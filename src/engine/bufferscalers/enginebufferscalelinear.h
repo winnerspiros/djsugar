@@ -25,6 +25,9 @@ class EngineBufferScaleLinear : public EngineBufferScale  {
                              double* pPitchRatio) override;
 
   private:
+    void setSignal(
+            mixxx::audio::SampleRate sampleRate,
+            mixxx::audio::ChannelCount channelCount) override;
     void onSignalChanged() override;
 
     double do_scale(CSAMPLE* buf, SINT buf_size);

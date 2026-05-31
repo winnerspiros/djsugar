@@ -966,6 +966,14 @@ void YouTubeService::downloadViaAndroidBundled(
     // before the thread completes.
     QPointer<YouTubeService> guard(this);
     QThread* thread = QThread::create([guard, videoId, cacheDir]() {
+        // Attach this worker thread to the JVM before any JNI calls.
+        // QJniEnvironment ensures the thread is properly attached and
+        // remains attached for the lifetime of this scope.
+        QJniEnvironment env;
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         if (!context.isValid()) {
             if (guard)
@@ -1027,7 +1035,7 @@ void YouTubeService::downloadViaAndroidBundled(
                 QJniObject::fromString("--no-mtime").object());
 
         // Execute the download (blocks this thread until complete).
-        QJniEnvironment env;
+        // QJniEnvironment already active from thread start (see above).
         QJniObject response = ytdl.callObjectMethod(
                 "exec",
                 "(Lcom/yausername/youtubedl_android/YoutubeDLRequest;)"
