@@ -17,7 +17,6 @@ EngineBufferScaleLinear::EngineBufferScaleLinear(ReadAheadManager *pReadAheadMan
       m_dOldRate(1.0),
       m_dCurrentFrame(0.0),
       m_dNextFrame(0.0) {
-    onSignalChanged();
     SampleUtil::clear(m_bufferInt, kiLinearScaleReadAheadLength);
 }
 
@@ -25,21 +24,30 @@ EngineBufferScaleLinear::~EngineBufferScaleLinear() {
     SampleUtil::free(m_bufferInt);
 }
 
+void EngineBufferScaleLinear::setSignal(
+        mixxx::audio::SampleRate sampleRate,
+        mixxx::audio::ChannelCount channelCount) {
+    EngineBufferScale::setSignal(sampleRate, channelCount);
+    // Allocate sample buffers on the non-real-time path (setSignal is
+    // called from EngineBuffer, not the engine thread). Use the same
+    // grow-only pattern so we never shrink and never allocate on the
+    // real-time thread thereafter.
+    const auto channelCountValue = getOutputSignal().getChannelCount();
+    if (m_floorSampleOld.size() < channelCountValue) {
+        m_floorSampleOld = mixxx::SampleBuffer(channelCountValue);
+    }
+    if (m_floorSample.size() < channelCountValue) {
+        m_floorSample = mixxx::SampleBuffer(channelCountValue);
+    }
+    if (m_ceilSample.size() < channelCountValue) {
+        m_ceilSample = mixxx::SampleBuffer(channelCountValue);
+    }
+}
+
 void EngineBufferScaleLinear::onSignalChanged() {
-    // We only upscale the memory allocation to reduce the likelihood of
-    // impacting the real-time thread. This way, on first load of a STEM (8
-    // channels), we reallocate the right size and keep it allocated till the
-    // scaler is destroyed.
-    const auto channelCount = getOutputSignal().getChannelCount();
-    if (m_floorSampleOld.size() < channelCount) {
-        m_floorSampleOld = mixxx::SampleBuffer(channelCount);
-    }
-    if (m_floorSample.size() < channelCount) {
-        m_floorSample = mixxx::SampleBuffer(channelCount);
-    }
-    if (m_ceilSample.size() < channelCount) {
-        m_ceilSample = mixxx::SampleBuffer(channelCount);
-    }
+    // This may be called from clear() on the engine thread, so it must
+    // not perform any heap allocations. All buffer sizing is done in
+    // setSignal() above which runs on the non-real-time path.
 }
 
 void EngineBufferScaleLinear::setScaleParameters(double base_rate,

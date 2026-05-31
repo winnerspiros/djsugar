@@ -513,6 +513,10 @@ SoundSourceFFmpeg::~SoundSourceFFmpeg() {
 SoundSource::OpenResult SoundSourceFFmpeg::tryOpen(
         OpenMode /*mode*/,
         const OpenParams& params) {
+    // Reset per-open state so subsequent opens recompute the flag
+    // based on the current decoder.
+    m_isLibfdk_aac = false;
+
     // Open input
     {
         AVFormatContext* pavInputFormatContext =
