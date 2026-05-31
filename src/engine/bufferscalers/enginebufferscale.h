@@ -43,9 +43,9 @@ class EngineBufferScale : public QObject {
     }
 
     // Set the desired output signal.
-    void setSignal(
+    virtual void setSignal(
             mixxx::audio::SampleRate sampleRate,
-            mixxx::audio::ChannelCount channelCout);
+            mixxx::audio::ChannelCount channelCount);
 
     const mixxx::audio::SignalInfo& getOutputSignal() const {
         return m_signal;
