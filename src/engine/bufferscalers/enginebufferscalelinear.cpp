@@ -44,6 +44,7 @@ void EngineBufferScaleLinear::onSignalChanged() {
     VERIFY_OR_DEBUG_ASSERT(m_ceilSample.size() >= channelCount) {
         m_ceilSample = mixxx::SampleBuffer(channelCount);
     }
+}
 
 void EngineBufferScaleLinear::setScaleParameters(double base_rate,
                                                  double* pTempoRatio,
