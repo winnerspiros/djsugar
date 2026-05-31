@@ -42,6 +42,7 @@ class EngineBufferScaleRubberBand final : public EngineBufferScale {
     void clear() override;
 
   private:
+    void prepareChannelBuffers();
     // Reset RubberBand library with new audio signal
     void onSignalChanged() override;
 

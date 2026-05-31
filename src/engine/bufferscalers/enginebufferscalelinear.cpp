@@ -17,7 +17,11 @@ EngineBufferScaleLinear::EngineBufferScaleLinear(ReadAheadManager *pReadAheadMan
       m_dOldRate(1.0),
       m_dCurrentFrame(0.0),
       m_dNextFrame(0.0) {
-    onSignalChanged();
+    // Pre-allocate sample buffers with the maximum channel count to avoid
+    // allocations on the real-time thread in onSignalChanged().
+    m_floorSampleOld = mixxx::SampleBuffer(mixxx::kEngineChannelOutputCount);
+    m_floorSample = mixxx::SampleBuffer(mixxx::kEngineChannelOutputCount);
+    m_ceilSample = mixxx::SampleBuffer(mixxx::kEngineChannelOutputCount);
     SampleUtil::clear(m_bufferInt, kiLinearScaleReadAheadLength);
 }
 
@@ -26,21 +30,20 @@ EngineBufferScaleLinear::~EngineBufferScaleLinear() {
 }
 
 void EngineBufferScaleLinear::onSignalChanged() {
-    // We only upscale the memory allocation to reduce the likelihood of
-    // impacting the real-time thread. This way, on first load of a STEM (8
-    // channels), we reallocate the right size and keep it allocated till the
-    // scaler is destroyed.
+    // Buffers are pre-allocated in the constructor with the maximum
+    // channel count, so no heap allocation is needed here.
+    // The grow-only pattern is kept as a safety net for unexpected
+    // channel count changes, but this should never trigger in practice.
     const auto channelCount = getOutputSignal().getChannelCount();
-    if (m_floorSampleOld.size() < channelCount) {
+    VERIFY_OR_DEBUG_ASSERT(m_floorSampleOld.size() >= channelCount) {
         m_floorSampleOld = mixxx::SampleBuffer(channelCount);
     }
-    if (m_floorSample.size() < channelCount) {
+    VERIFY_OR_DEBUG_ASSERT(m_floorSample.size() >= channelCount) {
         m_floorSample = mixxx::SampleBuffer(channelCount);
     }
-    if (m_ceilSample.size() < channelCount) {
+    VERIFY_OR_DEBUG_ASSERT(m_ceilSample.size() >= channelCount) {
         m_ceilSample = mixxx::SampleBuffer(channelCount);
     }
-}
 
 void EngineBufferScaleLinear::setScaleParameters(double base_rate,
                                                  double* pTempoRatio,

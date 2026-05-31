@@ -25,9 +25,6 @@ EngineBufferScaleRubberBand::EngineBufferScaleRubberBand(
           m_interleavedReadBuffer(MAX_BUFFER_LEN),
           m_bBackwards(false),
           m_useEngineFiner(false) {
-    // Initialize the internal buffers to prevent re-allocations
-    // in the real-time thread.
-    onSignalChanged();
 }
 
 void EngineBufferScaleRubberBand::setScaleParameters(double base_rate,
@@ -94,10 +91,9 @@ void EngineBufferScaleRubberBand::setScaleParameters(double base_rate,
     m_dPitchRatio = *pPitchRatio;
 }
 
-void EngineBufferScaleRubberBand::onSignalChanged() {
-    // TODO: Resetting the sample rate will cause internal
-    // memory allocations that may block the real-time thread.
-    // When is this function actually invoked??
+void EngineBufferScaleRubberBand::prepareChannelBuffers() {
+    // Must only be called from non-real-time paths (setSignal chain
+    // via onSignalChanged, or useEngineFiner).
     if (!getOutputSignal().isValid()) {
         return;
     }
@@ -115,8 +111,6 @@ void EngineBufferScaleRubberBand::onSignalChanged() {
         m_bufferPtrs.resize(channelCount);
     }
 
-    m_rubberBand.clear();
-
     for (int chIdx = 0; chIdx < channelCount; chIdx++) {
         if (m_buffers[chIdx].size() == MAX_BUFFER_LEN) {
             continue;
@@ -124,6 +118,14 @@ void EngineBufferScaleRubberBand::onSignalChanged() {
         m_buffers[chIdx] = mixxx::SampleBuffer(MAX_BUFFER_LEN);
         m_bufferPtrs[chIdx] = m_buffers[chIdx].data();
     }
+}
+
+void EngineBufferScaleRubberBand::onSignalChanged() {
+    // This is invoked from EngineBufferScale::setSignal() on the non-RT
+    // path. Buffer allocation is done in prepareChannelBuffers().
+    prepareChannelBuffers();
+
+    m_rubberBand.clear();
 
     RubberBandStretcher::Options rubberbandOptions =
             RubberBandStretcher::OptionProcessRealTime;
