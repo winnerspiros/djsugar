@@ -1,18 +1,19 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
-# Auto-release workflow for winnerspiros/mixxx fork (DJ Sugar).
+# Auto-release workflow for winnerspiros/djsugar (DJ Sugar).
 #
 # Triggers:
 #   - Push to main -> creates/updates a rolling "latest" pre-release.
 #   - Manual workflow_dispatch -> create a versioned release (e.g. v2.7.0).
 #   - Push of a version tag (vX.Y.Z) -> create a versioned release.
 #
-# Delegates the actual compilation to the reusable build.yml workflow,
-# which handles all platform-specific details (MSVC toolchain setup,
-# Android NDK/SDK, macOS codesigning, vcpkg deps, etc.).
+# Calls the reusable build.yml workflow ONCE (no matrix duplication).
+# build.yml handles its own matrix internally:
+#   Ubuntu 24.04 (DEB), macOS 15 x64 (DMG), macOS 15 arm64 (DMG),
+#   Windows 2022 x64 (MSI), Windows 11 ARM64 (MSI), Android 15 (APK),
+#   Flatpak (x86_64, aarch64).
 #
 # This workflow adds a release-publishing stage on top that collects
-# the built artifacts (DEB, DMG x2, MSI x2) and publishes them to
-# GitHub Releases.
+# all built artifacts and publishes them to GitHub Releases.
 
 name: Auto-Release
 
@@ -104,24 +105,11 @@ jobs:
           echo "PreRelease: ${IS_PRE}"
 
   # ── 2. Build every platform via the reusable build workflow ───────────────
+  # Call build.yml ONCE — it handles its own matrix internally (6 platforms
+  # + Flatpak). No matrix duplication here.
   build:
-    name: Build – ${{ matrix.name }}
+    name: Build all platforms
     needs: version
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Ubuntu 24.04
-            artifacts_slug: ubuntu-jammy
-          - name: macOS 15 x64
-            artifacts_slug: macos-macosintel
-          - name: macOS 15 arm64
-            artifacts_slug: macos-macosarm
-          - name: Windows 2022 x64
-            artifacts_slug: windows-win64
-          - name: Windows 11 ARM64
-            artifacts_slug: windows-winarm
-
     uses: ./.github/workflows/build.yml
     with:
       publish: false
