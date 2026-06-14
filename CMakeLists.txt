@@ -2172,7 +2172,7 @@ if(MIXXX_USE_LLGL)
     mixxx-lib
     PRIVATE
       src/shaders/llglshader.cpp
-      src/waveform/llglcontext.cpp
+      src/rendergraph/llgl/rendergraph/context.cpp
       src/rendergraph/llgl/backend/basellglnode.cpp
       src/rendergraph/llgl/backend/llglopenglnode.cpp
       src/waveform/widgets/llglwaveformwidget.cpp
