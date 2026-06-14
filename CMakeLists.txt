@@ -2171,7 +2171,6 @@ if(MIXXX_USE_LLGL)
   target_sources(
     mixxx-lib
     PRIVATE
-      src/shaders/llglshader.cpp
       src/rendergraph/llgl/rendergraph/context.cpp
       src/rendergraph/llgl/backend/basellglnode.cpp
       src/rendergraph/llgl/backend/llglopenglnode.cpp
