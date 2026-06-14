@@ -6,9 +6,7 @@
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/opengl/backend/shadercache.h"
-#endif
 
 using namespace rendergraph;
 
@@ -36,9 +34,7 @@ std::unique_ptr<MaterialShader> RGBMaterial::createShader() const {
             "rgb.vert", "rgb.frag", uniforms(), attributes());
 }
 
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> RGBMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "rgb.vert", "rgb.frag", uniforms(), attributes());
 }
-#endif

@@ -3,9 +3,7 @@
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/opengl/backend/shadercache.h"
-#endif
 
 namespace rendergraph {
 class RGBMaterial;
@@ -22,7 +20,6 @@ class rendergraph::RGBMaterial : public rendergraph::Material {
 
     std::unique_ptr<MaterialShader> createShader() const override;
 
-#ifdef MIXXX_USE_LLGL
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;
-#endif
+
 };

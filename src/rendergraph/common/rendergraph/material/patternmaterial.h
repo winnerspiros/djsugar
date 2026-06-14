@@ -1,7 +1,5 @@
 #include "rendergraph/attributeset.h"
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/opengl/backend/shadercache.h"
-#endif
 #include "rendergraph/material.h"
 #include "rendergraph/texture.h"
 #include "rendergraph/uniformset.h"
@@ -22,9 +20,8 @@ class rendergraph::PatternMaterial : public rendergraph::Material {
 
     std::unique_ptr<MaterialShader> createShader() const override;
 
-#ifdef MIXXX_USE_LLGL
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;
-#endif
+
 
     Texture* texture(int) const override {
         return m_pTexture.get();

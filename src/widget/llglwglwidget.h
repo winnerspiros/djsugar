@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef MIXXX_USE_LLGL
-
 #include <QWidget>
 #include <QTimer>
 #include <memory>
@@ -51,5 +49,3 @@ class LLGLWGLWidget : public QWidget {
     bool m_initialized;
     bool m_initOk;
 };
-
-#endif // MIXXX_USE_LLGL

@@ -35,7 +35,6 @@ Upgrade::~Upgrade() {
 
 namespace {
 // mapping to proactively move users to the new all-shader waveform types
-#ifdef MIXXX_USE_QOPENGL
 std::tuple<WaveformWidgetType::Type,
         WaveformWidgetBackend,
         WaveformRendererSignalBase::Options>
@@ -137,22 +136,6 @@ upgradeToAllShaders(int unsafeWaveformType,
     }
     return {waveformType, waveformBackend, waveformOption};
 }
-#else
-// Without AllShader support, provide a stub that returns defaults
-[[maybe_unused]] std::tuple<WaveformWidgetType::Type,
-        WaveformWidgetBackend,
-        WaveformRendererSignalBase::Options>
-upgradeToAllShaders(int unsafeWaveformType,
-        int unsafeWaveformBackend,
-        int unsafeWaveformOption) {
-    Q_UNUSED(unsafeWaveformType);
-    Q_UNUSED(unsafeWaveformBackend);
-    Q_UNUSED(unsafeWaveformOption);
-    return {WaveformWidgetFactory::defaultType(),
-            WaveformWidgetBackend::None,
-            WaveformRendererSignalBase::Option::None};
-}
-#endif
 
 VSyncThread::VSyncMode upgradeDeprecatedVSyncModes(int configVSyncMode) {
     using VT = VSyncThread;
@@ -623,7 +606,6 @@ UserSettingsPointer Upgrade::versionUpgrade(const QString& settingsPath) {
                     configVersion.startsWith("2.6.0-"))) {
         // Proactively move users to an all-shader waveform widget type and set the
         // framerate to 60 fps
-#ifdef MIXXX_USE_QOPENGL
         int waveformType =
                 config->getValue<int>(ConfigKey("[Waveform]", "WaveformType"));
         // values might be out of range for the enum, avoid undefined
@@ -642,7 +624,6 @@ UserSettingsPointer Upgrade::versionUpgrade(const QString& settingsPath) {
                 correctedWaveformBacked);
         config->setValue<int>(ConfigKey("[Waveform]", "waveform_options"),
                 correctedWaveformOption);
-#endif
         // mark the configuration as updated
         configVersion = "2.6.0";
         config->set(ConfigKey("[Config]", "Version"),

@@ -302,7 +302,6 @@ void WWaveformViewer::setWaveformWidget(WaveformWidgetAbstract* waveformWidget) 
                     m_waveformWidget = nullptr;
                 });
         m_waveformWidget->getWidget()->setMouseTracking(true);
-#ifdef MIXXX_USE_QOPENGL
         if (m_waveformWidget->getGLWidget()) {
             // The OpenGLWindow used to display the waveform widget interferes with the
             // normal Qt tooltip mechanism and uses it's own mechanism. We set the tooltip
@@ -313,7 +312,6 @@ void WWaveformViewer::setWaveformWidget(WaveformWidgetAbstract* waveformWidget) 
             // Tell the WGLWidget that this is its drag&drop target
             m_waveformWidget->getGLWidget()->setTrackDropTarget(this);
         }
-#endif
         // Make connection to show "Passthrough" label on the waveform, except for
         // "Empty" waveform type
         if (m_waveformWidget->getType() == WaveformWidgetType::Empty) {

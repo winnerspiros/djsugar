@@ -9,12 +9,7 @@
 #include "rendergraph/texture.h"
 #include "rendergraph/uniformscache.h"
 #include "rendergraph/uniformset.h"
-
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/llgl/backend/shadercache.h"
-#else
-#include <QOpenGLShaderProgram>
-#endif
 
 namespace rendergraph {
 class Material;
@@ -42,10 +37,7 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     }
 
     virtual std::unique_ptr<MaterialShader> createShader() const = 0;
-
-#ifdef MIXXX_USE_LLGL
     virtual std::unique_ptr<LLGLMaterialShader> createLLGLShader() const = 0;
-#endif
 
     template<typename T>
     void setUniform(int uniformIndex, const T& value) {
@@ -69,8 +61,6 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         return nullptr;
     }
 
-    // Shader access — returns the appropriate type for the backend
-#ifdef MIXXX_USE_LLGL
     LLGLMaterialShader& shader() {
         return *m_pLLGLShader;
     }
@@ -80,32 +70,11 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     void setShader(std::shared_ptr<LLGLMaterialShader> pShader) {
         m_pLLGLShader = pShader;
     }
-#else
-    MaterialShader& shader() {
-        return *m_pShader;
-    }
-    const MaterialShader& shader() const {
-        return *m_pShader;
-    }
-    void setShader(std::shared_ptr<MaterialShader> pShader) {
-        m_pShader = pShader;
-    }
-#endif
 
-    // For BaseGeometryNode::render() which needs to check shader type
-#ifdef MIXXX_USE_LLGL
     bool isLLGL() const { return true; }
-#else
-    bool isLLGL() const { return false; }
-#endif
 
   private:
     UniformsCache m_uniformsCache;
     bool m_uniformsCacheDirty{};
-
-#ifdef MIXXX_USE_LLGL
     std::shared_ptr<LLGLMaterialShader> m_pLLGLShader;
-#else
-    std::shared_ptr<MaterialShader> m_pShader;
-#endif
 };

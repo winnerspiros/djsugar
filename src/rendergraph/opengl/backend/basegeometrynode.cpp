@@ -7,10 +7,7 @@
 #include "rendergraph/engine.h"
 #include "rendergraph/geometrynode.h"
 #include "rendergraph/texture.h"
-
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/llgl/rendergraph/context.h"
-#endif
 
 using namespace rendergraph;
 
@@ -28,9 +25,6 @@ GLenum toGlDrawingMode(DrawingMode mode) {
 } // namespace
 
 void BaseGeometryNode::initialize() {
-#ifndef MIXXX_USE_LLGL
-    initializeOpenGLFunctions();
-#endif
     GeometryNode* pThis = static_cast<GeometryNode*>(this);
     pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
     pThis->material().setUniform(0, engine()->matrix());
@@ -45,14 +39,8 @@ void BaseGeometryNode::render() {
         return;
     }
 
-#ifdef MIXXX_USE_LLGL
     renderLLGL(pThis, geometry, material);
-#else
-    renderGL(pThis, geometry, material);
-#endif
 }
-
-#ifdef MIXXX_USE_LLGL
 
 void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         Geometry& geometry,
@@ -115,80 +103,8 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
     pMatShader->release();
 }
 
-#endif
-
-void BaseGeometryNode::renderGL(GeometryNode* pThis,
-        Geometry& geometry,
-        Material& material) {
-    Q_UNUSED(pThis);
-
-#ifndef MIXXX_USE_LLGL
-    QOpenGLShaderProgram& shader = material.shader();
-    VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
-        return;
-    }
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-    if (material.clearUniformsCacheDirty() || !material.isLastModifierOfShader()) {
-        material.modifyShader();
-        const UniformsCache& cache = material.uniformsCache();
-        for (int i = 0; i < cache.count(); i++) {
-            int location = material.uniformLocation(i);
-            switch (cache.type(i)) {
-            case Type::UInt:
-                shader.setUniformValue(location, cache.get<GLuint>(i));
-                break;
-            case Type::Float:
-                shader.setUniformValue(location, cache.get<GLfloat>(i));
-                break;
-            case Type::Vector2D:
-                shader.setUniformValue(location, cache.get<QVector2D>(i));
-                break;
-            case Type::Vector3D:
-                shader.setUniformValue(location, cache.get<QVector3D>(i));
-                break;
-            case Type::Vector4D:
-                shader.setUniformValue(location, cache.get<QVector4D>(i));
-                break;
-            case Type::Matrix4x4:
-                shader.setUniformValue(location, cache.get<QMatrix4x4>(i));
-                break;
-            }
-        }
-    }
-
-    int vertexOffset = 0;
-    for (int i = 0; i < geometry.attributeCount(); i++) {
-        const Geometry::Attribute& attribute = geometry.attributes()[i];
-        int location = material.attributeLocation(i);
-        shader.enableAttributeArray(location);
-        shader.setAttributeArray(location,
-                geometry.vertexDataAs<float>() + vertexOffset,
-                attribute.m_tupleSize,
-                geometry.sizeOfVertex());
-        vertexOffset += attribute.m_tupleSize;
-    }
-
-    auto* pTexture = material.texture(1);
-    if (pTexture) {
-        pTexture->backendTexture()->bind();
-    }
-
-    glDrawArrays(toGlDrawingMode(geometry.drawingMode()), 0, geometry.vertexCount());
-
-    if (pTexture) {
-        pTexture->backendTexture()->release();
-    }
-
-    for (int i = 0; i < geometry.attributeCount(); i++) {
-        int location = material.attributeLocation(i);
-        shader.disableAttributeArray(location);
-    }
-
-    shader.release();
-#endif
+void BaseGeometryNode::renderGL(GeometryNode*, Geometry&, Material&) {
+    // Not used when LLGL is enabled — kept for link compatibility
 }
 
 void BaseGeometryNode::resize(int, int) {

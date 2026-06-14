@@ -1,8 +1,6 @@
 #include "waveform/renderers/allshader/waveformrenderertextured.h"
 
 #ifndef QT_OPENGL_ES_2
-#ifndef MIXXX_USE_LLGL
-
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLShaderProgram>
 
@@ -558,6 +556,4 @@ void WaveformRendererTextured::paintGL() {
 }
 
 } // namespace allshader
-
-#endif // MIXXX_USE_LLGL
 #endif // QT_OPENGL_ES_2

@@ -3,9 +3,7 @@
 #include <QVector2D>
 
 #include "rendergraph/materialshader.h"
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/opengl/backend/shadercache.h"
-#endif
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 
@@ -35,9 +33,7 @@ std::unique_ptr<MaterialShader> EndOfTrackMaterial::createShader() const {
             "endoftrack.vert", "endoftrack.frag", uniforms(), attributes());
 }
 
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> EndOfTrackMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "endoftrack.vert", "endoftrack.frag", uniforms(), attributes());
 }
-#endif

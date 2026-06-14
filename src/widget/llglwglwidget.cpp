@@ -1,7 +1,5 @@
 #include "llglwglwidget.h"
 
-#ifdef MIXXX_USE_LLGL
-
 #include <QDebug>
 #include <QWindow>
 
@@ -133,5 +131,3 @@ void LLGLWGLWidget::onRenderTimer() {
         update();
     }
 }
-
-#endif // MIXXX_USE_LLGL

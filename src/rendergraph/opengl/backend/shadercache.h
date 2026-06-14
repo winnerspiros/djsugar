@@ -4,16 +4,12 @@
 #include <memory>
 
 #include "rendergraph/material.h"
-
-#ifdef MIXXX_USE_LLGL
 #include "rendergraph/llgl/backend/llglshaderprogram.h"
-#endif
 
 namespace rendergraph {
 
-#ifdef MIXXX_USE_LLGL
 /// LLGLMaterialShader wraps LLGLShaderProgram to provide the same interface
-/// as MaterialShader (which wraps QOpenGLShaderProgram).
+/// as MaterialShader (which wrapped QOpenGLShaderProgram).
 class LLGLMaterialShader {
   public:
     LLGLMaterialShader(const char* vertexShaderFile,
@@ -66,11 +62,9 @@ class LLGLMaterialShader {
     QString m_fragmentFile;
     bool m_loaded;
 };
-#endif
 
 class ShaderCache {
   private:
-#ifdef MIXXX_USE_LLGL
     static std::unordered_map<MaterialType*,
             std::shared_ptr<LLGLMaterialShader>>&
     map() {
@@ -79,19 +73,8 @@ class ShaderCache {
                 s_map;
         return s_map;
     }
-#else
-    static std::unordered_map<MaterialType*,
-            std::shared_ptr<MaterialShader>>&
-    map() {
-        static std::unordered_map<MaterialType*,
-                std::shared_ptr<MaterialShader>>
-                s_map;
-        return s_map;
-    }
-#endif
 
   public:
-#ifdef MIXXX_USE_LLGL
     static std::shared_ptr<LLGLMaterialShader> getShaderForMaterial(
             Material* pMaterial) {
         auto iter = map().find(pMaterial->type());
@@ -105,21 +88,6 @@ class ShaderCache {
                 pMaterial->type(), pResult});
         return pResult;
     }
-#else
-    static std::shared_ptr<MaterialShader> getShaderForMaterial(
-            Material* pMaterial) {
-        auto iter = map().find(pMaterial->type());
-        if (iter != map().end()) {
-            return iter->second;
-        }
-        auto pResult = std::shared_ptr<MaterialShader>(
-                pMaterial->createShader());
-        map().insert(std::pair<MaterialType*,
-                std::shared_ptr<MaterialShader>>{
-                pMaterial->type(), pResult});
-        return pResult;
-    }
-#endif
     static void purge() {
         std::erase_if(map(), [](const auto& item) {
             auto const& [key, value] = item;

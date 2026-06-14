@@ -469,7 +469,7 @@ endif()
 # LLGL rendering backend — cross-platform graphics abstraction
 # (OpenGL, Vulkan, D3D11, Metal). When enabled, LLGL-powered widgets
 # replace the QOpenGLWindow / QPainter backend on ALL platforms.
-option(MIXXX_USE_LLGL "Use LLGL rendering backend" OFF)
+option(MIXXX_USE_LLGL "Use LLGL rendering backend" ON)
 
 if(MIXXX_USE_LLGL)
   add_compile_definitions(MIXXX_USE_LLGL)
