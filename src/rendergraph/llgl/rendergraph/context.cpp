@@ -1,24 +1,9 @@
-#include "context.h"
+#include "llglcontext.h"
+
+#ifdef MIXXX_USE_LLGL
 
 #include <QDebug>
 #include <QWindow>
-#include <QGuiApplication>
-#include <QScreen>
-
-#if defined(Q_OS_ANDROID)
-#include <android/native_window.h>
-#include <android/native_window_jni.h>
-#include <QJniObject>
-#include <QNativeInterface>
-#elif defined(Q_OS_WIN32)
-#include <windows.h>
-#elif defined(Q_OS_MACOS)
-#include <Cocoa/Cocoa.h>
-#elif defined(Q_OS_LINUX)
-#include <X11/Xlib.h>
-#endif
-
-namespace rendergraph {
 
 LLGLContext::LLGLContext(QObject* parent)
         : QObject(parent) {
@@ -288,4 +273,4 @@ LLGL::PipelineLayout* LLGLContext::createPipelineLayout(
     return m_pRenderSystem->CreatePipelineLayout(desc);
 }
 
-} // namespace rendergraph
+#endif // MIXXX_USE_LLGL
