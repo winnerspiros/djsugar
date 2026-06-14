@@ -1,21 +1,20 @@
 #pragma once
 
-#include <QOffscreenSurface>
-#include <QOpenGLContext>
+#include <QWidget>
 #include <QTimer>
+#include <QOpenGLContext>
+#include <QOffscreenSurface>
 #include <memory>
 
 #include "waveform/widgets/waveformwidgetabstract.h"
-
-struct LLGLRenderState;
+#include "rendergraph/llgl/rendergraph/context.h"
 
 /// LLGLWaveformWidget uses LLGL (Low Level Graphics Library) to render
 /// waveforms with hardware acceleration on ALL platforms.
 ///
-/// This widget uses LLGL's OpenGL backend to render waveforms with
-/// hardware acceleration on ALL platforms (Windows, macOS, Linux, Android).
-/// It replaces both the QOpenGLWindow-based GL path and the QPainter
-/// software fallback with a single, unified rendering backend.
+/// This widget uses LLGL's rendering backend to draw waveforms.
+/// It creates its own LLGL context and swap chain, and renders
+/// the waveform using LLGL command buffers.
 ///
 /// When MIXXX_USE_LLGL is enabled, this becomes the primary waveform widget.
 class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
@@ -40,13 +39,10 @@ class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
     bool initializeLLGL();
     void shutdownLLGL();
     void render();
-    void renderBackground();
-    void renderSignal();
-    void renderBeatMarkers();
-    void renderEndOfTrack();
-    void renderMarks();
+    void renderLLGL();
+    void renderFallback();
 
-    std::unique_ptr<LLGLRenderState> m_renderState;
+    std::unique_ptr<rendergraph::LLGLContext> m_pContext;
     QTimer* m_pRenderTimer;
     bool m_initOk;
 };

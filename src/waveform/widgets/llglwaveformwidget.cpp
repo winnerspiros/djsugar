@@ -1,7 +1,7 @@
 #include "llglwaveformwidget.h"
 
-#include <QDebug>
 #include <QPainter>
+#include <QDebug>
 
 #include "moc_llglwaveformwidget.cpp"
 #include "waveform/renderers/waveformrenderbackground.h"
@@ -15,11 +15,13 @@
 LLGLWaveformWidget::LLGLWaveformWidget(const QString& group, QWidget* parent)
         : WaveformWidgetAbstract(group),
           QWidget(parent),
-          m_initOk(false),
-          m_pRenderTimer(new QTimer(this)) {
+          m_pContext(std::make_unique<rendergraph::LLGLContext>()),
+          m_pRenderTimer(new QTimer(this)),
+          m_initOk(false) {
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_OpaquePaintEvent);
 
+    // Always add QPainter-based renderers as fallback.
     addRenderer<WaveformRenderBackground>();
     addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
@@ -45,8 +47,7 @@ QWidget* LLGLWaveformWidget::widget() {
 
 void LLGLWaveformWidget::paintEvent(QPaintEvent* event) {
     if (!m_initOk) {
-        QPainter painter(this);
-        draw(&painter, event);
+        renderFallback();
         return;
     }
 
@@ -55,8 +56,8 @@ void LLGLWaveformWidget::paintEvent(QPaintEvent* event) {
 
 void LLGLWaveformWidget::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
-    if (m_initOk) {
-        // Resize LLGL swap chain
+    if (m_initOk && m_pContext) {
+        m_pContext->resize(width(), height());
     }
     update();
 }
@@ -83,38 +84,47 @@ void LLGLWaveformWidget::onRenderTimer() {
 }
 
 bool LLGLWaveformWidget::initializeLLGL() {
-    qDebug() << "LLGLWaveformWidget: initialized (QPainter fallback active)";
+    if (!m_pContext) {
+        return false;
+    }
+
+    if (!m_pContext->initialize(this)) {
+        qWarning() << "LLGLWaveformWidget: failed to initialize LLGL context";
+        return false;
+    }
+
+    qDebug() << "LLGLWaveformWidget: LLGL context initialized";
     return true;
 }
 
 void LLGLWaveformWidget::shutdownLLGL() {
-    m_initOk = false;
     m_pRenderTimer->stop();
+    if (m_pContext) {
+        m_pContext->shutdown();
+    }
+    m_initOk = false;
 }
 
 void LLGLWaveformWidget::render() {
-    // TODO: Full LLGL rendering pipeline
-    // For now, fall through to QPainter
+    if (!m_pContext || !m_pContext->isValid()) {
+        renderFallback();
+        return;
+    }
+
+    renderLLGL();
+}
+
+void LLGLWaveformWidget::renderLLGL() {
+    // Clear the background using LLGL
+    m_pContext->beginFrame(QColor(0, 0, 0, 255));
+
+    // TODO: Render waveform using LLGL command buffer
+    // For now, we clear the screen and present
+
+    m_pContext->endFrame();
+}
+
+void LLGLWaveformWidget::renderFallback() {
     QPainter painter(this);
-    paintEvent(nullptr);
-}
-
-void LLGLWaveformWidget::renderBackground() {
-    // TODO: LLGL background rendering
-}
-
-void LLGLWaveformWidget::renderSignal() {
-    // TODO: LLGL signal rendering
-}
-
-void LLGLWaveformWidget::renderBeatMarkers() {
-    // TODO: LLGL beat marker rendering
-}
-
-void LLGLWaveformWidget::renderEndOfTrack() {
-    // TODO: LLGL end-of-track rendering
-}
-
-void LLGLWaveformWidget::renderMarks() {
-    // TODO: LLGL mark rendering
+    draw(&painter, nullptr);
 }
