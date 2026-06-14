@@ -38,4 +38,7 @@ enum class WaveformWidgetBackend {
 #ifdef MIXXX_USE_QOPENGL
     AllShader,
 #endif
+#ifdef MIXXX_USE_LLGL
+    LLGL,
+#endif
 };

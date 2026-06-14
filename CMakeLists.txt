@@ -2178,7 +2178,7 @@ if(MIXXX_USE_LLGL)
       src/waveform/widgets/llglwaveformwidget.cpp
   )
   target_include_directories(mixxx-lib PRIVATE src/rendergraph)
-  target_link_libraries(mixxx-lib PRIVATE llgl)
+  target_link_libraries(mixxx-lib PRIVATE LLGL)
 endif()
 
 set_source_files_properties(

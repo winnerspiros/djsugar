@@ -1100,6 +1100,10 @@ void WaveformWidgetFactory::evaluateWidgets() {
             addHandle(collectedHandles, type, waveformWidgetVars<HSVWaveformWidget>());
             break;
         case WaveformWidgetType::Stacked:
+#if defined(MIXXX_USE_LLGL)
+            addHandle(collectedHandles, type, waveformWidgetVars<LLGLWaveformWidget>());
+            supportedOptions[type] = WaveformRendererSignalBase::Option::None;
+#endif
 #ifdef MIXXX_USE_QOPENGL
             addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
             supportedOptions[type] =
@@ -1189,6 +1193,10 @@ WaveformWidgetAbstract* WaveformWidgetFactory::createStackedWaveformWidget(
         WWaveformViewer* viewer, WaveformRendererSignalBase::Options options) {
     WaveformWidgetBackend backend = getBackendFromConfig();
     switch (backend) {
+#ifdef MIXXX_USE_LLGL
+    case WaveformWidgetBackend::LLGL:
+        return new LLGLWaveformWidget(viewer->getGroup(), viewer);
+#endif
     case WaveformWidgetBackend::AllShader:
         return createAllshaderWaveformWidget(WaveformWidgetType::Type::Stacked, viewer, options);
     default:
@@ -1383,6 +1391,9 @@ WaveformWidgetBackend WaveformWidgetFactory::getBackendFromConfig() const {
 }
 
 WaveformWidgetBackend WaveformWidgetFactory::preferredBackend() const {
+#ifdef MIXXX_USE_LLGL
+    return WaveformWidgetBackend::LLGL;
+#endif
 #ifdef MIXXX_USE_QOPENGL
     if (m_openGlAvailable || m_openGlesAvailable) {
         return WaveformWidgetBackend::AllShader;
