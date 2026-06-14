@@ -273,6 +273,12 @@ class YouTubeService : public QObject {
     void searchViaYtDlp(const QString& query, int cap);
     void downloadViaYtDlp(const QString& videoId, const QString& cacheDir);
 
+    /// yt-dlp download with explicit error callback (used by yt-dlp-first chain).
+    /// On failure, calls `onFailed(error)` instead of emitting downloadFailed.
+    void downloadViaYtDlpEx(const QString& videoId,
+            const QString& cacheDir,
+            const std::function<void(const QString&)>& onFailed);
+
     /// Auto-fetch continuation pages after an initial InnerTube search returns
     /// fewer than `minResults` results. Accumulates results across pages and
     /// emits searchResultsReady once the threshold is met or no more pages
@@ -296,6 +302,11 @@ class YouTubeService : public QObject {
     /// This is the primary fallback on Android when Piped fails.
     /// No external Python, Termux, or system dependency needed.
     void downloadViaAndroidBundled(const QString& videoId, const QString& cacheDir);
+
+    /// Bundled yt-dlp download with explicit error callback.
+    void downloadViaAndroidBundledEx(const QString& videoId,
+            const QString& cacheDir,
+            const std::function<void(const QString&)>& onFailed);
 #endif
 
     // ----- shared -----

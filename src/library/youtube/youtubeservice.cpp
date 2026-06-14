@@ -30,6 +30,7 @@
 #include <QVector>
 #include <algorithm>
 #include <atomic>
+#include <functional>
 #include <utility>
 
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
@@ -333,17 +334,21 @@ QStringList ytDlpFallbackBins() {
         // Also probe Contents/Resources just in case.
         bins << QDir(appDir).filePath(QStringLiteral("../Resources/") + exe);
 #endif
-    }
-    // 2. Common system locations.
-    bins << QStringLiteral("/usr/local/bin/yt-dlp")
-         << QStringLiteral("/usr/bin/yt-dlp")
-         << QStringLiteral("/opt/homebrew/bin/yt-dlp")
-         << QStringLiteral("/opt/local/bin/yt-dlp")
-         // Termux-on-Android: only path that ever yields a working yt-dlp
-         // on Android, and only if the user has installed it themselves.
-         // Piped is the primary Android backend so this is purely a bonus.
-         << QStringLiteral("/data/data/com.termux/files/usr/bin/yt-dlp");
-    return bins;
+}
+
+void YouTubeService::downloadViaYtDlpEx(
+        const QString& videoId, const QString& cacheDir,
+        const std::function<void(const QString&)>& onFailed) {
+    // Wrap downloadViaYtDlp: on success, finalize normally; on failure, call
+    // the provided callback instead of emitting downloadFailed.
+    auto* conn = new QObject(this);
+    connect(this, &YouTubeService::downloadFailed, conn,
+            [onFailed, conn](const QString& id, const QString& error) {
+                Q_UNUSED(id);
+                onFailed(error);
+                conn->deleteLater();
+            });
+    downloadViaYtDlp(videoId, cacheDir);
 }
 
 // Map a Piped audio stream's ext-hint (mimeType) to a sensible file
@@ -976,47 +981,76 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                 });
     }
 
-    // Primary: the YouTube InnerTube player API (same reliable, proxy-free path
-    // used for search). The Android client context returns plain (non-cipher)
-    // stream URLs valid for ~6 hours with no external dependencies. We only fall
-    // back to the (frequently-dead) Piped instances and then yt-dlp if every
-    // InnerTube client fails — this avoids the long stall the user hit while
-    // cycling through unreachable Piped hosts before each download.
+    // Primary: yt-dlp. It handles YouTube's bot detection, signature
+    // deciphering, and format selection far more reliably than our
+    // InnerTube clients (which YouTube frequently blocks with "Forbidden"
+    // or "Video not playable" when they rotate their API). yt-dlp is
+    // the same engine used by the reference yt-dlp project and is
+    // actively maintained to track YouTube changes.
+    //
+    // Fallback chain: yt-dlp → InnerTube → Piped.
+    if (!m_ytDlpPath.isEmpty()
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+            || m_ytDlpPath == QStringLiteral("android-bundled")
+#endif
+            ) {
+        const bool isAndroidBundled =
+                m_ytDlpPath == QStringLiteral("android-bundled");
+        const QString downloaderLabel =
+                isAndroidBundled ? QStringLiteral("bundled yt-dlp (JNI)")
+                                 : QStringLiteral("yt-dlp");
+        kLogger.info() << "Trying" << downloaderLabel << "first for"
+                       << videoId;
+        auto onYtDlpFailed = [this, videoId, cacheDir, isAndroidBundled](
+                                     const QString& ytDlpError) {
+            kLogger.warning()
+                    << (isAndroidBundled ? "Bundled yt-dlp" : "yt-dlp")
+                    << "failed for" << videoId << ":" << ytDlpError
+                    << "— falling back to InnerTube";
+            downloadViaInnerTube(videoId, cacheDir,
+                    [this, videoId, cacheDir, isAndroidBundled,
+                     ytDlpError](const QString& innerTubeError) {
+                kLogger.warning()
+                        << "InnerTube also failed for" << videoId
+                        << ":" << innerTubeError
+                        << "— falling back to Piped";
+                downloadViaPiped(videoId, cacheDir, 0,
+                        [this, videoId, cacheDir, ytDlpError,
+                         innerTubeError](const QString& pipedError) {
+                    Q_EMIT downloadFailed(videoId,
+                            QStringLiteral("yt-dlp: %1 | InnerTube: %2 | "
+                                           "Piped: %3")
+                                    .arg(ytDlpError, innerTubeError,
+                                         pipedError));
+                });
+            });
+        };
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+        if (isAndroidBundled) {
+            downloadViaAndroidBundledEx(videoId, cacheDir, onYtDlpFailed);
+            return;
+        }
+#endif
+        downloadViaYtDlpEx(videoId, cacheDir, onYtDlpFailed);
+        return;
+    }
+
+    // No yt-dlp available — fall back to the old InnerTube → Piped chain.
     downloadViaInnerTube(videoId,
             cacheDir,
             [this, videoId, cacheDir](const QString& innerTubeError) {
-#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
-                // On Android, skip the Piped detour entirely: the community
-                // instances are mostly dead, so cycling 5×10s through them only
-                // adds ~50s of lag before the download finally fails. The
-                // bundled yt-dlp (real Python yt-dlp via JNI) is the reliable
-                // path that actually downloads the song, so go straight to it.
-                if (m_ytDlpPath == QStringLiteral("android-bundled")) {
-                    kLogger.warning() << "InnerTube download failed for"
-                                      << videoId << ":" << innerTubeError
-                                      << "— falling back to bundled yt-dlp (JNI)";
-                    downloadViaAndroidBundled(videoId, cacheDir);
-                    return;
-                }
-#endif
-                kLogger.warning() << "InnerTube download failed for" << videoId
-                                  << ":" << innerTubeError
+                kLogger.warning() << "InnerTube download failed for"
+                                  << videoId << ":" << innerTubeError
                                   << "— falling back to Piped";
                 downloadViaPiped(videoId,
                         cacheDir,
                         /*instanceIdx=*/0,
                         [this, videoId, cacheDir, innerTubeError](
                                 const QString& pipedError) {
-                            // Piped also failed — last resort: yt-dlp binary.
-                            kLogger.warning()
-                                    << "All Piped instances failed for download"
-                                    << videoId << ":" << pipedError;
-                            if (!m_ytDlpPath.isEmpty()) {
-                                kLogger.warning() << "Falling back to yt-dlp binary";
-                                downloadViaYtDlp(videoId, cacheDir);
-                            } else {
-                                Q_EMIT downloadFailed(videoId, innerTubeError);
-                            }
+                            Q_EMIT downloadFailed(videoId,
+                                    QStringLiteral("InnerTube: %1 | Piped: "
+                                                   "%2")
+                                            .arg(innerTubeError, pipedError));
                         });
             });
 }
@@ -2925,6 +2959,21 @@ void YouTubeService::downloadViaAndroidBundled(
     thread->setParent(this);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start();
+}
+
+void YouTubeService::downloadViaAndroidBundledEx(
+        const QString& videoId, const QString& cacheDir,
+        const std::function<void(const QString&)>& onFailed) {
+    // Wrap downloadViaAndroidBundled: intercept downloadFailed via a
+    // temporary connection and forward to onFailed.
+    auto* conn = new QObject(this);
+    connect(this, &YouTubeService::downloadFailed, conn,
+            [onFailed, conn](const QString& id, const QString& error) {
+                Q_UNUSED(id);
+                onFailed(error);
+                conn->deleteLater();
+            });
+    downloadViaAndroidBundled(videoId, cacheDir);
 }
 #endif // Q_OS_ANDROID && HAVE_YTDLP_ANDROID
 
