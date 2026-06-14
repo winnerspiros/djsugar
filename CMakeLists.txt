@@ -2167,6 +2167,20 @@ else()
   endif()
 endif()
 
+if(MIXXX_USE_LLGL)
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/shaders/llglshader.cpp
+      src/waveform/llglcontext.cpp
+      src/rendergraph/llgl/backend/basellglnode.cpp
+      src/rendergraph/llgl/backend/llglopenglnode.cpp
+      src/waveform/widgets/llglwaveformwidget.cpp
+  )
+  target_include_directories(mixxx-lib PRIVATE src/rendergraph)
+  target_link_libraries(mixxx-lib PRIVATE llgl)
+endif()
+
 set_source_files_properties(
   src/util/moc_included_test.cpp
   PROPERTIES SKIP_PRECOMPILE_HEADERS ON

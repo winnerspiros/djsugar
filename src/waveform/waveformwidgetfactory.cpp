@@ -44,6 +44,9 @@
 #include "waveform/widgets/simplesignalwaveformwidget.h"
 #include "waveform/widgets/softwarewaveformwidget.h"
 #include "waveform/widgets/waveformwidgetabstract.h"
+#if defined(MIXXX_USE_LLGL)
+#include "waveform/widgets/llglwaveformwidget.h"
+#endif
 #include "widget/wvumeterbase.h"
 #include "widget/wvumeterlegacy.h"
 #include "widget/wwaveformviewer.h"
@@ -1040,6 +1043,10 @@ void WaveformWidgetFactory::evaluateWidgets() {
             addHandle(collectedHandles, type, waveformWidgetVars<EmptyWaveformWidget>());
             break;
         case WaveformWidgetType::Simple:
+#if defined(MIXXX_USE_LLGL)
+            addHandle(collectedHandles, type, waveformWidgetVars<LLGLWaveformWidget>());
+            supportedOptions[type] = WaveformRendererSignalBase::Option::None;
+#endif
 #ifdef MIXXX_USE_QOPENGL
             addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
             supportedOptions[type] =
@@ -1049,6 +1056,10 @@ void WaveformWidgetFactory::evaluateWidgets() {
             addHandle(collectedHandles, type, waveformWidgetVars<SimpleSignalWaveformWidget>());
             break;
         case WaveformWidgetType::Filtered:
+#if defined(MIXXX_USE_LLGL)
+            addHandle(collectedHandles, type, waveformWidgetVars<LLGLWaveformWidget>());
+            supportedOptions[type] = WaveformRendererSignalBase::Option::None;
+#endif
 #ifdef MIXXX_USE_QOPENGL
             addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
             supportedOptions[type] =
@@ -1063,6 +1074,10 @@ void WaveformWidgetFactory::evaluateWidgets() {
 #endif
             break;
         case WaveformWidgetType::RGB:
+#if defined(MIXXX_USE_LLGL)
+            addHandle(collectedHandles, type, waveformWidgetVars<LLGLWaveformWidget>());
+            supportedOptions[type] = WaveformRendererSignalBase::Option::None;
+#endif
 #ifdef MIXXX_USE_QOPENGL
             addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
             supportedOptions[type] =
@@ -1072,6 +1087,10 @@ void WaveformWidgetFactory::evaluateWidgets() {
             addHandle(collectedHandles, type, waveformWidgetVars<RGBWaveformWidget>());
             break;
         case WaveformWidgetType::HSV:
+#if defined(MIXXX_USE_LLGL)
+            addHandle(collectedHandles, type, waveformWidgetVars<LLGLWaveformWidget>());
+            supportedOptions[type] = WaveformRendererSignalBase::Option::None;
+#endif
 #ifdef MIXXX_USE_QOPENGL
             addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
             supportedOptions[type] =
