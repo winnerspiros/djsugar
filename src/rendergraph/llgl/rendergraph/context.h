@@ -1,28 +1,27 @@
 #pragma once
 
-#include <LLGL/LLGL.h>
-#include <LLGL/RenderSystem.h>
-#include <LLGL/Device.h>
+#include <LLGL/Buffer.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
-#include <LLGL/SwapChain.h>
-#include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/Buffer.h>
-#include <LLGL/Texture.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/RenderTarget.h>
-#include <LLGL/VertexAttribute.h>
+#include <LLGL/Device.h>
 #include <LLGL/Format.h>
+#include <LLGL/LLGL.h>
 #include <LLGL/PipelineLayout.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/RenderTarget.h>
+#include <LLGL/Sampler.h>
+#include <LLGL/Shader.h>
 #include <LLGL/ShaderReflection.h>
+#include <LLGL/SwapChain.h>
+#include <LLGL/Texture.h>
+#include <LLGL/VertexAttribute.h>
 
+#include <QMutex>
+#include <QString>
+#include <QTimer>
 #include <QWidget>
 #include <QWindow>
-#include <QMutex>
-#include <QTimer>
-#include <QHash>
-#include <QString>
 #include <memory>
 
 namespace rendergraph {
@@ -57,14 +56,23 @@ class LLGLContext : public QObject {
     }
 
     /// Accessors for LLGL objects (valid after initialize()).
-    LLGL::RenderSystem* renderSystem() const { return m_pRenderSystem.get(); }
-    LLGL::SwapChain* swapChain() const { return m_pSwapChain; }
-    LLGL::CommandBuffer* commandBuffer() const { return m_pCommandBuffer; }
-    LLGL::CommandQueue* commandQueue() const { return m_pCommandQueue; }
+    LLGL::RenderSystem* renderSystem() const {
+        return m_pRenderSystem.get();
+    }
+    LLGL::SwapChain* swapChain() const {
+        return m_pSwapChain;
+    }
+    LLGL::CommandBuffer* commandBuffer() const {
+        return m_pCommandBuffer;
+    }
+    LLGL::CommandQueue* commandQueue() const {
+        return m_pCommandQueue;
+    }
 
     /// Create an LLGL shader from GLSL source code.
     LLGL::Shader* createShader(LLGL::ShaderType type,
-            const char* source, size_t sourceSize);
+            const char* source,
+            size_t sourceSize);
 
     /// Create a vertex/index/uniform buffer.
     LLGL::Buffer* createBuffer(size_t size,
@@ -87,7 +95,9 @@ class LLGLContext : public QObject {
             const LLGL::PipelineLayoutDescriptor& desc);
 
     /// Get the native surface for the current platform.
-    LLGL::Surface* surface() const { return m_pSurface.get(); }
+    LLGL::Surface* surface() const {
+        return m_pSurface.get();
+    }
 
   private:
     bool createRenderSystem();

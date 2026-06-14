@@ -1,7 +1,7 @@
 #include "llglwaveformwidget.h"
 
-#include <QPainter>
 #include <QDebug>
+#include <QPainter>
 
 #include "moc_llglwaveformwidget.cpp"
 #include "waveform/renderers/waveformrenderbackground.h"
@@ -16,13 +16,10 @@ LLGLWaveformWidget::LLGLWaveformWidget(const QString& group, QWidget* parent)
         : WaveformWidgetAbstract(group),
           QWidget(parent),
           m_initOk(false),
-          m_pRenderTimer(new QTimer(this)),
-          m_useFallback(true) {
+          m_pRenderTimer(new QTimer(this)) {
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_OpaquePaintEvent);
 
-    // Add QPainter-based renderers as fallback.
-    // These are always registered and used when LLGL is not available.
     addRenderer<WaveformRenderBackground>();
     addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
@@ -47,14 +44,12 @@ QWidget* LLGLWaveformWidget::widget() {
 }
 
 void LLGLWaveformWidget::paintEvent(QPaintEvent* event) {
-    if (!m_initOk || m_useFallback) {
-        // QPainter fallback
+    if (!m_initOk) {
         QPainter painter(this);
         draw(&painter, event);
         return;
     }
 
-    // LLGL rendering
     render();
 }
 
@@ -72,8 +67,7 @@ void LLGLWaveformWidget::showEvent(QShowEvent* event) {
         m_initOk = initializeLLGL();
     }
     if (m_initOk) {
-        m_useFallback = false;
-        m_pRenderTimer->start(16); // ~60fps
+        m_pRenderTimer->start(16);
     }
 }
 
@@ -89,13 +83,6 @@ void LLGLWaveformWidget::onRenderTimer() {
 }
 
 bool LLGLWaveformWidget::initializeLLGL() {
-    // LLGL rendering infrastructure placeholder.
-    // Full implementation: load RenderSystem with platform-appropriate backend,
-    // create Device, CommandBuffer, SwapChain for this widget's native window.
-    //
-    // For now we rely on the QPainter fallback (always registered above)
-    // and flag the widget as initialized. The render() override will use
-    // LLGL when m_initOk is true, otherwise falls through to QPainter.
     qDebug() << "LLGLWaveformWidget: initialized (QPainter fallback active)";
     return true;
 }
@@ -108,8 +95,8 @@ void LLGLWaveformWidget::shutdownLLGL() {
 void LLGLWaveformWidget::render() {
     // TODO: Full LLGL rendering pipeline
     // For now, fall through to QPainter
-    m_useFallback = true;
-    update();
+    QPainter painter(this);
+    paintEvent(nullptr);
 }
 
 void LLGLWaveformWidget::renderBackground() {

@@ -102,7 +102,8 @@ void LGLOpenGLNode::glBufferData(GLenum target, GLsizeiptr size, const GLvoid* d
     Q_UNUSED(usage);
 }
 
-void LGLOpenGLNode::glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data) {
+void LGLOpenGLNode::glBufferSubData(
+        GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data) {
     Q_UNUSED(target);
     Q_UNUSED(offset);
     Q_UNUSED(size);
@@ -127,7 +128,12 @@ void LGLOpenGLNode::glDisableVertexAttribArray(GLuint index) {
     Q_UNUSED(index);
 }
 
-void LGLOpenGLNode::glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* pointer) {
+void LGLOpenGLNode::glVertexAttribPointer(GLuint index,
+        GLint size,
+        GLenum type,
+        GLboolean normalized,
+        GLsizei stride,
+        const GLvoid* pointer) {
     Q_UNUSED(index);
     Q_UNUSED(size);
     Q_UNUSED(type);
@@ -183,7 +189,10 @@ GLuint LGLOpenGLNode::glCreateShader(GLenum type) {
     return 0;
 }
 
-void LGLOpenGLNode::glShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length) {
+void LGLOpenGLNode::glShaderSource(GLuint shader,
+        GLsizei count,
+        const GLchar** string,
+        const GLint* length) {
     Q_UNUSED(shader);
     Q_UNUSED(count);
     Q_UNUSED(string);
@@ -200,7 +209,8 @@ void LGLOpenGLNode::glGetShaderiv(GLuint shader, GLenum pname, GLint* params) {
     Q_UNUSED(params);
 }
 
-void LGLOpenGLNode::glGetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog) {
+void LGLOpenGLNode::glGetShaderInfoLog(
+        GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog) {
     Q_UNUSED(shader);
     Q_UNUSED(bufSize);
     Q_UNUSED(length);
@@ -259,9 +269,7 @@ void LGLOpenGLNode::glTexParameteri(GLenum target, GLenum pname, GLint param) {
     Q_UNUSED(param);
 }
 
-void LGLOpenGLNode::glTexImage2D(GLenum target, GLint level, GLint internalformat,
-                                   GLsizei width, GLint height, GLint border,
-                                   GLenum format, GLenum type, const GLvoid* pixels) {
+void LGLOpenGLNode::glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLint height, GLint border, GLenum format, GLenum type, const GLvoid* pixels) {
     Q_UNUSED(target);
     Q_UNUSED(level);
     Q_UNUSED(internalformat);

@@ -3,6 +3,7 @@
 #ifdef MIXXX_USE_LLGL
 
 #include <QOpenGLFunctions>
+
 #include "llgl/rendergraph/context.h"
 
 namespace rendergraph {

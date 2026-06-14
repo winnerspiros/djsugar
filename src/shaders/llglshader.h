@@ -3,9 +3,9 @@
 #ifdef MIXXX_USE_LLGL
 
 #include <LLGL/LLGL.h>
+#include <LLGL/PipelineState.h>
 #include <LLGL/RenderSystem.h>
 #include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
 
 #include <QMatrix4x4>
 #include <QString>
