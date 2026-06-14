@@ -10,7 +10,6 @@
 
 #ifdef MIXXX_USE_LLGL
 #include "rendergraph/llgl/rendergraph/context.h"
-#include "rendergraph/llgl/backend/llglshaderprogram.h"
 #endif
 
 using namespace rendergraph;
@@ -30,7 +29,6 @@ GLenum toGlDrawingMode(DrawingMode mode) {
 
 void BaseGeometryNode::initialize() {
 #ifdef MIXXX_USE_LLGL
-    // LLGL path: don't call initializeOpenGLFunctions
     GeometryNode* pThis = static_cast<GeometryNode*>(this);
     pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
     pThis->material().setUniform(0, engine()->matrix());
@@ -52,6 +50,19 @@ void BaseGeometryNode::render() {
     }
 
 #ifdef MIXXX_USE_LLGL
+    renderLLGL(pThis, geometry, material);
+#else
+    renderGL(pThis, geometry, material);
+#endif
+}
+
+#ifdef MIXXX_USE_LLGL
+
+void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+    Q_UNUSED(pThis);
+
     // Get LLGL context from the node
     auto* pLLGLNode = dynamic_cast<BaseLLGLNode*>(this);
     if (!pLLGLNode) {
@@ -125,8 +136,19 @@ void BaseGeometryNode::render() {
     pMatShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
 
     pMatShader->release();
+}
+
+void BaseGeometryNode::renderGL(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+    Q_UNUSED(pThis);
 #else
-    // Original OpenGL path
+
+void BaseGeometryNode::renderGL(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+    Q_UNUSED(pThis);
+#endif
     QOpenGLShaderProgram& shader = material.shader();
     VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
         return;
@@ -192,7 +214,6 @@ void BaseGeometryNode::render() {
     }
 
     shader.release();
-#endif
 }
 
 void BaseGeometryNode::resize(int, int) {

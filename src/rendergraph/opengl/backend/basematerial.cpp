@@ -4,6 +4,7 @@
 
 using namespace rendergraph;
 
+#ifndef MIXXX_USE_LLGL
 void BaseMaterial::setShader(std::shared_ptr<MaterialShader> pShader) {
     m_pShader = pShader;
 }
@@ -27,6 +28,7 @@ void BaseMaterial::modifyShader() {
 bool BaseMaterial::isLastModifierOfShader() const {
     return this == m_pShader->lastModifiedByMaterial();
 }
+#endif
 
 int BaseMaterial::compare(const BaseMaterial* other) const {
     auto pThis = static_cast<const Material*>(this);
