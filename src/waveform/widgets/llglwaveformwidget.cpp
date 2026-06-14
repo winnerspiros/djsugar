@@ -1,7 +1,7 @@
 #include "llglwaveformwidget.h"
 
-#include <QPainter>
 #include <QDebug>
+#include <QPainter>
 
 #include "moc_llglwaveformwidget.cpp"
 #include "waveform/renderers/waveformrenderbackground.h"

@@ -1,13 +1,13 @@
 #pragma once
 
-#include <QWidget>
-#include <QTimer>
-#include <QOpenGLContext>
 #include <QOffscreenSurface>
+#include <QOpenGLContext>
+#include <QTimer>
+#include <QWidget>
 #include <memory>
 
-#include "waveform/widgets/waveformwidgetabstract.h"
 #include "rendergraph/llgl/rendergraph/context.h"
+#include "waveform/widgets/waveformwidgetabstract.h"
 
 /// LLGLWaveformWidget uses LLGL (Low Level Graphics Library) to render
 /// waveforms with hardware acceleration on ALL platforms.
