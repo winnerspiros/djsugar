@@ -28,16 +28,12 @@ GLenum toGlDrawingMode(DrawingMode mode) {
 } // namespace
 
 void BaseGeometryNode::initialize() {
-#ifdef MIXXX_USE_LLGL
-    GeometryNode* pThis = static_cast<GeometryNode*>(this);
-    pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
-    pThis->material().setUniform(0, engine()->matrix());
-#else
+#ifndef MIXXX_USE_LLGL
     initializeOpenGLFunctions();
+#endif
     GeometryNode* pThis = static_cast<GeometryNode*>(this);
     pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
     pThis->material().setUniform(0, engine()->matrix());
-#endif
 }
 
 void BaseGeometryNode::render() {
@@ -58,44 +54,29 @@ void BaseGeometryNode::render() {
 
 #ifdef MIXXX_USE_LLGL
 
+// LLGL rendering path
 void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         Geometry& geometry,
         Material& material) {
     Q_UNUSED(pThis);
 
-    // Get LLGL context from the node
     auto* pLLGLNode = dynamic_cast<BaseLLGLNode*>(this);
-    if (!pLLGLNode) {
-        return;
-    }
+    if (!pLLGLNode) return;
     auto* pContext = pLLGLNode->context();
-    if (!pContext || !pContext->isValid()) {
-        return;
-    }
+    if (!pContext || !pContext->isValid()) return;
     auto* pCmdBuf = pContext->commandBuffer();
-    if (!pCmdBuf) {
-        return;
-    }
+    if (!pCmdBuf) return;
 
-    // Get the LLGL material shader
     LLGLMaterialShader* pMatShader = nullptr;
     if (material.isLLGL()) {
         pMatShader = &static_cast<LLGLMaterialShader&>(material.shader());
     }
-    if (!pMatShader || !pMatShader->isValid()) {
-        return;
-    }
+    if (!pMatShader || !pMatShader->isValid()) return;
 
-    // Set command buffer and context on shader
     pMatShader->setContext(pContext);
     pMatShader->setCommandBuffer(pCmdBuf);
+    if (!pMatShader->bind()) return;
 
-    // Bind pipeline state + uniform buffer
-    if (!pMatShader->bind()) {
-        return;
-    }
-
-    // Update vertex buffer from geometry data
     if (geometry.vertexCount() > 0 && geometry.sizeOfVertex() > 0) {
         pMatShader->updateVertexBuffer(
                 geometry.vertexDataAs<float>(),
@@ -103,7 +84,6 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
                 static_cast<std::uint32_t>(geometry.sizeOfVertex()));
     }
 
-    // Set uniforms from cache
     if (material.clearUniformsCacheDirty() || !material.isLastModifierOfShader()) {
         material.modifyShader();
         const UniformsCache& cache = material.uniformsCache();
@@ -132,23 +112,25 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         }
     }
 
-    // Draw
     pMatShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
-
     pMatShader->release();
 }
 
-void BaseGeometryNode::renderGL(GeometryNode* pThis,
-        Geometry& geometry,
-        Material& material) {
-    Q_UNUSED(pThis);
+// Stub for LLGL builds — not called but needs to compile
+void BaseGeometryNode::renderGL(GeometryNode*,
+        Geometry&,
+        Material&) {
+    // Not used when LLGL is enabled
+}
+
 #else
 
+// OpenGL rendering path (original, unchanged)
 void BaseGeometryNode::renderGL(GeometryNode* pThis,
         Geometry& geometry,
         Material& material) {
     Q_UNUSED(pThis);
-#endif
+
     QOpenGLShaderProgram& shader = material.shader();
     VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
         return;
@@ -215,6 +197,8 @@ void BaseGeometryNode::renderGL(GeometryNode* pThis,
 
     shader.release();
 }
+
+#endif
 
 void BaseGeometryNode::resize(int, int) {
     VERIFY_OR_DEBUG_ASSERT(engine() != nullptr) {

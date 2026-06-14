@@ -12,6 +12,8 @@
 
 #ifdef MIXXX_USE_LLGL
 #include "rendergraph/llgl/backend/shadercache.h"
+#else
+#include <QOpenGLShaderProgram>
 #endif
 
 namespace rendergraph {
@@ -79,6 +81,9 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         m_pLLGLShader = pShader;
     }
 #else
+#ifndef MIXXX_USE_LLGL
+#include <QOpenGLShaderProgram>
+#endif
     QOpenGLShaderProgram& shader() {
         return *m_pShader;
     }

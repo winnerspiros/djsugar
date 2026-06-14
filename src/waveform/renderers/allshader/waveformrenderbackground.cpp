@@ -2,6 +2,10 @@
 
 #include "waveform/renderers/waveformwidgetrenderer.h"
 
+#ifdef MIXXX_USE_LLGL
+#include "rendergraph/llgl/rendergraph/context.h"
+#endif
+
 namespace allshader {
 
 WaveformRenderBackground::WaveformRenderBackground(
@@ -22,11 +26,16 @@ void WaveformRenderBackground::setup(const QDomNode& node,
 }
 
 void WaveformRenderBackground::paintGL() {
+#ifdef MIXXX_USE_LLGL
+    // LLGL: clear is handled by the widget's beginFrame
+    Q_UNUSED(m_backgroundColor);
+#else
     glClearColor(static_cast<float>(m_backgroundColor.redF()),
             static_cast<float>(m_backgroundColor.greenF()),
             static_cast<float>(m_backgroundColor.blueF()),
             1.f);
     glClear(GL_COLOR_BUFFER_BIT);
+#endif
 }
 
 } // namespace allshader
