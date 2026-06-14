@@ -2,34 +2,35 @@
 
 #ifdef MIXXX_USE_LLGL
 
-#include <LLGL/Buffer.h>
+#include <LLGL/LLGL.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/Device.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
-#include <LLGL/Device.h>
-#include <LLGL/Format.h>
-#include <LLGL/LLGL.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/RenderSystem.h>
-#include <LLGL/RenderTarget.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/Shader.h>
-#include <LLGL/Surface.h>
 #include <LLGL/SwapChain.h>
+#include <LLGL/Shader.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/PipelineLayout.h>
+#include <LLGL/Buffer.h>
 #include <LLGL/Texture.h>
+#include <LLGL/Sampler.h>
 #include <LLGL/VertexAttribute.h>
+#include <LLGL/Format.h>
 
+#include <QObject>
 #include <QMutex>
 #include <QWidget>
-#include <QWindow>
 #include <memory>
 
-/// LLGLContext manages the LLGL rendering infrastructure for a QWidget.
-/// It creates and owns the RenderSystem, Device, SwapChain, and CommandBuffer.
+namespace rendergraph {
+
+/// LLGLContext manages the LLGL rendering infrastructure.
+/// Creates and owns the RenderSystem, Device, SwapChain, and CommandBuffer.
 class LLGLContext : public QObject {
     Q_OBJECT
   public:
     explicit LLGLContext(QObject* parent = nullptr);
-    ~LLGLContext() override;
+    ~LLGLContext() override();
 
     bool initialize(QWidget* pWidget);
     void shutdown();
@@ -54,12 +55,13 @@ class LLGLContext : public QObject {
         return m_pCommandQueue;
     }
 
-    LLGL::Shader* createShader(LLGL::ShaderType type,
-            const char* source,
-            size_t sourceSize);
-    LLGL::Buffer* createBuffer(size_t size,
-            LLGL::BindFlags::Bits bindFlags,
-            const void* initialData = nullptr);
+    LLGL::Shader* createShader(
+            LLGL::ShaderType type, const char* source, std::uint32_t sourceSize);
+    LLGL::Buffer* createBuffer(
+            std::uint64_t size, LLGL::BindFlags::Bits bindFlags,
+            const void* initialData = nullptr,
+            const LLGL::VertexAttribute* attribs = nullptr,
+            std::uint32_t numAttribs = 0);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);
     LLGL::Sampler* createSampler(const LLGL::SamplerDescriptor& desc);
@@ -67,10 +69,6 @@ class LLGLContext : public QObject {
             const LLGL::GraphicsPipelineDescriptor& desc);
     LLGL::PipelineLayout* createPipelineLayout(
             const LLGL::PipelineLayoutDescriptor& desc);
-
-    LLGL::Surface* surface() const {
-        return m_pSurface.get();
-    }
 
   private:
     bool createRenderSystem();
@@ -89,3 +87,5 @@ class LLGLContext : public QObject {
 };
 
 } // namespace rendergraph
+
+#endif // MIXXX_USE_LLGL

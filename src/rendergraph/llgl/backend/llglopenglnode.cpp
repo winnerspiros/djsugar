@@ -15,7 +15,9 @@ LGLOpenGLNode::~LGLOpenGLNode() {
 }
 
 void LGLOpenGLNode::initialize() {
-    initializeOpenGLFunctions();
+    // Don't call initializeOpenGLFunctions() — we override all GL methods
+    // to use LLGL command buffers instead of calling the GL driver directly.
+    qDebug() << "LGLOpenGLNode: initialized (LLGL backend)";
 }
 
 void LGLOpenGLNode::glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) {
