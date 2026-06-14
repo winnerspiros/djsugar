@@ -22,10 +22,9 @@ static const char* kVertexShaderSource = R"(
     #version 330 core
     layout(location = 0) in vec2 aPosition;
     layout(location = 1) in vec3 aColor;
-    uniform mat4 uProjection;
     out vec3 vColor;
     void main() {
-        gl_Position = uProjection * vec4(aPosition, 0.0, 1.0);
+        gl_Position = vec4(aPosition, 0.0, 1.0);
         vColor = aColor;
     }
 )";
@@ -41,10 +40,7 @@ static const char* kFragmentShaderSource = R"(
 )";
 
 // Vertex format: position (x, y) + color (r, g, b)
-struct WaveformVertex {
-    float x, y;
-    float r, g, b;
-};
+// (defined in header)
 
 LLGLWaveformWidget::LLGLWaveformWidget(const QString& group, QWidget* parent)
         : WaveformWidgetAbstract(group),
@@ -56,7 +52,6 @@ LLGLWaveformWidget::LLGLWaveformWidget(const QString& group, QWidget* parent)
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_OpaquePaintEvent);
 
-    // Add QPainter-based renderers as fallback
     addRenderer<WaveformRenderBackground>();
     addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
@@ -94,7 +89,6 @@ void LLGLWaveformWidget::paintEvent(QPaintEvent* event) {
         renderFallback();
         return;
     }
-
     renderLLGL();
 }
 
@@ -116,7 +110,7 @@ void LLGLWaveformWidget::showEvent(QShowEvent* event) {
     }
 }
 
-void LLGLWaveformWidget::hideEvent(QHideEvent* event) {
+void LLGLWaveformWidget::hideEvent(QEvent* event) {
     QWidget::hideEvent(event);
     m_pRenderTimer->stop();
 }
@@ -128,7 +122,7 @@ void LLGLWaveformWidget::onRenderTimer() {
 }
 
 bool LLGLWaveformWidget::initializeLLGL() {
-    if (!m_pContext) {
+    if (!m_pContext || !m_renderState) {
         return false;
     }
 
@@ -142,13 +136,13 @@ bool LLGLWaveformWidget::initializeLLGL() {
         return false;
     }
 
-    if (!createPipelineState()) {
-        qWarning() << "LLGLWaveformWidget: failed to create pipeline state";
+    if (!createBuffers()) {
+        qWarning() << "LLGLWaveformWidget: failed to create buffers";
         return false;
     }
 
-    if (!createBuffers()) {
-        qWarning() << "LLGLWaveformWidget: failed to create buffers";
+    if (!createPipelineState()) {
+        qWarning() << "LLGLWaveformWidget: failed to create pipeline state";
         return false;
     }
 
@@ -165,6 +159,10 @@ void LLGLWaveformWidget::shutdownLLGL() {
 
     auto* pDevice = m_pContext->renderSystem();
     if (pDevice) {
+        auto* pQueue = m_pContext->commandQueue();
+        if (pQueue) {
+            pQueue->WaitIdle();
+        }
         if (m_renderState->pPipelineState) {
             pDevice->Release(*m_renderState->pPipelineState);
         }
@@ -173,9 +171,6 @@ void LLGLWaveformWidget::shutdownLLGL() {
         }
         if (m_renderState->pVertexBuffer) {
             pDevice->Release(*m_renderState->pVertexBuffer);
-        }
-        if (m_renderState->pIndexBuffer) {
-            pDevice->Release(*m_renderState->pIndexBuffer);
         }
         if (m_renderState->pVertexShader) {
             pDevice->Release(*m_renderState->pVertexShader);
@@ -196,79 +191,25 @@ bool LLGLWaveformWidget::createShaders() {
         return false;
     }
 
-    // Create vertex shader
     LLGL::ShaderDescriptor vsDesc;
     vsDesc.type = LLGL::ShaderType::Vertex;
     vsDesc.source = kVertexShaderSource;
-    vsDesc.sourceSize = strlen(kVertexShaderSource);
+    vsDesc.sourceSize = static_cast<std::uint32_t>(strlen(kVertexShaderSource));
     vsDesc.entryPoint = "main";
-    vsDesc.profile = nullptr;
 
     m_renderState->pVertexShader = pDevice->CreateShader(vsDesc);
     if (!m_renderState->pVertexShader) {
         return false;
     }
 
-    // Create fragment shader
     LLGL::ShaderDescriptor fsDesc;
     fsDesc.type = LLGL::ShaderType::Fragment;
     fsDesc.source = kFragmentShaderSource;
-    fsDesc.sourceSize = strlen(kFragmentShaderSource);
+    fsDesc.sourceSize = static_cast<std::uint32_t>(strlen(kFragmentShaderSource));
     fsDesc.entryPoint = "main";
-    fsDesc.profile = nullptr;
 
     m_renderState->pFragmentShader = pDevice->CreateShader(fsDesc);
-    if (!m_renderState->pFragmentShader) {
-        return false;
-    }
-
-    return true;
-}
-
-bool LLGLWaveformWidget::createPipelineState() {
-    auto* pDevice = m_pContext->renderSystem();
-    if (!pDevice) {
-        return false;
-    }
-
-    // Pipeline layout (empty - no uniform buffers needed for now)
-    LLGL::PipelineLayoutDescriptor layoutDesc;
-    m_renderState->pPipelineLayout = pDevice->CreatePipelineLayout(layoutDesc);
-
-    // Graphics pipeline descriptor
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineDesc.pipelineLayout = m_renderState->pPipelineLayout;
-    pipelineDesc.vertexShader = m_renderState->pVertexShader;
-    pipelineDesc.fragmentShader = m_renderState->pFragmentShader;
-
-    // Vertex attributes
-    LLGL::VertexAttribute vertexAttributes[2];
-    vertexAttributes[0].name = "aPosition";
-    vertexAttributes[0].format = LLGL::Format::RG32Float;
-    vertexAttributes[0].location = 0;
-    vertexAttributes[0].offset = 0;
-
-    vertexAttributes[1].name = "aColor";
-    vertexAttributes[1].format = LLGL::Format::RGB32Float;
-    vertexAttributes[1].location = 1;
-    vertexAttributes[1].offset = sizeof(float) * 2;
-
-    pipelineDesc.vertexAttributes = vertexAttributes;
-    pipelineDesc.numVertexAttributes = 2;
-
-    // Primitive topology
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
-
-    // Blend state
-    pipelineDesc.blend.targets[0].blendEnable = true;
-    pipelineDesc.blend.targets[0].srcColor = LLGL::BlendOp::SrcAlpha;
-    pipelineDesc.blend.targets[0].dstColor = LLGL::BlendOp::InvSrcAlpha;
-
-    // Rasterizer state
-    pipelineDesc.rasterizer.cullMode = LLGL::CullMode::None;
-
-    m_renderState->pPipelineState = pDevice->CreatePipelineState(pipelineDesc);
-    return m_renderState->pPipelineState != nullptr;
+    return m_renderState->pFragmentShader != nullptr;
 }
 
 bool LLGLWaveformWidget::createBuffers() {
@@ -277,19 +218,60 @@ bool LLGLWaveformWidget::createBuffers() {
         return false;
     }
 
-    // Create dynamic vertex buffer (will be updated each frame)
-    const size_t maxVertices = 65536;
+    // Define vertex attributes
+    LLGL::VertexAttribute vertexAttribs[2];
+    vertexAttribs[0].name = "aPosition";
+    vertexAttribs[0].format = LLGL::Format::RG32Float;
+    vertexAttribs[0].location = 0;
+    vertexAttribs[0].offset = 0;
+    vertexAttribs[0].stride = sizeof(WaveformVertex);
+
+    vertexAttribs[1].name = "aColor";
+    vertexAttribs[1].format = LLGL::Format::RGB32Float;
+    vertexAttribs[1].location = 1;
+    vertexAttribs[1].offset = sizeof(float) * 2;
+    vertexAttribs[1].stride = sizeof(WaveformVertex);
+
+    // Create vertex buffer with vertex attributes
+    const std::uint64_t bufferSize = 65536 * sizeof(WaveformVertex);
+
     LLGL::BufferDescriptor vbDesc;
-    vbDesc.size = maxVertices * sizeof(WaveformVertex);
+    vbDesc.size = bufferSize;
     vbDesc.bindFlags = LLGL::BindFlags::VertexBuffer;
     vbDesc.cpuAccessFlags = LLGL::CPUAccessFlags::Write;
+    vbDesc.vertexAttribs = vertexAttribs;
+    vbDesc.miscFlags = LLGL::MiscFlags::DynamicUsage;
 
     m_renderState->pVertexBuffer = pDevice->CreateBuffer(vbDesc);
-    if (!m_renderState->pVertexBuffer) {
+    return m_renderState->pVertexBuffer != nullptr;
+}
+
+bool LLGLWaveformWidget::createPipelineState() {
+    auto* pDevice = m_pContext->renderSystem();
+    if (!pDevice) {
         return false;
     }
 
-    return true;
+    // Pipeline layout (empty - no binding points)
+    LLGL::PipelineLayoutDescriptor layoutDesc;
+    m_renderState->pPipelineLayout = pDevice->CreatePipelineLayout(layoutDesc);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.pipelineLayout = m_renderState->pPipelineLayout;
+    pipelineDesc.vertexShader = m_renderState->pVertexShader;
+    pipelineDesc.fragmentShader = m_renderState->pFragmentShader;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+
+    // Rasterizer: no culling
+    pipelineDesc.rasterizer.cullMode = LLGL::CullMode::Disabled;
+
+    // Blend: standard alpha blending
+    pipelineDesc.blend.targets[0].blendEnabled = true;
+    pipelineDesc.blend.targets[0].srcColor = LLGL::BlendOp::SrcAlpha;
+    pipelineDesc.blend.targets[0].dstColor = LLGL::BlendOp::InvSrcAlpha;
+
+    m_renderState->pPipelineState = pDevice->CreatePipelineState(pipelineDesc);
+    return m_renderState->pPipelineState != nullptr;
 }
 
 void LLGLWaveformWidget::renderLLGL() {
@@ -298,32 +280,24 @@ void LLGLWaveformWidget::renderLLGL() {
         return;
     }
 
-    // Update vertex data from waveform
     updateVertexData();
 
-    if (m_renderState->vertexCount == 0) {
-        // Nothing to draw, just clear
-        m_pContext->beginFrame(QColor(0, 0, 0, 255));
-        m_pContext->endFrame();
-        return;
-    }
-
-    // Render using LLGL
     m_pContext->beginFrame(QColor(0, 0, 0, 255));
 
     auto* pCmdBuf = m_pContext->commandBuffer();
-    if (pCmdBuf && m_renderState->pPipelineState) {
-        // Set pipeline state
+    if (pCmdBuf && m_renderState->pPipelineState && m_renderState->vertexCount > 0) {
         pCmdBuf->SetPipelineState(*m_renderState->pPipelineState);
+        pCmdBuf->SetVertexBuffer(*m_renderState->pVertexBuffer);
 
-        // Set vertex buffer
-        LLGL::VertexBufferStream vertexStream;
-        vertexStream.buffer = m_renderState->pVertexBuffer;
-        vertexStream.stride = sizeof(WaveformVertex);
-        vertexStream.offset = 0;
-        pCmdBuf->SetVertexBuffer(vertexStream);
+        LLGL::Viewport viewport;
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(width());
+        viewport.height = static_cast<float>(height());
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        pCmdBuf->SetViewport(viewport);
 
-        // Draw
         pCmdBuf->Draw(static_cast<std::uint32_t>(m_renderState->vertexCount), 0);
     }
 
@@ -336,7 +310,6 @@ void LLGLWaveformWidget::updateVertexData() {
         return;
     }
 
-    // Get waveform data from the track
     TrackPointer pTrack = getTrackInfo();
     if (!pTrack) {
         m_renderState->vertexCount = 0;
@@ -360,17 +333,24 @@ void LLGLWaveformWidget::updateVertexData() {
     const double firstVisualFrame = getFirstDisplayedPosition() * visualFramesSize;
     const double lastVisualFrame = getLastDisplayedPosition() * visualFramesSize;
     const int pixelLength = width();
-    const double visualIncrementPerPixel = (lastVisualFrame - firstVisualFrame) / static_cast<double>(pixelLength);
+
+    if (pixelLength <= 0) {
+        m_renderState->vertexCount = 0;
+        return;
+    }
+
+    const double visualIncrementPerPixel =
+            (lastVisualFrame - firstVisualFrame) / static_cast<double>(pixelLength);
     const double maxSamplingRange = visualIncrementPerPixel / 2.0;
 
     const float breadth = static_cast<float>(getBreadth());
     const float halfBreadth = breadth / 2.0f;
     const float heightFactor = halfBreadth / 255.0f;
 
-    // Waveform color (green)
-    const float signalR = 0.0f;
-    const float signalG = 1.0f;
-    const float signalB = 0.3f;
+    // Waveform color (green-ish)
+    constexpr float signalR = 0.0f;
+    constexpr float signalG = 1.0f;
+    constexpr float signalB = 0.3f;
 
     m_vertices.clear();
 
@@ -379,7 +359,8 @@ void LLGLWaveformWidget::updateVertexData() {
         const int visualFrameStart = std::lround(xVisualFrame - maxSamplingRange);
         const int visualFrameStop = std::lround(xVisualFrame + maxSamplingRange);
         const int visualIndexStart = std::max(visualFrameStart * 2, 0);
-        const int visualIndexStop = std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2, dataSize - 1);
+        const int visualIndexStop =
+                std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2, dataSize - 1);
 
         float maxSample = 0.0f;
         for (int i = visualIndexStart; i < visualIndexStop; i++) {
@@ -392,11 +373,10 @@ void LLGLWaveformWidget::updateVertexData() {
         const float bottom = halfBreadth + heightFactor * maxSample;
 
         // Two triangles (6 vertices) for a rectangle
-        // Triangle 1
         m_vertices.push_back({fpos - halfPixelSize, top, signalR, signalG, signalB});
         m_vertices.push_back({fpos + halfPixelSize, top, signalR, signalG, signalB});
         m_vertices.push_back({fpos - halfPixelSize, bottom, signalR, signalG, signalB});
-        // Triangle 2
+
         m_vertices.push_back({fpos - halfPixelSize, bottom, signalR, signalG, signalB});
         m_vertices.push_back({fpos + halfPixelSize, top, signalR, signalG, signalB});
         m_vertices.push_back({fpos + halfPixelSize, bottom, signalR, signalG, signalB});
@@ -404,14 +384,18 @@ void LLGLWaveformWidget::updateVertexData() {
         xVisualFrame += visualIncrementPerPixel;
     }
 
-    m_renderState->vertexCount = static_cast<uint32_t>(m_vertices.size());
+    m_renderState->vertexCount = static_cast<std::uint32_t>(m_vertices.size());
 
-    // Upload to LLGL buffer
-    if (m_renderState->vertexCount > 0 && m_renderState->pVertexBuffer) {
+    // Upload vertex data to LLGL buffer
+    if (m_renderState->vertexCount > 0) {
         auto* pCmdBuf = m_pContext->commandBuffer();
         if (pCmdBuf) {
             const size_t dataSize = m_vertices.size() * sizeof(WaveformVertex);
-            pCmdBuf->UpdateBuffer(*m_renderState->pVertexBuffer, 0, m_vertices.data(), dataSize);
+            pCmdBuf->UpdateBuffer(
+                    *m_renderState->pVertexBuffer,
+                    0,
+                    m_vertices.data(),
+                    static_cast<std::uint64_t>(dataSize));
         }
     }
 }
