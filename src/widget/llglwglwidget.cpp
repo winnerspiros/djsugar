@@ -4,10 +4,6 @@
 
 #include <QDebug>
 #include <QWindow>
-#include <QGuiApplication>
-#include <QScreen>
-#include <QOpenGLContext>
-#include <QOpenGLFunctions>
 
 #include "widget/trackdroptarget.h"
 #include "rendergraph/llgl/rendergraph/context.h"
@@ -56,7 +52,7 @@ void LLGLWGLWidget::swapBuffers() {
 }
 
 void LLGLWGLWidget::paintGL() {
-    // Base class does nothing — subclasses override
+    // Base class does nothing — subclasses override with engine->render() etc.
 }
 
 void LLGLWGLWidget::resizeGL(int w, int h) {
@@ -85,10 +81,7 @@ void LLGLWGLWidget::showEvent(QShowEvent* event) {
         if (m_pContext->initialize(this)) {
             m_initOk = true;
             m_initialized = true;
-
-            // Initialize GL functions through LLGL's context
             initializeGL();
-
             m_pRenderTimer->start(16); // ~60 FPS
         } else {
             qWarning() << "LLGLWGLWidget: failed to initialize LLGL context";
@@ -112,10 +105,10 @@ void LLGLWGLWidget::paintEvent(QPaintEvent* event) {
         return;
     }
 
-    // Begin LLGL frame
+    // Begin LLGL frame — clear to black
     m_pContext->beginFrame(QColor(0, 0, 0, 255));
 
-    // Set viewport through LLGL
+    // Set viewport
     auto* pCmdBuf = m_pContext->commandBuffer();
     if (pCmdBuf) {
         LLGL::Viewport viewport;
@@ -128,9 +121,7 @@ void LLGLWGLWidget::paintEvent(QPaintEvent* event) {
         pCmdBuf->SetViewport(viewport);
     }
 
-    // Call subclass rendering (paintGL)
-    // The subclass uses QOpenGLFunctions and QOpenGLShaderProgram
-    // which work because LLGL's OpenGL backend provides a valid GL context
+    // Call subclass rendering
     paintGL();
 
     // End frame and present

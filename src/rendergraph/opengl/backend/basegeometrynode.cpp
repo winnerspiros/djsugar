@@ -29,10 +29,17 @@ GLenum toGlDrawingMode(DrawingMode mode) {
 } // namespace
 
 void BaseGeometryNode::initialize() {
+#ifdef MIXXX_USE_LLGL
+    // LLGL path: don't call initializeOpenGLFunctions
+    GeometryNode* pThis = static_cast<GeometryNode*>(this);
+    pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
+    pThis->material().setUniform(0, engine()->matrix());
+#else
     initializeOpenGLFunctions();
     GeometryNode* pThis = static_cast<GeometryNode*>(this);
     pThis->material().setShader(ShaderCache::getShaderForMaterial(&pThis->material()));
     pThis->material().setUniform(0, engine()->matrix());
+#endif
 }
 
 void BaseGeometryNode::render() {
@@ -45,41 +52,42 @@ void BaseGeometryNode::render() {
     }
 
 #ifdef MIXXX_USE_LLGL
-    // LLGL rendering path
-    renderLLGL(pThis, geometry, material);
-#else
-    // OpenGL rendering path (original)
-    renderGL(pThis, geometry, material);
-#endif
-}
-
-#ifdef MIXXX_USE_LLGL
-void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
-        Geometry& geometry,
-        Material& material) {
-    Q_UNUSED(pThis);
-
-    // Get the LLGL context from the widget
+    // Get LLGL context from the node
     auto* pLLGLNode = dynamic_cast<BaseLLGLNode*>(this);
     if (!pLLGLNode) {
         return;
     }
-
     auto* pContext = pLLGLNode->context();
     if (!pContext || !pContext->isValid()) {
         return;
     }
-
     auto* pCmdBuf = pContext->commandBuffer();
     if (!pCmdBuf) {
         return;
     }
 
-    // Get or create the LLGL shader program for this material
-    QOpenGLShaderProgram& shader = material.shader();
+    // Get the LLGL shader program
+    LLGLShaderProgram* pShader = static_cast<LLGLShaderProgram*>(&material.shader());
+    if (!pShader || !pShader->isValid()) {
+        return;
+    }
 
-    // Set blend state (baked into pipeline state for LLGL)
-    // LLGL pipeline state already has blend configured
+    // Set command buffer on shader
+    pShader->setCommandBuffer(pCmdBuf);
+    pShader->setContext(pContext);
+
+    // Bind pipeline state + uniform buffer
+    if (!pShader->bind()) {
+        return;
+    }
+
+    // Update vertex buffer from geometry data
+    if (geometry.vertexCount() > 0 && geometry.sizeOfVertex() > 0) {
+        pShader->updateVertexBuffer(
+                geometry.vertexDataAs<float>(),
+                static_cast<std::uint32_t>(geometry.vertexCount()),
+                static_cast<std::uint32_t>(geometry.sizeOfVertex()));
+    }
 
     // Set uniforms from cache
     if (material.clearUniformsCacheDirty() || !material.isLastModifierOfShader()) {
@@ -88,42 +96,34 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         for (int i = 0; i < cache.count(); i++) {
             int location = material.uniformLocation(i);
             switch (cache.type(i)) {
-            case Type::UInt:
-                // TODO: Set via LLGL push constants
-                break;
             case Type::Float:
-                // TODO: Set via LLGL push constants
+                pShader->setUniformValue(location, cache.get<GLfloat>(i));
                 break;
             case Type::Vector2D:
-                // TODO: Set via LLGL push constants
+                pShader->setUniformValue(location, cache.get<QVector2D>(i));
                 break;
             case Type::Vector3D:
-                // TODO: Set via LLGL push constants
+                pShader->setUniformValue(location, cache.get<QVector3D>(i));
                 break;
             case Type::Vector4D:
-                // TODO: Set via LLGL push constants
+                pShader->setUniformValue(location, cache.get<QVector4D>(i));
                 break;
             case Type::Matrix4x4:
-                // TODO: Set via LLGL push constants
+                pShader->setUniformValue(location, cache.get<QMatrix4x4>(i));
+                break;
+            case Type::UInt:
+                pShader->setUniformValue(location, cache.get<GLuint>(i));
                 break;
             }
         }
     }
 
-    // Set vertex attributes and draw
-    // TODO: Use LLGL vertex buffer and Draw command
-    // For now, fall back to QPainter
-    Q_UNUSED(geometry);
-}
+    // Draw
+    pShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
 
-void BaseGeometryNode::renderGL(GeometryNode* pThis,
-        Geometry& geometry,
-        Material& material) {
+    pShader->release();
 #else
-void BaseGeometryNode::render(GeometryNode* pThis,
-        Geometry& geometry,
-        Material& material) {
-#endif
+    // Original OpenGL path
     QOpenGLShaderProgram& shader = material.shader();
     VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
         return;
@@ -189,6 +189,7 @@ void BaseGeometryNode::render(GeometryNode* pThis,
     }
 
     shader.release();
+#endif
 }
 
 void BaseGeometryNode::resize(int, int) {
