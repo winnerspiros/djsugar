@@ -66,24 +66,27 @@ void BaseGeometryNode::render() {
         return;
     }
 
-    // Get the LLGL shader program
-    LLGLShaderProgram* pShader = static_cast<LLGLShaderProgram*>(&material.shader());
-    if (!pShader || !pShader->isValid()) {
+    // Get the LLGL material shader
+    LLGLMaterialShader* pMatShader = nullptr;
+    if (material.isLLGL()) {
+        pMatShader = &static_cast<LLGLMaterialShader&>(material.shader());
+    }
+    if (!pMatShader || !pMatShader->isValid()) {
         return;
     }
 
-    // Set command buffer on shader
-    pShader->setCommandBuffer(pCmdBuf);
-    pShader->setContext(pContext);
+    // Set command buffer and context on shader
+    pMatShader->setContext(pContext);
+    pMatShader->setCommandBuffer(pCmdBuf);
 
     // Bind pipeline state + uniform buffer
-    if (!pShader->bind()) {
+    if (!pMatShader->bind()) {
         return;
     }
 
     // Update vertex buffer from geometry data
     if (geometry.vertexCount() > 0 && geometry.sizeOfVertex() > 0) {
-        pShader->updateVertexBuffer(
+        pMatShader->updateVertexBuffer(
                 geometry.vertexDataAs<float>(),
                 static_cast<std::uint32_t>(geometry.vertexCount()),
                 static_cast<std::uint32_t>(geometry.sizeOfVertex()));
@@ -97,31 +100,31 @@ void BaseGeometryNode::render() {
             int location = material.uniformLocation(i);
             switch (cache.type(i)) {
             case Type::Float:
-                pShader->setUniformValue(location, cache.get<GLfloat>(i));
+                pMatShader->setUniformValue(location, cache.get<GLfloat>(i));
                 break;
             case Type::Vector2D:
-                pShader->setUniformValue(location, cache.get<QVector2D>(i));
+                pMatShader->setUniformValue(location, cache.get<QVector2D>(i));
                 break;
             case Type::Vector3D:
-                pShader->setUniformValue(location, cache.get<QVector3D>(i));
+                pMatShader->setUniformValue(location, cache.get<QVector3D>(i));
                 break;
             case Type::Vector4D:
-                pShader->setUniformValue(location, cache.get<QVector4D>(i));
+                pMatShader->setUniformValue(location, cache.get<QVector4D>(i));
                 break;
             case Type::Matrix4x4:
-                pShader->setUniformValue(location, cache.get<QMatrix4x4>(i));
+                pMatShader->setUniformValue(location, cache.get<QMatrix4x4>(i));
                 break;
             case Type::UInt:
-                pShader->setUniformValue(location, cache.get<GLuint>(i));
+                pMatShader->setUniformValue(location, cache.get<GLuint>(i));
                 break;
             }
         }
     }
 
     // Draw
-    pShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
+    pMatShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
 
-    pShader->release();
+    pMatShader->release();
 #else
     // Original OpenGL path
     QOpenGLShaderProgram& shader = material.shader();

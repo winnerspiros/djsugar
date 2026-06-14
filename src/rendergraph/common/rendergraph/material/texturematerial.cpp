@@ -4,6 +4,9 @@
 #include <QVector2D>
 
 #include "rendergraph/materialshader.h"
+#ifdef MIXXX_USE_LLGL
+#include "rendergraph/opengl/backend/shadercache.h"
+#endif
 #include "rendergraph/materialtype.h"
 
 using namespace rendergraph;
@@ -31,3 +34,10 @@ std::unique_ptr<MaterialShader> TextureMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "texture.vert", "texture.frag", uniforms(), attributes());
 }
+
+#ifdef MIXXX_USE_LLGL
+std::unique_ptr<LLGLMaterialShader> TextureMaterial::createLLGLShader() const {
+    return std::make_unique<LLGLMaterialShader>(
+            "texture.vert", "texture.frag", uniforms(), attributes());
+}
+#endif
