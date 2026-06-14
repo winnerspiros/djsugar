@@ -1,22 +1,37 @@
 #pragma once
 
+#include <QWidget>
+#include <QTimer>
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
-#include <QTimer>
-#include <QWidget>
 #include <memory>
 
-#include "rendergraph/llgl/rendergraph/context.h"
 #include "waveform/widgets/waveformwidgetabstract.h"
+#include "rendergraph/llgl/rendergraph/context.h"
 
-/// LLGLWaveformWidget uses LLGL (Low Level Graphics Library) to render
-/// waveforms with hardware acceleration on ALL platforms.
+/// LLGL rendering state for a single waveform widget.
+/// Manages LLGL buffers, shaders, and pipeline state.
+struct LLGLWaveformRenderState {
+    LLGL::Buffer* pVertexBuffer = nullptr;
+    LLGL::Buffer* pIndexBuffer = nullptr;
+    LLGL::Shader* pVertexShader = nullptr;
+    LLGL::Shader* pFragmentShader = nullptr;
+    LLGL::PipelineState* pPipelineState = nullptr;
+    LLGL::PipelineLayout* pPipelineLayout = nullptr;
+    uint32_t vertexCount = 0;
+    uint32_t indexCount = 0;
+};
+
+/// LLGLWaveformWidget renders waveforms using LLGL (Low Level Graphics Library)
+/// as the rendering backend on ALL platforms.
 ///
-/// This widget uses LLGL's rendering backend to draw waveforms.
-/// It creates its own LLGL context and swap chain, and renders
-/// the waveform using LLGL command buffers.
+/// The widget creates its own LLGL context and swap chain, then renders
+/// the waveform by:
+/// 1. Computing vertex data from waveform samples (CPU-side preprocess)
+/// 2. Uploading to LLGL vertex buffers
+/// 3. Drawing with LLGL command buffer (shaders + pipeline state)
 ///
-/// When MIXXX_USE_LLGL is enabled, this becomes the primary waveform widget.
+/// Falls back to QPainter if LLGL initialization fails.
 class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
     Q_OBJECT
   public:
@@ -25,6 +40,9 @@ class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
 
     void castToQWidget() override;
     QWidget* widget() override;
+
+    // Override WaveformWidgetAbstract
+    mixxx::Duration render() override;
 
   protected:
     void paintEvent(QPaintEvent* event) override;
@@ -38,11 +56,22 @@ class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
   private:
     bool initializeLLGL();
     void shutdownLLGL();
-    void render();
     void renderLLGL();
     void renderFallback();
 
+    // LLGL rendering pipeline
+    bool createShaders();
+    bool createPipelineState();
+    bool createBuffers();
+    void updateVertexData();
+    void drawWaveform();
+
     std::unique_ptr<rendergraph::LLGLContext> m_pContext;
+    std::unique_ptr<LLGLWaveformRenderState> m_renderState;
+
+    // Waveform data cache
+    std::vector<float> m_vertices;
+
     QTimer* m_pRenderTimer;
     bool m_initOk;
 };
