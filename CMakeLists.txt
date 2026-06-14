@@ -466,6 +466,46 @@ if(QOPENGL)
   add_compile_definitions(MIXXX_USE_QOPENGL)
 endif()
 
+# LLGL rendering backend — cross-platform graphics abstraction
+# (OpenGL, Vulkan, D3D11, Metal). When enabled, LLGL-powered widgets
+# replace the QOpenGLWindow / QPainter backend on ALL platforms.
+option(MIXXX_USE_LLGL "Use LLGL rendering backend" OFF)
+
+if(MIXXX_USE_LLGL)
+  add_compile_definitions(MIXXX_USE_LLGL)
+
+  # Build LLGL as part of the project
+  set(LLGL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(LLGL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(LLGL_INSTALL OFF CACHE BOOL "" FORCE)
+
+  if(ANDROID)
+    set(LLGL_ANDROID_PLATFORM ON CACHE BOOL "" FORCE)
+    set(LLGL_OPENGL_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_VULKAN_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_D3D11_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_D3D12_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_METAL_ENABLE OFF CACHE BOOL "" FORCE)
+  elseif(APPLE)
+    set(LLGL_METAL_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_OPENGL_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_VULKAN_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_D3D11_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_D3D12_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_ANDROID_PLATFORM OFF CACHE BOOL "" FORCE)
+  else()
+    # Linux / Windows: prefer OpenGL, optionally Vulkan
+    set(LLGL_OPENGL_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_VULKAN_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_D3D11_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_D3D12_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_METAL_ENABLE OFF CACHE BOOL "" FORCE)
+    set(LLGL_ANDROID_PLATFORM OFF CACHE BOOL "" FORCE)
+  endif()
+
+  add_subdirectory(third_party/llgl)
+endif()
+
 if(QML)
   add_compile_definitions(MIXXX_USE_QML)
 endif()
