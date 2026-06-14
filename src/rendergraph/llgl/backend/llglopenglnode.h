@@ -30,12 +30,20 @@ class LGLOpenGLNode : public QOpenGLFunctions {
     void glUniformMatrix4fv(GLint location, GLboolean transpose, const GLfloat* value) override;
     void glBindBuffer(GLenum target, GLuint buffer) override;
     void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) override;
-    void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data) override;
+    void glBufferSubData(GLenum target,
+            GLintptr offset,
+            GLsizeiptr size,
+            const GLvoid* data) override;
     void glGenBuffers(GLsizei n, GLuint* buffers) override;
     void glDeleteBuffers(GLsizei n, const GLuint* buffers) override;
     void glEnableVertexAttribArray(GLuint index) override;
     void glDisableVertexAttribArray(GLuint index) override;
-    void glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* pointer) override;
+    void glVertexAttribPointer(GLuint index,
+            GLint size,
+            GLenum type,
+            GLboolean normalized,
+            GLsizei stride,
+            const GLvoid* pointer) override;
     void glDrawArrays(GLenum mode, GLint first, GLsizei count) override;
     void glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices) override;
     void glEnable(GLenum cap) override;
@@ -44,10 +52,16 @@ class LGLOpenGLNode : public QOpenGLFunctions {
     void glScissor(GLint x, GLint y, GLsizei width, GLsizei height) override;
     GLint glGetUniformLocation(GLuint program, const GLchar* name) override;
     GLuint glCreateShader(GLenum type) override;
-    void glShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length) override;
+    void glShaderSource(GLuint shader,
+            GLsizei count,
+            const GLchar** string,
+            const GLint* length) override;
     void glCompileShader(GLuint shader) override;
     void glGetShaderiv(GLuint shader, GLenum pname, GLint* params) override;
-    void glGetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog) override;
+    void glGetShaderInfoLog(GLuint shader,
+            GLsizei bufSize,
+            GLsizei* length,
+            GLchar* infoLog) override;
     GLuint glCreateProgram() override;
     void glAttachShader(GLuint program, GLuint shader) override;
     void glLinkProgram(GLuint program) override;
@@ -59,11 +73,19 @@ class LGLOpenGLNode : public QOpenGLFunctions {
     void glGenTextures(GLsizei n, GLuint* textures) override;
     void glDeleteTextures(GLsizei n, const GLuint* textures) override;
     void glTexParameteri(GLenum target, GLenum pname, GLint param) override;
-    void glTexImage2D(GLenum target, GLint level, GLint internalformat,
-                      GLsizei width, GLint height, GLint border,
-                      GLenum format, GLenum type, const GLvoid* pixels) override;
+    void glTexImage2D(GLenum target,
+            GLint level,
+            GLint internalformat,
+            GLsizei width,
+            GLint height,
+            GLint border,
+            GLenum format,
+            GLenum type,
+            const GLvoid* pixels) override;
 
-    LLGLContext* context() const { return m_pContext; }
+    LLGLContext* context() const {
+        return m_pContext;
+    }
 
   private:
     LLGLContext* m_pContext;

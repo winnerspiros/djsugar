@@ -1,31 +1,30 @@
 #pragma once
 
-#include <LLGL/LLGL.h>
-#include <LLGL/RenderSystem.h>
-#include <LLGL/Device.h>
+#include <LLGL/Buffer.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
-#include <LLGL/SwapChain.h>
-#include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/Buffer.h>
-#include <LLGL/Texture.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/RenderTarget.h>
-#include <LLGL/VertexAttribute.h>
+#include <LLGL/Device.h>
 #include <LLGL/Format.h>
+#include <LLGL/LLGL.h>
 #include <LLGL/PipelineLayout.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/RenderTarget.h>
+#include <LLGL/Sampler.h>
+#include <LLGL/Shader.h>
 #include <LLGL/ShaderReflection.h>
+#include <LLGL/SwapChain.h>
+#include <LLGL/Texture.h>
+#include <LLGL/VertexAttribute.h>
 
+#include <QMutex>
+#include <QString>
+#include <QTimer>
 #include <QWidget>
 #include <QWindow>
-#include <QMutex>
-#include <QTimer>
-#include <QHash>
-#include <QString>
 #include <memory>
 
-#include "rendergraph/llgl/rendergraph/context.h"
+#include "llgl/rendergraph/openglnode.h"
 
 namespace rendergraph {
 
@@ -50,7 +49,9 @@ class LLGLNode {
     virtual void preprocess();
 
     /// Get the LLGL context.
-    LLGLContext* context() const { return m_pContext; }
+    LLGLContext* context() const {
+        return m_pContext;
+    }
 
     /// Get the command buffer.
     LLGL::CommandBuffer* commandBuffer() const;
@@ -58,7 +59,7 @@ class LLGLNode {
     /// Get the render system.
     LLGL::RenderSystem* renderSystem() const;
 
-  protected:
+  private:
     LLGLContext* m_pContext;
 };
 

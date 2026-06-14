@@ -269,7 +269,15 @@ void LGLOpenGLNode::glTexParameteri(GLenum target, GLenum pname, GLint param) {
     Q_UNUSED(param);
 }
 
-void LGLOpenGLNode::glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLint height, GLint border, GLenum format, GLenum type, const GLvoid* pixels) {
+void LGLOpenGLNode::glTexImage2D(GLenum target,
+        GLint level,
+        GLint internalformat,
+        GLsizei width,
+        GLint height,
+        GLint border,
+        GLenum format,
+        GLenum type,
+        const GLvoid* pixels) {
     Q_UNUSED(target);
     Q_UNUSED(level);
     Q_UNUSED(internalformat);
