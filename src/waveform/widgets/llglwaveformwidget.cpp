@@ -340,7 +340,8 @@ void LLGLWaveformWidget::updateVertexData() {
     }
 
     const double visualIncrementPerPixel =
-            (lastVisualFrame - firstVisualFrame) / static_cast<double>(pixelLength);
+            (lastVisualFrame - firstVisualFrame) /
+            static_cast<double>(pixelLength);
     const double maxSamplingRange = visualIncrementPerPixel / 2.0;
 
     const float breadth = static_cast<float>(getBreadth());
@@ -360,7 +361,8 @@ void LLGLWaveformWidget::updateVertexData() {
         const int visualFrameStop = std::lround(xVisualFrame + maxSamplingRange);
         const int visualIndexStart = std::max(visualFrameStart * 2, 0);
         const int visualIndexStop =
-                std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2, dataSize - 1);
+                std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2,
+                        dataSize - 1);
 
         float maxSample = 0.0f;
         for (int i = visualIndexStart; i < visualIndexStop; i++) {
