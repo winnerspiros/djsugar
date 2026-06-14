@@ -54,7 +54,6 @@ void BaseGeometryNode::render() {
 
 #ifdef MIXXX_USE_LLGL
 
-// LLGL rendering path
 void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         Geometry& geometry,
         Material& material) {
@@ -116,21 +115,14 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
     pMatShader->release();
 }
 
-// Stub for LLGL builds — not called but needs to compile
-void BaseGeometryNode::renderGL(GeometryNode*,
-        Geometry&,
-        Material&) {
-    // Not used when LLGL is enabled
-}
+#endif
 
-#else
-
-// OpenGL rendering path (original, unchanged)
 void BaseGeometryNode::renderGL(GeometryNode* pThis,
         Geometry& geometry,
         Material& material) {
     Q_UNUSED(pThis);
 
+#ifndef MIXXX_USE_LLGL
     QOpenGLShaderProgram& shader = material.shader();
     VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
         return;
@@ -196,9 +188,8 @@ void BaseGeometryNode::renderGL(GeometryNode* pThis,
     }
 
     shader.release();
-}
-
 #endif
+}
 
 void BaseGeometryNode::resize(int, int) {
     VERIFY_OR_DEBUG_ASSERT(engine() != nullptr) {

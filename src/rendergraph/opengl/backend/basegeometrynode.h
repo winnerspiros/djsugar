@@ -27,8 +27,8 @@ class rendergraph::BaseGeometryNode : public rendergraph::BaseNode
     void resize(int w, int h) override;
 
   protected:
+    void renderGL(GeometryNode* pThis, Geometry& geometry, Material& material);
 #ifdef MIXXX_USE_LLGL
     void renderLLGL(GeometryNode* pThis, Geometry& geometry, Material& material);
-    void renderGL(GeometryNode* pThis, Geometry& geometry, Material& material);
 #endif
 };

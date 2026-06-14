@@ -81,13 +81,10 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         m_pLLGLShader = pShader;
     }
 #else
-#ifndef MIXXX_USE_LLGL
-#include <QOpenGLShaderProgram>
-#endif
-    QOpenGLShaderProgram& shader() {
+    MaterialShader& shader() {
         return *m_pShader;
     }
-    const QOpenGLShaderProgram& shader() const {
+    const MaterialShader& shader() const {
         return *m_pShader;
     }
     void setShader(std::shared_ptr<MaterialShader> pShader) {
