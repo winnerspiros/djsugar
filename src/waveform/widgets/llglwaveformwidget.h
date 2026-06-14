@@ -1,22 +1,24 @@
 #pragma once
 
-// LLGLWaveformWidget - Hardware-accelerated waveform rendering using LLGL
-// (Low Level Graphics Library) as a cross-platform rendering backend.
-//
-// LLGL provides a unified API for OpenGL, Vulkan, Direct3D, and Metal.
-// This widget replaces both the QOpenGLWindow-based GL path and the
-// QPainter software fallback with a single LLGL-powered backend.
-//
-// CMake option MIXXX_USE_LLGL controls inclusion.
-
 #include <QWidget>
 #include <QTimer>
+#include <QOpenGLContext>
+#include <QOffscreenSurface>
 #include <memory>
 
 #include "waveform/widgets/waveformwidgetabstract.h"
+#include "waveform/renderers/waveformwidgetrenderer.h"
 
-struct LLGLRenderSystem;
+struct LLGLRenderState;
 
+/// LLGLWaveformWidget - Hardware-accelerated waveform rendering using LLGL.
+///
+/// This widget uses LLGL's OpenGL backend to render waveforms with
+/// hardware acceleration on ALL platforms (Windows, macOS, Linux, Android).
+/// It replaces both the QOpenGLWindow-based GL path and the QPainter
+/// software fallback with a single, unified rendering backend.
+///
+/// When MIXXX_USE_LLGL is enabled, this becomes the primary waveform widget.
 class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
     Q_OBJECT
   public:
@@ -36,11 +38,16 @@ class LLGLWaveformWidget : public WaveformWidgetAbstract, public QWidget {
     void onRenderTimer();
 
   private:
-    bool initLLGL();
+    bool initializeLLGL();
     void shutdownLLGL();
-    void render();
+    void renderWaveform();
+    void renderBackground();
+    void renderSignal();
+    void renderBeatMarkers();
+    void renderEndOfTrack();
+    void renderMarks();
 
-    std::unique_ptr<LLGLRenderSystem> m_renderSystem;
+    std::unique_ptr<LLGLRenderState> m_renderState;
     QTimer* m_pRenderTimer;
     bool m_initOk;
 };
