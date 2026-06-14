@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QOpenGLContext>
 #include <QOffscreenSurface>
+#include <QOpenGLContext>
 #include <QTimer>
 #include <memory>
 

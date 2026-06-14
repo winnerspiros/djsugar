@@ -1,9 +1,25 @@
-#include "llglcontext.h"
-
-#ifdef MIXXX_USE_LLGL
+#include "context.h"
 
 #include <QDebug>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QWindow>
+
+#if defined(Q_OS_ANDROID)
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
+
+#include <QJniObject>
+#include <QNativeInterface>
+#elif defined(Q_OS_WIN32)
+#include <windows.h>
+#elif defined(Q_OS_MACOS)
+#include <Cocoa/Cocoa.h>
+#elif defined(Q_OS_LINUX)
+#include <X11/Xlib.h>
+#endif
+
+namespace rendergraph {
 
 LLGLContext::LLGLContext(QObject* parent)
         : QObject(parent) {
@@ -114,9 +130,9 @@ void LLGLContext::beginFrame(const QColor& clearColor) {
 
     LLGL::ClearValue clearValue;
     clearValue.color = {static_cast<float>(clearColor.redF()),
-                        static_cast<float>(clearColor.greenF()),
-                        static_cast<float>(clearColor.blueF()),
-                        static_cast<float>(clearColor.alphaF())};
+            static_cast<float>(clearColor.greenF()),
+            static_cast<float>(clearColor.blueF()),
+            static_cast<float>(clearColor.alphaF())};
 
     m_pCommandBuffer->BeginRenderPass(*m_pSwapChain, &clearValue);
 }
@@ -273,4 +289,4 @@ LLGL::PipelineLayout* LLGLContext::createPipelineLayout(
     return m_pRenderSystem->CreatePipelineLayout(desc);
 }
 
-#endif // MIXXX_USE_LLGL
+} // namespace rendergraph
