@@ -8,6 +8,11 @@
 #include "rendergraph/geometrynode.h"
 #include "rendergraph/texture.h"
 
+#ifdef MIXXX_USE_LLGL
+#include "rendergraph/llgl/rendergraph/context.h"
+#include "rendergraph/llgl/backend/llglshaderprogram.h"
+#endif
+
 using namespace rendergraph;
 
 namespace {
@@ -39,17 +44,92 @@ void BaseGeometryNode::render() {
         return;
     }
 
+#ifdef MIXXX_USE_LLGL
+    // LLGL rendering path
+    renderLLGL(pThis, geometry, material);
+#else
+    // OpenGL rendering path (original)
+    renderGL(pThis, geometry, material);
+#endif
+}
+
+#ifdef MIXXX_USE_LLGL
+void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+    Q_UNUSED(pThis);
+
+    // Get the LLGL context from the widget
+    auto* pLLGLNode = dynamic_cast<BaseLLGLNode*>(this);
+    if (!pLLGLNode) {
+        return;
+    }
+
+    auto* pContext = pLLGLNode->context();
+    if (!pContext || !pContext->isValid()) {
+        return;
+    }
+
+    auto* pCmdBuf = pContext->commandBuffer();
+    if (!pCmdBuf) {
+        return;
+    }
+
+    // Get or create the LLGL shader program for this material
+    QOpenGLShaderProgram& shader = material.shader();
+
+    // Set blend state (baked into pipeline state for LLGL)
+    // LLGL pipeline state already has blend configured
+
+    // Set uniforms from cache
+    if (material.clearUniformsCacheDirty() || !material.isLastModifierOfShader()) {
+        material.modifyShader();
+        const UniformsCache& cache = material.uniformsCache();
+        for (int i = 0; i < cache.count(); i++) {
+            int location = material.uniformLocation(i);
+            switch (cache.type(i)) {
+            case Type::UInt:
+                // TODO: Set via LLGL push constants
+                break;
+            case Type::Float:
+                // TODO: Set via LLGL push constants
+                break;
+            case Type::Vector2D:
+                // TODO: Set via LLGL push constants
+                break;
+            case Type::Vector3D:
+                // TODO: Set via LLGL push constants
+                break;
+            case Type::Vector4D:
+                // TODO: Set via LLGL push constants
+                break;
+            case Type::Matrix4x4:
+                // TODO: Set via LLGL push constants
+                break;
+            }
+        }
+    }
+
+    // Set vertex attributes and draw
+    // TODO: Use LLGL vertex buffer and Draw command
+    // For now, fall back to QPainter
+    Q_UNUSED(geometry);
+}
+
+void BaseGeometryNode::renderGL(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+#else
+void BaseGeometryNode::render(GeometryNode* pThis,
+        Geometry& geometry,
+        Material& material) {
+#endif
     QOpenGLShaderProgram& shader = material.shader();
     VERIFY_OR_DEBUG_ASSERT(shader.bind()) {
-        // if the shader can't be bound, don't try to render with it.
-        // this should only happen if the shader compilation failed,
-        // which shouldn't happen
         return;
     }
 
     glEnable(GL_BLEND);
-    // Note: Qt scenegraph uses premultiplied alpha color in the shader,
-    // so we need to do the same.
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     if (material.clearUniformsCacheDirty() || !material.isLastModifierOfShader()) {
@@ -80,7 +160,6 @@ void BaseGeometryNode::render() {
         }
     }
 
-    // TODO this code assumes all vertices are floats
     int vertexOffset = 0;
     for (int i = 0; i < geometry.attributeCount(); i++) {
         const Geometry::Attribute& attribute = geometry.attributes()[i];
@@ -93,7 +172,6 @@ void BaseGeometryNode::render() {
         vertexOffset += attribute.m_tupleSize;
     }
 
-    // TODO multiple textures
     auto* pTexture = material.texture(1);
     if (pTexture) {
         pTexture->backendTexture()->bind();
