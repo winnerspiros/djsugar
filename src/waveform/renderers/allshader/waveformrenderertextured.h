@@ -1,6 +1,7 @@
 #pragma once
 
 #ifndef QT_OPENGL_ES_2
+#ifndef MIXXX_USE_LLGL
 
 #include "rendergraph/openglnode.h"
 #include "track/track_decl.h"
@@ -79,4 +80,5 @@ class allshader::WaveformRendererTextured final : public allshader::WaveformRend
     std::unique_ptr<QOpenGLShaderProgram> m_frameShaderProgram;
 };
 
+#endif // MIXXX_USE_LLGL
 #endif // QT_OPENGL_ES_2
