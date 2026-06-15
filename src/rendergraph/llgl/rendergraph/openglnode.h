@@ -2,7 +2,7 @@
 
 #ifdef MIXXX_USE_LLGL
 
-#include "backend/llglopenglnode.h"
+#include "../backend/llglopenglnode.h"
 
 namespace rendergraph {
 using OpenGLNode = LGLOpenGLNode;
