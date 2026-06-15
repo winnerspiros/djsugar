@@ -1,5 +1,7 @@
 #include "rendergraph/attributeset.h"
+#ifdef MIXXX_USE_LLGL
 #include "../opengl/backend/shadercache.h"
+#endif
 #include "rendergraph/material.h"
 #include "rendergraph/texture.h"
 #include "rendergraph/uniformset.h"

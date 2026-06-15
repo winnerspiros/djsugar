@@ -6,7 +6,9 @@
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 
+#ifdef MIXXX_USE_LLGL
 #include "../opengl/backend/shadercache.h"
+#endif
 
 using namespace rendergraph;
 
