@@ -511,7 +511,50 @@ if(MIXXX_USE_LLGL)
     set(LLGL_ANDROID_PLATFORM OFF CACHE BOOL "" FORCE)
   endif()
 
-  add_subdirectory(third_party/llgl)
+  # Build LLGL sources directly to avoid vcpkg add_library conflict.
+  # vcpkg's toolchain overrides add_library() with a macro that causes
+  # infinite recursion when LLGL's CMakeLists.txt calls add_library(LLGL).
+  # Instead, we collect LLGL sources and build them as part of mixxx-lib.
+
+  # Collect LLGL source files
+  file(GLOB_RECURSE LLGL_SOURCES
+    third_party/llgl/sources/*.cpp
+    third_party/llgl/sources/*.h
+    third_party/llgl/include/LLGL/*.h
+  )
+
+  # Create LLGL static library using direct source compilation
+  # We use _add_library which is the original function vcpkg's macro calls
+  if(COMMAND _add_library)
+    _add_library(LLGL STATIC ${LLGL_SOURCES})
+  else()
+    add_library(LLGL STATIC ${LLGL_SOURCES})
+  endif()
+
+  target_include_directories(LLGL PUBLIC
+    third_party/llgl/include
+  )
+
+  # Set LLGL compile definitions per platform
+  target_compile_definitions(LLGL PRIVATE
+    LLGL_BUILD_STATIC_LIB
+    $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL_ENABLE>
+    $<$<BOOL:${LLGL_VULKAN_ENABLE}>:LLGL_VULKAN_ENABLE>
+    $<$<BOOL:${LLGL_D3D11_ENABLE}>:LLGL_D3D11_ENABLE>
+    $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
+    $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
+  )
+
+  # Link platform libraries
+  if(WIN32)
+    target_link_libraries(LLGL PRIVATE d3d11 d3d12 dxgi)
+  elseif(APPLE)
+    target_link_libraries(LLGL PRIVATE "-framework Metal" "-framework Cocoa")
+  elseif(ANDROID)
+    target_link_libraries(LLGL PRIVATE android log)
+  elseif(UNIX)
+    target_link_libraries(LLGL PRIVATE X11 Xrandr pthread)
+  endif()
 endif()
 
 if(QML)
