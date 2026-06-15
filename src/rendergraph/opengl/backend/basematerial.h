@@ -2,11 +2,7 @@
 
 #include "rendergraph/materialshader.h"
 #include "rendergraph/materialtype.h"
-
-// Forward declare to avoid circular include with shadercache.h
-namespace rendergraph {
-class LLGLMaterialShader;
-} // namespace rendergraph
+#include "llglmaterialshader.h"
 
 namespace rendergraph {
 class BaseMaterial;

@@ -41,9 +41,6 @@ class LLGLMaterialShader : public LLGLBaseMaterialShader {
     void disableAttributeArray(int location);
     void setAttributeArray(int location, const float* data, int tupleSize, int stride);
 
-    int uniformLocation(int index) const;
-    int attributeLocation(int index) const;
-
     GLuint programId() const { return 0; }
 
     bool isLinked() const { return m_shader.isValid(); }
