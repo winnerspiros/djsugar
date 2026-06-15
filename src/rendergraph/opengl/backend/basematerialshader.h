@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendergraph/materialshader.h"
 #include <QString>
 #include <vector>
 
@@ -9,9 +10,14 @@ class LLGLShaderProgram;
 class LLGLBaseMaterialShader;
 } // namespace rendergraph
 
-class rendergraph::LLGLBaseMaterialShader {
+class rendergraph::LLGLBaseMaterialShader : public MaterialShader {
   protected:
-    LLGLBaseMaterialShader() = default;
+    LLGLBaseMaterialShader(const char* vertexShaderFile,
+            const char* fragmentShaderFile,
+            const UniformSet& uniforms,
+            const AttributeSet& attributeSet)
+        : MaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet) {
+    }
 
   public:
     virtual ~LLGLBaseMaterialShader() = default;

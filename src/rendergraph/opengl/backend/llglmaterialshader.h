@@ -2,7 +2,6 @@
 
 #include "basematerialshader.h"
 #include "../../llgl/backend/llglshaderprogram.h"
-#include "rendergraph/materialshader.h"
 #include "rendergraph/uniformset.h"
 #include "rendergraph/attributeset.h"
 
@@ -10,13 +9,13 @@ namespace rendergraph {
 
 /// LLGLMaterialShader wraps LLGLShaderProgram to provide the same interface
 /// as the original QOpenGLShaderProgram-based MaterialShader.
-class LLGLMaterialShader : public MaterialShader, public LLGLBaseMaterialShader {
+class LLGLMaterialShader : public LLGLBaseMaterialShader {
   public:
     LLGLMaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet)
-        : MaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
+        : LLGLBaseMaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
           m_vertexFile(vertexShaderFile),
           m_fragmentFile(fragmentShaderFile),
           m_loaded(false) {
