@@ -3,6 +3,19 @@
 
 using namespace rendergraph;
 
+// MaterialShader base class constructor (LLGL path)
+MaterialShader::MaterialShader(const char* vertexShaderFile,
+        const char* fragmentShaderFile,
+        const UniformSet& uniforms,
+        const AttributeSet& attributeSet) {
+    Q_UNUSED(vertexShaderFile);
+    Q_UNUSED(fragmentShaderFile);
+    Q_UNUSED(uniforms);
+    Q_UNUSED(attributeSet);
+}
+
+// LLGLMaterialShader constructor
+
 bool LLGLMaterialShader::load(const QString& vertexShader, const QString& fragmentShader) {
     m_loaded = m_shader.addShaderFromSourceCode(vertexShader, fragmentShader);
     return m_loaded;
