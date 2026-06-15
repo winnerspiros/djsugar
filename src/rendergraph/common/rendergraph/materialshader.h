@@ -14,7 +14,12 @@ class rendergraph::MaterialShader {
     MaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
-            const AttributeSet& attributeSet);
+            const AttributeSet& attributeSet) {
+        Q_UNUSED(vertexShaderFile);
+        Q_UNUSED(fragmentShaderFile);
+        Q_UNUSED(uniforms);
+        Q_UNUSED(attributeSet);
+    }
 
     virtual bool bind() = 0;
     virtual void release() = 0;

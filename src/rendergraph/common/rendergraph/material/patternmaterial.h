@@ -20,9 +20,7 @@ class rendergraph::PatternMaterial : public rendergraph::Material {
 
     MaterialType* type() const override;
 
-#ifndef MIXXX_USE_LLGL
     std::unique_ptr<MaterialShader> createShader() const override;
-#endif
 
 #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;

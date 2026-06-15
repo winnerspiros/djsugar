@@ -30,12 +30,10 @@ MaterialType* TextureMaterial::type() const {
     return &type;
 }
 
-#ifndef MIXXX_USE_LLGL
 std::unique_ptr<MaterialShader> TextureMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "texture.vert", "texture.frag", uniforms(), attributes());
 }
-#endif
 
 #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
 std::unique_ptr<LLGLMaterialShader> TextureMaterial::createLLGLShader() const {
