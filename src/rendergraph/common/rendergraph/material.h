@@ -63,6 +63,7 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         return nullptr;
     }
 
+#ifdef MIXXX_USE_LLGL
     LLGLMaterialShader& shader() {
         return *m_pLLGLShader;
     }
@@ -72,11 +73,14 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     void setShader(std::shared_ptr<LLGLMaterialShader> pShader) {
         m_pLLGLShader = pShader;
     }
+#endif
 
     bool isLLGL() const { return true; }
 
   private:
     UniformsCache m_uniformsCache;
     bool m_uniformsCacheDirty{};
+#ifdef MIXXX_USE_LLGL
     std::shared_ptr<LLGLMaterialShader> m_pLLGLShader;
+#endif
 };

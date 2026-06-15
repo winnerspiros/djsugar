@@ -38,9 +38,12 @@ void BaseGeometryNode::render() {
         return;
     }
 
+#ifdef MIXXX_USE_LLGL
     renderLLGL(pThis, geometry, material);
+#endif
 }
 
+#ifdef MIXXX_USE_LLGL
 void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         Geometry& geometry,
         Material& material) {
@@ -101,6 +104,7 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
     pMatShader->drawArrays(GL_TRIANGLES, 0, static_cast<int>(geometry.vertexCount()));
     pMatShader->release();
 }
+#endif // MIXXX_USE_LLGL
 
 void BaseGeometryNode::renderGL(GeometryNode*, Geometry&, Material&) {
     // Not used when LLGL is enabled — kept for link compatibility

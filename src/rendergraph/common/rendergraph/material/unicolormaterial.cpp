@@ -33,7 +33,10 @@ std::unique_ptr<MaterialShader> UniColorMaterial::createShader() const {
             "unicolor.vert", "unicolor.frag", uniforms(), attributes());
 }
 
+#ifdef MIXXX_USE_LLGL
+#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> UniColorMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "unicolor.vert", "unicolor.frag", uniforms(), attributes());
 }
+#endif
