@@ -104,6 +104,8 @@ case "$1" in
             libgmock-dev \
             libgtest-dev \
             libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
             libhidapi-dev \
             libid3tag0-dev \
             liblilv-dev \
