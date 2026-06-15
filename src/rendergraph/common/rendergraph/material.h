@@ -12,6 +12,7 @@
 
 namespace rendergraph {
 class Material;
+class LLGLMaterialShader;
 } // namespace rendergraph
 
 class rendergraph::Material : public rendergraph::BaseMaterial {

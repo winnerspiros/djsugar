@@ -14,6 +14,11 @@
 #include <LLGL/Format.h>
 #include <LLGL/CommandBuffer.h>
 
+// Define GL types that would normally come from Qt OpenGL or GLEW
+typedef unsigned int GLenum;
+typedef unsigned int GLuint;
+typedef float GLfloat;
+
 #include <QMatrix4x4>
 #include <QVector2D>
 #include <QVector3D>
