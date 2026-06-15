@@ -19,6 +19,10 @@ typedef unsigned int GLenum;
 typedef unsigned int GLuint;
 typedef float GLfloat;
 
+typedef int GLint;
+typedef int GLsizei;
+typedef void GLvoid;
+
 // Common GL constants needed for draw calls
 static const GLenum GL_TRIANGLES = 0x0004;
 static const GLenum GL_TRIANGLE_STRIP = 0x0005;

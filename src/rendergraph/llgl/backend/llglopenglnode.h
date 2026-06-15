@@ -3,6 +3,7 @@
 #ifdef MIXXX_USE_LLGL
 
 #include "../rendergraph/context.h"
+#include "llglshaderprogram.h"
 
 namespace rendergraph {
 
