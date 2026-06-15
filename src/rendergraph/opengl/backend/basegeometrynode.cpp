@@ -7,18 +7,19 @@
 #include "rendergraph/geometrynode.h"
 #include "rendergraph/texture.h"
 #include "rendergraph/llgl/rendergraph/context.h"
+#include "../../llgl/backend/llglshaderprogram.h"
 
 using namespace rendergraph;
 
 namespace {
-GLenum toGlDrawingMode(DrawingMode mode) {
+LLGL::PrimitiveTopology toPrimitiveTopology(DrawingMode mode) {
     switch (mode) {
     case DrawingMode::Triangles:
-        return GL_TRIANGLES;
+        return LLGL::PrimitiveTopology::TriangleList;
     case DrawingMode::TriangleStrip:
-        return GL_TRIANGLE_STRIP;
+        return LLGL::PrimitiveTopology::TriangleStrip;
     default:
-        throw std::runtime_error("not implemented");
+        return LLGL::PrimitiveTopology::TriangleStrip;
     }
 }
 } // namespace
@@ -49,7 +50,7 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
         Material& material) {
     Q_UNUSED(pThis);
 
-    auto* pLLGLNode = dynamic_cast<BaseLLGLNode*>(this);
+    auto* pLLGLNode = dynamic_cast<LLGLNode*>(this);
     if (!pLLGLNode) return;
     auto* pContext = pLLGLNode->context();
     if (!pContext || !pContext->isValid()) return;
@@ -60,7 +61,7 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
     if (material.isLLGL()) {
         pMatShader = &static_cast<LLGLMaterialShader&>(material.shader());
     }
-    if (!pMatShader || !pMatShader->isValid()) return;
+    if (!pMatShader || !pMatShader->isLinked()) return;
 
     pMatShader->setContext(pContext);
     pMatShader->setCommandBuffer(pCmdBuf);
