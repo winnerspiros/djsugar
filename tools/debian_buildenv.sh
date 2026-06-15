@@ -106,6 +106,7 @@ case "$1" in
             libgl1-mesa-dev \
             libx11-dev \
             libxrandr-dev \
+            libwayland-dev \
             libhidapi-dev \
             libid3tag0-dev \
             liblilv-dev \
