@@ -37,7 +37,6 @@ std::unique_ptr<MaterialShader> RGBMaterial::createShader() const {
 #endif
 
 #ifdef MIXXX_USE_LLGL
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> RGBMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "rgb.vert", "rgb.frag", uniforms(), attributes());

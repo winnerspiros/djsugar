@@ -36,7 +36,6 @@ std::unique_ptr<MaterialShader> EndOfTrackMaterial::createShader() const {
 #endif
 
 #ifdef MIXXX_USE_LLGL
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> EndOfTrackMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "endoftrack.vert", "endoftrack.frag", uniforms(), attributes());

@@ -36,7 +36,6 @@ std::unique_ptr<MaterialShader> TextureMaterial::createShader() const {
 #endif
 
 #ifdef MIXXX_USE_LLGL
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> TextureMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "texture.vert", "texture.frag", uniforms(), attributes());

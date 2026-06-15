@@ -38,7 +38,6 @@ std::unique_ptr<MaterialShader> RGBAMaterial::createShader() const {
 #endif
 
 #ifdef MIXXX_USE_LLGL
-#ifdef MIXXX_USE_LLGL
 std::unique_ptr<LLGLMaterialShader> RGBAMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "rgba.vert", "rgba.frag", uniforms(), attributes());
