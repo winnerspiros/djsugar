@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef MIXXX_USE_LLGL
+
 #include <unordered_map>
 #include <memory>
 
@@ -42,3 +44,5 @@ class ShaderCache {
 };
 
 } // namespace rendergraph
+
+#endif // MIXXX_USE_LLGL

@@ -2,7 +2,11 @@
 
 #include "rendergraph/materialshader.h"
 #include "rendergraph/materialtype.h"
-#include "shadercache.h"
+
+// Forward declare to avoid circular include with shadercache.h
+namespace rendergraph {
+class LLGLMaterialShader;
+} // namespace rendergraph
 
 namespace rendergraph {
 class BaseMaterial;
@@ -17,6 +21,7 @@ class rendergraph::BaseMaterial {
 
     int compare(const BaseMaterial* other) const;
 
+#ifdef MIXXX_USE_LLGL
     void setShader(std::shared_ptr<LLGLMaterialShader> pShader) {
         m_pLLGLShader = pShader;
     }
@@ -37,5 +42,8 @@ class rendergraph::BaseMaterial {
     }
   private:
     std::shared_ptr<LLGLMaterialShader> m_pLLGLShader;
+#endif
+
+  private:
     BaseMaterial* m_pLastModifier = nullptr;
 };

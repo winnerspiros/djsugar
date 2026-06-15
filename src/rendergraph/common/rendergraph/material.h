@@ -37,7 +37,9 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     }
 
     virtual std::unique_ptr<MaterialShader> createShader() const = 0;
+#ifdef MIXXX_USE_LLGL
     virtual std::unique_ptr<LLGLMaterialShader> createLLGLShader() const = 0;
+#endif
 
     template<typename T>
     void setUniform(int uniformIndex, const T& value) {
