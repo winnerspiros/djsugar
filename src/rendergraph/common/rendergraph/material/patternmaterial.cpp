@@ -28,10 +28,12 @@ MaterialType* PatternMaterial::type() const {
     return &type;
 }
 
+#ifndef MIXXX_USE_LLGL
 std::unique_ptr<MaterialShader> PatternMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "pattern.vert", "pattern.frag", uniforms(), attributes());
 }
+#endif
 
 #ifdef MIXXX_USE_LLGL
 #ifdef MIXXX_USE_LLGL

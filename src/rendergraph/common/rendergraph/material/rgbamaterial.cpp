@@ -30,10 +30,12 @@ MaterialType* RGBAMaterial::type() const {
     return &type;
 }
 
+#ifndef MIXXX_USE_LLGL
 std::unique_ptr<MaterialShader> RGBAMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "rgba.vert", "rgba.frag", uniforms(), attributes());
 }
+#endif
 
 #ifdef MIXXX_USE_LLGL
 #ifdef MIXXX_USE_LLGL

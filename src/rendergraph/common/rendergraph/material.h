@@ -36,7 +36,9 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         return diff < 0 ? -1 : (diff > 0 ? 1 : 0);
     }
 
+#ifndef MIXXX_USE_LLGL
     virtual std::unique_ptr<MaterialShader> createShader() const = 0;
+#endif
 #ifdef MIXXX_USE_LLGL
     virtual std::unique_ptr<LLGLMaterialShader> createLLGLShader() const = 0;
 #endif

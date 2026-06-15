@@ -28,10 +28,12 @@ MaterialType* EndOfTrackMaterial::type() const {
     return &type;
 }
 
+#ifndef MIXXX_USE_LLGL
 std::unique_ptr<MaterialShader> EndOfTrackMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "endoftrack.vert", "endoftrack.frag", uniforms(), attributes());
 }
+#endif
 
 #ifdef MIXXX_USE_LLGL
 #ifdef MIXXX_USE_LLGL

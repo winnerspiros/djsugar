@@ -29,10 +29,12 @@ MaterialType* RGBMaterial::type() const {
     return &type;
 }
 
+#ifndef MIXXX_USE_LLGL
 std::unique_ptr<MaterialShader> RGBMaterial::createShader() const {
     return std::make_unique<MaterialShader>(
             "rgb.vert", "rgb.frag", uniforms(), attributes());
 }
+#endif
 
 #ifdef MIXXX_USE_LLGL
 #ifdef MIXXX_USE_LLGL
