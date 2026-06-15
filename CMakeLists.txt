@@ -2170,7 +2170,7 @@ if(MIXXX_USE_LLGL)
       src/rendergraph/llgl/backend/shadersourceprovider.cpp
       src/waveform/widgets/llglwaveformwidget.cpp
   )
-  target_include_directories(mixxx-lib PRIVATE src/rendergraph)
+  target_include_directories(mixxx-lib PRIVATE src/rendergraph ${CMAKE_SOURCE_DIR}/third_party/llgl/include)
   target_link_libraries(mixxx-lib PRIVATE LLGL)
 endif()
 
