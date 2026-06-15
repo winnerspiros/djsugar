@@ -1,5 +1,6 @@
 #include "llglshaderprogram.h"
 #include "shadersourceprovider.h"
+#include "rendergraph/llgl/rendergraph/context.h"
 
 #include <QDir>
 #include <QFile>
@@ -58,6 +59,11 @@ void LLGLShaderProgram::destroyResources() {
         }
     }
     m_pipelineCreated = false;
+}
+
+void LLGLShaderProgram::setContext(LLGLContext* pContext) {
+    m_pContext = pContext;
+    m_pDevice = pContext ? pContext->renderSystem() : nullptr;
 }
 
 bool LLGLShaderProgram::addShaderFromSourceCode(

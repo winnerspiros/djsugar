@@ -71,7 +71,7 @@ class LLGLShaderProgram {
     LLGL::Buffer* uniformBuffer() const { return m_pUniformBuffer; }
     LLGL::RenderSystem* device() const { return m_pDevice; }
 
-    void setContext(LLGLContext* pContext) { m_pContext = pContext; m_pDevice = pContext ? pContext->renderSystem() : nullptr; }
+    void setContext(LLGLContext* pContext);
     void setCommandBuffer(LLGL::CommandBuffer* pCmdBuf) { m_pCmdBuf = pCmdBuf; }
 
     // Create/update vertex buffer from data
