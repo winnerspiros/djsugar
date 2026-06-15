@@ -8,7 +8,6 @@
 #if defined(Q_OS_ANDROID)
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-
 #include <QJniObject>
 #include <QNativeInterface>
 #elif defined(Q_OS_WIN32)
@@ -44,7 +43,8 @@ bool LLGLContext::initialize(QWidget* pWidget) {
     }
 
     m_initialized = true;
-    qDebug() << "LLGLContext: initialized (render system loaded)";
+    qDebug() << "LLGLContext: initialized (render system:\""
+             << m_pRenderSystem->GetName() << "\")";
     return true;
 }
 
@@ -152,39 +152,33 @@ void LLGLContext::endFrame() {
 }
 
 bool LLGLContext::createRenderSystem() {
-    const char* backendName = nullptr;
+    // Use OpenGL backend on all platforms.
+    // LLGL's OpenGL backend works everywhere:
+    // - Linux: native OpenGL/EGL
+    // - Android: OpenGL ES (via EGL)  
+    // - Windows: native OpenGL (WGL)
+    // - macOS: NSOpenGLContext (deprecated but functional on macOS 15)
+    //
+    // All shader code is GLSL which LLGL compiles for OpenGL.
+    // This avoids the need for per-backend shader translation.
 
-#if defined(Q_OS_ANDROID)
-    backendName = "OpenGL";
-#elif defined(Q_OS_MACOS)
-    backendName = "Metal";
-#elif defined(Q_OS_WIN32)
-    backendName = "Direct3D11";
-#else
-    backendName = "OpenGL";
-#endif
+    const char* backends[] = {"OpenGL"};
 
     LLGL::Log::RegisterCallbackStd();
 
-    LLGL::RenderSystemDescriptor desc;
-    desc.moduleName = backendName;
+    for (const char* backendName : backends) {
+        LLGL::RenderSystemDescriptor desc;
+        desc.moduleName = backendName;
 
-    m_pRenderSystem = LLGL::RenderSystem::Load(desc);
-
-    if (!m_pRenderSystem) {
-        qWarning() << "LLGLContext: failed to load:" << backendName;
-        if (strcmp(backendName, "OpenGL") != 0) {
-            qDebug() << "LLGLContext: trying OpenGL fallback";
-            desc.moduleName = "OpenGL";
-            m_pRenderSystem = LLGL::RenderSystem::Load(desc);
+        m_pRenderSystem = LLGL::RenderSystem::Load(desc);
+        if (m_pRenderSystem) {
+            qDebug() << "LLGLContext: loaded" << backendName;
+            return true;
         }
-        if (!m_pRenderSystem) {
-            return false;
-        }
+        qWarning() << "LLGLContext: failed to load" << backendName;
     }
 
-    qDebug() << "LLGLContext: loaded" << m_pRenderSystem->GetName();
-    return true;
+    return false;
 }
 
 bool LLGLContext::createSwapChain(QWidget* pWidget) {
@@ -224,7 +218,8 @@ void LLGLContext::destroySwapChain() {
 }
 
 LLGL::Shader* LLGLContext::createShader(
-        LLGL::ShaderType type, const char* source, size_t sourceSize) {
+        LLGL::ShaderType type, const char* source, size_t sourceSize,
+        const char* profile) {
     QMutexLocker lock(&m_mutex);
     if (!m_pRenderSystem) {
         return nullptr;
@@ -235,7 +230,7 @@ LLGL::Shader* LLGLContext::createShader(
     desc.source = source;
     desc.sourceSize = sourceSize;
     desc.entryPoint = "main";
-    desc.profile = nullptr;
+    desc.profile = profile;
 
     return m_pRenderSystem->CreateShader(desc);
 }
@@ -287,6 +282,16 @@ LLGL::PipelineLayout* LLGLContext::createPipelineLayout(
         return nullptr;
     }
     return m_pRenderSystem->CreatePipelineLayout(desc);
+}
+
+QString LLGLContext::backendName() const {
+    return m_pRenderSystem ? QString::fromUtf8(m_pRenderSystem->GetName()) : QString();
+}
+
+bool LLGLContext::useGLSL() const {
+    if (!m_pRenderSystem) return true;
+    const char* name = m_pRenderSystem->GetName();
+    return (strcmp(name, "OpenGL") == 0 || strcmp(name, "OpenGLES") == 0);
 }
 
 } // namespace rendergraph

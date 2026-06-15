@@ -2162,7 +2162,6 @@ if(MIXXX_USE_LLGL)
       src/rendergraph/llgl/backend/basellglnode.cpp
       src/rendergraph/llgl/backend/llglopenglnode.cpp
       src/rendergraph/llgl/backend/llglshaderprogram.cpp
-      src/rendergraph/llgl/backend/shadercache.cpp
       src/waveform/widgets/llglwaveformwidget.cpp
   )
   target_include_directories(mixxx-lib PRIVATE src/rendergraph)

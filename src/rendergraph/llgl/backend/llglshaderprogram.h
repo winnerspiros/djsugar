@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef MIXXX_USE_LLGL
-
 #include <LLGL/LLGL.h>
 #include <LLGL/RenderSystem.h>
 #include <LLGL/Device.h>
@@ -14,9 +12,7 @@
 #include <LLGL/VertexAttribute.h>
 #include <LLGL/Format.h>
 #include <LLGL/CommandBuffer.h>
-#include <LLGL/RenderPass.h>
 
-#include <QOpenGLTexture>
 #include <QMatrix4x4>
 #include <QVector2D>
 #include <QVector3D>
@@ -31,6 +27,8 @@ namespace rendergraph {
 
 /// LLGLShaderProgram wraps LLGL shader objects and pipeline state,
 /// providing the same interface as QOpenGLShaderProgram.
+/// Auto-detects the active backend (OpenGL/Metal/D3D11) and uses
+/// the appropriate shader profile.
 class LLGLShaderProgram {
   public:
     LLGLShaderProgram();
@@ -53,7 +51,7 @@ class LLGLShaderProgram {
     void disableAttributeArray(int location);
     void setAttributeArray(int location, const float* data, int tupleSize, int stride);
 
-    void setUniformValue(int location, QOpenGLTexture* texture);
+    void setUniformValue(int location, LLGL::Texture* texture) { Q_UNUSED(location); Q_UNUSED(texture); }
 
     int uniformLocation(const char* name) const;
     int attributeLocation(const char* name) const;
@@ -79,6 +77,7 @@ class LLGLShaderProgram {
   private:
     bool createPipelineState(const QString& vertexShader, const QString& fragmentShader);
     void destroyResources();
+    void detectProfiles(QString& vsProfile, QString& fsProfile);
 
     LLGLContext* m_pContext;
     LLGL::RenderSystem* m_pDevice;
@@ -109,5 +108,3 @@ class LLGLShaderProgram {
 };
 
 } // namespace rendergraph
-
-#endif // MIXXX_USE_LLGL

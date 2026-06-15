@@ -1,7 +1,5 @@
 #include "llglshaderprogram.h"
 
-#ifdef MIXXX_USE_LLGL
-
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
@@ -61,6 +59,12 @@ void LLGLShaderProgram::destroyResources() {
     m_pipelineCreated = false;
 }
 
+void LLGLShaderProgram::detectProfiles(QString& vsProfile, QString& fsProfile) {
+    // Always use GLSL 440 since LLGL context uses OpenGL backend on all platforms.
+    vsProfile = "440";
+    fsProfile = "440";
+}
+
 bool LLGLShaderProgram::addShaderFromSourceCode(
         const QString& vertexShader, const QString& fragmentShader) {
     if (!m_pDevice) {
@@ -88,23 +92,8 @@ bool LLGLShaderProgram::createPipelineState(
         return false;
     }
 
-    // Determine shader profiles based on backend
-    const char* vsProfile = nullptr;
-    const char* fsProfile = nullptr;
-    const char* backendName = m_pDevice->GetName();
-
-    if (strncmp(backendName, "OpenGL", 6) == 0) {
-        vsProfile = "440";
-        fsProfile = "440";
-    } else if (strcmp(backendName, "Direct3D11") == 0) {
-        // Need to translate GLSL to HLSL for D3D11
-        qWarning() << "LLGLShaderProgram: D3D11 backend needs HLSL shaders, falling back to OpenGL";
-        vsProfile = "440";
-        fsProfile = "440";
-    } else if (strcmp(backendName, "Metal") == 0) {
-        vsProfile = nullptr;
-        fsProfile = nullptr;
-    }
+    QString vsProfile, fsProfile;
+    detectProfiles(vsProfile, fsProfile);
 
     // Create vertex shader
     LLGL::ShaderDescriptor vsDesc;
@@ -113,11 +102,12 @@ bool LLGLShaderProgram::createPipelineState(
     vsDesc.source = vsBytes.constData();
     vsDesc.sourceSize = static_cast<std::uint32_t>(vsBytes.size());
     vsDesc.entryPoint = "main";
-    vsDesc.profile = vsProfile;
+    vsDesc.profile = vsProfile.toUtf8().constData();
 
     m_pVertexShader = m_pDevice->CreateShader(vsDesc);
     if (!m_pVertexShader) {
-        qWarning() << "LLGLShaderProgram: failed to create vertex shader";
+        qWarning() << "LLGLShaderProgram: failed to create vertex shader on"
+                   << m_pDevice->GetName();
         return false;
     }
 
@@ -128,11 +118,12 @@ bool LLGLShaderProgram::createPipelineState(
     fsDesc.source = fsBytes.constData();
     fsDesc.sourceSize = static_cast<std::uint32_t>(fsBytes.size());
     fsDesc.entryPoint = "main";
-    fsDesc.profile = fsProfile;
+    fsDesc.profile = fsProfile.toUtf8().constData();
 
     m_pFragmentShader = m_pDevice->CreateShader(fsDesc);
     if (!m_pFragmentShader) {
-        qWarning() << "LLGLShaderProgram: failed to create fragment shader";
+        qWarning() << "LLGLShaderProgram: failed to create fragment shader on"
+                   << m_pDevice->GetName();
         return false;
     }
 
@@ -179,7 +170,8 @@ bool LLGLShaderProgram::createPipelineState(
 
     m_pPipelineState = m_pDevice->CreatePipelineState(pipelineDesc);
     if (!m_pPipelineState) {
-        qWarning() << "LLGLShaderProgram: failed to create pipeline state on" << backendName;
+        qWarning() << "LLGLShaderProgram: failed to create pipeline state on"
+                   << m_pDevice->GetName();
         return false;
     }
 
@@ -205,7 +197,7 @@ bool LLGLShaderProgram::createPipelineState(
     m_uniformLocations.push_back(0); // matrix at location 0
 
     m_pipelineCreated = true;
-    qDebug() << "LLGLShaderProgram: shaders loaded on" << backendName;
+    qDebug() << "LLGLShaderProgram: created on" << m_pDevice->GetName();
     return true;
 }
 
@@ -268,7 +260,6 @@ void LLGLShaderProgram::setUniformValue(int location, GLuint value) {
 
 void LLGLShaderProgram::enableAttributeArray(int location) {
     Q_UNUSED(location);
-    // LLGL vertex attributes are set via SetVertexBuffer
 }
 
 void LLGLShaderProgram::disableAttributeArray(int location) {
@@ -281,13 +272,9 @@ void LLGLShaderProgram::setAttributeArray(int location, const float* data,
     Q_UNUSED(data);
     Q_UNUSED(tupleSize);
     Q_UNUSED(stride);
-    // Vertex buffer is created in drawArrays from the geometry data
 }
 
-void LLGLShaderProgram::setUniformValue(int location, QOpenGLTexture* texture) {
-    Q_UNUSED(location);
-    Q_UNUSED(texture);
-    // Texture binding not yet implemented
+void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {
 }
 
 int LLGLShaderProgram::uniformLocation(const char* name) const {
@@ -308,10 +295,7 @@ void LLGLShaderProgram::drawArrays(GLenum mode, int first, int count) {
         return;
     }
 
-    // Set vertex buffer
     m_pCmdBuf->SetVertexBuffer(*m_pVertexBuffer);
-
-    // Draw
     m_pCmdBuf->Draw(static_cast<std::uint32_t>(count), static_cast<std::uint32_t>(first));
 }
 
@@ -322,7 +306,6 @@ void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vert
 
     std::uint32_t dataSize = vertexCount * stride;
 
-    // Recreate buffer if size changed
     if (m_pVertexBuffer && m_vertexCount != vertexCount) {
         m_pDevice->Release(*m_pVertexBuffer);
         m_pVertexBuffer = nullptr;
@@ -338,9 +321,6 @@ void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vert
         m_vertexCount = vertexCount;
         m_vertexStride = stride;
     } else {
-        // Update existing buffer
         m_pCmdBuf->UpdateBuffer(*m_pVertexBuffer, 0, data, dataSize);
     }
 }
-
-#endif // MIXXX_USE_LLGL

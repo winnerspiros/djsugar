@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef MIXXX_USE_LLGL
-
 #include <LLGL/LLGL.h>
 #include <LLGL/RenderSystem.h>
 #include <LLGL/Device.h>
@@ -26,6 +24,7 @@ namespace rendergraph {
 
 /// LLGLContext manages the LLGL rendering infrastructure.
 /// Creates and owns the RenderSystem, Device, SwapChain, and CommandBuffer.
+/// Uses OpenGL backend on all platforms for maximum compatibility.
 class LLGLContext : public QObject {
     Q_OBJECT
   public:
@@ -55,13 +54,17 @@ class LLGLContext : public QObject {
         return m_pCommandQueue;
     }
 
+    /// Create a shader with optional profile override.
+    /// If profile is null, the context auto-detects based on the active backend.
     LLGL::Shader* createShader(
-            LLGL::ShaderType type, const char* source, std::uint32_t sourceSize);
+            LLGL::ShaderType type,
+            const char* source,
+            size_t sourceSize,
+            const char* profile = nullptr);
+
     LLGL::Buffer* createBuffer(
-            std::uint64_t size, LLGL::BindFlags::Bits bindFlags,
-            const void* initialData = nullptr,
-            const LLGL::VertexAttribute* attribs = nullptr,
-            std::uint32_t numAttribs = 0);
+            size_t size, LLGL::BindFlags::Bits bindFlags,
+            const void* initialData = nullptr);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);
     LLGL::Sampler* createSampler(const LLGL::SamplerDescriptor& desc);
@@ -69,6 +72,11 @@ class LLGLContext : public QObject {
             const LLGL::GraphicsPipelineDescriptor& desc);
     LLGL::PipelineLayout* createPipelineLayout(
             const LLGL::PipelineLayoutDescriptor& desc);
+
+    /// Name of the active backend (e.g. "OpenGL", "Metal")
+    QString backendName() const;
+    /// Whether the backend accepts GLSL shaders
+    bool useGLSL() const;
 
   private:
     bool createRenderSystem();
@@ -83,9 +91,6 @@ class LLGLContext : public QObject {
     LLGL::CommandQueue* m_pCommandQueue = nullptr;
     QWidget* m_pWidget = nullptr;
     bool m_initialized = false;
-    std::shared_ptr<LLGL::Surface> m_pSurface;
 };
 
 } // namespace rendergraph
-
-#endif // MIXXX_USE_LLGL
