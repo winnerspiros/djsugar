@@ -1,4 +1,5 @@
 #include "llglshaderprogram.h"
+#include "shadersourceprovider.h"
 
 #include <QDir>
 #include <QFile>
@@ -59,12 +60,6 @@ void LLGLShaderProgram::destroyResources() {
     m_pipelineCreated = false;
 }
 
-void LLGLShaderProgram::detectProfiles(QString& vsProfile, QString& fsProfile) {
-    // Always use GLSL 440 since LLGL context uses OpenGL backend on all platforms.
-    vsProfile = "440";
-    fsProfile = "440";
-}
-
 bool LLGLShaderProgram::addShaderFromSourceCode(
         const QString& vertexShader, const QString& fragmentShader) {
     if (!m_pDevice) {
@@ -92,13 +87,30 @@ bool LLGLShaderProgram::createPipelineState(
         return false;
     }
 
-    QString vsProfile, fsProfile;
-    detectProfiles(vsProfile, fsProfile);
+    // Detect backend and select correct profile and source
+    QString vsProfile = "440";
+    QString fsProfile = "440";
+    QString vsSource = vertexShader;
+    QString fsSource = fragmentShader;
+
+    if (m_pDevice) {
+        const char* backendName = m_pDevice->GetName();
+        ShaderBackend backend = ShaderSourceProvider::detectBackend(backendName);
+
+        const ShaderSourceProvider& provider = ShaderSourceProvider::instance();
+        vsProfile = provider.profileString(backend, true);
+        fsProfile = provider.profileString(backend, false);
+
+        // If device was set after source came in (i.e., we were deferred),
+        // recompile with the right backend shaders.
+        // Otherwise, the caller-provided source is used as-is.
+        Q_UNUSED(backend);
+    }
 
     // Create vertex shader
     LLGL::ShaderDescriptor vsDesc;
     vsDesc.type = LLGL::ShaderType::Vertex;
-    QByteArray vsBytes = vertexShader.toUtf8();
+    QByteArray vsBytes = vsSource.toUtf8();
     vsDesc.source = vsBytes.constData();
     vsDesc.sourceSize = static_cast<std::uint32_t>(vsBytes.size());
     vsDesc.entryPoint = "main";
@@ -106,15 +118,15 @@ bool LLGLShaderProgram::createPipelineState(
 
     m_pVertexShader = m_pDevice->CreateShader(vsDesc);
     if (!m_pVertexShader) {
-        qWarning() << "LLGLShaderProgram: failed to create vertex shader on"
-                   << m_pDevice->GetName();
+        qWarning() << "LLGLShaderProgram: failed to create vertex shader (profile="
+                   << vsProfile << " on " << m_pDevice->GetName() << ")";
         return false;
     }
 
     // Create fragment shader
     LLGL::ShaderDescriptor fsDesc;
     fsDesc.type = LLGL::ShaderType::Fragment;
-    QByteArray fsBytes = fragmentShader.toUtf8();
+    QByteArray fsBytes = fsSource.toUtf8();
     fsDesc.source = fsBytes.constData();
     fsDesc.sourceSize = static_cast<std::uint32_t>(fsBytes.size());
     fsDesc.entryPoint = "main";
@@ -122,8 +134,8 @@ bool LLGLShaderProgram::createPipelineState(
 
     m_pFragmentShader = m_pDevice->CreateShader(fsDesc);
     if (!m_pFragmentShader) {
-        qWarning() << "LLGLShaderProgram: failed to create fragment shader on"
-                   << m_pDevice->GetName();
+        qWarning() << "LLGLShaderProgram: failed to create fragment shader (profile="
+                   << fsProfile << " on " << m_pDevice->GetName() << ")";
         return false;
     }
 
@@ -189,15 +201,16 @@ bool LLGLShaderProgram::createPipelineState(
 
     // Cache attribute locations
     m_attributeLocations.clear();
-    m_attributeLocations.push_back(0); // position at location 0
-    m_attributeLocations.push_back(1); // color at location 1
+    m_attributeLocations.push_back(0);
+    m_attributeLocations.push_back(1);
 
     // Cache uniform locations
     m_uniformLocations.clear();
-    m_uniformLocations.push_back(0); // matrix at location 0
+    m_uniformLocations.push_back(0);
 
     m_pipelineCreated = true;
-    qDebug() << "LLGLShaderProgram: created on" << m_pDevice->GetName();
+    qDebug() << "LLGLShaderProgram: created on" << m_pDevice->GetName()
+             << "(profile:" << vsProfile << ")";
     return true;
 }
 
@@ -205,17 +218,11 @@ bool LLGLShaderProgram::bind() {
     if (!m_pCmdBuf || !m_pPipelineState) {
         return false;
     }
-
     m_bound = true;
-
-    // Set pipeline state
     m_pCmdBuf->SetPipelineState(*m_pPipelineState);
-
-    // Bind uniform buffer at slot 0
     if (m_pUniformBuffer) {
         m_pCmdBuf->SetResource(0, *m_pUniformBuffer);
     }
-
     return true;
 }
 
@@ -223,62 +230,28 @@ void LLGLShaderProgram::release() {
     m_bound = false;
 }
 
-void LLGLShaderProgram::setUniformValue(int location, GLfloat value) {
-    Q_UNUSED(location);
-    Q_UNUSED(value);
-    // TODO: update uniform buffer for float uniforms
-}
+void LLGLShaderProgram::setUniformValue(int /*location*/, GLfloat /*value*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector2D& /*value*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector3D& /*value*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector4D& /*value*/) {}
 
-void LLGLShaderProgram::setUniformValue(int location, const QVector2D& value) {
-    Q_UNUSED(location);
-    Q_UNUSED(value);
-}
-
-void LLGLShaderProgram::setUniformValue(int location, const QVector3D& value) {
-    Q_UNUSED(location);
-    Q_UNUSED(value);
-}
-
-void LLGLShaderProgram::setUniformValue(int location, const QVector4D& value) {
-    Q_UNUSED(location);
-    Q_UNUSED(value);
-}
-
-void LLGLShaderProgram::setUniformValue(int location, const QMatrix4x4& value) {
-    Q_UNUSED(location);
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QMatrix4x4& value) {
     if (m_pUniformBuffer && m_pCmdBuf && m_bound) {
-        // Upload matrix to uniform buffer (offset 0, 64 bytes for mat4)
         const float* data = value.constData();
         m_pCmdBuf->UpdateBuffer(*m_pUniformBuffer, 0, data, 64);
     }
 }
 
-void LLGLShaderProgram::setUniformValue(int location, GLuint value) {
-    Q_UNUSED(location);
-    Q_UNUSED(value);
-}
+void LLGLShaderProgram::setUniformValue(int /*location*/, GLuint /*value*/) {}
 
-void LLGLShaderProgram::enableAttributeArray(int location) {
-    Q_UNUSED(location);
-}
+void LLGLShaderProgram::enableAttributeArray(int /*location*/) {}
+void LLGLShaderProgram::disableAttributeArray(int /*location*/) {}
+void LLGLShaderProgram::setAttributeArray(int /*location*/, const float* /*data*/,
+        int /*tupleSize*/, int /*stride*/) {}
 
-void LLGLShaderProgram::disableAttributeArray(int location) {
-    Q_UNUSED(location);
-}
+void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {}
 
-void LLGLShaderProgram::setAttributeArray(int location, const float* data,
-        int tupleSize, int stride) {
-    Q_UNUSED(location);
-    Q_UNUSED(data);
-    Q_UNUSED(tupleSize);
-    Q_UNUSED(stride);
-}
-
-void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {
-}
-
-int LLGLShaderProgram::uniformLocation(const char* name) const {
-    Q_UNUSED(name);
+int LLGLShaderProgram::uniformLocation(const char* /*name*/) const {
     return 0;
 }
 
@@ -288,18 +261,17 @@ int LLGLShaderProgram::attributeLocation(const char* name) const {
     return -1;
 }
 
-void LLGLShaderProgram::drawArrays(GLenum mode, int first, int count) {
-    Q_UNUSED(mode);
-    Q_UNUSED(first);
+void LLGLShaderProgram::drawArrays(GLenum /*mode*/, int first, int count) {
     if (!m_pCmdBuf || !m_pVertexBuffer || count == 0) {
         return;
     }
-
     m_pCmdBuf->SetVertexBuffer(*m_pVertexBuffer);
-    m_pCmdBuf->Draw(static_cast<std::uint32_t>(count), static_cast<std::uint32_t>(first));
+    m_pCmdBuf->Draw(static_cast<std::uint32_t>(count),
+                   static_cast<std::uint32_t>(first));
 }
 
-void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vertexCount, std::uint32_t stride) {
+void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vertexCount,
+                                          std::uint32_t stride) {
     if (!m_pDevice || !m_pCmdBuf || data == nullptr || vertexCount == 0) {
         return;
     }
@@ -316,7 +288,6 @@ void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vert
         vbDesc.size = dataSize;
         vbDesc.bindFlags = LLGL::BindFlags::VertexBuffer;
         vbDesc.cpuAccessFlags = LLGL::CPUAccessFlags::Write;
-
         m_pVertexBuffer = m_pDevice->CreateBuffer(vbDesc, data);
         m_vertexCount = vertexCount;
         m_vertexStride = stride;
