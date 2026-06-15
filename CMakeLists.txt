@@ -5761,6 +5761,7 @@ if(QML)
   target_compile_definitions(
     rendergraph_sg
     PUBLIC $<$<CONFIG:Debug>:MIXXX_DEBUG_ASSERTIONS_ENABLED>
+    PUBLIC RENDERGRAPH_SG
   )
   mixxx_target_warnings_fatal(rendergraph_sg PRIVATE)
   target_link_libraries(mixxx-qml-lib PRIVATE rendergraph_sg)
