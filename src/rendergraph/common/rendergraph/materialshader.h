@@ -11,10 +11,12 @@ class rendergraph::MaterialShader {
   public:
     virtual ~MaterialShader() = default;
 
+#ifndef MIXXX_USE_LLGL
     MaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet);
+#endif
 
     virtual bool bind() = 0;
     virtual void release() = 0;

@@ -9,6 +9,8 @@
 
 using namespace rendergraph;
 
+#ifndef MIXXX_USE_LLGL
+
 namespace {
 #ifdef USE_QSHADER_FOR_GL
 QString resource(const QString& filename) {
@@ -75,3 +77,5 @@ MaterialShader::MaterialShader(const char* vertexShaderFilename,
         m_uniformLocations.push_back(location);
     }
 }
+
+#endif // !MIXXX_USE_LLGL
