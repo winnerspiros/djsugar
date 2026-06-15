@@ -19,7 +19,7 @@ ShaderBackend ShaderSourceProvider::detectBackend(const char* renderSystemName) 
     if (strncmp(renderSystemName, "Direct3D", 7) == 0) {
         return ShaderBackend::HLSL;
     }
-    // OpenGL, Vulkan, OpenGLES → GLSL
+    /* OpenGL, Vulkan, OpenGLES */
     return ShaderBackend::GLSL;
 }
 
@@ -40,14 +40,14 @@ QString ShaderSourceProvider::vertexShader(ShaderBackend backend) const {
     case ShaderBackend::GLSL:
         return QStringLiteral(R"(
 #version 440 core
-layout(location = 0) in vec4 aPosition;
+layout(location = 0) in vec2 aPosition;
 layout(location = 1) in vec3 aColor;
 layout(std140, binding = 0) uniform Uniforms {
     mat4 uMatrix;
 };
 out vec3 vColor;
 void main() {
-    gl_Position = uMatrix * aPosition;
+    gl_Position = uMatrix * vec4(aPosition, 0.0, 1.0);
     vColor = aColor;
 }
 )");
@@ -58,7 +58,7 @@ cbuffer Uniforms : register(b0) {
     float4x4 uMatrix;
 };
 struct VSIn {
-    float4 position : POSITION;
+    float2 position : POSITION;
     float3 color : COLOR;
 };
 struct VSOut {
@@ -67,7 +67,7 @@ struct VSOut {
 };
 VSOut main(VSIn input) {
     VSOut output;
-    output.position = mul(uMatrix, input.position);
+    output.position = mul(uMatrix, float4(input.position, 0.0, 1.0));
     output.color = input.color;
     return output;
 }
@@ -87,11 +87,11 @@ struct VSOut {
 vertex VSOut vertex_main(
     constant Uniforms& uniforms [[buffer(0)]],
     uint vid [[vertex_id]],
-    constant float4* positions [[buffer(1)]],
+    constant float2* positions [[buffer(1)]],
     constant float3* colors [[buffer(2)]]
 ) {
     VSOut output;
-    output.position = uniforms.uMatrix * positions[vid];
+    output.position = uniforms.uMatrix * float4(positions[vid], 0.0, 1.0);
     output.color = colors[vid];
     return output;
 }

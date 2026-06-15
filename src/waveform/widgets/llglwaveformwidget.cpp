@@ -238,7 +238,7 @@ bool LLGLWaveformWidget::createBuffers() {
     vertexAttribs[1].name = "color";
     vertexAttribs[1].format = LLGL::Format::RGB32Float;
     vertexAttribs[1].location = 1;
-    vertexAttribs[1].offset = sizeof(float) * 4;
+    vertexAttribs[1].offset = sizeof(float) * 2;
     vertexAttribs[1].stride = sizeof(WaveformVertex);
 
     // Create vertex buffer

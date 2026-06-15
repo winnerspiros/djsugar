@@ -149,17 +149,17 @@ bool LLGLShaderProgram::createPipelineState(
 
     m_pPipelineLayout = m_pDevice->CreatePipelineLayout(layoutDesc);
 
-    // Vertex attributes: position (vec4) + color (vec3)
+    // Vertex attributes: position (vec2) + color (vec3)
     LLGL::VertexAttribute vertexAttribs[2];
     vertexAttribs[0].name = "position";
-    vertexAttribs[0].format = LLGL::Format::RGBA32Float;
+    vertexAttribs[0].format = LLGL::Format::RG32Float;
     vertexAttribs[0].location = 0;
     vertexAttribs[0].offset = 0;
 
     vertexAttribs[1].name = "color";
     vertexAttribs[1].format = LLGL::Format::RGB32Float;
     vertexAttribs[1].location = 1;
-    vertexAttribs[1].offset = sizeof(float) * 4;
+    vertexAttribs[1].offset = sizeof(float) * 2;
 
     // Graphics pipeline
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
