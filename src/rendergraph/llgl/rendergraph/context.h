@@ -20,16 +20,17 @@
 #include <QWidget>
 #include <memory>
 
+namespace mixxx {
+enum class RendererBackend;
+}
+
 namespace rendergraph {
 
-/// LLGLContext manages the LLGL rendering infrastructure.
-/// Creates and owns the RenderSystem, Device, SwapChain, and CommandBuffer.
-/// Uses OpenGL backend on all platforms for maximum compatibility.
 class LLGLContext : public QObject {
     Q_OBJECT
   public:
     explicit LLGLContext(QObject* parent = nullptr);
-    ~LLGLContext() override();
+    ~LLGLContext() override;
 
     bool initialize(QWidget* pWidget);
     void shutdown();
@@ -41,29 +42,14 @@ class LLGLContext : public QObject {
         return m_pRenderSystem != nullptr && m_pSwapChain != nullptr;
     }
 
-    LLGL::RenderSystem* renderSystem() const {
-        return m_pRenderSystem.get();
-    }
-    LLGL::SwapChain* swapChain() const {
-        return m_pSwapChain;
-    }
-    LLGL::CommandBuffer* commandBuffer() const {
-        return m_pCommandBuffer;
-    }
-    LLGL::CommandQueue* commandQueue() const {
-        return m_pCommandQueue;
-    }
+    LLGL::RenderSystem* renderSystem() const { return m_pRenderSystem.get(); }
+    LLGL::SwapChain* swapChain() const { return m_pSwapChain; }
+    LLGL::CommandBuffer* commandBuffer() const { return m_pCommandBuffer; }
+    LLGL::CommandQueue* commandQueue() const { return m_pCommandQueue; }
 
-    /// Create a shader with optional profile override.
-    /// If profile is null, the context auto-detects based on the active backend.
-    LLGL::Shader* createShader(
-            LLGL::ShaderType type,
-            const char* source,
-            size_t sourceSize,
-            const char* profile = nullptr);
-
-    LLGL::Buffer* createBuffer(
-            size_t size, LLGL::BindFlags::Bits bindFlags,
+    LLGL::Shader* createShader(LLGL::ShaderType type, const char* source,
+            size_t sourceSize, const char* profile = nullptr);
+    LLGL::Buffer* createBuffer(size_t size, LLGL::BindFlags::Bits bindFlags,
             const void* initialData = nullptr);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);
@@ -73,10 +59,11 @@ class LLGLContext : public QObject {
     LLGL::PipelineLayout* createPipelineLayout(
             const LLGL::PipelineLayoutDescriptor& desc);
 
-    /// Name of the active backend (e.g. "OpenGL", "Metal")
     QString backendName() const;
-    /// Whether the backend accepts GLSL shaders
     bool useGLSL() const;
+
+    static void setRendererBackend(mixxx::RendererBackend backend);
+    static mixxx::RendererBackend getConfiguredBackend();
 
   private:
     bool createRenderSystem();

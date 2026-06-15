@@ -2,7 +2,7 @@
 
 #include "rendergraph/materialshader.h"
 #include "rendergraph/materialtype.h"
-#include "rendergraph/llgl/backend/shadercache.h"
+#include "../llgl/backend/shadercache.h"
 
 namespace rendergraph {
 class BaseMaterial;

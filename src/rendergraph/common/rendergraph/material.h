@@ -9,7 +9,7 @@
 #include "rendergraph/texture.h"
 #include "rendergraph/uniformscache.h"
 #include "rendergraph/uniformset.h"
-#include "rendergraph/llgl/backend/shadercache.h"
+#include "../llgl/backend/shadercache.h"
 
 namespace rendergraph {
 class Material;

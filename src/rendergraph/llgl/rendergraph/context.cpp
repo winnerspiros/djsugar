@@ -5,6 +5,8 @@
 #include <QScreen>
 #include <QWindow>
 
+#include "preferences/usersettings.h"
+
 #if defined(Q_OS_ANDROID)
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -152,30 +154,34 @@ void LLGLContext::endFrame() {
 }
 
 bool LLGLContext::createRenderSystem() {
-    // Use OpenGL backend on all platforms.
-    // LLGL's OpenGL backend works everywhere:
-    // - Linux: native OpenGL/EGL
-    // - Android: OpenGL ES (via EGL)  
-    // - Windows: native OpenGL (WGL)
-    // - macOS: NSOpenGLContext (deprecated but functional on macOS 15)
-    //
-    // All shader code is GLSL which LLGL compiles for OpenGL.
-    // This avoids the need for per-backend shader translation.
-
-    const char* backends[] = {"OpenGL"};
-
     LLGL::Log::RegisterCallbackStd();
 
-    for (const char* backendName : backends) {
-        LLGL::RenderSystemDescriptor desc;
-        desc.moduleName = backendName;
+    // Read the configured backend from user settings; fall back to OpenGL.
+    RendererBackend configured = getConfiguredBackend();
+    const char* moduleName = rendererBackendToModuleName(configured);
 
+    // First try the configured backend.
+    {
+        LLGL::RenderSystemDescriptor desc;
+        desc.moduleName = moduleName;
         m_pRenderSystem = LLGL::RenderSystem::Load(desc);
         if (m_pRenderSystem) {
-            qDebug() << "LLGLContext: loaded" << backendName;
+            qDebug() << "LLGLContext: loaded configured backend" << moduleName;
             return true;
         }
-        qWarning() << "LLGLContext: failed to load" << backendName;
+        qWarning() << "LLGLContext: failed to load configured backend" << moduleName;
+    }
+
+    // Fall back to OpenGL.
+    {
+        LLGL::RenderSystemDescriptor desc;
+        desc.moduleName = "OpenGL";
+        m_pRenderSystem = LLGL::RenderSystem::Load(desc);
+        if (m_pRenderSystem) {
+            qDebug() << "LLGLContext: loaded fallback backend OpenGL";
+            return true;
+        }
+        qWarning() << "LLGLContext: failed to load fallback backend OpenGL";
     }
 
     return false;
@@ -292,6 +298,20 @@ bool LLGLContext::useGLSL() const {
     if (!m_pRenderSystem) return true;
     const char* name = m_pRenderSystem->GetName();
     return (strcmp(name, "OpenGL") == 0 || strcmp(name, "OpenGLES") == 0);
+}
+
+namespace {
+// Cached renderer backend selection, set from main() after UserSettings is loaded.
+// Persisted to config so it survives restarts.
+mixxx::RendererBackend s_configuredBackend = mixxx::RendererBackend::Auto;
+} // namespace
+
+mixxx::RendererBackend LLGLContext::getConfiguredBackend() {
+    return s_configuredBackend;
+}
+
+void LLGLContext::setRendererBackend(mixxx::RendererBackend backend) {
+    s_configuredBackend = backend;
 }
 
 } // namespace rendergraph
