@@ -4,7 +4,7 @@
 #include <QVector2D>
 
 #include "rendergraph/materialshader.h"
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
 #include "../opengl/backend/shadercache.h"
 #endif
 #include "rendergraph/materialtype.h"
@@ -37,7 +37,7 @@ std::unique_ptr<MaterialShader> PatternMaterial::createShader() const {
 }
 #endif
 
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
 std::unique_ptr<LLGLMaterialShader> PatternMaterial::createLLGLShader() const {
     return std::make_unique<LLGLMaterialShader>(
             "pattern.vert", "pattern.frag", uniforms(), attributes());
