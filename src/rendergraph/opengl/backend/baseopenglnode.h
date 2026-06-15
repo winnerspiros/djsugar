@@ -15,10 +15,12 @@ class rendergraph::BaseOpenGLNode : public rendergraph::BaseNode {
     void render() override;
     void resize(int w, int h) override;
 
+#ifndef MIXXX_USE_LLGL
     virtual void initializeGL() {
     }
     virtual void paintGL() {
     }
     virtual void resizeGL(int, int) {
     }
+#endif // !MIXXX_USE_LLGL
 };
