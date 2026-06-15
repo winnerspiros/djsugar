@@ -6,7 +6,7 @@
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 
-#include "opengl/backend/shadercache.h"
+#include "../opengl/backend/shadercache.h"
 
 using namespace rendergraph;
 

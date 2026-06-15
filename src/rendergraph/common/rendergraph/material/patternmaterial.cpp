@@ -4,7 +4,7 @@
 #include <QVector2D>
 
 #include "rendergraph/materialshader.h"
-#include "opengl/backend/shadercache.h"
+#include "../opengl/backend/shadercache.h"
 #include "rendergraph/materialtype.h"
 
 using namespace rendergraph;
