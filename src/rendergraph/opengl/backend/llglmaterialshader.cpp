@@ -61,5 +61,8 @@ int LLGLMaterialShader::uniformLocation(int index) const {
 }
 
 int LLGLMaterialShader::attributeLocation(int index) const {
-    return m_shader.attributeLocation(index);
+    if (index < 0 || index >= static_cast<int>(m_attributeLocations.size())) {
+        return -1;
+    }
+    return m_attributeLocations[index];
 }
