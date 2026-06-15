@@ -3,7 +3,6 @@
 #include <LLGL/Buffer.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
-#include <LLGL/Device.h>
 #include <LLGL/Format.h>
 #include <LLGL/LLGL.h>
 #include <LLGL/PipelineLayout.h>

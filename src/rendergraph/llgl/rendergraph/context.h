@@ -2,7 +2,6 @@
 
 #include <LLGL/LLGL.h>
 #include <LLGL/RenderSystem.h>
-#include <LLGL/Device.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
 #include <LLGL/SwapChain.h>

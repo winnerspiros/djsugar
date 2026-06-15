@@ -4,7 +4,6 @@
 
 #include <LLGL/LLGL.h>
 #include <LLGL/RenderSystem.h>
-#include <LLGL/Device.h>
 #include <LLGL/Shader.h>
 #include <LLGL/PipelineState.h>
 #include <LLGL/PipelineLayout.h>
