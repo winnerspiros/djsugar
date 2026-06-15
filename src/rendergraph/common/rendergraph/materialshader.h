@@ -21,7 +21,7 @@ class rendergraph::MaterialShader {
         Q_UNUSED(attributeSet);
     }
 
-    virtual bool bind() {}
+    virtual bool bind() { return true; }
     virtual void release() {}
 
     virtual int uniformLocation(int index) const { return -1; }
