@@ -516,12 +516,37 @@ if(MIXXX_USE_LLGL)
   # infinite recursion when LLGL's CMakeLists.txt calls add_library(LLGL).
   # Instead, we collect LLGL sources and build them as part of mixxx-lib.
 
-  # Collect LLGL source files
+  # Collect LLGL source files recursively, then filter platform-specific ones
   file(GLOB_RECURSE LLGL_SOURCES
     third_party/llgl/sources/*.cpp
     third_party/llgl/sources/*.h
     third_party/llgl/include/LLGL/*.h
   )
+  # Remove platform-specific files not for this platform
+  if(NOT ANDROID)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Android/.*")
+  endif()
+  if(NOT APPLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/iOS/.*")
+  endif()
+  if(NOT WIN32)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/UWP/.*")
+  endif()
+  if(NOT LLGL_OPENGL_ENABLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/OpenGL/.*")
+  endif()
+  if(NOT LLGL_VULKAN_ENABLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/Vulkan/.*")
+  endif()
+  if(NOT LLGL_D3D11_ENABLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/Direct3D11/.*")
+  endif()
+  if(NOT LLGL_D3D12_ENABLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/Direct3D12/.*")
+  endif()
+  if(NOT LLGL_METAL_ENABLE)
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/Metal/.*")
+  endif()
 
   # Create LLGL static library using direct source compilation
   # We use _add_library which is the original function vcpkg's macro calls
