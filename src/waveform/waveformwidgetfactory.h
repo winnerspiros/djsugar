@@ -260,9 +260,6 @@ class WaveformWidgetFactory : public QObject,
   private slots:
     void render();
     void swap();
-#ifdef MIXXX_USE_QOPENGL
-    void swapAndRender();
-#endif
     void slotFrameSwapped();
 
   private:
