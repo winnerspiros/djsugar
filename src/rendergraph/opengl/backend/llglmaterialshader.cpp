@@ -57,7 +57,10 @@ void LLGLMaterialShader::setAttributeArray(int location, const float* data, int 
 }
 
 int LLGLMaterialShader::uniformLocation(int index) const {
-    return m_shader.uniformLocation(index);
+    if (index < 0 || index >= static_cast<int>(m_uniformLocations.size())) {
+        return -1;
+    }
+    return m_uniformLocations[index];
 }
 
 int LLGLMaterialShader::attributeLocation(int index) const {
