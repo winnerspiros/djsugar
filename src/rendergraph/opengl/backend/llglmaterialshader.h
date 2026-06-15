@@ -1,6 +1,6 @@
 #pragma once
 
-#include "llglshaderprogram.h"
+#include "../llgl/backend/llglshaderprogram.h"
 #include "rendergraph/uniformset.h"
 #include "rendergraph/attributeset.h"
 
