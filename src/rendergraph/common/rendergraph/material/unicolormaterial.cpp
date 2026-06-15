@@ -3,7 +3,7 @@
 #include <QVector2D>
 
 #include "rendergraph/materialshader.h"
-#include "rendergraph/opengl/backend/shadercache.h"
+#include "opengl/backend/shadercache.h"
 #include "rendergraph/materialtype.h"
 #include "rendergraph/uniformset.h"
 

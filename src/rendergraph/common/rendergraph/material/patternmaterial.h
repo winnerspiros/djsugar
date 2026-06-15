@@ -1,5 +1,5 @@
 #include "rendergraph/attributeset.h"
-#include "rendergraph/opengl/backend/shadercache.h"
+#include "opengl/backend/shadercache.h"
 #include "rendergraph/material.h"
 #include "rendergraph/texture.h"
 #include "rendergraph/uniformset.h"
