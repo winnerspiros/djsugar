@@ -1794,8 +1794,6 @@ add_library(
   src/util/xml.cpp
   src/waveform/guitick.cpp
   src/waveform/overviewtype.cpp
-  src/waveform/renderers/glwaveformrenderbackground.cpp
-  src/waveform/renderers/glvsynctestrenderer.cpp
   src/waveform/renderers/waveformmark.cpp
   src/waveform/renderers/waveformmarkrange.cpp
   src/waveform/renderers/waveformmarkset.cpp
@@ -1829,10 +1827,6 @@ add_library(
   src/waveform/widgets/simplesignalwaveformwidget.cpp
   src/waveform/widgets/softwarewaveformwidget.cpp
   src/waveform/widgets/waveformwidgetabstract.cpp
-  #if !defined(Q_OS_ANDROID)
-  src/waveform/widgets/glwaveformwidgetabstract.cpp
-  #endif
-  src/waveform/widgets/glvsynctestwidget.cpp
   src/widget/controlwidgetconnection.cpp
   src/widget/findonwebmenufactory.cpp
   src/widget/findonweblast.cpp
@@ -2162,6 +2156,7 @@ if(MIXXX_USE_LLGL)
       src/rendergraph/llgl/backend/basellglnode.cpp
       src/rendergraph/llgl/backend/llglopenglnode.cpp
       src/rendergraph/llgl/backend/llglshaderprogram.cpp
+      src/rendergraph/llgl/backend/shadersourceprovider.cpp
       src/waveform/widgets/llglwaveformwidget.cpp
   )
   target_include_directories(mixxx-lib PRIVATE src/rendergraph)
