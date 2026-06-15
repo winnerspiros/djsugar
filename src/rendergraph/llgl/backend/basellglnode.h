@@ -23,7 +23,7 @@
 #include <QWindow>
 #include <memory>
 
-#include "llgl/rendergraph/openglnode.h"
+#include "../rendergraph/openglnode.h"
 
 namespace rendergraph {
 

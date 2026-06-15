@@ -2,7 +2,7 @@
 
 #ifdef MIXXX_USE_LLGL
 
-#include "llgl/rendergraph/context.h"
+#include "../rendergraph/context.h"
 
 namespace rendergraph {
 
