@@ -29,6 +29,7 @@
 #include "preferences/dialog/dlgprefinterface.h"
 #include "preferences/dialog/dlgprefmixer.h"
 #include "preferences/dialog/dlgprefwaveform.h"
+#include "preferences/dialog/dlgprefrenderer.h"
 #include "util/cmdlineargs.h"
 #include "waveform/waveformwidgetfactory.h"
 
@@ -177,6 +178,12 @@ DlgPreferences::DlgPreferences(
                 tr("Waveforms"),
                 "ic_preferences_waveforms.svg");
     }
+
+    addPageWidget(PreferencesPage(
+                          new DlgPrefRenderer(this, m_pConfig),
+                          new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
+            tr("Renderer"),
+            "ic_preferences_graphics.svg");
 
     addPageWidget(PreferencesPage(
                           new DlgPrefColors(this, m_pConfig, pLibrary),

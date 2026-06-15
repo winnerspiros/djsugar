@@ -29,6 +29,8 @@
 #endif
 #include "mixxxmainwindow.h"
 #include "preferences/configobject.h"
+#include "preferences/rendererbackend.h"
+#include "rendergraph/llgl/rendergraph/context.h"
 #if defined(__WINDOWS__)
 #include "nativeeventhandlerwin.h"
 #endif
@@ -541,6 +543,20 @@ int main(int argc, char* argv[]) {
             QDir(args.getSettingsPath()).filePath(MIXXX_SETTINGS_FILE),
             QString(),
             QString());
+
+    // Set LLGL renderer backend from config
+    {
+        const QString backendStr = config.getValue(
+                ConfigKey(QStringLiteral("[Graphics]"),
+                        QStringLiteral("rendererBackend")),
+                QString());
+        if (!backendStr.isEmpty()) {
+            mixxx::RendererBackend backend = mixxx::rendererBackendFromString(backendStr);
+            rendergraph::LLGLContext::setRendererBackend(backend);
+            qInfo() << "LLGL renderer backend:" << backendStr;
+        }
+    }
+
 #ifndef Q_OS_ANDROID
     int notifywarningThreshold = config.getValue<int>(
             ConfigKey(kConfigGroup, kNotifyMaxDbgTimeKey), 10);

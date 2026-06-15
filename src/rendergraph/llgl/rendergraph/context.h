@@ -20,9 +20,7 @@
 #include <QWidget>
 #include <memory>
 
-namespace mixxx {
-enum class RendererBackend;
-}
+#include "preferences/rendererbackend.h"
 
 namespace rendergraph {
 

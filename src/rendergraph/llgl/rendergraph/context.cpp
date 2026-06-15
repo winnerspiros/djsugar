@@ -5,8 +5,7 @@
 #include <QScreen>
 #include <QWindow>
 
-#include "preferences/usersettings.h"
-
+#include "preferences/rendererbackend.h"
 #if defined(Q_OS_ANDROID)
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -156,32 +155,49 @@ void LLGLContext::endFrame() {
 bool LLGLContext::createRenderSystem() {
     LLGL::Log::RegisterCallbackStd();
 
-    // Read the configured backend from user settings; fall back to OpenGL.
+    // 1. Read the configured backend.
     RendererBackend configured = getConfiguredBackend();
-    const char* moduleName = rendererBackendToModuleName(configured);
 
-    // First try the configured backend.
+    // 2. If Auto, resolve to the platform default.
+    if (configured == RendererBackend::Auto) {
+        configured = defaultRenderer();
+        qDebug() << "LLGLContext: Auto resolved to"
+                 << rendererBackendToString(configured);
+    }
+
+    // 3. Check if the configured backend is available on this platform.
+    QList<RendererBackend> available = availableRenderers();
+    if (!available.contains(configured)) {
+        qWarning() << "LLGLContext: backend"
+                   << rendererBackendToString(configured)
+                   << "not available on this platform, falling back to OpenGL";
+        configured = RendererBackend::OpenGL;
+    }
+
+    // 4. Try to load the configured (or resolved) backend.
     {
+        const char* moduleName = rendererBackendToModuleName(configured);
         LLGL::RenderSystemDescriptor desc;
         desc.moduleName = moduleName;
         m_pRenderSystem = LLGL::RenderSystem::Load(desc);
         if (m_pRenderSystem) {
-            qDebug() << "LLGLContext: loaded configured backend" << moduleName;
+            qDebug() << "LLGLContext: loaded backend" << moduleName;
             return true;
         }
-        qWarning() << "LLGLContext: failed to load configured backend" << moduleName;
+        qWarning() << "LLGLContext: failed to load backend" << moduleName;
     }
 
-    // Fall back to OpenGL.
-    {
+    // 5. Fall back to OpenGL if the preferred backend failed.
+    if (configured != RendererBackend::OpenGL) {
+        const char* fallbackName = rendererBackendToModuleName(RendererBackend::OpenGL);
         LLGL::RenderSystemDescriptor desc;
-        desc.moduleName = "OpenGL";
+        desc.moduleName = fallbackName;
         m_pRenderSystem = LLGL::RenderSystem::Load(desc);
         if (m_pRenderSystem) {
-            qDebug() << "LLGLContext: loaded fallback backend OpenGL";
+            qDebug() << "LLGLContext: loaded fallback backend" << fallbackName;
             return true;
         }
-        qWarning() << "LLGLContext: failed to load fallback backend OpenGL";
+        qWarning() << "LLGLContext: failed to load fallback backend" << fallbackName;
     }
 
     return false;

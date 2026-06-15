@@ -1657,10 +1657,13 @@ add_library(
   src/preferences/dialog/dlgprefsounditem.cpp
   src/preferences/dialog/dlgprefsounditem.ui
   src/preferences/dialog/dlgprefvinyldlg.ui
+  src/preferences/dialog/dlgprefrenderer.cpp
+  src/preferences/dialog/dlgprefrendererdlg.ui
   src/preferences/dialog/dlgprefwaveform.cpp
   src/preferences/dialog/dlgprefwaveformdlg.ui
   src/preferences/effectchainpresetlistmodel.cpp
   src/preferences/effectmanifesttablemodel.cpp
+  src/preferences/rendererbackend.cpp
   src/preferences/replaygainsettings.cpp
   src/preferences/settingsmanager.cpp
   src/preferences/upgrade.cpp
