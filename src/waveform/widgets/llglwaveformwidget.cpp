@@ -1,22 +1,15 @@
 // LLGLWaveformWidget - Full GPU-accelerated waveform rendering using LLGL
 //
-// Architecture improvements over QOpenGL-based rendering:
-// 1. Native swap chain: Renders directly to a native window surface via LLGL,
-//    bypassing Qt's compositor for lower latency.
-// 2. Command buffer batching: All draw commands are recorded into a single
-//    LLGL command buffer per frame, reducing CPU overhead.
-// 3. GPU-side vertex buffers: Waveform vertex data is uploaded to GPU memory
-//    and reused across frames. Only re-uploaded when data changes.
-// 4. Pipeline state caching: Pipeline state objects (shaders, blend state,
-//    rasterizer state) are created once at initialization and reused.
-// 5. Multi-buffered rendering: 3 frames in flight to maximize GPU utilization
-//    and avoid CPU-GPU sync stalls.
+// Architecture:
+// - Uses LLGL swap chain for native surface rendering
+// - GPU-side vertex buffers with dynamic upload
+// - Pipeline state caching: PSOs created once at init, reused every frame
+// - No QPainter fallback — LLGL is the only rendering path
 
 #include "llglwaveformwidget.h"
 
 #include <QDebug>
 #include <QTimer>
-#include <QWindow>
 #include <cmath>
 
 #include "moc_llglwaveformwidget.cpp"
@@ -68,8 +61,6 @@ QWidget* LLGLWaveformWidget::widget() {
 mixxx::Duration LLGLWaveformWidget::render() {
     if (m_initOk && m_pContext && m_pContext->isValid()) {
         renderLLGL();
-    } else {
-        update();
     }
     return mixxx::Duration();
 }
@@ -126,31 +117,23 @@ bool LLGLWaveformWidget::initializeLLGL() {
         return false;
     }
 
-    // Swap chain is created by m_pContext->initialize(this) above
-
     // Create pipeline state cache (shaders, PSO)
     if (!createPipelineCache()) {
         qWarning() << "LLGLWaveformWidget: failed to create pipeline cache";
         return false;
     }
 
-    // Create multi-buffered frame resources
-    if (!createFrameResources()) {
-        qWarning() << "LLGLWaveformWidget: failed to create frame resources";
-        return false;
-    }
-
     // Create GPU vertex buffer
-    m_vertexBuffer.capacity = 65536;  // Initial capacity
+    m_vertexBuffer.capacity = 65536;
     m_vertexBuffer.count = 0;
 
     auto* device = m_pContext->renderSystem();
     if (device) {
         LLGL::BufferDescriptor bufDesc;
         bufDesc.size = static_cast<std::uint32_t>(m_vertexBuffer.capacity * sizeof(WaveformVertex));
-        bufDesc.bindFlags = LLGL::BindFlag::VertexBuffer;
-        bufDesc.cpuAccessFlags = LLGL::CPUAccessFlag::Write;  // CPU-write for updates
-        bufDesc.miscFlags = LLGL::MiscFlag::DynamicUsage;       // Dynamic for frequent updates
+        bufDesc.bindFlags = LLGL::BindFlags::VertexBuffer;
+        bufDesc.cpuAccessFlags = LLGL::CPUAccessFlags::Write;
+        bufDesc.miscFlags = LLGL::MiscFlags::DynamicUsage;
         m_vertexBuffer.buffer = device->CreateBuffer(bufDesc);
         if (!m_vertexBuffer.buffer) {
             qWarning() << "LLGLWaveformWidget: failed to create vertex buffer";
@@ -159,9 +142,7 @@ bool LLGLWaveformWidget::initializeLLGL() {
     }
 
     qDebug() << "LLGLWaveformWidget: initialized with backend:"
-             << m_pContext->backendName()
-             << "swap chain:" << (m_pContext->swapChain() ? "yes" : "no")
-             << "pipeline:" << (m_pipelineCache.valid ? "yes" : "no");
+             << m_pContext->backendName();
     return true;
 }
 
@@ -174,21 +155,7 @@ void LLGLWaveformWidget::shutdownLLGL() {
 
     auto* device = m_pContext->renderSystem();
     if (device) {
-        // Wait for all GPU work to complete
-        auto* queue = m_pContext->commandQueue();
-        if (queue) {
-            queue->WaitIdle();
-        }
-
-        // Release frame resources
-        for (int i = 0; i < kFrameCount; ++i) {
-            if (m_frames[i].commandBuffer) {
-                device->Release(*m_frames[i].commandBuffer);
-            }
-            if (m_frames[i].fence) {
-                device->Release(*m_frames[i].fence);
-            }
-        }
+        m_pContext->waitIdle();
 
         // Release pipeline cache
         if (m_pipelineCache.pipelineState) {
@@ -208,11 +175,8 @@ void LLGLWaveformWidget::shutdownLLGL() {
         if (m_vertexBuffer.buffer) {
             device->Release(*m_vertexBuffer.buffer);
         }
-
-        // Note: swap chain is owned by m_pContext, don't release here
     }
 
-    memset(m_frames, 0, sizeof(m_frames));
     memset(&m_pipelineCache, 0, sizeof(m_pipelineCache));
     memset(&m_vertexBuffer, 0, sizeof(m_vertexBuffer));
     m_pRenderTarget = nullptr;
@@ -260,8 +224,7 @@ bool LLGLWaveformWidget::createShaders() {
 
     m_pipelineCache.vertexShader = device->CreateShader(vsDesc);
     if (!m_pipelineCache.vertexShader) {
-        qWarning() << "LLGLWaveformWidget: failed to create vertex shader ("
-                   << vsProfile << " on " << device->GetName() << ")";
+        qWarning() << "LLGLWaveformWidget: failed to create vertex shader";
         return false;
     }
 
@@ -276,8 +239,7 @@ bool LLGLWaveformWidget::createShaders() {
 
     m_pipelineCache.fragmentShader = device->CreateShader(fsDesc);
     if (!m_pipelineCache.fragmentShader) {
-        qWarning() << "LLGLWaveformWidget: failed to create fragment shader ("
-                   << fsProfile << " on " << device->GetName() << ")";
+        qWarning() << "LLGLWaveformWidget: failed to create fragment shader";
         return false;
     }
 
@@ -285,7 +247,6 @@ bool LLGLWaveformWidget::createShaders() {
 }
 
 void LLGLWaveformWidget::setupVertexFormat() {
-    // Vertex format: float2 position + float3 color
     auto& fmt = m_pipelineCache.vertexFormat;
     fmt.AppendAttribute({"position", LLGL::Format::RG32Float, 0, 0});
     fmt.AppendAttribute({"color", LLGL::Format::RGB32Float, 1, 2 * sizeof(float)});
@@ -318,7 +279,7 @@ bool LLGLWaveformWidget::createPipelineState() {
     gpDesc.rasterizer.cullMode = LLGL::CullMode::None;
     gpDesc.rasterizer.fillMode = LLGL::FillMode::Solid;
 
-    // Blend state — enable alpha blending
+    // Blend state
     gpDesc.blend.blendFactor = {1.0f, 1.0f, 1.0f, 1.0f};
     gpDesc.blend.targets[0].blendEnabled = true;
     gpDesc.blend.targets[0].srcColor = LLGL::BlendOp::SrcAlpha;
@@ -335,151 +296,51 @@ bool LLGLWaveformWidget::createPipelineState() {
     return true;
 }
 
-bool LLGLWaveformWidget::createFrameResources() {
-    auto* device = m_pContext->renderSystem();
-    if (!device) {
-        return false;
-    }
-
-    for (int i = 0; i < kFrameCount; ++i) {
-        // Create command buffer
-        LLGL::CommandBufferDescriptor cbDesc;
-        cbDesc.flags = LLGL::CommandBufferFlag::Secondary;
-        m_frames[i].commandBuffer = device->CreateCommandBuffer(cbDesc);
-        if (!m_frames[i].commandBuffer) {
-            qWarning() << "LLGLWaveformWidget: failed to create command buffer " << i;
-            return false;
-        }
-
-        // Create fence for GPU-CPU synchronization
-        m_frames[i].fence = device->CreateFence();
-        if (!m_frames[i].fence) {
-            qWarning() << "LLGLWaveformWidget: failed to create fence " << i;
-            return false;
-        }
-    }
-
-    return true;
-}
-
 // ============================================================================
-// Per-Frame Rendering with Command Buffer Batching
+// Per-Frame Rendering
 // ============================================================================
 
 void LLGLWaveformWidget::renderLLGL() {
-    if (!m_initOk || !m_pContext || !m_pContext->swapChain()) {
+    if (!m_initOk || !m_pContext || !m_pContext->isValid()) {
         renderFallback();
         return;
     }
 
-    std::lock_guard<std::mutex> lock(m_renderMutex);
-
-    beginFrame();
-    recordDrawCommands();
-    endFrame();
-    presentFrame();
-}
-
-void LLGLWaveformWidget::beginFrame() {
-    // Get next frame resource and wait for it to be free
-    LLGLFrameResources& frame = m_frames[m_currentFrame];
-    waitForFrame(frame);
-
-    // Begin recording command buffer
-    LLGL::CommandBuffer* cmdBuf = frame.commandBuffer;
-    cmdBuf->Begin();
-
-    // Set render target to swap chain
-    cmdBuf->SetRenderTarget(*m_pContext->swapChain());
-
-    // Set viewport
-    LLGL::Viewport viewport;
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(width());
-    viewport.height = static_cast<float>(height());
-    cmdBuf->SetViewport(viewport);
-
-    // Clear to background color
-    LLGL::ClearValue clearValue;
-    clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
-    cmdBuf->Clear(LLGL::ClearFlag::Color, clearValue);
-
-    // Bind cached pipeline state
-    cmdBuf->SetPipelineState(*m_pipelineCache.pipelineState);
-
-    frame.inUse = true;
-}
-
-void LLGLWaveformWidget::recordDrawCommands() {
-    LLGLFrameResources& frame = m_frames[m_currentFrame];
-    LLGL::CommandBuffer* cmdBuf = frame.commandBuffer;
-
     // Update vertex buffer if data changed
     if (!m_vertices.empty()) {
-        updateVertexData(m_vertices.data(), static_cast<std::uint32_t>(m_vertices.size()));
+        updateVertexBuffer(m_vertices.data(), static_cast<std::uint32_t>(m_vertices.size()));
     }
 
-    // Bind vertex buffer
-    if (m_vertexBuffer.buffer && m_vertexBuffer.count > 0) {
-        cmdBuf->SetVertexBuffer(*m_vertexBuffer.buffer);
+    // Begin frame (handles render pass, clear, etc.)
+    m_pContext->beginFrame(Qt::black);
 
-        // Draw — single draw call for all waveform data
+    // Bind pipeline state
+    auto* cmdBuf = m_pContext->commandBuffer();
+    if (cmdBuf && m_pipelineCache.pipelineState) {
+        cmdBuf->SetPipelineState(*m_pipelineCache.pipelineState);
+    }
+
+    // Draw waveform
+    if (m_vertexBuffer.buffer && m_vertexBuffer.count > 0 && cmdBuf) {
+        cmdBuf->SetVertexBuffer(*m_vertexBuffer.buffer);
         cmdBuf->Draw(static_cast<std::uint32_t>(m_vertexBuffer.count), 0);
     }
-}
 
-void LLGLWaveformWidget::endFrame() {
-    LLGLFrameResources& frame = m_frames[m_currentFrame];
-    LLGL::CommandBuffer* cmdBuf = frame.commandBuffer;
-
-    cmdBuf->End();
-}
-
-void LLGLWaveformWidget::presentFrame() {
-    LLGLFrameResources& frame = m_frames[m_currentFrame];
-    auto* queue = m_pContext->commandQueue();
-
-    if (queue) {
-        // Submit command buffer with fence
-        queue->Submit(*frame.commandBuffer);
-        queue->Submit(*frame.fence);
-
-        // Present swap chain
-        m_pContext->swapChain()->Present();
-    }
-
-    // Advance to next frame
-    m_currentFrame = (m_currentFrame + 1) % kFrameCount;
-}
-
-void LLGLWaveformWidget::waitForFrame(LLGLFrameResources& frame) {
-    if (!frame.inUse || !frame.fence) {
-        return;
-    }
-
-    auto* queue = m_pContext->commandQueue();
-    if (queue) {
-        // Wait for GPU to finish with this frame
-        queue->WaitFence(*frame.fence);
-        queue->ResetFence(*frame.fence);
-    }
-    frame.inUse = false;
+    // End frame (handles present)
+    m_pContext->endFrame();
 }
 
 // ============================================================================
 // GPU Buffer Management
 // ============================================================================
 
-void LLGLWaveformWidget::updateVertexData(const WaveformVertex* data, std::uint32_t count) {
+void LLGLWaveformWidget::updateVertexBuffer(const WaveformVertex* data, std::uint32_t count) {
     if (!data || count == 0 || !m_vertexBuffer.buffer) {
         return;
     }
 
-    // Ensure buffer is large enough
     ensureBufferCapacity(count);
 
-    // Upload data to GPU buffer
     auto* device = m_pContext->renderSystem();
     if (device) {
         device->WriteBuffer(*m_vertexBuffer.buffer, 0, data,
@@ -499,23 +360,20 @@ void LLGLWaveformWidget::ensureBufferCapacity(std::uint32_t required) {
         return;
     }
 
-    // Double capacity until large enough
     std::uint32_t newCapacity = m_vertexBuffer.capacity;
     while (newCapacity < required) {
         newCapacity *= 2;
     }
 
-    // Release old buffer
     if (m_vertexBuffer.buffer) {
         device->Release(*m_vertexBuffer.buffer);
     }
 
-    // Create new larger buffer
     LLGL::BufferDescriptor bufDesc;
     bufDesc.size = static_cast<std::uint32_t>(newCapacity * sizeof(WaveformVertex));
-    bufDesc.bindFlags = LLGL::BindFlag::VertexBuffer;
-    bufDesc.cpuAccessFlags = LLGL::CPUAccessFlag::Write;
-    bufDesc.miscFlags = LLGL::MiscFlag::DynamicUsage;
+    bufDesc.bindFlags = LLGL::BindFlags::VertexBuffer;
+    bufDesc.cpuAccessFlags = LLGL::CPUAccessFlags::Write;
+    bufDesc.miscFlags = LLGL::MiscFlags::DynamicUsage;
     m_vertexBuffer.buffer = device->CreateBuffer(bufDesc);
     m_vertexBuffer.capacity = newCapacity;
     m_vertexBuffer.count = 0;
@@ -527,5 +385,4 @@ void LLGLWaveformWidget::ensureBufferCapacity(std::uint32_t required) {
 
 void LLGLWaveformWidget::renderFallback() {
     // No fallback — if LLGL fails, we show nothing
-    // The old QPainter fallback is removed as part of the full LLGL migration
 }

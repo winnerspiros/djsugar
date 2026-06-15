@@ -43,10 +43,11 @@ class LLGLContext : public QObject {
     LLGL::SwapChain* swapChain() const { return m_pSwapChain; }
     LLGL::CommandBuffer* commandBuffer() const { return m_pCommandBuffer; }
     LLGL::CommandQueue* commandQueue() const { return m_pCommandQueue; }
+    void waitIdle();
 
     LLGL::Shader* createShader(LLGL::ShaderType type, const char* source,
             size_t sourceSize, const char* profile = nullptr);
-    LLGL::Buffer* createBuffer(size_t size, LLGL::BindFlags::Bits bindFlags,
+    LLGL::Buffer* createBuffer(size_t size, long bindFlags,
             const void* initialData = nullptr);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);

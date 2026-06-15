@@ -8,6 +8,7 @@
 #include "rendergraph/texture.h"
 #include "rendergraph/llgl/rendergraph/context.h"
 #include "../../llgl/backend/llglshaderprogram.h"
+#include "../../llgl/backend/basellglnode.h"
 
 using namespace rendergraph;
 

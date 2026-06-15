@@ -225,6 +225,13 @@ void LLGLContext::destroySwapChain() {
     }
 }
 
+void LLGLContext::waitIdle() {
+    QMutexLocker lock(&m_mutex);
+    if (m_pCommandQueue) {
+        m_pCommandQueue->WaitIdle();
+    }
+}
+
 LLGL::Shader* LLGLContext::createShader(
         LLGL::ShaderType type, const char* source, size_t sourceSize,
         const char* profile) {
@@ -244,7 +251,7 @@ LLGL::Shader* LLGLContext::createShader(
 }
 
 LLGL::Buffer* LLGLContext::createBuffer(
-        size_t size, LLGL::BindFlags::Bits bindFlags, const void* initialData) {
+        size_t size, long bindFlags, const void* initialData) {
     QMutexLocker lock(&m_mutex);
     if (!m_pRenderSystem) {
         return nullptr;
