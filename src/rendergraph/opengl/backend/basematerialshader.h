@@ -7,12 +7,12 @@
 namespace rendergraph {
 class BaseMaterial;
 class LLGLShaderProgram;
-class LLGLBaseMaterialShader;
+class BaseMaterialShader;
 } // namespace rendergraph
 
-class rendergraph::LLGLBaseMaterialShader : public MaterialShader {
+class rendergraph::BaseMaterialShader : public MaterialShader {
   protected:
-    LLGLBaseMaterialShader(const char* vertexShaderFile,
+    BaseMaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet)
@@ -20,7 +20,7 @@ class rendergraph::LLGLBaseMaterialShader : public MaterialShader {
     }
 
   public:
-    virtual ~LLGLBaseMaterialShader() = default;
+    virtual ~BaseMaterialShader() = default;
 
     virtual int attributeLocation(int attributeIndex) const;
     virtual int uniformLocation(int uniformIndex) const;

@@ -9,13 +9,13 @@ namespace rendergraph {
 
 /// LLGLMaterialShader wraps LLGLShaderProgram to provide the same interface
 /// as the original QOpenGLShaderProgram-based MaterialShader.
-class LLGLMaterialShader : public LLGLBaseMaterialShader {
+class LLGLMaterialShader : public BaseMaterialShader {
   public:
     LLGLMaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet)
-        : LLGLBaseMaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
+        : BaseMaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
           m_vertexFile(vertexShaderFile),
           m_fragmentFile(fragmentShaderFile),
           m_loaded(false) {
