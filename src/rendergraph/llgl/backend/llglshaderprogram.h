@@ -22,6 +22,9 @@ typedef void GLvoid;
 typedef char GLchar;
 typedef unsigned short GLushort;
 typedef unsigned char GLubyte;
+typedef unsigned int GLboolean;
+typedef intptr_t GLsizeiptr;
+typedef uintptr_t GLintptr;
 
 // Common GL constants needed for draw calls
 static const GLenum GL_TRIANGLES = 0x0004;
@@ -37,12 +40,12 @@ static const GLenum GL_LINEAR = 0x2601;
 static const GLenum GL_TEXTURE_MIN_FILTER = 0x2801;
 static const GLenum GL_TEXTURE_MAG_FILTER = 0x2800;
 
+#include <cstdint>
 #include <QMatrix4x4>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
 #include <QString>
-#include <QDebug>
 #include <vector>
 
 #include "util/class.h"
