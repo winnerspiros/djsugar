@@ -40,4 +40,4 @@ else()
 endif()
 target_compile_definitions(rendergraph_sg PUBLIC rendergraph=rendergraph_sg)
 
-target_include_directories(rendergraph_sg PUBLIC . ../common ../opengl ${CMAKE_SOURCE_DIR}/third_party/llgl/include)
+target_include_directories(rendergraph_sg PUBLIC . ../common ../opengl ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/llgl/include)
