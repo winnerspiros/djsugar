@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "preferences/dialog/dlgpreferencepage.h"
-#include "preferences/dialog/ui_dlgprefrenderdlg.h"
-#include "preferences/usersettings.h"
+#include "dlgpreferencepage.h"
+#include "ui_dlgprefrenderdlg.h"
+#include "usersettings.h"
 
 class DlgPrefRenderer : public DlgPreferencePage, public Ui::DlgPrefRenderDlg {
     Q_OBJECT

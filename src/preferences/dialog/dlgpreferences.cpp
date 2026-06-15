@@ -29,7 +29,7 @@
 #include "preferences/dialog/dlgprefinterface.h"
 #include "preferences/dialog/dlgprefmixer.h"
 #include "preferences/dialog/dlgprefwaveform.h"
-#include "preferences/dialog/dlgprefrenderer.h"
+#include "dlgprefrenderer.h"
 #include "util/cmdlineargs.h"
 #include "waveform/waveformwidgetfactory.h"
 

@@ -5,7 +5,7 @@
 #include <QScreen>
 #include <QWindow>
 
-#include "preferences/rendererbackend.h"
+#include "../../preferences/rendererbackend.h"
 #if defined(Q_OS_ANDROID)
 #include <android/native_window.h>
 #include <android/native_window_jni.h>

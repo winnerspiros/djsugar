@@ -2,7 +2,7 @@
 
 #include <QComboBox>
 
-#include "preferences/rendererbackend.h"
+#include "../rendererbackend.h"
 #include "moc_dlgprefrenderer.cpp"
 
 namespace {

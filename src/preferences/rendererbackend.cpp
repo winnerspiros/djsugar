@@ -1,4 +1,4 @@
-#include "preferences/rendererbackend.h"
+#include "rendererbackend.h"
 
 #include <QCoreApplication>
 
@@ -11,20 +11,27 @@ namespace mixxx {
 QList<RendererBackend> availableRenderers() {
     QList<RendererBackend> backends;
     backends.append(RendererBackend::Auto);
-    backends.append(RendererBackend::OpenGL);
 
 #if defined(Q_OS_WIN32)
-    backends.append(RendererBackend::Direct3D11);
+    // Windows: DX12, DX11, Vulkan, OpenGL
     backends.append(RendererBackend::Direct3D12);
+    backends.append(RendererBackend::Direct3D11);
     backends.append(RendererBackend::Vulkan);
+    backends.append(RendererBackend::OpenGL);
 #elif defined(Q_OS_MACOS) || defined(Q_OS_IOS)
+    // macOS/iOS: Metal only (OpenGL deprecated)
     backends.append(RendererBackend::Metal);
-    // macOS also supports OpenGL (deprecated but functional)
     backends.append(RendererBackend::OpenGL);
 #elif defined(Q_OS_LINUX)
+    // Linux: Vulkan only
     backends.append(RendererBackend::Vulkan);
+    backends.append(RendererBackend::OpenGL);
 #elif defined(Q_OS_ANDROID)
+    // Android: Vulkan, OpenGL ES
     backends.append(RendererBackend::Vulkan);
+    backends.append(RendererBackend::OpenGL);
+#else
+    backends.append(RendererBackend::OpenGL);
 #endif
 
     return backends;
@@ -38,7 +45,7 @@ RendererBackend defaultRenderer() {
 #elif defined(Q_OS_LINUX)
     return RendererBackend::Vulkan;
 #elif defined(Q_OS_ANDROID)
-    return RendererBackend::OpenGL;
+    return RendererBackend::Vulkan;
 #else
     return RendererBackend::OpenGL;
 #endif
@@ -74,15 +81,7 @@ RendererBackend rendererBackendFromString(const QString& name) {
 const char* rendererBackendToModuleName(RendererBackend backend) {
     switch (backend) {
     case RendererBackend::Auto:
-#if defined(Q_OS_MACOS) || defined(Q_OS_IOS)
-        return "Metal";
-#elif defined(Q_OS_WIN32)
-        return "Direct3D11";
-#elif defined(Q_OS_LINUX)
-        return "Vulkan";
-#else
-        return "OpenGL";
-#endif
+        return rendererBackendToModuleName(defaultRenderer());
     case RendererBackend::OpenGL:
         return "OpenGL";
     case RendererBackend::Vulkan:
@@ -98,22 +97,8 @@ const char* rendererBackendToModuleName(RendererBackend backend) {
 }
 
 bool rendererBackendUsesGLSL(RendererBackend backend) {
-    switch (backend) {
-    case RendererBackend::OpenGL:
-        return true;
-    case RendererBackend::Vulkan:
-        // Vulkan uses SPIR-V, but LLGL accepts GLSL and compiles to SPIR-V
-        return true;
-    case RendererBackend::Direct3D11:
-    case RendererBackend::Direct3D12:
-        // D3D uses HLSL, but LLGL accepts GLSL and cross-compiles to HLSL
-        return true;
-    case RendererBackend::Metal:
-        // Metal uses MetalSL, but LLGL accepts GLSL and cross-compiles
-        return true;
-    case RendererBackend::Auto:
-        return rendererBackendUsesGLSL(defaultRenderer());
-    }
+    Q_UNUSED(backend);
+    // LLGL accepts GLSL for all backends and compiles internally
     return true;
 }
 

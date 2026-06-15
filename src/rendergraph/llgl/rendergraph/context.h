@@ -20,7 +20,7 @@
 #include <QWidget>
 #include <memory>
 
-#include "preferences/rendererbackend.h"
+#include "../../preferences/rendererbackend.h"
 
 namespace rendergraph {
 
