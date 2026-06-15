@@ -221,10 +221,6 @@ QSGNode* QmlWaveformDisplay::updatePaintNode(QSGNode* node, UpdatePaintNodeData*
                 continue;
             }
             auto renderer = pQmlRenderer->create(this, m_options);
-            // FIXME Some renderer will return nullptr till
-            // WaveformRendererTextured is supported (#14990)
-            // It is also expected for the stem renderer to return a null value in
-            // case STEM are not enabled.
             if (!renderer.renderer) {
                 continue;
             }

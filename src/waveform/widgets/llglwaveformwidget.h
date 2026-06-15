@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QOffscreenSurface>
-#include <QOpenGLContext>
 #include <QTimer>
 #include <QWidget>
 #include <memory>
