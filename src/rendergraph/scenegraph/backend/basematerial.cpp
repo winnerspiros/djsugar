@@ -22,6 +22,8 @@ QSGMaterialShader* BaseMaterial::createShader(QSGRendererInterface::RenderMode) 
     // Qt will cache and reuse the shader for all Material of the same type.
     // TODO make sure that RenderMode is always the same.
     auto pThis = static_cast<const Material*>(this);
+    // MaterialShader inherits from BaseMaterialShader which inherits from QSGMaterialShader (SG target)
+    // So this conversion is safe
     auto pShader = pThis->createShader().release();
-    return pShader;
+    return static_cast<QSGMaterialShader*>(pShader);
 }
