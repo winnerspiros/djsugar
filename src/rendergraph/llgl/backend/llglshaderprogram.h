@@ -25,6 +25,12 @@ typedef unsigned char GLubyte;
 typedef unsigned int GLboolean;
 typedef intptr_t GLsizeiptr;
 typedef uintptr_t GLintptr;
+typedef float GLclampf;
+typedef unsigned int GLbitfield;
+typedef unsigned short GLhalf;
+typedef signed char GLbyte;
+typedef unsigned long long GLuint64;
+typedef long long GLint64;
 
 // Common GL constants needed for draw calls
 static const GLenum GL_TRIANGLES = 0x0004;
