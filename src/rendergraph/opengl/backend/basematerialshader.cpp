@@ -1,19 +1,19 @@
-#include "backend/basematerialshader.h"
+#include "basematerialshader.h"
 
 using namespace rendergraph;
 
-int BaseMaterialShader::attributeLocation(int attributeIndex) const {
+int LLGLBaseMaterialShader::attributeLocation(int attributeIndex) const {
     return m_attributeLocations[attributeIndex];
 }
 
-int BaseMaterialShader::uniformLocation(int uniformIndex) const {
+int LLGLBaseMaterialShader::uniformLocation(int uniformIndex) const {
     return m_uniformLocations[uniformIndex];
 }
 
-BaseMaterial* BaseMaterialShader::lastModifiedByMaterial() const {
+BaseMaterial* LLGLBaseMaterialShader::lastModifiedByMaterial() const {
     return m_pLastModifiedByMaterial;
 }
 
-void BaseMaterialShader::setLastModifiedByMaterial(BaseMaterial* pMaterial) {
+void LLGLBaseMaterialShader::setLastModifiedByMaterial(BaseMaterial* pMaterial) {
     m_pLastModifiedByMaterial = pMaterial;
 }

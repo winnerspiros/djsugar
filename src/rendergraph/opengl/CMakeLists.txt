@@ -12,6 +12,8 @@ add_library(
   backend/basematerial.cpp
   backend/basematerial.h
   backend/basematerialshader.cpp
+  backend/llglmaterialshader.cpp
+  backend/llglmaterialshader.h
   backend/basematerialtype.h
   backend/basenode.h
   backend/basenode.cpp

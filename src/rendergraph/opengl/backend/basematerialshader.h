@@ -6,17 +6,18 @@
 namespace rendergraph {
 class BaseMaterial;
 class LLGLShaderProgram;
+class LLGLBaseMaterialShader;
 } // namespace rendergraph
 
-class rendergraph::BaseMaterialShader {
+class rendergraph::LLGLBaseMaterialShader {
   protected:
-    BaseMaterialShader() = default;
+    LLGLBaseMaterialShader() = default;
 
   public:
-    virtual ~BaseMaterialShader() = default;
+    virtual ~LLGLBaseMaterialShader() = default;
 
-    int attributeLocation(int attributeIndex) const;
-    int uniformLocation(int uniformIndex) const;
+    virtual int attributeLocation(int attributeIndex) const;
+    virtual int uniformLocation(int uniformIndex) const;
 
     BaseMaterial* lastModifiedByMaterial() const;
     void setLastModifiedByMaterial(BaseMaterial* pMaterial);
