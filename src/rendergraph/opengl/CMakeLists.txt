@@ -33,7 +33,7 @@ add_library(
   texture.cpp
 )
 
-target_link_libraries(rendergraph_gl PUBLIC Qt6::Core Qt6::Gui LLGL)
+target_link_libraries(rendergraph_gl PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets LLGL)
 find_package(Microsoft.GSL CONFIG)
 if(Microsoft.GSL_FOUND)
   target_link_libraries(rendergraph_gl PUBLIC Microsoft.GSL::GSL)
