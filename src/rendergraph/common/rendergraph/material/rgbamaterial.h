@@ -19,7 +19,7 @@ class rendergraph::RGBAMaterial : public rendergraph::Material {
     std::unique_ptr<MaterialShader> createShader() const override;
 #endif
 
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;
 #endif
 

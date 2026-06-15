@@ -12,9 +12,7 @@
 
 namespace rendergraph {
 class Material;
-#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
 class LLGLMaterialShader;
-#endif
 } // namespace rendergraph
 
 class rendergraph::Material : public rendergraph::BaseMaterial {
@@ -79,7 +77,7 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     }
 #endif
 
-    #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     bool isLLGL() const { return true; }
 #else
     bool isLLGL() const { return false; }
