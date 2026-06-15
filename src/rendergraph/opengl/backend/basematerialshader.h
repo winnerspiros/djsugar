@@ -1,11 +1,11 @@
 #pragma once
 
-#include "rendergraph/materialshader.h"
 #include <QString>
 #include <vector>
 
 namespace rendergraph {
 class BaseMaterial;
+class MaterialShader;
 class LLGLShaderProgram;
 class BaseMaterialShader;
 } // namespace rendergraph
