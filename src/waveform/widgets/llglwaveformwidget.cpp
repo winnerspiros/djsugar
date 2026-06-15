@@ -11,7 +11,7 @@
 #include <cmath>
 
 #include "moc_llglwaveformwidget.cpp"
-#include "rendergraph/llgl/backend/shadersourceprovider.h"
+#include "../rendergraph/llgl/backend/shadersourceprovider.h"
 #include "track/track.h"
 #include "util/math.h"
 #include "waveform/renderers/waveformrenderbackground.h"

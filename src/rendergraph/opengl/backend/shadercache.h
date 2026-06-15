@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "rendergraph/material.h"
-#include "rendergraph/llgl/backend/llglshaderprogram.h"
+#include "../llgl/backend/llglshaderprogram.h"
 
 namespace rendergraph {
 
