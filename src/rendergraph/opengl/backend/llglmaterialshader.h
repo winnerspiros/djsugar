@@ -26,8 +26,10 @@ class LLGLMaterialShader : public MaterialShader, public LLGLBaseMaterialShader 
     bool link();
 
     // QOpenGLShaderProgram-compatible interface
-    bool bind();
-    void release();
+    bool bind() override;
+    void release() override;
+    int uniformLocation(int index) const override;
+    int attributeLocation(int index) const override;
 
     void setUniformValue(int location, GLfloat value);
     void setUniformValue(int location, const QVector2D& value);
