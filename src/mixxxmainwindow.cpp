@@ -5,24 +5,12 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QKeyEvent>
-#include <QOpenGLContext>
 #include <QStatusBar>
 #include <QUrl>
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QGLFormat>
-#endif
 
 #if defined(__LINUX__) && !defined(__ANDROID__)
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
-#endif
-
-#ifdef MIXXX_USE_QOPENGL
-#include <QGuiApplication>
-
-#include "widget/tooltipqopengl.h"
-#include "widget/winitialglwidget.h"
 #endif
 
 #include "controllers/keyboard/keyboardeventfilter.h"
@@ -155,51 +143,6 @@ MixxxMainWindow::MixxxMainWindow(std::shared_ptr<mixxx::CoreServices> pCoreServi
     m_pVisualsManager = new VisualsManager();
 }
 
-#ifdef MIXXX_USE_QOPENGL
-void MixxxMainWindow::initializeQOpenGL() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Qt 6 will nno longer crash if no GL is available and
-    // QGLFormat::hasOpenGL() has been removed.
-    if (!CmdlineArgs::Instance().getSafeMode() && QGLFormat::hasOpenGL()) {
-#else
-    // With EGLFS there is always exactly one native window and one EGL window surface
-    // OpenGL windows cannot be embedded into our QWidgets main window we already have.
-    // https://doc.qt.io/qt-6/embedded-linux.html
-    bool isEglfs = QGuiApplication::platformName() == "eglfs";
-
-    if (!CmdlineArgs::Instance().getSafeMode() && !isEglfs) {
-#endif
-        QOpenGLContext context;
-        context.setFormat(WaveformWidgetFactory::getSurfaceFormat(m_pCoreServices->getSettings()));
-        if (context.create()) {
-            std::pair version = context.format().version();
-            qDebug().noquote()
-                    << "QOpenGLContext created:"
-                    << QGuiApplication::platformName()
-                    << context.format().renderableType()
-                    << QString("V%1.%2").arg(QString::number(version.first),
-                               QString::number(version.second))
-                    << context.format().profile();
-            // This widget and its QOpenGLWindow will be used to query QOpenGL
-            // information (version, driver, etc) in WaveformWidgetFactory.
-            // The "SharedGLContext" terminology here doesn't really apply,
-            // but allows us to take advantage of the existing classes.
-            auto pWidget = make_parented<WInitialGLWidget>(this);
-            pWidget->setGeometry(QRect(0, 0, 3, 3));
-            SharedGLContext::setWidget(pWidget);
-            // When the widget's QOpenGLWindow has been initialized, we continue
-            // with the actual initialization
-            connect(pWidget, &WInitialGLWidget::onInitialized, this, &MixxxMainWindow::initialize);
-            pWidget->show();
-            return;
-        }
-        qDebug() << "QOpenGLContext::create() failed";
-    }
-    qInfo() << "Initializing without OpenGL";
-    initialize();
-}
-#endif
-
 void MixxxMainWindow::initialize() {
     m_pCoreServices->getControlIndicatorTimer()->setLegacyVsyncEnabled(true);
 
@@ -209,10 +152,6 @@ void MixxxMainWindow::initialize() {
     m_toolTipsCfg = pConfig->getValue(
             ConfigKey("[Controls]", "Tooltips"),
             mixxx::preferences::Tooltips::On);
-#ifdef MIXXX_USE_QOPENGL
-    ToolTipQOpenGL::singleton().setActive(
-            m_toolTipsCfg == mixxx::preferences::Tooltips::On);
-#endif
 
 #ifdef __ENGINEPRIME__
     // Initialise library exporter
@@ -274,39 +213,6 @@ void MixxxMainWindow::initialize() {
                     m_pVisualsManager->addDeckIfNotExist(group);
                 }
             });
-
-#if !defined(MIXXX_USE_QOPENGL) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Before creating the first skin we need to create a QGLWidget so that all
-    // the QGLWidget's we create can use it as a shared QGLContext.
-    // QGLFormat/QGLWidget were removed in Qt6.
-    if (!CmdlineArgs::Instance().getSafeMode() && QGLFormat::hasOpenGL()) {
-        QGLFormat glFormat;
-        glFormat.setDirectRendering(true);
-        glFormat.setDoubleBuffer(true);
-        glFormat.setDepth(false);
-        // Disable waiting for vertical Sync
-        // This can be enabled when using a single Threads for each QGLContext
-        // Setting 1 causes QGLContext::swapBuffer to sleep until the next VSync
-#if defined(__APPLE__)
-        // On OS X, syncing to vsync has good performance FPS-wise and
-        // eliminates tearing.
-        glFormat.setSwapInterval(1);
-#else
-        // Otherwise, turn VSync off because it could cause horrible FPS on
-        // Linux.
-        // TODO(XXX): Make this configurable.
-        // TODO(XXX): What should we do on Windows?
-        glFormat.setSwapInterval(0);
-#endif
-        glFormat.setRgba(true);
-        QGLFormat::setDefaultFormat(glFormat);
-
-        WGLWidget* pContextWidget = new WGLWidget(this);
-        pContextWidget->setGeometry(QRect(0, 0, 3, 3));
-        pContextWidget->hide();
-        SharedGLContext::setWidget(pContextWidget);
-    }
-#endif
 
     WaveformWidgetFactory::createInstance(); // takes a long time
     WaveformWidgetFactory::instance()->setConfig(m_pCoreServices->getSettings());
@@ -1352,10 +1258,6 @@ void MixxxMainWindow::slotTooltipModeChanged(mixxx::preferences::Tooltips tt) {
     m_toolTipsCfg = tt;
     m_pCoreServices->getKeyboardEventFilter()->setShowOnlyKbdShortcuts(
             tt == mixxx::preferences::Tooltips::OnlyKbdShortcuts);
-#ifdef MIXXX_USE_QOPENGL
-    ToolTipQOpenGL::singleton().setActive(
-            m_toolTipsCfg == mixxx::preferences::Tooltips::On);
-#endif
 }
 
 void MixxxMainWindow::rebootMixxxView() {

@@ -2,7 +2,6 @@
 
 #include <QFont>
 #include <QImage>
-#include <QOpenGLTexture>
 
 #include "control/controlproxy.h"
 #include "engine/channels/enginedeck.h"

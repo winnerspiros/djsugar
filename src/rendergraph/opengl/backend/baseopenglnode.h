@@ -1,15 +1,12 @@
 #pragma once
 
-#include <QOpenGLFunctions>
-
 #include "backend/basenode.h"
 
 namespace rendergraph {
 class BaseOpenGLNode;
 } // namespace rendergraph
 
-class rendergraph::BaseOpenGLNode : public rendergraph::BaseNode,
-                                    public QOpenGLFunctions {
+class rendergraph::BaseOpenGLNode : public rendergraph::BaseNode {
   public:
     BaseOpenGLNode() = default;
     virtual ~BaseOpenGLNode() = default;

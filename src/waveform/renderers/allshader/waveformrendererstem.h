@@ -6,7 +6,6 @@
 #include "util/class.h"
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
 
-class QOpenGLTexture;
 class ControlProxy;
 
 namespace allshader {

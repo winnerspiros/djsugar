@@ -3,7 +3,6 @@
 #include "waveform/renderers/waveformrendererabstract.h"
 #include "waveform/waveform.h"
 
-#include <QOpenGLFunctions>
 #include <QRegularExpression>
 #include <QStringList>
 #include <QWidget>
@@ -779,7 +778,6 @@ void WaveformWidgetFactory::evaluateWidgets() {
             WaveformRendererSignalBase::Options>
             supportedOptions;
     bool useGles = isOpenGlesAvailable(); // we can make use of GLES waveforms
-#endif
     for (WaveformWidgetType::Type type : WaveformWidgetType::kValues) {
         switch (type) {
         case WaveformWidgetType::Empty:

@@ -27,16 +27,8 @@ class WaveformWidgetAbstractHandle {
     WaveformWidgetAbstractHandle();
     WaveformWidgetAbstractHandle(WaveformWidgetType::Type type,
             QList<WaveformWidgetBackend> backends
-#ifdef MIXXX_USE_QOPENGL
-            ,
-            int supportedOptions
-#endif
             )
             : m_type(type), m_backends(std::move(backends))
-#ifdef MIXXX_USE_QOPENGL
-              ,
-              m_supportedOption(supportedOptions)
-#endif
     {
     }
 
@@ -48,9 +40,7 @@ class WaveformWidgetAbstractHandle {
         for (auto backend : m_backends) {
             if (backend == WaveformWidgetBackend::GL ||
                     backend == WaveformWidgetBackend::GLSL
-#ifdef MIXXX_USE_QOPENGL
                     || backend == WaveformWidgetBackend::AllShader
-#endif
             ) {
                 return true;
             }
@@ -61,25 +51,12 @@ class WaveformWidgetAbstractHandle {
         return m_backends.contains(WaveformWidgetBackend::None);
     }
 
-#ifdef MIXXX_USE_QOPENGL
-    WaveformRendererSignalBase::Options supportedOptions(
-            WaveformWidgetBackend backend) const {
-        return backend == WaveformWidgetBackend::AllShader
-                ? m_supportedOption
-                : WaveformRendererSignalBase::Option::None;
-    }
-#endif
-
     QString getDisplayName() const;
     static QString getDisplayName(WaveformWidgetType::Type type);
 
   private:
     WaveformWidgetType::Type m_type;
     QList<WaveformWidgetBackend> m_backends;
-#ifdef MIXXX_USE_QOPENGL
-    // Only relevant for Allshader (accelerated) backend. Other backends don't implement options
-    WaveformRendererSignalBase::Options m_supportedOption;
-#endif
 
     friend class WaveformWidgetFactory;
 };

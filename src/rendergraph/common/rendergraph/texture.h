@@ -15,12 +15,12 @@ class rendergraph::Texture {
     Texture(Context* pContext, const QImage& image);
 
     BaseTexture* backendTexture() const {
-        return m_pTexture.get();
+        return m_pTexture;
     }
 
     // used by Material::compare
     qint64 comparisonKey() const;
 
   private:
-    const std::unique_ptr<BaseTexture> m_pTexture{};
+    BaseTexture* m_pTexture{};
 };

@@ -2123,7 +2123,6 @@ if(QOPENGL)
       src/shaders/textureshader.cpp
       src/shaders/unicolorshader.cpp
       src/shaders/vinylqualityshader.cpp
-      src/util/opengltexture2d.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/matrixforwidgetgeometry.cpp
       src/waveform/renderers/allshader/waveformrenderbackground.cpp
@@ -2141,12 +2140,6 @@ if(QOPENGL)
       src/waveform/renderers/allshader/waveformrendermark.cpp
       src/waveform/renderers/allshader/waveformrendermarkrange.cpp
       src/waveform/widgets/allshader/waveformwidget.cpp
-      src/widget/openglwindow.cpp
-      src/widget/tooltipqopengl.cpp
-      src/widget/wglwidgetqopengl.cpp
-      src/widget/winitialglwidget.cpp
-      src/widget/wspinnyglsl.cpp
-      src/widget/wvumeterglsl.cpp
   )
 else()
   # Qt5 fallback only — QGLWidget was removed in Qt6
@@ -2159,11 +2152,6 @@ else()
         src/waveform/renderers/qtwaveformrenderersimplesignal.cpp
         src/widget/wglwidgetqglwidget.cpp
     )
-  endif()
-  # Provide stub WGLWidget implementations for Android (QOPENGL=OFF)
-  # so the linker can resolve virtual method symbols
-  if(ANDROID)
-    target_sources(mixxx-lib PRIVATE src/widget/wglwidgetqopengl_stub.cpp)
   endif()
 endif()
 

@@ -14,7 +14,6 @@
 #include "waveform/waveformmarklabel.h"
 
 class SkinContext;
-class QOpenGLTexture;
 
 class WaveformMark;
 typedef QSharedPointer<WaveformMark> WaveformMarkPointer;

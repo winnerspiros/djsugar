@@ -15,12 +15,10 @@ LGLOpenGLNode::~LGLOpenGLNode() {
 }
 
 void LGLOpenGLNode::initialize() {
-    // Don't call initializeOpenGLFunctions() — we override all GL methods
-    // to use LLGL command buffers instead of calling the GL driver directly.
     qDebug() << "LGLOpenGLNode: initialized (LLGL backend)";
 }
 
-void LGLOpenGLNode::glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) {
+void LGLOpenGLNode::glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) const {
     if (m_pContext && m_pContext->commandBuffer()) {
         LLGL::ClearValue clearValue;
         clearValue.color = {red, green, blue, alpha};
@@ -32,12 +30,12 @@ void LGLOpenGLNode::glClearColor(GLclampf red, GLclampf green, GLclampf blue, GL
     Q_UNUSED(alpha);
 }
 
-void LGLOpenGLNode::glClear(GLbitfield mask) {
+void LGLOpenGLNode::glClear(GLbitfield mask) const {
     Q_UNUSED(mask);
     // Handled by BeginRenderPass in LLGL
 }
 
-void LGLOpenGLNode::glViewport(GLint x, GLint y, GLsizei width, StyleSheet height) {
+void LGLOpenGLNode::glViewport(GLint x, GLint y, GLsizei width, GLsizei height) const {
     if (m_pContext && m_pContext->commandBuffer()) {
         LLGL::Viewport viewport;
         viewport.x = static_cast<float>(x);
@@ -48,31 +46,31 @@ void LGLOpenGLNode::glViewport(GLint x, GLint y, GLsizei width, StyleSheet heigh
     }
 }
 
-void LGLOpenGLNode::glUseProgram(GLuint program) {
+void LGLOpenGLNode::glUseProgram(GLuint program) const {
     Q_UNUSED(program);
     // Handled by SetPipelineState in LLGL
 }
 
-void LGLOpenGLNode::glUniform1f(GLint location, GLfloat v0) {
+void LGLOpenGLNode::glUniform1f(GLint location, GLfloat v0) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
     // TODO: Implement uniform setting via LLGL push constants or uniform buffer
 }
 
-void LGLOpenGLNode::glUniform2f(GLint location, GLfloat v0, GLfloat v1) {
+void LGLOpenGLNode::glUniform2f(GLint location, GLfloat v0, GLfloat v1) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
     Q_UNUSED(v1);
 }
 
-void LGLOpenGLNode::glUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2) {
+void LGLOpenGLNode::glUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
     Q_UNUSED(v1);
     Q_UNUSED(v2);
 }
 
-void LGLOpenGLNode::glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) {
+void LGLOpenGLNode::glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
     Q_UNUSED(v1);
@@ -80,24 +78,24 @@ void LGLOpenGLNode::glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat 
     Q_UNUSED(v3);
 }
 
-void LGLOpenGLNode::glUniform1i(GLint location, GLint v0) {
+void LGLOpenGLNode::glUniform1i(GLint location, GLint v0) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
 }
 
-void LGLOpenGLNode::glUniformMatrix4fv(GLint location, GLboolean transpose, const GLfloat* value) {
+void LGLOpenGLNode::glUniformMatrix4fv(GLint location, GLboolean transpose, const GLfloat* value) const {
     Q_UNUSED(location);
     Q_UNUSED(transpose);
     Q_UNUSED(value);
 }
 
-void LGLOpenGLNode::glBindBuffer(GLenum target, GLuint buffer) {
+void LGLOpenGLNode::glBindBuffer(GLenum target, GLuint buffer) const {
     Q_UNUSED(target);
     Q_UNUSED(buffer);
     // Handled by SetVertexBuffer/SetIndexBuffer in LLGL
 }
 
-void LGLOpenGLNode::glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) {
+void LGLOpenGLNode::glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) const {
     Q_UNUSED(target);
     Q_UNUSED(size);
     Q_UNUSED(data);
@@ -105,28 +103,28 @@ void LGLOpenGLNode::glBufferData(GLenum target, GLsizeiptr size, const GLvoid* d
 }
 
 void LGLOpenGLNode::glBufferSubData(
-        GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data) {
+        GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data) const {
     Q_UNUSED(target);
     Q_UNUSED(offset);
     Q_UNUSED(size);
     Q_UNUSED(data);
 }
 
-void LGLOpenGLNode::glGenBuffers(GLsizei n, GLuint* buffers) {
+void LGLOpenGLNode::glGenBuffers(GLsizei n, GLuint* buffers) const {
     Q_UNUSED(n);
     Q_UNUSED(buffers);
 }
 
-void LGLOpenGLNode::glDeleteBuffers(GLsizei n, const GLuint* buffers) {
+void LGLOpenGLNode::glDeleteBuffers(GLsizei n, const GLuint* buffers) const {
     Q_UNUSED(n);
     Q_UNUSED(buffers);
 }
 
-void LGLOpenGLNode::glEnableVertexAttribArray(GLuint index) {
+void LGLOpenGLNode::glEnableVertexAttribArray(GLuint index) const {
     Q_UNUSED(index);
 }
 
-void LGLOpenGLNode::glDisableVertexAttribArray(GLuint index) {
+void LGLOpenGLNode::glDisableVertexAttribArray(GLuint index) const {
     Q_UNUSED(index);
 }
 
@@ -135,7 +133,7 @@ void LGLOpenGLNode::glVertexAttribPointer(GLuint index,
         GLenum type,
         GLboolean normalized,
         GLsizei stride,
-        const GLvoid* pointer) {
+        const GLvoid* pointer) const {
     Q_UNUSED(index);
     Q_UNUSED(size);
     Q_UNUSED(type);
@@ -144,7 +142,7 @@ void LGLOpenGLNode::glVertexAttribPointer(GLuint index,
     Q_UNUSED(pointer);
 }
 
-void LGLOpenGLNode::glDrawArrays(GLenum mode, GLint first, GLsizei count) {
+void LGLOpenGLNode::glDrawArrays(GLenum mode, GLint first, GLsizei count) const {
     if (m_pContext && m_pContext->commandBuffer()) {
         m_pContext->commandBuffer()->Draw(
                 static_cast<std::uint32_t>(count),
@@ -153,40 +151,40 @@ void LGLOpenGLNode::glDrawArrays(GLenum mode, GLint first, GLsizei count) {
     Q_UNUSED(mode);
 }
 
-void LGLOpenGLNode::glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices) {
+void LGLOpenGLNode::glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices) const {
     Q_UNUSED(mode);
     Q_UNUSED(count);
     Q_UNUSED(type);
     Q_UNUSED(indices);
 }
 
-void LGLOpenGLNode::glEnable(GLenum cap) {
+void LGLOpenGLNode::glEnable(GLenum cap) const {
     Q_UNUSED(cap);
 }
 
-void LGLOpenGLNode::glDisable(GLenum cap) {
+void LGLOpenGLNode::glDisable(GLenum cap) const {
     Q_UNUSED(cap);
 }
 
-void LGLOpenGLNode::glBlendFunc(GLenum sfactor, GLenum dfactor) {
+void LGLOpenGLNode::glBlendFunc(GLenum sfactor, GLenum dfactor) const {
     Q_UNUSED(sfactor);
     Q_UNUSED(dfactor);
 }
 
-void LGLOpenGLNode::glScissor(GLint x, GLint y, GLsizei width, StyleSheet height) {
+void LGLOpenGLNode::glScissor(GLint x, GLint y, GLsizei width, GLsizei height) const {
     Q_UNUSED(x);
     Q_UNUSED(y);
     Q_UNUSED(width);
     Q_UNUSED(height);
 }
 
-GLint LGLOpenGLNode::glGetUniformLocation(GLuint program, const GLchar* name) {
+GLint LGLOpenGLNode::glGetUniformLocation(GLuint program, const GLchar* name) const {
     Q_UNUSED(program);
     Q_UNUSED(name);
     return 0;
 }
 
-GLuint LGLOpenGLNode::glCreateShader(GLenum type) {
+GLuint LGLOpenGLNode::glCreateShader(GLenum type) const {
     Q_UNUSED(type);
     return 0;
 }
@@ -194,78 +192,78 @@ GLuint LGLOpenGLNode::glCreateShader(GLenum type) {
 void LGLOpenGLNode::glShaderSource(GLuint shader,
         GLsizei count,
         const GLchar** string,
-        const GLint* length) {
+        const GLint* length) const {
     Q_UNUSED(shader);
     Q_UNUSED(count);
     Q_UNUSED(string);
     Q_UNUSED(length);
 }
 
-void LGLOpenGLNode::glCompileShader(GLuint shader) {
+void LGLOpenGLNode::glCompileShader(GLuint shader) const {
     Q_UNUSED(shader);
 }
 
-void LGLOpenGLNode::glGetShaderiv(GLuint shader, GLenum pname, GLint* params) {
+void LGLOpenGLNode::glGetShaderiv(GLuint shader, GLenum pname, GLint* params) const {
     Q_UNUSED(shader);
     Q_UNUSED(pname);
     Q_UNUSED(params);
 }
 
 void LGLOpenGLNode::glGetShaderInfoLog(
-        GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog) {
+        GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog) const {
     Q_UNUSED(shader);
     Q_UNUSED(bufSize);
     Q_UNUSED(length);
     Q_UNUSED(infoLog);
 }
 
-GLuint LGLOpenGLNode::glCreateProgram() {
+GLuint LGLOpenGLNode::glCreateProgram() const {
     return 0;
 }
 
-void LGLOpenGLNode::glAttachShader(GLuint program, GLuint shader) {
+void LGLOpenGLNode::glAttachShader(GLuint program, GLuint shader) const {
     Q_UNUSED(program);
     Q_UNUSED(shader);
 }
 
-void LGLOpenGLNode::glLinkProgram(GLuint program) {
+void LGLOpenGLNode::glLinkProgram(GLuint program) const {
     Q_UNUSED(program);
 }
 
-void LGLOpenGLNode::glGetProgramiv(GLuint program, GLenum pname, GLint* params) {
+void LGLOpenGLNode::glGetProgramiv(GLuint program, GLenum pname, GLint* params) const {
     Q_UNUSED(program);
     Q_UNUSED(pname);
     Q_UNUSED(params);
 }
 
-void LGLOpenGLNode::glDeleteProgram(GLuint program) {
+void LGLOpenGLNode::glDeleteProgram(GLuint program) const {
     Q_UNUSED(program);
 }
 
-void LGLOpenGLNode::glDeleteShader(GLuint shader) {
+void LGLOpenGLNode::glDeleteShader(GLuint shader) const {
     Q_UNUSED(shader);
 }
 
-void LGLOpenGLNode::glActiveTexture(GLenum texture) {
+void LGLOpenGLNode::glActiveTexture(GLenum texture) const {
     Q_UNUSED(texture);
 }
 
-void LGLOpenGLNode::glBindTexture(GLenum target, GLuint texture) {
+void LGLOpenGLNode::glBindTexture(GLenum target, GLuint texture) const {
     Q_UNUSED(target);
     Q_UNUSED(texture);
 }
 
-void LGLOpenGLNode::glGenTextures(GLsizei n, GLuint* textures) {
+void LGLOpenGLNode::glGenTextures(GLsizei n, GLuint* textures) const {
     Q_UNUSED(n);
     Q_UNUSED(textures);
 }
 
-void LGLOpenGLNode::glDeleteTextures(GLsizei n, const GLuint* textures) {
+void LGLOpenGLNode::glDeleteTextures(GLsizei n, const GLuint* textures) const {
     Q_UNUSED(n);
     Q_UNUSED(textures);
 }
 
-void LGLOpenGLNode::glTexParameteri(GLenum target, GLenum pname, GLint param) {
+void LGLOpenGLNode::glTexParameteri(GLenum target, GLenum pname, GLint param) const {
     Q_UNUSED(target);
     Q_UNUSED(pname);
     Q_UNUSED(param);
@@ -279,7 +277,7 @@ void LGLOpenGLNode::glTexImage2D(GLenum target,
         GLint border,
         GLenum format,
         GLenum type,
-        const GLvoid* pixels) {
+        const GLvoid* pixels) const {
     Q_UNUSED(target);
     Q_UNUSED(level);
     Q_UNUSED(internalformat);

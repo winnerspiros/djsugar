@@ -1,6 +1,5 @@
 #include "waveformmark.h"
 
-#include <QOpenGLTexture>
 #include <QPainterPath>
 #include <QRegularExpression>
 #include <QStringLiteral>

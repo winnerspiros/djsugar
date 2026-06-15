@@ -135,10 +135,6 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
             qInfo() << "User previously ran the unstable version on this profile";
         }
 
-        // Will call initialize when the initial wglwidget's
-        // qopenglwindow has been exposed
-        mainWindow.initializeQOpenGL();
-
         pCoreServices->getControllerManager()->setUpDevices();
 
         // If startup produced a fatal error, then don't even start the
@@ -428,9 +424,6 @@ int main(int argc, char* argv[]) {
     // growing unbounded during fast fader sweeps.
     QCoreApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents);
 
-    // Prefer OpenGL ES 3.x on Android for better shader compilation
-    // performance and GPU driver optimizations.
-    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
     // High DPI scaling is always enabled in Qt6.
@@ -439,15 +432,6 @@ int main(int argc, char* argv[]) {
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-
-    // workaround for https://bugreports.qt.io/browse/QTBUG-84363
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1)
-    qputenv("QV4_FORCE_INTERPRETER", QByteArrayLiteral("1"));
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    // Follow whatever factor the user has selected in the system settings
-    // By default the value is always rounded to the nearest int.
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif

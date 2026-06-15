@@ -1,6 +1,5 @@
 #include "backend/basegeometrynode.h"
 
-#include <QOpenGLTexture>
 #include <stdexcept>
 
 #include "backend/shadercache.h"

@@ -2,9 +2,6 @@
 
 #include <QGuiApplication>
 #include <QOffscreenSurface>
-#include <QOpenGLContext>
-#include <QOpenGLFramebufferObject>
-#include <QOpenGLFunctions>
 #include <QQmlEngine>
 #include <QQuickGraphicsDevice>
 #include <QQuickRenderControl>
@@ -123,10 +120,6 @@ void ControllerRenderingEngine::prepare() {
 ControllerRenderingEngine::~ControllerRenderingEngine() {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_ANTI_AFFINITY();
     m_pThread->wait();
-    VERIFY_OR_DEBUG_ASSERT(!m_fbo) {
-        kLogger.critical() << "The ControllerEngine is being deleted but hasn't been "
-                              "cleaned up. Brace for impact";
-    };
 }
 
 void ControllerRenderingEngine::start() {
@@ -193,19 +186,8 @@ void ControllerRenderingEngine::setup(std::shared_ptr<QQmlEngine> qmlEngine) {
     format.setDepthBufferSize(16);
     format.setStencilBufferSize(8);
 
-    m_context = std::make_unique<QOpenGLContext>();
-    m_context->setFormat(format);
-    VERIFY_OR_DEBUG_ASSERT(m_context->create()) {
-        kLogger.warning() << "Unable to initialize controller screen rendering. Giving up";
-        return;
-    }
-    connect(m_context.get(),
-            &QOpenGLContext::aboutToBeDestroyed,
-            this,
-            &ControllerRenderingEngine::finish);
-
     m_offscreenSurface = std::make_unique<QOffscreenSurface>();
-    m_offscreenSurface->setFormat(m_context->format());
+    m_offscreenSurface->setFormat(format);
 
     // offscreen surface needs to be created from application main thread.
     VERIFY_OR_DEBUG_ASSERT(QMetaObject::invokeMethod(
@@ -239,28 +221,15 @@ void ControllerRenderingEngine::finish() {
 
     m_isValid = false;
 
-    if (m_context && m_context->isValid()) {
-        disconnect(m_context.get(),
-                &QOpenGLContext::aboutToBeDestroyed,
-                this,
-                &ControllerRenderingEngine::finish);
-        m_context->makeCurrent(m_offscreenSurface.get());
-        m_renderControl.reset();
+    m_renderControl.reset();
 
-        std::shared_ptr<QOffscreenSurface> pOffscreenSurface = std::move(m_offscreenSurface);
-        QMetaObject::invokeMethod(
-                qApp,
-                [pOffscreenSurface] {
-                    pOffscreenSurface->destroy();
-                });
-        m_quickWindow.reset();
-
-        // Free the engine and FBO.
-        m_fbo.reset();
-
-        m_context->doneCurrent();
-    }
-    m_context.reset();
+    std::shared_ptr<QOffscreenSurface> pOffscreenSurface = std::move(m_offscreenSurface);
+    QMetaObject::invokeMethod(
+            qApp,
+            [pOffscreenSurface] {
+                pOffscreenSurface->destroy();
+            });
+    m_quickWindow.reset();
 }
 
 void ControllerRenderingEngine::renderFrame() {
@@ -271,37 +240,6 @@ void ControllerRenderingEngine::renderFrame() {
     }
 
     VERIFY_OR_TERMINATE(m_offscreenSurface->isValid(), "OffscreenSurface isn't valid anymore.");
-    VERIFY_OR_TERMINATE(m_context->isValid(), "GLContext isn't valid anymore.");
-
-    if (!m_fbo) {
-        VERIFY_OR_TERMINATE(m_context->makeCurrent(m_offscreenSurface.get()),
-                "Couldn't make the GLContext current to the OffscreenSurface.");
-        ScopedTimer t(QStringLiteral("ControllerRenderingEngine::renderFrame::initFBO"));
-        VERIFY_OR_TERMINATE(
-                QOpenGLFramebufferObject::hasOpenGLFramebufferObjects(),
-                "OpenGL doesn't support FBO");
-
-        m_fbo = std::make_unique<QOpenGLFramebufferObject>(
-                m_screenInfo.size, QOpenGLFramebufferObject::CombinedDepthStencil);
-
-        GLenum glError;
-        glError = m_context->functions()->glGetError();
-
-        VERIFY_OR_TERMINATE(glError == GL_NO_ERROR, "GLError: " << glError);
-        VERIFY_OR_TERMINATE(m_fbo->isValid(), "Failed to initialize FBO");
-
-        m_quickWindow->setGraphicsDevice(QQuickGraphicsDevice::fromOpenGLContext(m_context.get()));
-
-        VERIFY_OR_TERMINATE(m_renderControl->initialize(),
-                "Failed to initialize redirected Qt Quick rendering");
-
-        m_quickWindow->setRenderTarget(QQuickRenderTarget::fromOpenGLTexture(m_fbo->texture(),
-                m_screenInfo.size));
-
-        m_quickWindow->setGeometry(0, 0, m_screenInfo.size.width(), m_screenInfo.size.height());
-
-        m_context->doneCurrent();
-    }
 
     m_nextFrameStart = Clock::now();
 
@@ -329,122 +267,16 @@ void ControllerRenderingEngine::renderFrame() {
     }
 
     VERIFY_OR_TERMINATE(m_offscreenSurface->isValid(), "OffscreenSurface isn't valid anymore.");
-    VERIFY_OR_TERMINATE(m_context->makeCurrent(m_offscreenSurface.get()),
-            "Couldn't make the GLContext current to the OffscreenSurface.");
 
-#ifdef QT_OPENGL_ES_2
-    // OpenGL ES doesn't support extended format and type when reading pixel and
-    // only support GL_RGBA/GL_UNSIGNED_BYTE On this platform, we fallback to Qt
-    // for the pixel transformation, using QImage conversion capabilities
-    QImage fboImage(m_screenInfo.size, QImage::Format_RGBA8888);
-#else
     QImage fboImage(m_screenInfo.size, m_screenInfo.pixelFormat);
-#endif
-
-    VERIFY_OR_DEBUG_ASSERT(m_fbo->bind()) {
-        kLogger.warning() << "Couldn't bind the FBO.";
-    }
-    GLenum glError;
-    // Flush any remaining GL errors.
-    while ((glError = m_context->functions()->glGetError()) != GL_NO_ERROR) {
-        kLogger.debug() << "Retrieved a previously unhandled GL error: " << glError;
-    }
-#ifndef QT_OPENGL_ES_2
-    m_context->functions()->glFlush();
-    glError = m_context->functions()->glGetError();
-    VERIFY_OR_TERMINATE(glError == GL_NO_ERROR, "GLError after glFlush: " << glError);
-    if (static_cast<std::endian>(m_screenInfo.endian) != std::endian::native) {
-        m_context->functions()->glPixelStorei(GL_PACK_SWAP_BYTES, GL_TRUE);
-    }
-    glError = m_context->functions()->glGetError();
-    VERIFY_OR_TERMINATE(glError == GL_NO_ERROR, "GLError after glPixelStorei: " << glError);
-#endif
 
     QDateTime timestamp = QDateTime::currentDateTime();
     m_renderControl->render();
     m_renderControl->endFrame();
 
-    // Flush any remaining GL errors.
-    while ((glError = m_context->functions()->glGetError()) != GL_NO_ERROR) {
-        kLogger.debug() << "Retrieved a previously unhandled GL error: " << glError;
-    }
-    {
-        ScopedTimer t(QStringLiteral("ControllerRenderingEngine::renderFrame::glReadPixels"));
-        m_context->functions()->glReadPixels(0,
-                0,
-                m_screenInfo.size.width(),
-                m_screenInfo.size.height(),
-#ifndef QT_OPENGL_ES_2
-                m_GLDataFormat,
-                m_GLDataType,
-#else
-                GL_RGBA,
-                GL_UNSIGNED_BYTE,
-#endif
-                fboImage.bits());
-    }
-    glError = m_context->functions()->glGetError();
-    VERIFY_OR_TERMINATE(glError == GL_NO_ERROR, "GLError after glReadPixels: " << glError);
     VERIFY_OR_DEBUG_ASSERT(!fboImage.isNull()) {
         kLogger.warning() << "Screen frame is null!";
     }
-    VERIFY_OR_DEBUG_ASSERT(m_fbo->release()) {
-        kLogger.debug() << "Couldn't release the FBO.";
-    }
-
-    m_context->doneCurrent();
-
-#ifdef QT_OPENGL_ES_2
-    fboImage.convertTo(m_screenInfo.pixelFormat);
-
-    // OpenGL ES doesn't support extended reverse format (suffixed with _REV) so
-    // we use QImage function for this
-    if (static_cast<std::endian>(m_screenInfo.endian) != std::endian::native) {
-        fboImage.rgbSwap();
-    }
-
-    // OpenGL ES doesn't support explicit endianness (GL_PACK_SWAP_BYTES) se we
-    // use Qt helper function to convert the pixel buffer. Only 16 and 32 bit
-    // pixel format are supported currently.
-    switch (static_cast<std::endian>(m_screenInfo.endian)) {
-    case std::endian::big:
-        switch (m_screenInfo.pixelFormat) {
-        case QImage::Format_RGB16:
-            qToBigEndian<quint16>(fboImage.bits(), fboImage.sizeInBytes() / 2, fboImage.bits());
-            break;
-        case QImage::Format_RGBA8888:
-            qToBigEndian<quint32>(fboImage.bits(), fboImage.sizeInBytes() / 4, fboImage.bits());
-            break;
-        default:
-            kLogger.critical()
-                    << "Screen endianness mismatches native endianness, but OpenGL "
-                       "ES does not let us specify a reverse pixel store order. "
-                       "This will likely lead to invalid colors.";
-        }
-        break;
-    case std::endian::little:
-        switch (m_screenInfo.pixelFormat) {
-        case QImage::Format_RGB16:
-            qToLittleEndian<quint16>(fboImage.bits(), fboImage.sizeInBytes(), fboImage.bits());
-            break;
-        case QImage::Format_RGBA8888:
-            qToLittleEndian<quint32>(fboImage.bits(), fboImage.sizeInBytes(), fboImage.bits());
-            break;
-        default:
-            kLogger.critical()
-                    << "Screen endianness mismatches native endianness, but OpenGL "
-                       "ES does not let us specify a reverse pixel store order. "
-                       "This will likely lead to invalid colors.";
-        }
-        break;
-    }
-#endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-    fboImage.flip(Qt::Vertical);
-#else
-    fboImage.mirror(false, true);
-#endif
 
     emit frameRendered(m_screenInfo, fboImage.copy(), timestamp);
 }

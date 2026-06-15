@@ -1,8 +1,6 @@
 #pragma once
 
 #include <QObject>
-#include <QOpenGLContext>
-#include <QOpenGLFramebufferObject>
 #include <chrono>
 #include <gsl/pointers>
 
@@ -13,8 +11,6 @@
 class Controller;
 class ControllerEngineThreadControl;
 class QOffscreenSurface;
-class QOpenGLContext;
-class QOpenGLFramebufferObject;
 class QQmlEngine;
 class QQuickRenderControl;
 class QQuickWindow;
@@ -90,12 +86,9 @@ class ControllerRenderingEngine : public QObject {
 
     std::unique_ptr<QThread> m_pThread;
 
-    std::unique_ptr<QOpenGLContext> m_context;
     std::unique_ptr<QOffscreenSurface> m_offscreenSurface;
     std::unique_ptr<QQuickRenderControl> m_renderControl;
     std::unique_ptr<QQuickWindow> m_quickWindow;
-
-    std::unique_ptr<QOpenGLFramebufferObject> m_fbo;
 
     GLenum m_GLDataFormat;
     GLenum m_GLDataType;
