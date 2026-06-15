@@ -12,7 +12,9 @@
 
 namespace rendergraph {
 class Material;
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
 class LLGLMaterialShader;
+#endif
 } // namespace rendergraph
 
 class rendergraph::Material : public rendergraph::BaseMaterial {
@@ -39,7 +41,7 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
 #ifndef MIXXX_USE_LLGL
     virtual std::unique_ptr<MaterialShader> createShader() const = 0;
 #endif
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     virtual std::unique_ptr<LLGLMaterialShader> createLLGLShader() const = 0;
 #endif
 
@@ -65,7 +67,7 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
         return nullptr;
     }
 
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     LLGLMaterialShader& shader() {
         return *m_pLLGLShader;
     }
@@ -77,12 +79,16 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
     }
 #endif
 
+    #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     bool isLLGL() const { return true; }
+#else
+    bool isLLGL() const { return false; }
+#endif
 
   private:
     UniformsCache m_uniformsCache;
     bool m_uniformsCacheDirty{};
-#ifdef MIXXX_USE_LLGL
+#if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     std::shared_ptr<LLGLMaterialShader> m_pLLGLShader;
 #endif
 };
