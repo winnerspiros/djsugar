@@ -571,10 +571,12 @@ if(MIXXX_USE_LLGL)
 
     # Android NDK include paths for LLGL platform files
     if(ANDROID AND CMAKE_ANDROID_NDK)
-      target_include_directories(LLGL PRIVATE
-        "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include"
-        "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include/${CMAKE_ANDROID_ARCH_TRIPLE}"
-        "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue"
+      target_include_directories(
+        LLGL
+        PRIVATE
+          "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include"
+          "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include/${CMAKE_ANDROID_ARCH_TRIPLE}"
+          "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue"
       )
       target_compile_definitions(LLGL PRIVATE ANDROID)
     endif()

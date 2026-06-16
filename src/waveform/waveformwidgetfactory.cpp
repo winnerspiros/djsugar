@@ -833,7 +833,11 @@ void WaveformWidgetFactory::evaluateWidgets() {
         const auto& type = handleIter.key();
         const auto& backends = handleIter.value();
 #endif
-        m_waveformWidgetHandles.push_back(WaveformWidgetAbstractHandle(type, backends, supportedOptions.value(type, static_cast<WaveformRendererSignalBase::Options>(WaveformRendererSignalBase::Option::None))));
+        m_waveformWidgetHandles.push_back(WaveformWidgetAbstractHandle(type,
+                backends,
+                supportedOptions.value(type,
+                        static_cast<WaveformRendererSignalBase::Options>(
+                                WaveformRendererSignalBase::Option::None))));
     }
 }
 
