@@ -494,7 +494,7 @@ PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || funct
 PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group) {
     const down = (value === 0x7F);
 
-    // equal ob Deck1 oder Deck2: Shift zählt also "down"
+    // equal ob Deck1 oder Deck2: Shift zählt also "down"  // codespell:ignore
     // (bei FLX4 kommen separate Events pro Deck; wir wollen OR-Verhalten)
     if (status === 0x90) {
         PioneerDDJFLX4._shiftDeck1 = down;
@@ -869,7 +869,7 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     // apply gain
     v *= PioneerDDJFLX4.VU.GAIN;
 
-    // normalize to 0..1 using INPUT_MAX (statt hart bei 1.0 abzuschneiden)
+    // normalize to 0..1 using INPUT_MAX (statt hart bei 1.0 abzuschneiden)  // codespell:ignore
     const inMax = PioneerDDJFLX4.VU.INPUT_MAX;
     v = Math.max(0, Math.min(inMax, v)) / inMax;
 
@@ -1351,7 +1351,7 @@ PioneerDDJFLX4._cancelBrakeWatch = function(deckIdx) {
     if (t !== -1) {
         try {
             engine.stopTimer(t);
-        } catch {}
+        } catch { /* ignored */ }
 
         PioneerDDJFLX4._brakeWatchTimer[deckIdx] = -1;
     }
@@ -1370,13 +1370,13 @@ PioneerDDJFLX4._stopAllVinylFx = function(deck) {
         if (typeof engine.isBrakeActive === "function" && engine.isBrakeActive(deck)) {
             engine.brake(deck, false);
         }
-    } catch {}
+    } catch { /* ignored */ }
 
     try {
         if (typeof engine.isSoftStartActive === "function" && engine.isSoftStartActive(deck)) {
             engine.softStart(deck, false);
         }
-    } catch {}
+    } catch { /* ignored */ }
 };
 
 
@@ -2080,7 +2080,7 @@ PioneerDDJFLX4._armBeatFxUnit = function(u) {
         : (PioneerDDJFLX4._beatFx.assign.ch2 ? 1 : 0);
 
     // route ON for its intended deck, OFF otherwise
-    try { engine.setValue(u, routeKey, enable); } catch {}
+    try { engine.setValue(u, routeKey, enable); } catch { /* ignored */ }
 };
 
 // ---- LED ----
@@ -2189,7 +2189,7 @@ PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
 
         const routeKey = PioneerDDJFLX4._beatFxRouteKey(u);
         if (routeKey) {
-            try { engine.setValue(u, routeKey, 0); } catch {}
+            try { engine.setValue(u, routeKey, 0); } catch { /* ignored */ }
         }
         return;
     }
@@ -2483,12 +2483,12 @@ PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
         engine.setValue(S2, "enabled", 0);
         engine.setValue(S1, "enabled", 0);
         engine.setValue(U,  "enabled", 0);
-        try { engine.setValue(U, rk, 0); } catch {}
+        try { engine.setValue(U, rk, 0); } catch { /* ignored */ }
         return;
     }
 
     // ON: route + unit first, then slots
-    try { engine.setValue(U, rk, 1); } catch {}
+    try { engine.setValue(U, rk, 1); } catch { /* ignored */ }
     engine.setValue(U, "enabled", 1);
     engine.setValue(S1, "enabled", 1);
     engine.setValue(S2, "enabled", 1);
@@ -2620,7 +2620,7 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 ///////////////////////////////////////////////////////////////
 
 // ------------------- LED HELPERS -------------------
-// Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)
+// Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)  // codespell:ignore
 PioneerDDJFLX4.setReloopLight = function(status, value) {
     midi.sendShortMsg(status, 0x4D, value);
     midi.sendShortMsg(status, 0x50, value);
@@ -3432,7 +3432,7 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
     // Press
     if (value === 0x7F) {
-        // long-press nur sinnvoll, wenn überhaupt was geladen ist
+        // long-press nur sinnvoll, wenn überhaupt was geladen ist  // codespell:ignore
         if (engine.getValue(group, "track_loaded")) {
             // alten Timer weg
             const old = PioneerDDJFLX4._samplerHold.timer[group];
@@ -3909,7 +3909,7 @@ PioneerDDJFLX4.shutdown = function() {
     midi.sendShortMsg(0xB0, 0x02, 0x00);
     midi.sendShortMsg(0xB1, 0x02, 0x00);
 
-    // Optional: zusätzlich dein "VU Meter Light" aus (falls das eine separate LED ist)
+    // Optional: zusätzlich dein "VU Meter Light" aus (falls das eine separate LED ist)  // codespell:ignore
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
 

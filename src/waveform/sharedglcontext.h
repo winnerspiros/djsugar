@@ -1,6 +1,6 @@
 #pragma once
 
-class WGLWidget;
+#include "widget/wglwidget.h"
 
 // Creating a QGLContext on its own doesn't work. We've tried that. You can't
 // create a context on your own. It has to be associated with a real paint
