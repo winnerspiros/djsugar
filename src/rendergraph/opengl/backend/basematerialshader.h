@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendergraph/materialshader.h"
 #include <QString>
 #include <vector>
 
