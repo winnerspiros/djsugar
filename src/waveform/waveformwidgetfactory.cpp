@@ -480,7 +480,9 @@ bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force)
 }
 
 void WaveformWidgetFactory::setDefaultZoom(double zoom) {
-    m_defaultZoom = math_clamp(zoom, WaveformWidgetRenderer::s_waveformMinZoom, WaveformWidgetRenderer::s_waveformMaxZoom);
+    m_defaultZoom = math_clamp(zoom,
+            WaveformWidgetRenderer::s_waveformMinZoom,
+            WaveformWidgetRenderer::s_waveformMaxZoom);
     if (m_config) {
         m_config->setValue(kDefaultZoomKey, m_defaultZoom);
     }

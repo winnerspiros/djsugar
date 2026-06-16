@@ -126,7 +126,7 @@
 //
 // =============================================================================
 
-var PioneerDDJFLX4 = {};
+const PioneerDDJFLX4 = {};
 
 //
 // LED definitions
@@ -150,34 +150,34 @@ PioneerDDJFLX4.lights = {
         data1: 0x09,
     },
     deck1: {
-        vuMeter: { status: 0xB0, data1: 0x02 },
-        playPause: { status: 0x90, data1: 0x0B },
-        shiftPlayPause: { status: 0x90, data1: 0x47 },
-        cue: { status: 0x90, data1: 0x0C },
-        shiftCue: { status: 0x90, data1: 0x48 },
-        hotcueMode: { status: 0x90, data1: 0x1B },
-        keyboardMode: { status: 0x90, data1: 0x69 },
-        padFX1Mode: { status: 0x90, data1: 0x1E },
-        padFX2Mode: { status: 0x90, data1: 0x6B },
-        beatJumpMode: { status: 0x90, data1: 0x20 },
-        beatLoopMode: { status: 0x90, data1: 0x6D },
-        samplerMode: { status: 0x90, data1: 0x22 },
-        keyShiftMode: { status: 0x90, data1: 0x6F },
+        vuMeter: {status: 0xB0, data1: 0x02},
+        playPause: {status: 0x90, data1: 0x0B},
+        shiftPlayPause: {status: 0x90, data1: 0x47},
+        cue: {status: 0x90, data1: 0x0C},
+        shiftCue: {status: 0x90, data1: 0x48},
+        hotcueMode: {status: 0x90, data1: 0x1B},
+        keyboardMode: {status: 0x90, data1: 0x69},
+        padFX1Mode: {status: 0x90, data1: 0x1E},
+        padFX2Mode: {status: 0x90, data1: 0x6B},
+        beatJumpMode: {status: 0x90, data1: 0x20},
+        beatLoopMode: {status: 0x90, data1: 0x6D},
+        samplerMode: {status: 0x90, data1: 0x22},
+        keyShiftMode: {status: 0x90, data1: 0x6F},
     },
     deck2: {
-        vuMeter: { status: 0xB1, data1: 0x02 },
-        playPause: { status: 0x91, data1: 0x0B },
-        shiftPlayPause: { status: 0x91, data1: 0x47 },
-        cue: { status: 0x91, data1: 0x0C },
-        shiftCue: { status: 0x91, data1: 0x48 },
-        hotcueMode: { status: 0x91, data1: 0x1B },
-        keyboardMode: { status: 0x91, data1: 0x69 },
-        padFX1Mode: { status: 0x91, data1: 0x1E },
-        padFX2Mode: { status: 0x91, data1: 0x6B },
-        beatJumpMode: { status: 0x91, data1: 0x20 },
-        beatLoopMode: { status: 0x91, data1: 0x6D },
-        samplerMode: { status: 0x91, data1: 0x22 },
-        keyShiftMode: { status: 0x91, data1: 0x6F },
+        vuMeter: {status: 0xB1, data1: 0x02},
+        playPause: {status: 0x91, data1: 0x0B},
+        shiftPlayPause: {status: 0x91, data1: 0x47},
+        cue: {status: 0x91, data1: 0x0C},
+        shiftCue: {status: 0x91, data1: 0x48},
+        hotcueMode: {status: 0x91, data1: 0x1B},
+        keyboardMode: {status: 0x91, data1: 0x69},
+        padFX1Mode: {status: 0x91, data1: 0x1E},
+        padFX2Mode: {status: 0x91, data1: 0x6B},
+        beatJumpMode: {status: 0x91, data1: 0x20},
+        beatLoopMode: {status: 0x91, data1: 0x6D},
+        samplerMode: {status: 0x91, data1: 0x22},
+        keyShiftMode: {status: 0x91, data1: 0x6F},
     },
 };
 
@@ -229,11 +229,11 @@ PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 //   13 = 14_PHASER_DJ
 
 PioneerDDJFLX4._beatFxPresetGroups = [
-    { name: "Echo",    presets: [0, 1, 2, 3, 4] },
-    { name: "Reverb",  presets: [5, 6] },
-    { name: "Trans",   presets: [7, 8, 9, 10, 11] },
-    { name: "Flanger", presets: [12] },
-    { name: "Phaser",  presets: [13] }
+    {name: "Echo",    presets: [0, 1, 2, 3, 4]},
+    {name: "Reverb",  presets: [5, 6]},
+    {name: "Trans",   presets: [7, 8, 9, 10, 11]},
+    {name: "Flanger", presets: [12]},
+    {name: "Phaser",  presets: [13]}
 ];
 
 // -----------------------------------------------------------------------------
@@ -371,10 +371,10 @@ PioneerDDJFLX4._quantizeLP = {
     fired: {},
 };
 
-PioneerDDJFLX4._beatFxKnob = { msb: 0, lsb: 0 };
-PioneerDDJFLX4._beatFxKnobLast = { msb: -1, lsb: -1 };
+PioneerDDJFLX4._beatFxKnob = {msb: 0, lsb: 0};
+PioneerDDJFLX4._beatFxKnobLast = {msb: -1, lsb: -1};
 
-PioneerDDJFLX4._smartCfx = { enabled: false };
+PioneerDDJFLX4._smartCfx = {enabled: false};
 
 PioneerDDJFLX4.wheelTouch = [false, false];
 PioneerDDJFLX4._scratchEnabled = [false, false];
@@ -421,13 +421,13 @@ PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.8;
 PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
 
 PioneerDDJFLX4.PADMODE = {
-    HOTCUE:   "hotcue",
+    HOTCUE: "hotcue",
     KEYBOARD: "keyboard",
-    PADFX1:   "padfx1",
-    PADFX2:   "padfx2",
+    PADFX1: "padfx1",
+    PADFX2: "padfx2",
     BEATJUMP: "beatjump",
     BEATLOOP: "beatloop",
-    SAMPLER:  "sampler",
+    SAMPLER: "sampler",
     KEYSHIFT: "keyshift",
 };
 
@@ -475,13 +475,13 @@ PioneerDDJFLX4.sendKeepAlive = function() {
 ///////////////////////////////////////////////////////////////
 PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || function(group) {
     // group is usually "[Channel1]" / "[Channel2]"
-    if (group === "[Channel1]") return 0;
-    if (group === "[Channel2]") return 1;
+    if (group === "[Channel1]") { return 0; }
+    if (group === "[Channel2]") { return 1; }
     // fallback: try to parse ChannelN
     const m = /\[Channel(\d+)\]/.exec(group);
     if (m) {
         const d = (parseInt(m[1], 10) | 0) - 1;
-        if (d === 0 || d === 1) return d;
+        if (d === 0 || d === 1) { return d; }
     }
     return 0; // safe default
 };
@@ -494,7 +494,7 @@ PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || funct
 PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group) {
     const down = (value === 0x7F);
 
-    // egal ob Deck1 oder Deck2: Shift zählt als "down"
+    // equal ob Deck1 oder Deck2: Shift zählt also "down"
     // (bei FLX4 kommen separate Events pro Deck; wir wollen OR-Verhalten)
     if (status === 0x90) {
         PioneerDDJFLX4._shiftDeck1 = down;
@@ -519,7 +519,7 @@ PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group
 PioneerDDJFLX4.updateDeckLeds = function(group) {
     const status = (group === "[Channel1]") ? 0x90 : 0x91;
     const padStatus = (group === "[Channel1]") ? 0x97 : 0x99;
-        const deckLights = (group === "[Channel1]")
+    const deckLights = (group === "[Channel1]")
         ? PioneerDDJFLX4.lights.deck1
         : PioneerDDJFLX4.lights.deck2;
     const mode = PioneerDDJFLX4.padMode[group];
@@ -599,16 +599,16 @@ PioneerDDJFLX4.updateAllLeds = function() {
 PioneerDDJFLX4.init = function() {
     engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
 
-// --- Connections (WICHTIG: ChannelN, nicht Main) ---
-engine.makeConnection("[Channel1]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(1, v); });
-engine.makeConnection("[Channel1]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(1, v); });
+    // --- Connections (WICHTIG: ChannelN, nicht Main) ---
+    engine.makeConnection("[Channel1]", "peak_indicator_left",  function(v) { PioneerDDJFLX4._latchPeak(1, v); });
+    engine.makeConnection("[Channel1]", "peak_indicator_right", function(v) { PioneerDDJFLX4._latchPeak(1, v); });
 
-engine.makeConnection("[Channel2]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(2, v); });
-engine.makeConnection("[Channel2]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(2, v); });
+    engine.makeConnection("[Channel2]", "peak_indicator_left",  function(v) { PioneerDDJFLX4._latchPeak(2, v); });
+    engine.makeConnection("[Channel2]", "peak_indicator_right", function(v) { PioneerDDJFLX4._latchPeak(2, v); });
 
-// VU bleibt wie gehabt:
-engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
-engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+    // VU bleibt wie gehabt:
+    engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+    engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
 
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
@@ -618,26 +618,26 @@ engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect1]", "meta", true);
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect2]", "meta", true);
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
-//  engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
-//  engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
-//    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
-//    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
+    //  engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
+    //  engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
+    //    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
+    //    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
 
-const samplerCount = 16;
-if (engine.getValue("[App]", "num_samplers") < samplerCount) {
-    engine.setValue("[App]", "num_samplers", samplerCount);
-}
+    const samplerCount = 16;
+    if (engine.getValue("[App]", "num_samplers") < samplerCount) {
+        engine.setValue("[App]", "num_samplers", samplerCount);
+    }
 
-for (let i = 1; i <= samplerCount; ++i) {
-    const sg = `[Sampler${i}]`;
+    for (let i = 1; i <= samplerCount; ++i) {
+        const sg = `[Sampler${i}]`;
 
-    // LED State Machine: off / solid / blink
-    engine.makeConnection(sg, "track_loaded", PioneerDDJFLX4.samplerLedUpdate);
-    engine.makeConnection(sg, "play",        PioneerDDJFLX4.samplerLedUpdate);
+        // LED State Machine: off / solid / blink
+        engine.makeConnection(sg, "track_loaded", PioneerDDJFLX4.samplerLedUpdate);
+        engine.makeConnection(sg, "play",        PioneerDDJFLX4.samplerLedUpdate);
 
-    // initialer LED-Refresh beim Start (sonst sind LEDs u.U. “alt” bis zum ersten Event)
-    PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
-}
+        // initialer LED-Refresh beim Start (sonst sind LEDs u.U. “alt” bis zum ersten Event)
+        PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
+    }
 
     engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
     engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
@@ -652,19 +652,19 @@ for (let i = 1; i <= samplerCount; ++i) {
     engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
     engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
 
-// Beat FX: update LED when chain/unit OR any slot enable state changes
-engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
-engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+    // Beat FX: update LED when chain/unit OR any slot enable state changes
+    engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+    engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
 
-for (let unit = 1; unit <= 2; unit++) {
-    for (let slot = 1; slot <= 3; slot++) {
-        engine.makeConnection(
-            `[EffectRack1_EffectUnit${unit}_Effect${slot}]`,
-            "enabled",
-            PioneerDDJFLX4._updateBeatFxOnOffLed
-        );
+    for (let unit = 1; unit <= 2; unit++) {
+        for (let slot = 1; slot <= 3; slot++) {
+            engine.makeConnection(
+                `[EffectRack1_EffectUnit${unit}_Effect${slot}]`,
+                "enabled",
+                PioneerDDJFLX4._updateBeatFxOnOffLed
+            );
+        }
     }
-}
 
     // Smart CFX LED sync
     engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
@@ -695,7 +695,7 @@ for (let unit = 1; unit <= 2; unit++) {
     PioneerDDJFLX4._bindHotcueBankConnections("[Channel2]");
 
     // --- PAD FX LED SYNC (Engine -> Controller) ---
-    [1,2,3,4].forEach((unitIdx) => {
+    [1, 2, 3, 4].forEach((unitIdx) => {
         const U = `[EffectRack1_EffectUnit${unitIdx}]`;
 
         // Unit enable
@@ -705,7 +705,7 @@ for (let unit = 1; unit <= 2; unit++) {
         });
 
         // Slots 1–3
-        [1,2,3].forEach((slotIdx) => {
+        [1, 2, 3].forEach((slotIdx) => {
             engine.makeConnection(
                 `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`,
                 "enabled",
@@ -729,10 +729,10 @@ for (let unit = 1; unit <= 2; unit++) {
     // Force known Beat FX preset state on startup
     PioneerDDJFLX4._initBeatFx();
 
-// ------------------- DEFAULT PAD MODE -------------------
-PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
-PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
-PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
+    // ------------------- DEFAULT PAD MODE -------------------
+    PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
+    PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
+    PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 
     // initialize Beat FX routing + LED state
     PioneerDDJFLX4._applyBeatFxRouting();
@@ -765,11 +765,11 @@ PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 //
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     // SHIFT+BROWSE currently unused
-    if (control === 0x42) return;
-    if (control !== 0x41) return;
+    if (control === 0x42) { return; }
+    if (control !== 0x41) { return; }
 
     if (PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY) {
         const focus = engine.getValue("[Library]", "focused_widget");
@@ -799,16 +799,14 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 // Waveform zoom (fix: ignore release/unknown values)
 //
 
-PioneerDDJFLX4.waveformZoom = function (_ch, _ctrl, value /* 0x01 / 0x7F */, _status, _group) {
+PioneerDDJFLX4.waveformZoom = function(_ch, _ctrl, value /* 0x01 / 0x7F */, _status, _group) {
     // FLX4 sends typically 0x7F (one dir) and 0x01 (other dir). Ignore 0x00 release etc.
     let dir;
-    if (value === 0x7F) dir = "up";
-    else if (value === 0x01) dir = "down";
-    else return;
+    if (value === 0x7F) { dir = "up"; } else if (value === 0x01) { dir = "down"; } else { return; }
 
     // "global" feel: apply to both decks
-    script.triggerControl("[Channel1]", "waveform_zoom_" + dir, 50);
-    script.triggerControl("[Channel2]", "waveform_zoom_" + dir, 50);
+    script.triggerControl("[Channel1]", `waveform_zoom_${  dir}`, 50);
+    script.triggerControl("[Channel2]", `waveform_zoom_${  dir}`, 50);
 };
 
 // -------------------
@@ -833,7 +831,7 @@ PioneerDDJFLX4.VU = PioneerDDJFLX4.VU || {
     CURVE_EXP: 1,
     GAIN: 1.0,
 
-    // Rotzone-Start (deine Zonen: Red 0x77..0x7F)
+    // Rotzone-Start (define Zonen: Red 0x77..0x7F)
     RED_START: 0x77
 };
 
@@ -843,18 +841,18 @@ PioneerDDJFLX4._peakTimerL = 0;
 PioneerDDJFLX4._peakTimerR = 0;
 
 PioneerDDJFLX4._latchPeak = function(deck, value) {
-    if (!value) return; // nur bei "1" latchen
+    if (!value) { return; } // nur bei "1" latchen
 
     if (deck === 1) {
         PioneerDDJFLX4._peakL = 1;
-        if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
+        if (PioneerDDJFLX4._peakTimerL) { engine.stopTimer(PioneerDDJFLX4._peakTimerL); }
         PioneerDDJFLX4._peakTimerL = engine.beginTimer(PioneerDDJFLX4._peakHoldMs, function() {
             PioneerDDJFLX4._peakL = 0;
             PioneerDDJFLX4._peakTimerL = 0;
         }, true);
     } else if (deck === 2) {
         PioneerDDJFLX4._peakR = 1;
-        if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
+        if (PioneerDDJFLX4._peakTimerR) { engine.stopTimer(PioneerDDJFLX4._peakTimerR); }
         PioneerDDJFLX4._peakTimerR = engine.beginTimer(PioneerDDJFLX4._peakHoldMs, function() {
             PioneerDDJFLX4._peakR = 0;
             PioneerDDJFLX4._peakTimerR = 0;
@@ -865,7 +863,7 @@ PioneerDDJFLX4._latchPeak = function(deck, value) {
 // Bargraph update (per-channel LED send)
 PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     let v = Number(value);
-    if (!Number.isFinite(v)) v = 0;
+    if (!Number.isFinite(v)) { v = 0; }
     v = Math.max(0, v);
 
     // apply gain
@@ -882,10 +880,9 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     const max = PioneerDDJFLX4.VU.MAX;
     let newVal = min + Math.round(v * (max - min));
 
-    if (group === "[Channel1]" && PioneerDDJFLX4._peakL) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
-    else if (group === "[Channel2]" && PioneerDDJFLX4._peakR) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
+    if (group === "[Channel1]" && PioneerDDJFLX4._peakL) { newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START); } else if (group === "[Channel2]" && PioneerDDJFLX4._peakR) { newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START); }
 
-    if (v < 0.02) newVal = 0x00;
+    if (v < 0.02) { newVal = 0x00; }
 
     switch (group) {
     case "[Channel1]":
@@ -951,7 +948,7 @@ PioneerDDJFLX4._doInstantDouble = function(targetGroup) {
 };
 
 PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const state = PioneerDDJFLX4._loadPress;
 
@@ -990,7 +987,7 @@ PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group)
 //
 
 PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     // SHIFT + LOAD left → toggle library maximize
     if (control === 0x68) {
@@ -1052,26 +1049,26 @@ PioneerDDJFLX4.eqStemPickupThreshold =
 //
 // If your files/controller/UI expose a different order, change ONLY this map.
 PioneerDDJFLX4.stemIndexMap = PioneerDDJFLX4.stemIndexMap || {
-    low:  [1, 2], // drums + bass
-    mid:  [3],    // melody / instruments
+    low: [1, 2], // drums + bass
+    mid: [3],    // melody / instruments
     high: [4],    // vocals
 };
 
 // ---------- 14-bit input state ----------
 PioneerDDJFLX4.eq14bit = PioneerDDJFLX4.eq14bit || {
-    "[Channel1]": { highMsb: 0, midMsb: 0, lowMsb: 0 },
-    "[Channel2]": { highMsb: 0, midMsb: 0, lowMsb: 0 },
+    "[Channel1]": {highMsb: 0, midMsb: 0, lowMsb: 0},
+    "[Channel2]": {highMsb: 0, midMsb: 0, lowMsb: 0},
 };
 
 // ---------- per-mode soft-takeover state ----------
 PioneerDDJFLX4.eqStemPickup = PioneerDDJFLX4.eqStemPickup || {
     "[Channel1]": {
-        eq:   { high: false, mid: false, low: false },
-        stem: { high: false, mid: false, low: false },
+        eq: {high: false, mid: false, low: false},
+        stem: {high: false, mid: false, low: false},
     },
     "[Channel2]": {
-        eq:   { high: false, mid: false, low: false },
-        stem: { high: false, mid: false, low: false },
+        eq: {high: false, mid: false, low: false},
+        stem: {high: false, mid: false, low: false},
     },
 };
 
@@ -1084,8 +1081,8 @@ PioneerDDJFLX4.eqStemLastMode = PioneerDDJFLX4.eqStemLastMode || {
 
 // ---------- helpers ----------
 PioneerDDJFLX4._clamp01 = function(value) {
-    if (value < 0) return 0;
-    if (value > 1) return 1;
+    if (value < 0) { return 0; }
+    if (value > 1) { return 1; }
     return value;
 };
 
@@ -1094,8 +1091,8 @@ PioneerDDJFLX4._eqGroupFromChannelGroup = function(channelGroup) {
 };
 
 PioneerDDJFLX4._eqKeyFromBand = function(band) {
-    if (band === "low") return "parameter1";
-    if (band === "mid") return "parameter2";
+    if (band === "low") { return "parameter1"; }
+    if (band === "mid") { return "parameter2"; }
     return "parameter3"; // high
 };
 
@@ -1424,7 +1421,7 @@ PioneerDDJFLX4._startBrakeWatch = function(deckIdx, group) {
 
 PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group) {
 
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
     const deck = deckIdx + 1;
@@ -1771,14 +1768,14 @@ PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
 PioneerDDJFLX4._beatFx = {
     unit1: "[EffectRack1_EffectUnit1]",
     unit2: "[EffectRack1_EffectUnit2]",
-    assign: { ch1: true, ch2: true }, // default: 1&2
+    assign: {ch1: true, ch2: true}, // default: 1&2
 };
 
 // ---- target selection (CH1 / CH2 / 1&2) ----
 PioneerDDJFLX4._beatFxTargets = function() {
     const t = [];
-    if (PioneerDDJFLX4._beatFx.assign.ch1) t.push(PioneerDDJFLX4._beatFx.unit1);
-    if (PioneerDDJFLX4._beatFx.assign.ch2) t.push(PioneerDDJFLX4._beatFx.unit2);
+    if (PioneerDDJFLX4._beatFx.assign.ch1) { t.push(PioneerDDJFLX4._beatFx.unit1); }
+    if (PioneerDDJFLX4._beatFx.assign.ch2) { t.push(PioneerDDJFLX4._beatFx.unit2); }
     return t;
 };
 
@@ -1817,25 +1814,26 @@ PioneerDDJFLX4._getBeatFxGroup = function() {
  * - Reverb -> DJ
  * - Trans  -> 1 beat
  * - Flanger/Phaser -> only available variant
+ * @param groupIndex
  */
 PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
     const groups = PioneerDDJFLX4._beatFxPresetGroups;
     const group = groups[groupIndex];
-    if (!group) return 0;
+    if (!group) { return 0; }
 
     switch (group.name) {
-        case "Echo":
-            return 2; // 01_ECHO_1_4, 02_ECHO_1_2, 03_ECHO_1
-        case "Reverb":
-            return 0; // 06_REVERB_DJ
-        case "Trans":
-            return 2; // 08_TRANS_1_4, 09_TRANS_1_2, 10_TRANS_1
-        case "Flanger":
-            return 0;
-        case "Phaser":
-            return 0;
-        default:
-            return 0;
+    case "Echo":
+        return 2; // 01_ECHO_1_4, 02_ECHO_1_2, 03_ECHO_1
+    case "Reverb":
+        return 0; // 06_REVERB_DJ
+    case "Trans":
+        return 2; // 08_TRANS_1_4, 09_TRANS_1_2, 10_TRANS_1
+    case "Flanger":
+        return 0;
+    case "Phaser":
+        return 0;
+    default:
+        return 0;
     }
 };
 
@@ -1848,6 +1846,7 @@ PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
  *    1 = first real preset
  *    2 = second real preset
  *    ...
+ * @param u
  */
 PioneerDDJFLX4._getBeatFxUnitLoadedSlot = function(u) {
     return engine.getValue(u, "loaded_chain_preset");
@@ -1858,9 +1857,11 @@ PioneerDDJFLX4._getBeatFxUnitLoadedSlot = function(u) {
  *
  * Positive delta -> next_chain_preset
  * Negative delta -> prev_chain_preset
+ * @param u
+ * @param delta
  */
 PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
-    if (!delta) return;
+    if (!delta) { return; }
 
     const stepControl = delta > 0 ? "next_chain_preset" : "prev_chain_preset";
     const steps = Math.abs(delta);
@@ -1883,10 +1884,12 @@ PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
  *   1 = first real preset
  *   2 = second real preset
  *   ...
+ * @param u
+ * @param targetAbsolute
  */
 PioneerDDJFLX4._setBeatFxUnitToAbsolute = function(u, targetAbsolute) {
     const currentSlot = PioneerDDJFLX4._getBeatFxUnitLoadedSlot(u);
-    if (currentSlot < 0) return;
+    if (currentSlot < 0) { return; }
 
     const targetSlot = targetAbsolute + 1; // convert internal index -> Mixxx slot
     const delta = targetSlot - currentSlot;
@@ -1899,6 +1902,7 @@ PioneerDDJFLX4._setBeatFxUnitToAbsolute = function(u, targetAbsolute) {
  *
  * The mapping state is still the source of truth for the TARGET,
  * but each unit is moved from its own actual current Mixxx slot.
+ * @param targetAbsolute
  */
 PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState = function(targetAbsolute) {
     PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit1, targetAbsolute);
@@ -1916,8 +1920,8 @@ PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState = function(targetAbsolute)
  */
 PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
     const group = PioneerDDJFLX4._beatFxPresetGroups[groupIndex];
-    if (!group) return;
-    if (variantIndex < 0 || variantIndex >= group.presets.length) return;
+    if (!group) { return; }
+    if (variantIndex < 0 || variantIndex >= group.presets.length) { return; }
 
     const targetAbsolute = group.presets[variantIndex];
 
@@ -1963,8 +1967,8 @@ PioneerDDJFLX4._prevBeatFxVariant = function() {
     const group = PioneerDDJFLX4._getBeatFxGroup();
     const currentVariant = PioneerDDJFLX4._beatFxPresetState.variantIndex;
 
-    if (group.presets.length <= 1) return;
-    if (currentVariant <= 0) return;
+    if (group.presets.length <= 1) { return; }
+    if (currentVariant <= 0) { return; }
 
     PioneerDDJFLX4._setBeatFxGroupVariant(
         PioneerDDJFLX4._beatFxPresetState.groupIndex,
@@ -1979,8 +1983,8 @@ PioneerDDJFLX4._nextBeatFxVariant = function() {
     const group = PioneerDDJFLX4._getBeatFxGroup();
     const currentVariant = PioneerDDJFLX4._beatFxPresetState.variantIndex;
 
-    if (group.presets.length <= 1) return;
-    if (currentVariant >= group.presets.length - 1) return;
+    if (group.presets.length <= 1) { return; }
+    if (currentVariant >= group.presets.length - 1) { return; }
 
     PioneerDDJFLX4._setBeatFxGroupVariant(
         PioneerDDJFLX4._beatFxPresetState.groupIndex,
@@ -2019,8 +2023,8 @@ PioneerDDJFLX4._beatFxUnitIdx = function(u) {
 
 PioneerDDJFLX4._beatFxRouteKey = function(u) {
     // fixed mapping: Unit1 -> Channel1, Unit2 -> Channel2
-    if (u === PioneerDDJFLX4._beatFx.unit1) return "group_[Channel1]_enable";
-    if (u === PioneerDDJFLX4._beatFx.unit2) return "group_[Channel2]_enable";
+    if (u === PioneerDDJFLX4._beatFx.unit1) { return "group_[Channel1]_enable"; }
+    if (u === PioneerDDJFLX4._beatFx.unit2) { return "group_[Channel2]_enable"; }
     return null;
 };
 
@@ -2030,23 +2034,23 @@ PioneerDDJFLX4._beatFxSlotGroup = function(unitIdx, slotIdx) {
 
 PioneerDDJFLX4._beatFxAnySlotOn = function(u) {
     const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
-    if (!unitIdx) return false;
+    if (!unitIdx) { return false; }
 
     for (let i = 1; i <= 3; i++) {
-        if (engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5) return true;
+        if (engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5) { return true; }
     }
     return false;
 };
 
 PioneerDDJFLX4._beatFxAllSlotsOn = function(u) {
     const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
-    if (!unitIdx) return false;
+    if (!unitIdx) { return false; }
 
     const Uon = engine.getValue(u, "enabled") > 0.5;
-    if (!Uon) return false;
+    if (!Uon) { return false; }
 
     for (let i = 1; i <= 3; i++) {
-        if (!(engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5)) return false;
+        if (!(engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5)) { return false; }
     }
     return true;
 };
@@ -2069,7 +2073,7 @@ PioneerDDJFLX4._applyBeatFxRouting = function() {
 
 PioneerDDJFLX4._armBeatFxUnit = function(u) {
     const routeKey = PioneerDDJFLX4._beatFxRouteKey(u);
-    if (!routeKey) return;
+    if (!routeKey) { return; }
 
     const enable = (u === PioneerDDJFLX4._beatFx.unit1)
         ? (PioneerDDJFLX4._beatFx.assign.ch1 ? 1 : 0)
@@ -2093,26 +2097,26 @@ PioneerDDJFLX4._updateBeatFxOnOffLed = function() {
 
 // ---- BEAT FX SELECT: cycle Beat FX groups ----
 PioneerDDJFLX4.beatFxSelectPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     PioneerDDJFLX4._nextBeatFxGroup();
 };
 
 PioneerDDJFLX4.beatFxSelectShiftPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     PioneerDDJFLX4._prevBeatFxGroup();
 };
 
 // ---- BEAT LEFT/RIGHT: cycle variants inside current Beat FX group ----
 PioneerDDJFLX4.beatFxLeftPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     PioneerDDJFLX4._prevBeatFxVariant();
 };
 
 PioneerDDJFLX4.beatFxRightPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     PioneerDDJFLX4._nextBeatFxVariant();
 };
@@ -2131,16 +2135,16 @@ PioneerDDJFLX4.beatFxChannel2 = function(_channel, _control, value) {
 // ---- LEVEL/DEPTH knob: 14-bit (MSB 0x02, LSB 0x22 on status 0xB4) ----
 // normal: super1, SHIFT: mix
 // Defaults anlegen, falls noch nicht vorhanden
-PioneerDDJFLX4._beatFxKnob = PioneerDDJFLX4._beatFxKnob || { msb: 0, lsb: 0 };
-PioneerDDJFLX4._beatFxKnobLast = PioneerDDJFLX4._beatFxKnobLast || { msb: -1, lsb: -1 };
+PioneerDDJFLX4._beatFxKnob = PioneerDDJFLX4._beatFxKnob || {msb: 0, lsb: 0};
+PioneerDDJFLX4._beatFxKnobLast = PioneerDDJFLX4._beatFxKnobLast || {msb: -1, lsb: -1};
 
 PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
     if (control === 0x02) {
-        if (PioneerDDJFLX4._beatFxKnobLast.msb === value) return;
+        if (PioneerDDJFLX4._beatFxKnobLast.msb === value) { return; }
         PioneerDDJFLX4._beatFxKnobLast.msb = value;
         PioneerDDJFLX4._beatFxKnob.msb = value & 0x7F;
     } else if (control === 0x22) {
-        if (PioneerDDJFLX4._beatFxKnobLast.lsb === value) return;
+        if (PioneerDDJFLX4._beatFxKnobLast.lsb === value) { return; }
         PioneerDDJFLX4._beatFxKnobLast.lsb = value;
         PioneerDDJFLX4._beatFxKnob.lsb = value & 0x7F;
     } else {
@@ -2169,7 +2173,7 @@ PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
 // ---- ON/OFF: toggle Unit + Slots 1..3 together ----
 PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
     const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
-    if (!unitIdx) return;
+    if (!unitIdx) { return; }
 
     const S = (n) => PioneerDDJFLX4._beatFxSlotGroup(unitIdx, n);
 
@@ -2198,10 +2202,10 @@ PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
 };
 
 PioneerDDJFLX4.beatFxOnOffPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const targets = PioneerDDJFLX4._beatFxTargets();
-    if (!targets.length) return;
+    if (!targets.length) { return; }
 
     const anyOn = targets.some((u) => PioneerDDJFLX4._beatFxAnySlotOn(u));
 
@@ -2216,13 +2220,13 @@ PioneerDDJFLX4.beatFxOnOffPressed = function(_channel, _control, value) {
 };
 
 PioneerDDJFLX4.beatFxOnOffShiftPressed = function(_channel, _control, value) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     PioneerDDJFLX4._beatFxTargets().forEach((u) => PioneerDDJFLX4._beatFxSetUnitAndSlots(u, false));
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 // --- SMART CFX (Version A: universal) ---
-PioneerDDJFLX4._smartCfx = PioneerDDJFLX4._smartCfx || { enabled: false };
+PioneerDDJFLX4._smartCfx = PioneerDDJFLX4._smartCfx || {enabled: false};
 
 PioneerDDJFLX4._qfxGroup = function(ch) {
     return `[QuickEffectRack1_[Channel${ch}]]`;
@@ -2238,7 +2242,7 @@ PioneerDDJFLX4.smartCfxLedFromEngine = function(_value, _group, _control) {
 };
 
 PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
-    if (value !== 0x7F) return; // only on press
+    if (value !== 0x7F) { return; } // only on press
 
     const isShiftVariant = (control === 0x08); // SHIFT+SMART CFX note
     const g1 = PioneerDDJFLX4._qfxGroup(1);
@@ -2297,8 +2301,8 @@ PioneerDDJFLX4._centerCurve = function(v, exp) {
  * Separate storage per channel (ch1 / ch2).
  */
 PioneerDDJFLX4._filterKnob = PioneerDDJFLX4._filterKnob || {
-    ch1: { msb: 0, lsb: 0 },
-    ch2: { msb: 0, lsb: 0 }
+    ch1: {msb: 0, lsb: 0},
+    ch2: {msb: 0, lsb: 0}
 };
 
 /**
@@ -2307,8 +2311,8 @@ PioneerDDJFLX4._filterKnob = PioneerDDJFLX4._filterKnob || {
  * Some controllers repeatedly send identical values → unnecessary updates.
  */
 PioneerDDJFLX4._filterKnobLast = PioneerDDJFLX4._filterKnobLast || {
-    ch1: { msb: -1, lsb: -1 },
-    ch2: { msb: -1, lsb: -1 }
+    ch1: {msb: -1, lsb: -1},
+    ch2: {msb: -1, lsb: -1}
 };
 
 /**
@@ -2326,11 +2330,11 @@ PioneerDDJFLX4._filterKnobLast = PioneerDDJFLX4._filterKnobLast || {
  */
 PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
     if (control === 0x17) {
-        if (PioneerDDJFLX4._filterKnobLast.ch1.msb === value) return;
+        if (PioneerDDJFLX4._filterKnobLast.ch1.msb === value) { return; }
         PioneerDDJFLX4._filterKnobLast.ch1.msb = value;
         PioneerDDJFLX4._filterKnob.ch1.msb = value & 0x7F;
     } else if (control === 0x37) {
-        if (PioneerDDJFLX4._filterKnobLast.ch1.lsb === value) return;
+        if (PioneerDDJFLX4._filterKnobLast.ch1.lsb === value) { return; }
         PioneerDDJFLX4._filterKnobLast.ch1.lsb = value;
         PioneerDDJFLX4._filterKnob.ch1.lsb = value & 0x7F;
     } else {
@@ -2352,14 +2356,17 @@ PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
 /**
  * Same logic as Channel 1, applied to Channel 2.
  * Only MIDI controls and target group differ.
+ * @param _channel
+ * @param control
+ * @param value
  */
 PioneerDDJFLX4.filterCh2Rotate = function(_channel, control, value) {
     if (control === 0x18) {
-        if (PioneerDDJFLX4._filterKnobLast.ch2.msb === value) return;
+        if (PioneerDDJFLX4._filterKnobLast.ch2.msb === value) { return; }
         PioneerDDJFLX4._filterKnobLast.ch2.msb = value;
         PioneerDDJFLX4._filterKnob.ch2.msb = value & 0x7F;
     } else if (control === 0x38) {
-        if (PioneerDDJFLX4._filterKnobLast.ch2.lsb === value) return;
+        if (PioneerDDJFLX4._filterKnobLast.ch2.lsb === value) { return; }
         PioneerDDJFLX4._filterKnobLast.ch2.lsb = value;
         PioneerDDJFLX4._filterKnob.ch2.lsb = value & 0x7F;
     } else {
@@ -2453,13 +2460,13 @@ PioneerDDJFLX4._allSlotsOn = function(unitIdx) {
 
 PioneerDDJFLX4._autoArmIfNeeded = function(unitIdx, group) {
     // if any slot is on -> ensure Unit enabled + routing to current deck ON
-    if (!PioneerDDJFLX4._anySlotOn(unitIdx)) return;
+    if (!PioneerDDJFLX4._anySlotOn(unitIdx)) { return; }
 
     const U = PioneerDDJFLX4._U(unitIdx);
     const rk = PioneerDDJFLX4._fxRouteKey(group);
 
-    if (engine.getValue(U, "enabled") <= 0.5) engine.setValue(U, "enabled", 1);
-    if (engine.getValue(U, rk) <= 0.5) engine.setValue(U, rk, 1);
+    if (engine.getValue(U, "enabled") <= 0.5) { engine.setValue(U, "enabled", 1); }
+    if (engine.getValue(U, rk) <= 0.5) { engine.setValue(U, rk, 1); }
 };
 
 PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
@@ -2490,7 +2497,7 @@ PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
 
 PioneerDDJFLX4.updatePadFxUI = function(group) {
     const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
-    if (!unitIdx) return;
+    if (!unitIdx) { return; }
 
     // auto-arm if needed (prevents “it’s on but does nothing”)
     PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
@@ -2535,10 +2542,10 @@ PioneerDDJFLX4._toggleRoute = function(unitIdx, routeGroup) {
 };
 
 PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
-    if (!unitIdx) return;
+    if (!unitIdx) { return; }
 
     const mode = PioneerDDJFLX4.padMode[group];
     const base = (mode === "padfx1") ? 0x10 : 0x50;
@@ -2579,19 +2586,19 @@ PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
         const allOn = PioneerDDJFLX4._allSlotsOn(unitIdx);
         PioneerDDJFLX4._setUnitAndSlots(unitIdx, group, !allOn);
         PioneerDDJFLX4.updatePadFxUI(group);
-        return;
+
     }
 };
 
 // mode switches (call these from your PAD MODE buttons)
 PioneerDDJFLX4.setPadModePadFx1 = function(_ch, _ctrl, value, _st, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
     PioneerDDJFLX4.padMode[group] = "padfx1";
     PioneerDDJFLX4.updatePadFxUI(group);
 };
 
 PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
     PioneerDDJFLX4.padMode[group] = "padfx2";
     PioneerDDJFLX4.updatePadFxUI(group);
 };
@@ -2615,24 +2622,24 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 // ------------------- LED HELPERS -------------------
 // Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)
 PioneerDDJFLX4.setReloopLight = function(status, value) {
-  midi.sendShortMsg(status, 0x4D, value);
-  midi.sendShortMsg(status, 0x50, value);
+    midi.sendShortMsg(status, 0x4D, value);
+    midi.sendShortMsg(status, 0x50, value);
 };
 
 PioneerDDJFLX4.setLoopButtonLights = function(status, value) {
-  // IN, OUT, IN(SHIFT), OUT(SHIFT) – wie bisher
-  [0x10, 0x11, 0x4E, 0x4C].forEach(function(control) {
-    midi.sendShortMsg(status, control, value);
-  });
+    // IN, OUT, IN(SHIFT), OUT(SHIFT) – wie bisher
+    [0x10, 0x11, 0x4E, 0x4C].forEach(function(control) {
+        midi.sendShortMsg(status, control, value);
+    });
 };
 
 PioneerDDJFLX4.stopLoopLightsBlink = function(group) {
-  PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
-  const id = PioneerDDJFLX4.timersLoop[group].loopBlink;
-  if (id !== undefined) {
-    engine.stopTimer(id);
-  }
-  PioneerDDJFLX4.timersLoop[group].loopBlink = undefined;
+    PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
+    const id = PioneerDDJFLX4.timersLoop[group].loopBlink;
+    if (id !== undefined) {
+        engine.stopTimer(id);
+    }
+    PioneerDDJFLX4.timersLoop[group].loopBlink = undefined;
 };
 
 // ------------------- CENTRAL LED STATE -------------------
@@ -2643,116 +2650,116 @@ PioneerDDJFLX4.stopLoopLightsBlink = function(group) {
 // - loop on + adjust in: IN blinks, OUT off
 // - loop on + adjust out: OUT blinks, IN off
 PioneerDDJFLX4._updateLoopLeds = function(group, _controlForBlink, statusForLed) {
-  const channelIdx = (group === "[Channel1]") ? 0 : 1;
-  const trackLoaded = engine.getValue(group, "track_loaded") === 1;
-  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    const channelIdx = (group === "[Channel1]") ? 0 : 1;
+    const trackLoaded = engine.getValue(group, "track_loaded") === 1;
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
 
-  // kill blink timer first (we may restart it)
-  PioneerDDJFLX4.stopLoopLightsBlink(group);
+    // kill blink timer first (we may restart it)
+    PioneerDDJFLX4.stopLoopLightsBlink(group);
 
-  if (!trackLoaded) {
-    PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00);
-    PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
-    return;
-  }
+    if (!trackLoaded) {
+        PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00);
+        PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
+        return;
+    }
 
-  // track loaded
-  if (!loopOn) {
-    PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
-    PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x7F); // solid
-    return;
-  }
+    // track loaded
+    if (!loopOn) {
+        PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
+        PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x7F); // solid
+        return;
+    }
 
-  // loop on -> reloop light on, and blinking behaviour
-  PioneerDDJFLX4.setReloopLight(statusForLed, 0x7F);
-  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, statusForLed, group);
+    // loop on -> reloop light on, and blinking behaviour
+    PioneerDDJFLX4.setReloopLight(statusForLed, 0x7F);
+    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, statusForLed, group);
 };
 
 
 PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, status, group) {
-  let blink = 0x7F;
+    let blink = 0x7F;
 
-  PioneerDDJFLX4.stopLoopLightsBlink(group);
+    PioneerDDJFLX4.stopLoopLightsBlink(group);
 
-  PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
-  PioneerDDJFLX4.timersLoop[group].loopBlink = engine.beginTimer(500, () => {
-    blink = 0x7F - blink;
+    PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
+    PioneerDDJFLX4.timersLoop[group].loopBlink = engine.beginTimer(500, () => {
+        blink = 0x7F - blink;
 
-    // OUT adjust aktiv -> IN LEDs OFF, OUT LEDs blink
-    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-      midi.sendShortMsg(status, 0x10, 0x00);
-      midi.sendShortMsg(status, 0x4C, 0x00);
-    } else {
-      midi.sendShortMsg(status, 0x10, blink);
-      midi.sendShortMsg(status, 0x4C, blink);
-    }
+        // OUT adjust aktiv -> IN LEDs OFF, OUT LEDs blink
+        if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+            midi.sendShortMsg(status, 0x10, 0x00);
+            midi.sendShortMsg(status, 0x4C, 0x00);
+        } else {
+            midi.sendShortMsg(status, 0x10, blink);
+            midi.sendShortMsg(status, 0x4C, blink);
+        }
 
-    // IN adjust aktiv -> OUT LEDs OFF, IN LEDs blink
-    if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
-      midi.sendShortMsg(status, 0x11, 0x00);
-      midi.sendShortMsg(status, 0x4E, 0x00);
-    } else {
-      midi.sendShortMsg(status, 0x11, blink);
-      midi.sendShortMsg(status, 0x4E, blink);
-    }
-  });
+        // IN adjust aktiv -> OUT LEDs OFF, IN LEDs blink
+        if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
+            midi.sendShortMsg(status, 0x11, 0x00);
+            midi.sendShortMsg(status, 0x4E, 0x00);
+        } else {
+            midi.sendShortMsg(status, 0x11, blink);
+            midi.sendShortMsg(status, 0x4E, blink);
+        }
+    });
 };
 
 // ------------------- AUTO TIMEOUT -------------------
 // Wird bei jedem Adjust-Jog neu gestartet.
 // Wenn ausgelöst: Adjust Flags aus + Blink aus + LEDs in "normalen" Loop-Status.
 PioneerDDJFLX4._scheduleLoopAdjustTimeout = function(channelIdx, group, controlForBlink, statusForLed) {
-  const ms = Number(PioneerDDJFLX4.loopAdjustTimeoutMs);
-  if (!Number.isFinite(ms) || ms <= 0) return;
+    const ms = Number(PioneerDDJFLX4.loopAdjustTimeoutMs);
+    if (!Number.isFinite(ms) || ms <= 0) { return; }
 
-  // Timer pro Deck/Group
-  const oldId = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
-  if (oldId !== undefined) {
-    engine.stopTimer(oldId);
-    PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
-  }
+    // Timer pro Deck/Group
+    const oldId = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
+    if (oldId !== undefined) {
+        engine.stopTimer(oldId);
+        PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+    }
 
-  PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = engine.beginTimer(ms, () => {
-    PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+    PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = engine.beginTimer(ms, () => {
+        PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
 
-    // Adjust-Flags aus
-    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
-    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+        // Adjust-Flags aus
+        PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+        PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
 
-    // LEDs zentral neu setzen
-    PioneerDDJFLX4._updateLoopLeds(group, controlForBlink, statusForLed);
-  }, true /* one-shot, falls unterstützt */);
+        // LEDs zentral neu setzen
+        PioneerDDJFLX4._updateLoopLeds(group, controlForBlink, statusForLed);
+    }, true /* one-shot, falls unterstützt */);
 };
 
 // ------------------- loop_enabled callback -------------------
 PioneerDDJFLX4.loopToggle = function(value, group, _control) {
-  const status = group === "[Channel1]" ? 0x90 : 0x91;
-  const channelIdx = group === "[Channel1]" ? 0 : 1;
+    const status = group === "[Channel1]" ? 0x90 : 0x91;
+    const channelIdx = group === "[Channel1]" ? 0 : 1;
 
-  if (!value) {
+    if (!value) {
     // Loop off: reset adjust + pending
-    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
-    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
-    PioneerDDJFLX4._loopPendingOut[group] = false;
+        PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+        PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+        PioneerDDJFLX4._loopPendingOut[group] = false;
 
-    // Timeout kill
-    const tid = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
-    if (tid !== undefined) {
-      engine.stopTimer(tid);
-      PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+        // Timeout kill
+        const tid = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
+        if (tid !== undefined) {
+            engine.stopTimer(tid);
+            PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+        }
     }
-  }
 
-  // Always update LEDs based on track_loaded + loop_enabled + adjust flags
-  PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
+    // Always update LEDs based on track_loaded + loop_enabled + adjust flags
+    PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
 };
 
 // track_loaded callback: keep Loop LEDs correct even when no loop state changes
 PioneerDDJFLX4.loopTrackLoaded = function(_value, group, _control) {
-  const status = (group === "[Channel1]") ? 0x90 : 0x91;
-  // any of the loop buttons is fine as "control key" for our blink timer bucket
-  // use IN (0x10) as stable id
-  PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
+    const status = (group === "[Channel1]") ? 0x90 : 0x91;
+    // any of the loop buttons is fine as "control key" for our blink timer bucket
+    // use IN (0x10) as stable id
+    PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
 };
 
 
@@ -2760,174 +2767,173 @@ PioneerDDJFLX4.loopTrackLoaded = function(_value, group, _control) {
 // Loop on  -> reloop_toggle (Exit)
 // Loop off -> if a previous loop exists: reloop_toggle (Reloop), else create N-beat loop
 PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, group) {
-  if (value !== 0x7F) return;
-  if (engine.getValue(group, "track_loaded") !== 1) return;
+    if (value !== 0x7F) { return; }
+    if (engine.getValue(group, "track_loaded") !== 1) { return; }
 
-  const loopOn = engine.getValue(group, "loop_enabled") > 0;
-  if (loopOn) {
-    script.triggerControl(group, "reloop_toggle");
-    return;
-  }
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    if (loopOn) {
+        script.triggerControl(group, "reloop_toggle");
+        return;
+    }
 
-  const loopStart = engine.getValue(group, "loop_start_position");
-  const loopEnd   = engine.getValue(group, "loop_end_position");
+    const loopStart = engine.getValue(group, "loop_start_position");
+    const loopEnd   = engine.getValue(group, "loop_end_position");
 
-  // Mixxx uses -1 for unset positions in many cases; also guard against garbage.
-  const haveStoredLoop =
+    // Mixxx uses -1 for unset positions in many cases; also guard against garbage.
+    const haveStoredLoop =
       Number.isFinite(loopStart) && Number.isFinite(loopEnd) &&
       loopStart >= 0 && loopEnd >= 0 &&
       loopEnd > loopStart;
 
-  if (haveStoredLoop) {
+    if (haveStoredLoop) {
     // Reloop previously set IN/OUT
-    script.triggerControl(group, "reloop_toggle");
-    return;
-  }
+        script.triggerControl(group, "reloop_toggle");
+        return;
+    }
 
-  // No stored loop -> create default loop (e.g. 4 beats)
-  const size = Number(PioneerDDJFLX4.reloopExitBeats);
-  engine.setValue(group, "beatloop_size", (Number.isFinite(size) && size > 0) ? size : 4);
-  script.triggerControl(group, "beatloop_activate");
+    // No stored loop -> create default loop (e.g. 4 beats)
+    const size = Number(PioneerDDJFLX4.reloopExitBeats);
+    engine.setValue(group, "beatloop_size", (Number.isFinite(size) && size > 0) ? size : 4);
+    script.triggerControl(group, "beatloop_activate");
 };
 
 // -------------------  HELPERS -------------------
 PioneerDDJFLX4._samplesPerBeat = function(group) {
-  const sr = engine.getValue(group, "track_samplerate");
-  let bpm = engine.getValue(group, "bpm");
-  if (!Number.isFinite(bpm) || bpm <= 0) bpm = engine.getValue(group, "local_bpm");
-  if (!Number.isFinite(sr) || sr <= 0) return NaN;
-  if (!Number.isFinite(bpm) || bpm <= 0) return NaN;
-  return (60 / bpm) * sr; // samples per beat
+    const sr = engine.getValue(group, "track_samplerate");
+    let bpm = engine.getValue(group, "bpm");
+    if (!Number.isFinite(bpm) || bpm <= 0) { bpm = engine.getValue(group, "local_bpm"); }
+    if (!Number.isFinite(sr) || sr <= 0) { return NaN; }
+    if (!Number.isFinite(bpm) || bpm <= 0) { return NaN; }
+    return (60 / bpm) * sr; // samples per beat
 };
 
 PioneerDDJFLX4._adjustLoopEdge = function(group, edge /*"in"|"out"*/, interval /*signed int*/) {
-  const spb   = PioneerDDJFLX4._samplesPerBeat(group);
-  const total = engine.getValue(group, "track_samples");
-  if (!Number.isFinite(spb) || !Number.isFinite(total) || total <= 0) return;
+    const spb   = PioneerDDJFLX4._samplesPerBeat(group);
+    const total = engine.getValue(group, "track_samples");
+    if (!Number.isFinite(spb) || !Number.isFinite(total) || total <= 0) { return; }
 
-  const delta  = Math.round(spb * PioneerDDJFLX4.loopAdjustStepBeats * interval);
-  const minLen = Math.max(1, Math.round(spb * 0.05)); // ~5% beat min length
+    const delta  = Math.round(spb * PioneerDDJFLX4.loopAdjustStepBeats * interval);
+    const minLen = Math.max(1, Math.round(spb * 0.05)); // ~5% beat min length
 
-  let a = engine.getValue(group, "loop_start_position");
-  let b = engine.getValue(group, "loop_end_position");
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+    let a = engine.getValue(group, "loop_start_position");
+    let b = engine.getValue(group, "loop_end_position");
+    if (!Number.isFinite(a) || !Number.isFinite(b)) { return; }
 
-  if (edge === "in") a += delta;
-  else              b += delta;
+    if (edge === "in") { a += delta; } else              { b += delta; }
 
-  a = Math.max(0, Math.min(total - minLen, a));
-  b = Math.max(a + minLen, Math.min(total, b));
+    a = Math.max(0, Math.min(total - minLen, a));
+    b = Math.max(a + minLen, Math.min(total, b));
 
-  engine.setValue(group, "loop_start_position", a);
-  engine.setValue(group, "loop_end_position",   b);
+    engine.setValue(group, "loop_start_position", a);
+    engine.setValue(group, "loop_end_position",   b);
 };
 
 // Hook für jogTurn(): in workflow-mode sample-based adjust
 PioneerDDJFLX4._handleJogLoopAdjust = function(channelIdx, group, jogDelta /*signed*/, controlForBlink, statusForLed) {
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE !== "workflow") return false;
+    if (PioneerDDJFLX4.LOOP_ADJUST_MODE !== "workflow") { return false; }
 
-  const loopOn = engine.getValue(group, "loop_enabled") > 0;
-  if (!loopOn) return false;
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    if (!loopOn) { return false; }
 
-  if (!PioneerDDJFLX4.loopAdjustIn[channelIdx] && !PioneerDDJFLX4.loopAdjustOut[channelIdx]) return false;
+    if (!PioneerDDJFLX4.loopAdjustIn[channelIdx] && !PioneerDDJFLX4.loopAdjustOut[channelIdx]) { return false; }
 
-  const dir = jogDelta > 0 ? 1 : -1;
-  if (PioneerDDJFLX4.loopAdjustIn[channelIdx])  PioneerDDJFLX4._adjustLoopEdge(group, "in",  dir);
-  if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) PioneerDDJFLX4._adjustLoopEdge(group, "out", dir);
+    const dir = jogDelta > 0 ? 1 : -1;
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx])  { PioneerDDJFLX4._adjustLoopEdge(group, "in",  dir); }
+    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) { PioneerDDJFLX4._adjustLoopEdge(group, "out", dir); }
 
-  // Jede Adjust-Bewegung verlängert den Adjust-Mode
-  PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, controlForBlink, statusForLed);
-  return true;
+    // Jede Adjust-Bewegung verlängert den Adjust-Mode
+    PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, controlForBlink, statusForLed);
+    return true;
 };
 
 // ------------------- LOOP IN / OUT BUTTONS -------------------
 // toggleLoopAdjustIn / toggleLoopAdjustOut bleiben die XML targets.
 // Mode entscheidet, was passiert.
 PioneerDDJFLX4.toggleLoopAdjustIn = function(channelIdx, _control, value, _status, group) {
-  if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
-  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
 
-  // --- workflow MODE ---
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
-    if (!loopOn) {
-      // pending already? -> cancel
-      if (PioneerDDJFLX4._loopPendingOut[group]) {
+    // --- workflow MODE ---
+    if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
+        if (!loopOn) {
+            // pending already? -> cancel
+            if (PioneerDDJFLX4._loopPendingOut[group]) {
+                PioneerDDJFLX4._loopPendingOut[group] = false;
+                PioneerDDJFLX4.setLoopButtonLights(st, 0x00);
+                return;
+            }
+
+            // set loop in + pending out
+            script.triggerControl(group, "loop_in");
+            PioneerDDJFLX4._loopPendingOut[group] = true;
+            return;
+        }
+
+        // loop active -> toggle IN adjust mode
         PioneerDDJFLX4._loopPendingOut[group] = false;
-        PioneerDDJFLX4.setLoopButtonLights(st, 0x00);
-        return;
-      }
 
-      // set loop in + pending out
-      script.triggerControl(group, "loop_in");
-      PioneerDDJFLX4._loopPendingOut[group] = true;
-      return;
+        PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
+        if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) { PioneerDDJFLX4.loopAdjustOut[channelIdx] = false; }
+
+        // Your startLoopLightsBlink signature is (channelIdx, status, group).
+        // Also: don’t manually force LEDs here; use the central renderer.
+        if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+            PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+        }
+        PioneerDDJFLX4._updateLoopLeds(group, control, st);
+        return;
     }
 
-    // loop active -> toggle IN adjust mode
-    PioneerDDJFLX4._loopPendingOut[group] = false;
+    // --- SIMPLE MODE (DEFAULT) ---
+    if (!loopOn) { return; }
 
     PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
-    if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
 
-    // Your startLoopLightsBlink signature is (channelIdx, status, group).
-    // Also: don’t manually force LEDs here; use the central renderer.
-    if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-      PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+    // Timer nur wenn Adjust aktiv
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
+        PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
     }
-    PioneerDDJFLX4._updateLoopLeds(group, control, st);
-    return;
-  }
-
-  // --- SIMPLE MODE (DEFAULT) ---
-  if (!loopOn) return;
-
-  PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
-  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
-
-  // Timer nur wenn Adjust aktiv
-  if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
-    PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
-  }
 };
 
 PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, _control, value, _status, group) {
-  if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
-  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
 
-  // --- workflow MODE ---
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
-    if (!loopOn) {
-      // set loop out (also activates loop)
-      script.triggerControl(group, "loop_out");
-      PioneerDDJFLX4._loopPendingOut[group] = false;
-      return;
+    // --- workflow MODE ---
+    if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
+        if (!loopOn) {
+            // set loop out (also activates loop)
+            script.triggerControl(group, "loop_out");
+            PioneerDDJFLX4._loopPendingOut[group] = false;
+            return;
+        }
+
+        // loop active -> toggle OUT adjust mode
+        PioneerDDJFLX4._loopPendingOut[group] = false;
+
+        PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
+        if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) { PioneerDDJFLX4.loopAdjustIn[channelIdx] = false; }
+
+        // Fix wrong function calls + keep LED logic centralized
+        if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+            PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+        }
+        PioneerDDJFLX4._updateLoopLeds(group, control, st);
+        return;
     }
 
-    // loop active -> toggle OUT adjust mode
-    PioneerDDJFLX4._loopPendingOut[group] = false;
+    // --- SIMPLE MODE (DEFAULT) ---
+    if (!loopOn) { return; }
 
     PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
-    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
 
-    // Fix wrong function calls + keep LED logic centralized
-    if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-      PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+        PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
     }
-    PioneerDDJFLX4._updateLoopLeds(group, control, st);
-    return;
-  }
-
-  // --- SIMPLE MODE (DEFAULT) ---
-  if (!loopOn) return;
-
-  PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
-  PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
-
-  if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-    PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
-  }
 };
 
 
@@ -2940,35 +2946,35 @@ PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, _control, value, _stat
 ///////////////////////////////////////////////////////////////
 
 PioneerDDJFLX4.loopInPressed = function(_channel, _control, value, _status, group) {
-  if (value !== 0x7F) return;
-  if (engine.getValue(group, "track_loaded") !== 1) return;
+    if (value !== 0x7F) { return; }
+    if (engine.getValue(group, "track_loaded") !== 1) { return; }
 
-  const channelIdx = (group === "[Channel1]") ? 0 : 1;
+    const channelIdx = (group === "[Channel1]") ? 0 : 1;
 
-  // Trigger Mixxx loop-in
-  script.triggerControl(group, "loop_in");
+    // Trigger Mixxx loop-in
+    script.triggerControl(group, "loop_in");
 
-  // Pending-Out visual: IN blinks, OUT off
-  PioneerDDJFLX4._loopPendingOut[group] = true;
-  PioneerDDJFLX4.loopAdjustIn[channelIdx] = true;     // makes OUT off in your blink routine
-  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;   // keeps IN blinking
-  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, st, group);
+    // Pending-Out visual: IN blinks, OUT off
+    PioneerDDJFLX4._loopPendingOut[group] = true;
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = true;     // makes OUT off in your blink routine
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;   // keeps IN blinking
+    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, st, group);
 };
 
 PioneerDDJFLX4.loopOutPressed = function(_channel, _control, value, _status, group) {
-  if (value !== 0x7F) return;
-  if (engine.getValue(group, "track_loaded") !== 1) return;
+    if (value !== 0x7F) { return; }
+    if (engine.getValue(group, "track_loaded") !== 1) { return; }
 
-  const channelIdx = (group === "[Channel1]") ? 0 : 1;
+    const channelIdx = (group === "[Channel1]") ? 0 : 1;
 
-  // Trigger Mixxx loop-out
-  script.triggerControl(group, "loop_out");
+    // Trigger Mixxx loop-out
+    script.triggerControl(group, "loop_out");
 
-  // Clear pending + stop special blink; loopToggle(loop_enabled) will render final state
-  PioneerDDJFLX4._loopPendingOut[group] = false;
-  PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
-  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
-  PioneerDDJFLX4.stopLoopLightsBlink(group);
+    // Clear pending + stop special blink; loopToggle(loop_enabled) will render final state
+    PioneerDDJFLX4._loopPendingOut[group] = false;
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+    PioneerDDJFLX4.stopLoopLightsBlink(group);
 };
 
 //
@@ -2976,8 +2982,8 @@ PioneerDDJFLX4.loopOutPressed = function(_channel, _control, value, _status, gro
 //
 
 PioneerDDJFLX4.cueLoopCallLeft = function(_ch, _ctrl, value, _status, group) {
-    if (value !== 0x7F) return; // nur Press
-    if (engine.getValue(group, "track_loaded") !== 1) return;
+    if (value !== 0x7F) { return; } // nur Press
+    if (engine.getValue(group, "track_loaded") !== 1) { return; }
 
     if (engine.getValue(group, "loop_enabled") > 0) {
         script.triggerControl(group, "loop_halve", 50);
@@ -2988,8 +2994,8 @@ PioneerDDJFLX4.cueLoopCallLeft = function(_ch, _ctrl, value, _status, group) {
 };
 
 PioneerDDJFLX4.cueLoopCallRight = function(_ch, _ctrl, value, _status, group) {
-    if (value !== 0x7F) return; // nur Press
-    if (engine.getValue(group, "track_loaded") !== 1) return;
+    if (value !== 0x7F) { return; } // nur Press
+    if (engine.getValue(group, "track_loaded") !== 1) { return; }
 
     if (engine.getValue(group, "loop_enabled") > 0) {
         script.triggerControl(group, "loop_double", 50);
@@ -3006,7 +3012,7 @@ PioneerDDJFLX4.cueLoopCallRight = function(_ch, _ctrl, value, _status, group) {
 //
 
 PioneerDDJFLX4.syncPressed = function(_channel, _control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const hold = engine.getValue(group, "sync_enabled") === 1;
 
@@ -3020,14 +3026,14 @@ PioneerDDJFLX4.syncPressed = function(_channel, _control, value, _status, group)
 };
 
 PioneerDDJFLX4.syncLongPressed = function(_channel, _control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const hold = engine.getValue(group, "sync_enabled") === 1;
     engine.setValue(group, "sync_enabled", hold ? 0 : 1);
 };
 
 PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
-    if (!value) return;
+    if (!value) { return; }
 
     const cur = engine.getValue(group, "rateRange");
 
@@ -3043,7 +3049,7 @@ PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
 };
 
 ///////////////////////////////////////////////////////////////
-// Jog wheels (FLX4) – stateful scratch/bend 
+// Jog wheels (FLX4) – stateful scratch/bend
 //
 // Goals:
 // - Loop-adjust has priority (your existing _handleJogLoopAdjust hook stays).
@@ -3091,46 +3097,46 @@ PioneerDDJFLX4._scratchDisable = function(deckNum, ramp) {
     PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
 };
 
- // ---------- touch handlers ----------
- PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
-     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
-     const deckNum = deckIdx + 1;
+// ---------- touch handlers ----------
+PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const deckNum = deckIdx + 1;
 
-     // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
-     if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
-         return;
-     }
+    // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
+    if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
+        return;
+    }
 
-     const touching = (value !== 0);
-     PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
+    const touching = (value !== 0);
+    PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
 
-     if (touching) {
-         // Decide scratch vs bend based on intended vinyl state:
-         // scratch if deck not playing OR vinyl mode is enabled for this deck.
-         const playing = engine.getValue(group, "play") === 1;
-         const wantScratch = (!playing) || !!PioneerDDJFLX4._vinylWanted[deckIdx];
+    if (touching) {
+        // Decide scratch vs bend based on intended vinyl state:
+        // scratch if deck not playing OR vinyl mode is enabled for this deck.
+        const playing = engine.getValue(group, "play") === 1;
+        const wantScratch = (!playing) || !!PioneerDDJFLX4._vinylWanted[deckIdx];
 
-         if (wantScratch) {
-             PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
-             PioneerDDJFLX4._scratchEnable(deckNum);
-         } else {
-             PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
+        if (wantScratch) {
+            PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
+            PioneerDDJFLX4._scratchEnable(deckNum);
+        } else {
+            PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
 
-             // ensure scratch is off if it was on
-             if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-                 PioneerDDJFLX4._scratchDisable(deckNum);
-             }
-         }
-         return;
-     }
+            // ensure scratch is off if it was on
+            if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+                PioneerDDJFLX4._scratchDisable(deckNum);
+            }
+        }
+        return;
+    }
 
-     // Touch released
-     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-         PioneerDDJFLX4._scratchDisable(deckNum, true);
-     } else {
-         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-     }
- };
+    // Touch released
+    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+        PioneerDDJFLX4._scratchDisable(deckNum, true);
+    } else {
+        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
+    }
+};
 
 PioneerDDJFLX4._shiftSearchTouch = PioneerDDJFLX4._shiftSearchTouch || [false, false];
 
@@ -3209,9 +3215,9 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
     const delta = value - 64;
 
-    if (delta === 0) return;
+    if (delta === 0) { return; }
 
-    let step = delta * 0.00015; // deutlich feiner als vorher
+    let step = delta * 0.00015; // deutlich feiner also vorher
 
     if (PioneerDDJFLX4._shiftSearchTouch[deckIdx]) {
         step *= 2.0; // statt 6
@@ -3220,14 +3226,14 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
     const pos = engine.getValue(group, "playposition");
     let newPos = pos + step;
 
-    if (newPos < 0) newPos = 0;
-    if (newPos > 1) newPos = 1;
+    if (newPos < 0) { newPos = 0; }
+    if (newPos > 1) { newPos = 1; }
 
     engine.setValue(group, "playposition", newPos);
 };
 
 ///////////////////////////////////////////////////////////////
-// VINYL MODE (PER-DECK) via a mapped butto
+// VINYL MODE (PER-DECK) via a mapped button
 //
 // FLX4 has an internal Vinyl Mode that changes which CC the jog sends.
 // To switch it, Mixxx must SEND the command to the controller:
@@ -3266,7 +3272,7 @@ PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
 
     // if turning OFF, ensure we don't stay in scratching
     if (!state) {
-        if (PioneerDDJFLX4._scratchEnabled[deckIdx]) PioneerDDJFLX4._scratchDisable(deckIdx + 1);
+        if (PioneerDDJFLX4._scratchEnabled[deckIdx]) { PioneerDDJFLX4._scratchDisable(deckIdx + 1); }
         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
 
@@ -3275,7 +3281,7 @@ PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
 };
 
 PioneerDDJFLX4.vinylTogglePressed = function(_channel, _control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     // per-deck via group ([Channel1]/[Channel2])
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
@@ -3333,7 +3339,7 @@ PioneerDDJFLX4._setBeatloopPadsLit = function(status, on) {
 // LED off if not loaded, solid if loaded+stopped, blink if playing
 PioneerDDJFLX4.samplerLedUpdate = function(_value, group, _control) {
     const m = group.match(script.samplerRegEx);
-    if (!m) return;
+    if (!m) { return; }
 
     const curPad = parseInt(m[1], 10);
     let deckIndex = 0;
@@ -3379,7 +3385,7 @@ PioneerDDJFLX4.samplerLedUpdate = function(_value, group, _control) {
 //PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || { "[Channel1]": PioneerDDJFLX4.PADMODE.HOTCUE, "[Channel2]": PioneerDDJFLX4.PADMODE.HOTCUE };
 
 PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, _group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const ch = (_status === 0x90) ? "[Channel1]" : "[Channel2]";
 
@@ -3540,7 +3546,7 @@ PioneerDDJFLX4._quantizeLP = PioneerDDJFLX4._quantizeLP || {
     fired: {}
 };
 
-PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, group) {
+PioneerDDJFLX4.toggleQuantize = function(_channel, _control, value, _status, group) {
     const key = group; // pro Deck getrennt
 
     if (value === 0x7F) { // Button DOWN
@@ -3555,7 +3561,7 @@ PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, gr
         // Long-Press Timer
         PioneerDDJFLX4._quantizeLP.timer[key] = engine.beginTimer(
             PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS,
-            function () {
+            function() {
                 PioneerDDJFLX4._quantizeLP.fired[key] = true;
                 script.toggleControl(group, "keylock");
                 PioneerDDJFLX4._quantizeLP.timer[key] = null;
@@ -3565,7 +3571,7 @@ PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, gr
         return;
     }
 
-    if (value !== 0x00) return; // alles andere ignorieren
+    if (value !== 0x00) { return; } // alles andere ignorieren
 
     // Button UP
     const t = PioneerDDJFLX4._quantizeLP.timer[key];
@@ -3626,18 +3632,18 @@ PioneerDDJFLX4._stemQfxGroup = function(channelGroup, stemIdx1) {
 
 // ------------------- MOMENTARY SOLO STATE -------------------
 PioneerDDJFLX4._stemMomentary = PioneerDDJFLX4._stemMomentary || {
-    "[Channel1]": { active: false, prev: [0,0,0,0] },
-    "[Channel2]": { active: false, prev: [0,0,0,0] },
+    "[Channel1]": {active: false, prev: [0, 0, 0, 0]},
+    "[Channel2]": {active: false, prev: [0, 0, 0, 0]},
 };
 
 PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"holdmute"*/) {
     const stemCount = PioneerDDJFLX4._stemCount(group);
-    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) { return; }
 
     const st = PioneerDDJFLX4._stemMomentary[group] ||
-        (PioneerDDJFLX4._stemMomentary[group] = { active:false, prev:[0,0,0,0] });
+        (PioneerDDJFLX4._stemMomentary[group] = {active: false, prev: [0, 0, 0, 0]});
 
-    // Snapshot current mutes (1..4, egal ob vorhanden – safe)
+    // Snapshot current mutes (1..4, equal ob vorhanden – safe)
     for (let s = 1; s <= 4; s++) {
         const sg = PioneerDDJFLX4._stemGroup(group, s);
         st.prev[s - 1] = engine.getValue(sg, "mute") > 0 ? 1 : 0;
@@ -3657,7 +3663,7 @@ PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"ho
 
 PioneerDDJFLX4._stemMomentaryRelease = function(group) {
     const st = PioneerDDJFLX4._stemMomentary[group];
-    if (!st || !st.active) return;
+    if (!st || !st.active) { return; }
 
     const stemCount = PioneerDDJFLX4._stemCount(group);
     for (let s = 1; s <= stemCount; s++) {
@@ -3693,11 +3699,11 @@ PioneerDDJFLX4._refreshKeyboardStemLeds = function(channelGroup) {
 
 // Pads 1–4: Mute toggle
 PioneerDDJFLX4.stemMutePadPressed = function(_channel, control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const stemCount = PioneerDDJFLX4._stemCount(group);
     const stemIdx1 = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1;
-    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) { return; }
 
     const sg = PioneerDDJFLX4._stemGroup(group, stemIdx1);
     engine.setValue(sg, "mute", engine.getValue(sg, "mute") ? 0 : 1);
@@ -3705,11 +3711,11 @@ PioneerDDJFLX4.stemMutePadPressed = function(_channel, control, value, _status, 
 
 // Shift + Pads 1–4: Only stem X active
 PioneerDDJFLX4.stemMutePadShiftPressed = function(_channel, control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const stemCount = PioneerDDJFLX4._stemCount(group);
     const stemIdx1 = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1;
-    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) { return; }
 
     for (let s = 1; s <= stemCount; s++) {
         const sg = PioneerDDJFLX4._stemGroup(group, s);
@@ -3720,19 +3726,18 @@ PioneerDDJFLX4.stemMutePadShiftPressed = function(_channel, control, value, _sta
 // Pads 5–8: FX or momentary SOLO depending on STEMS_PAD5_8_MODE
 PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, group) {
     const stemIdx1 = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1;
-    if (stemIdx1 < 1 || stemIdx1 > 4) return;
+    if (stemIdx1 < 1 || stemIdx1 > 4) { return; }
 
     if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
         // momentary SOLO (needs Script-Binding to receive value 0x00 on release — du hast Script-Binding)
-        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "solo");
-        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        if (value === 0x7F) { PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "solo"); } else if (value === 0x00) { PioneerDDJFLX4._stemMomentaryRelease(group); }
         return;
     }
 
     // FX toggle on press
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
     const stemCount = PioneerDDJFLX4._stemCount(group);
-    if (stemIdx1 > stemCount) return;
+    if (stemIdx1 > stemCount) { return; }
 
     const qg = PioneerDDJFLX4._stemQfxGroup(group, stemIdx1);
     engine.setValue(qg, "enabled", engine.getValue(qg, "enabled") ? 0 : 1);
@@ -3740,19 +3745,18 @@ PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, gr
 
 PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _status, group) {
     const stemIdx1 = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1;
-    if (stemIdx1 < 1 || stemIdx1 > 4) return;
+    if (stemIdx1 < 1 || stemIdx1 > 4) { return; }
 
     if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
         // momentary HOLD-MUTE
-        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "holdmute");
-        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        if (value === 0x7F) { PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "holdmute"); } else if (value === 0x00) { PioneerDDJFLX4._stemMomentaryRelease(group); }
         return;
     }
 
     // next preset on press
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
     const stemCount = PioneerDDJFLX4._stemCount(group);
-    if (stemIdx1 > stemCount) return;
+    if (stemIdx1 > stemCount) { return; }
 
     const qg = PioneerDDJFLX4._stemQfxGroup(group, stemIdx1);
     engine.setValue(qg, "next_chain_preset", 1);
@@ -3763,10 +3767,10 @@ PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _statu
 
 PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _control) {
     const m = /\[Channel(\d+)_Stem(\d+)\]/.exec(group);
-    if (!m) return;
+    if (!m) { return; }
     const deck = Number(m[1]);
     const stem = Number(m[2]);
-    if (stem < 1 || stem > 4) return;
+    if (stem < 1 || stem > 4) { return; }
 
     const ch = `[Channel${deck}]`;
     const stemCount = engine.getValue(ch, "stem_count") | 0;
@@ -3783,10 +3787,10 @@ PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _
 
 PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[ChannelX_StemY]] */, _control) {
     const m = /\[QuickEffectRack1_\[Channel(\d+)_Stem(\d+)\]\]/.exec(group);
-    if (!m) return;
+    if (!m) { return; }
     const deck = Number(m[1]);
     const stem = Number(m[2]);
-    if (stem < 1 || stem > 4) return;
+    if (stem < 1 || stem > 4) { return; }
 
     const ch = `[Channel${deck}]`;
     const code = (value <= 0.5) ? 0x00 : 0x7F;
@@ -3817,7 +3821,7 @@ PioneerDDJFLX4._keyShiftPadToSemitone = function(padIndex0to7) {
 PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
     const cur = Math.round(engine.getValue(group, "pitch_adjust"));
 
-    // Finde, welches Pad dazu passt
+    // Find, welches Pad dazu passt
     const map = [4, 5, 6, 7, 0, 1, 2, 3];
     const idx = map.indexOf(cur); // 0..7 oder -1
 
@@ -3836,7 +3840,7 @@ PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
 };
 
 PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, group) {
-    if (value !== 0x7F) return;
+    if (value !== 0x7F) { return; }
 
     const padIndex = control - PioneerDDJFLX4.pitchPadsFirstControl; // 0..7
     const semitone = PioneerDDJFLX4._keyShiftPadToSemitone(padIndex);
@@ -3845,7 +3849,7 @@ PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, gro
 };
 
 // SHIFT-Funktion: wenn du (wie im Handbuch) später „Anzeige/Pitch-Range ändern“ willst,
-// MUSS man das als eigenen Offset/Bank implementieren.
+// MUSS man das also eigenen Offset/Bank implementieren.
 // Solange du das nicht sauber nachbaust: lieber gar nichts tun, statt „irgendwie“.
 PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _status, _group) {
     // absichtlich leer
@@ -3857,8 +3861,8 @@ PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _stat
 
 PioneerDDJFLX4.shutdown = function() {
     // --- Peak latch timers ---
-    if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
-    if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
+    if (PioneerDDJFLX4._peakTimerL) { engine.stopTimer(PioneerDDJFLX4._peakTimerL); }
+    if (PioneerDDJFLX4._peakTimerR) { engine.stopTimer(PioneerDDJFLX4._peakTimerR); }
     PioneerDDJFLX4._peakTimerL = 0;
     PioneerDDJFLX4._peakTimerR = 0;
     PioneerDDJFLX4._peakL = 0;
@@ -3869,7 +3873,7 @@ PioneerDDJFLX4.shutdown = function() {
         for (const chanStr in PioneerDDJFLX4.timersSampler) {
             const chan = Number(chanStr);
             const controls = PioneerDDJFLX4.timersSampler[chan];
-            if (!controls) continue;
+            if (!controls) { continue; }
 
             for (const ctrlStr in controls) {
                 const t = controls[ctrlStr];
@@ -3885,8 +3889,8 @@ PioneerDDJFLX4.shutdown = function() {
     if (PioneerDDJFLX4.timersLoop) {
         for (const g in PioneerDDJFLX4.timersLoop) {
             const t = PioneerDDJFLX4.timersLoop[g]?.loopBlink;
-            if (t) engine.stopTimer(t);
-            if (PioneerDDJFLX4.timersLoop[g]) PioneerDDJFLX4.timersLoop[g].loopBlink = undefined;
+            if (t) { engine.stopTimer(t); }
+            if (PioneerDDJFLX4.timersLoop[g]) { PioneerDDJFLX4.timersLoop[g].loopBlink = undefined; }
         }
     }
     // --- stop hotcue timers ---

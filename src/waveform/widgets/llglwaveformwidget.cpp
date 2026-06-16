@@ -343,7 +343,10 @@ void LLGLWaveformWidget::updateVertexBuffer(const WaveformVertex* data, std::uin
 
     auto* device = m_pContext->renderSystem();
     if (device) {
-        device->WriteBuffer(*m_vertexBuffer.buffer, 0, data, static_cast<std::uint32_t>(count * sizeof(WaveformVertex)));
+        device->WriteBuffer(*m_vertexBuffer.buffer,
+                0,
+                data,
+                static_cast<std::uint32_t>(count * sizeof(WaveformVertex)));
     }
 
     m_vertexBuffer.count = count;

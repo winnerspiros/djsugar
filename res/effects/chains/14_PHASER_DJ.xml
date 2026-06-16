@@ -10,7 +10,7 @@
    <BackendType>Built-In</BackendType>
    <Parameters>
 
-    <!-- Rate konstant lassen -->
+    <!-- Rate constant lassen -->
     <Parameter>
      <Id>lfo_period</Id>
      <Value>1</Value>
@@ -19,7 +19,7 @@
      <Hidden>0</Hidden>
     </Parameter>
 
-    <!-- FEEDBACK = entscheidend für Charakter -->
+    <!-- FEEDBACK = entscheidend für Character -->
     <Parameter>
      <Id>feedback</Id>
      <Value>0.2</Value>

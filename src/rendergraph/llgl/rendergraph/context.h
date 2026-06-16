@@ -53,7 +53,10 @@ class LLGLContext : public QObject {
     }
     void waitIdle();
 
-    LLGL::Shader* createShader(LLGL::ShaderType type, const char* source, size_t sourceSize, const char* profile = nullptr);
+    LLGL::Shader* createShader(LLGL::ShaderType type,
+            const char* source,
+            size_t sourceSize,
+            const char* profile = nullptr);
     LLGL::Buffer* createBuffer(size_t size, long bindFlags, const void* initialData = nullptr);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);

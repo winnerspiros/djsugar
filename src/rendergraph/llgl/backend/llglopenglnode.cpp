@@ -18,7 +18,8 @@ void LGLOpenGLNode::initialize() {
     qDebug() << "LGLOpenGLNode: initialized (LLGL backend)";
 }
 
-void LGLOpenGLNode::glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) const {
+void LGLOpenGLNode::glClearColor(
+        GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) const {
     if (m_pContext && m_pContext->commandBuffer()) {
         LLGL::ClearValue clearValue;
         clearValue.color = {red, green, blue, alpha};
@@ -70,7 +71,8 @@ void LGLOpenGLNode::glUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat 
     Q_UNUSED(v2);
 }
 
-void LGLOpenGLNode::glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const {
+void LGLOpenGLNode::glUniform4f(
+        GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const {
     Q_UNUSED(location);
     Q_UNUSED(v0);
     Q_UNUSED(v1);
@@ -83,7 +85,8 @@ void LGLOpenGLNode::glUniform1i(GLint location, GLint v0) const {
     Q_UNUSED(v0);
 }
 
-void LGLOpenGLNode::glUniformMatrix4fv(GLint location, GLboolean transpose, const GLfloat* value) const {
+void LGLOpenGLNode::glUniformMatrix4fv(
+        GLint location, GLboolean transpose, const GLfloat* value) const {
     Q_UNUSED(location);
     Q_UNUSED(transpose);
     Q_UNUSED(value);
@@ -95,7 +98,10 @@ void LGLOpenGLNode::glBindBuffer(GLenum target, GLuint buffer) const {
     // Handled by SetVertexBuffer/SetIndexBuffer in LLGL
 }
 
-void LGLOpenGLNode::glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) const {
+void LGLOpenGLNode::glBufferData(GLenum target,
+        GLsizeiptr size,
+        const GLvoid* data,
+        GLenum usage) const {
     Q_UNUSED(target);
     Q_UNUSED(size);
     Q_UNUSED(data);
@@ -151,7 +157,8 @@ void LGLOpenGLNode::glDrawArrays(GLenum mode, GLint first, GLsizei count) const 
     Q_UNUSED(mode);
 }
 
-void LGLOpenGLNode::glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices) const {
+void LGLOpenGLNode::glDrawElements(
+        GLenum mode, GLsizei count, GLenum type, const GLvoid* indices) const {
     Q_UNUSED(mode);
     Q_UNUSED(count);
     Q_UNUSED(type);

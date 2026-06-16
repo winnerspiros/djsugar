@@ -516,7 +516,8 @@ if(MIXXX_USE_LLGL)
   # recursion. On plain Linux, we use add_subdirectory.
   if(APPLE OR WIN32 OR ANDROID)
     # Build LLGL sources directly to avoid vcpkg add_library conflict.
-    file(GLOB_RECURSE LLGL_SOURCES
+    file(
+      GLOB_RECURSE LLGL_SOURCES
       third_party/llgl/sources/*.cpp
       third_party/llgl/sources/*.h
       third_party/llgl/include/LLGL/*.h
@@ -564,17 +565,17 @@ if(MIXXX_USE_LLGL)
       add_library(LLGL STATIC ${LLGL_SOURCES})
     endif()
 
-    target_include_directories(LLGL PUBLIC
-      third_party/llgl/include
-    )
+    target_include_directories(LLGL PUBLIC third_party/llgl/include)
 
-    target_compile_definitions(LLGL PRIVATE
-      LLGL_BUILD_STATIC_LIB
-      $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL_ENABLE>
-      $<$<BOOL:${LLGL_VULKAN_ENABLE}>:LLGL_VULKAN_ENABLE>
-      $<$<BOOL:${LLGL_D3D11_ENABLE}>:LLGL_D3D11_ENABLE>
-      $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
-      $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
+    target_compile_definitions(
+      LLGL
+      PRIVATE
+        LLGL_BUILD_STATIC_LIB
+        $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL_ENABLE>
+        $<$<BOOL:${LLGL_VULKAN_ENABLE}>:LLGL_VULKAN_ENABLE>
+        $<$<BOOL:${LLGL_D3D11_ENABLE}>:LLGL_D3D11_ENABLE>
+        $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
+        $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
     )
 
     if(WIN32)
@@ -2244,7 +2245,10 @@ if(MIXXX_USE_LLGL)
       src/rendergraph/llgl/backend/shadersourceprovider.cpp
       src/waveform/widgets/llglwaveformwidget.cpp
   )
-  target_include_directories(mixxx-lib PRIVATE src/rendergraph ${CMAKE_SOURCE_DIR}/third_party/llgl/include)
+  target_include_directories(
+    mixxx-lib
+    PRIVATE src/rendergraph ${CMAKE_SOURCE_DIR}/third_party/llgl/include
+  )
   target_link_libraries(mixxx-lib PRIVATE LLGL)
 endif()
 

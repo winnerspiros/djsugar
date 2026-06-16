@@ -19,7 +19,7 @@
      <Hidden>0</Hidden>
     </Parameter>
 
-    <!-- Rate bleibt konstant (entscheidend!) -->
+    <!-- Rate bleibt constant (entscheidend!) -->
     <Parameter>
      <Id>rate</Id>
      <Value>0.5</Value>

@@ -10,7 +10,7 @@
    <BackendType>Built-In</BackendType>
    <Parameters>
 
-    <!-- Rate bleibt konstant -->
+    <!-- Rate bleibt constant -->
     <Parameter>
      <Id>speed</Id>
      <Value>8</Value>

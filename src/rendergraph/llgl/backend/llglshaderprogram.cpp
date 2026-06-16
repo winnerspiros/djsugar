@@ -260,7 +260,10 @@ void LLGLShaderProgram::enableAttributeArray(int /*location*/) {
 }
 void LLGLShaderProgram::disableAttributeArray(int /*location*/) {
 }
-void LLGLShaderProgram::setAttributeArray(int /*location*/, const float* /*data*/, int /*tupleSize*/, int /*stride*/) {
+void LLGLShaderProgram::setAttributeArray(int /*location*/,
+        const float* /*data*/,
+        int /*tupleSize*/,
+        int /*stride*/) {
 }
 
 void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {
@@ -287,7 +290,8 @@ void LLGLShaderProgram::drawArrays(GLenum /*mode*/, int first, int count) {
             static_cast<std::uint32_t>(first));
 }
 
-void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vertexCount, std::uint32_t stride) {
+void LLGLShaderProgram::updateVertexBuffer(
+        const float* data, std::uint32_t vertexCount, std::uint32_t stride) {
     if (!m_pDevice || !m_pCmdBuf || data == nullptr || vertexCount == 0) {
         return;
     }

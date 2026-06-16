@@ -55,7 +55,8 @@ void LLGLMaterialShader::disableAttributeArray(int location) {
     m_shader.disableAttributeArray(location);
 }
 
-void LLGLMaterialShader::setAttributeArray(int location, const float* data, int tupleSize, int stride) {
+void LLGLMaterialShader::setAttributeArray(
+        int location, const float* data, int tupleSize, int stride) {
     m_shader.setAttributeArray(location, data, tupleSize, stride);
 }
 
