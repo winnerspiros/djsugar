@@ -514,8 +514,10 @@ if(MIXXX_USE_LLGL)
   # Build LLGL. On platforms using vcpkg (macOS, Windows, Android), we build LLGL
   # sources directly to avoid vcpkg's add_library override causing infinite
   # recursion. On plain Linux, we use add_subdirectory.
-  if(APPLE OR WIN32)
+  if(APPLE OR WIN32 OR ANDROID)
     # Build LLGL sources directly to avoid vcpkg add_library conflict.
+    # (vcpkg overrides add_library with _add_library, causing infinite recursion
+    #  when LLGL's CMakeLists.txt calls add_library via add_subdirectory)
     file(
       GLOB_RECURSE LLGL_SOURCES
       third_party/llgl/sources/*.cpp
@@ -531,10 +533,10 @@ if(MIXXX_USE_LLGL)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/UWP/.*")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Win32/.*")
     endif()
-    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Linux/.*")
     endif()
-    if(WIN32)
+    if(WIN32 OR ANDROID)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/POSIX/.*")
     endif()
     if(NOT VCPKG_TARGET_TRIPLET MATCHES "^wasm")
@@ -567,17 +569,28 @@ if(MIXXX_USE_LLGL)
 
     target_include_directories(LLGL PUBLIC third_party/llgl/include)
 
+    # Android NDK include paths for LLGL platform files
+    if(ANDROID AND CMAKE_ANDROID_NDK)
+      target_include_directories(LLGL PRIVATE
+        "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include"
+        "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include/${CMAKE_ANDROID_ARCH_TRIPLE}"
+        "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue"
+      )
+      target_compile_definitions(LLGL PRIVATE ANDROID)
+    endif()
+
     target_compile_definitions(
       LLGL
       PRIVATE
         LLGL_BUILD_STATIC_LIB
         $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL_ENABLE>
-        $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL>
+        $<$<AND:$<BOOL:${LLGL_OPENGL_ENABLE}>,$<NOT:$<BOOL:${ANDROID}>>>:LLGL_OPENGL>
         $<$<BOOL:${LLGL_VULKAN_ENABLE}>:LLGL_VULKAN_ENABLE>
         $<$<BOOL:${LLGL_D3D11_ENABLE}>:LLGL_D3D11_ENABLE>
         $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL>
+        $<$<BOOL:${ANDROID}>:LLGL_OPENGLES3>
     )
 
     set_property(TARGET LLGL PROPERTY CXX_STANDARD 17)
@@ -588,17 +601,7 @@ if(MIXXX_USE_LLGL)
       target_link_libraries(LLGL PRIVATE "-framework Metal" "-framework Cocoa")
     endif()
   else()
-    # Linux/Android (with or without vcpkg): use add_subdirectory
-    # Guard against vcpkg add_library override causing infinite recursion
-    if(COMMAND _add_library)
-      macro(_add_library)
-        add_library(${ARGV})
-      endmacro()
-    endif()
-    # Set ANDROID_NDK_ROOT for LLGL's CMakeLists.txt
-    if(ANDROID AND CMAKE_ANDROID_NDK)
-      set(ENV{ANDROID_NDK_ROOT} "${CMAKE_ANDROID_NDK}")
-    endif()
+    # Linux (no vcpkg): use add_subdirectory
     add_subdirectory(third_party/llgl)
   endif()
 endif()
