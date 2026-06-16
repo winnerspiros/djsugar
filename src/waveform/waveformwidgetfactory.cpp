@@ -782,20 +782,40 @@ void WaveformWidgetFactory::evaluateWidgets() {
             addHandle(collectedHandles, type, waveformWidgetVars<EmptyWaveformWidget>());
             break;
         case WaveformWidgetType::Simple:
+            addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
+            supportedOptions[type] =
+                    allshader::WaveformWidget::supportedOptions(
+                            type, useGles);
             addHandle(collectedHandles, type, waveformWidgetVars<SimpleSignalWaveformWidget>());
             break;
         case WaveformWidgetType::Filtered:
+            addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
+            supportedOptions[type] =
+                    allshader::WaveformWidget::supportedOptions(
+                            type, useGles);
             addHandle(collectedHandles, type, waveformWidgetVars<SoftwareWaveformWidget>());
             break;
         case WaveformWidgetType::VSyncTest:
             break;
         case WaveformWidgetType::RGB:
+            addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
+            supportedOptions[type] =
+                    allshader::WaveformWidget::supportedOptions(
+                            type, useGles);
             addHandle(collectedHandles, type, waveformWidgetVars<RGBWaveformWidget>());
             break;
         case WaveformWidgetType::HSV:
+            addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
+            supportedOptions[type] =
+                    allshader::WaveformWidget::supportedOptions(
+                            type, useGles);
             addHandle(collectedHandles, type, waveformWidgetVars<HSVWaveformWidget>());
             break;
         case WaveformWidgetType::Stacked:
+            addHandle(collectedHandles, type, allshader::WaveformWidget::vars());
+            supportedOptions[type] =
+                    allshader::WaveformWidget::supportedOptions(
+                            type, useGles);
             break;
         default:
             DEBUG_ASSERT(!"Unexpected WaveformWidgetType");
@@ -813,7 +833,8 @@ void WaveformWidgetFactory::evaluateWidgets() {
         const auto& type = handleIter.key();
         const auto& backends = handleIter.value();
 #endif
-        m_waveformWidgetHandles.push_back(WaveformWidgetAbstractHandle(type, backends));
+        m_waveformWidgetHandles.push_back(WaveformWidgetAbstractHandle(type, backends,
+                        supportedOptions.value(type, WaveformRendererSignalBase::Option::None)));
     }
 }
 
