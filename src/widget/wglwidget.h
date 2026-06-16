@@ -37,6 +37,8 @@ class WGLWidget : public QWidget {
 };
 #else
 #include "widget/llglwglwidget.h"
+// LLGLWGLWidget is the LLGL-based replacement for WGLWidget
+using WGLWidget = LLGLWGLWidget;
 #endif
 
 #undef WGLWIDGET_H
