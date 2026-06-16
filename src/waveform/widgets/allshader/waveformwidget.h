@@ -1,9 +1,8 @@
 #pragma once
 
-#ifndef RENDERGRAPH_SG
-
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
 #include "waveform/widgets/waveformwidgetabstract.h"
+#include "waveform/widgets/waveformwidgettype.h"
 #include "waveform/widgets/waveformwidgetvars.h"
 #include "widget/wglwidget.h"
 
@@ -70,9 +69,11 @@ class allshader::WaveformWidget final : public ::WGLWidget,
 
   private:
     void castToQWidget() override;
+#ifndef RENDERGRAPH_SG
     void paintEvent(QPaintEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void leaveEvent(QEvent* event) override;
+#endif
 
     template<class T_Renderer, typename... Args>
     inline std::unique_ptr<T_Renderer> addRendererNode(Args&&... args) {
@@ -101,5 +102,3 @@ class allshader::WaveformWidget final : public ::WGLWidget,
 
     DISALLOW_COPY_AND_ASSIGN(WaveformWidget);
 };
-
-#endif // RENDERGRAPH_SG
