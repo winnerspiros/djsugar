@@ -56,7 +56,7 @@ class WaveformWidgetAbstractHandle {
             WaveformWidgetBackend backend) const {
         return backend == WaveformWidgetBackend::AllShader
                 ? static_cast<WaveformRendererSignalBase::Options>(m_supportedOption)
-                : WaveformRendererSignalBase::Options::None;
+                : WaveformRendererSignalBase::Options(WaveformRendererSignalBase::Option::None);
     }
 
     QString getDisplayName() const;
