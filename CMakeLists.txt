@@ -514,7 +514,7 @@ if(MIXXX_USE_LLGL)
   # Build LLGL. On platforms using vcpkg (macOS, Windows, Android), we build LLGL
   # sources directly to avoid vcpkg's add_library override causing infinite
   # recursion. On plain Linux, we use add_subdirectory.
-  if(APPLE OR WIN32 OR ANDROID)
+  if(APPLE OR WIN32)
     # Build LLGL sources directly to avoid vcpkg add_library conflict.
     file(
       GLOB_RECURSE LLGL_SOURCES
@@ -523,9 +523,6 @@ if(MIXXX_USE_LLGL)
       third_party/llgl/include/LLGL/*.h
     )
     # Remove platform-specific files not for this platform
-    if(NOT ANDROID)
-      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Android/.*")
-    endif()
     if(NOT APPLE)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/IOS/.*")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/MacOS/.*")
@@ -537,7 +534,7 @@ if(MIXXX_USE_LLGL)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Linux/.*")
     endif()
-    if(WIN32 OR ANDROID)
+    if(WIN32)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/POSIX/.*")
     endif()
     if(NOT VCPKG_TARGET_TRIPLET MATCHES "^wasm")
@@ -555,7 +552,6 @@ if(MIXXX_USE_LLGL)
     if(NOT LLGL_D3D12_ENABLE)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/Direct3D12/.*")
     endif()
-    # DXCommon is shared between D3D11 and D3D12 — only include if either is enabled
     if(NOT LLGL_D3D11_ENABLE AND NOT LLGL_D3D12_ENABLE)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/DXCommon/.*")
     endif()
@@ -576,13 +572,12 @@ if(MIXXX_USE_LLGL)
       PRIVATE
         LLGL_BUILD_STATIC_LIB
         $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL_ENABLE>
-        $<$<AND:$<BOOL:${LLGL_OPENGL_ENABLE}>,$<NOT:$<BOOL:${ANDROID}>>>:LLGL_OPENGL>
+        $<$<BOOL:${LLGL_OPENGL_ENABLE}>:LLGL_OPENGL>
         $<$<BOOL:${LLGL_VULKAN_ENABLE}>:LLGL_VULKAN_ENABLE>
         $<$<BOOL:${LLGL_D3D11_ENABLE}>:LLGL_D3D11_ENABLE>
         $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL>
-        $<$<BOOL:${ANDROID}>:LLGL_OPENGLES3>
     )
 
     set_property(TARGET LLGL PROPERTY CXX_STANDARD 17)
@@ -593,7 +588,13 @@ if(MIXXX_USE_LLGL)
       target_link_libraries(LLGL PRIVATE "-framework Metal" "-framework Cocoa")
     endif()
   else()
-    # Linux (no vcpkg): use add_subdirectory
+    # Linux/Android (with or without vcpkg): use add_subdirectory
+    # Guard against vcpkg add_library override causing infinite recursion
+    if(COMMAND _add_library)
+      macro(_add_library)
+        add_library(${ARGV})
+      endmacro()
+    endif()
     add_subdirectory(third_party/llgl)
   endif()
 endif()
