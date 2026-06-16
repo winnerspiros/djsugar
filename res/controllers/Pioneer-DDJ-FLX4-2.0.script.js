@@ -494,7 +494,7 @@ PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || funct
 PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group) {
     const down = (value === 0x7F);
 
-    // equal ob Deck1 oder Deck2: Shift zählt also "down"  // codespell:ignore
+    // equal ob Deck1 oder Deck2: Shift zählt also "down"
     // (bei FLX4 kommen separate Events pro Deck; wir wollen OR-Verhalten)
     if (status === 0x90) {
         PioneerDDJFLX4._shiftDeck1 = down;
@@ -869,7 +869,7 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     // apply gain
     v *= PioneerDDJFLX4.VU.GAIN;
 
-    // normalize to 0..1 using INPUT_MAX (statt hart bei 1.0 abzuschneiden)  // codespell:ignore
+    // normalize to 0..1 using INPUT_MAX (statt hart bei 1.0 abzuschneiden)
     const inMax = PioneerDDJFLX4.VU.INPUT_MAX;
     v = Math.max(0, Math.min(inMax, v)) / inMax;
 
@@ -2620,7 +2620,7 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 ///////////////////////////////////////////////////////////////
 
 // ------------------- LED HELPERS -------------------
-// Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)  // codespell:ignore
+// Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)
 PioneerDDJFLX4.setReloopLight = function(status, value) {
     midi.sendShortMsg(status, 0x4D, value);
     midi.sendShortMsg(status, 0x50, value);
@@ -3432,7 +3432,7 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
     // Press
     if (value === 0x7F) {
-        // long-press nur sinnvoll, wenn überhaupt was geladen ist  // codespell:ignore
+        // long-press nur sinnvoll, wenn überhaupt was geladen ist
         if (engine.getValue(group, "track_loaded")) {
             // alten Timer weg
             const old = PioneerDDJFLX4._samplerHold.timer[group];
@@ -3909,7 +3909,7 @@ PioneerDDJFLX4.shutdown = function() {
     midi.sendShortMsg(0xB0, 0x02, 0x00);
     midi.sendShortMsg(0xB1, 0x02, 0x00);
 
-    // Optional: zusätzlich dein "VU Meter Light" aus (falls das eine separate LED ist)  // codespell:ignore
+    // Optional: zusätzlich dein "VU Meter Light" aus (falls das eine separate LED ist)
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
 
