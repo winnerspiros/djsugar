@@ -4,11 +4,9 @@
 
 #include <LLGL/Types.h>
 
-namespace LLGL
-{
+namespace LLGL {
 
-class AndroidCanvas
-{
+class AndroidCanvas {
   public:
     AndroidCanvas();
     ~AndroidCanvas();

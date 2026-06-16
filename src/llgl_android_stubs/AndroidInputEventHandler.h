@@ -4,11 +4,9 @@
 
 #include <LLGL/Types.h>
 
-namespace LLGL
-{
+namespace LLGL {
 
-class AndroidInputEventHandler
-{
+class AndroidInputEventHandler {
   public:
     AndroidInputEventHandler();
     ~AndroidInputEventHandler();
