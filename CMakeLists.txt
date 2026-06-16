@@ -580,9 +580,11 @@ if(MIXXX_USE_LLGL)
 
     target_include_directories(LLGL PUBLIC third_party/llgl/include)
 
-    # Android: define ANDROID and LLGL_OPENGLES3 for the stub files
+    # Android: define LLGL_OPENGLES3 for the stub files
+    # Note: Don't define ANDROID as it triggers LLGL_OS_ANDROID which
+    # causes android_native_app_glue.h to be included (not available in NDK)
     if(ANDROID)
-      target_compile_definitions(LLGL PRIVATE ANDROID)
+      target_compile_definitions(LLGL PRIVATE LLGL_OPENGLES3)
     endif()
 
     target_compile_definitions(
@@ -596,7 +598,6 @@ if(MIXXX_USE_LLGL)
         $<$<BOOL:${LLGL_D3D12_ENABLE}>:LLGL_D3D12_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL>
-        $<$<BOOL:${ANDROID}>:LLGL_OPENGLES3>
     )
 
     set_property(TARGET LLGL PROPERTY CXX_STANDARD 17)
