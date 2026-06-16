@@ -4,7 +4,7 @@
 
 #include "dlgpreferencepage.h"
 #include "ui_dlgprefrendererdlg.h"
-#include "usersettings.h"
+#include "../usersettings.h"
 
 class DlgPrefRenderer : public DlgPreferencePage, public Ui::DlgPrefRenderDlg {
     Q_OBJECT
