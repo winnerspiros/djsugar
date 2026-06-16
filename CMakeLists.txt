@@ -553,7 +553,9 @@ if(MIXXX_USE_LLGL)
     if(NOT VCPKG_TARGET_TRIPLET MATCHES "^wasm")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Wasm/.*")
     endif()
-    if(NOT LLGL_OPENGL_ENABLE)
+    # Exclude OpenGL renderer files when OpenGL is not enabled,
+    # or on Windows/Android where we use Vulkan instead
+    if(NOT LLGL_OPENGL_ENABLE OR WIN32 OR ANDROID)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/OpenGL/.*")
     endif()
     if(NOT LLGL_VULKAN_ENABLE)
@@ -580,10 +582,11 @@ if(MIXXX_USE_LLGL)
 
     target_include_directories(LLGL PUBLIC third_party/llgl/include)
 
-    # Android: define LLGL_OPENGLES3 for the stub files
-    # Note: Don't define ANDROID as it triggers LLGL_OS_ANDROID which
-    # causes android_native_app_glue.h to be included (not available in NDK)
+    # Android: provide replacement headers that don't include android_native_app_glue.h
+    # The stubs directory is added to the include path so our replacement headers
+    # take precedence over the originals in third_party/llgl/sources/Platform/Android/
     if(ANDROID)
+      target_include_directories(LLGL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs")
       target_compile_definitions(LLGL PRIVATE LLGL_OPENGLES3)
     endif()
 
