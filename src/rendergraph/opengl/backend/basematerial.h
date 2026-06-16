@@ -1,8 +1,8 @@
 #pragma once
 
+#include "llglmaterialshader.h"
 #include "rendergraph/materialshader.h"
 #include "rendergraph/materialtype.h"
-#include "llglmaterialshader.h"
 
 namespace rendergraph {
 class BaseMaterial;
@@ -36,6 +36,7 @@ class rendergraph::BaseMaterial {
     bool isLastModifierOfShader() const {
         return m_pLastModifier == this;
     }
+
   private:
     std::shared_ptr<LLGLMaterialShader> m_pLLGLShader;
 #endif

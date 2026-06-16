@@ -233,8 +233,7 @@ void LLGLContext::waitIdle() {
 }
 
 LLGL::Shader* LLGLContext::createShader(
-        LLGL::ShaderType type, const char* source, size_t sourceSize,
-        const char* profile) {
+        LLGL::ShaderType type, const char* source, size_t sourceSize, const char* profile) {
     QMutexLocker lock(&m_mutex);
     if (!m_pRenderSystem) {
         return nullptr;
@@ -304,7 +303,8 @@ QString LLGLContext::backendName() const {
 }
 
 bool LLGLContext::useGLSL() const {
-    if (!m_pRenderSystem) return true;
+    if (!m_pRenderSystem)
+        return true;
     const char* name = m_pRenderSystem->GetName();
     return (strcmp(name, "OpenGL") == 0 || strcmp(name, "OpenGLES") == 0);
 }

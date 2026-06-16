@@ -1,16 +1,16 @@
 #pragma once
 
-#include <LLGL/LLGL.h>
-#include <LLGL/RenderSystem.h>
-#include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/PipelineLayout.h>
 #include <LLGL/Buffer.h>
-#include <LLGL/Texture.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/VertexAttribute.h>
-#include <LLGL/Format.h>
 #include <LLGL/CommandBuffer.h>
+#include <LLGL/Format.h>
+#include <LLGL/LLGL.h>
+#include <LLGL/PipelineLayout.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/Sampler.h>
+#include <LLGL/Shader.h>
+#include <LLGL/Texture.h>
+#include <LLGL/VertexAttribute.h>
 
 // Define GL types that would normally come from Qt OpenGL or GLEW
 typedef unsigned int GLenum;
@@ -46,12 +46,12 @@ static const GLenum GL_LINEAR = 0x2601;
 static const GLenum GL_TEXTURE_MIN_FILTER = 0x2801;
 static const GLenum GL_TEXTURE_MAG_FILTER = 0x2800;
 
-#include <cstdint>
 #include <QMatrix4x4>
+#include <QString>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
-#include <QString>
+#include <cstdint>
 #include <vector>
 
 #include "util/class.h"
@@ -85,7 +85,10 @@ class LLGLShaderProgram {
     void disableAttributeArray(int location);
     void setAttributeArray(int location, const float* data, int tupleSize, int stride);
 
-    void setUniformValue(int location, LLGL::Texture* texture) { Q_UNUSED(location); Q_UNUSED(texture); }
+    void setUniformValue(int location, LLGL::Texture* texture) {
+        Q_UNUSED(location);
+        Q_UNUSED(texture);
+    }
 
     int uniformLocation(const char* name) const;
     int attributeLocation(const char* name) const;
@@ -95,13 +98,23 @@ class LLGLShaderProgram {
     }
 
     // Direct LLGL access
-    LLGL::PipelineState* pipelineState() const { return m_pPipelineState; }
-    LLGL::Buffer* vertexBuffer() const { return m_pVertexBuffer; }
-    LLGL::Buffer* uniformBuffer() const { return m_pUniformBuffer; }
-    LLGL::RenderSystem* device() const { return m_pDevice; }
+    LLGL::PipelineState* pipelineState() const {
+        return m_pPipelineState;
+    }
+    LLGL::Buffer* vertexBuffer() const {
+        return m_pVertexBuffer;
+    }
+    LLGL::Buffer* uniformBuffer() const {
+        return m_pUniformBuffer;
+    }
+    LLGL::RenderSystem* device() const {
+        return m_pDevice;
+    }
 
     void setContext(LLGLContext* pContext);
-    void setCommandBuffer(LLGL::CommandBuffer* pCmdBuf) { m_pCmdBuf = pCmdBuf; }
+    void setCommandBuffer(LLGL::CommandBuffer* pCmdBuf) {
+        m_pCmdBuf = pCmdBuf;
+    }
 
     // Create/update vertex buffer from data
     void updateVertexBuffer(const float* data, std::uint32_t vertexCount, std::uint32_t stride);

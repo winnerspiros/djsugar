@@ -1,9 +1,9 @@
 #pragma once
 
-#include "basematerialshader.h"
 #include "../../llgl/backend/llglshaderprogram.h"
-#include "rendergraph/uniformset.h"
+#include "basematerialshader.h"
 #include "rendergraph/attributeset.h"
+#include "rendergraph/uniformset.h"
 
 namespace rendergraph {
 
@@ -15,10 +15,10 @@ class LLGLMaterialShader : public BaseMaterialShader {
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet)
-        : BaseMaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
-          m_vertexFile(vertexShaderFile),
-          m_fragmentFile(fragmentShaderFile),
-          m_loaded(false) {
+            : BaseMaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet),
+              m_vertexFile(vertexShaderFile),
+              m_fragmentFile(fragmentShaderFile),
+              m_loaded(false) {
     }
 
     bool load(const QString& vertexShader, const QString& fragmentShader);
@@ -41,14 +41,24 @@ class LLGLMaterialShader : public BaseMaterialShader {
     void disableAttributeArray(int location);
     void setAttributeArray(int location, const float* data, int tupleSize, int stride);
 
-    GLuint programId() const { return 0; }
+    GLuint programId() const {
+        return 0;
+    }
 
-    bool isLinked() const { return m_shader.isValid(); }
+    bool isLinked() const {
+        return m_shader.isValid();
+    }
 
     // LLGL-specific
-    LLGLShaderProgram* llglShader() { return &m_shader; }
-    void setContext(LLGLContext* pContext) { m_shader.setContext(pContext); }
-    void setCommandBuffer(LLGL::CommandBuffer* pCmdBuf) { m_shader.setCommandBuffer(pCmdBuf); }
+    LLGLShaderProgram* llglShader() {
+        return &m_shader;
+    }
+    void setContext(LLGLContext* pContext) {
+        m_shader.setContext(pContext);
+    }
+    void setCommandBuffer(LLGL::CommandBuffer* pCmdBuf) {
+        m_shader.setCommandBuffer(pCmdBuf);
+    }
 
     // Update vertex buffer from geometry data
     void updateVertexBuffer(const float* data, std::uint32_t vertexCount, std::uint32_t stride) {

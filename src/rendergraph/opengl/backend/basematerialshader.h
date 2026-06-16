@@ -1,8 +1,9 @@
 #pragma once
 
-#include "rendergraph/materialshader.h"
 #include <QString>
 #include <vector>
+
+#include "rendergraph/materialshader.h"
 
 namespace rendergraph {
 class BaseMaterial;
@@ -17,7 +18,7 @@ class rendergraph::BaseMaterialShader : public MaterialShader {
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
             const AttributeSet& attributeSet)
-        : MaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet) {
+            : MaterialShader(vertexShaderFile, fragmentShaderFile, uniforms, attributeSet) {
     }
 
   public:

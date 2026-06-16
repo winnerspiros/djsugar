@@ -23,9 +23,16 @@ class rendergraph::MaterialShader {
             const UniformSet& uniforms,
             const AttributeSet& attributeSet);
 
-    virtual bool bind() { return true; }
-    virtual void release() {}
+    virtual bool bind() {
+        return true;
+    }
+    virtual void release() {
+    }
 
-    virtual int uniformLocation(int index) const { return -1; }
-    virtual int attributeLocation(int index) const { return -1; }
+    virtual int uniformLocation(int index) const {
+        return -1;
+    }
+    virtual int attributeLocation(int index) const {
+        return -1;
+    }
 };

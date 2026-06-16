@@ -70,11 +70,16 @@ QString rendererBackendToString(RendererBackend backend) {
 }
 
 RendererBackend rendererBackendFromString(const QString& name) {
-    if (name == QStringLiteral("OpenGL")) return RendererBackend::OpenGL;
-    if (name == QStringLiteral("Vulkan")) return RendererBackend::Vulkan;
-    if (name == QStringLiteral("Direct3D 11")) return RendererBackend::Direct3D11;
-    if (name == QStringLiteral("Direct3D 12")) return RendererBackend::Direct3D12;
-    if (name == QStringLiteral("Metal")) return RendererBackend::Metal;
+    if (name == QStringLiteral("OpenGL"))
+        return RendererBackend::OpenGL;
+    if (name == QStringLiteral("Vulkan"))
+        return RendererBackend::Vulkan;
+    if (name == QStringLiteral("Direct3D 11"))
+        return RendererBackend::Direct3D11;
+    if (name == QStringLiteral("Direct3D 12"))
+        return RendererBackend::Direct3D12;
+    if (name == QStringLiteral("Metal"))
+        return RendererBackend::Metal;
     return RendererBackend::Auto;
 }
 

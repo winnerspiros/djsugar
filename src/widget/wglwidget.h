@@ -12,16 +12,28 @@
 class WGLWidget : public QWidget {
     Q_OBJECT
   public:
-    WGLWidget(QWidget* parent = nullptr) : QWidget(parent) {}
+    WGLWidget(QWidget* parent = nullptr)
+            : QWidget(parent) {
+    }
     virtual ~WGLWidget() = default;
-    virtual void paintGL() {}
-    virtual void initializeGL() {}
-    virtual void resizeGL(int, int) {}
-    virtual bool isContextValid() const { return false; }
-    virtual bool shouldRender() const { return false; }
-    virtual void makeCurrentIfNeeded() {}
-    virtual void doneCurrent() {}
-    virtual void swapBuffers() {}
+    virtual void paintGL() {
+    }
+    virtual void initializeGL() {
+    }
+    virtual void resizeGL(int, int) {
+    }
+    virtual bool isContextValid() const {
+        return false;
+    }
+    virtual bool shouldRender() const {
+        return false;
+    }
+    virtual void makeCurrentIfNeeded() {
+    }
+    virtual void doneCurrent() {
+    }
+    virtual void swapBuffers() {
+    }
 };
 #else
 #include "widget/llglwglwidget.h"

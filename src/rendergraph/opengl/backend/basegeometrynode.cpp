@@ -2,13 +2,13 @@
 
 #include <stdexcept>
 
+#include "../../llgl/backend/basellglnode.h"
+#include "../../llgl/backend/llglshaderprogram.h"
 #include "backend/shadercache.h"
 #include "rendergraph/engine.h"
 #include "rendergraph/geometrynode.h"
-#include "rendergraph/texture.h"
 #include "rendergraph/llgl/rendergraph/context.h"
-#include "../../llgl/backend/llglshaderprogram.h"
-#include "../../llgl/backend/basellglnode.h"
+#include "rendergraph/texture.h"
 
 using namespace rendergraph;
 
@@ -52,21 +52,26 @@ void BaseGeometryNode::renderLLGL(GeometryNode* pThis,
     Q_UNUSED(pThis);
 
     auto* pLLGLNode = dynamic_cast<LLGLNode*>(this);
-    if (!pLLGLNode) return;
+    if (!pLLGLNode)
+        return;
     auto* pContext = pLLGLNode->context();
-    if (!pContext || !pContext->isValid()) return;
+    if (!pContext || !pContext->isValid())
+        return;
     auto* pCmdBuf = pContext->commandBuffer();
-    if (!pCmdBuf) return;
+    if (!pCmdBuf)
+        return;
 
     LLGLMaterialShader* pMatShader = nullptr;
     if (material.isLLGL()) {
         pMatShader = &static_cast<LLGLMaterialShader&>(material.shader());
     }
-    if (!pMatShader || !pMatShader->isLinked()) return;
+    if (!pMatShader || !pMatShader->isLinked())
+        return;
 
     pMatShader->setContext(pContext);
     pMatShader->setCommandBuffer(pCmdBuf);
-    if (!pMatShader->bind()) return;
+    if (!pMatShader->bind())
+        return;
 
     if (geometry.vertexCount() > 0 && geometry.sizeOfVertex() > 0) {
         pMatShader->updateVertexBuffer(

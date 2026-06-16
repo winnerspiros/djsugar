@@ -1,15 +1,15 @@
 #pragma once
 
-#include <QString>
 #include <QHash>
 #include <QMutex>
+#include <QString>
 
 namespace rendergraph {
 
 enum class ShaderBackend {
-    GLSL,       // OpenGL, Vulkan (GLSL compiled to SPIR-V by LLGL)
-    HLSL,       // Direct3D 11, Direct3D 12
-    MetalSL,    // Metal (macOS, iOS)
+    GLSL,    // OpenGL, Vulkan (GLSL compiled to SPIR-V by LLGL)
+    HLSL,    // Direct3D 11, Direct3D 12
+    MetalSL, // Metal (macOS, iOS)
 };
 
 /// Provides shader source code for each backend.

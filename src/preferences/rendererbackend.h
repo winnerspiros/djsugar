@@ -1,19 +1,19 @@
 #pragma once
 
-#include <QString>
 #include <QList>
+#include <QString>
 
 namespace mixxx {
 
 /// Available rendering backends per platform.
 /// Each backend maps to an LLGL render system.
 enum class RendererBackend {
-    Auto,           // Platform default
-    OpenGL,         // Linux, Windows, macOS, Android
-    Vulkan,         // Linux, Windows, Android (if supported)
-    Direct3D11,     // Windows only
-    Direct3D12,     // Windows only
-    Metal,          // macOS, iOS only
+    Auto,       // Platform default
+    OpenGL,     // Linux, Windows, macOS, Android
+    Vulkan,     // Linux, Windows, Android (if supported)
+    Direct3D11, // Windows only
+    Direct3D12, // Windows only
+    Metal,      // macOS, iOS only
 };
 
 /// Returns the list of backends available on the current platform.

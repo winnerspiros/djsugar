@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "dlgpreferencepage.h"
-#include "ui_dlgprefrenderdlg.h"
+#include "ui_dlgprefrendererdlg.h"
 #include "usersettings.h"
 
 class DlgPrefRenderer : public DlgPreferencePage, public Ui::DlgPrefRenderDlg {

@@ -12,8 +12,8 @@
 #include <QTimer>
 #include <cmath>
 
-#include "moc_llglwaveformwidget.cpp"
 #include "../rendergraph/llgl/backend/shadersourceprovider.h"
+#include "moc_llglwaveformwidget.cpp"
 #include "track/track.h"
 #include "util/math.h"
 #include "waveform/renderers/waveformrenderbackground.h"
@@ -87,7 +87,7 @@ void LLGLWaveformWidget::showEvent(QShowEvent* event) {
         m_initOk = initializeLLGL();
     }
     if (m_initOk) {
-        m_pRenderTimer->start(16);  // ~60fps
+        m_pRenderTimer->start(16); // ~60fps
     }
 }
 
@@ -343,8 +343,7 @@ void LLGLWaveformWidget::updateVertexBuffer(const WaveformVertex* data, std::uin
 
     auto* device = m_pContext->renderSystem();
     if (device) {
-        device->WriteBuffer(*m_vertexBuffer.buffer, 0, data,
-                static_cast<std::uint32_t>(count * sizeof(WaveformVertex)));
+        device->WriteBuffer(*m_vertexBuffer.buffer, 0, data, static_cast<std::uint32_t>(count * sizeof(WaveformVertex)));
     }
 
     m_vertexBuffer.count = count;

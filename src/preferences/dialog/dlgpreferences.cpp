@@ -22,6 +22,7 @@
 #include "preferences/dialog/dlgprefvinyl.h"
 #endif // __VINYLCONTROL__
 
+#include "dlgprefrenderer.h"
 #include "preferences/dialog/dlgprefautodj.h"
 #include "preferences/dialog/dlgprefcolors.h"
 #include "preferences/dialog/dlgprefdeck.h"
@@ -29,7 +30,6 @@
 #include "preferences/dialog/dlgprefinterface.h"
 #include "preferences/dialog/dlgprefmixer.h"
 #include "preferences/dialog/dlgprefwaveform.h"
-#include "dlgprefrenderer.h"
 #include "util/cmdlineargs.h"
 #include "waveform/waveformwidgetfactory.h"
 

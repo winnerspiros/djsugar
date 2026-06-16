@@ -20,5 +20,4 @@ class rendergraph::UniColorMaterial : public rendergraph::Material {
 #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;
 #endif
-
 };

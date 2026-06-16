@@ -1,11 +1,12 @@
 #include "llglshaderprogram.h"
-#include "shadersourceprovider.h"
-#include "rendergraph/llgl/rendergraph/context.h"
 
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
 #include <cstring>
+
+#include "rendergraph/llgl/rendergraph/context.h"
+#include "shadersourceprovider.h"
 
 using namespace rendergraph;
 
@@ -236,10 +237,14 @@ void LLGLShaderProgram::release() {
     m_bound = false;
 }
 
-void LLGLShaderProgram::setUniformValue(int /*location*/, GLfloat /*value*/) {}
-void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector2D& /*value*/) {}
-void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector3D& /*value*/) {}
-void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector4D& /*value*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, GLfloat /*value*/) {
+}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector2D& /*value*/) {
+}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector3D& /*value*/) {
+}
+void LLGLShaderProgram::setUniformValue(int /*location*/, const QVector4D& /*value*/) {
+}
 
 void LLGLShaderProgram::setUniformValue(int /*location*/, const QMatrix4x4& value) {
     if (m_pUniformBuffer && m_pCmdBuf && m_bound) {
@@ -248,22 +253,28 @@ void LLGLShaderProgram::setUniformValue(int /*location*/, const QMatrix4x4& valu
     }
 }
 
-void LLGLShaderProgram::setUniformValue(int /*location*/, GLuint /*value*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, GLuint /*value*/) {
+}
 
-void LLGLShaderProgram::enableAttributeArray(int /*location*/) {}
-void LLGLShaderProgram::disableAttributeArray(int /*location*/) {}
-void LLGLShaderProgram::setAttributeArray(int /*location*/, const float* /*data*/,
-        int /*tupleSize*/, int /*stride*/) {}
+void LLGLShaderProgram::enableAttributeArray(int /*location*/) {
+}
+void LLGLShaderProgram::disableAttributeArray(int /*location*/) {
+}
+void LLGLShaderProgram::setAttributeArray(int /*location*/, const float* /*data*/, int /*tupleSize*/, int /*stride*/) {
+}
 
-void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {}
+void LLGLShaderProgram::setUniformValue(int /*location*/, LLGL::Texture* /*texture*/) {
+}
 
 int LLGLShaderProgram::uniformLocation(const char* /*name*/) const {
     return 0;
 }
 
 int LLGLShaderProgram::attributeLocation(const char* name) const {
-    if (strcmp(name, "position") == 0) return 0;
-    if (strcmp(name, "color") == 0) return 1;
+    if (strcmp(name, "position") == 0)
+        return 0;
+    if (strcmp(name, "color") == 0)
+        return 1;
     return -1;
 }
 
@@ -273,11 +284,10 @@ void LLGLShaderProgram::drawArrays(GLenum /*mode*/, int first, int count) {
     }
     m_pCmdBuf->SetVertexBuffer(*m_pVertexBuffer);
     m_pCmdBuf->Draw(static_cast<std::uint32_t>(count),
-                   static_cast<std::uint32_t>(first));
+            static_cast<std::uint32_t>(first));
 }
 
-void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vertexCount,
-                                          std::uint32_t stride) {
+void LLGLShaderProgram::updateVertexBuffer(const float* data, std::uint32_t vertexCount, std::uint32_t stride) {
     if (!m_pDevice || !m_pCmdBuf || data == nullptr || vertexCount == 0) {
         return;
     }

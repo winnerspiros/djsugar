@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QWidget>
 #include <QTimer>
+#include <QWidget>
 #include <memory>
 
 #include "rendergraph/llgl/rendergraph/context.h"

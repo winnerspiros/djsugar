@@ -511,10 +511,10 @@ if(MIXXX_USE_LLGL)
     set(LLGL_ANDROID_PLATFORM OFF CACHE BOOL "" FORCE)
   endif()
 
-  # Build LLGL. On platforms using vcpkg (macOS, Windows), we build LLGL
+  # Build LLGL. On platforms using vcpkg (macOS, Windows, Android), we build LLGL
   # sources directly to avoid vcpkg's add_library override causing infinite
-  # recursion. On other platforms (Linux, Android), we use add_subdirectory.
-  if(APPLE OR WIN32)
+  # recursion. On plain Linux, we use add_subdirectory.
+  if(APPLE OR WIN32 OR ANDROID)
     # Build LLGL sources directly to avoid vcpkg add_library conflict.
     file(GLOB_RECURSE LLGL_SOURCES
       third_party/llgl/sources/*.cpp
@@ -527,9 +527,20 @@ if(MIXXX_USE_LLGL)
     endif()
     if(NOT APPLE)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/iOS/.*")
+      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/MacOS/.*")
     endif()
     if(NOT WIN32)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/UWP/.*")
+      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Win32/.*")
+    endif()
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Linux/.*")
+    endif()
+    if(WIN32 OR ANDROID)
+      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/POSIX/.*")
+    endif()
+    if(NOT VCPKG_TARGET_TRIPLET MATCHES "^wasm")
+      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Wasm/.*")
     endif()
     if(NOT LLGL_OPENGL_ENABLE)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Renderer/OpenGL/.*")
@@ -572,7 +583,7 @@ if(MIXXX_USE_LLGL)
       target_link_libraries(LLGL PRIVATE "-framework Metal" "-framework Cocoa")
     endif()
   else()
-    # Linux/Android: use add_subdirectory (no vcpkg conflict)
+    # Linux (no vcpkg): use add_subdirectory
     add_subdirectory(third_party/llgl)
   endif()
 endif()

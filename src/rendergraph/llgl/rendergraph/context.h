@@ -1,21 +1,21 @@
 #pragma once
 
-#include <LLGL/LLGL.h>
-#include <LLGL/RenderSystem.h>
+#include <LLGL/Buffer.h>
 #include <LLGL/CommandBuffer.h>
 #include <LLGL/CommandQueue.h>
-#include <LLGL/SwapChain.h>
-#include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/PipelineLayout.h>
-#include <LLGL/Buffer.h>
-#include <LLGL/Texture.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/VertexAttribute.h>
 #include <LLGL/Format.h>
+#include <LLGL/LLGL.h>
+#include <LLGL/PipelineLayout.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/Sampler.h>
+#include <LLGL/Shader.h>
+#include <LLGL/SwapChain.h>
+#include <LLGL/Texture.h>
+#include <LLGL/VertexAttribute.h>
 
-#include <QObject>
 #include <QMutex>
+#include <QObject>
 #include <QWidget>
 #include <memory>
 
@@ -39,16 +39,22 @@ class LLGLContext : public QObject {
         return m_pRenderSystem != nullptr && m_pSwapChain != nullptr;
     }
 
-    LLGL::RenderSystem* renderSystem() const { return m_pRenderSystem.get(); }
-    LLGL::SwapChain* swapChain() const { return m_pSwapChain; }
-    LLGL::CommandBuffer* commandBuffer() const { return m_pCommandBuffer; }
-    LLGL::CommandQueue* commandQueue() const { return m_pCommandQueue; }
+    LLGL::RenderSystem* renderSystem() const {
+        return m_pRenderSystem.get();
+    }
+    LLGL::SwapChain* swapChain() const {
+        return m_pSwapChain;
+    }
+    LLGL::CommandBuffer* commandBuffer() const {
+        return m_pCommandBuffer;
+    }
+    LLGL::CommandQueue* commandQueue() const {
+        return m_pCommandQueue;
+    }
     void waitIdle();
 
-    LLGL::Shader* createShader(LLGL::ShaderType type, const char* source,
-            size_t sourceSize, const char* profile = nullptr);
-    LLGL::Buffer* createBuffer(size_t size, long bindFlags,
-            const void* initialData = nullptr);
+    LLGL::Shader* createShader(LLGL::ShaderType type, const char* source, size_t sourceSize, const char* profile = nullptr);
+    LLGL::Buffer* createBuffer(size_t size, long bindFlags, const void* initialData = nullptr);
     LLGL::Texture* createTexture(const LLGL::TextureDescriptor& desc,
             const void* initialData = nullptr);
     LLGL::Sampler* createSampler(const LLGL::SamplerDescriptor& desc);

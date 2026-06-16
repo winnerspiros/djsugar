@@ -2,17 +2,17 @@
 
 #ifdef MIXXX_USE_LLGL
 
-#include <LLGL/LLGL.h>
-#include <LLGL/RenderSystem.h>
-#include <LLGL/Shader.h>
-#include <LLGL/PipelineState.h>
-#include <LLGL/PipelineLayout.h>
 #include <LLGL/Buffer.h>
-#include <LLGL/Texture.h>
-#include <LLGL/Sampler.h>
-#include <LLGL/VertexAttribute.h>
-#include <LLGL/Format.h>
 #include <LLGL/CommandBuffer.h>
+#include <LLGL/Format.h>
+#include <LLGL/LLGL.h>
+#include <LLGL/PipelineLayout.h>
+#include <LLGL/PipelineState.h>
+#include <LLGL/RenderSystem.h>
+#include <LLGL/Sampler.h>
+#include <LLGL/Shader.h>
+#include <LLGL/Texture.h>
+#include <LLGL/VertexAttribute.h>
 
 // Define GL types that would normally come from Qt OpenGL or GLEW
 typedef unsigned int GLenum;
@@ -37,12 +37,12 @@ static const GLenum GL_LINES = 0x0001;
 static const GLenum GL_LINE_STRIP = 0x0003;
 static const GLenum GL_POINTS = 0x0000;
 
+#include <QDebug>
 #include <QMatrix4x4>
+#include <QString>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
-#include <QString>
-#include <QDebug>
 
 #include "util/class.h"
 
@@ -83,15 +83,20 @@ class LLGLShader {
 
     // Uniform setting (called before draw)
     void setUniform(LLGL::CommandBuffer* pCmdBuf,
-            int location, float value);
+            int location,
+            float value);
     void setUniform(LLGL::CommandBuffer* pCmdBuf,
-            int location, const QVector2D& value);
+            int location,
+            const QVector2D& value);
     void setUniform(LLGL::CommandBuffer* pCmdBuf,
-            int location, const QVector3D& value);
+            int location,
+            const QVector3D& value);
     void setUniform(LLGL::CommandBuffer* pCmdBuf,
-            int location, const QVector4D& value);
+            int location,
+            const QVector4D& value);
     void setUniform(LLGL::CommandBuffer* pCmdBuf,
-            int location, const QMatrix4x4& value);
+            int location,
+            const QMatrix4x4& value);
 
     // Attribute location query
     int attributeLocation(int attributeIndex) const {

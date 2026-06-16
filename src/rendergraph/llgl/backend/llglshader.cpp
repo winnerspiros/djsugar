@@ -117,7 +117,8 @@ bool LLGLShader::load(LLGL::RenderSystem* pDevice,
 }
 
 void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
-        int location, float value) {
+        int location,
+        float value) {
     Q_UNUSED(pCmdBuf);
     Q_UNUSED(location);
     Q_UNUSED(value);
@@ -125,28 +126,32 @@ void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
 }
 
 void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
-        int location, const QVector2D& value) {
+        int location,
+        const QVector2D& value) {
     Q_UNUSED(pCmdBuf);
     Q_UNUSED(location);
     Q_UNUSED(value);
 }
 
 void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
-        int location, const QVector3D& value) {
+        int location,
+        const QVector3D& value) {
     Q_UNUSED(pCmdBuf);
     Q_UNUSED(location);
     Q_UNUSED(value);
 }
 
 void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
-        int location, const QVector4D& value) {
+        int location,
+        const QVector4D& value) {
     Q_UNUSED(pCmdBuf);
     Q_UNUSED(location);
     Q_UNUSED(value);
 }
 
 void LLGLShader::setUniform(LLGL::CommandBuffer* pCmdBuf,
-        int location, const QMatrix4x4& value) {
+        int location,
+        const QMatrix4x4& value) {
     Q_UNUSED(pCmdBuf);
     Q_UNUSED(location);
     Q_UNUSED(value);

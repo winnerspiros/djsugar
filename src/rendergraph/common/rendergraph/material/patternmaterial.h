@@ -26,7 +26,6 @@ class rendergraph::PatternMaterial : public rendergraph::Material {
     std::unique_ptr<LLGLMaterialShader> createLLGLShader() const override;
 #endif
 
-
     Texture* texture(int) const override {
         return m_pTexture.get();
     }

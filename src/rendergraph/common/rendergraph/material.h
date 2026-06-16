@@ -76,9 +76,13 @@ class rendergraph::Material : public rendergraph::BaseMaterial {
 #endif
 
 #if defined(MIXXX_USE_LLGL) && !defined(RENDERGRAPH_SG)
-    bool isLLGL() const { return true; }
+    bool isLLGL() const {
+        return true;
+    }
 #else
-    bool isLLGL() const { return false; }
+    bool isLLGL() const {
+        return false;
+    }
 #endif
 
   private:
