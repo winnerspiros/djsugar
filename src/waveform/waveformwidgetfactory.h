@@ -27,11 +27,10 @@ class WaveformWidgetAbstractHandle {
     WaveformWidgetAbstractHandle();
     WaveformWidgetAbstractHandle(WaveformWidgetType::Type type,
             QList<WaveformWidgetBackend> backends,
-            int supportedOptions
-            )
-            : m_type(type), m_backends(std::move(backends)),
-              m_supportedOption(supportedOptions)
-    {
+            int supportedOptions)
+            : m_type(type),
+              m_backends(std::move(backends)),
+              m_supportedOption(supportedOptions) {
     }
 
     WaveformWidgetType::Type getType() const { return m_type;}
@@ -56,8 +55,8 @@ class WaveformWidgetAbstractHandle {
     WaveformRendererSignalBase::Options supportedOptions(
             WaveformWidgetBackend backend) const {
         return backend == WaveformWidgetBackend::AllShader
-                ? m_supportedOption
-                : WaveformRendererSignalBase::Option::None;
+                ? static_cast<WaveformRendererSignalBase::Options>(m_supportedOption)
+                : WaveformRendererSignalBase::Options::None;
     }
 
     QString getDisplayName() const;
