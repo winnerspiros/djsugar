@@ -586,7 +586,7 @@ if(MIXXX_USE_LLGL)
     # The stubs directory is added to the include path so our replacement headers
     # take precedence over the originals in third_party/llgl/sources/Platform/Android/
     if(ANDROID)
-      target_include_directories(LLGL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs")
+      include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs")
       target_compile_definitions(LLGL PRIVATE LLGL_OPENGLES3)
     endif()
 

@@ -1797,6 +1797,7 @@ PioneerDDJFLX4._beatFxTargets = function() {
 
 /**
  * Returns the current Beat FX group object.
+ * @returns {object} The current Beat FX group.
  */
 PioneerDDJFLX4._getBeatFxGroup = function() {
     return PioneerDDJFLX4._beatFxPresetGroups[PioneerDDJFLX4._beatFxPresetState.groupIndex];
