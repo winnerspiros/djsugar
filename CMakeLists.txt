@@ -603,6 +603,7 @@ if(MIXXX_USE_LLGL)
     set_property(TARGET LLGL PROPERTY CXX_STANDARD 17)
 
     if(WIN32)
+      target_compile_definitions(LLGL PRIVATE NOMINMAX)
       target_link_libraries(LLGL PRIVATE d3d11 d3d12 dxgi)
     elseif(APPLE)
       target_link_libraries(LLGL PRIVATE "-framework Metal" "-framework Cocoa")
