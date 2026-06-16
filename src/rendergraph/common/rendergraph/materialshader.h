@@ -3,11 +3,23 @@
 #include "rendergraph/attributeset.h"
 #include "rendergraph/uniformset.h"
 
+#ifndef RENDERGRAPH_SG
+// GL target: MaterialShader is standalone
+class QSGMaterialShader;
+#endif
+
 namespace rendergraph {
 class MaterialShader;
 } // namespace rendergraph
 
+#ifdef RENDERGRAPH_SG
+// SG target: MaterialShader inherits from QSGMaterialShader
+#include <QSGMaterialShader>
+class rendergraph::MaterialShader : public QSGMaterialShader {
+#else
+// GL target: MaterialShader is standalone
 class rendergraph::MaterialShader {
+#endif
   public:
     virtual ~MaterialShader() = default;
 
