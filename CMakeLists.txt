@@ -494,9 +494,9 @@ if(MIXXX_USE_LLGL)
     set(LLGL_D3D12_ENABLE OFF CACHE BOOL "" FORCE)
     set(LLGL_ANDROID_PLATFORM OFF CACHE BOOL "" FORCE)
   elseif(WIN32)
-    # Windows: Vulkan + OpenGL (D3D11/D3D12 disabled due to Windows SDK compatibility)
-    set(LLGL_D3D12_ENABLE OFF CACHE BOOL "" FORCE)
-    set(LLGL_D3D11_ENABLE OFF CACHE BOOL "" FORCE)
+    # Windows: DX12, DX11, Vulkan, OpenGL
+    set(LLGL_D3D12_ENABLE ON CACHE BOOL "" FORCE)
+    set(LLGL_D3D11_ENABLE ON CACHE BOOL "" FORCE)
     set(LLGL_VULKAN_ENABLE ON CACHE BOOL "" FORCE)
     set(LLGL_OPENGL_ENABLE ON CACHE BOOL "" FORCE)
     set(LLGL_METAL_ENABLE OFF CACHE BOOL "" FORCE)
@@ -529,12 +529,20 @@ if(MIXXX_USE_LLGL)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/IOS/.*")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/MacOS/.*")
     endif()
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/UWP/.*")
     if(NOT WIN32)
-      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/UWP/.*")
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Win32/.*")
     endif()
-    if(NOT ANDROID)
-      list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Android/.*")
+    # Always exclude Android platform files from LLGL (they use deprecated ALooper_pollAll)
+    # For Android builds, we provide minimal stubs instead
+    list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Android/.*")
+    if(ANDROID)
+      # Add minimal Android platform stubs that don't use deprecated APIs
+      list(APPEND LLGL_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs/AndroidApp.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs/AndroidCanvas.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/llgl_android_stubs/AndroidInputEventHandler.cpp"
+      )
     endif()
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
       list(FILTER LLGL_SOURCES EXCLUDE REGEX ".*Platform/Linux/.*")
@@ -572,18 +580,9 @@ if(MIXXX_USE_LLGL)
 
     target_include_directories(LLGL PUBLIC third_party/llgl/include)
 
-    # Android NDK include paths for LLGL platform files
-    if(ANDROID AND CMAKE_ANDROID_NDK)
-      target_include_directories(
-        LLGL
-        PRIVATE
-          "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include"
-          "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/sysroot/usr/include/${CMAKE_ANDROID_ARCH_TRIPLE}"
-          "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue"
-      )
+    # Android: define ANDROID and LLGL_OPENGLES3 for the stub files
+    if(ANDROID)
       target_compile_definitions(LLGL PRIVATE ANDROID)
-      # Fix deprecated ALooper_pollAll in android_native_app_glue.c
-      target_compile_options(LLGL PRIVATE -DALooper_pollAll=ALooper_pollOnce)
     endif()
 
     target_compile_definitions(
