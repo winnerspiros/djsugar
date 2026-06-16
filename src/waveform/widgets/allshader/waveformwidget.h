@@ -4,7 +4,12 @@
 #include "waveform/widgets/waveformwidgetabstract.h"
 #include "waveform/widgets/waveformwidgettype.h"
 #include "waveform/widgets/waveformwidgetvars.h"
+
+#ifndef MIXXX_USE_LLGL
 #include "widget/wglwidget.h"
+#else
+class WGLWidget;
+#endif
 
 namespace rendergraph {
 class Engine;
@@ -17,8 +22,15 @@ class WaveformRenderMark;
 class WaveformRenderMarkRange;
 } // namespace allshader
 
+#ifdef MIXXX_USE_LLGL
+// LLGL path: inherit from QWidget directly (not WGLWidget)
+class allshader::WaveformWidget final : public QWidget,
+                                        public ::WaveformWidgetAbstract {
+#else
+// QOpenGL path: inherit from WGLWidget
 class allshader::WaveformWidget final : public ::WGLWidget,
                                         public ::WaveformWidgetAbstract {
+#endif
     Q_OBJECT
   public:
     explicit WaveformWidget(QWidget* parent,
@@ -36,13 +48,20 @@ class allshader::WaveformWidget final : public ::WGLWidget,
     // override for WaveformWidgetAbstract
     mixxx::Duration render() override;
 
-    // overrides for WGLWidget
+#ifdef MIXXX_USE_LLGL
+    // LLGL path: no WGLWidget overrides needed
+    WGLWidget* getGLWidget() override {
+        return nullptr;
+    }
+#else
+    // QOpenGL path: WGLWidget overrides
     void paintGL() override;
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     WGLWidget* getGLWidget() override {
         return this;
     }
+#endif
     static WaveformWidgetVars vars();
     static ::WaveformRendererSignalBase::Options supportedOptions(
             WaveformWidgetType::Type type, bool useGles) {

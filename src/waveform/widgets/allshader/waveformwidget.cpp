@@ -28,7 +28,11 @@ WaveformWidget::WaveformWidget(QWidget* parent,
         WaveformWidgetType::Type type,
         const QString& group,
         ::WaveformRendererSignalBase::Options options)
+#ifndef MIXXX_USE_LLGL
         : WGLWidget(parent),
+#else
+        : QWidget(parent),
+#endif
           WaveformWidgetAbstract(group),
           m_type(type),
           m_pWaveformRenderMarkSlip(nullptr),
@@ -96,11 +100,15 @@ WaveformWidget::WaveformWidget(QWidget* parent,
 }
 
 WaveformWidget::~WaveformWidget() {
+#ifndef MIXXX_USE_LLGL
     makeCurrentIfNeeded();
+#endif
     m_rendererStack.clear();
     // destruction of nodes needs to happen within the opengl context
     m_pEngine.reset();
+#ifndef MIXXX_USE_LLGL
     doneCurrent();
+#endif
 }
 
 std::unique_ptr<WaveformRendererSignalBase>
@@ -140,15 +148,29 @@ WaveformWidget::addWaveformSignalRenderer(WaveformWidgetType::Type type,
 }
 
 mixxx::Duration WaveformWidget::render() {
+#ifndef MIXXX_USE_LLGL
     makeCurrentIfNeeded();
     paintGL();
     doneCurrent();
+#else
+    // LLGL path: render via the engine directly
+    m_pOpacityNode->setOpacity(shouldOnlyDrawBackground() ? 0.f : 1.f);
+    m_pWaveformRenderMark->update();
+    m_pWaveformRenderMarkRange->update();
+    if (m_pWaveformRenderMarkSlip) {
+        m_pWaveformRenderMarkSlip->update();
+    }
+    m_pEngine->preprocess();
+    m_pEngine->render();
+#endif
     // In the legacy widgets, this is used to "return timer for painter setup"
     // which is not relevant here. Also note that the return value is not used
     // at all, so it might be better to remove it everywhere. In the meantime.
     // we need to return something for API compatibility.
     return mixxx::Duration();
 }
+
+#ifndef MIXXX_USE_LLGL
 
 void WaveformWidget::paintGL() {
     // opacity of 0.f effectively skips the subtree rendering
@@ -162,10 +184,6 @@ void WaveformWidget::paintGL() {
 
     m_pEngine->preprocess();
     m_pEngine->render();
-}
-
-void WaveformWidget::castToQWidget() {
-    m_widget = this;
 }
 
 void WaveformWidget::initializeGL() {
@@ -186,6 +204,12 @@ void WaveformWidget::resizeGL(int w, int h) {
     // must resize the renderer first, before updating the rendergraph
     WaveformWidgetRenderer::resizeRenderer(w, h, static_cast<float>(devicePixelRatio()));
     m_pEngine->resize(w, h);
+}
+
+#endif // !MIXXX_USE_LLGL
+
+void WaveformWidget::castToQWidget() {
+    m_widget = this;
 }
 
 void WaveformWidget::paintEvent(QPaintEvent* event) {
