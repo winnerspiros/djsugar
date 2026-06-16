@@ -90,8 +90,13 @@ class ControllerRenderingEngine : public QObject {
     std::unique_ptr<QQuickRenderControl> m_renderControl;
     std::unique_ptr<QQuickWindow> m_quickWindow;
 
+#if defined(MIXXX_USE_LLGL)
+    unsigned int m_GLDataFormat;
+    unsigned int m_GLDataType;
+#else
     GLenum m_GLDataFormat;
     GLenum m_GLDataType;
+#endif
 
     bool m_isValid;
     // Engine control is owned by ControllerScriptEngineBase. The assumption is

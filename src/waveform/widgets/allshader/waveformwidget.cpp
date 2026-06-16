@@ -1,3 +1,4 @@
+#ifndef RENDERGRAPH_SG
 
 #include "waveform/widgets/allshader/waveformwidget.h"
 
@@ -213,3 +214,5 @@ WaveformWidgetVars WaveformWidget::vars() {
 }
 
 } // namespace allshader
+
+#endif // RENDERGRAPH_SG

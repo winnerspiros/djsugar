@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef RENDERGRAPH_SG
+
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
 #include "waveform/widgets/waveformwidgetabstract.h"
 #include "waveform/widgets/waveformwidgetvars.h"
@@ -60,8 +62,6 @@ class allshader::WaveformWidget final : public ::WGLWidget,
             break;
         }
         if (useGles) {
-            // High detail (textured) waveforms are not supported on OpenGL ES.
-            // See https://github.com/mixxxdj/mixxx/issues/13385
             options &= ~WaveformRendererSignalBase::Options(
                     WaveformRendererSignalBase::Option::HighDetail);
         }
@@ -101,3 +101,5 @@ class allshader::WaveformWidget final : public ::WGLWidget,
 
     DISALLOW_COPY_AND_ASSIGN(WaveformWidget);
 };
+
+#endif // RENDERGRAPH_SG
