@@ -582,6 +582,8 @@ if(MIXXX_USE_LLGL)
           "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue"
       )
       target_compile_definitions(LLGL PRIVATE ANDROID)
+      # Fix deprecated ALooper_pollAll in android_native_app_glue.c
+      target_compile_options(LLGL PRIVATE -DALooper_pollAll=ALooper_pollOnce)
     endif()
 
     target_compile_definitions(
