@@ -69,11 +69,9 @@ class allshader::WaveformWidget final : public ::WGLWidget,
 
   private:
     void castToQWidget() override;
-#ifndef RENDERGRAPH_SG
     void paintEvent(QPaintEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void leaveEvent(QEvent* event) override;
-#endif
 
     template<class T_Renderer, typename... Args>
     inline std::unique_ptr<T_Renderer> addRendererNode(Args&&... args) {
