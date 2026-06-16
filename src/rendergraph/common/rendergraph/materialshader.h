@@ -3,11 +3,6 @@
 #include "rendergraph/attributeset.h"
 #include "rendergraph/uniformset.h"
 
-#ifndef RENDERGRAPH_SG
-// GL target: MaterialShader is standalone
-class QSGMaterialShader;
-#endif
-
 namespace rendergraph {
 class MaterialShader;
 } // namespace rendergraph
@@ -26,12 +21,7 @@ class rendergraph::MaterialShader {
     MaterialShader(const char* vertexShaderFile,
             const char* fragmentShaderFile,
             const UniformSet& uniforms,
-            const AttributeSet& attributeSet) {
-        Q_UNUSED(vertexShaderFile);
-        Q_UNUSED(fragmentShaderFile);
-        Q_UNUSED(uniforms);
-        Q_UNUSED(attributeSet);
-    }
+            const AttributeSet& attributeSet);
 
     virtual bool bind() { return true; }
     virtual void release() {}

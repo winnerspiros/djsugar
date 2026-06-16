@@ -79,3 +79,16 @@ MaterialShader::MaterialShader(const char* vertexShaderFilename,
 }
 
 #endif // !MIXXX_USE_LLGL
+
+#ifdef MIXXX_USE_LLGL
+// Stub constructor for LLGL path — LLGLMaterialShader overrides this
+MaterialShader::MaterialShader(const char* vertexShaderFilename,
+        const char* fragmentShaderFilename,
+        const UniformSet& uniformSet,
+        const AttributeSet& attributeSet) {
+    Q_UNUSED(vertexShaderFilename);
+    Q_UNUSED(fragmentShaderFilename);
+    Q_UNUSED(uniformSet);
+    Q_UNUSED(attributeSet);
+}
+#endif // MIXXX_USE_LLGL
