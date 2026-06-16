@@ -583,6 +583,8 @@ if(MIXXX_USE_LLGL)
         $<$<BOOL:${LLGL_METAL_ENABLE}>:LLGL_METAL_ENABLE>
     )
 
+    set_property(TARGET LLGL PROPERTY CXX_STANDARD 17)
+
     if(WIN32)
       target_link_libraries(LLGL PRIVATE d3d11 d3d12 dxgi)
     elseif(APPLE)
