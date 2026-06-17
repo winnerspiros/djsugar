@@ -212,10 +212,11 @@ void DJEchoEffect::processChannel(
     const double sampleRate = engineParameters.sampleRate();
 
     // Pre-compute filter coefficients
+    constexpr double k2Pi = 6.283185307179586476925286766559;
     const CSAMPLE_GAIN lp_alpha = static_cast<CSAMPLE_GAIN>(
-            1.0 - std::exp(-2.0 * M_PI * lp_cutoff / sampleRate));
+            1.0 - std::exp(-k2Pi * lp_cutoff / sampleRate));
     const CSAMPLE_GAIN hp_alpha = static_cast<CSAMPLE_GAIN>(
-            1.0 - std::exp(-2.0 * M_PI * hp_cutoff / sampleRate));
+            1.0 - std::exp(-k2Pi * hp_cutoff / sampleRate));
 
     for (SINT i = 0; i < engineParameters.samplesPerBuffer(); i += chCount) {
         CSAMPLE_GAIN send_ramped = send.getNth(rampIndex);

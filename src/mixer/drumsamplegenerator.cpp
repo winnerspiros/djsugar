@@ -15,6 +15,8 @@
 
 namespace {
 
+constexpr double k2Pi = 6.283185307179586476925286766559;
+
 const mixxx::audio::SampleRate kDefaultSampleRate(44100);
 constexpr double kDefaultDurationSec = 0.5;
 constexpr double kNormalisationPeak = 0.90;
@@ -158,7 +160,7 @@ std::vector<CSAMPLE> DrumSampleGenerator::generateKick(mixxx::audio::SampleRate 
         const double t = static_cast<double>(i) / fs;
         const double phase = 150.0 * duration * (1.0 - std::exp(-t * 80.0));
         const double env = std::exp(-t * 12.0);
-        samples[i] = static_cast<CSAMPLE>(std::sin(2.0 * M_PI * phase) * env);
+        samples[i] = static_cast<CSAMPLE>(std::sin(k2Pi * phase) * env);
     }
     return samples;
 }
@@ -181,7 +183,7 @@ std::vector<CSAMPLE> DrumSampleGenerator::generateSnare(mixxx::audio::SampleRate
         const double t = static_cast<double>(i) / fs;
         const double toneEnv = std::exp(-t * 40.0);
         const double noiseEnv = std::exp(-t * 25.0);
-        const double tone = std::sin(2.0 * M_PI * 200.0 * t) * toneEnv;
+        const double tone = std::sin(k2Pi * 200.0 * t) * toneEnv;
         const double noise = nextNoise() * noiseEnv;
         samples[i] = static_cast<CSAMPLE>(tone * 0.4 + noise * 0.6);
     }
@@ -241,7 +243,7 @@ std::vector<CSAMPLE> DrumSampleGenerator::generateTom(mixxx::audio::SampleRate s
         const double t = static_cast<double>(i) / fs;
         const double freq = 200.0 - 80.0 * t;
         const double env = std::exp(-t * 15.0);
-        samples[i] = static_cast<CSAMPLE>(std::sin(2.0 * M_PI * freq * t) * env);
+        samples[i] = static_cast<CSAMPLE>(std::sin(k2Pi * freq * t) * env);
     }
     return samples;
 }
@@ -284,7 +286,7 @@ std::vector<CSAMPLE> DrumSampleGenerator::generateRide(mixxx::audio::SampleRate 
         const double t = static_cast<double>(i) / fs;
         const double env = std::exp(-t * 6.0);
         // Add some "metallic" character with a high sine
-        const double metallic = std::sin(2.0 * M_PI * 8000.0 * t) * 0.3;
+        const double metallic = std::sin(k2Pi * 8000.0 * t) * 0.3;
         samples[i] = static_cast<CSAMPLE>((nextNoise() * 0.7 + metallic) * env);
     }
     return samples;
