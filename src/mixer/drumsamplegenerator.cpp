@@ -89,8 +89,8 @@ void normalize(std::vector<CSAMPLE>& samples) {
 
 } // namespace
 
-const QVector<DrumSampleGenerator::DrumSample>& DrumSampleGenerator::sampleList() {
-    static const QVector<DrumSample> list = {
+const QList<DrumSampleGenerator::DrumSample>& DrumSampleGenerator::sampleList() {
+    static const QList<DrumSample> list = {
             {"Kick", "kick.wav"},
             {"Snare", "snare.wav"},
             {"Hi-Hat Closed", "hihat_closed.wav"},
@@ -115,7 +115,7 @@ QStringList DrumSampleGenerator::generateAll(const QDir& outputDir,
         std::vector<CSAMPLE> (*generator)(mixxx::audio::SampleRate);
     };
 
-    QVector<GenInfo> generators = {
+    QList<GenInfo> generators = {
             {"Kick", "kick.wav", &generateKick},
             {"Snare", "snare.wav", &generateSnare},
             {"Hi-Hat Closed", "hihat_closed.wav", &generateHiHat},

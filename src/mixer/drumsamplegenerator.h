@@ -1,7 +1,7 @@
 #pragma once
 #include <QDir>
+#include <QList>
 #include <QString>
-#include <QVector>
 #include <vector>
 
 #include "audio/types.h"
@@ -17,7 +17,7 @@ class DrumSampleGenerator {
         QString fileName;
     };
 
-    static const QVector<DrumSample>& sampleList();
+    static const QList<DrumSample>& sampleList();
 
     /// Generate all samples into the given directory.
     /// Returns the list of successfully generated file paths.
