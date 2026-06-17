@@ -155,7 +155,4 @@ class SoundManager : public QObject {
 
     PortAudioEnumerator m_paEnumerator;
     NetworkEnumerator m_networkEnumerator;
-
-    // Our fork's Android/PortAudio extensions
-    bool m_paInitialized = false;
 };
