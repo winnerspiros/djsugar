@@ -159,7 +159,4 @@ class SoundManager : public QObject {
 
     // Our fork's Android/PortAudio extensions
     bool m_paInitialized = false;
-    mixxx::audio::SampleRate::value_t m_jackSampleRate = 0;
-    QIODevice* m_pNetworkStream = nullptr;
-    SoundDevicePointer m_pClkRefDevice;
 };
