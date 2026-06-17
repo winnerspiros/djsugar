@@ -41,6 +41,10 @@ class SoundManager : public QObject {
     void clearAndQueryDevices();
     void queryDevices();
 
+    // Our fork's extended device query (Android Oboe + PortAudio)
+    void queryDevicesPortaudio();
+    void queryDevicesMixxx();
+
     // Opens all the devices chosen by the user in the preferences dialog, and
     // establishes the proper connections between them and the mixing engine.
     SoundDeviceStatus setupDevices();
@@ -152,4 +156,10 @@ class SoundManager : public QObject {
 
     PortAudioEnumerator m_paEnumerator;
     NetworkEnumerator m_networkEnumerator;
+
+    // Our fork's Android/PortAudio extensions
+    bool m_paInitialized = false;
+    mixxx::audio::SampleRate::value_t m_jackSampleRate = 0;
+    QIODevice* m_pNetworkStream = nullptr;
+    SoundDevicePointer m_pClkRefDevice;
 };
