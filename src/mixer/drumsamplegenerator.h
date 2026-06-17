@@ -1,6 +1,7 @@
 #pragma once
 #include <QDir>
 #include <QString>
+#include <QVector>
 #include <vector>
 
 #include "audio/types.h"

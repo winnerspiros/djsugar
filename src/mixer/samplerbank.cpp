@@ -21,6 +21,7 @@ const ConfigKey kConfigkeyLastImportExportDirectory(
 // This is used in multiple tr() calls below which accepts const char* as a key.
 // lupdate finds the single string here.
 const char kSamplerFileType[] = QT_TRANSLATE_NOOP("SamplerBank", "Mixxx Sampler Banks (*.xml)");
+const mixxx::Logger kLogger("SamplerBank");
 
 } // anonymous namespace
 

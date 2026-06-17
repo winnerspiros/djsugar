@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QtGlobal>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>

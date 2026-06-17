@@ -1,5 +1,6 @@
 #include "effects/backends/builtin/djechoeffect.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "effects/backends/effectmanifest.h"
