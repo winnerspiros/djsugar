@@ -21,7 +21,7 @@ void decrementRing(int* pIndex, int decrement, int length) {
     *pIndex = (*pIndex + length - decrement) % length;
 }
 
-} // namespace
+} // anonymous namespace
 
 // static
 QString DJEchoEffect::getId() {
