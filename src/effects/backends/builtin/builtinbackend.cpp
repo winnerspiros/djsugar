@@ -21,6 +21,7 @@
 #include "effects/backends/builtin/compressoreffect.h"
 #include "effects/backends/builtin/distortioneffect.h"
 #include "effects/backends/builtin/echoeffect.h"
+#include "effects/backends/builtin/djechoeffect.h"
 #include "effects/backends/builtin/glitcheffect.h"
 #include "effects/backends/builtin/keycomparisoneffect.h"
 #include "effects/backends/builtin/loudnesscontoureffect.h"
@@ -54,6 +55,7 @@ BuiltInBackend::BuiltInBackend() {
     // Fancy effects
     registerEffect<FlangerEffect>();
     registerEffect<EchoEffect>();
+    registerEffect<DJEchoEffect>();
     registerEffect<AutoPanEffect>();
 #ifndef __MACAPPSTORE__
     registerEffect<ReverbEffect>();
