@@ -1,10 +1,14 @@
 #include "effects/backends/builtin/djechoeffect.h"
 
+#include <cmath>
+
 #include "effects/backends/effectmanifest.h"
 #include "engine/effects/engineeffectparameter.h"
 #include "util/math.h"
 #include "util/rampingvalue.h"
 #include "util/sample.h"
+
+constexpr int DJEchoGroupState::kMaxDelaySeconds;
 
 namespace {
 

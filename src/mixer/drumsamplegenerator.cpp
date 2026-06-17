@@ -1,17 +1,16 @@
 #include "mixer/drumsamplegenerator.h"
 
+#include <QDir>
+#include <QFile>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
-#include <QDir>
-#include <QFile>
-
 #include "audio/types.h"
-#include "util/sample.h"
 #include "util/logger.h"
+#include "util/sample.h"
 
 namespace {
 
@@ -89,15 +88,15 @@ void normalize(std::vector<CSAMPLE>& samples) {
 
 const QVector<DrumSampleGenerator::DrumSample>& DrumSampleGenerator::sampleList() {
     static const QVector<DrumSample> list = {
-        {"Kick",          "kick.wav"},
-        {"Snare",         "snare.wav"},
-        {"Hi-Hat Closed", "hihat_closed.wav"},
-        {"Hi-Hat Open",   "hihat_open.wav"},
-        {"Clap",          "clap.wav"},
-        {"Tom High",      "tom_high.wav"},
-        {"Tom Low",       "tom_low.wav"},
-        {"Crash",         "crash.wav"},
-        {"Ride",          "ride.wav"},
+            {"Kick", "kick.wav"},
+            {"Snare", "snare.wav"},
+            {"Hi-Hat Closed", "hihat_closed.wav"},
+            {"Hi-Hat Open", "hihat_open.wav"},
+            {"Clap", "clap.wav"},
+            {"Tom High", "tom_high.wav"},
+            {"Tom Low", "tom_low.wav"},
+            {"Crash", "crash.wav"},
+            {"Ride", "ride.wav"},
     };
     return list;
 }
@@ -114,15 +113,15 @@ QStringList DrumSampleGenerator::generateAll(const QDir& outputDir,
     };
 
     QVector<GenInfo> generators = {
-        {"Kick",          "kick.wav",          &generateKick},
-        {"Snare",         "snare.wav",         &generateSnare},
-        {"Hi-Hat Closed", "hihat_closed.wav",  &generateHiHat},
-        {"Hi-Hat Open",   "hihat_open.wav",    &generateHiHat},
-        {"Clap",          "clap.wav",          &generateClap},
-        {"Tom High",      "tom_high.wav",      &generateTom},
-        {"Tom Low",       "tom_low.wav",       &generateTom},
-        {"Crash",         "crash.wav",         &generateCrash},
-        {"Ride",          "ride.wav",          &generateRide},
+            {"Kick", "kick.wav", &generateKick},
+            {"Snare", "snare.wav", &generateSnare},
+            {"Hi-Hat Closed", "hihat_closed.wav", &generateHiHat},
+            {"Hi-Hat Open", "hihat_open.wav", &generateHiHat},
+            {"Clap", "clap.wav", &generateClap},
+            {"Tom High", "tom_high.wav", &generateTom},
+            {"Tom Low", "tom_low.wav", &generateTom},
+            {"Crash", "crash.wav", &generateCrash},
+            {"Ride", "ride.wav", &generateRide},
     };
 
     for (const auto& info : generators) {
@@ -138,7 +137,8 @@ QStringList DrumSampleGenerator::generateAll(const QDir& outputDir,
 }
 
 bool DrumSampleGenerator::saveSample(const std::vector<CSAMPLE>& samples,
-        const QDir& outputDir, const QString& fileName,
+        const QDir& outputDir,
+        const QString& fileName,
         mixxx::audio::SampleRate sampleRate) {
     QString filePath = outputDir.filePath(fileName);
     return writeWav16(samples, filePath, sampleRate.value());

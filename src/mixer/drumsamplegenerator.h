@@ -1,7 +1,7 @@
 #pragma once
-#include <vector>
-#include <QString>
 #include <QDir>
+#include <QString>
+#include <vector>
 
 #include "audio/types.h"
 #include "util/types.h"
@@ -32,6 +32,7 @@ class DrumSampleGenerator {
     static std::vector<CSAMPLE> generateCrash(mixxx::audio::SampleRate sr);
     static std::vector<CSAMPLE> generateRide(mixxx::audio::SampleRate sr);
     static bool saveSample(const std::vector<CSAMPLE>& samples,
-            const QDir& outputDir, const QString& fileName,
+            const QDir& outputDir,
+            const QString& fileName,
             mixxx::audio::SampleRate sr);
 };
