@@ -2,9 +2,11 @@
 
 #include <lv2/units/units.h>
 
+#ifdef Q_OS_ANDROID
 #include <QCoreApplication>
 #include <QDir>
 #include <QStandardPaths>
+#endif
 
 #include "effects/backends/lv2/lv2effectprocessor.h"
 #include "effects/backends/lv2/lv2manifest.h"
