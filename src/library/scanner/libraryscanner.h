@@ -130,5 +130,6 @@ class LibraryScanner : public QThread {
     QList<mixxx::FileInfo> m_libraryRootDirs;
     std::unique_ptr<LibraryScannerDlg> m_pProgressDlg;
 
+    bool m_canceled;
     bool m_manualScan;
 };
