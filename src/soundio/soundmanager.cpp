@@ -85,7 +85,7 @@ SoundManager::~SoundManager() {
 
 QList<SoundDevicePointer> SoundManager::getDeviceList(
         const QString& filterAPI, bool bOutputDevices, bool bInputDevices) const {
-    //qDebug() << "SoundManager::getDeviceList";
+    // qDebug() << "SoundManager::getDeviceList";
 
     if (filterAPI == SoundManagerConfig::kDefaultAPI) {
         return QList<SoundDevicePointer>();
@@ -173,20 +173,22 @@ void SoundManager::completeDevicesClosing() {
     // then the callback may be running when we call
     // onInputDisconnected/onOutputDisconnected.
     for (const auto& pDevice : std::as_const(m_devices)) {
-        for (const auto& in: pDevice->inputs()) {
+        for (const auto& in : pDevice->inputs()) {
             // Need to tell all registered AudioDestinations for this AudioInput
             // that the input was disconnected.
             for (auto it = m_registeredDestinations.constFind(in);
-                 it != m_registeredDestinations.constEnd() && it.key() == in; ++it) {
+                    it != m_registeredDestinations.constEnd() && it.key() == in;
+                    ++it) {
                 it.value()->onInputUnconfigured(in);
                 m_pEngineMixer->onInputDisconnected(in);
             }
         }
-        for (const auto& out: pDevice->outputs()) {
+        for (const auto& out : pDevice->outputs()) {
             // Need to tell all registered AudioSources for this AudioOutput
             // that the output was disconnected.
             for (auto it = m_registeredSources.constFind(out);
-                 it != m_registeredSources.constEnd() && it.key() == out; ++it) {
+                    it != m_registeredSources.constEnd() && it.key() == out;
+                    ++it) {
                 it.value()->onOutputDisconnected(out);
             }
         }
@@ -206,7 +208,7 @@ void SoundManager::completeDevicesClosing() {
 }
 
 void SoundManager::clearDeviceList(bool sleepAfterClosing) {
-    //qDebug() << "SoundManager::clearDeviceList()";
+    // qDebug() << "SoundManager::clearDeviceList()";
 
     // Close the devices first.
     closeDevices(sleepAfterClosing);
@@ -289,7 +291,7 @@ void SoundManager::queryDevicesPortaudio() {
                             "GET_DEVICES_OUTPUTS");
 
             auto const parse = [](PaOboe_Direction direction,
-                                   QJniArray<QJniObject>& devices) {
+                                       QJniArray<QJniObject>& devices) {
                 for (const auto& device : devices) {
                     jint type = device->callMethod<jint>("getType");
                     QString name = device->callObjectMethod("getProductName",
@@ -297,14 +299,18 @@ void SoundManager::queryDevicesPortaudio() {
                                            .toString();
                     int32_t id = device->callMethod<jint>("getId");
                     auto channelCounts = device->callMethod<QJniArray<jint>>("getChannelCounts");
-                    if (channelCounts.isEmpty()) continue;
+                    if (channelCounts.isEmpty())
+                        continue;
                     int channelCount = *std::max_element(
                             channelCounts.begin(), channelCounts.end());
                     auto sampleRates = device->callMethod<QJniArray<jint>>("getSampleRates");
                     if (!sampleRates.isEmpty()) {
                         int sampleRate = *sampleRates.cbegin();
                         PaOboe_RegisterDevice(name.toStdString().c_str(),
-                                id, direction, channelCount, sampleRate);
+                                id,
+                                direction,
+                                channelCount,
+                                sampleRate);
                     }
                 }
             };
@@ -366,7 +372,7 @@ SoundDeviceStatus SoundManager::setupDevices() {
     // it was. Clearing it causes the engine to stop being processed which
     // results in a stuttering noise (sometimes a loud buzz noise at low
     // latencies) when changing devices.
-    //m_pClkRefDevice = NULL;
+    // m_pClkRefDevice = NULL;
     m_pErrorDevice.clear();
     int outputDevicesOpened = 0;
     int inputDevicesOpened = 0;
@@ -486,7 +492,7 @@ SoundDeviceStatus SoundManager::setupDevices() {
         }
     }
 
-    for (const auto& mode: toOpen) {
+    for (const auto& mode : toOpen) {
         SoundDevicePointer pDevice = mode.pDevice;
         m_pErrorDevice = pDevice;
 
@@ -532,8 +538,7 @@ SoundDeviceStatus SoundManager::setupDevices() {
     }
 
     m_pControlObjectSoundStatusCO->set(
-            outputDevicesOpened > 0 ?
-                    SOUNDMANAGER_CONNECTED : SOUNDMANAGER_DISCONNECTED);
+            outputDevicesOpened > 0 ? SOUNDMANAGER_CONNECTED : SOUNDMANAGER_DISCONNECTED);
 
     // returns OK if we were able to open all the devices the user wanted
     if (devicesNotFound.isEmpty()) {
@@ -631,20 +636,23 @@ void SoundManager::onDeviceOutputCallback(const SINT iFramesPerBuffer) {
 }
 
 void SoundManager::pushInputBuffers(const QList<AudioInputBuffer>& inputs,
-                                    const SINT iFramesPerBuffer) {
-   for (QList<AudioInputBuffer>::ConstIterator i = inputs.begin(),
-                 e = inputs.end(); i != e; ++i) {
+        const SINT iFramesPerBuffer) {
+    for (QList<AudioInputBuffer>::ConstIterator i = inputs.begin(),
+                                                e = inputs.end();
+            i != e;
+            ++i) {
         const AudioInputBuffer& in = *i;
         CSAMPLE* pInputBuffer = in.getBuffer();
         for (auto it = m_registeredDestinations.constFind(in);
-             it != m_registeredDestinations.constEnd() && it.key() == in; ++it) {
+                it != m_registeredDestinations.constEnd() && it.key() == in;
+                ++it) {
             it.value()->receiveBuffer(in, pInputBuffer, iFramesPerBuffer);
         }
     }
 }
 
 void SoundManager::writeProcess(SINT framesPerBuffer) const {
-    for (const auto& pDevice: m_devices) {
+    for (const auto& pDevice : m_devices) {
         if (pDevice) {
             pDevice->writeProcess(framesPerBuffer);
         }
@@ -652,7 +660,7 @@ void SoundManager::writeProcess(SINT framesPerBuffer) const {
 }
 
 void SoundManager::readProcess(SINT framesPerBuffer) const {
-    for (const auto& pDevice: m_devices) {
+    for (const auto& pDevice : m_devices) {
         if (pDevice) {
             pDevice->readProcess(framesPerBuffer);
         }

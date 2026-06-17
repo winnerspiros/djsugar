@@ -24,7 +24,6 @@ class ControlObject;
 #define SOUNDMANAGER_CONNECTING 1
 #define SOUNDMANAGER_CONNECTED 2
 
-
 class SoundManager : public QObject {
     Q_OBJECT
   public:
@@ -80,7 +79,7 @@ class SoundManager : public QObject {
     // Used by SoundDevices to "push" any audio from their inputs that they have
     // into the mixing engine.
     void pushInputBuffers(const QList<AudioInputBuffer>& inputs,
-                          const SINT iFramesPerBuffer);
+            const SINT iFramesPerBuffer);
 
     void writeProcess(SINT framesPerBuffer) const;
     void readProcess(SINT framesPerBuffer) const;
@@ -115,8 +114,8 @@ class SoundManager : public QObject {
 
   signals:
     void devicesUpdated(); // emitted when pointers to SoundDevices go stale
-    void devicesSetup(); // emitted when the sound devices have been set up
-    void devicesClosed(); // emitted when the sound devices have been closed and resources freed
+    void devicesSetup();   // emitted when the sound devices have been set up
+    void devicesClosed();  // emitted when the sound devices have been closed and resources freed
     void outputRegistered(const AudioOutput& output, AudioSource* src);
     void inputRegistered(const AudioInput& input, AudioDestination* dest);
 
