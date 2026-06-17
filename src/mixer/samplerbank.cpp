@@ -5,12 +5,14 @@
 #include <QStandardPaths>
 
 #include "control/controlpushbutton.h"
+#include "mixer/drumsamplegenerator.h"
 #include "mixer/playermanager.h"
 #include "mixer/sampler.h"
 #include "moc_samplerbank.cpp"
 #include "track/track.h"
 #include "util/assert.h"
 #include "util/file.h"
+#include "util/logger.h"
 
 namespace {
 
@@ -44,6 +46,29 @@ SamplerBank::SamplerBank(UserSettingsPointer pConfig,
     m_pCONumSamplers = new ControlProxy(
             ConfigKey(QStringLiteral("[App]"), QStringLiteral("num_samplers")),
             this);
+
+    // Generate default drum samples at first run if the samples directory
+    // doesn't exist yet. This ensures the sampler has basic sounds available
+    // without requiring the user to manually add files.
+    generateDefaultSamples();
+}
+
+void SamplerBank::generateDefaultSamples() {
+    QString samplesDir = m_pConfig->getSettingsPath() + QStringLiteral("/samples");
+    QDir dir(samplesDir);
+    if (dir.exists() && !dir.entryList(QStringList() << "*.wav", QDir::Files).isEmpty()) {
+        return; // Samples already exist
+    }
+
+    kLogger.info() << "Generating default drum samples to" << samplesDir;
+    if (!dir.mkpath(".")) {
+        qWarning() << "Failed to create samples directory:" << samplesDir;
+        return;
+    }
+
+    mixxx::audio::SampleRate sr(44100);
+    QStringList generated = DrumSampleGenerator::generateAll(dir, sr);
+    kLogger.info() << "Generated" << generated.size() << "default drum samples";
 }
 
 void SamplerBank::slotSaveSamplerBank(double v) {
