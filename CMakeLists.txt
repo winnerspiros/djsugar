@@ -2651,6 +2651,15 @@ if(QT6)
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/effects
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/effects
       COMMAND
+        ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
+      COMMAND
+        python3 ${CMAKE_SOURCE_DIR}/lib/opiqo-plugins/build_lv2_bundles.py arm64-v8a
+      COMMAND
+        ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lib/opiqo-plugins/lv2-bundles/arm64-v8a
+        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
+      COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/fonts
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/fonts
       COMMAND

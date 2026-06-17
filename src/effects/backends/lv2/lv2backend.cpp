@@ -2,10 +2,26 @@
 
 #include <lv2/units/units.h>
 
+#include <QCoreApplication>
+#include <QDir>
+#include <QStandardPaths>
+
 #include "effects/backends/lv2/lv2effectprocessor.h"
 #include "effects/backends/lv2/lv2manifest.h"
 
 LV2Backend::LV2Backend() {
+    // On Android, set LV2_PATH to the bundled plugins directory
+    // so the scanner finds our pre-built LV2 plugins.
+#ifdef Q_OS_ANDROID
+    QString lv2Path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/lv2";
+    if (!QDir(lv2Path).exists()) {
+        lv2Path = QCoreApplication::applicationDirPath() + "/assets/lv2";
+    }
+    if (!qEnvironmentVariableIsSet("LV2_PATH")) {
+        qputenv("LV2_PATH", lv2Path.toUtf8());
+    }
+#endif
+
     m_pWorld = lilv_world_new();
     initializeProperties();
     lilv_world_load_all(m_pWorld);
