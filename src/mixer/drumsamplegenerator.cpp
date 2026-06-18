@@ -107,7 +107,6 @@ const QList<DrumSampleGenerator::DrumSample>& DrumSampleGenerator::sampleList() 
 
 QStringList DrumSampleGenerator::generateAll(const QDir& outputDir,
         mixxx::audio::SampleRate sampleRate) {
-    const int sr = sampleRate.value();
     QStringList generated;
 
     struct GenInfo {
