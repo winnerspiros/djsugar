@@ -138,9 +138,9 @@ void ProNoiseEffect::processChannel(
     double smoothBandwidth = pState->prev_bandwidth +
             kSmoothCoeff * (bandwidth - pState->prev_bandwidth);
 
-    pState->prev_send = smoothSend;
-    pState->prev_color = smoothColor;
-    pState->prev_bandwidth = smoothBandwidth;
+    pState->prev_send = static_cast<CSAMPLE>(smoothSend);
+    pState->prev_color = static_cast<CSAMPLE>(smoothColor);
+    pState->prev_bandwidth = static_cast<CSAMPLE>(smoothBandwidth);
 
     double bp_center = 1000.0 + smoothBandwidth * 8000.0;
     double bp_q = 1.0 + smoothBandwidth * 4.0;
