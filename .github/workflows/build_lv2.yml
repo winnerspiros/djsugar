@@ -1,9 +1,10 @@
-#Build LV2 plugins for Android ARM64 and upload as artifacts
+# Build LV2 plugins for Android ARM64 and upload as artifacts
 name: Build LV2 Plugins
 
 on:
-  workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - 'lib/lsp-plugins/**'
       - 'lib/calf-plugins/**'
@@ -18,7 +19,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
-          fetch-depth: 0
 
       - name: Install build dependencies
         run: |
@@ -35,12 +35,11 @@ jobs:
 
       - name: Download Android NDK
         run: |
-#Download NDK r27(latest stable)
           wget -q https://dl.google.com/android/repository/android-ndk-r27c-linux.zip -O ndk.zip
           unzip -q ndk.zip -d /opt/
           mv /opt/android-ndk-r27c /opt/android-ndk
           rm ndk.zip
-          echo "ANDROID_NDK_HOME=/opt/android-ndk" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=/opt/android-ndk" >> "$GITHUB_ENV"
           ls /opt/android-ndk/
 
       - name: Build LV2 plugins for Android ARM64
@@ -48,8 +47,7 @@ jobs:
           ANDROID_NDK_HOME: /opt/android-ndk
         run: |
           set -e
-          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          PROJECT_ROOT="${SCRIPT_DIR}"
+          PROJECT_ROOT="${{ github.workspace }}"
           BUILD_DIR="${PROJECT_ROOT}/build-lv2-android"
           ASSETS_DIR="${PROJECT_ROOT}/packaging/android/assets/lv2"
 
@@ -105,35 +103,10 @@ jobs:
           cmake --install .
 
           echo "=== Bundling LV2 plugins ==="
-#Copy Calf LV2 bundles
-          if [ -d "${BUILD_DIR}/install/calf-plugins/lib/lv2" ]; then
-            for bundle in "${BUILD_DIR}/install/calf-plugins/lib/lv2"/*.lv2; do
-              if [ -d "$bundle" ]; then
-                name=$(basename "$bundle")
-                echo "  Bundling: ${name}"
-                cp -r "$bundle" "${ASSETS_DIR}/${name}"
-              fi
-            done
-          fi
-
-          # Copy Dragonfly LV2 bundles
-          if [ -d "${BUILD_DIR}/install/dragonfly-reverb/lib/lv2" ]; then
-            for bundle in "${BUILD_DIR}/install/dragonfly-reverb/lib/lv2"/*.lv2; do
-              if [ -d "$bundle" ]; then
-                name=$(basename "$bundle")
-                echo "  Bundling: ${name}"
-                cp -r "$bundle" "${ASSETS_DIR}/${name}"
-              fi
-            done
-          fi
-
-          # Also check for LV2 bundles in the build directories
-          find "${BUILD_DIR}" -name "*.lv2" -type d 2>/dev/null | while read -r bundle; do
-            name=$(basename "$bundle")
-            if [ ! -d "${ASSETS_DIR}/${name}" ]; then
-              echo "  Bundling: ${name}"
-              cp -r "$bundle" "${ASSETS_DIR}/${name}"
-            fi
+          find "${BUILD_DIR}/install" -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle; do
+            name="$(basename "${bundle}")"
+            echo "  Bundling: ${name}"
+            cp -r "${bundle}" "${ASSETS_DIR}/${name}"
           done
 
           echo ""
@@ -145,11 +118,4 @@ jobs:
         with:
           name: lv2-plugins-android-arm64
           path: packaging/android/assets/lv2/
-          retention-days: 7
-
-      - name: List bundled plugins
-        run: |
-          echo "=== Bundled LV2 plugins ==="
-          find packaging/android/assets/lv2/ -name "*.lv2" -type d 2>/dev/null | while read -r d; do
-            echo "  $(basename "$d")"
-          done
+          retention-days: 30
