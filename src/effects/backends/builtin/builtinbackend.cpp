@@ -16,6 +16,8 @@
 #include "effects/backends/builtin/proreverbeffect.h"
 #include "effects/backends/builtin/profiltereffect.h"
 #include "effects/backends/builtin/pronoiseeffect.h"
+#include "effects/backends/builtin/beatrepeateffect.h"
+#include "effects/backends/builtin/tapestopeffect.h"
 #ifndef __MACAPPSTORE__
 #include "effects/backends/builtin/reverbeffect.h"
 #endif
@@ -64,6 +66,8 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<ProReverbEffect>();
     registerEffect<ProFilterEffect>();
     registerEffect<ProNoiseEffect>();
+    registerEffect<BeatRepeatEffect>();
+    registerEffect<TapeStopEffect>();
 #ifndef __MACAPPSTORE__
     registerEffect<ReverbEffect>();
 #endif

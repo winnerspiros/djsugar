@@ -1332,6 +1332,8 @@ add_library(
   src/effects/backends/builtin/proreverbeffect.cpp
   src/effects/backends/builtin/profiltereffect.cpp
   src/effects/backends/builtin/pronoiseeffect.cpp
+  src/effects/backends/builtin/beatrepeateffect.cpp
+  src/effects/backends/builtin/tapestopeffect.cpp
   src/effects/backends/builtin/loudnesscontoureffect.cpp
   src/effects/backends/builtin/metronomeeffect.cpp
   src/effects/backends/builtin/metronomeclick.cpp
