@@ -77,8 +77,8 @@ void TapeStopEffect::processChannel(
     const double smoothEnable = pState->prev_enable + 0.02 * (enable - pState->prev_enable);
     const double smoothSpeed = pState->prev_speed + 0.02 * (speed - pState->prev_speed);
 
-    pState->prev_enable = smoothEnable;
-    pState->prev_speed = smoothSpeed;
+    pState->prev_enable = static_cast<CSAMPLE_GAIN>(smoothEnable);
+    pState->prev_speed = static_cast<CSAMPLE_GAIN>(smoothSpeed);
 
     if (enable > 0.5) {
         if (!pState->is_stopping) {

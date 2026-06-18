@@ -187,9 +187,9 @@ void ProFilterEffect::processChannel(
             kSmoothCoeff * (resonance - pState->prev_resonance);
     double smoothGain = pState->prev_gain + kSmoothCoeff * (gain - pState->prev_gain);
 
-    pState->prev_cutoff = smoothCutoff;
-    pState->prev_resonance = smoothResonance;
-    pState->prev_gain = smoothGain;
+    pState->prev_cutoff = static_cast<CSAMPLE>(smoothCutoff);
+    pState->prev_resonance = static_cast<CSAMPLE>(smoothResonance);
+    pState->prev_gain = static_cast<CSAMPLE>(smoothGain);
 
     double b0, b1, b2, a1, a2;
     computeBiquadCoefficients(
@@ -203,9 +203,9 @@ void ProFilterEffect::processChannel(
                 a1 * pState->y1[ch] - a2 * pState->y2[ch];
 
         pState->x2[ch] = pState->x1[ch];
-        pState->x1[ch] = x0;
+        pState->x1[ch] = static_cast<CSAMPLE>(x0);
         pState->y2[ch] = pState->y1[ch];
-        pState->y1[ch] = y0;
+        pState->y1[ch] = static_cast<CSAMPLE>(y0);
 
         pOutput[i] = static_cast<CSAMPLE>(y0);
     }

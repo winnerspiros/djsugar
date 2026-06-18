@@ -101,9 +101,9 @@ void BeatRepeatEffect::processChannel(
             kSmoothCoeff * (interval - pState->prev_interval);
     double smoothPitch = pState->prev_pitch + kSmoothCoeff * (pitch - pState->prev_pitch);
 
-    pState->prev_enable = smoothEnable;
-    pState->prev_interval = smoothInterval;
-    pState->prev_pitch = smoothPitch;
+    pState->prev_enable = static_cast<CSAMPLE_GAIN>(smoothEnable);
+    pState->prev_interval = static_cast<CSAMPLE_GAIN>(smoothInterval);
+    pState->prev_pitch = static_cast<CSAMPLE_GAIN>(smoothPitch);
 
     // Calculate loop length in samples based on interval (beats)
     // Assume 120 BPM default if no tempo info
