@@ -1,4 +1,3 @@
-#Build LV2 plugins for Android ARM64 and upload as artifacts
 name: Build LV2 Plugins
 
 on:
@@ -6,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - 'lib/lsp-plugins/**'
-      - 'lib/calf-plugins/**'
-      - 'lib/dragonfly-reverb/**'
-      - 'tools/build_lv2_android.sh'
+      - "lib/lsp-plugins/**"
+      - "lib/calf-plugins/**"
+      - "lib/dragonfly-reverb/**"
+      - "tools/build_lv2_android.sh"
 
 jobs:
   build-lv2:
@@ -103,23 +102,19 @@ jobs:
           cmake --install .
 
           echo "=== Bundling LV2 plugins ==="
-          find "${BUILD_DIR}/install" -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle;
-do
-    name = "$(basename " $ {
-        bundle
-    }
-")" echo "  Bundling: ${name}" cp - r
-                        "${bundle}"
-                        "${ASSETS_DIR}/${name}" done
+          find "${BUILD_DIR}/install" -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle; do
+            name="$(basename "${bundle}")"
+            echo "  Bundling: ${name}"
+            cp -r "${bundle}" "${ASSETS_DIR}/${name}"
+          done
 
-                        echo "" echo "=== LV2 bundles created ===" ls -
-                        la "${ASSETS_DIR}/" 2 >
-                / dev / null ||
-        echo "  (none found)"
+          echo ""
+          echo "=== LV2 bundles created ==="
+          ls -la "${ASSETS_DIR}/" 2>/dev/null || echo "  (none found)"
 
-                - name : Upload LV2 plugin artifacts
-                                 uses : actions /
-                                        upload -
-                artifact @v4
-                        with : name : lv2 -
-                                      plugins - android - arm64 path : packaging / android / assets / lv2 / retention - days : 30
+      - name: Upload LV2 plugin artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lv2-plugins-android-arm64
+          path: packaging/android/assets/lv2/
+          retention-days: 30
