@@ -2,6 +2,7 @@
 #include "effects/backends/builtin/builtinbackend.h"
 
 #include "effects/backends/builtin/balanceeffect.h"
+#include "effects/backends/builtin/beatrepeateffect.h"
 #include "effects/backends/builtin/bessel4lvmixeqeffect.h"
 #include "effects/backends/builtin/bessel8lvmixeqeffect.h"
 #include "effects/backends/builtin/biquadfullkilleqeffect.h"
@@ -12,12 +13,11 @@
 #include "effects/backends/builtin/linkwitzriley8eqeffect.h"
 #include "effects/backends/builtin/moogladder4filtereffect.h"
 #include "effects/backends/builtin/parametriceqeffect.h"
-#include "effects/backends/builtin/threebandbiquadeqeffect.h"
-#include "effects/backends/builtin/proreverbeffect.h"
 #include "effects/backends/builtin/profiltereffect.h"
 #include "effects/backends/builtin/pronoiseeffect.h"
-#include "effects/backends/builtin/beatrepeateffect.h"
+#include "effects/backends/builtin/proreverbeffect.h"
 #include "effects/backends/builtin/tapestopeffect.h"
+#include "effects/backends/builtin/threebandbiquadeqeffect.h"
 #ifndef __MACAPPSTORE__
 #include "effects/backends/builtin/reverbeffect.h"
 #endif
