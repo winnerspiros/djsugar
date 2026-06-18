@@ -1525,187 +1525,188 @@ void AIBroFeature::updateCurrentTrackInfo() {
     }
     m_currentTrackTitle = pTrack->getTitle();
     m_currentTrackArtist = pTrack->getArtist();
+}
 
-    int AIBroFeature::findAvailableDeck() const {
-        if (!m_pPlayerManager)
-            return -1;
-        return (m_iCurrentDeck == 0) ? 1 : 0;
-    }
+int AIBroFeature::findAvailableDeck() const {
+    if (!m_pPlayerManager)
+        return -1;
+    return (m_iCurrentDeck == 0) ? 1 : 0;
+}
 
-    double AIBroFeature::getDeckPlayPosition(int deckIndex) const {
-        QString group = QStringLiteral("[Channel%1]").arg(deckIndex + 1);
-        ConfigKey posKey(group, "playposition");
-        return ControlObject::get(posKey);
-    }
+double AIBroFeature::getDeckPlayPosition(int deckIndex) const {
+    QString group = QStringLiteral("[Channel%1]").arg(deckIndex + 1);
+    ConfigKey posKey(group, "playposition");
+    return ControlObject::get(posKey);
+}
 
-    // ===================================================================
-    // Vocal sync
-    // ===================================================================
+// ===================================================================
+// Vocal sync
+// ===================================================================
 
-    double AIBroFeature::estimateVocalStartPosition(int deckIndex) const {
-        if (!m_pPlayerManager)
-            return 0.0;
-        auto* pPlayer = m_pPlayerManager->getDeck(deckIndex);
-        if (!pPlayer)
-            return 0.0;
-        TrackPointer pTrack = pPlayer->getLoadedTrack();
-        if (!pTrack)
-            return 0.0;
+double AIBroFeature::estimateVocalStartPosition(int deckIndex) const {
+    if (!m_pPlayerManager)
+        return 0.0;
+    auto* pPlayer = m_pPlayerManager->getDeck(deckIndex);
+    if (!pPlayer)
+        return 0.0;
+    TrackPointer pTrack = pPlayer->getLoadedTrack();
+    if (!pTrack)
+        return 0.0;
 
-        double durationSec = pTrack->getDuration();
-        if (durationSec <= 0.0)
-            return 0.0;
+    double durationSec = pTrack->getDuration();
+    if (durationSec <= 0.0)
+        return 0.0;
 
-        QString title = pTrack->getTitle().toLower();
-        bool isRemix = false;
-        bool isExtended = false;
-        for (const QString& kw : remixKeywords()) {
-            if (title.contains(kw)) {
-                isRemix = true;
-                if (kw == "extended" || kw == "extended mix" || kw == "club mix") {
-                    isExtended = true;
-                }
-                break;
+    QString title = pTrack->getTitle().toLower();
+    bool isRemix = false;
+    bool isExtended = false;
+    for (const QString& kw : remixKeywords()) {
+        if (title.contains(kw)) {
+            isRemix = true;
+            if (kw == "extended" || kw == "extended mix" || kw == "club mix") {
+                isExtended = true;
             }
+            break;
         }
-
-        double vocalStartPercent = 0.15;
-        if (isExtended) {
-            vocalStartPercent = 0.30;
-        } else if (isRemix) {
-            vocalStartPercent = 0.22;
-        } else if (durationSec > 300.0) {
-            vocalStartPercent = 0.20;
-        } else if (durationSec < 180.0) {
-            vocalStartPercent = 0.10;
-        }
-        if (durationSec > 420.0) {
-            vocalStartPercent = 0.35;
-        }
-
-        kLogger.info() << "AI Bro: vocal sync — title:" << title
-                       << "duration:" << durationSec << "s"
-                       << "vocal start:" << (vocalStartPercent * 100.0)
-                       << "% (remix:" << isRemix
-                       << ", extended:" << isExtended << ")";
-
-        return vocalStartPercent;
     }
 
-    // ===================================================================
-    // Manual track detection
-    // ===================================================================
+    double vocalStartPercent = 0.15;
+    if (isExtended) {
+        vocalStartPercent = 0.30;
+    } else if (isRemix) {
+        vocalStartPercent = 0.22;
+    } else if (durationSec > 300.0) {
+        vocalStartPercent = 0.20;
+    } else if (durationSec < 180.0) {
+        vocalStartPercent = 0.10;
+    }
+    if (durationSec > 420.0) {
+        vocalStartPercent = 0.35;
+    }
 
-    QMap<int, QString> AIBroFeature::snapshotTrackLocations() const {
-        QMap<int, QString> snapshot;
-        if (!m_pPlayerManager)
-            return snapshot;
-        for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
-            auto* pPlayer = m_pPlayerManager->getDeck(i);
-            if (!pPlayer)
-                continue;
-            TrackPointer pTrack = pPlayer->getLoadedTrack();
-            if (pTrack)
-                snapshot[i] = pTrack->getLocation();
-        }
+    kLogger.info() << "AI Bro: vocal sync — title:" << title
+                   << "duration:" << durationSec << "s"
+                   << "vocal start:" << (vocalStartPercent * 100.0)
+                   << "% (remix:" << isRemix
+                   << ", extended:" << isExtended << ")";
+
+    return vocalStartPercent;
+}
+
+// ===================================================================
+// Manual track detection
+// ===================================================================
+
+QMap<int, QString> AIBroFeature::snapshotTrackLocations() const {
+    QMap<int, QString> snapshot;
+    if (!m_pPlayerManager)
         return snapshot;
+    for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
+        auto* pPlayer = m_pPlayerManager->getDeck(i);
+        if (!pPlayer)
+            continue;
+        TrackPointer pTrack = pPlayer->getLoadedTrack();
+        if (pTrack)
+            snapshot[i] = pTrack->getLocation();
     }
+    return snapshot;
+}
 
-    QString AIBroFeature::findNewManualTrack() {
-        if (!m_pPlayerManager)
-            return {};
-        QMap<int, QString> current = snapshotTrackLocations();
-        for (auto it = current.begin(); it != current.end(); ++it) {
-            int deck = it.key();
-            const QString& location = it.value();
-            if (m_searchTrackSnapshot.contains(deck) &&
-                    m_searchTrackSnapshot[deck] == location) {
-                continue;
-            }
-            if (!m_searchTrackSnapshot.contains(deck) && location.isEmpty()) {
-                continue;
-            }
-            if (!isDeckPlaying(deck)) {
-                kLogger.info() << "AI Bro: manual track on deck" << (deck + 1)
-                               << ":" << location;
-                return location;
-            }
-        }
+QString AIBroFeature::findNewManualTrack() {
+    if (!m_pPlayerManager)
         return {};
-    }
-
-    // ===================================================================
-    // BPM detection
-    // ===================================================================
-
-    double AIBroFeature::getCurrentPlayingBPM() const {
-        if (!m_pPlayerManager)
-            return 0.0;
-        for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
-            if (!isDeckPlaying(i))
-                continue;
-            auto* pPlayer = m_pPlayerManager->getDeck(i);
-            if (!pPlayer)
-                continue;
-            TrackPointer pTrack = pPlayer->getLoadedTrack();
-            if (pTrack) {
-                double bpm = pTrack->getBpm();
-                if (bpm > 0)
-                    return bpm;
-            }
+    QMap<int, QString> current = snapshotTrackLocations();
+    for (auto it = current.begin(); it != current.end(); ++it) {
+        int deck = it.key();
+        const QString& location = it.value();
+        if (m_searchTrackSnapshot.contains(deck) &&
+                m_searchTrackSnapshot[deck] == location) {
+            continue;
         }
-        return 0.0;
+        if (!m_searchTrackSnapshot.contains(deck) && location.isEmpty()) {
+            continue;
+        }
+        if (!isDeckPlaying(deck)) {
+            kLogger.info() << "AI Bro: manual track on deck" << (deck + 1)
+                           << ":" << location;
+            return location;
+        }
     }
+    return {};
+}
 
-    double AIBroFeature::getCandidateBPM(
-            const mixxx::YouTubeVideoInfo& candidate) const {
-        QString title = candidate.title.toLower();
-        if (title.contains("drum and bass") || title.contains("dnb") ||
-                title.contains("drum & bass"))
-            return 174.0;
-        if (title.contains("dubstep") || title.contains("dub step"))
-            return 140.0;
-        if (title.contains("techno"))
-            return 130.0;
-        if (title.contains("trance"))
-            return 138.0;
-        if (title.contains("house"))
-            return 124.0;
-        if (title.contains("deep house"))
-            return 122.0;
-        if (title.contains("tech house"))
-            return 126.0;
-        if (title.contains("progressive"))
-            return 128.0;
-        if (title.contains("electro"))
-            return 128.0;
-        if (title.contains("hip hop") || title.contains("hip-hop") ||
-                title.contains("rap"))
-            return 90.0;
-        if (title.contains("r&b") || title.contains("rnb") ||
-                title.contains("rhythm and blues"))
-            return 85.0;
-        if (title.contains("pop"))
-            return 120.0;
-        if (title.contains("reggaeton") || title.contains("reggae"))
-            return 95.0;
-        if (title.contains("dancehall"))
-            return 100.0;
-        if (title.contains("afrobeats"))
-            return 110.0;
-        if (title.contains("ambient") || title.contains("chill"))
-            return 90.0;
-        if (title.contains("downtempo"))
-            return 85.0;
-        if (title.contains("breakbeat") || title.contains("breaks"))
-            return 135.0;
-        if (title.contains("garage"))
-            return 130.0;
-        if (title.contains("grime"))
-            return 140.0;
-        if (title.contains("jungle"))
-            return 170.0;
+// ===================================================================
+// BPM detection
+// ===================================================================
+
+double AIBroFeature::getCurrentPlayingBPM() const {
+    if (!m_pPlayerManager)
         return 0.0;
+    for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
+        if (!isDeckPlaying(i))
+            continue;
+        auto* pPlayer = m_pPlayerManager->getDeck(i);
+        if (!pPlayer)
+            continue;
+        TrackPointer pTrack = pPlayer->getLoadedTrack();
+        if (pTrack) {
+            double bpm = pTrack->getBpm();
+            if (bpm > 0)
+                return bpm;
+        }
     }
+    return 0.0;
+}
+
+double AIBroFeature::getCandidateBPM(
+        const mixxx::YouTubeVideoInfo& candidate) const {
+    QString title = candidate.title.toLower();
+    if (title.contains("drum and bass") || title.contains("dnb") ||
+            title.contains("drum & bass"))
+        return 174.0;
+    if (title.contains("dubstep") || title.contains("dub step"))
+        return 140.0;
+    if (title.contains("techno"))
+        return 130.0;
+    if (title.contains("trance"))
+        return 138.0;
+    if (title.contains("house"))
+        return 124.0;
+    if (title.contains("deep house"))
+        return 122.0;
+    if (title.contains("tech house"))
+        return 126.0;
+    if (title.contains("progressive"))
+        return 128.0;
+    if (title.contains("electro"))
+        return 128.0;
+    if (title.contains("hip hop") || title.contains("hip-hop") ||
+            title.contains("rap"))
+        return 90.0;
+    if (title.contains("r&b") || title.contains("rnb") ||
+            title.contains("rhythm and blues"))
+        return 85.0;
+    if (title.contains("pop"))
+        return 120.0;
+    if (title.contains("reggaeton") || title.contains("reggae"))
+        return 95.0;
+    if (title.contains("dancehall"))
+        return 100.0;
+    if (title.contains("afrobeats"))
+        return 110.0;
+    if (title.contains("ambient") || title.contains("chill"))
+        return 90.0;
+    if (title.contains("downtempo"))
+        return 85.0;
+    if (title.contains("breakbeat") || title.contains("breaks"))
+        return 135.0;
+    if (title.contains("garage"))
+        return 130.0;
+    if (title.contains("grime"))
+        return 140.0;
+    if (title.contains("jungle"))
+        return 170.0;
+    return 0.0;
+}
 
 #include "moc_aibrofeature.cpp"
