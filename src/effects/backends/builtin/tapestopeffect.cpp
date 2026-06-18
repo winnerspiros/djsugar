@@ -65,14 +65,14 @@ void TapeStopEffect::processChannel(
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
+        [[maybe_unused]] const EffectEnableState enableState,
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
     const int sampleRate = engineParameters.sampleRate();
     const int numSamples = engineParameters.framesPerBuffer();
 
-    const CSAMPLE_GAIN enable = m_pEnableParameter->value();
-    const CSAMPLE_GAIN speed = m_pSpeedParameter->value();
-    const CSAMPLE_GAIN duration = m_pDurationParameter->value();
+    const CSAMPLE_GAIN enable = static_cast<CSAMPLE_GAIN>(m_pEnableParameter->value());
+    const CSAMPLE_GAIN speed = static_cast<CSAMPLE_GAIN>(m_pSpeedParameter->value());
+    const CSAMPLE_GAIN duration = static_cast<CSAMPLE_GAIN>(m_pDurationParameter->value());
 
     const double smoothEnable = pState->prev_enable + 0.02 * (enable - pState->prev_enable);
     const double smoothSpeed = pState->prev_speed + 0.02 * (speed - pState->prev_speed);
@@ -113,7 +113,7 @@ void TapeStopEffect::processChannel(
             CSAMPLE sample1 = pState->delay_buf[readPos];
             CSAMPLE sample2 = pState->delay_buf[(readPos + 1) % pState->delay_buf.size()];
             double frac = pState->read_position - readPos;
-            CSAMPLE interpolated = sample1 + (sample2 - sample1) * frac;
+            CSAMPLE interpolated = static_cast<CSAMPLE>(sample1 + (sample2 - sample1) * frac);
 
             pOutput[i] = interpolated;
 

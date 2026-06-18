@@ -166,8 +166,8 @@ void ProFilterEffect::processChannel(
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
+        [[maybe_unused]] const EffectEnableState enableState,
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
     const int sampleRate = engineParameters.sampleRate();
     const int numSamples = engineParameters.framesPerBuffer();
 

@@ -45,6 +45,7 @@ class ProReverbGroupState : public EffectState {
         diff_state[1] = 0.0f;
         diff_state[2] = 0.0f;
         diff_state[3] = 0.0f;
+        diff_state[4] = 0.0f;
     };
 
     mixxx::SampleBuffer delay_buf;
@@ -54,7 +55,7 @@ class ProReverbGroupState : public EffectState {
     int write_position;
     CSAMPLE tap_gains[kNumTaps];
     int tap_delays[kNumTaps];
-    CSAMPLE diff_state[4];
+    CSAMPLE diff_state[5];
 };
 
 class ProReverbEffect : public EffectProcessorImpl<ProReverbGroupState> {

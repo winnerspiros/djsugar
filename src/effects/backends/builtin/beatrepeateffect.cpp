@@ -83,17 +83,17 @@ void BeatRepeatEffect::processChannel(
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
+        [[maybe_unused]] const EffectEnableState enableState,
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
     const int sampleRate = engineParameters.sampleRate();
     const int numSamples = engineParameters.framesPerBuffer();
     const int chCount = engineParameters.channelCount();
 
-    const CSAMPLE_GAIN enable = m_pEnableParameter->value();
-    const CSAMPLE_GAIN interval = m_pIntervalParameter->value();
-    const CSAMPLE_GAIN pitch = m_pPitchParameter->value();
-    const CSAMPLE_GAIN decay = m_pDecayParameter->value();
-    const CSAMPLE_GAIN gate = m_pGateParameter->value();
+    const CSAMPLE_GAIN enable = static_cast<CSAMPLE_GAIN>(m_pEnableParameter->value());
+    const CSAMPLE_GAIN interval = static_cast<CSAMPLE_GAIN>(m_pIntervalParameter->value());
+    const CSAMPLE_GAIN pitch = static_cast<CSAMPLE_GAIN>(m_pPitchParameter->value());
+    const CSAMPLE_GAIN decay = static_cast<CSAMPLE_GAIN>(m_pDecayParameter->value());
+    const CSAMPLE_GAIN gate = static_cast<CSAMPLE_GAIN>(m_pGateParameter->value());
 
     // Smooth parameters
     double smoothEnable = pState->prev_enable + kSmoothCoeff * (enable - pState->prev_enable);
@@ -137,8 +137,8 @@ void BeatRepeatEffect::processChannel(
             }
         } else {
             // Repeat mode
-            CSAMPLE_GAIN volume = pState->fade_state;
-            CSAMPLE_GAIN decayPerSample = decay * 0.001f; // Slow decay
+            CSAMPLE_GAIN volume = static_cast<CSAMPLE_GAIN>(pState->fade_state);
+            CSAMPLE_GAIN decayPerSample = static_cast<CSAMPLE_GAIN>(decay * 0.001f); // Slow decay
 
             for (int i = 0; i < numSamples; ++i) {
                 // Read from loop with optional pitch shift (simple resampling)

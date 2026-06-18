@@ -136,17 +136,16 @@ void ProReverbEffect::processChannel(
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
-    const int sampleRate = engineParameters.sampleRate();
+        [[maybe_unused]] const EffectEnableState enableState,
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
     const int numSamples = engineParameters.framesPerBuffer();
 
-    const CSAMPLE_GAIN send = m_pSendParameter->value();
-    const CSAMPLE_GAIN feedback = m_pFeedbackParameter->value();
-    const CSAMPLE_GAIN size = m_pSizeParameter->value();
-    const CSAMPLE_GAIN damping = m_pDampingParameter->value();
+    const CSAMPLE_GAIN send = static_cast<CSAMPLE_GAIN>(m_pSendParameter->value());
+    const CSAMPLE_GAIN feedback = static_cast<CSAMPLE_GAIN>(m_pFeedbackParameter->value());
+    const CSAMPLE_GAIN size = static_cast<CSAMPLE_GAIN>(m_pSizeParameter->value());
+    const CSAMPLE_GAIN damping = static_cast<CSAMPLE_GAIN>(m_pDampingParameter->value());
     const int mode = static_cast<int>(m_pModeParameter->value());
-    const CSAMPLE_GAIN dryWet = m_pDryWetParameter->value();
+    const CSAMPLE_GAIN dryWet = static_cast<CSAMPLE_GAIN>(m_pDryWetParameter->value());
 
     const int safeMode = std::clamp(mode, 0, kNumModes - 1);
 
@@ -173,18 +172,18 @@ void ProReverbEffect::processChannel(
         }
 
         CSAMPLE dampedFeedback = delayedSum;
-        pState->diff_state[0] = dampedFeedback * (1.0f - damp_coeff) +
-                pState->diff_state[0] * damp_coeff;
+        pState->diff_state[0] = static_cast<CSAMPLE>(dampedFeedback * (1.0f - damp_coeff) +
+                pState->diff_state[0] * damp_coeff);
         dampedFeedback = pState->diff_state[0];
 
         for (int d = 0; d < 4; ++d) {
             CSAMPLE in = dampedFeedback;
-            CSAMPLE out = pState->diff_state[d + 1] - kDiffusionCoeff * in;
-            pState->diff_state[d + 1] = in + kDiffusionCoeff * out;
+            CSAMPLE out = static_cast<CSAMPLE>(pState->diff_state[d + 1] - kDiffusionCoeff * in);
+            pState->diff_state[d + 1] = static_cast<CSAMPLE>(in + kDiffusionCoeff * out);
             dampedFeedback = out;
         }
 
-        CSAMPLE writeSample = inputSample + dampedFeedback * effectiveFeedback;
+        CSAMPLE writeSample = static_cast<CSAMPLE>(inputSample + dampedFeedback * effectiveFeedback);
         pState->delay_buf[pState->write_position] = writeSample;
         pState->write_position = (pState->write_position + 1) % pState->delay_buf.size();
 
