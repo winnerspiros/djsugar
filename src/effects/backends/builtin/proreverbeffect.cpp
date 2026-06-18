@@ -6,6 +6,10 @@
 #include "effects/backends/effectmanifest.h"
 #include "util/sample.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace {
 // Prime number ratios for tap delays to avoid flutter echo
 constexpr int kTapRatios[] = {1, 7, 13, 19, 31, 43, 61, 73};
@@ -27,10 +31,10 @@ struct ReverbPreset {
 };
 
 constexpr ReverbPreset kPresets[] = {
-    {0.85, 0.75, 0.5, "Hall"},
-    {0.65, 0.45, 0.6, "Room"},
-    {0.75, 0.55, 0.4, "Plate"},
-    {0.55, 0.30, 0.7, "Spring"},
+        {0.85, 0.75, 0.5, "Hall"},
+        {0.65, 0.45, 0.6, "Room"},
+        {0.75, 0.55, 0.4, "Plate"},
+        {0.55, 0.30, 0.7, "Spring"},
 };
 constexpr int kNumModes = 4;
 
@@ -47,74 +51,62 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pManifest->setAuthor("DJ Sugar");
     pManifest->setVersion("1.0");
     pManifest->setDescription(QObject::tr(
-        "Professional multi-mode reverb with Hall, Room, Plate, and Spring modes. "
-        "Comparable to Rekordbox and Serato reverb quality."));
+            "Professional multi-mode reverb with Hall, Room, Plate, and Spring modes. "
+            "Comparable to Rekordbox and Serato reverb quality."));
 
     auto pSend = pManifest->addParameter();
     pSend->setId("send");
     pSend->setName(QObject::tr("Send"));
     pSend->setDescription(QObject::tr("Amount of signal sent to reverb"));
-    pSend->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pSend->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pSend->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pSend->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pSend->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pSend->setDefault(0.3);
-    pSend->setMinimum(0.0);
-    pSend->setMaximum(1.0);
+    pSend->setRange(0.0, 0.3, 1.0);
 
     auto pFeedback = pManifest->addParameter();
     pFeedback->setId("feedback");
     pFeedback->setName(QObject::tr("Feedback"));
     pFeedback->setDescription(QObject::tr("Reverb feedback amount (tail length)"));
-    pFeedback->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pFeedback->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pFeedback->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pFeedback->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pFeedback->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pFeedback->setDefault(0.6);
-    pFeedback->setMinimum(0.0);
-    pFeedback->setMaximum(0.95);
+    pFeedback->setRange(0.0, 0.6, 0.95);
 
     auto pSize = pManifest->addParameter();
     pSize->setId("size");
     pSize->setName(QObject::tr("Size"));
     pSize->setDescription(QObject::tr("Reverb room size"));
-    pSize->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pSize->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pSize->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pSize->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pSize->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pSize->setDefault(0.5);
-    pSize->setMinimum(0.1);
-    pSize->setMaximum(1.0);
+    pSize->setRange(0.1, 0.5, 1.0);
 
     auto pDamping = pManifest->addParameter();
     pDamping->setId("damping");
     pDamping->setName(QObject::tr("Damping"));
     pDamping->setDescription(QObject::tr("High frequency damping (darkness)"));
-    pDamping->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pDamping->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pDamping->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pDamping->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pDamping->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pDamping->setDefault(0.5);
-    pDamping->setMinimum(0.0);
-    pDamping->setMaximum(1.0);
+    pDamping->setRange(0.0, 0.5, 1.0);
 
     auto pMode = pManifest->addParameter();
     pMode->setId("mode");
     pMode->setName(QObject::tr("Mode"));
-    pMode->setDescription(QObject::tr("Reverb mode: Hall, Room, Plate, Spring"));
-    pMode->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pMode->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pMode->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pMode->setDescription(QObject::tr("Reverb mode: 0=Hall, 1=Room, 2=Plate, 3=Spring"));
+    pMode->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
+    pMode->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pMode->setDefault(0.0);
-    pMode->setMinimum(0.0);
-    pMode->setMaximum(3.0);
+    pMode->setRange(0.0, 0.0, 3.0);
 
     auto pDryWet = pManifest->addParameter();
     pDryWet->setId("drywet");
     pDryWet->setName(QObject::tr("Dry/Wet"));
     pDryWet->setDescription(QObject::tr("Dry/wet mix"));
-    pDryWet->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pDryWet->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pDryWet->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pDryWet->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pDryWet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pDryWet->setDefault(0.3);
-    pDryWet->setMinimum(0.0);
-    pDryWet->setMaximum(1.0);
+    pDryWet->setRange(0.0, 0.3, 1.0);
 
     return pManifest;
 }
@@ -134,15 +126,13 @@ void ProReverbEffect::updateTapDelays(
         const mixxx::EngineParameters& engineParameters,
         int size_param) {
     const int sampleRate = engineParameters.sampleRate();
-    const double baseDelay = size_param / 100.0 * sampleRate; // 0 to 1 second base
+    const double baseDelay = size_param / 100.0 * sampleRate;
 
     for (int i = 0; i < kNumTaps; ++i) {
-        // Each tap delay is base * prime_ratio / max_ratio
         double delay = baseDelay * kTapRatios[i] / kTapRatios[kNumTaps - 1];
         pState->tap_delays[i] = std::max(1, static_cast<int>(delay));
-        // Taps get progressively quieter
         pState->tap_gains[i] = static_cast<CSAMPLE>(
-            1.0 / (1.0 + i * 0.3));
+                1.0 / (1.0 + i * 0.3));
     }
 }
 
@@ -154,10 +144,8 @@ void ProReverbEffect::processChannel(
         const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
     const int sampleRate = engineParameters.sampleRate();
-    const int chCount = engineParameters.channelCount();
     const int numSamples = engineParameters.framesPerBuffer();
 
-    // Smooth parameter changes
     const CSAMPLE_GAIN send = m_pSendParameter->value();
     const CSAMPLE_GAIN feedback = m_pFeedbackParameter->value();
     const CSAMPLE_GAIN size = m_pSizeParameter->value();
@@ -165,27 +153,21 @@ void ProReverbEffect::processChannel(
     const int mode = static_cast<int>(m_pModeParameter->value());
     const CSAMPLE_GAIN dryWet = m_pDryWetParameter->value();
 
-    // Clamp mode
     const int safeMode = std::clamp(mode, 0, kNumModes - 1);
 
-    // Apply mode preset as base, then modulate with user parameters
     const double presetFeedback = kPresets[safeMode].feedback;
     const double presetDamping = kPresets[safeMode].damping;
     const double effectiveFeedback = presetFeedback * feedback;
     const double effectiveDamping = presetDamping + (damping - 0.5) * 0.3;
 
-    // Update tap delays based on size parameter
     int size_param = static_cast<int>(size * 100);
     updateTapDelays(pState, engineParameters, size_param);
 
-    // Damping filter coefficient
     const double damp_coeff = kDampingMin + effectiveDamping * (kDampingMax - kDampingMin);
 
-    // Process each sample
     for (int i = 0; i < numSamples; ++i) {
         CSAMPLE inputSample = pInput[i];
 
-        // Write to delay buffer with feedback
         CSAMPLE delayedSum = 0.0f;
         for (int t = 0; t < kNumTaps; ++t) {
             int readPos = pState->write_position - pState->tap_delays[t];
@@ -195,13 +177,11 @@ void ProReverbEffect::processChannel(
             delayedSum += pState->delay_buf[readPos] * pState->tap_gains[t];
         }
 
-        // Apply damping (one-pole low-pass on feedback)
         CSAMPLE dampedFeedback = delayedSum;
         pState->diff_state[0] = dampedFeedback * (1.0f - damp_coeff) +
-                                 pState->diff_state[0] * damp_coeff;
+                pState->diff_state[0] * damp_coeff;
         dampedFeedback = pState->diff_state[0];
 
-        // Diffusion (all-pass filters for density)
         for (int d = 0; d < 4; ++d) {
             CSAMPLE in = dampedFeedback;
             CSAMPLE out = pState->diff_state[d + 1] - kDiffusionCoeff * in;
@@ -209,17 +189,14 @@ void ProReverbEffect::processChannel(
             dampedFeedback = out;
         }
 
-        // Write to delay buffer
         CSAMPLE writeSample = inputSample + dampedFeedback * effectiveFeedback;
         pState->delay_buf[pState->write_position] = writeSample;
         pState->write_position = (pState->write_position + 1) % pState->delay_buf.size();
 
-        // Output: dry/wet mix
         CSAMPLE reverbOut = delayedSum * send;
         pOutput[i] = inputSample * (1.0f - dryWet) + reverbOut * dryWet;
     }
 
-    // Store previous values for smoothing
     pState->prev_send = send;
     pState->prev_feedback = feedback;
     pState->prev_size = size;

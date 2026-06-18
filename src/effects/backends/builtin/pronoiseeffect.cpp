@@ -11,7 +11,6 @@
 #endif
 
 namespace {
-// Simple LCG random number generator (faster than rand())
 struct FastRNG {
     uint32_t state = 12345;
 
@@ -23,12 +22,8 @@ struct FastRNG {
 
 thread_local FastRNG g_rng;
 
-// Smoothing coefficient
 constexpr double kSmoothCoeff = 0.01;
 
-} // anonymous namespace
-
-// Noise modes
 enum NoiseMode {
     WHITE = 0,
     PINK = 1,
@@ -36,22 +31,19 @@ enum NoiseMode {
     NUM_MODES = 3
 };
 
+} // anonymous namespace
+
 CSAMPLE ProNoiseEffect::generateWhiteNoise() {
-    // Uniform random between -1 and 1
     return g_rng.nextFloat() * 2.0f - 1.0f;
 }
 
 CSAMPLE ProNoiseEffect::generatePinkNoise(ProNoiseGroupState* pState) {
-    // Voss-McCartney pink noise algorithm
-    // Uses 7 generators updated at different rates
     constexpr int numGenerators = 7;
     constexpr uint32_t updateMasks[numGenerators] = {
-        0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40
-    };
+            0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40};
 
     pState->pink_index = (pState->pink_index + 1) & 0x7F;
 
-    // Update generators based on index bits
     pState->pink_running_sum = 0.0f;
     for (int i = 0; i < numGenerators; ++i) {
         if ((pState->pink_index & updateMasks[i]) == 0) {
@@ -60,10 +52,8 @@ CSAMPLE ProNoiseEffect::generatePinkNoise(ProNoiseGroupState* pState) {
         pState->pink_running_sum += pState->pink_state[i];
     }
 
-    // Add a small white noise component for smoothness
     pState->pink_running_sum += generateWhiteNoise() * 0.5f;
 
-    // Normalize to approximately -1 to 1
     return pState->pink_running_sum / static_cast<float>(numGenerators + 1);
 }
 
@@ -78,53 +68,45 @@ EffectManifestPointer ProNoiseEffect::getManifest() {
     pManifest->setAuthor("DJ Sugar");
     pManifest->setVersion("1.0");
     pManifest->setDescription(QObject::tr(
-        "Professional noise generator for DJ transitions. "
-        "Supports white noise, pink noise, and bandpass-filtered noise. "
-        "Comparable to Rekordbox's Noise effect."));
+            "Professional noise generator for DJ transitions. "
+            "Supports white noise, pink noise, and bandpass-filtered noise. "
+            "Comparable to Rekordbox's Noise effect."));
 
     auto pSend = pManifest->addParameter();
     pSend->setId("send");
     pSend->setName(QObject::tr("Send"));
     pSend->setDescription(QObject::tr("Noise volume"));
-    pSend->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pSend->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pSend->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pSend->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pSend->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pSend->setDefault(0.5);
-    pSend->setMinimum(0.0);
-    pSend->setMaximum(1.0);
+    pSend->setRange(0.0, 0.5, 1.0);
 
     auto pColor = pManifest->addParameter();
     pColor->setId("color");
     pColor->setName(QObject::tr("Color"));
     pColor->setDescription(QObject::tr("Noise color (0=white, 1=pink)"));
-    pColor->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pColor->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pColor->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pColor->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pColor->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pColor->setDefault(0.5);
-    pColor->setMinimum(0.0);
-    pColor->setMaximum(1.0);
+    pColor->setRange(0.0, 0.5, 1.0);
 
     auto pBandwidth = pManifest->addParameter();
     pBandwidth->setId("bandwidth");
     pBandwidth->setName(QObject::tr("Bandwidth"));
     pBandwidth->setDescription(QObject::tr("Filter bandwidth for bandpass mode"));
-    pBandwidth->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pBandwidth->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pBandwidth->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pBandwidth->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
+    pBandwidth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pBandwidth->setDefault(0.5);
-    pBandwidth->setMinimum(0.0);
-    pBandwidth->setMaximum(1.0);
+    pBandwidth->setRange(0.0, 0.5, 1.0);
 
     auto pMode = pManifest->addParameter();
     pMode->setId("mode");
     pMode->setName(QObject::tr("Mode"));
     pMode->setDescription(QObject::tr("Noise mode: 0=White, 1=Pink, 2=Bandpass"));
-    pMode->setControlHint(EffectManifestParameter::ControlHint::KNOB_LINEAR);
-    pMode->setSemanticHint(EffectManifestParameter::SemanticHint::UNKNOWN);
-    pMode->setUnitsHint(EffectManifestParameter::UnitsHint::UNKNOWN);
+    pMode->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
+    pMode->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     pMode->setDefault(0.0);
-    pMode->setMinimum(0.0);
-    pMode->setMaximum(2.0);
+    pMode->setRange(0.0, 0.0, 2.0);
 
     return pManifest;
 }
@@ -147,16 +129,13 @@ void ProNoiseEffect::processChannel(
     const int sampleRate = engineParameters.sampleRate();
     const int numSamples = engineParameters.framesPerBuffer();
 
-    // Get parameters
     double send = m_pSendParameter->value();
     double color = m_pColorParameter->value();
     double bandwidth = m_pBandwidthParameter->value();
     int mode = static_cast<int>(m_pModeParameter->value());
 
-    // Clamp mode
     mode = std::clamp(mode, 0, NUM_MODES - 1);
 
-    // Smooth parameters
     double smoothSend = pState->prev_send + kSmoothCoeff * (send - pState->prev_send);
     double smoothColor = pState->prev_color + kSmoothCoeff * (color - pState->prev_color);
     double smoothBandwidth = pState->prev_bandwidth + kSmoothCoeff * (bandwidth - pState->prev_bandwidth);
@@ -165,9 +144,8 @@ void ProNoiseEffect::processChannel(
     pState->prev_color = smoothColor;
     pState->prev_bandwidth = smoothBandwidth;
 
-    // Compute bandpass filter coefficients for bandpass mode
-    double bp_center = 1000.0 + smoothBandwidth * 8000.0; // 1kHz to 9kHz
-    double bp_q = 1.0 + smoothBandwidth * 4.0; // Q from 1 to 5
+    double bp_center = 1000.0 + smoothBandwidth * 8000.0;
+    double bp_q = 1.0 + smoothBandwidth * 4.0;
     double w0 = 2.0 * M_PI * bp_center / sampleRate;
     double cosw0 = std::cos(w0);
     double sinw0 = std::sin(w0);
@@ -180,7 +158,6 @@ void ProNoiseEffect::processChannel(
     double a1 = -2.0 * cosw0;
     double a2 = 1.0 - alpha;
 
-    // Normalize
     b0 /= a0;
     b1 /= a0;
     b2 /= a0;
@@ -198,11 +175,9 @@ void ProNoiseEffect::processChannel(
             noise = generatePinkNoise(pState);
             break;
         case BANDPASS: {
-            // Generate white noise then bandpass filter it
             CSAMPLE white = generateWhiteNoise();
             CSAMPLE filtered = static_cast<CSAMPLE>(
-                b0 * white + b1 * pState->filter_x1 + b2 * pState->filter_x2
-                - a1 * pState->filter_y1 - a2 * pState->filter_y2);
+                    b0 * white + b1 * pState->filter_x1 + b2 * pState->filter_x2 - a1 * pState->filter_y1 - a2 * pState->filter_y2);
             pState->filter_x2 = pState->filter_x1;
             pState->filter_x1 = white;
             pState->filter_y2 = pState->filter_y1;
@@ -215,7 +190,6 @@ void ProNoiseEffect::processChannel(
             break;
         }
 
-        // Mix noise with dry signal
         pOutput[i] = pInput[i] + noise * smoothSend;
     }
 }

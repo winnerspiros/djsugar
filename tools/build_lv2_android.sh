@@ -79,7 +79,6 @@ build_lsp_plugins() {
     echo "=== Building LSP Plugins (selected) ==="
 
     local lsp_src="${PROJECT_ROOT}/lib/lsp-plugins"
-    local lsp_build="${BUILD_DIR}/lsp-plugins"
     local lsp_install="${BUILD_DIR}/install/lsp-plugins"
 
     cd "${lsp_src}"
@@ -224,8 +223,9 @@ bundle_plugins() {
 
     # Copy LSP plugins
     if [ -d "${BUILD_DIR}/install/lsp-plugins" ]; then
+        # shellcheck disable=SC2034
         find "${BUILD_DIR}/install/lsp-plugins" -name "*.lv2" -type d | while read -r bundle; do
-            local bundle_name=$(basename "${bundle}")
+            bundle_name=$(basename "${bundle}")
             echo "  Bundling: ${bundle_name}"
             cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
             bundle_count=$((bundle_count + 1))
@@ -234,8 +234,9 @@ bundle_plugins() {
 
     # Copy Calf plugins
     if [ -d "${BUILD_DIR}/install/calf-plugins" ]; then
+        # shellcheck disable=SC2034
         find "${BUILD_DIR}/install/calf-plugins" -name "*.lv2" -type d | while read -r bundle; do
-            local bundle_name=$(basename "${bundle}")
+            bundle_name=$(basename "${bundle}")
             echo "  Bundling: ${bundle_name}"
             cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
             bundle_count=$((bundle_count + 1))
@@ -244,8 +245,9 @@ bundle_plugins() {
 
     # Copy Dragonfly plugins
     if [ -d "${BUILD_DIR}/install/dragonfly-reverb" ]; then
+        # shellcheck disable=SC2034
         find "${BUILD_DIR}/install/dragonfly-reverb" -name "*.lv2" -type d | while read -r bundle; do
-            local bundle_name=$(basename "${bundle}")
+            bundle_name=$(basename "${bundle}")
             echo "  Bundling: ${bundle_name}"
             cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
             bundle_count=$((bundle_count + 1))

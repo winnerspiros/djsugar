@@ -74,9 +74,13 @@ class ProFilterEffect : public EffectProcessorImpl<ProFilterGroupState> {
             double cutoff,
             double resonance,
             double gain,
-            double* b0, double* b1, double* b2,
-            double* a1, double* a2,
-            int mode, double sampleRate);
+            double* b0,
+            double* b1,
+            double* b2,
+            double* a1,
+            double* a2,
+            int mode,
+            double sampleRate);
 
     EngineEffectParameterPointer m_pCutoffParameter;
     EngineEffectParameterPointer m_pResonanceParameter;
