@@ -183,7 +183,8 @@ void ProReverbEffect::processChannel(
             dampedFeedback = out;
         }
 
-        CSAMPLE writeSample = static_cast<CSAMPLE>(inputSample + dampedFeedback * effectiveFeedback);
+        CSAMPLE writeSample = static_cast<CSAMPLE>(
+                inputSample + dampedFeedback * effectiveFeedback);
         pState->delay_buf[pState->write_position] = writeSample;
         pState->write_position = (pState->write_position + 1) % pState->delay_buf.size();
 
