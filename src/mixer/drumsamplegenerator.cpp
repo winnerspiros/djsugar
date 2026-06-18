@@ -18,8 +18,6 @@ namespace {
 
 constexpr double k2Pi = 6.283185307179586476925286766559;
 
-const mixxx::audio::SampleRate kDefaultSampleRate(44100);
-constexpr double kDefaultDurationSec = 0.5;
 constexpr double kNormalisationPeak = 0.90;
 
 // Write a simple 16-bit PCM mono WAV file
