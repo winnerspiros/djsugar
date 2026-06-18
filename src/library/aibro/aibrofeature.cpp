@@ -1522,9 +1522,9 @@ void AIBroFeature::updateCurrentTrackInfo() {
     TrackPointer pTrack = pPlayer->getLoadedTrack();
     if (!pTrack) {
         return;
-        m_currentTrackTitle = pTrack->getTitle();
-        m_currentTrackArtist = pTrack->getArtist();
     }
+    m_currentTrackTitle = pTrack->getTitle();
+    m_currentTrackArtist = pTrack->getArtist();
 
     int AIBroFeature::findAvailableDeck() const {
         if (!m_pPlayerManager)
