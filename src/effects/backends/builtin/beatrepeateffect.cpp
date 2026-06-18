@@ -102,7 +102,8 @@ void BeatRepeatEffect::processChannel(
 
     // Smooth parameters
     double smoothEnable = pState->prev_enable + kSmoothCoeff * (enable - pState->prev_enable);
-    double smoothInterval = pState->prev_interval + kSmoothCoeff * (interval - pState->prev_interval);
+    double smoothInterval = pState->prev_interval +
+            kSmoothCoeff * (interval - pState->prev_interval);
     double smoothPitch = pState->prev_pitch + kSmoothCoeff * (pitch - pState->prev_pitch);
 
     pState->prev_enable = smoothEnable;

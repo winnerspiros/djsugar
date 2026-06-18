@@ -139,7 +139,8 @@ void ProNoiseEffect::processChannel(
 
     double smoothSend = pState->prev_send + kSmoothCoeff * (send - pState->prev_send);
     double smoothColor = pState->prev_color + kSmoothCoeff * (color - pState->prev_color);
-    double smoothBandwidth = pState->prev_bandwidth + kSmoothCoeff * (bandwidth - pState->prev_bandwidth);
+    double smoothBandwidth = pState->prev_bandwidth +
+            kSmoothCoeff * (bandwidth - pState->prev_bandwidth);
 
     pState->prev_send = smoothSend;
     pState->prev_color = smoothColor;
@@ -177,8 +178,9 @@ void ProNoiseEffect::processChannel(
             break;
         case BANDPASS: {
             CSAMPLE white = generateWhiteNoise();
-            CSAMPLE filtered = static_cast<CSAMPLE>(
-                    b0 * white + b1 * pState->filter_x1 + b2 * pState->filter_x2 - a1 * pState->filter_y1 - a2 * pState->filter_y2);
+            CSAMPLE filtered = static_cast<CSAMPLE>(b0 * white +
+                    b1 * pState->filter_x1 + b2 * pState->filter_x2 -
+                    a1 * pState->filter_y1 - a2 * pState->filter_y2);
             pState->filter_x2 = pState->filter_x1;
             pState->filter_x1 = white;
             pState->filter_y2 = pState->filter_y1;

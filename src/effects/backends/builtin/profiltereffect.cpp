@@ -187,7 +187,8 @@ void ProFilterEffect::processChannel(
     double gain = gain_raw * 12.0;
 
     double smoothCutoff = pState->prev_cutoff + kSmoothCoeff * (cutoff - pState->prev_cutoff);
-    double smoothResonance = pState->prev_resonance + kSmoothCoeff * (resonance - pState->prev_resonance);
+    double smoothResonance = pState->prev_resonance +
+            kSmoothCoeff * (resonance - pState->prev_resonance);
     double smoothGain = pState->prev_gain + kSmoothCoeff * (gain - pState->prev_gain);
 
     pState->prev_cutoff = smoothCutoff;
@@ -202,7 +203,8 @@ void ProFilterEffect::processChannel(
         int ch = i % 2;
 
         double x0 = static_cast<double>(pInput[i]);
-        double y0 = b0 * x0 + b1 * pState->x1[ch] + b2 * pState->x2[ch] - a1 * pState->y1[ch] - a2 * pState->y2[ch];
+        double y0 = b0 * x0 + b1 * pState->x1[ch] + b2 * pState->x2[ch] -
+                a1 * pState->y1[ch] - a2 * pState->y2[ch];
 
         pState->x2[ch] = pState->x1[ch];
         pState->x1[ch] = x0;
