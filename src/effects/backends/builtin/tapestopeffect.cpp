@@ -32,7 +32,6 @@ EffectManifestPointer TapeStopEffect::getManifest() {
     pEnable->setDescription(QObject::tr("Toggle tape stop on/off"));
     pEnable->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
     pEnable->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pEnable->setDefault(0.0);
     pEnable->setRange(0.0, 0.0, 1.0);
 
     auto pSpeed = pManifest->addParameter();
@@ -41,7 +40,6 @@ EffectManifestPointer TapeStopEffect::getManifest() {
     pSpeed->setDescription(QObject::tr("Initial playback speed"));
     pSpeed->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
     pSpeed->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pSpeed->setDefault(1.0);
     pSpeed->setRange(0.1, 1.0, 2.0);
 
     auto pDuration = pManifest->addParameter();
@@ -50,7 +48,6 @@ EffectManifestPointer TapeStopEffect::getManifest() {
     pDuration->setDescription(QObject::tr("Stop duration in seconds"));
     pDuration->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pDuration->setUnitsHint(EffectManifestParameter::UnitsHint::Seconds);
-    pDuration->setDefault(1.0);
     pDuration->setRange(0.1, 1.0, 4.0);
 
     return pManifest;

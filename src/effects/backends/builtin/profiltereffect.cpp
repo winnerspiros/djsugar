@@ -124,7 +124,6 @@ EffectManifestPointer ProFilterEffect::getManifest() {
     pCutoff->setDescription(QObject::tr("Filter cutoff frequency"));
     pCutoff->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
     pCutoff->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pCutoff->setDefault(0.5);
     pCutoff->setRange(0.0, 0.5, 1.0);
 
     auto pResonance = pManifest->addParameter();
@@ -133,7 +132,6 @@ EffectManifestPointer ProFilterEffect::getManifest() {
     pResonance->setDescription(QObject::tr("Filter resonance (Q factor)"));
     pResonance->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pResonance->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pResonance->setDefault(0.3);
     pResonance->setRange(0.0, 0.3, 1.0);
 
     auto pMode = pManifest->addParameter();
@@ -142,7 +140,6 @@ EffectManifestPointer ProFilterEffect::getManifest() {
     pMode->setDescription(QObject::tr("Filter mode: 0=LPF, 1=HPF, 2=BPF, 3=Notch, 4=Peak"));
     pMode->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
     pMode->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pMode->setDefault(0.0);
     pMode->setRange(0.0, 0.0, 4.0);
 
     auto pGain = pManifest->addParameter();
@@ -151,7 +148,6 @@ EffectManifestPointer ProFilterEffect::getManifest() {
     pGain->setDescription(QObject::tr("Gain (for peaking mode, in dB)"));
     pGain->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pGain->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pGain->setDefault(0.0);
     pGain->setRange(-1.0, 0.0, 1.0);
 
     return pManifest;

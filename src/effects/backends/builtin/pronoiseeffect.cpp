@@ -79,7 +79,6 @@ EffectManifestPointer ProNoiseEffect::getManifest() {
     pSend->setDescription(QObject::tr("Noise volume"));
     pSend->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pSend->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pSend->setDefault(0.5);
     pSend->setRange(0.0, 0.5, 1.0);
 
     auto pColor = pManifest->addParameter();
@@ -88,7 +87,6 @@ EffectManifestPointer ProNoiseEffect::getManifest() {
     pColor->setDescription(QObject::tr("Noise color (0=white, 1=pink)"));
     pColor->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pColor->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pColor->setDefault(0.5);
     pColor->setRange(0.0, 0.5, 1.0);
 
     auto pBandwidth = pManifest->addParameter();
@@ -97,7 +95,6 @@ EffectManifestPointer ProNoiseEffect::getManifest() {
     pBandwidth->setDescription(QObject::tr("Filter bandwidth for bandpass mode"));
     pBandwidth->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pBandwidth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pBandwidth->setDefault(0.5);
     pBandwidth->setRange(0.0, 0.5, 1.0);
 
     auto pMode = pManifest->addParameter();
@@ -106,7 +103,6 @@ EffectManifestPointer ProNoiseEffect::getManifest() {
     pMode->setDescription(QObject::tr("Noise mode: 0=White, 1=Pink, 2=Bandpass"));
     pMode->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
     pMode->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pMode->setDefault(0.0);
     pMode->setRange(0.0, 0.0, 2.0);
 
     return pManifest;

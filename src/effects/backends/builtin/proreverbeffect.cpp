@@ -61,7 +61,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pSend->setDescription(QObject::tr("Amount of signal sent to reverb"));
     pSend->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pSend->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pSend->setDefault(0.3);
     pSend->setRange(0.0, 0.3, 1.0);
 
     auto pFeedback = pManifest->addParameter();
@@ -70,7 +69,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pFeedback->setDescription(QObject::tr("Reverb feedback amount (tail length)"));
     pFeedback->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pFeedback->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pFeedback->setDefault(0.6);
     pFeedback->setRange(0.0, 0.6, 0.95);
 
     auto pSize = pManifest->addParameter();
@@ -79,7 +77,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pSize->setDescription(QObject::tr("Reverb room size"));
     pSize->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pSize->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pSize->setDefault(0.5);
     pSize->setRange(0.1, 0.5, 1.0);
 
     auto pDamping = pManifest->addParameter();
@@ -88,7 +85,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pDamping->setDescription(QObject::tr("High frequency damping (darkness)"));
     pDamping->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pDamping->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pDamping->setDefault(0.5);
     pDamping->setRange(0.0, 0.5, 1.0);
 
     auto pMode = pManifest->addParameter();
@@ -97,7 +93,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pMode->setDescription(QObject::tr("Reverb mode: 0=Hall, 1=Room, 2=Plate, 3=Spring"));
     pMode->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
     pMode->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pMode->setDefault(0.0);
     pMode->setRange(0.0, 0.0, 3.0);
 
     auto pDryWet = pManifest->addParameter();
@@ -106,7 +101,6 @@ EffectManifestPointer ProReverbEffect::getManifest() {
     pDryWet->setDescription(QObject::tr("Dry/wet mix"));
     pDryWet->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pDryWet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pDryWet->setDefault(0.3);
     pDryWet->setRange(0.0, 0.3, 1.0);
 
     return pManifest;

@@ -32,7 +32,6 @@ EffectManifestPointer BeatRepeatEffect::getManifest() {
     pEnable->setDescription(QObject::tr("Toggle beat repeat on/off"));
     pEnable->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
     pEnable->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pEnable->setDefault(0.0);
     pEnable->setRange(0.0, 0.0, 1.0);
 
     auto pInterval = pManifest->addParameter();
@@ -41,7 +40,6 @@ EffectManifestPointer BeatRepeatEffect::getManifest() {
     pInterval->setDescription(QObject::tr("Loop length in beats"));
     pInterval->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
     pInterval->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    pInterval->setDefault(1.0);
     pInterval->setRange(0.25, 1.0, 4.0);
 
     auto pPitch = pManifest->addParameter();
@@ -50,7 +48,6 @@ EffectManifestPointer BeatRepeatEffect::getManifest() {
     pPitch->setDescription(QObject::tr("Pitch shift for repeats (octaves)"));
     pPitch->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pPitch->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pPitch->setDefault(0.0);
     pPitch->setRange(-1.0, 0.0, 1.0);
 
     auto pDecay = pManifest->addParameter();
@@ -59,7 +56,6 @@ EffectManifestPointer BeatRepeatEffect::getManifest() {
     pDecay->setDescription(QObject::tr("Volume decay per repeat"));
     pDecay->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     pDecay->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pDecay->setDefault(0.0);
     pDecay->setRange(0.0, 0.0, 1.0);
 
     auto pGate = pManifest->addParameter();
@@ -68,7 +64,6 @@ EffectManifestPointer BeatRepeatEffect::getManifest() {
     pGate->setDescription(QObject::tr("Gate the repeats (stutter effect)"));
     pGate->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
     pGate->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pGate->setDefault(0.0);
     pGate->setRange(0.0, 0.0, 1.0);
 
     return pManifest;
