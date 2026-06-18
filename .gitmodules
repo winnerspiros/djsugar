@@ -7,3 +7,6 @@
 [submodule "lib/dragonfly-reverb"]
 	path = lib/dragonfly-reverb
 	url = https://github.com/michaelwillis/dragonfly-reverb.git
+[submodule "lib/calf-plugins"]
+	path = lib/calf-plugins
+	url = https://github.com/calf-studio-gear/calf.git

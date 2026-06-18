@@ -1329,6 +1329,9 @@ add_library(
   src/effects/backends/builtin/glitcheffect.cpp
   src/effects/backends/builtin/graphiceqeffect.cpp
   src/effects/backends/builtin/linkwitzriley8eqeffect.cpp
+  src/effects/backends/builtin/proreverbeffect.cpp
+  src/effects/backends/builtin/profiltereffect.cpp
+  src/effects/backends/builtin/pronoiseeffect.cpp
   src/effects/backends/builtin/loudnesscontoureffect.cpp
   src/effects/backends/builtin/metronomeeffect.cpp
   src/effects/backends/builtin/metronomeclick.cpp
@@ -2531,6 +2534,25 @@ if(QT6)
     # stable and produces measurably smaller+faster binaries.
     target_compile_options(mixxx-lib PUBLIC -flto=full)
     target_link_options(mixxx-lib PUBLIC -flto=full)
+
+    # ─── LV2 plugin assets ───────────────────────────────────────────────
+    # Bundle pre-built LV2 plugins into the APK assets so the LV2 backend
+    # can discover them at runtime via the LV2_PATH environment variable.
+    # The plugins are built by tools/build_lv2_android.sh and placed in
+    # packaging/android/assets/lv2/ as .lv2 bundle directories.
+    set(LV2_ASSETS_DIR "${CMAKE_SOURCE_DIR}/packaging/android/assets/lv2")
+    if(EXISTS "${LV2_ASSETS_DIR}")
+        file(GLOB LV2_BUNDLES RELATIVE "${LV2_ASSETS_DIR}" "${LV2_ASSETS_DIR}/*")
+        if(LV2_BUNDLES)
+            message(STATUS "LV2 plugin assets found: ${LV2_BUNDLES}")
+            # Qt's ANDROID_PACKAGE_SOURCE_DIR automatically picks up assets/
+            # No extra copy step needed — just verify the directory exists.
+        else()
+            message(WARNING "LV2 assets directory is empty: ${LV2_ASSETS_DIR}")
+        endif()
+    else()
+        message(STATUS "LV2 assets directory not found (run tools/build_lv2_android.sh): ${LV2_ASSETS_DIR}")
+    endif()
 
     # Locate the NDK's bundled libomp.so dynamically. The path used to be
     # hardcoded to `lib/clang/18/...` which broke every time the NDK was

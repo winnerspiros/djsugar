@@ -13,6 +13,9 @@
 #include "effects/backends/builtin/moogladder4filtereffect.h"
 #include "effects/backends/builtin/parametriceqeffect.h"
 #include "effects/backends/builtin/threebandbiquadeqeffect.h"
+#include "effects/backends/builtin/proreverbeffect.h"
+#include "effects/backends/builtin/profiltereffect.h"
+#include "effects/backends/builtin/pronoiseeffect.h"
 #ifndef __MACAPPSTORE__
 #include "effects/backends/builtin/reverbeffect.h"
 #endif
@@ -57,6 +60,10 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<EchoEffect>();
     registerEffect<DJEchoEffect>();
     registerEffect<AutoPanEffect>();
+    // DJ Sugar Pro Effects
+    registerEffect<ProReverbEffect>();
+    registerEffect<ProFilterEffect>();
+    registerEffect<ProNoiseEffect>();
 #ifndef __MACAPPSTORE__
     registerEffect<ReverbEffect>();
 #endif
