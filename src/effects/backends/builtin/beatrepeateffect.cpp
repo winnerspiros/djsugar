@@ -9,7 +9,6 @@
 
 namespace {
 constexpr double kSmoothCoeff = 0.02;
-constexpr int kMaxRepeatCount = 32;
 } // anonymous namespace
 
 QString BeatRepeatEffect::getId() {

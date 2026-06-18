@@ -9,7 +9,6 @@
 
 namespace {
 constexpr double kMinSpeed = 0.01;
-constexpr double kMaxSpeed = 1.0;
 } // anonymous namespace
 
 QString TapeStopEffect::getId() {
