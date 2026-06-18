@@ -150,7 +150,7 @@ void DJEchoEffect::processChannel(
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        const EffectEnableState enableState,
+        [[maybe_unused]] const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
     double period = m_pDelayParameter->value();
     const auto send_current = static_cast<CSAMPLE_GAIN>(m_pSendParameter->value());
@@ -182,7 +182,8 @@ void DJEchoEffect::processChannel(
         period = std::max(period, 1 / 8.0);
         delay_seconds = period;
     }
-    delay_seconds = std::min(delay_seconds, static_cast<double>(DJEchoGroupState::kMaxDelaySeconds));
+    delay_seconds = std::min(delay_seconds,
+            static_cast<double>(DJEchoGroupState::kMaxDelaySeconds));
     VERIFY_OR_DEBUG_ASSERT(delay_seconds > 0) {
         delay_seconds = 1 / engineParameters.sampleRate();
     }
@@ -247,20 +248,24 @@ void DJEchoEffect::processChannel(
         CSAMPLE filteredRight = bufferedSampleRight;
 
         // Low-pass filter for warmth (one-pole)
-        pGroupState->feedback_lp_state[0] += lp_alpha * (filteredLeft - pGroupState->feedback_lp_state[0]);
+        pGroupState->feedback_lp_state[0] +=
+                lp_alpha * (filteredLeft - pGroupState->feedback_lp_state[0]);
         filteredLeft = pGroupState->feedback_lp_state[0];
 
         if (chCount > 1) {
-            pGroupState->feedback_lp_state[1] += lp_alpha * (filteredRight - pGroupState->feedback_lp_state[1]);
+            pGroupState->feedback_lp_state[1] += lp_alpha *
+                    (filteredRight - pGroupState->feedback_lp_state[1]);
             filteredRight = pGroupState->feedback_lp_state[1];
         }
 
         // High-pass filter to remove low-end buildup (one-pole)
-        pGroupState->feedback_filter_state[0] += hp_alpha * (filteredLeft - pGroupState->feedback_filter_state[0]);
+        pGroupState->feedback_filter_state[0] += hp_alpha *
+                (filteredLeft - pGroupState->feedback_filter_state[0]);
         filteredLeft -= pGroupState->feedback_filter_state[0];
 
         if (chCount > 1) {
-            pGroupState->feedback_filter_state[1] += hp_alpha * (filteredRight - pGroupState->feedback_filter_state[1]);
+            pGroupState->feedback_filter_state[1] += hp_alpha *
+                    (filteredRight - pGroupState->feedback_filter_state[1]);
             filteredRight -= pGroupState->feedback_filter_state[1];
         }
 
@@ -279,7 +284,7 @@ void DJEchoEffect::processChannel(
 
         // Ping-pong: swap channels based on pingpong_frac
         if (chCount > 1 && pingpong_frac > 0) {
-            CSAMPLE_GAIN straight = 1.0 - pingpong_frac;
+            CSAMPLE_GAIN straight = static_cast<CSAMPLE_GAIN>(1.0 - pingpong_frac);
             CSAMPLE_GAIN crossed = pingpong_frac;
             CSAMPLE origLeft = writeLeft;
             CSAMPLE origRight = writeRight;
