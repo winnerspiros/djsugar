@@ -37,11 +37,14 @@ class WGLWidget : public QWidget {
     virtual void paintGL() {
     }
     virtual void resizeGL(int w, int h) {
+        Q_UNUSED(w);
+        Q_UNUSED(h);
     }
     virtual void initializeGL() {
     }
 
     void setTrackDropTarget(TrackDropTarget* pTarget) {
+        Q_UNUSED(pTarget);
     }
     TrackDropTarget* trackDropTarget() const {
         return nullptr;
