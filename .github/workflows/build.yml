@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=OFF -DQOPENGL=OFF
+              -DLILV=ON -DQOPENGL=OFF
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
@@ -318,7 +318,6 @@ jobs:
           # long tag names from git describe. We fetch full history
           # manually below for `git describe` to work.
           fetch-depth: 1
-          submodules: ${{ startsWith(matrix.artifacts_slug, 'android') && 'recursive' || 'false' }}
 
       - name: "[Windows] Enable long paths in git"
         if: runner.os == 'Windows'
@@ -507,6 +506,8 @@ jobs:
         if: startsWith(matrix.artifacts_slug, 'android')
         run: |
           set -e
+          # Init submodules
+          git submodule update --init --recursive lib/calf-plugins lib/dragonfly-reverb 2>/dev/null || true
           NDK="${ANDROID_NDK_HOME}"
           TOOLCHAIN="${NDK}/build/cmake/android.toolchain.cmake"
           TC_PREFIX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
@@ -517,23 +518,16 @@ jobs:
           export STRIP="${TC_PREFIX}/bin/llvm-strip"
           JOBS=$(nproc)
           BUILD_DIR="${{ github.workspace }}/build-lv2-android"
-          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_OUTPUT}"
+          ASSETS_DIR="${{ github.workspace }}/packaging/android/assets/lv2"
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}" "${ASSETS_DIR}"
 
           # Install LV2 headers into NDK sysroot
           NDK_SYSROOT="${TC_PREFIX}/sysroot"
-          for src in /usr/include/lv2 /usr/include/lilv-0; do
-            if [ -d "$src" ]; then
-              dest="${NDK_SYSROOT}/usr/include/$(basename "$src")"
-              mkdir -p "$(dirname "$dest")"
-              cp -r "$src" "$dest"
-            fi
-          done
-          if [ -f /usr/include/lv2.h ]; then
-            mkdir -p "${NDK_SYSROOT}/usr/include"
-            cp /usr/include/lv2.h "${NDK_SYSROOT}/usr/include/"
-          fi
+          mkdir -p "${NDK_SYSROOT}/usr/include"
+          cp -r /usr/include/lv2 "${NDK_SYSROOT}/usr/include/" 2>/dev/null || true
+          cp -r /usr/include/lilv-0 "${NDK_SYSROOT}/usr/include/" 2>/dev/null || true
+          cp /usr/include/lv2.h "${NDK_SYSROOT}/usr/include/" 2>/dev/null || true
 
           # Build expat for Android (required by Calf)
           echo "=== Building expat ==="
