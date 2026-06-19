@@ -165,8 +165,8 @@ jobs:
 
           # Copy LV2 bundles
           mkdir -p "${BUILD_DIR}/install/dragonfly-reverb"
-          for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
-                       dragonfly-plate-reverb dragonfly-early-reflections; do
+          for plugin in DragonflyHallReverb DragonflyRoomReverb \
+                       DragonflyPlateReverb DragonflyEarlyReflections; do
             if [ -d "bin/${plugin}.lv2" ]; then
               echo "  Bundling: ${plugin}"
               cp -r "bin/${plugin}.lv2" "${BUILD_DIR}/install/dragonfly-reverb/"
