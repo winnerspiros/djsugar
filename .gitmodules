@@ -1,9 +1,6 @@
 [submodule "lib/lsp-plugins"]
 	path = lib/lsp-plugins
 	url = https://github.com/lsp-plugins/lsp-plugins.git
-[submodule "lib/opiqo-plugins"]
-	path = lib/opiqo-plugins
-	url = https://github.com/djshaji/opiqo-plugins.git
 [submodule "lib/dragonfly-reverb"]
 	path = lib/dragonfly-reverb
 	url = https://github.com/michaelwillis/dragonfly-reverb.git

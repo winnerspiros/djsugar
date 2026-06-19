@@ -4,11 +4,19 @@ on:
   push:
     branches:
       - main
+      - "fix/**"
+      - "feat/**"
     paths:
       - "lib/lsp-plugins/**"
       - "lib/calf-plugins/**"
       - "lib/dragonfly-reverb/**"
-      - "tools/build_lv2_android.sh"
+      - ".github/workflows/build_lv2.yml"
+  pull_request:
+    paths:
+      - "lib/lsp-plugins/**"
+      - "lib/calf-plugins/**"
+      - "lib/dragonfly-reverb/**"
+      - ".github/workflows/build_lv2.yml"
 
 jobs:
   build-lv2:
@@ -39,7 +47,6 @@ jobs:
           mv /opt/android-ndk-r27c /opt/android-ndk
           rm ndk.zip
           echo "ANDROID_NDK_HOME=/opt/android-ndk" >> "$GITHUB_ENV"
-          ls /opt/android-ndk/
 
       - name: Build LV2 plugins for Android ARM64
         env:
@@ -61,6 +68,19 @@ jobs:
           ANDROID_STL="c++_shared"
           JOBS=$(nproc)
 
+          # NDK toolchain binaries for cross-compilation
+          TC_PREFIX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
+          export CC="${TC_PREFIX}/bin/aarch64-linux-android35-clang"
+          export CXX="${TC_PREFIX}/bin/aarch64-linux-android35-clang++"
+          export AR="${TC_PREFIX}/bin/llvm-ar"
+          export RANLIB="${TC_PREFIX}/bin/llvm-ranlib"
+          export STRIP="${TC_PREFIX}/bin/llvm-strip"
+
+          # ---------------------------------------------------------------
+          # 1. Calf Studio Gear (CMake-based)
+          #    DJ-relevant: compressor, flanger, chorus, filter, delay,
+          #    reverb, multiband compressor, limiter, deesser
+          # ---------------------------------------------------------------
           echo "=== Building Calf Studio Gear (LV2 only) ==="
           cd "${PROJECT_ROOT}/lib/calf-plugins"
           mkdir -p build-android && cd build-android
@@ -85,22 +105,75 @@ jobs:
           cmake --build . --parallel "${JOBS}"
           cmake --install .
 
+          # ---------------------------------------------------------------
+          # 2. Dragonfly Reverb (DPF Makefile-based)
+          #    Plugins: Hall, Plate, Room, Early Reflections
+          # ---------------------------------------------------------------
           echo "=== Building Dragonfly Reverb ==="
           cd "${PROJECT_ROOT}/lib/dragonfly-reverb"
-          mkdir -p build-android && cd build-android
 
-          cmake .. \
-            -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-            -DANDROID_ABI="${ANDROID_ABI}" \
-            -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
-            -DANDROID_STL="${ANDROID_STL}" \
-            -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install/dragonfly-reverb"
+          # Build with DPF Makefile, cross-compiling via CC/CXX
+          make -j"${JOBS}" \
+            CC="${CC}" \
+            CXX="${CXX}" \
+            AR="${AR}" \
+            RANLIB="${RANLIB}" \
+            STRIP="${STRIP}" \
+            CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
+            CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
+            LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
+            CROSS_COMPILING=true \
+            plugins
 
-          cmake --build . --parallel "${JOBS}"
-          cmake --install .
+          # Copy LV2 bundles
+          mkdir -p "${BUILD_DIR}/install/dragonfly-reverb"
+          for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
+                       dragonfly-plate-reverb dragonfly-early-reflections; do
+            if [ -d "bin/${plugin}.lv2" ]; then
+              echo "  Bundling: ${plugin}"
+              cp -r "bin/${plugin}.lv2" "${BUILD_DIR}/install/dragonfly-reverb/"
+            fi
+          done
 
+          # ---------------------------------------------------------------
+          # 3. LSP Plugins (custom Makefile-based)
+          #    DJ-relevant: delay, chorus, flanger, phaser, filter,
+          #    compressor, limiter, reverb, slap-delay, art-delay
+          # ---------------------------------------------------------------
+          echo "=== Building LSP Plugins ==="
+          cd "${PROJECT_ROOT}/lib/lsp-plugins"
+
+          # Fetch internal dependencies (lsp-common-lib, lsp-dsp-lib, etc.)
+          make fetch
+
+          # Configure for cross-compilation
+          make config \
+            ARCHITECTURE=aarch64 \
+            CROSS_COMPILE=yes \
+            CC="${CC}" \
+            CXX="${CXX}" \
+            AR="${AR}" \
+            PKG_CONFIG=/bin/false
+
+          # Build all LV2 plugins
+          make -j"${JOBS}" \
+            BUILD_FEATURES="lv2" \
+            CC="${CC}" \
+            CXX="${CXX}" \
+            AR="${AR}"
+
+          # Copy LV2 bundles
+          mkdir -p "${BUILD_DIR}/install/lsp-plugins"
+          find bin/ -maxdepth 1 -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle; do
+            name="$(basename "${bundle}")"
+            echo "  Bundling: ${name}"
+            cp -r "${bundle}" "${BUILD_DIR}/install/lsp-plugins/"
+          done
+
+          # ---------------------------------------------------------------
+          # Bundle all LV2 plugins into assets directory
+          # ---------------------------------------------------------------
+          echo ""
           echo "=== Bundling LV2 plugins ==="
           find "${BUILD_DIR}/install" -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle; do
             name="$(basename "${bundle}")"
