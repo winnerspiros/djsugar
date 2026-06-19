@@ -618,6 +618,7 @@ jobs:
           -DQTKEYCHAIN=ON
           -DVINYLCONTROL=ON
           -DCMAKE_VERBOSE_MAKEFILE=OFF
+          -DBUILD_DIR="${{ github.workspace }}/build-lv2-android"
           ${{ matrix.cmake_args }}
           -L
           ..

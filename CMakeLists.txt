@@ -5318,9 +5318,9 @@ if(HSS1394)
 endif()
 
 # Lilv (LV2)
-if(ANDROID AND DEFINED ENV{BUILD_DIR})
+if(ANDROID AND DEFINED BUILD_DIR)
   # Use lilv built for Android from the CI build step
-  set(ANDROID_LV2_INSTALL "$ENV{BUILD_DIR}/install/lv2-deps")
+  set(ANDROID_LV2_INSTALL "${BUILD_DIR}/install/lv2-deps")
   if(IS_DIRECTORY "${ANDROID_LV2_INSTALL}")
     set(lilv_INCLUDE_DIR "${ANDROID_LV2_INSTALL}/include")
     find_library(
@@ -5359,13 +5359,13 @@ if(LILV)
   target_compile_definitions(mixxx-lib PUBLIC __LILV__)
   if(
     ANDROID
-    AND DEFINED ENV{BUILD_DIR}
-    AND EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/lib"
+    AND DEFINED BUILD_DIR
+    AND EXISTS "${BUILD_DIR}/install/lv2-deps/lib"
   )
     # Link against Android-built lilv and dependencies
     target_link_directories(
       mixxx-lib
-      PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/lib"
+      PRIVATE "${BUILD_DIR}/install/lv2-deps/lib"
     )
     target_link_libraries(
       mixxx-lib
@@ -5373,18 +5373,18 @@ if(LILV)
     )
     target_include_directories(
       mixxx-lib
-      PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include"
+      PRIVATE "${BUILD_DIR}/install/lv2-deps/include"
     )
-    if(EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/include/serd-0")
+    if(EXISTS "${BUILD_DIR}/install/lv2-deps/include/serd-0")
       target_include_directories(
         mixxx-lib
-        PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/serd-0"
+        PRIVATE "${BUILD_DIR}/install/lv2-deps/include/serd-0"
       )
     endif()
-    if(EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/include/lilv-0")
+    if(EXISTS "${BUILD_DIR}/install/lv2-deps/include/lilv-0")
       target_include_directories(
         mixxx-lib
-        PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/lilv-0"
+        PRIVATE "${BUILD_DIR}/install/lv2-deps/include/lilv-0"
       )
     endif()
   else()
