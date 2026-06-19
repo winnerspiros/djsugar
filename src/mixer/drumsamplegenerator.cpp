@@ -39,39 +39,66 @@ bool writeWav16(const std::vector<CSAMPLE>& samples,
     };
 
     // RIFF header
-    if (!writeExact("RIFF", 4)) return false;
+    if (!writeExact("RIFF", 4)) {
+        return false;
+    }
     qint32 riffSize = qToLittleEndian(fileSize);
-    if (!writeExact(&riffSize, 4)) return false;
-    if (!writeExact("WAVE", 4)) return false;
+    if (!writeExact(&riffSize, 4)) {
+        return false;
+    }
+    if (!writeExact("WAVE", 4)) {
+        return false;
+    }
 
     // fmt chunk
-    if (!writeExact("fmt ", 4)) return false;
+    if (!writeExact("fmt ", 4)) {
+        return false;
+    }
     qint32 fmtSize = qToLittleEndian(16);
-    if (!writeExact(&fmtSize, 4)) return false;
+    if (!writeExact(&fmtSize, 4)) {
+        return false;
+    }
     qint16 audioFormat = qToLittleEndian(static_cast<qint16>(1)); // PCM
-    if (!writeExact(&audioFormat, 2)) return false;
+    if (!writeExact(&audioFormat, 2)) {
+        return false;
+    }
     qint16 numChannels = qToLittleEndian(static_cast<qint16>(1)); // mono
-    if (!writeExact(&numChannels, 2)) return false;
+    if (!writeExact(&numChannels, 2)) {
+        return false;
+    }
     qint32 sampleRateLE = qToLittleEndian(static_cast<qint32>(sampleRate));
-    if (!writeExact(&sampleRateLE, 4)) return false;
+    if (!writeExact(&sampleRateLE, 4)) {
+        return false;
+    }
     qint32 byteRate = qToLittleEndian(static_cast<qint32>(sampleRate * bytesPerSample));
-    if (!writeExact(&byteRate, 4)) return false;
+    if (!writeExact(&byteRate, 4)) {
+        return false;
+    }
     qint16 blockAlign = qToLittleEndian(static_cast<qint16>(bytesPerSample));
-    if (!writeExact(&blockAlign, 2)) return false;
+    if (!writeExact(&blockAlign, 2)) {
+        return false;
+    }
     qint16 bitsPerSample = qToLittleEndian(static_cast<qint16>(16));
-    if (!writeExact(&bitsPerSample, 2)) return false;
+    if (!writeExact(&bitsPerSample, 2)) {
+        return false;
+    }
 
     // data chunk
-    if (!writeExact("data", 4)) return false;
+    if (!writeExact("data", 4)) {
+        return false;
+    }
     qint32 dataSizeLE = qToLittleEndian(static_cast<qint32>(dataSize));
-    if (!writeExact(&dataSizeLE, 4)) return false;
+    if (!writeExact(&dataSizeLE, 4)) {
+        return false;
+    }
 
     // Write samples as 16-bit PCM
     for (const CSAMPLE& s : samples) {
         double clamped = std::max(-1.0, std::min(1.0, static_cast<double>(s)));
         qint16 sample = static_cast<qint16>(clamped * 32767.0);
         sample = qToLittleEndian(sample);
-        if (!writeExact(&sample, 2)) return false;
+        if (!writeExact(&sample, 2))
+            return false;
     }
 
     file.close();
