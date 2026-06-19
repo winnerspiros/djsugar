@@ -33,7 +33,8 @@ LV2Backend::LV2Backend() {
                         QFile::copy(src + "/" + file, dst + "/" + file);
                     }
                     // Copy manifest.ttl and plugin.so files
-                    for (const QString& subdir : srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                    for (const QString& subdir : srcDir.entryList(
+                                 QDir::Dirs | QDir::NoDotAndDotDot)) {
                         QString subDst = dst + "/" + subdir;
                         QDir(subDst).mkpath(".");
                         QDir srcSubDir(src + "/" + subdir);

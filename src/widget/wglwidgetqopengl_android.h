@@ -16,27 +16,50 @@ class TrackDropTarget;
 
 class WGLWidget : public QWidget {
   public:
-    WGLWidget(QWidget* parent) : QWidget(parent) {}
+    WGLWidget(QWidget* parent)
+            : QWidget(parent) {
+    }
     ~WGLWidget() = default;
 
-    bool isContextValid() const { return false; }
-    bool shouldRender() const { return false; }
-    void makeCurrentIfNeeded() {}
-    void doneCurrent() {}
-    void swapBuffers() {}
+    bool isContextValid() const {
+        return false;
+    }
+    bool shouldRender() const {
+        return false;
+    }
+    void makeCurrentIfNeeded() {
+    }
+    void doneCurrent() {
+    }
+    void swapBuffers() {
+    }
 
-    virtual void paintGL() {}
-    virtual void resizeGL(int w, int h) {}
-    virtual void initializeGL() {}
+    virtual void paintGL() {
+    }
+    virtual void resizeGL(int w, int h) {
+    }
+    virtual void initializeGL() {
+    }
 
-    void setTrackDropTarget(TrackDropTarget* pTarget) {}
-    TrackDropTarget* trackDropTarget() const { return nullptr; }
+    void setTrackDropTarget(TrackDropTarget* pTarget) {
+    }
+    TrackDropTarget* trackDropTarget() const {
+        return nullptr;
+    }
 
-    void* getOpenGLWindow() const { return nullptr; }
+    void* getOpenGLWindow() const {
+        return nullptr;
+    }
 
   protected:
-    void showEvent(QShowEvent* event) override { QWidget::showEvent(event); }
-    void resizeEvent(QResizeEvent* event) override { QWidget::resizeEvent(event); }
+    void showEvent(QShowEvent* event) override {
+        QWidget::showEvent(event);
+    }
+    void resizeEvent(QResizeEvent* event) override {
+        QWidget::resizeEvent(event);
+    }
 
-    QPaintDevice* paintDevice() { return nullptr; }
+    QPaintDevice* paintDevice() {
+        return nullptr;
+    }
 };

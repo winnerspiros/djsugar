@@ -5323,7 +5323,12 @@ if(ANDROID AND DEFINED ENV{BUILD_DIR})
   set(ANDROID_LV2_INSTALL "$ENV{BUILD_DIR}/install/lv2-deps")
   if(IS_DIRECTORY "${ANDROID_LV2_INSTALL}")
     set(lilv_INCLUDE_DIR "${ANDROID_LV2_INSTALL}/include")
-    find_library(lilv_LIBRARY NAMES lilv-0 lilv PATHS "${ANDROID_LV2_INSTALL}/lib" NO_DEFAULT_PATH)
+    find_library(
+      lilv_LIBRARY
+      NAMES lilv-0 lilv
+      PATHS "${ANDROID_LV2_INSTALL}/lib"
+      NO_DEFAULT_PATH
+    )
     if(lilv_LIBRARY)
       set(lilv_FOUND TRUE)
       set(LILV_FOUND TRUE)
@@ -5352,16 +5357,35 @@ if(LILV)
       src/effects/backends/lv2/lv2manifest.cpp
   )
   target_compile_definitions(mixxx-lib PUBLIC __LILV__)
-  if(ANDROID AND DEFINED ENV{BUILD_DIR} AND EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/lib")
+  if(
+    ANDROID
+    AND DEFINED ENV{BUILD_DIR}
+    AND EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/lib"
+  )
     # Link against Android-built lilv and dependencies
-    target_link_directories(mixxx-lib PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/lib")
-    target_link_libraries(mixxx-lib PRIVATE lilv-0 serd-0 sord-0 sratom-0 lv2)
-    target_include_directories(mixxx-lib PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include")
+    target_link_directories(
+      mixxx-lib
+      PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/lib"
+    )
+    target_link_libraries(
+      mixxx-lib
+      PRIVATE lilv-0 serd-0 sord-0 sratom-0 lv2
+    )
+    target_include_directories(
+      mixxx-lib
+      PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include"
+    )
     if(EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/include/serd-0")
-      target_include_directories(mixxx-lib PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/serd-0")
+      target_include_directories(
+        mixxx-lib
+        PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/serd-0"
+      )
     endif()
     if(EXISTS "$ENV{BUILD_DIR}/install/lv2-deps/include/lilv-0")
-      target_include_directories(mixxx-lib PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/lilv-0")
+      target_include_directories(
+        mixxx-lib
+        PRIVATE "$ENV{BUILD_DIR}/install/lv2-deps/include/lilv-0"
+      )
     endif()
   else()
     target_link_libraries(mixxx-lib PRIVATE lilv::lilv)
