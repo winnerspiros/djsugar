@@ -551,6 +551,8 @@ jobs:
           mkdir -p "${LV2_INSTALL}"
 
           # Build serd
+          echo "=== Building serd ==="
+          rm -rf /tmp/serd-src
           git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src
           cd /tmp/serd-src
           mkdir -p build-android && cd build-android
@@ -564,6 +566,8 @@ jobs:
           cmake --install .
 
           # Build sord
+          echo "=== Building sord ==="
+          rm -rf /tmp/sord-src
           git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src
           cd /tmp/sord-src
           mkdir -p build-android && cd build-android
@@ -577,6 +581,8 @@ jobs:
           cmake --install .
 
           # Build sratom
+          echo "=== Building sratom ==="
+          rm -rf /tmp/sratom-src
           git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src
           cd /tmp/sratom-src
           mkdir -p build-android && cd build-android
@@ -590,6 +596,8 @@ jobs:
           cmake --install .
 
           # Build lilv
+          echo "=== Building lilv ==="
+          rm -rf /tmp/lilv-src
           git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src
           cd /tmp/lilv-src
           mkdir -p build-android && cd build-android
