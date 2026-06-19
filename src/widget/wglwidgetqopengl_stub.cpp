@@ -1,11 +1,10 @@
 // Stub implementations for WGLWidget on Android (QOPENGL=OFF)
-// This file provides empty implementations for the virtual methods declared
-// in wglwidgetqopengl.h so the linker can resolve symbols.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-private-field"
-#endif
-
+// On Android, the full class is defined in wglwidgetqopengl_android.h
+// so this file is intentionally left empty to avoid redefinition errors.
+#ifndef Q_OS_ANDROID
+// This file is only compiled on non-Android platforms where
+// wglwidgetqopengl.h is included but the linker still needs
+// the virtual method implementations.
 #include "widget/wglwidget.h"
 
 WGLWidget::WGLWidget(QWidget* parent)
@@ -70,7 +69,4 @@ void WGLWidget::resizeEvent(QResizeEvent* event) {
 QPaintDevice* WGLWidget::paintDevice() {
     return nullptr;
 }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+#endif // !Q_OS_ANDROID
