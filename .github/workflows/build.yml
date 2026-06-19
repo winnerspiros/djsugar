@@ -553,7 +553,8 @@ jobs:
           # Build serd
           echo "=== Building serd ==="
           rm -rf /tmp/serd-src
-          git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src
+          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src && break || sleep 5; done
+          if [ ! -f /tmp/serd-src/CMakeLists.txt ]; then echo "FATAL: serd clone failed"; exit 1; fi
           cd /tmp/serd-src
           mkdir -p build-android && cd build-android
           cmake .. \
@@ -568,7 +569,8 @@ jobs:
           # Build sord
           echo "=== Building sord ==="
           rm -rf /tmp/sord-src
-          git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src
+          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src && break || sleep 5; done
+          if [ ! -f /tmp/sord-src/CMakeLists.txt ]; then echo "FATAL: sord clone failed"; exit 1; fi
           cd /tmp/sord-src
           mkdir -p build-android && cd build-android
           cmake .. \
@@ -583,7 +585,8 @@ jobs:
           # Build sratom
           echo "=== Building sratom ==="
           rm -rf /tmp/sratom-src
-          git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src
+          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src && break || sleep 5; done
+          if [ ! -f /tmp/sratom-src/CMakeLists.txt ]; then echo "FATAL: sratom clone failed"; exit 1; fi
           cd /tmp/sratom-src
           mkdir -p build-android && cd build-android
           cmake .. \
@@ -598,7 +601,8 @@ jobs:
           # Build lilv
           echo "=== Building lilv ==="
           rm -rf /tmp/lilv-src
-          git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src
+          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src && break || sleep 5; done
+          if [ ! -f /tmp/lilv-src/CMakeLists.txt ]; then echo "FATAL: lilv clone failed"; exit 1; fi
           cd /tmp/lilv-src
           mkdir -p build-android && cd build-android
           cmake .. \
