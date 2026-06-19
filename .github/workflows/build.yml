@@ -567,44 +567,24 @@ jobs:
             done
           fi
 
-          # Build Dragonfly Reverb (DPF Makefile)
-          echo "=== Building Dragonfly ==="
-          DF_SRC="${{ github.workspace }}/lib/dragonfly-reverb"
-          if [ -d "${DF_SRC}" ]; then
-            cd "${DF_SRC}"
-            # Create minimal GL/gl.h stub for Android (DPF needs it for UI code)
-            # NDK sysroot is read-only, so use a separate include dir
-            GL_STUB_DIR="${BUILD_DIR}/gl-stub"
-            mkdir -p "${GL_STUB_DIR}/GL"
-            echo '#ifndef __GL_GL_H__' > "${GL_STUB_DIR}/GL/gl.h"
-            echo '#define __GL_GL_H__' >> "${GL_STUB_DIR}/GL/gl.h"
-            echo '#include <GLES3/gl3.h>' >> "${GL_STUB_DIR}/GL/gl.h"
-            echo '#include <GLES3/gl3ext.h>' >> "${GL_STUB_DIR}/GL/gl.h"
-            echo '#endif' >> "${GL_STUB_DIR}/GL/gl.h"
-            echo '#ifndef __GL_GLEXT_H__' > "${GL_STUB_DIR}/GL/glext.h"
-            echo '#define __GL_GLEXT_H__' >> "${GL_STUB_DIR}/GL/glext.h"
-            echo '#include <GLES3/gl3ext.h>' >> "${GL_STUB_DIR}/GL/glext.h"
-            echo '#endif' >> "${GL_STUB_DIR}/GL/glext.h"
-            # Build each plugin directly, only lv2_sep target (skip UI/OpenGL)
-            for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
-                         dragonfly-plate-reverb dragonfly-early-reflections; do
-              make -C "plugins/${plugin}" -j"${JOBS}" lv2_sep \
-                CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
-                CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2 -I${GL_STUB_DIR}" \
-                CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2 -I${GL_STUB_DIR}" \
-                LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
-                CROSS_COMPILING=true
-            done
-            # Copy LV2 bundles
-            for plugin in DragonflyHallReverb DragonflyRoomReverb \
-                         DragonflyPlateReverb DragonflyEarlyReflections; do
-              if [ -d "bin/${plugin}.lv2" ]; then
-                cp -r "bin/${plugin}.lv2" "${ASSETS_DIR}/${plugin}.lv2"
-              fi
-            done
+          # Download pre-built LV2 plugins from build_lv2.yml workflow
+          echo "=== Downloading pre-built LV2 plugins ==="
+          LV2_ARTIFACT_URL=$(gh api "repos/winnerspiros/djsugar/actions/workflows/build_lv2.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].artifacts_url' 2>/dev/null || echo "")
+          if [ -n "${LV2_ARTIFACT_URL}" ] && [ "${LV2_ARTIFACT_URL}" != "null" ]; then
+            ARTIFACT_DOWNLOAD_URL=$(gh api "${LV2_ARTIFACT_URL}" --jq '.artifacts[0].archive_download_url' 2>/dev/null || echo "")
+            if [ -n "${ARTIFACT_DOWNLOAD_URL}" ] && [ "${ARTIFACT_DOWNLOAD_URL}" != "null" ]; then
+              curl -sL -H "Authorization: Bearer *** secrets.GITHUB_TOKEN }}" "${ARTIFACT_DOWNLOAD_URL}" -o lv2-plugins.zip
+              unzip -o lv2-plugins.zip -d "${ASSETS_DIR}/"
+              echo "LV2 plugins downloaded:"
+              ls -la "${ASSETS_DIR}/"
+            else
+              echo "WARNING: Could not download LV2 artifact"
+            fi
+          else
+            echo "WARNING: No successful build_lv2 workflow run found"
           fi
 
-          echo "=== LV2 plugins built ==="
+          echo "=== LV2 plugins ready ==="
           ls -la "${ASSETS_DIR}/"
 
       - name: "Create build directory"
