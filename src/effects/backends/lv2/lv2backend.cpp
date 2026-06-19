@@ -25,6 +25,10 @@ LV2Backend::LV2Backend() {
 #endif
 
     m_pWorld = lilv_world_new();
+    if (!m_pWarning) {
+        qWarning() << "LV2Backend: lilv_world_new() returned NULL — LV2 support disabled";
+        return;
+    }
     initializeProperties();
     lilv_world_load_all(m_pWorld);
     enumeratePlugins();
@@ -34,7 +38,9 @@ LV2Backend::~LV2Backend() {
     for (LilvNode* node : std::as_const(m_properties)) {
         lilv_node_free(node);
     }
-    lilv_world_free(m_pWorld);
+    if (m_pWorld) {
+        lilv_world_free(m_pWorld);
+    }
     m_registeredEffects.clear();
 }
 

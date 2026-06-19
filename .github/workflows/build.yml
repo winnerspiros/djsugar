@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=OFF -DQOPENGL=OFF
+              -DLILV=ON -DQOPENGL=OFF
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
@@ -515,7 +515,8 @@ jobs:
           export STRIP="${TC_PREFIX}/bin/llvm-strip"
           JOBS=$(nproc)
           BUILD_DIR="${{ github.workspace }}/build-lv2-android"
-          ASSETS_DIR="${{ github.workspace }}/packaging/android/assets/lv2"
+          BUILD_DIR="${{ github.workspace }}/build-lv2-android"
+          echo "BUILD_DIR=${BUILD_DIR}" >> "${GITHUB_ENV}"
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}" "${ASSETS_DIR}"
 
@@ -543,6 +544,74 @@ jobs:
             -DEXPAT_SHARED_LIBS=ON
           cmake --build . --parallel "${JOBS}"
           cmake --install .
+
+          # Build LV2 dependencies for Android (serd, sord, sratom, lilv, lv2)
+          # These are needed for the LV2 effects backend
+          echo "=== Building LV2 dependencies ==="
+          LV2_INSTALL="${BUILD_DIR}/install/lv2-deps"
+          mkdir -p "${LV2_INSTALL}"
+
+          # Build serd
+          git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src
+          cd /tmp/serd-src
+          mkdir -p build-android && cd build-android
+          cmake .. \
+            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
+            -DSERD_BUILD_TESTS=OFF -DSERD_BUILD_DOCS=OFF
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # Build sord
+          git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src
+          cd /tmp/sord-src
+          mkdir -p build-android && cd build-android
+          cmake .. \
+            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
+            -DSORD_BUILD_TESTS=OFF -DSORD_BUILD_DOCS=OFF
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # Build sratom
+          git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src
+          cd /tmp/sratom-src
+          mkdir -p build-android && cd build-android
+          cmake .. \
+            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
+            -DSRATOM_BUILD_TESTS=OFF
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # Build lilv
+          git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src
+          cd /tmp/lilv-src
+          mkdir -p build-android && cd build-android
+          cmake .. \
+            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
+            -DLILV_BUILD_TESTS=OFF -DLILV_BUILD_DOCS=OFF \
+            -DCMAKE_PREFIX_PATH="${LV2_INSTALL}"
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # Copy LV2 headers from host (they're just headers, no arch-specific code)
+          cp -r /usr/include/lv2 "${LV2_INSTALL}/include/" 2>/dev/null || true
+          cp -r /usr/include/lilv-0 "${LV2_INSTALL}/include/" 2>/dev/null || true
+          # Also copy serd headers from build
+          cp -r "${LV2_INSTALL}/include/serd-0" "${LV2_INSTALL}/include/serd" 2>/dev/null || true
+
+          echo "=== LV2 dependencies built ==="
+          ls -la "${LV2_INSTALL}/lib/"
 
           # Build Calf Studio Gear (LV2 only)
           echo "=== Building Calf ==="
