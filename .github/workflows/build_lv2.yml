@@ -163,13 +163,12 @@ jobs:
             CROSS_COMPILING=true \
             plugins
 
-          # Copy LV2 bundles
+          # Copy LV2 bundles to install dir (will be picked up by find below)
           mkdir -p "${BUILD_DIR}/install/dragonfly-reverb"
           for plugin in DragonflyHallReverb DragonflyRoomReverb \
                        DragonflyPlateReverb DragonflyEarlyReflections; do
             if [ -d "bin/${plugin}.lv2" ]; then
-              echo "  Bundling: ${plugin}"
-              cp -r "bin/${plugin}.lv2" "${BUILD_DIR}/install/dragonfly-reverb/"
+              cp -r "bin/${plugin}.lv2" "${BUILD_DIR}/install/dragonfly-reverb/${plugin}.lv2"
             fi
           done
 
