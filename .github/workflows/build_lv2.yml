@@ -52,7 +52,7 @@ jobs:
       - name: Install LV2 headers into NDK sysroot
         run: |
           NDK_SYSROOT="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          # Find and copy all LV2 and audio headers to NDK sysroot
+          # Copy LV2, lilv, and fluidsynth headers to NDK sysroot
           for src in /usr/include/lv2.h \
                     /usr/include/lv2 \
                     /usr/include/lilv-0 \
@@ -62,12 +62,14 @@ jobs:
               mkdir -p "$(dirname $dest)"
               cp -r "$src" "$dest"
               echo "  Copied: $src -> $dest"
-            else
-              echo "  Not found: $src"
             fi
           done
-          echo "LV2 headers in NDK sysroot:"
-          find "${NDK_SYSROOT}/usr/include" -name "lv2*" -o -name "lilv*" 2>/dev/null | head -20
+          # fluidsynth.h lives inside fluidsynth/ subdir; Calf uses #include <fluidsynth.h>
+          if [ -f "${NDK_SYSROOT}/usr/include/fluidsynth/fluidsynth.h" ]; then
+            cp "${NDK_SYSROOT}/usr/include/fluidsynth/fluidsynth.h" \
+               "${NDK_SYSROOT}/usr/include/fluidsynth.h"
+            echo "  Copied fluidsynth.h to top-level"
+          fi
 
       - name: Build LV2 plugins for Android ARM64
         env:
