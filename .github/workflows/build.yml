@@ -300,6 +300,8 @@ jobs:
       # Android signing
       ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+      # Android LV2 build directory (used by Configure step to find cross-compiled lilv)
+      BUILD_DIR: ${{ github.workspace }}/build-lv2-android
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -516,7 +518,6 @@ jobs:
           JOBS=$(nproc)
           BUILD_DIR="${{ github.workspace }}/build-lv2-android"
           BUILD_DIR="${{ github.workspace }}/build-lv2-android"
-          echo "BUILD_DIR=${BUILD_DIR}" >> "${GITHUB_ENV}"
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}" "${ASSETS_DIR}"
 
@@ -666,6 +667,7 @@ jobs:
         # CMAKE_BUILD_TYPE=MinSizeRel and BROADCAST=OFF were silently
         # overridden by the trailing defaults below.)
         run: >-
+          echo "BUILD_DIR from env: '${BUILD_DIR}'" &&
           cmake ${{ env.CMAKE_ARGS_EXTRA }}
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
@@ -688,7 +690,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          BUILD_DIR: ${{ github.workspace }}/build-lv2-android
 
       - name: "[Ubuntu/macOS] Set up gcc/clang problem matcher"
         if: runner.os != 'Windows'
@@ -703,19 +704,18 @@ jobs:
       - name: "Build"
         run: |
           cmake --build . --config RelWithDebInfo
-          # Copy LV2 bundles into Android build assets after cmake creates them
-          if [ -d "android-build/assets" ] && [ -d "../packaging/android/assets/lv2" ]; then
-            mkdir -p android-build/assets/lv2
-            cp -r ../packaging/android/assets/lv2/* android-build/assets/lv2/ 2>/dev/null || true
-            echo "LV2 bundles copied to Android assets"
-            ls -la android-build/assets/lv2/ || true
-          fi
         working-directory: build
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          # GitHub Actions automatically zstd compresses caches
-          CCACHE_NOCOMPRESS: true
+
+      - name: "[android] Copy LV2 bundles to build assets"
+        if: startsWith(matrix.artifacts_slug, 'android')
+        run: |
+          mkdir -p build/android-build/assets/lv2
+          cp -r packaging/android/assets/lv2/* build/android-build/assets/lv2/ 2>/dev/null || true
+          echo "LV2 bundles copied"
+          ls -la build/android-build/assets/lv2/ || true
 
       - name: "[Ubuntu/macOS] Print compiler cache stats"
         if: runner.os != 'windows'
