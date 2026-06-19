@@ -77,6 +77,28 @@ jobs:
           export STRIP="${TC_PREFIX}/bin/llvm-strip"
 
           # ---------------------------------------------------------------
+          # 0. Build EXPAT for Android (required by Calf)
+          # ---------------------------------------------------------------
+          echo "=== Building EXPAT for Android ==="
+          cd "${PROJECT_ROOT}"
+          git clone --depth 1 https://github.com/libexpat/libexpat.git expat-src
+          cd expat-src
+          mkdir -p build-android && cd build-android
+          cmake ../expat \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI="${ANDROID_ABI}" \
+            -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
+            -DANDROID_STL="${ANDROID_STL}" \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install/expat" \
+            -DEXPAT_BUILD_EXAMPLES=OFF \
+            -DEXPAT_BUILD_TESTS=OFF \
+            -DEXPAT_SHARED_LIBS=ON
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # ---------------------------------------------------------------
           # 1. Calf Studio Gear (CMake-based)
           #    DJ-relevant: compressor, flanger, chorus, filter, delay,
           #    reverb, multiband compressor, limiter, deesser
@@ -100,7 +122,10 @@ jobs:
             -DWANT_LV2_GUI=OFF \
             -DWANT_SORDI=OFF \
             -DWANT_EXPERIMENTAL=OFF \
-            -DWANT_SSE=OFF
+            -DWANT_SSE=OFF \
+            -DCMAKE_FIND_ROOT_PATH="${BUILD_DIR}/install/expat" \
+            -DEXPAT_INCLUDE_DIR="${BUILD_DIR}/install/expat/include" \
+            -DEXPAT_LIBRARY="${BUILD_DIR}/install/expat/lib/libexpat.so"
 
           cmake --build . --parallel "${JOBS}"
           cmake --install .
