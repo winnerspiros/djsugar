@@ -38,7 +38,8 @@ jobs:
             libexpat1-dev \
             libglib2.0-dev \
             lv2-dev \
-            liblilv-dev
+            liblilv-dev \
+            libfluidsynth-dev
 
       - name: Download Android NDK
         run: |
@@ -51,11 +52,11 @@ jobs:
       - name: Install LV2 headers into NDK sysroot
         run: |
           NDK_SYSROOT="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          # Find and copy all LV2-related headers to NDK sysroot
+          # Find and copy all LV2 and audio headers to NDK sysroot
           for src in /usr/include/lv2.h \
                     /usr/include/lv2 \
-                    /usr/include/lilv \
-                    /usr/include/lilv-0; do
+                    /usr/include/lilv-0 \
+                    /usr/include/fluidsynth; do
             if [ -e "$src" ]; then
               dest="${NDK_SYSROOT}/usr/include/$(basename $src)"
               mkdir -p "$(dirname $dest)"
