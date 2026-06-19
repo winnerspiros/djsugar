@@ -153,7 +153,7 @@ build_dragonfly() {
               /usr/include/lilv-0; do
         if [ -e "$src" ]; then
             dest="${ndk_sysroot}/usr/include/$(basename $src)"
-            mkdir -p "$(dirname $dest)"
+            mkdir -p "$(dirname "$dest")"
             cp -r "$src" "$dest"
         fi
     done
