@@ -212,7 +212,12 @@ jobs:
 
           # Build serd
           echo "=== Building serd ==="
-          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/serd.git /tmp/serd-src
+          git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src 2>&1 || true
+          if [ ! -f /tmp/serd-src/CMakeLists.txt ]; then
+            echo "git clone failed, trying zip download..."
+            curl -sL "https://github.com/drobilla/serd/archive/refs/heads/master.tar.gz" -o /tmp/serd.tar.gz
+            mkdir -p /tmp/serd-src && tar xzf /tmp/serd.tar.gz -C /tmp/serd-src --strip-components=1
+          fi
           cd /tmp/serd-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -225,7 +230,11 @@ jobs:
 
           # Build sord
           echo "=== Building sord ==="
-          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/sord.git /tmp/sord-src
+          git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src 2>&1 || true
+          if [ ! -f /tmp/sord-src/CMakeLists.txt ]; then
+            curl -sL "https://github.com/drobilla/sord/archive/refs/heads/master.tar.gz" -o /tmp/sord.tar.gz
+            mkdir -p /tmp/sord-src && tar xzf /tmp/sord.tar.gz -C /tmp/sord-src --strip-components=1
+          fi
           cd /tmp/sord-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -238,7 +247,11 @@ jobs:
 
           # Build sratom
           echo "=== Building sratom ==="
-          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/sratom.git /tmp/sratom-src
+          git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src 2>&1 || true
+          if [ ! -f /tmp/sratom-src/CMakeLists.txt ]; then
+            curl -sL "https://github.com/drobilla/sratom/archive/refs/heads/master.tar.gz" -o /tmp/sratom.tar.gz
+            mkdir -p /tmp/sratom-src && tar xzf /tmp/sratom.tar.gz -C /tmp/sratom-src --strip-components=1
+          fi
           cd /tmp/sratom-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -251,7 +264,11 @@ jobs:
 
           # Build lilv
           echo "=== Building lilv ==="
-          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/lilv.git /tmp/lilv-src
+          git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src 2>&1 || true
+          if [ ! -f /tmp/lilv-src/CMakeLists.txt ]; then
+            curl -sL "https://github.com/drobilla/lilv/archive/refs/heads/master.tar.gz" -o /tmp/lilv.tar.gz
+            mkdir -p /tmp/lilv-src && tar xzf /tmp/lilv.tar.gz -C /tmp/lilv-src --strip-components=1
+          fi
           cd /tmp/lilv-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
