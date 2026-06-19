@@ -572,12 +572,17 @@ jobs:
           DF_SRC="${{ github.workspace }}/lib/dragonfly-reverb"
           if [ -d "${DF_SRC}" ]; then
             cd "${DF_SRC}"
-            make -j"${JOBS}" \
-              CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
-              CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
-              CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
-              LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
-              CROSS_COMPILING=true plugins
+            # Build each plugin directly (skip dgl which needs OpenGL headers)
+            for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
+                         dragonfly-plate-reverb dragonfly-early-reflections; do
+              make -C "plugins/${plugin}" -j"${JOBS}" \
+                CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
+                CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
+                CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
+                LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
+                CROSS_COMPILING=true
+            done
+            # Copy LV2 bundles
             for plugin in DragonflyHallReverb DragonflyRoomReverb \
                          DragonflyPlateReverb DragonflyEarlyReflections; do
               if [ -d "bin/${plugin}.lv2" ]; then
