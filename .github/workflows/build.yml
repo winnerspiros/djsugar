@@ -572,6 +572,18 @@ jobs:
           DF_SRC="${{ github.workspace }}/lib/dragonfly-reverb"
           if [ -d "${DF_SRC}" ]; then
             cd "${DF_SRC}"
+            # Create minimal GL/gl.h stub for Android (DPF needs it for UI code)
+            NDK_SYSROOT="${TC_PREFIX}/sysroot"
+            mkdir -p "${NDK_SYSROOT}/usr/include/GL"
+            echo '#ifndef __GL_GL_H__' > "${NDK_SYSROOT}/usr/include/GL/gl.h"
+            echo '#define __GL_GL_H__' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
+            echo '#include <GLES3/gl3.h>' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
+            echo '#include <GLES3/gl3ext.h>' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
+            echo '#endif' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
+            echo '#ifndef __GL_GLEXT_H__' > "${NDK_SYSROOT}/usr/include/GL/glext.h"
+            echo '#define __GL_GLEXT_H__' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
+            echo '#include <GLES3/gl3ext.h>' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
+            echo '#endif' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
             # Build each plugin directly, only lv2_sep target (skip UI/OpenGL)
             for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
                          dragonfly-plate-reverb dragonfly-early-reflections; do
