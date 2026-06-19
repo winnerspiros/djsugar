@@ -38,7 +38,7 @@ jobs:
             libexpat1-dev \
             libglib2.0-dev \
             lv2-dev \
-            lilv-dev
+            liblilv-dev
 
       - name: Download Android NDK
         run: |
