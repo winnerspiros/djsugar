@@ -544,86 +544,6 @@ jobs:
           cmake --build . --parallel "${JOBS}"
           cmake --install .
 
-          # Build LV2 dependencies for Android (serd, sord, sratom, lilv, lv2)
-          # These are needed for the LV2 effects backend
-          echo "=== Building LV2 dependencies ==="
-          LV2_INSTALL="${BUILD_DIR}/install/lv2-deps"
-          mkdir -p "${LV2_INSTALL}"
-
-          # Build serd
-          echo "=== Building serd ==="
-          rm -rf /tmp/serd-src
-          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src && break || sleep 5; done
-          if [ ! -f /tmp/serd-src/CMakeLists.txt ]; then echo "FATAL: serd clone failed"; exit 1; fi
-          cd /tmp/serd-src
-          mkdir -p build-android && cd build-android
-          cmake .. \
-            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
-            -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
-            -DSERD_BUILD_TESTS=OFF -DSERD_BUILD_DOCS=OFF
-          cmake --build . --parallel "${JOBS}"
-          cmake --install .
-
-          # Build sord
-          echo "=== Building sord ==="
-          rm -rf /tmp/sord-src
-          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src && break || sleep 5; done
-          if [ ! -f /tmp/sord-src/CMakeLists.txt ]; then echo "FATAL: sord clone failed"; exit 1; fi
-          cd /tmp/sord-src
-          mkdir -p build-android && cd build-android
-          cmake .. \
-            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
-            -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
-            -DSORD_BUILD_TESTS=OFF -DSORD_BUILD_DOCS=OFF
-          cmake --build . --parallel "${JOBS}"
-          cmake --install .
-
-          # Build sratom
-          echo "=== Building sratom ==="
-          rm -rf /tmp/sratom-src
-          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src && break || sleep 5; done
-          if [ ! -f /tmp/sratom-src/CMakeLists.txt ]; then echo "FATAL: sratom clone failed"; exit 1; fi
-          cd /tmp/sratom-src
-          mkdir -p build-android && cd build-android
-          cmake .. \
-            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
-            -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
-            -DSRATOM_BUILD_TESTS=OFF
-          cmake --build . --parallel "${JOBS}"
-          cmake --install .
-
-          # Build lilv
-          echo "=== Building lilv ==="
-          rm -rf /tmp/lilv-src
-          for i in 1 2 3; do git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src && break || sleep 5; done
-          if [ ! -f /tmp/lilv-src/CMakeLists.txt ]; then echo "FATAL: lilv clone failed"; exit 1; fi
-          cd /tmp/lilv-src
-          mkdir -p build-android && cd build-android
-          cmake .. \
-            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
-            -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_INSTALL_PREFIX="${LV2_INSTALL}" \
-            -DLILV_BUILD_TESTS=OFF -DLILV_BUILD_DOCS=OFF \
-            -DCMAKE_PREFIX_PATH="${LV2_INSTALL}"
-          cmake --build . --parallel "${JOBS}"
-          cmake --install .
-
-          # Copy LV2 headers from host (they're just headers, no arch-specific code)
-          cp -r /usr/include/lv2 "${LV2_INSTALL}/include/" 2>/dev/null || true
-          cp -r /usr/include/lilv-0 "${LV2_INSTALL}/include/" 2>/dev/null || true
-          # Also copy serd headers from build
-          cp -r "${LV2_INSTALL}/include/serd-0" "${LV2_INSTALL}/include/serd" 2>/dev/null || true
-
-          echo "=== LV2 dependencies built ==="
-          ls -la "${LV2_INSTALL}/lib/"
-
           # Build Calf Studio Gear (LV2 only)
           echo "=== Building Calf ==="
           CALF_SRC="${{ github.workspace }}/lib/calf-plugins"
@@ -655,6 +575,11 @@ jobs:
             if [ -n "${ARTIFACT_DOWNLOAD_URL}" ] && [ "${ARTIFACT_DOWNLOAD_URL}" != "null" ]; then
               curl -sL -H "Authorization: Bearer *** secrets.GITHUB_TOKEN }}" "${ARTIFACT_DOWNLOAD_URL}" -o lv2-plugins.zip
               unzip -o lv2-plugins.zip -d "${ASSETS_DIR}/"
+              # Also copy lilv libraries to the build dir for cmake to find
+              if [ -d "${ASSETS_DIR}/build-lv2-android/install/lv2-deps" ]; then
+                cp -r "${ASSETS_DIR}/build-lv2-android/install/lv2-deps" "${BUILD_DIR}/install/lv2-deps"
+                echo "LV2 dependencies copied to build dir"
+              fi
               echo "LV2 plugins downloaded:"
               ls -la "${ASSETS_DIR}/"
             else
@@ -666,9 +591,6 @@ jobs:
 
           echo "=== LV2 plugins ready ==="
           ls -la "${ASSETS_DIR}/"
-
-          # Output BUILD_DIR for downstream steps
-          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_ENV}"
 
       - name: "Create build directory"
         run: mkdir -p build
