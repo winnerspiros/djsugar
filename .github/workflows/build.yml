@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=ON -DQOPENGL=OFF -DBUILD_DIR=${{ github.workspace }}/build-lv2-android
+              -DLILV=OFF -DQOPENGL=OFF
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
