@@ -523,13 +523,17 @@ jobs:
 
           # Install LV2 headers into NDK sysroot
           NDK_SYSROOT="${TC_PREFIX}/sysroot"
-          for src in /usr/include/lv2.h /usr/include/lv2 /usr/include/lilv-0; do
-            if [ -e "$src" ]; then
-              dest="${NDK_SYSROOT}/usr/include/$(basename $src)"
-              mkdir -p "$(dirname $dest)"
+          for src in /usr/include/lv2 /usr/include/lilv-0; do
+            if [ -d "$src" ]; then
+              dest="${NDK_SYSROOT}/usr/include/$(basename "$src")"
+              mkdir -p "$(dirname "$dest")"
               cp -r "$src" "$dest"
             fi
           done
+          if [ -f /usr/include/lv2.h ]; then
+            mkdir -p "${NDK_SYSROOT}/usr/include"
+            cp /usr/include/lv2.h "${NDK_SYSROOT}/usr/include/"
+          fi
 
           # Build expat for Android (required by Calf)
           echo "=== Building expat ==="
@@ -659,6 +663,7 @@ jobs:
 
       - name: "Create build directory"
         run: mkdir build
+        working-directory: ${{ github.workspace }}
 
       - name: "Configure"
         # NB: ${{ matrix.cmake_args }} is placed AFTER the per-job defaults
@@ -667,7 +672,6 @@ jobs:
         # CMAKE_BUILD_TYPE=MinSizeRel and BROADCAST=OFF were silently
         # overridden by the trailing defaults below.)
         run: >-
-          echo "BUILD_DIR from env: '${BUILD_DIR}'" &&
           cmake ${{ env.CMAKE_ARGS_EXTRA }}
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
