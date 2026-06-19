@@ -212,7 +212,7 @@ jobs:
 
           # Build serd
           echo "=== Building serd ==="
-          git clone --depth 1 https://github.com/drobilla/serd.git /tmp/serd-src
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/serd.git /tmp/serd-src
           cd /tmp/serd-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -225,7 +225,7 @@ jobs:
 
           # Build sord
           echo "=== Building sord ==="
-          git clone --depth 1 https://github.com/drobilla/sord.git /tmp/sord-src
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/sord.git /tmp/sord-src
           cd /tmp/sord-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -238,7 +238,7 @@ jobs:
 
           # Build sratom
           echo "=== Building sratom ==="
-          git clone --depth 1 https://github.com/drobilla/sratom.git /tmp/sratom-src
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/sratom.git /tmp/sratom-src
           cd /tmp/sratom-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -251,7 +251,7 @@ jobs:
 
           # Build lilv
           echo "=== Building lilv ==="
-          git clone --depth 1 https://github.com/drobilla/lilv.git /tmp/lilv-src
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/drobilla/lilv.git /tmp/lilv-src
           cd /tmp/lilv-src
           mkdir -p build-android && cd build-android
           cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
