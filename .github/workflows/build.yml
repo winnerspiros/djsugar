@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=ON
+              -DLILV=ON -DQOPENGL=OFF
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
