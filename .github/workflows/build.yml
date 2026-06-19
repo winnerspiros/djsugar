@@ -572,10 +572,10 @@ jobs:
           DF_SRC="${{ github.workspace }}/lib/dragonfly-reverb"
           if [ -d "${DF_SRC}" ]; then
             cd "${DF_SRC}"
-            # Build each plugin directly (skip dgl which needs OpenGL headers)
+            # Build each plugin directly, only lv2_sep target (skip UI/OpenGL)
             for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
                          dragonfly-plate-reverb dragonfly-early-reflections; do
-              make -C "plugins/${plugin}" -j"${JOBS}" \
+              make -C "plugins/${plugin}" -j"${JOBS}" lv2_sep \
                 CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
                 CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
                 CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
