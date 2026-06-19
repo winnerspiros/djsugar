@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=ON -DQOPENGL=OFF
+              -DLILV=ON -DQOPENGL=OFF -DBUILD_DIR=${{ github.workspace }}/build-lv2-android
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
@@ -300,8 +300,6 @@ jobs:
       # Android signing
       ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
-      # Android LV2 build directory (used by Configure step to find cross-compiled lilv)
-      BUILD_DIR: ${{ github.workspace }}/build-lv2-android
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -311,6 +309,7 @@ jobs:
       artifact-macos-macosarm: ${{ steps.prepare_deploy.outputs.artifact-macos-macosarm }}
       artifact-windows-win64: ${{ steps.prepare_deploy.outputs.artifact-windows-win64 }}
       artifact-windows-winarm: ${{ steps.prepare_deploy.outputs.artifact-windows-winarm }}
+      build_dir: ${{ steps.build_lv2.outputs.build_dir }}
     steps:
       - name: "Check out repository"
         uses: actions/checkout@v6
@@ -504,6 +503,7 @@ jobs:
           sudo rm -rf /usr/local/share/vcpkg       # Size unknown, but obvious duplicate
 
       - name: "[android] Build LV2 plugins for Android"
+        id: build_lv2
         if: startsWith(matrix.artifacts_slug, 'android')
         run: |
           set -e
@@ -517,7 +517,7 @@ jobs:
           export STRIP="${TC_PREFIX}/bin/llvm-strip"
           JOBS=$(nproc)
           BUILD_DIR="${{ github.workspace }}/build-lv2-android"
-          BUILD_DIR="${{ github.workspace }}/build-lv2-android"
+          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_OUTPUT}"
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}" "${ASSETS_DIR}"
 
@@ -661,8 +661,11 @@ jobs:
           echo "=== LV2 plugins ready ==="
           ls -la "${ASSETS_DIR}/"
 
+          # Output BUILD_DIR for downstream steps
+          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_ENV}"
+
       - name: "Create build directory"
-        run: mkdir build
+        run: mkdir -p build
         working-directory: ${{ github.workspace }}
 
       - name: "Configure"
