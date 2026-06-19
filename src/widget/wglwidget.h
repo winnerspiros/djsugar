@@ -5,7 +5,10 @@
 // all code includes this header wglwidget.h.
 #define WGLWIDGET_H
 
-#ifdef MIXXX_USE_QOPENGL
+#ifdef Q_OS_ANDROID
+// Android: use stub to avoid QOpenGLWindow crash
+#include "widget/wglwidgetqopengl_android.h"
+#elif MIXXX_USE_QOPENGL
 #include "widget/wglwidgetqopengl.h"
 #elif QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 // QGLWidget was removed in Qt6 — only include Qt5 fallback
