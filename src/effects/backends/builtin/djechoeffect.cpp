@@ -241,6 +241,7 @@ void DJEchoEffect::processChannel(
                 bufferedSampleRight += pGroupState->delay_buf[prev_read_position + 1] * (1 - frac);
             }
             incrementRing(&prev_read_position, chCount, pGroupState->delay_buf.size());
+            incrementRing(&read_position, chCount, pGroupState->delay_buf.size());
         }
 
         // Apply feedback filtering to the delayed signal
@@ -295,8 +296,6 @@ void DJEchoEffect::processChannel(
         pGroupState->delay_buf[pGroupState->write_position] = writeLeft;
         if (chCount > 1) {
             pGroupState->delay_buf[pGroupState->write_position + 1] = writeRight;
-        } else {
-            pGroupState->delay_buf[pGroupState->write_position + 1] = 0;
         }
         incrementRing(&pGroupState->write_position, chCount, pGroupState->delay_buf.size());
     }

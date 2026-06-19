@@ -5,7 +5,7 @@
 # Prerequisites:
 #   - ANDROID_NDK_HOME set
 #   - CMake >= 3.21
-#   - Submodules initialized: lib/lsp-plugins, lib/calf-plugins, lib/dragonfly-reverb
+#   - Submodules initialized: lib/calf-plugins, lib/dragonfly-reverb
 
 set -euo pipefail
 
@@ -27,6 +27,14 @@ ANDROID_STL="c++_shared"
 # Number of parallel jobs
 JOBS=$(nproc 2>/dev/null || echo 4)
 
+# NDK toolchain binaries
+TC_PREFIX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
+export CC="${TC_PREFIX}/bin/aarch64-linux-android35-clang"
+export CXX="${TC_PREFIX}/bin/aarch64-linux-android35-clang++"
+export AR="${TC_PREFIX}/bin/llvm-ar"
+export RANLIB="${TC_PREFIX}/bin/llvm-ranlib"
+export STRIP="${TC_PREFIX}/bin/llvm-strip"
+
 echo "=== Building LV2 plugins for Android ARM64 ==="
 echo "NDK: ${NDK}"
 echo "Build dir: ${BUILD_DIR}"
@@ -38,123 +46,63 @@ mkdir -p "${BUILD_DIR}"
 mkdir -p "${ASSETS_DIR}"
 
 ###############################################################################
-# Helper: build a CMake-based LV2 project
+# 0. Build EXPAT for Android (required by Calf)
 ###############################################################################
-build_cmake_lv2() {
-    local name="$1"
-    local src_dir="$2"
-    local build_subdir="${BUILD_DIR}/${name}"
-    local install_prefix="${BUILD_DIR}/install/${name}"
-
+build_expat() {
     echo ""
-    echo "=== Building ${name} ==="
+    echo "=== Building EXPAT for Android ==="
 
-    mkdir -p "${build_subdir}"
-    cd "${build_subdir}"
+    local expat_src="${PROJECT_ROOT}/expat-src"
+    local expat_install="${BUILD_DIR}/install/expat"
 
-    cmake "${src_dir}" \
-        -G "Unix Makefiles" \
+    if [ ! -d "${expat_src}" ]; then
+        git clone --depth 1 https://github.com/libexpat/libexpat.git "${expat_src}"
+    fi
+
+    cd "${expat_src}"
+    rm -rf build-android
+    mkdir -p build-android && cd build-android
+
+    cmake ../expat \
+        -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
         -DANDROID_ABI="${ANDROID_ABI}" \
         -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
         -DANDROID_STL="${ANDROID_STL}" \
         -DCMAKE_BUILD_TYPE=MinSizeRel \
-        -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
-        -DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
-        -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
-        -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections,--icf=safe,-O2,-s" \
-        "${@:3}"
+        -DCMAKE_INSTALL_PREFIX="${expat_install}" \
+        -DEXPAT_BUILD_EXAMPLES=OFF \
+        -DEXPAT_BUILD_TESTS=OFF \
+        -DEXPAT_SHARED_LIBS=ON
 
     cmake --build . --parallel "${JOBS}"
     cmake --install .
 
-    echo "=== ${name} built successfully ==="
+    echo "=== EXPAT built ==="
 }
 
 ###############################################################################
-# 1. LSP Plugins (custom make-based build system)
-###############################################################################
-build_lsp_plugins() {
-    echo ""
-    echo "=== Building LSP Plugins (selected) ==="
-
-    local lsp_src="${PROJECT_ROOT}/lib/lsp-plugins"
-    local lsp_install="${BUILD_DIR}/install/lsp-plugins"
-
-    cd "${lsp_src}"
-
-    # Configure for Android cross-compilation
-    # LSP uses a custom Makefile system; we need to set cross-compilation vars
-    export CC="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
-    export CXX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++"
-    export AR="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-    export RANLIB="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
-    export STRIP="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
-    export SYSROOT="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-    export CFLAGS="--sysroot=${SYSROOT} -ffunction-sections -fdata-sections -fvisibility=hidden -O2 -fmerge-all-constants"
-    export CXXFLAGS="--sysroot=${SYSROOT} -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2 -fmerge-all-constants"
-    export LDFLAGS="--sysroot=${SYSROOT} -Wl,--gc-sections,--icf=safe,-O2,-s"
-
-    # Build only the plugins we need (much faster than building all)
-    # Selected: slap-delay, filter, flanger, phaser, compressor, clipper,
-    #           para-equalizer, noise-generator, beat-breather
-    make config \
-        ARCH=aarch64 \
-        HOST_ARCH=x86_64 \
-        CROSS_COMPILE=1 \
-        SYSROOT="${SYSROOT}" \
-        CC="${CC}" \
-        CXX="${CXX}" \
-        AR="${AR}" \
-        RANLIB="${RANLIB}" \
-        CFLAGS="${CFLAGS}" \
-        CXXFLAGS="${CXXFLAGS}" \
-        LDFLAGS="${LDFLAGS}" \
-        VERBOSE=1 \
-        -j"${JOBS}" || true
-
-    # Build individual plugins
-    local plugins=(
-        "slap-delay"
-        "filter"
-        "flanger"
-        "phaser"
-        "compressor"
-        "clipper"
-        "para-equalizer"
-        "noise-generator"
-        "beat-breather"
-    )
-
-    for plugin in "${plugins[@]}"; do
-        echo "Building LSP plugin: ${plugin}"
-        make -j"${JOBS}" "${plugin}" || echo "WARNING: ${plugin} build failed, skipping"
-    done
-
-    # Install — copy LV2 bundles to install dir
-    mkdir -p "${lsp_install}"
-    find "${lsp_src}/.build" -name "*.lv2" -type d -exec cp -r {} "${lsp_install}/" \; 2>/dev/null || true
-
-    echo "=== LSP Plugins built ==="
-}
-
-###############################################################################
-# 2. Calf Studio Gear (CMake-based, build only LV2 plugins we want)
+# 1. Calf Studio Gear (CMake-based)
 ###############################################################################
 build_calf_plugins() {
     echo ""
-    echo "=== Building Calf Plugins (selected) ==="
+    echo "=== Building Calf Plugins (LV2 only) ==="
 
     local calf_src="${PROJECT_ROOT}/lib/calf-plugins"
+    if [ ! -d "${calf_src}" ]; then
+        echo "WARNING: lib/calf-plugins not found, skipping"
+        return
+    fi
+
     local calf_build="${BUILD_DIR}/calf-plugins"
     local calf_install="${BUILD_DIR}/install/calf-plugins"
+    local expat_install="${BUILD_DIR}/install/expat"
 
     mkdir -p "${calf_build}"
     cd "${calf_build}"
 
-    # Build Calf with only LV2, no GUI, no JACK
     cmake "${calf_src}" \
-        -G "Unix Makefiles" \
+        -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
         -DANDROID_ABI="${ANDROID_ABI}" \
         -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
@@ -172,7 +120,10 @@ build_calf_plugins() {
         -DWANT_SORDI=OFF \
         -DWANT_EXPERIMENTAL=OFF \
         -DWANT_SSE=OFF \
-        -DBUILD_SHARED_LIBS=ON
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_FIND_ROOT_PATH="${expat_install}" \
+        -DEXPAT_INCLUDE_DIR="${expat_install}/include" \
+        -DEXPAT_LIBRARY="${expat_install}/lib/libexpat.so"
 
     cmake --build . --parallel "${JOBS}"
     cmake --install .
@@ -181,83 +132,75 @@ build_calf_plugins() {
 }
 
 ###############################################################################
-# 3. Dragonfly Reverb (CMake-based, already in repo)
+# 2. Dragonfly Reverb (DPF Makefile-based)
 ###############################################################################
 build_dragonfly() {
     echo ""
     echo "=== Building Dragonfly Reverb ==="
 
     local df_src="${PROJECT_ROOT}/lib/dragonfly-reverb"
-    local df_build="${BUILD_DIR}/dragonfly-reverb"
+    if [ ! -d "${df_src}" ]; then
+        echo "WARNING: lib/dragonfly-reverb not found, skipping"
+        return
+    fi
+
+    cd "${df_src}"
+
+    # Install LV2 headers into NDK sysroot for cross-compilation
+    local ndk_sysroot="${TC_PREFIX}/sysroot"
+    for src in /usr/include/lv2.h \
+              /usr/include/lv2 \
+              /usr/include/lilv-0; do
+        if [ -e "$src" ]; then
+            dest="${ndk_sysroot}/usr/include/$(basename $src)"
+            mkdir -p "$(dirname $dest)"
+            cp -r "$src" "$dest"
+        fi
+    done
+
+    # Build with DPF Makefile, cross-compiling via CC/CXX
+    make -j"${JOBS}" \
+        CC="${CC}" \
+        CXX="${CXX}" \
+        AR="${AR}" \
+        RANLIB="${RANLIB}" \
+        STRIP="${STRIP}" \
+        CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
+        CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
+        LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
+        CROSS_COMPILING=true \
+        plugins
+
+    # Copy LV2 bundles
     local df_install="${BUILD_DIR}/install/dragonfly-reverb"
-
-    mkdir -p "${df_build}"
-    cd "${df_build}"
-
-    cmake "${df_src}" \
-        -G "Unix Makefiles" \
-        -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
-        -DANDROID_ABI="${ANDROID_ABI}" \
-        -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
-        -DANDROID_STL="${ANDROID_STL}" \
-        -DCMAKE_BUILD_TYPE=MinSizeRel \
-        -DCMAKE_INSTALL_PREFIX="${df_install}" \
-        -DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
-        -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
-        -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections,--icf=safe,-O2,-s"
-
-    cmake --build . --parallel "${JOBS}"
-    cmake --install .
+    mkdir -p "${df_install}"
+    for plugin in DragonflyHallReverb DragonflyRoomReverb \
+                 DragonflyPlateReverb DragonflyEarlyReflections; do
+        if [ -d "bin/${plugin}.lv2" ]; then
+            echo "  Copying: ${plugin}.lv2"
+            cp -r "bin/${plugin}.lv2" "${df_install}/${plugin}.lv2"
+        fi
+    done
 
     echo "=== Dragonfly Reverb built ==="
 }
 
 ###############################################################################
-# 4. Copy all LV2 bundles to assets
+# 3. Bundle all LV2 plugins into assets directory
 ###############################################################################
 bundle_plugins() {
     echo ""
-    echo "=== Bundling LV2 plugins into assets ==="
+    echo "=== Bundling LV2 plugins ==="
 
-    local bundle_count=0
-
-    # Copy LSP plugins
-    if [ -d "${BUILD_DIR}/install/lsp-plugins" ]; then
-        # shellcheck disable=SC2034
-        find "${BUILD_DIR}/install/lsp-plugins" -name "*.lv2" -type d | while read -r bundle; do
-            bundle_name=$(basename "${bundle}")
-            echo "  Bundling: ${bundle_name}"
-            cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
-            bundle_count=$((bundle_count + 1))
-        done
-    fi
-
-    # Copy Calf plugins
-    if [ -d "${BUILD_DIR}/install/calf-plugins" ]; then
-        # shellcheck disable=SC2034
-        find "${BUILD_DIR}/install/calf-plugins" -name "*.lv2" -type d | while read -r bundle; do
-            bundle_name=$(basename "${bundle}")
-            echo "  Bundling: ${bundle_name}"
-            cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
-            bundle_count=$((bundle_count + 1))
-        done
-    fi
-
-    # Copy Dragonfly plugins
-    if [ -d "${BUILD_DIR}/install/dragonfly-reverb" ]; then
-        # shellcheck disable=SC2034
-        find "${BUILD_DIR}/install/dragonfly-reverb" -name "*.lv2" -type d | while read -r bundle; do
-            bundle_name=$(basename "${bundle}")
-            echo "  Bundling: ${bundle_name}"
-            cp -r "${bundle}" "${ASSETS_DIR}/${bundle_name}"
-            bundle_count=$((bundle_count + 1))
-        done
-    fi
+    find "${BUILD_DIR}/install" -name "*.lv2" -type d 2>/dev/null | while IFS= read -r bundle; do
+        name="$(basename "${bundle}")"
+        echo "  Bundling: ${name}"
+        cp -r "${bundle}" "${ASSETS_DIR}/${name}"
+    done
 
     echo ""
-    echo "=== Bundle complete ==="
-    echo "Total LV2 bundles in assets:"
-    ls -1 "${ASSETS_DIR}" 2>/dev/null || echo "  (none found)"
+    echo "=== LV2 bundles created ==="
+    ls -la "${ASSETS_DIR}/" 2>/dev/null || echo "  (none found)"
 }
 
 ###############################################################################
@@ -274,12 +217,12 @@ main() {
         exit 1
     fi
 
-    # Initialize submodules if needed
+    # Initialize submodules if needed (fail fast on error)
     cd "${PROJECT_ROOT}"
-    git submodule update --init lib/lsp-plugins lib/calf-plugins lib/dragonfly-reverb 2>/dev/null || true
+    git submodule update --init lib/calf-plugins lib/dragonfly-reverb
 
     # Build
-    build_lsp_plugins
+    build_expat
     build_calf_plugins
     build_dragonfly
 
@@ -293,4 +236,3 @@ main() {
 }
 
 main "$@"
-# LV2 build trigger
