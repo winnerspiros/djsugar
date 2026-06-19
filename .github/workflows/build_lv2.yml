@@ -56,6 +56,7 @@ jobs:
           for src in /usr/include/lv2.h \
                     /usr/include/lv2 \
                     /usr/include/lilv-0 \
+                    /usr/include/fluidsynth.h \
                     /usr/include/fluidsynth; do
             if [ -e "$src" ]; then
               dest="${NDK_SYSROOT}/usr/include/$(basename $src)"
@@ -64,12 +65,6 @@ jobs:
               echo "  Copied: $src -> $dest"
             fi
           done
-          # fluidsynth.h lives inside fluidsynth/ subdir; Calf uses #include <fluidsynth.h>
-          if [ -f "${NDK_SYSROOT}/usr/include/fluidsynth/fluidsynth.h" ]; then
-            cp "${NDK_SYSROOT}/usr/include/fluidsynth/fluidsynth.h" \
-               "${NDK_SYSROOT}/usr/include/fluidsynth.h"
-            echo "  Copied fluidsynth.h to top-level"
-          fi
 
       - name: Build LV2 plugins for Android ARM64
         env:
