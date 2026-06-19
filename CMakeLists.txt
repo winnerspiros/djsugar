@@ -2705,6 +2705,15 @@ if(QT6)
         ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/res/skins/default-menu-styles-linux.qss
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default-menu-styles-linux.qss
+      # LV2 plugins: bundled pre-built .lv2 directories for Android
+      # Only copy if the directory exists (populated by CI build_lv2.yml workflow)
+      COMMAND
+        ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
+      COMMAND
+        ${CMAKE_COMMAND} -D SRC_DIR=${CMAKE_SOURCE_DIR}/packaging/android/assets/lv2
+          -D DST_DIR=${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
+          -P ${CMAKE_SOURCE_DIR}/cmake/copy_lv2_bundles.cmake
       # Translations: ship only the English source file (Mixxx falls back to
       # the in-source English strings if no .qm is found).
       COMMAND
