@@ -573,24 +573,25 @@ jobs:
           if [ -d "${DF_SRC}" ]; then
             cd "${DF_SRC}"
             # Create minimal GL/gl.h stub for Android (DPF needs it for UI code)
-            NDK_SYSROOT="${TC_PREFIX}/sysroot"
-            mkdir -p "${NDK_SYSROOT}/usr/include/GL"
-            echo '#ifndef __GL_GL_H__' > "${NDK_SYSROOT}/usr/include/GL/gl.h"
-            echo '#define __GL_GL_H__' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
-            echo '#include <GLES3/gl3.h>' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
-            echo '#include <GLES3/gl3ext.h>' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
-            echo '#endif' >> "${NDK_SYSROOT}/usr/include/GL/gl.h"
-            echo '#ifndef __GL_GLEXT_H__' > "${NDK_SYSROOT}/usr/include/GL/glext.h"
-            echo '#define __GL_GLEXT_H__' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
-            echo '#include <GLES3/gl3ext.h>' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
-            echo '#endif' >> "${NDK_SYSROOT}/usr/include/GL/glext.h"
+            # NDK sysroot is read-only, so use a separate include dir
+            GL_STUB_DIR="${BUILD_DIR}/gl-stub"
+            mkdir -p "${GL_STUB_DIR}/GL"
+            echo '#ifndef __GL_GL_H__' > "${GL_STUB_DIR}/GL/gl.h"
+            echo '#define __GL_GL_H__' >> "${GL_STUB_DIR}/GL/gl.h"
+            echo '#include <GLES3/gl3.h>' >> "${GL_STUB_DIR}/GL/gl.h"
+            echo '#include <GLES3/gl3ext.h>' >> "${GL_STUB_DIR}/GL/gl.h"
+            echo '#endif' >> "${GL_STUB_DIR}/GL/gl.h"
+            echo '#ifndef __GL_GLEXT_H__' > "${GL_STUB_DIR}/GL/glext.h"
+            echo '#define __GL_GLEXT_H__' >> "${GL_STUB_DIR}/GL/glext.h"
+            echo '#include <GLES3/gl3ext.h>' >> "${GL_STUB_DIR}/GL/glext.h"
+            echo '#endif' >> "${GL_STUB_DIR}/GL/glext.h"
             # Build each plugin directly, only lv2_sep target (skip UI/OpenGL)
             for plugin in dragonfly-hall-reverb dragonfly-room-reverb \
                          dragonfly-plate-reverb dragonfly-early-reflections; do
               make -C "plugins/${plugin}" -j"${JOBS}" lv2_sep \
                 CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
-                CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
-                CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
+                CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2 -I${GL_STUB_DIR}" \
+                CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2 -I${GL_STUB_DIR}" \
                 LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
                 CROSS_COMPILING=true
             done
