@@ -48,6 +48,52 @@ jobs:
           rm ndk.zip
           echo "ANDROID_NDK_HOME=/opt/android-ndk" >> "$GITHUB_ENV"
 
+      - name: Install LV2 headers into NDK sysroot
+        run: |
+          NDK_SYSROOT="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          # Copy LV2 headers (lv2core, LV2 extensions) into NDK sysroot
+          for dir in /usr/include/lv2/lv2plug.in/ns/lv2core \
+                     /usr/include/lv2/lv2plug.in/ns/extensions/ui \
+                     /usr/include/lv2/lv2plug.in/ns/extensions/units \
+                     /usr/include/lv2/lv2plug.in/ns/ext/atom \
+                     /usr/include/lv2/lv2plug.in/ns/ext/buf-size \
+                     /usr/include/lv2/lv2plug.in/ns/ext/data-access \
+                     /usr/include/lv2/lv2plug.in/ns/ext/dynmanifest \
+                     /usr/include/lv2/lv2plug.in/ns/ext/event \
+                     /usr/include/lv2/lv2plug.in/ns/ext/instance-access \
+                     /usr/include/lv2/lv2plug.in/ns/ext/log \
+                     /usr/include/lv2/lv2plug.in/ns/ext/midi \
+                     /usr/include/lv2/lv2plug.in/ns/ext/morph \
+                     /usr/include/lv2/lv2plug.in/ns/ext/options \
+                     /usr/include/lv2/lv2plug.in/ns/ext/parameters \
+                     /usr/include/lv2/lv2plug.in/ns/ext/patch \
+                     /usr/include/lv2/lv2plug.in/ns/ext/port-groups \
+                     /usr/include/lv2/lv2plug.in/ns/ext/port-props \
+                     /usr/include/lv2/lv2plug.in/ns/ext/presets \
+                     /usr/include/lv2/lv2plug.in/ns/ext/resize-port \
+                     /usr/include/lv2/lv2plug.in/ns/ext/state \
+                     /usr/include/lv2/lv2plug.in/ns/ext/time \
+                     /usr/include/lv2/lv2plug.in/ns/ext/uri-map \
+                     /usr/include/lv2/lv2plug.in/ns/ext/urid \
+                     /usr/include/lv2/lv2plug.in/ns/ext/worker \
+                     /usr/include/lv2/lv2plug.in/ns/ext/; do
+            if [ -d "$dir" ]; then
+              cp -r "$dir" "${NDK_SYSROOT}/usr/include/lv2/lv2plug.in/ns/"
+            fi
+          done
+          # Also copy top-level lv2.h if it exists
+          if [ -f /usr/include/lv2.h ]; then
+            cp /usr/include/lv2.h "${NDK_SYSROOT}/usr/include/"
+          fi
+          # Copy lilv headers if available
+          if [ -d /usr/include/lilv-0 ]; then
+            cp -r /usr/include/lilv-0/lilv "${NDK_SYSROOT}/usr/include/"
+          fi
+          if [ -f /usr/include/lilv/lilv.h ]; then
+            mkdir -p "${NDK_SYSROOT}/usr/include/lilv"
+            cp /usr/include/lilv/lilv.h "${NDK_SYSROOT}/usr/include/lilv/"
+          fi
+
       - name: Build LV2 plugins for Android ARM64
         env:
           ANDROID_NDK_HOME: /opt/android-ndk
