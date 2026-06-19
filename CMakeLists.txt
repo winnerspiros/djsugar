@@ -2642,7 +2642,7 @@ if(QT6)
       #   - res/skins/{Deere,Shade,Tango,*64 Samplers}  → ~12 MiB; we ship
       #     only LateNight (the default skin returned by SkinLoader) plus
       #     the shared *.qss helpers
-      #   - res/translations/* except English  → ~70 MiB of .qm files; the
+#- res / translations/* except English  → ~70 MiB of .qm files; the
       #     user runs the app in English and would otherwise have to find
       #     Settings → Preferences to switch back. Re-add specific locales
       #     here if needed.
@@ -2711,9 +2711,10 @@ if(QT6)
         ${CMAKE_COMMAND} -E make_directory
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
       COMMAND
-        ${CMAKE_COMMAND} -D SRC_DIR=${CMAKE_SOURCE_DIR}/packaging/android/assets/lv2
-          -D DST_DIR=${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
-          -P ${CMAKE_SOURCE_DIR}/cmake/copy_lv2_bundles.cmake
+        ${CMAKE_COMMAND} -D
+        SRC_DIR=${CMAKE_SOURCE_DIR}/packaging/android/assets/lv2 -D
+        DST_DIR=${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2 -P
+        ${CMAKE_SOURCE_DIR}/cmake/copy_lv2_bundles.cmake
       # Translations: ship only the English source file (Mixxx falls back to
       # the in-source English strings if no .qm is found).
       COMMAND
