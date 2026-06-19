@@ -262,7 +262,7 @@ jobs:
               -DFFMPEG=ON
               -DLOCALECOMPARE=OFF
               -DBROADCAST=OFF
-              -DLILV=OFF
+              -DLILV=ON
               -DVINYLCONTROL=OFF
               -DMAD=OFF
               -DMODPLUG=OFF
@@ -317,6 +317,7 @@ jobs:
           # long tag names from git describe. We fetch full history
           # manually below for `git describe` to work.
           fetch-depth: 1
+          submodules: ${{ startsWith(matrix.artifacts_slug, 'android') && 'recursive' || 'false' }}
 
       - name: "[Windows] Enable long paths in git"
         if: runner.os == 'Windows'
@@ -499,6 +500,94 @@ jobs:
           sudo rm -rf /usr/share/dotnet            # Free up 3.4G
           sudo rm -rf /usr/share/swift             # Free up 3.2G
           sudo rm -rf /usr/local/share/vcpkg       # Size unknown, but obvious duplicate
+
+      - name: "[android] Build LV2 plugins for Android"
+        if: startsWith(matrix.artifacts_slug, 'android')
+        run: |
+          set -e
+          NDK="${ANDROID_NDK_HOME}"
+          TOOLCHAIN="${NDK}/build/cmake/android.toolchain.cmake"
+          TC_PREFIX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
+          export CC="${TC_PREFIX}/bin/aarch64-linux-android35-clang"
+          export CXX="${TC_PREFIX}/bin/aarch64-linux-android35-clang++"
+          export AR="${TC_PREFIX}/bin/llvm-ar"
+          export RANLIB="${TC_PREFIX}/bin/llvm-ranlib"
+          export STRIP="${TC_PREFIX}/bin/llvm-strip"
+          JOBS=$(nproc)
+          BUILD_DIR="${{ github.workspace }}/build-lv2-android"
+          ASSETS_DIR="${{ github.workspace }}/packaging/android/assets/lv2"
+          rm -rf "${BUILD_DIR}"
+          mkdir -p "${BUILD_DIR}" "${ASSETS_DIR}"
+
+          # Install LV2 headers into NDK sysroot
+          NDK_SYSROOT="${TC_PREFIX}/sysroot"
+          for src in /usr/include/lv2.h /usr/include/lv2 /usr/include/lilv-0; do
+            if [ -e "$src" ]; then
+              dest="${NDK_SYSROOT}/usr/include/$(basename $src)"
+              mkdir -p "$(dirname $dest)"
+              cp -r "$src" "$dest"
+            fi
+          done
+
+          # Build expat for Android (required by Calf)
+          echo "=== Building expat ==="
+          git clone --depth 1 https://github.com/libexpat/libexpat.git /tmp/expat-src
+          cd /tmp/expat-src
+          mkdir -p build-android && cd build-android
+          cmake ../expat \
+            -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+            -DANDROID_STL=c++_shared -DCMAKE_BUILD_TYPE=MinSizeRel \
+            -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install/expat" \
+            -DEXPAT_BUILD_EXAMPLES=OFF -DEXPAT_BUILD_TESTS=OFF \
+            -DEXPAT_SHARED_LIBS=ON
+          cmake --build . --parallel "${JOBS}"
+          cmake --install .
+
+          # Build Calf Studio Gear (LV2 only)
+          echo "=== Building Calf ==="
+          CALF_SRC="${{ github.workspace }}/lib/calf-plugins"
+          if [ -d "${CALF_SRC}" ]; then
+            mkdir -p "${BUILD_DIR}/calf-plugins" && cd "${BUILD_DIR}/calf-plugins"
+            cmake "${CALF_SRC}" \
+              -G Ninja -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+              -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 \
+              -DANDROID_STL=c++_shared -DCMAKE_BUILD_TYPE=MinSizeRel \
+              -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install/calf-plugins" \
+              -DWANT_GUI=OFF -DWANT_JACK=OFF -DWANT_LASH=OFF \
+              -DWANT_LV2=ON -DWANT_LV2_GUI=OFF -DWANT_SORDI=OFF \
+              -DWANT_EXPERIMENTAL=OFF -DWANT_SSE=OFF \
+              -DCMAKE_FIND_ROOT_PATH="${BUILD_DIR}/install/expat" \
+              -DEXPAT_INCLUDE_DIR="${BUILD_DIR}/install/expat/include" \
+              -DEXPAT_LIBRARY="${BUILD_DIR}/install/expat/lib/libexpat.so"
+            cmake --build . --parallel "${JOBS}"
+            cmake --install .
+            find "${BUILD_DIR}/install/calf-plugins" -name "*.lv2" -type d | while IFS= read -r bundle; do
+              cp -r "${bundle}" "${ASSETS_DIR}/$(basename "${bundle}")"
+            done
+          fi
+
+          # Build Dragonfly Reverb (DPF Makefile)
+          echo "=== Building Dragonfly ==="
+          DF_SRC="${{ github.workspace }}/lib/dragonfly-reverb"
+          if [ -d "${DF_SRC}" ]; then
+            cd "${DF_SRC}"
+            make -j"${JOBS}" \
+              CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}" STRIP="${STRIP}" \
+              CFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -O2" \
+              CXXFLAGS="--target=aarch64-linux-android35 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -O2" \
+              LDFLAGS="--target=aarch64-linux-android35 -Wl,--gc-sections,-O2,-s" \
+              CROSS_COMPILING=true plugins
+            for plugin in DragonflyHallReverb DragonflyRoomReverb \
+                         DragonflyPlateReverb DragonflyEarlyReflections; do
+              if [ -d "bin/${plugin}.lv2" ]; then
+                cp -r "bin/${plugin}.lv2" "${ASSETS_DIR}/${plugin}.lv2"
+              fi
+            done
+          fi
+
+          echo "=== LV2 plugins built ==="
+          ls -la "${ASSETS_DIR}/"
 
       - name: "Create build directory"
         run: mkdir build
