@@ -5,6 +5,7 @@
 #ifdef Q_OS_ANDROID
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QStandardPaths>
 #endif
 
@@ -12,20 +13,45 @@
 #include "effects/backends/lv2/lv2manifest.h"
 
 LV2Backend::LV2Backend() {
-    // On Android, set LV2_PATH to the bundled plugins directory
-    // so the scanner finds our pre-built LV2 plugins.
+    // On Android, copy LV2 bundles from APK assets to a writable directory
+    // so lilv can scan them via regular file paths.
 #ifdef Q_OS_ANDROID
-    QString lv2Path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/lv2";
-    if (!QDir(lv2Path).exists()) {
-        lv2Path = QCoreApplication::applicationDirPath() + "/assets/lv2";
+    QString lv2Dest = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/lv2";
+    if (!QDir(lv2Dest).exists()) {
+        // Copy from bundled assets to writable location
+        QDir(lv2Dest).mkpath(".");
+        QDir assetDir("assets:/lv2");
+        if (assetDir.exists()) {
+            for (const QString& bundle : assetDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                QString src = "assets:/lv2/" + bundle;
+                QString dst = lv2Dest + "/" + bundle;
+                if (!QDir(dst).exists()) {
+                    QDir(dst).mkpath(".");
+                    // Recursively copy bundle contents
+                    QDir srcDir(src);
+                    for (const QString& file : srcDir.entryList(QDir::Files)) {
+                        QFile::copy(src + "/" + file, dst + "/" + file);
+                    }
+                    // Copy manifest.ttl and plugin.so files
+                    for (const QString& subdir : srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                        QString subDst = dst + "/" + subdir;
+                        QDir(subDst).mkpath(".");
+                        QDir srcSubDir(src + "/" + subdir);
+                        for (const QString& file : srcSubDir.entryList(QDir::Files)) {
+                            QFile::copy(src + "/" + subdir + "/" + file, subDst + "/" + file);
+                        }
+                    }
+                }
+            }
+        }
     }
     if (!qEnvironmentVariableIsSet("LV2_PATH")) {
-        qputenv("LV2_PATH", lv2Path.toUtf8());
+        qputenv("LV2_PATH", lv2Dest.toUtf8());
     }
 #endif
 
     m_pWorld = lilv_world_new();
-    if (!m_pWarning) {
+    if (!m_pWorld) {
         qWarning() << "LV2Backend: lilv_world_new() returned NULL — LV2 support disabled";
         return;
     }

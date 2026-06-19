@@ -700,7 +700,15 @@ jobs:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
       - name: "Build"
-        run: cmake --build . --config RelWithDebInfo
+        run: |
+          cmake --build . --config RelWithDebInfo
+          # Copy LV2 bundles into Android build assets after cmake creates them
+          if [ -d "android-build/assets" ] && [ -d "../packaging/android/assets/lv2" ]; then
+            mkdir -p android-build/assets/lv2
+            cp -r ../packaging/android/assets/lv2/* android-build/assets/lv2/ 2>/dev/null || true
+            echo "LV2 bundles copied to Android assets"
+            ls -la android-build/assets/lv2/ || true
+          fi
         working-directory: build
         env:
           CC: ${{ matrix.cc }}
