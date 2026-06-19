@@ -183,10 +183,7 @@ jobs:
           echo "=== Building LSP Plugins ==="
           cd "${PROJECT_ROOT}/lib/lsp-plugins"
 
-          # Fetch internal dependencies (lsp-common-lib, lsp-dsp-lib, etc.)
-          make fetch
-
-          # Configure for cross-compilation
+          # Configure for cross-compilation first (required before fetch)
           make config \
             ARCHITECTURE=aarch64 \
             CROSS_COMPILE=yes \
@@ -194,6 +191,9 @@ jobs:
             CXX="${CXX}" \
             AR="${AR}" \
             PKG_CONFIG=/bin/false
+
+          # Fetch internal dependencies (lsp-common-lib, lsp-dsp-lib, etc.)
+          make fetch
 
           # Build all LV2 plugins
           make -j"${JOBS}" \
