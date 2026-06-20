@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QtGlobal>
+
 // This define is checked in wglwidgetqglwidget.h and wglwidgetqopengl.h
 // to make sure they are only included from this header, to enforce that
 // all code includes this header wglwidget.h.
