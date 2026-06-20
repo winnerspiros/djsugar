@@ -2129,11 +2129,8 @@ else()
         src/widget/wglwidgetqglwidget.cpp
     )
   endif()
-  # Provide stub WGLWidget implementations for Android (QOPENGL=OFF)
-  # so the linker can resolve virtual method symbols
-  if(ANDROID)
-    target_sources(mixxx-lib PRIVATE src/widget/wglwidgetqopengl_stub.cpp)
-  endif()
+  # Note: wglwidgetqopengl_stub.cpp is not needed on Android because
+  # wglwidgetqopengl_android.h defines all methods inline
 endif()
 
 set_source_files_properties(
