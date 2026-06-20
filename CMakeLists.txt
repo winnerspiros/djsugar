@@ -1322,12 +1322,18 @@ add_library(
   src/effects/backends/builtin/builtinbackend.cpp
   src/effects/backends/builtin/distortioneffect.cpp
   src/effects/backends/builtin/echoeffect.cpp
+  src/effects/backends/builtin/djechoeffect.cpp
   src/effects/backends/builtin/filtereffect.cpp
   src/effects/backends/builtin/flangereffect.cpp
   src/effects/backends/builtin/gaineffect.cpp
   src/effects/backends/builtin/glitcheffect.cpp
   src/effects/backends/builtin/graphiceqeffect.cpp
   src/effects/backends/builtin/linkwitzriley8eqeffect.cpp
+  src/effects/backends/builtin/proreverbeffect.cpp
+  src/effects/backends/builtin/profiltereffect.cpp
+  src/effects/backends/builtin/pronoiseeffect.cpp
+  src/effects/backends/builtin/beatrepeateffect.cpp
+  src/effects/backends/builtin/tapestopeffect.cpp
   src/effects/backends/builtin/loudnesscontoureffect.cpp
   src/effects/backends/builtin/metronomeeffect.cpp
   src/effects/backends/builtin/metronomeclick.cpp
@@ -1637,6 +1643,9 @@ add_library(
   src/skin/legacy/tooltips.cpp
   src/skin/skincontrols.cpp
   src/skin/skinloader.cpp
+  src/soundio/networkenumerator.cpp
+  src/soundio/portaudioenumerator.cpp
+  src/soundio/sounddeviceenumerator.cpp
   src/soundio/sounddevice.cpp
   src/soundio/sounddevicenetwork.cpp
   src/soundio/sounddeviceportaudio.cpp
@@ -2695,6 +2704,16 @@ if(QT6)
         ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/res/skins/default-menu-styles-linux.qss
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default-menu-styles-linux.qss
+      # LV2 plugins: bundled pre-built .lv2 directories for Android
+      # Only copy if the directory exists (populated by CI build_lv2.yml workflow)
+      COMMAND
+        ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2
+      COMMAND
+        ${CMAKE_COMMAND} -D
+        SRC_DIR=${CMAKE_SOURCE_DIR}/packaging/android/assets/lv2 -D
+        DST_DIR=${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/lv2 -P
+        ${CMAKE_SOURCE_DIR}/cmake/copy_lv2_bundles.cmake
       # Translations: ship only the English source file (Mixxx falls back to
       # the in-source English strings if no .qm is found).
       COMMAND
@@ -3509,6 +3528,11 @@ target_link_libraries(mixxx-lib PRIVATE Chromaprint::Chromaprint)
 
 # Locale Aware Compare for SQLite
 find_package(SQLite3)
+if(NOT TARGET SQLite3::SQLite3) # CMake < 4.3
+  # This will allow to use the new name while still permitting it to
+  # compile with older versions of CMake.
+  add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
 # For LOCALECOMPARE we call directly sqlite functions to the database opened by
 # Qt. It only works without crashing when Mixxx links to the same sqlite
 # library as Qt. On vcpkg builds, the custom FindSQLite3.cmake wrapper ensures
@@ -3557,12 +3581,12 @@ if(LOCALECOMPARE)
       endif()
     endif()
   else()
-    target_link_libraries(mixxx-lib PRIVATE SQLite::SQLite3)
+    target_link_libraries(mixxx-lib PRIVATE SQLite3::SQLite3)
   endif()
 elseif(SQLite3_FOUND)
   # When LOCALECOMPARE is OFF (manually set) but SQLite3 is found (static Qt builds),
   # we still need to link SQLite3 unconditionally
-  target_link_libraries(mixxx-lib PRIVATE SQLite::SQLite3)
+  target_link_libraries(mixxx-lib PRIVATE SQLite3::SQLite3)
 endif()
 
 # Denon Engine Prime library export support (using libdjinterop)
@@ -4097,6 +4121,7 @@ if(QT6)
   if(QT_VERSION VERSION_GREATER_EQUAL 6.10)
     # from Qt 6.10 GuiPrivate required for QShader/rendergraph (rhi/qshader.h)
     list(APPEND QT_EXTRA_COMPONENTS "GuiPrivate")
+    set(QT_NO_PRIVATE_MODULE_WARNING ON)
   endif()
 else()
   find_package(QT 5.12 NAMES Qt5 COMPONENTS Core REQUIRED)
@@ -5291,7 +5316,28 @@ if(HSS1394)
 endif()
 
 # Lilv (LV2)
-find_package(lilv)
+if(ANDROID AND DEFINED BUILD_DIR)
+  # Use lilv built for Android from the CI build step
+  set(ANDROID_LV2_INSTALL "${BUILD_DIR}/install/lv2-deps")
+  if(IS_DIRECTORY "${ANDROID_LV2_INSTALL}")
+    set(lilv_INCLUDE_DIR "${ANDROID_LV2_INSTALL}/include")
+    find_library(
+      lilv_LIBRARY
+      NAMES lilv-0 lilv
+      PATHS "${ANDROID_LV2_INSTALL}/lib"
+      NO_DEFAULT_PATH
+    )
+    if(lilv_LIBRARY)
+      set(lilv_FOUND TRUE)
+      set(LILV_FOUND TRUE)
+      message(STATUS "Found Android lilv: ${lilv_LIBRARY}")
+    endif()
+  endif()
+endif()
+
+if(NOT lilv_FOUND)
+  find_package(lilv)
+endif()
 default_option(LILV "Lilv (LV2) support" "lilv_FOUND")
 if(LILV)
   if(NOT lilv_FOUND)
@@ -5308,7 +5354,39 @@ if(LILV)
       src/effects/backends/lv2/lv2manifest.cpp
   )
   target_compile_definitions(mixxx-lib PUBLIC __LILV__)
-  target_link_libraries(mixxx-lib PRIVATE lilv::lilv)
+  if(
+    ANDROID
+    AND DEFINED BUILD_DIR
+    AND EXISTS "${BUILD_DIR}/install/lv2-deps/lib"
+  )
+    # Link against Android-built lilv and dependencies
+    target_link_directories(
+      mixxx-lib
+      PRIVATE "${BUILD_DIR}/install/lv2-deps/lib"
+    )
+    target_link_libraries(
+      mixxx-lib
+      PRIVATE lilv-0 serd-0 sord-0 sratom-0 lv2
+    )
+    target_include_directories(
+      mixxx-lib
+      PRIVATE "${BUILD_DIR}/install/lv2-deps/include"
+    )
+    if(EXISTS "${BUILD_DIR}/install/lv2-deps/include/serd-0")
+      target_include_directories(
+        mixxx-lib
+        PRIVATE "${BUILD_DIR}/install/lv2-deps/include/serd-0"
+      )
+    endif()
+    if(EXISTS "${BUILD_DIR}/install/lv2-deps/include/lilv-0")
+      target_include_directories(
+        mixxx-lib
+        PRIVATE "${BUILD_DIR}/install/lv2-deps/include/lilv-0"
+      )
+    endif()
+  else()
+    target_link_libraries(mixxx-lib PRIVATE lilv::lilv)
+  endif()
   if(BUILD_TESTING)
     target_link_libraries(mixxx-test PRIVATE lilv::lilv)
   endif()
@@ -5678,7 +5756,7 @@ target_precompile_headers(
   mixxx-lib
   PUBLIC ${MIXXX_LIB_PRECOMPILED_HEADER} ${MIXXX_COMMON_PRECOMPILED_HEADER}
 )
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   target_precompile_headers(mixxx-test REUSE_FROM mixxx-lib)
 endif()
 
