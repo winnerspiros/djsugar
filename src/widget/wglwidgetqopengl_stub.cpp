@@ -1,22 +1,18 @@
 // Stub implementations for WGLWidget on Android (QOPENGL=OFF)
-// On Android, the full class is defined in wglwidgetqopengl_android.h
-// so this file is intentionally left empty to avoid redefinition errors.
-#ifndef Q_OS_ANDROID
-// This file is only compiled on non-Android platforms where
-// wglwidgetqopengl.h is included but the linker still needs
-// the virtual method implementations.
+// Provides out-of-line virtual method symbols for the linker.
+// On Android, WGLWidget is defined inline in wglwidgetqopengl_android.h
+// but we still need this file to emit the vtable and typeinfo symbols
+// when LTO (CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON) is enabled.
 #include "widget/wglwidget.h"
 
+// Out-of-line definitions to force vtable/typeinfo emission under LTO.
+// These match the inline definitions in wglwidgetqopengl_android.h.
+
 WGLWidget::WGLWidget(QWidget* parent)
-        : QWidget(parent),
-          m_pOpenGLWindow(nullptr),
-          m_pContainerWidget(nullptr),
-          m_pTrackDropTarget(nullptr) {
-    Q_UNUSED(parent);
+        : QWidget(parent) {
 }
 
-WGLWidget::~WGLWidget() {
-}
+WGLWidget::~WGLWidget() = default;
 
 bool WGLWidget::isContextValid() const {
     return false;
@@ -47,14 +43,14 @@ void WGLWidget::initializeGL() {
 }
 
 void WGLWidget::setTrackDropTarget(TrackDropTarget* pTarget) {
-    m_pTrackDropTarget = pTarget;
+    Q_UNUSED(pTarget);
 }
 
 TrackDropTarget* WGLWidget::trackDropTarget() const {
-    return m_pTrackDropTarget;
+    return nullptr;
 }
 
-QOpenGLWindow* WGLWidget::getOpenGLWindow() const {
+void* WGLWidget::getOpenGLWindow() const {
     return nullptr;
 }
 
@@ -69,4 +65,3 @@ void WGLWidget::resizeEvent(QResizeEvent* event) {
 QPaintDevice* WGLWidget::paintDevice() {
     return nullptr;
 }
-#endif // !Q_OS_ANDROID
