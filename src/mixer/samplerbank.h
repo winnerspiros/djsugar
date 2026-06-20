@@ -21,9 +21,6 @@ class SamplerBank : public QObject {
     bool saveSamplerBankToPath(const QString& samplerBankPath);
     bool loadSamplerBankFromPath(const QString& samplerBankPath);
 
-  private:
-    void generateDefaultSamples();
-
   private slots:
     void slotSaveSamplerBank(double v);
     void slotLoadSamplerBank(double v);
