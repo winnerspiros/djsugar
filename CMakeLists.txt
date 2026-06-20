@@ -1798,7 +1798,7 @@ add_library(
   src/waveform/widgets/simplesignalwaveformwidget.cpp
   src/waveform/widgets/softwarewaveformwidget.cpp
   src/waveform/widgets/waveformwidgetabstract.cpp
-  #if !defined(Q_OS_ANDROID)
+  #if NOT CMAKE_SYSTEM_NAME STREQUAL "Android"
   src/waveform/widgets/glwaveformwidgetabstract.cpp
   #endif
   src/waveform/widgets/glvsynctestwidget.cpp
@@ -1870,7 +1870,7 @@ add_library(
   src/widget/wsizeawarestack.cpp
   src/widget/wskincolor.cpp
   src/widget/wslidercomposed.cpp
-  #if !defined(Q_OS_ANDROID)
+  #if NOT CMAKE_SYSTEM_NAME STREQUAL "Android"
   src/widget/wspinny.cpp
   src/widget/wspinnybase.cpp
   #endif
@@ -1884,7 +1884,7 @@ add_library(
   src/widget/wtracktableview.cpp
   src/widget/wtracktableviewheader.cpp
   src/widget/wtrackwidgetgroup.cpp
-  #if !defined(Q_OS_ANDROID)
+  #if NOT CMAKE_SYSTEM_NAME STREQUAL "Android"
   src/widget/wvumeter.cpp
   src/widget/wvumeterbase.cpp
   #endif
