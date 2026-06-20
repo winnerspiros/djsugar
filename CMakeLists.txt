@@ -2132,7 +2132,7 @@ else()
   # Provide stub WGLWidget implementations for Android (QOPENGL=OFF)
   # so the linker can resolve virtual method symbols from derived
   # classes like WSpinnyBase and WVuMeterBase
-  if(ANDROID)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     target_sources(mixxx-lib PRIVATE src/widget/wglwidgetqopengl_stub.cpp)
   endif()
 endif()
