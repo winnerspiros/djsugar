@@ -54,6 +54,10 @@ constexpr double kBPMToleranceMax = 15.0;
 // Delays
 constexpr int kLoadToBlendDelayMs = 1000;
 constexpr int kRetryDelayMs = 3000;
+// Maximum retry delay (caps exponential backoff)
+constexpr int kMaxRetryDelayMs = 30000;
+// Maximum consecutive retries before giving up
+constexpr int kMaxSearchRetries = 5;
 
 // Ideal duration (seconds)
 constexpr int kIdealDurationMin = 150;
@@ -1047,7 +1051,17 @@ void AIBroFeature::findNextSong() {
         return;
     }
 
-    updateCurrentTrackInfo();
+    // Update track info. If metadata is not yet populated (YouTube tracks
+    // load asynchronously), retry after a short delay.
+    if (!updateCurrentTrackInfo()) {
+        kLogger.info() << "AI Bro: track metadata not ready, retrying in 500ms";
+        QTimer::singleShot(500, this, [this]() {
+            if (isActive() && !m_downloading) {
+                findNextSong();
+            }
+        });
+        return;
+    }
 
     // Validate current track
     const QString currentLower = m_currentTrackTitle.toLower();
@@ -1147,6 +1161,8 @@ void AIBroFeature::findNextSongFallback() {
 void AIBroFeature::slotMusicMatcherReady(
         const QList<mixxx::MusicMatcherSuggestion>& suggestions) {
     m_musicMatcherPending = false;
+    // Reset retry count on successful API response
+    m_searchRetryCount = 0;
     if (!m_downloading || suggestions.isEmpty()) {
         m_downloading = false;
         findNextSongFallback();
@@ -1298,6 +1314,9 @@ void AIBroFeature::slotSearchResultsReady(
     // Clear Music Matcher pending flag (local MM uses YouTube search directly)
     m_musicMatcherPending = false;
 
+    // Reset retry count on successful search
+    m_searchRetryCount = 0;
+
     kLogger.info() << "AI Bro:" << results.size() << "results";
 
     // Manual track override
@@ -1382,7 +1401,21 @@ void AIBroFeature::slotDownloadFailed(
         }
     }
 
-    QTimer::singleShot(kRetryDelayMs * 2, this, [this]() {
+    // Exponential backoff for download failures too
+    int delay = kRetryDelayMs * (1 << qMin(m_searchRetryCount, 4));
+    delay = qMin(delay, kMaxRetryDelayMs);
+    m_searchRetryCount++;
+
+    if (m_searchRetryCount > kMaxSearchRetries) {
+        kLogger.warning() << "AI Bro: max retries reached ("
+                          << kMaxSearchRetries << "), stopping search";
+        m_searchRetryCount = 0;
+        return;
+    }
+
+    kLogger.info() << "AI Bro: retrying in" << delay << "ms (attempt"
+                   << m_searchRetryCount << ")";
+    QTimer::singleShot(delay, this, [this]() {
         if (isActive()) {
             findNextSong();
         }
@@ -1398,7 +1431,22 @@ void AIBroFeature::slotSearchFailed(
     m_musicMatcherPending = false;
     kLogger.warning() << "AI Bro: search failed:" << error;
     m_downloading = false;
-    QTimer::singleShot(kRetryDelayMs, this, [this]() {
+
+    // Exponential backoff: 3s, 6s, 12s, 24s, 30s (capped)
+    int delay = kRetryDelayMs * (1 << qMin(m_searchRetryCount, 4));
+    delay = qMin(delay, kMaxRetryDelayMs);
+    m_searchRetryCount++;
+
+    if (m_searchRetryCount > kMaxSearchRetries) {
+        kLogger.warning() << "AI Bro: max retries reached ("
+                          << kMaxSearchRetries << "), stopping search";
+        m_searchRetryCount = 0;
+        return;
+    }
+
+    kLogger.info() << "AI Bro: retrying search in" << delay << "ms (attempt"
+                   << m_searchRetryCount << ")";
+    QTimer::singleShot(delay, this, [this]() {
         if (isActive()) {
             findNextSong();
         }
@@ -1768,19 +1816,19 @@ int AIBroFeature::countPlayingDecks() const {
     return count;
 }
 
-void AIBroFeature::updateCurrentTrackInfo() {
+bool AIBroFeature::updateCurrentTrackInfo() {
     m_currentTrackTitle.clear();
     m_currentTrackArtist.clear();
     if (!m_pPlayerManager) {
-        return;
+        return false;
     }
     auto* pPlayer = m_pPlayerManager->getDeck(m_iCurrentDeck);
     if (!pPlayer) {
-        return;
+        return false;
     }
     TrackPointer pTrack = pPlayer->getLoadedTrack();
     if (!pTrack) {
-        return;
+        return false;
     }
     m_currentTrackTitle = pTrack->getTitle();
     m_currentTrackArtist = pTrack->getArtist();
@@ -1809,7 +1857,9 @@ void AIBroFeature::updateCurrentTrackInfo() {
                                << artist << "-" << title;
             }
         });
+        return false;
     }
+    return true;
 }
 
 int AIBroFeature::findAvailableDeck() const {

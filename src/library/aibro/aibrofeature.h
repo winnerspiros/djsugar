@@ -134,8 +134,10 @@ class AIBroFeature : public QObject {
     void setVolume(int deckIndex, double volume);
     void setPlay(int deckIndex, bool play);
 
-    // --- Current track tracking ---
-    void updateCurrentTrackInfo();
+    // --- Current track tracking --
+    // Returns true if track info (title or artist) is available.
+    // If false, the caller should retry later (metadata may not be populated yet).
+    bool updateCurrentTrackInfo();
 
     // --- Vocal sync helpers ---
     double estimateVocalStartPosition(int deckIndex) const;
@@ -193,6 +195,9 @@ class AIBroFeature : public QObject {
     int m_blendCount;
     /// Current session BPM (for beat-synced echo)
     double m_sessionBPM;
+
+    /// Consecutive search retry count (for exponential backoff)
+    int m_searchRetryCount = 0;
 
     Library* m_pLibrary;
     UserSettingsPointer m_pConfig;
