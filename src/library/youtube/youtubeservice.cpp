@@ -793,8 +793,9 @@ bool YouTubeService::applyRemoteConfig(const QJsonObject& config, int remoteVers
     // Validate that each client entry has the required fields.
     for (const QJsonValue& v : clientsArr) {
         const QJsonObject o = v.toObject();
-        if (o.isEmpty())
+        if (o.isEmpty()) {
             continue;
+        }
         if (!o.contains(QStringLiteral("name")) ||
                 !o.contains(QStringLiteral("version")) ||
                 !o.contains(QStringLiteral("id"))) {
@@ -2756,8 +2757,9 @@ void YouTubeService::downloadViaAndroidBundled(
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "QAndroidApplication::context() invalid for"
                               << videoId;
-            if (guard)
+            if (guard) {
                 Q_EMIT guard->downloadFailed(videoId, "No Android context");
+            }
             return;
         }
 
@@ -2771,9 +2773,10 @@ void YouTubeService::downloadViaAndroidBundled(
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "YoutubeDL.getInstance() returned invalid for"
                               << videoId;
-            if (guard)
+            if (guard) {
                 Q_EMIT guard->downloadFailed(
                         videoId, "Bundled yt-dlp (youtubedl-android) not available");
+            }
             return;
         }
 
@@ -2788,9 +2791,10 @@ void YouTubeService::downloadViaAndroidBundled(
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "YoutubeDL.init() threw exception for"
                               << videoId;
-            if (guard)
+            if (guard) {
                 Q_EMIT guard->downloadFailed(
                         videoId, "yt-dlp init failed (youtubedl-android)");
+            }
             return;
         }
 
@@ -2872,9 +2876,10 @@ void YouTubeService::downloadViaAndroidBundled(
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "execute() failed or returned invalid for"
                               << videoId;
-            if (guard)
+            if (guard) {
                 Q_EMIT guard->downloadFailed(videoId,
                         "yt-dlp download failed (youtubedl-android)");
+            }
             return;
         }
 
@@ -2884,8 +2889,9 @@ void YouTubeService::downloadViaAndroidBundled(
         // file by id rather than trusting the process stdout — getOut() returns
         // yt-dlp's log text, not a path, which is why downloads that did run
         // were still reported as "file not found".
-        if (!guard)
+        if (!guard) {
             return; // Service destroyed, nothing more to do
+        }
 
         QString outputPath;
         const QFileInfoList matches = QDir(cacheDir).entryInfoList(

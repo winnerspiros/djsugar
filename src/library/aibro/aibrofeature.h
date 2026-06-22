@@ -7,6 +7,7 @@
 
 #include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
+#include "library/aibro/musicmatcherclient.h"
 #include "library/youtube/youtubeservice.h"
 #include "preferences/configobject.h"
 #include "preferences/usersettings.h"
@@ -60,16 +61,17 @@ class AIBroFeature : public QObject {
   private slots:
     void slotToggle(bool newValue);
     void slotProgressTick();
-    void slotSearchResultsReady(
-            const QString& query,
+    void slotSearchResultsReady(const QString& query,
             const QList<mixxx::YouTubeVideoInfo>& results);
-    void slotDownloadFinished(
-            const QString& videoId, const QString& localPath);
-    void slotDownloadFailed(
-            const QString& videoId, const QString& error);
+    void slotDownloadFinished(const QString& videoId, const QString& localPath);
+    void slotDownloadFailed(const QString& videoId, const QString& error);
     void slotBlendTick();
-    void slotSearchFailed(
-            const QString& query, const QString& error);
+    void slotSearchFailed(const QString& query, const QString& error);
+
+    // --- Music Matcher ---
+    void slotMusicMatcherReady(
+            const QList<mixxx::MusicMatcherSuggestion>& suggestions);
+    void slotMusicMatcherFailed(const QString& error);
 
   private:
     // --- Song discovery ---
@@ -79,6 +81,7 @@ class AIBroFeature : public QObject {
     mixxx::YouTubeVideoInfo pickBestCandidate(
             const QList<mixxx::YouTubeVideoInfo>& results);
     void downloadCandidate(const mixxx::YouTubeVideoInfo& candidate);
+    void findNextSongFallback();
 
     // --- DJ Blending ---
     void loadAndBlend(const QString& localPath);
@@ -155,8 +158,10 @@ class AIBroFeature : public QObject {
     bool m_downloading;
     bool m_blending;
     int m_blendStep;
+    int m_blendSteps = 100; // Dynamic blend length (75-150 based on BPM match)
     int m_blendFromDeck;
     int m_blendToDeck;
+    double m_bpmRatio = 1.0; // BPM ratio of toDeck/fromDeck (1.0 = matched)
 
     /// The deck index (0 or 1) that is currently the "active" playing deck.
     int m_iCurrentDeck;
@@ -193,4 +198,8 @@ class AIBroFeature : public QObject {
     UserSettingsPointer m_pConfig;
     PlayerManager* m_pPlayerManager;
     YouTubeFeature* m_pYouTubeFeature;
+
+    // --- Music Matcher integration ---
+    mixxx::MusicMatcherClient* m_pMusicMatcher;
+    bool m_musicMatcherPending; // true while waiting for API response
 };

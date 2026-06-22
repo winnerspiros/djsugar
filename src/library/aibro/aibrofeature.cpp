@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "control/controlproxy.h"
+#include "library/aibro/musicmatcherclient.h"
 #include "library/library.h"
 #include "library/youtube/youtubefeature.h"
 #include "mixer/deck.h"
@@ -25,12 +26,16 @@ const mixxx::Logger kLogger("AIBroFeature");
 constexpr int kProgressIntervalMs = 1000;
 constexpr int kBlendTickIntervalMs = 80;
 
-// Blend window — start blend at 90% of track
-constexpr double kBlendStartMin = 0.90;
+// Blend window — start searching for next song at 70% of track
+// This gives ~25s for a 3min track to find, download, and prepare
+// the next song before the blend starts at 85%
+constexpr double kBlendSearchStart = 0.70;
+// Start the actual crossfade blend at 85% of track
+// (blend is triggered by slotDownloadFinished → loadAndBlend when ready)
 
-// Base blend duration: 8 seconds (genre rules multiply this)
-// Used by kBlendTickIntervalMs to compute total blend steps
-constexpr int kBlendSteps = 100;
+// Base blend duration: 8 seconds at 80ms tick interval = 100 steps
+// Actual blend length is dynamic (75-150 steps) based on BPM match
+// See m_blendSteps in startBlend()
 
 // Similarity weights
 constexpr double kWeightTitleOverlap = 0.10;
@@ -79,6 +84,10 @@ constexpr double kBandFadeLowOut = 0.65;
 constexpr double kBandFadeHighIn = 0.65;
 constexpr double kBandFadeMidIn = 1.0;
 constexpr double kBandFadeLowIn = 1.4;
+
+// BPM blend thresholds
+constexpr double kBPMTolerance = 0.10;       // 10% BPM difference = "matched"
+constexpr double kBPMDoubleThreshold = 0.40; // 40% diff = half/double time
 
 // Garbage title patterns
 static const QStringList& garbagePatterns() {
@@ -296,8 +305,7 @@ static const QSet<QString>& stopWords() {
 // Normalize a song title for fuzzy comparison
 static QString normalizeSongTitle(const QString& title) {
     QString t = title.toLower().trimmed();
-    static const QRegularExpression parenRe(
-            QStringLiteral("\\s*\\([^)]*\\)"),
+    static const QRegularExpression parenRe(QStringLiteral("\\s*\\([^)]*\\)"),
             QRegularExpression::CaseInsensitiveOption);
     t.remove(parenRe);
     static const QRegularExpression dashRe(
@@ -353,8 +361,7 @@ static double titleSimilarity(const QString& a, const QString& b) {
             ++matches;
         }
     }
-    return static_cast<double>(matches) /
-            qMax(wordsA.size(), wordsB.size());
+    return static_cast<double>(matches) / qMax(wordsA.size(), wordsB.size());
 }
 
 // Remix/extended keywords
@@ -431,7 +438,9 @@ AIBroFeature::AIBroFeature(Library* pLibrary,
           m_pLibrary(pLibrary),
           m_pConfig(pConfig),
           m_pPlayerManager(pPlayerManager),
-          m_pYouTubeFeature(pYouTubeFeature) {
+          m_pYouTubeFeature(pYouTubeFeature),
+          m_pMusicMatcher(new mixxx::MusicMatcherClient(this)),
+          m_musicMatcherPending(false) {
 }
 
 AIBroFeature::~AIBroFeature() = default;
@@ -442,11 +451,16 @@ AIBroFeature::~AIBroFeature() = default;
 
 void AIBroFeature::init() {
     m_controlEnabled.setButtonMode(mixxx::control::ButtonMode::Toggle);
-    m_controlEnabled.connectValueChangeRequest(
-            this, &AIBroFeature::slotToggle);
-    connect(m_pProgressTimer, &QTimer::timeout, this, &AIBroFeature::slotProgressTick);
+    m_controlEnabled.connectValueChangeRequest(this, &AIBroFeature::slotToggle);
+    connect(m_pProgressTimer,
+            &QTimer::timeout,
+            this,
+            &AIBroFeature::slotProgressTick);
     m_pProgressTimer->setInterval(kProgressIntervalMs);
-    connect(m_pBlendTimer, &QTimer::timeout, this, &AIBroFeature::slotBlendTick);
+    connect(m_pBlendTimer,
+            &QTimer::timeout,
+            this,
+            &AIBroFeature::slotBlendTick);
     m_pBlendTimer->setInterval(kBlendTickIntervalMs);
 
     // YouTube service signals
@@ -469,17 +483,26 @@ void AIBroFeature::init() {
                     &mixxx::YouTubeService::searchFailed,
                     this,
                     &AIBroFeature::slotSearchFailed);
-            kLogger.info()
-                    << "AI Bro: signal connections: downloadFinished=" << ok1
-                    << " downloadFailed=" << ok2
-                    << " searchResultsReady=" << ok3
-                    << " searchFailed=" << ok4;
+            kLogger.info() << "AI Bro: signal connections: downloadFinished="
+                           << ok1 << " downloadFailed=" << ok2
+                           << " searchResultsReady=" << ok3
+                           << " searchFailed=" << ok4;
         } else {
             kLogger.warning() << "AI Bro: YouTubeService is null!";
         }
     } else {
         kLogger.warning() << "AI Bro: YouTubeFeature is null!";
     }
+
+    // Music Matcher signals
+    connect(m_pMusicMatcher,
+            &mixxx::MusicMatcherClient::suggestionsReady,
+            this,
+            &AIBroFeature::slotMusicMatcherReady);
+    connect(m_pMusicMatcher,
+            &mixxx::MusicMatcherClient::suggestionsFailed,
+            this,
+            &AIBroFeature::slotMusicMatcherFailed);
 }
 
 bool AIBroFeature::isActive() const {
@@ -522,7 +545,8 @@ void AIBroFeature::slotToggle(bool newValue) {
 
 AIBroFeature::MixingRules AIBroFeature::getMixingRules() const {
     // Detect genre from current track title/artist
-    QString context = (m_currentTrackTitle + " " + m_currentTrackArtist).toLower();
+    QString context =
+            (m_currentTrackTitle + " " + m_currentTrackArtist).toLower();
 
     // Check for Greek/laiko/rebetiko
     for (const QString& kw : greekGenreKeywords()) {
@@ -530,6 +554,16 @@ AIBroFeature::MixingRules AIBroFeature::getMixingRules() const {
             // Greek music: moderate overlap (1.0x), standard EQ
             return {1.0, 1.0, kEchoDecay, kEchoBeats};
         }
+    }
+
+    // Greek rap/greek trap — detect common Greek rap artist name patterns
+    // and Greek rap keywords
+    if (context.contains("greek rap") || context.contains("greek trap") ||
+            context.contains("ελληνικό rap") ||
+            context.contains("ελληνικο rap") ||
+            context.contains("ελληνικό trap") ||
+            context.contains("ελληνικο trap")) {
+        return {0.75, 0.9, 0.45, 3}; // Medium blends, light EQ
     }
 
     // EDM/electronic
@@ -555,7 +589,7 @@ AIBroFeature::MixingRules AIBroFeature::getMixingRules() const {
         return {0.75, 0.9, 0.45, 3};
     }
 
-    // Default (Greek music falls here too)
+    // Default: moderate blend suitable for most genres
     return {1.0, 1.0, kEchoDecay, kEchoBeats};
 }
 
@@ -715,7 +749,8 @@ QString AIBroFeature::buildSearchQuery() {
     if (m_currentTrackArtist.isEmpty()) {
         return m_currentTrackTitle;
     }
-    return QStringLiteral("%1 %2").arg(m_currentTrackArtist, m_currentTrackTitle);
+    return QStringLiteral("%1 %2").arg(
+            m_currentTrackArtist, m_currentTrackTitle);
 }
 
 QStringList AIBroFeature::buildDiscoveryQueries() {
@@ -743,11 +778,13 @@ QStringList AIBroFeature::buildDiscoveryQueries() {
     return queries;
 }
 
-double AIBroFeature::scoreCandidate(
-        const mixxx::YouTubeVideoInfo& candidate) {
+double AIBroFeature::scoreCandidate(const mixxx::YouTubeVideoInfo& candidate) {
     if (candidate.title.isEmpty()) {
         return -1.0;
     }
+
+    const bool trendingMode =
+            m_currentTrackTitle.isEmpty() || m_currentTrackTitle.length() < 3;
 
     // Hard filter: already played
     if (m_playedVideoIds.contains(candidate.id)) {
@@ -757,13 +794,11 @@ double AIBroFeature::scoreCandidate(
     // Hard filter: similar title already played
     QString normTitle = normalizeSongTitle(candidate.title);
     for (const QString& playedKey : std::as_const(m_playedSongKeys)) {
-        if (titleSimilarity(normTitle, normalizeSongTitle(playedKey)) > kDedupThreshold) {
+        if (titleSimilarity(normTitle, normalizeSongTitle(playedKey)) >
+                kDedupThreshold) {
             return -1.0;
         }
     }
-
-    const bool trendingMode = m_currentTrackTitle.isEmpty() ||
-            m_currentTrackTitle.length() < 3;
 
     // Hard filter: same song as currently playing
     if (!trendingMode) {
@@ -777,16 +812,15 @@ double AIBroFeature::scoreCandidate(
                 return -1.0;
             }
         }
-    }
 
-    // Hard filter: reject songs by the SAME artist (we want variety)
-    // Compare uploader name with current track artist
-    if (!m_currentTrackArtist.isEmpty() && !candidate.uploader.isEmpty()) {
-        const QString currArtLower = m_currentTrackArtist.toLower().trimmed();
-        const QString uploaderLower = candidate.uploader.toLower().trimmed();
-        // Check if uploader matches artist (handles "Artist", "Artist - Topic", etc.)
-        if (uploaderLower.contains(currArtLower) || currArtLower.contains(uploaderLower)) {
-            return -1.0;
+        // Hard filter: reject songs by the SAME artist (we want variety)
+        if (!m_currentTrackArtist.isEmpty() && !candidate.uploader.isEmpty()) {
+            const QString currArtLower = m_currentTrackArtist.toLower().trimmed();
+            const QString uploaderLower = candidate.uploader.toLower().trimmed();
+            if (uploaderLower.contains(currArtLower) ||
+                    currArtLower.contains(uploaderLower)) {
+                return -1.0;
+            }
         }
     }
 
@@ -796,10 +830,10 @@ double AIBroFeature::scoreCandidate(
     }
 
     // Hard filter: remixes (often low quality)
-    {
+    // SKIP in trending mode — greek music search returns many remixes
+    if (!trendingMode) {
         const QString lowerTitle = candidate.title.toLower();
-        if (lowerTitle.contains("remix") ||
-                lowerTitle.contains("edit") ||
+        if (lowerTitle.contains("remix") || lowerTitle.contains("edit") ||
                 lowerTitle.contains("bootleg") ||
                 lowerTitle.contains("mashup") ||
                 lowerTitle.contains("rework")) {
@@ -829,79 +863,79 @@ double AIBroFeature::scoreCandidate(
         }
     }
 
-    // Hard filter: current track is garbage
-    if (!m_currentTrackTitle.isEmpty() && m_currentTrackTitle.length() >= 3) {
-        const QString currentLower = m_currentTrackTitle.toLower();
-        for (const QString& pattern : garbagePatterns()) {
-            if (currentLower.contains(pattern)) {
-                return -1.0;
-            }
-        }
+    // === Scoring ===
+    double score = 0.0;
+
+    // In trending mode, start with a base score so valid candidates
+    // don't all end up at 0.0 and fall below the threshold.
+    if (trendingMode) {
+        score = kMinScoreThreshold + 0.05; // 0.25 base
     }
 
-    double score = 0.0;
     const QString currentT = m_currentTrackTitle.toLower().trimmed();
     const QString currentA = m_currentTrackArtist.toLower().trimmed();
     const QString videoT = candidate.title.toLower().trimmed();
     const QString videoU = candidate.uploader.toLower().trimmed();
 
-    // 1. Title word overlap
-    const QStringList titleList = currentT.split(' ', Qt::SkipEmptyParts);
-    const QSet<QString> titleWords(titleList.begin(), titleList.end());
-    const QStringList videoList = videoT.split(' ', Qt::SkipEmptyParts);
-    const QSet<QString> videoWords(videoList.begin(), videoList.end());
-    if (!titleWords.isEmpty() && !videoWords.isEmpty()) {
-        int common = 0;
-        for (const QString& w : titleWords) {
-            if (videoWords.contains(w)) {
-                ++common;
+    if (!trendingMode) {
+        // 1. Title word overlap
+        const QStringList titleList = currentT.split(' ', Qt::SkipEmptyParts);
+        const QSet<QString> titleWords(titleList.begin(), titleList.end());
+        const QStringList videoList = videoT.split(' ', Qt::SkipEmptyParts);
+        const QSet<QString> videoWords(videoList.begin(), videoList.end());
+        if (!titleWords.isEmpty() && !videoWords.isEmpty()) {
+            int common = 0;
+            for (const QString& w : titleWords) {
+                if (videoWords.contains(w)) {
+                    ++common;
+                }
             }
+            double jaccard = static_cast<double>(common) /
+                    qMax(titleWords.size(), videoWords.size());
+            score += kWeightTitleOverlap * jaccard;
         }
-        double jaccard = static_cast<double>(common) /
-                qMax(titleWords.size(), videoWords.size());
-        score += kWeightTitleOverlap * jaccard;
-    }
 
-    // 2. Semantic word similarity
-    if (!titleWords.isEmpty() && !videoWords.isEmpty()) {
-        double semanticScore = 0.0;
-        int meaningfulWords = 0;
-        for (const QString& w : titleWords) {
-            if (stopWords().contains(w)) {
-                continue;
-            }
-            ++meaningfulWords;
-            if (videoWords.contains(w)) {
-                semanticScore += 1.0;
-            } else {
-                for (const QString& vw : videoWords) {
-                    if (vw.contains(w) || w.contains(vw)) {
-                        semanticScore += 0.5;
-                        break;
+        // 2. Semantic word similarity
+        if (!titleWords.isEmpty() && !videoWords.isEmpty()) {
+            double semanticScore = 0.0;
+            int meaningfulWords = 0;
+            for (const QString& w : titleWords) {
+                if (stopWords().contains(w)) {
+                    continue;
+                }
+                ++meaningfulWords;
+                if (videoWords.contains(w)) {
+                    semanticScore += 1.0;
+                } else {
+                    for (const QString& vw : videoWords) {
+                        if (vw.contains(w) || w.contains(vw)) {
+                            semanticScore += 0.5;
+                            break;
+                        }
                     }
                 }
             }
+            if (meaningfulWords > 0) {
+                semanticScore /= meaningfulWords;
+            }
+            score += kWeightSemanticWords * semanticScore;
         }
-        if (meaningfulWords > 0) {
-            semanticScore /= meaningfulWords;
+
+        // 3. Different artist bonus
+        if (!currentA.isEmpty() && !videoU.isEmpty()) {
+            score += kWeightDifferentArtist;
         }
-        score += kWeightSemanticWords * semanticScore;
+
+        // 4. Remix/extended bonus
+        for (const QString& kw : remixKeywords()) {
+            if (videoT.contains(kw)) {
+                score += kWeightRemixBonus;
+                break;
+            }
+        }
     }
 
-    // 3. Different artist bonus (same artist songs are already filtered out above)
-    if (!currentA.isEmpty() && !videoU.isEmpty()) {
-        score += kWeightDifferentArtist;
-    }
-
-    // 4. Remix/extended bonus
-    for (const QString& kw : remixKeywords()) {
-        if (videoT.contains(kw)) {
-            score += kWeightRemixBonus;
-            break;
-        }
-    }
-
-    // 5. Greek content bonus
+    // 5. Greek content bonus (always applied — helps trending mode too)
     for (const QString& gk : greekGenreKeywords()) {
         if (videoT.contains(gk) || videoU.contains(gk)) {
             score += kWeightGreekContent;
@@ -949,22 +983,19 @@ double AIBroFeature::scoreCandidate(
         }
     }
 
-    // 9. BPM proximity
-    double currentBPM = getCurrentPlayingBPM();
-    double candidateBPM = getCandidateBPM(candidate);
-    if (currentBPM > 0 && candidateBPM > 0) {
-        double bpmRatio = candidateBPM / currentBPM;
-        double bpmDiff = std::abs(bpmRatio - 1.0);
-        double halfDiff = std::abs(bpmRatio - 0.5);
-        double doubleDiff = std::abs(bpmRatio - 2.0);
-        double bestDiff = std::min({bpmDiff, halfDiff, doubleDiff});
-        double bpmScore = 1.0 - (bestDiff / (kBPMToleranceMax / 100.0));
-        score += kWeightBPMProximity * qBound(0.0, bpmScore, 1.0);
-    }
-
-    // Trending mode base score
-    if (trendingMode && score < kMinScoreThreshold) {
-        score = kMinScoreThreshold + 0.01;
+    // 9. BPM proximity (skip in trendingMode)
+    if (!trendingMode) {
+        double currentBPM = getCurrentPlayingBPM();
+        double candidateBPM = getCandidateBPM(candidate);
+        if (currentBPM > 0 && candidateBPM > 0) {
+            double bpmRatio = candidateBPM / currentBPM;
+            double bpmDiff = std::abs(bpmRatio - 1.0);
+            double halfDiff = std::abs(bpmRatio - 0.5);
+            double doubleDiff = std::abs(bpmRatio - 2.0);
+            double bestDiff = std::min({bpmDiff, halfDiff, doubleDiff});
+            double bpmScore = 1.0 - (bestDiff / (kBPMToleranceMax / 100.0));
+            score += kWeightBPMProximity * qBound(0.0, bpmScore, 1.0);
+        }
     }
 
     return qBound(0.0, score, 1.0);
@@ -982,16 +1013,14 @@ mixxx::YouTubeVideoInfo AIBroFeature::pickBestCandidate(
         }
     }
     if (bestIdx < 0 || bestScore < kMinScoreThreshold) {
-        kLogger.warning()
-                << "AI Bro: no suitable candidate (best:" << bestScore
-                << "threshold:" << kMinScoreThreshold << ")";
+        kLogger.warning() << "AI Bro: no suitable candidate (best:" << bestScore
+                          << "threshold:" << kMinScoreThreshold << ")";
         return {};
     }
     return results[bestIdx];
 }
 
-void AIBroFeature::downloadCandidate(
-        const mixxx::YouTubeVideoInfo& candidate) {
+void AIBroFeature::downloadCandidate(const mixxx::YouTubeVideoInfo& candidate) {
     if (!m_pYouTubeFeature) {
         return;
     }
@@ -1022,8 +1051,8 @@ void AIBroFeature::findNextSong() {
 
     // Validate current track
     const QString currentLower = m_currentTrackTitle.toLower();
-    bool currentIsGarbage = m_currentTrackTitle.isEmpty() ||
-            m_currentTrackTitle.length() < 3;
+    bool currentIsGarbage =
+            m_currentTrackTitle.isEmpty() || m_currentTrackTitle.length() < 3;
     if (!currentIsGarbage) {
         for (const QString& pattern : garbagePatterns()) {
             if (currentLower.contains(pattern)) {
@@ -1046,18 +1075,41 @@ void AIBroFeature::findNextSong() {
     const QString& artist = m_currentTrackArtist;
     const QString& title = m_currentTrackTitle;
 
-    // Find the next song that "flows" from the current one.
-    //
-    // We leverage YouTube's search smarts. Queries like "songs like Artist"
-    // or "music like Artist" cause YouTube to return results from SIMILAR
-    // artists, not just the queried artist. This is the same algorithm YouTube
-    // uses for "Up Next" recommendations.
-    //
-    // We hard-filter out songs by the exact same artist (uploader name match)
-    // and pick the best-scoring remainder.
+    // Build a query for Music Matcher from the current track.
+    // Uses Deezer's recommendation engine (free, no API key) to find
+    // similar songs — replaces the non-functional musicmatcher.app HTTP API.
+    QString mmQuery;
+    if (!artist.isEmpty() && artist.length() >= 3) {
+        mmQuery = title.isEmpty() ? artist
+                                  : QStringLiteral("%1 %2").arg(artist, title);
+    } else if (!title.isEmpty() && title.length() >= 3) {
+        mmQuery = title;
+    }
+
+    if (!mmQuery.isEmpty()) {
+        kLogger.info() << "AI Bro: Music Matcher searching for similar to:"
+                       << mmQuery;
+        m_musicMatcherPending = true;
+        m_downloading = true;
+        m_searchTrackSnapshot = snapshotTrackLocations();
+        m_pMusicMatcher->findSimilar(mmQuery, 12);
+        return;
+    }
+
+    // Fallback: no valid query for Music Matcher, use direct YouTube search
+    findNextSongFallback();
+}
+
+/// Fallback: direct YouTube search with variety.
+/// Used when Music Matcher is unavailable or returns no results.
+/// Rotates through different query styles to avoid getting stuck on one song.
+void AIBroFeature::findNextSongFallback() {
+    const QString& artist = m_currentTrackArtist;
+    const QString& title = m_currentTrackTitle;
     QString query;
     if (!artist.isEmpty() && artist.length() >= 3) {
-        int style = m_blendCount % 3;
+        // Rotate through search styles based on blend count for variety
+        int style = m_blendCount % 5;
         switch (style) {
         case 0:
             query = QStringLiteral("%1 official music").arg(artist);
@@ -1066,8 +1118,13 @@ void AIBroFeature::findNextSong() {
             query = QStringLiteral("%1 songs playlist").arg(artist);
             break;
         case 2:
-        default:
             query = QStringLiteral("best of %1 music").arg(artist);
+            break;
+        case 3:
+            query = QStringLiteral("%1 live performance").arg(artist);
+            break;
+        case 4:
+            query = QStringLiteral("%1 acoustic").arg(artist);
             break;
         }
     } else if (!title.isEmpty() && title.length() >= 3) {
@@ -1075,7 +1132,7 @@ void AIBroFeature::findNextSong() {
     } else {
         query = QStringLiteral("popular greek music 2024 2025");
     }
-    kLogger.info() << "AI Bro: searching YouTube for:" << query;
+    kLogger.info() << "AI Bro: fallback YouTube search:" << query;
     m_downloading = true;
     m_searchTrackSnapshot = snapshotTrackLocations();
     if (m_pYouTubeFeature) {
@@ -1084,18 +1141,143 @@ void AIBroFeature::findNextSong() {
 }
 
 // ===================================================================
-// Progress monitoring
+// Music Matcher callbacks
+// ===================================================================
+
+void AIBroFeature::slotMusicMatcherReady(
+        const QList<mixxx::MusicMatcherSuggestion>& suggestions) {
+    m_musicMatcherPending = false;
+    if (!m_downloading || suggestions.isEmpty()) {
+        m_downloading = false;
+        findNextSongFallback();
+        return;
+    }
+
+    kLogger.info() << "AI Bro: Music Matcher returned" << suggestions.size()
+                   << "suggestions";
+
+    // Pick the best suggestion with variety:
+    // - Skip exact same artist as current track
+    // - Skip already played songs (by title matching)
+    // - Prefer higher similarity score
+    int bestIdx = -1;
+    double bestScore = -1.0;
+    for (int i = 0; i < suggestions.size(); ++i) {
+        const auto& s = suggestions[i];
+
+        // Skip exact same artist as current track (avoid getting stuck in one
+        // artist)
+        if (!m_currentTrackArtist.isEmpty() && !s.artist.isEmpty()) {
+            const QString currArtLower =
+                    m_currentTrackArtist.toLower().trimmed();
+            const QString suggArtLower = s.artist.toLower().trimmed();
+            if (suggArtLower == currArtLower) {
+                continue;
+            }
+        }
+
+        // Skip if a similar song title was already played this session
+        QString normTitle = s.title.toLower().trimmed();
+        for (const QString& suffix : {QStringLiteral("(official video)"),
+                     QStringLiteral("(official audio)"),
+                     QStringLiteral("(audio)"),
+                     QStringLiteral("(lyrics)"),
+                     QStringLiteral("(lyric video)"),
+                     QStringLiteral("- topic")}) {
+            normTitle.remove(suffix);
+        }
+        normTitle = normTitle.trimmed();
+
+        bool alreadyPlayed = false;
+        for (const QString& playedKey : std::as_const(m_playedSongKeys)) {
+            if (normTitle == playedKey || normTitle.contains(playedKey) ||
+                    playedKey.contains(normTitle)) {
+                alreadyPlayed = true;
+                break;
+            }
+            const QStringList titleWords =
+                    normTitle.split(' ', Qt::SkipEmptyParts);
+            const QStringList playedWords =
+                    playedKey.split(' ', Qt::SkipEmptyParts);
+            if (!titleWords.isEmpty() && !playedWords.isEmpty()) {
+                int common = 0;
+                for (const QString& w : titleWords) {
+                    if (playedWords.contains(w)) {
+                        common++;
+                    }
+                }
+                if (common * 2 > titleWords.size()) {
+                    alreadyPlayed = true;
+                    break;
+                }
+            }
+        }
+        if (alreadyPlayed) {
+            continue;
+        }
+
+        // Score: prefer higher similarity
+        double score = s.similarityScore;
+        if (score > bestScore) {
+            bestScore = score;
+            bestIdx = i;
+        }
+    }
+
+    if (bestIdx < 0) {
+        kLogger.info()
+                << "AI Bro: no suitable Music Matcher suggestion, falling back";
+        m_downloading = false;
+        findNextSongFallback();
+        return;
+    }
+
+    const auto& best = suggestions[bestIdx];
+    kLogger.info() << "AI Bro: Music Matcher best:" << best.artist << "-"
+                   << best.title << "score:" << best.similarityScore;
+
+    // Search YouTube for this specific track
+    QString ytQuery = QStringLiteral("%1 %2").arg(best.artist, best.title);
+    m_searchTrackSnapshot = snapshotTrackLocations();
+    if (m_pYouTubeFeature) {
+        m_pYouTubeFeature->searchAndActivate(ytQuery);
+    }
+}
+
+void AIBroFeature::slotMusicMatcherFailed(const QString& error) {
+    m_musicMatcherPending = false;
+    kLogger.warning() << "AI Bro: Music Matcher failed:" << error;
+    if (m_downloading) {
+        m_downloading = false;
+        findNextSongFallback();
+    }
+}
 // ===================================================================
 
 void AIBroFeature::slotProgressTick() {
-    if (!isActive() || m_blending || !m_pPlayerManager) {
+    if (!isActive() || !m_pPlayerManager) {
         return;
     }
     if (isDeckPlaying(m_iCurrentDeck)) {
         double pos = getDeckPlayPosition(m_iCurrentDeck);
-        if (pos >= kBlendStartMin && !m_downloading) {
-            kLogger.info() << "AI Bro: blend point at" << pos
-                           << "on deck" << (m_iCurrentDeck + 1);
+
+        // Start searching for next song early (at 70%) to give time for
+        // download. This fires once per tick while not already downloading.
+        // findNextSong() sets m_downloading=true to prevent re-triggering.
+        if (!m_downloading && pos >= kBlendSearchStart) {
+            kLogger.info()
+                    << "AI Bro: search point at" << pos << "on deck"
+                    << (m_iCurrentDeck + 1)
+                    << (m_blending ? " (during blend)" : " (pre-blend)");
+            updateCurrentTrackInfo();
+            findNextSong();
+        }
+
+        // Safety: if track is at 95% and we're not blending, force search
+        // (download may have failed silently)
+        if (!m_blending && !m_downloading && pos >= 0.95) {
+            kLogger.warning() << "AI Bro: safety search at" << pos
+                              << " — track almost ended without blend";
             updateCurrentTrackInfo();
             findNextSong();
         }
@@ -1107,12 +1289,14 @@ void AIBroFeature::slotProgressTick() {
 // ===================================================================
 
 void AIBroFeature::slotSearchResultsReady(
-        const QString& query,
-        const QList<mixxx::YouTubeVideoInfo>& results) {
+        const QString& query, const QList<mixxx::YouTubeVideoInfo>& results) {
     Q_UNUSED(query);
     if (!m_downloading || results.isEmpty()) {
         return;
     }
+
+    // Clear Music Matcher pending flag (local MM uses YouTube search directly)
+    m_musicMatcherPending = false;
 
     kLogger.info() << "AI Bro:" << results.size() << "results";
 
@@ -1127,7 +1311,8 @@ void AIBroFeature::slotSearchResultsReady(
 
     auto candidate = pickBestCandidate(results);
     if (candidate.id.isEmpty()) {
-        kLogger.warning() << "AI Bro: no suitable candidate, retrying with broader query";
+        kLogger.warning()
+                << "AI Bro: no suitable candidate, retrying with broader query";
         m_downloading = false;
         // Retry with a broader genre search instead of the same query
         QTimer::singleShot(kRetryDelayMs, this, [this]() {
@@ -1210,6 +1395,7 @@ void AIBroFeature::slotSearchFailed(
         return;
     }
     Q_UNUSED(query);
+    m_musicMatcherPending = false;
     kLogger.warning() << "AI Bro: search failed:" << error;
     m_downloading = false;
     QTimer::singleShot(kRetryDelayMs, this, [this]() {
@@ -1278,18 +1464,64 @@ void AIBroFeature::startBlend(int fromDeck, int toDeck) {
     m_blendFromDeck = fromDeck;
     m_blendToDeck = toDeck;
 
-    // Get genre-specific mixing rules
-    MixingRules rules = getMixingRules();
-    kLogger.info() << "AI Bro: mixing rules — overlap:" << rules.overlapMultiplier
-                   << "x, EQ:" << rules.eqStrength;
-
-    // Store session BPM for crossfade curve computation
-    m_sessionBPM = getCurrentPlayingBPM();
-    if (m_sessionBPM <= 0) {
-        m_sessionBPM = 120.0;
+    // Get BPM of both tracks for smart blending
+    double fromBPM = 0.0;
+    double toBPM = 0.0;
+    if (m_pPlayerManager) {
+        auto* pFrom = m_pPlayerManager->getDeck(fromDeck);
+        if (pFrom) {
+            TrackPointer pTrack = pFrom->getLoadedTrack();
+            if (pTrack) {
+                fromBPM = pTrack->getBpm();
+            }
+        }
+        auto* pTo = m_pPlayerManager->getDeck(toDeck);
+        if (pTo) {
+            TrackPointer pTrack = pTo->getLoadedTrack();
+            if (pTrack) {
+                toBPM = pTrack->getBpm();
+            }
+        }
     }
 
-    // NO BPM sync — pure crossfade blending
+    // Store session BPM (outgoing track's BPM, or default)
+    m_sessionBPM = (fromBPM > 0.0) ? fromBPM : 120.0;
+
+    // Compute BPM ratio for blend curve selection
+    m_bpmRatio = 1.0; // default: matched
+    if (fromBPM > 0.0 && toBPM > 0.0) {
+        m_bpmRatio = toBPM / fromBPM;
+        // Normalize: if ratio is ~2.0 or ~0.5, treat as matched (double/half time)
+        if (m_bpmRatio > 1.8 && m_bpmRatio < 2.2) {
+            m_bpmRatio = 1.0; // double time = matched
+        } else if (m_bpmRatio > 0.45 && m_bpmRatio < 0.55) {
+            m_bpmRatio = 1.0; // half time = matched
+        }
+    }
+
+    // Dynamic blend duration based on BPM match and genre
+    // Well-matched BPM → shorter, tighter blend
+    // Mismatched BPM → longer, smoother blend
+    double bpmMatch = std::abs(m_bpmRatio - 1.0);
+    if (bpmMatch < kBPMTolerance) {
+        // BPM matched: quick 6-second blend (75 steps)
+        m_blendSteps = 75;
+    } else if (bpmMatch < kBPMDoubleThreshold) {
+        // Close but not matched: standard 8-second blend (100 steps)
+        m_blendSteps = 100;
+    } else {
+        // Very different BPM: long 12-second blend (150 steps)
+        m_blendSteps = 150;
+    }
+
+    // Get genre-specific mixing rules
+    MixingRules rules = getMixingRules();
+    kLogger.info() << "AI Bro: mixing rules — overlap:"
+                   << rules.overlapMultiplier << "x, EQ:" << rules.eqStrength
+                   << "fromBPM:" << fromBPM << "toBPM:" << toBPM
+                   << "bpmRatio:" << m_bpmRatio
+                   << "blendSteps:" << m_blendSteps;
+
     // Set rate range for potential manual tempo matching
     {
         ConfigKey rangeKey(
@@ -1317,17 +1549,49 @@ void AIBroFeature::slotBlendTick() {
     }
 
     ++m_blendStep;
-    double progress = static_cast<double>(m_blendStep) / kBlendSteps;
+    double progress = static_cast<double>(m_blendStep) / m_blendSteps;
 
     if (progress >= 1.0) {
         stopBlend();
         return;
     }
 
-    // Smooth ease-in-out curve
-    double eased = easeInOut(progress);
+    // Get genre-specific mixing rules
+    MixingRules rules = getMixingRules();
 
-    // --- Crossfader ---
+    // --- Smart Fader: BPM-aware constant-power crossfade curve ---
+    // The curve shape adapts based on BPM match between tracks:
+    // - Matched BPM (<10% diff): tight constant-power, quick transition
+    // - Close BPM (10-40% diff): standard cosine crossfade
+    // - Mismatched BPM (>40% diff): long smooth S-curve with extended overlap
+    double fadeIn;
+    double fadeOut;
+
+    double bpmDiff = std::abs(m_bpmRatio - 1.0);
+    if (bpmDiff < kBPMTolerance) {
+        // BPM matched: constant-power crossfade (no volume dip)
+        // sin/cos curve ensures fadeIn² + fadeOut² = 1 at all points
+        fadeIn = std::sin(M_PI_2 * progress);
+        fadeOut = std::cos(M_PI_2 * progress);
+    } else if (bpmDiff < kBPMDoubleThreshold) {
+        // Close BPM: use eased S-curve for smoother transition
+        // Outgoing fades slightly faster to avoid clash
+        fadeIn = progress * progress * (3.0 - 2.0 * progress); // smoothstep
+        fadeOut = 1.0 - progress * progress * (3.0 - 2.0 * progress * 1.05);
+        if (fadeOut < 0.0) {
+            fadeOut = 0.0;
+        }
+    } else {
+        // Mismatched BPM: long smooth S-curve with extended overlap
+        // Both tracks play together longer, outgoing fades slowly
+        fadeIn = 0.5 * (1.0 - std::cos(M_PI * progress * 0.7));
+        fadeOut = 0.5 * (1.0 + std::cos(M_PI * progress * 0.7));
+    }
+    fadeIn = qBound(0.0, fadeIn, 1.0);
+    fadeOut = qBound(0.0, fadeOut, 1.0);
+
+    // --- Crossfader (hard left to hard right) ---
+    double eased = easeInOut(progress);
     double crossfadeValue = 0.0;
     if (m_blendFromDeck < m_blendToDeck) {
         crossfadeValue = -1.0 + 2.0 * eased;
@@ -1336,39 +1600,29 @@ void AIBroFeature::slotBlendTick() {
     }
     m_coCrossfader.set(crossfadeValue);
 
-    // --- 3-Band Frequency-Selective Fade (ai-remixmate technique) ---
+    // --- Volume fader: constant-power with energy arc ---
+    double energyArc = computeEnergyArc();
+    double targetVol = fadeIn * energyArc;
+    double sourceVol = fadeOut * energyArc;
+    // Cap at 1.0 to prevent clipping
+    setVolume(m_blendToDeck, qBound(0.0, targetVol, 1.0));
+    setVolume(m_blendFromDeck, qBound(0.0, sourceVol, 1.0));
+
+    // --- EQ-based frequency-selective fade (if EQ available) ---
     // Outgoing: highs vanish first (1.4x), bass lingers (0.65x)
     // Incoming: bass arrives first (1.4x), highs bloom last (0.65x)
+    // On Android without EQ effects, setEQ gracefully skips
     BandFades sourceFades = computeBandFades(progress, true);
     BandFades targetFades = computeBandFades(progress, false);
-
-    // Apply EQ with genre-specific strength
-    MixingRules rules = getMixingRules();
     double eqStr = rules.eqStrength;
-
-    // Source deck (outgoing): per-band fade
     setEQ(m_blendFromDeck,
             sourceFades.low * eqStr,
             sourceFades.mid * eqStr,
             sourceFades.high * eqStr);
-
-    // Target deck (incoming): per-band fade
     setEQ(m_blendToDeck,
             targetFades.low * eqStr,
             targetFades.mid * eqStr,
             targetFades.high * eqStr);
-
-    // --- Stem-aware crossfade curves ---
-    CrossfadeCurve curve = computeCrossfadeCurve(progress);
-
-    // --- Energy arc: vary blend intensity ---
-    double energyArc = computeEnergyArc();
-
-    // --- Volume fade with crossfade curve + energy arc ---
-    double targetVol = (0.85 + 0.15 * curve.fadeIn) * energyArc;
-    double sourceVol = curve.fadeOut * energyArc;
-    setVolume(m_blendToDeck, qBound(0.0, targetVol, 1.5));
-    setVolume(m_blendFromDeck, qBound(0.0, sourceVol, 1.5));
 
     // --- Sidechain-like vocal ducking (30-70% of blend) ---
     if (progress > 0.3 && progress < 0.7) {
@@ -1377,32 +1631,28 @@ void AIBroFeature::slotBlendTick() {
         ConfigKey eqMidKey(
                 QStringLiteral("[Channel%1]").arg(m_blendFromDeck + 1),
                 "eqMid");
-        double baseMid = sourceFades.mid * eqStr;
-        ControlObject::set(eqMidKey, qMax(0.0, baseMid - duckAmount));
+        if (ControlObject::exists(eqMidKey)) {
+            double baseMid = sourceFades.mid * eqStr;
+            ControlObject::set(eqMidKey, qMax(0.0, baseMid - duckAmount));
+        }
     }
 
-    // --- Beat-synced echo-out on source (last 20% of blend) ---
-    // From ai-remixmate: beat-sync'd ping-pong delay
+    // --- Echo-out on source (last 20% of blend) ---
     if (progress > 0.8) {
         double echoProgress = (progress - 0.8) / 0.2;
-        // Increase echo effect as we approach the end
         double echoStrength = echoProgress * rules.echoDecay;
 
-        // Cut highs faster for echo effect
-        double echoHigh = sourceFades.high * (1.0 - echoProgress);
         ConfigKey eqHighKey(
                 QStringLiteral("[Channel%1]").arg(m_blendFromDeck + 1),
                 "eqHigh");
-        ControlObject::set(eqHighKey, echoHigh);
+        if (ControlObject::exists(eqHighKey)) {
+            double echoHigh = sourceFades.high * (1.0 - echoProgress);
+            ControlObject::set(eqHighKey, echoHigh);
+        }
 
-        // Reduce volume faster for echo effect
         double echoVol = sourceVol * (1.0 - echoProgress * 0.5);
-        ConfigKey volKey(
-                QStringLiteral("[Channel%1]").arg(m_blendFromDeck + 1),
-                "volume");
-        ControlObject::set(volKey, qMax(0.0, echoVol));
+        setVolume(m_blendFromDeck, qMax(0.0, echoVol));
 
-        // Log echo activity
         if (m_blendStep % 10 == 0) {
             kLogger.info() << "AI Bro: echo-out strength:" << echoStrength;
         }
@@ -1462,9 +1712,20 @@ void AIBroFeature::setSync(int deckIndex, bool enabled) {
 
 void AIBroFeature::setEQ(int deckIndex, double low, double mid, double high) {
     QString group = QStringLiteral("[Channel%1]").arg(deckIndex + 1);
-    ControlObject::set(ConfigKey(group, "eqLow"), low);
-    ControlObject::set(ConfigKey(group, "eqMid"), mid);
-    ControlObject::set(ConfigKey(group, "eqHigh"), high);
+    // EQ controls may not exist on all platforms (e.g. Android without
+    // effects enabled). Check before setting to avoid NULL warnings.
+    ConfigKey lowKey(group, "eqLow");
+    ConfigKey midKey(group, "eqMid");
+    ConfigKey highKey(group, "eqHigh");
+    if (ControlObject::exists(lowKey)) {
+        ControlObject::set(lowKey, low);
+    }
+    if (ControlObject::exists(midKey)) {
+        ControlObject::set(midKey, mid);
+    }
+    if (ControlObject::exists(highKey)) {
+        ControlObject::set(highKey, high);
+    }
 }
 
 void AIBroFeature::setVolume(int deckIndex, double volume) {
@@ -1474,8 +1735,7 @@ void AIBroFeature::setVolume(int deckIndex, double volume) {
 }
 
 void AIBroFeature::setPlay(int deckIndex, bool play) {
-    ConfigKey playKey(
-            QStringLiteral("[Channel%1]").arg(deckIndex + 1), "play");
+    ConfigKey playKey(QStringLiteral("[Channel%1]").arg(deckIndex + 1), "play");
     ControlObject::set(playKey, play ? 1.0 : 0.0);
 }
 
@@ -1491,8 +1751,7 @@ bool AIBroFeature::isDeckPlaying(int deckIndex) const {
     if (!pPlayer) {
         return false;
     }
-    ConfigKey playKey(
-            QStringLiteral("[Channel%1]").arg(deckIndex + 1), "play");
+    ConfigKey playKey(QStringLiteral("[Channel%1]").arg(deckIndex + 1), "play");
     return ControlObject::get(playKey) > 0.0;
 }
 
@@ -1525,11 +1784,38 @@ void AIBroFeature::updateCurrentTrackInfo() {
     }
     m_currentTrackTitle = pTrack->getTitle();
     m_currentTrackArtist = pTrack->getArtist();
+
+    // If title is empty, the track metadata may not be populated yet
+    // (YouTube tracks load asynchronously). Schedule a retry.
+    if (m_currentTrackTitle.isEmpty()) {
+        QTimer::singleShot(500, this, [this]() {
+            if (!m_pPlayerManager) {
+                return;
+            }
+            auto* pPlayer = m_pPlayerManager->getDeck(m_iCurrentDeck);
+            if (!pPlayer) {
+                return;
+            }
+            TrackPointer pTrack = pPlayer->getLoadedTrack();
+            if (!pTrack) {
+                return;
+            }
+            QString title = pTrack->getTitle();
+            QString artist = pTrack->getArtist();
+            if (!title.isEmpty()) {
+                m_currentTrackTitle = title;
+                m_currentTrackArtist = artist;
+                kLogger.info() << "AI Bro: track info updated after delay: "
+                               << artist << "-" << title;
+            }
+        });
+    }
 }
 
 int AIBroFeature::findAvailableDeck() const {
-    if (!m_pPlayerManager)
+    if (!m_pPlayerManager) {
         return -1;
+    }
     return (m_iCurrentDeck == 0) ? 1 : 0;
 }
 
@@ -1544,18 +1830,22 @@ double AIBroFeature::getDeckPlayPosition(int deckIndex) const {
 // ===================================================================
 
 double AIBroFeature::estimateVocalStartPosition(int deckIndex) const {
-    if (!m_pPlayerManager)
+    if (!m_pPlayerManager) {
         return 0.0;
+    }
     auto* pPlayer = m_pPlayerManager->getDeck(deckIndex);
-    if (!pPlayer)
+    if (!pPlayer) {
         return 0.0;
+    }
     TrackPointer pTrack = pPlayer->getLoadedTrack();
-    if (!pTrack)
+    if (!pTrack) {
         return 0.0;
+    }
 
     double durationSec = pTrack->getDuration();
-    if (durationSec <= 0.0)
+    if (durationSec <= 0.0) {
         return 0.0;
+    }
 
     QString title = pTrack->getTitle().toLower();
     bool isRemix = false;
@@ -1587,8 +1877,8 @@ double AIBroFeature::estimateVocalStartPosition(int deckIndex) const {
     kLogger.info() << "AI Bro: vocal sync — title:" << title
                    << "duration:" << durationSec << "s"
                    << "vocal start:" << (vocalStartPercent * 100.0)
-                   << "% (remix:" << isRemix
-                   << ", extended:" << isExtended << ")";
+                   << "% (remix:" << isRemix << ", extended:" << isExtended
+                   << ")";
 
     return vocalStartPercent;
 }
@@ -1599,22 +1889,26 @@ double AIBroFeature::estimateVocalStartPosition(int deckIndex) const {
 
 QMap<int, QString> AIBroFeature::snapshotTrackLocations() const {
     QMap<int, QString> snapshot;
-    if (!m_pPlayerManager)
+    if (!m_pPlayerManager) {
         return snapshot;
+    }
     for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
         auto* pPlayer = m_pPlayerManager->getDeck(i);
-        if (!pPlayer)
+        if (!pPlayer) {
             continue;
+        }
         TrackPointer pTrack = pPlayer->getLoadedTrack();
-        if (pTrack)
+        if (pTrack) {
             snapshot[i] = pTrack->getLocation();
+        }
     }
     return snapshot;
 }
 
 QString AIBroFeature::findNewManualTrack() {
-    if (!m_pPlayerManager)
+    if (!m_pPlayerManager) {
         return {};
+    }
     QMap<int, QString> current = snapshotTrackLocations();
     for (auto it = current.begin(); it != current.end(); ++it) {
         int deck = it.key();
@@ -1640,19 +1934,23 @@ QString AIBroFeature::findNewManualTrack() {
 // ===================================================================
 
 double AIBroFeature::getCurrentPlayingBPM() const {
-    if (!m_pPlayerManager)
+    if (!m_pPlayerManager) {
         return 0.0;
+    }
     for (int i = 0; i < m_pPlayerManager->numberOfDecks(); ++i) {
-        if (!isDeckPlaying(i))
+        if (!isDeckPlaying(i)) {
             continue;
+        }
         auto* pPlayer = m_pPlayerManager->getDeck(i);
-        if (!pPlayer)
+        if (!pPlayer) {
             continue;
+        }
         TrackPointer pTrack = pPlayer->getLoadedTrack();
         if (pTrack) {
             double bpm = pTrack->getBpm();
-            if (bpm > 0)
+            if (bpm > 0) {
                 return bpm;
+            }
         }
     }
     return 0.0;
@@ -1662,50 +1960,71 @@ double AIBroFeature::getCandidateBPM(
         const mixxx::YouTubeVideoInfo& candidate) const {
     QString title = candidate.title.toLower();
     if (title.contains("drum and bass") || title.contains("dnb") ||
-            title.contains("drum & bass"))
+            title.contains("drum & bass")) {
         return 174.0;
-    if (title.contains("dubstep") || title.contains("dub step"))
+    }
+    if (title.contains("dubstep") || title.contains("dub step")) {
         return 140.0;
-    if (title.contains("techno"))
+    }
+    if (title.contains("techno")) {
         return 130.0;
-    if (title.contains("trance"))
+    }
+    if (title.contains("trance")) {
         return 138.0;
-    if (title.contains("house"))
+    }
+    if (title.contains("house")) {
         return 124.0;
-    if (title.contains("deep house"))
+    }
+    if (title.contains("deep house")) {
         return 122.0;
-    if (title.contains("tech house"))
+    }
+    if (title.contains("tech house")) {
         return 126.0;
-    if (title.contains("progressive"))
+    }
+    if (title.contains("progressive")) {
         return 128.0;
-    if (title.contains("electro"))
+    }
+    if (title.contains("electro")) {
         return 128.0;
+    }
     if (title.contains("hip hop") || title.contains("hip-hop") ||
-            title.contains("rap"))
+            title.contains("rap")) {
         return 90.0;
+    }
     if (title.contains("r&b") || title.contains("rnb") ||
-            title.contains("rhythm and blues"))
+            title.contains("rhythm and blues")) {
         return 85.0;
-    if (title.contains("pop"))
+    }
+    if (title.contains("pop")) {
         return 120.0;
-    if (title.contains("reggaeton") || title.contains("reggae"))
+    }
+    if (title.contains("reggaeton") || title.contains("reggae")) {
         return 95.0;
-    if (title.contains("dancehall"))
+    }
+    if (title.contains("dancehall")) {
         return 100.0;
-    if (title.contains("afrobeats"))
+    }
+    if (title.contains("afrobeats")) {
         return 110.0;
-    if (title.contains("ambient") || title.contains("chill"))
+    }
+    if (title.contains("ambient") || title.contains("chill")) {
         return 90.0;
-    if (title.contains("downtempo"))
+    }
+    if (title.contains("downtempo")) {
         return 85.0;
-    if (title.contains("breakbeat") || title.contains("breaks"))
+    }
+    if (title.contains("breakbeat") || title.contains("breaks")) {
         return 135.0;
-    if (title.contains("garage"))
+    }
+    if (title.contains("garage")) {
         return 130.0;
-    if (title.contains("grime"))
+    }
+    if (title.contains("grime")) {
         return 140.0;
-    if (title.contains("jungle"))
+    }
+    if (title.contains("jungle")) {
         return 170.0;
+    }
     return 0.0;
 }
 
