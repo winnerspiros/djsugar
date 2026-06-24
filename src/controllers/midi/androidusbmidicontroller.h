@@ -19,7 +19,7 @@ class AndroidUsbMidiController : public MidiController {
             QObject* parent = nullptr);
     ~AndroidUsbMidiController() override;
 
-    bool open(const QString& resourcePath) override;
+    int open(const QString& resourcePath) override;
 
     /// Set the JNI UsbDevice and UsbManager from the enumerator
     void setUsbDevice(QJniObject usbDevice, QJniObject usbManager);

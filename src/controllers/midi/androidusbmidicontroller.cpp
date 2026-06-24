@@ -43,14 +43,14 @@ void AndroidUsbMidiController::setUsbDevice(QJniObject usbDevice, QJniObject usb
     m_usbManager = usbManager;
 }
 
-bool AndroidUsbMidiController::open(const QString& resourcePath) {
+int AndroidUsbMidiController::open(const QString& resourcePath) {
     if (isOpen()) {
-        return true;
+        return 0;
     }
 
     if (!m_usbDevice.isValid() || !m_usbManager.isValid()) {
         qCWarning(kLogger) << "AndroidUsbMidiController: No USB device/manager set";
-        return false;
+        return -1;
     }
 
     // Open device connection
@@ -61,7 +61,7 @@ bool AndroidUsbMidiController::open(const QString& resourcePath) {
 
     if (!m_usbConnection.isValid()) {
         qCWarning(kLogger) << "AndroidUsbMidiController: Cannot open USB device";
-        return false;
+        return -1;
     }
 
     // Find the MIDI interface (class=1, subclass=3)
@@ -79,7 +79,7 @@ bool AndroidUsbMidiController::open(const QString& resourcePath) {
 
     if (!m_usbInterface.isValid()) {
         qCWarning(kLogger) << "AndroidUsbMidiController: No MIDI interface found";
-        return false;
+        return -1;
     }
 
     // Claim the interface
@@ -91,7 +91,7 @@ bool AndroidUsbMidiController::open(const QString& resourcePath) {
 
     if (!claimed) {
         qCWarning(kLogger) << "AndroidUsbMidiController: Cannot claim MIDI interface";
-        return false;
+        return -1;
     }
 
     // Find MIDI IN and OUT endpoints
@@ -120,7 +120,7 @@ bool AndroidUsbMidiController::open(const QString& resourcePath) {
     m_pIoThread = new IoThread(this);
     m_pIoThread->start();
 
-    return true;
+    return 0;
 }
 
 void AndroidUsbMidiController::IoThread::stop() {

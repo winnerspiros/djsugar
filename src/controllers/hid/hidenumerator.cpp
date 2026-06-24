@@ -198,15 +198,15 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
                     // Get device name for identification
                     QString productName =
-                            usbDevice.callMethod<jstring>("getProductName")
+                            usbDevice->callMethod<jstring>("getProductName")
                                     .toString();
                     if (productName.isEmpty()) {
                         productName = QString("USB-MIDI %1:%2")
-                                              .arg(usbDevice.callMethod<jshort>(
+                                              .arg(usbDevice->callMethod<jshort>(
                                                            "getVendorId"),
                                                       0,
                                                       16)
-                                              .arg(usbDevice.callMethod<jshort>(
+                                              .arg(usbDevice->callMethod<jshort>(
                                                            "getProductId"),
                                                       0,
                                                       16);
@@ -215,9 +215,9 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     qInfo() << "Found USB-MIDI device:" << productName;
 
                     // Check permission
-                    if (!usbManager.callMethod<jboolean>("hasPermission",
+                    if (!usbManager->callMethod<jboolean>("hasPermission",
                                 "(Landroid/hardware/usb/UsbDevice;)Z",
-                                usbDevice.object<jobject>())) {
+                                usbDevice->object<jobject>())) {
                         qWarning() << "USB-MIDI device permission denied:" << productName;
                         continue;
                     }
