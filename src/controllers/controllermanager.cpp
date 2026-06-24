@@ -274,7 +274,39 @@ QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, boo
 
 QString ControllerManager::getConfiguredMappingFileForDevice(const QString& name) const {
     // Thread-Safe : ConfigObject<ValueType>::getValueString/get is protected by QWriteLocker
-    return m_pConfig->getValueString(ConfigKey(kSettingsGroup, sanitizeDeviceName(name)));
+    QString mapping = m_pConfig->getValueString(ConfigKey(kSettingsGroup, sanitizeDeviceName(name)));
+    if (!mapping.isEmpty()) {
+        return mapping;
+    }
+
+    // Auto-detect mapping for known devices (first-time setup)
+    return autoDetectMappingForDevice(name);
+}
+
+QString ControllerManager::autoDetectMappingForDevice(const QString& name) const {
+    // Map of known device names to their mapping files
+    static const QMap<QString, QString> kKnownDevices = {
+        // Pioneer DDJ-FLX4 (detected as "DDJ-FLX4 ..." on Android)
+        {"DDJ-FLX4", "Pioneer-DDJ-FLX4.midi.xml"},
+        // Pioneer DDJ-FLX4 (desktop MIDI name)
+        {"DDJ-FLX4 MIDI", "Pioneer-DDJ-FLX4.midi.xml"},
+        // Pioneer DDJ-400
+        {"DDJ-400", "Pioneer-DDJ-400.midi.xml"},
+        // Pioneer DDJ-200
+        {"DDJ-200", "Pioneer-DDJ-200.midi.xml"},
+    };
+
+    for (auto it = kKnownDevices.begin(); it != kKnownDevices.end(); ++it) {
+        if (name.startsWith(it.key(), Qt::CaseInsensitive)) {
+            // Verify the mapping file exists in one of the mapping paths
+            QFileInfo mappingFile = findMappingFile(it.value(), getMappingPaths(m_pConfig));
+            if (mappingFile.exists()) {
+                qDebug() << "Auto-detected mapping for device" << name << ":" << it.value();
+                return it.value();
+            }
+        }
+    }
+    return QString();
 }
 
 void ControllerManager::slotSetUpDevices() {

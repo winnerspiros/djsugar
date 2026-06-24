@@ -39,6 +39,7 @@ class ControllerManager : public QObject {
         return m_pMainThreadSystemMappingEnumerator;
     }
     QString getConfiguredMappingFileForDevice(const QString& name) const;
+    QString autoDetectMappingForDevice(const QString& name) const;
 
     /// Trigger BLE MIDI scan for wireless controllers (e.g. DDJ-FLX4)
     void startBleScan();
