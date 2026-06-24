@@ -14,6 +14,10 @@
 
 #include "controllers/hid/hidcontroller.h"
 #include "controllers/hid/hiddenylist.h"
+#include "controllers/hid/hidusagetables.h"
+#if defined(Q_OS_ANDROID)
+#include "controllers/midi/androidusbmidicontroller.h"
+#endif
 #include "moc_hidenumerator.cpp"
 #include "util/cmdlineargs.h"
 
@@ -160,7 +164,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
             auto usbInterface = usbDevice->callMethod<jobject>("getInterface",
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
-            if (usbInterface.callMethod<jint>("getInterfaceClass") == LIBUSB_CLASS_HID) {
+            jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
+            if (ifaceClass == LIBUSB_CLASS_HID) {
                 auto deviceInfo = mixxx::hid::DeviceInfo(usbDevice, usbInterface);
 
                 if (!recognizeDevice(deviceInfo)) {
@@ -179,6 +184,48 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 HidController* newDevice = new HidController(std::move(deviceInfo));
                 m_devices.push_back(newDevice);
             }
+#if defined(Q_OS_ANDROID)
+            else if (ifaceClass == 1) {
+                // Audio class — check for MIDI subclass (3)
+                jint ifaceSubclass = usbInterface.callMethod<jint>("getInterfaceSubclass");
+                if (ifaceSubclass == 3) {
+                    // USB-MIDI device found
+                    QJniObject usbManager = context.callObjectMethod("getSystemService",
+                            "(Ljava/lang/String;)Ljava/lang/Object;",
+                            QJniObject::getStaticObjectField(
+                                    "android/content/Context", "USB_SERVICE",
+                                    "Ljava/lang/String;")
+                                    .object());
+
+                    // Get device name for identification
+                    QString productName = usbDevice.callMethod<jstring>("getProductName").toString();
+                    if (productName.isEmpty()) {
+                        productName = QString("USB-MIDI %1:%2")
+                                .arg(usbDevice.callMethod<jshort>("getVendorId"), 0, 16)
+                                .arg(usbDevice.callMethod<jshort>("getProductId"), 0, 16);
+                    }
+
+                    qInfo() << "Found USB-MIDI device:" << productName;
+
+                    // Check permission
+                    if (!usbManager.callMethod<jboolean>("hasPermission",
+                                "(Landroid/hardware/usb/UsbDevice;)Z",
+                                usbDevice.object<jobject>())) {
+                        qWarning() << "USB-MIDI device permission denied:" << productName;
+                        continue;
+                    }
+
+                    // Create AndroidUsbMidiController
+                    auto* pMidiController = new AndroidUsbMidiController(
+                            productName,
+                            usbDevice.callMethod<jshort>("getVendorId"),
+                            usbDevice.callMethod<jshort>("getProductId"),
+                            this);
+                    pMidiController->setUsbDevice(usbDevice, usbManager);
+                    m_devices.push_back(pMidiController);
+                }
+            }
+#endif
         }
     }
 #else
