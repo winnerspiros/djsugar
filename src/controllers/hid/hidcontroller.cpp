@@ -53,22 +53,38 @@ QString HidController::mappingExtension() {
 }
 
 void HidController::setMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
+    m_pMidiMapping.reset();
     m_pMutableMapping = pMapping;
     m_pMapping = downcastAndClone<LegacyHidControllerMapping>(pMapping.get());
+    if (!m_pMapping) {
+        // Try MIDI mapping as fallback (e.g. DDJ-FLX4 detected as HID on Android
+        // but uses .midi.xml mapping)
+        m_pMidiMapping = downcastAndClone<LegacyMidiControllerMapping>(pMapping.get());
+        if (m_pMidiMapping) {
+            qInfo() << "HidController: Using MIDI mapping for device:"
+                    << getName();
+        }
+    }
 }
 
 QList<LegacyControllerMapping::ScriptFileInfo> HidController::getMappingScriptFiles() {
-    if (!m_pMapping) {
-        return {};
+    if (m_pMapping) {
+        return m_pMapping->getScriptFiles();
     }
-    return m_pMapping->getScriptFiles();
+    if (m_pMidiMapping) {
+        return m_pMidiMapping->getScriptFiles();
+    }
+    return {};
 }
 
 QList<std::shared_ptr<AbstractLegacyControllerSetting>> HidController::getMappingSettings() {
-    if (!m_pMapping) {
-        return {};
+    if (m_pMapping) {
+        return m_pMapping->getSettings();
     }
-    return m_pMapping->getSettings();
+    if (m_pMidiMapping) {
+        return m_pMidiMapping->getSettings();
+    }
+    return {};
 }
 
 #ifdef MIXXX_USE_QML

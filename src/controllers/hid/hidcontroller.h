@@ -10,6 +10,7 @@
 #include "controllers/hid/hidiothread.h"
 #include "controllers/hid/hidreportdescriptor.h"
 #include "controllers/hid/legacyhidcontrollermapping.h"
+#include "controllers/midi/legacymidicontrollermapping.h"
 
 /// HID controller backend
 class HidController final : public Controller {
@@ -115,6 +116,7 @@ class HidController final : public Controller {
 
     std::unique_ptr<HidIoThread> m_pHidIoThread;
     std::unique_ptr<LegacyHidControllerMapping> m_pMapping;
+    std::unique_ptr<LegacyMidiControllerMapping> m_pMidiMapping;
 
     // Background thread used to fetch raw HID report descriptor during
     // enumeration so mapping detection can use it without blocking the startup.
