@@ -1,8 +1,8 @@
 #pragma once
 
 #include <QJniObject>
-#include <QThread>
 #include <QMutex>
+#include <QThread>
 
 #include "controllers/midi/midicontroller.h"
 
@@ -29,8 +29,10 @@ class AndroidUsbMidiController : public MidiController {
       public:
         explicit IoThread(AndroidUsbMidiController* pController);
         void stop();
+
       protected:
         void run() override;
+
       private:
         AndroidUsbMidiController* m_pController;
         volatile bool m_stop;

@@ -274,7 +274,8 @@ QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, boo
 
 QString ControllerManager::getConfiguredMappingFileForDevice(const QString& name) const {
     // Thread-Safe : ConfigObject<ValueType>::getValueString/get is protected by QWriteLocker
-    QString mapping = m_pConfig->getValueString(ConfigKey(kSettingsGroup, sanitizeDeviceName(name)));
+    QString mapping = m_pConfig->getValueString(
+            ConfigKey(kSettingsGroup, sanitizeDeviceName(name)));
     if (!mapping.isEmpty()) {
         return mapping;
     }
@@ -286,14 +287,14 @@ QString ControllerManager::getConfiguredMappingFileForDevice(const QString& name
 QString ControllerManager::autoDetectMappingForDevice(const QString& name) const {
     // Map of known device names to their mapping files
     static const QMap<QString, QString> kKnownDevices = {
-        // Pioneer DDJ-FLX4 (detected as "DDJ-FLX4 ..." on Android)
-        {"DDJ-FLX4", "Pioneer-DDJ-FLX4.midi.xml"},
-        // Pioneer DDJ-FLX4 (desktop MIDI name)
-        {"DDJ-FLX4 MIDI", "Pioneer-DDJ-FLX4.midi.xml"},
-        // Pioneer DDJ-400
-        {"DDJ-400", "Pioneer-DDJ-400.midi.xml"},
-        // Pioneer DDJ-200
-        {"DDJ-200", "Pioneer-DDJ-200.midi.xml"},
+            // Pioneer DDJ-FLX4 (detected as "DDJ-FLX4 ..." on Android)
+            {"DDJ-FLX4", "Pioneer-DDJ-FLX4.midi.xml"},
+            // Pioneer DDJ-FLX4 (desktop MIDI name)
+            {"DDJ-FLX4 MIDI", "Pioneer-DDJ-FLX4.midi.xml"},
+            // Pioneer DDJ-400
+            {"DDJ-400", "Pioneer-DDJ-400.midi.xml"},
+            // Pioneer DDJ-200
+            {"DDJ-200", "Pioneer-DDJ-200.midi.xml"},
     };
 
     for (auto it = kKnownDevices.begin(); it != kKnownDevices.end(); ++it) {

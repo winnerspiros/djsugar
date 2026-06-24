@@ -15,7 +15,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +27,7 @@ import java.util.UUID;
 public class BleMidiScanner {
     private static final String TAG = "MixxxBleMidiScanner";
     private static final UUID BLE_MIDI_SERVICE_UUID =
-            UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700");
+        UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700");
 
     private final Context mContext;
     private final BluetoothManager mBluetoothManager;
@@ -96,13 +95,13 @@ public class BleMidiScanner {
     public boolean startScan(Context context, String serviceUuid) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)
-                    != PackageManager.PERMISSION_GRANTED) {
+                != PackageManager.PERMISSION_GRANTED) {
                 Log.w(TAG, "BLUETOOTH_SCAN permission not granted");
                 return false;
             }
         } else {
             if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
+                != PackageManager.PERMISSION_GRANTED) {
                 Log.w(TAG, "ACCESS_FINE_LOCATION permission not granted");
                 return false;
             }

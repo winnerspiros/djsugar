@@ -193,16 +193,15 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     QJniObject usbManager = context.callObjectMethod("getSystemService",
                             "(Ljava/lang/String;)Ljava/lang/Object;",
                             QJniObject::getStaticObjectField(
-                                    "android/content/Context", "USB_SERVICE",
-                                    "Ljava/lang/String;")
+                                    "android/content/Context", "USB_SERVICE", "Ljava/lang/String;")
                                     .object());
 
                     // Get device name for identification
                     QString productName = usbDevice.callMethod<jstring>("getProductName").toString();
                     if (productName.isEmpty()) {
                         productName = QString("USB-MIDI %1:%2")
-                                .arg(usbDevice.callMethod<jshort>("getVendorId"), 0, 16)
-                                .arg(usbDevice.callMethod<jshort>("getProductId"), 0, 16);
+                                              .arg(usbDevice.callMethod<jshort>("getVendorId"), 0, 16)
+                                              .arg(usbDevice.callMethod<jshort>("getProductId"), 0, 16);
                     }
 
                     qInfo() << "Found USB-MIDI device:" << productName;

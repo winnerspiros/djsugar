@@ -86,7 +86,8 @@ bool AndroidUsbMidiController::open(const QString& resourcePath) {
     bool claimed = m_usbConnection.callMethod<jboolean>(
             "claimInterface",
             "(Landroid/hardware/usb/UsbInterface;Z)Z",
-            m_usbInterface.object<jobject>(), true);
+            m_usbInterface.object<jobject>(),
+            true);
 
     if (!claimed) {
         qCWarning(kLogger) << "AndroidUsbMidiController: Cannot claim MIDI interface";
@@ -155,7 +156,10 @@ void AndroidUsbMidiController::IoThread::run() {
                 "interruptTransfer",
                 "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
                 endpoint.object<jobject>(),
-                buffer.data(), 0, buffer.size(), 100);
+                buffer.data(),
+                0,
+                buffer.size(),
+                100);
 
         if (bytesRead >= kUsbMidiPacketSize) {
             m_pController->parseUsbMidiPacket(
@@ -203,7 +207,10 @@ void AndroidUsbMidiController::sendMidiMessage(uint8_t status, uint8_t data1, ui
             "bulkTransfer",
             "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
             m_endpointOut.object<jobject>(),
-            packet.data(), 0, packet.size(), 1000);
+            packet.data(),
+            0,
+            packet.size(),
+            1000);
 }
 
 #include "moc_androidusbmidicontroller.cpp"
