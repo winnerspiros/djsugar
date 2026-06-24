@@ -61,8 +61,18 @@ void BleMidiEnumerator::startScan() {
         return;
     }
 
-    jboolean result = QJniObject::callStaticMethod<jboolean>(
+    // Create BleMidiScanner instance
+    m_scanner = QJniObject(
             kBleScannerClass,
+            "(Landroid/content/Context;)V",
+            activity.object<jobject>());
+    if (!m_scanner.isValid()) {
+        kLogger.warning() << "BLE scan: failed to create BleMidiScanner";
+        m_scanning = false;
+        return;
+    }
+
+    jboolean result = m_scanner.callMethod<jboolean>(
             "startScan",
             "(Landroid/content/Context;Ljava/lang/String;)Z",
             activity.object<jobject>(),
@@ -88,17 +98,10 @@ void BleMidiEnumerator::rescan() {
 
 bool BleMidiEnumerator::isConnected() const {
 #ifdef Q_OS_ANDROID
-    constexpr const char* kBleScannerClass = "org/mixxx/BleMidiScanner";
-
-    QJniObject activity = QJniObject::callStaticObjectMethod(
-            "org/qtproject/qt/android/QtNative",
-            "activity",
-            "()Landroid/app/Activity;");
-    if (!activity.isValid()) {
+    if (!m_scanner.isValid()) {
         return false;
     }
-    jboolean result = QJniObject::callStaticMethod<jboolean>(
-            kBleScannerClass, "isConnected", "()Z");
+    jboolean result = m_scanner.callMethod<jboolean>("isConnected", "()Z");
     return result;
 #else
     return false;
@@ -107,20 +110,13 @@ bool BleMidiEnumerator::isConnected() const {
 
 void BleMidiEnumerator::slotOnScanTimeout() {
 #ifdef Q_OS_ANDROID
-    constexpr const char* kBleScannerClass = "org/mixxx/BleMidiScanner";
-
     m_scanning = false;
 
-    QJniObject activity = QJniObject::callStaticObjectMethod(
-            "org/qtproject/qt/android/QtNative",
-            "activity",
-            "()Landroid/app/Activity;");
-    if (!activity.isValid()) {
+    if (!m_scanner.isValid()) {
         return;
     }
 
-    QJniObject devices = QJniObject::callStaticObjectMethod(
-            kBleScannerClass,
+    QJniObject devices = m_scanner.callStaticMethod<jobject>(
             "getDiscoveredDevices",
             "()Ljava/util/List;");
 

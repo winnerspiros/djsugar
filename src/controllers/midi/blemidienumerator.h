@@ -31,4 +31,7 @@ class BleMidiEnumerator : public MidiEnumerator {
     QTimer* m_pScanTimer;
     bool m_scanning;
     mutable QMutex m_mutex;
+#ifdef Q_OS_ANDROID
+    QJniObject m_scanner;
+#endif
 };
