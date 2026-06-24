@@ -21,6 +21,11 @@ class AndroidUsbMidiController : public MidiController {
 
     int open(const QString& resourcePath) override;
 
+    /// Send a 3-byte MIDI message via USB-MIDI OUT endpoint
+    void sendShortMsg(unsigned char status,
+            unsigned char byte1,
+            unsigned char byte2) override;
+
     /// Set the JNI UsbDevice and UsbManager from the enumerator
     void setUsbDevice(QJniObject usbDevice, QJniObject usbManager);
 

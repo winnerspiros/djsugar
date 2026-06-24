@@ -192,13 +192,13 @@ void AndroidUsbMidiController::parseUsbMidiPacket(const QByteArray& packet) {
     // This requires access to the MIDI input engine
 }
 
-void AndroidUsbMidiController::sendMidiMessage(uint8_t status, uint8_t data1, uint8_t data2) {
+void AndroidUsbMidiController::sendMidiMessage(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2) {
     if (!m_endpointOut.isValid() || !m_usbConnection.isValid()) {
         return;
     }
 
     QByteArray packet(kUsbMidiPacketSize, 0);
-    packet[0] = static_cast<char>(0x09); // CIN=Note On, Cable 0
+    packet[0] = static_cast<char>((0 << 4) | (cin & 0x0F)); // Cable 0 + CIN
     packet[1] = static_cast<char>(status);
     packet[2] = static_cast<char>(data1);
     packet[3] = static_cast<char>(data2);
@@ -207,10 +207,27 @@ void AndroidUsbMidiController::sendMidiMessage(uint8_t status, uint8_t data1, ui
             "bulkTransfer",
             "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
             m_endpointOut.object<jobject>(),
-            packet.data(),
-            0,
-            packet.size(),
-            1000);
+            packet.data(), 0, packet.size(), 1000);
+}
+
+void AndroidUsbMidiController::sendShortMsg(unsigned char status,
+        unsigned char byte1,
+        unsigned char byte2) {
+    // USB-MIDI 4-byte packet: [CIN<<4 | cable, status, data1, data2]
+    uint8_t cin;
+    uint8_t msgType = status & 0xF0;
+    switch (msgType) {
+    case 0x80: cin = kCINNoteOff; break;
+    case 0x90: cin = kCINNoteOn; break;
+    case 0xA0: cin = 0x0A; break; // Poly Key Pressure
+    case 0xB0: cin = kCINControlChange; break;
+    case 0xC0: cin = kCINProgramChange; break;
+    case 0xD0: cin = 0x0D; break; // Channel Pressure
+    case 0xE0: cin = kCINPitchBend; break;
+    default:   cin = 0x0F; break; // Single Byte
+    }
+
+    sendMidiMessage(static_cast<uint8_t>(cin), status, byte1, byte2);
 }
 
 #include "moc_androidusbmidicontroller.cpp"
