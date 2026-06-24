@@ -5587,7 +5587,10 @@ if(HID)
   )
 
   if(ANDROID)
-    target_sources(mixxx-lib PRIVATE src/controllers/android.cpp)
+    target_sources(mixxx-lib PRIVATE
+      src/controllers/android.cpp
+      src/controllers/midi/androidusbmidicontroller.cpp
+    )
   else()
     # Android doesn't support QWidget and is not able to compile this manager due to compiler lacking support for structure binding (error: capturing a structured binding is not yet supported)
     target_sources(
