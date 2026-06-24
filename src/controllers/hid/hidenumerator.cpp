@@ -197,11 +197,19 @@ QList<Controller*> HidEnumerator::queryDevices() {
                                     .object());
 
                     // Get device name for identification
-                    QString productName = usbDevice.callMethod<jstring>("getProductName").toString();
+                    QString productName =
+                            usbDevice.callMethod<jstring>("getProductName")
+                                    .toString();
                     if (productName.isEmpty()) {
                         productName = QString("USB-MIDI %1:%2")
-                                              .arg(usbDevice.callMethod<jshort>("getVendorId"), 0, 16)
-                                              .arg(usbDevice.callMethod<jshort>("getProductId"), 0, 16);
+                                              .arg(usbDevice.callMethod<jshort>(
+                                                           "getVendorId"),
+                                                      0,
+                                                      16)
+                                              .arg(usbDevice.callMethod<jshort>(
+                                                           "getProductId"),
+                                                      0,
+                                                      16);
                     }
 
                     qInfo() << "Found USB-MIDI device:" << productName;
