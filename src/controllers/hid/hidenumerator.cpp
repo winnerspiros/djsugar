@@ -215,7 +215,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     qInfo() << "Found USB-MIDI device:" << productName;
 
                     // Check permission
-                    if (!usbManager->callMethod<jboolean>("hasPermission",
+                    if (!usbManager.callMethod<jboolean>("hasPermission",
                                 "(Landroid/hardware/usb/UsbDevice;)Z",
                                 usbDevice->object<jobject>())) {
                         qWarning() << "USB-MIDI device permission denied:" << productName;
@@ -225,8 +225,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     // Create AndroidUsbMidiController
                     auto* pMidiController = new AndroidUsbMidiController(
                             productName,
-                            usbDevice.callMethod<jshort>("getVendorId"),
-                            usbDevice.callMethod<jshort>("getProductId"),
+                            usbDevice->callMethod<jshort>("getVendorId"),
+                            usbDevice->callMethod<jshort>("getProductId"),
                             this);
                     pMidiController->setUsbDevice(usbDevice, usbManager);
                     m_devices.push_back(pMidiController);
