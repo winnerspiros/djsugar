@@ -192,7 +192,8 @@ void AndroidUsbMidiController::parseUsbMidiPacket(const QByteArray& packet) {
     // This requires access to the MIDI input engine
 }
 
-void AndroidUsbMidiController::sendMidiMessage(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2) {
+void AndroidUsbMidiController::sendMidiMessage(
+        uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2) {
     if (!m_endpointOut.isValid() || !m_usbConnection.isValid()) {
         return;
     }
@@ -207,7 +208,10 @@ void AndroidUsbMidiController::sendMidiMessage(uint8_t cin, uint8_t status, uint
             "bulkTransfer",
             "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
             m_endpointOut.object<jobject>(),
-            packet.data(), 0, packet.size(), 1000);
+            packet.data(),
+            0,
+            packet.size(),
+            1000);
 }
 
 void AndroidUsbMidiController::sendShortMsg(unsigned char status,
@@ -217,14 +221,30 @@ void AndroidUsbMidiController::sendShortMsg(unsigned char status,
     uint8_t cin;
     uint8_t msgType = status & 0xF0;
     switch (msgType) {
-    case 0x80: cin = kCINNoteOff; break;
-    case 0x90: cin = kCINNoteOn; break;
-    case 0xA0: cin = 0x0A; break; // Poly Key Pressure
-    case 0xB0: cin = kCINControlChange; break;
-    case 0xC0: cin = kCINProgramChange; break;
-    case 0xD0: cin = 0x0D; break; // Channel Pressure
-    case 0xE0: cin = kCINPitchBend; break;
-    default:   cin = 0x0F; break; // Single Byte
+    case 0x80:
+        cin = kCINNoteOff;
+        break;
+    case 0x90:
+        cin = kCINNoteOn;
+        break;
+    case 0xA0:
+        cin = 0x0A;
+        break; // Poly Key Pressure
+    case 0xB0:
+        cin = kCINControlChange;
+        break;
+    case 0xC0:
+        cin = kCINProgramChange;
+        break;
+    case 0xD0:
+        cin = 0x0D;
+        break; // Channel Pressure
+    case 0xE0:
+        cin = kCINPitchBend;
+        break;
+    default:
+        cin = 0x0F;
+        break; // Single Byte
     }
 
     sendMidiMessage(static_cast<uint8_t>(cin), status, byte1, byte2);

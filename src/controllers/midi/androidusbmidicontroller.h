@@ -3,6 +3,7 @@
 #include <QJniObject>
 #include <QMutex>
 #include <QThread>
+#include <optional>
 
 #include "controllers/midi/midicontroller.h"
 
@@ -28,6 +29,33 @@ class AndroidUsbMidiController : public MidiController {
 
     /// Set the JNI UsbDevice and UsbManager from the enumerator
     void setUsbDevice(QJniObject usbDevice, QJniObject usbManager);
+
+    // Controller interface overrides
+    PhysicalTransportProtocol getPhysicalTransportProtocol() const override {
+        return PhysicalTransportProtocol::USB;
+    }
+    QString getVendorString() const override {
+        return QString();
+    }
+    QString getProductString() const override {
+        return QString();
+    }
+    std::optional<uint16_t> getVendorId() const override {
+        return m_vendorId;
+    }
+    std::optional<uint16_t> getProductId() const override {
+        return m_productId;
+    }
+    QString getSerialNumber() const override {
+        return QString();
+    }
+    std::optional<uint8_t> getUsbInterfaceNumber() const override {
+        return std::nullopt;
+    }
+    bool sendBytes(const QByteArray& data) override {
+        Q_UNUSED(data);
+        return false;
+    }
 
   private:
     class IoThread : public QThread {
