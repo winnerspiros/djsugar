@@ -42,9 +42,10 @@ QString resolveSamplesPath(UserSettingsPointer pConfig) {
         return QString();
     }
 
-    // Determine writable destination
+    // Determine writable destination — use CacheLocation to avoid the
+    // library scanner picking up sample files as regular tracks.
     QString destDir = QStandardPaths::writableLocation(
-                              QStandardPaths::AppLocalDataLocation) +
+                              QStandardPaths::CacheLocation) +
             QStringLiteral("/") + kSamplesSubdir;
     QDir dest(destDir);
     if (!dest.exists()) {
