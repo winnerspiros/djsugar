@@ -529,7 +529,14 @@ void PlayerManager::loadSamplers() {
                 QString group = groupForSampler(i);
                 BaseTrackPlayer* pPlayer = getPlayer(group);
                 if (pPlayer) {
+#ifdef __STEM__
+                    pPlayer->slotLoadTrack(
+                            pTrack,
+                            mixxx::StemChannelSelection(),
+                            false);
+#else
                     pPlayer->slotLoadTrack(pTrack, false);
+#endif
                 }
             }
         }
