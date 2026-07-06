@@ -870,7 +870,22 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
+
+    // When AutoDJ or AI Bro is active, restrict to the first 2 decks
+    // so manually loaded tracks don't spill onto decks 3+.
+    bool autoMixActive = false;
+    if (!m_pAutoDjEnabled) {
+        m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
+    }
+    if (!m_pAIBroEnabled) {
+        m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
+    }
+    autoMixActive = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
+
+    int maxDecks = autoMixActive ? qMin(2, m_decks.size()) : m_decks.size();
+    QList<BaseTrackPlayer*> candidates = m_decks.mid(0, maxDecks);
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
+
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
@@ -890,15 +905,7 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
-    // When AutoDJ or AI Bro is active, auto-play the loaded track so
-    // manually added tracks don't sit there paused.
-    if (!m_pAutoDjEnabled) {
-        m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
-    }
-    if (!m_pAIBroEnabled) {
-        m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
-    }
-    bool play = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
+    bool play = autoMixActive;
 
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
