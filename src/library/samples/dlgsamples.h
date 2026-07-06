@@ -45,8 +45,12 @@ class SampleListWidget : public QListWidget {
         QList<QUrl> urls;
         urls.append(QUrl::fromLocalFile(pItem->toolTip()));
         mimeData->setUrls(urls);
-        // Also set text/uri-list explicitly for QML DropArea compatibility
+        // Set text/uri-list for generic file drops
         mimeData->setData(QStringLiteral("text/uri-list"),
+                urls.first().toString(QUrl::FullyEncoded).toUtf8());
+        // Tag as a sample so PlayerDropArea can bypass the library
+        // (load as temporary track, avoiding getOrAddTrack pollution).
+        mimeData->setData(QStringLiteral("mixxx/sample-file"),
                 urls.first().toString(QUrl::FullyEncoded).toUtf8());
 
         QDrag* drag = new QDrag(this);
