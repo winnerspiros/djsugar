@@ -886,6 +886,12 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     QList<BaseTrackPlayer*> candidates = m_decks.mid(0, maxDecks);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
 
+    if (pDeck == nullptr && autoMixActive && !candidates.isEmpty()) {
+        // AI Bro uses both decks — load to the "other" deck (last in
+        // candidates) instead of spilling to decks 3+ or bailing.
+        pDeck = candidates.last();
+    }
+
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
