@@ -2897,7 +2897,7 @@ install(
   DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/samples/"
   DESTINATION "${MIXXX_INSTALL_DATADIR}/samples"
   FILES_MATCHING
-  PATTERN "*.mp3"
+  PATTERN "*.ogg"
   PATTERN "*.wav"
   PATTERN "*.aiff"
   PATTERN "README.md"

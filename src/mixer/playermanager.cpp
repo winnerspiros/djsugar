@@ -502,22 +502,22 @@ void PlayerManager::loadSamplers() {
         // First start: load 16 default samples as temporary tracks.
         // These bypass the library completely (Track::newTemporary).
         QStringList defaultSamples = {
-                QStringLiteral("kick.mp3"),
-                QStringLiteral("kick-hard.mp3"),
-                QStringLiteral("snare.mp3"),
-                QStringLiteral("hi-hat.mp3"),
-                QStringLiteral("clap.mp3"),
-                QStringLiteral("tom-drum.mp3"),
-                QStringLiteral("crash-cymbal.mp3"),
-                QStringLiteral("percussion.mp3"),
-                QStringLiteral("riser-classic.mp3"),
-                QStringLiteral("transition-sweep.mp3"),
-                QStringLiteral("horn.mp3"),
-                QStringLiteral("siren-police.mp3"),
-                QStringLiteral("shotgun-blast.mp3"),
-                QStringLiteral("laser.mp3"),
-                QStringLiteral("explosion.mp3"),
-                QStringLiteral("vinyl-scratch.mp3"),
+                QStringLiteral("kick.ogg"),
+                QStringLiteral("kick-hard.ogg"),
+                QStringLiteral("snare.ogg"),
+                QStringLiteral("hi-hat.ogg"),
+                QStringLiteral("clap.ogg"),
+                QStringLiteral("tom-drum.ogg"),
+                QStringLiteral("crash-cymbal.ogg"),
+                QStringLiteral("percussion.ogg"),
+                QStringLiteral("riser-classic.ogg"),
+                QStringLiteral("transition-sweep.ogg"),
+                QStringLiteral("horn.ogg"),
+                QStringLiteral("siren-police.ogg"),
+                QStringLiteral("shotgun-blast.ogg"),
+                QStringLiteral("laser.ogg"),
+                QStringLiteral("explosion.ogg"),
+                QStringLiteral("vinyl-scratch.ogg"),
         };
         for (int i = 0; i < defaultSamples.size(); ++i) {
             QString filePath = samplesDir + defaultSamples.at(i);
