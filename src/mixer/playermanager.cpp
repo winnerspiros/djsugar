@@ -883,7 +883,7 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     autoMixActive = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
 
     int maxDecks = autoMixActive ? qMin(2, m_decks.size()) : m_decks.size();
-    QList<BaseTrackPlayer*> candidates = m_decks.mid(0, maxDecks);
+    auto candidates = m_decks.mid(0, maxDecks);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
 
     if (pDeck == nullptr && autoMixActive && !candidates.isEmpty()) {
