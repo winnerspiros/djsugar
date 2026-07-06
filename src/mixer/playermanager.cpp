@@ -895,7 +895,10 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     if (!m_pAutoDjEnabled) {
         m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
     }
-    bool play = m_pAutoDjEnabled->toBool();
+    if (!m_pAIBroEnabled) {
+        m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
+    }
+    bool play = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
 
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
