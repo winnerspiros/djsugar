@@ -890,11 +890,18 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
+    // When AutoDJ or AI Bro is active, auto-play the loaded track so
+    // manually added tracks don't sit there paused.
+    if (!m_pAutoDjEnabled) {
+        m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
+    }
+    bool play = m_pAutoDjEnabled->toBool();
+
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
 #endif
-            false);
+            play);
 }
 
 void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& location, bool play) {
