@@ -35,6 +35,7 @@ class SampleListWidget : public QListWidget {
 
   protected:
     void startDrag(Qt::DropActions supportedActions) override {
+        Q_UNUSED(supportedActions);
         QListWidgetItem* pItem = currentItem();
         if (!pItem) {
             return;
