@@ -888,6 +888,9 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
             double pos1 = ControlObject::get(
                     ConfigKey(m_decks[1]->getGroup(), "playposition"));
             pDeck = (pos0 >= pos1) ? m_decks[0] : m_decks[1];
+            // Stop the deck before loading — otherwise the old track keeps
+            // playing while the new one loads, causing audio overlap.
+            ControlObject::set(ConfigKey(pDeck->getGroup(), "stop"), 1.0);
         }
     }
 
