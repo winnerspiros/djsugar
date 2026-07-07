@@ -890,7 +890,6 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
             // Stop the deck before loading — otherwise the old track keeps
             // playing while the new one loads, causing audio overlap.
             ControlObject::set(ConfigKey(pDeck->getGroup(), "stop"), 1.0);
-        }
     }
 
     if (pDeck == nullptr) {
