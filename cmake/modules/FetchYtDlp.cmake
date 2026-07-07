@@ -397,7 +397,15 @@ if(ANDROID)
     )
 
     # Add classes.jar to the target's dependencies.
-    target_link_libraries(mixxx PRIVATE "${_ytdlp_classes_jar}")
+    # NOTE: target_link_libraries with a .jar file can cause linker errors
+    # on some NDK toolchains. Use QT_ANDROID_JAR_DEPENDENCIES instead, which
+    # tells androiddeployqt to include the jar in the APK's classpath without
+    # passing it to the native linker.
+    set_property(
+      TARGET mixxx
+      APPEND
+      PROPERTY QT_ANDROID_JAR_DEPENDENCIES "${_ytdlp_classes_jar}"
+    )
 
     # ---------------------------------------------------------------------------
     # Define a preprocessor macro so the C++ code knows the bundled runtime exists.
