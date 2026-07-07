@@ -442,6 +442,18 @@ void appendUniqueVideos(
     }
 }
 
+// Returns true for YouTube video titles that should be excluded from
+// DJ Sugar search results — "type beat" instrumentals, beat channels,
+// and similar non-DJ content that clutters search results.
+bool isBlockedYouTubeContent(const QString& title) {
+    const QString lower = title.toLower();
+    // "type beat" and its common variants
+    if (lower.contains(QStringLiteral("type beat"))) {
+        return true;
+    }
+    return false;
+}
+
 // Parse a Piped JSON array of stream items (the same `items[]` shape returned
 // by /search and the top-level array returned by /trending) into our internal
 // YouTubeVideoInfo list, capped at `cap`. Non-stream entries (channels,
@@ -478,7 +490,9 @@ QList<YouTubeVideoInfo> parsePipedItems(const QJsonArray& items, int cap) {
         }
         info.isLive = false;
         if (isValidYouTubeVideoId(info.id) && !info.title.isEmpty()) {
-            results.append(info);
+            if (!isBlockedYouTubeContent(info.title)) {
+                results.append(info);
+            }
         }
     }
     return results;
@@ -563,7 +577,9 @@ void collectInnerTubeVideos(const QJsonValue& node,
             if (!info.isLive && isValidYouTubeVideoId(info.id) &&
                     !info.title.isEmpty() && !seen->contains(info.id)) {
                 seen->insert(info.id);
-                out->append(info);
+                if (!isBlockedYouTubeContent(info.title)) {
+                    out->append(info);
+                }
             }
             // Don't descend into a matched renderer's children.
             return;

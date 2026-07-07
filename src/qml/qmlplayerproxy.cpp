@@ -63,6 +63,26 @@ void QmlPlayerProxy::loadTrackFromLocationUrl(const QUrl& trackLocationUrl, bool
     }
 }
 
+void QmlPlayerProxy::loadSampleFromLocationUrl(const QUrl& trackLocationUrl) {
+    if (!trackLocationUrl.isLocalFile() || !m_pTrackPlayer) {
+        return;
+    }
+    // Load as a temporary track to bypass Library::getOrAddTrack,
+    // preventing samples from appearing in the track library.
+    TrackPointer pTrack = Track::newTemporary(
+            trackLocationUrl.toLocalFile());
+    if (pTrack) {
+#ifdef __STEM__
+        m_pTrackPlayer->slotLoadTrack(
+                pTrack,
+                mixxx::StemChannelSelection(),
+                false);
+#else
+        m_pTrackPlayer->slotLoadTrack(pTrack, false);
+#endif
+    }
+}
+
 void QmlPlayerProxy::slotTrackLoaded(TrackPointer pTrack) {
     m_pCurrentTrack = pTrack;
     Q_EMIT trackChanged();

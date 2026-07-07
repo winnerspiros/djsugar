@@ -584,25 +584,27 @@ import "." as Skin import Mixxx 1.0 as Mixxx import QtQuick 2.12 import QtQuick.
                     }
                 }
 
-                // Skin.SamplerRow {
-                //     id: samplers
-                //     visible: root.showSamplers
-                //     width: parent.width
+                Skin.SamplerPanel {
+                id:
+                    samplers
+                            visible : root.showSamplers
+                                              width : parent.width
 
-                //     Skin.FadeBehavior on visible {
-                //         fadeTarget: samplers
-                //     }
-                // }
-                // Skin.EffectRow {
-                //     id: effects
-                //     visible: root.showEffects
-                //     width: parent.width
+                                                              Skin.FadeBehavior on visible {
+                    fadeTarget:
+                        samplers
+                    }
+                }
+                Skin.EffectRow {
+                    //     id: effects
+                    //     visible: root.showEffects
+                    //     width: parent.width
 
-                //     Skin.FadeBehavior on visible {
-                //         fadeTarget: effects
-                //     }
-                // }
-                Loader {
+                    //     Skin.FadeBehavior on visible {
+                    //         fadeTarget: effects
+                    //     }
+                    // }
+                    Loader {
                     id: library
 
                     active: root.maximizeLibrary || root.height - mixer.height >= 400
@@ -645,7 +647,7 @@ import "." as Skin import Mixxx 1.0 as Mixxx import QtQuick 2.12 import QtQuick.
                         top: mixer.bottom
                     }
                 }
-            }
+                }
         }
     }
     Skin.Settings {

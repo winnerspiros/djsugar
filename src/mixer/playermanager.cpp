@@ -1,6 +1,10 @@
 #include "mixer/playermanager.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
+#include <QStandardPaths>
 
 #include "audio/types.h"
 #include "control/controlobject.h"
@@ -91,6 +95,78 @@ inline QString getDefaultSamplerPath(UserSettingsPointer pConfig) {
     return pConfig->getSettingsPath() + QStringLiteral("/samplers.xml");
 }
 
+// Extracts sample files from the app's resource directory to a writable
+// location so the audio engine can load them. This is needed on platforms
+// where samples are bundled as read-only resources (e.g. Android assets:/).
+// Uses CacheLocation to avoid the library scanner picking them up.
+// Returns the writable destination directory path, or empty string on failure.
+QString extractSamplesToWritableLocation(UserSettingsPointer pConfig) {
+    const QString kSamplesSubdir = QStringLiteral("samples/");
+
+    // Source candidates: resource path first, then fallback to res/samples/
+    QStringList sourceCandidates = {
+            pConfig->getResourcePath() + kSamplesSubdir,
+            QStringLiteral("res/samples/"),
+    };
+
+    QString sourceDir;
+    for (const auto& candidate : sourceCandidates) {
+        QFileInfo fi(candidate);
+        if (fi.exists() && fi.isDir()) {
+            sourceDir = fi.absoluteFilePath();
+            break;
+        }
+    }
+
+    if (sourceDir.isEmpty()) {
+        return QString();
+    }
+
+    // Writable destination — use CacheLocation to avoid the library scanner
+    // picking up sample files as regular tracks.
+    QString destDir = QStandardPaths::writableLocation(
+                              QStandardPaths::CacheLocation) +
+            QStringLiteral("/") + kSamplesSubdir;
+    QDir dest(destDir);
+    if (!dest.exists()) {
+        dest.mkpath(QStringLiteral("."));
+    }
+
+    // Check if already extracted
+    QFileInfo destMarker(destDir + QStringLiteral(".extracted"));
+    if (destMarker.exists()) {
+        return destDir;
+    }
+
+    // Copy sample files
+    QDir source(sourceDir);
+    QStringList filters = {QStringLiteral("*.mp3"),
+            QStringLiteral("*.wav"),
+            QStringLiteral("*.aiff"),
+            QStringLiteral("*.m4a"),
+            QStringLiteral("*.ogg")};
+    const QFileInfoList files = source.entryInfoList(filters, QDir::Files);
+
+    for (const auto& fi : std::as_const(files)) {
+        QString destPath = destDir + fi.fileName();
+        if (!QFile::exists(destPath)) {
+            if (!QFile::copy(fi.absoluteFilePath(), destPath)) {
+                qWarning() << "Failed to copy sample:" << fi.absoluteFilePath();
+            }
+        }
+    }
+
+    // Create marker
+    QFile markerFile(destDir + QStringLiteral(".extracted"));
+    if (!markerFile.open(QIODevice::WriteOnly)) {
+        qWarning() << "Failed to create .extracted marker:"
+                   << destDir + QStringLiteral(".extracted");
+    }
+    markerFile.close();
+
+    return destDir;
+}
+
 } // anonymous namespace
 
 PlayerManager::PlayerManager(UserSettingsPointer pConfig,
@@ -118,19 +194,24 @@ PlayerManager::PlayerManager(UserSettingsPointer pConfig,
           m_pTrackAnalysisScheduler(TrackAnalysisScheduler::NullPointer()) {
     m_pCONumDecks->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_decks")));
     m_pCONumDecks->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumDecks, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumDecks,
+            Qt::DirectConnection);
     m_pCONumSamplers->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_samplers")));
     m_pCONumSamplers->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumSamplers, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumSamplers,
+            Qt::DirectConnection);
     m_pCONumPreviewDecks->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_preview_decks")));
     m_pCONumPreviewDecks->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumPreviewDecks, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumPreviewDecks,
+            Qt::DirectConnection);
     m_pCONumMicrophones->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_microphones")));
     m_pCONumMicrophones->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumMicrophones, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumMicrophones,
+            Qt::DirectConnection);
     m_pCONumAuxiliaries->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_auxiliaries")));
     m_pCONumAuxiliaries->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumAuxiliaries, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumAuxiliaries,
+            Qt::DirectConnection);
 
     // This is parented to the PlayerManager so does not need to be deleted
     m_pSamplerBank = new SamplerBank(m_pConfig, this);
@@ -174,20 +255,24 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
             kNumberOfAnalyzerThreads,
             AnalyzerModeFlags::WithWaveform);
 
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::trackProgress,
-            this, &PlayerManager::onTrackAnalysisProgress);
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::finished,
-            this, &PlayerManager::onTrackAnalysisFinished);
+    connect(m_pTrackAnalysisScheduler.get(),
+            &TrackAnalysisScheduler::trackProgress,
+            this,
+            &PlayerManager::onTrackAnalysisProgress);
+    connect(m_pTrackAnalysisScheduler.get(),
+            &TrackAnalysisScheduler::finished,
+            this,
+            &PlayerManager::onTrackAnalysisFinished);
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
-    foreach(Deck* pDeck, m_decks) {
+    foreach (Deck* pDeck, m_decks) {
         connect(pDeck, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
     }
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
-    foreach(Sampler* pSampler, m_samplers) {
+    foreach (Sampler* pSampler, m_samplers) {
         connect(pSampler, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
     }
 
@@ -401,7 +486,61 @@ void PlayerManager::addDeckInner() {
 }
 
 void PlayerManager::loadSamplers() {
-    m_pSamplerBank->loadSamplerBankFromPath(getDefaultSamplerPath(m_pConfig));
+    // On first start, extract sample files to writable location so the audio
+    // engine can read them (required on Android where assets are bundled).
+    // Uses CacheLocation so the library scanner never picks them up.
+    QString samplesDir = extractSamplesToWritableLocation(m_pConfig);
+
+    // If a saved sampler bank exists, restore it (preserves user changes).
+    // Otherwise, load the 16 Rekordbox-style default samples directly as
+    // temporary tracks — no XML bank, no getOrAddTrack, so they never
+    // appear in the track library.
+    QString samplerBankPath = getDefaultSamplerPath(m_pConfig);
+    if (QFileInfo::exists(samplerBankPath)) {
+        m_pSamplerBank->loadSamplerBankFromPath(samplerBankPath);
+    } else if (!samplesDir.isEmpty()) {
+        // First start: load 16 default samples as temporary tracks.
+        // These bypass the library completely (Track::newTemporary).
+        QStringList defaultSamples = {
+                QStringLiteral("kick.ogg"),
+                QStringLiteral("kick-hard.ogg"),
+                QStringLiteral("snare.ogg"),
+                QStringLiteral("hi-hat.ogg"),
+                QStringLiteral("clap.ogg"),
+                QStringLiteral("tom-drum.ogg"),
+                QStringLiteral("crash-cymbal.ogg"),
+                QStringLiteral("percussion.ogg"),
+                QStringLiteral("riser-classic.ogg"),
+                QStringLiteral("transition-sweep.ogg"),
+                QStringLiteral("horn.ogg"),
+                QStringLiteral("siren-police.ogg"),
+                QStringLiteral("shotgun-blast.ogg"),
+                QStringLiteral("laser.ogg"),
+                QStringLiteral("explosion.ogg"),
+                QStringLiteral("vinyl-scratch.ogg"),
+        };
+        for (int i = 0; i < defaultSamples.size(); ++i) {
+            QString filePath = samplesDir + defaultSamples.at(i);
+            if (!QFileInfo::exists(filePath)) {
+                continue;
+            }
+            TrackPointer pTrack = Track::newTemporary(filePath);
+            if (pTrack) {
+                QString group = groupForSampler(i);
+                BaseTrackPlayer* pPlayer = getPlayer(group);
+                if (pPlayer) {
+#ifdef __STEM__
+                    pPlayer->slotLoadTrack(
+                            pTrack,
+                            mixxx::StemChannelSelection(),
+                            false);
+#else
+                    pPlayer->slotLoadTrack(pTrack, false);
+#endif
+                }
+            }
+        }
+    }
 }
 
 void PlayerManager::addSampler() {
@@ -580,7 +719,7 @@ Microphone* PlayerManager::getMicrophone(unsigned int microphone) const {
     const auto locker = lockMutex(&m_mutex);
     if (microphone < 1 || microphone >= static_cast<unsigned int>(m_microphones.size())) {
         kLogger.warning() << "Warning getMicrophone() called with invalid index: "
-                   << microphone;
+                          << microphone;
         return nullptr;
     }
     return m_microphones[microphone - 1];
@@ -590,7 +729,7 @@ Auxiliary* PlayerManager::getAuxiliary(unsigned int auxiliary) const {
     const auto locker = lockMutex(&m_mutex);
     if (auxiliary < 1 || auxiliary > static_cast<unsigned int>(m_auxiliaries.size())) {
         kLogger.warning() << "Warning getAuxiliary() called with invalid index: "
-                   << auxiliary;
+                          << auxiliary;
         return nullptr;
     }
     return m_auxiliaries[auxiliary - 1];
@@ -731,7 +870,28 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
+
+    // When AutoDJ or AI Bro is active, restrict to the first 2 decks
+    // so manually loaded tracks don't spill onto decks 3+.
+    bool autoMixActive = false;
+    if (!m_pAutoDjEnabled) {
+        m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
+    }
+    if (!m_pAIBroEnabled) {
+        m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
+    }
+    autoMixActive = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
+
+    int maxDecks = autoMixActive ? qMin(2, m_decks.size()) : m_decks.size();
+    auto candidates = m_decks.mid(0, maxDecks);
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
+
+    if (pDeck == nullptr && autoMixActive && !candidates.isEmpty()) {
+        // AI Bro uses both decks — load to the "other" deck (last in
+        // candidates) instead of spilling to decks 3+ or bailing.
+        pDeck = candidates.last();
+    }
+
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
@@ -751,11 +911,13 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
+    bool play = autoMixActive;
+
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
 #endif
-            false);
+            play);
 }
 
 void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& location, bool play) {

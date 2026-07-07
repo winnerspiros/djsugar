@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<samplerbank>
+ <!-- Default 16 Rekordbox-style sample slots -->
+ <sampler group="[Sampler1]" location="samples/kick.ogg"/>
+ <sampler group="[Sampler2]" location="samples/kick-hard.ogg"/>
+ <sampler group="[Sampler3]" location="samples/snare.ogg"/>
+ <sampler group="[Sampler4]" location="samples/hi-hat.ogg"/>
+ <sampler group="[Sampler5]" location="samples/clap.ogg"/>
+ <sampler group="[Sampler6]" location="samples/tom-drum.ogg"/>
+ <sampler group="[Sampler7]" location="samples/crash-cymbal.ogg"/>
+ <sampler group="[Sampler8]" location="samples/percussion.ogg"/>
+ <sampler group="[Sampler9]" location="samples/riser-classic.ogg"/>
+ <sampler group="[Sampler10]" location="samples/transition-sweep.ogg"/>
+ <sampler group="[Sampler11]" location="samples/horn.ogg"/>
+ <sampler group="[Sampler12]" location="samples/siren-police.ogg"/>
+ <sampler group="[Sampler13]" location="samples/shotgun-blast.ogg"/>
+ <sampler group="[Sampler14]" location="samples/laser.ogg"/>
+ <sampler group="[Sampler15]" location="samples/explosion.ogg"/>
+ <sampler group="[Sampler16]" location="samples/vinyl-scratch.ogg"/>
+</samplerbank>

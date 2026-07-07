@@ -2704,6 +2704,10 @@ if(QT6)
       COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samples
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples
+      # Default sampler bank: pre-loaded Rekordbox-style sample slots
+      COMMAND
+        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samplers
+        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samplers
       COMMAND
         ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/res/schema.xml
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/schema.xml
@@ -2893,7 +2897,7 @@ install(
   DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/samples/"
   DESTINATION "${MIXXX_INSTALL_DATADIR}/samples"
   FILES_MATCHING
-  PATTERN "*.mp3"
+  PATTERN "*.ogg"
   PATTERN "*.wav"
   PATTERN "*.aiff"
   PATTERN "README.md"
