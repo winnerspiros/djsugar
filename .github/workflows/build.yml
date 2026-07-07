@@ -500,6 +500,36 @@ jobs:
           sudo rm -rf /usr/share/swift             # Free up 3.2G
           sudo rm -rf /usr/local/share/vcpkg       # Size unknown, but obvious duplicate
 
+      - name: "[android] Cache yt-dlp Android AAR"
+        if: startsWith(matrix.artifacts_slug, 'android')
+        id: cache-ytdlp-aar
+        uses: actions/cache@v6
+        with:
+          path: build/_deps/yt-dlp-android-*
+          key: ytdlp-aar-v1-2026.07.04
+          restore-keys: |
+            ytdlp-aar-v1-
+
+      - name: "[android] Pre-seed yt-dlp AAR (cache miss)"
+        if: startsWith(matrix.artifacts_slug, 'android') && steps.cache-ytdlp-aar.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/_deps
+          AAR_DIR="build/_deps/yt-dlp-android-2026.07.04"
+          AAR_PATH="${AAR_DIR}/library-0.18.1.aar"
+          if [ ! -f "${AAR_PATH}" ]; then
+            mkdir -p "${AAR_DIR}"
+            echo "Pre-seeding youtubedl-android AAR..."
+            curl -L --retry 5 --retry-delay 5 \
+              -o "${AAR_PATH}" \
+              "https://repo1.maven.org/maven2/io/github/junkfood02/youtubedl-android/library/0.18.1/library-0.18.1.aar"
+            if [ -f "${AAR_PATH}" ]; then
+              AAR_SIZE=$(stat -c%s "${AAR_PATH}")
+              echo "AAR pre-seeded: ${AAR_SIZE} bytes"
+            else
+              echo "WARNING: AAR pre-seed failed, cmake will retry"
+            fi
+          fi
+
       - name: "Create build directory"
         run: mkdir build
 

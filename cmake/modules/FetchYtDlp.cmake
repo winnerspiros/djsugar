@@ -27,7 +27,7 @@
 
 set(
   YTDLP_VERSION
-  "2026.06.09"
+  "2026.07.04"
   CACHE STRING
   "Pinned yt-dlp release tag to bundle inside Mixxx"
 )
@@ -46,7 +46,7 @@ elseif(APPLE)
   set(_ytdlp_asset "yt-dlp_macos")
   set(
     _ytdlp_sha256
-    "b82c3626952e6c14eaf654cc565866775ffd0b9ffb7021628ac59b42c2f4f244"
+    "87d25761f0e5301bdaa36e3022c03fdcb4ae68ce46e59e2f6bdc403e1c431d78"
   )
   set(_ytdlp_install_name "yt-dlp")
 elseif(UNIX)
@@ -57,7 +57,7 @@ elseif(UNIX)
     set(_ytdlp_asset "yt-dlp_linux")
     set(
       _ytdlp_sha256
-      "bf8aac79b72287a6d2043074415132558b43743a8f9461a22b0141e90f16ce66"
+      "7058f63591e60b5b96a24b8eecd1e3b3b1899ebae1749db36a263b6807b1f43f"
     )
     set(_ytdlp_install_name "yt-dlp")
   endif()
@@ -299,11 +299,26 @@ if(ANDROID)
     endwhile()
 
     if(NOT _aar_ok)
-      message(
-        WARNING
-        "Failed to download youtubedl-android AAR after ${_max_attempts} attempts. "
-        "You can manually place the AAR at ${_ytdlp_aar_path} and re-run cmake."
-      )
+      # In CI (GitHub Actions, etc.), a missing AAR means the bundled yt-dlp
+      # fallback is silently broken — downstream code cannot download YouTube
+      # audio at all once InnerTube gets blocked. Fail hard so the build
+      # explicitly shows the error instead of silently shipping a broken APK.
+      if(DEFINED ENV{CI} AND NOT "$ENV{CI}" STREQUAL "")
+        message(
+          FATAL_ERROR
+          "Failed to download youtubedl-android AAR after ${_max_attempts} attempts. "
+          "The APK will ship without the bundled yt-dlp runtime, making YouTube "
+          "downloads non-functional. Check network access to Maven Central.\n"
+          "  URL: ${_ytdlp_aar_url}\n"
+          "  Cache path: ${_ytdlp_aar_path}"
+        )
+      else()
+        message(
+          WARNING
+          "Failed to download youtubedl-android AAR after ${_max_attempts} attempts. "
+          "You can manually place the AAR at ${_ytdlp_aar_path} and re-run cmake."
+        )
+      endif()
     endif()
   endif()
 

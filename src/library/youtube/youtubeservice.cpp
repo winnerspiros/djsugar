@@ -197,11 +197,11 @@ QVector<InnerTubeClient> innerTubeClients() {
             // with HTTP 400 / 403, so this MUST be tried first. Caveat: it
             // cannot access "made for kids" videos, hence the fallbacks below.
             {"ANDROID_VR",
-                    "1.65.10",
+                    "1.66.2",
                     "28",
                     "", // no API key needed; the client context is sufficient
-                    "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; "
-                    "U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+                    "com.google.android.apps.youtube.vr.oculus/1.66.2 (Linux; "
+                    "U; Android 13; eureka-user Build/TQ3A.230805.001.A1) gzip",
                     "Oculus",
                     "Quest 3",
                     32,
@@ -211,11 +211,11 @@ QVector<InnerTubeClient> innerTubeClients() {
             // serve. May require a poToken (and then fail over), but still
             // succeeds for many videos.
             {"IOS",
-                    "21.02.3",
+                    "21.06.1",
                     "5",
                     "",
-                    "com.google.ios.youtube/21.02.3 (iPhone16,2; U; CPU iOS "
-                    "18_3_2 like Mac OS X;)",
+                    "com.google.ios.youtube/21.06.1 (iPhone17,2; U; CPU iOS "
+                    "19_0 like Mac OS X;)",
                     "Apple",
                     "iPhone16,2",
                     0,
@@ -271,11 +271,11 @@ const QVector<InnerTubeClient>& innerTubeSearchClients() {
     // Initialize from compiled-in defaults.
     const QVector<InnerTubeClient> kClients = {
             {"ANDROID_VR",
-                    "1.65.10",
+                    "1.66.2",
                     "28",
                     "",
-                    "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; "
-                    "U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+                    "com.google.android.apps.youtube.vr.oculus/1.66.2 (Linux; "
+                    "U; Android 13; eureka-user Build/TQ3A.230805.001.A1) gzip",
                     "Oculus",
                     "Quest 3",
                     32,
