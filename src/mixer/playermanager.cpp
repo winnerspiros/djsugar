@@ -870,30 +870,7 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-
-    // When AI Bro is active, restrict to the first 2 decks
-    // so manually loaded tracks don't spill onto decks 3+.
-    bool aiBroActive = false;
-    if (!m_pAIBroEnabled) {
-        m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
-    }
-    aiBroActive = m_pAIBroEnabled->toBool();
-
-    int maxDecks = aiBroActive ? qMin(2, m_decks.size()) : m_decks.size();
-    auto candidates = m_decks.mid(0, maxDecks);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
-
-    if (pDeck == nullptr && aiBroActive && candidates.size() == 2) {
-        // Both AI Bro decks are playing. Pick the one closest to ending
-        // (highest playposition) — that deck is the one AI Bro is blending
-        // OUT of, so overwriting it is least disruptive.
-        double pos0 = ControlObject::get(
-                ConfigKey(candidates[0]->getGroup(), "playposition"));
-        double pos1 = ControlObject::get(
-                ConfigKey(candidates[1]->getGroup(), "playposition"));
-        pDeck = (pos0 >= pos1) ? candidates[0] : candidates[1];
-    }
-
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
