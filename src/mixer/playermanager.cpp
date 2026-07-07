@@ -872,17 +872,16 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
 
+    bool aiBroActive = false;
+    if (!m_pAIBroEnabled) {
+        m_pAIBroEnabled =
+                make_parented<ControlProxy>("[AIBro]", "enabled", this);
+    }
+    aiBroActive = m_pAIBroEnabled->toBool();
+
     // If no stopped deck is found and AI Bro is active, force-load to the
     // deck nearest its end (the one AI Bro is fading OUT of) and auto-play.
-    if (pDeck == nullptr) {
-        bool aiBroActive = false;
-        if (!m_pAIBroEnabled) {
-            m_pAIBroEnabled =
-                    make_parented<ControlProxy>("[AIBro]", "enabled", this);
-        }
-        aiBroActive = m_pAIBroEnabled->toBool();
-
-        if (aiBroActive && m_decks.size() >= 2) {
+    if (pDeck == nullptr && aiBroActive && m_decks.size() >= 2) {
             double pos0 = ControlObject::get(
                     ConfigKey(m_decks[0]->getGroup(), "playposition"));
             double pos1 = ControlObject::get(
@@ -900,10 +899,7 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 
     // When AI Bro is active, auto-play so the loaded track blends correctly.
-    bool autoPlay = false;
-    if (m_pAIBroEnabled) {
-        autoPlay = m_pAIBroEnabled->toBool();
-    }
+    bool autoPlay = aiBroActive;
 
 #ifdef __STEM__
     // Reset the QuickFx of stem to their default value
