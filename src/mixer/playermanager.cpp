@@ -871,25 +871,27 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
 
-    // When AutoDJ or AI Bro is active, restrict to the first 2 decks
+    // When AI Bro is active, restrict to the first 2 decks
     // so manually loaded tracks don't spill onto decks 3+.
-    bool autoMixActive = false;
-    if (!m_pAutoDjEnabled) {
-        m_pAutoDjEnabled = make_parented<ControlProxy>("[AutoDJ]", "enabled", this);
-    }
+    bool aiBroActive = false;
     if (!m_pAIBroEnabled) {
         m_pAIBroEnabled = make_parented<ControlProxy>("[AIBro]", "enabled", this);
     }
-    autoMixActive = m_pAutoDjEnabled->toBool() || m_pAIBroEnabled->toBool();
+    aiBroActive = m_pAIBroEnabled->toBool();
 
-    int maxDecks = autoMixActive ? qMin(2, m_decks.size()) : m_decks.size();
+    int maxDecks = aiBroActive ? qMin(2, m_decks.size()) : m_decks.size();
     auto candidates = m_decks.mid(0, maxDecks);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(candidates);
 
-    if (pDeck == nullptr && autoMixActive && !candidates.isEmpty()) {
-        // AI Bro uses both decks — load to the "other" deck (last in
-        // candidates) instead of spilling to decks 3+ or bailing.
-        pDeck = candidates.last();
+    if (pDeck == nullptr && aiBroActive && candidates.size() == 2) {
+        // Both AI Bro decks are playing. Pick the one closest to ending
+        // (highest playposition) — that deck is the one AI Bro is blending
+        // OUT of, so overwriting it is least disruptive.
+        double pos0 = ControlObject::get(
+                ConfigKey(candidates[0]->getGroup(), "playposition"));
+        double pos1 = ControlObject::get(
+                ConfigKey(candidates[1]->getGroup(), "playposition"));
+        pDeck = (pos0 >= pos1) ? candidates[0] : candidates[1];
     }
 
     if (pDeck == nullptr) {
@@ -911,13 +913,11 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
-    bool play = autoMixActive;
-
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
 #endif
-            play);
+            false);
 }
 
 void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& location, bool play) {
