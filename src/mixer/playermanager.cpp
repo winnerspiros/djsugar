@@ -871,35 +871,10 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
-
-    bool aiBroActive = false;
-    if (!m_pAIBroEnabled) {
-        m_pAIBroEnabled =
-                make_parented<ControlProxy>("[AIBro]", "enabled", this);
-    }
-    aiBroActive = m_pAIBroEnabled->toBool();
-
-    // If no stopped deck is found and AI Bro is active, force-load to the
-    // deck nearest its end (the one AI Bro is fading OUT of) and auto-play.
-    if (pDeck == nullptr && aiBroActive && m_decks.size() >= 2) {
-        double pos0 = ControlObject::get(
-                ConfigKey(m_decks[0]->getGroup(), "playposition"));
-        double pos1 = ControlObject::get(
-                ConfigKey(m_decks[1]->getGroup(), "playposition"));
-        pDeck = (pos0 >= pos1) ? m_decks[0] : m_decks[1];
-        // Stop the deck before loading — otherwise the old track keeps
-        // playing while the new one loads, causing audio overlap.
-        ControlObject::set(ConfigKey(pDeck->getGroup(), "stop"), 1.0);
-    }
-
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
     }
-
-    // When AI Bro is active, auto-play so the loaded track blends correctly.
-    bool autoPlay = aiBroActive;
-
 #ifdef __STEM__
     // Reset the QuickFx of stem to their default value
     if (m_pConfig->getValue(
@@ -919,7 +894,7 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
 #endif
-            autoPlay);
+            false);
 }
 
 void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& location, bool play) {

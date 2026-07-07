@@ -297,7 +297,6 @@ class PlayerManager : public PlayerManagerInterface {
     std::unique_ptr<ControlObject> m_pCONumMicrophones;
     std::unique_ptr<ControlObject> m_pCONumAuxiliaries;
     parented_ptr<ControlProxy> m_pAutoDjEnabled;
-    parented_ptr<ControlProxy> m_pAIBroEnabled;
 
     TrackAnalysisScheduler::Pointer m_pTrackAnalysisScheduler;
 
