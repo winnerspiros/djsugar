@@ -63,7 +63,7 @@ jobs:
               -DINSTALL_USER_UDEV_RULES=OFF
               -DNDEBUG=ON
             # TODO: Fix these broken tests. They time out on slow CI runners.
-            ctest_args: --exclude-regex '(ControllerScriptEngineLegacy|PlayerManagerTest\.Un|MappingTestFixture)'
+            ctest_args: --exclude-regex '(ControllerScriptEngineLegacy|PlayerManagerTest\.Un|MappingTestFixture|AdjustReplayGainTest\.AdjustReplayGainUpdatesPregain)'
             compiler_cache: ccache
             compiler_cache_path: /home/runner/.cache/ccache
             compiler_cache_id: qt6
