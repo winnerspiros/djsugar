@@ -20,6 +20,15 @@ DropArea {
             drop.accepted = true;
             return ;
         }
+        // Sample file drops: load as temporary track to bypass the
+        // library and avoid polluting the track list.
+        if (drop.formats.includes("mixxx/sample-file")) {
+            const url = drop.getDataAsString("mixxx/sample-file");
+            console.log("Dropped sample '" + url + "' on sampler " + group);
+            player.loadSampleFromLocationUrl(url);
+            drop.accepted = true;
+            return;
+        }
         if (drop.hasUrls && drop.urls.length > 0) {
             let url = drop.urls[0];
             console.log("Dropped URL '" + url + "' on deck " + group);

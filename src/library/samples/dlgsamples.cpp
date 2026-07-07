@@ -42,9 +42,10 @@ QString resolveSamplesPath(UserSettingsPointer pConfig) {
         return QString();
     }
 
-    // Determine writable destination
+    // Determine writable destination — use CacheLocation to avoid the
+    // library scanner picking up sample files as regular tracks.
     QString destDir = QStandardPaths::writableLocation(
-                              QStandardPaths::AppLocalDataLocation) +
+                              QStandardPaths::CacheLocation) +
             QStringLiteral("/") + kSamplesSubdir;
     QDir dest(destDir);
     if (!dest.exists()) {
@@ -97,7 +98,7 @@ DlgSamples::DlgSamples(
         : QWidget(parent),
           m_pConfig(pConfig),
           m_pLibrary(pLibrary),
-          m_pSampleList(new QListWidget(this)) {
+          m_pSampleList(new SampleListWidget(this)) {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(m_pSampleList);
@@ -136,6 +137,7 @@ void DlgSamples::refreshBrowseModel() {
     foreach (const QString& filename, m_sampleFiles) {
         QListWidgetItem* pItem = new QListWidgetItem(filename);
         pItem->setToolTip(dir.absoluteFilePath(filename));
+        pItem->setFlags(pItem->flags() | Qt::ItemIsDragEnabled);
         m_pSampleList->addItem(pItem);
     }
 }

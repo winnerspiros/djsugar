@@ -342,29 +342,22 @@ if(ANDROID)
     endif()
 
     # ---------------------------------------------------------------------------
-    # Install JNI shared libraries into the APK's lib directory.
-    # These go into QT_ANDROID_EXTRA_LIBS so Qt's androiddeployqt picks them up.
-    # ---------------------------------------------------------------------------
-    set(_ytdlp_jni_libs "")
-    foreach(_abi IN ITEMS arm64-v8a armeabi-v7a x86_64)
-      set(_aar_jni_dir "${_ytdlp_aar_extracted}/jni/${_abi}")
-      if(EXISTS "${_aar_jni_dir}")
-        # Collect all .so files from this ABI's jni directory.
-        file(GLOB _abi_so_files "${_aar_jni_dir}/*.so")
-        foreach(_so_file IN LISTS _abi_so_files)
-          list(APPEND _ytdlp_jni_libs "${_so_file}")
-          message(STATUS "  yt-dlp JNI lib: ${_so_file}")
-        endforeach()
-      endif()
-    endforeach()
-
-    # ---------------------------------------------------------------------------
     # Install the classes.jar into the APK's classpath.
-    # We add it to the target's linked libraries so androiddeployqt includes it.
+    # We add it via QT_ANDROID_JAR_DEPENDENCIES so androiddeployqt includes it.
     # ---------------------------------------------------------------------------
     set(_ytdlp_classes_jar "${_ytdlp_aar_extracted}/classes.jar")
     if(EXISTS "${_ytdlp_classes_jar}")
       message(STATUS "  yt-dlp classes.jar: ${_ytdlp_classes_jar}")
+      # NOTE: we do NOT bundle the AAR's JNI shared libs (libpython.so etc.)
+      # because libpython.so requires libandroid-support.so which is not
+      # available on modern Android NDKs (removed in NDK r23+). Bundling it
+      # causes UnsatisfiedLinkError at APK startup. The classes.jar alone
+      # enables graceful runtime fallback when the native libs are absent.
+      set_property(
+        TARGET mixxx
+        APPEND
+        PROPERTY QT_ANDROID_JAR_DEPENDENCIES "${_ytdlp_classes_jar}"
+      )
     else()
       message(FATAL_ERROR "classes.jar not found in youtubedl-android AAR")
     endif()
@@ -387,17 +380,16 @@ if(ANDROID)
       message(FATAL_ERROR "res/raw/ytdlp not found in youtubedl-android AAR")
     endif()
 
-    # ---------------------------------------------------------------------------
-    # Add JNI libs and classes.jar to the target.
-    # ---------------------------------------------------------------------------
+    # Add classes.jar to the target's dependencies.
+    # NOTE: target_link_libraries with a .jar file can cause linker errors
+    # on some NDK toolchains. Use QT_ANDROID_JAR_DEPENDENCIES instead, which
+    # tells androiddeployqt to include the jar in the APK's classpath without
+    # passing it to the native linker.
     set_property(
       TARGET mixxx
       APPEND
-      PROPERTY QT_ANDROID_EXTRA_LIBS ${_ytdlp_jni_libs}
+      PROPERTY QT_ANDROID_JAR_DEPENDENCIES "${_ytdlp_classes_jar}"
     )
-
-    # Add classes.jar to the target's dependencies.
-    target_link_libraries(mixxx PRIVATE "${_ytdlp_classes_jar}")
 
     # ---------------------------------------------------------------------------
     # Define a preprocessor macro so the C++ code knows the bundled runtime exists.
