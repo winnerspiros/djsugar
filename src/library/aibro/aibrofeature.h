@@ -14,9 +14,7 @@
 
 namespace mixxx {
 struct YouTubeVideoInfo;
-class MusicMatcherClient;
-struct MusicMatcherSuggestion;
-} // namespace mixxx
+}
 
 class Library;
 class PlayerManager;
@@ -72,10 +70,6 @@ class AIBroFeature : public QObject {
     void slotBlendTick();
     void slotSearchFailed(
             const QString& query, const QString& error);
-    void slotMusicMatcherSuggestionsReady(
-            const QList<mixxx::MusicMatcherSuggestion>& suggestions);
-    void slotMusicMatcherSearchFailed(
-            const QString& error);
 
   private:
     // --- Song discovery ---
@@ -199,5 +193,4 @@ class AIBroFeature : public QObject {
     UserSettingsPointer m_pConfig;
     PlayerManager* m_pPlayerManager;
     YouTubeFeature* m_pYouTubeFeature;
-    mixxx::MusicMatcherClient* m_pMusicMatcher;
 };
