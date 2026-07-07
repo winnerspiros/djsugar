@@ -35,7 +35,6 @@
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
 #include <QJniEnvironment>
 #include <QJniObject>
-#include <QNativeInterface/QAndroidApplication>
 #endif
 
 #include "library/youtube/youtubeaudiocutter.h"
