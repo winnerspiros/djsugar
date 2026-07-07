@@ -500,6 +500,9 @@ jobs:
           sudo rm -rf /usr/share/swift             # Free up 3.2G
           sudo rm -rf /usr/local/share/vcpkg       # Size unknown, but obvious duplicate
 
+      - name: "Create build directory"
+        run: mkdir build
+
       - name: "[android] Cache yt-dlp Android AAR"
         if: startsWith(matrix.artifacts_slug, 'android')
         id: cache-ytdlp-aar
@@ -513,7 +516,6 @@ jobs:
       - name: "[android] Pre-seed yt-dlp AAR (cache miss)"
         if: startsWith(matrix.artifacts_slug, 'android') && steps.cache-ytdlp-aar.outputs.cache-hit != 'true'
         run: |
-          mkdir -p build/_deps
           AAR_DIR="build/_deps/yt-dlp-android-2026.07.04"
           AAR_PATH="${AAR_DIR}/library-0.18.1.aar"
           if [ ! -f "${AAR_PATH}" ]; then
@@ -529,9 +531,6 @@ jobs:
               echo "WARNING: AAR pre-seed failed, cmake will retry"
             fi
           fi
-
-      - name: "Create build directory"
-        run: mkdir build
 
       - name: "Configure"
         # NB: ${{ matrix.cmake_args }} is placed AFTER the per-job defaults
