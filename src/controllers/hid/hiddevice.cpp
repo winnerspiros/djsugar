@@ -174,5 +174,39 @@ QDebug operator<<(QDebug dbg, const DeviceInfo& deviceInfo) {
     return dbg;
 }
 
+bool DeviceInfo::matchProductInfo(
+        const ProductInfo& product) const {
+    bool ok;
+    // Product and vendor match is always required
+    if (vendor_id != product.vendor_id.toInt(&ok, 16) || !ok) {
+        return false;
+    }
+    if (product_id != product.product_id.toInt(&ok, 16) || !ok) {
+        return false;
+    }
+
+    // Optionally check against m_usbInterfaceNumber / usage_page && usage
+#ifndef Q_OS_ANDROID
+    if (m_usbInterfaceNumber >= 0)
+#endif
+    {
+        if (m_usbInterfaceNumber != product.interface_number.toInt(&ok, 16) || !ok) {
+            return false;
+        }
+    }
+#ifndef Q_OS_ANDROID
+    else {
+        if (usage_page != product.usage_page.toInt(&ok, 16) || !ok) {
+            return false;
+        }
+        if (usage != product.usage.toInt(&ok, 16) || !ok) {
+            return false;
+        }
+    }
+#endif
+    // Match found
+    return true;
+}
+
 } // namespace hid
 } // namespace mixxx
