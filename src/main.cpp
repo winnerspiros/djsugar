@@ -422,6 +422,12 @@ int main(int argc, char* argv[]) {
     // drags and fader movements by up to one frame (~16 ms @ 60 Hz).
     qputenv("QT_ANDROID_DISABLE_ACCESSIBILITY", QByteArrayLiteral("1"));
 
+    // Prevent Qt 6.6+ Android deadlock protection fatal abort during
+    // initial widget repaint on some Samsung devices (e.g. Galaxy S24).
+    // The deadlock mechanism in QAndroidPlatformBackingStore can time
+    // out on the first window expose, causing a qFatal -> SIGABRT.
+    qputenv("QT_ANDROID_SKIP_DEADLOCK_PROTECTION", QByteArrayLiteral("1"));
+
     // Tell Qt's Android platform plugin to use the Choreographer for
     // rendering (better frame pacing) and to synthesize mouse events
     // from touch at the platform layer with minimal overhead.
