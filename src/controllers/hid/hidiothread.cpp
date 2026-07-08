@@ -6,6 +6,7 @@
 #include <android/log.h>
 #include <hidapi_libusb.h>
 #include <libusb.h>
+
 #include <QJniEnvironment>
 #else
 #include <hidapi.h>
@@ -130,7 +131,9 @@ void HidIoThread::pollBufferedInputReports() {
                             0,
                             kBufferSize));
             if (bytesRead > 0) {
-                env->GetByteArrayRegion(byteArray, 0, bytesRead,
+                env->GetByteArrayRegion(byteArray,
+                        0,
+                        bytesRead,
                         reinterpret_cast<jbyte*>(
                                 m_pPollData[m_pollingBufferIndex]));
                 processInputReport(static_cast<int>(bytesRead));

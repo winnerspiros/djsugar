@@ -3,6 +3,9 @@
 #include <hidapi.h>
 
 #include <QDebugStateSaver>
+#if defined(Q_OS_ANDROID)
+#include <android/log.h>
+#endif
 
 #include "controllers/controllermappinginfo.h"
 #include "util/string.h"
@@ -85,9 +88,11 @@ DeviceInfo::DeviceInfo(
         jint epType = ep.callMethod<jint>("getType");
         // USB_ENDPOINT_XFER_INT = 3, DIR_IN = 0x80
         if ((epAddr & 0x80) && epType == 3) {
-            __android_log_print(ANDROID_LOG_INFO, "mixxx",
+            __android_log_print(ANDROID_LOG_INFO,
+                    "mixxx",
                     "Found HID interrupt IN endpoint 0x%02x at index %d",
-                    epAddr, i);
+                    epAddr,
+                    i);
             m_androidInterruptEndpoint = ep;
             break;
         }
@@ -161,7 +166,7 @@ QDebug operator<<(QDebug dbg, const DeviceInfo& deviceInfo) {
     dbg << "Interface: #" << deviceInfo.getUsbInterfaceNumber().value_or(-1)
         << " | ";
 
-    dbg << "Manufacturer: " << deviceInfo.getManufacturerString()
+    dbg << "Manufacturer: " << deviceInfo.getVendorString()
         << " | Product: " << deviceInfo.getProductString()
         << " | S/N: " << deviceInfo.getSerialNumber();
 
