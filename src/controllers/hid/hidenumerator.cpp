@@ -161,7 +161,11 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
             jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
-            if (ifaceClass == LIBUSB_CLASS_HID) {
+            if (ifaceClass == LIBUSB_CLASS_HID
+#ifdef __ANDROID__
+                    || ifaceClass == 0xFF // vendor-specific — DDJ-FLX4 deck HID on Android
+#endif
+            ) {
                 auto deviceInfo = mixxx::hid::DeviceInfo(usbDevice, usbInterface);
 
                 if (!recognizeDevice(deviceInfo)) {

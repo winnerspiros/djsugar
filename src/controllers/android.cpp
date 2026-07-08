@@ -31,10 +31,10 @@ const QJniObject& getIntent() {
     QJniObject context = QNativeInterface::QAndroidApplication::context();
 
     s_usbManager = QJniObject("org/mixxx/UsbPermission");
-    jint FLAG_IMMUTABLE =
+    jint FLAG_MUTABLE =
             QJniObject::getStaticField<jint>(
                     "android/app/PendingIntent",
-                    "FLAG_IMMUTABLE");
+                    "FLAG_MUTABLE");
     QtJniTypes::String ACTION_USB_PERMISSION =
             QJniObject::fromString("org.mixxx.permissions.USB_PERMISSION");
     QtJniTypes::Intent intent = QJniObject("android/content/Intent",
@@ -51,7 +51,7 @@ const QJniObject& getIntent() {
                     context,
                     0,
                     intent,
-                    FLAG_IMMUTABLE);
+                    FLAG_MUTABLE);
 
     if (!s_intent.isValid()) {
         __android_log_print(ANDROID_LOG_WARN, "mixxx", "pending intent is invalid!");
