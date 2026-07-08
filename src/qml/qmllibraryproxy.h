@@ -11,7 +11,6 @@
 
 class Library;
 class KeyboardEventFilter;
-class WTrackMenu;
 
 namespace mixxx {
 namespace qml {
@@ -45,16 +44,6 @@ class QmlLibraryProxy : public QObject {
 
     QmlLibraryTrackListModel* model() const;
     Q_INVOKABLE void analyze(const mixxx::qml::QmlTrackProxy* track) const;
-    Q_INVOKABLE void showDeckTrackMenu(
-            mixxx::qml::QmlTrackProxy* track,
-            const QString& group,
-            const QString& property,
-            int globalXPosition,
-            int globalYPosition);
-    Q_INVOKABLE void showDeckTrackProperties(
-            mixxx::qml::QmlTrackProxy* track,
-            const QString& group,
-            const QString& property);
     Q_INVOKABLE QString deckHotcueLabel(
             mixxx::qml::QmlTrackProxy* track,
             int hotcueNumber) const;
@@ -72,12 +61,8 @@ class QmlLibraryProxy : public QObject {
             int hotcueNumber);
 
   private:
-    void ensureDeckTrackMenu();
-
     static inline std::shared_ptr<Library> s_pLibrary;
     static inline std::shared_ptr<KeyboardEventFilter> s_pKeyboard;
-
-    std::unique_ptr<WTrackMenu> m_pDeckTrackMenu;
 };
 
 } // namespace qml
