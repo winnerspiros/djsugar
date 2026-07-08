@@ -38,7 +38,6 @@ class DlgPrefSoundItem : public QWidget, public Ui::DlgPrefSoundItem {
         return channelComboBox->currentIndex();
     }
     void selectFirstUnusedChannelIndex(const QList<int>& selectedChannels);
-    void setDevice(const SoundDeviceId& device);
 
     int getLatencyOffsetMs() const {
         return m_latencyOffsetMs;

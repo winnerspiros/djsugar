@@ -281,7 +281,7 @@ class SoundDeviceId final {
     QString debugName() const;
 
     SoundDeviceId()
-            : portAudioIndex(-1) {
+            : deviceIndex(-1) {
     }
 };
 
@@ -292,7 +292,7 @@ inline bool operator==(
         const SoundDeviceId& lhs,
         const SoundDeviceId& rhs) {
     return lhs.name == rhs.name && lhs.alsaHwDevice == rhs.alsaHwDevice &&
-            lhs.portAudioIndex == rhs.portAudioIndex;
+            lhs.deviceIndex == rhs.deviceIndex;
 }
 
 inline bool operator!=(

@@ -120,7 +120,7 @@ class SoundManager : public QObject {
     }
 
     QSharedPointer<EngineNetworkStream> getNetworkStream() const {
-        return m_pNetworkEnumerator->getNetworkStream();
+        return m_networkEnumerator.getNetworkStream();
     }
 
     void underflowHappened(int code) {
@@ -200,6 +200,10 @@ class SoundManager : public QObject {
     NetworkEnumerator m_networkEnumerator;
 
     AudioLatencyCalibrator* m_pCalibrator = nullptr;
+
+#ifdef __PIPEWIRE__
+    std::unique_ptr<PipewireEnumerator> m_pPipewireEnumerator;
+#endif
 
     /// Cache for one buffer's worth of calibration chirp samples.
     /// Filled by the clock-ref callback, consumed by writeProcess for non-ref
