@@ -54,11 +54,11 @@ SoundManager::SoundManager(UserSettingsPointer pConfig,
           m_underflowUpdateCount(0),
           m_audioLatencyOverloadCount(kAppGroup, QStringLiteral("audio_latency_overload_count")),
           m_audioLatencyOverload(kAppGroup, QStringLiteral("audio_latency_overload")),
-          m_pPaEnumerator(std::make_unique<PortAudioEnumerator>(pConfig, this)),
+          m_paEnumerator(pConfig, this),
 #ifdef __PIPEWIRE__
           m_pPipewireEnumerator(std::make_unique<PipewireEnumerator>(pConfig, this)),
 #endif
-          m_pNetworkEnumerator(std::make_unique<NetworkEnumerator>(pConfig, this)) {
+          m_networkEnumerator(pConfig, this) {
     // TODO(xxx) some of these ControlObject are not needed by soundmanager, or are unused here.
     // It is possible to take them out?
     m_pControlObjectSoundStatusCO = new ControlObject(
@@ -131,7 +131,7 @@ QList<SoundDevicePointer> SoundManager::getDeviceList(
 QList<QString> SoundManager::getHostAPIList() const {
     QList<QString> apiList;
 
-    for (const auto& api : m_pPaEnumerator->getAPIs()) {
+    for (const auto& api : m_paEnumerator.getAPIs()) {
         apiList.push_back(api.c_str());
     }
 
@@ -234,7 +234,7 @@ void SoundManager::clearDeviceList(bool sleepAfterClosing) {
     m_devices.clear();
     m_pErrorDevice.clear();
 
-    m_pPaEnumerator->terminate();
+    m_paEnumerator.terminate();
 }
 
 QList<mixxx::audio::SampleRate> SoundManager::getSampleRates(const QString& api) const {
@@ -242,7 +242,7 @@ QList<mixxx::audio::SampleRate> SoundManager::getSampleRates(const QString& api)
     if (api == MIXXX_PORTAUDIO_JACK_STRING) {
         // queryDevices must have been called for this to work, but the
         // ctor calls it -bkgood
-        samplerates = m_pPaEnumerator->getJackSampleRates();
+        samplerates = m_paEnumerator.getJackSampleRates();
     }
 #ifdef __PIPEWIRE__
     else if (api == MIXXX_PIPEWIRE_STRING) {
@@ -250,7 +250,7 @@ QList<mixxx::audio::SampleRate> SoundManager::getSampleRates(const QString& api)
     }
 #endif
     else if (!api.isEmpty()) {
-        samplerates = m_pPaEnumerator->getSampleRates();
+        samplerates = m_paEnumerator.getSampleRates();
     }
 
     if (!samplerates.empty()) {
@@ -272,9 +272,9 @@ void SoundManager::queryDevices() {
     qDebug() << "SoundManager::queryDevices()";
 
     m_devices.clear();
-    m_pPaEnumerator->initialize();
+    m_paEnumerator.initialize();
 
-    for (auto& device : m_pPaEnumerator->queryDevices()) {
+    for (auto& device : m_paEnumerator.queryDevices()) {
         m_devices.push_back(device);
         qDebug() << "m_devices.push_back " << device->getDisplayName();
     }
@@ -286,7 +286,7 @@ void SoundManager::queryDevices() {
     }
 #endif
 
-    for (auto& device : m_pNetworkEnumerator->queryDevices()) {
+    for (auto& device : m_networkEnumerator.queryDevices()) {
         m_devices.push_back(device);
         qDebug() << "m_devices.push_back " << device->getDisplayName();
     }
