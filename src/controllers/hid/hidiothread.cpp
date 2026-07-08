@@ -6,6 +6,7 @@
 #include <android/log.h>
 #include <hidapi_libusb.h>
 #include <libusb.h>
+#include <QJniEnvironment>
 #else
 #include <hidapi.h>
 #endif
@@ -112,22 +113,34 @@ void HidIoThread::pollBufferedInputReports() {
     // If the interval between two polls is to long, multiple buffered HID InputReports
     // will be processed at the same time.
 
-    // On Android, the hidapi libusb backend submits interrupt transfers
-    // for HID InputReports but requires libusb_handle_events() to
-    // process transfer completions into the internal ring buffer.
-    // Without it, hid_read() always returns 0 because no completed
-    // transfers ever reach the buffer. Process events here before
-    // each poll cycle.
-#ifdef __ANDROID__
-    {
-        struct timeval tv{0, 0};
-        int completed = 0;
-        libusb_handle_events_timeout_completed(
-                nullptr, &tv, &completed);
-    }
-#endif
-
     while (m_state.loadAcquire() == static_cast<int>(HidIoThreadState::InputOutputActive)) {
+#ifdef Q_OS_ANDROID
+        // On Android, hidapi/libusb uses its own internal libusb context
+        // that we can't reach. Read directly via UsbDeviceConnection.bulkTransfer
+        // using the interrupt IN endpoint discovered during enumeration.
+        if (m_androidConnection.isValid() && m_androidUsbEndpoint.isValid()) {
+            QJniEnvironment env;
+            jbyteArray byteArray = env->NewByteArray(kBufferSize);
+            auto bytesRead = static_cast<jint>(
+                    m_androidConnection.callMethod<jint>(
+                            "bulkTransfer",
+                            "(Landroid/hardware/usb/UsbEndpoint;[BII)I",
+                            m_androidUsbEndpoint.object(),
+                            byteArray,
+                            0,
+                            kBufferSize));
+            if (bytesRead > 0) {
+                env->GetByteArrayRegion(byteArray, 0, bytesRead,
+                        reinterpret_cast<jbyte*>(
+                                m_pPollData[m_pollingBufferIndex]));
+                processInputReport(static_cast<int>(bytesRead));
+                env->DeleteLocalRef(byteArray);
+                continue;
+            }
+            env->DeleteLocalRef(byteArray);
+        }
+        // Fall through to hid_read as secondary path
+#endif
         int bytesRead = hid_read(m_pHidDevice, m_pPollData[m_pollingBufferIndex], kBufferSize);
         if (bytesRead < 0) {
             // -1 is the only error value according to hidapi documentation.

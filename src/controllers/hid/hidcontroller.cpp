@@ -177,7 +177,6 @@ int HidController::open(const QString& resourcePath) {
                       << fileDescriptor << "and interface"
                       << m_deviceInfo.getUsbInterfaceNumber();
 
-    libusb_set_option(nullptr, LIBUSB_OPTION_NO_DEVICE_DISCOVERY);
     hid_device* pHidDevice = hid_libusb_wrap_sys_device(
             fileDescriptor, m_deviceInfo.getUsbInterfaceNumber().value());
 #else
@@ -279,6 +278,10 @@ int HidController::open(const QString& resourcePath) {
     m_pHidIoThread = std::make_unique<HidIoThread>(pHidDevice, m_deviceInfo, m_deviceUsesReportIds);
 #ifdef Q_OS_ANDROID
     m_pHidIoThread->setDeviceConnection(std::move(usbDeviceConnection));
+    auto endpoint = m_deviceInfo.androidInterruptEndpoint();
+    if (endpoint.isValid()) {
+        m_pHidIoThread->setUsbEndpoint(QJniObject(endpoint));
+    }
 #endif
     m_pHidIoThread->setObjectName(QStringLiteral("HidIoThread ") + getName());
 

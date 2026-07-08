@@ -74,6 +74,24 @@ DeviceInfo::DeviceInfo(
     }
 
     m_usbInterfaceNumber = usbInterface.callMethod<jint>("getId");
+
+    // Discover the interrupt IN endpoint for direct bulkTransfer reads.
+    // hidapi/libusb doesn't reliably deliver interrupt transfers on Android.
+    jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
+    for (jint i = 0; i < epCount; i++) {
+        auto ep = usbInterface.callMethod<jobject>(
+                "getEndpoint", "(I)Landroid/hardware/usb/UsbEndpoint;", i);
+        jint epAddr = ep.callMethod<jint>("getAddress");
+        jint epType = ep.callMethod<jint>("getType");
+        // USB_ENDPOINT_XFER_INT = 3, DIR_IN = 0x80
+        if ((epAddr & 0x80) && epType == 3) {
+            __android_log_print(ANDROID_LOG_INFO, "mixxx",
+                    "Found HID interrupt IN endpoint 0x%02x at index %d",
+                    epAddr, i);
+            m_androidInterruptEndpoint = ep;
+            break;
+        }
+    }
 }
 #endif
 
@@ -140,57 +158,16 @@ QDebug operator<<(QDebug dbg, const DeviceInfo& deviceInfo) {
     dbg << "Usage: " << formatHex(deviceInfo.getUsage())
         << ' ' << deviceInfo.getUsageDescription() << " | ";
 
-    if (deviceInfo.getUsbInterfaceNumber()) {
-        dbg << "Interface: #" << deviceInfo.getUsbInterfaceNumber().value() << " | ";
-    }
-    if (!deviceInfo.getVendorString().isEmpty()) {
-        dbg << "Manufacturer: " << deviceInfo.getVendorString() << " | ";
-    }
-    if (!deviceInfo.getProductString().isEmpty()) {
-        dbg << "Product: " << deviceInfo.getProductString() << " | ";
-    }
-    if (!deviceInfo.getSerialNumber().isEmpty()) {
-        dbg << "S/N: " << deviceInfo.getSerialNumber();
-    }
+    dbg << "Interface: #" << deviceInfo.getUsbInterfaceNumber().value_or(-1)
+        << " | ";
+
+    dbg << "Manufacturer: " << deviceInfo.getManufacturerString()
+        << " | Product: " << deviceInfo.getProductString()
+        << " | S/N: " << deviceInfo.getSerialNumber();
 
     dbg << " }";
     return dbg;
 }
 
-bool DeviceInfo::matchProductInfo(
-        const ProductInfo& product) const {
-    bool ok;
-    // Product and vendor match is always required
-    if (vendor_id != product.vendor_id.toInt(&ok, 16) || !ok) {
-        return false;
-    }
-    if (product_id != product.product_id.toInt(&ok, 16) || !ok) {
-        return false;
-    }
-
-    // Optionally check against m_usbInterfaceNumber / usage_page && usage
-#ifndef Q_OS_ANDROID
-    if (m_usbInterfaceNumber >= 0)
-#endif
-    {
-        if (m_usbInterfaceNumber != product.interface_number.toInt(&ok, 16) || !ok) {
-            return false;
-        }
-    }
-#ifndef Q_OS_ANDROID
-    else {
-        if (usage_page != product.usage_page.toInt(&ok, 16) || !ok) {
-            return false;
-        }
-        if (usage != product.usage.toInt(&ok, 16) || !ok) {
-            return false;
-        }
-    }
-#endif
-    // Match found
-    return true;
-}
-
 } // namespace hid
-
 } // namespace mixxx
