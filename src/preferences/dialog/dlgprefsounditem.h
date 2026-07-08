@@ -38,6 +38,7 @@ class DlgPrefSoundItem : public QWidget, public Ui::DlgPrefSoundItem {
         return channelComboBox->currentIndex();
     }
     void selectFirstUnusedChannelIndex(const QList<int>& selectedChannels);
+    void setDevice(const SoundDeviceId& device);
 
     int getLatencyOffsetMs() const {
         return m_latencyOffsetMs;
@@ -60,6 +61,10 @@ class DlgPrefSoundItem : public QWidget, public Ui::DlgPrefSoundItem {
     void writePath(SoundManagerConfig* config) const;
     void save();
     void reload();
+    void addDevice(SoundDevicePointer pDevice);
+    void removeDevice(SoundDevicePointer pDevice);
+    void updateDeviceChannels(SoundDevicePointer pDevice);
+    void updateDeviceRoute(const SoundDeviceId& pDevice, const AudioPath* pPath);
 
   private slots:
     void latencyOffsetChanged(double value);

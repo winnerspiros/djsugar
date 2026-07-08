@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QSharedPointer>
 #include <QString>
+#include <memory>
 
 #include "audio/types.h"
 #include "control/pollingcontrolproxy.h"
@@ -20,6 +21,7 @@
 class AudioLatencyCalibrator;
 class EngineMixer;
 class ControlObject;
+class PipewireEnumerator;
 
 #define SOUNDMANAGER_DISCONNECTED 0
 #define SOUNDMANAGER_CONNECTING 1
@@ -118,7 +120,7 @@ class SoundManager : public QObject {
     }
 
     QSharedPointer<EngineNetworkStream> getNetworkStream() const {
-        return m_networkEnumerator.getNetworkStream();
+        return m_pNetworkEnumerator->getNetworkStream();
     }
 
     void underflowHappened(int code) {
@@ -140,7 +142,16 @@ class SoundManager : public QObject {
         m_audioLatencyOverloadCount.set(0);
     }
 
+    // currently only used by pipewire
+    void updateDeviceChannels(SoundDevicePointer pDevice);
+
   signals:
+    void deviceAdded(SoundDevicePointer pDevice);
+    void deviceRemoved(SoundDevicePointer pDevice);
+    void deviceChannelsUpdated(SoundDevicePointer pDevice);
+    void deviceConnected(const SoundDeviceId& pDevice, const AudioPath* pPath);
+    void deviceDisconnected(const AudioPath* pPath);
+
     void devicesUpdated(); // emitted when pointers to SoundDevices go stale
     void devicesSetup();   // emitted when the sound devices have been set up
     void devicesClosed();  // emitted when the sound devices have been closed and resources freed
@@ -149,6 +160,10 @@ class SoundManager : public QObject {
 
   private slots:
     void completeDevicesClosing();
+
+  public slots:
+    void addDevice(SoundDevicePointer pDevice);
+    void removeDevice(SoundDevicePointer pDevice);
 
   private:
     // Closes all the devices and empties the list of devices we have.
