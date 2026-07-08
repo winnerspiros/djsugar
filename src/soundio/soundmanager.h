@@ -197,13 +197,13 @@ class SoundManager : public QObject {
     PollingControlProxy m_audioLatencyOverload;
 
     PortAudioEnumerator m_paEnumerator;
-    NetworkEnumerator m_networkEnumerator;
-
-    AudioLatencyCalibrator* m_pCalibrator = nullptr;
 
 #ifdef __PIPEWIRE__
     std::unique_ptr<PipewireEnumerator> m_pPipewireEnumerator;
 #endif
+    NetworkEnumerator m_networkEnumerator;
+
+    AudioLatencyCalibrator* m_pCalibrator = nullptr;
 
     /// Cache for one buffer's worth of calibration chirp samples.
     /// Filled by the clock-ref callback, consumed by writeProcess for non-ref

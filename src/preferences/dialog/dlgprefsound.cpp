@@ -390,6 +390,16 @@ void DlgPrefSound::slotUpdate() {
     m_bSkipConfigClear = false;
 }
 
+void DlgPrefSound::updateSampleRates(const QList<mixxx::audio::SampleRate>& sampleRates) {
+    sampleRateComboBox->clear();
+    for (const auto& sampleRate : sampleRates) {
+        if (sampleRate.isValid()) {
+            sampleRateComboBox->addItem(tr("%1 Hz").arg(sampleRate.value()),
+                    QVariant::fromValue(sampleRate));
+        }
+    }
+}
+
 /// Slot called when the Apply or OK button is pressed.
 void DlgPrefSound::slotApply() {
     if (!m_settingsModified) {
