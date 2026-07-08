@@ -130,7 +130,7 @@ SoundDevicePortAudio::SoundDevicePortAudio(UserSettingsPointer config,
     } else {
         m_deviceId.name = deviceInfo->name;
     }
-    m_deviceId.portAudioIndex = devIndex;
+    m_deviceId.deviceIndex = devIndex;
     m_strDisplayName = QString::fromUtf8(deviceInfo->name);
     m_numInputChannels = mixxx::audio::ChannelCount(m_deviceInfo->maxInputChannels);
     m_numOutputChannels = mixxx::audio::ChannelCount(m_deviceInfo->maxOutputChannels);
@@ -249,7 +249,7 @@ SoundDeviceStatus SoundDevicePortAudio::open(bool isClkRefDevice, int syncBuffer
              << m_inputParams.channelCount;
 
     // Fill out the rest of the info.
-    m_outputParams.device = m_deviceId.portAudioIndex;
+    m_outputParams.device = m_deviceId.deviceIndex;
     m_outputParams.sampleFormat = paFloat32;
     m_outputParams.suggestedLatency = bufferMSec / 1000.0;
 #ifdef PA_USE_OBOE
@@ -271,7 +271,7 @@ SoundDeviceStatus SoundDevicePortAudio::open(bool isClkRefDevice, int syncBuffer
     }
 #endif
 
-    m_inputParams.device  = m_deviceId.portAudioIndex;
+    m_inputParams.device = m_deviceId.deviceIndex;
     m_inputParams.sampleFormat  = paFloat32;
     m_inputParams.suggestedLatency = bufferMSec / 1000.0;
 #ifdef PA_USE_OBOE
@@ -287,7 +287,7 @@ SoundDeviceStatus SoundDevicePortAudio::open(bool isClkRefDevice, int syncBuffer
     m_inputParams.hostApiSpecificStreamInfo = nullptr;
 #endif
 
-    qDebug() << "Opening stream with id" << m_deviceId.portAudioIndex;
+    qDebug() << "Opening stream with id" << m_deviceId.deviceIndex;
 
     m_lastCallbackEntrytoDacSecs = bufferMSec / 1000.0;
 
