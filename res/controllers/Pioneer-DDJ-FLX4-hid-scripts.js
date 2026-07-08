@@ -45,6 +45,7 @@ PioneerDDJFLX4HID.shutdown = function() {
 
 // HID input entry point - called by Mixxx script engine for each HID report
 PioneerDDJFLX4HID.incomingData = function(data, length) {
+    PioneerDDJFLX4HID.logRawPacket(data);
     PioneerDDJFLX4HID.controller.parsePacket(data, length);
 };
 

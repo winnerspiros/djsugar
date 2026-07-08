@@ -5,6 +5,7 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 #include <hidapi_libusb.h>
+#include <libusb.h>
 #else
 #include <hidapi.h>
 #endif
@@ -110,6 +111,22 @@ void HidIoThread::pollBufferedInputReports() {
     // - windows(64 reports)
     // If the interval between two polls is to long, multiple buffered HID InputReports
     // will be processed at the same time.
+
+    // On Android, the hidapi libusb backend submits interrupt transfers
+    // for HID InputReports but requires libusb_handle_events() to
+    // process transfer completions into the internal ring buffer.
+    // Without it, hid_read() always returns 0 because no completed
+    // transfers ever reach the buffer. Process events here before
+    // each poll cycle.
+#ifdef __ANDROID__
+    {
+        struct timeval tv{0, 0};
+        int completed = 0;
+        libusb_handle_events_timeout_completed(
+                nullptr, &tv, &completed);
+    }
+#endif
+
     while (m_state.loadAcquire() == static_cast<int>(HidIoThreadState::InputOutputActive)) {
         int bytesRead = hid_read(m_pHidDevice, m_pPollData[m_pollingBufferIndex], kBufferSize);
         if (bytesRead < 0) {
