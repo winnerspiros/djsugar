@@ -9,12 +9,12 @@ Skin.Knob {
     property alias key: control.key
 
     value: control.parameter
+
     onTurned: control.parameter = value
 
     Mixxx.ControlProxy {
         id: control
     }
-
     TapHandler {
         onDoubleTapped: control.reset()
     }
