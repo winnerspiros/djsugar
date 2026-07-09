@@ -156,8 +156,7 @@ bool UsbMidiController::sendBytes(const QByteArray& data) {
 
     QJniEnvironment env;
     jbyteArray jData = env->NewByteArray(data.size());
-    env->SetByteArrayRegion(jData, 0, data.size(),
-            reinterpret_cast<const jbyte*>(data.constData()));
+    env->SetByteArrayRegion(jData, 0, data.size(), reinterpret_cast<const jbyte*>(data.constData()));
 
     jboolean result = QJniObject::callStaticMethod<jboolean>(
             kUsbMidiJavaClass,
@@ -180,9 +179,7 @@ void UsbMidiController::onMidiDataReceived(int deviceId, const QByteArray& data)
     s_pInstance->receive(data, mixxx::Duration());
 }
 
-void UsbMidiController::onDeviceConnected(int vendorId, int productId,
-        const QString& manufacturer, const QString& product,
-        int interfaceNumber) {
+void UsbMidiController::onDeviceConnected(int vendorId, int productId, const QString& manufacturer, const QString& product, int interfaceNumber) {
     Q_UNUSED(interfaceNumber);
     int key = ::deviceKey(vendorId, productId);
     if (s_controllers.contains(key))
@@ -195,8 +192,7 @@ void UsbMidiController::onDeviceConnected(int vendorId, int productId,
     }
 
     auto* controller = new UsbMidiController(
-            deviceName, vendorId, productId,
-            manufacturer, product);
+            deviceName, vendorId, productId, manufacturer, product);
 
     s_controllers.insert(key, controller);
     kLogger.info() << "Created USB MIDI controller:" << deviceName

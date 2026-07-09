@@ -8,7 +8,6 @@ import android.media.midi.MidiManager;
 import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
 import android.util.Log;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +31,7 @@ public class UsbMidiDevice {
     private static native void onMidiDataReceived(int deviceId, byte[] data, int offset, int count);
     private static native void onDeviceDisconnected(int deviceId);
     private static native void onDeviceConnected(int deviceId, int vendorId, int productId,
-            String manufacturer, String product, int interfaceNumber);
+        String manufacturer, String product, int interfaceNumber);
 
     private final int mDeviceId;
     private final MidiDevice mMidiDevice;
@@ -78,21 +77,23 @@ public class UsbMidiDevice {
      * Returns the number of devices found.
      */
     public static int enumerateDevices() {
-        if (sMidiManager == null) return 0;
+        if (sMidiManager == null)
+            return 0;
 
         MidiDeviceInfo[] infos = sMidiManager.getDevices();
         int count = 0;
         for (MidiDeviceInfo info : infos) {
-            if (info.getType() != MidiDeviceInfo.TYPE_USB) continue;
+            if (info.getType() != MidiDeviceInfo.TYPE_USB)
+                continue;
 
             int vendorId = info.getProperties()
-                    .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
+                               .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
             int productId = info.getProperties()
-                    .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
+                                .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
             String manufacturer = info.getProperties()
-                    .getString(MidiDeviceInfo.PROPERTY_MANUFACTURER, "");
+                                      .getString(MidiDeviceInfo.PROPERTY_MANUFACTURER, "");
             String product = info.getProperties()
-                    .getString(MidiDeviceInfo.PROPERTY_NAME, "");
+                                 .getString(MidiDeviceInfo.PROPERTY_NAME, "");
             int outputPortCount = info.getOutputPortCount();
 
             // Notify native about this device
@@ -107,16 +108,18 @@ public class UsbMidiDevice {
      * The device is identified by its MidiDeviceInfo matching vendor/product.
      */
     public static UsbMidiDevice openDevice(int vendorId, int productId) {
-        if (sMidiManager == null) return null;
+        if (sMidiManager == null)
+            return null;
 
         MidiDeviceInfo[] infos = sMidiManager.getDevices();
         for (MidiDeviceInfo info : infos) {
-            if (info.getType() != MidiDeviceInfo.TYPE_USB) continue;
+            if (info.getType() != MidiDeviceInfo.TYPE_USB)
+                continue;
 
             int devVendorId = info.getProperties()
-                    .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
+                                  .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
             int devProductId = info.getProperties()
-                    .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
+                                   .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
 
             if (devVendorId == vendorId && devProductId == productId) {
                 return openDevice(info);
@@ -180,7 +183,8 @@ public class UsbMidiDevice {
      */
     public static boolean sendMidiData(int deviceId, byte[] data, int offset, int count) {
         UsbMidiDevice device = sOpenDevices.get(deviceId);
-        if (device == null || device.mOutputPort == null) return false;
+        if (device == null || device.mOutputPort == null)
+            return false;
 
         try {
             device.mOutputPort.send(data, offset, count);
@@ -196,7 +200,8 @@ public class UsbMidiDevice {
      */
     public static void closeDevice(int deviceId) {
         UsbMidiDevice device = sOpenDevices.remove(deviceId);
-        if (device == null) return;
+        if (device == null)
+            return;
         device.close();
     }
 
