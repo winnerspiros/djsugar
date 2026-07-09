@@ -18,6 +18,13 @@ constexpr static hid_denylist_t kHidDenyList[] = {
         {0x1157, 0x300, kAnyValue, kAnyValue, 0x3}, // EKS Otus mouse pad (linux)
         {0x04f3, 0x2d26, kAnyValue, kAnyValue},     // ELAN2D26:00 Touch screen
         {0x046d, 0xc539, kAnyValue, kAnyValue},     // Logitech G Pro Wireless
+        // DDJ-FLX4 BLE chip (2B73:0045 interface 6). The BLE chip exposes
+        // two HID interfaces (5 & 6) but only interface 5 carries the DJ
+        // controller HID data. Interface 6 is a duplicate non-functional
+        // interface that creates a second useless controller entry.
+        // Bluetooth discovery is handled separately via the dedicated
+        // Bluetooth scan button.
+        {0x2b73, 0x0045, kAnyValue, kAnyValue, 0x6},
         // The following rules have been created using the official USB HID page
         // spec as specified at https://usb.org/sites/default/files/hut1_4.pdf
         {
