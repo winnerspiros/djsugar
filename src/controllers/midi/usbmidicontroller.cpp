@@ -8,7 +8,6 @@
 #include <QJniObject>
 
 #include "controllers/midi/midioutputhandler.h"
-#include "moc_usbmidicontroller.cpp"
 #include "util/logger.h"
 
 namespace {
