@@ -125,11 +125,12 @@ void HidIoThread::pollBufferedInputReports() {
             auto bytesRead = static_cast<jint>(
                     m_androidConnection.callMethod<jint>(
                             "bulkTransfer",
-                            "(Landroid/hardware/usb/UsbEndpoint;[BII)I",
+                            "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
                             m_androidUsbEndpoint.object(),
                             byteArray,
                             0,
-                            kBufferSize));
+                            kBufferSize,
+                            100));
             if (bytesRead > 0) {
                 env->GetByteArrayRegion(byteArray,
                         0,
