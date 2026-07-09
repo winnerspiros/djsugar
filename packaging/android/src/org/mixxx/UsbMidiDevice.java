@@ -7,9 +7,9 @@ import android.media.midi.MidiInputPort;
 import android.media.midi.MidiManager;
 import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
+import android.os.Bundle;
 import android.util.Log;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,9 +28,10 @@ public class UsbMidiDevice {
     private static int sNextDeviceId = 1;
 
     // Native callbacks
-    private static native void onMidiDataReceived(int deviceId, byte[] data, int offset, int count);
+    private static native void onMidiDataReceived(int deviceId, byte[] data,
+        int offset, int count);
     private static native void onDeviceDisconnected(int deviceId);
-    private static native void onDeviceConnected(int deviceId, int vendorId, int productId,
+    private static native void onDeviceConnected(int vendorId, int productId,
         String manufacturer, String product, int interfaceNumber);
 
     private final int mDeviceId;
@@ -80,23 +81,27 @@ public class UsbMidiDevice {
         if (sMidiManager == null)
             return 0;
 
-        MidiDeviceInfo[] infos = sMidiManager.getDevices();
+        MidiDeviceInfo[] infos;
+        try {
+            infos = sMidiManager.getDevices();
+        } catch (Exception e) {
+            return 0;
+        }
         int count = 0;
         for (MidiDeviceInfo info : infos) {
             if (info.getType() != MidiDeviceInfo.TYPE_USB)
                 continue;
 
-            int vendorId = info.getProperties()
-                               .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
-            int productId = info.getProperties()
-                                .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
-            String manufacturer = info.getProperties()
-                                      .getString(MidiDeviceInfo.PROPERTY_MANUFACTURER, "");
-            String product = info.getProperties()
-                                 .getString(MidiDeviceInfo.PROPERTY_NAME, "");
+            Bundle props = info.getProperties();
+            int vendorId = props.getInt("vendor", 0);
+            int productId = props.getInt("product", 0);
+            String manufacturer = props.getString("manufacturer", "");
+            String product = props.getString("name", "");
             int outputPortCount = info.getOutputPortCount();
 
-            // Notify native about this device
+            if (vendorId == 0 && productId == 0)
+                continue;
+
             onDeviceConnected(vendorId, productId, manufacturer, product, outputPortCount);
             count++;
         }
@@ -116,10 +121,9 @@ public class UsbMidiDevice {
             if (info.getType() != MidiDeviceInfo.TYPE_USB)
                 continue;
 
-            int devVendorId = info.getProperties()
-                                  .getInt(MidiDeviceInfo.PROPERTY_VENDOR_ID, 0);
-            int devProductId = info.getProperties()
-                                   .getInt(MidiDeviceInfo.PROPERTY_PRODUCT_ID, 0);
+            Bundle props = info.getProperties();
+            int devVendorId = props.getInt("vendor", 0);
+            int devProductId = props.getInt("product", 0);
 
             if (devVendorId == vendorId && devProductId == productId) {
                 return openDevice(info);
