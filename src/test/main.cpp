@@ -1,14 +1,15 @@
-#include <gtest/gtest.h>
+#ifdef USE_BENCH
+#include <benchmark/benchmark.h>
+#endif
 
+#include "errordialoghandler.h"
+#include "mixxxtest.h"
 #include "util/denormalsarezero.h"
+#include "util/logging.h"
 
-// On aarch64 (Linux & Windows ARM64), flush denormals to zero to prevent
-// STATUS_FLOAT_MULTIPLE_FAULTS on Windows ARM64, where denormal values
-// raise an FPU exception. On x86/x64 this is done via SSE MXCSR.
-// On Linux ARM64 the FTZ bit is usually already set, but we ensure it.
-//
-// Note: _MM_SET_DENORMALS_ZERO_MODE from denormalsarezero.h is a no-op
-// on non-x86 (the #else branch). On aarch64 we set the FPCR directly.
+// On aarch64, flush denormals to zero to prevent
+// STATUS_FLOAT_MULTIPLE_FAULTS on Windows ARM64.
+// On x86/x64 this is done via SSE MXCSR.
 #if defined(__aarch64__)
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -29,8 +30,37 @@ static void enableFlushToZero() {
 }
 #endif
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     enableFlushToZero();
+    // By default, render analyzer waveform tests to an offscreen buffer
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
+    }
+
+    // We never want to popup error dialogs when running tests.
+    ErrorDialogHandler::setEnabled(false);
+
+#ifdef USE_BENCH
+    bool run_benchmarks = false;
+    for (int i = 0; i < argc; ++i) {
+        if (strcmp(argv[i], "--benchmark") == 0) {
+            run_benchmarks = true;
+            break;
+        } else if (strcmp(argv[i], "--trace") == 0) {
+            mixxx::Logging::setLogLevel(mixxx::LogLevel::Trace);
+        }
+    }
+
+    if (run_benchmarks) {
+        benchmark::Initialize(&argc, argv);
+        MixxxTest::ApplicationScope applicationScope(argc, argv);
+        benchmark::RunSpecifiedBenchmarks();
+        return 0;
+    }
+
+    // Otherwise, run the test suite:
+#endif
     testing::InitGoogleTest(&argc, argv);
+    MixxxTest::ApplicationScope applicationScope(argc, argv);
     return RUN_ALL_TESTS();
 }

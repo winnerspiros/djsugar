@@ -3295,7 +3295,6 @@ if(BUILD_TESTING)
     src/test/wwidgetstack_test.cpp
     src/util/moc_included_test.cpp
     src/test/helpers/log_test.cpp
-    src/test/main.cpp
   )
   if(STEM)
     set(
