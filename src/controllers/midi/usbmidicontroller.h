@@ -34,7 +34,11 @@ class UsbMidiController : public MidiController {
     /// Called from Java when MIDI data arrives
     static void onMidiDataReceived(int deviceId, const QByteArray& data);
     /// Called from Java when a USB MIDI device is discovered
-    static void onDeviceConnected(int vendorId, int productId, const QString& manufacturer, const QString& product, int interfaceNumber);
+    static void onDeviceConnected(int vendorId,
+            int productId,
+            const QString& manufacturer,
+            const QString& product,
+            int interfaceNumber);
 
   protected:
     void sendShortMsg(unsigned char status,
