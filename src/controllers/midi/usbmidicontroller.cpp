@@ -1,7 +1,5 @@
 #include "controllers/midi/usbmidicontroller.h"
 
-#include "moc_usbmidicontroller.cpp"
-
 #ifdef Q_OS_ANDROID
 
 #include <QtCore/private/qandroidextras_p.h>

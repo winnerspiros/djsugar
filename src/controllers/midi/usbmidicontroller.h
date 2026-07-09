@@ -14,7 +14,6 @@
 /// that Android's MIDI subsystem claims. This controller reads/writes via
 /// MidiInputPort/MidiOutputPort through the UsbMidiDevice Java helper.
 class UsbMidiController : public MidiController {
-    Q_OBJECT
   public:
     UsbMidiController(const QString& deviceName,
             int vendorId,

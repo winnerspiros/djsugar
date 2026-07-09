@@ -13,8 +13,6 @@ class Controller;
 /// The enumerator queries available USB MIDI devices and creates a UsbMidiController
 /// for each one.
 class UsbMidiEnumerator : public MidiEnumerator {
-    Q_OBJECT
-
   public:
     explicit UsbMidiEnumerator();
     ~UsbMidiEnumerator() override;
