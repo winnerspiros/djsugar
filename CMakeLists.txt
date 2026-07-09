@@ -1293,6 +1293,8 @@ add_library(
   src/controllers/midi/midimessage.cpp
   src/controllers/midi/midioutputhandler.cpp
   src/controllers/midi/midiutils.cpp
+  src/controllers/midi/usbmidicontroller.cpp
+  src/controllers/midi/usbmidienumerator.cpp
   src/controllers/scripting/colormapper.cpp
   src/controllers/scripting/colormapperjsproxy.cpp
   src/controllers/scripting/controllerscriptenginebase.cpp

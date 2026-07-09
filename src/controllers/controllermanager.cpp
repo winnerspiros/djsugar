@@ -32,6 +32,10 @@
 #include "controllers/bulk/bulkenumerator.h"
 #endif
 
+#ifdef Q_OS_ANDROID
+#include "controllers/midi/usbmidienumerator.h"
+#endif
+
 // http://developer.qt.nokia.com/wiki/Threads_Events_QObjects
 
 // Poll every 1ms (where possible) for good controller response
@@ -181,6 +185,9 @@ void ControllerManager::slotInitialize() {
 #endif
 #ifdef __HID__
         m_enumerators.push_back(std::make_unique<HidEnumerator>());
+#endif
+#ifdef Q_OS_ANDROID
+        m_enumerators.push_back(std::make_unique<UsbMidiEnumerator>());
 #endif
     } // Mutex locker released here
     emit initialized();
