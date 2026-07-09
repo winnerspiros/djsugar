@@ -1,5 +1,7 @@
 #include "controllers/midi/usbmidienumerator.h"
 
+#include "moc_usbmidienumerator.cpp"
+
 #ifdef Q_OS_ANDROID
 
 #include <QJniObject>
