@@ -1,6 +1,8 @@
 #include "controllers/midi/androidusbmidicontroller.h"
 
 #ifdef Q_OS_ANDROID
+#include <unistd.h>
+
 #include <QJniEnvironment>
 #include <QJniObject>
 
@@ -100,7 +102,12 @@ void AndroidUsbMidiController::MidiIoThread::run() {
                     }
                 }
             }
+        } else if (bytesRead < 0) {
+            // bulkTransfer error (e.g. -1 if interface not claimed)
+            // Sleep briefly to avoid busy-looping on persistent errors
+            usleep(10000); // 10ms
         }
+        // bytesRead == 0 is a timeout — loop back and try again
     }
 
     env->DeleteLocalRef(byteArray);

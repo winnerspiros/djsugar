@@ -117,6 +117,20 @@ bool recognizeDevice(const mixxx::hid::DeviceInfo& deviceInfo) {
 #endif
         return false;
     }
+
+#ifdef __ANDROID__
+    // On Android, the DDJ-FLX4 BLE chip (2B73:0045) exposes two HID
+    // interfaces (5 & 6). Interface 6 is already denied by the deny list
+    // above. Interface 5 is a HID class interface that only carries
+    // Bluetooth data, not deck control data. The actual deck HID is on
+    // the main chip (08E4:017B) interface 10 (vendor-specific class 0xFF)
+    // but is invisible on Android. Skip interface 5 to avoid a dead HID
+    // controller that would override the working MIDI controller.
+    if (vendor_id == 0x2b73 && product_id == 0x0045 &&
+            interface_number == 0x5) {
+        return false;
+    }
+#endif
     return true;
 }
 
