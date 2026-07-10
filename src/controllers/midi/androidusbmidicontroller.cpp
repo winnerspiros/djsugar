@@ -157,6 +157,8 @@ int AndroidUsbMidiController::open(const QString& resourcePath) {
         return -1;
     }
 
+    // Reset stop flag before starting (may be 1 from prior stop())
+    m_pIoThread->resetStopFlag();
     m_pIoThread->start();
     startEngine();
     setOpen(true);
