@@ -82,8 +82,6 @@ class AndroidUsbMidiController : public MidiController {
     };
 
     MidiIoThread* m_pIoThread;
-#else
-    void* m_pIoThread;
 #endif
     int m_vendorId;
     int m_productId;
