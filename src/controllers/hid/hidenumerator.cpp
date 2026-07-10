@@ -271,8 +271,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 QString manufacturerName =
                         usbDevice->callMethod<jstring>("getManufacturerName")
                                 .toString();
-                jint vendorId = usbDevice.callMethod<jint>("getVendorId");
-                jint productId = usbDevice.callMethod<jint>("getProductId");
+                jint vendorId = usbDevice->callMethod<jint>("getVendorId");
+                jint productId = usbDevice->callMethod<jint>("getProductId");
                 int ifaceNum =
                         usbInterface.callMethod<jint>("getId");
 
