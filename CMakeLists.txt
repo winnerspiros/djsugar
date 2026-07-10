@@ -5625,9 +5625,12 @@ if(HID)
 
   if(ANDROID)
     target_sources(mixxx-lib PRIVATE src/controllers/android.cpp)
-    # androidusbmidicontroller.cpp uses libusb functions (bulk_transfer,
-    # detach_kernel_driver, wrap_sys_device) directly. Link explicitly.
-    target_link_libraries(mixxx-lib PRIVATE LibUSB::LibUSB)
+    # androidusbmidicontroller.cpp uses libusb functions directly.
+    # Link explicitly if LibUSB is available. If not (e.g. some CI
+    # Android runners without libusb-dev), the JNI fallback is used.
+    if(TARGET LibUSB::LibUSB)
+      target_link_libraries(mixxx-lib PRIVATE LibUSB::LibUSB)
+    endif()
   else()
     # Android doesn't support QWidget and is not able to compile this manager due to compiler lacking support for structure binding (error: capturing a structured binding is not yet supported)
     target_sources(
