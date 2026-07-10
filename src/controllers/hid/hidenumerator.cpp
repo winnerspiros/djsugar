@@ -17,6 +17,11 @@
 #include "moc_hidenumerator.cpp"
 #include "util/cmdlineargs.h"
 
+#ifdef __ANDROID__
+#include "controllers/android.h"
+#include "controllers/midi/androidusbmidicontroller.h"
+#endif
+
 namespace mixxx {
 
 namespace hid {
@@ -161,6 +166,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
             jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
+            jint ifaceSubclass = usbInterface.callMethod<jint>("getInterfaceSubclass");
             if (ifaceClass == LIBUSB_CLASS_HID
 #ifdef __ANDROID__
                     || ifaceClass == 0xFF // vendor-specific — DDJ-FLX4 deck HID on Android
@@ -183,6 +189,107 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
                 HidController* newDevice = new HidController(std::move(deviceInfo));
                 m_devices.push_back(newDevice);
+#ifdef __ANDROID__
+            } else if (ifaceClass == 1 && // LIBUSB_CLASS_AUDIO
+                    ifaceSubclass == 3) {
+                // MIDI Streaming interface (class 1 subclass 3)
+                // Found on DDJ-FLX4 main chip interface 3
+                // Use direct bulkTransfer instead of MidiManager
+                qInfo() << "Found USB MIDI interface" << ifaceIdx
+                        << "on device"
+                        << usbDevice->callMethod<jstring>("getProductName")
+                                   .toString();
+
+                // Open device and claim interface for raw MIDI access
+                auto usbManager = context.callObjectMethod("getSystemService",
+                        "(Ljava/lang/String;)Ljava/lang/Object;",
+                        USB_SERVICE.object());
+                if (!usbManager.isValid()) {
+                    qWarning() << "Cannot get UsbManager for MIDI device";
+                    continue;
+                }
+
+                if (!usbManager.callMethod<jboolean>("hasPermission",
+                            "(Landroid/hardware/usb/UsbDevice;)Z",
+                            usbDevice)) {
+                    auto pendingIntent = mixxx::android::getIntent();
+                    usbManager.callMethod<void>("requestPermission",
+                            "(Landroid/hardware/usb/UsbDevice;Landroid/app/"
+                            "PendingIntent;)V",
+                            usbDevice,
+                            pendingIntent);
+                    if (!mixxx::android::waitForPermission(usbDevice)) {
+                        qWarning() << "MIDI device permission denied";
+                        continue;
+                    }
+                }
+
+                auto usbConnection = usbManager.callMethod<QJniObject>(
+                        "openDevice",
+                        "(Landroid/hardware/usb/UsbDevice;)"
+                        "Landroid/hardware/usb/UsbDeviceConnection;",
+                        usbDevice);
+                if (!usbConnection.isValid()) {
+                    qWarning() << "Failed to open MIDI USB connection";
+                    continue;
+                }
+
+                // Claim the MIDI interface
+                usbConnection.callMethod<jboolean>("claimInterface",
+                        "(Landroid/hardware/usb/UsbInterface;Z)Z",
+                        usbInterface,
+                        true);
+
+                // Discover bulk endpoints
+                QJniObject bulkInEndpoint, bulkOutEndpoint;
+                jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
+                for (jint i = 0; i < epCount; i++) {
+                    auto ep = usbInterface.callMethod<jobject>(
+                            "getEndpoint",
+                            "(I)Landroid/hardware/usb/UsbEndpoint;",
+                            i);
+                    jint epAddr = ep.callMethod<jint>("getAddress");
+                    jint epType = ep.callMethod<jint>("getType");
+                    // USB_ENDPOINT_XFER_BULK = 2
+                    if (epType != 2)
+                        continue;
+                    if (epAddr & 0x80) {
+                        bulkInEndpoint = ep; // IN endpoint
+                    } else {
+                        bulkOutEndpoint = ep; // OUT endpoint
+                    }
+                }
+
+                if (!bulkInEndpoint.isValid() && !bulkOutEndpoint.isValid()) {
+                    qWarning() << "No bulk endpoints found on MIDI interface";
+                    continue;
+                }
+
+                QString productName =
+                        usbDevice->callMethod<jstring>("getProductName")
+                                .toString();
+                QString manufacturerName =
+                        usbDevice->callMethod<jstring>("getManufacturerName")
+                                .toString();
+                jint vendorId = usbDevice.callMethod<jint>("getVendorId");
+                jint productId = usbDevice.callMethod<jint>("getProductId");
+                int ifaceNum =
+                        usbInterface.callMethod<jint>("getId");
+
+                // Create a unique name including interface number
+                QString devName = QString("%1 M%2")
+                                          .arg(productName)
+                                          .arg(ifaceNum);
+
+                auto* midiDevice = new AndroidUsbMidiController(
+                        devName, vendorId, productId, manufacturerName, productName);
+                midiDevice->setAndroidDevice(
+                        QJniObject(*usbDevice),
+                        std::move(usbConnection),
+                        std::move(bulkInEndpoint),
+                        std::move(bulkOutEndpoint));
+                m_devices.push_back(midiDevice);
+#endif
             } else {
                 qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
                         << ifaceClass << "on device"
