@@ -277,15 +277,10 @@ public class UsbMidiDevice {
             }
         }
 
-        // Fallback: send via MidiReceiver.send()
-        try {
-            device.mOutputPort.send(data, offset, count,
-                System.nanoTime() / 1000);
-            return true;
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to send MIDI: " + e.getMessage());
-            return false;
-        }
+        // Fallback: on API < 26, send() may not be available
+        Log.w(TAG, "send() not available via reflection"
+                + " — output may not work");
+        return false;
     }
 
     /**
@@ -321,3 +316,4 @@ public class UsbMidiDevice {
         return mDeviceId;
     }
 }
+
