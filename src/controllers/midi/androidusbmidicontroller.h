@@ -37,12 +37,14 @@ class AndroidUsbMidiController : public MidiController {
     QString getSerialNumber() const override;
     std::optional<uint8_t> getUsbInterfaceNumber() const override;
 
+#ifdef Q_OS_ANDROID
     /// Set the Android USB device, connection, and endpoints from the
     /// enumerator. Called after construction but before open().
     void setAndroidDevice(QJniObject&& usbDevice,
             QJniObject&& usbConnection,
             QJniObject&& bulkInEndpoint,
             QJniObject&& bulkOutEndpoint);
+#endif
 
   protected:
     void sendShortMsg(unsigned char status,
@@ -56,7 +58,8 @@ class AndroidUsbMidiController : public MidiController {
     bool poll() override;
     bool isPolling() const override;
 
-    // MIDI I/O thread
+#ifdef Q_OS_ANDROID
+    // MIDI I/O thread — reads from bulk IN endpoint
     class MidiIoThread : public QThread {
       public:
         MidiIoThread(AndroidUsbMidiController* parent);
@@ -79,9 +82,14 @@ class AndroidUsbMidiController : public MidiController {
     };
 
     MidiIoThread* m_pIoThread;
+#else
+    void* m_pIoThread;
+#endif
     int m_vendorId;
     int m_productId;
     QString m_vendorString;
     QString m_productString;
+#ifdef Q_OS_ANDROID
     friend class MidiIoThread;
+#endif
 };
