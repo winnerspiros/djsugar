@@ -6,6 +6,8 @@
 #include "controllers/midi/midicontroller.h"
 
 #ifdef Q_OS_ANDROID
+#include <libusb.h>
+
 #include <QJniObject>
 #endif
 
@@ -38,12 +40,18 @@ class AndroidUsbMidiController : public MidiController {
     std::optional<uint8_t> getUsbInterfaceNumber() const override;
 
 #ifdef Q_OS_ANDROID
-    /// Set the Android USB device, connection, and endpoints from the
-    /// enumerator. Called after construction but before open().
+    /// Set the Android USB device, file descriptor, interface number,
+    /// and bulk endpoint addresses from the enumerator.
+    /// Called after construction but before open().
+    /// Uses libusb (via the FD) to claim the interface and do bulk
+    /// transfers, because JNI UsbDeviceConnection.claimInterface()
+    /// fails on composite audio/MIDI devices where the audio subsystem
+    /// owns the kernel driver.
     void setAndroidDevice(QJniObject&& usbDevice,
-            QJniObject&& usbConnection,
-            QJniObject&& bulkInEndpoint,
-            QJniObject&& bulkOutEndpoint);
+            jint fd,
+            jint interfaceNumber,
+            uint8_t bulkInEndpoint,
+            uint8_t bulkOutEndpoint);
 #endif
 
   protected:
@@ -59,7 +67,7 @@ class AndroidUsbMidiController : public MidiController {
     bool isPolling() const override;
 
 #ifdef Q_OS_ANDROID
-    // MIDI I/O thread — reads from bulk IN endpoint
+    // MIDI I/O thread — reads from bulk IN endpoint via libusb
     class MidiIoThread : public QThread {
       public:
         MidiIoThread(AndroidUsbMidiController* parent);
@@ -69,13 +77,15 @@ class AndroidUsbMidiController : public MidiController {
             m_stopRequested.storeRelaxed(0);
         }
         void setAndroidDevice(QJniObject&& usbDevice,
-                QJniObject&& usbConnection,
-                QJniObject&& bulkInEndpoint,
-                QJniObject&& bulkOutEndpoint);
+                jint fd,
+                jint interfaceNumber,
+                uint8_t bulkInEndpoint,
+                uint8_t bulkOutEndpoint);
 
         // Exposed for AndroidUsbMidiController::sendBytes()
-        QJniObject m_usbConnection;
-        QJniObject m_bulkOutEndpoint;
+        libusb_device_handle* m_usbHandle;
+        uint8_t m_bulkOutEpAddress;
+        jint m_usbFd;
 
       protected:
         void run() override;
@@ -83,7 +93,8 @@ class AndroidUsbMidiController : public MidiController {
       private:
         AndroidUsbMidiController* m_parent;
         QJniObject m_usbDevice;
-        QJniObject m_bulkInEndpoint;
+        uint8_t m_bulkInEpAddress;
+        jint m_interfaceNumber;
         QAtomicInt m_stopRequested;
     };
 

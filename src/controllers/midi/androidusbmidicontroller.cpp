@@ -1,6 +1,8 @@
 #include "controllers/midi/androidusbmidicontroller.h"
 
 #ifdef Q_OS_ANDROID
+#include <hidapi_libusb.h>
+#include <libusb.h>
 #include <unistd.h>
 
 #include <QJniEnvironment>
@@ -23,6 +25,7 @@ AndroidUsbMidiController::MidiIoThread::MidiIoThread(
         : QThread(parent),
           m_parent(parent) {
     m_stopRequested.storeRelaxed(0);
+    m_usbHandle = nullptr;
 }
 
 void AndroidUsbMidiController::MidiIoThread::stop() {
@@ -31,97 +34,231 @@ void AndroidUsbMidiController::MidiIoThread::stop() {
 
 void AndroidUsbMidiController::MidiIoThread::setAndroidDevice(
         QJniObject&& usbDevice,
-        QJniObject&& usbConnection,
-        QJniObject&& bulkInEndpoint,
-        QJniObject&& bulkOutEndpoint) {
+        jint fd,
+        jint interfaceNumber,
+        uint8_t bulkInEndpoint,
+        uint8_t bulkOutEndpoint) {
     m_usbDevice = std::move(usbDevice);
-    m_usbConnection = std::move(usbConnection);
-    m_bulkInEndpoint = std::move(bulkInEndpoint);
-    m_bulkOutEndpoint = std::move(bulkOutEndpoint);
+    m_usbFd = fd;
+    m_interfaceNumber = interfaceNumber;
+    m_bulkInEpAddress = bulkInEndpoint;
+    m_bulkOutEpAddress = bulkOutEndpoint;
 }
 
 void AndroidUsbMidiController::MidiIoThread::run() {
-    if (!m_usbConnection.isValid() || !m_bulkInEndpoint.isValid()) {
-        kLogger.warning() << "MIDI IO thread: no valid connection or endpoint";
+    if (m_usbFd < 0) {
+        kLogger.warning() << "MIDI IO thread: no valid file descriptor";
         return;
     }
 
-    QJniEnvironment env;
-    jbyteArray byteArray = env->NewByteArray(kBufferSize);
-
-    // Verify the connection is valid for I/O
-    int fd = m_usbConnection.callMethod<jint>("getFileDescriptor");
-    kLogger.info() << "MIDI IO thread started, FD=" << fd;
-
-    while (!m_stopRequested.loadRelaxed()) {
-        // Read MIDI data from the bulk IN endpoint
-        auto bytesRead = m_usbConnection.callMethod<jint>(
-                "bulkTransfer",
-                "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
-                m_bulkInEndpoint.object(),
-                byteArray,
-                0,
-                kBufferSize,
-                kPollTimeoutMs);
-
-        if (bytesRead > 0) {
-            // Convert jbyteArray to QByteArray — copy BEFORE releasing elements
-            jbyte* elements = env->GetByteArrayElements(byteArray, nullptr);
-            if (elements) {
-                // Copy the raw data locally before releasing JNI pinning
-                // The parsing loop below reads from this copy, not from
-                // the released elements pointer.
-                QByteArray midiData(
-                        reinterpret_cast<const char*>(elements),
-                        bytesRead);
-                // Debug: dump received USB MIDI packet bytes
-                kLogger.debug()
-                        << "MIDI IO thread: bulkTransfer returned"
-                        << bytesRead
-                        << "bytes:" << midiData.toHex();
-                env->ReleaseByteArrayElements(byteArray, elements, JNI_ABORT);
-                // elements is now INVALID — do not dereference it anymore
-
-                // Process MIDI data
-                // USB MIDI event packets are 4 bytes each:
-                // [cin(b4) | cable(b4)] [byte1] [byte2] [byte3]
-                // CIN (Code Index Number) identifies the message type
-                for (int i = 0; i + 3 < bytesRead; i += 4) {
-                    unsigned char cin = static_cast<unsigned char>(
-                            static_cast<unsigned char>(midiData.at(i)) & 0x0F);
-                    unsigned char midiStatus = static_cast<unsigned char>(
-                            midiData.at(i + 1));
-                    unsigned char midiByte1 = static_cast<unsigned char>(
-                            midiData.at(i + 2));
-                    unsigned char midiByte2 = static_cast<unsigned char>(
-                            midiData.at(i + 3));
-
-                    // Strip USB framing — pass raw MIDI bytes
-                    QByteArray rawMidi;
-                    rawMidi.append(static_cast<char>(midiStatus));
-                    if (cin >= 0x2 && cin <= 0x6) {
-                        rawMidi.append(static_cast<char>(midiByte1));
-                    }
-                    if (cin == 0x3 || cin == 0x6) {
-                        rawMidi.append(static_cast<char>(midiByte2));
-                    }
-
-                    if (!rawMidi.isEmpty()) {
-                        m_parent->receive(rawMidi, mixxx::Duration());
-                    }
-                }
-            }
-        } else if (bytesRead < 0) {
-            // bulkTransfer error (e.g. -1 if interface not claimed)
-            kLogger.warning() << "MIDI IO thread: bulkTransfer returned"
-                              << bytesRead << "- sleeping 10ms";
-            // Sleep briefly to avoid busy-looping on persistent errors
-            usleep(10000); // 10ms
-        }
-        // bytesRead == 0 is a timeout — loop back and try again
+    // Initialize libusb context
+    libusb_context* ctx = nullptr;
+    int rc = libusb_init(&ctx);
+    if (rc != LIBUSB_SUCCESS) {
+        kLogger.warning() << "MIDI IO thread: libusb_init failed:" << rc;
+        return;
     }
 
-    env->DeleteLocalRef(byteArray);
+    // Use libusb_wrap_sys_device to get a device handle from the FD.
+    // This requires libusb >= 1.0.22.
+    rc = libusb_wrap_sys_device(ctx, static_cast<intptr_t>(m_usbFd), &m_usbHandle);
+    if (rc != LIBUSB_SUCCESS || !m_usbHandle) {
+        kLogger.warning()
+                << "MIDI IO thread: libusb_wrap_sys_device failed:"
+                << rc << "- falling back to JNI claimInterface";
+
+        // Fallback: try JNI approach if libusb wrapping failed
+        QJniEnvironment env;
+        jbyteArray byteArray = env->NewByteArray(kBufferSize);
+
+        // Get the JNI connection from the stored device
+        QJniObject javaUsbManager =
+                QNativeInterface::QAndroidApplication::context()
+                        .callObjectMethod("getSystemService",
+                                "(Ljava/lang/String;)Ljava/lang/Object;",
+                                QJniObject::getStaticObjectField(
+                                        "android/content/Context",
+                                        "USB_SERVICE",
+                                        "Ljava/lang/String;")
+                                        .object());
+        auto usbConnection = javaUsbManager.callMethod<QJniObject>(
+                "openDevice",
+                "(Landroid/hardware/usb/UsbDevice;)"
+                "Landroid/hardware/usb/UsbDeviceConnection;",
+                m_usbDevice);
+        if (!usbConnection.isValid()) {
+            kLogger.warning() << "MIDI IO thread: fallback openDevice failed";
+            libusb_exit(ctx);
+            return;
+        }
+
+        // Get the interface and try claim with force=true
+        auto usbInterface = m_usbDevice.callMethod<jobject>(
+                "getInterface",
+                "(I)Landroid/hardware/usb/UsbInterface;",
+                m_interfaceNumber);
+        if (usbInterface.isValid()) {
+            bool claimed = usbConnection.callMethod<jboolean>("claimInterface",
+                    "(Landroid/hardware/usb/UsbInterface;Z)Z",
+                    usbInterface,
+                    true);
+            if (!claimed) {
+                kLogger.warning()
+                        << "MIDI IO thread: JNI claimInterface also failed"
+                        << "- giving up";
+                env->DeleteLocalRef(byteArray);
+                libusb_exit(ctx);
+                return;
+            }
+            kLogger.info()
+                    << "MIDI IO thread: JNI claimInterface succeeded"
+                    << "(fallback path)";
+        }
+
+        kLogger.info() << "MIDI IO thread started (fallback), FD="
+                       << m_usbFd;
+
+        // Read loop using JNI bulkTransfer (fallback path)
+        while (!m_stopRequested.loadRelaxed()) {
+            auto bytesRead = usbConnection.callMethod<jint>("bulkTransfer",
+                    "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
+                    m_usbDevice
+                            .callMethod<jobject>("getInterface",
+                                    "(I)Landroid/hardware/usb/UsbInterface;",
+                                    m_interfaceNumber)
+                            .callMethod<jobject>("getEndpoint",
+                                    "(I)Landroid/hardware/usb/UsbEndpoint;",
+                                    0),
+                    byteArray,
+                    0,
+                    kBufferSize,
+                    kPollTimeoutMs);
+
+            if (bytesRead > 0) {
+                jbyte* elements = env->GetByteArrayElements(byteArray, nullptr);
+                if (elements) {
+                    QByteArray midiData(
+                            reinterpret_cast<const char*>(elements), bytesRead);
+                    kLogger.debug() << "MIDI IO thread: bulkTransfer returned"
+                                    << bytesRead << "bytes:" << midiData.toHex();
+                    env->ReleaseByteArrayElements(byteArray, elements, JNI_ABORT);
+
+                    for (int i = 0; i + 3 < bytesRead; i += 4) {
+                        unsigned char cin = static_cast<unsigned char>(
+                                static_cast<unsigned char>(midiData.at(i)) & 0x0F);
+                        unsigned char midiStatus = static_cast<unsigned char>(
+                                midiData.at(i + 1));
+                        unsigned char midiByte1 = static_cast<unsigned char>(
+                                midiData.at(i + 2));
+                        unsigned char midiByte2 = static_cast<unsigned char>(
+                                midiData.at(i + 3));
+
+                        QByteArray rawMidi;
+                        rawMidi.append(static_cast<char>(midiStatus));
+                        if (cin >= 0x2 && cin <= 0x6)
+                            rawMidi.append(static_cast<char>(midiByte1));
+                        if (cin == 0x3 || cin == 0x6)
+                            rawMidi.append(static_cast<char>(midiByte2));
+
+                        if (!rawMidi.isEmpty())
+                            m_parent->receive(rawMidi, mixxx::Duration());
+                    }
+                }
+            } else if (bytesRead < 0) {
+                kLogger.warning()
+                        << "MIDI IO thread: fallback bulkTransfer returned"
+                        << bytesRead << "- sleeping 10ms";
+                usleep(10000);
+            }
+        }
+
+        env->DeleteLocalRef(byteArray);
+        libusb_exit(ctx);
+        kLogger.info() << "MIDI IO thread finished (fallback)";
+        return;
+    }
+
+    // Primary path: libusb bulk_transfer
+    // Detach kernel driver if present (e.g., audio subsystem owns it)
+    int rcd = libusb_detach_kernel_driver(m_usbHandle, m_interfaceNumber);
+    if (rcd != LIBUSB_SUCCESS && rcd != LIBUSB_ERROR_NOT_FOUND) {
+        // LIBUSB_ERROR_NOT_FOUND means no kernel driver to detach — fine
+        kLogger.warning()
+                << "MIDI IO thread: libusb_detach_kernel_driver for iface"
+                << m_interfaceNumber << ":" << rcd;
+    }
+
+    // Claim the MIDI interface
+    rc = libusb_claim_interface(m_usbHandle, m_interfaceNumber);
+    if (rc != LIBUSB_SUCCESS) {
+        kLogger.warning()
+                << "MIDI IO thread: libusb_claim_interface failed for iface"
+                << m_interfaceNumber << ":" << rc;
+        libusb_close(m_usbHandle);
+        m_usbHandle = nullptr;
+        libusb_exit(ctx);
+        return;
+    }
+
+    kLogger.info()
+            << "MIDI IO thread started (libusb), FD=" << m_usbFd
+            << "iface=" << m_interfaceNumber
+            << "bulkIn=0x" << Qt::hex << m_bulkInEpAddress
+            << "bulkOut=0x" << m_bulkOutEpAddress;
+
+    unsigned char buffer[kBufferSize];
+
+    while (!m_stopRequested.loadRelaxed()) {
+        int transferred = 0;
+        rc = libusb_bulk_transfer(m_usbHandle,
+                m_bulkInEpAddress,
+                buffer,
+                kBufferSize,
+                &transferred,
+                kPollTimeoutMs);
+
+        if (rc == LIBUSB_SUCCESS && transferred > 0) {
+            QByteArray midiData(
+                    reinterpret_cast<const char*>(buffer), transferred);
+            kLogger.debug()
+                    << "MIDI IO thread: libusb_bulk_transfer returned"
+                    << transferred << "bytes:" << midiData.toHex();
+
+            // Process USB MIDI event packets (4 bytes each)
+            for (int i = 0; i + 3 < transferred; i += 4) {
+                unsigned char cin = static_cast<unsigned char>(
+                        static_cast<unsigned char>(buffer[i]) & 0x0F);
+                unsigned char midiStatus = buffer[i + 1];
+                unsigned char midiByte1 = buffer[i + 2];
+                unsigned char midiByte2 = buffer[i + 3];
+
+                QByteArray rawMidi;
+                rawMidi.append(static_cast<char>(midiStatus));
+                if (cin >= 0x2 && cin <= 0x6)
+                    rawMidi.append(static_cast<char>(midiByte1));
+                if (cin == 0x3 || cin == 0x6)
+                    rawMidi.append(static_cast<char>(midiByte2));
+
+                if (!rawMidi.isEmpty())
+                    m_parent->receive(rawMidi, mixxx::Duration());
+            }
+        } else if (rc == LIBUSB_ERROR_TIMEOUT) {
+            // Timeout is normal — no data available, loop back
+            continue;
+        } else if (rc < 0) {
+            kLogger.warning()
+                    << "MIDI IO thread: libusb_bulk_transfer error:"
+                    << rc << "- sleeping 10ms";
+            usleep(10000);
+        }
+    }
+
+    // Clean up
+    libusb_release_interface(m_usbHandle, m_interfaceNumber);
+    libusb_close(m_usbHandle);
+    m_usbHandle = nullptr;
+    libusb_exit(ctx);
+
     kLogger.info() << "MIDI IO thread finished";
 }
 
@@ -151,15 +288,17 @@ AndroidUsbMidiController::~AndroidUsbMidiController() {
 
 void AndroidUsbMidiController::setAndroidDevice(
         QJniObject&& usbDevice,
-        QJniObject&& usbConnection,
-        QJniObject&& bulkInEndpoint,
-        QJniObject&& bulkOutEndpoint) {
+        jint fd,
+        jint interfaceNumber,
+        uint8_t bulkInEndpoint,
+        uint8_t bulkOutEndpoint) {
     m_pIoThread = new MidiIoThread(this);
     m_pIoThread->setAndroidDevice(
             std::move(usbDevice),
-            std::move(usbConnection),
-            std::move(bulkInEndpoint),
-            std::move(bulkOutEndpoint));
+            fd,
+            interfaceNumber,
+            bulkInEndpoint,
+            bulkOutEndpoint);
 }
 
 bool AndroidUsbMidiController::isPolling() const {
@@ -244,32 +383,33 @@ bool AndroidUsbMidiController::sendBytes(const QByteArray& data) {
     if (!m_pIoThread || data.isEmpty())
         return false;
 
-    // Wrap raw MIDI bytes in USB MIDI event packet
-    // Format: [cin(b4) | cable(b4)] [status] [byte1] [byte2]
-    // CIN 0x3 = 3-byte note/control message
-    QJniEnvironment env;
-    jbyteArray jData = env->NewByteArray(4);
-    jbyte packet[4] = {0x03, 0, 0, 0};
-    packet[1] = static_cast<jbyte>(data[0]);
-    if (data.size() > 1)
-        packet[2] = static_cast<jbyte>(data[1]);
-    if (data.size() > 2)
-        packet[3] = static_cast<jbyte>(data[2]);
-    env->SetByteArrayRegion(jData, 0, 4, packet);
+    // Send via libusb bulk transfer
+    if (m_pIoThread->m_usbHandle && m_pIoThread->m_bulkOutEpAddress) {
+        // Wrap raw MIDI bytes in USB MIDI event packet
+        unsigned char packet[4] = {0x03, 0, 0, 0};
+        packet[1] = static_cast<unsigned char>(data[0]);
+        if (data.size() > 1)
+            packet[2] = static_cast<unsigned char>(data[1]);
+        if (data.size() > 2)
+            packet[3] = static_cast<unsigned char>(data[2]);
 
-    if (m_pIoThread->m_bulkOutEndpoint.isValid()) {
-        m_pIoThread->m_usbConnection.callMethod<jint>(
-                "bulkTransfer",
-                "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
-                m_pIoThread->m_bulkOutEndpoint.object(),
-                jData,
-                0,
+        int transferred = 0;
+        int rc = libusb_bulk_transfer(
+                m_pIoThread->m_usbHandle,
+                m_pIoThread->m_bulkOutEpAddress,
+                packet,
                 4,
+                &transferred,
                 10);
+        if (rc != LIBUSB_SUCCESS) {
+            kLogger.warning()
+                    << "sendBytes: libusb_bulk_transfer error:" << rc;
+            return false;
+        }
+        return true;
     }
 
-    env->DeleteLocalRef(jData);
-    return true;
+    return false;
 }
 
 #else // !Q_OS_ANDROID

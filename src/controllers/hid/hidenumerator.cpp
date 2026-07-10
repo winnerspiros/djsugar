@@ -248,14 +248,21 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     continue;
                 }
 
-                // Claim the MIDI interface
-                usbConnection.callMethod<jboolean>("claimInterface",
-                        "(Landroid/hardware/usb/UsbInterface;Z)Z",
-                        usbInterface,
-                        true);
+                // Get the file descriptor — we'll use libusb to claim the
+                // interface and do bulk transfers, because Android's JNI
+                // claimInterface fails on composite audio/MIDI devices
+                // (the audio subsystem owns the kernel driver).
+                jint fd = usbConnection.callMethod<jint>("getFileDescriptor");
+                int ifaceId = usbInterface.callMethod<jint>("getId");
+                __android_log_print(ANDROID_LOG_INFO,
+                        "mixxx",
+                        "MIDI USB device FD=%d interface=%d",
+                        fd,
+                        ifaceId);
 
-                // Discover bulk endpoints
-                QJniObject bulkInEndpoint, bulkOutEndpoint;
+                // Discover bulk endpoint addresses (we need the raw addresses
+                // for libusb_bulk_transfer, not JNI endpoint objects)
+                uint8_t bulkInEp = 0, bulkOutEp = 0;
                 jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
                 for (jint i = 0; i < epCount; i++) {
                     auto ep = usbInterface.callMethod<jobject>(
@@ -268,13 +275,13 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     if (epType != 2)
                         continue;
                     if (epAddr & 0x80) {
-                        bulkInEndpoint = ep; // IN endpoint
+                        bulkInEp = static_cast<uint8_t>(epAddr);
                     } else {
-                        bulkOutEndpoint = ep; // OUT endpoint
+                        bulkOutEp = static_cast<uint8_t>(epAddr);
                     }
                 }
 
-                if (!bulkInEndpoint.isValid() && !bulkOutEndpoint.isValid()) {
+                if (!bulkInEp && !bulkOutEp) {
                     qWarning() << "No bulk endpoints found on MIDI interface";
                     continue;
                 }
@@ -299,9 +306,10 @@ QList<Controller*> HidEnumerator::queryDevices() {
                         devName, vendorId, productId, manufacturerName, productName);
                 midiDevice->setAndroidDevice(
                         QJniObject(*usbDevice),
-                        std::move(usbConnection),
-                        std::move(bulkInEndpoint),
-                        std::move(bulkOutEndpoint));
+                        fd,
+                        ifaceId,
+                        bulkInEp,
+                        bulkOutEp);
                 m_devices.push_back(midiDevice);
 #endif
             } else {
