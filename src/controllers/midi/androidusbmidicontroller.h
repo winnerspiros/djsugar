@@ -65,7 +65,9 @@ class AndroidUsbMidiController : public MidiController {
         MidiIoThread(AndroidUsbMidiController* parent);
         void stop();
         /// Reset stop flag so the thread can be restarted after stop()
-        void resetStopFlag() { m_stopRequested.storeRelaxed(0); }
+        void resetStopFlag() {
+            m_stopRequested.storeRelaxed(0);
+        }
         void setAndroidDevice(QJniObject&& usbDevice,
                 QJniObject&& usbConnection,
                 QJniObject&& bulkInEndpoint,
