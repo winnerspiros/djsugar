@@ -43,15 +43,17 @@ class AndroidUsbMidiController : public MidiController {
     /// Set the Android USB device, file descriptor, interface number,
     /// and bulk endpoint addresses from the enumerator.
     /// Called after construction but before open().
-    /// Uses libusb (via the FD) to claim the interface and do bulk
-    /// transfers, because JNI UsbDeviceConnection.claimInterface()
-    /// fails on composite audio/MIDI devices where the audio subsystem
-    /// owns the kernel driver.
+    /// Uses libusb (via libusb_open_device_with_vid_pid) to claim the
+    /// interface and do bulk transfers, because JNI
+    /// UsbDeviceConnection.claimInterface() fails on composite audio/MIDI
+    /// devices where the audio subsystem owns the kernel driver.
     void setAndroidDevice(QJniObject&& usbDevice,
             jint fd,
             jint interfaceNumber,
             uint8_t bulkInEndpoint,
-            uint8_t bulkOutEndpoint);
+            uint8_t bulkOutEndpoint,
+            uint16_t vendorId,
+            uint16_t productId);
 #endif
 
   protected:

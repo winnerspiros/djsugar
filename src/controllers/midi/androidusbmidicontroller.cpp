@@ -78,15 +78,16 @@ void AndroidUsbMidiController::MidiIoThread::run() {
         jbyteArray byteArray = env->NewByteArray(kBufferSize);
 
         // Get the JNI connection from the stored device
-        QJniObject javaUsbManager =
-                QNativeInterface::QAndroidApplication::context()
-                        .callObjectMethod("getSystemService",
-                                "(Ljava/lang/String;)Ljava/lang/Object;",
-                                QJniObject::getStaticObjectField(
-                                        "android/content/Context",
-                                        "USB_SERVICE",
-                                        "Ljava/lang/String;")
-                                        .object());
+        QJniObject context =
+                QNativeInterface::QAndroidApplication::context();
+        QJniObject javaUsbManager = context.callObjectMethod(
+                "getSystemService",
+                "(Ljava/lang/String;)Ljava/lang/Object;",
+                QJniObject::getStaticObjectField(
+                        "android/content/Context",
+                        "USB_SERVICE",
+                        "Ljava/lang/String;")
+                        .object());
         auto usbConnection = javaUsbManager.callMethod<QJniObject>(
                 "openDevice",
                 "(Landroid/hardware/usb/UsbDevice;)"
@@ -297,14 +298,18 @@ void AndroidUsbMidiController::setAndroidDevice(
         jint fd,
         jint interfaceNumber,
         uint8_t bulkInEndpoint,
-        uint8_t bulkOutEndpoint) {
+        uint8_t bulkOutEndpoint,
+        uint16_t vendorId,
+        uint16_t productId) {
     m_pIoThread = new MidiIoThread(this);
     m_pIoThread->setAndroidDevice(
             std::move(usbDevice),
             fd,
             interfaceNumber,
             bulkInEndpoint,
-            bulkOutEndpoint);
+            bulkOutEndpoint,
+            vendorId,
+            productId);
 }
 
 bool AndroidUsbMidiController::isPolling() const {
