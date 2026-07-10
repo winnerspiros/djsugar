@@ -270,10 +270,6 @@ AndroidUsbMidiController::AndroidUsbMidiController(
 
 AndroidUsbMidiController::~AndroidUsbMidiController() = default;
 
-void AndroidUsbMidiController::setAndroidDevice(
-        QJniObject&&, QJniObject&&, QJniObject&&, QJniObject&&) {
-}
-
 bool AndroidUsbMidiController::isPolling() const {
     return false;
 }
