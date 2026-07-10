@@ -65,13 +65,22 @@ void AndroidUsbMidiController::MidiIoThread::run() {
                 kPollTimeoutMs);
 
         if (bytesRead > 0) {
-            // Convert jbyteArray to QByteArray
+            // Convert jbyteArray to QByteArray — copy BEFORE releasing elements
             jbyte* elements = env->GetByteArrayElements(byteArray, nullptr);
             if (elements) {
+                // Copy the raw data locally before releasing JNI pinning
+                // The parsing loop below reads from this copy, not from
+                // the released elements pointer.
                 QByteArray midiData(
                         reinterpret_cast<const char*>(elements),
                         bytesRead);
+                // Debug: dump received USB MIDI packet bytes
+                kLogger.debug()
+                        << "MIDI IO thread: bulkTransfer returned"
+                        << bytesRead
+                        << "bytes:" << midiData.toHex();
                 env->ReleaseByteArrayElements(byteArray, elements, JNI_ABORT);
+                // elements is now INVALID — do not dereference it anymore
 
                 // Process MIDI data
                 // USB MIDI event packets are 4 bytes each:
@@ -79,13 +88,13 @@ void AndroidUsbMidiController::MidiIoThread::run() {
                 // CIN (Code Index Number) identifies the message type
                 for (int i = 0; i + 3 < bytesRead; i += 4) {
                     unsigned char cin = static_cast<unsigned char>(
-                            elements[i] & 0x0F);
+                            static_cast<unsigned char>(midiData.at(i)) & 0x0F);
                     unsigned char midiStatus = static_cast<unsigned char>(
-                            elements[i + 1]);
+                            midiData.at(i + 1));
                     unsigned char midiByte1 = static_cast<unsigned char>(
-                            elements[i + 2]);
+                            midiData.at(i + 2));
                     unsigned char midiByte2 = static_cast<unsigned char>(
-                            elements[i + 3]);
+                            midiData.at(i + 3));
 
                     // Strip USB framing — pass raw MIDI bytes
                     QByteArray rawMidi;
@@ -104,6 +113,8 @@ void AndroidUsbMidiController::MidiIoThread::run() {
             }
         } else if (bytesRead < 0) {
             // bulkTransfer error (e.g. -1 if interface not claimed)
+            kLogger.warning() << "MIDI IO thread: bulkTransfer returned"
+                              << bytesRead << "- sleeping 10ms";
             // Sleep briefly to avoid busy-looping on persistent errors
             usleep(10000); // 10ms
         }
