@@ -69,15 +69,17 @@ class AndroidUsbMidiController : public MidiController {
                 QJniObject&& bulkInEndpoint,
                 QJniObject&& bulkOutEndpoint);
 
+        // Exposed for AndroidUsbMidiController::sendBytes()
+        QJniObject m_usbConnection;
+        QJniObject m_bulkOutEndpoint;
+
       protected:
         void run() override;
 
       private:
         AndroidUsbMidiController* m_parent;
         QJniObject m_usbDevice;
-        QJniObject m_usbConnection;
         QJniObject m_bulkInEndpoint;
-        QJniObject m_bulkOutEndpoint;
         QAtomicInt m_stopRequested;
     };
 
