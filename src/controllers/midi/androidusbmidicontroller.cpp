@@ -261,7 +261,6 @@ AndroidUsbMidiController::AndroidUsbMidiController(
         const QString& vendorString,
         const QString& productString)
         : MidiController(name),
-          m_pIoThread(nullptr),
           m_vendorId(vendorId),
           m_productId(productId),
           m_vendorString(vendorString),
