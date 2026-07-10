@@ -309,7 +309,9 @@ QList<Controller*> HidEnumerator::queryDevices() {
                         fd,
                         ifaceId,
                         bulkInEp,
-                        bulkOutEp);
+                        bulkOutEp,
+                        static_cast<uint16_t>(vendorId),
+                        static_cast<uint16_t>(productId));
                 m_devices.push_back(midiDevice);
 #endif
             } else {

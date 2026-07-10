@@ -37,12 +37,16 @@ void AndroidUsbMidiController::MidiIoThread::setAndroidDevice(
         jint fd,
         jint interfaceNumber,
         uint8_t bulkInEndpoint,
-        uint8_t bulkOutEndpoint) {
+        uint8_t bulkOutEndpoint,
+        uint16_t vendorId,
+        uint16_t productId) {
     m_usbDevice = std::move(usbDevice);
     m_usbFd = fd;
     m_interfaceNumber = interfaceNumber;
     m_bulkInEpAddress = bulkInEndpoint;
     m_bulkOutEpAddress = bulkOutEndpoint;
+    m_vendorId = vendorId;
+    m_productId = productId;
 }
 
 void AndroidUsbMidiController::MidiIoThread::run() {
@@ -59,13 +63,15 @@ void AndroidUsbMidiController::MidiIoThread::run() {
         return;
     }
 
-    // Use libusb_wrap_sys_device to get a device handle from the FD.
-    // This requires libusb >= 1.0.22.
-    rc = libusb_wrap_sys_device(ctx, static_cast<intptr_t>(m_usbFd), &m_usbHandle);
-    if (rc != LIBUSB_SUCCESS || !m_usbHandle) {
+    // Open device by VID/PID — available in all libusb 1.0+.
+    m_usbHandle = libusb_open_device_with_vid_pid(ctx,
+            m_vendorId,
+            m_productId);
+    if (!m_usbHandle) {
         kLogger.warning()
-                << "MIDI IO thread: libusb_wrap_sys_device failed:"
-                << rc << "- falling back to JNI claimInterface";
+                << "MIDI IO thread: libusb_open_device_with_vid_pid failed"
+                << "- falling back to JNI claimInterface";
+        // Don't exit ctx yet — fallback needs it
 
         // Fallback: try JNI approach if libusb wrapping failed
         QJniEnvironment env;

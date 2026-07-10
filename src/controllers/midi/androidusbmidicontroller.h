@@ -80,7 +80,9 @@ class AndroidUsbMidiController : public MidiController {
                 jint fd,
                 jint interfaceNumber,
                 uint8_t bulkInEndpoint,
-                uint8_t bulkOutEndpoint);
+                uint8_t bulkOutEndpoint,
+                uint16_t vendorId,
+                uint16_t productId);
 
         // Exposed for AndroidUsbMidiController::sendBytes()
         libusb_device_handle* m_usbHandle;
@@ -95,6 +97,8 @@ class AndroidUsbMidiController : public MidiController {
         QJniObject m_usbDevice;
         uint8_t m_bulkInEpAddress;
         jint m_interfaceNumber;
+        uint16_t m_vendorId;
+        uint16_t m_productId;
         QAtomicInt m_stopRequested;
     };
 
