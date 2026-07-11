@@ -63,14 +63,19 @@ void AndroidUsbMidiController::MidiIoThread::run() {
         return;
     }
 
-    // Open device by VID/PID — available in all libusb 1.0+.
-    m_usbHandle = libusb_open_device_with_vid_pid(ctx,
-            m_vendorId,
-            m_productId);
-    if (!m_usbHandle) {
+    // Wrap the file descriptor that was already opened via JNI's
+    // UsbManager.openDevice(). On Android, we cannot call
+    // libusb_open_device_with_vid_pid because native libusb open
+    // requires root or a udev rule — only the Java USB API can
+    // open USB devices in unprivileged apps. Wrapping the FD
+    // reuses the already-opened kernel handle from JNI.
+    rc = libusb_wrap_sys_device(ctx,
+            static_cast<intptr_t>(m_usbFd),
+            &m_usbHandle);
+    if (rc != LIBUSB_SUCCESS || !m_usbHandle) {
         kLogger.warning()
-                << "MIDI IO thread: libusb_open_device_with_vid_pid failed"
-                << "- falling back to JNI claimInterface";
+                << "MIDI IO thread: libusb_wrap_sys_device failed (rc="
+                << rc << ") - falling back to JNI claimInterface";
         // Don't exit ctx yet — fallback needs it
 
         // Fallback: try JNI approach if libusb wrapping failed

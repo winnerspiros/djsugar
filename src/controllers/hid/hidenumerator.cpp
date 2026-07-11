@@ -149,6 +149,10 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
 #ifdef __ANDROID__
     QJniObject context = QNativeInterface::QAndroidApplication::context();
+    if (!context.isValid()) {
+        qWarning() << "HID enumerator: Android context is null";
+        return {};
+    }
     QJniObject USB_SERVICE =
             QJniObject::getStaticObjectField(
                     "android/content/Context",
@@ -158,21 +162,34 @@ QList<Controller*> HidEnumerator::queryDevices() {
             "(Ljava/lang/String;)Ljava/lang/Object;",
             USB_SERVICE.object());
     if (!usbManager.isValid()) {
-        qDebug() << "usbManager invalid";
+        qWarning() << "HID enumerator: usbManager invalid (no USB_SERVICE?)";
         return {};
     }
 
     QJniObject deviceListObject =
             usbManager.callMethod<QJniObject>("getDeviceList", "()Ljava/util/HashMap;");
     deviceListObject = deviceListObject.callMethod<jobject>("values", "()Ljava/util/Collection;");
+    if (!deviceListObject.isValid()) {
+        qWarning() << "HID enumerator: getDeviceList returned null";
+        return {};
+    }
     QJniArray<QJniObject> deviceList = QJniArray<QJniObject>(
             deviceListObject.callMethod<jobjectArray>("toArray"));
-    __android_log_print(ANDROID_LOG_INFO,
-            "mixxx",
-            "found %d USB devices for HID enumerator",
-            deviceList.size());
+    qInfo() << "HID enumerator: found" << deviceList.size() << "USB devices";
 
     for (const auto& usbDevice : deviceList) {
+        if (!usbDevice.isValid()) {
+            continue;
+        }
+        QString productName =
+                usbDevice->callMethod<jstring>("getProductName")
+                        .toString();
+        jint vid = usbDevice->callMethod<jint>("getVendorId");
+        jint pid = usbDevice->callMethod<jint>("getProductId");
+        jint ifaceCount = usbDevice->callMethod<jint>("getInterfaceCount");
+        qInfo() << "HID enumerator: USB device" << productName
+                << "VID=0x" << Qt::hex << vid << "PID=0x" << pid
+                << Qt::dec << "interfaces=" << ifaceCount;
         for (jint ifaceIdx = 0;
                 ifaceIdx < usbDevice->callMethod<jint>("getInterfaceCount");
                 ifaceIdx++) {
@@ -181,6 +198,9 @@ QList<Controller*> HidEnumerator::queryDevices() {
                     ifaceIdx);
             jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
             jint ifaceSubclass = usbInterface.callMethod<jint>("getInterfaceSubclass");
+            qInfo() << "HID enumerator: iface" << ifaceIdx
+                    << "class=" << ifaceClass
+                    << "subclass=" << ifaceSubclass;
             if (ifaceClass == LIBUSB_CLASS_HID
 #ifdef __ANDROID__
                     || ifaceClass == 0xFF // vendor-specific — DDJ-FLX4 deck HID on Android
@@ -254,11 +274,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 // (the audio subsystem owns the kernel driver).
                 jint fd = usbConnection.callMethod<jint>("getFileDescriptor");
                 int ifaceId = usbInterface.callMethod<jint>("getId");
-                __android_log_print(ANDROID_LOG_INFO,
-                        "mixxx",
-                        "MIDI USB device FD=%d interface=%d",
-                        fd,
-                        ifaceId);
+                qInfo() << "HID enumerator: MIDI USB device opened FD="
+                        << fd << "interface=" << ifaceId;
 
                 // Discover bulk endpoint addresses (we need the raw addresses
                 // for libusb_bulk_transfer, not JNI endpoint objects)
