@@ -11,7 +11,6 @@
 #include "control/pollingcontrolproxy.h"
 #include "engine/sidechain/enginenetworkstream.h"
 #include "preferences/usersettings.h"
-#include "soundio/networkenumerator.h"
 #include "soundio/portaudioenumerator.h"
 #include "soundio/sounddevice.h"
 #include "soundio/sounddeviceenumerator.h"
@@ -20,8 +19,10 @@
 #include "soundio/soundmanagerconfig.h"
 #include "util/cmdlineargs.h"
 #include "util/types.h"
-
+#include "soundio/networkenumerator.h"
 class AudioLatencyCalibrator;
+
+
 class EngineMixer;
 class ControlObject;
 class PipewireEnumerator;
@@ -29,6 +30,7 @@ class PipewireEnumerator;
 #define SOUNDMANAGER_DISCONNECTED 0
 #define SOUNDMANAGER_CONNECTING 1
 #define SOUNDMANAGER_CONNECTED 2
+
 
 class SoundManager : public QObject {
     Q_OBJECT
@@ -45,10 +47,6 @@ class SoundManager : public QObject {
     // Creates a list of sound devices
     void clearAndQueryDevices();
     void queryDevices();
-
-    // Our fork's extended device query (Android Oboe + PortAudio)
-    void queryDevicesPortaudio();
-    void queryDevicesMixxx();
 
     // Opens all the devices chosen by the user in the preferences dialog, and
     // establishes the proper connections between them and the mixing engine.
@@ -85,45 +83,18 @@ class SoundManager : public QObject {
     // Used by SoundDevices to "push" any audio from their inputs that they have
     // into the mixing engine.
     void pushInputBuffers(const QList<AudioInputBuffer>& inputs,
-            const SINT iFramesPerBuffer);
+                          const SINT iFramesPerBuffer);
 
     void writeProcess(SINT framesPerBuffer) const;
     void readProcess(SINT framesPerBuffer) const;
 
     void registerOutput(const AudioOutput& output, AudioSource* src);
-    // All Main outputs share the EngineMixer as their AudioSource.
-    // Use this instead of registerOutput(output, nullptr) when adding
-    // additional Main outputs via the UI.
-    void registerMainOutput(const AudioOutput& output);
-    /// Remove a previously registered output so a new one with the same
-    /// parameters can be registered (e.g. after removing and re-adding).
-    /// Does nothing if the output is not registered.
-    void unregisterOutput(const AudioOutput& output);
     void registerInput(const AudioInput& input, AudioDestination* dest);
     QList<AudioOutput> registeredOutputs() const;
     QList<AudioInput> registeredInputs() const;
 
-    /// Calibration: start/stop active latency measurement.
-    /// When calibrating, the clock-ref output callback plays the reference
-    /// pulse from the calibrator instead of engine audio, and captured input
-    /// is fed to the calibrator for cross-correlation.
-    void startCalibration(AudioLatencyCalibrator* calibrator);
-    void stopCalibration();
-    bool isCalibrating() const {
-        return m_pCalibrator != nullptr;
-    }
-    AudioLatencyCalibrator* calibrator() const {
-        return m_pCalibrator;
-    }
-
-    /// Calibration frame cache — one buffer's worth of chirp samples.
-    /// Written by the clock-ref callback, read by writeProcess.
-    QVector<CSAMPLE>& calibrationFrameCache() {
-        return m_calibFrameCache;
-    }
-
     QSharedPointer<EngineNetworkStream> getNetworkStream() const {
-        return m_networkEnumerator.getNetworkStream();
+        return m_pNetworkStream;
     }
 
     void underflowHappened(int code) {
@@ -151,6 +122,39 @@ class SoundManager : public QObject {
     bool isPipewireSelected();
 #endif
 
+    // Our fork's extended device query (Android Oboe + PortAudio)
+    void queryDevicesPortaudio();
+    void queryDevicesMixxx();
+
+    // All Main outputs share the EngineMixer as their AudioSource.
+    // Use this instead of registerOutput(output, nullptr) when adding
+    // additional Main outputs via the UI.
+    void registerMainOutput(const AudioOutput& output);
+    /// Remove a previously registered output so a new one with the same
+    /// parameters can be registered (e.g. after removing and re-adding).
+    /// Does nothing if the output is not registered.
+    void unregisterOutput(const AudioOutput& output);
+
+    /// Calibration: start/stop active latency measurement.
+    /// When calibrating, the clock-ref output callback plays the reference
+    /// pulse from the calibrator instead of engine audio, and captured input
+    /// is fed to the calibrator for cross-correlation.
+    void startCalibration(AudioLatencyCalibrator* calibrator);
+    void stopCalibration();
+    bool isCalibrating() const {
+        return m_pCalibrator != nullptr;
+    }
+    AudioLatencyCalibrator* calibrator() const {
+        return m_pCalibrator;
+    }
+
+    /// Calibration frame cache — one buffer's worth of chirp samples.
+    /// Written by the clock-ref callback, read by writeProcess.
+    QVector<CSAMPLE>& calibrationFrameCache() {
+        return m_calibFrameCache;
+    }
+
+
   signals:
     void deviceAdded(SoundDevicePointer pDevice);
     void deviceRemoved(SoundDevicePointer pDevice);
@@ -159,8 +163,8 @@ class SoundManager : public QObject {
     void deviceDisconnected(const AudioPath* pPath);
 
     void devicesUpdated(); // emitted when pointers to SoundDevices go stale
-    void devicesSetup();   // emitted when the sound devices have been set up
-    void devicesClosed();  // emitted when the sound devices have been closed and resources freed
+    void devicesSetup(); // emitted when the sound devices have been set up
+    void devicesClosed(); // emitted when the sound devices have been closed and resources freed
     void outputRegistered(const AudioOutput& output, AudioSource* src);
     void inputRegistered(const AudioInput& input, AudioDestination* dest);
 
@@ -202,17 +206,15 @@ class SoundManager : public QObject {
     PollingControlProxy m_audioLatencyOverloadCount;
     PollingControlProxy m_audioLatencyOverload;
 
-    PortAudioEnumerator m_paEnumerator;
+    std::unique_ptr<SoundDeviceEnumerator> m_pEnumerator;
 
-#ifdef __PIPEWIRE__
-    std::unique_ptr<PipewireEnumerator> m_pPipewireEnumerator;
-#endif
-    NetworkEnumerator m_networkEnumerator;
-
+    QSharedPointer<EngineNetworkStream> m_pNetworkStream;
+    QSharedPointer<SoundDeviceNetwork> m_pNetworkDevice;
     AudioLatencyCalibrator* m_pCalibrator = nullptr;
 
     /// Cache for one buffer's worth of calibration chirp samples.
     /// Filled by the clock-ref callback, consumed by writeProcess for non-ref
     /// devices. Prevents double-consumption of generateReferenceFrame().
     QVector<CSAMPLE> m_calibFrameCache;
+
 };
