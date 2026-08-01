@@ -175,15 +175,15 @@ QList<Controller*> HidEnumerator::queryDevices() {
         return {};
     }
     QJniArray<QJniObject> deviceList = QJniArray<QJniObject>(
-            deviceListObject.callMethod<jobjectArray>("toArray"));
+            deviceListObject.callMethod<QJniArray<QJniObject>>("toArray"));
     qInfo() << "HID enumerator: found" << deviceList.size() << "USB devices";
 
     for (const auto& usbDevice : deviceList) {
-        if (!usbDevice.isValid()) {
+        if (!usbDevice->isValid()) {
             continue;
         }
         QString productName =
-                usbDevice->callMethod<jstring>("getProductName")
+                usbDevice->callMethod<QJniObject>("getProductName")
                         .toString();
         jint vid = usbDevice->callMethod<jint>("getVendorId");
         jint pid = usbDevice->callMethod<jint>("getProductId");
@@ -232,7 +232,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 // Use direct bulkTransfer instead of MidiManager
                 qInfo() << "Found USB MIDI interface" << ifaceIdx
                         << "on device"
-                        << usbDevice->callMethod<jstring>("getProductName")
+                        << usbDevice->callMethod<QJniObject>("getProductName")
                                    .toString();
 
                 // Open device and claim interface for raw MIDI access
@@ -305,10 +305,10 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 }
 
                 QString productName =
-                        usbDevice->callMethod<jstring>("getProductName")
+                        usbDevice->callMethod<QJniObject>("getProductName")
                                 .toString();
                 QString manufacturerName =
-                        usbDevice->callMethod<jstring>("getManufacturerName")
+                        usbDevice->callMethod<QJniObject>("getManufacturerName")
                                 .toString();
                 jint vendorId = usbDevice->callMethod<jint>("getVendorId");
                 jint productId = usbDevice->callMethod<jint>("getProductId");
@@ -335,7 +335,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
             } else {
                 qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
                         << ifaceClass << "on device"
-                        << usbDevice->callMethod<jstring>("getProductName")
+                        << usbDevice->callMethod<QJniObject>("getProductName")
                                    .toString();
             }
         }
