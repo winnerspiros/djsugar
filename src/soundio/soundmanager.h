@@ -11,9 +11,11 @@
 #include "control/pollingcontrolproxy.h"
 #include "engine/sidechain/enginenetworkstream.h"
 #include "preferences/usersettings.h"
-#include "soundio/networkenumerator.h"
 #include "soundio/portaudioenumerator.h"
 #include "soundio/sounddevice.h"
+#include "soundio/sounddeviceenumerator.h"
+#include "soundio/sounddevicenetwork.h"
+#include "soundio/sounddevicestatus.h"
 #include "soundio/soundmanagerconfig.h"
 #include "util/cmdlineargs.h"
 #include "util/types.h"
@@ -144,6 +146,9 @@ class SoundManager : public QObject {
 
     // currently only used by pipewire
     void updateDeviceChannels(SoundDevicePointer pDevice);
+#ifdef __PIPEWIRE__
+    bool isPipewireSelected();
+#endif
 
   signals:
     void deviceAdded(SoundDevicePointer pDevice);
@@ -176,7 +181,7 @@ class SoundManager : public QObject {
     void closeDevices(bool sleepAfterClosing, bool async = false);
 
     bool jackApiUsed() const {
-        return m_config.getAPI() == MIXXX_PORTAUDIO_JACK_STRING;
+        return m_config.getAPI() == SoundManagerConfig::kAPIJack;
     }
 
     EngineMixer* m_pEngineMixer;

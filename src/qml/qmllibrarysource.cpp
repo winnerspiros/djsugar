@@ -35,7 +35,7 @@ void AllTrackLibraryFeature::activate() {
 namespace mixxx {
 namespace qml {
 
-QmlLibrarySource::QmlLibrarySource(
+QmlLibraryAbstractSource::QmlLibraryAbstractSource(
         QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
         : QObject(parent),
           m_columns(columns) {
@@ -47,13 +47,13 @@ void QmlLibrarySource::slotShowTrackModel(QAbstractItemModel* pModel) {
 
 QmlLibraryAllTrackSource::QmlLibraryAllTrackSource(
         QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
-        : QmlLibrarySource(parent, columns),
+        : QmlLibraryAbstractSource(parent, columns),
           m_pLibraryFeature(std::make_unique<AllTrackLibraryFeature>(
                   QmlLibraryProxy::get(), QmlConfigProxy::get())) {
     connect(m_pLibraryFeature.get(),
             &LibraryFeature::showTrackModel,
             this,
-            &QmlLibrarySource::slotShowTrackModel);
+            &QmlLibraryAbstractSource::slotShowTrackModel);
 }
 
 LibraryFeature* QmlLibraryTracksSource::internal() {
