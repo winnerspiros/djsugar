@@ -3158,8 +3158,8 @@ if(FFMPEG)
       __STDC_LIMIT_MACROS
       __STDC_FORMAT_MACROS
   )
-  target_link_libraries(mixxx-lib PRIVATE "${FFMPEG_LIBRARIES}")
-  target_include_directories(mixxx-lib PUBLIC "${FFMPEG_INCLUDE_DIRS}")
+  target_link_libraries(mixxx-lib PRIVATE "${FFmpeg_LIBRARIES}")
+  target_include_directories(mixxx-lib PUBLIC "${FFmpeg_INCLUDE_DIRS}")
 
   # Bundle the official yt-dlp standalone binary so the YouTube tab works
   # out of the box with no external setup. Runs at configure time and is a
