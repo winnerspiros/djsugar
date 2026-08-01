@@ -1,5 +1,9 @@
 #include "qml/qmllibrarysource.h"
 
+#include <qalgorithms.h>
+#include <qlist.h>
+#include <qqmlengine.h>
+
 #include <QAbstractListModel>
 #include <QVariant>
 #include <QtDebug>
@@ -8,16 +12,15 @@
 #include "library/browse/browsefeature.h"
 #include "library/library.h"
 #include "library/librarytablemodel.h"
-#include "library/mixxxlibraryfeature.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
 #include "library/trackset/crate/cratefeature.h"
+#include "library/trackset/crate/cratesummary.h"
 #include "library/trackset/playlistfeature.h"
-#include "library/treeitem.h"
 #include "library/treeitemmodel.h"
-#include "library/youtube/youtubefeature.h"
-#include "qml/qmlconfigproxy.h"
-#include "qml/qmllibraryproxy.h"
-#include "qml/qmllibrarytracklistmodel.h"
-#include "qml_owned_ptr.h"
+#include "moc_qmllibrarysource.cpp"
+#include "qmllibraryproxy.h"
+#include "track/track.h"
 
 AllTrackLibraryFeature::AllTrackLibraryFeature(Library* pLibrary, UserSettingsPointer pConfig)
         : LibraryFeature(pLibrary, pConfig, QString()),
@@ -26,10 +29,8 @@ AllTrackLibraryFeature::AllTrackLibraryFeature(Library* pLibrary, UserSettingsPo
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));
 }
 
-AllTrackLibraryFeature::~AllTrackLibraryFeature() = default;
-
 void AllTrackLibraryFeature::activate() {
-    Q_EMIT showTrackModel(m_pLibraryTableModel);
+    emit showTrackModel(m_pLibraryTableModel);
 }
 
 namespace mixxx {
@@ -41,8 +42,8 @@ QmlLibraryAbstractSource::QmlLibraryAbstractSource(
           m_columns(columns) {
 }
 
-void QmlLibrarySource::slotShowTrackModel(QAbstractItemModel* pModel) {
-    Q_EMIT requestTrackModel(make_qml_owned<QmlLibraryTrackListModel>(columns(), pModel).get());
+void QmlLibraryAbstractSource::slotShowTrackModel(QAbstractItemModel* pModel) {
+    emit requestTrackModel(std::make_shared<QmlLibraryTrackListModel>(columns(), pModel));
 }
 
 QmlLibraryAllTrackSource::QmlLibraryAllTrackSource(
@@ -56,32 +57,5 @@ QmlLibraryAllTrackSource::QmlLibraryAllTrackSource(
             &QmlLibraryAbstractSource::slotShowTrackModel);
 }
 
-LibraryFeature* QmlLibraryTracksSource::internal() {
-    auto* pLibrary = QmlLibraryProxy::get();
-    return pLibrary ? pLibrary->mixxxLibraryFeature() : nullptr;
-}
-
-LibraryFeature* QmlLibraryPlaylistsSource::internal() {
-    auto* pLibrary = QmlLibraryProxy::get();
-    return pLibrary ? pLibrary->playlistFeature() : nullptr;
-}
-
-LibraryFeature* QmlLibraryCratesSource::internal() {
-    auto* pLibrary = QmlLibraryProxy::get();
-    return pLibrary ? pLibrary->crateFeature() : nullptr;
-}
-
-LibraryFeature* QmlLibraryBrowseSource::internal() {
-    auto* pLibrary = QmlLibraryProxy::get();
-    return pLibrary ? pLibrary->browseFeature() : nullptr;
-}
-
-LibraryFeature* QmlLibraryYouTubeSource::internal() {
-    auto* pLibrary = QmlLibraryProxy::get();
-    return pLibrary ? pLibrary->youtubeFeature() : nullptr;
-}
-
 } // namespace qml
 } // namespace mixxx
-
-#include "moc_qmllibrarysource.cpp"

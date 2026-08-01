@@ -7,9 +7,11 @@
 #include <Qt>
 #include <memory>
 
-#include "qml_owned_ptr.h"
-#include "qmllibrarytracklistmodel.h"
-#include "qml/qmltrackproxy.h"
+#include "library/dao/directorydao.h"
+#include "library/scanner/libraryscanner.h"
+#include "qml/qmllibrarysource.h"
+#include "qml/qmllibrarytracklistmodel.h"
+#include "util/parented_ptr.h"
 
 class Library;
 class LibraryScanner;
@@ -17,6 +19,70 @@ class KeyboardEventFilter;
 
 namespace mixxx {
 namespace qml {
+
+class QmlLibrarySource : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(QString path MEMBER m_path CONSTANT)
+    Q_PROPERTY(uint totalSecond MEMBER m_totalSecond CONSTANT)
+    Q_PROPERTY(uint trackCount MEMBER m_trackCount CONSTANT)
+    QML_NAMED_ELEMENT(LibrarySource)
+  public:
+    QmlLibrarySource(const DirectoryDAO::RootDirectoryInfo& record)
+            : m_path(record.path),
+              m_totalSecond(record.totalSecond),
+              m_trackCount(record.trackCount) {
+    }
+
+  private:
+    QString m_path;
+    uint m_totalSecond;
+    uint m_trackCount;
+};
+
+class QmlLibraryScannerProxy : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(bool running READ isRunning NOTIFY stateChanged)
+    Q_PROPERTY(bool cancelling READ isCancelling NOTIFY stateChanged)
+    QML_NAMED_ELEMENT(LibraryScanner)
+    QML_UNCREATABLE("Only accessible via Mixxx.Library.scanner")
+  public:
+    QmlLibraryScannerProxy(LibraryScanner* libraryScanner, QObject* parent);
+
+    bool isRunning() const {
+        return m_running;
+    }
+
+    bool isCancelling() const {
+        return m_cancelling;
+    }
+
+    Q_INVOKABLE void start() {
+        m_running = true;
+        m_pLibraryScanner->scan();
+        emit stateChanged();
+    }
+
+    Q_INVOKABLE void cancel() {
+        m_cancelling = true;
+        emit stateChanged();
+        emit requestCancel();
+    }
+
+  signals:
+    void progress(const QString& path);
+    void started();
+    void finished();
+
+    void stateChanged();
+
+    void requestStart();
+    void requestCancel();
+
+  private:
+    LibraryScanner* m_pLibraryScanner;
+    bool m_running;
+    bool m_cancelling;
+};
 
 class QmlLibraryProxy : public QObject {
     Q_OBJECT
