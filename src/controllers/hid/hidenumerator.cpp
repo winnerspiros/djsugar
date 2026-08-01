@@ -168,7 +168,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
     QJniObject deviceListObject =
             usbManager.callMethod<QJniObject>("getDeviceList", "()Ljava/util/HashMap;");
-    deviceListObject = deviceListObject.callMethod<QJniObject>("values", "()Ljava/util/Collection;");
+    deviceListObject = deviceListObject.callMethod<QJniObject>(
+            "values", "()Ljava/util/Collection;");
     if (!deviceListObject.isValid()) {
         qWarning() << "HID enumerator: getDeviceList returned null";
         return {};
