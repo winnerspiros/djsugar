@@ -2,12 +2,12 @@
 
 #include <QAbstractItemModel>
 #include <QObject>
-#include <QPointer>
 #include <QQmlEngine>
 #include <QQmlListProperty>
 #include <QQmlParserStatus>
 #include <QQuickItem>
 #include <QVariant>
+#include <memory>
 
 #include "library/libraryfeature.h"
 #include "library/sidebarmodel.h"
@@ -17,7 +17,7 @@
 namespace mixxx {
 namespace qml {
 
-class QmlLibrarySource;
+class QmlLibraryAbstractSource;
 
 class QmlSidebarModelProxy : public SidebarModel {
     Q_OBJECT
@@ -34,10 +34,10 @@ class QmlSidebarModelProxy : public SidebarModel {
     ~QmlSidebarModelProxy() override;
 
     QmlLibraryTrackListModel* tracklist() const {
-        return m_tracklist.data();
+        return m_tracklist.get();
     }
 
-    void update(const QList<QmlLibrarySource*>& sources);
+    void update(const QList<QmlLibraryAbstractSource*>& sources);
     QHash<int, QByteArray> roleNames() const override;
     Q_INVOKABLE QVariant get(int row) const;
     Q_INVOKABLE void activate(const QModelIndex& index);
@@ -45,10 +45,10 @@ class QmlSidebarModelProxy : public SidebarModel {
     void tracklistChanged();
 
   protected slots:
-    void slotShowTrackModel(mixxx::qml::QmlLibraryTrackListModel* pModel);
+    void slotShowTrackModel(std::shared_ptr<mixxx::qml::QmlLibraryTrackListModel> pModel);
 
   private:
-    QPointer<QmlLibraryTrackListModel> m_tracklist;
+    std::shared_ptr<QmlLibraryTrackListModel> m_tracklist;
 };
 
 } // namespace qml

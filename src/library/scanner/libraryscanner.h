@@ -73,7 +73,7 @@ class LibraryScanner : public QThread {
     void slotDirectoryHashedAndScanned(const QString& directoryPath,
             bool newDirectory,
             mixxx::cache_key_t hash);
-    void slotDirectoryUnchanged(const QString& directoryPath);
+    void slotDirectoryUnchanged(const QString& directoryPath, const QStringList& verifiedTracks);
     void slotTrackExists(const QString& trackPath);
     void slotAddNewTrack(const QString& trackPath);
 

@@ -4,6 +4,7 @@
 
 #include "sounddevice.h"
 #include "soundio/soundmanagerconfig.h"
+#include "soundio/soundmanagerutil.h"
 
 class SoundManager;
 class PipewireEnumerator;
@@ -15,6 +16,8 @@ class SoundDevicePipewire : public SoundDevice {
             PipewireEnumerator* pEnumerator,
             uint32_t id,
             const std::string_view name);
+    ~SoundDevicePipewire() override;
+
     SoundDeviceStatus open(bool isClkRefDevice, int syncBuffers) override;
     bool isOpen() const override;
     SoundDeviceStatus close() override;
@@ -27,6 +30,7 @@ class SoundDevicePipewire : public SoundDevice {
         return m_error.c_str();
     }
 
+    QString getChannelString(ChannelGroup channelGroup, bool input) override;
     mixxx::audio::SampleRate getDefaultSampleRate() const override;
 
     void writeOutput(float* output, int channel, int framesPerBuffer, int offset = 0);
@@ -50,8 +54,17 @@ class SoundDevicePipewire : public SoundDevice {
     }
 
     struct Port {
+        std::string getDisplayName() const {
+            return name + channel;
+        }
+
         uint32_t id;
+        // this is port.name after stripping out channel and delimiter,
+        // and appending a ':' to simplify logic
         std::string name;
+        // in case port had no recognizable channel, entire name is put
+        // here so SoundDevicePipewire::getChannelString logic works fine
+        std::string channel;
     };
 
     std::span<const Port> getInPorts() const {

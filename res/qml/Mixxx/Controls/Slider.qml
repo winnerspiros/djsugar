@@ -25,22 +25,24 @@ Slider {
         ShapePath {
             id: barPath
 
-            property color color: "transparent"
-            property bool enabled: false
-            property real margin: 0
-            property real start: 0
-            property real width: 2
-
             fillColor: "transparent"
             startX: barShape.width * (root.horizontal ? (1 - root.bar.start) : 0.5)
             startY: barShape.height * (root.vertical ? (1 - root.bar.start) : 0.5)
-            strokeColor: color
-            strokeWidth: width
+            strokeColor: root.bar.color
+            strokeWidth: root.bar.width
 
             PathLine {
                 x: root.horizontal ? (barShape.width * root.value) : barPath.startX
                 y: root.vertical ? (barShape.height * (1 - root.value)) : barPath.startY
             }
         }
+    }
+
+    component BarSettings: QtObject {
+        property color color: "transparent"
+        property bool enabled: false
+        property real margin: 0
+        property real start: 0
+        property real width: 2
     }
 }

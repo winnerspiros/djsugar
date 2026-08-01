@@ -238,6 +238,8 @@ class QmlControllerDeviceProxy : public QObject {
     mutable QHash<QString, std::shared_ptr<LegacyControllerMapping>> m_mappingInstance;
 };
 
+using QmlControllerMappingProxyList = QList<QmlControllerMappingProxy*>;
+
 class QmlControllerManagerProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> knownDevices READ knownDevices NOTIFY deviceListChanged)

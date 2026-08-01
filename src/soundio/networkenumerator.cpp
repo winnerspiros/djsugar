@@ -17,10 +17,17 @@ std::vector<SoundDevicePointer> NetworkEnumerator::queryDevices() const {
     return std::vector<SoundDevicePointer>{m_pDevice};
 }
 
-QList<mixxx::audio::SampleRate> NetworkEnumerator::getSampleRates() const {
+QList<mixxx::audio::SampleRate> NetworkEnumerator::getSampleRates(bool jackSampleRate) const {
+    Q_UNUSED(jackSampleRate);
     return QList<mixxx::audio::SampleRate>{};
 }
 
-std::vector<std::string> NetworkEnumerator::getAPIs() const {
-    return std::vector<std::string>{};
+QList<QString> NetworkEnumerator::getAPIs() const {
+    return QList<QString>{};
+}
+
+void NetworkEnumerator::initialize() {
+}
+
+void NetworkEnumerator::deinitialize() {
 }

@@ -6,6 +6,7 @@
 #include <spa/utils/result.h>
 
 #include <QList>
+#include <QMessageBox>
 #include <QSharedPointer>
 #include <QStringView>
 #include <string>
@@ -28,21 +29,48 @@ namespace {
 constexpr int kCpuUsageUpdateRate = 30; // in 1/s, fits to display frame rate
 const QString kAppGroup = QStringLiteral("[App]");
 
-static const char* find_node_name(const struct spa_dict* props) {
-    static const char* const name_keys[] = {
-            PW_KEY_NODE_NAME,
+static std::string find_node_name(uint32_t id, const struct spa_dict* props) {
+    std::string name;
+    static const char* const nameKeys[] = {
             PW_KEY_NODE_DESCRIPTION,
-            PW_KEY_APP_NAME,
+            PW_KEY_NODE_NICK,
             PW_KEY_MEDIA_NAME,
+            PW_KEY_APP_NAME,
+            PW_KEY_NODE_NAME,
     };
 
-    for (const char* key : name_keys) {
-        const char* name = spa_dict_lookup(props, key);
-        if (name) {
-            return name;
+    for (const char* key : nameKeys) {
+        const char* prop = spa_dict_lookup(props, key);
+        if (prop) {
+            name = prop;
+            break;
         }
     }
-    return nullptr;
+
+    const char* mediaClass = spa_dict_lookup(props, PW_KEY_MEDIA_CLASS);
+    static const char* const subtypes[] = {
+            "Output",
+            "Input",
+            "Source",
+            "Sink",
+            "Duplex",
+    };
+
+    if (mediaClass) {
+        for (const char* subtype : subtypes) {
+            if (std::strstr(mediaClass, subtype)) {
+                name = name + " (" + subtype + ")";
+            }
+        }
+    } else {
+        const char* mediaCategory = spa_dict_lookup(props, PW_KEY_MEDIA_CATEGORY);
+        if (mediaCategory) {
+            name = name + " (" + mediaCategory + ")";
+        }
+    }
+
+    // worst case scenario, we still have node ID as name
+    return name + ":" + std::to_string(id);
 }
 } // namespace
 
@@ -54,7 +82,6 @@ PipewireEnumerator::PipewireEnumerator(UserSettingsPointer, SoundManager* pManag
           m_pPwRegistry(nullptr),
           m_pPwMetadata(nullptr),
           m_pPwFilter(nullptr),
-          m_initialized(false),
           m_sampleRate(48000),
           m_audioLatencyUsage(kAppGroup, QStringLiteral("audio_latency_usage")),
           m_framesPerBuffer(0) {
@@ -73,40 +100,17 @@ PipewireEnumerator::PipewireEnumerator(UserSettingsPointer, SoundManager* pManag
     pw_init(nullptr, nullptr);
 
     m_pPwThreadLoop = pw_thread_loop_new("mixxx_loop", nullptr);
+    spa_zero(m_pwCoreListener);
     spa_zero(m_pwRegistryListener);
     spa_zero(m_pwMetadataListener);
     spa_zero(m_pwFilterListener);
-
-    initialize();
 }
 
 PipewireEnumerator::~PipewireEnumerator() {
-    pw_thread_loop_stop(m_pPwThreadLoop);
-
-    if (m_pPwFilter) {
-        spa_hook_remove(&m_pwFilterListener);
-        pw_filter_destroy(m_pPwFilter);
-    }
-
-    if (m_pPwMetadata) {
-        spa_hook_remove(&m_pwMetadataListener);
-        pw_proxy_destroy((struct pw_proxy*)m_pPwMetadata);
-    }
-
-    if (m_pPwRegistry) {
-        spa_hook_remove(&m_pwRegistryListener);
-        pw_proxy_destroy((struct pw_proxy*)m_pPwRegistry);
-    }
-
-    if (m_pPwCore) {
-        pw_core_disconnect(m_pPwCore);
-    }
-
+    deinitialize();
     if (m_pPwContext) {
         pw_context_destroy(m_pPwContext);
     }
-
-    pw_thread_loop_destroy(m_pPwThreadLoop);
     pw_deinit();
 }
 
@@ -133,6 +137,7 @@ void PipewireEnumerator::initialize() {
                    << spa_strerror(errno);
         return;
     }
+    pw_core_add_listener(m_pPwCore, &m_pwCoreListener, &coreEvents, this);
 
     m_pPwRegistry = pw_core_get_registry(m_pPwCore, PW_VERSION_REGISTRY, 0);
     pw_registry_add_listener(m_pPwRegistry, &m_pwRegistryListener, &registry_events, this);
@@ -182,8 +187,46 @@ void PipewireEnumerator::initialize() {
     m_initialized = true;
 }
 
-QList<mixxx::audio::SampleRate> PipewireEnumerator::getSampleRates() const {
-    return m_samplerates;
+void PipewireEnumerator::deinitialize() {
+    if (!m_initialized) {
+        return;
+    }
+
+    pw_thread_loop_stop(m_pPwThreadLoop);
+
+    // clear everything we get through registry
+    m_openedDevices.clear();
+    m_soundDevices.clear();
+    m_objects.clear();
+
+    // or is it better to m_pSoundManager->removeDevice(device) for every device?
+    emit m_pSoundManager->devicesUpdated();
+
+    if (m_pPwFilter) {
+        spa_hook_remove(&m_pwFilterListener);
+        pw_filter_destroy(m_pPwFilter);
+        m_pPwFilter = nullptr;
+    }
+
+    if (m_pPwMetadata) {
+        spa_hook_remove(&m_pwMetadataListener);
+        pw_proxy_destroy((struct pw_proxy*)m_pPwMetadata);
+        m_pPwMetadata = nullptr;
+    }
+
+    if (m_pPwRegistry) {
+        spa_hook_remove(&m_pwRegistryListener);
+        pw_proxy_destroy((struct pw_proxy*)m_pPwRegistry);
+        m_pPwRegistry = nullptr;
+    }
+
+    if (m_pPwCore) {
+        spa_hook_remove(&m_pwCoreListener);
+        pw_core_disconnect(m_pPwCore);
+        m_pPwCore = nullptr;
+    }
+
+    m_initialized = false;
 }
 
 void PipewireEnumerator::registryEventGlobal(uint32_t id,
@@ -215,7 +258,7 @@ void PipewireEnumerator::registryEventGlobal(uint32_t id,
             return;
         }
 
-        const char* name = find_node_name(pProps);
+        std::string name = find_node_name(id, pProps);
 
         m_objects.insert_or_assign(id, Object{Node{}});
         auto pDevice = QSharedPointer<SoundDevicePipewire>::create(
@@ -225,9 +268,11 @@ void PipewireEnumerator::registryEventGlobal(uint32_t id,
         // any previous element is either invalid or already removed
         m_soundDevices.insert_or_assign(id, std::move(pDevice));
 
-        // this can be fooled if a different application names its node "Mixxx"
-        if (strcmp(name, "Mixxx") == 0) {
-            m_filterId = id;
+        if (name.find("Mixxx") != std::string::npos) {
+            uint32_t filterId = pw_filter_get_node_id(m_pPwFilter);
+            if (filterId == id) {
+                m_filterId = filterId;
+            }
         }
     } else if (strcmp(pType, PW_TYPE_INTERFACE_Port) == 0) {
         const uint32_t node_id = pw_properties_parse_int(spa_dict_lookup(pProps, PW_KEY_NODE_ID));
@@ -702,7 +747,11 @@ std::pair<uint32_t*, uint32_t*> PipewireEnumerator::createPorts(
             // see pipewire/keys.h header
             PW_KEY_FORMAT_DSP,
             "32 bit float mono audio",
+            PW_KEY_AUDIO_CHANNEL,
+            "FL",
             nullptr);
+    // any changes to port name needs to update port name parsing logic in
+    // PipewireEnumerator::registryEventGlobal
     pw_properties_setf(props, PW_KEY_PORT_NAME, "%s:FL", name.data());
 
     void* leftPort = pw_filter_add_port(m_pPwFilter,
@@ -717,7 +766,11 @@ std::pair<uint32_t*, uint32_t*> PipewireEnumerator::createPorts(
             // see pipewire/keys.h header
             PW_KEY_FORMAT_DSP,
             "32 bit float mono audio",
+            PW_KEY_AUDIO_CHANNEL,
+            "FR",
             nullptr);
+    // any changes to port name needs to update port name parsing logic in
+    // PipewireEnumerator::registryEventGlobal
     pw_properties_setf(props, PW_KEY_PORT_NAME, "%s:FR", name.data());
 
     void* rightPort = pw_filter_add_port(m_pPwFilter,
@@ -775,5 +828,18 @@ void PipewireEnumerator::setLatency(unsigned int sampleRate, unsigned int frames
                       "pw_filter_update_properties failed:"
                    << spa_strerror(res);
         qWarning() << "Unable to set requested samplerate";
+    }
+}
+
+void PipewireEnumerator::coreEventError(uint32_t id, int seq, int res, const char* message) {
+    qWarning() << "PipewireEnumerator::coreEventError" << id << seq << res << message;
+    if (id == 0) {
+        if (res == -EPIPE) {
+            qWarning() << "Deinitializing PipeWire due to server disconnect";
+            QMessageBox::information(nullptr,
+                    tr("Information"),
+                    tr("PipeWire server disconnected, query devices to reconnect."));
+            deinitialize();
+        }
     }
 }

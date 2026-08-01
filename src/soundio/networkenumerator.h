@@ -13,8 +13,10 @@ class NetworkEnumerator : public SoundDeviceEnumerator {
     ~NetworkEnumerator() override;
 
     std::vector<SoundDevicePointer> queryDevices() const override;
-    QList<mixxx::audio::SampleRate> getSampleRates() const override;
-    std::vector<std::string> getAPIs() const override;
+    QList<mixxx::audio::SampleRate> getSampleRates(bool jackSampleRate) const override;
+    QList<QString> getAPIs() const override;
+    void initialize() override;
+    void deinitialize() override;
 
     QSharedPointer<EngineNetworkStream> getNetworkStream() const {
         return m_pNetworkStream;

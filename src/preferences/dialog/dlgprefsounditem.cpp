@@ -4,6 +4,7 @@
 
 #include "soundio/sounddevice.h"
 #include "soundio/soundmanagerconfig.h"
+#include "soundio/soundmanagerutil.h"
 #include "util/assert.h"
 
 /// Constructs a new preferences sound item, representing an AudioPath and SoundDevice
@@ -207,11 +208,14 @@ void DlgPrefSoundItem::deviceChanged(int index) {
     channelComboBox->clear();
     SoundDeviceId selection = deviceComboBox->itemData(index).value<SoundDeviceId>();
     mixxx::audio::ChannelCount numChannels;
+    SoundDevicePointer selectedDevice;
+
     if (selection == SoundDeviceId()) {
         goto emitAndReturn;
     } else {
         for (const auto& pDevice : std::as_const(m_devices)) {
             if (pDevice->getDeviceId() == selection) {
+                selectedDevice = pDevice;
                 if (m_isInput) {
                     numChannels = pDevice->getNumInputChannels();
                 } else {
@@ -248,8 +252,7 @@ void DlgPrefSoundItem::deviceChanged(int index) {
 
                 // Because QComboBox supports QPoint natively (via QVariant) we
                 // use a QPoint to store the channel info. x is the channel base
-                // and y is the channel count. We use i - 1 because the channel
-                // base is 0-indexed.
+                // and y is the channel count.
                 channelComboBox->addItem(channelString,
                         QPoint(i - 1, channelsForType));
             }
