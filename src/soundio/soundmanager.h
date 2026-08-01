@@ -11,6 +11,7 @@
 #include "control/pollingcontrolproxy.h"
 #include "engine/sidechain/enginenetworkstream.h"
 #include "preferences/usersettings.h"
+#include "soundio/networkenumerator.h"
 #include "soundio/portaudioenumerator.h"
 #include "soundio/sounddevice.h"
 #include "soundio/sounddeviceenumerator.h"
@@ -19,9 +20,7 @@
 #include "soundio/soundmanagerconfig.h"
 #include "util/cmdlineargs.h"
 #include "util/types.h"
-#include "soundio/networkenumerator.h"
 class AudioLatencyCalibrator;
-
 
 class EngineMixer;
 class ControlObject;
@@ -30,7 +29,6 @@ class PipewireEnumerator;
 #define SOUNDMANAGER_DISCONNECTED 0
 #define SOUNDMANAGER_CONNECTING 1
 #define SOUNDMANAGER_CONNECTED 2
-
 
 class SoundManager : public QObject {
     Q_OBJECT
@@ -83,7 +81,7 @@ class SoundManager : public QObject {
     // Used by SoundDevices to "push" any audio from their inputs that they have
     // into the mixing engine.
     void pushInputBuffers(const QList<AudioInputBuffer>& inputs,
-                          const SINT iFramesPerBuffer);
+            const SINT iFramesPerBuffer);
 
     void writeProcess(SINT framesPerBuffer) const;
     void readProcess(SINT framesPerBuffer) const;
@@ -154,7 +152,6 @@ class SoundManager : public QObject {
         return m_calibFrameCache;
     }
 
-
   signals:
     void deviceAdded(SoundDevicePointer pDevice);
     void deviceRemoved(SoundDevicePointer pDevice);
@@ -163,8 +160,8 @@ class SoundManager : public QObject {
     void deviceDisconnected(const AudioPath* pPath);
 
     void devicesUpdated(); // emitted when pointers to SoundDevices go stale
-    void devicesSetup(); // emitted when the sound devices have been set up
-    void devicesClosed(); // emitted when the sound devices have been closed and resources freed
+    void devicesSetup();   // emitted when the sound devices have been set up
+    void devicesClosed();  // emitted when the sound devices have been closed and resources freed
     void outputRegistered(const AudioOutput& output, AudioSource* src);
     void inputRegistered(const AudioInput& input, AudioDestination* dest);
 
@@ -216,5 +213,4 @@ class SoundManager : public QObject {
     /// Filled by the clock-ref callback, consumed by writeProcess for non-ref
     /// devices. Prevents double-consumption of generateReferenceFrame().
     QVector<CSAMPLE> m_calibFrameCache;
-
 };

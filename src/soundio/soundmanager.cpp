@@ -1,4 +1,3 @@
-#include "engine/audiolatencycalibrator.h"
 #include "soundio/soundmanager.h"
 
 #include <QLibrary>
@@ -8,6 +7,7 @@
 #include <memory>
 
 #include "control/controlobject.h"
+#include "engine/audiolatencycalibrator.h"
 #include "engine/enginemixer.h"
 #include "moc_soundmanager.cpp"
 #include "preferences/configobject.h"
@@ -108,7 +108,7 @@ SoundManager::~SoundManager() {
 
 QList<SoundDevicePointer> SoundManager::getDeviceList(
         const QString& filterAPI, bool bOutputDevices, bool bInputDevices) const {
-    //qDebug() << "SoundManager::getDeviceList";
+    // qDebug() << "SoundManager::getDeviceList";
 
     if (filterAPI == SoundManagerConfig::kAPINone) {
         return QList<SoundDevicePointer>();
@@ -122,25 +122,25 @@ QList<SoundDevicePointer> SoundManager::getDeviceList(
         // Skip devices that don't match the API, don't have input channels when
         // we
 
-... [OUTPUT TRUNCATED - 14297 chars omitted out of 24297 total] ...
+        ...[OUTPUT TRUNCATED - 14297 chars omitted out of 24297 total]...
 
-ng deviceName(tr("a device"));
-    QString detailedError(tr("An unknown error occurred"));
-    SoundDevicePointer pDevice = getErrorDevice();
-    if (pDevice) {
-        deviceName = pDevice->getDisplayName();
-        detailedError = pDevice->getError();
+                ng deviceName(tr("a device"));
+        QString detailedError(tr("An unknown error occurred"));
+        SoundDevicePointer pDevice = getErrorDevice();
+        if (pDevice) {
+            deviceName = pDevice->getDisplayName();
+            detailedError = pDevice->getError();
+        }
+        switch (status) {
+        case SoundDeviceStatus::ErrorDuplicateOutputChannel:
+            error = tr("Two outputs cannot share channels on \"%1\"").arg(deviceName);
+            break;
+        default:
+            error = tr("Error opening \"%1\"").arg(deviceName) + "\n" + detailedError;
+            break;
+        }
+        return error;
     }
-    switch (status) {
-    case SoundDeviceStatus::ErrorDuplicateOutputChannel:
-        error = tr("Two outputs cannot share channels on \"%1\"").arg(deviceName);
-        break;
-    default:
-        error = tr("Error opening \"%1\"").arg(deviceName) + "\n" + detailedError;
-        break;
-    }
-    return error;
-}
 
 SoundManagerConfig SoundManager::getConfig() const {
     return m_config;
@@ -191,9 +191,11 @@ void SoundManager::onDeviceOutputCallback(const SINT iFramesPerBuffer) {
 }
 
 void SoundManager::pushInputBuffers(const QList<AudioInputBuffer>& inputs,
-                                    const SINT iFramesPerBuffer) {
-   for (QList<AudioInputBuffer>::ConstIterator i = inputs.begin(),
-                 e = inputs.end(); i != e; ++i) {
+        const SINT iFramesPerBuffer) {
+    for (QList<AudioInputBuffer>::ConstIterator i = inputs.begin(),
+                                                e = inputs.end();
+            i != e;
+            ++i) {
         const AudioInputBuffer& in = *i;
         CSAMPLE* pInputBuffer = in.getBuffer();
         for (auto it = m_registeredDestinations.constFind(in);
@@ -323,7 +325,7 @@ void SoundManager::unregisterOutput(const AudioOutput& output) {
     }
 }
 
-void SoundManager::startCalibration(AudioLatencyCalibrator* calibrator) {
+void SoundManager::startCalibration(AudioLatencyCalibrator * calibrator) {
     m_pCalibrator = calibrator;
 }
 
