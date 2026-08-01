@@ -11,6 +11,7 @@
 #include "control/pollingcontrolproxy.h"
 #include "engine/sidechain/enginenetworkstream.h"
 #include "preferences/usersettings.h"
+#include "soundio/networkenumerator.h"
 #include "soundio/portaudioenumerator.h"
 #include "soundio/sounddevice.h"
 #include "soundio/sounddeviceenumerator.h"
