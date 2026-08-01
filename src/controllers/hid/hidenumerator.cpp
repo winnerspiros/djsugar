@@ -168,7 +168,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
     QJniObject deviceListObject =
             usbManager.callMethod<QJniObject>("getDeviceList", "()Ljava/util/HashMap;");
-    deviceListObject = deviceListObject.callMethod<jobject>("values", "()Ljava/util/Collection;");
+    deviceListObject = deviceListObject.callMethod<QJniObject>("values", "()Ljava/util/Collection;");
     if (!deviceListObject.isValid()) {
         qWarning() << "HID enumerator: getDeviceList returned null";
         return {};
@@ -193,7 +193,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
         for (jint ifaceIdx = 0;
                 ifaceIdx < usbDevice->callMethod<jint>("getInterfaceCount");
                 ifaceIdx++) {
-            auto usbInterface = usbDevice->callMethod<jobject>("getInterface",
+            auto usbInterface = usbDevice->callMethod<QJniObject>("getInterface",
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
             jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
@@ -282,7 +282,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 uint8_t bulkInEp = 0, bulkOutEp = 0;
                 jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
                 for (jint i = 0; i < epCount; i++) {
-                    auto ep = usbInterface.callMethod<jobject>(
+                    auto ep = usbInterface.callMethod<QJniObject>(
                             "getEndpoint",
                             "(I)Landroid/hardware/usb/UsbEndpoint;",
                             i);
