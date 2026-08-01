@@ -1653,6 +1653,7 @@ add_library(
   src/skin/skincontrols.cpp
   src/skin/skinloader.cpp
   src/soundio/portaudioenumerator.cpp
+  src/soundio/networkenumerator.cpp
   src/soundio/sounddeviceenumerator.cpp
   src/soundio/sounddevice.cpp
   src/soundio/sounddevicenetwork.cpp
