@@ -207,8 +207,9 @@ class SoundManager : public QObject {
 
     QSharedPointer<EngineNetworkStream> m_pNetworkStream;
     QSharedPointer<SoundDeviceNetwork> m_pNetworkDevice;
-    AudioLatencyCalibrator* m_pCalibrator = nullptr;
+    NetworkEnumerator m_networkEnumerator;
 
+    AudioLatencyCalibrator* m_pCalibrator = nullptr;
     /// Cache for one buffer's worth of calibration chirp samples.
     /// Filled by the clock-ref callback, consumed by writeProcess for non-ref
     /// devices. Prevents double-consumption of generateReferenceFrame().
