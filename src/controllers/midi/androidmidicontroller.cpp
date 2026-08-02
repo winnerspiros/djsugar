@@ -6,7 +6,9 @@
 #include <unistd.h>
 
 #include <QJniEnvironment>
-#include <QNativeInterface>
+#if __has_include(<QNativeInterface/QAndroidApplication>)
+#include <QNativeInterface/QAndroidApplication>
+#endif
 
 #include "controllers/defs_controllers.h"
 #include "controllers/midi/midiutils.h"
