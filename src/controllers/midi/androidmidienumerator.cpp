@@ -137,8 +137,6 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 
         // Check USB interfaces for MIDI streaming (class 1, subclass 3)
         int ifaceNum = -1;
-        uint8_t bulkInEp = 0x81;  // default IN endpoint
-        uint8_t bulkOutEp = 0x01; // default OUT endpoint
 
         if (usbDevice.isValid()) {
             jint ifaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
@@ -154,23 +152,6 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                     kLogger.info()
                             << "Found MIDI interface" << ifIdx
                             << "on" << name;
-                    // Try to get actual endpoint addresses
-                    jint epCount = iface.callMethod<jint>("getEndpointCount");
-                    for (jint ep = 0; ep < epCount; ep++) {
-                        auto endpoint =
-                                iface.callMethod<QJniObject>("getEndpoint",
-                                        "(I)Landroid/hardware/usb/UsbEndpoint;",
-                                        ep);
-                        jint epAddr =
-                                endpoint.callMethod<jint>("getEndpointAddress");
-                        jint epDir =
-                                endpoint.callMethod<jint>("getDirection");
-                        if (epDir == 0x80) { // IN
-                            bulkInEp = static_cast<uint8_t>(epAddr);
-                        } else { // OUT
-                            bulkOutEp = static_cast<uint8_t>(epAddr);
-                        }
-                    }
                     break;
                 }
             }
@@ -185,8 +166,6 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
         auto* controller = new AndroidMidiController(name,
                 usbDevice,
                 ifaceNum,
-                bulkInEp,
-                bulkOutEp,
                 vendorId,
                 productId,
                 vendorStr,

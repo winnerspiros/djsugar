@@ -25,8 +25,6 @@ constexpr int kMidiMsgSize = 3;
 AndroidMidiController::AndroidMidiController(const QString& name,
         const QJniObject& usbDevice,
         int interfaceNumber,
-        uint8_t bulkInEp,
-        uint8_t bulkOutEp,
         uint16_t vendorId,
         uint16_t productId,
         const QString& vendorStr,
