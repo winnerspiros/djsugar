@@ -8,141 +8,112 @@ import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
 import android.os.Bundle;
 import android.util.Log;
+
 import java.io.IOException;
 
-/**
- * Bridges Android MIDI API to native Mixxx code.
- * Mixxx calls openDevice() to open a MidiDevice and get input/output ports.
- * Incoming MIDI data is forwarded to native midiReceive().
- */
 public class AndroidMidiHelper {
     private static final String TAG = "MixxxMidi";
-    private static native void midiReceive(int controllerId, byte[] data, int offset, int count, long timestamp);
 
-    private MidiManager m_manager;
-    private MidiDevice m_device;
-    private MidiInputPort m_inputPort;
-    private MidiOutputPort m_outputPort;
-    private int m_controllerId;
+    private static native void midiReceive(int controllerId, byte[] data,
+            int offset, int count, long timestamp);
 
-    public interface OpenCallback {
-        void onDeviceOpened(AndroidMidiHelper helper);
-        void onError(String error);
-    }
+    private MidiDevice mDevice;
+    private MidiInputPort mInputPort;
+    private MidiOutputPort mOutputPort;
+    private int mControllerId;
+    private boolean mOpenDone;
 
-    private final MidiManager.OnDeviceOpenedListener m_openListener =
-        new MidiManager.OnDeviceOpenedListener() {
-            @Override
-            public void onDeviceOpened(MidiDevice device) {
-                if (device == null) {
-                    Log.e(TAG, "Failed to open MIDI device");
-                    return;
-                }
-                m_device = device;
-                Log.i(TAG, "MIDI device opened: " + device.getInfo().getProperties().getString(MidiDeviceInfo.PROPERTY_NAME));
-            }
-        };
-
-    private final MidiReceiver m_receiver = new MidiReceiver() {
+    /** Custom receiver that forwards incoming MIDI data to native code. */
+    private final MidiReceiver mNativeReceiver = new MidiReceiver() {
         @Override
         public void onSend(byte[] data, int offset, int count, long timestamp) {
-            midiReceive(m_controllerId, data, offset, count, timestamp);
+            midiReceive(mControllerId, data, offset, count, timestamp);
         }
     };
 
-    public AndroidMidiHelper() {}
-
-    public static MidiDeviceInfo[] getDevices(MidiManager manager) {
-        return manager.getDevices();
+    // Static helpers used by C++ enumerator
+    public static MidiDeviceInfo[] getDevices(MidiManager mgr) {
+        return mgr.getDevices();
     }
 
     public static String getDeviceName(MidiDeviceInfo info) {
-        Bundle props = info.getProperties();
-        String name = props.getString(MidiDeviceInfo.PROPERTY_NAME);
-        return (name != null) ? name : "Unknown MIDI Device";
+        Bundle p = info.getProperties();
+        String n = p.getString(MidiDeviceInfo.PROPERTY_NAME);
+        return n != null ? n : "Unknown";
     }
 
-    public static String getDeviceManufacturer(MidiDeviceInfo info) {
-        Bundle props = info.getProperties();
-        return props.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER, "");
-    }
-
-    public static String getDeviceProduct(MidiDeviceInfo info) {
-        Bundle props = info.getProperties();
-        return props.getString(MidiDeviceInfo.PROPERTY_PRODUCT, "");
-    }
-
-    public static int getInputPortCount(MidiDeviceInfo info) {
-        return info.getInputPortCount();
-    }
-
-    public static int getOutputPortCount(MidiDeviceInfo info) {
-        return info.getOutputPortCount();
-    }
-
-    public boolean open(MidiManager manager, MidiDeviceInfo deviceInfo, int controllerId) {
-        m_manager = manager;
-        m_controllerId = controllerId;
-        manager.openDevice(deviceInfo, new MidiManager.OnDeviceOpenedListener() {
+    // Instance methods for device/port management
+    public boolean open(MidiManager mgr, MidiDeviceInfo info, int controllerId) {
+        mControllerId = controllerId;
+        mOpenDone = false;
+        mgr.openDevice(info, new MidiManager.OnDeviceOpenedListener() {
             @Override
             public void onDeviceOpened(MidiDevice device) {
-                m_device = device;
-                Log.i(TAG, "MIDI device opened: " + (device != null ? device.getInfo().getProperties().getString(MidiDeviceInfo.PROPERTY_NAME) : "null"));
+                mDevice = device;
+                mOpenDone = true;
             }
-        }, null); // handler must be null or a Handler for the callback thread
-        return true;
+        }, null);
+        long deadline = System.currentTimeMillis() + 3000;
+        while (!mOpenDone && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+        return mDevice != null;
     }
 
-    public boolean openPorts(int inputPortIndex, int outputPortIndex) {
-        if (m_device == null) {
-            Log.e(TAG, "Device not open, cannot open ports");
+    public boolean openPorts(int inIdx, int outIdx) {
+        if (mDevice == null) {
             return false;
         }
+        MidiDeviceInfo info = mDevice.getInfo();
         try {
-            if (inputPortIndex >= 0 && inputPortIndex < m_device.getInfo().getInputPortCount()) {
-                m_inputPort = m_device.openInputPort(inputPortIndex);
-                if (m_inputPort != null) {
-                    m_inputPort.connect(m_receiver);
-                    Log.i(TAG, "Input port " + inputPortIndex + " opened");
-                }
+            if (inIdx >= 0 && inIdx < info.getInputPortCount()) {
+                mInputPort = mDevice.openInputPort(inIdx);
             }
-            if (outputPortIndex >= 0 && outputPortIndex < m_device.getInfo().getOutputPortCount()) {
-                m_outputPort = m_device.openOutputPort(outputPortIndex);
-                Log.i(TAG, "Output port " + outputPortIndex + " opened");
+            if (outIdx >= 0 && outIdx < info.getOutputPortCount()) {
+                mOutputPort = mDevice.openOutputPort(outIdx);
+            }
+            // Route output port data through our native receiver
+            if (mOutputPort != null) {
+                mOutputPort.connect(mNativeReceiver);
             }
             return true;
         } catch (IOException e) {
-            Log.e(TAG, "Failed to open MIDI ports: " + e.getMessage());
+            Log.e(TAG, "openPorts failed: " + e.getMessage());
             return false;
         }
     }
 
     public void send(byte[] data, int offset, int count) {
-        if (m_outputPort == null)
+        if (mInputPort == null) {
             return;
+        }
         try {
-            m_outputPort.write(data, offset, count);
+            mInputPort.send(data, offset, count, 0);
         } catch (IOException e) {
-            Log.e(TAG, "MIDI send failed: " + e.getMessage());
+            Log.e(TAG, "send failed: " + e.getMessage());
         }
     }
 
     public void close() {
         try {
-            if (m_inputPort != null) {
-                m_inputPort.close();
-                m_inputPort = null;
+            if (mInputPort != null) {
+                mInputPort.close();
+                mInputPort = null;
             }
-            if (m_outputPort != null) {
-                m_outputPort.close();
-                m_outputPort = null;
+            if (mOutputPort != null) {
+                mOutputPort.close();
+                mOutputPort = null;
             }
-            if (m_device != null) {
-                m_device.close();
-                m_device = null;
+            if (mDevice != null) {
+                mDevice.close();
+                mDevice = null;
             }
         } catch (IOException e) {
-            Log.e(TAG, "Error closing MIDI: " + e.getMessage());
+            Log.e(TAG, "close failed: " + e.getMessage());
         }
     }
 }
