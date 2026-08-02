@@ -11,6 +11,9 @@ class AndroidMidiEnumerator : public MidiEnumerator {
     ~AndroidMidiEnumerator() override;
 
     QList<Controller*> queryDevices() override;
+
+  private:
+    QList<Controller*> m_devices;
 };
 
 #endif // __ANDROID__
