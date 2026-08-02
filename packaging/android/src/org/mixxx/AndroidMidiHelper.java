@@ -77,15 +77,14 @@ public class AndroidMidiHelper {
             if (outIdx >= 0 && outIdx < info.getOutputPortCount()) {
                 mOutputPort = mDevice.openOutputPort(outIdx);
             }
-            // Route output port data through our native receiver
-            if (mOutputPort != null) {
-                mOutputPort.connect(mNativeReceiver);
-            }
-            return true;
         } catch (IOException e) {
             Log.e(TAG, "openPorts failed: " + e.getMessage());
             return false;
         }
+        if (mOutputPort != null) {
+            mOutputPort.connect(mNativeReceiver);
+        }
+        return true;
     }
 
     public void send(byte[] data, int offset, int count) {
