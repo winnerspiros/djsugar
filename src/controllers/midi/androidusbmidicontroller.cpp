@@ -50,6 +50,12 @@ void AndroidUsbMidiController::MidiIoThread::setAndroidDevice(
 }
 
 void AndroidUsbMidiController::MidiIoThread::run() {
+    kLogger.info() << "MIDI IO thread starting: FD=" << m_usbFd
+                   << " iface=" << m_interfaceNumber
+                   << " bulkIn=0x" << Qt::hex << m_bulkInEpAddress
+                   << " bulkOut=0x" << m_bulkOutEpAddress
+                   << " VID=0x" << m_vendorId << " PID=0x" << m_productId;
+
     if (m_usbFd < 0) {
         kLogger.warning() << "MIDI IO thread: no valid file descriptor";
         return;
@@ -135,6 +141,7 @@ void AndroidUsbMidiController::MidiIoThread::run() {
         }
 
         unsigned char buffer[kBufferSize];
+        bool firstPacket = true;
 
         while (!m_stopRequested.loadRelaxed()) {
             int transferred = 0;
@@ -146,6 +153,13 @@ void AndroidUsbMidiController::MidiIoThread::run() {
                     kPollTimeoutMs);
 
             if (rc == LIBUSB_SUCCESS && transferred > 0) {
+                if (firstPacket) {
+                    QByteArray preview(reinterpret_cast<const char*>(buffer),
+                            qMin(transferred, 32));
+                    kLogger.info() << "MIDI IO thread: FIRST PACKET received,"
+                                   << transferred << "bytes:" << preview.toHex();
+                    firstPacket = false;
+                }
                 QByteArray midiData(
                         reinterpret_cast<const char*>(buffer), transferred);
                 kLogger.debug()
@@ -345,15 +359,15 @@ void AndroidUsbMidiController::setAndroidDevice(
 }
 
 bool AndroidUsbMidiController::isPolling() const {
-    return false;
+    return m_pIoThread && m_pIoThread->isRunning();
 }
 
 int AndroidUsbMidiController::open(const QString& resourcePath) {
     Q_UNUSED(resourcePath);
-    kLogger.info() << "Opening Android USB MIDI device" << getName();
+    kLogger.info() << "open() called — starting IO thread for" << getName();
 
     if (!m_pIoThread) {
-        kLogger.warning() << "No IO thread — setAndroidDevice not called";
+        kLogger.warning() << "open(): no IO thread — setAndroidDevice not called";
         return -1;
     }
 
