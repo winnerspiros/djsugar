@@ -38,7 +38,8 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 
     QJniObject MIDI_SERVICE =
             QJniObject::getStaticObjectField("android/content/Context",
-                    "MIDI_SERVICE", "Ljava/lang/String;");
+                    "MIDI_SERVICE",
+                    "Ljava/lang/String;");
     auto midiManager = context.callObjectMethod("getSystemService",
             "(Ljava/lang/String;)Ljava/lang/Object;",
             MIDI_SERVICE.object());
@@ -143,7 +144,8 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             jint ifaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
             for (jint ifIdx = 0; ifIdx < ifaceCount; ifIdx++) {
                 auto iface = usbDevice.callMethod<QJniObject>("getInterface",
-                        "(I)Landroid/hardware/usb/UsbInterface;", ifIdx);
+                        "(I)Landroid/hardware/usb/UsbInterface;",
+                        ifIdx);
                 jint ifaceClass = iface.callMethod<jint>("getInterfaceClass");
                 jint ifaceSubclass =
                         iface.callMethod<jint>("getInterfaceSubclass");
@@ -181,10 +183,7 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
         }
 
         auto* controller = new AndroidMidiController(
-                name, usbDevice, ifaceNum,
-                bulkInEp, bulkOutEp,
-                vendorId, productId,
-                vendorStr, productStr);
+                name, usbDevice, ifaceNum, bulkInEp, bulkOutEp, vendorId, productId, vendorStr, productStr);
         m_devices.push_back(controller);
     }
 

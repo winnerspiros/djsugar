@@ -29,15 +29,21 @@ class AndroidMidiController : public MidiController {
     PhysicalTransportProtocol getPhysicalTransportProtocol() const override {
         return PhysicalTransportProtocol::USB;
     }
-    QString getVendorString() const override { return m_vendor; }
-    QString getProductString() const override { return m_product; }
+    QString getVendorString() const override {
+        return m_vendor;
+    }
+    QString getProductString() const override {
+        return m_product;
+    }
     std::optional<uint16_t> getVendorId() const override {
         return m_vendorId ? std::optional<uint16_t>(m_vendorId) : std::nullopt;
     }
     std::optional<uint16_t> getProductId() const override {
         return m_productId ? std::optional<uint16_t>(m_productId) : std::nullopt;
     }
-    QString getSerialNumber() const override { return {}; }
+    QString getSerialNumber() const override {
+        return {};
+    }
     std::optional<uint8_t> getUsbInterfaceNumber() const override {
         return std::nullopt;
     }
