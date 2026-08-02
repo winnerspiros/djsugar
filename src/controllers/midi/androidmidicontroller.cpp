@@ -6,7 +6,6 @@
 #include <QtJniTypes>
 #include <android/log.h>
 
-#include "controllers/defs_controllers.h"
 #include "moc_androidmidicontroller.cpp"
 
 namespace {
@@ -21,7 +20,6 @@ AndroidMidiController::AndroidMidiController(const QString& name,
           m_deviceInfo(midiDeviceInfo),
           m_inputPortIndex(inputPortIndex),
           m_outputPortIndex(outputPortIndex) {
-    // Extract device properties from MidiDeviceInfo
     QJniObject props = midiDeviceInfo.callObjectMethod(
             "getProperties", "()Landroid/os/Bundle;");
     if (props.isValid()) {
@@ -41,7 +39,6 @@ AndroidMidiController::AndroidMidiController(const QString& name,
                         .object());
         m_vendor = mfrStr.isValid() ? mfrStr.toString() : QString();
 
-        // Try to get USB VID/PID from the USB device property
         QJniObject usbDev = props.callObjectMethod(
                 "getParcelable",
                 "(Ljava/lang/String;)Landroid/os/Parcelable;",
@@ -67,7 +64,6 @@ int AndroidMidiController::open(const QString& resourcePath) {
         return 0;
     }
 
-    // Get MidiManager from Android context
     QJniObject context = QNativeInterface::QAndroidApplication::context();
     QJniObject MIDI_SERVICE =
             QJniObject::getStaticObjectField(
@@ -80,51 +76,44 @@ int AndroidMidiController::open(const QString& resourcePath) {
             MIDI_SERVICE.object());
 
     if (!midiManager.isValid()) {
-        qCWarning(kLogger) << "Cannot get MidiManager";
+        kLogger.warning() << "Cannot get MidiManager";
         return 1;
     }
 
-    // Open the device
     midiManager.callMethod<void>(
             "openDevice",
             "(Landroid/media/midi/MidiDeviceInfo;"
             "Landroid/media/midi/MidiManager$OnDeviceOpenedListener;"
             "Landroid/os/Handler;)V",
             m_deviceInfo.object(),
-            nullptr,  // listener — we'll use a Java helper instead
-            nullptr); // handler
+            nullptr,
+            nullptr);
 
-    // Use Java helper for port management
     QJniObject helper("org/mixxx/AndroidMidiHelper", "()V");
     if (!helper.isValid()) {
-        qCWarning(kLogger) << "Cannot create AndroidMidiHelper";
+        kLogger.warning() << "Cannot create AndroidMidiHelper";
         return 1;
     }
 
-    // Open device via helper (Java handles the async callback)
     helper.callMethod<jboolean>(
             "open",
             "(Landroid/media/midi/MidiManager;"
             "Landroid/media/midi/MidiDeviceInfo;I)Z",
             midiManager.object(),
             m_deviceInfo.object(),
-            static_cast<jint>(0)); // controller ID placeholder
+            static_cast<jint>(0));
 
-    // Give Android time to open the device asynchronously
     for (int i = 0; i < 20; i++) {
         QCoreApplication::processEvents();
         QThread::msleep(50);
     }
 
-    // Open ports
     helper.callMethod<jboolean>(
             "openPorts", "(II)Z",
             static_cast<jint>(m_inputPortIndex),
             static_cast<jint>(m_outputPortIndex));
 
-    // Start I/O thread for reading
-    m_pIoThread = new IoThread(this, m_deviceInfo,
-            m_inputPortIndex, m_outputPortIndex);
+    m_pIoThread = new IoThread(this);
     m_pIoThread->start();
 
     return 0;
@@ -141,7 +130,6 @@ int AndroidMidiController::close() {
 }
 
 bool AndroidMidiController::poll() {
-    // I/O thread handles receiving; nothing to do here
     return m_pIoThread && m_pIoThread->isRunning();
 }
 
@@ -169,13 +157,8 @@ bool AndroidMidiController::sendBytes(const QByteArray& data) {
 // ── IoThread ────────────────────────────────────────────────────
 
 AndroidMidiController::IoThread::IoThread(
-        AndroidMidiController* parent,
-        const QJniObject& midiDevice,
-        int inputPortIndex,
-        int outputPortIndex)
-        : m_parent(parent),
-          m_inputPortIndex(inputPortIndex) {
-    Q_UNUSED(midiDevice);
+        AndroidMidiController* parent)
+        : m_parent(parent) {
 }
 
 void AndroidMidiController::IoThread::stop() {
@@ -192,28 +175,31 @@ void AndroidMidiController::IoThread::run() {
     __android_log_print(ANDROID_LOG_INFO, "mixxx",
             "AndroidMidiController I/O thread started");
 
-    // The Java callback (midiReceive) handles incoming data.
-    // This thread just processes sends and keeps alive.
+    QJniEnvironment env;
     while (!m_stop.loadRelaxed()) {
-        // Process pending sends
         {
             QMutexLocker lock(&m_sendMutex);
             if (m_hasPending && m_outputPort.isValid()) {
-                QJniObject data = QJniObject::fromLocalBuffer(
-                        m_pendingSend.constData(),
+                jbyteArray jdata = env->NewByteArray(
                         m_pendingSend.size());
-                m_outputPort.callMethod<void>(
-                        "write", "([BII)V",
-                        data.object(),
-                        static_cast<jint>(0),
-                        static_cast<jint>(m_pendingSend.size()));
+                if (jdata) {
+                    env->SetByteArrayRegion(jdata, 0,
+                            m_pendingSend.size(),
+                            reinterpret_cast<const jbyte*>(
+                                    m_pendingSend.constData()));
+                    m_outputPort.callMethod<void>(
+                            "write", "([BII)V",
+                            jdata,
+                            static_cast<jint>(0),
+                            static_cast<jint>(m_pendingSend.size()));
+                    env->DeleteLocalRef(jdata);
+                }
                 m_hasPending = false;
             }
         }
         msleep(5);
     }
 
-    // Close ports
     if (m_inputPort.isValid()) {
         m_inputPort.callMethod<void>("close");
     }

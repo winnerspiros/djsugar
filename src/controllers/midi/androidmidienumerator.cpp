@@ -24,7 +24,7 @@ AndroidMidiEnumerator::~AndroidMidiEnumerator() {
 }
 
 QList<Controller*> AndroidMidiEnumerator::queryDevices() {
-    qCInfo(kLogger) << "Scanning Android MIDI devices";
+    kLogger.info() << "Scanning Android MIDI devices";
 
     while (!m_devices.isEmpty()) {
         delete m_devices.takeLast();
@@ -32,7 +32,7 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 
     QJniObject context = QNativeInterface::QAndroidApplication::context();
     if (!context.isValid()) {
-        qCWarning(kLogger) << "Android context is null";
+        kLogger.warning() << "Android context is null";
         return {};
     }
 
@@ -47,7 +47,7 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             MIDI_SERVICE.object());
 
     if (!midiManager.isValid()) {
-        qCWarning(kLogger) << "Cannot get MidiManager";
+        kLogger.warning() << "Cannot get MidiManager";
         return {};
     }
 
@@ -55,14 +55,14 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             "getDevices", "()[Landroid/media/midi/MidiDeviceInfo;");
 
     if (!deviceInfoArray.isValid()) {
-        qCInfo(kLogger) << "No Android MIDI devices found";
+        kLogger.info() << "No Android MIDI devices found";
         return {};
     }
 
     QJniEnvironment env;
     jsize count = env->GetArrayLength(
             static_cast<jobjectArray>(deviceInfoArray.object()));
-    qCInfo(kLogger) << "Found" << count << "Android MIDI devices";
+    kLogger.info() << "Found" << count << "Android MIDI devices";
 
     for (jsize i = 0; i < count; i++) {
         QJniObject deviceInfo = env->GetObjectArrayElement(
@@ -72,13 +72,9 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             continue;
         }
 
-        // Get input/output port counts
-        jint inputPorts = deviceInfo.callMethod<jint>(
-                "getInputPortCount");
-        jint outputPorts = deviceInfo.callMethod<jint>(
-                "getOutputPortCount");
+        jint inputPorts = deviceInfo.callMethod<jint>("getInputPortCount");
+        jint outputPorts = deviceInfo.callMethod<jint>("getOutputPortCount");
 
-        // Get device name
         QJniObject props = deviceInfo.callObjectMethod(
                 "getProperties", "()Landroid/os/Bundle;");
         QString name;
@@ -97,11 +93,10 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             name = QStringLiteral("Android MIDI Device %1").arg(i);
         }
 
-        qCInfo(kLogger) << "MIDI device:" << name
-                         << "inputs:" << inputPorts
-                         << "outputs:" << outputPorts;
+        kLogger.info() << "MIDI device:" << name
+                       << "inputs:" << inputPorts
+                       << "outputs:" << outputPorts;
 
-        // Use the first available input and output ports
         int inputIdx = inputPorts > 0 ? 0 : -1;
         int outputIdx = outputPorts > 0 ? 0 : -1;
 

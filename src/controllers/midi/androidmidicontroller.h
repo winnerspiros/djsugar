@@ -4,13 +4,12 @@
 
 #include <QAtomicInt>
 #include <QJniObject>
+#include <QMutex>
 #include <QString>
 #include <QThread>
 
 #include "controllers/midi/midicontroller.h"
 
-/// Android MIDI controller using android.media.midi API.
-/// Opens MidiInputPort/MidiOutputPort and reads via polling thread.
 class AndroidMidiController : public MidiController {
     Q_OBJECT
   public:
@@ -46,10 +45,7 @@ class AndroidMidiController : public MidiController {
 
     class IoThread : public QThread {
       public:
-        IoThread(AndroidMidiController* parent,
-                const QJniObject& midiDevice,
-                int inputPortIndex,
-                int outputPortIndex);
+        explicit IoThread(AndroidMidiController* parent);
         void stop();
         void send(const QByteArray& data);
 
@@ -58,10 +54,8 @@ class AndroidMidiController : public MidiController {
 
       private:
         AndroidMidiController* m_parent;
-        QJniObject m_midiDevice;
-        QJniObject m_inputPort;
         QJniObject m_outputPort;
-        int m_inputPortIndex;
+        QJniObject m_inputPort;
         QAtomicInt m_stop{0};
         QMutex m_sendMutex;
         QByteArray m_pendingSend;
