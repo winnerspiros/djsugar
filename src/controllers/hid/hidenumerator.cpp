@@ -300,6 +300,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 // for libusb_bulk_transfer, not JNI endpoint objects)
                 uint8_t bulkInEp = 0, bulkOutEp = 0;
                 jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
+                qInfo() << "HID enumerator: MIDI iface" << ifaceId
+                        << "has" << epCount << "endpoints";
                 for (jint i = 0; i < epCount; i++) {
                     auto ep = usbInterface.callMethod<QJniObject>(
                             "getEndpoint",
@@ -307,7 +309,13 @@ QList<Controller*> HidEnumerator::queryDevices() {
                             i);
                     jint epAddr = ep.callMethod<jint>("getAddress");
                     jint epType = ep.callMethod<jint>("getType");
-                    // USB_ENDPOINT_XFER_BULK = 2
+                    jint epMaxPkt = ep.callMethod<jint>("getMaxPacketSize");
+                    jint epDir = ep.callMethod<jint>("getDirection");
+                    qInfo() << "HID enumerator:   ep" << i
+                            << "addr=0x" << Qt::hex << epAddr
+                            << "type=" << Qt::dec << epType
+                            << "dir=" << epDir
+                            << "maxPkt=" << epMaxPkt;
                     if (epType != 2)
                         continue;
                     if (epAddr & 0x80) {

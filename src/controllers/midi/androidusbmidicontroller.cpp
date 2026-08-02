@@ -138,6 +138,9 @@ void AndroidUsbMidiController::MidiIoThread::run() {
             }
             kLogger.info() << "Sent Pioneer init SysEx to iface"
                            << m_interfaceNumber;
+
+            // Give the controller time to process init before reading
+            usleep(100000);
         }
 
         unsigned char buffer[kBufferSize];
