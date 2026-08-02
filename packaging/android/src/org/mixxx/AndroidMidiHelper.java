@@ -8,14 +8,13 @@ import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
 import android.os.Bundle;
 import android.util.Log;
-
 import java.io.IOException;
 
 public class AndroidMidiHelper {
     private static final String TAG = "MixxxMidi";
 
     private static native void midiReceive(int controllerId, byte[] data,
-            int offset, int count, long timestamp);
+        int offset, int count, long timestamp);
 
     private MidiDevice mDevice;
     private MidiInputPort mInputPort;
@@ -23,7 +22,9 @@ public class AndroidMidiHelper {
     private int mControllerId;
     private boolean mOpenDone;
 
-    /** Custom receiver that forwards incoming MIDI data to native code. */
+    /**
+     * Custom receiver that forwards incoming MIDI data to native code.
+     */
     private final MidiReceiver mNativeReceiver = new MidiReceiver() {
         @Override
         public void onSend(byte[] data, int offset, int count, long timestamp) {
