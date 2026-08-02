@@ -199,7 +199,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
             continue;
         }
         QString productName =
-                usbDevice->callMethod<QJniObject>("getProductName")
+                usbDevice->callObjectMethod("getProductName",
+                        "()Ljava/lang/String;")
                         .toString();
         jint vid = usbDevice->callMethod<jint>("getVendorId");
         jint pid = usbDevice->callMethod<jint>("getProductId");
@@ -248,7 +249,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 // Use direct bulkTransfer instead of MidiManager
                 qInfo() << "Found USB MIDI interface" << ifaceIdx
                         << "on device"
-                        << usbDevice->callMethod<QJniObject>("getProductName")
+                        << usbDevice->callObjectMethod("getProductName",
+                                   "()Ljava/lang/String;")
                                    .toString();
 
                 // Open device and claim interface for raw MIDI access
@@ -321,10 +323,12 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 }
 
                 QString productName =
-                        usbDevice->callMethod<QJniObject>("getProductName")
+                        usbDevice->callObjectMethod("getProductName",
+                                "()Ljava/lang/String;")
                                 .toString();
                 QString manufacturerName =
-                        usbDevice->callMethod<QJniObject>("getManufacturerName")
+                        usbDevice->callObjectMethod("getManufacturerName",
+                                "()Ljava/lang/String;")
                                 .toString();
                 jint vendorId = usbDevice->callMethod<jint>("getVendorId");
                 jint productId = usbDevice->callMethod<jint>("getProductId");
@@ -351,7 +355,8 @@ QList<Controller*> HidEnumerator::queryDevices() {
             } else {
                 qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
                         << ifaceClass << "on device"
-                        << usbDevice->callMethod<QJniObject>("getProductName")
+                        << usbDevice->callObjectMethod("getProductName",
+                                   "()Ljava/lang/String;")
                                    .toString();
             }
         }
