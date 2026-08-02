@@ -5,6 +5,7 @@
 #include <qjnitypes.h>
 
 #include <QtJniTypes>
+#include <atomic>
 #include <cstddef>
 
 namespace mixxx {
@@ -14,6 +15,7 @@ std::condition_variable s_grantingWaitCond = {};
 std::vector<std::pair<QJniObject, bool>> s_grantingResult = {};
 QJniObject s_intent = {};
 QJniObject s_usbManager = {};
+std::atomic<bool> s_usbPermissionGranted{false};
 
 const QJniObject& getIntent() {
     __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "about to get intent");
