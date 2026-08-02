@@ -115,9 +115,7 @@ void AndroidUsbMidiController::MidiIoThread::run() {
         // Required for the controller to start sending MIDI data on the
         // streaming interface. Without this, no input events arrive.
         if (m_vendorId == 0x2b73 || m_vendorId == 0x08e4) {
-            static const unsigned char kPioneerInitSysex[] = {
-                    0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xF7};
-            // Wrap in 4 USB MIDI SysEx packets
+            // Wrap Pioneer init SysEx in 4 USB MIDI SysEx packets
             struct {
                 unsigned char cin;
                 unsigned char d[3];
