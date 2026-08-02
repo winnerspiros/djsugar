@@ -12,6 +12,7 @@
 
 #include "controllers/defs_controllers.h"
 #include "controllers/midi/midiutils.h"
+#include "controllers/android.h"
 #include "moc_androidmidicontroller.cpp"
 
 namespace {
@@ -33,8 +34,6 @@ AndroidMidiController::AndroidMidiController(const QString& name,
         : MidiController(name),
           m_usbDevice(usbDevice),
           m_interfaceNumber(interfaceNumber),
-          m_bulkInEp(bulkInEp),
-          m_bulkOutEp(bulkOutEp),
           m_vendorId(vendorId),
           m_productId(productId),
           m_vendor(vendorStr),
@@ -123,8 +122,6 @@ int AndroidMidiController::open(const QString& resourcePath) {
     m_pIoThread = new IoThread(m_usbDevice,
             usbFd,
             m_interfaceNumber,
-            m_bulkInEp,
-            m_bulkOutEp,
             this);
     m_pIoThread->start();
 
@@ -174,14 +171,10 @@ AndroidMidiController::IoThread::IoThread(
         const QJniObject& usbDevice,
         jint usbFd,
         int interfaceNumber,
-        uint8_t bulkInEp,
-        uint8_t bulkOutEp,
         AndroidMidiController* controller)
         : m_usbDevice(usbDevice),
           m_usbFd(usbFd),
           m_interfaceNumber(interfaceNumber),
-          m_bulkInEp(bulkInEp),
-          m_bulkOutEp(bulkOutEp),
           m_controller(controller) {
 }
 
@@ -210,9 +203,6 @@ void AndroidMidiController::IoThread::processUsbMidiPacket(
         }
 
         // Standard MIDI messages in USB: cin 0x2—0xF map to MIDI status bytes
-        // For 3-byte messages (note on/off, CC, etc.), cin matches the high nibble
-        unsigned char status = (cin << 4) | 0x00;
-        // Reconstruct actual status from cin + first byte
         // cin 0x8 = Note Off, 0x9 = Note On, 0xA = Poly Pressure,
         // 0xB = CC, 0xC = Program Change, 0xD = Channel Pressure,
         // 0xE = Pitch Bend, 0xF = System
@@ -249,7 +239,7 @@ void AndroidMidiController::IoThread::run() {
             m_usbFd);
 
     QJniEnvironment env;
-    auto context = QNativeInterface::QAndroidApplication::context();
+    QJniObject context = QNativeInterface::QAndroidApplication::context();
     auto usbManager = context.callObjectMethod("getSystemService",
             "(Ljava/lang/String;)Ljava/lang/Object;",
             QJniObject::getStaticObjectField("android/content/Context",

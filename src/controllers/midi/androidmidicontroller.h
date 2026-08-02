@@ -65,8 +65,6 @@ class AndroidMidiController : public MidiController {
         IoThread(const QJniObject& usbDevice,
                 jint usbFd,
                 int interfaceNumber,
-                uint8_t bulkInEp,
-                uint8_t bulkOutEp,
                 AndroidMidiController* controller);
         void stop();
         void send(const QByteArray& data);
@@ -80,8 +78,6 @@ class AndroidMidiController : public MidiController {
         QJniObject m_usbDevice;
         jint m_usbFd;
         int m_interfaceNumber;
-        uint8_t m_bulkInEp;
-        uint8_t m_bulkOutEp;
         AndroidMidiController* m_controller;
         QAtomicInt m_stop{0};
         QMutex m_sendMutex;
@@ -92,8 +88,6 @@ class AndroidMidiController : public MidiController {
     IoThread* m_pIoThread{nullptr};
     QJniObject m_usbDevice;
     int m_interfaceNumber{0};
-    uint8_t m_bulkInEp{0};
-    uint8_t m_bulkOutEp{0};
     uint16_t m_vendorId{0};
     uint16_t m_productId{0};
     QString m_vendor;
