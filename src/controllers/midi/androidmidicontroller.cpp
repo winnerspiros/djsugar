@@ -2,9 +2,10 @@
 
 #include "controllers/midi/androidmidicontroller.h"
 
+#include <android/log.h>
+
 #include <QCoreApplication>
 #include <QtJniTypes>
-#include <android/log.h>
 
 #include "moc_androidmidicontroller.cpp"
 
@@ -109,9 +110,7 @@ int AndroidMidiController::open(const QString& resourcePath) {
     }
 
     helper.callMethod<jboolean>(
-            "openPorts", "(II)Z",
-            static_cast<jint>(m_inputPortIndex),
-            static_cast<jint>(m_outputPortIndex));
+            "openPorts", "(II)Z", static_cast<jint>(m_inputPortIndex), static_cast<jint>(m_outputPortIndex));
 
     m_pIoThread = new IoThread(this);
     m_pIoThread->start();
@@ -172,8 +171,7 @@ void AndroidMidiController::IoThread::send(const QByteArray& data) {
 }
 
 void AndroidMidiController::IoThread::run() {
-    __android_log_print(ANDROID_LOG_INFO, "mixxx",
-            "AndroidMidiController I/O thread started");
+    __android_log_print(ANDROID_LOG_INFO, "mixxx", "AndroidMidiController I/O thread started");
 
     QJniEnvironment env;
     while (!m_stop.loadRelaxed()) {
@@ -183,15 +181,9 @@ void AndroidMidiController::IoThread::run() {
                 jbyteArray jdata = env->NewByteArray(
                         m_pendingSend.size());
                 if (jdata) {
-                    env->SetByteArrayRegion(jdata, 0,
-                            m_pendingSend.size(),
-                            reinterpret_cast<const jbyte*>(
-                                    m_pendingSend.constData()));
+                    env->SetByteArrayRegion(jdata, 0, m_pendingSend.size(), reinterpret_cast<const jbyte*>(m_pendingSend.constData()));
                     m_outputPort.callMethod<void>(
-                            "write", "([BII)V",
-                            jdata,
-                            static_cast<jint>(0),
-                            static_cast<jint>(m_pendingSend.size()));
+                            "write", "([BII)V", jdata, static_cast<jint>(0), static_cast<jint>(m_pendingSend.size()));
                     env->DeleteLocalRef(jdata);
                 }
                 m_hasPending = false;
@@ -206,8 +198,7 @@ void AndroidMidiController::IoThread::run() {
     if (m_outputPort.isValid()) {
         m_outputPort.callMethod<void>("close");
     }
-    __android_log_print(ANDROID_LOG_INFO, "mixxx",
-            "AndroidMidiController I/O thread stopped");
+    __android_log_print(ANDROID_LOG_INFO, "mixxx", "AndroidMidiController I/O thread stopped");
 }
 
 #endif // __ANDROID__

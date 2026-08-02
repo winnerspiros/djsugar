@@ -5675,7 +5675,8 @@ if(BULK)
       src/controllers/bulk/bulkenumerator.cpp
   )
   if(ANDROID)
-    target_sources(mixxx-lib
+    target_sources(
+      mixxx-lib
       PRIVATE
         src/controllers/midi/androidmidicontroller.cpp
         src/controllers/midi/androidmidienumerator.cpp

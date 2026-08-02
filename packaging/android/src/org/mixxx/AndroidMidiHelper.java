@@ -87,8 +87,7 @@ public class AndroidMidiHelper {
             @Override
             public void onDeviceOpened(MidiDevice device) {
                 m_device = device;
-                Log.i(TAG, "MIDI device opened: " + 
-                    (device != null ? device.getInfo().getProperties().getString(MidiDeviceInfo.PROPERTY_NAME) : "null"));
+                Log.i(TAG, "MIDI device opened: " + (device != null ? device.getInfo().getProperties().getString(MidiDeviceInfo.PROPERTY_NAME) : "null"));
             }
         }, null); // handler must be null or a Handler for the callback thread
         return true;
@@ -119,7 +118,8 @@ public class AndroidMidiHelper {
     }
 
     public void send(byte[] data, int offset, int count) {
-        if (m_outputPort == null) return;
+        if (m_outputPort == null)
+            return;
         try {
             m_outputPort.write(data, offset, count);
         } catch (IOException e) {
@@ -129,9 +129,18 @@ public class AndroidMidiHelper {
 
     public void close() {
         try {
-            if (m_inputPort != null) { m_inputPort.close(); m_inputPort = null; }
-            if (m_outputPort != null) { m_outputPort.close(); m_outputPort = null; }
-            if (m_device != null) { m_device.close(); m_device = null; }
+            if (m_inputPort != null) {
+                m_inputPort.close();
+                m_inputPort = null;
+            }
+            if (m_outputPort != null) {
+                m_outputPort.close();
+                m_outputPort = null;
+            }
+            if (m_device != null) {
+                m_device.close();
+                m_device = null;
+            }
         } catch (IOException e) {
             Log.e(TAG, "Error closing MIDI: " + e.getMessage());
         }

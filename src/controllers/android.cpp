@@ -122,8 +122,7 @@ void usbDeviceAccessResult(JNIEnv*, jobject, jobject device, jboolean granted) {
 Q_DECLARE_JNI_NATIVE_METHOD(usbDeviceAccessResult)
 
 // Native callback from AndroidMidiHelper.midiReceive()
-static void midiReceive(JNIEnv*, jobject, jint controllerId,
-        jbyteArray data, jint offset, jint count, jlong timestamp) {
+static void midiReceive(JNIEnv*, jobject, jint controllerId, jbyteArray data, jint offset, jint count, jlong timestamp) {
     // Forward to the active AndroidMidiController
     // TODO: implement controller lookup by ID
     Q_UNUSED(controllerId);
