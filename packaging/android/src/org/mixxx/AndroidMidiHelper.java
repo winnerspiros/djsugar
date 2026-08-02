@@ -70,16 +70,11 @@ public class AndroidMidiHelper {
             return false;
         }
         MidiDeviceInfo info = mDevice.getInfo();
-        try {
-            if (inIdx >= 0 && inIdx < info.getInputPortCount()) {
-                mInputPort = mDevice.openInputPort(inIdx);
-            }
-            if (outIdx >= 0 && outIdx < info.getOutputPortCount()) {
-                mOutputPort = mDevice.openOutputPort(outIdx);
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "openPorts failed: " + e.getMessage());
-            return false;
+        if (inIdx >= 0 && inIdx < info.getInputPortCount()) {
+            mInputPort = mDevice.openInputPort(inIdx);
+        }
+        if (outIdx >= 0 && outIdx < info.getOutputPortCount()) {
+            mOutputPort = mDevice.openOutputPort(outIdx);
         }
         if (mOutputPort != null) {
             mOutputPort.connect(mNativeReceiver);
