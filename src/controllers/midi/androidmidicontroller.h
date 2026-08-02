@@ -3,6 +3,7 @@
 #ifdef __ANDROID__
 
 #include <QAtomicInt>
+#include <QByteArray>
 #include <QJniObject>
 #include <QMutex>
 #include <QString>
@@ -10,33 +11,33 @@
 
 #include "controllers/midi/midicontroller.h"
 
+/// Android MIDI controller — enumerates via MidiManager, I/O via USB bulk.
 class AndroidMidiController : public MidiController {
     Q_OBJECT
   public:
     AndroidMidiController(const QString& name,
-            const QJniObject& midiDeviceInfo,
-            int inputPortIndex,
-            int outputPortIndex);
+            const QJniObject& usbDevice,
+            int interfaceNumber,
+            uint8_t bulkInEp,
+            uint8_t bulkOutEp,
+            uint16_t vendorId,
+            uint16_t productId,
+            const QString& vendorStr,
+            const QString& productStr);
     ~AndroidMidiController() override;
 
     PhysicalTransportProtocol getPhysicalTransportProtocol() const override {
         return PhysicalTransportProtocol::USB;
     }
-    QString getVendorString() const override {
-        return m_vendor;
-    }
-    QString getProductString() const override {
-        return m_product;
-    }
+    QString getVendorString() const override { return m_vendor; }
+    QString getProductString() const override { return m_product; }
     std::optional<uint16_t> getVendorId() const override {
         return m_vendorId ? std::optional<uint16_t>(m_vendorId) : std::nullopt;
     }
     std::optional<uint16_t> getProductId() const override {
         return m_productId ? std::optional<uint16_t>(m_productId) : std::nullopt;
     }
-    QString getSerialNumber() const override {
-        return {};
-    }
+    QString getSerialNumber() const override { return {}; }
     std::optional<uint8_t> getUsbInterfaceNumber() const override {
         return std::nullopt;
     }
@@ -55,7 +56,12 @@ class AndroidMidiController : public MidiController {
 
     class IoThread : public QThread {
       public:
-        explicit IoThread(AndroidMidiController* parent);
+        IoThread(const QJniObject& usbDevice,
+                jint usbFd,
+                int interfaceNumber,
+                uint8_t bulkInEp,
+                uint8_t bulkOutEp,
+                AndroidMidiController* controller);
         void stop();
         void send(const QByteArray& data);
 
@@ -63,8 +69,14 @@ class AndroidMidiController : public MidiController {
         void run() override;
 
       private:
-        QJniObject m_outputPort;
-        QJniObject m_inputPort;
+        void processUsbMidiPacket(const unsigned char* packet, int len);
+
+        QJniObject m_usbDevice;
+        jint m_usbFd;
+        int m_interfaceNumber;
+        uint8_t m_bulkInEp;
+        uint8_t m_bulkOutEp;
+        AndroidMidiController* m_controller;
         QAtomicInt m_stop{0};
         QMutex m_sendMutex;
         QByteArray m_pendingSend;
@@ -72,9 +84,10 @@ class AndroidMidiController : public MidiController {
     };
 
     IoThread* m_pIoThread{nullptr};
-    QJniObject m_deviceInfo;
-    int m_inputPortIndex;
-    int m_outputPortIndex;
+    QJniObject m_usbDevice;
+    int m_interfaceNumber{0};
+    uint8_t m_bulkInEp{0};
+    uint8_t m_bulkOutEp{0};
     uint16_t m_vendorId{0};
     uint16_t m_productId{0};
     QString m_vendor;

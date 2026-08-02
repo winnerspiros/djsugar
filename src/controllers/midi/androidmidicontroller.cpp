@@ -3,56 +3,40 @@
 #include "controllers/midi/androidmidicontroller.h"
 
 #include <android/log.h>
+#include <unistd.h>
 
-#include <QCoreApplication>
-#include <QtJniTypes>
+#include <QJniEnvironment>
+#include <QNativeInterface>
 
+#include "controllers/defs_controllers.h"
+#include "controllers/midi/midiutils.h"
 #include "moc_androidmidicontroller.cpp"
 
 namespace {
 const mixxx::Logger kLogger("AndroidMidiController");
-}
+constexpr int kUsbMidiPacketSize = 64;
+constexpr int kPollTimeoutMs = 10;
+constexpr int kMidiMsgSize = 3;
+} // namespace
 
 AndroidMidiController::AndroidMidiController(const QString& name,
-        const QJniObject& midiDeviceInfo,
-        int inputPortIndex,
-        int outputPortIndex)
+        const QJniObject& usbDevice,
+        int interfaceNumber,
+        uint8_t bulkInEp,
+        uint8_t bulkOutEp,
+        uint16_t vendorId,
+        uint16_t productId,
+        const QString& vendorStr,
+        const QString& productStr)
         : MidiController(name),
-          m_deviceInfo(midiDeviceInfo),
-          m_inputPortIndex(inputPortIndex),
-          m_outputPortIndex(outputPortIndex) {
-    QJniObject props = midiDeviceInfo.callObjectMethod(
-            "getProperties", "()Landroid/os/Bundle;");
-    if (props.isValid()) {
-        QJniObject nameStr = props.callObjectMethod(
-                "getString",
-                "(Ljava/lang/String;)Ljava/lang/String;",
-                QJniObject::fromString(
-                        "android.media.midi.extra.PROPERTY_NAME")
-                        .object());
-        m_product = nameStr.isValid() ? nameStr.toString() : name;
-
-        QJniObject mfrStr = props.callObjectMethod(
-                "getString",
-                "(Ljava/lang/String;)Ljava/lang/String;",
-                QJniObject::fromString(
-                        "android.media.midi.extra.PROPERTY_MANUFACTURER")
-                        .object());
-        m_vendor = mfrStr.isValid() ? mfrStr.toString() : QString();
-
-        QJniObject usbDev = props.callObjectMethod(
-                "getParcelable",
-                "(Ljava/lang/String;)Landroid/os/Parcelable;",
-                QJniObject::fromString(
-                        "android.media.midi.extra.PROPERTY_USB_DEVICE")
-                        .object());
-        if (usbDev.isValid()) {
-            m_vendorId = static_cast<uint16_t>(
-                    usbDev.callMethod<jint>("getVendorId"));
-            m_productId = static_cast<uint16_t>(
-                    usbDev.callMethod<jint>("getProductId"));
-        }
-    }
+          m_usbDevice(usbDevice),
+          m_interfaceNumber(interfaceNumber),
+          m_bulkInEp(bulkInEp),
+          m_bulkOutEp(bulkOutEp),
+          m_vendorId(vendorId),
+          m_productId(productId),
+          m_vendor(vendorStr),
+          m_product(productStr) {
 }
 
 AndroidMidiController::~AndroidMidiController() {
@@ -66,57 +50,77 @@ int AndroidMidiController::open(const QString& resourcePath) {
     }
 
     QJniObject context = QNativeInterface::QAndroidApplication::context();
-    QJniObject MIDI_SERVICE =
-            QJniObject::getStaticObjectField(
-                    "android/content/Context",
-                    "MIDI_SERVICE",
-                    "Ljava/lang/String;");
-    auto midiManager = context.callObjectMethod(
-            "getSystemService",
+    if (!context.isValid()) {
+        kLogger.warning() << "No Android context";
+        return 1;
+    }
+
+    QJniObject USB_SERVICE =
+            QJniObject::getStaticObjectField("android/content/Context",
+                    "USB_SERVICE", "Ljava/lang/String;");
+    auto usbManager = context.callObjectMethod("getSystemService",
             "(Ljava/lang/String;)Ljava/lang/Object;",
-            MIDI_SERVICE.object());
+            USB_SERVICE.object());
 
-    if (!midiManager.isValid()) {
-        kLogger.warning() << "Cannot get MidiManager";
+    if (!usbManager.isValid()) {
+        kLogger.warning() << "No UsbManager";
         return 1;
     }
 
-    midiManager.callMethod<void>(
-            "openDevice",
-            "(Landroid/media/midi/MidiDeviceInfo;"
-            "Landroid/media/midi/MidiManager$OnDeviceOpenedListener;"
-            "Landroid/os/Handler;)V",
-            m_deviceInfo.object(),
-            nullptr,
-            nullptr);
+    // Request USB permission
+    if (!usbManager.callMethod<jboolean>("hasPermission",
+                "(Landroid/hardware/usb/UsbDevice;)Z",
+                m_usbDevice.object())) {
+        kLogger.info() << "Requesting USB permission";
+        auto pendingIntent = mixxx::android::getIntent();
+        usbManager.callMethod<void>("requestPermission",
+                "(Landroid/hardware/usb/UsbDevice;Landroid/app/PendingIntent;)V",
+                m_usbDevice.object(), pendingIntent.object());
+        if (!mixxx::android::waitForPermission(m_usbDevice)) {
+            kLogger.warning() << "USB permission denied";
+            return 1;
+        }
+    }
 
-    QJniObject helper("org/mixxx/AndroidMidiHelper", "()V");
-    if (!helper.isValid()) {
-        kLogger.warning() << "Cannot create AndroidMidiHelper";
+    // Open USB device
+    auto usbConnection = usbManager.callMethod<QJniObject>("openDevice",
+            "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;",
+            m_usbDevice.object());
+
+    if (!usbConnection.isValid()) {
+        kLogger.warning() << "Cannot open USB device";
         return 1;
     }
 
-    helper.callMethod<jboolean>(
-            "open",
-            "(Landroid/media/midi/MidiManager;"
-            "Landroid/media/midi/MidiDeviceInfo;I)Z",
-            midiManager.object(),
-            m_deviceInfo.object(),
-            static_cast<jint>(0));
-
-    for (int i = 0; i < 20; i++) {
-        QCoreApplication::processEvents();
-        QThread::msleep(50);
+    // Get file descriptor
+    jint usbFd = usbConnection.callMethod<jint>("getFileDescriptor");
+    if (usbFd < 0) {
+        kLogger.warning() << "No file descriptor";
+        return 1;
     }
 
-    helper.callMethod<jboolean>("openPorts",
-            "(II)Z",
-            static_cast<jint>(m_inputPortIndex),
-            static_cast<jint>(m_outputPortIndex));
+    // Claim the MIDI interface
+    auto usbInterface = m_usbDevice.callMethod<QJniObject>("getInterface",
+            "(I)Landroid/hardware/usb/UsbInterface;", m_interfaceNumber);
+    if (usbInterface.isValid()) {
+        bool claimed = usbConnection.callMethod<jboolean>("claimInterface",
+                "(Landroid/hardware/usb/UsbInterface;Z)Z",
+                usbInterface.object(), true);
+        if (!claimed) {
+            kLogger.warning() << "Cannot claim MIDI interface";
+            return 1;
+        }
+        kLogger.info() << "MIDI interface" << m_interfaceNumber << "claimed";
+    }
 
-    m_pIoThread = new IoThread(this);
+    // Start I/O thread
+    m_pIoThread = new IoThread(m_usbDevice, usbFd,
+            m_interfaceNumber, m_bulkInEp,
+            m_bulkOutEp, this);
     m_pIoThread->start();
 
+    kLogger.info() << "Android MIDI controller opened:"
+                   << getProductString() << "USB FD:" << usbFd;
     return 0;
 }
 
@@ -140,7 +144,7 @@ bool AndroidMidiController::isPolling() const {
 
 void AndroidMidiController::sendShortMsg(
         unsigned char status, unsigned char byte1, unsigned char byte2) {
-    QByteArray data(3, '\0');
+    QByteArray data(kMidiMsgSize, '\0');
     data[0] = static_cast<char>(status);
     data[1] = static_cast<char>(byte1);
     data[2] = static_cast<char>(byte2);
@@ -158,7 +162,18 @@ bool AndroidMidiController::sendBytes(const QByteArray& data) {
 // ── IoThread ────────────────────────────────────────────────────
 
 AndroidMidiController::IoThread::IoThread(
-        AndroidMidiController* /*parent*/) {
+        const QJniObject& usbDevice,
+        jint usbFd,
+        int interfaceNumber,
+        uint8_t bulkInEp,
+        uint8_t bulkOutEp,
+        AndroidMidiController* controller)
+        : m_usbDevice(usbDevice),
+          m_usbFd(usbFd),
+          m_interfaceNumber(interfaceNumber),
+          m_bulkInEp(bulkInEp),
+          m_bulkOutEp(bulkOutEp),
+          m_controller(controller) {
 }
 
 void AndroidMidiController::IoThread::stop() {
@@ -171,42 +186,127 @@ void AndroidMidiController::IoThread::send(const QByteArray& data) {
     m_hasPending = true;
 }
 
+void AndroidMidiController::IoThread::processUsbMidiPacket(
+        const unsigned char* packet, int len) {
+    // USB MIDI packet: 4-byte words: [CIN|MIDI_0|MIDI_1|MIDI_2]
+    // CIN (Code Index Number) tells us the MIDI message type and cable number
+    for (int i = 0; i + 3 < len; i += 4) {
+        unsigned char cin = packet[i] & 0x0F;
+        unsigned char midi0 = packet[i + 1];
+        unsigned char midi1 = packet[i + 2];
+        unsigned char midi2 = packet[i + 3];
+
+        if (cin == 0x0) {
+            continue; // miscellaneous / reserved
+        }
+
+        // Standard MIDI messages in USB: cin 0x2—0xF map to MIDI status bytes
+        // For 3-byte messages (note on/off, CC, etc.), cin matches the high nibble
+        unsigned char status = (cin << 4) | 0x00;
+        // Reconstruct actual status from cin + first byte
+        // cin 0x8 = Note Off, 0x9 = Note On, 0xA = Poly Pressure,
+        // 0xB = CC, 0xC = Program Change, 0xD = Channel Pressure,
+        // 0xE = Pitch Bend, 0xF = System
+        m_controller->receive(QByteArray(1, static_cast<char>(midi0)),
+                mixxx::Duration::fromMillis(0));
+        if (cin >= 0x8 && cin <= 0xE) {
+            // 3-byte message: [status+channel, data1, data2]
+            unsigned char statusByte = (cin << 4) | (midi0 & 0x0F);
+            m_controller->receivedShortMessage(
+                    statusByte, midi1, midi2,
+                    mixxx::Duration::fromMillis(0));
+        } else if (cin == 0x2 || cin == 0x3 || cin == 0x4 || cin == 0x6 || cin == 0x7) {
+            // 2-byte system common messages (MTC, Song Position, Song Select, etc.)
+            m_controller->receive(
+                    QByteArray(1, static_cast<char>(midi0)),
+                    mixxx::Duration::fromMillis(0));
+        } else if (cin == 0x5) {
+            // System exclusive — variable length
+            // For now just forward the raw bytes
+            QByteArray sysex;
+            sysex.append(static_cast<char>(0xF0));
+            int sysexLen = (midi0 == 0xF0) ? 3 : 0;
+            Q_UNUSED(sysexLen);
+            m_controller->receive(
+                    QByteArray(1, static_cast<char>(midi0)),
+                    mixxx::Duration::fromMillis(0));
+        }
+    }
+}
+
 void AndroidMidiController::IoThread::run() {
-    __android_log_print(ANDROID_LOG_INFO, "mixxx", "AndroidMidiController I/O thread started");
+    __android_log_print(ANDROID_LOG_INFO, "mixxx",
+            "AndroidMidiController I/O thread starting, FD=%d", m_usbFd);
 
     QJniEnvironment env;
+    auto context = QNativeInterface::QAndroidApplication::context();
+    auto usbManager = context.callObjectMethod("getSystemService",
+            "(Ljava/lang/String;)Ljava/lang/Object;",
+            QJniObject::getStaticObjectField("android/content/Context",
+                    "USB_SERVICE", "Ljava/lang/String;")
+                    .object());
+
+    auto usbConnection = usbManager.callMethod<QJniObject>("openDevice",
+            "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;",
+            m_usbDevice.object());
+
+    if (!usbConnection.isValid()) {
+        __android_log_print(ANDROID_LOG_ERROR, "mixxx",
+                "IoThread: openDevice failed");
+        return;
+    }
+
+    auto usbInterface = m_usbDevice.callMethod<QJniObject>("getInterface",
+            "(I)Landroid/hardware/usb/UsbInterface;", m_interfaceNumber);
+
+    // Get bulk endpoints
+    auto bulkInEndpoint = usbInterface.callMethod<QJniObject>("getEndpoint",
+            "(I)Landroid/hardware/usb/UsbEndpoint;", 0);
+    auto bulkOutEndpoint = usbInterface.callMethod<QJniObject>("getEndpoint",
+            "(I)Landroid/hardware/usb/UsbEndpoint;", 1);
+
+    jbyteArray readBuffer = env->NewByteArray(kUsbMidiPacketSize);
+
     while (!m_stop.loadRelaxed()) {
+        // Process sends
         {
             QMutexLocker lock(&m_sendMutex);
-            if (m_hasPending && m_outputPort.isValid()) {
-                jbyteArray jdata = env->NewByteArray(
-                        m_pendingSend.size());
-                if (jdata) {
-                    env->SetByteArrayRegion(jdata,
-                            0,
-                            m_pendingSend.size(),
-                            reinterpret_cast<const jbyte*>(
-                                    m_pendingSend.constData()));
-                    m_outputPort.callMethod<void>("write",
-                            "([BII)V",
-                            jdata,
-                            static_cast<jint>(0),
-                            static_cast<jint>(m_pendingSend.size()));
-                    env->DeleteLocalRef(jdata);
-                }
+            if (m_hasPending && bulkOutEndpoint.isValid()) {
+                jbyteArray writeBuf = env->NewByteArray(m_pendingSend.size());
+                env->SetByteArrayRegion(writeBuf, 0,
+                        m_pendingSend.size(),
+                        reinterpret_cast<const jbyte*>(m_pendingSend.constData()));
+                usbConnection.callMethod<jint>("bulkTransfer",
+                        "(Landroid/hardware/usb/UsbEndpoint;[BII)I",
+                        bulkOutEndpoint.object(), writeBuf,
+                        0, m_pendingSend.size(), kPollTimeoutMs);
+                env->DeleteLocalRef(writeBuf);
                 m_hasPending = false;
             }
         }
+
+        // Read incoming data
+        jint bytesRead = usbConnection.callMethod<jint>("bulkTransfer",
+                "(Landroid/hardware/usb/UsbEndpoint;[BII)I",
+                bulkInEndpoint.object(), readBuffer, 0,
+                kUsbMidiPacketSize, kPollTimeoutMs);
+
+        if (bytesRead > 0) {
+            jbyte* elements = env->GetByteArrayElements(readBuffer, nullptr);
+            if (elements) {
+                processUsbMidiPacket(
+                        reinterpret_cast<const unsigned char*>(elements),
+                        bytesRead);
+                env->ReleaseByteArrayElements(readBuffer, elements, JNI_ABORT);
+            }
+        }
+
         msleep(5);
     }
 
-    if (m_inputPort.isValid()) {
-        m_inputPort.callMethod<void>("close");
-    }
-    if (m_outputPort.isValid()) {
-        m_outputPort.callMethod<void>("close");
-    }
-    __android_log_print(ANDROID_LOG_INFO, "mixxx", "AndroidMidiController I/O thread stopped");
+    env->DeleteLocalRef(readBuffer);
+    __android_log_print(ANDROID_LOG_INFO, "mixxx",
+            "AndroidMidiController I/O thread stopped");
 }
 
 #endif // __ANDROID__
