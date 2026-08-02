@@ -177,6 +177,22 @@ QList<Controller*> HidEnumerator::queryDevices() {
     QJniArray<QJniObject> deviceList = QJniArray<QJniObject>(
             deviceListObject.callMethod<QJniArray<QJniObject>>("toArray"));
     qInfo() << "HID enumerator: found" << deviceList.size() << "USB devices";
+    if (deviceList.size() == 0) {
+        qInfo() << "HID enumerator: no USB devices with permission. "
+                   "Unplug/replug controller and grant permission.";
+        QThread::msleep(500);
+        deviceListObject = usbManager.callMethod<QJniObject>(
+                "getDeviceList", "()Ljava/util/HashMap;");
+        deviceListObject = deviceListObject.callMethod<QJniObject>(
+                "values", "()Ljava/util/Collection;");
+        if (deviceListObject.isValid()) {
+            deviceList = QJniArray<QJniObject>(
+                    deviceListObject.callMethod<QJniArray<QJniObject>>(
+                            "toArray"));
+            qInfo() << "HID enumerator: retry found" << deviceList.size()
+                    << "USB devices";
+        }
+    }
 
     for (const auto& usbDevice : deviceList) {
         if (!usbDevice->isValid()) {
