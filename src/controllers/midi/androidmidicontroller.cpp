@@ -109,8 +109,10 @@ int AndroidMidiController::open(const QString& resourcePath) {
         QThread::msleep(50);
     }
 
-    helper.callMethod<jboolean>(
-            "openPorts", "(II)Z", static_cast<jint>(m_inputPortIndex), static_cast<jint>(m_outputPortIndex));
+    helper.callMethod<jboolean>("openPorts",
+            "(II)Z",
+            static_cast<jint>(m_inputPortIndex),
+            static_cast<jint>(m_outputPortIndex));
 
     m_pIoThread = new IoThread(this);
     m_pIoThread->start();
@@ -180,9 +182,16 @@ void AndroidMidiController::IoThread::run() {
                 jbyteArray jdata = env->NewByteArray(
                         m_pendingSend.size());
                 if (jdata) {
-                    env->SetByteArrayRegion(jdata, 0, m_pendingSend.size(), reinterpret_cast<const jbyte*>(m_pendingSend.constData()));
-                    m_outputPort.callMethod<void>(
-                            "write", "([BII)V", jdata, static_cast<jint>(0), static_cast<jint>(m_pendingSend.size()));
+                    env->SetByteArrayRegion(jdata,
+                            0,
+                            m_pendingSend.size(),
+                            reinterpret_cast<const jbyte*>(
+                                    m_pendingSend.constData()));
+                    m_outputPort.callMethod<void>("write",
+                            "([BII)V",
+                            jdata,
+                            static_cast<jint>(0),
+                            static_cast<jint>(m_pendingSend.size()));
                     env->DeleteLocalRef(jdata);
                 }
                 m_hasPending = false;
