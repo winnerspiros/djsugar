@@ -33,6 +33,7 @@ public class AndroidMidiHelper {
     };
 
     // Static helpers used by C++ enumerator
+    @SuppressWarnings("deprecation")
     public static MidiDeviceInfo[] getDevices(MidiManager mgr) {
         return mgr.getDevices();
     }
