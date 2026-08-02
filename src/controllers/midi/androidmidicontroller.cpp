@@ -156,8 +156,7 @@ bool AndroidMidiController::sendBytes(const QByteArray& data) {
 // ── IoThread ────────────────────────────────────────────────────
 
 AndroidMidiController::IoThread::IoThread(
-        AndroidMidiController* parent)
-        : m_parent(parent) {
+        AndroidMidiController* /*parent*/) {
 }
 
 void AndroidMidiController::IoThread::stop() {

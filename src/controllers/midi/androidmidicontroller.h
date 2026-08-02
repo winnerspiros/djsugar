@@ -57,7 +57,6 @@ class AndroidMidiController : public MidiController {
         void run() override;
 
       private:
-        AndroidMidiController* m_parent;
         QJniObject m_outputPort;
         QJniObject m_inputPort;
         QAtomicInt m_stop{0};
