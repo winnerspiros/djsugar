@@ -200,7 +200,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
         }
         QString productName =
                 usbDevice->callObjectMethod("getProductName",
-                        "()Ljava/lang/String;")
+                                 "()Ljava/lang/String;")
                         .toString();
         jint vid = usbDevice->callMethod<jint>("getVendorId");
         jint pid = usbDevice->callMethod<jint>("getProductId");
@@ -250,7 +250,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 qInfo() << "Found USB MIDI interface" << ifaceIdx
                         << "on device"
                         << usbDevice->callObjectMethod("getProductName",
-                                   "()Ljava/lang/String;")
+                                            "()Ljava/lang/String;")
                                    .toString();
 
                 // Open device and claim interface for raw MIDI access
@@ -324,11 +324,11 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
                 QString productName =
                         usbDevice->callObjectMethod("getProductName",
-                                "()Ljava/lang/String;")
+                                         "()Ljava/lang/String;")
                                 .toString();
                 QString manufacturerName =
                         usbDevice->callObjectMethod("getManufacturerName",
-                                "()Ljava/lang/String;")
+                                         "()Ljava/lang/String;")
                                 .toString();
                 jint vendorId = usbDevice->callMethod<jint>("getVendorId");
                 jint productId = usbDevice->callMethod<jint>("getProductId");
@@ -356,7 +356,7 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
                         << ifaceClass << "on device"
                         << usbDevice->callObjectMethod("getProductName",
-                                   "()Ljava/lang/String;")
+                                            "()Ljava/lang/String;")
                                    .toString();
             }
         }

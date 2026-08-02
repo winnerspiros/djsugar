@@ -105,91 +105,91 @@ void AndroidUsbMidiController::MidiIoThread::run() {
     }
 
     if (useLibusb) {
+        kLogger.info()
+                << "MIDI IO thread started (libusb), FD=" << m_usbFd
+                << "iface=" << m_interfaceNumber
+                << "bulkIn=0x" << Qt::hex << m_bulkInEpAddress
+                << "bulkOut=0x" << m_bulkOutEpAddress;
 
-    kLogger.info()
-            << "MIDI IO thread started (libusb), FD=" << m_usbFd
-            << "iface=" << m_interfaceNumber
-            << "bulkIn=0x" << Qt::hex << m_bulkInEpAddress
-            << "bulkOut=0x" << m_bulkOutEpAddress;
-
-    // Send Pioneer DDJ-FLX4 init SysEx to put controller in MIDI mode.
-    // Required for the controller to start sending MIDI data on the
-    // streaming interface. Without this, no input events arrive.
-    if (m_vendorId == 0x2b73 || m_vendorId == 0x08e4) {
-        static const unsigned char kPioneerInitSysex[] = {
-                0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04,
-                0x05, 0x00, 0x50, 0x02, 0xF7};
-        // Wrap in 4 USB MIDI SysEx packets
-        struct { unsigned char cin; unsigned char d[3]; } sysexPkts[] = {
-                {0x04, {0xF0, 0x00, 0x40}}, // start
-                {0x04, {0x05, 0x00, 0x00}}, // continue
-                {0x04, {0x04, 0x05, 0x00}}, // continue
-                {0x07, {0x50, 0x02, 0xF7}}, // end (3 bytes)
-        };
-        for (const auto& pkt : sysexPkts) {
-            unsigned char buf[4] = {pkt.cin, pkt.d[0], pkt.d[1], pkt.d[2]};
-            int transferred = 0;
-            libusb_bulk_transfer(m_usbHandle, m_bulkOutEpAddress,
-                    buf, 4, &transferred, 100);
-        }
-        kLogger.info() << "Sent Pioneer init SysEx to iface"
-                       << m_interfaceNumber;
-    }
-
-    unsigned char buffer[kBufferSize];
-
-    while (!m_stopRequested.loadRelaxed()) {
-        int transferred = 0;
-        rc = libusb_bulk_transfer(m_usbHandle,
-                m_bulkInEpAddress,
-                buffer,
-                kBufferSize,
-                &transferred,
-                kPollTimeoutMs);
-
-        if (rc == LIBUSB_SUCCESS && transferred > 0) {
-            QByteArray midiData(
-                    reinterpret_cast<const char*>(buffer), transferred);
-            kLogger.debug()
-                    << "MIDI IO thread: libusb_bulk_transfer returned"
-                    << transferred << "bytes:" << midiData.toHex();
-
-            // Process USB MIDI event packets (4 bytes each)
-            for (int i = 0; i + 3 < transferred; i += 4) {
-                unsigned char cin = static_cast<unsigned char>(
-                        static_cast<unsigned char>(buffer[i]) & 0x0F);
-                unsigned char midiStatus = buffer[i + 1];
-                unsigned char midiByte1 = buffer[i + 2];
-                unsigned char midiByte2 = buffer[i + 3];
-
-                QByteArray rawMidi;
-                rawMidi.append(static_cast<char>(midiStatus));
-                if (cin >= 0x2 && cin <= 0x6)
-                    rawMidi.append(static_cast<char>(midiByte1));
-                if (cin == 0x3 || cin == 0x6)
-                    rawMidi.append(static_cast<char>(midiByte2));
-
-                if (!rawMidi.isEmpty())
-                    m_parent->receive(rawMidi, mixxx::Duration());
+        // Send Pioneer DDJ-FLX4 init SysEx to put controller in MIDI mode.
+        // Required for the controller to start sending MIDI data on the
+        // streaming interface. Without this, no input events arrive.
+        if (m_vendorId == 0x2b73 || m_vendorId == 0x08e4) {
+            static const unsigned char kPioneerInitSysex[] = {
+                    0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xF7};
+            // Wrap in 4 USB MIDI SysEx packets
+            struct {
+                unsigned char cin;
+                unsigned char d[3];
+            } sysexPkts[] = {
+                    {0x04, {0xF0, 0x00, 0x40}}, // start
+                    {0x04, {0x05, 0x00, 0x00}}, // continue
+                    {0x04, {0x04, 0x05, 0x00}}, // continue
+                    {0x07, {0x50, 0x02, 0xF7}}, // end (3 bytes)
+            };
+            for (const auto& pkt : sysexPkts) {
+                unsigned char buf[4] = {pkt.cin, pkt.d[0], pkt.d[1], pkt.d[2]};
+                int transferred = 0;
+                libusb_bulk_transfer(m_usbHandle, m_bulkOutEpAddress, buf, 4, &transferred, 100);
             }
-        } else if (rc == LIBUSB_ERROR_TIMEOUT) {
-            // Timeout is normal — no data available, loop back
-            continue;
-        } else if (rc < 0) {
-            kLogger.warning()
-                    << "MIDI IO thread: libusb_bulk_transfer error:"
-                    << rc << "- sleeping 10ms";
-            usleep(10000);
+            kLogger.info() << "Sent Pioneer init SysEx to iface"
+                           << m_interfaceNumber;
         }
-    }
 
-    // Clean up
-    libusb_release_interface(m_usbHandle, m_interfaceNumber);
-    libusb_close(m_usbHandle);
-    m_usbHandle = nullptr;
-    libusb_exit(ctx);
+        unsigned char buffer[kBufferSize];
 
-    kLogger.info() << "MIDI IO thread finished (libusb)";
+        while (!m_stopRequested.loadRelaxed()) {
+            int transferred = 0;
+            rc = libusb_bulk_transfer(m_usbHandle,
+                    m_bulkInEpAddress,
+                    buffer,
+                    kBufferSize,
+                    &transferred,
+                    kPollTimeoutMs);
+
+            if (rc == LIBUSB_SUCCESS && transferred > 0) {
+                QByteArray midiData(
+                        reinterpret_cast<const char*>(buffer), transferred);
+                kLogger.debug()
+                        << "MIDI IO thread: libusb_bulk_transfer returned"
+                        << transferred << "bytes:" << midiData.toHex();
+
+                // Process USB MIDI event packets (4 bytes each)
+                for (int i = 0; i + 3 < transferred; i += 4) {
+                    unsigned char cin = static_cast<unsigned char>(
+                            static_cast<unsigned char>(buffer[i]) & 0x0F);
+                    unsigned char midiStatus = buffer[i + 1];
+                    unsigned char midiByte1 = buffer[i + 2];
+                    unsigned char midiByte2 = buffer[i + 3];
+
+                    QByteArray rawMidi;
+                    rawMidi.append(static_cast<char>(midiStatus));
+                    if (cin >= 0x2 && cin <= 0x6)
+                        rawMidi.append(static_cast<char>(midiByte1));
+                    if (cin == 0x3 || cin == 0x6)
+                        rawMidi.append(static_cast<char>(midiByte2));
+
+                    if (!rawMidi.isEmpty())
+                        m_parent->receive(rawMidi, mixxx::Duration());
+                }
+            } else if (rc == LIBUSB_ERROR_TIMEOUT) {
+                // Timeout is normal — no data available, loop back
+                continue;
+            } else if (rc < 0) {
+                kLogger.warning()
+                        << "MIDI IO thread: libusb_bulk_transfer error:"
+                        << rc << "- sleeping 10ms";
+                usleep(10000);
+            }
+        }
+
+        // Clean up
+        libusb_release_interface(m_usbHandle, m_interfaceNumber);
+        libusb_close(m_usbHandle);
+        m_usbHandle = nullptr;
+        libusb_exit(ctx);
+
+        kLogger.info() << "MIDI IO thread finished (libusb)";
     } else {
         // ── JNI fallback path ──
         // Used when libusb_wrap_sys_device or claim_interface fails.
@@ -445,7 +445,8 @@ bool AndroidUsbMidiController::sendBytes(const QByteArray& data) {
                 // SysEx — split across multiple packets
                 if (remaining <= 3) {
                     // Single packet: all remaining bytes
-                    packet[0] = (remaining == 1) ? 0x05 : (remaining == 2) ? 0x06 : 0x07;
+                    packet[0] = (remaining == 1) ? 0x05 : (remaining == 2) ? 0x06
+                                                                           : 0x07;
                     for (int j = 0; j < remaining && j < 3; j++)
                         packet[1 + j] = static_cast<unsigned char>(data[pos + j]);
                     pos += remaining;
@@ -460,7 +461,7 @@ bool AndroidUsbMidiController::sendBytes(const QByteArray& data) {
                 // Standard channel voice / system message
                 // CIN = status >> 4 for channel messages (0x8-0xE)
                 unsigned char cin = (status >= 0xF0) ? 0x02
-                                                      : (status >> 4);
+                                                     : (status >> 4);
                 packet[0] = cin;
                 packet[1] = status;
                 if (remaining > 1)
