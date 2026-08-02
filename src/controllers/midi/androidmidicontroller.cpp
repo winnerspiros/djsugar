@@ -10,9 +10,9 @@
 #include <QNativeInterface/QAndroidApplication>
 #endif
 
+#include "controllers/android.h"
 #include "controllers/defs_controllers.h"
 #include "controllers/midi/midiutils.h"
-#include "controllers/android.h"
 #include "moc_androidmidicontroller.cpp"
 
 namespace {
