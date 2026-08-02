@@ -34,8 +34,12 @@ class AndroidMidiController : public MidiController {
     std::optional<uint16_t> getProductId() const override {
         return m_productId ? std::optional<uint16_t>(m_productId) : std::nullopt;
     }
-    QString getSerialNumber() const override { return {}; }
-    std::optional<uint8_t> getUsbInterfaceNumber() const override { return std::nullopt; }
+    QString getSerialNumber() const override {
+        return {};
+    }
+    std::optional<uint8_t> getUsbInterfaceNumber() const override {
+        return std::nullopt;
+    }
 
   protected:
     void sendShortMsg(unsigned char status,
