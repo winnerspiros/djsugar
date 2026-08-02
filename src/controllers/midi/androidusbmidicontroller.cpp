@@ -356,6 +356,13 @@ void AndroidUsbMidiController::setAndroidDevice(
             bulkOutEndpoint,
             vendorId,
             productId);
+    // Start IO thread immediately — don't wait for Mixxx to call open().
+    // On Android, controller auto-matching currently fails (the mapping
+    // engine expects PortMidi-style devices), so open() may never be
+    // called. We start reading MIDI data now; open() just activates
+    // the engine for output.
+    m_pIoThread->start();
+    kLogger.info() << "setAndroidDevice: IO thread started for" << getName();
 }
 
 bool AndroidUsbMidiController::isPolling() const {
@@ -364,16 +371,22 @@ bool AndroidUsbMidiController::isPolling() const {
 
 int AndroidUsbMidiController::open(const QString& resourcePath) {
     Q_UNUSED(resourcePath);
-    kLogger.info() << "open() called — starting IO thread for" << getName();
+    kLogger.info() << "open() called for" << getName()
+                   << "(IO thread already "
+                   << (m_pIoThread && m_pIoThread->isRunning() ? "running" : "stopped")
+                   << ")";
 
     if (!m_pIoThread) {
         kLogger.warning() << "open(): no IO thread — setAndroidDevice not called";
         return -1;
     }
 
-    // Reset stop flag before starting (may be 1 from prior stop())
-    m_pIoThread->resetStopFlag();
-    m_pIoThread->start();
+    // IO thread was started in setAndroidDevice(). If it stopped (e.g., error),
+    // try to restart it.
+    if (!m_pIoThread->isRunning()) {
+        m_pIoThread->resetStopFlag();
+        m_pIoThread->start();
+    }
     startEngine();
     setOpen(true);
     return 0;
