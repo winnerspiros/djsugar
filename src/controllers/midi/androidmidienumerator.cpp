@@ -182,8 +182,15 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             continue;
         }
 
-        auto* controller = new AndroidMidiController(
-                name, usbDevice, ifaceNum, bulkInEp, bulkOutEp, vendorId, productId, vendorStr, productStr);
+        auto* controller = new AndroidMidiController(name,
+                usbDevice,
+                ifaceNum,
+                bulkInEp,
+                bulkOutEp,
+                vendorId,
+                productId,
+                vendorStr,
+                productStr);
         m_devices.push_back(controller);
     }
 

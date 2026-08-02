@@ -118,7 +118,12 @@ int AndroidMidiController::open(const QString& resourcePath) {
     }
 
     // Start I/O thread
-    m_pIoThread = new IoThread(m_usbDevice, usbFd, m_interfaceNumber, m_bulkInEp, m_bulkOutEp, this);
+    m_pIoThread = new IoThread(m_usbDevice,
+            usbFd,
+            m_interfaceNumber,
+            m_bulkInEp,
+            m_bulkOutEp,
+            this);
     m_pIoThread->start();
 
     kLogger.info() << "Android MIDI controller opened:"
@@ -236,7 +241,10 @@ void AndroidMidiController::IoThread::processUsbMidiPacket(
 }
 
 void AndroidMidiController::IoThread::run() {
-    __android_log_print(ANDROID_LOG_INFO, "mixxx", "AndroidMidiController I/O thread starting, FD=%d", m_usbFd);
+    __android_log_print(ANDROID_LOG_INFO,
+            "mixxx",
+            "AndroidMidiController I/O thread starting, FD=%d",
+            m_usbFd);
 
     QJniEnvironment env;
     auto context = QNativeInterface::QAndroidApplication::context();
@@ -276,7 +284,11 @@ void AndroidMidiController::IoThread::run() {
             QMutexLocker lock(&m_sendMutex);
             if (m_hasPending && bulkOutEndpoint.isValid()) {
                 jbyteArray writeBuf = env->NewByteArray(m_pendingSend.size());
-                env->SetByteArrayRegion(writeBuf, 0, m_pendingSend.size(), reinterpret_cast<const jbyte*>(m_pendingSend.constData()));
+                env->SetByteArrayRegion(writeBuf,
+                        0,
+                        m_pendingSend.size(),
+                        reinterpret_cast<const jbyte*>(
+                                m_pendingSend.constData()));
                 usbConnection.callMethod<jint>("bulkTransfer",
                         "(Landroid/hardware/usb/UsbEndpoint;[BII)I",
                         bulkOutEndpoint.object(),
