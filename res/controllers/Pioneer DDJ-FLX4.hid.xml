@@ -8,6 +8,7 @@
     <forums>https://mixxx.discourse.group/t/pioneer-ddj-flx4</forums>
     <devices>
       <product protocol="hid" vendor_id="0x2b73" product_id="0x0045" interface_number="0x5" />
+      <product protocol="hid" vendor_id="0x08e4" product_id="0x017b" interface_number="0x0a" />
     </devices>
   </info>
   <controller id="DDJ-FLX4">

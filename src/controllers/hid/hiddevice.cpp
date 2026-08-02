@@ -3,6 +3,9 @@
 #include <hidapi.h>
 
 #include <QDebugStateSaver>
+#if defined(Q_OS_ANDROID)
+#include <android/log.h>
+#endif
 
 #include "controllers/controllermappinginfo.h"
 #include "util/path.h"
@@ -75,6 +78,26 @@ DeviceInfo::DeviceInfo(
     }
 
     m_usbInterfaceNumber = usbInterface.callMethod<jint>("getId");
+
+    // Discover the interrupt IN endpoint for direct bulkTransfer reads.
+    // hidapi/libusb doesn't reliably deliver interrupt transfers on Android.
+    jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
+    for (jint i = 0; i < epCount; i++) {
+        auto ep = usbInterface.callMethod<jobject>(
+                "getEndpoint", "(I)Landroid/hardware/usb/UsbEndpoint;", i);
+        jint epAddr = ep.callMethod<jint>("getAddress");
+        jint epType = ep.callMethod<jint>("getType");
+        // USB_ENDPOINT_XFER_INT = 3, DIR_IN = 0x80
+        if ((epAddr & 0x80) && epType == 3) {
+            __android_log_print(ANDROID_LOG_INFO,
+                    "mixxx",
+                    "Found HID interrupt IN endpoint 0x%02x at index %d",
+                    epAddr,
+                    i);
+            m_androidInterruptEndpoint = ep;
+            break;
+        }
+    }
 }
 #endif
 
@@ -141,18 +164,12 @@ QDebug operator<<(QDebug dbg, const DeviceInfo& deviceInfo) {
     dbg << "Usage: " << formatHex(deviceInfo.getUsage())
         << ' ' << deviceInfo.getUsageDescription() << " | ";
 
-    if (deviceInfo.getUsbInterfaceNumber()) {
-        dbg << "Interface: #" << deviceInfo.getUsbInterfaceNumber().value() << " | ";
-    }
-    if (!deviceInfo.getVendorString().isEmpty()) {
-        dbg << "Manufacturer: " << deviceInfo.getVendorString() << " | ";
-    }
-    if (!deviceInfo.getProductString().isEmpty()) {
-        dbg << "Product: " << deviceInfo.getProductString() << " | ";
-    }
-    if (!deviceInfo.getSerialNumber().isEmpty()) {
-        dbg << "S/N: " << deviceInfo.getSerialNumber();
-    }
+    dbg << "Interface: #" << deviceInfo.getUsbInterfaceNumber().value_or(-1)
+        << " | ";
+
+    dbg << "Manufacturer: " << deviceInfo.getVendorString()
+        << " | Product: " << deviceInfo.getProductString()
+        << " | S/N: " << deviceInfo.getSerialNumber();
 
     dbg << " }";
     return dbg;
@@ -193,5 +210,4 @@ bool DeviceInfo::matchProductInfo(
 }
 
 } // namespace hid
-
 } // namespace mixxx

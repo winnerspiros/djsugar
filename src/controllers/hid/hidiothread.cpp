@@ -5,6 +5,9 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 #include <hidapi_libusb.h>
+#include <libusb.h>
+
+#include <QJniEnvironment>
 #else
 #include <hidapi.h>
 #endif
@@ -110,7 +113,38 @@ void HidIoThread::pollBufferedInputReports() {
     // - windows(64 reports)
     // If the interval between two polls is to long, multiple buffered HID InputReports
     // will be processed at the same time.
+
     while (m_state.loadAcquire() == static_cast<int>(HidIoThreadState::InputOutputActive)) {
+#ifdef Q_OS_ANDROID
+        // On Android, hidapi/libusb uses its own internal libusb context
+        // that we can't reach. Read directly via UsbDeviceConnection.bulkTransfer
+        // using the interrupt IN endpoint discovered during enumeration.
+        if (m_androidConnection.isValid() && m_androidUsbEndpoint.isValid()) {
+            QJniEnvironment env;
+            jbyteArray byteArray = env->NewByteArray(kBufferSize);
+            auto bytesRead = static_cast<jint>(
+                    m_androidConnection.callMethod<jint>(
+                            "bulkTransfer",
+                            "(Landroid/hardware/usb/UsbEndpoint;[BIII)I",
+                            m_androidUsbEndpoint.object(),
+                            byteArray,
+                            0,
+                            kBufferSize,
+                            100));
+            if (bytesRead > 0) {
+                env->GetByteArrayRegion(byteArray,
+                        0,
+                        bytesRead,
+                        reinterpret_cast<jbyte*>(
+                                m_pPollData[m_pollingBufferIndex]));
+                processInputReport(static_cast<int>(bytesRead));
+                env->DeleteLocalRef(byteArray);
+                continue;
+            }
+            env->DeleteLocalRef(byteArray);
+        }
+        // Fall through to hid_read as secondary path
+#endif
         int bytesRead = hid_read(m_pHidDevice, m_pPollData[m_pollingBufferIndex], kBufferSize);
         if (bytesRead < 0) {
             // -1 is the only error value according to hidapi documentation.

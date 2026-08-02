@@ -80,6 +80,9 @@ class DeviceInfo final {
     const QJniObject& androidUsbDevice() const {
         return m_androidUsbDevice;
     }
+    const QJniObject& androidInterruptEndpoint() const {
+        return m_androidInterruptEndpoint;
+    }
     void updateSerialNumber(QString serialNumber) {
         m_serialNumber = serialNumber;
     }
@@ -172,6 +175,9 @@ class DeviceInfo final {
     unsigned short usage;
 #else
     QJniObject m_androidUsbDevice;
+    /// Interrupt IN endpoint for direct bulkTransfer reads on Android.
+    /// Set during enumeration from the USB interface's endpoints.
+    QJniObject m_androidInterruptEndpoint;
 #endif
 
     PhysicalTransportProtocol m_physicalTransportProtocol;

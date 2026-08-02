@@ -57,6 +57,13 @@ class HidIoThread : public QThread {
     void setDeviceConnection(QJniObject&& connection) {
         m_androidConnection = connection;
     }
+
+    // Store the USB interrupt IN endpoint object discovered from the HID
+    // interface descriptor. Used for direct bulkTransfer reads on Android
+    // where hidapi/libusb doesn't reliably deliver interrupt transfers.
+    void setUsbEndpoint(QJniObject&& endpoint) {
+        m_androidUsbEndpoint = endpoint;
+    }
 #endif
 
   signals:
@@ -115,5 +122,8 @@ class HidIoThread : public QThread {
     QSemaphore m_runLoopSemaphore;
 #ifdef Q_OS_ANDROID
     QJniObject m_androidConnection;
+    /// USB interrupt IN endpoint for bulkTransfer reads.
+    /// Must be kept alive while the thread runs.
+    QJniObject m_androidUsbEndpoint;
 #endif
 };
