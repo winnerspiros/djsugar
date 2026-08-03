@@ -135,9 +135,13 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                                                  .arg(vid, 4, 16, QChar('0'))
                                                  .arg(pid, 4, 16, QChar('0'));
                         }
-                        name = vendorStr.isEmpty() ? productStr
-                                                   : (productStr.isEmpty() ? vendorStr
-                                                                           : QStringLiteral("%1 %2").arg(vendorStr, productStr));
+                        name = vendorStr.isEmpty()
+                                ? productStr
+                                : (productStr.isEmpty()
+                                                  ? vendorStr
+                                                  : QStringLiteral("%1 %2").arg(
+                                                            vendorStr,
+                                                            productStr));
 
                         kLogger.info() << "USB MIDI device (UsbManager):" << name
                                        << QStringLiteral("VID:0x%1 PID:0x%2")

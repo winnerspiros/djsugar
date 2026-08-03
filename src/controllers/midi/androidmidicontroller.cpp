@@ -265,7 +265,10 @@ void AndroidMidiController::IoThread::run() {
                 usbInterface.object(),
                 true);
         if (!claimed) {
-            __android_log_print(ANDROID_LOG_WARN, "mixxx", "IoThread: claimInterface failed — trying bulkTransfer anyway");
+            __android_log_print(ANDROID_LOG_WARN,
+                    "mixxx",
+                    "IoThread: claimInterface failed — trying bulkTransfer "
+                    "anyway");
             // Fall through — some devices work without explicit claim
         }
     }
@@ -288,11 +291,20 @@ void AndroidMidiController::IoThread::run() {
     }
 
     if (!bulkInEndpoint.isValid() && !bulkOutEndpoint.isValid()) {
-        __android_log_print(ANDROID_LOG_ERROR, "mixxx", "IoThread: no bulk endpoints found on interface %d (epCount=%d)", m_interfaceNumber, epCount);
+        __android_log_print(ANDROID_LOG_ERROR,
+                "mixxx",
+                "IoThread: no bulk endpoints found on interface %d "
+                "(epCount=%d)",
+                m_interfaceNumber,
+                epCount);
         return;
     }
 
-    __android_log_print(ANDROID_LOG_INFO, "mixxx", "IoThread: endpoints — IN=%s OUT=%s", bulkInEndpoint.isValid() ? "yes" : "no", bulkOutEndpoint.isValid() ? "yes" : "no");
+    __android_log_print(ANDROID_LOG_INFO,
+            "mixxx",
+            "IoThread: endpoints — IN=%s OUT=%s",
+            bulkInEndpoint.isValid() ? "yes" : "no",
+            bulkOutEndpoint.isValid() ? "yes" : "no");
 
     jbyteArray readBuffer = env->NewByteArray(kUsbMidiPacketSize);
 
