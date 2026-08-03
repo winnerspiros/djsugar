@@ -265,8 +265,7 @@ void AndroidMidiController::IoThread::run() {
                 usbInterface.object(),
                 true);
         if (!claimed) {
-            __android_log_print(ANDROID_LOG_WARN, "mixxx",
-                    "IoThread: claimInterface failed — trying bulkTransfer anyway");
+            __android_log_print(ANDROID_LOG_WARN, "mixxx", "IoThread: claimInterface failed — trying bulkTransfer anyway");
             // Fall through — some devices work without explicit claim
         }
     }
@@ -277,7 +276,8 @@ void AndroidMidiController::IoThread::run() {
     jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
     for (jint ep = 0; ep < epCount; ep++) {
         auto endpoint = usbInterface.callObjectMethod("getEndpoint",
-                "(I)Landroid/hardware/usb/UsbEndpoint;", ep);
+                "(I)Landroid/hardware/usb/UsbEndpoint;",
+                ep);
         jint dir = endpoint.callMethod<jint>("getDirection");
         // DIRECTION_IN = 0x80, DIRECTION_OUT = 0x00 in UsbConstants
         if (dir == 0x80 && !bulkInEndpoint.isValid()) {
@@ -288,16 +288,11 @@ void AndroidMidiController::IoThread::run() {
     }
 
     if (!bulkInEndpoint.isValid() && !bulkOutEndpoint.isValid()) {
-        __android_log_print(ANDROID_LOG_ERROR, "mixxx",
-                "IoThread: no bulk endpoints found on interface %d (epCount=%d)",
-                m_interfaceNumber, epCount);
+        __android_log_print(ANDROID_LOG_ERROR, "mixxx", "IoThread: no bulk endpoints found on interface %d (epCount=%d)", m_interfaceNumber, epCount);
         return;
     }
 
-    __android_log_print(ANDROID_LOG_INFO, "mixxx",
-            "IoThread: endpoints — IN=%s OUT=%s",
-            bulkInEndpoint.isValid() ? "yes" : "no",
-            bulkOutEndpoint.isValid() ? "yes" : "no");
+    __android_log_print(ANDROID_LOG_INFO, "mixxx", "IoThread: endpoints — IN=%s OUT=%s", bulkInEndpoint.isValid() ? "yes" : "no", bulkOutEndpoint.isValid() ? "yes" : "no");
 
     jbyteArray readBuffer = env->NewByteArray(kUsbMidiPacketSize);
 

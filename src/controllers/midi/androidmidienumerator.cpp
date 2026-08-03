@@ -87,7 +87,8 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                     for (jsize j = 0; j < usbCount; j++) {
                         QJniObject usbDevice = env2->GetObjectArrayElement(
                                 static_cast<jobjectArray>(valuesArray.object()), j);
-                        if (!usbDevice.isValid()) continue;
+                        if (!usbDevice.isValid())
+                            continue;
 
                         jint vid = usbDevice.callMethod<jint>("getVendorId");
                         jint pid = usbDevice.callMethod<jint>("getProductId");
@@ -97,7 +98,8 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                         int midiIface = -1;
                         for (jint ifIdx = 0; ifIdx < ifaceCount; ifIdx++) {
                             auto iface = usbDevice.callObjectMethod("getInterface",
-                                    "(I)Landroid/hardware/usb/UsbInterface;", ifIdx);
+                                    "(I)Landroid/hardware/usb/UsbInterface;",
+                                    ifIdx);
                             jint ifaceClass = iface.callMethod<jint>("getInterfaceClass");
                             jint ifaceSubclass = iface.callMethod<jint>("getInterfaceSubclass");
                             if (ifaceClass == 1 && ifaceSubclass == 3) {
@@ -106,7 +108,8 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                             }
                         }
 
-                        if (midiIface < 0) continue;
+                        if (midiIface < 0)
+                            continue;
 
                         // Try to get product name via USB device descriptor
                         QString name;
@@ -129,12 +132,12 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 
                         if (productStr.isEmpty() && vendorStr.isEmpty()) {
                             productStr = QStringLiteral("USB MIDI %1:%2")
-                                    .arg(vid, 4, 16, QChar('0'))
-                                    .arg(pid, 4, 16, QChar('0'));
+                                                 .arg(vid, 4, 16, QChar('0'))
+                                                 .arg(pid, 4, 16, QChar('0'));
                         }
                         name = vendorStr.isEmpty() ? productStr
-                                : (productStr.isEmpty() ? vendorStr
-                                        : QStringLiteral("%1 %2").arg(vendorStr, productStr));
+                                                   : (productStr.isEmpty() ? vendorStr
+                                                                           : QStringLiteral("%1 %2").arg(vendorStr, productStr));
 
                         kLogger.info() << "USB MIDI device (UsbManager):" << name
                                        << QStringLiteral("VID:0x%1 PID:0x%2")
