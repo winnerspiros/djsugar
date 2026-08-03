@@ -115,8 +115,6 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                         QString name;
                         QString vendorStr;
                         QString productStr;
-                        jint productIdJni = usbDevice.callMethod<jint>("getProductId");
-                        jint vendorIdJni = usbDevice.callMethod<jint>("getVendorId");
 
                         // Try getProductName via JNI (custom method may not exist on all devices)
                         QJniObject devName = usbDevice.callObjectMethod(
