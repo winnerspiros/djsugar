@@ -355,7 +355,7 @@ jobs:
 
       - name: "[Windows] Set up MSVC Developer Command Prompt"
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@v1.13.0
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
@@ -438,7 +438,7 @@ jobs:
         # already encodes the dependency revision SHA) so a deps bump
         # automatically invalidates the cache.
         if: matrix.buildenv_script != null && runner.os != 'Linux'
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ matrix.buildenv_basepath }}
           key: buildenv-${{ matrix.os }}-${{ matrix.compiler_cache_id || matrix.arch }}-${{ env.BUILDENV_NAME }}

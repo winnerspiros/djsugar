@@ -17,5 +17,9 @@ extern std::vector<std::pair<QJniObject, bool>> s_grantingResult;
 extern QJniObject s_intent;
 extern QJniObject s_usbManager;
 
+/// True when a USB permission was recently granted (e.g. via USB_DEVICE_ATTACHED).
+/// HID enumerator should re-scan when this is set.
+extern std::atomic<bool> s_usbPermissionGranted;
+
 } // namespace android
 } // namespace mixxx

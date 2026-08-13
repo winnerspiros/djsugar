@@ -66,7 +66,7 @@ jobs:
       release_name: ${{ steps.ver.outputs.release_name }}
       tag_name: ${{ steps.ver.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # need full history for git describe
 
@@ -146,7 +146,7 @@ jobs:
     # Run even if some builds fail so we still get a release with partial assets.
     if: always() && needs.version.result == 'success'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Download artifacts from each build by slug name (build.yml uses
       # artifacts_slug as the upload-artifact name).

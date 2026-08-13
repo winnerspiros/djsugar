@@ -5,6 +5,7 @@
 #include <qjnitypes.h>
 
 #include <QtJniTypes>
+#include <atomic>
 #include <cstddef>
 
 namespace mixxx {
@@ -14,6 +15,7 @@ std::condition_variable s_grantingWaitCond = {};
 std::vector<std::pair<QJniObject, bool>> s_grantingResult = {};
 QJniObject s_intent = {};
 QJniObject s_usbManager = {};
+std::atomic<bool> s_usbPermissionGranted{false};
 
 const QJniObject& getIntent() {
     __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "about to get intent");
@@ -114,16 +116,38 @@ void usbDeviceAccessResult(QJniObject device, bool granted) {
 } // namespace mixxx
 
 Q_DECLARE_JNI_CLASS(UsbPermissionClass, "org/mixxx/UsbPermission")
+Q_DECLARE_JNI_CLASS(AndroidMidiHelperClass, "org/mixxx/AndroidMidiHelper")
 
 void usbDeviceAccessResult(JNIEnv*, jobject, jobject device, jboolean granted) {
     mixxx::android::usbDeviceAccessResult(device, granted);
 }
 Q_DECLARE_JNI_NATIVE_METHOD(usbDeviceAccessResult)
 
+// Native callback from AndroidMidiHelper.midiReceive()
+static void midiReceive(JNIEnv*,
+        jobject,
+        jint controllerId,
+        jbyteArray data,
+        jint offset,
+        jint count,
+        jlong timestamp) {
+    // Forward to the active AndroidMidiController
+    // TODO: implement controller lookup by ID
+    Q_UNUSED(controllerId);
+    Q_UNUSED(data);
+    Q_UNUSED(offset);
+    Q_UNUSED(count);
+    Q_UNUSED(timestamp);
+}
+Q_DECLARE_JNI_NATIVE_METHOD(midiReceive)
+
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM*, void*) {
     QJniEnvironment env;
     env.registerNativeMethods<QtJniTypes::UsbPermissionClass>({
             Q_JNI_NATIVE_METHOD(usbDeviceAccessResult),
+    });
+    env.registerNativeMethods<QtJniTypes::AndroidMidiHelperClass>({
+            Q_JNI_NATIVE_METHOD(midiReceive),
     });
     return JNI_VERSION_1_6;
 }

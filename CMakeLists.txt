@@ -5682,6 +5682,14 @@ if(BULK)
       src/controllers/bulk/bulkcontroller.cpp
       src/controllers/bulk/bulkenumerator.cpp
   )
+  if(ANDROID)
+    target_sources(
+      mixxx-lib
+      PRIVATE
+        src/controllers/midi/androidmidicontroller.cpp
+        src/controllers/midi/androidmidienumerator.cpp
+    )
+  endif()
   if(NOT HID)
     target_sources(
       mixxx-lib
