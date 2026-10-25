@@ -16,6 +16,7 @@ namespace {
 
 const ConfigKey kSkinConfigKey(QStringLiteral("[Config]"), QStringLiteral("AndroidSkin"));
 const QString kClassicSkin = QStringLiteral("Classic");
+const QString kDefaultSkin = QStringLiteral("Booth");
 const ConfigKey kHiddenTopBarItemsKey(
         QStringLiteral("[Skin]"), QStringLiteral("AndroidHiddenTopBarItems"));
 
@@ -56,7 +57,7 @@ QString QmlMobileAppProxy::packageVersion() const {
 
 QString QmlMobileAppProxy::skin() const {
     const UserSettingsPointer pConfig = QmlConfigProxy::get();
-    return pConfig ? pConfig->getValue(kSkinConfigKey, kClassicSkin) : kClassicSkin;
+    return pConfig ? pConfig->getValue(kSkinConfigKey, kDefaultSkin) : kDefaultSkin;
 }
 
 void QmlMobileAppProxy::setSkin(const QString& skin) {
