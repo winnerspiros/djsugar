@@ -5,6 +5,8 @@
 #include <QString>
 #include <QVariantList>
 
+#include "library/youtube/youtubeservice.h"
+
 class Library;
 class PlayerManager;
 class YouTubeFeature;
