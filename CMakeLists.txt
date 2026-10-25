@@ -4549,6 +4549,7 @@ if(QML)
       src/qml/qmlmobileaudioproxy.cpp
       src/qml/qmlmobilecontrollersproxy.cpp
       src/qml/qmllibraryfeaturesource.cpp
+      src/qml/qmlyoutubeproxy.cpp
       src/qml/qmlstreamingproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/waveformrenderbeat.cpp

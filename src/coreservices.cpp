@@ -53,6 +53,7 @@
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
 #include "qml/qmlstreamingproxy.h"
+#include "qml/qmlyoutubeproxy.h"
 #endif
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
@@ -941,6 +942,8 @@ void CoreServices::initializeQMLSingletons() {
     // Mixxx.StreamingManager, from JaviLabarumDJ/mixxx-android).
     mixxx::qml::QmlStreamingProxy::registerPlayerManager(getPlayerManager());
     mixxx::qml::QmlStreamingProxy::registerUserSettings(getSettings());
+    mixxx::qml::QmlYouTubeProxy::registerLibrary(getLibrary());
+    mixxx::qml::QmlYouTubeProxy::registerPlayerManager(getPlayerManager());
 
     ControllerScriptEngineBase::registerTrackCollectionManager(getTrackCollectionManager());
 
