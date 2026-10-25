@@ -113,8 +113,8 @@ add_custom_target(
   mixxx-android-qml-overrides
   COMMAND
     ${CMAKE_COMMAND}
-    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml"
-    -P ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
+    ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
 )
 add_dependencies(mixxx-android-qml-overrides copy-resource-android)
 add_dependencies(mixxx mixxx-android-qml-overrides)
