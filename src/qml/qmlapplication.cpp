@@ -14,10 +14,15 @@
 #include <QPushButton>
 #endif
 
+#include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
 #include "controllers/controllermanager.h"
+#include "effects/effectsmanager.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
+#include "library/trackcollectionmanager.h"
 #include "mixer/playermanager.h"
+#include "mixer/previewdeck.h"
+#include "mixer/sampler.h"
 #include "moc_qmlapplication.cpp"
 #include "preferences/configobject.h"
 #include "qml/asyncimageprovider.h"
@@ -26,6 +31,8 @@
 #include "qml/qmlcoreservices.h"
 #include "qml/qmldlgpreferencesproxy.h"
 #include "qml/qmllanguageproxy.h"
+#include "qml/qmlrecordingproxy.h"
+#include "recording/recordingmanager.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
