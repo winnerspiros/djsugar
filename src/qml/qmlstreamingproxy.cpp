@@ -24,7 +24,8 @@ const QString kStreamingGroup = QStringLiteral("[Streaming]");
 const QString kSubsonicUrlKey = QStringLiteral("SubsonicUrl");
 const QString kSubsonicUserKey = QStringLiteral("SubsonicUsername");
 const QString kSubsonicPassKey = QStringLiteral("SubsonicPassword");
-const QString kDefaultUserAgent = QStringLiteral("Mozilla/5.0 (Linux; Android 14; Mobile; Mixxx-DJ) AppleWebKit/537.36");
+const QString kDefaultUserAgent = QStringLiteral(
+        "Mozilla/5.0 (Linux; Android 14; Mobile; Mixxx-DJ) AppleWebKit/537.36");
 } // namespace
 
 QmlStreamingProxy::QmlStreamingProxy(QObject* parent)
@@ -39,14 +40,17 @@ QmlStreamingProxy::QmlStreamingProxy(QObject* parent)
     m_cacheDir = baseDir + QStringLiteral("/streaming_cache");
     QDir(m_cacheDir).mkpath(QStringLiteral("."));
 #else
-    m_cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/streaming");
+    m_cacheDir =
+            QStandardPaths::writableLocation(QStandardPaths::CacheLocation) +
+            QStringLiteral("/streaming");
     QDir(m_cacheDir).mkpath(QStringLiteral("."));
 #endif
 
     // Load persisted settings if config is available
     if (s_pConfig) {
         m_subsonicUrl = s_pConfig->getValue(ConfigKey(kStreamingGroup, kSubsonicUrlKey), QString());
-        m_subsonicUsername = s_pConfig->getValue(ConfigKey(kStreamingGroup, kSubsonicUserKey), QString());
+        m_subsonicUsername = s_pConfig->getValue(
+                ConfigKey(kStreamingGroup, kSubsonicUserKey), QString());
         m_subsonicPassword = s_pConfig->getValue(
                 ConfigKey(kStreamingGroup, kSubsonicPassKey), QString());
     }
@@ -193,7 +197,8 @@ void QmlStreamingProxy::testSubsonicConnection() {
     }
 
     QNetworkRequest request{QUrl(urlStr)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -221,12 +226,15 @@ void QmlStreamingProxy::testSubsonicConnection() {
             }
             m_subsonicServerVersion = version;
             emit subsonicConnectionChanged();
-            emit subsonicConnectionTested(true, tr("Connection established successfully!"), version);
+            emit subsonicConnectionTested(
+                    true, tr("Connection established successfully!"), version);
         } else {
             m_isSubsonicConnected = false;
             emit subsonicConnectionChanged();
             QJsonObject err = resp.value(QStringLiteral("error")).toObject();
-            QString msg = err.value(QStringLiteral("message")).toString(tr("Authentication or server error"));
+            QString msg =
+                    err.value(QStringLiteral("message"))
+                            .toString(tr("Authentication or server error"));
             emit subsonicConnectionTested(false, msg, QString());
         }
     });
@@ -238,7 +246,8 @@ void QmlStreamingProxy::searchSubsonic(const QString& query) {
         return;
     }
 
-    const QString extra = QStringLiteral("query=") + QString::fromUtf8(QUrl::toPercentEncoding(query.trimmed()));
+    const QString extra = QStringLiteral("query=") +
+            QString::fromUtf8(QUrl::toPercentEncoding(query.trimmed()));
     const QString urlStr = buildSubsonicUrl(QStringLiteral("search3"), extra);
     if (urlStr.isEmpty()) {
         emit subsonicSearchFinished(false, QVariantList(), tr("Set up the Navidrome/Subsonic URL"));
@@ -246,7 +255,8 @@ void QmlStreamingProxy::searchSubsonic(const QString& query) {
     }
 
     QNetworkRequest request{QUrl(urlStr)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -277,13 +287,18 @@ void QmlStreamingProxy::searchSubsonic(const QString& query) {
             item[QStringLiteral("album")] =
                     song.value(QStringLiteral("album")).toString();
             item[QStringLiteral("duration")] = song.value(QStringLiteral("duration")).toInt();
-            item[QStringLiteral("suffix")] = song.value(QStringLiteral("suffix")).toString(QStringLiteral("mp3")).toUpper();
+            item[QStringLiteral("suffix")] =
+                    song.value(QStringLiteral("suffix"))
+                            .toString(QStringLiteral("mp3"))
+                            .toUpper();
             item[QStringLiteral("bitRate")] =
                     song.value(QStringLiteral("bitRate")).toInt();
-            item[QStringLiteral("size")] = song.value(QStringLiteral("size")).toVariant().toLongLong();
+            item[QStringLiteral("size")] =
+                    song.value(QStringLiteral("size")).toVariant().toLongLong();
             item[QStringLiteral("coverArt")] =
                     song.value(QStringLiteral("coverArt")).toString();
-            item[QStringLiteral("coverArtUrl")] = getSubsonicCoverArtUrl(song.value(QStringLiteral("coverArt")).toString(), 160);
+            item[QStringLiteral("coverArtUrl")] = getSubsonicCoverArtUrl(
+                    song.value(QStringLiteral("coverArt")).toString(), 160);
             item[QStringLiteral("streamUrl")] = getSubsonicStreamUrl(id);
             item[QStringLiteral("service")] = QStringLiteral("subsonic");
             item[QStringLiteral("isCached")] =
@@ -298,12 +313,14 @@ void QmlStreamingProxy::searchSubsonic(const QString& query) {
 void QmlStreamingProxy::getSubsonicPlaylists() {
     const QString urlStr = buildSubsonicUrl(QStringLiteral("getPlaylists"));
     if (urlStr.isEmpty()) {
-        emit subsonicPlaylistsFinished(false, QVariantList(), tr("Set up the Navidrome/Subsonic URL"));
+        emit subsonicPlaylistsFinished(
+                false, QVariantList(), tr("Set up the Navidrome/Subsonic URL"));
         return;
     }
 
     QNetworkRequest request{QUrl(urlStr)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -339,12 +356,14 @@ void QmlStreamingProxy::getSubsonicPlaylistSongs(const QString& playlistId) {
     const QString extra = QStringLiteral("id=") + playlistId;
     const QString urlStr = buildSubsonicUrl(QStringLiteral("getPlaylist"), extra);
     if (urlStr.isEmpty()) {
-        emit subsonicPlaylistSongsFinished(false, QVariantList(), tr("Set up the Navidrome/Subsonic URL"));
+        emit subsonicPlaylistSongsFinished(
+                false, QVariantList(), tr("Set up the Navidrome/Subsonic URL"));
         return;
     }
 
     QNetworkRequest request{QUrl(urlStr)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -369,18 +388,23 @@ void QmlStreamingProxy::getSubsonicPlaylistSongs(const QString& playlistId) {
             QVariantMap item;
             QString id = song.value(QStringLiteral("id")).toString();
             item[QStringLiteral("id")] = id;
-            item[QStringLiteral("title")] = song.value(QStringLiteral("title")).toString(tr("Untitled"));
+            item[QStringLiteral("title")] = song.value(QStringLiteral("title"))
+                                                    .toString(tr("Untitled"));
             item[QStringLiteral("artist")] =
                     song.value(QStringLiteral("artist"))
                             .toString(tr("Unknown artist"));
             item[QStringLiteral("album")] =
                     song.value(QStringLiteral("album")).toString();
             item[QStringLiteral("duration")] = song.value(QStringLiteral("duration")).toInt();
-            item[QStringLiteral("suffix")] = song.value(QStringLiteral("suffix")).toString(QStringLiteral("mp3")).toUpper();
+            item[QStringLiteral("suffix")] =
+                    song.value(QStringLiteral("suffix"))
+                            .toString(QStringLiteral("mp3"))
+                            .toUpper();
             item[QStringLiteral("bitRate")] =
                     song.value(QStringLiteral("bitRate")).toInt();
             item[QStringLiteral("coverArt")] = song.value(QStringLiteral("coverArt")).toString();
-            item[QStringLiteral("coverArtUrl")] = getSubsonicCoverArtUrl(song.value(QStringLiteral("coverArt")).toString(), 160);
+            item[QStringLiteral("coverArtUrl")] = getSubsonicCoverArtUrl(
+                    song.value(QStringLiteral("coverArt")).toString(), 160);
             item[QStringLiteral("streamUrl")] = getSubsonicStreamUrl(id);
             item[QStringLiteral("service")] = QStringLiteral("subsonic");
             item[QStringLiteral("isCached")] = isTrackCached(QStringLiteral("subsonic"), id);
@@ -405,7 +429,8 @@ void QmlStreamingProxy::searchAudius(const QString& query) {
                             QUrl::toPercentEncoding(query.trimmed())));
 
     QNetworkRequest request{QUrl(urlStr)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -431,13 +456,17 @@ void QmlStreamingProxy::searchAudius(const QString& query) {
             }
             QVariantMap item;
             item[QStringLiteral("id")] = id;
-            item[QStringLiteral("title")] = t.value(QStringLiteral("title")).toString(tr("Audius track"));
+            item[QStringLiteral("title")] =
+                    t.value(QStringLiteral("title"))
+                            .toString(tr("Audius track"));
             item[QStringLiteral("artist")] =
                     user.value(QStringLiteral("name"))
                             .toString(tr("Audius artist"));
             item[QStringLiteral("duration")] =
                     t.value(QStringLiteral("duration")).toInt();
-            item[QStringLiteral("genre")] = t.value(QStringLiteral("genre")).toString(QStringLiteral("Electronic"));
+            item[QStringLiteral("genre")] =
+                    t.value(QStringLiteral("genre"))
+                            .toString(QStringLiteral("Electronic"));
             item[QStringLiteral("bpm")] =
                     t.value(QStringLiteral("bpm")).toDouble(126.0);
             item[QStringLiteral("key")] =
@@ -449,7 +478,10 @@ void QmlStreamingProxy::searchAudius(const QString& query) {
             }
             item[QStringLiteral("coverArtUrl")] = artUrl;
             item[QStringLiteral("suffix")] = QStringLiteral("MP3");
-            item[QStringLiteral("streamUrl")] = QStringLiteral("https://discoveryprovider.audius.co/v1/tracks/%1/stream?app_name=MixxxAndroid").arg(id);
+            item[QStringLiteral("streamUrl")] = QStringLiteral(
+                    "https://discoveryprovider.audius.co/v1/tracks/%1/"
+                    "stream?app_name=MixxxAndroid")
+                                                        .arg(id);
             item[QStringLiteral("service")] = QStringLiteral("audius");
             item[QStringLiteral("isCached")] = isTrackCached(QStringLiteral("audius"), id);
             resultList.append(item);
@@ -493,13 +525,17 @@ void QmlStreamingProxy::getAudiusTrending(const QString& genre) {
             }
             QVariantMap item;
             item[QStringLiteral("id")] = id;
-            item[QStringLiteral("title")] = t.value(QStringLiteral("title")).toString(tr("Audius track"));
+            item[QStringLiteral("title")] =
+                    t.value(QStringLiteral("title"))
+                            .toString(tr("Audius track"));
             item[QStringLiteral("artist")] =
                     user.value(QStringLiteral("name"))
                             .toString(tr("Audius artist"));
             item[QStringLiteral("duration")] =
                     t.value(QStringLiteral("duration")).toInt();
-            item[QStringLiteral("genre")] = t.value(QStringLiteral("genre")).toString(QStringLiteral("Electronic"));
+            item[QStringLiteral("genre")] =
+                    t.value(QStringLiteral("genre"))
+                            .toString(QStringLiteral("Electronic"));
             item[QStringLiteral("bpm")] =
                     t.value(QStringLiteral("bpm")).toDouble(126.0);
             item[QStringLiteral("key")] = t.value(QStringLiteral("musical_key")).toString();
@@ -510,7 +546,10 @@ void QmlStreamingProxy::getAudiusTrending(const QString& genre) {
             }
             item[QStringLiteral("coverArtUrl")] = artUrl;
             item[QStringLiteral("suffix")] = QStringLiteral("MP3");
-            item[QStringLiteral("streamUrl")] = QStringLiteral("https://discoveryprovider.audius.co/v1/tracks/%1/stream?app_name=MixxxAndroid").arg(id);
+            item[QStringLiteral("streamUrl")] = QStringLiteral(
+                    "https://discoveryprovider.audius.co/v1/tracks/%1/"
+                    "stream?app_name=MixxxAndroid")
+                                                        .arg(id);
             item[QStringLiteral("service")] = QStringLiteral("audius");
             item[QStringLiteral("isCached")] = isTrackCached(QStringLiteral("audius"), id);
             resultList.append(item);
@@ -524,7 +563,8 @@ bool QmlStreamingProxy::isTrackCached(const QString& service, const QString& tra
     return !getCachedTrackPath(service, trackId).isEmpty();
 }
 
-QString QmlStreamingProxy::getCachedTrackPath(const QString& service, const QString& trackId) const {
+QString QmlStreamingProxy::getCachedTrackPath(
+        const QString& service, const QString& trackId) const {
     const QString safeId = sanitizeFileName(trackId);
     const QString marker = QStringLiteral("[%1_%2]").arg(service, safeId);
     const QString legacyPrefix = service + QLatin1Char('_') + safeId;
@@ -585,7 +625,9 @@ void QmlStreamingProxy::downloadAndLoad(
     QString ext = QStringLiteral(".mp3");
     if (streamUrl.contains(QStringLiteral(".flac"), Qt::CaseInsensitive)) {
         ext = QStringLiteral(".flac");
-    } else if (streamUrl.contains(QStringLiteral(".m4a"), Qt::CaseInsensitive) || streamUrl.contains(QStringLiteral(".aac"), Qt::CaseInsensitive)) {
+    } else if (streamUrl.contains(
+                       QStringLiteral(".m4a"), Qt::CaseInsensitive) ||
+            streamUrl.contains(QStringLiteral(".aac"), Qt::CaseInsensitive)) {
         ext = QStringLiteral(".m4a");
     } else if (streamUrl.contains(
                        QStringLiteral(".ogg"), Qt::CaseInsensitive)) {
@@ -607,7 +649,8 @@ void QmlStreamingProxy::downloadAndLoad(
     }
 
     QNetworkRequest request{QUrl(streamUrl)};
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+            QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, kDefaultUserAgent);
 
     QNetworkReply* reply = m_pNetworkManager->get(request);
@@ -633,10 +676,15 @@ void QmlStreamingProxy::downloadAndLoad(
     m_activeDownloads.insert(trackId, job);
     emit activeDownloadsChanged();
 
-    connect(reply, &QNetworkReply::downloadProgress, this, [this, trackId](qint64 received, qint64 total) {
-        qreal progress = total > 0 ? static_cast<qreal>(received) / static_cast<qreal>(total) : 0.0;
-        emit downloadProgress(trackId, progress, received, total);
-    });
+    connect(reply,
+            &QNetworkReply::downloadProgress,
+            this,
+            [this, trackId](qint64 received, qint64 total) {
+                qreal progress = total > 0 ? static_cast<qreal>(received) /
+                                static_cast<qreal>(total)
+                                           : 0.0;
+                emit downloadProgress(trackId, progress, received, total);
+            });
 
     connect(reply, &QIODevice::readyRead, this, [job]() {
         if (job->pFile && job->pFile->isOpen()) {
@@ -677,7 +725,8 @@ void QmlStreamingProxy::downloadAndLoad(
             return;
         }
 
-        // Write ID3 metadata tags (Title, Artist) before loading so Mixxx will never display file fallback names
+        // Write ID3 metadata tags (Title, Artist) before loading so Mixxx will
+        // never display file fallback names
         mixxx::TrackMetadata trackMetadata;
         if (!job->title.isEmpty()) {
             trackMetadata.refTrackInfo().setTitle(job->title);

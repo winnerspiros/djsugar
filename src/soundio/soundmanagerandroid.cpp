@@ -204,7 +204,8 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
     for (const auto& pDevice : devices) {
         if (pDevice && pDevice->getNumOutputChannels() > 0 &&
                 pDevice->getDeviceId().name != kNetworkDeviceInternalName) {
-            if (pDevice->getDisplayName().contains(QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
+            if (pDevice->getDisplayName().contains(
+                        QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
                 continue;
             }
             if (pDevice->getHostAPI().contains(QStringLiteral("Oboe"), Qt::CaseInsensitive)) {
@@ -213,7 +214,9 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
                     targetDevice = pDevice;
                     break;
                 }
-                if (!targetDevice || !targetDevice->getHostAPI().contains(QStringLiteral("Oboe"), Qt::CaseInsensitive)) {
+                if (!targetDevice ||
+                        !targetDevice->getHostAPI().contains(
+                                QStringLiteral("Oboe"), Qt::CaseInsensitive)) {
                     targetDevice = pDevice;
                 }
                 continue;

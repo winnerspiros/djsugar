@@ -6,7 +6,6 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
-
 import java.util.List;
 
 /// Helpers for the Android audio system used by SoundManager.
@@ -25,14 +24,14 @@ public class AudioHelper {
             return false;
         }
         AudioManager audioManager =
-                (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audioManager == null) {
             return false;
         }
         AudioAttributes attributes = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build();
+                                         .setUsage(AudioAttributes.USAGE_MEDIA)
+                                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                         .build();
         List<AudioDeviceInfo> devices = audioManager.getAudioDevicesForAttributes(attributes);
         if (devices == null || devices.isEmpty()) {
             return false;
@@ -40,8 +39,8 @@ public class AudioHelper {
         for (AudioDeviceInfo device : devices) {
             int type = device.getType();
             if (type != AudioDeviceInfo.TYPE_USB_DEVICE
-                    && type != AudioDeviceInfo.TYPE_USB_HEADSET
-                    && type != AudioDeviceInfo.TYPE_USB_ACCESSORY) {
+                && type != AudioDeviceInfo.TYPE_USB_HEADSET
+                && type != AudioDeviceInfo.TYPE_USB_ACCESSORY) {
                 Log.i(TAG, "Media is not routed to USB only, keeping the volume");
                 return false;
             }

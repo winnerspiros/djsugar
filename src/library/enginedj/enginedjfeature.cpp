@@ -80,7 +80,7 @@ void createTables(const QSqlDatabase& database) {
             "    device TEXT,"
             "    color INTEGER"
             ")")
-                            .arg(kLibraryTable));
+                    .arg(kLibraryTable));
     execQuery(library);
 
     QSqlQuery playlists(database);
@@ -90,7 +90,7 @@ void createTables(const QSqlDatabase& database) {
             "    name TEXT UNIQUE,"
             "    device TEXT"
             ")")
-                              .arg(kPlaylistsTable));
+                    .arg(kPlaylistsTable));
     execQuery(playlists);
 
     QSqlQuery playlistTracks(database);
@@ -101,7 +101,7 @@ void createTables(const QSqlDatabase& database) {
             "    track_id INTEGER REFERENCES %3(id),"
             "    position INTEGER"
             ")")
-                                   .arg(kPlaylistTracksTable, kPlaylistsTable, kLibraryTable));
+                    .arg(kPlaylistTracksTable, kPlaylistsTable, kLibraryTable));
     execQuery(playlistTracks);
 }
 
@@ -110,7 +110,7 @@ void clearDevice(const QSqlDatabase& database, const QString& devicePath) {
     QSqlQuery playlistTracks(database);
     playlistTracks.prepare(QStringLiteral(
             "DELETE FROM %1 WHERE playlist_id IN (SELECT id FROM %2 WHERE device=:device)")
-                                   .arg(kPlaylistTracksTable, kPlaylistsTable));
+                    .arg(kPlaylistTracksTable, kPlaylistsTable));
     playlistTracks.bindValue(QStringLiteral(":device"), devicePath);
     execQuery(playlistTracks);
     for (const auto& table : {kPlaylistsTable, kLibraryTable}) {
@@ -238,11 +238,11 @@ class DeviceParser {
                 " location, comment, duration, bitrate, bpm, key, rating, device)"
                 " VALUES (:artist, :title, :album, :year, :genre, :tracknumber,"
                 " :location, :comment, :duration, :bitrate, :bpm, :key, :rating, :device)")
-                                      .arg(kLibraryTable));
+                        .arg(kLibraryTable));
         m_insertPlaylistTrack.prepare(QStringLiteral(
                 "INSERT INTO %1 (playlist_id, track_id, position)"
                 " VALUES (:playlist_id, :track_id, :position)")
-                                              .arg(kPlaylistTracksTable));
+                        .arg(kPlaylistTracksTable));
     }
 
     void addTrack(const TrackInfo& track) {
@@ -343,8 +343,7 @@ class DeviceParser {
 class SqlEngineLibrary {
   public:
     explicit SqlEngineLibrary(const QString& databasePath)
-            : m_connectionName(QStringLiteral("enginedj-%1").arg(
-                      reinterpret_cast<quintptr>(QThread::currentThread()))) {
+            : m_connectionName(QStringLiteral("enginedj-%1").arg(reinterpret_cast<quintptr>(QThread::currentThread()))) {
         QSqlDatabase database = QSqlDatabase::addDatabase(
                 QStringLiteral("QSQLITE"), m_connectionName);
         database.setDatabaseName(databasePath);
@@ -380,20 +379,20 @@ class SqlEngineLibrary {
         if (!tracks.exec(QStringLiteral(
                     "SELECT id, path, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12,"
                     " %13, %14 FROM Track")
-                                 .arg(column("title"),
-                                         column("artist"),
-                                         column("album"),
-                                         column("genre"),
-                                         column("comment"),
-                                         column("key"),
-                                         column("year"),
-                                         column("bitrate"),
-                                         column("length"),
-                                         column("bpmAnalyzed"),
-                                         column("bpm"),
-                                         column("rating"),
-                                         column("originDatabaseUuid"),
-                                         column("originTrackId")))) {
+                            .arg(column("title"),
+                                    column("artist"),
+                                    column("album"),
+                                    column("genre"),
+                                    column("comment"),
+                                    column("key"),
+                                    column("year"),
+                                    column("bitrate"),
+                                    column("length"),
+                                    column("bpmAnalyzed"),
+                                    column("bpm"),
+                                    column("rating"),
+                                    column("originDatabaseUuid"),
+                                    column("originTrackId")))) {
             m_error = tracks.lastError().text();
             return false;
         }
@@ -495,12 +494,12 @@ class SqlEngineLibrary {
         }
         QSqlQuery playlists(database);
         playlists.exec(QStringLiteral("SELECT id, title, parentListId, %1, %2 FROM Playlist")
-                               .arg(playlistColumns.contains(QLatin1String("nextListId"))
-                                               ? QStringLiteral("nextListId")
-                                               : QStringLiteral("0"),
-                                       playlistColumns.contains(QLatin1String("isPersisted"))
-                                               ? QStringLiteral("isPersisted")
-                                               : QStringLiteral("1")));
+                        .arg(playlistColumns.contains(QLatin1String("nextListId"))
+                                        ? QStringLiteral("nextListId")
+                                        : QStringLiteral("0"),
+                                playlistColumns.contains(QLatin1String("isPersisted"))
+                                        ? QStringLiteral("isPersisted")
+                                        : QStringLiteral("1")));
         QHash<int64_t, QString> titles;
         QHash<int64_t, QList<int64_t>> children;
         QHash<int64_t, int64_t> nextList;
@@ -530,12 +529,12 @@ class SqlEngineLibrary {
         QHash<int64_t, int64_t> trackOfEntity;
         QSqlQuery entities(database);
         entities.exec(QStringLiteral("SELECT id, listId, trackId, %1, %2 FROM PlaylistEntity")
-                              .arg(entityColumns.contains(QLatin1String("nextEntityId"))
-                                              ? QStringLiteral("nextEntityId")
-                                              : QStringLiteral("0"),
-                                      entityColumns.contains(QLatin1String("databaseUuid"))
-                                              ? QStringLiteral("databaseUuid")
-                                              : QStringLiteral("NULL")));
+                        .arg(entityColumns.contains(QLatin1String("nextEntityId"))
+                                        ? QStringLiteral("nextEntityId")
+                                        : QStringLiteral("0"),
+                                entityColumns.contains(QLatin1String("databaseUuid"))
+                                        ? QStringLiteral("databaseUuid")
+                                        : QStringLiteral("NULL")));
         int resolved = 0;
         int unresolved = 0;
         while (entities.next()) {

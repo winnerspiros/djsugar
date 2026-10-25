@@ -64,7 +64,7 @@ void QmlLanguageProxy::installAndroidTranslations(UserSettingsPointer pConfig) {
         return;
     }
     qInfo() << "Loaded" << kAndroidTranslationsPrefix << "translations for locale"
-             << locale.name() << "from" << pTranslator->filePath();
+            << locale.name() << "from" << pTranslator->filePath();
     // Installed last, so it takes precedence over the upstream catalog
     pApp->installTranslator(pTranslator);
     s_pAndroidTranslator = pTranslator;

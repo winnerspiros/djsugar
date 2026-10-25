@@ -49,7 +49,8 @@ std::optional<CoverInfoRelative> coverInfoFromLibrary(const QString& trackLocati
     info.source = static_cast<CoverInfoRelative::Source>(query.value(0).toInt());
     info.type = static_cast<CoverInfoRelative::Type>(query.value(1).toInt());
     info.coverLocation = query.value(2).toString();
-    info.setImageDigest(query.value(3).toByteArray(), static_cast<quint16>(query.value(4).toUInt()));
+    info.setImageDigest(query.value(3).toByteArray(),
+            static_cast<quint16>(query.value(4).toUInt()));
     return info;
 }
 
