@@ -186,9 +186,10 @@ BulkController::BulkController(libusb_context* pContext,
 }
 #else
 BulkController::BulkController(const QJniObject& usbDevice)
-        : Controller(QString("%1 %2").arg(
-                  usbDevice.callMethod<jstring>("getProductName").toString(),
-                  usbDevice.callMethod<jstring>("getSerialNumber").toString())),
+        // The serial number is only readable once USB permission has been
+        // granted, so it must not be part of the name, which is used as
+        // configuration key (from JaviLabarumDJ/mixxx-android android-stable).
+        : Controller(usbDevice.callMethod<jstring>("getProductName").toString()),
           m_pContext(nullptr),
           m_pHandle(nullptr),
           m_androidUsbDevice(usbDevice),

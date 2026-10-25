@@ -18,17 +18,14 @@ AndroidMidiEnumerator::AndroidMidiEnumerator()
 }
 
 AndroidMidiEnumerator::~AndroidMidiEnumerator() {
-    while (!m_devices.isEmpty()) {
-        delete m_devices.takeLast();
-    }
+    qDeleteAll(m_devices);
+    m_devices.clear();
+    qDeleteAll(m_removedDevices);
+    m_removedDevices.clear();
 }
 
 QList<Controller*> AndroidMidiEnumerator::queryDevices() {
     kLogger.info() << "Scanning Android MIDI devices";
-
-    while (!m_devices.isEmpty()) {
-        delete m_devices.takeLast();
-    }
 
     QJniObject context = QNativeInterface::QAndroidApplication::context();
     if (!context.isValid()) {
@@ -147,7 +144,21 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                                                   .arg(pid, 4, 16, QChar('0'))
                                        << "interface:" << midiIface;
 
-                        auto* controller = new AndroidMidiController(name,
+                        // Stable name keys: plain product name. The serial is only
+                        // readable after USB permission and would churn the
+                        // config key between scans (same fix as BulkController).
+                        QString stableName = productStr.isEmpty() ? name : productStr;
+                        bool alreadyKnownFallback = false;
+                        for (const auto* pDevice : std::as_const(m_devices)) {
+                            if (pDevice->getName() == stableName) {
+                                alreadyKnownFallback = true;
+                                break;
+                            }
+                        }
+                        if (alreadyKnownFallback) {
+                            continue;
+                        }
+                        auto* controller = new AndroidMidiController(stableName,
                                 usbDevice,
                                 midiIface,
                                 static_cast<uint16_t>(vid),
@@ -162,7 +173,12 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 
         kLogger.info() << "Enumerated" << m_devices.size()
                        << "Android MIDI controllers (UsbManager fallback)";
-        return m_devices;
+        QList<Controller*> fallbackResult;
+        fallbackResult.reserve(m_devices.size());
+        for (auto* pDevice : std::as_const(m_devices)) {
+            fallbackResult.append(pDevice);
+        }
+        return fallbackResult;
     }
 
     if (!deviceInfoArray.isValid()) {
@@ -174,6 +190,9 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
     count = env->GetArrayLength(
             static_cast<jobjectArray>(deviceInfoArray.object()));
     kLogger.info() << "Found" << count << "Android MIDI devices";
+
+    // Names seen in this scan; used below to drop unplugged devices.
+    QSet<QString> presentNames;
 
     for (jsize i = 0; i < count; i++) {
         QJniObject deviceInfo = env->GetObjectArrayElement(
@@ -241,6 +260,20 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             name = QStringLiteral("Android MIDI Device %1").arg(i);
         }
 
+        // Skip duplicates: the same device is still connected from the last
+        // scan, keep the existing entry so open controllers survive rescans.
+        bool alreadyKnown = false;
+        for (const auto* pDevice : std::as_const(m_devices)) {
+            if (pDevice->getName() == name) {
+                alreadyKnown = true;
+                presentNames.insert(name);
+                break;
+            }
+        }
+        if (alreadyKnown) {
+            continue;
+        }
+
         kLogger.info() << "MIDI device:" << name
                        << "inputs:" << inputPorts
                        << "outputs:" << outputPorts
@@ -283,12 +316,30 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                 productId,
                 vendorStr,
                 productStr);
+        presentNames.insert(name);
         m_devices.push_back(controller);
     }
 
-    kLogger.info() << "Enumerated" << m_devices.size()
+    // Drop devices that disappeared; deferred-delete so the GUI can still
+    // hold pointers until it processes devicesChanged().
+    for (int i = m_devices.size() - 1; i >= 0; --i) {
+        AndroidMidiController* pDevice = m_devices.at(i);
+        if (presentNames.contains(pDevice->getName())) {
+            continue;
+        }
+        kLogger.info() << "Android MIDI device removed:" << pDevice->getName();
+        m_devices.removeAt(i);
+        m_removedDevices.append(pDevice);
+    }
+
+    QList<Controller*> result;
+    result.reserve(m_devices.size());
+    for (auto* pDevice : std::as_const(m_devices)) {
+        result.append(pDevice);
+    }
+    kLogger.info() << "Enumerated" << result.size()
                    << "Android MIDI controllers";
-    return m_devices;
+    return result;
 }
 
 #endif // __ANDROID__

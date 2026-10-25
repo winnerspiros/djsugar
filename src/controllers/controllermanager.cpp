@@ -8,6 +8,7 @@
 #include "controllers/controllermappinginfoenumerator.h"
 #include "controllers/defs_controllers.h"
 #include "controllers/legacycontrollermappingfilehandler.h"
+#include "controllers/mappingmatcher.h"
 #include "moc_controllermanager.cpp"
 #include "preferences/usersettings.h"
 #include "util/cmdlineargs.h"
@@ -103,6 +104,9 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
           m_pControllerLearningEventFilter(
                   std::make_unique<ControllerLearningEventFilter>()),
           m_pollTimer(this),
+#ifdef __ANDROID__
+          m_hotplugTimer(this),
+#endif
           m_pThread(std::make_unique<QThread>()),
           m_skipPoll(false) {
     qRegisterMetaType<std::shared_ptr<LegacyControllerMapping>>(
@@ -117,6 +121,12 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
 
     m_pollTimer.setInterval(kPollInterval.toIntegerMillis());
     connect(&m_pollTimer, &QTimer::timeout, this, &ControllerManager::slotPollDevices);
+
+#ifdef __ANDROID__
+    m_hotplugTimer.setSingleShot(true);
+    m_hotplugTimer.setInterval(750);
+    connect(&m_hotplugTimer, &QTimer::timeout, this, &ControllerManager::slotSetUpDevices);
+#endif
 
     m_pThread->setObjectName("ControllerManager");
 
@@ -190,11 +200,22 @@ void ControllerManager::slotInitialize() {
         m_enumerators.push_back(std::make_unique<AndroidMidiEnumerator>());
 #endif
     } // Mutex locker released here
+#ifdef __ANDROID__
+    // USB and MIDI hotplug notifications arrive on Java threads.
+    m_hotplugListenerId = mixxx::android::addDevicesChangedListener([this]() {
+        QMetaObject::invokeMethod(
+                this, [this]() { m_hotplugTimer.start(); }, Qt::QueuedConnection);
+    });
+#endif
     emit initialized();
 }
 
 void ControllerManager::slotShutdown() {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+#ifdef __ANDROID__
+    mixxx::android::removeDevicesChangedListener(m_hotplugListenerId);
+    m_hotplugTimer.stop();
+#endif
     stopPolling();
 
     // Clear m_enumerators before deleting the enumerators to prevent other code
@@ -286,12 +307,22 @@ void ControllerManager::slotSetUpDevices() {
     for (Controller* pController : deviceList) {
         QString name = pController->getName();
 
+        // Rescans and hotplug events must not restart controllers that are
+        // already running, it would reset their scripts and LEDs.
         if (pController->isOpen()) {
-            pController->close();
+            continue;
         }
 
         // The filename for this device name.
         QString deviceName = sanitizeDeviceName(name);
+
+        // Plug and play: a controller that has never been configured gets a
+        // matching mapping from the ones shipped with Mixxx.
+        if (!m_pConfig->exists(ConfigKey("[Controller]", deviceName)) &&
+                getConfiguredMappingFileForDevice(deviceName).isEmpty() &&
+                autoAssignMapping(pController)) {
+            continue;
+        }
 
         // Check if device is enabled
         if (!m_pConfig->getValue(ConfigKey("[Controller]", deviceName), 0)) {
@@ -441,6 +472,42 @@ void ControllerManager::openController(Controller* pController) {
         m_pConfig->setValue(
                 ConfigKey("[Controller]", sanitizeDeviceName(pController->getName())), 1);
     }
+}
+
+// Plug and play: assign the best shipped mapping to a never-configured
+// controller (from JaviLabarumDJ/mixxx-android android-stable).
+bool ControllerManager::autoAssignMapping(Controller* pController) {
+    DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+    if (CmdlineArgs::Instance().getSafeMode()) {
+        return false;
+    }
+
+    MappingInfoEnumerator enumerator(resourceMappingsPath(m_pConfig));
+    enumerator.loadSupportedMappings();
+    const QList<MappingInfo> mappings =
+            enumerator.getMappingsByExtension(pController->mappingExtension());
+
+    const MappingInfo* pBestMatch = mixxx::bestMatchingMapping(pController, mappings);
+    if (!pBestMatch) {
+        qInfo() << "No mapping found for new controller" << pController->getName();
+        return false;
+    }
+
+    std::shared_ptr<LegacyControllerMapping> pMapping =
+            LegacyControllerMappingFileHandler::loadMapping(
+                    QFileInfo(pBestMatch->getPath()), resourceMappingsPath(m_pConfig));
+    if (!pMapping) {
+        return false;
+    }
+    qInfo() << "Automatically assigning mapping" << pBestMatch->getName()
+            << "to new controller" << pController->getName();
+    pMapping->loadSettings(m_pConfig, pController->getName());
+    m_pConfig->set(ConfigKey(kSettingsGroup, sanitizeDeviceName(pController->getName())),
+            pMapping->filePath());
+    pController->setMapping(std::move(pMapping));
+    // Marks the controller as enabled in the configuration on success
+    openController(pController);
+    return true;
 }
 
 void ControllerManager::closeController(Controller* pController) {

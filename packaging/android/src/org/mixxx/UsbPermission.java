@@ -13,6 +13,17 @@ public class UsbPermission {
         "org.mixxx.permissions.USB_PERMISSION";
     private static final String TAG = "MixxxUsbPermission";
     private static native void usbDeviceAccessResult(Object device, boolean granted);
+    private static native void usbDevicesChanged();
+
+    /// Asks the native ControllerManager to rescan devices. Safe to call before
+    /// the native library is loaded (from JaviLabarumDJ/mixxx-android).
+    public static void notifyDevicesChanged() {
+        try {
+            usbDevicesChanged();
+        } catch (UnsatisfiedLinkError e) {
+            Log.v(TAG, "Native library not loaded yet, skipping rescan");
+        }
+    }
     public boolean registerServiceBroadcastReceiver(Context context) {
         try {
             IntentFilter intentFilter = new IntentFilter(ACTION_USB_PERMISSION);

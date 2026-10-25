@@ -1,8 +1,12 @@
 package org.mixxx;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -67,6 +71,17 @@ public class MainActivity extends QtActivityBase {
         });
 
         requestMusicLibraryPermissions();
+
+        // USB/MIDI hotplug: USB_DEVICE_ATTACHED only reaches the activity via
+        // onNewIntent, but DETACHED needs a receiver. Either way, ask the
+        // native ControllerManager to rescan (from JaviLabarumDJ/mixxx-android
+        // android-stable).
+        IntentFilter usbFilter = new IntentFilter();
+        usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_EXPORTED);
+
+        MidiHelper.init(this);
 
         // Background audio: PlaybackService is lazy-started from native on
         // first deck play (EngineBuffer slotControlPlayRequest) — not here.
@@ -202,10 +217,35 @@ public class MainActivity extends QtActivityBase {
     // change never kills background playback.
     @Override
     protected void onDestroy() {
+        try {
+            unregisterReceiver(mUsbHotplugReceiver);
+        } catch (IllegalArgumentException e) {
+            // Receiver was not registered
+        }
         if (isFinishing()) {
             PlaybackService.stop(this);
         }
         super.onDestroy();
+    }
+
+    // USB/MIDI hotplug receiver + exit-save hook (from
+    // JaviLabarumDJ/mixxx-android android-stable).
+    private final BroadcastReceiver mUsbHotplugReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            UsbPermission.notifyDevicesChanged();
+        }
+    };
+
+    private static native void saveBeforeExit();
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {
+            UsbPermission.notifyDevicesChanged();
+        }
     }
 
     private void requestAllFilesAccessIfNeeded() {
