@@ -343,7 +343,9 @@ class DeviceParser {
 class SqlEngineLibrary {
   public:
     explicit SqlEngineLibrary(const QString& databasePath)
-            : m_connectionName(QStringLiteral("enginedj-%1").arg(reinterpret_cast<quintptr>(QThread::currentThread()))) {
+            : m_connectionName(QStringLiteral("enginedj-%1")
+                              .arg(reinterpret_cast<quintptr>(
+                                      QThread::currentThread()))) {
         QSqlDatabase database = QSqlDatabase::addDatabase(
                 QStringLiteral("QSQLITE"), m_connectionName);
         database.setDatabaseName(databasePath);
