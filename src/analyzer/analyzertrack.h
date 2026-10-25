@@ -10,6 +10,11 @@ class AnalyzerTrack {
     struct Options {
         /// If set, overrides whether the analysis should assume constant BPM.
         std::optional<bool> useFixedTempo;
+#ifdef Q_OS_ANDROID
+        /// If set, the beats are analyzed again even if the track has
+        /// some, unless they are locked or imported from Rekordbox
+        std::optional<bool> redoBeats;
+#endif
     };
 
     explicit AnalyzerTrack(TrackPointer track, Options options = Options());
