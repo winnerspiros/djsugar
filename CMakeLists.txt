@@ -2280,7 +2280,9 @@ if(ANDROID)
     mixxx-lib
     PUBLIC __ANDROID_USB_AUDIO__ __ANDROID_USB_DRIVE__
   )
-  target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
+  if(QML)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
+  endif()
 
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.
