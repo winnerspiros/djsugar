@@ -2275,6 +2275,12 @@ if(ANDROID)
       src/soundio/soundmanagerandroid.cpp
       src/soundio/usbaudiodescriptors.cpp
   )
+  # Direct USB audio/MIDI driver + USB drive reader (from JaviLabarumDJ/mixxx-android)
+  target_compile_definitions(
+    mixxx-lib
+    PUBLIC __ANDROID_USB_AUDIO__ __ANDROID_USB_DRIVE__
+  )
+  target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
 
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.
@@ -2818,6 +2824,9 @@ if(QT6)
       COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/qml
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml
+      # The Android versions of upstream QML files live in +android folders
+      # (from JaviLabarumDJ/mixxx-android), flattened over the base files
+      # after the copy by mixxx-android-qml-overrides below.
       COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
@@ -2866,7 +2875,17 @@ if(QT6)
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations/.keep
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     )
-    add_dependencies(mixxx copy-resource-android android-strip-libomp)
+    # Flatten +android QML selectors over base files in the package
+    # (from JaviLabarumDJ/mixxx-android, cmake/modules/MixxxAndroid.cmake).
+    add_custom_target(
+      mixxx-android-qml-overrides
+      COMMAND
+        ${CMAKE_COMMAND}
+        -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml"
+        -P ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+    )
+    add_dependencies(mixxx-android-qml-overrides copy-resource-android)
+    add_dependencies(mixxx copy-resource-android android-strip-libomp mixxx-android-qml-overrides)
     target_link_libraries(mixxx PUBLIC omp)
   else()
     qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
@@ -5935,6 +5954,8 @@ if(BULK)
         src/controllers/midi/androidmidicontroller.cpp
         src/controllers/midi/androidmidienumerator.cpp
     )
+    # Android MIDI (android.media.midi + NDK AMidi, from JaviLabarumDJ/mixxx-android)
+    target_compile_definitions(mixxx-lib PUBLIC __ANDROID_MIDI__)
   endif()
   if(NOT HID)
     target_sources(
