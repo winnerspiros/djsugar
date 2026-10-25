@@ -2240,6 +2240,9 @@ if(ANDROID)
   # Android microphone capture for audio calibration (bypasses BT SCO)
   target_sources(mixxx-lib PRIVATE src/engine/androidmiccapture.cpp)
 
+  # Kick-aligned beatgrids for house/techno (from JaviLabarumDJ/mixxx-android)
+  target_sources(mixxx-lib PRIVATE src/analyzer/androidkickgrid.cpp)
+
   # Android storage/library helpers (from JaviLabarumDJ/mixxx-android):
   # permissions, backups, USB drives, Rekordbox stick read/copy
   target_sources(
