@@ -1,5 +1,6 @@
 #include "soundio/androidusbaudiodevice.h"
 
+#include <QtCore/private/qandroidextras_p.h>
 #include <libusb.h>
 #include <pthread.h>
 #include <sys/resource.h>
@@ -8,7 +9,6 @@
 #include <QDebug>
 #include <QJniEnvironment>
 #include <QSet>
-#include <QtCore/private/qandroidextras_p.h>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
