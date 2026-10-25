@@ -117,7 +117,9 @@ BeatsPointer KickGrid::correct(const BeatsPointer& pBeats) const {
     // The first strong onsets from there: without a few, there's no kick to
     // follow
     const std::size_t windowEnd = std::min(onset.size(),
-            start + static_cast<std::size_t>(kStrongOnsetWindowSeconds * m_sampleRate.value() / kHopFrames));
+            start +
+                    static_cast<std::size_t>(kStrongOnsetWindowSeconds *
+                            m_sampleRate.value() / kHopFrames));
     const double threshold = kStrongOnset *
             *std::max_element(onset.begin() + start, onset.begin() + windowEnd);
     std::vector<double> kicks;

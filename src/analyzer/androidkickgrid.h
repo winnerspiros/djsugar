@@ -12,9 +12,10 @@ namespace android {
 /// Lines a constant beatgrid up with the kicks.
 ///
 /// The beat tracker often follows the off-beat hi-hats or claps of house and
-/// techno rather than the kick, which leaves the grid half a beat off, and sometimes doubles the BPM. While the track
-/// is analyzed, this keeps the onsets of its low frequencies (below about
-/// 120 Hz) for the first two minutes. Afterwards:
+/// techno rather than the kick, which leaves the grid half a beat off, and
+/// sometimes doubles the BPM. While the track is analyzed, this keeps the
+/// onsets of its low frequencies (below about 120 Hz) for the first two
+/// minutes. Afterwards:
 ///
 /// - from 200 BPM on, the BPM is halved when one half of the beats carries
 ///   much more kick than the other (doubled house and techno);
