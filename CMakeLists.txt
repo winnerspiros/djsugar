@@ -2263,7 +2263,15 @@ if(ANDROID)
 
   # Android DJ-controller auto-routing + speaker fallback
   # (SoundManagerAndroid from JaviLabarumDJ/mixxx-android)
-  target_sources(mixxx-lib PRIVATE src/soundio/soundmanagerandroid.cpp)
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/soundio/androidusbaudiodevice.cpp
+      src/soundio/androidusbsounddevices.cpp
+      src/soundio/sounddeviceandroidusb.cpp
+      src/soundio/soundmanagerandroid.cpp
+      src/soundio/usbaudiodescriptors.cpp
+  )
 
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.

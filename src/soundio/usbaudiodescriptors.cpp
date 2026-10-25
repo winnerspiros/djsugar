@@ -100,156 +100,136 @@ DeviceDescription parse(const uint8_t* pData, size_t length) {
         }
         const uint8_t type = d[1];
 
-        if (type == kDescriptorInterface) {
-            if (descriptorLength < 9) {
-                break;
-            }
+        if (type == kDescriptorInterface && descriptorLength >= 9) {
+            const int number = d[2];
+            const int alt = d[3];
             const uint8_t interfaceClass = d[5];
-            const uint8_t interfaceSubClass = d[6];
-            const uint8_t interfaceProtocol = d[7];
-            const int interfaceNumber = d[2];
-
-            if (interfaceClass == kClassAudio && interfaceSubClass == kSubclassAudioControl) {
-                inMidi = false;
-                currentControl = description.controls.size();
-                description.controls.push_back(ControlInterface{});
-                description.controls.back().interfaceNumber = interfaceNumber;
-                description.controls.back().uacVersion =
-                        (interfaceProtocol == kProtocolUac2) ? 2 : 1;
-            } else if (interfaceClass == kClassAudio &&
-                    interfaceSubClass == kSubclassAudioStreaming) {
-                inMidi = false;
-                currentStream = description.streams.size();
-                description.streams.push_back(StreamFormat{});
-                description.streams.back().interfaceNumber = interfaceNumber;
-                description.streams.back().uacVersion =
-                        (interfaceProtocol == kProtocolUac2) ? 2 : 1;
-            } else if (interfaceClass == kClassAudio &&
-                    interfaceSubClass == kSubclassMidiStreaming) {
+            const uint8_t subclass = d[6];
+            const uint8_t protocol = d[7];
+            currentStream = -1;
+            currentControl = -1;
+            inMidi = false;
+            lastEndpointIsData = false;
+            if (interfaceClass == kClassAudio && subclass == kSubclassAudioControl && alt == 0) {
+                ControlInterface control;
+                control.interfaceNumber = number;
+                control.uacVersion = protocol == kProtocolUac2 ? 2 : 1;
+                description.controls.push_back(control);
+                currentControl = static_cast<int>(description.controls.size()) - 1;
+            } else if (interfaceClass == kClassAudio && subclass == kSubclassAudioStreaming) {
+                StreamFormat format;
+                format.interfaceNumber = number;
+                format.altSetting = alt;
+                format.uacVersion = protocol == kProtocolUac2 ? 2 : 1;
+                description.streams.push_back(format);
+                currentStream = static_cast<int>(description.streams.size()) - 1;
+            } else if (interfaceClass == kClassAudio && subclass == kSubclassMidiStreaming &&
+                    description.midi.interfaceNumber < 0) {
+                description.midi.interfaceNumber = number;
                 inMidi = true;
-                description.midi.interfaceNumber = interfaceNumber;
-            } else {
-                inMidi = false;
-                currentStream = -1;
-                currentControl = -1;
             }
-        } else if (type == kCsInterface && descriptorLength >= 4 &&
-                currentControl >= 0 && !inMidi) {
-            ControlInterface& control = description.controls[currentControl];
+        } else if (type == kCsInterface && descriptorLength >= 3) {
             const uint8_t subtype = d[2];
-            if (control.uacVersion == 2) {
-                if (subtype == kAcInputTerminal || subtype == kAcOutputTerminal) {
-                    if (descriptorLength >= 8) {
-                        const int terminalId = d[3];
-                        const int clockId = d[7];
-                        control.terminalClocks[terminalId] = clockId;
-                    }
-                } else if (subtype == kAcClockSource) {
-                    if (descriptorLength >= 8) {
-                        const int clockId = d[3];
-                        control.clocks[clockId] = ClockEntity{ClockEntity::Type::Source};
-                    }
-                } else if (subtype == kAcClockSelector) {
-                    if (descriptorLength >= 6) {
-                        const int clockId = d[3];
-                        const int numSources = d[4];
-                        ClockEntity entity{ClockEntity::Type::Selector};
-                        for (int i = 0; i < numSources &&
-                                5 + i < static_cast<int>(descriptorLength);
+            if (currentControl >= 0) {
+                ControlInterface& control = description.controls[currentControl];
+                if (control.uacVersion == 2) {
+                    if (subtype == kAcInputTerminal && descriptorLength >= 8) {
+                        control.terminalClocks[d[3]] = d[7];
+                    } else if (subtype == kAcOutputTerminal && descriptorLength >= 9) {
+                        control.terminalClocks[d[3]] = d[8];
+                    } else if (subtype == kAcClockSource && descriptorLength >= 4) {
+                        control.clocks[d[3]].type = ClockEntity::Type::Source;
+                    } else if (subtype == kAcClockSelector && descriptorLength >= 5) {
+                        ClockEntity& clock = control.clocks[d[3]];
+                        clock.type = ClockEntity::Type::Selector;
+                        const int pins = d[4];
+                        for (int i = 0; i < pins && 5 + static_cast<size_t>(i) < descriptorLength;
                                 ++i) {
-                            entity.sources.push_back(d[5 + i]);
+                            clock.sources.push_back(d[5 + i]);
                         }
-                        control.clocks[clockId] = entity;
-                    }
-                } else if (subtype == kAcClockMultiplier) {
-                    if (descriptorLength >= 6) {
-                        const int clockId = d[3];
-                        const int numSources = d[4];
-                        ClockEntity entity{ClockEntity::Type::Multiplier};
-                        for (int i = 0; i < numSources &&
-                                5 + i < static_cast<int>(descriptorLength);
-                                ++i) {
-                            entity.sources.push_back(d[5 + i]);
-                        }
-                        control.clocks[clockId] = entity;
+                    } else if (subtype == kAcClockMultiplier && descriptorLength >= 5) {
+                        ClockEntity& clock = control.clocks[d[3]];
+                        clock.type = ClockEntity::Type::Multiplier;
+                        clock.sources.push_back(d[4]);
                     }
                 }
-            }
-        } else if (type == kCsInterface && descriptorLength >= 4 &&
-                currentStream >= 0 && !inMidi) {
-            StreamFormat& format = description.streams[currentStream];
-            const uint8_t subtype = d[2];
-            if (subtype == kAsGeneral) {
-                if (format.uacVersion == 1) {
-                    if (descriptorLength >= 7) {
-                        format.terminalLink = d[4] | (d[5] << 8);
-                        format.bitResolution = d[6];
+            } else if (currentStream >= 0) {
+                StreamFormat& format = description.streams[currentStream];
+                if (subtype == kAsGeneral) {
+                    if (format.uacVersion == 1 && descriptorLength >= 7) {
+                        format.terminalLink = d[3];
+                        format.isPcm = (d[5] | (d[6] << 8)) == kFormatTagPcm;
+                    } else if (format.uacVersion == 2 && descriptorLength >= 16) {
+                        format.terminalLink = d[3];
+                        const uint32_t formats = d[6] | (d[7] << 8) | (d[8] << 16) |
+                                (static_cast<uint32_t>(d[9]) << 24);
+                        format.isPcm = d[5] == kFormatTypeI && (formats & 0x1);
+                        format.channels = d[10];
                     }
-                } else {
-                    if (descriptorLength >= 6) {
-                        format.terminalLink = d[3] | (d[4] << 8);
+                } else if (subtype == kAsFormatType && descriptorLength >= 4 &&
+                        d[3] == kFormatTypeI) {
+                    if (format.uacVersion == 1 && descriptorLength >= 8) {
+                        format.channels = d[4];
+                        format.subframeBytes = d[5];
+                        format.bitResolution = d[6];
+                        const int frequencyCount = d[7];
+                        if (frequencyCount == 0 && descriptorLength >= 14) {
+                            format.minRate = rate24(d + 8);
+                            format.maxRate = rate24(d + 11);
+                        } else {
+                            for (int i = 0; i < frequencyCount &&
+                                    8 + 3 * static_cast<size_t>(i + 1) <= descriptorLength;
+                                    ++i) {
+                                format.sampleRates.push_back(rate24(d + 8 + 3 * i));
+                            }
+                        }
+                    } else if (format.uacVersion == 2 && descriptorLength >= 6) {
+                        format.subframeBytes = d[4];
                         format.bitResolution = d[5];
                     }
                 }
-            } else if (subtype == kAsFormatType) {
-                if (descriptorLength >= 6) {
-                    const uint8_t formatType = d[3];
-                    if (formatType == kFormatTypeI) {
-                        format.isPcm = true;
-                        format.channels = d[4];
-                        format.subframeBytes = d[5];
-                        format.bitResolution = d[6] > 0 ? d[6] : format.subframeBytes * 8;
-                    }
+            }
+        } else if (type == kDescriptorEndpoint && descriptorLength >= 7) {
+            const uint8_t address = d[2];
+            const uint8_t attributes = d[3];
+            const int maxPacket = d[4] | (d[5] << 8);
+            const uint8_t interval = d[6];
+            const bool isIn = address & 0x80;
+            lastEndpointIsData = false;
+            if (currentStream >= 0 && (attributes & 0x3) == kTransferTypeIsochronous) {
+                StreamFormat& format = description.streams[currentStream];
+                const int usage = (attributes >> 4) & 0x3;
+                // UAC1 feedback endpoints are often declared without the
+                // usage bits: an IN endpoint next to an OUT data endpoint
+                const bool isFeedback = usage == kUsageFeedback ||
+                        (format.endpoint != 0 && !(format.endpoint & 0x80) && isIn);
+                if (isFeedback) {
+                    format.feedbackEndpoint = address;
+                } else if (format.endpoint == 0) {
+                    format.endpoint = address;
+                    format.isOutput = !isIn;
+                    // High bandwidth endpoints: additional transactions per microframe
+                    format.maxPacketSize = (maxPacket & 0x7ff) * (1 + ((maxPacket >> 11) & 0x3));
+                    format.bInterval = interval;
+                    format.syncType = static_cast<SyncType>((attributes >> 2) & 0x3);
+                    format.bSynchAddress = descriptorLength >= 9 ? d[8] : 0;
+                    lastEndpointIsData = usage == kUsageData || usage == 2;
+                }
+            } else if (inMidi && (attributes & 0x3) == kTransferTypeBulk) {
+                if (isIn) {
+                    description.midi.inEndpoint = address;
+                    description.midi.inMaxPacketSize = maxPacket & 0x7ff;
+                } else {
+                    description.midi.outEndpoint = address;
                 }
             }
-        } else if (type == kDescriptorEndpoint && descriptorLength >= 7 &&
-                currentStream >= 0 && !inMidi) {
-            StreamFormat& format = description.streams[currentStream];
-            const uint8_t endpoint = d[2];
-            const uint8_t attributes = d[3];
-            const uint16_t maxPacketSize = d[4] | (d[5] << 8);
-            const uint8_t bInterval = d[6];
-
-            format.endpoint = endpoint;
-            format.maxPacketSize = maxPacketSize;
-            format.bInterval = bInterval;
-            format.isOutput = (endpoint & 0x80) == 0;
-
-            const uint8_t syncType = (attributes >> 2) & 0x03;
-            if (syncType == 0)
-                format.syncType = SyncType::Synchronous;
-            else if (syncType == 1)
-                format.syncType = SyncType::Asynchronous;
-            else if (syncType == 2)
-                format.syncType = SyncType::Adaptive;
-            else
-                format.syncType = SyncType::None;
-
-            lastEndpointIsData = (attributes & kTransferTypeIsochronous) != 0;
-        } else if (type == kCsEndpoint && descriptorLength >= 4 &&
-                currentStream >= 0 && lastEndpointIsData &&
-                d[2] == kEpGeneral) {
+        } else if (type == kCsEndpoint && descriptorLength >= 4 && currentStream >= 0 &&
+                lastEndpointIsData && d[2] == kEpGeneral) {
             StreamFormat& format = description.streams[currentStream];
             if (format.uacVersion == 1) {
                 format.hasSampleRateControl = d[3] & 0x01;
             }
-        } else if (type == kDescriptorInterface && inMidi &&
-                descriptorLength >= 9) {
-            // MIDI streaming interface already handled above
-        } else if (type == kCsInterface && inMidi && descriptorLength >= 4) {
-            // MIDI class-specific descriptors (ignored for now)
-        } else if (type == kDescriptorEndpoint && inMidi &&
-                descriptorLength >= 7) {
-            const uint8_t endpoint = d[2];
-            const uint16_t maxPacketSize = d[4] | (d[5] << 8);
-            if (endpoint & 0x80) {
-                description.midi.inEndpoint = endpoint;
-                description.midi.inMaxPacketSize = maxPacketSize;
-            } else {
-                description.midi.outEndpoint = endpoint;
-            }
         }
-
         pos += descriptorLength;
     }
     return description;

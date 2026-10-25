@@ -188,10 +188,12 @@ class AndroidUsbAudioDevice {
     uint64_t m_measuredFrames16_16;
     int m_measuredPackets;
     bool m_clockLogged;
-    bool m_midiInRunning;
-    bool m_midiInPending;
-    libusb_transfer* m_pMidiInTransfer;
+
+    // MIDI input
     MidiCallback m_midiCallback;
+    libusb_transfer* m_pMidiInTransfer;
+    std::atomic<bool> m_midiInRunning;
+    std::atomic<bool> m_midiInPending;
 };
 
 } // namespace androidusb
