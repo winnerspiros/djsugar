@@ -17,8 +17,8 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import org.qtproject.qt.android.QtActivityBase;
 import org.mixxx.youtube.PoTokenManager;
+import org.qtproject.qt.android.QtActivityBase;
 
 public class MainActivity extends QtActivityBase {
     private static final int MEDIA_PERMISSION_REQUEST = 1001;

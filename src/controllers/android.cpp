@@ -4,17 +4,16 @@
 #include <android/log.h>
 #include <qjnitypes.h>
 
+#include <QCoreApplication>
+#include <QDebug>
+#include <QMetaObject>
+#include <QSemaphore>
 #include <QtJniTypes>
 #include <atomic>
 #include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
-
-#include <QCoreApplication>
-#include <QMetaObject>
-#include <QDebug>
-#include <QSemaphore>
 
 namespace mixxx {
 namespace android {
