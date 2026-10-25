@@ -101,7 +101,7 @@ bool UsbMassStorage::open() {
         }
         if (ready && readCapacity()) {
             qInfo() << "USB drive LUN" << lun << ":" << m_blockCount << "blocks of"
-                     << m_blockSize << "bytes";
+                    << m_blockSize << "bytes";
             return true;
         }
     }

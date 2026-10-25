@@ -1,5 +1,6 @@
 #include "library/usbdrive/androidusbdrive.h"
 
+#include <QtCore/private/qandroidextras_p.h>
 #include <libusb.h>
 
 #include <QDateTime>
@@ -15,7 +16,6 @@
 #include <QPointer>
 #include <QStandardPaths>
 #include <QtConcurrentRun>
-#include <QtCore/private/qandroidextras_p.h>
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -382,11 +382,11 @@ QFileInfoList driveRoots() {
     }
     // Forget the drives that are gone
     drives.erase(std::remove_if(drives.begin(),
-                           drives.end(),
-                           [&connected](const auto& pDrive) {
-                               return !connected.contains(pDrive->usbDeviceName) ||
-                                       pDrive->pStorage->isDisconnected();
-                           }),
+                         drives.end(),
+                         [&connected](const auto& pDrive) {
+                             return !connected.contains(pDrive->usbDeviceName) ||
+                                     pDrive->pStorage->isDisconnected();
+                         }),
             drives.end());
     s_permissionRequested.erase(std::remove_if(s_permissionRequested.begin(),
                                         s_permissionRequested.end(),
@@ -437,7 +437,9 @@ void prepareFiles(const QString& root, const QStringList& relativePaths) {
             const QString folder = relativePath.chopped(5);
             const QList<FatVolume::Entry> entries = pDrive->volume.list(folder);
             for (const auto& entry : entries) {
-                if (!entry.isDirectory && entry.name.endsWith(QLatin1String(".db"), Qt::CaseInsensitive)) {
+                if (!entry.isDirectory &&
+                        entry.name.endsWith(
+                                QLatin1String(".db"), Qt::CaseInsensitive)) {
                     ensureLocal(pDrive, folder + QChar('/') + entry.name);
                 }
             }

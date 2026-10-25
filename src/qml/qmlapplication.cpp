@@ -25,6 +25,7 @@
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmlcoreservices.h"
 #include "qml/qmldlgpreferencesproxy.h"
+#include "qml/qmllanguageproxy.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"

@@ -238,8 +238,9 @@ QString RekordboxDriveBackup::start(const QString& drivePath, const QString& nam
     if (markedId.isEmpty()
                     ? !QDir(target).isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden)
                     : markedId != id) {
-        return tr("The folder %1 already has the backup of another stick or other files. "
-                  "Choose another name.")
+        return tr(
+                "The folder %1 already has the backup of another stick or other files. "
+                "Choose another name.")
                 .arg(target);
     }
     if (!QDir().mkpath(target)) {
@@ -331,9 +332,9 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
     for (const File& file : std::as_const(files)) {
         stickFiles.insert(file.relativePath.toLower());
         const QFileInfo existing(target + QChar('/') + file.relativePath);
-        const bool upToDate = existing.isFile() && existing.size() == file.size &&
+        const bool up - to - date = existing.isFile() && existing.size() == file.size &&
                 sameTime(existing.lastModified(), file.modified);
-        if (!upToDate) {
+        if (!up - to - date) {
             pending.append(file);
             pendingBytes += file.size;
         }
@@ -400,9 +401,10 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
         qWarning() << "The stick" << drivePath
                    << "could not be read completely, no files are deleted from the backup";
     }
-    const QString deletedText = deleted > 0
-            ? QStringLiteral(" ") + tr("%1 files that are no longer on the stick were deleted.").arg(deleted)
-            : QString();
+    const QString deletedText = deleted > 0 ? QStringLiteral(" ") +
+                    tr("%1 files that are no longer on the stick were deleted.")
+                            .arg(deleted)
+                                            : QString();
     if (m_canceled) {
         finish(tr("Backup stopped after %1 of %2 files. Back up again to continue.")
                         .arg(m_filesDone.load())

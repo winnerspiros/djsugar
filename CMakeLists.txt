@@ -1595,6 +1595,7 @@ add_library(
   src/library/recording/recordingfeature.cpp
   src/library/samples/dlgsamples.cpp
   src/library/samples/samplesfeature.cpp
+  src/library/enginedj/enginedjfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -4543,6 +4544,9 @@ if(QML)
       src/qml/qmllibrarytracklistmodel.cpp
       src/qml/qmlmixxxcontrollerscreen.cpp
       src/qml/qmlstemsmodel.cpp
+      src/qml/librarycoverloader.cpp
+      src/qml/qmllanguageproxy.cpp
+      src/library/androidscanorder.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp

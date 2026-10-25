@@ -245,7 +245,9 @@ void QmlMobileLibraryProxy::analyzeTracksMatching(
 void QmlMobileLibraryProxy::analyzeAllTracks(bool redoBeats) const {
     AnalyzerTrack::Options options;
     options.redoBeats = redoBeats;
-    analyzeTracksMatching(QStringLiteral("SELECT id FROM library WHERE mixxx_deleted = 0"), options);
+    analyzeTracksMatching(
+            QStringLiteral("SELECT id FROM library WHERE mixxx_deleted = 0"),
+            options);
 }
 
 bool QmlMobileLibraryProxy::reanalyzeBeats(QmlTrackProxy* pTrackProxy) const {
@@ -359,9 +361,12 @@ int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemM
         }
     }
     // Keeps the order of the list
-    const QList<TrackId> trackIds = pTrackCollectionManager->resolveTrackIdsFromUrls(urls, true);
+    const QList<TrackId> trackIds =
+            pTrackCollectionManager->resolveTrackIdsFromUrls(urls, true);
     for (const auto& [location, dateAdded] : std::as_const(rekordboxDates)) {
-        android::setTrackDateAdded(database, android::libraryTrackId(database, location), dateAdded);
+        android::setTrackDateAdded(database,
+                android::libraryTrackId(database, location),
+                dateAdded);
     }
     if (trackIds.isEmpty()) {
         return 0;

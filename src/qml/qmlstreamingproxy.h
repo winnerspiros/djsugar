@@ -48,10 +48,13 @@ class QmlStreamingProxy : public QObject {
     QML_SINGLETON
 
     Q_PROPERTY(QString subsonicUrl READ subsonicUrl WRITE setSubsonicUrl NOTIFY subsonicUrlChanged)
-    Q_PROPERTY(QString subsonicUsername READ subsonicUsername WRITE setSubsonicUsername NOTIFY subsonicUsernameChanged)
-    Q_PROPERTY(QString subsonicPassword READ subsonicPassword WRITE setSubsonicPassword NOTIFY subsonicPasswordChanged)
+    Q_PROPERTY(QString subsonicUsername READ subsonicUsername WRITE
+                    setSubsonicUsername NOTIFY subsonicUsernameChanged)
+    Q_PROPERTY(QString subsonicPassword READ subsonicPassword WRITE
+                    setSubsonicPassword NOTIFY subsonicPasswordChanged)
     Q_PROPERTY(bool isSubsonicConnected READ isSubsonicConnected NOTIFY subsonicConnectionChanged)
-    Q_PROPERTY(QString subsonicServerVersion READ subsonicServerVersion NOTIFY subsonicConnectionChanged)
+    Q_PROPERTY(QString subsonicServerVersion READ subsonicServerVersion NOTIFY
+                    subsonicConnectionChanged)
     Q_PROPERTY(QString cacheDirectory READ cacheDirectory CONSTANT)
     Q_PROPERTY(qint64 cacheSizeBytes READ cacheSizeBytes NOTIFY cacheSizeChanged)
     Q_PROPERTY(int activeDownloadCount READ activeDownloadCount NOTIFY activeDownloadsChanged)
@@ -127,16 +130,31 @@ class QmlStreamingProxy : public QObject {
     void cacheSizeChanged();
     void activeDownloadsChanged();
 
-    void subsonicConnectionTested(bool success, const QString& message, const QString& serverVersion);
-    void subsonicSearchFinished(bool success, const QVariantList& songs, const QString& errorString);
-    void subsonicPlaylistsFinished(bool success, const QVariantList& playlists, const QString& errorString);
-    void subsonicPlaylistSongsFinished(bool success, const QVariantList& songs, const QString& errorString);
+    void subsonicConnectionTested(
+            bool success, const QString& message, const QString& serverVersion);
+    void subsonicSearchFinished(bool success,
+            const QVariantList& songs,
+            const QString& errorString);
+    void subsonicPlaylistsFinished(bool success,
+            const QVariantList& playlists,
+            const QString& errorString);
+    void subsonicPlaylistSongsFinished(bool success,
+            const QVariantList& songs,
+            const QString& errorString);
 
     void audiusSearchFinished(bool success, const QVariantList& tracks, const QString& errorString);
-    void audiusTrendingFinished(bool success, const QVariantList& tracks, const QString& errorString);
+    void audiusTrendingFinished(bool success,
+            const QVariantList& tracks,
+            const QString& errorString);
 
-    void downloadProgress(const QString& trackId, qreal progress, qint64 bytesReceived, qint64 bytesTotal);
-    void downloadFinished(const QString& trackId, const QString& localPath, const QString& targetDeck, bool autoPlay);
+    void downloadProgress(const QString& trackId,
+            qreal progress,
+            qint64 bytesReceived,
+            qint64 bytesTotal);
+    void downloadFinished(const QString& trackId,
+            const QString& localPath,
+            const QString& targetDeck,
+            bool autoPlay);
     void downloadFailed(const QString& trackId, const QString& errorMessage);
 
   private:

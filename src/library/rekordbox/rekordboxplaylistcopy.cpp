@@ -159,7 +159,9 @@ QString RekordboxPlaylistCopy::start(
         }
     }
     // The folder may not exist yet
-    const qint64 availableBytes = QStorageInfo(QStringLiteral("/storage/emulated/0")).bytesAvailable();
+    const qint64 availableBytes =
+            QStorageInfo(QStringLiteral("/storage/emulated/0"))
+                    .bytesAvailable();
     if (availableBytes >= 0 && neededBytes + kReservedBytes > availableBytes) {
         return tr("Not enough free space on the device: the copy needs %1 and %2 are free.")
                 .arg(QLocale().formattedDataSize(neededBytes),

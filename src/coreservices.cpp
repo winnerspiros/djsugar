@@ -49,10 +49,10 @@
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmleffectsmanagerproxy.h"
 #include "qml/qmllibraryproxy.h"
+#include "qml/qmlmobilesingletons.h"
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
-#include "qml/qmlmobilesingletons.h"
 #include "qml/qmlyoutubeproxy.h"
 #endif
 #include "soundio/soundmanager.h"
