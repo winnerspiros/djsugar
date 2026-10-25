@@ -74,7 +74,11 @@ auto lambda_to_singleton_type_factory_ptr(F&& f) {
 // breaks startup on Android 10/11; resolve dynamically instead so the
 // symbols are simply absent there (from JaviLabarumDJ/mixxx-android).
 using PFN_APerformanceHint_getManager = APerformanceHintManager* (*)();
-using PFN_APerformanceHint_createSession = APerformanceHintSession* (*)(APerformanceHintManager*, const int32_t*, size_t, int64_t);
+using PFN_APerformanceHint_createSession =
+        APerformanceHintSession* (*)(APerformanceHintManager*,
+                const int32_t*,
+                size_t,
+                int64_t);
 using PFN_APerformanceHint_setPreferPowerEfficiency = int (*)(
         APerformanceHintSession*, bool);
 using PFN_APerformanceHint_reportActualWorkDuration = int (*)(
