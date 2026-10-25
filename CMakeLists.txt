@@ -4542,6 +4542,7 @@ if(QML)
       src/qml/qmllibrarysourcetree.cpp
       src/qml/qmllibrarytracklistmodel.cpp
       src/qml/qmlmixxxcontrollerscreen.cpp
+      src/qml/qmlstemsmodel.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
