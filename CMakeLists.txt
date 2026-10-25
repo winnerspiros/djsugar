@@ -4545,7 +4545,11 @@ if(QML)
       src/qml/qmltrackproxy.cpp
       src/qml/qmlsoundmanagerproxy.cpp
       src/qml/qmlpreferencesproxy.cpp
+      src/qml/qmlmobileappproxy.cpp
+      src/qml/qmlmobileaudioproxy.cpp
       src/qml/qmlmobilecontrollersproxy.cpp
+      src/qml/qmllibraryfeaturesource.cpp
+      src/qml/qmlstreamingproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/waveformrenderbeat.cpp
       src/waveform/renderers/allshader/waveformrenderer.cpp

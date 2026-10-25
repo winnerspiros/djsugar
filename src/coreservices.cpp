@@ -52,6 +52,7 @@
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
+#include "qml/qmlstreamingproxy.h"
 #endif
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
@@ -936,6 +937,10 @@ void CoreServices::initializeQMLSingletons() {
     mixxx::qml::QmlControllerManagerProxy::registerManager(
             getControllerManager(),
             CmdlineArgs::Instance().getControllerPreviewScreens());
+    // Streaming sources for the Android UI (Subsonic/Audius via
+    // Mixxx.StreamingManager, from JaviLabarumDJ/mixxx-android).
+    mixxx::qml::QmlStreamingProxy::registerPlayerManager(getPlayerManager());
+    mixxx::qml::QmlStreamingProxy::registerUserSettings(getSettings());
 
     ControllerScriptEngineBase::registerTrackCollectionManager(getTrackCollectionManager());
 
