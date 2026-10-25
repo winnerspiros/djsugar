@@ -52,7 +52,7 @@
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
-#include "qml/qmlstreamingproxy.h"
+#include "qml/qmlmobilesingletons.h"
 #include "qml/qmlyoutubeproxy.h"
 #endif
 #include "soundio/soundmanager.h"
@@ -599,9 +599,9 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     m_pPlayerManager->addConfiguredDecks();
 
-#ifdef Q_OS_ANDROID
-    // Snap analysis cues to nearest beat on load for Android
-    mixxx::android::snapAutoCuesOnLoad(m_pPlayerManager.get());
+    // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
+    // (from JaviLabarumDJ/mixxx-android)
+    mixxx::qml::registerMobileQmlSingletons(this);
 #endif
 
     for (int i = 0; i < kSamplerCount; ++i) {
@@ -938,10 +938,9 @@ void CoreServices::initializeQMLSingletons() {
     mixxx::qml::QmlControllerManagerProxy::registerManager(
             getControllerManager(),
             CmdlineArgs::Instance().getControllerPreviewScreens());
-    // Streaming sources for the Android UI (Subsonic/Audius via
-    // Mixxx.StreamingManager, from JaviLabarumDJ/mixxx-android).
-    mixxx::qml::QmlStreamingProxy::registerPlayerManager(getPlayerManager());
-    mixxx::qml::QmlStreamingProxy::registerUserSettings(getSettings());
+    // Android-UI singletons (Booth skin + streaming + YouTube bridge,
+    // from JaviLabarumDJ/mixxx-android).
+    mixxx::qml::registerMobileQmlSingletons(this);
     mixxx::qml::QmlYouTubeProxy::registerLibrary(getLibrary());
     mixxx::qml::QmlYouTubeProxy::registerPlayerManager(getPlayerManager());
 

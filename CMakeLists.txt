@@ -2239,6 +2239,21 @@ if(ANDROID)
   # Android microphone capture for audio calibration (bypasses BT SCO)
   target_sources(mixxx-lib PRIVATE src/engine/androidmiccapture.cpp)
 
+  # Android storage/library helpers (from JaviLabarumDJ/mixxx-android):
+  # permissions, backups, USB drives, Rekordbox stick read/copy
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/util/androidbackup.cpp
+      src/util/androidpermissions.cpp
+      src/util/removablestorage.cpp
+      src/library/usbdrive/androidusbdrive.cpp
+      src/library/usbdrive/fatvolume.cpp
+      src/library/usbdrive/usbmassstorage.cpp
+      src/library/rekordbox/rekordboxdrivebackup.cpp
+      src/library/rekordbox/rekordboxplaylistcopy.cpp
+  )
+
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
     mixxx-lib
@@ -4542,13 +4557,14 @@ if(QML)
       src/qml/qmlwaveformrenderer.cpp
       src/qml/qmlsettingparameter.cpp
       src/qml/qmlskincontrolcreator.cpp
-      src/qml/qmltrackproxy.cpp
       src/qml/qmlsoundmanagerproxy.cpp
       src/qml/qmlpreferencesproxy.cpp
       src/qml/qmlmobileappproxy.cpp
       src/qml/qmlmobileaudioproxy.cpp
       src/qml/qmlmobilecontrollersproxy.cpp
       src/qml/qmllibraryfeaturesource.cpp
+      src/qml/qmlmobilelibraryproxy.cpp
+      src/qml/qmlmobilesingletons.cpp
       src/qml/qmlyoutubeproxy.cpp
       src/qml/qmlstreamingproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
