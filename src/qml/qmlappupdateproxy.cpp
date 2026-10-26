@@ -403,6 +403,14 @@ void QmlAppUpdateProxy::setState(State state, Error error) {
     emit stateChanged();
 }
 
+QString QmlAppUpdateProxy::apkPath() const {
+#ifdef Q_OS_ANDROID
+    return QDir(updatesDir()).filePath(m_apkName);
+#else
+    return {};
+#endif
+}
+
 void QmlAppUpdateProxy::removeOldDownloads() const {
 #ifdef Q_OS_ANDROID
     const QVersionNumber installed = installedVersion();
