@@ -672,21 +672,13 @@ jobs:
 
       - name: "Test"
         if: matrix.crosscompile != true
-        # `--repeat until-pass:3` re-runs only individual tests that fail,
-        # up to 3 attempts each, so the build is not torpedoed by a single
-        # transient SEGFAULT on the slow macOS x64 runner (e.g. the known
-        # `BeatsTranslateTest.SimpleTranslateMatch` flake). Tests that fail
-        # on every attempt still fail the job. No effect on the success
-        # path — it costs nothing for green builds.
-        run: ctest --timeout 45 --repeat until-pass:3 ${{ matrix.ctest_args }}
+        # Some SoundSourceProxy tests take ~20s on the macOS Intel runner and
+        # 2-3x longer when tests run in parallel.
+        run: ctest --timeout 90 ${{ matrix.ctest_args }}
         working-directory: build
         env:
           GTEST_COLOR: 1
-          # Windows tests fail randomly if run in parallel — keep serial there.
-          # The macos-15-intel runner is slow and dies (lost communication,
-          # twice in a row) when the whole heavy suite fans out across all
-          # CPUs — cap it at 2. Linux keeps full parallelism.
-          CTEST_PARALLEL_LEVEL: ${{ runner.os == 'Windows' && '1' || (runner.os == 'macOS' && '2' || '0') }}
+          CTEST_PARALLEL_LEVEL: 3
           CTEST_OUTPUT_ON_FAILURE: 1
 
       - name: "[Windows] Sign executables"

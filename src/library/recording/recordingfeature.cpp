@@ -2,8 +2,10 @@
 
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/browse/foldertreemodel.h"
+#include "library/library.h"
 #include "library/recording/dlgrecording.h"
 #include "moc_recordingfeature.cpp"
+#include "recording/recordingmanager.h"
 #include "widget/wlibrary.h"
 
 namespace {
@@ -30,6 +32,7 @@ TreeItemModel* RecordingFeature::sidebarModel() const {
 
 void RecordingFeature::bindLibraryWidget(WLibrary* pLibraryWidget,
                                   KeyboardEventFilter *keyboard) {
+    m_libraryWidgetBound = true;
     //The view will be deleted by LibraryWidget
     DlgRecording* pRecordingView = new DlgRecording(pLibraryWidget,
                                                     m_pConfig,
@@ -66,6 +69,23 @@ void RecordingFeature::bindLibraryWidget(WLibrary* pLibraryWidget,
 }
 
 void RecordingFeature::activate() {
+    if (!m_libraryWidgetBound) {
+        // QML UI: the recordings in its track list, read again each time
+        if (!m_pBrowseModel) {
+            m_pBrowseModel = std::make_unique<BrowseTableModel>(this,
+                    m_pLibrary->trackCollectionManager(),
+                    m_pRecordingManager,
+                    "mixxx.db.model.recording");
+            m_pProxyModel = std::make_unique<ProxyTrackModel>(m_pBrowseModel.get(), true);
+            m_pProxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+            m_pProxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
+        }
+        m_pBrowseModel->setPath(mixxx::FileAccess(
+                mixxx::FileInfo(m_pRecordingManager->getRecordingDir())));
+        emit showTrackModel(m_pProxyModel.get());
+        emit enableCoverArtDisplay(false);
+        return;
+    }
     emit refreshBrowseModel();
     emit switchToView(kViewName);
     emit requestRestoreSearch();

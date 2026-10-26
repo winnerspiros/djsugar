@@ -1,7 +1,11 @@
 #pragma once
 
-#include "preferences/usersettings.h"
+#include <memory>
+
+#include "library/browse/browsetablemodel.h"
 #include "library/libraryfeature.h"
+#include "library/proxytrackmodel.h"
+#include "preferences/usersettings.h"
 
 class RecordingManager;
 class FolderTreeModel;
@@ -33,4 +37,11 @@ class RecordingFeature final : public LibraryFeature {
     RecordingManager* const m_pRecordingManager;
 
     FolderTreeModel* m_pSidebarModel;
+
+    // The QML UI has no library widget, so no DlgRecording: there the
+    // recordings are shown in its track list with these models (see
+    // activate()). The proxy is declared last, to be destroyed first.
+    bool m_libraryWidgetBound = false;
+    std::unique_ptr<BrowseTableModel> m_pBrowseModel;
+    std::unique_ptr<ProxyTrackModel> m_pProxyModel;
 };
