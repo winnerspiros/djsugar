@@ -599,11 +599,6 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     m_pPlayerManager->addConfiguredDecks();
 
-    // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
-    // (from JaviLabarumDJ/mixxx-android)
-#ifdef __ANDROID__
-    mixxx::qml::registerMobileQmlSingletons(this);
-#endif
 
     for (int i = 0; i < kSamplerCount; ++i) {
         m_pPlayerManager->addSampler();
@@ -661,6 +656,13 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     // been created. Otherwise Mixxx might hang when accessing
     // the uninitialized singleton instance!
     m_pPlayerManager->bindToLibrary(m_pLibrary.get());
+
+    // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
+    // (from JaviLabarumDJ/mixxx-android). Must run after the Library and the
+    // TrackCollectionManager exist (applyRekordboxDataOnLoad dereferences both).
+#ifdef __ANDROID__
+    mixxx::qml::registerMobileQmlSingletons(this);
+#endif
 
     bool musicDirAdded = false;
 
