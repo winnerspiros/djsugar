@@ -41,6 +41,7 @@ constexpr int kPollIntervalMillis = 500;
 // Room left on the storage besides the APK
 constexpr qint64 kSpareBytes = 64 * 1024 * 1024;
 
+#ifdef Q_OS_ANDROID
 // android.app.DownloadManager.STATUS_*
 constexpr jlong kDownloadSuccessful = 8;
 constexpr jlong kDownloadFailed = 16;
@@ -60,6 +61,7 @@ QString updatesDir() {
             context().object())
             .toString();
 }
+#endif // Q_OS_ANDROID
 
 QVersionNumber installedVersion() {
     return QVersionNumber::fromString(mixxx::qml::QmlMobileAppProxy::packageVersion());
@@ -242,6 +244,7 @@ void QmlAppUpdateProxy::onReleasesFetched(const QString& json) {
 }
 
 void QmlAppUpdateProxy::download() {
+#ifdef Q_OS_ANDROID
     if (m_state != State::Available && m_state != State::Failed) {
         return;
     }
@@ -269,9 +272,13 @@ void QmlAppUpdateProxy::download() {
     emit progressChanged();
     setState(State::Downloading);
     m_pollTimer.start();
+#else
+    Q_UNUSED(this);
+#endif
 }
 
 void QmlAppUpdateProxy::slotPollDownload() {
+#ifdef Q_OS_ANDROID
     QJniEnvironment env;
     const QJniObject result = QJniObject::callStaticMethod<jlongArray>(kJavaClass,
             "queryDownload",
@@ -301,9 +308,13 @@ void QmlAppUpdateProxy::slotPollDownload() {
         m_progress = static_cast<double>(values[1]) / total;
         emit progressChanged();
     }
+#else
+    Q_UNUSED(this);
+#endif
 }
 
 void QmlAppUpdateProxy::cancelDownload() {
+#ifdef Q_OS_ANDROID
     if (m_state != State::Downloading) {
         return;
     }
@@ -315,6 +326,9 @@ void QmlAppUpdateProxy::cancelDownload() {
             static_cast<jlong>(m_downloadId));
     m_downloadId = -1;
     setState(State::Available);
+#else
+    Q_UNUSED(this);
+#endif
 }
 
 void QmlAppUpdateProxy::verifyDownload() {
@@ -348,6 +362,7 @@ void QmlAppUpdateProxy::verifyDownload() {
 }
 
 bool QmlAppUpdateProxy::install() {
+#ifdef Q_OS_ANDROID
     if (m_state != State::Downloaded) {
         return true;
     }
@@ -363,6 +378,10 @@ bool QmlAppUpdateProxy::install() {
         setState(State::Failed, Error::Installer);
     }
     return true;
+#else
+    Q_UNUSED(this);
+    return true;
+#endif
 }
 
 void QmlAppUpdateProxy::skipLatest() {
@@ -381,11 +400,8 @@ void QmlAppUpdateProxy::setState(State state, Error error) {
     emit stateChanged();
 }
 
-QString QmlAppUpdateProxy::apkPath() const {
-    return QDir(updatesDir()).filePath(m_apkName);
-}
-
 void QmlAppUpdateProxy::removeOldDownloads() const {
+#ifdef Q_OS_ANDROID
     const QVersionNumber installed = installedVersion();
     const QFileInfoList apks =
             QDir(updatesDir())
@@ -396,6 +412,9 @@ void QmlAppUpdateProxy::removeOldDownloads() const {
             QFile::remove(apk.absoluteFilePath());
         }
     }
+#else
+    Q_UNUSED(this);
+#endif
 }
 
 } // namespace qml
