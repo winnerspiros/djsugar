@@ -6,8 +6,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#ifdef Q_OS_ANDROID
+#include <QCoreApplication>
 #include <QJniEnvironment>
 #include <QJniObject>
+#endif
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
