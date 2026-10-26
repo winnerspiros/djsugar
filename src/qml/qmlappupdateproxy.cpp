@@ -62,7 +62,7 @@ QString updatesDir() {
 }
 
 QVersionNumber installedVersion() {
-    return QVersionNumber::fromString(mixxx::qml::QmlMobileAppProxy::installedVersion());
+    return QVersionNumber::fromString(mixxx::qml::QmlMobileAppProxy::packageVersion());
 }
 
 /// The release notes without the comments and the install instructions
@@ -96,8 +96,10 @@ QmlAppUpdateProxy::QmlAppUpdateProxy(QObject* pParent)
           m_downloadId(-1) {
     m_pollTimer.setInterval(kPollIntervalMillis);
     connect(&m_pollTimer, &QTimer::timeout, this, &QmlAppUpdateProxy::slotPollDownload);
+#ifdef Q_OS_ANDROID
     QTimer::singleShot(kAutoCheckDelayMillis, this, &QmlAppUpdateProxy::slotAutoCheck);
     removeOldDownloads();
+#endif
 }
 
 // static
@@ -143,6 +145,12 @@ void QmlAppUpdateProxy::slotAutoCheck() {
 }
 
 void QmlAppUpdateProxy::startCheck(bool automatic) {
+#ifndef Q_OS_ANDROID
+    // In-app updates are delivered through the Android DownloadManager
+    // and installer; anywhere else the proxy stays idle.
+    Q_UNUSED(automatic);
+    return;
+#else
     if (m_state == State::Checking || m_state == State::Downloading ||
             m_state == State::Verifying) {
         return;
@@ -150,7 +158,7 @@ void QmlAppUpdateProxy::startCheck(bool automatic) {
     m_automaticCheck = automatic;
     setState(State::Checking);
     const QString userAgent = QStringLiteral("Mixxx-Android/") +
-            QmlMobileAppProxy::installedVersion();
+            QmlMobileAppProxy::packageVersion();
     auto* pWatcher = new QFutureWatcher<QString>(this);
     connect(pWatcher, &QFutureWatcher<QString>::finished, this, [this, pWatcher]() {
         onReleasesFetched(pWatcher->result());
@@ -164,6 +172,7 @@ void QmlAppUpdateProxy::startCheck(bool automatic) {
                 QJniObject::fromString(userAgent).object<jstring>())
                 .toString();
     }));
+#endif
 }
 
 void QmlAppUpdateProxy::onReleasesFetched(const QString& json) {

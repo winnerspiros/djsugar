@@ -4621,6 +4621,7 @@ if(QML)
       src/qml/qmlmobilecontrollersproxy.cpp
       src/qml/qmllibraryfeaturesource.cpp
       src/qml/qmlmobilelibraryproxy.cpp
+      src/qml/qmlappupdateproxy.cpp
       src/qml/qmlmobilesingletons.cpp
       src/qml/qmlyoutubeproxy.cpp
       src/qml/qmlstreamingproxy.cpp

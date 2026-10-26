@@ -180,6 +180,24 @@ ApplicationWindow {
             }
         }
     }
+    // Updates found by the check at startup (see Mixxx.AppUpdate). Created
+    // once the core is ready, like the rest of the UI that uses Mixxx.
+    // Android only: elsewhere the proxy stays idle. (from JaviLabarumDJ/mixxx-android)
+    Loader {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        // Below the top bar of the skins, so that their buttons stay usable
+        anchors.topMargin: 84
+        z: 1000
+        active: Mixxx.Core.ready && root.isMobile
+        sourceComponent: Skin.AppUpdateBanner {
+            onInstallRequested: updateInstallPopup.open()
+        }
+    }
+
+    Skin.AppUpdateInstallPopup {
+        id: updateInstallPopup
+    }
     Rectangle {
         id: splash
         visible: opacity > 0
