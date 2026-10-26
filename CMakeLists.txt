@@ -2254,7 +2254,6 @@ if(ANDROID)
       src/library/usbdrive/usbmassstorage.cpp
   )
 
-
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
     mixxx-lib

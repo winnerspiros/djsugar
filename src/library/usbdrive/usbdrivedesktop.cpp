@@ -2,10 +2,10 @@
 // (from JaviLabarumDJ/mixxx-android: androidusbdrive.cpp is JNI/libusb and
 // Android-only). On desktop the OS mounts USB drives itself, so there is no
 // drive that Mixxx reads itself: all queries answer "not a drive".
-#include "library/usbdrive/androidusbdrive.h"
-
 #include <QFileInfo>
 #include <QTimer>
+
+#include "library/usbdrive/androidusbdrive.h"
 
 namespace mixxx {
 namespace usbdrive {
