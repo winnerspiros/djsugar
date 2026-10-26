@@ -2888,11 +2888,7 @@ if(QT6)
     add_dependencies(mixxx-android-qml-overrides copy-resource-android)
     # mixxx depends on the flattened QML, not the raw copy: the override
     # target itself depends on copy-resource-android (his ordering).
-    add_dependencies(
-      mixxx
-      android-strip-libomp
-      mixxx-android-qml-overrides
-    )
+    add_dependencies(mixxx android-strip-libomp mixxx-android-qml-overrides)
     target_link_libraries(mixxx PUBLIC omp)
   else()
     qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
