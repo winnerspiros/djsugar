@@ -73,7 +73,9 @@ int UsbMassStorage::maxLun() {
     uint8_t lun = 0;
     // Get Max LUN; devices with a single unit may stall it
     const int result = libusb_control_transfer(m_pHandle,
-            static_cast<int>(LIBUSB_ENDPOINT_IN) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
+            static_cast<int>(LIBUSB_ENDPOINT_IN) |
+                    static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                    static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
             0xFE,
             0,
             static_cast<uint16_t>(m_interfaceNumber),
@@ -273,7 +275,9 @@ void UsbMassStorage::resetRecovery() {
     }
     // Bulk-Only Mass Storage Reset, then clear both endpoints
     libusb_control_transfer(m_pHandle,
-            static_cast<int>(LIBUSB_ENDPOINT_OUT) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
+            static_cast<int>(LIBUSB_ENDPOINT_OUT) |
+                    static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                    static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
             0xFF,
             0,
             static_cast<uint16_t>(m_interfaceNumber),

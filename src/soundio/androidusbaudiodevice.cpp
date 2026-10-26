@@ -414,7 +414,9 @@ void AndroidUsbAudioDevice::queryUac2SampleRates() {
     // wNumSubRanges followed by (dMIN, dMAX, dRES) triplets of 4 bytes
     unsigned char buffer[2 + 12 * 32] = {};
     const int received = libusb_control_transfer(m_pHandle,
-            static_cast<int>(LIBUSB_ENDPOINT_IN) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
+            static_cast<int>(LIBUSB_ENDPOINT_IN) |
+                    static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                    static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
             kRequestRange,
             kSamplingFreqControl,
             index,
@@ -467,10 +469,13 @@ bool AndroidUsbAudioDevice::setSampleRate(const usbaudio::StreamFormat& format, 
             data[i] = static_cast<unsigned char>((sampleRate >> (8 * i)) & 0xff);
         }
         error = libusb_control_transfer(m_pHandle,
-                static_cast<int>(LIBUSB_ENDPOINT_OUT) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
+                static_cast<int>(LIBUSB_ENDPOINT_OUT) |
+                        static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                        static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
                 kRequestCur,
                 kSamplingFreqControl,
-                static_cast<uint16_t>((clockId << 8) | pControl->interfaceNumber),
+                static_cast<uint16_t>(
+                        (clockId << 8) | pControl->interfaceNumber),
                 data,
                 sizeof(data),
                 kControlTimeoutMillis);
@@ -481,7 +486,9 @@ bool AndroidUsbAudioDevice::setSampleRate(const usbaudio::StreamFormat& format, 
             data[i] = static_cast<unsigned char>((sampleRate >> (8 * i)) & 0xff);
         }
         error = libusb_control_transfer(m_pHandle,
-                static_cast<int>(LIBUSB_ENDPOINT_OUT) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_ENDPOINT),
+                static_cast<int>(LIBUSB_ENDPOINT_OUT) |
+                        static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                        static_cast<int>(LIBUSB_RECIPIENT_ENDPOINT),
                 kRequestCur,
                 kSamplingFreqControl,
                 format.endpoint,
@@ -507,16 +514,21 @@ int AndroidUsbAudioDevice::readSampleRate(const usbaudio::StreamFormat& format) 
             return 0;
         }
         received = libusb_control_transfer(m_pHandle,
-                static_cast<int>(LIBUSB_ENDPOINT_IN) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
+                static_cast<int>(LIBUSB_ENDPOINT_IN) |
+                        static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                        static_cast<int>(LIBUSB_RECIPIENT_INTERFACE),
                 kRequestCur,
                 kSamplingFreqControl,
-                static_cast<uint16_t>((clockId << 8) | pControl->interfaceNumber),
+                static_cast<uint16_t>(
+                        (clockId << 8) | pControl->interfaceNumber),
                 data,
                 4,
                 kControlTimeoutMillis);
     } else {
         received = libusb_control_transfer(m_pHandle,
-                static_cast<int>(LIBUSB_ENDPOINT_IN) | static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) | static_cast<int>(LIBUSB_RECIPIENT_ENDPOINT),
+                static_cast<int>(LIBUSB_ENDPOINT_IN) |
+                        static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
+                        static_cast<int>(LIBUSB_RECIPIENT_ENDPOINT),
                 kRequestGetCurUac1,
                 kSamplingFreqControl,
                 format.endpoint,
