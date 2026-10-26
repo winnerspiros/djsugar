@@ -1054,6 +1054,9 @@ void CoreServices::finalize() {
     mixxx::qml::QmlLibraryProxy::registerKeyboardEventFilter(nullptr);
     mixxx::qml::QmlSoundManagerProxy::registerManager(nullptr);
     mixxx::qml::QmlControllerManagerProxy::registerManager(nullptr);
+    // Release the mobile singletons (they hold shared ownership of core
+    // objects, which must be destroyed here in order)
+    mixxx::qml::unregisterMobileQmlSingletons();
 
     ControllerScriptEngineBase::registerTrackCollectionManager(nullptr);
 #endif

@@ -5,6 +5,7 @@
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "qml/qmlstreamingproxy.h"
+#include "qml/qmlyoutubeproxy.h"
 #include "track/androidautocue.h"
 
 namespace mixxx {
@@ -24,6 +25,8 @@ void registerMobileQmlSingletons(CoreServices* pCoreServices) {
 void unregisterMobileQmlSingletons() {
     QmlStreamingProxy::registerPlayerManager(nullptr);
     QmlStreamingProxy::registerUserSettings(nullptr);
+    QmlYouTubeProxy::registerLibrary(nullptr);
+    QmlYouTubeProxy::registerPlayerManager(nullptr);
 }
 
 } // namespace qml
