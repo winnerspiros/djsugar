@@ -57,6 +57,10 @@
 #endif
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
+#ifdef Q_OS_ANDROID
+#include "util/androidcrashreport.h"
+#include "util/androidpermissions.h"
+#endif
 #include "util/clipboard.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/font.h"
@@ -95,7 +99,14 @@ namespace {
 const mixxx::Logger kLogger("CoreServices");
 constexpr int kMicrophoneCount = 4;
 constexpr int kAuxiliaryCount = 4;
+#ifdef Q_OS_ANDROID
+// Mappings like the DDJ-400 one ask for 16 samplers when they start. They
+// are created here, on the main thread, so controllers don't have to.
+// (from JaviLabarumDJ/mixxx-android)
+constexpr int kSamplerCount = 16;
+#else
 constexpr int kSamplerCount = 4;
+#endif
 
 #define CLEAR_AND_CHECK_DELETED(x) clearHelper(x, #x);
 
@@ -484,6 +495,10 @@ void CoreServices::initializeLogging() {
             m_cmdlineArgs.getLogLevel(),
             m_cmdlineArgs.getLogFlushLevel(),
             logFlags);
+#ifdef Q_OS_ANDROID
+    mixxx::android::installCrashReporter();
+    mixxx::android::exportPreviousLog(m_pSettingsManager->settings()->getSettingsPath());
+#endif
 }
 
 void CoreServices::initialize(QGuiApplication* pApp) {
@@ -499,6 +514,13 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     }
 
     VersionStore::logBuildDetails();
+
+#ifdef Q_OS_ANDROID
+    // Ask for collection access on every start: the user may have revoked the
+    // permission in the system settings since the last run, and without it the
+    // library scan finds nothing at all. (from JaviLabarumDJ/mixxx-android)
+    mixxx::android::requestMusicLibraryPermissions();
+#endif
 
 #if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     // XESetWireToError will segfault if running as a Wayland client

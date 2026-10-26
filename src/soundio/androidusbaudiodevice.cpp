@@ -34,6 +34,10 @@ constexpr int kFeedbackTransfers = 2;
 constexpr int kFeedbackPacketsPerTransfer = 4;
 constexpr int kFeedbackPacketSize = 4;
 constexpr size_t kMaxImplicitQueue = 1024;
+// The event thread waits this long after an error of libusb, and gives the
+// output up after this many errors in a row (about half a second)
+constexpr int kEventErrorPauseMillis = 5;
+constexpr int kMaxEventErrors = 100;
 
 const int kCommonSampleRates[] = {44100, 48000, 88200, 96000, 32000, 176400, 192000};
 
@@ -108,6 +112,7 @@ AndroidUsbAudioDevice::AndroidUsbAudioDevice(const QJniObject& usbDevice)
           m_disconnected(false),
           m_eventThreadRunning(false),
           m_outputRunning(false),
+          m_outputFailed(false),
           m_outputTransfersPending(0),
           m_framesInFlight(0),
           m_sampleRate(0),
@@ -593,6 +598,7 @@ void AndroidUsbAudioDevice::startEventThread() {
     m_eventThread = std::thread([this]() {
         pthread_setname_np(pthread_self(), "MixxxUsbAudio");
         raiseThreadPriority();
+        int errorsInARow = 0;
         while (m_eventThreadRunning) {
             timeval timeout{0, 50000};
             const int error = libusb_handle_events_timeout_completed(
@@ -600,6 +606,16 @@ void AndroidUsbAudioDevice::startEventThread() {
             if (error == LIBUSB_ERROR_NO_DEVICE) {
                 markDisconnected();
                 break;
+            }
+            if (error < 0 && error != LIBUSB_ERROR_INTERRUPTED &&
+                    error != LIBUSB_ERROR_TIMEOUT) {
+                // Don't spin on a persistent error
+                std::this_thread::sleep_for(std::chrono::milliseconds(kEventErrorPauseMillis));
+                if (++errorsInARow == kMaxEventErrors && m_outputRunning) {
+                    markOutputFailed();
+                }
+            } else {
+                errorsInARow = 0;
             }
         }
     });
@@ -620,6 +636,12 @@ void AndroidUsbAudioDevice::markDisconnected() {
         qInfo() << "USB audio device" << m_productName << "disconnected";
         m_outputRunning = false;
         m_midiInRunning = false;
+        mixxx::android::notifyDevicesChanged();
+    }
+}
+
+void AndroidUsbAudioDevice::markOutputFailed() {
+    if (!m_outputFailed.exchange(true)) {
         mixxx::android::notifyDevicesChanged();
     }
 }
@@ -708,6 +730,7 @@ bool AndroidUsbAudioDevice::startOutput(int sampleRate,
             << m_packetsPerSecond << "packets/s," << numTransfers << "x"
             << packetsPerTransfer << "packets";
 
+    m_outputFailed = false;
     m_outputRunning = true;
 
     // Clock source of asynchronous outputs
@@ -841,7 +864,11 @@ void AndroidUsbAudioDevice::outputTransferCallback(libusb_transfer* pTransfer) {
         if (libusb_submit_transfer(pTransfer) == 0) {
             return;
         }
-        qWarning() << "Resubmitting an USB audio transfer failed";
+        // Fewer transfers in flight would play with gaps: the output is set
+        // up again
+        if (!pThis->m_disconnected) {
+            pThis->markOutputFailed();
+        }
     }
     --pThis->m_outputTransfersPending;
 }

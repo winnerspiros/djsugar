@@ -4,7 +4,8 @@ import QtQuick.Layouts
 
 // The mixer of the DJ view of the booth skin, like the one of the
 // PERFORMANCE layout of rekordbox: for each of the two decks TRIM, HIGH,
-// MID and LOW, the headphones CUE, the level meter and the channel fader.
+// MID, LOW and FILTER, the headphones CUE, the level meter and the channel
+// fader.
 Rectangle {
     id: root
 
@@ -52,6 +53,7 @@ Rectangle {
         required property string group
         required property color deckColor
         readonly property string eqGroup: `[EqualizerRack1_${group}_Effect1]`
+        readonly property string quickEffectGroup: `[QuickEffectRack1_${group}]`
 
         spacing: 3
 
@@ -60,6 +62,12 @@ Rectangle {
 
             group: channel.group
             key: "pfl"
+        }
+        Mixxx.ControlProxy {
+            id: quickEffectEnabledControl
+
+            group: channel.quickEffectGroup
+            key: "enabled"
         }
         ColumnLayout {
             Layout.fillHeight: true
@@ -99,6 +107,18 @@ Rectangle {
                     key: modelData.key
                     label: modelData.label
                 }
+            }
+            // The quick effect (the filter by default), like the FILTER or
+            // CFX knob of the controllers. Dimmed while it is off (e.g. by
+            // SMART CFX of the DDJ-FLX4).
+            BoothKnob {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                color: "#2fbf9f"
+                group: channel.quickEffectGroup
+                key: "super1"
+                label: qsTr("FILTER")
+                opacity: quickEffectEnabledControl.value > 0 ? 1 : 0.4
             }
         }
         ColumnLayout {

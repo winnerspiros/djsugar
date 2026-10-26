@@ -2,6 +2,7 @@ import "." as Skin
 import Mixxx 1.0 as Mixxx
 import QtQuick 2.12
 import QtQuick.Controls
+import QtQuick.Layouts
 import QtQuick.Window 2.12
 import "Theme"
 
@@ -21,6 +22,23 @@ ApplicationWindow {
     minimumWidth: isMobile ? 0 : 680
     visible: true
     width: isMobile ? Screen.width : designWidth
+
+    // Back (also swiping in from the edge of the screen) closes the window
+    // when nothing on it takes the key, which quits Mixxx in the middle of a
+    // set: on mobile it asks first.
+    property bool quitConfirmed: false
+
+    onClosing: close => {
+        if (root.isMobile && !root.quitConfirmed) {
+            close.accepted = false;
+            quitPopup.open();
+        }
+    }
+
+    function quit() {
+        root.quitConfirmed = true;
+        Qt.quit();
+    }
 
     function updateVisibility() {
         if (!Mixxx.Core.ready) {
@@ -130,10 +148,93 @@ ApplicationWindow {
                     return;
                 }
                 console.error("Failed to load the Mixxx main window")
-                Qt.quit()
+                root.quit()
             }
         }
     }
+    // Updates found by the check at startup (see Mixxx.AppUpdate). Created
+    // once the core is ready, like the rest of the UI that uses Mixxx.
+    Loader {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        // Below the top bar of the skins, so that their buttons stay usable
+        anchors.topMargin: 84
+        z: 1000
+        active: Mixxx.Core.ready
+        sourceComponent: Skin.AppUpdateBanner {
+            onInstallRequested: updateInstallPopup.open()
+        }
+    }
+
+    Skin.AppUpdateInstallPopup {
+        id: updateInstallPopup
+    }
+
+    Popup {
+        id: quitPopup
+
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(460, root.width - 40)
+        modal: true
+        dim: true
+        padding: 18
+
+        background: Rectangle {
+            color: "#181b24"
+            radius: 10
+            border.color: "#ff5252"
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: qsTr("Quit Mixxx?")
+                font.bold: true
+                font.pixelSize: 15
+                color: Theme.white
+                wrapMode: Text.WordWrap
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: qsTr("The music stops. The loaded tracks and the settings are saved.")
+                font.pixelSize: 12
+                color: "#b0bec5"
+                wrapMode: Text.WordWrap
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Skin.Button {
+                    Layout.preferredHeight: 44
+                    Layout.preferredWidth: 140
+                    text: qsTr("Cancel")
+                    onClicked: quitPopup.close()
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Skin.Button {
+                    Layout.preferredHeight: 44
+                    Layout.preferredWidth: 140
+                    activeColor: "#ff5252"
+                    backgroundColor: "#4a1c1c"
+                    normalColor: "#ff8a80"
+                    font.bold: true
+                    text: qsTr("QUIT")
+                    onClicked: root.quit()
+                }
+            }
+        }
+    }
+
     Rectangle {
         id: splash
         anchors.fill: parent
@@ -146,7 +247,7 @@ ApplicationWindow {
 
         opacity: fadingOut ? 0.0 : 1.0
         Behavior on opacity {
-            NumberAnimation { duration: 500; easing.type: Easing.InOutQuad }
+            NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
         }
 
         Timer {
@@ -154,13 +255,12 @@ ApplicationWindow {
             interval: 35
             running: !splash.fadingOut && splash.visible
             repeat: true
-            property int ticks: 0
             onTriggered: {
-                ticks++;
                 var isReady = (content.status === Loader.Ready && content.item !== null);
 
-                // Give at least 40 ticks * 35ms = 1400ms so user clearly sees startup progress
-                if (!isReady || ticks < 40) {
+                // Gone as soon as the skin is loaded: it used to stay at
+                // least 1.4 s, plus 0.3 s full and a 0.5 s fade
+                if (!isReady) {
                     if (splash.progress < 0.35) {
                         splash.progress = Math.min(0.35, splash.progress + 0.045);
                     } else if (splash.progress < 0.75) {
@@ -178,7 +278,7 @@ ApplicationWindow {
 
         Timer {
             id: dismissTimer
-            interval: 320
+            interval: 100
             repeat: false
             onTriggered: {
                 splash.fadingOut = true;

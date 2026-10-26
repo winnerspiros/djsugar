@@ -153,6 +153,16 @@ Item {
             "name": "fx",
             "label": "BEAT FX",
             "view": false
+        },
+        {
+            "name": "split",
+            "label": "SPLIT",
+            "view": false
+        },
+        {
+            "name": "rec",
+            "label": "REC",
+            "view": false
         }
     ]
     readonly property var hiddenTopBarItems: Mixxx.MobileApp.hiddenTopBarItems
@@ -237,6 +247,14 @@ Item {
         onInitializedChanged: value = root.waveformOverviewTypeRgb
     }
     Skin.LibraryScanSummaryDialog {
+    }
+    // Split headphones: the left channel plays the headphones cue, the
+    // right one the master (both mono), for a splitter cable
+    Mixxx.ControlProxy {
+        id: headSplitControl
+
+        group: "[Master]"
+        key: "headSplit"
     }
 
     // A tab of the top bar, like OVERVIEW / BROWSE on a player
@@ -508,6 +526,22 @@ Item {
             height: topBar.height
             spacing: 6
 
+            Tab {
+                active: headSplitControl.value > 0
+                label: "SPLIT"
+                visible: root.itemShown("split")
+                onClicked: headSplitControl.value = headSplitControl.value > 0 ? 0 : 1
+            }
+            // Asks before stopping, keeps its time across skin switches
+            Skin.MobileRecordButton {
+                fontPixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 13)
+                height: parent.height
+                idleBorderColor: "#5c6068"
+                idleColor: "#000000"
+                radius: 0
+                visible: root.itemShown("rec")
+                width: Math.max(root.width < 760 ? 44 : (root.compact ? 64 : 80), implicitWidth)
+            }
             Tab {
                 active: root.xyView
                 label: "XY"

@@ -290,6 +290,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (no light theme yet)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Theme color"); color: Theme.white; font.pixelSize: 13 }
                                 Skin.ComboBox {
@@ -301,6 +303,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (the skins have one layout)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Layout"); color: Theme.white; font.pixelSize: 13 }
                                 Skin.ComboBox {
@@ -312,6 +316,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (no mouse to hover with)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Tooltips"); color: Theme.white; font.pixelSize: 13 }
                                 RatioChoice {
@@ -332,6 +338,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (always fullscreen)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Start in fullscreen"); color: Theme.white; font.pixelSize: 13 }
                                 RatioChoice {
@@ -342,6 +350,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (the top bar of the skins is always shown)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Auto-hide top bar"); color: Theme.white; font.pixelSize: 13 }
                                 RatioChoice {
@@ -471,6 +481,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (keyboard shortcuts)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Search history"); color: Theme.white; font.pixelSize: 13 }
                                 RatioChoice {
@@ -585,6 +597,8 @@ Category {
                             }
 
                             RowLayout {
+                                // Not used on Android (not saved by Mixxx)
+                                visible: false
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Default beatjump color"); color: Theme.white; font.pixelSize: 13 }
                                 DefaultColorSelector {

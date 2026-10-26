@@ -130,42 +130,6 @@ Item {
         group: "[Master]"
         key: "headSplit"
     }
-    Mixxx.ControlProxy {
-        id: recordingStatusControl
-        group: "[Recording]"
-        key: "status"
-        onValueChanged: {
-            if (value > 0) {
-                recBlinkTimer.recSeconds = 0;
-                recBlinkTimer.start();
-            } else {
-                recBlinkTimer.stop();
-            }
-        }
-    }
-    Mixxx.ControlProxy {
-        id: recordingToggleControl
-        group: "[Recording]"
-        key: "toggle_recording"
-    }
-    Timer {
-        id: recBlinkTimer
-        interval: 500
-        repeat: true
-        property bool blink: false
-        property int recSeconds: 0
-        property string recTimeStr: "00:00"
-
-        onTriggered: {
-            blink = !blink;
-            if (blink) {
-                recSeconds++;
-                var m = Math.floor(recSeconds / 60);
-                var s = recSeconds % 60;
-                recTimeStr = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-            }
-        }
-    }
     Column {
         id: content
 
@@ -388,42 +352,12 @@ Item {
                         }
                     }
 
-                    Rectangle {
+                    // Asks before stopping, keeps its time across skin switches
+                    Skin.MobileRecordButton {
                         id: recButton
                         visible: root.topBarItemShown("rec")
                         Layout.preferredHeight: 30
-                        Layout.preferredWidth: recordingStatusControl.value > 0 ? 76 : 50
-                        radius: 4
-                        color: recordingStatusControl.value > 0 ? "#b71c1c" : (recMouse.pressed ? "#2e2124" : "#222733")
-                        border.color: recordingStatusControl.value > 0 ? "#ff5252" : "#374151"
-                        border.width: 1
-
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Rectangle {
-                                width: 8
-                                height: 8
-                                radius: 4
-                                color: recordingStatusControl.value > 0 ? (recBlinkTimer.blink ? "#ff1744" : "#ff8a80") : "#78909c"
-                            }
-
-                            Text {
-                                text: recordingStatusControl.value > 0 ? recBlinkTimer.recTimeStr : "REC"
-                                font.bold: true
-                                font.pixelSize: 10
-                                color: recordingStatusControl.value > 0 ? "#ffffff" : "#b0bec5"
-                            }
-                        }
-
-                        MouseArea {
-                            id: recMouse
-                            anchors.fill: parent
-                            onClicked: {
-                                recordingToggleControl.trigger();
-                            }
-                        }
+                        Layout.preferredWidth: implicitWidth
                     }
 
                     Skin.Button {

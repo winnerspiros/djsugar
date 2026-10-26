@@ -105,6 +105,12 @@ class AndroidUsbAudioDevice {
     bool isOutputRunning() const {
         return m_outputRunning.load();
     }
+    /// True once the output stopped by itself while the device is still
+    /// connected (its USB transfers failed). Devices changed listeners are
+    /// told, and the sound devices are set up again.
+    bool outputFailed() const {
+        return m_outputFailed.load();
+    }
     /// Number of frames submitted to the USB controller and not yet played
     int framesInFlight() const {
         return m_framesInFlight.load();
@@ -134,6 +140,7 @@ class AndroidUsbAudioDevice {
     void startEventThread();
     void stopEventThread();
     void markDisconnected();
+    void markOutputFailed();
     bool isHighSpeed() const;
 
     void fillOutputTransfer(libusb_transfer* pTransfer, bool silent);
@@ -172,6 +179,7 @@ class AndroidUsbAudioDevice {
     RenderCallback m_renderCallback;
     std::vector<libusb_transfer*> m_outputTransfers;
     std::atomic<bool> m_outputRunning;
+    std::atomic<bool> m_outputFailed;
     std::atomic<int> m_outputTransfersPending;
     std::atomic<int> m_framesInFlight;
     int m_sampleRate;
