@@ -323,3 +323,11 @@ QList<mixxx::audio::SampleRate> PortAudioEnumerator::getSampleRates(bool jackSam
 
     return {};
 }
+
+#ifdef __ANDROID_USB_AUDIO__
+bool PortAudioEnumerator::refreshAndroidUsbDevices(
+        std::vector<SoundDevicePointer>* pRemoved, bool waitForPermission) {
+    return m_androidUsbDevices.refresh(
+            m_pConfig, m_pSoundManager, &m_devices, pRemoved, waitForPermission);
+}
+#endif

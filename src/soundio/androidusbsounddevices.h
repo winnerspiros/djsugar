@@ -25,6 +25,15 @@ class AndroidUsbSoundDevices {
     const std::vector<SoundDevicePointer>& devices() const {
         return m_devices;
     }
+    /// True if a USB sound card driven directly reports an output error
+    bool outputFailed() const {
+        for (const auto& pDevice : m_devices) {
+            if (!pDevice->getError().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
     void clear() {
         m_devices.clear();
     }

@@ -67,10 +67,13 @@ void SoundManagerAndroid::slotUsbDevicesChanged() {
         return;
     }
     std::vector<SoundDevicePointer> removed;
-    if (!pEnumerator->refreshAndroidUsbDevices(&removed, false)) {
+    if (pEnumerator->refreshAndroidUsbDevices(&removed, false)) {
+        qInfo() << "USB sound cards changed, reconfiguring the audio devices";
+    } else if (pEnumerator->androidUsbOutputFailed()) {
+        qWarning() << "The output of a USB sound card stopped, setting the audio devices up again";
+    } else {
         return;
     }
-    qInfo() << "USB sound cards changed, reconfiguring the audio devices";
     for (const auto& pDevice : removed) {
         if (pDevice->isOpen()) {
             pDevice->close();
