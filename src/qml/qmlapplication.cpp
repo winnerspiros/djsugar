@@ -170,9 +170,6 @@ void saveForAndroid(const std::shared_ptr<mixxx::CoreServices>& pCoreServices) {
     for (int i = 0; i < pPlayerManager->numberOfPreviewDecks(); ++i) {
         save(pPlayerManager->getPreviewDeck(i));
     }
-    for (auto* pAux : {pPlayerManager->getAux1(), pPlayerManager->getAux2()}) {
-        save(pAux);
-    }
 }
 
 /// Finishes the open business of Mixxx before the process is torn down, and

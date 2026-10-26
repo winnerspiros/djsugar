@@ -89,9 +89,9 @@ class EffectsManager {
     void addQuickEffectChain(const ChannelHandleAndGroup& deckHandleGroup);
 
     void readEffectsXml();
+    void saveEffectsXml();
     void readEffectsXmlSingleDeck(const QString& deckGroup);
     void readEffectsXmlSingleDeckStem(const QString& deckStemGroup);
-    void saveEffectsXml();
 
     QSet<ChannelHandleAndGroup> m_registeredInputChannels;
     QSet<ChannelHandleAndGroup> m_registeredOutputChannels;

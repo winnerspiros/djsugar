@@ -2248,15 +2248,23 @@ if(ANDROID)
   target_sources(
     mixxx-lib
     PRIVATE
-      src/util/androidbackup.cpp
       src/util/androidpermissions.cpp
-      src/util/removablestorage.cpp
       src/library/usbdrive/androidusbdrive.cpp
       src/library/usbdrive/fatvolume.cpp
       src/library/usbdrive/usbmassstorage.cpp
-      src/library/rekordbox/rekordboxdrivebackup.cpp
-      src/library/rekordbox/rekordboxplaylistcopy.cpp
   )
+
+# Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
+# and Rekordbox stick read/copy are pure Qt/SQL with internal platform
+# switches, so they build everywhere; USB-direct parts stay Android-only.
+target_sources(
+  mixxx-lib
+  PRIVATE
+    src/util/androidbackup.cpp
+    src/util/removablestorage.cpp
+    src/library/rekordbox/rekordboxdrivebackup.cpp
+    src/library/rekordbox/rekordboxplaylistcopy.cpp
+)
 
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
@@ -5964,6 +5972,9 @@ if(BULK)
     # Android MIDI (android.media.midi + NDK AMidi, from JaviLabarumDJ/mixxx-android)
     target_compile_definitions(mixxx-lib PUBLIC __ANDROID_MIDI__)
   endif()
+  # USB-drive reader for Rekordbox sticks (from JaviLabarumDJ/mixxx-android,
+  # cmake/modules/MixxxAndroid.cmake: enabled with bulk controller support)
+  target_compile_definitions(mixxx-lib PUBLIC __ANDROID_USB_DRIVE__)
   if(NOT HID)
     target_sources(
       mixxx-lib

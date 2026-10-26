@@ -601,7 +601,9 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
     // (from JaviLabarumDJ/mixxx-android)
+#ifdef __ANDROID__
     mixxx::qml::registerMobileQmlSingletons(this);
+#endif
 
     for (int i = 0; i < kSamplerCount; ++i) {
         m_pPlayerManager->addSampler();

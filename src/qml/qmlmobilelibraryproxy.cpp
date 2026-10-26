@@ -317,6 +317,7 @@ bool QmlMobileLibraryProxy::addTrackToPlaylist(int playlistId, const QUrl& track
         qWarning() << "Unable to add" << trackUrl << "to playlist" << playlistId;
         return false;
     }
+#ifdef Q_OS_ANDROID
     if (!alreadyInLibrary) {
         // A track of a Rekordbox drive keeps its date of the collection
         const QSqlDatabase database = pTrackCollectionManager->internalCollection()->database();
@@ -324,6 +325,7 @@ bool QmlMobileLibraryProxy::addTrackToPlaylist(int playlistId, const QUrl& track
                 pTrack->getId(),
                 android::rekordboxDateAdded(database, pTrack->getLocation()));
     }
+#endif
     return playlistDao.appendTrackToPlaylist(pTrack->getId(), playlistId);
 }
 
@@ -349,6 +351,7 @@ int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemM
             urls.append(url);
         }
     }
+#ifdef Q_OS_ANDROID
     // The tracks of a Rekordbox drive that are not in the library yet keep
     // their date of the Rekordbox collection
     const QSqlDatabase database = pTrackCollectionManager->internalCollection()->database();
@@ -360,14 +363,17 @@ int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemM
             rekordboxDates.append({location, dateAdded});
         }
     }
+#endif
     // Keeps the order of the list
     const QList<TrackId> trackIds =
             pTrackCollectionManager->resolveTrackIdsFromUrls(urls, true);
+#ifdef Q_OS_ANDROID
     for (const auto& [location, dateAdded] : std::as_const(rekordboxDates)) {
         android::setTrackDateAdded(database,
                 android::libraryTrackId(database, location),
                 dateAdded);
     }
+#endif
     if (trackIds.isEmpty()) {
         return 0;
     }
@@ -376,14 +382,23 @@ int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemM
             : -1;
 }
 
+#ifdef Q_OS_ANDROID
 bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel* pTrackList) const {
     return android::isRekordboxPlaylist(pTrackList);
-}
+}#else
+bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel*) const {
+    return false;
+}#endif
 
+#ifdef Q_OS_ANDROID
 QString QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString& name) const {
     return android::RekordboxPlaylistCopy::targetDirectory(name);
-}
+}#else
+QString QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString&) const {
+    return QString();
+}#endif
 
+#ifdef Q_OS_ANDROID
 QString QmlMobileLibraryProxy::copyRekordboxPlaylist(
         QAbstractItemModel* pTrackList, const QString& name) {
     const auto tracks = android::rekordboxPlaylistTracks(pTrackList);
@@ -424,8 +439,27 @@ int QmlMobileLibraryProxy::playlistCopyDone() const {
 
 int QmlMobileLibraryProxy::playlistCopyTotal() const {
     return m_pPlaylistCopy ? m_pPlaylistCopy->total() : 0;
+}#else
+QString QmlMobileLibraryProxy::copyRekordboxPlaylist(QAbstractItemModel*, const QString&) {
+    return tr("Rekordbox copy needs Android");
 }
 
+void QmlMobileLibraryProxy::cancelPlaylistCopy() {
+}
+
+bool QmlMobileLibraryProxy::playlistCopyRunning() const {
+    return false;
+}
+
+int QmlMobileLibraryProxy::playlistCopyDone() const {
+    return 0;
+}
+
+int QmlMobileLibraryProxy::playlistCopyTotal() const {
+    return 0;
+}#endif
+
+#ifdef Q_OS_ANDROID
 void QmlMobileLibraryProxy::refreshRekordboxDrives() {
     if (m_rekordboxDrivesLoading) {
         return;
@@ -486,7 +520,37 @@ double QmlMobileLibraryProxy::driveBackupProgress() const {
     return static_cast<double>(m_pDriveBackup->bytesDone()) /
             static_cast<double>(m_pDriveBackup->bytesTotal());
 }
+#else
+void QmlMobileLibraryProxy::refreshRekordboxDrives() {
+}
 
+QString QmlMobileLibraryProxy::rekordboxDriveBackupDirectory(const QString&) const {
+    return QString();
+}
+
+QString QmlMobileLibraryProxy::backUpRekordboxDrive(const QString&, const QString&) {
+    return tr("Rekordbox backup needs Android");
+}
+
+void QmlMobileLibraryProxy::cancelDriveBackup() {
+}
+
+bool QmlMobileLibraryProxy::driveBackupRunning() const {
+    return false;
+}
+
+int QmlMobileLibraryProxy::driveBackupFilesDone() const {
+    return 0;
+}
+
+int QmlMobileLibraryProxy::driveBackupFilesTotal() const {
+    return 0;
+}
+
+double QmlMobileLibraryProxy::driveBackupProgress() const {
+    return 0;
+}
+#endif
 bool QmlMobileLibraryProxy::hasFullStorageAccess() const {
 #ifdef __ANDROID__
     return mixxx::android::hasFullExternalStorageAccess();
