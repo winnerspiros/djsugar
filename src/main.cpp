@@ -75,13 +75,14 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
     auto pCoreServices = std::make_shared<mixxx::CoreServices>(args, pApp);
 #ifdef MIXXX_USE_QML
     // The user can opt in to the experimental QML UI on any platform with
-    // `--qml`. On Android we used to force this on (no Qt-Widgets support
-    // assumption was wrong — Qt 6 supports Widgets on Android, and on Samsung
-    // DeX / large tablets the desktop skin is actually preferred), so the
-    // override is now opt-in everywhere. The skin engine + LateNight skin run
-    // on Android via `MixxxApplication` (QApplication) below.
+    // `--qml`. On Android it is always on: the Booth skin is the mobile UI
+    // (from JaviLabarumDJ/mixxx-android).
     QString mainQmlFilePath;
+#if defined(Q_OS_ANDROID)
+    bool loadQml = true;
+#else
     bool loadQml = args.isQml();
+#endif
     if (!loadQml && args.getDeveloper()) {
         mixxx::skin::SkinLoader skinLoader(pCoreServices->getSettings());
         const mixxx::skin::SkinPointer pSkin = skinLoader.getConfiguredSkin();
