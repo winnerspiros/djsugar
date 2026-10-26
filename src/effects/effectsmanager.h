@@ -81,6 +81,10 @@ class EffectsManager {
 
     bool isAdoptMetaknobSettingEnabled() const;
 
+    // Called on shutdown, and on Android also when the app goes to the
+    // background (from JaviLabarumDJ/mixxx-android, where it is public).
+    void saveEffectsXml();
+
   private:
     void addStandardEffectChains();
     void addOutputEffectChain();
@@ -89,7 +93,6 @@ class EffectsManager {
     void addQuickEffectChain(const ChannelHandleAndGroup& deckHandleGroup);
 
     void readEffectsXml();
-    void saveEffectsXml();
     void readEffectsXmlSingleDeck(const QString& deckGroup);
     void readEffectsXmlSingleDeckStem(const QString& deckStemGroup);
 
