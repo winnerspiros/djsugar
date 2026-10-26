@@ -132,7 +132,6 @@ Rectangle {
                     Layout.preferredHeight: 44
                     Layout.preferredWidth: 140
                     activeColor: "#ff5252"
-                    normalColor: "#4a1c1c"
                     normalColor: "#ff8a80"
                     font.bold: true
                     text: qsTr("STOP")
