@@ -386,9 +386,10 @@ int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemM
 bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel* pTrackList) const {
     return android::isRekordboxPlaylist(pTrackList);
 }
-
-#else bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel*) const {
-return false;
+#endif
+#ifndef Q_OS_ANDROID
+bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel*) const {
+    return false;
 }
 #endif
 #ifdef Q_OS_ANDROID
@@ -397,8 +398,10 @@ QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString& name) const
     return android::RekordboxPlaylistCopy::targetDirectory(name);
 }
 
-#else QString QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString&) const {
-return QString();
+#endif
+#ifndef Q_OS_ANDROID
+QString QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString&) const {
+    return QString();
 }
 #endif
 #ifdef Q_OS_ANDROID
@@ -445,7 +448,9 @@ int QmlMobileLibraryProxy::playlistCopyTotal() const {
     return m_pPlaylistCopy ? m_pPlaylistCopy->total() : 0;
 }
 
-#else QString QmlMobileLibraryProxy::copyRekordboxPlaylist(QAbstractItemModel*, const QString&) {
+#endif
+#ifndef Q_OS_ANDROID
+QString QmlMobileLibraryProxy::copyRekordboxPlaylist(QAbstractItemModel*, const QString&) {
 return tr("Rekordbox copy needs Android");
 }
 
@@ -525,7 +530,8 @@ double QmlMobileLibraryProxy::driveBackupProgress() const {
     return static_cast<double>(m_pDriveBackup->bytesDone()) /
             static_cast<double>(m_pDriveBackup->bytesTotal());
 }
-#else
+#endif
+#ifndef Q_OS_ANDROID
 void QmlMobileLibraryProxy::refreshRekordboxDrives() {
 }
 
