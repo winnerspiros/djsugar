@@ -2280,9 +2280,8 @@ if(ANDROID)
     mixxx-lib
     PUBLIC __ANDROID_USB_AUDIO__ __ANDROID_USB_DRIVE__
   )
-  if(QML)
-    target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
-  endif()
+  # NOTE: mixxx-qml-lib is created much later in this file (QML section),
+  # so its define lives there, not here.
 
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.
@@ -2887,9 +2886,10 @@ if(QT6)
         ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
     )
     add_dependencies(mixxx-android-qml-overrides copy-resource-android)
+    # mixxx depends on the flattened QML, not the raw copy: the override
+    # target itself depends on copy-resource-android (his ordering).
     add_dependencies(
       mixxx
-      copy-resource-android
       android-strip-libomp
       mixxx-android-qml-overrides
     )
@@ -4464,6 +4464,10 @@ if(QML)
 
   if(WIN32)
     target_compile_definitions(mixxx-qml-lib PUBLIC __WINDOWS__)
+  endif()
+  if(ANDROID)
+    # USB drive reader (from JaviLabarumDJ/mixxx-android)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
   endif()
 
   if(ENGINEPRIME)
