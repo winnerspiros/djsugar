@@ -68,6 +68,7 @@ Item {
                         font.pixelSize: 11
                         text: qsTr("🔗 DIRECT URL / RADIO")
                         onClicked: root.activePlatform = 2
+                    }
 
                     Skin.Button {
                         Layout.fillHeight: true
@@ -79,7 +80,6 @@ Item {
                         font.pixelSize: 11
                         text: qsTr("▶️ YOUTUBE")
                         onClicked: root.activePlatform = 3
-                    }
                     }
                 }
 

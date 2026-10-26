@@ -57,7 +57,19 @@ QString QmlMobileAppProxy::packageVersion() const {
 
 QString QmlMobileAppProxy::skin() const {
     const UserSettingsPointer pConfig = QmlConfigProxy::get();
-    return pConfig ? pConfig->getValue(kSkinConfigKey, kDefaultSkin) : kDefaultSkin;
+    if (pConfig) {
+        const QString skin = pConfig->getValue(kSkinConfigKey, QString());
+        if (!skin.isEmpty()) {
+            return skin;
+        }
+    }
+    // Booth is the mobile UI; desktop keeps the Classic main window unless
+    // the user picked a skin in Settings -> Interface.
+#ifdef Q_OS_ANDROID
+    return kDefaultSkin;
+#else
+    return kClassicSkin;
+#endif
 }
 
 void QmlMobileAppProxy::setSkin(const QString& skin) {
