@@ -81,8 +81,8 @@ void keepSubsonicPassword(const QString& previousConfig, const QString& restored
     }
     QString passwordLine;
     QString group;
-    const QStringList lines = QString::fromUtf8(previous.readAll()).split(QChar('\n'));
-    for (const auto& line : lines) {
+    const QStringList previousLines = QString::fromUtf8(previous.readAll()).split(QChar('\n'));
+    for (const auto& line : previousLines) {
         if (line.startsWith(QChar('['))) {
             group = line.trimmed();
         } else if (group == kStreamingGroup && isSubsonicPasswordLine(line)) {
