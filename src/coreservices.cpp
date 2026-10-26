@@ -515,7 +515,10 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     VersionStore::logBuildDetails();
 
-#ifdef Q_OS_ANDROID
+// NOTE: no C++ permission request here. MainActivity already requests the
+// media permission in onCreate (Java) before CoreServices runs; a second
+// blocking Qt request here raced it and hung startup after the grant dialog.
+#if defined(Q_OS_ANDROID) && 0
     // Ask for collection access on every start: the user may have revoked the
     // permission in the system settings since the last run, and without it the
     // library scan finds nothing at all. (from JaviLabarumDJ/mixxx-android)
