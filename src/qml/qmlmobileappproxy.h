@@ -35,6 +35,9 @@ class QmlMobileAppProxy : public QObject {
     static QmlMobileAppProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
 
     QString packageVersion() const;
+    /// The version of the installed package, see packageVersion
+    /// (from JaviLabarumDJ/mixxx-android)
+    static QString installedVersion();
 
     QString skin() const;
     void setSkin(const QString& skin);

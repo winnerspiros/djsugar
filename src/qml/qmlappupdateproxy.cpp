@@ -67,7 +67,7 @@ QString updatesDir() {
 #endif // Q_OS_ANDROID
 
 QVersionNumber installedVersion() {
-    return QVersionNumber::fromString(mixxx::qml::QmlMobileAppProxy::packageVersion());
+    return QVersionNumber::fromString(mixxx::qml::QmlMobileAppProxy::installedVersion());
 }
 
 /// The release notes without the comments and the install instructions
@@ -163,7 +163,7 @@ void QmlAppUpdateProxy::startCheck(bool automatic) {
     m_automaticCheck = automatic;
     setState(State::Checking);
     const QString userAgent = QStringLiteral("Mixxx-Android/") +
-            QmlMobileAppProxy::packageVersion();
+            QmlMobileAppProxy::installedVersion();
     auto* pWatcher = new QFutureWatcher<QString>(this);
     connect(pWatcher, &QFutureWatcher<QString>::finished, this, [this, pWatcher]() {
         onReleasesFetched(pWatcher->result());
