@@ -2254,17 +2254,17 @@ if(ANDROID)
       src/library/usbdrive/usbmassstorage.cpp
   )
 
-# Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
-# and Rekordbox stick read/copy are pure Qt/SQL with internal platform
-# switches, so they build everywhere; USB-direct parts stay Android-only.
-target_sources(
-  mixxx-lib
-  PRIVATE
-    src/util/androidbackup.cpp
-    src/util/removablestorage.cpp
-    src/library/rekordbox/rekordboxdrivebackup.cpp
-    src/library/rekordbox/rekordboxplaylistcopy.cpp
-)
+  # Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
+  # and Rekordbox stick read/copy are pure Qt/SQL with internal platform
+  # switches, so they build everywhere; USB-direct parts stay Android-only.
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/util/androidbackup.cpp
+      src/util/removablestorage.cpp
+      src/library/rekordbox/rekordboxdrivebackup.cpp
+      src/library/rekordbox/rekordboxplaylistcopy.cpp
+  )
 
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
