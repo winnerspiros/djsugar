@@ -332,9 +332,9 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
     for (const File& file : std::as_const(files)) {
         stickFiles.insert(file.relativePath.toLower());
         const QFileInfo existing(target + QChar('/') + file.relativePath);
-        const bool up - to - date = existing.isFile() && existing.size() == file.size &&
+        const bool upToDate = existing.isFile() && existing.size() == file.size &&
                 sameTime(existing.lastModified(), file.modified);
-        if (!up - to - date) {
+        if (!upToDate) {
             pending.append(file);
             pendingBytes += file.size;
         }
