@@ -193,6 +193,7 @@ void saveBeforeExit() {
 Q_DECLARE_JNI_CLASS(UsbPermissionClass, "org/mixxx/UsbPermission")
 Q_DECLARE_JNI_CLASS(MidiHelperClass, "org/mixxx/MidiHelper")
 Q_DECLARE_JNI_CLASS(MainActivityClass, "org/mixxx/MainActivity")
+Q_DECLARE_JNI_CLASS(AndroidMidiHelperClass, "org/mixxx/AndroidMidiHelper")
 
 void usbDeviceAccessResult(JNIEnv*, jobject, jobject device, jboolean granted) {
     mixxx::android::usbDeviceAccessResult(device, granted);
