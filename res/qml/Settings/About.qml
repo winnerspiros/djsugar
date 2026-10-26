@@ -96,7 +96,7 @@ Category {
                         Skin.Button {
                             Layout.preferredHeight: 40
                             Layout.preferredWidth: 150
-                            visible: [Mixxx.AppUpdate.Idle, Mixxx.AppUpdate.UpToDate].includes(Mixxx.AppUpdate.state) || (Mixxx.AppUpdate.state === Mixxx.AppUpdate.Failed && Mixxx.AppUpdate.latestVersion === "")
+                            visible: [Mixxx.AppUpdate.Idle, Mixxx.AppUpdate.up-to-date].includes(Mixxx.AppUpdate.state) || (Mixxx.AppUpdate.state === Mixxx.AppUpdate.Failed && Mixxx.AppUpdate.latestVersion === "")
                             text: qsTr("CHECK NOW")
                             onClicked: Mixxx.AppUpdate.check()
                         }

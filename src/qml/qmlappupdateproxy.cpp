@@ -217,7 +217,7 @@ void QmlAppUpdateProxy::onReleasesFetched(const QString& json) {
 
     const QVersionNumber installed = installedVersion();
     if (latest.isNull() || installed.isNull() || latest <= installed) {
-        setState(State::UpToDate);
+        setState(State::up - to - date);
         return;
     }
     m_latestVersion = latest.toString();
@@ -387,7 +387,9 @@ QString QmlAppUpdateProxy::apkPath() const {
 
 void QmlAppUpdateProxy::removeOldDownloads() const {
     const QVersionNumber installed = installedVersion();
-    const QFileInfoList apks = QDir(updatesDir()).entryInfoList({QStringLiteral("*.apk")}, QDir::Files);
+    const QFileInfoList apks =
+            QDir(updatesDir())
+                    .entryInfoList({QStringLiteral("*.apk")}, QDir::Files);
     for (const QFileInfo& apk : apks) {
         const QRegularExpressionMatch match = kApkVersion.match(apk.fileName());
         if (!match.hasMatch() || QVersionNumber::fromString(match.captured(1)) <= installed) {

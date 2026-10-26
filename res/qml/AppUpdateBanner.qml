@@ -16,7 +16,7 @@ Rectangle {
 
     signal installRequested
 
-    visible: active && update.state !== Mixxx.AppUpdate.Idle && update.state !== Mixxx.AppUpdate.Checking && update.state !== Mixxx.AppUpdate.UpToDate
+    visible: active && update.state !== Mixxx.AppUpdate.Idle && update.state !== Mixxx.AppUpdate.Checking && update.state !== Mixxx.AppUpdate.up-to-date
     // In a Loader, which takes the size of the bar
     width: Math.min(720, Window.width - 24)
     height: 48

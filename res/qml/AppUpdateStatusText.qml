@@ -28,7 +28,7 @@ Text {
         switch (update.state) {
         case Mixxx.AppUpdate.Checking:
             return qsTr("Looking for updates…");
-        case Mixxx.AppUpdate.UpToDate:
+        case Mixxx.AppUpdate.up-to-date:
             return qsTr("Mixxx is up to date.");
         case Mixxx.AppUpdate.Available:
             return qsTr("Mixxx %1 is available (%2).").arg(update.latestVersion).arg(sizeText);

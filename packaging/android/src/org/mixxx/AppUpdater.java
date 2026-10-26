@@ -7,9 +7,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.provider.Settings;
 import android.util.Log;
-
 import androidx.core.content.FileProvider;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -78,7 +76,7 @@ public class AppUpdater {
     /// the download, or -1.
     public static long startDownload(Context context, String url, String fileName, String title) {
         DownloadManager manager =
-                (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+            (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) {
             return -1;
         }
@@ -102,18 +100,18 @@ public class AppUpdater {
     public static long[] queryDownload(Context context, long id) {
         long[] result = {-1, 0, 0};
         DownloadManager manager =
-                (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+            (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) {
             return result;
         }
         try (Cursor cursor = manager.query(new DownloadManager.Query().setFilterById(id))) {
             if (cursor != null && cursor.moveToFirst()) {
                 result[0] = cursor.getInt(
-                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                    cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
                 result[1] = cursor.getLong(cursor.getColumnIndexOrThrow(
-                        DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                    DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
                 result[2] = cursor.getLong(
-                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                    cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
             }
         } catch (IllegalArgumentException e) {
             Log.w(TAG, "Unable to query download " + id, e);
@@ -123,7 +121,7 @@ public class AppUpdater {
 
     public static void cancelDownload(Context context, long id) {
         DownloadManager manager =
-                (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+            (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager != null) {
             manager.remove(id);
         }
@@ -136,13 +134,13 @@ public class AppUpdater {
         try {
             if (!context.getPackageManager().canRequestPackageInstalls()) {
                 Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + context.getPackageName()));
+                    Uri.parse("package:" + context.getPackageName()));
                 settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(settings);
                 return INSTALL_NEEDS_PERMISSION;
             }
             Uri uri = FileProvider.getUriForFile(
-                    context, context.getPackageName() + ".qtprovider", new File(path));
+                context, context.getPackageName() + ".qtprovider", new File(path));
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(uri, APK_MIME_TYPE);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
