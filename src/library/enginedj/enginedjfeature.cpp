@@ -309,11 +309,12 @@ class DeviceParser {
     QList<EngineDJFeature::PlaylistNode> addTree(
             const std::vector<T>& items, const QString& parentName) {
         QList<EngineDJFeature::PlaylistNode> nodes;
+        QList<int64_t> trackIds;
         for (const auto& item : items) {
             EngineDJFeature::PlaylistNode node;
             node.label = QString::fromStdString(item.name());
             node.name = parentName + QChar('/') + node.label;
-            QList<int64_t> trackIds;
+            trackIds.clear();
             for (const auto& track : item.tracks()) {
                 trackIds.append(track.id());
             }
@@ -568,11 +569,12 @@ class SqlEngineLibrary {
                 [&](int64_t parentId, const QString& parentName) {
                     QList<EngineDJFeature::PlaylistNode> nodes;
                     const QList<int64_t> ordered = linkedOrder(children.value(parentId), nextList);
+                    QList<int64_t> trackIds;
                     for (const int64_t id : ordered) {
                         EngineDJFeature::PlaylistNode node;
                         node.label = titles.value(id);
                         node.name = parentName + QChar('/') + node.label;
-                        QList<int64_t> trackIds;
+                        trackIds.clear();
                         const QList<int64_t> orderedEntities =
                                 linkedOrder(entitiesOfList.value(id), nextEntity);
                         for (const int64_t entity : orderedEntities) {
