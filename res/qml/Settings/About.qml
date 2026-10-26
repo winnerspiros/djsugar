@@ -105,7 +105,7 @@ Category {
                             Layout.preferredWidth: 150
                             visible: Mixxx.AppUpdate.state === Mixxx.AppUpdate.Available || (Mixxx.AppUpdate.state === Mixxx.AppUpdate.Failed && Mixxx.AppUpdate.latestVersion !== "")
                             activeColor: "#00e5ff"
-                            backgroundColor: "#0d3640"
+                            normalColor: "#0d3640"
                             normalColor: "#80deea"
                             font.bold: true
                             text: qsTr("DOWNLOAD")
@@ -123,7 +123,7 @@ Category {
                             Layout.preferredWidth: 150
                             visible: Mixxx.AppUpdate.state === Mixxx.AppUpdate.Downloaded
                             activeColor: "#00e5ff"
-                            backgroundColor: "#0d3640"
+                            normalColor: "#0d3640"
                             normalColor: "#80deea"
                             font.bold: true
                             text: qsTr("INSTALL")

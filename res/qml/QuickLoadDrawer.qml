@@ -94,7 +94,7 @@ Popup {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 130
                     activeColor: root.isDeck1 ? "#ff6d00" : "#00b0ff"
-                    backgroundColor: "#202736"
+                    normalColor: "#202736"
                     normalColor: root.isDeck1 ? "#ffb74d" : "#80d8ff"
                     font.bold: true
                     font.pixelSize: 10
@@ -111,7 +111,7 @@ Popup {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 110
                     activeColor: "#00e5ff"
-                    backgroundColor: root.activeTab === 0 ? "#1e3a47" : "#222733"
+                    normalColor: root.activeTab === 0 ? "#1e3a47" : "#222733"
                     normalColor: root.activeTab === 0 ? "#00e5ff" : "#90a4ae"
                     font.bold: true
                     font.pixelSize: 10
@@ -123,7 +123,7 @@ Popup {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 120
                     activeColor: "#00ffff"
-                    backgroundColor: root.activeTab === 1 ? "#004d40" : "#222733"
+                    normalColor: root.activeTab === 1 ? "#004d40" : "#222733"
                     normalColor: root.activeTab === 1 ? "#00ffff" : "#80deea"
                     font.bold: true
                     font.pixelSize: 10
@@ -136,7 +136,7 @@ Popup {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 72
                     activeColor: "#ff5252"
-                    backgroundColor: "#b71c1c"
+                    normalColor: "#b71c1c"
                     normalColor: "#ffffff"
                     font.bold: true
                     font.pixelSize: 10
@@ -178,7 +178,7 @@ Popup {
                             Layout.preferredHeight: 32
                             Layout.preferredWidth: 210
                             activeColor: "#00e5ff"
-                            backgroundColor: "#1c2b38"
+                            normalColor: "#1c2b38"
                             normalColor: "#80d8ff"
                             font.bold: true
                             font.pixelSize: 11

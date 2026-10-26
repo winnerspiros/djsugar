@@ -69,7 +69,7 @@ Rectangle {
             Layout.preferredWidth: 130
             visible: root.update.state === Mixxx.AppUpdate.Available || root.update.state === Mixxx.AppUpdate.Downloaded
             activeColor: "#00e5ff"
-            backgroundColor: "#0d3640"
+            normalColor: "#0d3640"
             normalColor: "#80deea"
             font.bold: true
             text: root.update.state === Mixxx.AppUpdate.Downloaded ? qsTr("INSTALL") : qsTr("DOWNLOAD")

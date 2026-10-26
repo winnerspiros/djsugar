@@ -76,7 +76,7 @@ Popup {
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 140
                 activeColor: "#00e5ff"
-                backgroundColor: "#0d3640"
+                normalColor: "#0d3640"
                 normalColor: "#80deea"
                 font.bold: true
                 text: qsTr("INSTALL")
