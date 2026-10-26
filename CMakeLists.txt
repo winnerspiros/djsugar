@@ -2254,17 +2254,6 @@ if(ANDROID)
       src/library/usbdrive/usbmassstorage.cpp
   )
 
-  # Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
-  # and Rekordbox stick read/copy are pure Qt/SQL with internal platform
-  # switches, so they build everywhere; USB-direct parts stay Android-only.
-  target_sources(
-    mixxx-lib
-    PRIVATE
-      src/util/androidbackup.cpp
-      src/util/removablestorage.cpp
-      src/library/rekordbox/rekordboxdrivebackup.cpp
-      src/library/rekordbox/rekordboxplaylistcopy.cpp
-  )
 
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
@@ -2294,6 +2283,23 @@ if(ANDROID)
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.
   target_compile_definitions(mixxx-lib PUBLIC QT_OPENGL_ES_2)
+endif()
+
+# Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
+# and Rekordbox stick read/copy are pure Qt/SQL with internal platform
+# switches, so they build everywhere; USB-direct parts stay Android-only.
+target_sources(
+  mixxx-lib
+  PRIVATE
+    src/util/androidbackup.cpp
+    src/util/removablestorage.cpp
+    src/library/rekordbox/rekordboxdrivebackup.cpp
+    src/library/rekordbox/rekordboxplaylistcopy.cpp
+)
+if(NOT ANDROID)
+  # Desktop has no USB-direct reader (androidusbdrive.cpp is JNI/libusb):
+  # the OS mounts drives itself, so all queries answer "not a drive".
+  target_sources(mixxx-lib PRIVATE src/library/usbdrive/usbdrivedesktop.cpp)
 endif()
 
 if(APPLE)
