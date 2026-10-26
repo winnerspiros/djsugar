@@ -451,7 +451,7 @@ int QmlMobileLibraryProxy::playlistCopyTotal() const {
 #endif
 #ifndef Q_OS_ANDROID
 QString QmlMobileLibraryProxy::copyRekordboxPlaylist(QAbstractItemModel*, const QString&) {
-return tr("Rekordbox copy needs Android");
+    return tr("Rekordbox copy needs Android");
 }
 
 void QmlMobileLibraryProxy::cancelPlaylistCopy() {
