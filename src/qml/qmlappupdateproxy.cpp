@@ -217,7 +217,7 @@ void QmlAppUpdateProxy::onReleasesFetched(const QString& json) {
 
     const QVersionNumber installed = installedVersion();
     if (latest.isNull() || installed.isNull() || latest <= installed) {
-        setState(State::up - to - date);
+        setState(State::UpToDate);
         return;
     }
     m_latestVersion = latest.toString();

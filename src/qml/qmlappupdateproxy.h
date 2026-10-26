@@ -41,7 +41,7 @@ class QmlAppUpdateProxy : public QObject {
     enum class State {
         Idle,
         Checking,
-        up - to - date,
+        UpToDate,
         Available,
         Downloading,
         Verifying,
