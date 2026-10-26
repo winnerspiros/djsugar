@@ -49,7 +49,7 @@ public class MidiHelper {
         HandlerThread thread = new HandlerThread("MixxxMidiCallbacks");
         thread.start();
         sHandler = new Handler(thread.getLooper());
-        sManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
+        MidiManager.DeviceCallback callback = new MidiManager.DeviceCallback() {
             @Override
             public void onDeviceAdded(MidiDeviceInfo info) {
                 Log.i(TAG, "MIDI device added: " + getName(info));
@@ -61,7 +61,14 @@ public class MidiHelper {
                 Log.i(TAG, "MIDI device removed: " + getName(info));
                 notifyDevicesChanged();
             }
-        }, sHandler);
+        };
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            // registerDeviceCallback(DeviceCallback, Handler) is deprecated
+            // since API 34; the Executor overload runs on the same thread.
+            sManager.registerDeviceCallback(sHandler::post, callback);
+        } else {
+            sManager.registerDeviceCallback(callback, sHandler);
+        }
         return true;
     }
 
