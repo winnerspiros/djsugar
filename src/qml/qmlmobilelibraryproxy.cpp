@@ -388,25 +388,23 @@ bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel* pTrackList) 
 }
 
 #else bool QmlMobileLibraryProxy::isRekordboxPlaylist(QAbstractItemModel*) const {
-    return false;
+return false;
 }
-
 #endif
 #ifdef Q_OS_ANDROID
-        QString
-        QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString& name) const {
+QString
+QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString& name) const {
     return android::RekordboxPlaylistCopy::targetDirectory(name);
 }
 
 #else QString QmlMobileLibraryProxy::rekordboxPlaylistCopyDirectory(const QString&) const {
-    return QString();
+return QString();
 }
-
 #endif
 #ifdef Q_OS_ANDROID
-        QString
-        QmlMobileLibraryProxy::copyRekordboxPlaylist(
-                QAbstractItemModel* pTrackList, const QString& name) {
+QString
+QmlMobileLibraryProxy::copyRekordboxPlaylist(
+        QAbstractItemModel* pTrackList, const QString& name) {
     const auto tracks = android::rekordboxPlaylistTracks(pTrackList);
     if (!tracks) {
         return tr("This list is not a Rekordbox playlist");
@@ -448,7 +446,7 @@ int QmlMobileLibraryProxy::playlistCopyTotal() const {
 }
 
 #else QString QmlMobileLibraryProxy::copyRekordboxPlaylist(QAbstractItemModel*, const QString&) {
-    return tr("Rekordbox copy needs Android");
+return tr("Rekordbox copy needs Android");
 }
 
 void QmlMobileLibraryProxy::cancelPlaylistCopy() {
@@ -465,11 +463,9 @@ int QmlMobileLibraryProxy::playlistCopyDone() const {
 int QmlMobileLibraryProxy::playlistCopyTotal() const {
     return 0;
 }
-
 #endif
 #ifdef Q_OS_ANDROID
-        void
-        QmlMobileLibraryProxy::refreshRekordboxDrives() {
+void QmlMobileLibraryProxy::refreshRekordboxDrives() {
     if (m_rekordboxDrivesLoading) {
         return;
     }
@@ -530,8 +526,7 @@ double QmlMobileLibraryProxy::driveBackupProgress() const {
             static_cast<double>(m_pDriveBackup->bytesTotal());
 }
 #else
-        void
-        QmlMobileLibraryProxy::refreshRekordboxDrives() {
+void QmlMobileLibraryProxy::refreshRekordboxDrives() {
 }
 
 QString QmlMobileLibraryProxy::rekordboxDriveBackupDirectory(const QString&) const {
