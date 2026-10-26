@@ -2290,7 +2290,6 @@ endif()
 target_sources(
   mixxx-lib
   PRIVATE
-    src/util/androidbackup.cpp
     src/util/removablestorage.cpp
     src/library/rekordbox/rekordboxdrivebackup.cpp
     src/library/rekordbox/rekordboxplaylistcopy.cpp
@@ -4569,6 +4568,9 @@ if(QML)
   target_sources(
     mixxx-qml-lib
     PRIVATE
+      # Mobile backup/restore helpers: only called from QmlMobileLibraryProxy,
+      # so they live in the QML lib (avoids a qml-lib -> mixxx-lib static-link cycle)
+      src/util/androidbackup.cpp
       src/qml/asyncimageprovider.cpp
       src/qml/qmlapplication.cpp
       src/qml/qmlapplicationproxy.cpp
