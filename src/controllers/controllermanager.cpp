@@ -34,6 +34,7 @@
 #endif
 
 #ifdef __ANDROID__
+#include "controllers/android.h"
 #include "controllers/midi/androidmidienumerator.h"
 #endif
 
