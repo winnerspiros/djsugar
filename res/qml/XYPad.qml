@@ -14,6 +14,17 @@ Rectangle {
     property real currentY: 0.0 // 0.0 (Dry) ... 1.0 (Wet)
     property bool isTouching: false
 
+    onCurrentXChanged: {
+        filterProxy.value = root.currentX;
+        fxMixProxy.value = root.currentY;
+        fxSuperProxy.value = root.currentY;
+    }
+    onCurrentYChanged: {
+        filterProxy.value = root.currentX;
+        fxMixProxy.value = root.currentY;
+        fxSuperProxy.value = root.currentY;
+    }
+
     signal closeRequested()
 
     color: "#e60a0d14"
@@ -376,7 +387,6 @@ Rectangle {
                     property: "currentX"
                     duration: 180
                     easing.type: Easing.OutQuad
-                    onValueChanged: root.applyValues(root.currentX, root.currentY)
                 }
                 NumberAnimation {
                     id: snapBackAnimY
@@ -384,7 +394,6 @@ Rectangle {
                     property: "currentY"
                     duration: 180
                     easing.type: Easing.OutQuad
-                    onValueChanged: root.applyValues(root.currentX, root.currentY)
                 }
                 onFinished: {
                     filterProxy.value = root.currentX;
