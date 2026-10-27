@@ -31,9 +31,11 @@ Skin.Fader {
         preventStealing: true
 
         function updateFromTouch(mouse) {
+            var travelY = height - handleItem.height;
+            var travelX = width - handleItem.width;
             var pos = (root.vertical !== undefined && root.vertical)
-                    ? 1.0 - Math.max(0.0, Math.min(1.0, mouse.y / height))
-                    : Math.max(0.0, Math.min(1.0, mouse.x / width));
+                    ? 1.0 - Math.max(0.0, Math.min(1.0, (mouse.y - handleItem.height / 2) / (travelY > 0 ? travelY : 1)))
+                    : Math.max(0.0, Math.min(1.0, (mouse.x - handleItem.width / 2) / (travelX > 0 ? travelX : 1)));
             control.parameter = pos;
         }
 

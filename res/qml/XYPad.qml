@@ -27,15 +27,17 @@ Rectangle {
         key: "super1"
     }
 
+    readonly property string fxUnit: root.targetDeck === "[Channel2]" ? "[EffectRack1_EffectUnit2]" : "[EffectRack1_EffectUnit1]"
+
     Mixxx.ControlProxy {
         id: fxMixProxy
-        group: "[EffectRack1_EffectUnit1]"
+        group: root.fxUnit
         key: "mix"
     }
 
     Mixxx.ControlProxy {
         id: fxSuperProxy
-        group: "[EffectRack1_EffectUnit1]"
+        group: root.fxUnit
         key: "super1"
     }
 
@@ -342,12 +344,26 @@ Rectangle {
                     }
                 }
 
-                onReleased: {
+                onReleased: touchPoints => {
+                    if (touchPoints.length > 0) {
+                        return;
+                    }
                     root.isTouching = false;
                     if (!root.holdMode) {
                         snapBackAnimX.to = 0.5;
                         snapBackAnimY.to = 0.0;
                         snapBackAnim.restart();
+                    }
+                }
+
+                onCanceled: {
+                    root.isTouching = false;
+                    if (!root.holdMode) {
+                        snapBackAnimX.to = 0.5;
+                        snapBackAnimY.to = 0.0;
+                        snapBackAnim.restart();
+                    } else {
+                        root.resetNeutral();
                     }
                 }
             }
@@ -360,6 +376,7 @@ Rectangle {
                     property: "currentX"
                     duration: 180
                     easing.type: Easing.OutQuad
+                    onValueChanged: root.applyValues(root.currentX, root.currentY)
                 }
                 NumberAnimation {
                     id: snapBackAnimY
@@ -367,6 +384,7 @@ Rectangle {
                     property: "currentY"
                     duration: 180
                     easing.type: Easing.OutQuad
+                    onValueChanged: root.applyValues(root.currentX, root.currentY)
                 }
                 onFinished: {
                     filterProxy.value = root.currentX;

@@ -53,6 +53,7 @@ Item {
         // Controls
         Mixxx.ControlProxy { id: bpmControl; group: card.group; key: "bpm" }
         Mixxx.ControlProxy { id: rateControl; group: card.group; key: "rate" }
+        Mixxx.ControlProxy { id: rateRangeControl; group: card.group; key: "rateRange" }
         Mixxx.ControlProxy { id: durationControl; group: card.group; key: "duration" }
         Mixxx.ControlProxy { id: playPositionControl; group: card.group; key: "playposition" }
         Mixxx.ControlProxy { id: keyControl; group: card.group; key: "visual_key" }
@@ -121,7 +122,7 @@ Item {
                     Text {
                         id: keyText
                         anchors.centerIn: parent
-                        text: keyControl.value ? keyControl.value.toString() : ""
+                        text: keyControl.value ? Mixxx.KeyUtils.keyToString(keyControl.value) : ""
                         color: "#ffffff"
                         font.bold: true
                         font.pixelSize: 10
@@ -216,7 +217,8 @@ Item {
                             font.pixelSize: 10
                             color: card.accentColor
                             text: {
-                                var p = (rateControl.value || 0) * 8.0;
+                                var range = rateRangeControl.value ? rateRangeControl.value : 0.08;
+                                var p = (rateControl.value || 0) * range * 100.0;
                                 return (p >= 0 ? "+" : "") + p.toFixed(1) + "%";
                             }
                         }
@@ -304,6 +306,7 @@ Item {
                         anchors.fill: parent
                         onPressed: cueControl.value = 1
                         onReleased: cueControl.value = 0
+                        onCanceled: cueControl.value = 0
                     }
                 }
 

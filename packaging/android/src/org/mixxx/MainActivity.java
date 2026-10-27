@@ -79,7 +79,7 @@ public class MainActivity extends QtActivityBase {
         IntentFilter usbFilter = new IntentFilter();
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_EXPORTED);
+        registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_NOT_EXPORTED);
 
         MidiHelper.init(this);
 

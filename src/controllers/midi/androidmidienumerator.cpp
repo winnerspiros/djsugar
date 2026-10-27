@@ -171,6 +171,56 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
             }
         }
 
+        // Drop devices that are no longer present (prune unplugged).
+        QSet<QString> seenFallbackNames;
+        for (jsize j = 0; j < usbCount; j++) {
+            // Re-derive the stable name the same way as the loop above.
+            // (Names already validated as MIDI interfaces in this scan.)
+            QJniObject usbDevice = env2->GetObjectArrayElement(
+                    static_cast<jobjectArray>(valuesArray.object()), j);
+            if (!usbDevice.isValid()) {
+                continue;
+            }
+            jint ifaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
+            bool isMidi = false;
+            for (jint ifIdx = 0; ifIdx < ifaceCount; ifIdx++) {
+                auto iface = usbDevice.callObjectMethod("getInterface",
+                        "(I)Landroid/hardware/usb/UsbInterface;",
+                        ifIdx);
+                if (iface.callMethod<jint>("getInterfaceClass") == 1 &&
+                        iface.callMethod<jint>("getInterfaceSubclass") == 3) {
+                    isMidi = true;
+                    break;
+                }
+            }
+            if (!isMidi) {
+                continue;
+            }
+            QJniObject devName = usbDevice.callObjectMethod(
+                    "getProductName", "()Ljava/lang/String;");
+            QString productStr = devName.isValid() ? devName.toString() : QString();
+            QJniObject mfrName = usbDevice.callObjectMethod(
+                    "getManufacturerName", "()Ljava/lang/String;");
+            QString vendorStr = mfrName.isValid() ? mfrName.toString() : QString();
+            QString nm = vendorStr.isEmpty()
+                    ? productStr
+                    : (productStr.isEmpty()
+                                      ? vendorStr
+                                      : QStringLiteral("%1 %2").arg(vendorStr, productStr));
+            QString stableName = productStr.isEmpty() ? nm : productStr;
+            seenFallbackNames.insert(stableName);
+        }
+        for (auto it = m_devices.begin(); it != m_devices.end();) {
+            if (!seenFallbackNames.contains((*it)->getName())) {
+                kLogger.info() << "Removing unplugged Android MIDI controller:"
+                               << (*it)->getName();
+                delete *it;
+                it = m_devices.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
         kLogger.info() << "Enumerated" << m_devices.size()
                        << "Android MIDI controllers (UsbManager fallback)";
         QList<Controller*> fallbackResult;

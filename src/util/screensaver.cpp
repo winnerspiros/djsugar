@@ -391,9 +391,11 @@ void ScreenSaverHelper::triggerUserActivity() {
 }
 void ScreenSaverHelper::inhibitInternal() {
     setKeepScreenOn(true);
+    s_enabled = true;
 }
 void ScreenSaverHelper::uninhibitInternal() {
     setKeepScreenOn(false);
+    s_enabled = false;
 }
 #else
 void ScreenSaverHelper::triggerUserActivity()
