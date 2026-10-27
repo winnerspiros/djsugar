@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.mixxx"
-    android:installLocation="auto"
-    android:versionCode="1"
-    android:versionName="1.0">
+    android:installLocation="internalOnly"
+    android:versionCode="15"
+    android:versionName="1.5.5">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"  />
     <uses-permission android:name="android.permission.INTERNET"  />
     <!-- API 33+ (Android 13) replaced the broad READ/WRITE_EXTERNAL_STORAGE
@@ -93,14 +93,9 @@
                 android:name="android.app.splash_screen_drawable"
                 android:value="@drawable/ic_launcher_foreground" />
 
-          <!-- Run the standard widget UI (MixxxApplication + LateNight skin)
-               on Android. Do NOT add the new_ui or qml command line flags
-               here: the QML UI is experimental and renders a broken,
-               overlapping layout on phones (controls on top of each other,
-               empty library, UI lost on rotation). The legacy skin engine
-               works on Android with Qt 6 and is the supported path for this
-               fork. Keep the log level in sync with
-               QT_ANDROID_APPLICATION_ARGUMENTS in CMakeLists.txt.
+          <!-- Run the QML UI (MixxxApplication + Booth skin by default;
+               Classic skin selectable in Settings). Keep the log level in
+               sync with QT_ANDROID_APPLICATION_ARGUMENTS in CMakeLists.txt.
                Note: XML comments cannot contain a double dash, so the
                flag names above are written without their leading dashes. -->
           <meta-data
