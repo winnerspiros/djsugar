@@ -157,7 +157,7 @@ Item {
                                 currentIndex: node.channelAssignation[channel.index] ?? 0
                                 font.pixelSize: 12
                                 model: {
-                                    return [...Array(node.channels.length / 2)].map((e, i) => `Ch ${i * 2 + node.channels[0] + 1} - ${i * 2 + node.channels[0] + 2}`);
+                                    return [...Array(node.channels.length / 2)].map((e, i) => qsTr("Ch %1 - %2").arg(i * 2 + node.channels[0] + 1).arg(i * 2 + node.channels[0] + 2));
                                 }
                                 spacing: 2
                                 visible: node.count > 1 && node.channels.length > 2

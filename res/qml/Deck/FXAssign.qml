@@ -43,7 +43,7 @@ Item {
         anchors.top: parent.top
         color: '#626262'
         font.pixelSize: 8
-        text: "FX Assign"
+        text: qsTr("FX Assign")
     }
     RowLayout {
         anchors.bottom: parent.bottom

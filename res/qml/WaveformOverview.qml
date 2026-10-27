@@ -139,7 +139,7 @@ Item {
 
         Skin.SectionText {
             anchors.centerIn: parent
-            text: "Passthrough Enabled"
+            text: qsTr("Passthrough Enabled")
         }
     }
 }
