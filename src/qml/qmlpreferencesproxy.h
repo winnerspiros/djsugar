@@ -210,6 +210,10 @@ class QmlControllerDeviceProxy : public QObject {
     Q_INVOKABLE bool save(const mixxx::qml::QmlConfigProxy* pConfig);
     Q_INVOKABLE void clear();
 
+    Controller* internal() const {
+        return m_pInternal;
+    }
+
     std::shared_ptr<LegacyControllerMapping> instanceFor(const QString& mappingPath) const;
     void setInstanceFor(const QString& mappingPath, std::shared_ptr<LegacyControllerMapping> pMapping);
 

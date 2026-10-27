@@ -38,7 +38,7 @@ void QmlMobileControllersProxy::copyToClipboard(const QString& text) const {
 QmlControllerMappingProxy* QmlMobileControllersProxy::suggestedMapping(
         QmlControllerDeviceProxy* pDevice,
         const QmlControllerMappingProxyList& mappings) const {
-    if (!pDevice) {
+    if (!pDevice || !pDevice->internal()) {
         return nullptr;
     }
     QmlControllerMappingProxy* pBestMatch = nullptr;
