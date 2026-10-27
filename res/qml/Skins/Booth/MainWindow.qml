@@ -706,24 +706,7 @@ Item {
             // The XY pad of the Classic skin, in the colors of this one
             Skin.XYPad {
                 anchors.fill: parent
-                accentColor: "#2f9bff"
-                border.color: "#2a2c30"
-                buttonBorderColor: "#3a3c40"
-                buttonColor: "#141518"
-                buttonTextColor: "#9a9ea6"
-                closable: false
-                color: "#0c0d0f"
-                controlRadius: 2
-                deck1Color: "#1f6fd1"
-                deck2Color: "#e8650f"
-                holdColor: "#ff6a13"
-                radius: 0
-                surfaceBorderColor: "#2a2c30"
-                surfaceColor: "#000000"
-                surfaceRadius: 0
-                title: qsTr("XY PAD")
                 visible: root.xyView
-                wetColor: "#d4e157"
             }
 
             // BEAT FX of phones, over the waveforms
