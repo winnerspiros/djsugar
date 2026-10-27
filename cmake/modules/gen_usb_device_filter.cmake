@@ -13,7 +13,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-file(GLOB HID_XML_FILES
+file(
+  GLOB HID_XML_FILES
   "${CMAKE_SOURCE_DIR}/res/controllers/*.hid.xml"
   "${CMAKE_SOURCE_DIR}/res/controllers/*.bulk.xml"
 )
