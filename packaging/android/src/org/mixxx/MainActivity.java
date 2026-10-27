@@ -15,6 +15,9 @@ import android.os.Process;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.WindowManager;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import org.mixxx.youtube.PoTokenManager;
 import org.qtproject.qt.android.QtActivityBase;
 
@@ -43,10 +46,20 @@ public class MainActivity extends QtActivityBase {
             getWindow().setPreferMinimalPostProcessing(true);
         }
 
-        // ─── Fullscreen and notch handling (API-level-aware) ────────────
-        // Replaces inline cutout/inset code with a dedicated helper that handles
-        // all Android API levels correctly (API 35+, 30-34, 28-29, <28).
-        AndroidScreenManager.applyFullScreen(this);
+        // ─── Fullscreen and notch handling ───────────────────────────────
+        // Matches JaviLabarumDJ/mixxx-android android-stable: never draw
+        // over the display cutout (its camera-hole region would otherwise
+        // shift the window geometry vs his build, changing which tab-size
+        // branch the skins take), hide only the navigation bar.
+        WindowManager.LayoutParams lp = this.getWindow().getAttributes();
+        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+        this.getWindow().setAttributes(lp);
+
+        WindowInsetsControllerCompat windowInsetsController =
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.setSystemBarsBehavior(
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars());
 
         // ─── Input performance: elevate the UI thread priority ───────────
         // The main thread handles input events and UI rendering; a higher
@@ -270,15 +283,6 @@ public class MainActivity extends QtActivityBase {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-
-        // ─── Fullscreen: re-apply after window is ready ────────────────
-        // On Samsung One UI, WindowInsetsController may not be available
-        // during onCreate() — the window isn't fully attached yet.
-        // Re-applying here ensures system bars are hidden and the notch
-        // cutout mode is set once the window is composited.
-        if (hasFocus) {
-            AndroidScreenManager.applyFullScreen(this);
-        }
     }
 
 }
