@@ -303,17 +303,6 @@ ApplicationWindow {
                 antialiasing: true
             }
 
-            // Subtitle
-            Text {
-                id: subtitleText
-                anchors.horizontalCenter: parent.horizontalCenter
-                color: "#ff9100"
-                font.pixelSize: 15
-                font.bold: true
-                font.letterSpacing: 0.8
-                text: qsTr("By JaviLabarumDJ on Android")
-            }
-
             Item {
                 // Spacer
                 height: 8
