@@ -167,6 +167,8 @@ class QmlControllerMappingProxy : public QObject {
 
 class QmlControllerDeviceProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerDevice)
+    QML_UNCREATABLE("Use Mixxx.ControllerManager to get devices")
     Q_PROPERTY(mixxx::qml::QmlControllerDeviceProxy::Type type READ getType CONSTANT)
     Q_PROPERTY(QString name READ getName CONSTANT)
     Q_PROPERTY(mixxx::qml::QmlControllerMappingProxy* mapping READ getMapping WRITE setMapping NOTIFY mappingChanged)
