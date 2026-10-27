@@ -1,6 +1,8 @@
 #include "controllers/controllermanager.h"
 
+#include <QDir>
 #include <QSet>
+#include <QStandardPaths>
 #include <QThread>
 
 #include "controllers/controller.h"
@@ -95,6 +97,23 @@ bool controllerCompare(Controller *a,Controller *b) {
     return a->getName() < b->getName();
 }
 
+namespace {
+// Extra user mapping locations on Android (from JaviLabarumDJ/mixxx-android
+// android-stable): sideloaded mappings in shared storage, so users can add
+// controller mappings without root.
+QStringList userMappingPaths(UserSettingsPointer pConfig) {
+    QStringList userPaths;
+    userPaths.append(userMappingsPath(pConfig));
+#if defined(Q_OS_ANDROID)
+    userPaths.append(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
+    userPaths.append(QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            QStringLiteral("/Mixxx/controllers/"));
+    QDir().mkpath(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
+#endif
+    return userPaths;
+}
+} // namespace
+
 ControllerManager::ControllerManager(UserSettingsPointer pConfig)
         : QObject(),
           m_pConfig(pConfig),
@@ -176,7 +195,7 @@ void ControllerManager::slotInitialize() {
     // thread. Do not touch it from within ControllerManager.
     m_pMainThreadUserMappingEnumerator =
             QSharedPointer<MappingInfoEnumerator>::create(
-                    userMappingsPath(m_pConfig));
+                    userMappingPaths(m_pConfig));
     m_pMainThreadSystemMappingEnumerator =
             QSharedPointer<MappingInfoEnumerator>::create(
                     resourceMappingsPath(m_pConfig));
