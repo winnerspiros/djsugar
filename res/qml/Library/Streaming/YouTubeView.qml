@@ -1,6 +1,7 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
+import "../.." as Skin
 
 // YouTube search tab of the Booth streaming hub: searches the built-in
 // YouTube service and loads results straight into a deck. Downloads are
