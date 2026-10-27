@@ -14,8 +14,6 @@ import android.os.Environment;
 import android.os.Process;
 import android.provider.Settings;
 import android.view.KeyEvent;
-import android.view.MotionEvent;
-import android.view.View;
 import android.view.WindowManager;
 import org.mixxx.youtube.PoTokenManager;
 import org.qtproject.qt.android.QtActivityBase;
@@ -55,20 +53,6 @@ public class MainActivity extends QtActivityBase {
         // priority reduces scheduling latency so mouse/touch/keyboard events
         // reach the Qt event loop faster.
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY);
-
-        // ─── Pointer / mouse performance: request pointer capture when
-        // a physical pointer device (mouse, trackpad) is connected. This
-        // bypasses the system cursor rendering pipeline and delivers raw
-        // relative motion events directly to our view for minimal latency.
-        final View decorView = getWindow().getDecorView();
-        decorView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
-            @Override
-            public boolean onCapturedPointer(View view, MotionEvent event) {
-                // Forward captured pointer events to Qt's input pipeline.
-                // Returning false lets the event continue to Qt.
-                return false;
-            }
-        });
 
         requestMusicLibraryPermissions();
 
@@ -195,20 +179,20 @@ public class MainActivity extends QtActivityBase {
         requestAllFilesAccessIfNeeded();
     }
 
-    // ─── Background audio survival (AI-agent change, needs human review) ──
-    // The mix engine must NOT pause here: backgrounding the app is exactly
-    // the case PlaybackService protects. Re-assert the service so a system
-    // restart of our process re-establishes foreground priority.
+    // ─── Background audio survival ──────────────────────────────────────
+    // Javi's fork (which works on the same devices) has no background
+    // service: auto-starting a foreground service on every onPause wedged
+    // relaunches (stuck splash — the old process never dies). Do not
+    // re-add PlaybackService.start() here without a real playing-state
+    // gate and a matching stop path.
     @Override
     protected void onPause() {
         super.onPause();
-        PlaybackService.start(this);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        PlaybackService.start(this);
     }
 
     // Stop the service only on explicit user quit. The Qt activity teardown
@@ -295,27 +279,6 @@ public class MainActivity extends QtActivityBase {
         if (hasFocus) {
             AndroidScreenManager.applyFullScreen(this);
         }
-
-        View decorView = getWindow().getDecorView();
-        if (hasFocus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            decorView.requestPointerCapture();
-        } else if (!hasFocus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            decorView.releasePointerCapture();
-        }
     }
 
-    // ─── Touch event handling: pass directly with no interception ────────
-    // Override dispatchTouchEvent to avoid any framework interception layers
-    // (e.g. gesture navigation edge zones). Every touch event reaches Qt's
-    // event loop as fast as possible.
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        return super.dispatchTouchEvent(event);
-    }
-
-    // ─── Generic motion (mouse scroll, trackpad) optimization ───────────
-    @Override
-    public boolean dispatchGenericMotionEvent(MotionEvent event) {
-        return super.dispatchGenericMotionEvent(event);
-    }
 }
