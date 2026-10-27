@@ -440,7 +440,7 @@ Category {
                             }
                         }
 
-                        // Step 5: Mapeos Personalizados y de serie
+                        // Step 5: Mapeos Personalizados y de series
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -622,7 +622,7 @@ Category {
                             color: "#ffffff"
                         }
                         Text {
-                            text: root.selectedController?.mapping 
+                            text: root.selectedController?.mapping
                                   ? qsTr("Assigned mapping: %1 (%2)").arg(root.selectedController.mapping.name).arg(root.selectedController.enabled ? qsTr("Enabled") : qsTr("Disabled"))
                                   : qsTr("Select its mapping in the drop-down list and press Save")
                             font.pixelSize: 11
@@ -878,9 +878,9 @@ Category {
                         color: root.dirty ? "#ffb300" : (root.activeDevices.length > 0 ? "#00e676" : "#64b5f6")
                     }
                     Text {
-                        text: root.dirty 
+                        text: root.dirty
                               ? qsTr("Unsaved changes")
-                              : (root.selectedController 
+                              : (root.selectedController
                                  ? qsTr("Editing controller")
                                  : (root.activeDevices.length > 0 ? qsTr("Controller ready") : qsTr("USB MIDI")))
                         font.bold: true
