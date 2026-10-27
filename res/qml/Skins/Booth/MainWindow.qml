@@ -97,6 +97,7 @@ Item {
 
     // The deck loader of the Classic skin is the browser here
     function openQuickLoad(group) {
+        console.info("BOOTH openQuickLoad:", group);
         root.loadTarget = (group && group.length > 0) ? group : "[Channel1]";
         root.viewMode = 2;
     }
@@ -108,6 +109,7 @@ Item {
         root.viewMode = root.playView;
     }
     function showView(mode) {
+        console.info("BOOTH showView:", mode);
         root.loadTarget = "";
         root.viewMode = mode;
         root.playView = mode;
@@ -202,6 +204,7 @@ Item {
         }
     }
     function toggleLibraryView() {
+        console.info("BOOTH toggleLibraryView, browsing:", root.browsing);
         if (root.browsing && root.loadTarget.length === 0) {
             root.showPlayView();
         } else {
@@ -287,7 +290,10 @@ Item {
             id: tabMouse
 
             anchors.fill: parent
-            onClicked: tab.clicked()
+            onClicked: {
+                console.info("BOOTH-TAB tapped:", tab.label);
+                tab.clicked();
+            }
         }
     }
     // Left of a waveform: deck, key, bars left, quantize and slip
