@@ -290,6 +290,15 @@ Item {
             id: tabMouse
 
             anchors.fill: parent
+            onPressed: mouse => {
+                console.info("BOOTH-TAB pressed:", tab.label, "x=" + Math.round(mouse.x) + " y=" + Math.round(mouse.y));
+            }
+            onReleased: {
+                console.info("BOOTH-TAB released:", tab.label);
+            }
+            onCanceled: {
+                console.info("BOOTH-TAB press canceled:", tab.label);
+            }
             onClicked: {
                 console.info("BOOTH-TAB tapped:", tab.label);
                 tab.clicked();
