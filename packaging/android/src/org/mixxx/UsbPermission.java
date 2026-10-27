@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.util.Log;
 
 public class UsbPermission {
@@ -14,6 +15,14 @@ public class UsbPermission {
     private static final String TAG = "MixxxUsbPermission";
     private static native void usbDeviceAccessResult(Object device, boolean granted);
     private static native void usbDevicesChanged();
+
+    @SuppressWarnings("deprecation")
+    static UsbDevice getDeviceExtra(Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+        }
+        return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    }
 
     /// Asks the native ControllerManager to rescan devices. Safe to call before
     /// the native library is loaded (from JaviLabarumDJ/mixxx-android).
@@ -43,7 +52,7 @@ public class UsbPermission {
             Log.v(TAG, "Received " + action);
             if (ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
-                    UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+                    UsbDevice usbDevice = getDeviceExtra(intent);
                     if (usbDevice == null) {
                         Log.e(TAG, "USB device is null");
                         return;
