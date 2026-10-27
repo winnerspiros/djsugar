@@ -23,6 +23,9 @@
 #include "soundio/sounddeviceportaudio.h"
 #include "soundio/soundmanagerconfig.h"
 #include "soundio/soundmanagerutil.h"
+#ifdef Q_OS_ANDROID
+#include "soundio/soundmanagerandroid.h"
+#endif
 #include "util/cmdlineargs.h"
 #include "util/compatibility/qatomic.h"
 #include "util/defs.h"
@@ -91,6 +94,12 @@ SoundManager::SoundManager(
     if (!m_config.readFromDisk()) {
         m_config.loadDefaults(this, SoundManagerConfig::API | SoundManagerConfig::OTHER);
     }
+#ifdef Q_OS_ANDROID
+    // Android USB audio routing (from JaviLabarumDJ/mixxx-android
+    // android-stable): without this the MobileAudio USB settings and
+    // controller auto-routing never run.
+    m_pAndroid = new SoundManagerAndroid(this);
+#endif
 
     if (!isPipewireSelected()) {
         devicesEnumerated();
