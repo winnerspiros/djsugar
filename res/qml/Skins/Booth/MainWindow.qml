@@ -510,7 +510,10 @@ Item {
                 active: root.browsing && root.loadTarget.length === 0
                 label: qsTr("BROWSE")
                 visible: root.itemShown("lib")
-                onClicked: root.toggleLibraryView()
+                onClicked: {
+                    console.info("BOOTH-TAB tapped: BROWSE-swapped");
+                    root.showView(1);
+                }
             }
             Tab {
                 active: root.browsing && root.loadTarget === "[Channel1]"
