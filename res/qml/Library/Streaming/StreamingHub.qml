@@ -38,7 +38,6 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 170
                         activeColor: "#00e5ff"
-                        backgroundColor: root.activePlatform === 0 ? "#00363a" : "#1a212d"
                         normalColor: root.activePlatform === 0 ? "#00e5ff" : "#80d8ff"
                         font.bold: true
                         font.pixelSize: 11
@@ -50,7 +49,6 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 130
                         activeColor: "#ea80fc"
-                        backgroundColor: root.activePlatform === 1 ? "#4a148c" : "#1a212d"
                         normalColor: root.activePlatform === 1 ? "#ea80fc" : "#e1bee7"
                         font.bold: true
                         font.pixelSize: 11
@@ -62,7 +60,6 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 150
                         activeColor: "#ffb300"
-                        backgroundColor: root.activePlatform === 2 ? "#4a3b00" : "#1a212d"
                         normalColor: root.activePlatform === 2 ? "#ffb300" : "#ffe082"
                         font.bold: true
                         font.pixelSize: 11
@@ -74,7 +71,6 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 130
                         activeColor: "#ff0000"
-                        backgroundColor: root.activePlatform === 3 ? "#4a0000" : "#1a212d"
                         normalColor: root.activePlatform === 3 ? "#ff5252" : "#ff8a80"
                         font.bold: true
                         font.pixelSize: 11

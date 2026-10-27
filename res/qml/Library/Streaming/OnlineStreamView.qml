@@ -132,7 +132,6 @@ Item {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 120
                     activeColor: "#ea80fc"
-                    backgroundColor: "#2a3040"
                     normalColor: "#ffffff"
                     font.bold: true
                     font.pixelSize: 11
@@ -185,7 +184,6 @@ Item {
                 Skin.Button {
                     Layout.preferredHeight: 34
                     Layout.preferredWidth: 38
-                    backgroundColor: "#2a3140"
                     normalColor: "#ffffff"
                     text: "🔍"
                     onClicked: searchInput.accepted()
@@ -395,7 +393,6 @@ Item {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
                             activeColor: "#64b5f6"
-                            backgroundColor: "#1565c0"
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11
@@ -414,7 +411,6 @@ Item {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
                             activeColor: "#ffb74d"
-                            backgroundColor: "#e65100"
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11

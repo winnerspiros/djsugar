@@ -89,7 +89,6 @@ Item {
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 120
                 activeColor: "#ff5252"
-                backgroundColor: "#4a0000"
                 normalColor: "#ffffff"
                 font.bold: true
                 font.pixelSize: 12
@@ -157,7 +156,6 @@ Item {
                         Layout.preferredHeight: 36
                         Layout.preferredWidth: 64
                         activeColor: "#64b5f6"
-                        backgroundColor: "#1565c0"
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 12
@@ -175,7 +173,6 @@ Item {
                         Layout.preferredHeight: 36
                         Layout.preferredWidth: 64
                         activeColor: "#ffb74d"
-                        backgroundColor: "#e65100"
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 12

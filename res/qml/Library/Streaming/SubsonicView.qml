@@ -155,7 +155,6 @@ Item {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 100
                     activeColor: "#00e5ff"
-                    backgroundColor: root.showSettings ? "#0097a7" : "#2a3040"
                     normalColor: "#ffffff"
                     font.bold: true
                     text: root.showSettings ? qsTr("▲ Hide") : qsTr("⚙ Settings")
@@ -245,7 +244,6 @@ Item {
                         Layout.preferredHeight: 34
                         Layout.preferredWidth: 110
                         activeColor: "#00e676"
-                        backgroundColor: "#00897b"
                         normalColor: "#ffffff"
                         font.bold: true
                         text: root.isBusy ? qsTr("🔄 Connecting") : qsTr("✔ Connect")
@@ -275,7 +273,6 @@ Item {
                     Skin.Button {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: 140
-                        backgroundColor: "#262b36"
                         normalColor: "#90a4ae"
                         font.pixelSize: 10
                         text: qsTr("🧹 Clear cache")
@@ -305,7 +302,6 @@ Item {
                     Layout.preferredHeight: 34
                     Layout.preferredWidth: 100
                     activeColor: "#00e5ff"
-                    backgroundColor: root.activeMode === "search" ? "#006064" : "#222733"
                     normalColor: "#ffffff"
                     font.bold: true
                     text: qsTr("🔍 Search")
@@ -322,7 +318,6 @@ Item {
                     Layout.preferredHeight: 34
                     Layout.preferredWidth: 105
                     activeColor: "#00e5ff"
-                    backgroundColor: root.activeMode === "playlists" ? "#006064" : "#222733"
                     normalColor: "#ffffff"
                     font.bold: true
                     text: qsTr("📜 Playlists")
@@ -358,7 +353,6 @@ Item {
                 Skin.Button {
                     Layout.preferredHeight: 34
                     Layout.preferredWidth: 40
-                    backgroundColor: "#2a3140"
                     normalColor: "#ffffff"
                     text: "🔍"
                     onClicked: searchInput.accepted()
@@ -382,7 +376,6 @@ Item {
                 Skin.Button {
                     Layout.preferredHeight: 26
                     Layout.preferredWidth: 80
-                    backgroundColor: "#2e4053"
                     normalColor: "#ffffff"
                     font.bold: true
                     arrowLeft: true
@@ -549,7 +542,6 @@ Item {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
                             activeColor: "#64b5f6"
-                            backgroundColor: "#1565c0"
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11
@@ -568,7 +560,6 @@ Item {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
                             activeColor: "#ffb74d"
-                            backgroundColor: "#e65100"
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11
@@ -675,7 +666,6 @@ Item {
                             Layout.preferredHeight: 32
                             Layout.preferredWidth: 95
                             activeColor: "#00e5ff"
-                            backgroundColor: "#006064"
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11

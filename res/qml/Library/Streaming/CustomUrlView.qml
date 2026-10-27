@@ -126,7 +126,6 @@ Item {
                         Layout.preferredHeight: 34
                         Layout.preferredWidth: 140
                         activeColor: "#64b5f6"
-                        backgroundColor: "#1565c0"
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 11
@@ -153,7 +152,6 @@ Item {
                         Layout.preferredHeight: 34
                         Layout.preferredWidth: 140
                         activeColor: "#ffb74d"
-                        backgroundColor: "#e65100"
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 11
