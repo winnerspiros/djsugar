@@ -246,6 +246,7 @@ class QmlControllerManagerProxy : public QObject {
     QML_SINGLETON
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> knownDevices READ knownDevices NOTIFY deviceListChanged)
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> unknownDevices READ unknownDevices NOTIFY deviceListChanged)
+    Q_PROPERTY(bool showControllerScreen MEMBER s_controllerPreviewScreens CONSTANT)
     Q_PROPERTY(bool controllerScreenDebug READ isControllerScreenDebug CONSTANT)
   public:
     QmlControllerManagerProxy(std::shared_ptr<ControllerManager> pControllerManager, QObject* parent = nullptr);
@@ -268,6 +269,10 @@ class QmlControllerManagerProxy : public QObject {
   public slots:
     void refreshKnownDevices();
     Q_INVOKABLE void rescan();
+    Q_INVOKABLE mixxx::qml::QmlControllerMappingProxyList mappings(
+            mixxx::qml::QmlControllerDeviceProxy::Type type) const {
+        return m_knownMappings.value(type);
+    }
     void refreshMappings();
     void loadNewMapping(mixxx::qml::QmlControllerDeviceProxy::Type type, const MappingInfo& mapping);
     void updateExistingMapping(mixxx::qml::QmlControllerMappingProxy* pMapping, const MappingInfo& mapping);
