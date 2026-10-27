@@ -242,6 +242,8 @@ using QmlControllerMappingProxyList = QList<QmlControllerMappingProxy*>;
 
 class QmlControllerManagerProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerManager)
+    QML_SINGLETON
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> knownDevices READ knownDevices NOTIFY deviceListChanged)
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> unknownDevices READ unknownDevices NOTIFY deviceListChanged)
     Q_PROPERTY(bool controllerScreenDebug READ isControllerScreenDebug CONSTANT)

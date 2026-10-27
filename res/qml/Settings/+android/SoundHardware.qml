@@ -150,8 +150,6 @@ Category {
 
     function load() {
         const manager = Mixxx.SoundManager;
-        // The engine may have rerouted the outputs (DJ controller plugged in)
-        manager.reload();
         root.loading = true;
         root.presetChosen = false;
         root.presetMessage = "";
