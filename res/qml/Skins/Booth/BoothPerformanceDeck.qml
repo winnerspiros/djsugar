@@ -399,8 +399,7 @@ Rectangle {
                     Booth.SamplerPad {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-                        // Left deck plays samplers 1-8, right deck 9-16
-                        samplerGroup: "[Sampler" + (modelData + 1 + (root.mirrored ? 8 : 0)) + "]"
+                        mirrored: root.mirrored
                     }
                 }
             }

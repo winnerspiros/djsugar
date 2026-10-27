@@ -7,7 +7,13 @@ import QtQuick
 Rectangle {
     id: padItem
 
-    required property string samplerGroup
+    // Repeater index (0-7) of this pad; the Repeater assigns it automatically
+    // when SamplerPad is used as a delegate. Combined with mirrored to pick
+    // the sampler group: left deck [Sampler1-8], right deck [Sampler9-16].
+    required property int index
+    required property bool mirrored
+
+    readonly property string samplerGroup: "[Sampler" + (index + 1 + (mirrored ? 8 : 0)) + "]"
 
     Mixxx.ControlProxy {
         id: loadedControl
