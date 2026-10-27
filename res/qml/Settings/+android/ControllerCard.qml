@@ -33,7 +33,7 @@ Item {
 
     function suggestMapping() {
         // Devices without any mapping get the best matching one of their
-        // type preselected; it is only applied once the user saves.
+        // type pre-selected; it is only applied once the user saves.
         if (root.modelData.mapping)
             return;
         let suggestion = Mixxx.MobileControllers.suggestedMapping(root.modelData, Mixxx.ControllerManager.mappings(root.modelData.type));
@@ -490,8 +490,8 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     color: mappingsCombobox.currentIndex >= 0 ? Theme.deckTextColor : "#ffb74d"
                     font: mappingsCombobox.font
-                    text: mappingsCombobox.currentIndex >= 0
-                          ? mappingsCombobox.model[mappingsCombobox.currentIndex]?.name
+                    text: mappingsCombobox.currentIndex >= 0 
+                          ? mappingsCombobox.model[mappingsCombobox.currentIndex]?.name 
                           : qsTr("Select mapping...")
                 }
                 InfoBubble {
