@@ -237,6 +237,10 @@ QmlApplication::QmlApplication(
 #if defined(Q_OS_ANDROID)
     if (canWriteToExternalStorage()) {
         const QString externalQmlDir = QStringLiteral("/storage/emulated/0/Mixxx/qml");
+        // Files of other versions would still be loaded (e.g. +android file
+        // selector folders), so start from an empty folder
+        // (from JaviLabarumDJ/mixxx-android android-stable).
+        QDir(externalQmlDir).removeRecursively();
         copyAssetDir(QStringLiteral("assets:/qml"), externalQmlDir);
         m_mainFilePath = externalQmlDir + QStringLiteral("/main.qml");
     }
