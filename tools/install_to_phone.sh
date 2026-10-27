@@ -27,7 +27,7 @@ export ANDROID_SERIAL="$DEV"
 
 echo "Waiting for Android to finish booting..."
 adb -s "$DEV" wait-for-device
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
     BOOT=$(adb -s "$DEV" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
     if [ "$BOOT" = "1" ]; then
         break
