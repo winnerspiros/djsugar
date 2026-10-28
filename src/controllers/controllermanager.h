@@ -72,11 +72,13 @@ class ControllerManager : public QObject {
 
   private:
     void updateControllerList();
+    /// Assigns and enables a system mapping matching the controller name if
+    /// the controller has never been configured. Returns true on success.
+    bool autoAssignMapping(Controller* pController);
     void startPolling();
     void stopPolling();
     void pollIfAnyControllersOpen();
     void openController(Controller* pController);
-    bool autoAssignMapping(Controller* pController);
     void closeController(Controller* pController);
 
     UserSettingsPointer m_pConfig;
@@ -84,12 +86,9 @@ class ControllerManager : public QObject {
     // because the CM is moved to its own thread and runs its own event loop.
     std::unique_ptr<ControllerLearningEventFilter> m_pControllerLearningEventFilter;
     QTimer m_pollTimer;
-#ifdef __ANDROID__
-    /// Debounces hotplug notifications, which arrive in bursts (from
-    /// JaviLabarumDJ/mixxx-android android-stable).
+    /// Debounces hotplug notifications, which arrive in bursts.
     QTimer m_hotplugTimer;
     int m_hotplugListenerId = 0;
-#endif
     mutable QMutex m_mutex;
     /// Guarded by m_mutex for main-thread reads.
     /// Written/iterated only on the ControllerManager thread

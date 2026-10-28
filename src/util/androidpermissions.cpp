@@ -10,7 +10,6 @@
 
 #include "util/assert.h"
 
-#ifdef Q_OS_ANDROID
 namespace {
 
 bool requestPermission(const QString& permission) {
@@ -120,29 +119,3 @@ QString defaultMusicDirectory() {
 
 } // namespace android
 } // namespace mixxx
-
-#else
-
-namespace mixxx {
-namespace android {
-
-// Desktop stub: no runtime permissions outside Android.
-bool requestMusicLibraryPermissions() {
-    return true;
-}
-
-bool hasFullExternalStorageAccess() {
-    return true;
-}
-
-void requestFullExternalStorageAccess() {
-}
-
-QString defaultMusicDirectory() {
-    return QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-}
-
-} // namespace android
-} // namespace mixxx
-
-#endif

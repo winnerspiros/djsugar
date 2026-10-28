@@ -21,7 +21,7 @@ QString backupRootDirectory();
 /// the open connection `database`, which gives a consistent copy while
 /// Mixxx is running. Returns the folder of the backup, or an empty string
 /// and an error message in pError.
-QString createBackup(const QString& settingsPath, const QSqlDatabase& database, QString* pError);
+QString createBackup(const QString& settingsPath, QSqlDatabase database, QString* pError);
 
 /// The names of the backup folders, newest first
 QStringList listBackups();

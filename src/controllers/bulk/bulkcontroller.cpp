@@ -188,7 +188,7 @@ BulkController::BulkController(libusb_context* pContext,
 BulkController::BulkController(const QJniObject& usbDevice)
         // The serial number is only readable once USB permission has been
         // granted, so it must not be part of the name, which is used as
-        // configuration key (from JaviLabarumDJ/mixxx-android android-stable).
+        // configuration key.
         : Controller(usbDevice.callMethod<jstring>("getProductName").toString()),
           m_pContext(nullptr),
           m_pHandle(nullptr),
@@ -224,7 +224,7 @@ QString BulkController::mappingExtension() {
 }
 
 void BulkController::setMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
-    m_pMutableMapping = pMapping;
+    setMutableMapping(pMapping);
     m_pMapping = downcastAndClone<LegacyHidControllerMapping>(pMapping.get());
 }
 
@@ -364,7 +364,7 @@ int BulkController::open(const QString& resourcePath) {
     libusb_set_option(nullptr, LIBUSB_OPTION_NO_DEVICE_DISCOVERY);
     libusb_init(&m_pContext);
 
-    int error = libusb_wrap_sys_device(nullptr, fileDescriptor, &m_pHandle);
+    int error = libusb_wrap_sys_device(m_pContext, fileDescriptor, &m_pHandle);
     if (error < 0) {
         qCWarning(m_logBase) << "Cannot open interface for" << getName()
                              << ":" << libusb_error_name(error);
@@ -466,6 +466,11 @@ int BulkController::close() {
 #ifdef Q_OS_ANDROID
     if (m_androidConnection.isValid()) {
         m_androidConnection.callMethod<void>("close");
+    }
+    // On Android each open() creates its own context
+    if (m_pContext) {
+        libusb_exit(m_pContext);
+        m_pContext = nullptr;
     }
 #endif
     m_pHandle = nullptr;

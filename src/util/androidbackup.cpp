@@ -81,8 +81,7 @@ void keepSubsonicPassword(const QString& previousConfig, const QString& restored
     }
     QString passwordLine;
     QString group;
-    const QStringList previousLines = QString::fromUtf8(previous.readAll()).split(QChar('\n'));
-    for (const auto& line : previousLines) {
+    for (const auto& line : QString::fromUtf8(previous.readAll()).split(QChar('\n'))) {
         if (line.startsWith(QChar('['))) {
             group = line.trimmed();
         } else if (group == kStreamingGroup && isSubsonicPasswordLine(line)) {
@@ -126,9 +125,8 @@ QString backupRootDirectory() {
     return QStringLiteral("/storage/emulated/0/Mixxx/backup");
 }
 
-QString createBackup(const QString& settingsPath, const QSqlDatabase& database, QString* pError) {
-    const QString name = QDateTime::currentDateTime().toString(
-            QStringLiteral("yyyy-MM-dd_HH-mm-ss"));
+QString createBackup(const QString& settingsPath, QSqlDatabase database, QString* pError) {
+    const QString name = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd_HH-mm-ss"));
     const QString backupDir = backupRootDirectory() + QChar('/') + name;
     if (!QDir().mkpath(backupDir)) {
         *pError = QCoreApplication::translate("AndroidBackup", "Cannot create %1").arg(backupDir);
@@ -139,8 +137,7 @@ QString createBackup(const QString& settingsPath, const QSqlDatabase& database, 
     query.prepare(QStringLiteral("VACUUM INTO :path"));
     query.bindValue(QStringLiteral(":path"), QString(backupDir + QChar('/') + kDatabaseFileName));
     if (!query.exec()) {
-        *pError = QCoreApplication::translate(
-                "AndroidBackup", "Cannot copy the library database: %1")
+        *pError = QCoreApplication::translate("AndroidBackup", "Cannot copy the library database: %1")
                           .arg(query.lastError().text());
         QDir(backupDir).removeRecursively();
         return {};
@@ -194,26 +191,20 @@ bool stageRestore(const QString& settingsPath, const QString& backupName, QStrin
     const QString backupDir = backupRootDirectory() + QChar('/') + backupName;
     if (backupName.isEmpty() || backupName.contains(QChar('/')) ||
             !QFileInfo::exists(backupDir + QChar('/') + kDatabaseFileName)) {
-        *pError = QCoreApplication::translate(
-                "AndroidBackup", "Backup %1 not found")
-                          .arg(backupName);
+        *pError = QCoreApplication::translate("AndroidBackup", "Backup %1 not found").arg(backupName);
         return false;
     }
     const QString pendingDir = settingsPath + QChar('/') + kPendingDirName;
     removePath(pendingDir);
     if (!copyRecursively(backupDir, pendingDir)) {
-        *pError = QCoreApplication::translate(
-                "AndroidBackup", "Cannot copy backup %1")
-                          .arg(backupName);
+        *pError = QCoreApplication::translate("AndroidBackup", "Cannot copy backup %1").arg(backupName);
         removePath(pendingDir);
         return false;
     }
     QFile::remove(pendingDir + QChar('/') + kInfoFileName);
     QFile marker(pendingDir + QChar('/') + kCompleteMarker);
     if (!marker.open(QIODevice::WriteOnly)) {
-        *pError = QCoreApplication::translate(
-                "AndroidBackup", "Cannot copy backup %1")
-                          .arg(backupName);
+        *pError = QCoreApplication::translate("AndroidBackup", "Cannot copy backup %1").arg(backupName);
         removePath(pendingDir);
         return false;
     }
@@ -244,9 +235,7 @@ void applyPendingRestore(const QString& settingsPath) {
 
     // A journal left over from the replaced database must not be applied
     // to the restored one
-    QStringList names = QDir(pendingDir)
-                                .entryList(QDir::AllEntries | QDir::Hidden |
-                                        QDir::NoDotAndDotDot);
+    QStringList names = QDir(pendingDir).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot);
     names.append(kDatabaseFileName + QStringLiteral("-journal"));
 
     // First move the current files away. If one can't be moved, put back

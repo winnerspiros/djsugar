@@ -23,10 +23,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <!-- Required on API 33+ to post the foreground-service notification
-         (AI-agent note: added for PlaybackService, needs human review). -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- In-app updates: install the APK downloaded from our GitHub releases (Settings → About) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
@@ -112,22 +109,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/qtprovider_paths"/>
         </provider>
-
-        <!-- AI-agent note: registered for PlaybackService (background audio
-             survival), needs human review. Foreground service keeping the
-             mix alive when the app is backgrounded. -->
-        <service
-            android:name=".PlaybackService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
     </application>
 
     <uses-feature
         android:name="android.hardware.usb.host"
-        android:required="true" />
-    <!-- Declare that we benefit from low-latency audio hardware. This is not
-         required (app still works without it) but lets the system/Play Store
-         know we're optimized for pro-audio devices. -->
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.midi"
+        android:required="false" />
+    <!-- Chromebooks may be operated with mouse and keyboard only. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.audio.low_latency"
         android:required="false" />

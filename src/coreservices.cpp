@@ -706,72 +706,11 @@ void CoreServices::initialize(QGuiApplication* pApp) {
             dir.mkpath(".");
         }
 #elif defined(Q_OS_ANDROID)
-        jboolean hasAllFilesAccess = QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-        if (hasAllFilesAccess) {
-            qDebug() << "Got ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION";
-        } else {
-            // Do NOT open the system Settings activity — the user explicitly
-            // does not want the app to "open a browser view". Instead, log a
-            // message and work with whatever storage is already accessible.
-            qInfo() << "MANAGE_EXTERNAL_STORAGE not granted; scanning "
-                       "app-internal music folder and any readable external "
-                       "storage. Grant the permission manually via Android "
-                       "Settings > Apps > Mixxx > Permissions if you want the "
-                       "full device scan.";
-        }
-
-        // Build the list of directories to scan. Always include the app's
-        // own internal music folder (data/data/org.mixxx.Mixxx/files/music)
-        // as a guaranteed-accessible fallback — the user confirmed they can
-        // see and place files there.
-        QStringList androidRoots;
-
-        // 1. App-internal music folder — always accessible, no permission
-        //    needed. This is where the user can drop songs via a file manager
-        //    and where YouTube downloads are cached.
-        const QString appMusicDir =
-                QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-        if (!appMusicDir.isEmpty()) {
-            QDir appMusicQDir(appMusicDir);
-            if (!appMusicQDir.exists()) {
-                appMusicQDir.mkpath(QStringLiteral("."));
-            }
-            androidRoots.append(appMusicDir);
-        }
-
-        // 2. If we have broad storage access, also scan external volumes.
-        if (hasAllFilesAccess) {
-            const QString primaryStorage = QStringLiteral("/storage/emulated/0");
-            if (QFileInfo::exists(primaryStorage) &&
-                    !androidRoots.contains(primaryStorage)) {
-                androidRoots.append(primaryStorage);
-            }
-            const QDir storageDir(QStringLiteral("/storage"));
-            const QStringList volumes = storageDir.entryList(
-                    QDir::Dirs | QDir::NoDotAndDotDot);
-            for (const QString& vol : volumes) {
-                if (vol == QStringLiteral("emulated") ||
-                        vol == QStringLiteral("self")) {
-                    continue;
-                }
-                const QString volPath = storageDir.absoluteFilePath(vol);
-                const QFileInfo volInfo(volPath);
-                if (volInfo.isDir() && volInfo.isReadable() &&
-                        !androidRoots.contains(volPath)) {
-                    androidRoots.append(volPath);
-                }
-            }
-        }
-
-        qInfo() << "Android library bootstrap: candidate storage roots ="
-                << androidRoots;
-        for (const QString& root : androidRoots) {
-            if (m_pLibrary->requestAddDir(root, /*silent=*/true)) {
-                qInfo() << "Android library bootstrap: registered root" << root;
-                musicDirAdded = true;
-            }
-        }
+        // "All files access" is what allows Mixxx to browse directories
+        // outside of the media store. It is optional: if the user declines,
+        // the default music directory below is still readable.
+        mixxx::android::requestFullExternalStorageAccess();
+        QString fd = mixxx::android::defaultMusicDirectory();
 #else
         // TODO(XXX) this needs to be smarter, we can't distinguish between an empty
         // path return value (not sure if this is normally possible, but it is

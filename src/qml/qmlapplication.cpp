@@ -53,6 +53,7 @@
 
 #include "controllers/android.h"
 #include "mixer/basetrackplayer.h"
+#include "util/androidpermissions.h"
 #endif
 
 Q_IMPORT_QML_PLUGIN(MixxxPlugin)
@@ -101,13 +102,7 @@ const QStringList kSkipQmlDirs = {
 };
 
 bool canWriteToExternalStorage() {
-    // API 30+ (Android 11+) requires MANAGE_EXTERNAL_STORAGE.
-    // Older: WRITE_EXTERNAL_STORAGE is granted at install time.
-    if (android_get_device_api_level() >= 30) {
-        return QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-    }
-    return true;
+    return mixxx::android::hasFullExternalStorageAccess();
 }
 
 void copyAssetDir(const QString& src, const QString& dst) {

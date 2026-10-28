@@ -24,17 +24,6 @@ std::vector<std::pair<QJniObject, bool>> s_grantingResult = {};
 QJniObject s_intent = {};
 QJniObject s_usbManager = {};
 
-namespace {
-
-/// UsbDevice objects received from a broadcast are different Java objects
-/// than the ones returned by UsbManager.getDeviceList(), so devices are
-/// identified by their device name (e.g. /dev/bus/usb/001/002).
-QString usbDeviceName(const QJniObject& device) {
-    return device.callMethod<jstring>("getDeviceName").toString();
-}
-
-} // namespace
-
 const QJniObject& getIntent() {
     __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "about to get intent");
     std::unique_lock lock(s_androidLock);
@@ -57,14 +46,10 @@ const QJniObject& getIntent() {
     // PendingIntent must use an explicit Intent (setPackage).
     jint apiLevel = QJniObject::getStaticField<jint>(
             "android/os/Build$VERSION", "SDK_INT");
-    jint pendingIntentFlag = 0;
-    if (apiLevel >= 34) {
-        pendingIntentFlag = QJniObject::getStaticField<jint>(
-                "android/app/PendingIntent", "FLAG_IMMUTABLE");
-    } else if (apiLevel >= 31) {
-        pendingIntentFlag = QJniObject::getStaticField<jint>(
-                "android/app/PendingIntent", "FLAG_MUTABLE");
-    }
+    jint pendingIntentFlag = (apiLevel >= 31)
+            ? QJniObject::getStaticField<jint>("android/app/PendingIntent", "FLAG_MUTABLE")
+            : 0;
+
     QtJniTypes::String ACTION_USB_PERMISSION =
             QJniObject::fromString("org.mixxx.permissions.USB_PERMISSION");
     QJniObject intent = QJniObject("android/content/Intent",
@@ -106,6 +91,21 @@ const QJniObject& getIntent() {
     // });
     return s_intent;
 }
+
+namespace {
+
+/// UsbDevice objects received from a broadcast are different Java objects
+/// than the ones returned by UsbManager.getDeviceList(), so devices are
+/// identified by their device name (e.g. /dev/bus/usb/001/002).
+QString usbDeviceName(const QJniObject& device) {
+    return device.callMethod<jstring>("getDeviceName").toString();
+}
+
+std::mutex s_devicesChangedLock;
+std::map<int, std::function<void()>> s_devicesChangedListeners;
+int s_nextListenerId = 1;
+
+} // namespace
 
 bool waitForPermission(const QJniObject& device) {
     __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "about to wait for perm");
@@ -157,20 +157,6 @@ void usbDeviceAccessResult(QJniObject device, bool granted) {
     }
 }
 
-namespace {
-
-std::mutex s_devicesChangedLock;
-std::map<int, std::function<void()>> s_devicesChangedListeners;
-int s_nextListenerId = 1;
-
-std::mutex s_saveBeforeExitLock;
-std::function<void()> s_saveBeforeExit;
-// Long enough to write the settings and a few tracks, short enough not to
-// hang the closing app if the main thread is blocked.
-constexpr int kSaveBeforeExitTimeoutMillis = 4000;
-
-} // namespace
-
 int addDevicesChangedListener(std::function<void()> callback) {
     std::lock_guard lock(s_devicesChangedLock);
     const int id = s_nextListenerId++;
@@ -190,6 +176,15 @@ void notifyDevicesChanged() {
     }
 }
 
+namespace {
+std::mutex s_saveBeforeExitLock;
+std::function<void()> s_saveBeforeExit;
+// Long enough to write the settings and a few tracks, finish a recording and
+// shut the controllers down, short enough not to hang the closing app if the
+// main thread is blocked
+constexpr int kSaveBeforeExitTimeoutMillis = 4000;
+} // namespace
+
 void setSaveBeforeExit(std::function<void()> save) {
     std::lock_guard lock(s_saveBeforeExitLock);
     s_saveBeforeExit = std::move(save);
@@ -204,6 +199,8 @@ void saveBeforeExit() {
     QMetaObject::invokeMethod(
             pApp,
             [pDone]() {
+                // Looked up on the main thread, where it is unset when Mixxx
+                // shuts down
                 std::function<void()> save;
                 {
                     std::lock_guard lock(s_saveBeforeExitLock);
@@ -225,9 +222,8 @@ void saveBeforeExit() {
 Q_DECLARE_JNI_CLASS(UsbPermissionClass, "org/mixxx/UsbPermission")
 Q_DECLARE_JNI_CLASS(MidiHelperClass, "org/mixxx/MidiHelper")
 Q_DECLARE_JNI_CLASS(MainActivityClass, "org/mixxx/MainActivity")
-Q_DECLARE_JNI_CLASS(AndroidMidiHelperClass, "org/mixxx/AndroidMidiHelper")
 
-void usbDeviceAccessResult(JNIEnv*, jobject, jobject device, jboolean granted) {
+void usbDeviceAccessResult(JNIEnv*, jclass, jobject device, jboolean granted) {
     mixxx::android::usbDeviceAccessResult(device, granted);
 }
 Q_DECLARE_JNI_NATIVE_METHOD(usbDeviceAccessResult)
@@ -247,24 +243,6 @@ void saveBeforeExit(JNIEnv*, jclass) {
 }
 Q_DECLARE_JNI_NATIVE_METHOD(saveBeforeExit)
 
-// Native callback from AndroidMidiHelper.midiReceive()
-static void midiReceive(JNIEnv*,
-        jobject,
-        jint controllerId,
-        jbyteArray data,
-        jint offset,
-        jint count,
-        jlong timestamp) {
-    // Forward to the active AndroidMidiController
-    // TODO: implement controller lookup by ID
-    Q_UNUSED(controllerId);
-    Q_UNUSED(data);
-    Q_UNUSED(offset);
-    Q_UNUSED(count);
-    Q_UNUSED(timestamp);
-}
-Q_DECLARE_JNI_NATIVE_METHOD(midiReceive)
-
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM*, void*) {
     QJniEnvironment env;
     env.registerNativeMethods<QtJniTypes::UsbPermissionClass>({
@@ -276,9 +254,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM*, void*) {
     });
     env.registerNativeMethods<QtJniTypes::MainActivityClass>({
             Q_JNI_NATIVE_METHOD(saveBeforeExit),
-    });
-    env.registerNativeMethods<QtJniTypes::AndroidMidiHelperClass>({
-            Q_JNI_NATIVE_METHOD(midiReceive),
     });
     return JNI_VERSION_1_6;
 }

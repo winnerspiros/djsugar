@@ -1842,6 +1842,8 @@ add_library(
   src/util/workerthread.cpp
   src/util/workerthreadscheduler.cpp
   src/util/xml.cpp
+  src/util/androidpermissions.cpp
+  src/util/androidbackup.cpp
   src/waveform/guitick.cpp
   src/waveform/overviewtype.cpp
   src/waveform/renderers/glwaveformrenderbackground.cpp
@@ -5977,9 +5979,13 @@ if(BULK)
       PRIVATE
         src/controllers/midi/androidmidicontroller.cpp
         src/controllers/midi/androidmidienumerator.cpp
+        src/controllers/midi/blemidicontroller.cpp
+        src/controllers/midi/blemidienumerator.cpp
     )
     # Android MIDI (android.media.midi + NDK AMidi, from JaviLabarumDJ/mixxx-android)
     target_compile_definitions(mixxx-lib PUBLIC __ANDROID_MIDI__)
+    # BLE MIDI support for Bluetooth controllers (e.g., DDJ-FLX4 in Bluetooth mode)
+    target_compile_definitions(mixxx-lib PUBLIC __BLE_MIDI__)
   endif()
   # USB-drive reader for Rekordbox sticks (from JaviLabarumDJ/mixxx-android,
   # cmake/modules/MixxxAndroid.cmake: enabled with bulk controller support)

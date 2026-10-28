@@ -1,359 +1,149 @@
-#ifdef __ANDROID__
-
 #include "controllers/midi/androidmidienumerator.h"
 
+#include <QJniEnvironment>
 #include <QJniObject>
-#include <QtJniTypes>
+#include <QSet>
 
-#include "controllers/defs_controllers.h"
 #include "controllers/midi/androidmidicontroller.h"
 #include "moc_androidmidienumerator.cpp"
-
-namespace {
-const mixxx::Logger kLogger("AndroidMidiEnumerator");
-} // namespace
+#include "soundio/androidusbaudiodevice.h"
 
 AndroidMidiEnumerator::AndroidMidiEnumerator()
         : MidiEnumerator() {
 }
 
 AndroidMidiEnumerator::~AndroidMidiEnumerator() {
+    qDebug() << "Deleting Android MIDI devices...";
     qDeleteAll(m_devices);
     m_devices.clear();
+    qDeleteAll(m_usbDevices);
+    m_usbDevices.clear();
     qDeleteAll(m_removedDevices);
     m_removedDevices.clear();
 }
 
 QList<Controller*> AndroidMidiEnumerator::queryDevices() {
-    kLogger.info() << "Scanning Android MIDI devices";
-
-    QJniObject context = QNativeInterface::QAndroidApplication::context();
-    if (!context.isValid()) {
-        kLogger.warning() << "Android context is null";
+    qDebug() << "Scanning Android MIDI devices:";
+    if (!AndroidMidiController::isSupported()) {
+        qWarning() << "Android MIDI is not supported on this device (requires Android 10)";
         return {};
     }
 
-    QJniObject MIDI_SERVICE =
-            QJniObject::getStaticObjectField("android/content/Context",
-                    "MIDI_SERVICE",
-                    "Ljava/lang/String;");
-    auto midiManager = context.callObjectMethod("getSystemService",
-            "(Ljava/lang/String;)Ljava/lang/Object;",
-            MIDI_SERVICE.object());
-
-    if (!midiManager.isValid()) {
-        kLogger.warning() << "Cannot get MidiManager";
-        return {};
-    }
-
-    auto deviceInfoArray = midiManager.callObjectMethod(
-            "getDevices", "()[Landroid/media/midi/MidiDeviceInfo;");
-
-    jsize count = 0;
-    if (deviceInfoArray.isValid()) {
-        QJniEnvironment env;
-        count = env->GetArrayLength(
-                static_cast<jobjectArray>(deviceInfoArray.object()));
-    }
-
-    // ── FALLBACK: MidiManager sees nothing when audio HAL claims the device ──
-    // Scan UsbManager directly for USB devices with MIDI interfaces (class 1, subclass 3).
-    QSet<QString> seenFallbackNames;
-    if (count == 0) {
-        kLogger.info() << "MidiManager returned 0 devices — falling back to UsbManager scan";
-        QJniObject USB_SERVICE = QJniObject::getStaticObjectField(
-                "android/content/Context", "USB_SERVICE", "Ljava/lang/String;");
-        auto usbManager = context.callObjectMethod("getSystemService",
-                "(Ljava/lang/String;)Ljava/lang/Object;",
-                USB_SERVICE.object());
-
-        if (usbManager.isValid()) {
-            auto usbDeviceMap = usbManager.callObjectMethod(
-                    "getDeviceList", "()Ljava/util/HashMap;");
-            if (usbDeviceMap.isValid()) {
-                auto values = usbDeviceMap.callObjectMethod(
-                        "values", "()Ljava/util/Collection;");
-                auto valuesArray = values.callObjectMethod(
-                        "toArray", "()[Ljava/lang/Object;");
-
-                if (valuesArray.isValid()) {
-                    QJniEnvironment env2;
-                    jsize usbCount = env2->GetArrayLength(
-                            static_cast<jobjectArray>(valuesArray.object()));
-                    kLogger.info() << "UsbManager found" << usbCount << "USB devices";
-
-                    for (jsize j = 0; j < usbCount; j++) {
-                        QJniObject usbDevice = env2->GetObjectArrayElement(
-                                static_cast<jobjectArray>(valuesArray.object()), j);
-                        if (!usbDevice.isValid())
-                            continue;
-
-                        jint vid = usbDevice.callMethod<jint>("getVendorId");
-                        jint pid = usbDevice.callMethod<jint>("getProductId");
-                        jint ifaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
-
-                        // Scan interfaces for MIDI class (class=1, subclass=3)
-                        int midiIface = -1;
-                        for (jint ifIdx = 0; ifIdx < ifaceCount; ifIdx++) {
-                            auto iface = usbDevice.callObjectMethod("getInterface",
-                                    "(I)Landroid/hardware/usb/UsbInterface;",
-                                    ifIdx);
-                            jint ifaceClass = iface.callMethod<jint>("getInterfaceClass");
-                            jint ifaceSubclass = iface.callMethod<jint>("getInterfaceSubclass");
-                            if (ifaceClass == 1 && ifaceSubclass == 3) {
-                                midiIface = ifIdx;
-                                break;
-                            }
-                        }
-
-                        if (midiIface < 0)
-                            continue;
-
-                        // Try to get product name via USB device descriptor
-                        QString name;
-                        QString vendorStr;
-                        QString productStr;
-
-                        // Try getProductName via JNI (custom method may not exist on all devices)
-                        QJniObject devName = usbDevice.callObjectMethod(
-                                "getProductName", "()Ljava/lang/String;");
-                        if (devName.isValid()) {
-                            productStr = devName.toString();
-                        }
-                        QJniObject mfrName = usbDevice.callObjectMethod(
-                                "getManufacturerName", "()Ljava/lang/String;");
-                        if (mfrName.isValid()) {
-                            vendorStr = mfrName.toString();
-                        }
-
-                        if (productStr.isEmpty() && vendorStr.isEmpty()) {
-                            productStr = QStringLiteral("USB MIDI %1:%2")
-                                                 .arg(vid, 4, 16, QChar('0'))
-                                                 .arg(pid, 4, 16, QChar('0'));
-                        }
-                        name = vendorStr.isEmpty()
-                                ? productStr
-                                : (productStr.isEmpty()
-                                                  ? vendorStr
-                                                  : QStringLiteral("%1 %2").arg(
-                                                            vendorStr,
-                                                            productStr));
-
-                        kLogger.info() << "USB MIDI device (UsbManager):" << name
-                                       << QStringLiteral("VID:0x%1 PID:0x%2")
-                                                  .arg(vid, 4, 16, QChar('0'))
-                                                  .arg(pid, 4, 16, QChar('0'))
-                                       << "interface:" << midiIface;
-
-                        // Stable name keys: plain product name. The serial is only
-                        // readable after USB permission and would churn the
-                        // config key between scans (same fix as BulkController).
-                        QString stableName = productStr.isEmpty() ? name : productStr;
-                        seenFallbackNames.insert(stableName);
-                        bool alreadyKnownFallback = false;
-                        for (const auto* pDevice : std::as_const(m_devices)) {
-                            if (pDevice->getName() == stableName) {
-                                alreadyKnownFallback = true;
-                                break;
-                            }
-                        }
-                        if (alreadyKnownFallback) {
-                            continue;
-                        }
-                        auto* controller = new AndroidMidiController(stableName,
-                                usbDevice,
-                                midiIface,
-                                static_cast<uint16_t>(vid),
-                                static_cast<uint16_t>(pid),
-                                vendorStr,
-                                productStr);
-                        m_devices.push_back(controller);
-                    }
-                }
-            }
-        }
-
-        // Drop devices that are no longer present (prune unplugged).
-        for (auto it = m_devices.begin(); it != m_devices.end();) {
-            if (!seenFallbackNames.contains((*it)->getName())) {
-                kLogger.info() << "Removing unplugged Android MIDI controller:"
-                               << (*it)->getName();
-                delete *it;
-                it = m_devices.erase(it);
-            } else {
-                ++it;
-            }
-        }
-
-        kLogger.info() << "Enumerated" << m_devices.size()
-                       << "Android MIDI controllers (UsbManager fallback)";
-        QList<Controller*> fallbackResult;
-        fallbackResult.reserve(m_devices.size());
-        for (auto* pDevice : std::as_const(m_devices)) {
-            fallbackResult.append(pDevice);
-        }
-        return fallbackResult;
-    }
-
-    if (!deviceInfoArray.isValid()) {
-        kLogger.info() << "No Android MIDI devices found";
-        return {};
-    }
-
+    QJniObject devices = QJniObject::callStaticMethod<jobjectArray>(
+            "org/mixxx/MidiHelper",
+            "getDevices",
+            "()[Landroid/media/midi/MidiDeviceInfo;");
     QJniEnvironment env;
-    count = env->GetArrayLength(
-            static_cast<jobjectArray>(deviceInfoArray.object()));
-    kLogger.info() << "Found" << count << "Android MIDI devices";
+    const jsize count = devices.isValid()
+            ? env->GetArrayLength(devices.object<jobjectArray>())
+            : 0;
 
-    // Names seen in this scan; used below to drop unplugged devices.
-    QSet<QString> presentNames;
-
-    for (jsize i = 0; i < count; i++) {
-        QJniObject deviceInfo = env->GetObjectArrayElement(
-                static_cast<jobjectArray>(deviceInfoArray.object()), i);
-
+    QSet<int> presentIds;
+    QSet<QString> usedNames;
+    // Directly driven USB devices first, they get the plain product name
+    updateUsbDevices(&usedNames);
+    QSet<QString> usbDeviceNames = usedNames;
+    for (const auto* pDevice : std::as_const(m_devices)) {
+        usedNames.insert(pDevice->getName());
+    }
+    for (jsize i = 0; i < count; ++i) {
+        QJniObject deviceInfo = QJniObject::fromLocalRef(
+                env->GetObjectArrayElement(devices.object<jobjectArray>(), i));
         if (!deviceInfo.isValid()) {
             continue;
         }
-
-        jint inputPorts = deviceInfo.callMethod<jint>("getInputPortCount");
-        jint outputPorts = deviceInfo.callMethod<jint>("getOutputPortCount");
-
-        QJniObject props = deviceInfo.callObjectMethod(
-                "getProperties", "()Landroid/os/Bundle;");
-        QString name;
-        QString vendorStr;
-        QString productStr;
-        uint16_t vendorId = 0;
-        uint16_t productId = 0;
-        QJniObject usbDevice;
-
-        if (props.isValid()) {
-            QJniObject nameStr = props.callObjectMethod("getString",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    QJniObject::fromString(
-                            "android.media.midi.extra.PROPERTY_NAME")
-                            .object());
-            if (nameStr.isValid()) {
-                name = nameStr.toString();
-            }
-
-            QJniObject mfrStr = props.callObjectMethod("getString",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    QJniObject::fromString(
-                            "android.media.midi.extra.PROPERTY_MANUFACTURER")
-                            .object());
-            if (mfrStr.isValid()) {
-                vendorStr = mfrStr.toString();
-            }
-
-            QJniObject prodStr = props.callObjectMethod("getString",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    QJniObject::fromString(
-                            "android.media.midi.extra.PROPERTY_PRODUCT")
-                            .object());
-            if (prodStr.isValid()) {
-                productStr = prodStr.toString();
-            }
-
-            // Get USB device for bulk transfer
-            usbDevice = props.callObjectMethod("getParcelable",
-                    "(Ljava/lang/String;)Landroid/os/Parcelable;",
-                    QJniObject::fromString(
-                            "android.media.midi.extra.PROPERTY_USB_DEVICE")
-                            .object());
-            if (usbDevice.isValid()) {
-                vendorId = static_cast<uint16_t>(
-                        usbDevice.callMethod<jint>("getVendorId"));
-                productId = static_cast<uint16_t>(
-                        usbDevice.callMethod<jint>("getProductId"));
-            }
+        const int id = deviceInfo.callMethod<jint>("getId");
+        if (usbDeviceNames.contains(QJniObject::callStaticMethod<jstring>(
+                    "org/mixxx/MidiHelper",
+                    "getName",
+                    "(Landroid/media/midi/MidiDeviceInfo;)Ljava/lang/String;",
+                    deviceInfo.object())
+                                            .toString())) {
+            // Stale entry of a device that Mixxx now drives over USB directly
+            continue;
         }
+        presentIds.insert(id);
 
-        if (name.isEmpty()) {
-            name = QStringLiteral("Android MIDI Device %1").arg(i);
-        }
-
-        // Skip duplicates: the same device is still connected from the last
-        // scan, keep the existing entry so open controllers survive rescans.
-        bool alreadyKnown = false;
-        for (const auto* pDevice : std::as_const(m_devices)) {
-            if (pDevice->getName() == name) {
-                alreadyKnown = true;
-                presentNames.insert(name);
-                break;
-            }
-        }
+        const bool alreadyKnown = std::any_of(m_devices.cbegin(),
+                m_devices.cend(),
+                [id](const AndroidMidiController* pDevice) {
+                    return pDevice->androidDeviceId() == id;
+                });
         if (alreadyKnown) {
             continue;
         }
-
-        kLogger.info() << "MIDI device:" << name
-                       << "inputs:" << inputPorts
-                       << "outputs:" << outputPorts
-                       << QStringLiteral("VID:0x%1 PID:0x%2")
-                                  .arg(vendorId, 4, 16, QChar('0'))
-                                  .arg(productId, 4, 16, QChar('0'));
-
-        // Check USB interfaces for MIDI streaming (class 1, subclass 3)
-        int ifaceNum = -1;
-
-        if (usbDevice.isValid()) {
-            jint ifaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
-            for (jint ifIdx = 0; ifIdx < ifaceCount; ifIdx++) {
-                auto iface = usbDevice.callObjectMethod("getInterface",
-                        "(I)Landroid/hardware/usb/UsbInterface;",
-                        ifIdx);
-                jint ifaceClass = iface.callMethod<jint>("getInterfaceClass");
-                jint ifaceSubclass =
-                        iface.callMethod<jint>("getInterfaceSubclass");
-                if (ifaceClass == 1 && ifaceSubclass == 3) {
-                    ifaceNum = ifIdx;
-                    kLogger.info()
-                            << "Found MIDI interface" << ifIdx
-                            << "on" << name;
-                    break;
-                }
-            }
-        }
-
-        if (ifaceNum < 0) {
-            kLogger.info() << "No USB MIDI interface found for" << name
-                           << "- skipping (Bluetooth MIDI?)";
+        if (deviceInfo.callMethod<jint>("getInputPortCount") == 0 &&
+                deviceInfo.callMethod<jint>("getOutputPortCount") == 0) {
             continue;
         }
 
-        auto* controller = new AndroidMidiController(name,
-                usbDevice,
-                ifaceNum,
-                vendorId,
-                productId,
-                vendorStr,
-                productStr);
-        presentNames.insert(name);
-        m_devices.push_back(controller);
+        // The name is used as configuration key, so it must be stable. Only
+        // disambiguate when two identical devices are connected.
+        const QString baseName = QJniObject::callStaticMethod<jstring>(
+                "org/mixxx/MidiHelper",
+                "getName",
+                "(Landroid/media/midi/MidiDeviceInfo;)Ljava/lang/String;",
+                deviceInfo.object())
+                                         .toString();
+        QString name = baseName;
+        for (int n = 2; usedNames.contains(name); ++n) {
+            name = QStringLiteral("%1 #%2").arg(baseName, QString::number(n));
+        }
+        usedNames.insert(name);
+
+        qInfo() << "Found Android MIDI device:" << name << "id" << id;
+        m_devices.append(new AndroidMidiController(deviceInfo, name));
     }
 
-    // Drop devices that disappeared; deferred-delete so the GUI can still
-    // hold pointers until it processes devicesChanged().
     for (int i = m_devices.size() - 1; i >= 0; --i) {
         AndroidMidiController* pDevice = m_devices.at(i);
-        if (presentNames.contains(pDevice->getName())) {
+        if (presentIds.contains(pDevice->androidDeviceId())) {
             continue;
         }
-        kLogger.info() << "Android MIDI device removed:" << pDevice->getName();
+        // ControllerManager closes controllers that disappeared from the list
+        qInfo() << "Android MIDI device removed:" << pDevice->getName();
         m_devices.removeAt(i);
         m_removedDevices.append(pDevice);
     }
 
     QList<Controller*> result;
-    result.reserve(m_devices.size());
+    result.reserve(m_usbDevices.size() + m_devices.size());
+    for (auto* pDevice : std::as_const(m_usbDevices)) {
+        result.append(pDevice);
+    }
     for (auto* pDevice : std::as_const(m_devices)) {
         result.append(pDevice);
     }
-    kLogger.info() << "Enumerated" << result.size()
-                   << "Android MIDI controllers";
     return result;
 }
 
-#endif // __ANDROID__
+void AndroidMidiEnumerator::updateUsbDevices(QSet<QString>* pUsedNames) {
+    const auto usbAudioDevices = mixxx::androidusb::AndroidUsbAudioDevice::devices();
+    QSet<QString> present;
+    for (const auto& pUsbDevice : usbAudioDevices) {
+        if (!pUsbDevice->isClaimed() || !pUsbDevice->midiInterface().isValid()) {
+            continue;
+        }
+        present.insert(pUsbDevice->usbDeviceName());
+        const bool alreadyKnown = std::any_of(m_usbDevices.cbegin(),
+                m_usbDevices.cend(),
+                [&](const AndroidUsbMidiController* pDevice) {
+                    return pDevice->usbDevice() == pUsbDevice;
+                });
+        if (!alreadyKnown) {
+            qInfo() << "Found direct USB MIDI device:" << pUsbDevice->productName();
+            m_usbDevices.append(new AndroidUsbMidiController(pUsbDevice));
+        }
+    }
+    for (int i = m_usbDevices.size() - 1; i >= 0; --i) {
+        AndroidUsbMidiController* pDevice = m_usbDevices.at(i);
+        if (present.contains(pDevice->usbDevice()->usbDeviceName())) {
+            pUsedNames->insert(pDevice->getName());
+            continue;
+        }
+        // ControllerManager closes controllers that disappeared from the list
+        qInfo() << "Direct USB MIDI device removed:" << pDevice->getName();
+        m_usbDevices.removeAt(i);
+        m_removedDevices.append(pDevice);
+    }
+}

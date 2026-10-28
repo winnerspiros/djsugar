@@ -2,7 +2,6 @@
 
 #include <libusb.h>
 #include <qglobal.h>
-
 #include <QSet>
 #include <algorithm>
 
