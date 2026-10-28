@@ -2249,7 +2249,6 @@ if(ANDROID)
     mixxx-lib
     PRIVATE
       src/util/androidpermissions.cpp
-      src/util/androidbackup.cpp
       src/library/usbdrive/androidusbdrive.cpp
       src/library/usbdrive/fatvolume.cpp
       src/library/usbdrive/usbmassstorage.cpp
@@ -4569,6 +4568,9 @@ if(QML)
   target_sources(
     mixxx-qml-lib
     PRIVATE
+      # Mobile backup helpers: used by QmlMobileLibraryProxy on all
+      # platforms (androidbackup.* has no Android-only includes).
+      src/util/androidbackup.cpp
       src/qml/asyncimageprovider.cpp
       src/qml/qmlapplication.cpp
       src/qml/qmlapplicationproxy.cpp

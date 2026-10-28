@@ -262,12 +262,10 @@ QmlApplication::QmlApplication(
     m_pWaveformOverviewType->forceSet(static_cast<double>(overviewType));
 
     // Legacy skins auto-create [Skin] controls; QML ControlProxy does not.
-    // Created with QmlApplication as parent, so lifetime is managed.
-    auto* pShowIntroOutroCues = new ControlObject(
+    m_pShowIntroOutroCues = std::make_unique<ControlObject>(
             ConfigKey(QStringLiteral("[Skin]"),
-                    QStringLiteral("show_intro_outro_cues")),
-            this);
-    pShowIntroOutroCues->set(1.0);
+                    QStringLiteral("show_intro_outro_cues")));
+    m_pShowIntroOutroCues->set(1.0);
 
     m_loadSucceeded = loadQml(m_mainFilePath);
     if (!m_loadSucceeded) {
