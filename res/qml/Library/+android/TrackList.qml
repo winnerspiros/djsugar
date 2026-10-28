@@ -206,6 +206,13 @@ Rectangle {
         property int dynamicColumnCount: 0
         property int usedWidth: 0
 
+        // Keyboard navigation lives here (not on the QtObject control,
+        // which cannot carry Keys): view holds focus.
+        Keys.onDownPressed: root.moveSelectionVertical(1)
+        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onUpPressed: root.moveSelectionVertical(-1)
+
         function loadSelectedTrack(group, play) {
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
@@ -364,10 +371,6 @@ Rectangle {
         }
 
         Component.onCompleted: this.updateColumnSize()
-        Keys.onDownPressed: root.moveSelectionVertical(1)
-        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onUpPressed: root.moveSelectionVertical(-1)
         onModelChanged: this.updateColumnSize()
         // The library grows when switching to the LIB view, rows have to be
         // created for the new space once the layout has settled

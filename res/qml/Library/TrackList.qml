@@ -167,6 +167,13 @@ Rectangle {
         property int dynamicColumnCount: 0
         property int usedWidth: 0
 
+        // Keyboard navigation lives here (not on LibraryComponent.Control,
+        // which is a QtObject and cannot carry Keys): view holds focus.
+        Keys.onDownPressed: this.selectionModel.moveSelectionVertical(1)
+        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onUpPressed: this.selectionModel.moveSelectionVertical(-1)
+
         function loadSelectedTrack(group, play) {
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
@@ -295,10 +302,6 @@ Rectangle {
         }
 
         Component.onCompleted: this.updateColumnSize()
-        Keys.onDownPressed: this.selectionModel.moveSelectionVertical(1)
-        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onUpPressed: this.selectionModel.moveSelectionVertical(-1)
         onModelChanged: this.updateColumnSize()
         onWidthChanged: {
             if (view.updateColumnSize()) {
