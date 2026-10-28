@@ -14,9 +14,9 @@
 #include <QPushButton>
 #endif
 
+#include "control/controlobject.h"
 #include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
-#include "control/controlobject.h"
 #include "controllers/controllermanager.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "effects/effectsmanager.h"

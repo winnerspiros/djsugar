@@ -174,7 +174,8 @@ void QmlControlProxy::reinitializeFromKey() {
         const QString keyStr = m_coKey.group + QStringLiteral(",") + m_coKey.item;
         if (!s_warnedMissing.contains(keyStr)) {
             s_warnedMissing.insert(keyStr);
-            qWarning() << "QmlControlProxy: Requested CO" << m_coKey << " does not exist, resetting...";
+            qWarning() << "QmlControlProxy: Requested CO" << m_coKey
+                       << " does not exist, resetting...";
         }
         if (isInitialized()) {
             m_pControlProxy.reset();
