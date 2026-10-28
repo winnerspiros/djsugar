@@ -58,7 +58,7 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
                     "getName",
                     "(Landroid/media/midi/MidiDeviceInfo;)Ljava/lang/String;",
                     deviceInfo.object())
-                                            .toString())) {
+                            .toString())) {
             // Stale entry of a device that Mixxx now drives over USB directly
             continue;
         }

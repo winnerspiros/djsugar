@@ -182,7 +182,9 @@ void ControllerManager::slotInitialize() {
     userPaths.append(userMappingsPath(m_pConfig));
 #if defined(Q_OS_ANDROID)
     userPaths.append(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
-    userPaths.append(QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + QStringLiteral("/Mixxx/controllers/"));
+    userPaths.append(
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            QStringLiteral("/Mixxx/controllers/"));
     QDir().mkpath(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
 #endif
     m_pMainThreadUserMappingEnumerator =
@@ -598,7 +600,9 @@ QList<QString> ControllerManager::getMappingPaths(UserSettingsPointer pConfig) {
     scriptPaths.append(userMappingsPath(pConfig));
 #if defined(Q_OS_ANDROID)
     scriptPaths.append(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
-    scriptPaths.append(QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + QStringLiteral("/Mixxx/controllers/"));
+    scriptPaths.append(
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            QStringLiteral("/Mixxx/controllers/"));
 #endif
     scriptPaths.append(resourceMappingsPath(pConfig));
     return scriptPaths;
