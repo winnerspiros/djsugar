@@ -16,6 +16,7 @@
 
 #include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
+#include "control/controlobject.h"
 #include "controllers/controllermanager.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "effects/effectsmanager.h"
@@ -259,6 +260,14 @@ QmlApplication::QmlApplication(
             overviewTypeKey,
             mixxx::OverviewType::RGB);
     m_pWaveformOverviewType->forceSet(static_cast<double>(overviewType));
+
+    // Legacy skins auto-create [Skin] controls; QML ControlProxy does not.
+    // Created with QmlApplication as parent, so lifetime is managed.
+    auto* pShowIntroOutroCues = new ControlObject(
+            ConfigKey(QStringLiteral("[Skin]"),
+                    QStringLiteral("show_intro_outro_cues")),
+            this);
+    pShowIntroOutroCues->set(1.0);
 
     m_loadSucceeded = loadQml(m_mainFilePath);
     if (!m_loadSucceeded) {

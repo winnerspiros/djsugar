@@ -89,7 +89,12 @@ Item {
         key: "WaveformOverviewType"
 
         onInitializedChanged: {
-            value = root.waveformOverviewTypeRgb;
+            // The C++ side owns this control (read-only, seeded from
+            // config at startup). Only write back when the skin setting
+            // actually differs, to avoid read-only write warnings.
+            if (initialized && value !== root.waveformOverviewTypeRgb) {
+                value = root.waveformOverviewTypeRgb;
+            }
         }
     }
     Column {
