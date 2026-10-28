@@ -5939,8 +5939,7 @@ if(HID)
 
   if(ANDROID)
     target_sources(mixxx-lib PRIVATE src/controllers/android.cpp)
-    # androidusbmidicontroller.cpp uses libusb functions directly.
-    # Link explicitly if LibUSB is available. If not (e.g. some CI
+    # Link libusb explicitly if available. If not (e.g. some CI
     # Android runners without libusb-dev), the JNI fallback is used.
     if(TARGET LibUSB::LibUSB)
       target_link_libraries(mixxx-lib PRIVATE LibUSB::LibUSB)
