@@ -97,7 +97,6 @@ Item {
 
     // The deck loader of the Classic skin is the browser here
     function openQuickLoad(group) {
-        console.info("BOOTH openQuickLoad:", group);
         root.loadTarget = (group && group.length > 0) ? group : "[Channel1]";
         root.viewMode = 2;
     }
@@ -109,7 +108,6 @@ Item {
         root.viewMode = root.playView;
     }
     function showView(mode) {
-        console.info("BOOTH showView:", mode);
         root.loadTarget = "";
         root.viewMode = mode;
         root.playView = mode;
@@ -204,7 +202,6 @@ Item {
         }
     }
     function toggleLibraryView() {
-        console.info("BOOTH toggleLibraryView, browsing:", root.browsing);
         if (root.browsing && root.loadTarget.length === 0) {
             root.showPlayView();
         } else {
@@ -290,19 +287,7 @@ Item {
             id: tabMouse
 
             anchors.fill: parent
-            onPressed: mouse => {
-                console.info("BOOTH-TAB pressed:", tab.label, "x=" + Math.round(mouse.x) + " y=" + Math.round(mouse.y));
-            }
-            onReleased: {
-                console.info("BOOTH-TAB released:", tab.label);
-            }
-            onCanceled: {
-                console.info("BOOTH-TAB press canceled:", tab.label);
-            }
-            onClicked: {
-                console.info("BOOTH-TAB tapped:", tab.label);
-                tab.clicked();
-            }
+            onClicked: tab.clicked()
         }
     }
     // Left of a waveform: deck, key, bars left, quantize and slip
@@ -519,10 +504,7 @@ Item {
                 active: root.browsing && root.loadTarget.length === 0
                 label: qsTr("BROWSE")
                 visible: root.itemShown("lib")
-                onClicked: {
-                    console.info("BOOTH-TAB tapped: BROWSE-swapped");
-                    root.showView(1);
-                }
+                onClicked: root.toggleLibraryView()
             }
             Tab {
                 active: root.browsing && root.loadTarget === "[Channel1]"

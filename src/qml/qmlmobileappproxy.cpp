@@ -102,6 +102,20 @@ QStringList QmlMobileAppProxy::skinsIn(const QUrl& skinsFolder) const {
         path = skinsFolder.path();
     }
     const QDir dir(path);
+#ifdef Q_OS_ANDROID
+    // APK assets: QDir::entryList() cannot list assets:/ subdirectories,
+    // so probe the skins packaged under assets:/qml/Skins/ instead.
+    if (skinsFolder.scheme() == QStringLiteral("assets")) {
+        const QStringList knownSkins{QStringLiteral("Booth")};
+        for (const QString& folder : knownSkins) {
+            if (QFileInfo::exists(
+                        dir.filePath(folder + QStringLiteral("/MainWindow.qml")))) {
+                skins.append(folder);
+            }
+        }
+        return skins;
+    }
+#endif
     const QStringList folders = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QString& folder : folders) {
         if (folder != kClassicSkin &&
