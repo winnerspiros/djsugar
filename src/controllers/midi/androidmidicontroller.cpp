@@ -523,7 +523,7 @@ int AndroidUsbMidiController::open(const QString& resourcePath) {
             // Timed on arrival, not when the controller thread polls
             packet.timestamp = mixxx::Time::elapsed();
             // Dropped if the controller thread is that far behind
-            m_packets.try_push(packet);
+            static_cast<void>(m_packets.try_push(packet));
         })) {
         qCWarning(m_logBase) << "Unable to start the USB MIDI input of" << getName();
         return -2;

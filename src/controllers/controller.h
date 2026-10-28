@@ -1,9 +1,11 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QMutex>
 
 #include "controllers/controllermappinginfo.h"
 #include "controllers/legacycontrollermapping.h"
+#include "util/compatibility/qmutex.h"
 #include "util/duration.h"
 #include "util/runtimeloggingcategory.h"
 
@@ -174,6 +176,17 @@ class Controller : public QObject {
     const RuntimeLoggingCategory m_logInput;
     const RuntimeLoggingCategory m_logOutput;
     std::shared_ptr<LegacyControllerMapping> m_pMutableMapping;
+
+    /// Must only be assigned through setMutableMapping()
+    /// (from JaviLabarumDJ/mixxx-android android-stable)
+
+    void setMutableMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
+        const auto locker = lockMutex(&m_mutableMappingMutex);
+        m_pMutableMapping = std::move(pMapping);
+    }
+
+  private:
+    mutable QMutex m_mutableMappingMutex;
 
   public:
     // This must be reimplemented by sub-classes desiring to send raw bytes to a

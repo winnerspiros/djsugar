@@ -1842,8 +1842,6 @@ add_library(
   src/util/workerthread.cpp
   src/util/workerthreadscheduler.cpp
   src/util/xml.cpp
-  src/util/androidpermissions.cpp
-  src/util/androidbackup.cpp
   src/waveform/guitick.cpp
   src/waveform/overviewtype.cpp
   src/waveform/renderers/glwaveformrenderbackground.cpp
@@ -2251,6 +2249,7 @@ if(ANDROID)
     mixxx-lib
     PRIVATE
       src/util/androidpermissions.cpp
+      src/util/androidbackup.cpp
       src/library/usbdrive/androidusbdrive.cpp
       src/library/usbdrive/fatvolume.cpp
       src/library/usbdrive/usbmassstorage.cpp
@@ -4570,9 +4569,6 @@ if(QML)
   target_sources(
     mixxx-qml-lib
     PRIVATE
-      # Mobile backup/restore helpers: only called from QmlMobileLibraryProxy,
-      # so they live in the QML lib (avoids a qml-lib -> mixxx-lib static-link cycle)
-      src/util/androidbackup.cpp
       src/qml/asyncimageprovider.cpp
       src/qml/qmlapplication.cpp
       src/qml/qmlapplicationproxy.cpp
