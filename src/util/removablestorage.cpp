@@ -29,6 +29,15 @@ QFileInfoList removableStorageRoots() {
     for (const QFileInfo& volume : volumes) {
         if (volume.fileName() != QLatin1String("emulated") &&
                 volume.fileName() != QLatin1String("self")) {
+            // Android takes a few seconds to mount a drive after it was
+            // plugged in (or after granting all-files access). The drive
+            // entry in /storage already exists, but it is not readable yet.
+            // Skip unready volumes: the device features re-scan on the next
+            // activate/open, by which time the mount has finished. Waiting
+            // here is not an option: this also runs on the UI thread.
+            if (!QStorageInfo(volume.absoluteFilePath()).isReady()) {
+                continue;
+            }
             roots.append(volume);
         }
     }
