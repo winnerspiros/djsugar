@@ -136,15 +136,23 @@ Item {
     }
     // Reading the databases on USB drives needs more than the music
     // permission, as in Library/Browser.qml
+    // True when the drive at path may be read; false opens the grant
+    // popup and STOPS the open: without all-files access the USB scan
+    // blocks the UI thread up to 29s waiting for a permission that can
+    // never arrive (see androidusbdrive waitForPermission). Music-library
+    // browsing only needs READ_MEDIA_AUDIO (granted at startup) and is
+    // unaffected: this gate only fires for USB-drive sections.
     function checkStorageAccess(path) {
         const icon = root.sectionIcon(path);
         if (icon !== "rekordbox" && icon !== "enginedj") {
-            return;
+            return true;
         }
         if (!Mixxx.MobileLibrary.hasFullStorageAccess()) {
             storageAccessPopup.open();
+            return false;
         }
         Mixxx.MobileLibrary.allowUsbPermissionRequests();
+        return true;
     }
     // Shows the tracks of the entry at path
     function activate(path) {
@@ -162,6 +170,12 @@ Item {
     // Opens a source or an entry. Returns true if its tracks are shown,
     // false if its entries are listed.
     function open(path) {
+        // USB drives without all-files access would hang the UI thread in
+        // the scan below; the popup is shown and the open is abandoned.
+        // The user taps the section again after granting.
+        if (!root.checkStorageAccess(path)) {
+            return false;
+        }
         // Order matters, and levelIndex must be cleared FIRST: activate()
         // replaces the model's tracklist (tracklistChanged), which rebuilds
         // the track TableView; canFetchMore/fetchMore below then signal the
@@ -170,7 +184,6 @@ Item {
         // during that, a handler reads a stale/deleted index.
         // Guarded by deferredRefresh (below), never run inline.
         root.levelIndex = null;
-        root.checkStorageAccess(path);
         root.activate(path);
         const index = root.indexOf(path);
         if (index === null) {
@@ -346,7 +359,10 @@ Item {
     onVisibleChanged: {
         if (root.visible && !root.initDone) {
             root.initDone = true;
-            root.activate([0]);
+            // Deferred past first paint, and through open() so a USB
+            // drive at [0] without all-files access shows the grant popup
+            // instead of hanging the UI thread in the scan.
+            Qt.callLater(function() { root.open([0]); });
         }
     }
 
