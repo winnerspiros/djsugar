@@ -273,6 +273,10 @@ Item {
         } else {
             tableView.loadSelectedTrackIntoNextAvailableDeck(false);
         }
+        // Return to the play view after a load from LOAD 1/2
+        if (root.loadTarget.length > 0) {
+            root.loadTarget = "";
+        }
     }
     function applySearch() {
         if (root.sidebar && root.sidebar.tracklist && !root.streaming) {
@@ -755,7 +759,6 @@ Item {
 
         LibraryComponent.TrackList {
             id: trackList
-            loadTarget: root.loadTarget
 
             anchors.bottom: parent.bottom
             anchors.left: sectionColumn.right
