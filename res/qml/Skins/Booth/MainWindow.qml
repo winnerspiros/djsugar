@@ -581,14 +581,14 @@ Item {
             height: root.viewMode !== 1 ? (root.compact ? 58 : 84) : Math.round(root.height * (root.compact ? 0.36 : 0.3))
             spacing: content.gap
 
-            Booth.BoothDeckPanel {
+            BoothDeckPanel {
                 deckNumber: 1
                 group: "[Channel1]"
                 height: parent.height
                 slim: root.viewMode !== 1
                 width: (parent.width - parent.spacing) / 2
             }
-            Booth.BoothDeckPanel {
+            BoothDeckPanel {
                 deckNumber: 2
                 group: "[Channel2]"
                 height: parent.height
@@ -598,7 +598,7 @@ Item {
         }
 
         // ---- Touch controls ----
-        Booth.BoothDjView {
+        BoothDjView {
             id: djView
 
             anchors.bottom: parent.bottom
@@ -674,7 +674,7 @@ Item {
                         width: parent.width
                     }
                 }
-                Booth.BoothBeatFx {
+                BoothBeatFx {
                     id: beatFx
 
                     // The DJ view leaves less height
@@ -734,7 +734,7 @@ Item {
             }
 
             // BEAT FX of phones, over the waveforms
-            Booth.BoothBeatFx {
+            BoothBeatFx {
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
                 anchors.rightMargin: content.gap
