@@ -396,7 +396,7 @@ Rectangle {
                 Repeater {
                     model: 8
 
-                    Booth.SamplerPad {
+                    SamplerPad {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
                         mirrored: root.mirrored
