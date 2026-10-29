@@ -739,6 +739,7 @@ Item {
 
         LibraryComponent.TrackList {
             id: trackList
+            loadTarget: root.loadTarget
 
             anchors.bottom: parent.bottom
             anchors.left: sectionColumn.right
