@@ -280,7 +280,7 @@ Item {
         }
     }
 
-    Booth.BoothSourceTree {
+    BoothSourceTree {
         id: sources
 
         infoTarget: root

@@ -701,7 +701,7 @@ Item {
                 onLoaded: keepLoaded = true
 
                 sourceComponent: Component {
-                    Booth.BoothBrowse {
+                    BoothBrowse {
                         acceptsController: !settingsPopup.opened
                         anchors.fill: parent
                         compact: root.compact
