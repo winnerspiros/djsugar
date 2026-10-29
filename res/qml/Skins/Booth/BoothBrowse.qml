@@ -120,7 +120,7 @@ Item {
         return path.length === 2 && (icon === "rekordbox" || icon === "enginedj");
     }
     function refreshLevel() {
-        if (root.levelPath === null) {
+        if (root.levelPath === null || root.sidebar === null) {
             root.levelIndex = null;
             return;
         }
@@ -162,22 +162,30 @@ Item {
     // Opens a source or an entry. Returns true if its tracks are shown,
     // false if its entries are listed.
     function open(path) {
+        // Order matters, and levelIndex must be cleared FIRST: activate()
+        // replaces the model's tracklist (tracklistChanged), which rebuilds
+        // the track TableView; canFetchMore/fetchMore below then signal the
+        // model again, and our onDataChanged/onRowsInserted handlers call
+        // refreshLevel(). If levelIndex still held a pre-activate index
+        // during that, a handler reads a stale/deleted index.
+        // Guarded by deferredRefresh (below), never run inline.
+        root.levelIndex = null;
         root.checkStorageAccess(path);
         root.activate(path);
         const index = root.indexOf(path);
         if (index === null) {
             root.levelPath = null;
-            root.refreshLevel();
             root.showTracks = true;
+            root.deferredRefresh();
             return true;
         }
         if (root.sidebar.canFetchMore(index)) {
             root.sidebar.fetchMore(index);
         }
         // Drives list their playlists once they have been read
-        if (root.sidebar.hasChildren(root.indexOf(path)) || root.pathIsDrive(path)) {
+        if (root.sidebar.hasChildren(index) || root.pathIsDrive(path)) {
             root.levelPath = path;
-            root.refreshLevel();
+            root.deferredRefresh();
             root.showTracks = false;
             root.cursor = root.levelHasAll ? -1 : 0;
             return false;
@@ -190,21 +198,24 @@ Item {
     }
     function openAllTracks() {
         root.activate(root.levelPath);
-        root.refreshLevel();
         root.showTracks = true;
+        root.deferredRefresh();
     }
     function back() {
         if (root.showTracks) {
             if (root.levelPath !== null) {
-                root.refreshLevel();
-                root.showTracks = root.levelIndex === null;
+                // Stale index check only; refresh is routed through the
+                // coalesced deferred path so this stays re-entrancy free.
+                root.levelIndex = null;
+                root.deferredRefresh();
+                root.showTracks = true;
             }
             return;
         }
         if (root.levelHasAll) {
             const row = root.levelPath[root.levelPath.length - 1];
             root.levelPath = root.levelPath.slice(0, -1);
-            root.refreshLevel();
+            root.deferredRefresh();
             root.cursor = row;
         }
     }
@@ -218,7 +229,8 @@ Item {
         } else {
             root.showTracks = true;
             root.levelPath = null;
-            root.refreshLevel();
+            root.levelIndex = null;
+            root.deferredRefresh();
             root.cursor = Math.max(0, Math.min(sections.count - 1, root.cursor + offset));
         }
     }
@@ -238,7 +250,7 @@ Item {
         const tracksShown = root.open([row]);
         if (tracksShown) {
             root.levelPath = null;
-            root.refreshLevel();
+            root.deferredRefresh();
         }
         return tracksShown;
     }
@@ -274,7 +286,7 @@ Item {
         }
         onCollapseSidebarItem: root.back()
         onFocusWidgetChanged: {
-            if (!enabled) {
+            if (!enabled || !root.visible || root.streaming) {
                 return;
             }
             switch (focusWidget) {
@@ -284,8 +296,9 @@ Item {
             case Skin.FocusedWidgetControl.WidgetKind.Sidebar:
                 root.streaming = false;
                 if (root.levelPath !== null) {
-                    root.refreshLevel();
-                    root.showTracks = root.levelIndex === null;
+                    root.levelIndex = null;
+                    root.deferredRefresh();
+                    root.showTracks = true;
                 } else {
                     root.cursor = root.activeSection;
                 }
@@ -325,10 +338,36 @@ Item {
         target: root.sidebar
     }
 
-    Component.onCompleted: root.activate([0])
+    // Opened lazily: activate([0]) rebuilds the model one entry at a time
+    // (each source's activate() emits signals), and doing that inside
+    // component creation - before the Loader's item tree is wired - hung
+    // the app on BROWSE. Runs once the browser is actually shown.
+    property bool initDone: false
+    onVisibleChanged: {
+        if (root.visible && !root.initDone) {
+            root.initDone = true;
+            root.activate([0]);
+        }
+    }
 
     // While the sources change no index of them may be used: the list is
-    // emptied first and looked up again afterwards
+    // emptied first and looked up again afterwards. All refreshes are
+    // deferred to the event loop AND coalesced: open()/activate() emit
+    // model signals synchronously (each feature activate, fetchMore,
+    // Rekordbox child inserts), inline refreshLevel() inside a signal
+    // handler re-enters indexOf() on a half-rebuilt model, an invalid
+    // QModelIndex crosses into C++ -> assert/hang of the UI thread.
+    property bool refreshQueued: false
+    function deferredRefresh() {
+        if (root.refreshQueued) {
+            return;
+        }
+        root.refreshQueued = true;
+        Qt.callLater(function() {
+            root.refreshQueued = false;
+            root.refreshLevel();
+        });
+    }
     Connections {
         // The playlists of a Rekordbox drive are added while it is read,
         // without telling the model; only a repaint (dataChanged) follows.
@@ -336,29 +375,29 @@ Item {
         function onDataChanged() {
             if (root.levelIndex !== null && root.sidebar.rowCount(root.levelIndex) !== levelEntries.count) {
                 root.levelIndex = null;
-                Qt.callLater(root.refreshLevel);
+                root.deferredRefresh();
             }
         }
         function onLayoutAboutToBeChanged() {
             root.levelIndex = null;
         }
         function onLayoutChanged() {
-            Qt.callLater(root.refreshLevel);
+            root.deferredRefresh();
         }
         function onModelAboutToBeReset() {
             root.levelIndex = null;
         }
         function onModelReset() {
-            Qt.callLater(root.refreshLevel);
+            root.deferredRefresh();
         }
         function onRowsAboutToBeRemoved() {
             root.levelIndex = null;
         }
         function onRowsInserted() {
-            Qt.callLater(root.refreshLevel);
+            root.deferredRefresh();
         }
         function onRowsRemoved() {
-            Qt.callLater(root.refreshLevel);
+            root.deferredRefresh();
         }
 
         target: root.sidebar
