@@ -176,9 +176,8 @@ Item {
     }
     // Opens a source or an entry. Returns true if its tracks are shown,
     // false if its entries are listed.
-    // True while open()/activate() is on the stack: the TapHandler and
-    // the MouseArea of one tap can both fire (driver-dependent), and an
-    // open() re-entered mid-model-rebuild reads half-built indexes.
+    // True while open()/activate() is on the stack: a second tap then
+    // waits instead of re-entering mid-model-rebuild on half-built indexes.
     property bool opening: false
     function open(path) {
         // USB drives without all-files access would hang the UI thread in
@@ -468,7 +467,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 border.color: usable ? "#8a8d93" : "#2a2c30"
                 border.width: 1
-                color: backMouse.pressed ? "#2a2c30" : "transparent"
+                color: "transparent"
                 height: header.height - 8
                 width: height * 1.3
 
@@ -479,15 +478,9 @@ Item {
                     text: "←"
                 }
                 TapHandler {
+                    enabled: parent.usable
                     gesturePolicy: TapHandler.ReleaseWithinBounds
                     onTapped: root.back()
-                }
-                MouseArea {
-                    id: backMouse
-
-                    anchors.fill: parent
-                    enabled: parent.usable
-                    onClicked: root.back()
                 }
             }
             Text {
@@ -577,10 +570,6 @@ Item {
                 gesturePolicy: TapHandler.ReleaseWithinBounds
                 onTapped: root.streaming = !root.streaming
             }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.streaming = !root.streaming
-            }
         }
     }
 
@@ -624,7 +613,7 @@ Item {
                             readonly property bool active: root.activeSection === index
                             readonly property bool atCursor: libraryControl.sidebarFocused && !root.showLevel && root.cursor === index
 
-                            color: active ? "#3a3c40" : (sectionMouse.pressed ? "#2a2c30" : "transparent")
+                            color: active ? "#3a3c40" : "transparent"
                             height: sectionColumn.buttonHeight
                             width: sectionColumn.width
 
@@ -674,12 +663,6 @@ Item {
                                 gesturePolicy: TapHandler.ReleaseWithinBounds
                                 onTapped: root.openSection(section.index)
                             }
-                            MouseArea {
-                                id: sectionMouse
-
-                                anchors.fill: parent
-                                onClicked: root.openSection(section.index)
-                            }
                         }
                     }
                 }
@@ -713,7 +696,7 @@ Item {
 
                 // The tracks of the entry itself, e.g. all of a drive
                 header: Rectangle {
-                    color: root.cursor === -1 ? "#1e5fb4" : (allMouse.pressed ? "#2a2c30" : "#16181b")
+                    color: root.cursor === -1 ? "#1e5fb4" : "#16181b"
                     height: root.levelHasAll ? (root.compact ? 40 : 46) : 0
                     visible: root.levelHasAll
                     width: ListView.view.width
@@ -730,12 +713,6 @@ Item {
                         gesturePolicy: TapHandler.ReleaseWithinBounds
                         onTapped: root.openAllTracks()
                     }
-                    MouseArea {
-                        id: allMouse
-
-                        anchors.fill: parent
-                        onClicked: root.openAllTracks()
-                    }
                 }
                 model: DelegateModel {
                     id: levelEntries
@@ -750,7 +727,7 @@ Item {
                         required property var model
                         required property bool hasModelChildren
 
-                        color: root.cursor === index ? "#1e5fb4" : (entryMouse.pressed ? "#2a2c30" : (index % 2 === 0 ? "#0c0d0f" : "#16181b"))
+                        color: root.cursor === index ? "#1e5fb4" : (index % 2 === 0 ? "#0c0d0f" : "#16181b")
                         height: root.compact ? 40 : 46
                         width: ListView.view.width
 
@@ -777,15 +754,6 @@ Item {
                         TapHandler {
                             gesturePolicy: TapHandler.ReleaseWithinBounds
                             onTapped: {
-                            root.cursor = entry.index;
-                            root.openEntry(entry.index);
-                            }
-                        }
-                        MouseArea {
-                            id: entryMouse
-
-                            anchors.fill: parent
-                            onClicked: {
                                 root.cursor = entry.index;
                                 root.openEntry(entry.index);
                             }
