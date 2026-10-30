@@ -486,6 +486,8 @@ Item {
         id: content
 
         readonly property int gap: 3
+        // Camera-hole inset in landscape: a fixed margin keeps the top
+        // bar clear of it (QtQuick 2.12 exposes no safe-area property).
 
         anchors.fill: parent
         enabled: !settingsPopup.opened
@@ -497,7 +499,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 4
             anchors.top: parent.top
-            anchors.topMargin: 3
+            anchors.topMargin: (root.applicationWindow.isMobile ? 28 : 0) + 3
             height: root.compact ? 26 : 34
             spacing: root.width < 760 ? 3 : 6
 

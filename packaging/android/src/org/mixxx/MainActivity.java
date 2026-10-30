@@ -47,12 +47,12 @@ public class MainActivity extends QtActivityBase {
         }
 
         // ─── Fullscreen and notch handling ───────────────────────────────
-        // Matches JaviLabarumDJ/mixxx-android android-stable: never draw
-        // over the display cutout (its camera-hole region would otherwise
-        // shift the window geometry vs his build, changing which tab-size
-        // branch the skins take), hide only the navigation bar.
+        // Draw edge to edge including the cutout area: the S918B camera
+        // hole would otherwise leave a black band and shift the skin
+        // geometry. LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS lets the Qt
+        // surface extend into the cutout; the skin keeps its own margins.
         WindowManager.LayoutParams lp = this.getWindow().getAttributes();
-        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
         this.getWindow().setAttributes(lp);
 
         WindowInsetsControllerCompat windowInsetsController =
