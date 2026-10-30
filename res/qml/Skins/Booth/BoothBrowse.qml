@@ -376,12 +376,14 @@ Item {
     // the app on BROWSE. Runs once the browser is actually shown.
     property bool initDone: false
     onVisibleChanged: {
+        console.log("BoothBrowse visible:", root.visible);
         if (root.visible && !root.initDone) {
             root.initDone = true;
             // Deferred past first paint, and through open() so a USB
             // drive at [0] without all-files access shows the grant popup
             // instead of hanging the UI thread in the scan.
-            Qt.callLater(function() { root.open([0]); });
+            console.log("BoothBrowse first show, opening source 0");
+            Qt.callLater(function() { console.log("BoothBrowse open([0]) running"); root.open([0]); });
         }
     }
 

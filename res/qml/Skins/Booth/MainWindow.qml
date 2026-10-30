@@ -97,6 +97,7 @@ Item {
 
     // The deck loader of the Classic skin is the browser here
     function openQuickLoad(group) {
+        console.log("Booth openQuickLoad:", group);
         root.loadTarget = (group && group.length > 0) ? group : "[Channel1]";
         root.viewMode = 2;
     }
@@ -299,13 +300,13 @@ Item {
             id: tabTap
 
             gesturePolicy: TapHandler.ReleaseWithinBounds
-            onTapped: tab.clicked()
+            onTapped: { console.log("Booth tab tapped:", tab.label); tab.clicked(); }
         }
         MouseArea {
             id: tabMouse
 
             anchors.fill: parent
-            onClicked: tab.clicked()
+            onClicked: { console.log("Booth tab clicked:", tab.label); tab.clicked(); }
         }
     }
     // Left of a waveform: deck, key, bars left, quantize and slip
@@ -710,6 +711,8 @@ Item {
                 active: keepLoaded || root.browsing
                 visible: root.browsing
                 onLoaded: keepLoaded = true
+                // Debug: trace whether the tap reaches the view switch
+                onActiveChanged: console.log("Booth library Loader active:", active)
 
                 sourceComponent: Component {
                     BoothBrowse {
