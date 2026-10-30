@@ -104,7 +104,7 @@ ColumnLayout {
 
                 Layout.fillWidth: true
                 activeColor: modelData.currentValue
-                text: "Change color"
+                text: qsTr("Change color")
 
                 onPressed: {
                     colorDialog.open();
@@ -124,7 +124,7 @@ ColumnLayout {
                     id: colorDialog
 
                     selectedColor: modelData.currentValue
-                    title: "Please choose a color"
+                    title: qsTr("Please choose a color")
 
                     onAccepted: {
                         modelData.currentValue = selectedColor;
@@ -260,12 +260,12 @@ ColumnLayout {
                     color: Theme.white
                     elide: Text.ElideLeft
                     font.italic: !modelData.currentValue
-                    text: modelData.currentValue ? modelData.currentValue : "No file selected"
+                    text: modelData.currentValue ? modelData.currentValue : qsTr("No file selected")
                 }
                 Skin.FormButton {
                     Layout.minimumWidth: 100
                     activeColor: modelData.currentValue
-                    text: "Select file"
+                    text: qsTr("Select file")
 
                     onPressed: {
                         fileDialog.open();
@@ -289,7 +289,7 @@ ColumnLayout {
                 required property var modelData
 
                 Layout.fillWidth: true
-                text: `Unsupported setting of type ${modelData.type}`
+                text: qsTr("Unsupported setting of type %1").arg(modelData.type)
             }
         }
     }

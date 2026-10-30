@@ -14,10 +14,16 @@
 #include <QPushButton>
 #endif
 
+#include "control/controlobject.h"
+#include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
 #include "controllers/controllermanager.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
+#include "effects/effectsmanager.h"
+#include "library/trackcollectionmanager.h"
 #include "mixer/playermanager.h"
+#include "mixer/previewdeck.h"
+#include "mixer/sampler.h"
 #include "moc_qmlapplication.cpp"
 #include "preferences/configobject.h"
 #include "qml/asyncimageprovider.h"
@@ -25,6 +31,9 @@
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmlcoreservices.h"
 #include "qml/qmldlgpreferencesproxy.h"
+#include "qml/qmllanguageproxy.h"
+#include "qml/qmlrecordingproxy.h"
+#include "recording/recordingmanager.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
@@ -35,10 +44,17 @@
 #include <android/api-level.h>
 #include <android/log.h>
 #include <android/performance_hint.h>
+#include <dlfcn.h>
 
 #include <QDir>
 #include <QFile>
 #include <QJniObject>
+#include <QSemaphore>
+#include <QThread>
+
+#include "controllers/android.h"
+#include "mixer/basetrackplayer.h"
+#include "util/androidpermissions.h"
 #endif
 
 Q_IMPORT_QML_PLUGIN(MixxxPlugin)
@@ -64,6 +80,22 @@ auto lambda_to_singleton_type_factory_ptr(F&& f) {
     };
 }
 #if defined(Q_OS_ANDROID)
+// dlsym typedefs for ADPF (Android 12+). Statically linking the symbols
+// breaks startup on Android 10/11; resolve dynamically instead so the
+// symbols are simply absent there (from JaviLabarumDJ/mixxx-android).
+using PFN_APerformanceHint_getManager = APerformanceHintManager* (*)();
+using PFN_APerformanceHint_createSession =
+        APerformanceHintSession* (*)(APerformanceHintManager*,
+                const int32_t*,
+                size_t,
+                int64_t);
+using PFN_APerformanceHint_setPreferPowerEfficiency = int (*)(
+        APerformanceHintSession*, bool);
+using PFN_APerformanceHint_reportActualWorkDuration = int (*)(
+        APerformanceHintSession*, int64_t);
+
+static PFN_APerformanceHint_reportActualWorkDuration s_pfnReportActualWorkDuration = nullptr;
+
 // Directories under res/qml/ that are compiled into the binary as QML modules
 // and should not be copied to external storage.
 const QStringList kSkipQmlDirs = {
@@ -71,13 +103,7 @@ const QStringList kSkipQmlDirs = {
 };
 
 bool canWriteToExternalStorage() {
-    // API 30+ (Android 11+) requires MANAGE_EXTERNAL_STORAGE.
-    // Older: WRITE_EXTERNAL_STORAGE is granted at install time.
-    if (android_get_device_api_level() >= 30) {
-        return QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-    }
-    return true;
+    return mixxx::android::hasFullExternalStorageAccess();
 }
 
 void copyAssetDir(const QString& src, const QString& dst) {
@@ -99,6 +125,75 @@ void copyAssetDir(const QString& src, const QString& dst) {
             continue;
         }
         copyAssetDir(src + '/' + dir, dst + '/' + dir);
+    }
+}
+#endif
+#if defined(Q_OS_ANDROID)
+// Within the time MainActivity waits for the closing app to save, see
+// kSaveBeforeExitTimeoutMillis in controllers/android.cpp (from
+// JaviLabarumDJ/mixxx-android android-stable).
+constexpr unsigned long kRecordingCloseMillis = 400;
+constexpr int kControllerShutdownMillis = 1500;
+
+/// Android may end Mixxx without a regular shutdown: in the background, and
+/// when the app is closed. Saves the configuration, the effects and the
+/// tracks that are loaded, whose changes (cues, beatgrid) are otherwise only
+/// saved when they are unloaded.
+void saveForAndroid(const std::shared_ptr<mixxx::CoreServices>& pCoreServices) {
+    pCoreServices->getSettings()->save();
+    if (auto pEffectsManager = pCoreServices->getEffectsManager()) {
+        pEffectsManager->saveEffectsXml();
+    }
+    const auto pPlayerManager = pCoreServices->getPlayerManager();
+    const auto pTrackCollectionManager = pCoreServices->getTrackCollectionManager();
+    if (!pPlayerManager || !pTrackCollectionManager) {
+        return;
+    }
+    const auto save = [&](BaseTrackPlayer* pPlayer) {
+        if (!pPlayer) {
+            return;
+        }
+        if (const TrackPointer pTrack = pPlayer->getLoadedTrack()) {
+            pTrackCollectionManager->saveTrack(pTrack);
+        }
+    };
+    for (int i = 0; i < pPlayerManager->numberOfDecks(); ++i) {
+        save(pPlayerManager->getDeckBase(i));
+    }
+    for (int i = 0; i < pPlayerManager->numberOfSamplers(); ++i) {
+        save(pPlayerManager->getSampler(i));
+    }
+    for (int i = 0; i < pPlayerManager->numberOfPreviewDecks(); ++i) {
+        save(pPlayerManager->getPreviewDeck(i));
+    }
+}
+
+/// Finishes the open business of Mixxx before the process is torn down, and
+/// does what the regular shutdown of Mixxx would: finishes a recording so its
+/// file stays playable, and runs the shutdown of the controller mappings,
+/// which turns off their lights.
+void shutDownForAndroid(const std::shared_ptr<mixxx::CoreServices>& pCoreServices) {
+    if (const auto pRecordingManager = pCoreServices->getRecordingManager();
+            pRecordingManager && pRecordingManager->isRecordingActive()) {
+        qInfo() << "Finishing the recording, Mixxx is closed";
+        pRecordingManager->slotSetRecording(false);
+        // The recording thread closes the file on its next round
+        QThread::msleep(kRecordingCloseMillis);
+    }
+    if (const auto pControllerManager = pCoreServices->getControllerManager()) {
+        auto pDone = std::make_shared<QSemaphore>();
+        QMetaObject::invokeMethod(
+                pControllerManager.get(),
+                [pControllerManager, pDone]() {
+                    // On the thread of the controllers the shutdown runs at
+                    // once, like when Mixxx quits
+                    emit pControllerManager->requestShutdown();
+                    pDone->release();
+                },
+                Qt::QueuedConnection);
+        if (!pDone->tryAcquire(1, kControllerShutdownMillis)) {
+            qWarning() << "Shutting the controllers down timed out";
+        }
     }
 }
 #endif
@@ -138,6 +233,10 @@ QmlApplication::QmlApplication(
 #if defined(Q_OS_ANDROID)
     if (canWriteToExternalStorage()) {
         const QString externalQmlDir = QStringLiteral("/storage/emulated/0/Mixxx/qml");
+        // Files of other versions would still be loaded (e.g. +android file
+        // selector folders), so start from an empty folder
+        // (from JaviLabarumDJ/mixxx-android android-stable).
+        QDir(externalQmlDir).removeRecursively();
         copyAssetDir(QStringLiteral("assets:/qml"), externalQmlDir);
         m_mainFilePath = externalQmlDir + QStringLiteral("/main.qml");
     }
@@ -161,6 +260,12 @@ QmlApplication::QmlApplication(
             overviewTypeKey,
             mixxx::OverviewType::RGB);
     m_pWaveformOverviewType->forceSet(static_cast<double>(overviewType));
+
+    // Legacy skins auto-create [Skin] controls; QML ControlProxy does not.
+    m_pShowIntroOutroCues = std::make_unique<ControlObject>(
+            ConfigKey(QStringLiteral("[Skin]"),
+                    QStringLiteral("show_intro_outro_cues")));
+    m_pShowIntroOutroCues->set(1.0);
 
     m_loadSucceeded = loadQml(m_mainFilePath);
     if (!m_loadSucceeded) {
@@ -307,6 +412,29 @@ QmlApplication::QmlApplication(
     });
     m_guiTickTimer.start(std::chrono::milliseconds(16));
 
+#if defined(Q_OS_ANDROID)
+    // Android kills apps in the background without a regular shutdown, so
+    // save whenever Mixxx leaves the foreground, and when the app is closed
+    // (from JaviLabarumDJ/mixxx-android android-stable).
+    connect(app,
+            &QGuiApplication::applicationStateChanged,
+            this,
+            [this](Qt::ApplicationState state) {
+                if (state != Qt::ApplicationSuspended &&
+                        state != Qt::ApplicationHidden) {
+                    return;
+                }
+                qInfo() << "Saving settings and loaded tracks, Mixxx went to "
+                           "the background";
+                saveForAndroid(m_pCoreServices);
+            });
+    mixxx::android::setSaveBeforeExit([this]() {
+        qInfo() << "Saving settings and loaded tracks, Mixxx is closed";
+        saveForAndroid(m_pCoreServices);
+        shutDownForAndroid(m_pCoreServices);
+    });
+#endif
+
     m_pCoreServices->getControllerManager()->setUpDevices();
 
     QmlCoreServices::instance()->setInitializationProgress(65, tr("skin"));
@@ -323,18 +451,33 @@ QmlApplication::QmlApplication(
             });
 
 #if defined(Q_OS_ANDROID)
-    APerformanceHintManager* manager = APerformanceHint_getManager();
-    VERIFY_OR_DEBUG_ASSERT(manager) {
-        return;
-    }
-    int32_t thread32 = gettid();
-    m_perfSession = APerformanceHint_createSession(manager, &thread32, 1, 1e9 / 60);
-    VERIFY_OR_DEBUG_ASSERT(m_perfSession) {
-        __android_log_print(ANDROID_LOG_WARN, "mixxx", "unable to create a ADPF session!");
-    }
-    else {
-        APerformanceHint_setPreferPowerEfficiency(m_perfSession, false);
-        __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "ADPF session ready");
+    // Resolve ADPF symbols dynamically: statically linking them crashes
+    // startup on Android 10/11 where they don't exist.
+    auto pfnGetManager = reinterpret_cast<PFN_APerformanceHint_getManager>(
+            dlsym(RTLD_DEFAULT, "APerformanceHint_getManager"));
+    auto pfnCreateSession = reinterpret_cast<PFN_APerformanceHint_createSession>(
+            dlsym(RTLD_DEFAULT, "APerformanceHint_createSession"));
+    auto pfnSetPreferPowerEfficiency =
+            reinterpret_cast<PFN_APerformanceHint_setPreferPowerEfficiency>(
+                    dlsym(RTLD_DEFAULT, "APerformanceHint_setPreferPowerEfficiency"));
+    s_pfnReportActualWorkDuration =
+            reinterpret_cast<PFN_APerformanceHint_reportActualWorkDuration>(
+                    dlsym(RTLD_DEFAULT, "APerformanceHint_reportActualWorkDuration"));
+
+    if (pfnGetManager && pfnCreateSession) {
+        APerformanceHintManager* manager = pfnGetManager();
+        if (manager) {
+            int32_t thread32 = gettid();
+            m_perfSession = pfnCreateSession(manager, &thread32, 1, 1e9 / 60);
+            if (m_perfSession) {
+                if (pfnSetPreferPowerEfficiency) {
+                    pfnSetPreferPowerEfficiency(m_perfSession, false);
+                }
+                __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "ADPF session ready");
+            } else {
+                __android_log_print(ANDROID_LOG_WARN, "mixxx", "unable to create a ADPF session!");
+            }
+        }
     }
 #endif
 }
@@ -360,18 +503,19 @@ void QmlApplication::slotFrameSwapped() {
     }
 #endif
 #if defined(Q_OS_ANDROID)
-    VERIFY_OR_DEBUG_ASSERT(m_perfSession) {
-        return;
+    if (m_perfSession && s_pfnReportActualWorkDuration) {
+        auto lastFrameDurationNs = m_frameTimer.elapsed().toIntegerNanos();
+        s_pfnReportActualWorkDuration(m_perfSession,
+                lastFrameDurationNs);
+        m_frameTimer.restart();
     }
-    auto lastFrameDurationNs = m_frameTimer.elapsed().toIntegerNanos();
-    auto t = std::chrono::steady_clock::now() - std::chrono::steady_clock::time_point{};
-    APerformanceHint_reportActualWorkDuration(m_perfSession,
-            lastFrameDurationNs);
-    m_frameTimer.restart();
 #endif
 }
 
 QmlApplication::~QmlApplication() {
+#if defined(Q_OS_ANDROID)
+    mixxx::android::setSaveBeforeExit({});
+#endif
     QmlApplicationProxy::registerReloadCallback({});
     // Destroy the QML engine before the waveform factory. Scene-graph nodes
     // owned by the engine may still reference QML waveform renderers and the

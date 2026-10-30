@@ -167,6 +167,8 @@ class QmlControllerMappingProxy : public QObject {
 
 class QmlControllerDeviceProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerDevice)
+    QML_UNCREATABLE("Use Mixxx.ControllerManager to get devices")
     Q_PROPERTY(mixxx::qml::QmlControllerDeviceProxy::Type type READ getType CONSTANT)
     Q_PROPERTY(QString name READ getName CONSTANT)
     Q_PROPERTY(mixxx::qml::QmlControllerMappingProxy* mapping READ getMapping WRITE setMapping NOTIFY mappingChanged)
@@ -208,6 +210,10 @@ class QmlControllerDeviceProxy : public QObject {
     Q_INVOKABLE bool save(const mixxx::qml::QmlConfigProxy* pConfig);
     Q_INVOKABLE void clear();
 
+    Controller* internal() const {
+        return m_pInternal;
+    }
+
     std::shared_ptr<LegacyControllerMapping> instanceFor(const QString& mappingPath) const;
     void setInstanceFor(const QString& mappingPath, std::shared_ptr<LegacyControllerMapping> pMapping);
 
@@ -242,8 +248,11 @@ using QmlControllerMappingProxyList = QList<QmlControllerMappingProxy*>;
 
 class QmlControllerManagerProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerManager)
+    QML_SINGLETON
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> knownDevices READ knownDevices NOTIFY deviceListChanged)
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> unknownDevices READ unknownDevices NOTIFY deviceListChanged)
+    Q_PROPERTY(bool showControllerScreen MEMBER s_controllerPreviewScreens CONSTANT)
     Q_PROPERTY(bool controllerScreenDebug READ isControllerScreenDebug CONSTANT)
   public:
     QmlControllerManagerProxy(std::shared_ptr<ControllerManager> pControllerManager, QObject* parent = nullptr);
@@ -265,6 +274,11 @@ class QmlControllerManagerProxy : public QObject {
 
   public slots:
     void refreshKnownDevices();
+    Q_INVOKABLE void rescan();
+    Q_INVOKABLE mixxx::qml::QmlControllerMappingProxyList mappings(
+            mixxx::qml::QmlControllerDeviceProxy::Type type) const {
+        return m_knownMappings.value(type);
+    }
     void refreshMappings();
     void loadNewMapping(mixxx::qml::QmlControllerDeviceProxy::Type type, const MappingInfo& mapping);
     void updateExistingMapping(mixxx::qml::QmlControllerMappingProxy* pMapping, const MappingInfo& mapping);

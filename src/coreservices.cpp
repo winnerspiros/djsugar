@@ -49,12 +49,18 @@
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmleffectsmanagerproxy.h"
 #include "qml/qmllibraryproxy.h"
+#include "qml/qmlmobilesingletons.h"
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
+#include "qml/qmlyoutubeproxy.h"
 #endif
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
+#ifdef Q_OS_ANDROID
+#include "util/androidcrashreport.h"
+#include "util/androidpermissions.h"
+#endif
 #include "util/clipboard.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/font.h"
@@ -93,7 +99,14 @@ namespace {
 const mixxx::Logger kLogger("CoreServices");
 constexpr int kMicrophoneCount = 4;
 constexpr int kAuxiliaryCount = 4;
+#ifdef Q_OS_ANDROID
+// Mappings like the DDJ-400 one ask for 16 samplers when they start. They
+// are created here, on the main thread, so controllers don't have to.
+// (from JaviLabarumDJ/mixxx-android)
+constexpr int kSamplerCount = 16;
+#else
 constexpr int kSamplerCount = 4;
+#endif
 
 #define CLEAR_AND_CHECK_DELETED(x) clearHelper(x, #x);
 
@@ -482,6 +495,10 @@ void CoreServices::initializeLogging() {
             m_cmdlineArgs.getLogLevel(),
             m_cmdlineArgs.getLogFlushLevel(),
             logFlags);
+#ifdef Q_OS_ANDROID
+    mixxx::android::installCrashReporter();
+    mixxx::android::exportPreviousLog(m_pSettingsManager->settings()->getSettingsPath());
+#endif
 }
 
 void CoreServices::initialize(QGuiApplication* pApp) {
@@ -497,6 +514,16 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     }
 
     VersionStore::logBuildDetails();
+
+// NOTE: no C++ permission request here. MainActivity already requests the
+// media permission in onCreate (Java) before CoreServices runs; a second
+// blocking Qt request here raced it and hung startup after the grant dialog.
+#if defined(Q_OS_ANDROID) && 0
+    // Ask for collection access on every start: the user may have revoked the
+    // permission in the system settings since the last run, and without it the
+    // library scan finds nothing at all. (from JaviLabarumDJ/mixxx-android)
+    mixxx::android::requestMusicLibraryPermissions();
+#endif
 
 #if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     // XESetWireToError will segfault if running as a Wayland client
@@ -597,10 +624,6 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     m_pPlayerManager->addConfiguredDecks();
 
-#ifdef Q_OS_ANDROID
-    // Snap analysis cues to nearest beat on load for Android
-    mixxx::android::snapAutoCuesOnLoad(m_pPlayerManager.get());
-#endif
 
     for (int i = 0; i < kSamplerCount; ++i) {
         m_pPlayerManager->addSampler();
@@ -659,6 +682,13 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     // the uninitialized singleton instance!
     m_pPlayerManager->bindToLibrary(m_pLibrary.get());
 
+    // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
+    // (from JaviLabarumDJ/mixxx-android). Must run after the Library and the
+    // TrackCollectionManager exist (applyRekordboxDataOnLoad dereferences both).
+#ifdef __ANDROID__
+    mixxx::qml::registerMobileQmlSingletons(this);
+#endif
+
     bool musicDirAdded = false;
 
     if (m_pTrackCollectionManager->internalCollection()->loadRootDirs().isEmpty()) {
@@ -676,72 +706,11 @@ void CoreServices::initialize(QGuiApplication* pApp) {
             dir.mkpath(".");
         }
 #elif defined(Q_OS_ANDROID)
-        jboolean hasAllFilesAccess = QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-        if (hasAllFilesAccess) {
-            qDebug() << "Got ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION";
-        } else {
-            // Do NOT open the system Settings activity — the user explicitly
-            // does not want the app to "open a browser view". Instead, log a
-            // message and work with whatever storage is already accessible.
-            qInfo() << "MANAGE_EXTERNAL_STORAGE not granted; scanning "
-                       "app-internal music folder and any readable external "
-                       "storage. Grant the permission manually via Android "
-                       "Settings > Apps > Mixxx > Permissions if you want the "
-                       "full device scan.";
-        }
-
-        // Build the list of directories to scan. Always include the app's
-        // own internal music folder (data/data/org.mixxx.Mixxx/files/music)
-        // as a guaranteed-accessible fallback — the user confirmed they can
-        // see and place files there.
-        QStringList androidRoots;
-
-        // 1. App-internal music folder — always accessible, no permission
-        //    needed. This is where the user can drop songs via a file manager
-        //    and where YouTube downloads are cached.
-        const QString appMusicDir =
-                QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-        if (!appMusicDir.isEmpty()) {
-            QDir appMusicQDir(appMusicDir);
-            if (!appMusicQDir.exists()) {
-                appMusicQDir.mkpath(QStringLiteral("."));
-            }
-            androidRoots.append(appMusicDir);
-        }
-
-        // 2. If we have broad storage access, also scan external volumes.
-        if (hasAllFilesAccess) {
-            const QString primaryStorage = QStringLiteral("/storage/emulated/0");
-            if (QFileInfo::exists(primaryStorage) &&
-                    !androidRoots.contains(primaryStorage)) {
-                androidRoots.append(primaryStorage);
-            }
-            const QDir storageDir(QStringLiteral("/storage"));
-            const QStringList volumes = storageDir.entryList(
-                    QDir::Dirs | QDir::NoDotAndDotDot);
-            for (const QString& vol : volumes) {
-                if (vol == QStringLiteral("emulated") ||
-                        vol == QStringLiteral("self")) {
-                    continue;
-                }
-                const QString volPath = storageDir.absoluteFilePath(vol);
-                const QFileInfo volInfo(volPath);
-                if (volInfo.isDir() && volInfo.isReadable() &&
-                        !androidRoots.contains(volPath)) {
-                    androidRoots.append(volPath);
-                }
-            }
-        }
-
-        qInfo() << "Android library bootstrap: candidate storage roots ="
-                << androidRoots;
-        for (const QString& root : androidRoots) {
-            if (m_pLibrary->requestAddDir(root, /*silent=*/true)) {
-                qInfo() << "Android library bootstrap: registered root" << root;
-                musicDirAdded = true;
-            }
-        }
+        // "All files access" is what allows Mixxx to browse directories
+        // outside of the media store. It is optional: if the user declines,
+        // the default music directory below is still readable.
+        mixxx::android::requestFullExternalStorageAccess();
+        QString fd = mixxx::android::defaultMusicDirectory();
 #else
         // TODO(XXX) this needs to be smarter, we can't distinguish between an empty
         // path return value (not sure if this is normally possible, but it is
@@ -936,6 +905,11 @@ void CoreServices::initializeQMLSingletons() {
     mixxx::qml::QmlControllerManagerProxy::registerManager(
             getControllerManager(),
             CmdlineArgs::Instance().getControllerPreviewScreens());
+    // Android-UI singletons (Booth skin + streaming + YouTube bridge,
+    // from JaviLabarumDJ/mixxx-android).
+    mixxx::qml::registerMobileQmlSingletons(this);
+    mixxx::qml::QmlYouTubeProxy::registerLibrary(getLibrary().get());
+    mixxx::qml::QmlYouTubeProxy::registerPlayerManager(getPlayerManager());
 
     ControllerScriptEngineBase::registerTrackCollectionManager(getTrackCollectionManager());
 
@@ -1046,6 +1020,9 @@ void CoreServices::finalize() {
     mixxx::qml::QmlLibraryProxy::registerKeyboardEventFilter(nullptr);
     mixxx::qml::QmlSoundManagerProxy::registerManager(nullptr);
     mixxx::qml::QmlControllerManagerProxy::registerManager(nullptr);
+    // Release the mobile singletons (they hold shared ownership of core
+    // objects, which must be destroyed here in order)
+    mixxx::qml::unregisterMobileQmlSingletons();
 
     ControllerScriptEngineBase::registerTrackCollectionManager(nullptr);
 #endif

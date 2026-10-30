@@ -24,6 +24,9 @@
 #include "library/libraryfeature.h"
 #include "library/mixxxlibraryfeature.h"
 #include "library/recording/recordingfeature.h"
+#ifdef __ENGINEPRIME__
+#include "library/enginedj/enginedjfeature.h"
+#endif
 #include "library/rekordbox/rekordboxfeature.h"
 #include "library/rhythmbox/rhythmboxfeature.h"
 #include "library/samples/samplesfeature.h"
@@ -243,6 +246,13 @@ Library::Library(
                 ConfigKey(kConfigGroup, "ShowSeratoLibrary"), true)) {
         addFeature(new SeratoFeature(this, m_pConfig));
     }
+
+#ifdef __ENGINEPRIME__
+    if (m_pConfig->getValue(
+                ConfigKey(kConfigGroup, "ShowEngineDJLibrary"), true)) {
+        addFeature(new EngineDJFeature(this, m_pConfig));
+    }
+#endif
 
     for (const auto& externalTrackCollection : m_pTrackCollectionManager->externalCollections()) {
         auto* feature = externalTrackCollection->newLibraryFeature(this, m_pConfig);

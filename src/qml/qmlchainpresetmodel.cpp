@@ -7,6 +7,9 @@
 #include "effects/presets/effectchainpreset.h"
 #include "effects/presets/effectpreset.h"
 #include "moc_qmlchainpresetmodel.cpp"
+#ifdef Q_OS_ANDROID
+#include "qml/androidpresetnames.h"
+#endif
 
 namespace mixxx {
 namespace qml {
@@ -60,6 +63,11 @@ QVariant QmlChainPresetModel::data(const QModelIndex& index, int role) const {
     case Qt::DisplayRole:
     case NameRole:
     case PresetDisplayRole:
+#ifdef Q_OS_ANDROID
+        if (role != NameRole) {
+            return mixxx::android::presetDisplayName(pPreset, m_pEffectsManager.get());
+        }
+#endif
         return pPreset->name();
     case ReadOnlyRole:
         return pPreset->isReadOnly();

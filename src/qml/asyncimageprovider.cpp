@@ -2,6 +2,9 @@
 
 #include "library/coverartcache.h"
 #include "moc_asyncimageprovider.cpp"
+#ifdef Q_OS_ANDROID
+#include "qml/librarycoverloader.h"
+#endif
 #include "track/track.h"
 
 namespace {
@@ -29,10 +32,17 @@ QQuickTextureFactory* AsyncImageResponse::textureFactory() const {
 void AsyncImageResponse::run() {
     if (!m_id.startsWith(kCoverArtPrefix)) {
         qWarning() << "ImageProvider: Unsupported ID" << m_id;
-        Q_EMIT finished();
+        emit finished();
         return;
     }
     const QString trackLocation = AsyncImageProvider::coverArtUrlIdToTrackLocation(m_id);
+#ifdef Q_OS_ANDROID
+    // Loading the whole track would block the main thread
+    if (mixxx::qml::loadLibraryCover(m_id, trackLocation, m_requestedSize, &m_image)) {
+        emit finished();
+        return;
+    }
+#endif
     const auto trackRef = TrackRef::fromFilePath(trackLocation);
 
     // TODO: Only load CoverInfo from TrackCollectionManager
@@ -52,7 +62,7 @@ void AsyncImageResponse::run() {
     }
     if (!pTrack) {
         qWarning() << "ImageProvider: Failed to load track" << trackRef;
-        Q_EMIT finished();
+        emit finished();
         return;
     }
     const auto coverInfo = CoverInfo(pTrack->getCoverInfo(), trackLocation);
@@ -76,7 +86,7 @@ void AsyncImageResponse::run() {
         break;
     }
 
-    Q_EMIT finished();
+    emit finished();
 }
 
 AsyncImageProvider::AsyncImageProvider(

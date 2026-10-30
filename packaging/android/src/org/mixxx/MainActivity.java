@@ -1,8 +1,12 @@
 package org.mixxx;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,11 +14,12 @@ import android.os.Environment;
 import android.os.Process;
 import android.provider.Settings;
 import android.view.KeyEvent;
-import android.view.MotionEvent;
-import android.view.View;
 import android.view.WindowManager;
-import org.qtproject.qt.android.QtActivityBase;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import org.mixxx.youtube.PoTokenManager;
+import org.qtproject.qt.android.QtActivityBase;
 
 public class MainActivity extends QtActivityBase {
     private static final int MEDIA_PERMISSION_REQUEST = 1001;
@@ -41,10 +46,20 @@ public class MainActivity extends QtActivityBase {
             getWindow().setPreferMinimalPostProcessing(true);
         }
 
-        // ─── Fullscreen and notch handling (API-level-aware) ────────────
-        // Replaces inline cutout/inset code with a dedicated helper that handles
-        // all Android API levels correctly (API 35+, 30-34, 28-29, <28).
-        AndroidScreenManager.applyFullScreen(this);
+        // ─── Fullscreen and notch handling ───────────────────────────────
+        // Draw edge to edge including the cutout area: the S918B camera
+        // hole would otherwise leave a black band and shift the skin
+        // geometry. LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS lets the Qt
+        // surface extend into the cutout; the skin keeps its own margins.
+        WindowManager.LayoutParams lp = this.getWindow().getAttributes();
+        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        this.getWindow().setAttributes(lp);
+
+        WindowInsetsControllerCompat windowInsetsController =
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.setSystemBarsBehavior(
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars());
 
         // ─── Input performance: elevate the UI thread priority ───────────
         // The main thread handles input events and UI rendering; a higher
@@ -52,21 +67,18 @@ public class MainActivity extends QtActivityBase {
         // reach the Qt event loop faster.
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY);
 
-        // ─── Pointer / mouse performance: request pointer capture when
-        // a physical pointer device (mouse, trackpad) is connected. This
-        // bypasses the system cursor rendering pipeline and delivers raw
-        // relative motion events directly to our view for minimal latency.
-        final View decorView = getWindow().getDecorView();
-        decorView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
-            @Override
-            public boolean onCapturedPointer(View view, MotionEvent event) {
-                // Forward captured pointer events to Qt's input pipeline.
-                // Returning false lets the event continue to Qt.
-                return false;
-            }
-        });
-
         requestMusicLibraryPermissions();
+
+        // USB/MIDI hotplug: USB_DEVICE_ATTACHED only reaches the activity via
+        // onNewIntent, but DETACHED needs a receiver. Either way, ask the
+        // native ControllerManager to rescan (from JaviLabarumDJ/mixxx-android
+        // android-stable).
+        IntentFilter usbFilter = new IntentFilter();
+        usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_NOT_EXPORTED);
+
+        MidiHelper.init(this);
 
         // Background audio: PlaybackService is lazy-started from native on
         // first deck play (EngineBuffer slotControlPlayRequest) — not here.
@@ -180,20 +192,20 @@ public class MainActivity extends QtActivityBase {
         requestAllFilesAccessIfNeeded();
     }
 
-    // ─── Background audio survival (AI-agent change, needs human review) ──
-    // The mix engine must NOT pause here: backgrounding the app is exactly
-    // the case PlaybackService protects. Re-assert the service so a system
-    // restart of our process re-establishes foreground priority.
+    // ─── Background audio survival ──────────────────────────────────────
+    // Javi's fork (which works on the same devices) has no background
+    // service: auto-starting a foreground service on every onPause wedged
+    // relaunches (stuck splash — the old process never dies). Do not
+    // re-add PlaybackService.start() here without a real playing-state
+    // gate and a matching stop path.
     @Override
     protected void onPause() {
         super.onPause();
-        PlaybackService.start(this);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        PlaybackService.start(this);
     }
 
     // Stop the service only on explicit user quit. The Qt activity teardown
@@ -202,10 +214,35 @@ public class MainActivity extends QtActivityBase {
     // change never kills background playback.
     @Override
     protected void onDestroy() {
+        try {
+            unregisterReceiver(mUsbHotplugReceiver);
+        } catch (IllegalArgumentException e) {
+            // Receiver was not registered
+        }
         if (isFinishing()) {
             PlaybackService.stop(this);
         }
         super.onDestroy();
+    }
+
+    // USB/MIDI hotplug receiver + exit-save hook (from
+    // JaviLabarumDJ/mixxx-android android-stable).
+    private final BroadcastReceiver mUsbHotplugReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            UsbPermission.notifyDevicesChanged();
+        }
+    };
+
+    private static native void saveBeforeExit();
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {
+            UsbPermission.notifyDevicesChanged();
+        }
     }
 
     private void requestAllFilesAccessIfNeeded() {
@@ -246,36 +283,6 @@ public class MainActivity extends QtActivityBase {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-
-        // ─── Fullscreen: re-apply after window is ready ────────────────
-        // On Samsung One UI, WindowInsetsController may not be available
-        // during onCreate() — the window isn't fully attached yet.
-        // Re-applying here ensures system bars are hidden and the notch
-        // cutout mode is set once the window is composited.
-        if (hasFocus) {
-            AndroidScreenManager.applyFullScreen(this);
-        }
-
-        View decorView = getWindow().getDecorView();
-        if (hasFocus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            decorView.requestPointerCapture();
-        } else if (!hasFocus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            decorView.releasePointerCapture();
-        }
     }
 
-    // ─── Touch event handling: pass directly with no interception ────────
-    // Override dispatchTouchEvent to avoid any framework interception layers
-    // (e.g. gesture navigation edge zones). Every touch event reaches Qt's
-    // event loop as fast as possible.
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        return super.dispatchTouchEvent(event);
-    }
-
-    // ─── Generic motion (mouse scroll, trackpad) optimization ───────────
-    @Override
-    public boolean dispatchGenericMotionEvent(MotionEvent event) {
-        return super.dispatchGenericMotionEvent(event);
-    }
 }

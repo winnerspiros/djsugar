@@ -1322,6 +1322,7 @@ add_library(
   src/controllers/controllerlearningeventfilter.cpp
   src/controllers/controllermanager.cpp
   src/controllers/controllermappinginfo.cpp
+  src/controllers/mappingmatcher.cpp
   src/controllers/legacycontrollersettings.cpp
   src/controllers/legacycontrollersettingslayout.cpp
   src/controllers/controllermappinginfoenumerator.cpp
@@ -1352,7 +1353,6 @@ add_library(
   src/controllers/midi/midimessage.cpp
   src/controllers/midi/midioutputhandler.cpp
   src/controllers/midi/midiutils.cpp
-  src/controllers/midi/androidusbmidicontroller.cpp
   src/controllers/scripting/colormapper.cpp
   src/controllers/scripting/colormapperjsproxy.cpp
   src/controllers/scripting/controllerscriptenginebase.cpp
@@ -1594,6 +1594,7 @@ add_library(
   src/library/recording/recordingfeature.cpp
   src/library/samples/dlgsamples.cpp
   src/library/samples/samplesfeature.cpp
+  src/library/enginedj/enginedjfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -2238,6 +2239,20 @@ if(ANDROID)
   # Android microphone capture for audio calibration (bypasses BT SCO)
   target_sources(mixxx-lib PRIVATE src/engine/androidmiccapture.cpp)
 
+  # Kick-aligned beatgrids for house/techno (from JaviLabarumDJ/mixxx-android)
+  target_sources(mixxx-lib PRIVATE src/analyzer/androidkickgrid.cpp)
+
+  # Android storage/library helpers (from JaviLabarumDJ/mixxx-android):
+  # permissions, backups, USB drives, Rekordbox stick read/copy
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/util/androidpermissions.cpp
+      src/library/usbdrive/androidusbdrive.cpp
+      src/library/usbdrive/fatvolume.cpp
+      src/library/usbdrive/usbmassstorage.cpp
+  )
+
   # Native crash reporter + auto-cue snap (from JaviLabarumDJ/mixxx-android)
   target_sources(
     mixxx-lib
@@ -2246,11 +2261,42 @@ if(ANDROID)
 
   # Android DJ-controller auto-routing + speaker fallback
   # (SoundManagerAndroid from JaviLabarumDJ/mixxx-android)
-  target_sources(mixxx-lib PRIVATE src/soundio/soundmanagerandroid.cpp)
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/soundio/androidusbaudiodevice.cpp
+      src/soundio/androidusbsounddevices.cpp
+      src/soundio/sounddeviceandroidusb.cpp
+      src/soundio/soundmanagerandroid.cpp
+      src/soundio/usbaudiodescriptors.cpp
+  )
+  # Direct USB audio/MIDI driver + USB drive reader (from JaviLabarumDJ/mixxx-android)
+  target_compile_definitions(
+    mixxx-lib
+    PUBLIC __ANDROID_USB_AUDIO__ __ANDROID_USB_DRIVE__
+  )
+  # NOTE: mixxx-qml-lib is created much later in this file (QML section),
+  # so its define lives there, not here.
 
   # Define QT_OPENGL_ES_2 so the deprecated desktop-GL-only renderers
   # (which include QOpenGLFunctions_2_1) are properly excluded on Android.
   target_compile_definitions(mixxx-lib PUBLIC QT_OPENGL_ES_2)
+endif()
+
+# Portable storage helpers (from JaviLabarumDJ/mixxx-android): backup/restore
+# and Rekordbox stick read/copy are pure Qt/SQL with internal platform
+# switches, so they build everywhere; USB-direct parts stay Android-only.
+target_sources(
+  mixxx-lib
+  PRIVATE
+    src/util/removablestorage.cpp
+    src/library/rekordbox/rekordboxdrivebackup.cpp
+    src/library/rekordbox/rekordboxplaylistcopy.cpp
+)
+if(NOT ANDROID)
+  # Desktop has no USB-direct reader (androidusbdrive.cpp is JNI/libusb):
+  # the OS mounts drives itself, so all queries answer "not a drive".
+  target_sources(mixxx-lib PRIVATE src/library/usbdrive/usbdrivedesktop.cpp)
 endif()
 
 if(APPLE)
@@ -2790,6 +2836,9 @@ if(QT6)
       COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/qml
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml
+      # The Android versions of upstream QML files live in +android folders
+      # (from JaviLabarumDJ/mixxx-android), flattened over the base files
+      # after the copy by mixxx-android-qml-overrides below.
       COMMAND
         ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
@@ -2838,7 +2887,19 @@ if(QT6)
         ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations/.keep
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     )
-    add_dependencies(mixxx copy-resource-android android-strip-libomp)
+    # Flatten +android QML selectors over base files in the package
+    # (from JaviLabarumDJ/mixxx-android, cmake/modules/MixxxAndroid.cmake).
+    add_custom_target(
+      mixxx-android-qml-overrides
+      COMMAND
+        ${CMAKE_COMMAND}
+        -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
+        ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+    )
+    add_dependencies(mixxx-android-qml-overrides copy-resource-android)
+    # mixxx depends on the flattened QML, not the raw copy: the override
+    # target itself depends on copy-resource-android (his ordering).
+    add_dependencies(mixxx android-strip-libomp mixxx-android-qml-overrides)
     target_link_libraries(mixxx PUBLIC omp)
   else()
     qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
@@ -4411,6 +4472,10 @@ if(QML)
   if(WIN32)
     target_compile_definitions(mixxx-qml-lib PUBLIC __WINDOWS__)
   endif()
+  if(ANDROID)
+    # USB drive reader (from JaviLabarumDJ/mixxx-android)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __ANDROID_USB_DRIVE__)
+  endif()
 
   if(ENGINEPRIME)
     target_compile_definitions(mixxx-qml-lib PUBLIC __ENGINEPRIME__)
@@ -4502,6 +4567,9 @@ if(QML)
   target_sources(
     mixxx-qml-lib
     PRIVATE
+      # Mobile backup helpers: used by QmlMobileLibraryProxy on all
+      # platforms (androidbackup.* has no Android-only includes).
+      src/util/androidbackup.cpp
       src/qml/asyncimageprovider.cpp
       src/qml/qmlapplication.cpp
       src/qml/qmlapplicationproxy.cpp
@@ -4510,6 +4578,7 @@ if(QML)
       src/qml/qmlbatteryproxy.cpp
       src/qml/qmlbeatsmodel.cpp
       src/qml/qmlchainpresetmodel.cpp
+      src/qml/androidpresetnames.cpp
       src/qml/qmlconfigproxy.cpp
       src/qml/qmlconfigproxybase.cpp
       src/qml/qmlcontrolproxy.cpp
@@ -4526,6 +4595,10 @@ if(QML)
       src/qml/qmllibrarysourcetree.cpp
       src/qml/qmllibrarytracklistmodel.cpp
       src/qml/qmlmixxxcontrollerscreen.cpp
+      src/qml/qmlstemsmodel.cpp
+      src/qml/librarycoverloader.cpp
+      src/qml/qmllanguageproxy.cpp
+      src/library/androidscanorder.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
@@ -4541,9 +4614,17 @@ if(QML)
       src/qml/qmlwaveformrenderer.cpp
       src/qml/qmlsettingparameter.cpp
       src/qml/qmlskincontrolcreator.cpp
-      src/qml/qmltrackproxy.cpp
       src/qml/qmlsoundmanagerproxy.cpp
       src/qml/qmlpreferencesproxy.cpp
+      src/qml/qmlmobileappproxy.cpp
+      src/qml/qmlmobileaudioproxy.cpp
+      src/qml/qmlmobilecontrollersproxy.cpp
+      src/qml/qmllibraryfeaturesource.cpp
+      src/qml/qmlmobilelibraryproxy.cpp
+      src/qml/qmlappupdateproxy.cpp
+      src/qml/qmlmobilesingletons.cpp
+      src/qml/qmlyoutubeproxy.cpp
+      src/qml/qmlstreamingproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/waveformrenderbeat.cpp
       src/waveform/renderers/allshader/waveformrenderer.cpp
@@ -5858,8 +5939,7 @@ if(HID)
 
   if(ANDROID)
     target_sources(mixxx-lib PRIVATE src/controllers/android.cpp)
-    # androidusbmidicontroller.cpp uses libusb functions directly.
-    # Link explicitly if LibUSB is available. If not (e.g. some CI
+    # Link libusb explicitly if available. If not (e.g. some CI
     # Android runners without libusb-dev), the JNI fallback is used.
     if(TARGET LibUSB::LibUSB)
       target_link_libraries(mixxx-lib PRIVATE LibUSB::LibUSB)
@@ -5895,8 +5975,17 @@ if(BULK)
       PRIVATE
         src/controllers/midi/androidmidicontroller.cpp
         src/controllers/midi/androidmidienumerator.cpp
+        src/controllers/midi/blemidicontroller.cpp
+        src/controllers/midi/blemidienumerator.cpp
     )
+    # Android MIDI (android.media.midi + NDK AMidi, from JaviLabarumDJ/mixxx-android)
+    target_compile_definitions(mixxx-lib PUBLIC __ANDROID_MIDI__)
+    # BLE MIDI support for Bluetooth controllers (e.g., DDJ-FLX4 in Bluetooth mode)
+    target_compile_definitions(mixxx-lib PUBLIC __BLE_MIDI__)
   endif()
+  # USB-drive reader for Rekordbox sticks (from JaviLabarumDJ/mixxx-android,
+  # cmake/modules/MixxxAndroid.cmake: enabled with bulk controller support)
+  target_compile_definitions(mixxx-lib PUBLIC __ANDROID_USB_DRIVE__)
   if(NOT HID)
     target_sources(
       mixxx-lib

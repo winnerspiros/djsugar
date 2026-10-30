@@ -203,7 +203,7 @@ Rectangle {
                 Layout.fillWidth: true
                 group: root.group
                 key: "eject"
-                text: "Eject"
+                text: qsTr("Eject")
             }
         }
         Skin.ControlFader {

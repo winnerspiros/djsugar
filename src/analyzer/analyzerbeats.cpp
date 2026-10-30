@@ -100,6 +100,16 @@ bool AnalyzerBeats::initialize(const AnalyzerTrack& track,
 
     // if we can load a stored track don't reanalyze it
     bool bShouldAnalyze = shouldAnalyze(track.getTrack());
+#ifdef Q_OS_ANDROID
+    // Re-analyzing the whole collection: the beats of the tracks too, so
+    // older beatgrids get the corrections of newer versions. Locked beats
+    // were excluded above, the beatgrids of Rekordbox are kept.
+    if (!bShouldAnalyze && track.getOptions().redoBeats.value_or(false)) {
+        const mixxx::BeatsPointer pBeats = track.getTrack()->getBeats();
+        bShouldAnalyze = !pBeats ||
+                pBeats->getSubVersion() != mixxx::rekordboxconstants::beatsSubversion;
+    }
+#endif
 
     DEBUG_ASSERT(!m_pPlugin);
     if (bShouldAnalyze) {
@@ -116,6 +126,9 @@ bool AnalyzerBeats::initialize(const AnalyzerTrack& track,
         if (m_pPlugin) {
             if (m_pPlugin->initialize(m_sampleRate)) {
                 qDebug() << "Beat calculation started with plugin" << m_pluginId;
+#ifdef Q_OS_ANDROID
+                m_kickGrid.initialize(m_sampleRate);
+#endif
             } else {
                 qDebug() << "Beat calculation will not start.";
                 m_pPlugin.reset();
@@ -236,6 +249,11 @@ bool AnalyzerBeats::processSamples(const CSAMPLE* pIn, SINT count) {
         return true; // silently ignore all remaining samples
     }
 
+#ifdef Q_OS_ANDROID
+    if (numFrames > 0) {
+        m_kickGrid.process(pBeatInput, numFrames, static_cast<int>(count / numFrames));
+    }
+#endif
     bool ret = m_pPlugin->processSamples(pBeatInput, count);
     if (pDrumChannel) {
         SampleUtil::free(pDrumChannel);
@@ -267,6 +285,11 @@ void AnalyzerBeats::storeResults(TrackPointer pTrack) {
                 extraVersionInfo,
                 m_bPreferencesFixedTempo,
                 m_sampleRate);
+#ifdef Q_OS_ANDROID
+        if (m_bPreferencesFixedTempo) {
+            pBeats = m_kickGrid.correct(pBeats);
+        }
+#endif
         qDebug() << "AnalyzerBeats plugin detected" << beats.size()
                  << "beats. Predominant BPM:"
                  << (pBeats ? pBeats->getBpmInRange(

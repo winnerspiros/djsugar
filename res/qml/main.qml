@@ -34,6 +34,7 @@ ApplicationWindow {
         target: Mixxx.Core
         function onReadyChanged() {
             root.updateVisibility();
+            root.loadSkin();
         }
     }
 
@@ -91,7 +92,71 @@ ApplicationWindow {
         }
     }
 
-    Component.onCompleted: { root.updateVisibility(); clampTimer.start() }
+    // The main window of the skin: "Classic" is MainWindow.qml next to
+    // this file, the others are in Skins/<name>/MainWindow.qml. Switched at
+    // once through Settings -> Interface; the decks keep playing. The old
+    // skin is unloaded first: both skins create the same [Skin] controls,
+    // which the new one can only create once the old one is gone.
+    // (Skin switching via Mixxx.MobileApp, from JaviLabarumDJ/mixxx-android.)
+    readonly property var skinItem: content.item
+    // The values of the Theme singleton before any skin changed them
+    property var themeDefaults: null
+
+    // A skin can change the shared colors (Theme) through a skinTheme
+    // property of its main window. The values of the previous skin are
+    // undone first.
+    function applySkinTheme(skinTheme) {
+        if (root.themeDefaults === null) {
+            const defaults = {};
+            for (const key in Theme) {
+                if (key !== "objectName" && typeof Theme[key] !== "function") {
+                    defaults[key] = Theme[key];
+                }
+            }
+            root.themeDefaults = defaults;
+        }
+        for (const key in root.themeDefaults) {
+            Theme[key] = root.themeDefaults[key];
+        }
+        for (const key in (skinTheme || {})) {
+            if (key in root.themeDefaults) {
+                Theme[key] = skinTheme[key];
+            } else {
+                console.warn("Unknown Theme property in the skin:", key);
+            }
+        }
+    }
+
+    function skinSource(skin) {
+        if (skin === "Classic" || Mixxx.MobileApp.skinsIn(Qt.resolvedUrl("Skins/")).indexOf(skin) < 0) {
+            return Qt.resolvedUrl("MainWindow.qml");
+        }
+        return Qt.resolvedUrl("Skins/" + skin + "/MainWindow.qml");
+    }
+    function loadSkin() {
+        if (!Mixxx.Core.ready) {
+            return;
+        }
+        content.setSource(root.skinSource(Mixxx.MobileApp.skin), {
+            "applicationWindow": root
+        });
+    }
+    Connections {
+        target: Mixxx.MobileApp
+
+        function onSkinChanged() {
+            content.source = "";
+            skinSwitchTimer.restart();
+        }
+    }
+    Timer {
+        id: skinSwitchTimer
+
+        interval: 150
+        onTriggered: root.loadSkin()
+    }
+
+    Component.onCompleted: { root.updateVisibility(); root.loadSkin(); clampTimer.start() }
     Loader {
         id: content
 
@@ -100,16 +165,38 @@ ApplicationWindow {
         active: Mixxx.Core.ready
         asynchronous: true
         onStatusChanged: {
+            if (status === Loader.Ready) {
+                root.applySkinTheme(item.skinTheme);
+            }
             if (status === Loader.Error) {
+                if (Mixxx.MobileApp.skin !== "Classic") {
+                    // A broken skin must not lock the user out
+                    console.error("Failed to load the skin", Mixxx.MobileApp.skin, "- using Classic");
+                    Mixxx.MobileApp.skin = "Classic";
+                    return;
+                }
                 console.error("Failed to load the Mixxx main window")
                 Qt.quit()
             }
         }
-        sourceComponent: Component {
-            MainWindow {
-                applicationWindow: root
-            }
+    }
+    // Updates found by the check at startup (see Mixxx.AppUpdate). Created
+    // once the core is ready, like the rest of the UI that uses Mixxx.
+    // Android only: elsewhere the proxy stays idle. (from JaviLabarumDJ/mixxx-android)
+    Loader {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        // Below the top bar of the skins, so that their buttons stay usable
+        anchors.topMargin: 84
+        z: 1000
+        active: Mixxx.Core.ready && root.isMobile
+        sourceComponent: Skin.AppUpdateBanner {
+            onInstallRequested: updateInstallPopup.open()
         }
+    }
+
+    Skin.AppUpdateInstallPopup {
+        id: updateInstallPopup
     }
     Rectangle {
         id: splash

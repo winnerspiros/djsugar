@@ -400,7 +400,10 @@ QSGNode* QmlWaveformDisplay::updatePaintNode(QSGNode* node, UpdatePaintNodeData*
                 continue;
             }
             if (!pQmlRenderer->isSupported()) {
-                qWarning() << "Ignoring the unsupported" << pQmlRenderer << "renderer";
+                // Unsupported renderers (e.g. the stem renderer on builds
+                // without STEM) are skipped silently: they are declared in
+                // WaveformDisplay.qml unconditionally, so warning here would
+                // spam the log once per waveform on every track load.
                 continue;
             }
             auto& renderer = createOrCached(pQmlRenderer);

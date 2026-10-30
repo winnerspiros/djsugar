@@ -1,5 +1,7 @@
 #include "qml/qmlcontrolproxy.h"
 
+#include <QSet>
+
 #include "moc_qmlcontrolproxy.cpp"
 #include "util/cmdlineargs.h"
 
@@ -125,9 +127,15 @@ void QmlControlProxy::reinitializeFromKey() {
     }
 
     // If the key is invalid, reset the control proxy if necessary.
+    // An empty key is a legitimate "not yet bound" state (e.g. skin
+    // ControlProxy waiting on its SkinControlCreator), so only debug it.
     if (!isKeyValid()) {
-        qWarning() << "QmlControlProxy: Tried to initialize CO" << m_coKey
-                   << " with invalid key, resetting...";
+        if (m_coKey.item.isEmpty() && m_coKey.group == QLatin1String("[Skin]")) {
+            qDebug() << "QmlControlProxy: CO" << m_coKey << "not created yet, deferring...";
+        } else {
+            qWarning() << "QmlControlProxy: Tried to initialize CO" << m_coKey
+                       << " with invalid key, resetting...";
+        }
         if (isInitialized()) {
             m_pControlProxy.reset();
             Q_EMIT initializedChanged(false);
@@ -158,8 +166,17 @@ void QmlControlProxy::reinitializeFromKey() {
     }
 
     // If the control does not exist, reset the control proxy if necessary.
+    // Warn only once per key: optional controls (e.g. vinylcontrol_* on
+    // builds without vinyl input, or skin keys for unloaded decks) would
+    // otherwise spam this on every track load / deck init.
     if (!pControlProxy->valid()) {
-        qWarning() << "QmlControlProxy: Requested CO" << m_coKey << " does not exist, resetting...";
+        static QSet<QString> s_warnedMissing;
+        const QString keyStr = m_coKey.group + QStringLiteral(",") + m_coKey.item;
+        if (!s_warnedMissing.contains(keyStr)) {
+            s_warnedMissing.insert(keyStr);
+            qWarning() << "QmlControlProxy: Requested CO" << m_coKey
+                       << " does not exist, resetting...";
+        }
         if (isInitialized()) {
             m_pControlProxy.reset();
             Q_EMIT initializedChanged(false);

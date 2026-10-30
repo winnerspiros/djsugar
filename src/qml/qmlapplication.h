@@ -11,6 +11,7 @@
 #include "util/parented_ptr.h"
 
 class ControlProxy;
+class ControlObject;
 class ControlPushButton;
 class GuiTick;
 class VisualsManager;
@@ -59,6 +60,8 @@ class QmlApplication : public QObject {
     std::unique_ptr<ControlPushButton> m_pShowSmallSpinnyCover;
     std::unique_ptr<ControlPushButton> m_pShowBigSpinnyCover;
     std::unique_ptr<ControlPushButton> m_pWaveformOverviewType;
+    // [Skin] flag owned here (ControlObject has no parent-taking ctor).
+    std::unique_ptr<ControlObject> m_pShowIntroOutroCues;
 
     QString m_mainFilePath;
 

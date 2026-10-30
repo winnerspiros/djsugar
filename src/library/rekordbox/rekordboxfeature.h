@@ -66,6 +66,12 @@ class RekordboxFeature : public BaseExternalLibraryFeature {
 
     TreeItemModel* sidebarModel() const override;
 
+#ifdef Q_OS_ANDROID
+    /// Looks for devices again without switching the view, e.g. after a USB
+    /// drive was plugged in or out (see rekordboxandroid.inc)
+    void refreshDevices();
+#endif
+
   public slots:
     void activate() override;
     void activateChild(const QModelIndex& index) override;

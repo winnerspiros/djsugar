@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.mixxx"
-    android:installLocation="auto"
-    android:versionCode="1"
-    android:versionName="1.0">
+    android:installLocation="internalOnly"
+    android:versionCode="15"
+    android:versionName="1.5.5">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"  />
     <uses-permission android:name="android.permission.INTERNET"  />
     <!-- API 33+ (Android 13) replaced the broad READ/WRITE_EXTERNAL_STORAGE
@@ -23,11 +23,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <!-- Required on API 33+ to post the foreground-service notification
-         (AI-agent note: added for PlaybackService, needs human review). -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- In-app updates: install the APK downloaded from our GitHub releases (Settings → About) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <!-- Bluetooth/Low Energy MIDI controller support (Android 12+) -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -91,14 +90,9 @@
                 android:name="android.app.splash_screen_drawable"
                 android:value="@drawable/ic_launcher_foreground" />
 
-          <!-- Run the standard widget UI (MixxxApplication + LateNight skin)
-               on Android. Do NOT add the new_ui or qml command line flags
-               here: the QML UI is experimental and renders a broken,
-               overlapping layout on phones (controls on top of each other,
-               empty library, UI lost on rotation). The legacy skin engine
-               works on Android with Qt 6 and is the supported path for this
-               fork. Keep the log level in sync with
-               QT_ANDROID_APPLICATION_ARGUMENTS in CMakeLists.txt.
+          <!-- Run the QML UI (MixxxApplication + Booth skin by default;
+               Classic skin selectable in Settings). Keep the log level in
+               sync with QT_ANDROID_APPLICATION_ARGUMENTS in CMakeLists.txt.
                Note: XML comments cannot contain a double dash, so the
                flag names above are written without their leading dashes. -->
           <meta-data
@@ -115,22 +109,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/qtprovider_paths"/>
         </provider>
-
-        <!-- AI-agent note: registered for PlaybackService (background audio
-             survival), needs human review. Foreground service keeping the
-             mix alive when the app is backgrounded. -->
-        <service
-            android:name=".PlaybackService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
     </application>
 
     <uses-feature
         android:name="android.hardware.usb.host"
-        android:required="true" />
-    <!-- Declare that we benefit from low-latency audio hardware. This is not
-         required (app still works without it) but lets the system/Play Store
-         know we're optimized for pro-audio devices. -->
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.midi"
+        android:required="false" />
+    <!-- Chromebooks may be operated with mouse and keyboard only. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.audio.low_latency"
         android:required="false" />

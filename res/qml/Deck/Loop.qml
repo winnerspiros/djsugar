@@ -116,7 +116,7 @@ Rectangle {
             implicitHeight: 26
             key: loopEnabled.value ? "loop_enabled" : "reloop_toggle"
             normalColor: root.buttonColor
-            text: loopEnabled.value ? "exit" : "Recall"
+            text: loopEnabled.value ? qsTr("exit") : qsTr("Recall")
             toggleable: loopEnabled.value
         }
     }

@@ -58,3 +58,10 @@ bool AndroidUsbSoundDevices::refresh(const UserSettingsPointer& pConfig,
     m_devices = std::move(devices);
     return changed;
 }
+
+bool AndroidUsbSoundDevices::outputFailed() const {
+    return std::any_of(m_devices.begin(), m_devices.end(), [](const SoundDevicePointer& pDevice) {
+        const auto* pUsbDevice = dynamic_cast<const SoundDeviceAndroidUsb*>(pDevice.data());
+        return pUsbDevice && pUsbDevice->isOpen() && pUsbDevice->usbDevice()->outputFailed();
+    });
+}

@@ -43,11 +43,11 @@ Column {
         readonly property string duckingModeName: {
             switch (value) {
             case MicrophoneDuckingPanel.DuckingMode.Auto:
-                return "Auto";
+                return qsTr("Auto");
             case MicrophoneDuckingPanel.DuckingMode.Manual:
-                return "Manual";
+                return qsTr("Manual");
             default:
-                return "Off";
+                return qsTr("Off");
             }
         }
 
