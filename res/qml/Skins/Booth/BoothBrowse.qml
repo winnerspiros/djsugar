@@ -463,6 +463,10 @@ Item {
                     font.pixelSize: root.compact ? 14 : 17
                     text: "←"
                 }
+                TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: root.back()
+                }
                 MouseArea {
                     id: backMouse
 
@@ -553,6 +557,10 @@ Item {
                 font.bold: true
                 font.pixelSize: root.compact ? 10 : 12
                 text: qsTr("STREAMING")
+            }
+            TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
+                onTapped: root.streaming = !root.streaming
             }
             MouseArea {
                 anchors.fill: parent
@@ -647,6 +655,10 @@ Item {
                                 text: root.sectionLabel(section.model.icon, section.model.label)
                                 width: parent.width - 4
                             }
+                            TapHandler {
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: root.openSection(section.index)
+                            }
                             MouseArea {
                                 id: sectionMouse
 
@@ -699,6 +711,10 @@ Item {
                         font.pixelSize: root.compact ? 14 : 16
                         text: "♪  " + qsTr("ALL TRACKS")
                     }
+                    TapHandler {
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                        onTapped: root.openAllTracks()
+                    }
                     MouseArea {
                         id: allMouse
 
@@ -742,6 +758,13 @@ Item {
                             color: "#8a8d93"
                             font.pixelSize: root.compact ? 15 : 17
                             text: entry.hasModelChildren || root.levelIsDrives ? "›" : ""
+                        }
+                        TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: {
+                            root.cursor = entry.index;
+                            root.openEntry(entry.index);
+                            }
                         }
                         MouseArea {
                             id: entryMouse

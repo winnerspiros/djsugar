@@ -274,7 +274,8 @@ Item {
 
         border.color: active ? "#d4e157" : "#5c6068"
         border.width: active ? 2 : 1
-        color: tabMouse.pressed ? "#1c1e22" : "#000000"
+        color: (tabMouse.pressed || tabTap.pressed) ? "#1c1e22" : "#000000"
+
         height: parent.height
         // Narrow phones: smaller tabs, so that both rows of the top bar fit
         width: root.width < 760
@@ -289,6 +290,16 @@ Item {
             font.bold: true
             font.pixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 13)
             text: tab.label
+        }
+        // Belt and suspenders: Qt on some Android builds delivers the tap
+        // to only one handler kind (driver-dependent). Both fire the same
+        // signal; the assignment is idempotent so a double fire is harmless
+        // (same viewMode twice). Press color listens to both.
+        TapHandler {
+            id: tabTap
+
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: tab.clicked()
         }
         MouseArea {
             id: tabMouse
