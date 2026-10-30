@@ -102,6 +102,13 @@ Item {
     }
     // A fresh index for a path, or null if the entry is gone
     function indexOf(path) {
+        // The sidebar model object exists from C++ construction, but it is
+        // empty until componentComplete wires the sources: index(-1,-1) on
+        // an empty model is a crash. A tap that lands in that window (fast
+        // BROWSE right after the browser first shows) must be dropped.
+        if (!root.sidebar || root.sidebar.rowCount(root.sidebar.index(-1, -1)) === 0) {
+            return null;
+        }
         let index = root.sidebar.index(-1, -1);
         for (let i = 0; i < path.length; ++i) {
             if (path[i] < 0 || path[i] >= root.sidebar.rowCount(index)) {
@@ -902,12 +909,18 @@ Item {
         }
     }
 
-    StreamingComponent.StreamingHub {
+    Loader {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: header.bottom
+        // The hub builds networked views on creation; keep it out of the
+        // item tree until streaming is actually opened.
+        active: root.streaming
         visible: root.streaming
+
+        sourceComponent: StreamingComponent.StreamingHub {
+        }
     }
 
     // Reading Rekordbox and Engine DJ drives needs access to all files
