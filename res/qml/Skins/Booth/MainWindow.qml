@@ -274,7 +274,7 @@ Item {
 
         border.color: active ? "#d4e157" : "#5c6068"
         border.width: active ? 2 : 1
-        color: (tabMouse.pressed || tabTap.pressed) ? "#1c1e22" : "#000000"
+        color: tabTap.pressed ? "#1c1e22" : "#000000"
 
         height: parent.height
         // Narrow phones: smaller tabs, so that both rows of the top bar fit
@@ -291,21 +291,14 @@ Item {
             font.pixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 13)
             text: tab.label
         }
-        // Belt and suspenders: Qt on some Android builds delivers the tap
-        // to only one handler kind (driver-dependent). Both fire the same
-        // signal; the assignment is idempotent so a double fire is harmless
-        // (same viewMode twice). Press color listens to both.
+        // One handler only: a second tap handler double-fires one tap
+        // on Android, and the BROWSE toggle then opens and instantly
+        // closes again. TapHandler alone serves touch+mouse.
         TapHandler {
             id: tabTap
 
             gesturePolicy: TapHandler.ReleaseWithinBounds
             onTapped: tab.clicked()
-        }
-        MouseArea {
-            id: tabMouse
-
-            anchors.fill: parent
-            onClicked: tab.clicked()
         }
     }
     // Left of a waveform: deck, key, bars left, quantize and slip
