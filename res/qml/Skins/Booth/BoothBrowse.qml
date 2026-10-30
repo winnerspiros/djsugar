@@ -169,13 +169,18 @@ Item {
     }
     // Opens a source or an entry. Returns true if its tracks are shown,
     // false if its entries are listed.
+    // True while open()/activate() is on the stack: the TapHandler and
+    // the MouseArea of one tap can both fire (driver-dependent), and an
+    // open() re-entered mid-model-rebuild reads half-built indexes.
+    property bool opening: false
     function open(path) {
         // USB drives without all-files access would hang the UI thread in
         // the scan below; the popup is shown and the open is abandoned.
         // The user taps the section again after granting.
-        if (!root.checkStorageAccess(path)) {
+        if (root.opening || !root.checkStorageAccess(path)) {
             return false;
         }
+        root.opening = true;
         // Order matters, and levelIndex must be cleared FIRST: activate()
         // replaces the model's tracklist (tracklistChanged), which rebuilds
         // the track TableView; canFetchMore/fetchMore below then signal the
@@ -190,6 +195,7 @@ Item {
             root.levelPath = null;
             root.showTracks = true;
             root.deferredRefresh();
+            root.opening = false;
             return true;
         }
         if (root.sidebar.canFetchMore(index)) {
@@ -201,9 +207,11 @@ Item {
             root.deferredRefresh();
             root.showTracks = false;
             root.cursor = root.levelHasAll ? -1 : 0;
+            root.opening = false;
             return false;
         }
         root.showTracks = true;
+        root.opening = false;
         return true;
     }
     function openEntry(row) {
