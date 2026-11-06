@@ -521,7 +521,7 @@ ApplicationWindow {
                             orientation: Gradient.Horizontal
                             GradientStop { position: 0.0; color: "#e63380" }
                             GradientStop { position: 0.55; color: "#ff99ca" }
-                            GradientStop { position: 1.0; color: "#00e5ff" }
+                            GradientStop { position: 1.0; color: "#D85486" }
                         }
 
                         Behavior on width {

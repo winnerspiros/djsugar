@@ -359,9 +359,9 @@ Item {
                         visible: root.topBarItemShown("xy")
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 54
-                        activeColor: "#00e5ff"
+                        activeColor: "#D85486"
                         backgroundColor: xyPadOverlay.visible ? "#006064" : "#222733"
-                        normalColor: xyPadOverlay.visible ? "#00e5ff" : "#b0bec5"
+                        normalColor: xyPadOverlay.visible ? "#D85486" : "#b0bec5"
                         checkable: true
                         checked: xyPadOverlay.visible
                         text: "XY"

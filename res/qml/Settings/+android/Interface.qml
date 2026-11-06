@@ -209,7 +209,7 @@ Category {
                                 text: qsTr("🎨 APPEARANCE & DISPLAY")
                                 font.bold: true
                                 font.pixelSize: 13
-                                color: "#00e5ff"
+                                color: "#D85486"
                             }
 
                             // Applied immediately, independently of the Save button
@@ -389,7 +389,7 @@ Category {
                                 text: qsTr("🧭 TOP BAR")
                                 font.bold: true
                                 font.pixelSize: 13
-                                color: "#00e5ff"
+                                color: "#D85486"
                             }
                             Text {
                                 Layout.fillWidth: true
@@ -679,7 +679,7 @@ Category {
                                 text: qsTr("🎛️ CUE MODES & LOADING BEHAVIOR")
                                 font.bold: true
                                 font.pixelSize: 13
-                                color: "#00e5ff"
+                                color: "#D85486"
                             }
 
                             RowLayout {

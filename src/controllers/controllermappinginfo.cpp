@@ -205,6 +205,7 @@ ProductInfo MappingInfo::parseBulkProduct(const QXmlStreamAttributes& xmlElement
                     .toString();
     productInfo.friendlyName = xmlElementAttributes.value("friendly_name").toString();
 
+    productInfo.sinceVersion = xmlElementAttributes.value(QStringLiteral("since")).toString();
     productInfo.visualUrl = QUrl(xmlElementAttributes.value("image").toString());
     return productInfo;
 }
@@ -220,6 +221,7 @@ ProductInfo MappingInfo::parseHIDProduct(const QXmlStreamAttributes& xmlElementA
     productInfo.product_id = xmlElementAttributes.value(QStringLiteral("product_id")).toString();
     productInfo.usage_page = xmlElementAttributes.value(QStringLiteral("usage_page")).toString();
     productInfo.usage = xmlElementAttributes.value(QStringLiteral("usage")).toString();
+    productInfo.sinceVersion = xmlElementAttributes.value(QStringLiteral("since")).toString();
     // Check for bulk-specific attributes which are not allowed for hid protocol
     if (xmlElementAttributes.hasAttribute(QStringLiteral("in_epaddr"))) {
         qCCritical(kLogger) << "Product info element for hid contains "

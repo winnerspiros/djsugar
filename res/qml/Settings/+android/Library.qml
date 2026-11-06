@@ -241,7 +241,7 @@ Category {
                                             text: qsTr("%1 tracks indexed").arg(modelData.trackCount || 0) +
                                                   (modelData.totalSecond > 0 ? " • " + qsTr("%1 min").arg(Math.round(modelData.totalSecond / 60)) : "")
                                             font.pixelSize: 10
-                                            color: "#00e5ff"
+                                            color: "#D85486"
                                         }
                                     }
 
@@ -297,7 +297,7 @@ Category {
                         Skin.Button {
                             height: 32
                             width: 170
-                            activeColor: "#00e5ff"
+                            activeColor: "#D85486"
                             backgroundColor: root.isFolderAdded("/storage/emulated/0/Music") ? "#004d40" : "#1a2533"
                             normalColor: root.isFolderAdded("/storage/emulated/0/Music") ? "#00e676" : "#ffffff"
                             font.bold: true
@@ -311,7 +311,7 @@ Category {
                         Skin.Button {
                             height: 32
                             width: 180
-                            activeColor: "#00e5ff"
+                            activeColor: "#D85486"
                             backgroundColor: root.isFolderAdded("/storage/emulated/0/Download") ? "#004d40" : "#1a2533"
                             normalColor: root.isFolderAdded("/storage/emulated/0/Download") ? "#00e676" : "#ffffff"
                             font.bold: true
@@ -325,7 +325,7 @@ Category {
                         Skin.Button {
                             height: 32
                             width: 160
-                            activeColor: "#00e5ff"
+                            activeColor: "#D85486"
                             backgroundColor: root.isFolderAdded("/storage/emulated/0/Mixxx") ? "#004d40" : "#1a2533"
                             normalColor: root.isFolderAdded("/storage/emulated/0/Mixxx") ? "#00e676" : "#ffffff"
                             font.bold: true
@@ -347,7 +347,7 @@ Category {
                             Layout.preferredWidth: 220
                             activeColor: "#00ffff"
                             backgroundColor: root.showFolderBrowser ? "#00363a" : "#263238"
-                            normalColor: "#00e5ff"
+                            normalColor: "#D85486"
                             font.bold: true
                             font.pixelSize: 11
                             text: root.showFolderBrowser ? qsTr("▲ Hide browser") : qsTr("📂 Browse / other folder...")
@@ -362,7 +362,7 @@ Category {
                         Skin.Button {
                             Layout.preferredHeight: 36
                             Layout.preferredWidth: 190
-                            activeColor: "#00e5ff"
+                            activeColor: "#D85486"
                             backgroundColor: "#1565c0"
                             normalColor: "#ffffff"
                             font.bold: true
@@ -383,7 +383,7 @@ Category {
                         Layout.preferredHeight: browserCol.implicitHeight + 20
                         color: "#111620"
                         radius: 6
-                        border.color: "#00e5ff44"
+                        border.color: "#D8548644"
                         border.width: 1
                         visible: root.showFolderBrowser
 
@@ -397,7 +397,7 @@ Category {
                                 text: qsTr("🔍 Device folder browser:")
                                 font.bold: true
                                 font.pixelSize: 12
-                                color: "#00e5ff"
+                                color: "#D85486"
                             }
 
                             // Current path display with Back/Up button
@@ -568,7 +568,7 @@ Category {
                         text: qsTr("☁️ Streaming storage & cache")
                         font.bold: true
                         font.pixelSize: 14
-                        color: "#00e5ff"
+                        color: "#D85486"
                         Layout.fillWidth: true
                     }
 
@@ -665,7 +665,7 @@ Category {
                         text: qsTr("💾 Library backup")
                         font.bold: true
                         font.pixelSize: 14
-                        color: "#00e5ff"
+                        color: "#D85486"
                         Layout.fillWidth: true
                     }
 
@@ -784,7 +784,7 @@ Category {
                         text: qsTr("🎛 Rekordbox stick backup")
                         font.bold: true
                         font.pixelSize: 14
-                        color: "#00e5ff"
+                        color: "#D85486"
                         Layout.fillWidth: true
                     }
 
@@ -804,7 +804,7 @@ Category {
                             Layout.preferredHeight: 40
                             Layout.preferredWidth: 170
                             enabled: !Mixxx.MobileLibrary.rekordboxDrivesLoading
-                            activeColor: "#00e5ff"
+                            activeColor: "#D85486"
                             backgroundColor: "#14303a"
                             normalColor: "#80deea"
                             font.bold: true
@@ -1001,7 +1001,7 @@ Category {
                         text: qsTr("⚡ Collection pre-analysis (BPM & Camelot key)")
                         font.bold: true
                         font.pixelSize: 14
-                        color: "#00e5ff"
+                        color: "#D85486"
                         Layout.fillWidth: true
                     }
 

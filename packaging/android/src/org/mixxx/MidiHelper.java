@@ -1,5 +1,6 @@
 package org.mixxx;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
@@ -10,7 +11,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -207,23 +207,29 @@ public class MidiHelper {
         }
     }
 
-    /// Checks if a Bluetooth MIDI device is currently open via MidiManager.
-    /// Used by BleMidiEnumerator to avoid duplicate controllers.
+    /// Returns true when MidiManager already exposes the Bluetooth MIDI device
+    /// with this MAC address. Such devices are handled by AndroidMidiEnumerator,
+    /// so the GATT fallback in BleMidiEnumerator must skip them.
     public static boolean isBluetoothDeviceOpen(String address) {
-        if (sManager == null || address == null) {
+        if (sManager == null || address == null || address.isEmpty()) {
             return false;
         }
-        MidiDeviceInfo[] devices = getDevices();
-        for (MidiDeviceInfo info : devices) {
-            String name = getName(info);
-            if (name.contains(address) || address.contains(name)) {
-                // Check if this device is a Bluetooth device and is open
-                // TYPE_BLUETOOTH = 3 from android.media.midi.MidiDeviceInfo
-                if (info.getType() == 3) {
-                    return true;
-                }
+        for (MidiDeviceInfo info : getDevices()) {
+            String deviceAddress = getBluetoothAddress(info);
+            if (deviceAddress != null && deviceAddress.equalsIgnoreCase(address)) {
+                return true;
             }
         }
         return false;
+    }
+
+    /// Returns the MAC address of a Bluetooth MIDI device, or null for other types.
+    private static String getBluetoothAddress(MidiDeviceInfo info) {
+        Bundle properties = info.getProperties();
+        if (properties == null) {
+            return null;
+        }
+        Object device = properties.getParcelable(MidiDeviceInfo.PROPERTY_BLUETOOTH_DEVICE);
+        return device instanceof BluetoothDevice ? ((BluetoothDevice) device).getAddress() : null;
     }
 }

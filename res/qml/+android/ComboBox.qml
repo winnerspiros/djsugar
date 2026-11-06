@@ -101,7 +101,7 @@ ComboBox {
         width: ListView.view ? ListView.view.width : root.popup.width
 
         background: Rectangle {
-            border.color: itemDlgt.highlighted ? "#00e5ff" : "transparent"
+            border.color: itemDlgt.highlighted ? "#D85486" : "transparent"
             border.width: 1
             color: itemDlgt.down ? "#37474f" : (itemDlgt.highlighted ? "#263238" : "transparent")
             radius: 4
@@ -209,7 +209,7 @@ ComboBox {
                     policy: popupListView.contentHeight > popupListView.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
                     width: 8
                     contentItem: Rectangle {
-                        color: popupScrollBar.pressed ? "#00e5ff" : "#546e7a"
+                        color: popupScrollBar.pressed ? "#D85486" : "#546e7a"
                         radius: 4
                     }
                 }
