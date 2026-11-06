@@ -2,6 +2,7 @@
 
 #include <QRegularExpression>
 #include <QSet>
+#include <QThread>
 
 #include "audio/types.h"
 #include "control/controlobject.h"
@@ -234,6 +235,14 @@ bool PlayerManager::isPreviewDeckGroup(const QString& group, int* number) {
 }
 
 void PlayerManager::slotChangeNumDecks(double v) {
+    if (QThread::currentThread() != thread()) {
+        // e.g. a controller script. The players are part of the engine and
+        // the UI, creating them on another thread corrupts memory.
+        // (from JaviLabarumDJ/mixxx-android)
+        QMetaObject::invokeMethod(
+                this, [this, v]() { slotChangeNumDecks(v); }, Qt::QueuedConnection);
+        return;
+    }
     const auto locker = lockMutex(&m_mutex);
     int num = (int)v;
 
@@ -264,6 +273,14 @@ void PlayerManager::slotChangeNumDecks(double v) {
 }
 
 void PlayerManager::slotChangeNumSamplers(double v) {
+    if (QThread::currentThread() != thread()) {
+        // e.g. a controller script. The players are part of the engine and
+        // the UI, creating them on another thread corrupts memory.
+        // (from JaviLabarumDJ/mixxx-android)
+        QMetaObject::invokeMethod(
+                this, [this, v]() { slotChangeNumSamplers(v); }, Qt::QueuedConnection);
+        return;
+    }
     const auto locker = lockMutex(&m_mutex);
     int num = (int)v;
     if (num < m_samplers.size()) {
@@ -280,6 +297,14 @@ void PlayerManager::slotChangeNumSamplers(double v) {
 }
 
 void PlayerManager::slotChangeNumPreviewDecks(double v) {
+    if (QThread::currentThread() != thread()) {
+        // e.g. a controller script. The players are part of the engine and
+        // the UI, creating them on another thread corrupts memory.
+        // (from JaviLabarumDJ/mixxx-android)
+        QMetaObject::invokeMethod(
+                this, [this, v]() { slotChangeNumPreviewDecks(v); }, Qt::QueuedConnection);
+        return;
+    }
     const auto locker = lockMutex(&m_mutex);
     int num = (int)v;
     if (num < m_previewDecks.size()) {
@@ -294,6 +319,14 @@ void PlayerManager::slotChangeNumPreviewDecks(double v) {
 }
 
 void PlayerManager::slotChangeNumMicrophones(double v) {
+    if (QThread::currentThread() != thread()) {
+        // e.g. a controller script. The players are part of the engine and
+        // the UI, creating them on another thread corrupts memory.
+        // (from JaviLabarumDJ/mixxx-android)
+        QMetaObject::invokeMethod(
+                this, [this, v]() { slotChangeNumMicrophones(v); }, Qt::QueuedConnection);
+        return;
+    }
     const auto locker = lockMutex(&m_mutex);
     int num = (int)v;
     if (num < m_microphones.size()) {
@@ -308,6 +341,14 @@ void PlayerManager::slotChangeNumMicrophones(double v) {
 }
 
 void PlayerManager::slotChangeNumAuxiliaries(double v) {
+    if (QThread::currentThread() != thread()) {
+        // e.g. a controller script. The players are part of the engine and
+        // the UI, creating them on another thread corrupts memory.
+        // (from JaviLabarumDJ/mixxx-android)
+        QMetaObject::invokeMethod(
+                this, [this, v]() { slotChangeNumAuxiliaries(v); }, Qt::QueuedConnection);
+        return;
+    }
     const auto locker = lockMutex(&m_mutex);
     int num = (int)v;
     if (num < m_auxiliaries.size()) {
