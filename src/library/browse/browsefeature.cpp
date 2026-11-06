@@ -486,6 +486,14 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index) {
         // This ensures we show the real dir tree. This is relevant when devices
         // were unmounted, changed and mounted again.
         m_pSidebarModel->removeChildDirsFromCache(removableDriveRootPaths());
+#elif defined(__ANDROID__)
+        // As on Linux: a card inserted or changed since shows its real folders
+        // (from JaviLabarumDJ/mixxx-android)
+        QStringList volumePaths;
+        for (const mixxx::AndroidStorageVolume& volume : mixxx::androidStorageVolumes()) {
+            volumePaths.append(volume.path);
+        }
+        m_pSidebarModel->removeChildDirsFromCache(volumePaths);
 #endif
         folders = createRemovableDevices();
     } else {
