@@ -5,7 +5,6 @@
 
 #include "controllers/controllermappinginfo.h"
 #include "controllers/legacycontrollermapping.h"
-#include "util/compatibility/qmutex.h"
 #include "util/duration.h"
 #include "util/runtimeloggingcategory.h"
 

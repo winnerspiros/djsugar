@@ -2862,16 +2862,9 @@ if(ANDROID)
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations/.keep
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   )
-  # Flatten +android QML selectors over base files in the package
-  # (from JaviLabarumDJ/mixxx-android, cmake/modules/MixxxAndroid.cmake).
-  add_custom_target(
-    mixxx-android-qml-overrides
-    COMMAND
-      ${CMAKE_COMMAND}
-      -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
-      ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
-  )
-  add_dependencies(mixxx-android-qml-overrides copy-resource-android)
+  # Flatten +android QML selectors over base files in the package.
+  # The mixxx-android-qml-overrides target itself is defined in
+  # cmake/modules/MixxxAndroid.cmake (included at the end of this file).
   # mixxx depends on the flattened QML, not the raw copy: the override
   # target itself depends on copy-resource-android (his ordering).
   add_dependencies(mixxx android-strip-libomp mixxx-android-qml-overrides)
