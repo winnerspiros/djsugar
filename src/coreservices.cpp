@@ -6,6 +6,7 @@
 #include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QtGlobal>
+#include <algorithm>
 #include <gsl/pointers>
 
 #ifdef __BROADCAST__
@@ -492,7 +493,16 @@ void CoreServices::initializeLogging() {
     }
     mixxx::Logging::initialize(
             m_pSettingsManager->settings()->getSettingsPath(),
+#ifdef Q_OS_ANDROID
+            // The log is the only trace of a crash on Android, see
+            // util/androidcrashreport.h. Only critical messages are flushed at once:
+            // flushing every line (e.g. warnings of the audio thread) made the audio
+            // and the UI stutter.
+            // (from JaviLabarumDJ/mixxx-android)
+            std::max(m_cmdlineArgs.getLogLevel(), mixxx::LogLevel::Info),
+#else
             m_cmdlineArgs.getLogLevel(),
+#endif
             m_cmdlineArgs.getLogFlushLevel(),
             logFlags);
 #ifdef Q_OS_ANDROID
