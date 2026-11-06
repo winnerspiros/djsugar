@@ -7,12 +7,10 @@
 #include <QSortFilterProxyModel>
 #include <QVariant>
 
-#include "library/basesqltablemodel.h"
 #include "library/basetracktablemodel.h"
 #include "library/browse/browsetablemodel.h"
 #include "library/columncache.h"
 #include "qml/asyncimageprovider.h"
-#include "qml/librarycoverloader.h"
 #include "qml/qmllibrarytracklistcolumn.h"
 #include "qml/qmltrackproxy.h"
 #include "qml_owned_ptr.h"
@@ -145,9 +143,7 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
 
     switch (role) {
     case TrackProxyRole: {
-        // Only for tracks of a database (not of the folder browser, see
-        // CoverArtRole)
-        if (dynamic_cast<const BaseSqlTableModel*>(pTrackModel) == nullptr) {
+        if (pTrackTableModel == nullptr) {
             return {};
         }
         auto pTrack = pTrackModel->getTrack(mapToSource(proxyIndex));
@@ -167,13 +163,19 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
                         .toDouble());
     }
     case CoverArtRole: {
-        // Loading the Track of a row of the folder browser adds the file to
-        // the library, which takes seconds when opening a folder. Only tracks
-        // of a database (Mixxx, Rekordbox, Engine DJ) have covers loaded here.
-        if (dynamic_cast<const BaseSqlTableModel*>(pTrackModel) == nullptr) {
+        QString location;
+        if (pTrackTableModel != nullptr) {
+            location = QIdentityProxyModel::data(
+                    proxyIndex.siblingAtColumn(pTrackTableModel->fieldIndex(
+                            ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION)),
+                    Qt::DisplayRole)
+                               .toString();
+        }
+        if (location.isEmpty()) {
             return {};
         }
-        return LibraryCoverLoader::loadCover(pTrackModel, mapToSource(proxyIndex));
+
+        return AsyncImageProvider::trackLocationToCoverArtUrl(location);
     }
     case FileURLRole: {
         if (pTrackModel == nullptr) {
