@@ -12,6 +12,7 @@
 #include <QStringList>
 #include <QTextCodec>
 #include <QtDebug>
+#include <algorithm>
 
 #include "engine/engine.h"
 #include "library/dao/trackschema.h"
@@ -29,6 +30,13 @@
 #include "util/color/color.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
+#include "util/removablestorage.h"
+#ifdef __ANDROID_USB_DRIVE__
+#include "library/usbdrive/androidusbdrive.h"
+#endif
+#ifdef Q_OS_ANDROID
+#include "library/rekordbox/rekordboxandroid.h"
+#endif
 #include "util/sandbox.h"
 #include "waveform/waveform.h"
 #include "widget/wlibrary.h"
@@ -249,6 +257,36 @@ QList<TreeItem*> findRekordboxDevices() {
             auto* pFoundDevice = new TreeItem(
                     device.fileName(),
                     QVariant(QList<QString>{device.filePath(), IS_RECORDBOX_DEVICE}));
+            foundDevices << pFoundDevice;
+        }
+    }
+#elif defined(__ANDROID__)
+    // USB drives are mounted under /storage
+    // (from JaviLabarumDJ/mixxx-android)
+    const QFileInfoList devices = mixxx::removableStorageRoots();
+    for (const QFileInfo& device : devices) {
+#ifdef __ANDROID_USB_DRIVE__
+        // Copies the database of drives that Mixxx reads itself
+        mixxx::usbdrive::prepareFiles(device.filePath(),
+                {QStringLiteral("PIONEER/rekordbox/export.pdb"),
+                        QStringLiteral(".PIONEER/rekordbox/export.pdb")});
+#endif
+        if (!findRekordboxPdbPath(device.filePath()).isEmpty()) {
+            // The devices are identified by their label, which must be unique
+            const QString baseLabel = mixxx::removableStorageLabel(device);
+            QString label = baseLabel;
+            for (int i = 2; std::any_of(foundDevices.cbegin(),
+                         foundDevices.cend(),
+                         [&label](const TreeItem* pItem) { return pItem->getLabel() == label; });
+                    ++i) {
+                label = QStringLiteral("%1 (%2)").arg(baseLabel).arg(i);
+            }
+            QList<QString> data;
+            data << device.filePath();
+            data << IS_RECORDBOX_DEVICE;
+            auto* pFoundDevice = new TreeItem(
+                    std::move(label),
+                    QVariant(data));
             foundDevices << pFoundDevice;
         }
     }
@@ -1402,6 +1440,9 @@ RekordboxFeature::RekordboxFeature(
             &RekordboxFeature::onTracksFound);
     // initialize the model
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));
+#ifdef Q_OS_ANDROID
+    mixxx::android::watchUsbDevices(this);
+#endif
 }
 
 RekordboxFeature::~RekordboxFeature() {
