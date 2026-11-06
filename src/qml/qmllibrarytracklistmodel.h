@@ -52,6 +52,8 @@ class QmlLibraryTrackListModel : public QIdentityProxyModel {
 
     Q_INVOKABLE void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 
+    int sourceColumn(int column) const;
+
   signals:
     void rowCountChanged();
 

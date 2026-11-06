@@ -795,6 +795,39 @@ Item {
             sortNewestFirst: root.activeIsDrive
             sourceName: root.activeLabel
             visible: !root.showLevel
+
+            // Default sort by playlist position (ascending) or date added (newest first)
+            function applyDefaultSort() {
+                horizontalHeader.sortingColumn = -1;
+                if (!trackList.model || !trackList.model.columns) {
+                    return;
+                }
+                const columns = trackList.model.columns;
+                let positionIndex = -1;
+                let dateAddedIndex = -1;
+                for (let i = 0; i < columns.length; ++i) {
+                    if (columns[i].columnIdx === Mixxx.TrackListColumn.SQLColumns.Position) {
+                        positionIndex = i;
+                    } else if (columns[i].columnIdx === Mixxx.TrackListColumn.SQLColumns.DateAdded) {
+                        dateAddedIndex = i;
+                    }
+                }
+                let index = -1;
+                let order = Qt.AscendingOrder;
+                if (positionIndex >= 0 && !trackList.sortNewestFirst) {
+                    index = positionIndex;
+                } else if (dateAddedIndex >= 0 && trackList.sortNewestFirst) {
+                    index = dateAddedIndex;
+                    order = Qt.DescendingOrder;
+                }
+                if (index < 0) {
+                    return;
+                }
+                horizontalHeader.sortingColumn = index;
+                horizontalHeader.sortingOrder = order;
+                trackList.model.sort(index, order);
+            }
+            onModelChanged: Qt.callLater(trackList.applyDefaultSort)
         }
 
         // The selected track, like the info panel of a player
