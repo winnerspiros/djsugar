@@ -4,6 +4,10 @@
 #include <QDir>
 #include <QStorageInfo>
 
+#if defined(__ANDROID__)
+#include <QJniEnvironment>
+#include <QJniObject>
+#endif
 #ifdef __ANDROID_USB_DRIVE__
 #include "library/usbdrive/androidusbdrive.h"
 #endif
@@ -76,5 +80,42 @@ QString removableStorageLabel(const QFileInfo& root) {
 #endif
     return root.fileName();
 }
+
+#if defined(__ANDROID__)
+QList<AndroidStorageVolume> androidStorageVolumes() {
+    QList<AndroidStorageVolume> volumes;
+    const QJniObject lines = QJniObject::callStaticMethod<jobjectArray>(
+            "org/mixxx/StorageHelper",
+            "volumes",
+            "(Landroid/content/Context;)[Ljava/lang/String;",
+            QNativeInterface::QAndroidApplication::context().object());
+    QJniEnvironment env;
+    if (!lines.isValid()) {
+        env.checkAndClearExceptions();
+        return volumes;
+    }
+    const auto array = lines.object<jobjectArray>();
+    const jsize count = env->GetArrayLength(array);
+    for (jsize i = 0; i < count; ++i) {
+        const QJniObject line = QJniObject::fromLocalRef(env->GetObjectArrayElement(array, i));
+        const QStringList fields = line.toString().split(QChar('\t'));
+        if (fields.size() < 3 || fields.at(0).isEmpty()) {
+            continue;
+        }
+        AndroidStorageVolume volume;
+        volume.path = fields.at(0);
+        volume.name = fields.at(1);
+        if (fields.at(2) == QLatin1String("internal")) {
+            volume.kind = AndroidStorageVolume::Kind::Internal;
+        } else if (fields.at(2) == QLatin1String("sd")) {
+            volume.kind = AndroidStorageVolume::Kind::SdCard;
+        } else {
+            volume.kind = AndroidStorageVolume::Kind::UsbDrive;
+        }
+        volumes.append(volume);
+    }
+    return volumes;
+}
+#endif
 
 } // namespace mixxx

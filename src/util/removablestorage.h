@@ -1,8 +1,32 @@
 #pragma once
 
 #include <QFileInfoList>
+#include <QList>
+#include <QString>
 
 namespace mixxx {
+
+#if defined(__ANDROID__)
+/// A storage volume Android has mounted
+struct AndroidStorageVolume {
+    enum class Kind {
+        Internal,
+        SdCard,
+        UsbDrive,
+    };
+    /// e.g. /storage/emulated/0 or /storage/1A2B-3C4D
+    QString path;
+    /// The name Android shows it with, e.g. "Tarjeta SD SanDisk"
+    QString name;
+    Kind kind;
+};
+
+/// The internal shared storage, SD cards and USB drives Android has mounted
+/// (org.mixxx.StorageHelper). Android doesn't tell SD cards and USB drives
+/// apart: a removable volume whose name doesn't say SD counts as a USB
+/// drive.
+QList<AndroidStorageVolume> androidStorageVolumes();
+#endif
 
 /// Root folders of the external drives (USB sticks, SD cards...) that are
 /// currently mounted. They are scanned for databases exported by other DJ
