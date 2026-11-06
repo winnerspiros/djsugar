@@ -2584,310 +2584,301 @@ endif()
 # According to https://doc.qt.io/qt-6/qt-finalize-target.html it is importand for
 # builds with Qt < 3.21
 if(ANDROID)
-    target_compile_definitions(
-      mixxx-lib
-      PUBLIC __STDC_CONSTANT_MACROS __STDC_LIMIT_MACROS __STDC_FORMAT_MACROS
-    )
-    set_property(TARGET mixxx-lib PROPERTY ANDROID_ABIS "${ANDROID_ABI}")
-    target_compile_definitions(
-      mixxx-lib
-      PUBLIC ANDROID_PACKAGE_NAME="org.mixxx"
-    )
-    qt_add_executable(mixxx src/main.cpp MANUAL_FINALIZATION)
-    set_property(
-      TARGET mixxx
-      PROPERTY
-        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/packaging/android"
-    )
-    set_target_properties(mixxx PROPERTIES QT_ANDROID_ABIS "${ANDROID_ABI}")
-    set_target_properties(mixxx PROPERTIES QT_ANDROID_PACKAGE_NAME "org.mixxx")
-    set_target_properties(
-      mixxx
-      PROPERTIES QT_ANDROID_VERSION_NAME "${MIXXX_VERSION}"
-    )
-    set_target_properties(
-      mixxx
-      PROPERTIES QT_ANDROID_APPLICATION_ARGUMENTS "--new-ui"
-    )
-    # From Android 10 on: functions of the C library that Mixxx and Qt use
-    # only exist from Android 11/13/14 on, see the libccompat part of
-    # cmake/modules/MixxxAndroid.cmake. Not Android 9: the MIDI API of the
-    # NDK (AMidi) used for the controllers comes with Android 10. The target
-    # stays at the compile SDK: from 36 on, Android 16 ignores the landscape
-    # lock on tablets and no longer delivers the Back key to Qt.
-    # (from JaviLabarumDJ/mixxx-android android-stable)
-    set_target_properties(
-      mixxx
-      PROPERTIES QT_ANDROID_MIN_SDK_VERSION 29 QT_ANDROID_TARGET_SDK_VERSION 35
-    )
-    qt_add_android_permission(mixxx
+  target_compile_definitions(
+    mixxx-lib
+    PUBLIC __STDC_CONSTANT_MACROS __STDC_LIMIT_MACROS __STDC_FORMAT_MACROS
+  )
+  set_property(TARGET mixxx-lib PROPERTY ANDROID_ABIS "${ANDROID_ABI}")
+  target_compile_definitions(mixxx-lib PUBLIC ANDROID_PACKAGE_NAME="org.mixxx")
+  qt_add_executable(mixxx src/main.cpp MANUAL_FINALIZATION)
+  set_property(
+    TARGET mixxx
+    PROPERTY
+      QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/packaging/android"
+  )
+  set_target_properties(mixxx PROPERTIES QT_ANDROID_ABIS "${ANDROID_ABI}")
+  set_target_properties(mixxx PROPERTIES QT_ANDROID_PACKAGE_NAME "org.mixxx")
+  set_target_properties(
+    mixxx
+    PROPERTIES QT_ANDROID_VERSION_NAME "${MIXXX_VERSION}"
+  )
+  set_target_properties(
+    mixxx
+    PROPERTIES QT_ANDROID_APPLICATION_ARGUMENTS "--new-ui"
+  )
+  # From Android 10 on: functions of the C library that Mixxx and Qt use
+  # only exist from Android 11/13/14 on, see the libccompat part of
+  # cmake/modules/MixxxAndroid.cmake. Not Android 9: the MIDI API of the
+  # NDK (AMidi) used for the controllers comes with Android 10. The target
+  # stays at the compile SDK: from 36 on, Android 16 ignores the landscape
+  # lock on tablets and no longer delivers the Back key to Qt.
+  # (from JaviLabarumDJ/mixxx-android android-stable)
+  set_target_properties(
+    mixxx
+    PROPERTIES QT_ANDROID_MIN_SDK_VERSION 29 QT_ANDROID_TARGET_SDK_VERSION 35
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.ACCESS_NETWORK_STATE
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.INTERNET
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.MODIFY_AUDIO_SETTINGS
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.RECORD_AUDIO
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.WRITE_EXTERNAL_STORAGE
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.MANAGE_EXTERNAL_STORAGE
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.WAKE_LOCK
-    )
-    qt_add_android_permission(mixxx
+  )
+  qt_add_android_permission(mixxx
     NAME android.permission.USB_PERMISSION
-    )
-    set(
-      CMAKE_LINKER
-      "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/lld"
-    )
-    set(
-      CMAKE_C_COMPILER
-      "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/clang"
-    )
-    set(
-      CMAKE_CXX_COMPILER
-      "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/clang++"
-    )
-    # Use C++23 for Android (NDK r28 Clang 19 supports it fully).
-    # Desktop stays at C++20 because GCC 13 on Ubuntu 24.04 doesn't fully support C++23.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 -fPIC")
+  )
+  set(
+    CMAKE_LINKER
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/lld"
+  )
+  set(
+    CMAKE_C_COMPILER
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/clang"
+  )
+  set(
+    CMAKE_CXX_COMPILER
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/clang++"
+  )
+  # Use C++23 for Android (NDK r28 Clang 19 supports it fully).
+  # Desktop stays at C++20 because GCC 13 on Ubuntu 24.04 doesn't fully support C++23.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 -fPIC")
 
-    # ─── Android performance & size optimizations ───────────────────────
-    # -O2 + full LTO gives the best perf/size tradeoff on ARM64.
-    # -Oz sacrifices ~10-15% perf for ~5% size savings which is not
-    # worth it for a DJ app where audio DSP latency matters.
-    target_compile_options(
-      mixxx-lib
-      PUBLIC -O2 -ffunction-sections -fdata-sections
-    )
-    # Full LTO (not Thin LTO) for release builds — maximizes cross-TU
-    # inlining and dead-code elimination. With NDK r28 Clang 19 this is
-    # stable and produces measurably smaller+faster binaries.
-    target_compile_options(mixxx-lib PUBLIC -flto=full)
-    target_link_options(mixxx-lib PUBLIC -flto=full)
+  # ─── Android performance & size optimizations ───────────────────────
+  # -O2 + full LTO gives the best perf/size tradeoff on ARM64.
+  # -Oz sacrifices ~10-15% perf for ~5% size savings which is not
+  # worth it for a DJ app where audio DSP latency matters.
+  target_compile_options(
+    mixxx-lib
+    PUBLIC -O2 -ffunction-sections -fdata-sections
+  )
+  # Full LTO (not Thin LTO) for release builds — maximizes cross-TU
+  # inlining and dead-code elimination. With NDK r28 Clang 19 this is
+  # stable and produces measurably smaller+faster binaries.
+  target_compile_options(mixxx-lib PUBLIC -flto=full)
+  target_link_options(mixxx-lib PUBLIC -flto=full)
 
-    # Locate the NDK's bundled libomp.so dynamically. The path used to be
-    # hardcoded to `lib/clang/18/...` which broke every time the NDK was
-    # bumped (r27 ships Clang 18, r28 ships Clang 19, r29+ will ship newer).
-    # Glob the single Clang version directory the NDK installs and pick that.
-    file(
-      GLOB ANDROID_LIBOMP_CANDIDATES
-      "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/lib/clang/*/lib/linux/${ANDROID_LLVM_ARCH}/libomp.so"
+  # Locate the NDK's bundled libomp.so dynamically. The path used to be
+  # hardcoded to `lib/clang/18/...` which broke every time the NDK was
+  # bumped (r27 ships Clang 18, r28 ships Clang 19, r29+ will ship newer).
+  # Glob the single Clang version directory the NDK installs and pick that.
+  file(
+    GLOB ANDROID_LIBOMP_CANDIDATES
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/lib/clang/*/lib/linux/${ANDROID_LLVM_ARCH}/libomp.so"
+  )
+  if(NOT ANDROID_LIBOMP_CANDIDATES)
+    message(
+      FATAL_ERROR
+      "Could not find libomp.so for ${ANDROID_LLVM_ARCH} in the NDK at ${CMAKE_ANDROID_NDK}"
     )
-    if(NOT ANDROID_LIBOMP_CANDIDATES)
-      message(
-        FATAL_ERROR
-        "Could not find libomp.so for ${ANDROID_LLVM_ARCH} in the NDK at ${CMAKE_ANDROID_NDK}"
-      )
-    endif()
-    # Pick the highest-numbered (most recent) entry; an NDK normally ships
-    # exactly one but be defensive if a side-by-side install ever happens.
-    list(SORT ANDROID_LIBOMP_CANDIDATES)
-    list(GET ANDROID_LIBOMP_CANDIDATES -1 ANDROID_LIBOMP)
-    # Ship a stripped copy of libomp.so. The NDK ships it unstripped
-    # (~600 KiB); `llvm-strip --strip-unneeded` brings it down to ~200 KiB
-    # without affecting OpenMP runtime behaviour. The stripped copy lives
-    # in the build dir so the NDK install is left untouched.
-    set(
-      _android_strip
-      "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/llvm-strip"
-    )
-    set(
-      _android_libomp_stripped
-      "${CMAKE_CURRENT_BINARY_DIR}/android-stripped/libomp.so"
-    )
-    add_custom_command(
-      OUTPUT "${_android_libomp_stripped}"
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/android-stripped"
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different "${ANDROID_LIBOMP}"
-        "${_android_libomp_stripped}"
-      COMMAND "${_android_strip}" --strip-unneeded "${_android_libomp_stripped}"
-      DEPENDS "${ANDROID_LIBOMP}"
-      COMMENT "Stripping libomp.so for APK packaging"
-      VERBATIM
-    )
-    add_custom_target(
-      android-strip-libomp
-      DEPENDS "${_android_libomp_stripped}"
-    )
-    set_target_properties(
-      mixxx
-      PROPERTIES QT_ANDROID_EXTRA_LIBS "${_android_libomp_stripped}"
-    )
-    # 16 KB page-size compatibility. Pixel 8a / 9 series and any device
-    # exposing `ro.product.cpu.pagesize=16384` refuse to load .so files
-    # whose segments aren't aligned to 16 KB. NDK r28 enables this by
-    # default for new projects but Mixxx overrides linker flags above —
-    # re-apply explicitly so we benefit on the new devices and don't
-    # silently regress to 4 KB-only loads. The `android+relr` relocation
-    # packing format collapses RELATIVE relocations into a bitmap (saves
-    # roughly 5–10 % off `libmixxx-lib.so` and a comparable share of the
-    # compressed APK) and is supported by every Android version we ship to.
-    target_link_options(
-      mixxx-lib
-      PUBLIC
-        "LINKER:-z,max-page-size=16384"
-        "LINKER:--pack-dyn-relocs=android+relr"
-        # Dead-code / dead-data elimination (requires -ffunction-sections
-        # and -fdata-sections above). Saves 10-20 % on the final .so.
-        "LINKER:--gc-sections"
-        # Identical Code Folding — merges functions with the same body.
-        # "safe" mode only folds functions whose address is never taken,
-        # so it cannot break function-pointer comparisons.
-        "LINKER:--icf=safe"
-    )
-    add_custom_target(
-      copy-resource-android
-      COMMENT "Copy filtered resources folder to Android build asset directory"
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/packaging/android
-        ${CMAKE_CURRENT_BINARY_DIR}/android
-      # The manifest (QT_ANDROID_PACKAGE_SOURCE_DIR = packaging/android)
-      # references @xml/usb_device_filter, so the generated file must land
-      # in the package source tree where androiddeployqt picks it up.
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_SOURCE_DIR}/packaging/android/res/xml
-      COMMAND
-        ${CMAKE_COMMAND}
-        -DTEMPLATE_FILE="${CMAKE_SOURCE_DIR}/packaging/android/usb_device_filter.xml.in"
-        -DTARGET_FILE="${CMAKE_SOURCE_DIR}/packaging/android/res/xml/usb_device_filter.xml"
-        -P ${CMAKE_SOURCE_DIR}/cmake/modules/gen_usb_device_filter.cmake
-      # We deliberately copy a subset of res/ to keep the APK small. The bits
-      # we drop are pure desktop-platform clutter on Android (and DeX, the
-      # primary target for this build, doesn't need icon themes from
-      # res/linux or res/osx either). Approximate APK savings from this
-      # filter: ~80 MiB raw / ~25-35 MiB compressed. Re-add a directory
-      # below if you genuinely need it on Android.
-      #   - res/linux, res/osx  → desktop-only icon themes / Info.plist
-      #   - res/Mixxx-Keyboard-Shortcuts.pdf → ~360 KiB doc, never opened
-      #   - res/skins/{Deere,Shade,Tango,*64 Samplers}  → ~12 MiB; we ship
-      #     only LateNight (the default skin returned by SkinLoader) plus
-      #     the shared *.qss helpers
-      #- res / translations/* except English  → ~70 MiB of .qm files; the
-      #     user runs the app in English and would otherwise have to find
-      #     Settings → Preferences to switch back. Re-add specific locales
-      #     here if needed.
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/controllers
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/controllers
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/effects
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/effects
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/fonts
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/fonts
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images
-      # Copy only the image files Android actually needs.
-      # Exclude res/images/icons/ entirely — Android uses mipmap icons from
-      # packaging/android/res/ and the SVG icons are 4.5MB of dead weight.
-      # Exclude templates/logo_mixxx.png — desktop-only about dialog logo.
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/res/images/preferences
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/preferences
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/res/images/keywheel
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/keywheel
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/res/images/library
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/library
-      COMMAND
-        ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.png
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.png
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/keyboard
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/keyboard
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/qml
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml
-      # The Android versions of upstream QML files live in +android folders
-      # (from JaviLabarumDJ/mixxx-android), flattened over the base files
-      # after the copy by mixxx-android-qml-overrides below.
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
-      # Samples: built-in DJ samples for sampler decks
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samples
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples
-      # Default sampler bank: pre-loaded Rekordbox-style sample slots
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samplers
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samplers
-      COMMAND
-        ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/res/schema.xml
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/schema.xml
-      # PO token BotGuard page: loaded by PoTokenWebView from the app assets
-      # (no network needed for the page itself). Lives in packaging/android
-      # next to the Java sources — NOT in packaging/android/assets/, because
-      # androiddeployqt would use that dir instead of the generated
-      # android-build/assets tree and ship an APK with no skins.
-      COMMAND
-        ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/packaging/android/po_token.html
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/po_token.html
-      # Skins: LateNight + the shared *.qss only.
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/res/skins/LateNight
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/LateNight
-      COMMAND
-        ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/res/skins/default.qss
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default.qss
-      COMMAND
-        ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/res/skins/default-menu-styles-linux.qss
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default-menu-styles-linux.qss
-      # Translations: ship only the English source file (Mixxx falls back to
-      # the in-source English strings if no .qm is found).
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations
-      # androiddeployqt drops empty dirs from the APK, which makes Mixxx
-      # log "Translations directory does not exist" on every startup.
-      # A zero-byte placeholder keeps the dir alive (cost: nothing).
-      COMMAND
-        ${CMAKE_COMMAND} -E touch
-        ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations/.keep
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    )
-    # Flatten +android QML selectors over base files in the package
-    # (from JaviLabarumDJ/mixxx-android, cmake/modules/MixxxAndroid.cmake).
-    add_custom_target(
-      mixxx-android-qml-overrides
-      COMMAND
-        ${CMAKE_COMMAND}
-        -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
-        ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
-    )
-    add_dependencies(mixxx-android-qml-overrides copy-resource-android)
-    # mixxx depends on the flattened QML, not the raw copy: the override
-    # target itself depends on copy-resource-android (his ordering).
-    add_dependencies(mixxx android-strip-libomp mixxx-android-qml-overrides)
-    target_link_libraries(mixxx PUBLIC omp)
-  else()
-    qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
   endif()
+  # Pick the highest-numbered (most recent) entry; an NDK normally ships
+  # exactly one but be defensive if a side-by-side install ever happens.
+  list(SORT ANDROID_LIBOMP_CANDIDATES)
+  list(GET ANDROID_LIBOMP_CANDIDATES -1 ANDROID_LIBOMP)
+  # Ship a stripped copy of libomp.so. The NDK ships it unstripped
+  # (~600 KiB); `llvm-strip --strip-unneeded` brings it down to ~200 KiB
+  # without affecting OpenMP runtime behaviour. The stripped copy lives
+  # in the build dir so the NDK install is left untouched.
+  set(
+    _android_strip
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/llvm-strip"
+  )
+  set(
+    _android_libomp_stripped
+    "${CMAKE_CURRENT_BINARY_DIR}/android-stripped/libomp.so"
+  )
+  add_custom_command(
+    OUTPUT "${_android_libomp_stripped}"
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/android-stripped"
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different "${ANDROID_LIBOMP}"
+      "${_android_libomp_stripped}"
+    COMMAND "${_android_strip}" --strip-unneeded "${_android_libomp_stripped}"
+    DEPENDS "${ANDROID_LIBOMP}"
+    COMMENT "Stripping libomp.so for APK packaging"
+    VERBATIM
+  )
+  add_custom_target(android-strip-libomp DEPENDS "${_android_libomp_stripped}")
+  set_target_properties(
+    mixxx
+    PROPERTIES QT_ANDROID_EXTRA_LIBS "${_android_libomp_stripped}"
+  )
+  # 16 KB page-size compatibility. Pixel 8a / 9 series and any device
+  # exposing `ro.product.cpu.pagesize=16384` refuse to load .so files
+  # whose segments aren't aligned to 16 KB. NDK r28 enables this by
+  # default for new projects but Mixxx overrides linker flags above —
+  # re-apply explicitly so we benefit on the new devices and don't
+  # silently regress to 4 KB-only loads. The `android+relr` relocation
+  # packing format collapses RELATIVE relocations into a bitmap (saves
+  # roughly 5–10 % off `libmixxx-lib.so` and a comparable share of the
+  # compressed APK) and is supported by every Android version we ship to.
+  target_link_options(
+    mixxx-lib
+    PUBLIC
+      "LINKER:-z,max-page-size=16384"
+      "LINKER:--pack-dyn-relocs=android+relr"
+      # Dead-code / dead-data elimination (requires -ffunction-sections
+      # and -fdata-sections above). Saves 10-20 % on the final .so.
+      "LINKER:--gc-sections"
+      # Identical Code Folding — merges functions with the same body.
+      # "safe" mode only folds functions whose address is never taken,
+      # so it cannot break function-pointer comparisons.
+      "LINKER:--icf=safe"
+  )
+  add_custom_target(
+    copy-resource-android
+    COMMENT "Copy filtered resources folder to Android build asset directory"
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/packaging/android
+      ${CMAKE_CURRENT_BINARY_DIR}/android
+    # The manifest (QT_ANDROID_PACKAGE_SOURCE_DIR = packaging/android)
+    # references @xml/usb_device_filter, so the generated file must land
+    # in the package source tree where androiddeployqt picks it up.
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_SOURCE_DIR}/packaging/android/res/xml
+    COMMAND
+      ${CMAKE_COMMAND}
+      -DTEMPLATE_FILE="${CMAKE_SOURCE_DIR}/packaging/android/usb_device_filter.xml.in"
+      -DTARGET_FILE="${CMAKE_SOURCE_DIR}/packaging/android/res/xml/usb_device_filter.xml"
+      -P ${CMAKE_SOURCE_DIR}/cmake/modules/gen_usb_device_filter.cmake
+    # We deliberately copy a subset of res/ to keep the APK small. The bits
+    # we drop are pure desktop-platform clutter on Android (and DeX, the
+    # primary target for this build, doesn't need icon themes from
+    # res/linux or res/osx either). Approximate APK savings from this
+    # filter: ~80 MiB raw / ~25-35 MiB compressed. Re-add a directory
+    # below if you genuinely need it on Android.
+    #   - res/linux, res/osx  → desktop-only icon themes / Info.plist
+    #   - res/Mixxx-Keyboard-Shortcuts.pdf → ~360 KiB doc, never opened
+    #   - res/skins/{Deere,Shade,Tango,*64 Samplers}  → ~12 MiB; we ship
+    #     only LateNight (the default skin returned by SkinLoader) plus
+    #     the shared *.qss helpers
+    #- res / translations/* except English  → ~70 MiB of .qm files; the
+    #     user runs the app in English and would otherwise have to find
+    #     Settings → Preferences to switch back. Re-add specific locales
+    #     here if needed.
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/controllers
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/controllers
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/effects
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/effects
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/fonts
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/fonts
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images
+    # Copy only the image files Android actually needs.
+    # Exclude res/images/icons/ entirely — Android uses mipmap icons from
+    # packaging/android/res/ and the SVG icons are 4.5MB of dead weight.
+    # Exclude templates/logo_mixxx.png — desktop-only about dialog logo.
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_SOURCE_DIR}/res/images/preferences
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/preferences
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/images/keywheel
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/keywheel
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/images/library
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/library
+    COMMAND
+      ${CMAKE_COMMAND} -E copy
+      ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.png
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.png
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/keyboard
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/keyboard
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/qml
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml
+    # The Android versions of upstream QML files live in +android folders
+    # (from JaviLabarumDJ/mixxx-android), flattened over the base files
+    # after the copy by mixxx-android-qml-overrides below.
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
+    # Samples: built-in DJ samples for sampler decks
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samples
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples
+    # Default sampler bank: pre-loaded Rekordbox-style sample slots
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samplers
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samplers
+    COMMAND
+      ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/res/schema.xml
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/schema.xml
+    # PO token BotGuard page: loaded by PoTokenWebView from the app assets
+    # (no network needed for the page itself). Lives in packaging/android
+    # next to the Java sources — NOT in packaging/android/assets/, because
+    # androiddeployqt would use that dir instead of the generated
+    # android-build/assets tree and ship an APK with no skins.
+    COMMAND
+      ${CMAKE_COMMAND} -E copy
+      ${CMAKE_SOURCE_DIR}/packaging/android/po_token.html
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/po_token.html
+    # Skins: LateNight + the shared *.qss only.
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/skins/LateNight
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/LateNight
+    COMMAND
+      ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/res/skins/default.qss
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default.qss
+    COMMAND
+      ${CMAKE_COMMAND} -E copy
+      ${CMAKE_SOURCE_DIR}/res/skins/default-menu-styles-linux.qss
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/skins/default-menu-styles-linux.qss
+    # Translations: ship only the English source file (Mixxx falls back to
+    # the in-source English strings if no .qm is found).
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations
+    # androiddeployqt drops empty dirs from the APK, which makes Mixxx
+    # log "Translations directory does not exist" on every startup.
+    # A zero-byte placeholder keeps the dir alive (cost: nothing).
+    COMMAND
+      ${CMAKE_COMMAND} -E touch
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/translations/.keep
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  # Flatten +android QML selectors over base files in the package
+  # (from JaviLabarumDJ/mixxx-android, cmake/modules/MixxxAndroid.cmake).
+  add_custom_target(
+    mixxx-android-qml-overrides
+    COMMAND
+      ${CMAKE_COMMAND}
+      -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
+      ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+  )
+  add_dependencies(mixxx-android-qml-overrides copy-resource-android)
+  # mixxx depends on the flattened QML, not the raw copy: the override
+  # target itself depends on copy-resource-android (his ordering).
+  add_dependencies(mixxx android-strip-libomp mixxx-android-qml-overrides)
+  target_link_libraries(mixxx PUBLIC omp)
+else()
+  qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
+endif()
 
 if(NOT QML)
   target_sources(
