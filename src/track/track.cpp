@@ -1494,6 +1494,19 @@ bool Track::setStemInfosWhileLocked(QList<StemInfo> stemInfos) {
     return true;
 }
 
+#ifdef __STEM_SEPARATION__
+void Track::setSeparatedStemInfos(QList<StemInfo> stemInfos) {
+    {
+        const QMutexLocker lock(&m_qMutex);
+        if (m_stemInfo == stemInfos) {
+            return;
+        }
+        m_stemInfo = std::move(stemInfos);
+    }
+    emit stemsUpdated();
+}
+#endif
+
 bool Track::importPendingStemInfosWhileLocked() {
     const QList<StemInfo> stemInfos =
             mixxx::StemInfoImporter::importStemInfos(

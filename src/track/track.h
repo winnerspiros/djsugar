@@ -361,6 +361,12 @@ class Track : public QObject {
     }
     // Setter is only available internally. See setStemPointsWhileLocked
 
+#ifdef __STEM_SEPARATION__
+    /// Sets the stems of the separated stem file that plays instead of the
+    /// track's file, see SoundSourceProxy::openAudioSource()
+    void setSeparatedStemInfos(QList<StemInfo> stemInfos);
+#endif
+
     bool hasStem() const {
         const QMutexLocker lock(&m_qMutex);
         // lock thread-unsafe copy constructors of QList

@@ -2636,6 +2636,17 @@ if(QT6)
       mixxx
       PROPERTIES QT_ANDROID_APPLICATION_ARGUMENTS "--new-ui"
     )
+    # From Android 10 on: functions of the C library that Mixxx and Qt use
+    # only exist from Android 11/13/14 on, see the libccompat part of
+    # cmake/modules/MixxxAndroid.cmake. Not Android 9: the MIDI API of the
+    # NDK (AMidi) used for the controllers comes with Android 10. The target
+    # stays at the compile SDK: from 36 on, Android 16 ignores the landscape
+    # lock on tablets and no longer delivers the Back key to Qt.
+    # (from JaviLabarumDJ/mixxx-android android-stable)
+    set_target_properties(
+      mixxx
+      PROPERTIES QT_ANDROID_MIN_SDK_VERSION 29 QT_ANDROID_TARGET_SDK_VERSION 35
+    )
     qt_add_android_permission(mixxx
     NAME android.permission.ACCESS_NETWORK_STATE
     )
@@ -4626,7 +4637,6 @@ if(QML)
       src/qml/qmlyoutubeproxy.cpp
       src/qml/qmlstreamingproxy.cpp
       src/qml/qmlframeclock.cpp
-      src/qml/qmlstemsproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/waveformrenderbeat.cpp
       src/waveform/renderers/allshader/waveformrenderer.cpp
