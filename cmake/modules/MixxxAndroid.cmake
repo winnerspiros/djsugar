@@ -25,6 +25,7 @@ if(QML)
     mixxx-qml-lib
     PRIVATE
       src/qml/androidpresetnames.cpp
+      src/qml/qmlappupdateproxy.cpp
       src/qml/librarycoverloader.cpp
       src/qml/qmllanguageproxy.cpp
       src/qml/qmllibraryfeaturesource.cpp
@@ -36,6 +37,54 @@ if(QML)
       src/qml/qmlstreamingproxy.cpp
   )
 endif()
+
+# Android 10 to 13 (API 29-33). Qt and the dependencies are built against
+# the C library of API 35, and libQt6Core, libQt6Test and libmixxx import
+# functions that it only has from Android 11/13/14 on (pthread_cond_clockwait,
+# backtrace, copy_file_range), so they can't be loaded on older versions. libmixxx_libccompat.so provides them
+# (src/util/androidlibccompat.c), and both libraries are patched to load it
+# and to import these functions without the version of the C library.
+# Check with tools: llvm-readelf --dyn-syms on the libraries of the APK.
+find_program(PATCHELF_EXECUTABLE patchelf REQUIRED)
+add_library(mixxx_libccompat SHARED src/util/androidlibccompat.c)
+target_link_libraries(mixxx_libccompat PRIVATE dl)
+add_dependencies(mixxx mixxx_libccompat)
+set_property(
+  TARGET mixxx
+  APPEND
+  PROPERTY QT_ANDROID_EXTRA_LIBS "$<TARGET_FILE:mixxx_libccompat>"
+)
+# The Qt library of the build environment, patched in place once
+add_custom_target(
+  android-qtcore-libccompat
+  COMMAND
+    ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
+    -DLIBRARY=$<TARGET_FILE:Qt6::Core> -DSYMBOLS=copy_file_range,pthread_cond_clockwait
+    -P
+    ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
+  VERBATIM
+)
+add_dependencies(mixxx android-qtcore-libccompat)
+# libmixxx links QtTest, which uses pthread_cond_clockwait too
+add_custom_target(
+  android-qttest-libccompat
+  COMMAND
+    ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
+    -DLIBRARY=$<TARGET_FILE:Qt6::Test> -DSYMBOLS=pthread_cond_clockwait -P
+    ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
+  VERBATIM
+)
+add_dependencies(mixxx android-qttest-libccompat)
+add_custom_command(
+  TARGET mixxx
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
+    -DLIBRARY=$<TARGET_FILE:mixxx>
+    -DSYMBOLS=copy_file_range,backtrace,pthread_cond_clockwait -P
+    ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
+  VERBATIM
+)
 
 if(HID)
   # Android MIDI (android.media.midi + NDK AMidi, resolved at runtime). It
@@ -113,8 +162,82 @@ add_custom_target(
   mixxx-android-qml-overrides
   COMMAND
     ${CMAKE_COMMAND}
-    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
-    ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml"
+    -P ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
 )
 add_dependencies(mixxx-android-qml-overrides copy-resource-android)
 add_dependencies(mixxx mixxx-android-qml-overrides)
+
+# Stem separation: splits tracks into .stem.mp4 files with ONNX models that
+# the app downloads (see src/stems/). ONNX Runtime is only loaded when a
+# track is separated, so it is packaged but not linked.
+if(STEM)
+  set(MIXXX_ONNXRUNTIME_VERSION 1.31.0)
+  set(
+    MIXXX_ONNXRUNTIME_AAR
+    "${CMAKE_CURRENT_BINARY_DIR}/onnxruntime-android-${MIXXX_ONNXRUNTIME_VERSION}.aar"
+  )
+  set(MIXXX_ONNXRUNTIME_DIR "${CMAKE_CURRENT_BINARY_DIR}/onnxruntime")
+  if(NOT EXISTS "${MIXXX_ONNXRUNTIME_DIR}/headers/onnxruntime_cxx_api.h")
+    file(
+      DOWNLOAD
+        "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/${MIXXX_ONNXRUNTIME_VERSION}/onnxruntime-android-${MIXXX_ONNXRUNTIME_VERSION}.aar"
+        "${MIXXX_ONNXRUNTIME_AAR}"
+      EXPECTED_HASH
+        SHA256=72683787a80d0608a3121b967d8e1239aef48286826661c953211626690540a7
+      SHOW_PROGRESS
+    )
+    file(MAKE_DIRECTORY "${MIXXX_ONNXRUNTIME_DIR}")
+    file(
+      ARCHIVE_EXTRACT
+      INPUT "${MIXXX_ONNXRUNTIME_AAR}"
+      DESTINATION "${MIXXX_ONNXRUNTIME_DIR}"
+      PATTERNS "headers/*" "jni/${ANDROID_ABI}/libonnxruntime.so"
+    )
+    file(REMOVE "${MIXXX_ONNXRUNTIME_AAR}")
+  endif()
+
+  target_compile_definitions(mixxx-lib PUBLIC __STEM_SEPARATION__)
+  target_include_directories(
+    mixxx-lib
+    SYSTEM
+    PRIVATE "${MIXXX_ONNXRUNTIME_DIR}/headers"
+  )
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/stems/htdemucsseparator.cpp
+      src/stems/onnxruntimeloader.cpp
+      src/stems/spleeterseparator.cpp
+      src/stems/stemcompanion.cpp
+      src/stems/stemfilewriter.cpp
+      src/stems/stemmodels.cpp
+      src/stems/stemseparator.cpp
+      src/stems/stemsmanager.cpp
+      src/stems/stemsworker.cpp
+  )
+  # The Wiener filter of Spleeter: plain complex arithmetic, without the
+  # slow handling of infinities and NaN (std::abs, products, divisions)
+  set_source_files_properties(
+    src/stems/spleeterseparator.cpp
+    PROPERTIES COMPILE_OPTIONS "-fcx-limited-range"
+  )
+  # The STFT of Spleeter
+  target_link_libraries(mixxx-lib PRIVATE "${FFTW3_INCLUDE_DIR}/../lib/libfftw3f.a")
+  set_property(
+    TARGET mixxx
+    APPEND
+    PROPERTY
+      QT_ANDROID_EXTRA_LIBS
+        "${MIXXX_ONNXRUNTIME_DIR}/jni/${ANDROID_ABI}/libonnxruntime.so"
+  )
+  if(QML)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __STEM_SEPARATION__)
+    target_include_directories(
+      mixxx-qml-lib
+      SYSTEM
+      PRIVATE "${MIXXX_ONNXRUNTIME_DIR}/headers"
+    )
+    target_sources(mixxx-qml-lib PRIVATE src/qml/qmlstemsproxy.cpp)
+  endif()
+endif()
