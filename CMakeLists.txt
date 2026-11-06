@@ -2575,12 +2575,15 @@ cmake_dependent_option(
 )
 if(QML)
   add_compile_definitions(MIXXX_USE_QML)
+else()
+  message(STATUS "Building without QML")
+endif()
 
-  # qt_add_executable() is the recommended initial call for qt_finalize_target()
-  # below that takes care of the correct object order in the resulting binary
-  # According to https://doc.qt.io/qt-6/qt-finalize-target.html it is importand for
-  # builds with Qt < 3.21
-  if(ANDROID)
+# qt_add_executable() is the recommended initial call for qt_finalize_target()
+# below that takes care of the correct object order in the resulting binary
+# According to https://doc.qt.io/qt-6/qt-finalize-target.html it is importand for
+# builds with Qt < 3.21
+if(ANDROID)
     target_compile_definitions(
       mixxx-lib
       PUBLIC __STDC_CONSTANT_MACROS __STDC_LIMIT_MACROS __STDC_FORMAT_MACROS
@@ -2885,9 +2888,6 @@ if(QML)
   else()
     qt_add_executable(mixxx WIN32 src/main.cpp MANUAL_FINALIZATION)
   endif()
-else()
-  message(STATUS "Building without QML")
-endif()
 
 if(NOT QML)
   target_sources(
