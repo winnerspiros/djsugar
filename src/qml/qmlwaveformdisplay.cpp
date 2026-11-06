@@ -1,6 +1,7 @@
 #include "qml/qmlwaveformdisplay.h"
 
 #include <QQuickWindow>
+#include <QScreen>
 #include <QSGFlatColorMaterial>
 #include <QSGSimpleRectNode>
 #include <QSGVertexColorMaterial>
@@ -18,6 +19,7 @@
 #include "mixer/basetrackplayer.h"
 #include "moc_qmlwaveformdisplay.cpp"
 #include "qml/qmlconfigproxy.h"
+#include "qml/qmlframeclock.h"
 #include "qml/qmlplayerproxy.h"
 #include "qmllibraryproxy.h"
 #include "rendergraph/context.h"
@@ -29,6 +31,11 @@ using namespace allshader;
 
 namespace {
 constexpr int kDefaultFrameRate = 60;
+// Refresh interval of a still waveform, see requestUpdateAtFrameRate()
+// (from JaviLabarumDJ/mixxx-android)
+constexpr int kStillRefreshMillis = 100;
+// A waveform whose position didn't change for this long is still
+constexpr int kStillAfterMillis = 150;
 } // namespace
 
 namespace mixxx {
@@ -78,8 +85,7 @@ void QmlWaveformDisplay::setFrameRate(int frameRate) {
         return;
     }
     m_frameRate = clampedFrameRate;
-    m_syncInterval = std::chrono::microseconds(
-            std::max(1, 1'000'000 / m_frameRate));
+    updateFrameInterval();
     if (window()) {
         m_frameRateTimer.stop();
         requestUpdateAtFrameRate();
@@ -281,12 +287,28 @@ void QmlWaveformDisplay::setStaticTrack(QmlTrackProxy* track) {
 void QmlWaveformDisplay::slotWindowChanged(QQuickWindow* window) {
     m_dirtyFlag.setFlag(DirtyFlag::Window, true);
     if (window) {
+        // The time on the render thread, the next frame on the GUI thread:
+        // both waveforms (and the other periodic updates on the frame clock)
+        // are drawn in one frame instead of one frame each.
+        // (from JaviLabarumDJ/mixxx-android frameclock)
+        connect(
+                window,
+                &QQuickWindow::afterFrameEnd,
+                this,
+                [this]() {
+                    frameclock::frameShown();
+                    if (m_drawnInFrame.exchange(false)) {
+                        frameclock::tickShown();
+                    }
+                },
+                Qt::UniqueConnection);
         connect(window,
                 &QQuickWindow::afterFrameEnd,
                 this,
                 &QmlWaveformDisplay::slotFrameSwapped,
                 Qt::UniqueConnection);
     }
+    updateFrameInterval();
     m_timer.restart();
     m_frameRateTimer.stop();
     m_frameRequestTimer.restart();
@@ -319,7 +341,20 @@ std::chrono::microseconds QmlWaveformDisplay::fromTimerToNextSync(const Performa
 
 void QmlWaveformDisplay::slotFrameSwapped() {
     m_timer.restart();
+    // Android may switch the refresh rate of the display (e.g. 60/90 Hz)
+    updateFrameInterval();
     requestUpdateAtFrameRate();
+}
+
+void QmlWaveformDisplay::updateFrameInterval() {
+    const QScreen* pScreen = window() ? window()->screen() : nullptr;
+    const qreal refreshRate = pScreen && pScreen->refreshRate() > 1.0
+            ? pScreen->refreshRate()
+            : 60.0;
+    frameclock::setDisplay(std::chrono::microseconds(
+                                   static_cast<qint64>(1'000'000.0 / refreshRate)),
+            m_frameRate);
+    m_syncInterval = frameclock::frameInterval();
 }
 
 void QmlWaveformDisplay::requestUpdateAtFrameRate() {
@@ -327,23 +362,46 @@ void QmlWaveformDisplay::requestUpdateAtFrameRate() {
         return;
     }
 
-    if (!m_frameRequestTimer.isValid()) {
-        m_frameRequestTimer.start();
-    }
-
-    const qint64 elapsedMicros = m_frameRequestTimer.nsecsElapsed() / 1000;
-    const qint64 intervalMicros = m_syncInterval.count();
-    if (elapsedMicros >= intervalMicros) {
+    if (!getTrackInfo()) {
         m_frameRateTimer.stop();
-        m_frameRequestTimer.restart();
-        update();
         return;
     }
 
-    const qint64 remainingMicros = intervalMicros - elapsedMicros;
-    const int remainingMillis = static_cast<int>(
-            std::max<qint64>(1, (remainingMicros + 999) / 1000));
-    m_frameRateTimer.start(remainingMillis);
+    // Fast path: while the waveform moves, redraw on every display refresh
+    // with no timer round-trip. The frameclock tick (wired in
+    // slotWindowChanged) already coalesces both decks into one frame.
+    const double playPos = WaveformWidgetRenderer::m_visualPlayPosition
+            ? WaveformWidgetRenderer::m_visualPlayPosition->getEnginePlayPos()
+            : -1.0;
+    if (playPos != m_lastFramePlayPos || !m_lastMove.isValid()) {
+        m_lastFramePlayPos = playPos;
+        m_lastMove.start();
+        if (frameclock::frameInterval() <= frameclock::refreshPeriod()) {
+            m_frameRateTimer.stop();
+            update();
+            return;
+        }
+        if (!m_frameRateTimer.isActive()) {
+            m_frameRateTimer.start(frameclock::millisToNextTick());
+        }
+        return;
+    }
+
+    if (m_lastMove.elapsed() > kStillAfterMillis) {
+        // Still: a slow refresh for marks, analysis progress and the like.
+        // Each redraw repaints the whole window, so a still waveform must not
+        // run at the frame rate (from JaviLabarumDJ/mixxx-android).
+        if (!m_frameRateTimer.isActive()) {
+            m_frameRateTimer.start(kStillRefreshMillis);
+        }
+        return;
+    }
+
+    // Position sampled twice within one audio buffer (e.g. 120 Hz engine
+    // updates vs 60 Hz frames): treat as moving, schedule the next tick.
+    if (!m_frameRateTimer.isActive()) {
+        m_frameRateTimer.start(frameclock::millisToNextTick());
+    }
 }
 
 void QmlWaveformDisplay::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) {
@@ -355,10 +413,11 @@ void QmlWaveformDisplay::geometryChange(const QRectF& newGeometry, const QRectF&
 const QmlWaveformRendererFactory::Renderer& QmlWaveformDisplay::createOrCached(
         QmlWaveformRendererFactory* pQmlRenderer) {
     auto name = std::string{pQmlRenderer->metaObject()->className()};
-    if (!m_rendererCache.contains(name)) {
-        m_rendererCache[name] = std::move(pQmlRenderer->create(this, m_options));
+    auto it = m_rendererCache.find(name);
+    if (it == m_rendererCache.end()) {
+        it = m_rendererCache.emplace(name, std::move(pQmlRenderer->create(this, m_options))).first;
     }
-    return m_rendererCache[name];
+    return it->second;
 }
 
 QSGNode* QmlWaveformDisplay::updatePaintNode(QSGNode* node, UpdatePaintNodeData*) {
@@ -370,8 +429,17 @@ QSGNode* QmlWaveformDisplay::updatePaintNode(QSGNode* node, UpdatePaintNodeData*
 
     DEBUG_ASSERT(!node || node->childCount() == 1);
 
-    auto* pClipNode = dynamic_cast<QSGClipNode*>(node);
-    auto* pBgNode = pClipNode ? dynamic_cast<QSGSimpleRectNode*>(pClipNode->lastChild()) : nullptr;
+    // The node types of Qt, not dynamic_cast: across the libraries of Qt and
+    // Mixxx it can fail on Android, and then the whole renderer stack (and
+    // the waveform textures) was built again on every frame
+    // (from JaviLabarumDJ/mixxx-android)
+    auto* pClipNode = node && node->type() == QSGNode::ClipNodeType
+            ? static_cast<QSGClipNode*>(node)
+            : nullptr;
+    QSGNode* pLastChild = pClipNode ? pClipNode->lastChild() : nullptr;
+    auto* pBgNode = pLastChild && pLastChild->type() == QSGNode::GeometryNodeType
+            ? static_cast<QSGSimpleRectNode*>(pLastChild)
+            : nullptr;
 
     if (!pBgNode) {
         if (pClipNode) {
@@ -436,17 +504,28 @@ QSGNode* QmlWaveformDisplay::updatePaintNode(QSGNode* node, UpdatePaintNodeData*
     }
 
     if (m_dirtyFlag.testFlag(DirtyFlag::Geometry)) {
-        m_dirtyFlag.setFlag(DirtyFlag::Geometry, false);
-        pBgNode->setRect(boundingRect());
-        pClipNode->setClipRect(boundingRect());
-        pBgNode->markDirty(QSGNode::DirtyGeometry);
-        pClipNode->markDirty(QSGNode::DirtyGeometry);
-        resizeRenderer(boundingRect().width(),
-                boundingRect().height(),
-                window()->devicePixelRatio());
+        // Skip redundant resizes: consecutive frames may carry the same
+        // geometry flag without any actual size or DPR change.
+        const qreal dpr = window() ? window()->devicePixelRatio() : 1.0;
+        if (boundingRect().size() != m_lastResizeSize ||
+                dpr != m_lastResizePixelRatio) {
+            m_lastResizeSize = boundingRect().size();
+            m_lastResizePixelRatio = dpr;
+            m_dirtyFlag.setFlag(DirtyFlag::Geometry, false);
+            pBgNode->setRect(boundingRect());
+            pClipNode->setClipRect(boundingRect());
+            pBgNode->markDirty(QSGNode::DirtyGeometry);
+            pClipNode->markDirty(QSGNode::DirtyGeometry);
+            resizeRenderer(boundingRect().width(),
+                    boundingRect().height(),
+                    dpr);
+        } else {
+            m_dirtyFlag.setFlag(DirtyFlag::Geometry, false);
+        }
     }
 
     onPreRender(this);
+    m_drawnInFrame = true;
 
     for (auto* pRenderer : std::as_const(m_rendererStack)) {
         pRenderer->update();
@@ -577,7 +656,9 @@ qsizetype QmlWaveformDisplay::renderers_count(QQmlListProperty<QmlWaveformRender
     VERIFY_OR_DEBUG_ASSERT(pWaveform) {
         return 0;
     }
-    pWaveform->m_dirtyFlag.setFlag(DirtyFlag::Window, true);
+    // Only reading: marking the renderers dirty here made updatePaintNode()
+    // build the whole renderer stack again on every frame
+    // (from JaviLabarumDJ/mixxx-android)
     return pWaveform->m_waveformRenderers.count();
 }
 
@@ -591,7 +672,6 @@ QmlWaveformRendererFactory* QmlWaveformDisplay::renderers_at(
     VERIFY_OR_DEBUG_ASSERT(pWaveform) {
         return nullptr;
     }
-    pWaveform->m_dirtyFlag.setFlag(DirtyFlag::Window, true);
     return pWaveform->m_waveformRenderers.at(index);
 }
 
