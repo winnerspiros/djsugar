@@ -22,7 +22,6 @@
 #include <sys/syscall.h>
 
 #include <QJniObject>
-
 #include <cstdlib>
 
 /// Called by PortAudio instead of malloc() (see MixxxAndroid.cmake): its
