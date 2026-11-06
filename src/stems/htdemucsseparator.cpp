@@ -72,9 +72,9 @@ bool HTDemucsSeparator::separate(const float* pStereo,
     }
     const double mean = frameCount > 0 ? sum / frameCount : 0.0;
     const float deviation = static_cast<float>(std::sqrt(std::max(0.0,
-                                                 frameCount > 0
-                                                         ? sumOfSquares / frameCount - mean * mean
-                                                         : 0.0))) +
+                                    frameCount > 0
+                                            ? sumOfSquares / frameCount - mean * mean
+                                            : 0.0))) +
             1e-8f;
 
     // Triangular weights of the overlap-add
@@ -111,7 +111,10 @@ bool HTDemucsSeparator::separate(const float* pStereo,
             const SINT at = start + i;
             const bool inside = at >= 0 && at < frameCount;
             input[i] = inside ? static_cast<float>((pStereo[2 * at] - mean) / deviation) : 0.0f;
-            input[kSegment + i] = inside ? static_cast<float>((pStereo[2 * at + 1] - mean) / deviation) : 0.0f;
+            input[kSegment + i] = inside
+                    ? static_cast<float>(
+                              (pStereo[2 * at + 1] - mean) / deviation)
+                    : 0.0f;
         }
         try {
             Ort::Value inputTensor = Ort::Value::CreateTensor<float>(memoryInfo,
@@ -167,9 +170,9 @@ bool HTDemucsSeparator::separate(const float* pStereo,
             }
         }
         if (!sink({emitBuffers[0].data(),
-                            emitBuffers[1].data(),
-                            emitBuffers[2].data(),
-                            emitBuffers[3].data()},
+                          emitBuffers[1].data(),
+                          emitBuffers[2].data(),
+                          emitBuffers[3].data()},
                     count)) {
             m_error = QStringLiteral("Canceled");
             return false;

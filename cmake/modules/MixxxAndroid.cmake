@@ -59,8 +59,8 @@ add_custom_target(
   android-qtcore-libccompat
   COMMAND
     ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
-    -DLIBRARY=$<TARGET_FILE:Qt6::Core> -DSYMBOLS=copy_file_range,pthread_cond_clockwait
-    -P
+    -DLIBRARY=$<TARGET_FILE:Qt6::Core>
+    -DSYMBOLS=copy_file_range,pthread_cond_clockwait -P
     ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
   VERBATIM
 )
@@ -162,8 +162,8 @@ add_custom_target(
   mixxx-android-qml-overrides
   COMMAND
     ${CMAKE_COMMAND}
-    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml"
-    -P ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
+    -DQML_DIR="${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/qml" -P
+    ${CMAKE_SOURCE_DIR}/cmake/modules/apply_android_qml_overrides.cmake
 )
 add_dependencies(mixxx-android-qml-overrides copy-resource-android)
 add_dependencies(mixxx mixxx-android-qml-overrides)
@@ -223,7 +223,10 @@ if(STEM)
     PROPERTIES COMPILE_OPTIONS "-fcx-limited-range"
   )
   # The STFT of Spleeter
-  target_link_libraries(mixxx-lib PRIVATE "${FFTW3_INCLUDE_DIR}/../lib/libfftw3f.a")
+  target_link_libraries(
+    mixxx-lib
+    PRIVATE "${FFTW3_INCLUDE_DIR}/../lib/libfftw3f.a"
+  )
   set_property(
     TARGET mixxx
     APPEND

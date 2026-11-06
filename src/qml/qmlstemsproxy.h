@@ -94,7 +94,8 @@ class QmlStemsProxy : public QObject {
     Q_INVOKABLE QVariantMap listStats(QAbstractItemModel* pTrackList) const;
     /// Queues tracks. Returns the number of tracks added.
     Q_INVOKABLE int separateTrack(const QVariant& track, const QString& model, bool replace);
-    Q_INVOKABLE int separateList(QAbstractItemModel* pTrackList, const QString& model, bool replace);
+    Q_INVOKABLE int separateList(
+            QAbstractItemModel* pTrackList, const QString& model, bool replace);
     Q_INVOKABLE void cancel(const QString& location);
     Q_INVOKABLE void cancelAll();
     Q_INVOKABLE void clearFinished();

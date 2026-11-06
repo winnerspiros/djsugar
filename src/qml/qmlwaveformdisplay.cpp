@@ -1,10 +1,10 @@
 #include "qml/qmlwaveformdisplay.h"
 
 #include <QQuickWindow>
-#include <QScreen>
 #include <QSGFlatColorMaterial>
 #include <QSGSimpleRectNode>
 #include <QSGVertexColorMaterial>
+#include <QScreen>
 #include <Qt>
 #include <QtQuick/QSGGeometryNode>
 #include <QtQuick/QSGMaterial>

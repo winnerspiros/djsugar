@@ -49,27 +49,27 @@ public class StemsService extends Service {
 
     public static boolean isCharging(Context context) {
         Intent battery = context.registerReceiver(
-                null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (battery == null) {
             return false;
         }
         int status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
         return status == BatteryManager.BATTERY_STATUS_CHARGING
-                || status == BatteryManager.BATTERY_STATUS_FULL;
+            || status == BatteryManager.BATTERY_STATUS_FULL;
     }
 
     /// Asks for the permission to show the progress notification
     /// (Android 13+). Must run on the Android UI thread.
     public static void requestNotificationPermission(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                || !(context instanceof Activity)) {
+            || !(context instanceof Activity)) {
             return;
         }
         Activity activity = (Activity) context;
         if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
+            != PackageManager.PERMISSION_GRANTED) {
             activity.requestPermissions(
-                    new String[] {Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_ID);
+                new String[] {Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_ID);
         }
     }
 
@@ -78,27 +78,27 @@ public class StemsService extends Service {
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID, "Stems", NotificationManager.IMPORTANCE_LOW);
+                CHANNEL_ID, "Stems", NotificationManager.IMPORTANCE_LOW);
             manager.createNotificationChannel(channel);
         }
         String title = intent != null ? intent.getStringExtra(Intent.EXTRA_TITLE) : null;
         String text = intent != null ? intent.getStringExtra(EXTRA_TEXT) : null;
         Intent openApp = getPackageManager().getLaunchIntentForPackage(getPackageName());
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle(title != null ? title : "Mixxx")
-                .setContentText(text != null ? text : "")
-                .setSmallIcon(getApplicationInfo().icon)
-                .setOngoing(true)
-                .setOnlyAlertOnce(true);
+                                           .setContentTitle(title != null ? title : "Mixxx")
+                                           .setContentText(text != null ? text : "")
+                                           .setSmallIcon(getApplicationInfo().icon)
+                                           .setOngoing(true)
+                                           .setOnlyAlertOnce(true);
         if (openApp != null) {
             builder.setContentIntent(android.app.PendingIntent.getActivity(this, 0, openApp,
-                    android.app.PendingIntent.FLAG_IMMUTABLE
-                            | android.app.PendingIntent.FLAG_UPDATE_CURRENT));
+                android.app.PendingIntent.FLAG_IMMUTABLE
+                    | android.app.PendingIntent.FLAG_UPDATE_CURRENT));
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(NOTIFICATION_ID, builder.build(),
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             } else {
                 startForeground(NOTIFICATION_ID, builder.build());
             }

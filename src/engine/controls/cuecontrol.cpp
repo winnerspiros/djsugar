@@ -914,7 +914,6 @@ void CueControl::quantizeChanged(double v) {
 }
 
 void CueControl::loadCuesFromTrackAndFollow() {
-
     // if we are playing (no matter what reason for) do not seek
     if (m_pPlay->toBool()) {
         return;

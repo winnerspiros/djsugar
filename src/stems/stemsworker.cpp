@@ -377,7 +377,8 @@ void StemsWorker::benchmark(int model, int threads) {
         return;
     }
     try {
-        std::unique_ptr<StemSeparator> pSeparator = StemSeparator::create(static_cast<Model>(model));
+        std::unique_ptr<StemSeparator> pSeparator =
+                StemSeparator::create(static_cast<Model>(model));
         StemSeparator::Options options;
         options.threads = threads;
         if (!pSeparator->load(StemModels::modelDir(static_cast<Model>(model)), options)) {
@@ -390,9 +391,10 @@ void StemsWorker::benchmark(int model, int threads) {
         std::mt19937 random(42);
         std::normal_distribution<float> noise(0.0f, 0.05f);
         for (SINT i = 0; i < kFrames; ++i) {
-            const float kick = (i % (kModelSampleRate / 2)) < 4000
-                    ? 0.5f * std::sin(2.0f * static_cast<float>(M_PI) * 55.0f * i / kModelSampleRate)
-                    : 0.0f;
+            const float kick = (i % (kModelSampleRate / 2)) < 4000 ? 0.5f *
+                            std::sin(2.0f * static_cast<float>(M_PI) * 55.0f *
+                                    i / kModelSampleRate)
+                                                                   : 0.0f;
             audio[2 * i] = kick + noise(random);
             audio[2 * i + 1] = kick + noise(random);
         }
@@ -410,7 +412,9 @@ void StemsWorker::benchmark(int model, int threads) {
             return;
         }
         const double seconds = std::max(0.001, timer.elapsed() / 1000.0);
-        emit benchmarkFinished(model, static_cast<double>(kFrames) / kModelSampleRate / seconds, QString());
+        emit benchmarkFinished(model,
+                static_cast<double>(kFrames) / kModelSampleRate / seconds,
+                QString());
     } catch (const std::exception& e) {
         kLogger.warning() << "Benchmark failed" << e.what();
         emit benchmarkFinished(model, 0.0, QStringLiteral("memory"));

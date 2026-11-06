@@ -265,7 +265,9 @@ bool StemFileWriter::encode(int streamIndex, const float* pStereo, int frameCoun
             break;
         }
         case AV_SAMPLE_FMT_FLT:
-            std::copy(pInput, pInput + 2 * samples, reinterpret_cast<float*>(stream.pFrame->data[0]));
+            std::copy(pInput,
+                    pInput + 2 * samples,
+                    reinterpret_cast<float*>(stream.pFrame->data[0]));
             break;
         case AV_SAMPLE_FMT_S16: {
             auto* pOutput = reinterpret_cast<int16_t*>(stream.pFrame->data[0]);

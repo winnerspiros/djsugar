@@ -311,7 +311,13 @@ bool SpleeterSeparator::estimateBlock(Block* pBlock) {
             float* pEstimate = &pBlock->estimates[stem * stemSize];
             Ort::Value output = Ort::Value::CreateTensor<float>(
                     memoryInfo, pEstimate, stemSize, shape.data(), shape.size());
-            m_sessions[stem]->Run(Ort::RunOptions{nullptr}, &kInputName, &input, 1, &kOutputName, &output, 1);
+            m_sessions[stem]->Run(Ort::RunOptions{nullptr},
+                    &kInputName,
+                    &input,
+                    1,
+                    &kOutputName,
+                    &output,
+                    1);
             for (int row = 0; row < 2 * kBlockFrames; ++row) {
                 const float* pRow = pEstimate + row * kModelBins;
                 float sum = 0.0f;
@@ -485,9 +491,9 @@ bool SpleeterSeparator::emitOutput(
             }
         }
         if (!sink({m_emitBuffers[0].data(),
-                            m_emitBuffers[1].data(),
-                            m_emitBuffers[2].data(),
-                            m_emitBuffers[3].data()},
+                          m_emitBuffers[1].data(),
+                          m_emitBuffers[2].data(),
+                          m_emitBuffers[3].data()},
                     count)) {
             return false;
         }

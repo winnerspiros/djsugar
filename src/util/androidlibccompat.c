@@ -16,8 +16,8 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unwind.h>
 
 // Mixxx builds with hidden symbols by default

@@ -242,7 +242,8 @@ void StemsManager::startNextJob() {
         m_stage = StemsWorker::Stage::Decoding;
         m_progress = 0.0;
         m_jobTimer.start();
-        const int bitrate = bitrateKbps(m_pConfig->getValue(kFileSizeKey, QStringLiteral("normal")));
+        const int bitrate = bitrateKbps(
+                m_pConfig->getValue(kFileSizeKey, QStringLiteral("normal")));
         kLogger.info() << "Separating" << job.location << "with" << modelName(job.model);
         QMetaObject::invokeMethod(m_pWorker,
                 "run",

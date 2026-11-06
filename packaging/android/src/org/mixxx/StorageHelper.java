@@ -6,7 +6,6 @@ import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.util.Log;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,8 +32,7 @@ public class StorageHelper {
             }
             for (StorageVolume volume : manager.getStorageVolumes()) {
                 final String state = volume.getState();
-                if (!Environment.MEDIA_MOUNTED.equals(state) &&
-                        !Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+                if (!Environment.MEDIA_MOUNTED.equals(state) && !Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
                     continue;
                 }
                 final File directory = directoryOf(volume);
@@ -42,9 +40,7 @@ public class StorageHelper {
                     continue;
                 }
                 final String name = volume.getDescription(context);
-                lines.add(directory.getAbsolutePath() + "\t" +
-                        (name != null ? name.replace('\t', ' ') : directory.getName()) + "\t" +
-                        kindOf(volume, name));
+                lines.add(directory.getAbsolutePath() + "\t" + (name != null ? name.replace('\t', ' ') : directory.getName()) + "\t" + kindOf(volume, name));
             }
         } catch (RuntimeException e) {
             Log.w(TAG, "Unable to list the storage volumes", e);
