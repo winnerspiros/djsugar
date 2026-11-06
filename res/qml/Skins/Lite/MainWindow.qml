@@ -181,6 +181,47 @@ Item {
             height: root.compact ? 32 : 40
             spacing: 4
 
+            Rectangle {
+                Layout.fillHeight: true
+                Layout.preferredWidth: liteBrandRow.implicitWidth + 14
+                radius: 4
+                color: "#160d1e"
+                border.color: "#e63380"
+                border.width: 1
+
+                Row {
+                    id: liteBrandRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    Image {
+                        width: root.compact ? 20 : 24
+                        height: width
+                        anchors.verticalCenter: parent.verticalCenter
+                        source: "qrc:/images/mixxx_logo.svg"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+
+                        RotationAnimator on rotation {
+                            running: root.visible
+                            from: 0
+                            to: 360
+                            duration: 8000
+                            loops: Animation.Infinite
+                        }
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "DJ SUGAR"
+                        color: "#ff99ca"
+                        font.bold: true
+                        font.letterSpacing: 1.0
+                        font.pixelSize: root.compact ? 11 : 13
+                    }
+                }
+            }
+
             Tab {
                 lit: !root.browsing
                 text: qsTr("DECKS")

@@ -58,6 +58,7 @@ Category {
 
     Component.onCompleted: {
         load();
+        Mixxx.MobileControllers.refreshBleDevices();
     }
 
     ScrollView {
@@ -186,7 +187,7 @@ Category {
                                 }
 
                                 Text {
-                                    text: root.isRescanning ? qsTr("Searching...") : qsTr("Scan for USB devices")
+                                    text: root.isRescanning ? qsTr("Searching...") : qsTr("Scan USB")
                                     font.pixelSize: 13
                                     font.bold: true
                                     color: "#ffffff"
@@ -202,6 +203,219 @@ Category {
                                     root.isRescanning = true;
                                     root.manager.rescan();
                                     rescanFeedbackTimer.restart();
+                                }
+                            }
+                        }
+
+                        // Scan Bluetooth Button
+                        Rectangle {
+                            Layout.preferredWidth: bleScanBtnRow.implicitWidth + 24
+                            Layout.preferredHeight: 38
+                            radius: 8
+                            color: Mixxx.MobileControllers.bleScanning
+                                ? "#ad1457"
+                                : (bleScanMouse.containsMouse ? "#d81b60" : "#e63380")
+                            border.color: "#ff99ca"
+                            border.width: 1
+
+                            RowLayout {
+                                id: bleScanBtnRow
+                                anchors.centerIn: parent
+                                spacing: 8
+
+                                Text {
+                                    text: "BT"
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: "#ff99ca"
+                                }
+
+                                Text {
+                                    text: Mixxx.MobileControllers.bleScanning
+                                        ? qsTr("Stop BT Scan")
+                                        : qsTr("Scan Bluetooth")
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    color: "#ffffff"
+                                }
+                            }
+
+                            MouseArea {
+                                id: bleScanMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (Mixxx.MobileControllers.bleScanning) {
+                                        Mixxx.MobileControllers.stopBleScan();
+                                    } else {
+                                        Mixxx.MobileControllers.startBleScan();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ================= BLUETOOTH / BLE MIDI CONTROLLERS =================
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: blePanelCol.implicitHeight + 24
+                color: "#1a1423"
+                radius: 12
+                border.color: Mixxx.MobileControllers.bleScanning ? "#e63380" : "#3a284e"
+                border.width: Mixxx.MobileControllers.bleScanning ? 2 : 1
+                visible: root.selectedController == null
+
+                ColumnLayout {
+                    id: blePanelCol
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        Rectangle {
+                            width: 38
+                            height: 38
+                            radius: 19
+                            color: "#311b47"
+                            border.color: "#e63380"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "BLE"
+                                font.bold: true
+                                font.pixelSize: 11
+                                font.letterSpacing: 1
+                                color: "#ff99ca"
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: qsTr("Bluetooth / BLE MIDI Controllers (DDJ-FLX4, DDJ-200, Hercules, etc.)")
+                                font.pixelSize: 14
+                                font.bold: true
+                                color: "#ffffff"
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: Mixxx.MobileControllers.bleStatus
+                                font.pixelSize: 12
+                                color: "#d1b3ff"
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+
+                    Repeater {
+                        model: Mixxx.MobileControllers.bleDevices
+
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 48
+                            radius: 8
+                            color: modelData.connected ? "#162d24" : "#231c30"
+                            border.color: modelData.connected
+                                ? "#00e676"
+                                : (modelData.isMidi ? "#e63380" : "#3a304d")
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                spacing: 10
+
+                                Rectangle {
+                                    width: 8
+                                    height: 8
+                                    radius: 4
+                                    color: modelData.connected
+                                        ? "#00e676"
+                                        : (modelData.isMidi ? "#ff99ca" : "#888888")
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 1
+
+                                    RowLayout {
+                                        spacing: 6
+                                        Text {
+                                            text: modelData.name || modelData.address
+                                            font.pixelSize: 13
+                                            font.bold: true
+                                            color: "#ffffff"
+                                            elide: Text.ElideRight
+                                        }
+                                        Rectangle {
+                                            visible: !!modelData.isMidi
+                                            radius: 4
+                                            color: "#4a1535"
+                                            border.color: "#e63380"
+                                            border.width: 1
+                                            implicitWidth: midiBadgeText.implicitWidth + 10
+                                            implicitHeight: 18
+                                            Text {
+                                                id: midiBadgeText
+                                                anchors.centerIn: parent
+                                                text: "MIDI"
+                                                font.pixelSize: 9
+                                                font.bold: true
+                                                color: "#ff99ca"
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.address + (modelData.connected ? qsTr(" • Connected") : "")
+                                        font.pixelSize: 11
+                                        color: modelData.connected ? "#69f0ae" : "#9e94b0"
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: 100
+                                    Layout.preferredHeight: 32
+                                    radius: 6
+                                    color: modelData.connected ? "#b71c1c" : "#e63380"
+                                    border.color: modelData.connected ? "#ef5350" : "#ff99ca"
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.connected ? qsTr("Disconnect") : qsTr("Connect")
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        color: "#ffffff"
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (modelData.connected) {
+                                                Mixxx.MobileControllers.disconnectBleDevice(modelData.address);
+                                            } else {
+                                                Mixxx.MobileControllers.connectBleDevice(
+                                                    modelData.address, modelData.name);
+                                            }
+                                            root.manager.rescan();
+                                        }
+                                    }
                                 }
                             }
                         }

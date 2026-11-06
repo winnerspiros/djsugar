@@ -278,13 +278,20 @@ Category {
                                 Skin.ComboBox {
                                     id: skinInput
 
-                                    readonly property var skins: Mixxx.MobileApp.skinsIn(Qt.resolvedUrl("../Skins/"))
+                                    readonly property var skins: Mixxx.MobileApp.skinsIn(Qt.resolvedUrl("../../Skins/"))
 
                                     Layout.preferredWidth: 180
                                     model: skins.map(skin => skin === "Classic" ? qsTr("Classic") : skin)
                                     currentIndex: Math.max(0, skins.indexOf(Mixxx.MobileApp.skin))
                                     onActivated: index => {
                                         Mixxx.MobileApp.skin = skins[index];
+                                    }
+
+                                    Connections {
+                                        target: Mixxx.MobileApp
+                                        function onSkinChanged() {
+                                            skinInput.currentIndex = Math.max(0, skinInput.skins.indexOf(Mixxx.MobileApp.skin));
+                                        }
                                     }
                                 }
                             }

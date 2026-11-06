@@ -1,9 +1,11 @@
 #pragma once
 
+#include <QHash>
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
 #include <QVariantList>
+#include <QVariantMap>
 
 #include "library/youtube/youtubeservice.h"
 
@@ -19,6 +21,12 @@ namespace qml {
 /// download) so QML can search and load results straight into a deck.
 class QmlYouTubeProxy : public QObject {
     Q_OBJECT
+    Q_PROPERTY(QVariantMap downloadProgressByVideo
+                    READ downloadProgressByVideo
+                    NOTIFY downloadProgressChanged)
+    Q_PROPERTY(QVariantMap deckDownloadProgress
+                    READ deckDownloadProgress
+                    NOTIFY downloadProgressChanged)
     QML_NAMED_ELEMENT(YouTube)
     QML_SINGLETON
 
@@ -29,6 +37,17 @@ class QmlYouTubeProxy : public QObject {
     static void registerLibrary(Library* pLibrary);
     static void registerPlayerManager(std::shared_ptr<PlayerManager> pPlayerManager);
 
+    QVariantMap downloadProgressByVideo() const {
+        return m_downloadProgressByVideo;
+    }
+    QVariantMap deckDownloadProgress() const {
+        return m_deckDownloadProgress;
+    }
+
+    Q_INVOKABLE double videoProgress(const QString& videoIdOrUrl) const;
+    Q_INVOKABLE double deckProgress(const QString& deckGroup) const;
+    Q_INVOKABLE QString deckDownloadingTitle(const QString& deckGroup) const;
+
     Q_INVOKABLE void search(const QString& query);
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE bool hasMore() const;
@@ -37,15 +56,23 @@ class QmlYouTubeProxy : public QObject {
   signals:
     void searchFinished(const QVariantList& results);
     void searchFailed(const QString& error);
+    void downloadProgressChanged(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
 
   private:
+    static QString extractVideoId(const QString& videoIdOrUrl);
     static QVariantList toVariantList(const QList<mixxx::YouTubeVideoInfo>& videos);
+    void updateVideoProgress(const QString& videoId, double progress);
+    void clearVideoProgress(const QString& videoId);
 
     static inline Library* s_pLibrary = nullptr;
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
     QString m_pendingDeck;
+    QVariantMap m_downloadProgressByVideo;
+    QVariantMap m_deckDownloadProgress;
+    QHash<QString, QString> m_videoToDeck;
+    QHash<QString, QString> m_videoTitles;
 };
 
 } // namespace qml

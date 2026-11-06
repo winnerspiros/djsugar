@@ -218,6 +218,7 @@ void ControllerManager::slotInitialize() {
     } // Mutex locker released here
 
 #ifdef __ANDROID__
+    mixxx::android::registerJniNativeMethods();
     // USB and MIDI hotplug notifications arrive on Java threads.
     m_hotplugListenerId = mixxx::android::addDevicesChangedListener([this]() {
         QMetaObject::invokeMethod(
@@ -351,8 +352,11 @@ void ControllerManager::slotSetUpDevices() {
             continue;
         }
 
-        // Check if device is enabled
-        if (!m_pConfig->getValue(ConfigKey("[Controller]", deviceName), 0)) {
+        // Check if device is enabled (default to enabled if a mapping is
+        // configured and the user has not explicitly disabled it).
+        const int defaultEnabled =
+                getConfiguredMappingFileForDevice(deviceName).isEmpty() ? 0 : 1;
+        if (!m_pConfig->getValue(ConfigKey("[Controller]", deviceName), defaultEnabled)) {
             continue;
         }
 
@@ -588,6 +592,8 @@ bool ControllerManager::autoAssignMapping(Controller* pController) {
     pMapping->loadSettings(m_pConfig, pController->getName());
     m_pConfig->set(ConfigKey(kSettingsGroup, sanitizeDeviceName(pController->getName())),
             pMapping->filePath());
+    m_pConfig->setValue(
+            ConfigKey("[Controller]", sanitizeDeviceName(pController->getName())), 1);
     pController->setMapping(std::move(pMapping));
     // Marks the controller as enabled in the configuration on success
     openController(pController);

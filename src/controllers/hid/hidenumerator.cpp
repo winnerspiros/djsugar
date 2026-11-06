@@ -140,6 +140,9 @@ HidEnumerator::~HidEnumerator() {
     while (m_devices.size() > 0) {
         delete m_devices.takeLast();
     }
+#ifdef __ANDROID__
+    qDeleteAll(m_removedDevices);
+#endif
     hid_exit();
 }
 
@@ -167,62 +170,35 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
     QJniObject deviceListObject =
             usbManager.callMethod<QJniObject>("getDeviceList", "()Ljava/util/HashMap;");
-    deviceListObject = deviceListObject.callMethod<QJniObject>(
-            "values", "()Ljava/util/Collection;");
-    if (!deviceListObject.isValid()) {
-        qWarning() << "HID enumerator: getDeviceList returned null";
-        return {};
-    }
+    deviceListObject = deviceListObject.callMethod<jobject>("values", "()Ljava/util/Collection;");
     QJniArray<QJniObject> deviceList = QJniArray<QJniObject>(
-            deviceListObject.callMethod<QJniArray<QJniObject>>("toArray"));
-    qInfo() << "HID enumerator: found" << deviceList.size() << "USB devices";
-    if (deviceList.size() == 0) {
-        qInfo() << "HID enumerator: no USB devices with permission. "
-                   "Unplug/replug controller and grant permission.";
-        QThread::msleep(500);
-        deviceListObject = usbManager.callMethod<QJniObject>(
-                "getDeviceList", "()Ljava/util/HashMap;");
-        deviceListObject = deviceListObject.callMethod<QJniObject>(
-                "values", "()Ljava/util/Collection;");
-        if (deviceListObject.isValid()) {
-            deviceList = QJniArray<QJniObject>(
-                    deviceListObject.callMethod<QJniArray<QJniObject>>(
-                            "toArray"));
-            qInfo() << "HID enumerator: retry found" << deviceList.size()
-                    << "USB devices";
-        }
-    }
+            deviceListObject.callMethod<jobjectArray>("toArray"));
+    __android_log_print(ANDROID_LOG_VERBOSE,
+            "mixxx",
+            "found %d USB devices for HID enumerator",
+            deviceList.size());
 
+    QSet<QString> presentKeys;
     for (const auto& usbDevice : deviceList) {
         if (!usbDevice->isValid()) {
             continue;
         }
-        QString productName =
-                usbDevice->callObjectMethod("getProductName",
-                                 "()Ljava/lang/String;")
-                        .toString();
-        jint vid = usbDevice->callMethod<jint>("getVendorId");
-        jint pid = usbDevice->callMethod<jint>("getProductId");
-        jint ifaceCount = usbDevice->callMethod<jint>("getInterfaceCount");
-        qInfo() << "HID enumerator: USB device" << productName
-                << "VID=0x" << Qt::hex << vid << "PID=0x" << pid
-                << Qt::dec << "interfaces=" << ifaceCount;
+        const QString usbDeviceName =
+                usbDevice->callMethod<jstring>("getDeviceName").toString();
         for (jint ifaceIdx = 0;
                 ifaceIdx < usbDevice->callMethod<jint>("getInterfaceCount");
                 ifaceIdx++) {
             auto usbInterface = usbDevice->callMethod<QJniObject>("getInterface",
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
-            jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
-            jint ifaceSubclass = usbInterface.callMethod<jint>("getInterfaceSubclass");
-            qInfo() << "HID enumerator: iface" << ifaceIdx
-                    << "class=" << ifaceClass
-                    << "subclass=" << ifaceSubclass;
-            if (ifaceClass == LIBUSB_CLASS_HID
-#ifdef __ANDROID__
-                    || ifaceClass == 0xFF // vendor-specific — DDJ-FLX4 deck HID on Android
-#endif
-            ) {
+            if (usbInterface.callMethod<jint>("getInterfaceClass") == LIBUSB_CLASS_HID) {
+                const QString key = QStringLiteral("%1#%2").arg(
+                        usbDeviceName,
+                        QString::number(usbInterface.callMethod<jint>("getId")));
+                presentKeys.insert(key);
+                if (m_androidDevicesByKey.contains(key)) {
+                    continue;
+                }
                 auto deviceInfo = mixxx::hid::DeviceInfo(usbDevice, usbInterface);
 
                 if (!recognizeDevice(deviceInfo)) {
@@ -239,16 +215,20 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 }
 
                 HidController* newDevice = new HidController(std::move(deviceInfo));
+                m_androidDevicesByKey.insert(key, newDevice);
                 m_devices.push_back(newDevice);
-
-            } else {
-                qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
-                        << ifaceClass << "on device"
-                        << usbDevice->callObjectMethod("getProductName",
-                                            "()Ljava/lang/String;")
-                                   .toString();
             }
         }
+    }
+    // ControllerManager closes controllers that disappeared from the list
+    for (auto it = m_androidDevicesByKey.begin(); it != m_androidDevicesByKey.end();) {
+        if (presentKeys.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        m_devices.removeAll(it.value());
+        m_removedDevices.append(it.value());
+        it = m_androidDevicesByKey.erase(it);
     }
 #else
 

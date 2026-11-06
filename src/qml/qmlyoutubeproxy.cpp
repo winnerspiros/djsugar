@@ -1,5 +1,9 @@
 #include "qml/qmlyoutubeproxy.h"
 
+#include <QFileInfo>
+#include <QTimer>
+#include <algorithm>
+
 #include "library/library.h"
 #include "library/youtube/youtubefeature.h"
 #include "library/youtube/youtubeservice.h"
@@ -17,17 +21,44 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
     if (!pFeature) {
         return;
     }
+    connect(pFeature,
+            &YouTubeFeature::downloadToPlayerRequested,
+            this,
+            [this](const QString& videoId, const QString& group, const QString& title) {
+                if (!group.isEmpty()) {
+                    m_videoToDeck.insert(videoId, group);
+                }
+                if (!title.isEmpty()) {
+                    m_videoTitles.insert(videoId, title);
+                }
+                updateVideoProgress(
+                        videoId,
+                        m_downloadProgressByVideo.contains(videoId)
+                                ? m_downloadProgressByVideo.value(videoId).toDouble()
+                                : 0.04);
+            });
+
     mixxx::YouTubeService* pService = pFeature->service();
     connect(pService,
             &mixxx::YouTubeService::searchResultsReady,
             this,
             [this](const QString&, const QList<mixxx::YouTubeVideoInfo>& results) {
+                for (const auto& v : results) {
+                    if (!v.id.isEmpty() && !v.title.isEmpty()) {
+                        m_videoTitles.insert(v.id, v.title);
+                    }
+                }
                 emit searchFinished(toVariantList(results));
             });
     connect(pService,
             &mixxx::YouTubeService::searchMoreReady,
             this,
             [this](const QString&, const QList<mixxx::YouTubeVideoInfo>& results) {
+                for (const auto& v : results) {
+                    if (!v.id.isEmpty() && !v.title.isEmpty()) {
+                        m_videoTitles.insert(v.id, v.title);
+                    }
+                }
                 emit searchFinished(toVariantList(results));
             });
     connect(pService,
@@ -37,9 +68,25 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                 emit searchFailed(error);
             });
     connect(pService,
+            &mixxx::YouTubeService::downloadStarted,
+            this,
+            [this](const QString& videoId) {
+                updateVideoProgress(videoId, 0.04);
+            });
+    connect(pService,
+            &mixxx::YouTubeService::downloadProgress,
+            this,
+            [this](const QString& videoId, double progress) {
+                updateVideoProgress(videoId, progress);
+            });
+    connect(pService,
             &mixxx::YouTubeService::downloadFinished,
             this,
             [this](const QString& videoId, const QString& localPath) {
+                updateVideoProgress(videoId, 1.0);
+                QTimer::singleShot(350, this, [this, videoId]() {
+                    clearVideoProgress(videoId);
+                });
                 if (!m_pendingDeck.isEmpty() && s_pPlayerManager) {
                     const QString deck = m_pendingDeck;
                     m_pendingDeck.clear();
@@ -58,6 +105,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
             this,
             [this](const QString& videoId, const QString& error) {
                 m_pendingDeck.clear();
+                clearVideoProgress(videoId);
                 emit downloadFailed(videoId, error);
             });
 }
@@ -75,6 +123,80 @@ void QmlYouTubeProxy::registerLibrary(Library* pLibrary) {
 // static
 void QmlYouTubeProxy::registerPlayerManager(std::shared_ptr<PlayerManager> pPlayerManager) {
     s_pPlayerManager = std::move(pPlayerManager);
+}
+
+// static
+QString QmlYouTubeProxy::extractVideoId(const QString& videoIdOrUrl) {
+    if (videoIdOrUrl.isEmpty()) {
+        return {};
+    }
+    if (videoIdOrUrl.startsWith(QStringLiteral("youtube://"))) {
+        QString id = videoIdOrUrl.mid(10);
+        while (id.endsWith(QLatin1Char('/'))) {
+            id.chop(1);
+        }
+        return id;
+    }
+    if (videoIdOrUrl.contains(QLatin1Char('/'))) {
+        return QFileInfo(videoIdOrUrl).completeBaseName();
+    }
+    return videoIdOrUrl;
+}
+
+void QmlYouTubeProxy::updateVideoProgress(const QString& videoId, double progress) {
+    if (videoId.isEmpty()) {
+        return;
+    }
+    const double clamped = std::max(0.02, std::min(1.0, progress));
+    m_downloadProgressByVideo.insert(videoId, clamped);
+
+    const QString deck = m_videoToDeck.value(videoId);
+    if (!deck.isEmpty()) {
+        QVariantMap deckInfo;
+        deckInfo[QStringLiteral("videoId")] = videoId;
+        deckInfo[QStringLiteral("title")] = m_videoTitles.value(videoId, videoId);
+        deckInfo[QStringLiteral("progress")] = clamped;
+        m_deckDownloadProgress.insert(deck, deckInfo);
+    }
+    emit downloadProgressChanged(videoId, clamped);
+}
+
+void QmlYouTubeProxy::clearVideoProgress(const QString& videoId) {
+    if (videoId.isEmpty()) {
+        return;
+    }
+    m_downloadProgressByVideo.remove(videoId);
+    const QString deck = m_videoToDeck.take(videoId);
+    if (!deck.isEmpty()) {
+        m_deckDownloadProgress.remove(deck);
+    }
+    emit downloadProgressChanged(videoId, -1.0);
+}
+
+double QmlYouTubeProxy::videoProgress(const QString& videoIdOrUrl) const {
+    const QString id = extractVideoId(videoIdOrUrl);
+    if (id.isEmpty() || !m_downloadProgressByVideo.contains(id)) {
+        return -1.0;
+    }
+    return m_downloadProgressByVideo.value(id).toDouble();
+}
+
+double QmlYouTubeProxy::deckProgress(const QString& deckGroup) const {
+    if (deckGroup.isEmpty() || !m_deckDownloadProgress.contains(deckGroup)) {
+        return -1.0;
+    }
+    return m_deckDownloadProgress.value(deckGroup).toMap()
+            .value(QStringLiteral("progress"), -1.0)
+            .toDouble();
+}
+
+QString QmlYouTubeProxy::deckDownloadingTitle(const QString& deckGroup) const {
+    if (deckGroup.isEmpty() || !m_deckDownloadProgress.contains(deckGroup)) {
+        return {};
+    }
+    return m_deckDownloadProgress.value(deckGroup).toMap()
+            .value(QStringLiteral("title"))
+            .toString();
 }
 
 void QmlYouTubeProxy::search(const QString& query) {
@@ -105,6 +227,8 @@ void QmlYouTubeProxy::downloadToDeck(const QString& videoId, const QString& deck
         return;
     }
     m_pendingDeck = deckGroup;
+    m_videoToDeck.insert(videoId, deckGroup);
+    updateVideoProgress(videoId, 0.04);
     pFeature->requestDownloadToPlayer(videoId, deckGroup, false);
 }
 

@@ -157,16 +157,50 @@ Item {
             width: parent.width
             z: 20
 
-            Text {
-                id: logoText
+            Row {
+                id: logoBrand
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                color: Theme.accentColor
-                font.bold: true
-                font.pixelSize: 14
-                font.letterSpacing: 1.5
-                text: "MIXXX"
+                spacing: 6
+
+                Rectangle {
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: "#000000"
+                    border.color: "#e63380"
+                    border.width: 1.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    clip: true
+
+                    Image {
+                        anchors.centerIn: parent
+                        width: 21
+                        height: 21
+                        source: "qrc:/images/mixxx_logo.svg"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+
+                        RotationAnimator on rotation {
+                            running: root.visible
+                            from: 0
+                            to: 360
+                            duration: 8000
+                            loops: Animation.Infinite
+                        }
+                    }
+                }
+
+                Text {
+                    id: logoText
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: "#ff99ca"
+                    font.bold: true
+                    font.pixelSize: 14
+                    font.letterSpacing: 1.5
+                    text: "DJ SUGAR"
+                }
             }
 
             Skin.Button {

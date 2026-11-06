@@ -32,6 +32,7 @@
 #include <QVector>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -988,6 +989,8 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                    << "ytDlpPath=" << m_ytDlpPath;
 #endif
     QDir().mkpath(cacheDir);
+    Q_EMIT downloadStarted(videoId);
+    Q_EMIT downloadProgress(videoId, 0.04);
 
     // Prefetch SponsorBlock segments NOW, in parallel with the audio download.
     // By the time the audio file lands on disk the segments are (usually) ready
@@ -2202,6 +2205,18 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
         outFile->write(reply->readAll());
     });
     connect(reply,
+            &QNetworkReply::downloadProgress,
+            this,
+            [this, videoId, contentLength](qint64 bytesReceived, qint64 bytesTotal) {
+                const qint64 total = bytesTotal > 0 ? bytesTotal : contentLength;
+                if (total > 0 && bytesReceived > 0) {
+                    const double frac = std::min(1.0,
+                            static_cast<double>(bytesReceived) /
+                                    static_cast<double>(total));
+                    Q_EMIT downloadProgress(videoId, 0.12 + 0.80 * frac);
+                }
+            });
+    connect(reply,
             &QNetworkReply::finished,
             this,
             [this, reply, outFile, outPath, videoId, tryNextStream]() {
@@ -2313,8 +2328,11 @@ void YouTubeService::downloadAudioStreamChunked(
         int remaining;
         bool failed = false;
         QString error;
+        qint64 downloadedBytes = 0;
+        qint64 lastEmitBytes = 0;
     };
-    auto* state = new ChunkState{kParallelDownloadChunks, false, {}};
+    auto* state = new ChunkState{kParallelDownloadChunks, false, {}, 0, 0};
+    Q_EMIT downloadProgress(videoId, 0.12);
 
     const QByteArray ua = streamUserAgent.isEmpty()
             ? QByteArray("Mixxx/YouTube")
@@ -2344,17 +2362,30 @@ void YouTubeService::downloadAudioStreamChunked(
         // Write each batch of incoming bytes at the correct file offset.
         // seek() is O(1) and safe to call interleaved with other chunks
         // because all readyRead signals fire serially on the UI thread.
-        connect(reply, &QNetworkReply::readyRead, this, [reply, outFile, writePos, state]() {
-            if (state->failed) {
-                return;
-            }
-            const QByteArray data = reply->readAll();
-            if (!data.isEmpty()) {
-                outFile->seek(*writePos);
-                outFile->write(data);
-                *writePos += data.size();
-            }
-        });
+        connect(reply,
+                &QNetworkReply::readyRead,
+                this,
+                [this, reply, outFile, writePos, state, videoId, contentLength]() {
+                    if (state->failed) {
+                        return;
+                    }
+                    const QByteArray data = reply->readAll();
+                    if (!data.isEmpty()) {
+                        outFile->seek(*writePos);
+                        outFile->write(data);
+                        *writePos += data.size();
+                        state->downloadedBytes += data.size();
+                        if (contentLength > 0 &&
+                                state->downloadedBytes - state->lastEmitBytes >=
+                                        std::max<qint64>(32768, contentLength / 40)) {
+                            state->lastEmitBytes = state->downloadedBytes;
+                            const double frac = std::min(1.0,
+                                    static_cast<double>(state->downloadedBytes) /
+                                            static_cast<double>(contentLength));
+                            Q_EMIT downloadProgress(videoId, 0.12 + 0.80 * frac);
+                        }
+                    }
+                });
 
         connect(reply,
                 &QNetworkReply::finished,
@@ -3369,7 +3400,36 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     });
 
     thread->setParent(this);
+    auto* progressTimer = new QTimer(this);
+    progressTimer->setInterval(160);
+    auto tickCount = std::make_shared<int>(0);
+    connect(progressTimer, &QTimer::timeout, this, [this, videoId, cacheDir, tickCount]() {
+        ++(*tickCount);
+        // Smooth asymptotic baseline (0.06 -> 0.85) blended with actual bytes
+        // written to <cacheDir>/<videoId>.* (.part) while yt-dlp downloads.
+        double progress = 0.06 + 0.79 * (1.0 - std::exp(-(*tickCount) * 0.08));
+        QDir dir(cacheDir);
+        const QStringList files = dir.entryList(
+                {videoId + QStringLiteral(".*")},
+                QDir::Files | QDir::NoDotAndDotDot);
+        qint64 maxBytes = 0;
+        for (const QString& f : files) {
+            if (isYouTubeSidecarFile(f)) {
+                continue;
+            }
+            maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
+        }
+        if (maxBytes > 0) {
+            // Typical 3.5-min opus/m4a audio stream is ~3.5 MB
+            const double byteFrac = std::min(0.90,
+                    static_cast<double>(maxBytes) / (3.5 * 1024.0 * 1024.0));
+            progress = std::max(progress, 0.12 + 0.78 * byteFrac);
+        }
+        Q_EMIT downloadProgress(videoId, std::min(0.90, progress));
+    });
+    connect(thread, &QThread::finished, progressTimer, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    progressTimer->start();
     thread->start();
 }
 #endif // Q_OS_ANDROID && HAVE_YTDLP_ANDROID
@@ -3711,6 +3771,7 @@ void YouTubeService::maybeUpdateDesktopYtDlp() {
 // =============================================================================
 
 void YouTubeService::finalizeDownload(const QString& videoId, const QString& outPath) {
+    Q_EMIT downloadProgress(videoId, 0.94);
     // Helper lambda: given segments (possibly empty), do the cut on a
     // background thread and emit downloadFinished when done. We run
     // cutAudioRanges() off the UI thread so the app stays responsive while
@@ -3774,6 +3835,7 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                                 // Clean up the prefetch cache entry now that
                                 // finalization is complete.
                                 m_sponsorPrefetchCache.remove(videoId);
+                                Q_EMIT downloadProgress(videoId, 1.0);
                                 Q_EMIT downloadFinished(videoId, outPath);
                             },
                             Qt::QueuedConnection);

@@ -36,7 +36,11 @@ public class UsbPermission {
     public boolean registerServiceBroadcastReceiver(Context context) {
         try {
             IntentFilter intentFilter = new IntentFilter(ACTION_USB_PERMISSION);
-            context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_EXPORTED);
+            } else {
+                context.registerReceiver(usbPermissionReceiver, intentFilter);
+            }
             Log.i(TAG, "Registered broadcast receiver");
             return true;
         } catch (Exception e) {

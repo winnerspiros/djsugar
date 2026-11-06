@@ -231,10 +231,20 @@ ApplicationWindow {
         Image {
             id: logo
             anchors.horizontalCenter: parent.horizontalCenter
-            source: "qrc:/images/mixxx-icon-logo-symbolic.svg"
-            // height: 64
+            source: "qrc:/images/mixxx_logo.svg"
+            width: 120
+            height: 120
+            fillMode: Image.PreserveAspectFit
             opacity: 0
             y: root.height / 2
+
+            RotationAnimator on rotation {
+                running: splash.visible
+                from: 0
+                to: 360
+                duration: 4500
+                loops: Animation.Infinite
+            }
 
             Behavior on opacity {
                 NumberAnimation { duration: 1500; easing.type: Easing.InOutQuad }
@@ -247,15 +257,17 @@ ApplicationWindow {
         Text {
             id: text
             opacity: 0
-            y: logo.y + logo.height*2
+            y: logo.y + logo.height + 16
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.topMargin: 20
-            font.pixelSize: 12
-            color: Theme.lightGray3
-            text: "DJ your way"
+            font.pixelSize: 14
+            font.bold: true
+            font.letterSpacing: 2.0
+            color: "#ff99ca"
+            text: "DJ SUGAR · SWEET MIXING"
             Behavior on opacity {
                 SequentialAnimation {
-                    PauseAnimation { duration: 1000 }
+                    PauseAnimation { duration: 600 }
                     NumberAnimation { duration: 500; easing.type: Easing.InOutQuad }
                 }
             }

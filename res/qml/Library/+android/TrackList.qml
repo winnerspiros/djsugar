@@ -309,6 +309,11 @@ Rectangle {
             required property int row
             required property bool selected
 
+            readonly property real ytProgress: {
+                const _ = Mixxx.YouTube.downloadProgressByVideo;
+                return item.file_url ? Mixxx.YouTube.videoProgress(item.file_url) : -1;
+            }
+
             implicitHeight: 38
 
             Loader {
@@ -332,6 +337,32 @@ Rectangle {
                 //     if (track)
                 //         Mixxx.Library.analyze(track)
                 {}
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 3
+                visible: item.ytProgress >= 0
+                color: "#22e63380"
+                z: 10
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: parent.width * Math.max(0.05, Math.min(1.0, item.ytProgress))
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#e63380" }
+                        GradientStop { position: 0.6; color: "#ff99ca" }
+                        GradientStop { position: 1.0; color: "#00e5ff" }
+                    }
+                    Behavior on width {
+                        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                    }
+                }
             }
             // Workaround needed for WaveformOverview column to load the data
             // TableView.onReused: {
@@ -422,27 +453,102 @@ Rectangle {
             spacing: 8
 
             Rectangle {
+                id: selectedSongBox
                 Layout.fillHeight: true
                 Layout.fillWidth: true
                 color: Theme.darkGray3
                 radius: 4
+                clip: true
+
+                readonly property real selectedYtProgress: {
+                    const map = Mixxx.YouTube.downloadProgressByVideo;
+                    if (quickLoadBar.hasTrack) {
+                        const p = Mixxx.YouTube.videoProgress(quickLoadBar.selectedUrls[0].toString());
+                        if (p >= 0) {
+                            return p;
+                        }
+                    }
+                    if (map) {
+                        const keys = Object.keys(map);
+                        if (keys.length > 0) {
+                            return Number(map[keys[0]]);
+                        }
+                    }
+                    return -1;
+                }
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    visible: selectedSongBox.selectedYtProgress >= 0
+                    width: parent.width * Math.max(0.04, Math.min(1.0, selectedSongBox.selectedYtProgress))
+                    color: "#28e63380"
+                    Behavior on width {
+                        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                    }
+                }
 
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: 6
+                    spacing: 8
 
                     Text {
                         Layout.fillWidth: true
                         color: quickLoadBar.hasTrack ? Theme.white : Theme.lightGray3
                         elide: Text.ElideRight
-                        font.bold: quickLoadBar.hasTrack
+                        font.bold: quickLoadBar.hasTrack || selectedSongBox.selectedYtProgress >= 0
                         font.pixelSize: 13
                         text: {
+                            if (selectedSongBox.selectedYtProgress >= 0) {
+                                const pct = Math.round(selectedSongBox.selectedYtProgress * 100);
+                                if (quickLoadBar.hasTrack) {
+                                    const urlStr = quickLoadBar.selectedUrls[0].toString();
+                                    const filename = decodeURIComponent(urlStr.substring(urlStr.lastIndexOf('/') + 1));
+                                    return qsTr("⬇ Downloading %1% · %2").arg(pct).arg(filename);
+                                }
+                                return qsTr("⬇ Downloading from YouTube… %1%").arg(pct);
+                            }
                             if (!quickLoadBar.hasTrack)
                                 return qsTr("Select a track to load");
                             const urlStr = quickLoadBar.selectedUrls[0].toString();
                             const filename = decodeURIComponent(urlStr.substring(urlStr.lastIndexOf('/') + 1));
                             return filename;
+                        }
+                    }
+
+                    Text {
+                        visible: selectedSongBox.selectedYtProgress >= 0
+                        text: `${Math.round(selectedSongBox.selectedYtProgress * 100)}%`
+                        color: "#ff99ca"
+                        font.bold: true
+                        font.pixelSize: 12
+                    }
+                }
+
+                // Linear download progress bar across bottom of song box
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 3
+                    visible: selectedSongBox.selectedYtProgress >= 0
+                    color: "#1a1d24"
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: parent.width * Math.max(0.04, Math.min(1.0, selectedSongBox.selectedYtProgress))
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "#e63380" }
+                            GradientStop { position: 0.55; color: "#ff99ca" }
+                            GradientStop { position: 1.0; color: "#00e5ff" }
+                        }
+                        Behavior on width {
+                            NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
                         }
                     }
                 }

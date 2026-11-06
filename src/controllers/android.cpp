@@ -24,6 +24,7 @@ QJniObject s_intent = {};
 QJniObject s_usbManager = {};
 
 const QJniObject& getIntent() {
+    registerJniNativeMethods();
     __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "about to get intent");
     std::unique_lock lock(s_androidLock);
     if (s_intent.isValid()) {
@@ -242,17 +243,56 @@ void saveBeforeExit(JNIEnv*, jclass) {
 }
 Q_DECLARE_JNI_NATIVE_METHOD(saveBeforeExit)
 
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM*, void*) {
-    QJniEnvironment env;
-    env.registerNativeMethods<QtJniTypes::UsbPermissionClass>({
-            Q_JNI_NATIVE_METHOD(usbDeviceAccessResult),
-            Q_JNI_NATIVE_METHOD(usbDevicesChanged),
+namespace mixxx {
+namespace android {
+
+void registerJniNativeMethods() {
+    static std::once_flag s_registered;
+    std::call_once(s_registered, []() {
+        QJniEnvironment env;
+        env.registerNativeMethods<QtJniTypes::UsbPermissionClass>({
+                Q_JNI_NATIVE_METHOD(usbDeviceAccessResult),
+                Q_JNI_NATIVE_METHOD(usbDevicesChanged),
+        });
+        env.registerNativeMethods<QtJniTypes::MidiHelperClass>({
+                Q_JNI_NATIVE_METHOD(midiDevicesChanged),
+        });
+        env.registerNativeMethods<QtJniTypes::MainActivityClass>({
+                Q_JNI_NATIVE_METHOD(saveBeforeExit),
+        });
     });
-    env.registerNativeMethods<QtJniTypes::MidiHelperClass>({
-            Q_JNI_NATIVE_METHOD(midiDevicesChanged),
-    });
-    env.registerNativeMethods<QtJniTypes::MainActivityClass>({
-            Q_JNI_NATIVE_METHOD(saveBeforeExit),
-    });
+}
+
+} // namespace android
+} // namespace mixxx
+
+extern "C" {
+
+JNIEXPORT void JNICALL __attribute__((used, visibility("default")))
+Java_org_mixxx_UsbPermission_usbDeviceAccessResult(
+        JNIEnv*, jclass, jobject device, jboolean granted) {
+    mixxx::android::usbDeviceAccessResult(device, granted);
+}
+
+JNIEXPORT void JNICALL __attribute__((used, visibility("default")))
+Java_org_mixxx_UsbPermission_usbDevicesChanged(JNIEnv*, jclass) {
+    mixxx::android::notifyDevicesChanged();
+}
+
+JNIEXPORT void JNICALL __attribute__((used, visibility("default")))
+Java_org_mixxx_MidiHelper_midiDevicesChanged(JNIEnv*, jclass) {
+    mixxx::android::notifyDevicesChanged();
+}
+
+JNIEXPORT void JNICALL __attribute__((used, visibility("default")))
+Java_org_mixxx_MainActivity_saveBeforeExit(JNIEnv*, jclass) {
+    mixxx::android::saveBeforeExit();
+}
+
+JNIEXPORT jint JNICALL __attribute__((used, visibility("default")))
+JNI_OnLoad(JavaVM*, void*) {
+    mixxx::android::registerJniNativeMethods();
     return JNI_VERSION_1_6;
 }
+
+} // extern "C"

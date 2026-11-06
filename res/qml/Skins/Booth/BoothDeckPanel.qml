@@ -143,6 +143,15 @@ Rectangle {
     Rectangle {
         id: titleBar
 
+        readonly property real ytDeckProgress: {
+            const _ = Mixxx.YouTube.deckDownloadProgress;
+            return Mixxx.YouTube.deckProgress(root.group);
+        }
+        readonly property string ytDeckTitle: {
+            const _ = Mixxx.YouTube.deckDownloadProgress;
+            return Mixxx.YouTube.deckDownloadingTitle(root.group);
+        }
+
         anchors.left: parent.left
         anchors.leftMargin: 1
         anchors.right: parent.right
@@ -151,6 +160,19 @@ Rectangle {
         anchors.topMargin: 1
         color: "#1c1e22"
         height: Math.round(root.unit * 2.3)
+        clip: true
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            visible: titleBar.ytDeckProgress >= 0
+            width: parent.width * Math.max(0.04, Math.min(1.0, titleBar.ytDeckProgress))
+            color: "#2ae63380"
+            Behavior on width {
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
+        }
 
         Rectangle {
             anchors.left: parent.left
@@ -187,10 +209,16 @@ Rectangle {
             anchors.right: keyLabel.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            color: "#ffffff"
+            color: titleBar.ytDeckProgress >= 0 ? "#ff99ca" : "#ffffff"
             elide: Text.ElideRight
             font.pixelSize: Math.round(root.unit * 1.45)
-            text: root.loaded && root.currentTrack ? "♪ " + root.currentTrack.title : ""
+            text: {
+                if (titleBar.ytDeckProgress >= 0) {
+                    const pct = Math.round(titleBar.ytDeckProgress * 100);
+                    return qsTr("⬇ Downloading %1% · %2").arg(pct).arg(titleBar.ytDeckTitle);
+                }
+                return root.loaded && root.currentTrack ? "♪ " + root.currentTrack.title : "";
+            }
         }
         Text {
             id: keyLabel
@@ -201,6 +229,32 @@ Rectangle {
             color: "#ffffff"
             font.pixelSize: Math.round(root.unit * 1.3)
             text: root.loaded ? (root.currentTrack?.keyText ?? "") : ""
+        }
+
+        // Linear progress bar across bottom of deck song box when downloading
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 3
+            visible: titleBar.ytDeckProgress >= 0
+            color: "#14161a"
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * Math.max(0.04, Math.min(1.0, titleBar.ytDeckProgress))
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "#e63380" }
+                    GradientStop { position: 0.55; color: "#ff99ca" }
+                    GradientStop { position: 1.0; color: "#00e5ff" }
+                }
+                Behavior on width {
+                    NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                }
+            }
         }
     }
 

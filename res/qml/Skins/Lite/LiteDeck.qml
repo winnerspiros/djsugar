@@ -215,16 +215,28 @@ Item {
                     }
                 }
                 ColumnLayout {
+                    id: trackTitleColumn
                     Layout.fillWidth: true
-                    spacing: 0
+                    spacing: 2
+
+                    readonly property real ytDeckProgress: {
+                        const _ = Mixxx.YouTube.deckDownloadProgress;
+                        return Mixxx.YouTube.deckProgress(root.group);
+                    }
+                    readonly property string ytDeckTitle: {
+                        const _ = Mixxx.YouTube.deckDownloadProgress;
+                        return Mixxx.YouTube.deckDownloadingTitle(root.group);
+                    }
 
                     Text {
                         Layout.fillWidth: true
-                        color: "#ffffff"
+                        color: trackTitleColumn.ytDeckProgress >= 0 ? "#ff99ca" : "#ffffff"
                         elide: Text.ElideRight
                         font.bold: true
                         font.pixelSize: Math.max(13, Math.round(root.unit * 0.32))
-                        text: root.currentTrack?.title || (root.loaded ? "" : qsTr("No track"))
+                        text: trackTitleColumn.ytDeckProgress >= 0
+                            ? qsTr("⬇ Downloading %1% · %2").arg(Math.round(trackTitleColumn.ytDeckProgress * 100)).arg(trackTitleColumn.ytDeckTitle)
+                            : (root.currentTrack?.title || (root.loaded ? "" : qsTr("No track")))
                     }
                     Text {
                         Layout.fillWidth: true
@@ -232,6 +244,25 @@ Item {
                         elide: Text.ElideRight
                         font.pixelSize: Math.max(11, Math.round(root.unit * 0.24))
                         text: root.currentTrack?.artist || ""
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 3
+                        visible: trackTitleColumn.ytDeckProgress >= 0
+                        color: "#1c1e22"
+                        radius: 1.5
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * Math.max(0.04, Math.min(1.0, trackTitleColumn.ytDeckProgress))
+                            radius: 1.5
+                            color: "#e63380"
+                            Behavior on width {
+                                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                            }
+                        }
                     }
                 }
             }

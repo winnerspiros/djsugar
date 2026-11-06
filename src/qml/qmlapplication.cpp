@@ -231,6 +231,7 @@ QmlApplication::QmlApplication(
     QQuickStyle::setStyle("Basic");
 
 #if defined(Q_OS_ANDROID)
+    mixxx::android::registerJniNativeMethods();
     if (canWriteToExternalStorage()) {
         const QString externalQmlDir = QStringLiteral("/storage/emulated/0/Mixxx/qml");
         // Files of other versions would still be loaded (e.g. +android file
@@ -497,6 +498,25 @@ void QmlApplication::slotWindowChanged(QQuickWindow* window) {
                 this,
                 &QmlApplication::slotFrameSwapped,
                 Qt::UniqueConnection);
+#if defined(Q_OS_ANDROID)
+        auto reapplyEdgeToEdge = []() {
+            QJniObject activity = QNativeInterface::QAndroidApplication::context();
+            if (activity.isValid()) {
+                QJniObject::callStaticMethod<void>(
+                        "org/mixxx/AndroidScreenManager",
+                        "applyFullScreen",
+                        "(Landroid/app/Activity;)V",
+                        activity.object());
+            }
+        };
+        reapplyEdgeToEdge();
+        connect(window,
+                &QWindow::visibilityChanged,
+                this,
+                [reapplyEdgeToEdge](QWindow::Visibility) {
+                    reapplyEdgeToEdge();
+                });
+#endif
     }
 #if defined(Q_OS_ANDROID)
     m_frameTimer.restart();

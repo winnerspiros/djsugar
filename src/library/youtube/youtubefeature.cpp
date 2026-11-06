@@ -1299,6 +1299,11 @@ void YouTubeFeature::requestDownloadToPlayer(
     pendingLoad.group = group;
     pendingLoad.play = play;
     m_pendingPlayerLoads[videoId].append(pendingLoad);
+    QString title;
+    if (m_videoMetadata.contains(videoId)) {
+        title = m_videoMetadata.value(videoId).title;
+    }
+    Q_EMIT downloadToPlayerRequested(videoId, group, title);
     requestDownloadFile(videoId);
 }
 

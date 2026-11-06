@@ -101,24 +101,9 @@ QStringList QmlMobileAppProxy::skinsIn(const QUrl& skinsFolder) const {
     } else {
         path = skinsFolder.path();
     }
+    path.replace(QStringLiteral("/+android/"), QStringLiteral("/"));
+    path.replace(QStringLiteral("/Settings/"), QStringLiteral("/"));
     const QDir dir(path);
-#ifdef Q_OS_ANDROID
-    // APK assets: QDir::entryList() cannot list assets:/ subdirectories,
-    // so probe the skins packaged under assets:/qml/Skins/ instead.
-    if (skinsFolder.scheme() == QStringLiteral("assets")) {
-        const QStringList knownSkins{
-                QStringLiteral("Booth"),
-                QStringLiteral("Lite"),
-        };
-        for (const QString& folder : knownSkins) {
-            if (QFileInfo::exists(
-                        dir.filePath(folder + QStringLiteral("/MainWindow.qml")))) {
-                skins.append(folder);
-            }
-        }
-        return skins;
-    }
-#endif
     const QStringList folders = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QString& folder : folders) {
         if (folder != kClassicSkin &&
@@ -126,6 +111,22 @@ QStringList QmlMobileAppProxy::skinsIn(const QUrl& skinsFolder) const {
             skins.append(folder);
         }
     }
+#ifdef Q_OS_ANDROID
+    // APK assets fallback: QDir::entryList() cannot list assets:/ subdirectories
+    if (skins.size() <= 1) {
+        const QStringList knownSkins{
+                QStringLiteral("Booth"),
+                QStringLiteral("Lite"),
+        };
+        for (const QString& folder : knownSkins) {
+            if (!skins.contains(folder) &&
+                    QFileInfo::exists(
+                            dir.filePath(folder + QStringLiteral("/MainWindow.qml")))) {
+                skins.append(folder);
+            }
+        }
+    }
+#endif
     return skins;
 }
 

@@ -23,6 +23,11 @@ void notifyDevicesChanged();
 /// when the activity closes (see MainActivity.onDestroy()). Empty to unset.
 void setSaveBeforeExit(std::function<void()> save);
 
+/// Explicitly registers JNI native methods for UsbPermission, MidiHelper, and
+/// MainActivity so LTO / --gc-sections cannot strip JNI_OnLoad from static
+/// archives.
+void registerJniNativeMethods();
+
 extern std::mutex s_androidLock;
 extern std::condition_variable s_grantingWaitCond;
 extern std::vector<std::pair<QJniObject, bool>> s_grantingResult;

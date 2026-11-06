@@ -68,6 +68,12 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// Always returns a non-empty 2-letter uppercase code.
     QString resolvedTrendingRegion() const;
 
+  signals:
+    void downloadToPlayerRequested(
+            const QString& videoId,
+            const QString& group,
+            const QString& title);
+
   protected:
     void appendTrackIdsFromRightClickIndex(
             QList<TrackId>* trackIds, QString* pPlaylist) override;
