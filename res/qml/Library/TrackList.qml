@@ -178,6 +178,9 @@ Rectangle {
         Keys.onUpPressed: this.selectionModel.moveSelectionVertical(-1)
 
         function loadSelectedTrack(group, play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
@@ -185,6 +188,9 @@ Rectangle {
             Mixxx.PlayerManager.getPlayer(group).loadTrackFromLocationUrl(urls[0], play);
         }
         function loadSelectedTrackIntoNextAvailableDeck(play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
@@ -225,7 +231,13 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
         interactive: true
         columnWidthProvider: function (column) {
+            if (!view.model) {
+                return 0;
+            }
             const columnDef = view.model.columns[column];
+            if (!columnDef) {
+                return 0;
+            }
             if (columnDef.hidden) {
                 return 0;
             }
@@ -299,26 +311,39 @@ Rectangle {
         }
         selectionModel: ItemSelectionModel {
             function moveSelectionVertical(value) {
-                if (value == 0)
+                if (value == 0 || !this.model) {
                     return;
+                }
 
                 const selected = this.selectedIndexes;
                 const oldRow = (selected.length == 0) ? 0 : selected[0].row;
                 this.selectRow(oldRow + value);
             }
             function selectRow(row) {
+                if (!this.model) {
+                    this.clear();
+                    return;
+                }
                 const rowCount = this.model.rowCount();
                 if (rowCount == 0) {
                     this.clear();
                     return;
                 }
                 const newRow = Mixxx.MathUtils.positiveModulo(row, rowCount);
-                this.select(this.model.index(newRow, 0), ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
+                const idx = this.model.index(newRow, 0);
+                if (!idx || !idx.valid) {
+                    this.clear();
+                    return;
+                }
+                this.select(idx, ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
                 if (!view.isRowLoaded(newRow)) {
                     view.positionViewAtRow(newRow, TableView.Visible | TableView.AlignVCenter)
                 }
             }
             function selectedTrackUrls() {
+                if (!this.model) {
+                    return [];
+                }
                 return this.selectedIndexes.map(index => {
                     return this.model.getUrl(index.row);
                 });

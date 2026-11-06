@@ -173,18 +173,32 @@ QHash<int, QByteArray> QmlLibraryTrackListModel::roleNames() const {
 
 QUrl QmlLibraryTrackListModel::getUrl(int row) const {
     auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
-    if (pTrackModel == nullptr) {
+    if (pTrackModel == nullptr || sourceModel() == nullptr) {
         return {};
     }
-    return pTrackModel->getTrackUrl(sourceModel()->index(row, 0));
+    if (row < 0 || row >= sourceModel()->rowCount()) {
+        return {};
+    }
+    const QModelIndex srcIndex = sourceModel()->index(row, 0);
+    if (!srcIndex.isValid()) {
+        return {};
+    }
+    return pTrackModel->getTrackUrl(srcIndex);
 }
 
 QmlTrackProxy* QmlLibraryTrackListModel::getTrack(int row) const {
     auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
-    if (pTrackModel == nullptr) {
+    if (pTrackModel == nullptr || sourceModel() == nullptr) {
         return nullptr;
     }
-    auto pTrack = pTrackModel->getTrack(sourceModel()->index(row, 0));
+    if (row < 0 || row >= sourceModel()->rowCount()) {
+        return nullptr;
+    }
+    const QModelIndex srcIndex = sourceModel()->index(row, 0);
+    if (!srcIndex.isValid()) {
+        return nullptr;
+    }
+    auto pTrack = pTrackModel->getTrack(srcIndex);
     if (!pTrack) {
         return nullptr;
     }
@@ -204,7 +218,7 @@ bool QmlLibraryTrackListModel::hasCapabilities(TrackModel::Capabilities caps) co
 }
 
 void QmlLibraryTrackListModel::sort(int column, Qt::SortOrder order) {
-    if (column < 0 || column >= m_columns.size()) {
+    if (column < 0 || column >= m_columns.size() || sourceModel() == nullptr) {
         return;
     }
     const auto& pColumn = m_columns[column];

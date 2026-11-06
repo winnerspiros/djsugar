@@ -55,8 +55,16 @@ Item {
     // A whole USB drive (Rekordbox or Engine DJ) rather than a playlist
     property bool activeIsDrive: false
     readonly property bool showLevel: root.levelIndex !== null && !root.showTracks
-    // levelIndex, or the invisible root of the sources
-    readonly property var listRoot: root.levelIndex ?? root.sidebar?.index(-1, -1)
+    // levelIndex, or the invisible root of the sources.
+    // A null index (sidebar gone/model resetting) disables the DelegateModel
+    // instead of crossing an invalid QModelIndex into C++ -> assert/hang.
+    readonly property var listRoot: {
+        if (root.levelIndex !== null && root.levelIndex.valid) {
+            return root.levelIndex;
+        }
+        const fallback = root.sidebar ? root.sidebar.index(-1, -1) : null;
+        return (fallback && fallback.valid) ? fallback : undefined;
+    }
     // Entries below a top level source can show their own tracks too
     readonly property bool levelHasAll: root.levelPath !== null && root.levelPath.length > 1
     // The entries listed are drives, which list their playlists once read
@@ -221,9 +229,15 @@ Item {
         return true;
     }
     function openEntry(row) {
+        if (root.levelPath === null) {
+            return false;
+        }
         return root.open(root.levelPath.concat([row]));
     }
     function openAllTracks() {
+        if (root.levelPath === null) {
+            return;
+        }
         root.activate(root.levelPath);
         root.showTracks = true;
         root.deferredRefresh();
@@ -407,7 +421,7 @@ Item {
         // without telling the model; only a repaint (dataChanged) follows.
         // The list is then built again.
         function onDataChanged() {
-            if (root.levelIndex !== null && root.sidebar.rowCount(root.levelIndex) !== levelEntries.count) {
+            if (root.sidebar && root.levelIndex !== null && root.levelIndex.valid && root.sidebar.rowCount(root.levelIndex) !== levelEntries.count) {
                 root.levelIndex = null;
                 root.deferredRefresh();
             }
@@ -603,7 +617,7 @@ Item {
                     model: DelegateModel {
                         id: sections
 
-                        model: root.sidebar
+                        model: root.sidebar ?? null
 
                         delegate: Rectangle {
                             id: section
@@ -717,7 +731,7 @@ Item {
                 model: DelegateModel {
                     id: levelEntries
 
-                    model: root.sidebar
+                    model: root.sidebar ?? null
                     rootIndex: root.listRoot
 
                     delegate: Rectangle {
@@ -754,6 +768,9 @@ Item {
                         TapHandler {
                             gesturePolicy: TapHandler.ReleaseWithinBounds
                             onTapped: {
+                                if (root.levelPath === null) {
+                                    return;
+                                }
                                 root.cursor = entry.index;
                                 root.openEntry(entry.index);
                             }

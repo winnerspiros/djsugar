@@ -214,6 +214,9 @@ Rectangle {
         Keys.onUpPressed: root.moveSelectionVertical(-1)
 
         function loadSelectedTrack(group, play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
@@ -221,6 +224,9 @@ Rectangle {
             Mixxx.PlayerManager.getPlayer(group).loadTrackFromLocationUrl(urls[0], play);
         }
         function loadSelectedTrackIntoNextAvailableDeck(play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
@@ -342,7 +348,7 @@ Rectangle {
 
         selectionModel: ItemSelectionModel {
             function moveSelectionVertical(value) {
-                if (value == 0)
+                if (value == 0 || !this.model)
                     return;
 
                 const selected = this.selectedIndexes;
@@ -350,6 +356,10 @@ Rectangle {
                 this.selectRow(oldRow + value);
             }
             function selectRow(row) {
+                if (!this.model) {
+                    this.clear();
+                    return;
+                }
                 const rowCount = this.model.rowCount();
                 if (rowCount == 0) {
                     this.clear();
@@ -357,11 +367,19 @@ Rectangle {
                 }
                 // Stay at the first or last track instead of wrapping around
                 const newRow = Math.max(0, Math.min(rowCount - 1, row));
-                this.select(this.model.index(newRow, 0), ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
+                const idx = this.model.index(newRow, 0);
+                if (!idx || !idx.valid) {
+                    this.clear();
+                    return;
+                }
+                this.select(idx, ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
                 // Keep the selection visible, e.g. when moving it with the controller
                 view.positionViewAtRow(newRow, TableView.Contain);
             }
             function selectedTrackUrls() {
+                if (!this.model) {
+                    return [];
+                }
                 return this.selectedIndexes.map(index => {
                     return this.model.getUrl(index.row);
                 });
@@ -393,7 +411,7 @@ Rectangle {
         border.color: Theme.panelSplitterBackground
         border.width: 1
 
-        readonly property var selectedUrls: view.selectionModel.selectedTrackUrls()
+        readonly property var selectedUrls: view.selectionModel ? view.selectionModel.selectedTrackUrls() : []
         readonly property bool hasTrack: selectedUrls && selectedUrls.length > 0
         // Without a selection, "+ ALL" adds the whole list to a playlist
         readonly property bool hasTracks: view.rows > 0
