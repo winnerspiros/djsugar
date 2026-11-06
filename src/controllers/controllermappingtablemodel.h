@@ -31,8 +31,13 @@ class ControllerMappingTableModel : public QAbstractTableModel {
     ////////////////////////////////////////////////////////////////////////////
     // QAbstractItemModel methods
     ////////////////////////////////////////////////////////////////////////////
-    bool setHeaderData(int section, Qt::Orientation orientation, const QVariant& value, int role = Qt::EditRole) override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    bool setHeaderData(int section,
+            Qt::Orientation orientation,
+            const QVariant& value,
+            int role = Qt::EditRole) override;
+    QVariant headerData(int section,
+            Qt::Orientation orientation,
+            int role = Qt::DisplayRole) const override;
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     virtual QString getDisplayString(const QModelIndex& index) const = 0;

@@ -1019,7 +1019,9 @@ bool TrackDAO::hideTracks(
     for (const auto& trackId : trackIds) {
         idList.append(trackId.toString());
     }
-    FwdSqlQuery query(m_database, QString("UPDATE library SET mixxx_deleted=1 WHERE id in (%1)").arg(idList.join(",")));
+    FwdSqlQuery query(m_database,
+            QString("UPDATE library SET mixxx_deleted=1 WHERE id in (%1)")
+                    .arg(idList.join(",")));
     return !query.hasError() && query.execPrepared();
 }
 
@@ -1108,10 +1110,13 @@ bool TrackDAO::onPurgingTracks(
     QStringList locations;
     QSet<QString> directories;
     {
-        FwdSqlQuery query(m_database, QString("SELECT track_locations.location, track_locations.directory FROM "
-                                              "track_locations INNER JOIN library ON library.location = "
-                                              "track_locations.id WHERE library.id in (%1)")
-                                              .arg(idListJoined));
+        FwdSqlQuery query(m_database,
+                QString("SELECT track_locations.location, "
+                        "track_locations.directory FROM "
+                        "track_locations INNER JOIN library ON "
+                        "library.location = "
+                        "track_locations.id WHERE library.id in (%1)")
+                        .arg(idListJoined));
         if (query.hasError() || !query.execPrepared()) {
             return false;
         }
@@ -1131,9 +1136,11 @@ bool TrackDAO::onPurgingTracks(
     }
     {
         // Remove location from track_locations table
-        FwdSqlQuery query(m_database, QString("DELETE FROM track_locations "
-                                              "WHERE location in (%1)")
-                                              .arg(SqlStringFormatter::formatList(m_database, locations)));
+        FwdSqlQuery query(m_database,
+                QString("DELETE FROM track_locations "
+                        "WHERE location in (%1)")
+                        .arg(SqlStringFormatter::formatList(
+                                m_database, locations)));
         if (query.hasError() || !query.execPrepared()) {
             return false;
         }
@@ -1153,9 +1160,11 @@ bool TrackDAO::onPurgingTracks(
         // Note: -1 is used as return value for missing entries,
         // needs_verification is a temporary column used during the scan only.
         // TODO(XXX) delegate to libraryHashDAO
-        FwdSqlQuery query(m_database, QString("UPDATE LibraryHashes SET "
-                                              "hash=-2 WHERE directory_path in (%1)")
-                                              .arg(SqlStringFormatter::formatList(m_database, directories)));
+        FwdSqlQuery query(m_database,
+                QString("UPDATE LibraryHashes SET "
+                        "hash=-2 WHERE directory_path in (%1)")
+                        .arg(SqlStringFormatter::formatList(
+                                m_database, directories)));
         if (query.hasError() || !query.execPrepared()) {
             return false;
         }

@@ -34,7 +34,11 @@ QString fromTraktorSeparators(QString path) {
 TraktorTrackModel::TraktorTrackModel(QObject* parent,
         TrackCollectionManager* pTrackCollectionManager,
         QSharedPointer<BaseTrackCache> trackSource)
-        : BaseExternalTrackModel(parent, pTrackCollectionManager, "mixxx.db.model.traktor_tablemodel", "traktor_library", trackSource) {
+        : BaseExternalTrackModel(parent,
+                  pTrackCollectionManager,
+                  "mixxx.db.model.traktor_tablemodel",
+                  "traktor_library",
+                  trackSource) {
 }
 
 bool TraktorTrackModel::isColumnHiddenByDefault(int column) {
@@ -47,7 +51,12 @@ bool TraktorTrackModel::isColumnHiddenByDefault(int column) {
 TraktorPlaylistModel::TraktorPlaylistModel(QObject* parent,
         TrackCollectionManager* pTrackCollectionManager,
         QSharedPointer<BaseTrackCache> trackSource)
-        : BaseExternalPlaylistModel(parent, pTrackCollectionManager, "mixxx.db.model.traktor.playlistmodel", "traktor_playlists", "traktor_playlist_tracks", trackSource) {
+        : BaseExternalPlaylistModel(parent,
+                  pTrackCollectionManager,
+                  "mixxx.db.model.traktor.playlistmodel",
+                  "traktor_playlists",
+                  "traktor_playlist_tracks",
+                  trackSource) {
 }
 
 bool TraktorPlaylistModel::isColumnHiddenByDefault(int column) {

@@ -367,7 +367,9 @@ void QmlControllerDeviceProxy::setEnabled(bool state) {
 QString QmlControllerDeviceProxy::vendor() const {
     auto vendorId = m_pInternal->getVendorId();
     if (!vendorId) {
-        return m_pInternal->getVendorString().isEmpty() ? tr("N/A") : m_pInternal->getVendorString();
+        return m_pInternal->getVendorString().isEmpty()
+                ? tr("N/A")
+                : m_pInternal->getVendorString();
     }
     uint16_t id = vendorId.value();
     return QStringLiteral("%1 (0x%2)")
@@ -378,7 +380,9 @@ QString QmlControllerDeviceProxy::vendor() const {
 QString QmlControllerDeviceProxy::product() const {
     auto productId = m_pInternal->getProductId();
     if (!productId) {
-        return m_pInternal->getProductString().isEmpty() ? tr("N/A") : m_pInternal->getProductString();
+        return m_pInternal->getProductString().isEmpty()
+                ? tr("N/A")
+                : m_pInternal->getProductString();
     }
     uint16_t id = productId.value();
     return QStringLiteral("%1 (0x%2)")

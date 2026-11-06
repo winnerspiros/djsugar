@@ -486,7 +486,13 @@ void EngineMixer::process(const std::size_t bufferSize) {
 
     // Calculate the crossfader gains for left and right side of the crossfader
     CSAMPLE_GAIN crossfaderLeftGain, crossfaderRightGain;
-    EngineXfader::getXfadeGains(m_pCrossfader->get(), m_pXFaderCurve->get(), m_pXFaderCalibration->get(), m_pXFaderMode->get(), m_pXFaderReverse->toBool(), &crossfaderLeftGain, &crossfaderRightGain);
+    EngineXfader::getXfadeGains(m_pCrossfader->get(),
+            m_pXFaderCurve->get(),
+            m_pXFaderCalibration->get(),
+            m_pXFaderMode->get(),
+            m_pXFaderReverse->toBool(),
+            &crossfaderLeftGain,
+            &crossfaderRightGain);
 
     // Make the mix for each crossfader orientation output bus.
     // m_mainGain takes care of applying the attenuation from

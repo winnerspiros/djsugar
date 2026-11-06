@@ -329,7 +329,9 @@ void WSliderComposed::fillDebugTooltip(QStringList* debug) {
     WWidget::fillDebugTooltip(debug);
     int sliderLength = m_bHorizontal ? width() : height();
     *debug << QString("Horizontal: %1").arg(toDebugString(m_bHorizontal))
-           << QString("SliderPosition: %1").arg(m_handler.parameterToPosition(getControlParameterDisplay()))
+           << QString("SliderPosition: %1")
+                      .arg(m_handler.parameterToPosition(
+                              getControlParameterDisplay()))
            << QString("SliderLength: %1").arg(sliderLength)
            << QString("HandleLength: %1").arg(m_dHandleLength);
 }

@@ -132,8 +132,11 @@ void StatsManager::writeTimeline(const QString& filename) {
         qint64 last_start = startTimes.value(event.m_tag, -1);
         qint64 last_end = endTimes.value(event.m_tag, -1);
 
-        qint64 duration_since_last_start = last_start == -1 ? 0 : event.m_time.toIntegerNanos() - last_start;
-        qint64 duration_since_last_end = last_end == -1 ? 0 : event.m_time.toIntegerNanos() - last_end;
+        qint64 duration_since_last_start = last_start == -1
+                ? 0
+                : event.m_time.toIntegerNanos() - last_start;
+        qint64 duration_since_last_end =
+                last_end == -1 ? 0 : event.m_time.toIntegerNanos() - last_end;
 
         if (event.m_type == Stat::EVENT_START) {
             // We last saw a start and we just saw another start.

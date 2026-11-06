@@ -179,8 +179,10 @@ class QmlControllerDeviceProxy : public QObject {
     Q_PROPERTY(QString vendor READ vendor CONSTANT)
     Q_PROPERTY(QString product READ product CONSTANT)
     Q_PROPERTY(QString serialNumber READ serialNumber CONSTANT)
-    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> mappings READ getMappings NOTIFY mappingsChanged)
-    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> availableMappings READ getMappings NOTIFY mappingsChanged)
+    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> mappings READ
+                    getMappings NOTIFY mappingsChanged)
+    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> availableMappings
+                    READ getMappings NOTIFY mappingsChanged)
   public:
     enum class Type {
         MIDI,

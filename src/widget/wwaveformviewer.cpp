@@ -91,7 +91,9 @@ void WWaveformViewer::mousePressEvent(QMouseEvent* event) {
             m_bBending = false;
         }
         m_bScratching = true;
-        int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal ? event->pos().x() : event->pos().y();
+        int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal
+                ? event->pos().x()
+                : event->pos().y();
         double audioSamplePerPixel = m_waveformWidget->getAudioSamplePerPixel();
         double targetPosition = -1.0 * eventPosValue * audioSamplePerPixel * 2;
         m_pScratchPosition->set(targetPosition);
@@ -129,7 +131,9 @@ void WWaveformViewer::mouseMoveEvent(QMouseEvent* event) {
 
     // Only send signals for mouse moving if the left button is pressed
     if (m_bScratching) {
-        int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal ? event->pos().x() : event->pos().y();
+        int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal
+                ? event->pos().x()
+                : event->pos().y();
         // Adjusts for one-to-one movement.
         double audioSamplePerPixel = m_waveformWidget->getAudioSamplePerPixel();
         double targetPosition = -1.0 * eventPosValue * audioSamplePerPixel * 2;

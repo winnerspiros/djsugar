@@ -229,11 +229,15 @@ void MidiController::learnTemporaryInputMappings(const MidiInputMappings& mappin
 
         MidiOpCode opCode = MidiUtils::opCodeFromStatus(mapping.key.status);
         bool twoBytes = MidiUtils::isMessageTwoBytes(opCode);
-        QString message = twoBytes ? QString("0x%1 0x%2")
-                                             .arg(QString::number(mapping.key.status, 16).toUpper(),
-                                                     QString::number(mapping.key.control, 16).toUpper().rightJustified(2, '0'))
-                                   : QString("0x%1")
-                                             .arg(QString::number(mapping.key.status, 16).toUpper());
+        QString message = twoBytes
+                ? QString("0x%1 0x%2")
+                          .arg(QString::number(mapping.key.status, 16)
+                                          .toUpper(),
+                                  QString::number(mapping.key.control, 16)
+                                          .toUpper()
+                                          .rightJustified(2, '0'))
+                : QString("0x%1").arg(
+                          QString::number(mapping.key.status, 16).toUpper());
 
         std::visit(
                 MidiUtils::overloaded{

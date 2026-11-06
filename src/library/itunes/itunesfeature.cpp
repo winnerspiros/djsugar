@@ -299,9 +299,13 @@ QString ITunesFeature::getiTunesMusicPath() {
         return "";
     }
 #if defined(__APPLE__)
-    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + "/iTunes/iTunes Music Library.xml";
+    musicFolder =
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            "/iTunes/iTunes Music Library.xml";
 #elif defined(__WINDOWS__)
-    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + "\\iTunes\\iTunes Music Library.xml";
+    musicFolder =
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            "\\iTunes\\iTunes Music Library.xml";
 #else
     musicFolder = "";
 #endif

@@ -149,7 +149,8 @@ void ShoutConnection::applySettings() {
     // processDisconnect manually
 
     int dStatus = getStatus();
-    if ((dStatus == BroadcastProfile::STATUS_UNCONNECTED || dStatus == BroadcastProfile::STATUS_FAILURE)) {
+    if ((dStatus == BroadcastProfile::STATUS_UNCONNECTED ||
+                dStatus == BroadcastProfile::STATUS_FAILURE)) {
         serverConnect();
     }
 }
@@ -291,7 +292,8 @@ void ShoutConnection::updateFromPreferences() {
     }
 
     if (shout_set_port(m_pShout,
-                static_cast<unsigned short>(serverUrl.port(BROADCAST_DEFAULT_PORT))) != SHOUTERR_SUCCESS) {
+                static_cast<unsigned short>(serverUrl.port(
+                        BROADCAST_DEFAULT_PORT))) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting port!"), shout_get_error(m_pShout));
         return;
     }
@@ -427,8 +429,9 @@ void ShoutConnection::updateFromPreferences() {
     }
 #endif
 
-    if (shout_set_audio_info(
-                m_pShout, SHOUT_AI_BITRATE, QByteArray::number(iBitrate).constData()) != SHOUTERR_SUCCESS) {
+    if (shout_set_audio_info(m_pShout,
+                SHOUT_AI_BITRATE,
+                QByteArray::number(iBitrate).constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting bitrate"), shout_get_error(m_pShout));
         return;
     }
@@ -662,7 +665,10 @@ bool ShoutConnection::processDisconnect() {
     return disconnected;
 }
 
-void ShoutConnection::write(const unsigned char* header, const unsigned char* body, int headerLen, int bodyLen) {
+void ShoutConnection::write(const unsigned char* header,
+        const unsigned char* body,
+        int headerLen,
+        int bodyLen) {
     setFunctionCode(7);
     if (!m_pShout || m_iShoutStatus != SHOUTERR_CONNECTED) {
         // This happens when the decoder calls flush() and the connection is
@@ -1046,7 +1052,8 @@ void ShoutConnection::run() {
             ring_buffer_size_t size2;
 
             // We use size1 and size2, so we can ignore the return value
-            (void)m_pOutputFifo->aquireReadRegions(readAvailable, &dataPtr1, &size1, &dataPtr2, &size2);
+            (void)m_pOutputFifo->aquireReadRegions(
+                    readAvailable, &dataPtr1, &size1, &dataPtr2, &size2);
 
             // Push frames to the encoder.
             process(dataPtr1, size1);

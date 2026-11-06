@@ -183,8 +183,14 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
             kNumberOfAnalyzerThreads,
             AnalyzerModeFlags::WithWaveform);
 
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::trackProgress, this, &PlayerManager::onTrackAnalysisProgress);
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::finished, this, &PlayerManager::onTrackAnalysisFinished);
+    connect(m_pTrackAnalysisScheduler.get(),
+            &TrackAnalysisScheduler::trackProgress,
+            this,
+            &PlayerManager::onTrackAnalysisProgress);
+    connect(m_pTrackAnalysisScheduler.get(),
+            &TrackAnalysisScheduler::finished,
+            this,
+            &PlayerManager::onTrackAnalysisFinished);
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.

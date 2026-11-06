@@ -104,7 +104,10 @@ void ScreenSaverHelper::inhibitInternal() {
     CFStringRef reasonForActivity = CFStringCreateWithCString(kCFAllocatorDefault,
             "Mixxx digital DJ software",
             kCFStringEncodingUTF8);
-    success = IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep, kIOPMAssertionLevelOn, reasonForActivity, &s_systemSleepAssertionID);
+    success = IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep,
+            kIOPMAssertionLevelOn,
+            reasonForActivity,
+            &s_systemSleepAssertionID);
     CFRelease(reasonForActivity);
 
     if (success == kIOReturnSuccess) {
@@ -240,9 +243,13 @@ void ScreenSaverHelper::inhibitInternal() {
     }
     s_cookie = 0;
     for (int i = 0; SCREENSAVERS[i][0] != nullptr; i++) {
-        QDBusInterface iface(SCREENSAVERS[i][0], SCREENSAVERS[i][1], SCREENSAVERS[i][2], QDBusConnection::sessionBus());
+        QDBusInterface iface(SCREENSAVERS[i][0],
+                SCREENSAVERS[i][1],
+                SCREENSAVERS[i][2],
+                QDBusConnection::sessionBus());
         if (iface.isValid()) {
-            QDBusReply<uint32_t> reply = iface.call(SCREENSAVERS[i][3], "org.mixxxdj", "Mixxx active");
+            QDBusReply<uint32_t> reply = iface.call(
+                    SCREENSAVERS[i][3], "org.mixxxdj", "Mixxx active");
             if (reply.isValid()) {
                 s_cookie = reply.value();
                 s_saverindex = i;
@@ -261,15 +268,19 @@ void ScreenSaverHelper::inhibitInternal() {
 void ScreenSaverHelper::uninhibitInternal() {
     if (s_cookie > 0) {
         s_enabled = false;
-        QDBusInterface iface(SCREENSAVERS[s_saverindex][0], SCREENSAVERS[s_saverindex][1], SCREENSAVERS[s_saverindex][2], QDBusConnection::sessionBus());
+        QDBusInterface iface(SCREENSAVERS[s_saverindex][0],
+                SCREENSAVERS[s_saverindex][1],
+                SCREENSAVERS[s_saverindex][2],
+                QDBusConnection::sessionBus());
         if (iface.isValid()) {
             QDBusReply<void> reply = iface.call("UnInhibit", s_cookie);
             if (reply.isValid()) {
                 s_cookie = 0;
                 qDebug() << "DBus screensaver " << SCREENSAVERS[s_saverindex][0] << " uninhibited";
             } else {
-                qWarning() << "Call to uninhibit for " << SCREENSAVERS[s_saverindex][0] << " failed: "
-                           << reply.error().message();
+                qWarning() << "Call to uninhibit for "
+                           << SCREENSAVERS[s_saverindex][0]
+                           << " failed: " << reply.error().message();
             }
         } else {
             qDebug() << "DBus interface " << SCREENSAVERS[s_saverindex][0] << " not valid";

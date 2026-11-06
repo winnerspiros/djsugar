@@ -540,7 +540,8 @@ ChromaticKey KeyUtils::keyFromNumericValue(int value) {
 
 KeyUtils::KeyNotation KeyUtils::keyNotationFromNumericValue(double value) {
     int value_floored = static_cast<int>(value);
-    if (value_floored < static_cast<int>(KeyNotation::Invalid) || value_floored >= static_cast<int>(KeyNotation::NumKeyNotations)) {
+    if (value_floored < static_cast<int>(KeyNotation::Invalid) ||
+            value_floored >= static_cast<int>(KeyNotation::NumKeyNotations)) {
         return KeyNotation::Invalid;
     }
     return static_cast<KeyNotation>(value_floored);

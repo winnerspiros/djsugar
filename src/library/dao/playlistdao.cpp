@@ -110,7 +110,8 @@ int PlaylistDAO::createUniquePlaylist(QString* pName, const HiddenType hidden) {
 }
 
 QString PlaylistDAO::getPlaylistName(const int playlistId) const {
-    // qDebug() << "PlaylistDAO::getPlaylistName" << QThread::currentThread() << m_database.connectionName();
+    // qDebug() << "PlaylistDAO::getPlaylistName" << QThread::currentThread() <<
+    // m_database.connectionName();
 
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(
@@ -177,7 +178,8 @@ QList<TrackId> PlaylistDAO::getAutoDJTrackIds() const {
 }
 
 int PlaylistDAO::getPlaylistIdFromName(const QString& name) const {
-    // qDebug() << "PlaylistDAO::getPlaylistIdFromName" << QThread::currentThread() << m_database.connectionName();
+    // qDebug() << "PlaylistDAO::getPlaylistIdFromName" <<
+    // QThread::currentThread() << m_database.connectionName();
 
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(
@@ -194,7 +196,8 @@ int PlaylistDAO::getPlaylistIdFromName(const QString& name) const {
 }
 
 void PlaylistDAO::deletePlaylist(const int playlistId) {
-    // qDebug() << "PlaylistDAO::deletePlaylist" << QThread::currentThread() << m_database.connectionName();
+    // qDebug() << "PlaylistDAO::deletePlaylist" << QThread::currentThread() <<
+    // m_database.connectionName();
     ScopedTransaction transaction(m_database);
 
     QSet<TrackId> playedTrackIds;
@@ -1421,7 +1424,8 @@ void PlaylistDAO::shuffleTracks(const int playlistId,
                 bestTrackDistance = trackDistance;
                 bestTrackBPosition = trackBPosition;
             }
-            // qDebug() << "        Current Best Position: " << bestTrackBPosition << " | Distance: " << bestTrackDistance;
+            // qDebug() << "        Current Best Position: " <<
+            // bestTrackBPosition << " | Distance: " << bestTrackDistance;
         }
 
         if (conflictFound) {

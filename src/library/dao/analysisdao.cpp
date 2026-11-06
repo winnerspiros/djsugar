@@ -169,9 +169,11 @@ bool AnalysisDao::saveAnalysis(AnalysisDao::AnalysisInfo* info) {
     }
 
     qDebug() << "AnalysisDAO saved analysis" << info->analysisId
-             << QString("%1 (%2 compressed)").arg(QString::number(info->data.length()), QString::number(compressedData.length()))
-             << "bytes for track"
-             << info->trackId << "in" << time.elapsed().debugMillisWithUnit();
+             << QString("%1 (%2 compressed)")
+                        .arg(QString::number(info->data.length()),
+                                QString::number(compressedData.length()))
+             << "bytes for track" << info->trackId << "in"
+             << time.elapsed().debugMillisWithUnit();
     return true;
 }
 

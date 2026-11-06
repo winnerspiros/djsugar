@@ -183,7 +183,36 @@ bool BroadcastProfile::equals(BroadcastProfilePtr other) {
 }
 
 bool BroadcastProfile::valuesEquals(BroadcastProfilePtr other) {
-    if (getEnabled() == other->getEnabled() && secureCredentialStorage() == other->secureCredentialStorage() && getHost() == other->getHost() && getPort() == other->getPort() && getServertype() == other->getServertype() && getLogin() == other->getLogin() && getPassword() == other->getPassword() && getEnableReconnect() == other->getEnableReconnect() && getReconnectPeriod() == other->getReconnectPeriod() && getLimitReconnects() == other->getLimitReconnects() && getMaximumRetries() == other->getMaximumRetries() && getNoDelayFirstReconnect() == other->getNoDelayFirstReconnect() && getReconnectFirstDelay() == other->getReconnectFirstDelay() && getFormat() == other->getFormat() && getBitrate() == other->getBitrate() && getChannels() == other->getChannels() && getMountpoint() == other->getMountpoint() && getStreamName() == other->getStreamName() && getStreamDesc() == other->getStreamDesc() && getStreamGenre() == other->getStreamGenre() && getStreamPublic() == other->getStreamPublic() && getStreamWebsite() == other->getStreamWebsite() && getStreamIRC() == other->getStreamIRC() && getStreamAIM() == other->getStreamAIM() && getStreamICQ() == other->getStreamICQ() && getEnableMetadata() == other->getEnableMetadata() && getMetadataCharset() == other->getMetadataCharset() && getCustomArtist() == other->getCustomArtist() && getCustomTitle() == other->getCustomTitle() && getMetadataFormat() == other->getMetadataFormat() && getOggDynamicUpdate() == other->getOggDynamicUpdate()) {
+    if (getEnabled() == other->getEnabled() &&
+            secureCredentialStorage() == other->secureCredentialStorage() &&
+            getHost() == other->getHost() && getPort() == other->getPort() &&
+            getServertype() == other->getServertype() &&
+            getLogin() == other->getLogin() &&
+            getPassword() == other->getPassword() &&
+            getEnableReconnect() == other->getEnableReconnect() &&
+            getReconnectPeriod() == other->getReconnectPeriod() &&
+            getLimitReconnects() == other->getLimitReconnects() &&
+            getMaximumRetries() == other->getMaximumRetries() &&
+            getNoDelayFirstReconnect() == other->getNoDelayFirstReconnect() &&
+            getReconnectFirstDelay() == other->getReconnectFirstDelay() &&
+            getFormat() == other->getFormat() &&
+            getBitrate() == other->getBitrate() &&
+            getChannels() == other->getChannels() &&
+            getMountpoint() == other->getMountpoint() &&
+            getStreamName() == other->getStreamName() &&
+            getStreamDesc() == other->getStreamDesc() &&
+            getStreamGenre() == other->getStreamGenre() &&
+            getStreamPublic() == other->getStreamPublic() &&
+            getStreamWebsite() == other->getStreamWebsite() &&
+            getStreamIRC() == other->getStreamIRC() &&
+            getStreamAIM() == other->getStreamAIM() &&
+            getStreamICQ() == other->getStreamICQ() &&
+            getEnableMetadata() == other->getEnableMetadata() &&
+            getMetadataCharset() == other->getMetadataCharset() &&
+            getCustomArtist() == other->getCustomArtist() &&
+            getCustomTitle() == other->getCustomTitle() &&
+            getMetadataFormat() == other->getMetadataFormat() &&
+            getOggDynamicUpdate() == other->getOggDynamicUpdate()) {
         return true;
     }
 
@@ -390,7 +419,10 @@ bool BroadcastProfile::save(const QString& filename) {
 
     XmlParse::addElement(doc, docRoot, kProfileName, m_profileName);
 
-    XmlParse::addElement(doc, docRoot, kSecureCredentials, QString::number((int)m_secureCredentials));
+    XmlParse::addElement(doc,
+            docRoot,
+            kSecureCredentials,
+            QString::number((int)m_secureCredentials));
     XmlParse::addElement(doc, docRoot, kEnabled, QString::number((int)m_enabled));
 
     XmlParse::addElement(doc, docRoot, kHost, m_host);
@@ -410,8 +442,14 @@ bool BroadcastProfile::save(const QString& filename) {
     XmlParse::addElement(doc, docRoot, kLimitReconnects, QString::number((int)m_limitReconnects));
     XmlParse::addElement(doc, docRoot, kMaximumRetries, QString::number(m_maximumRetries));
 
-    XmlParse::addElement(doc, docRoot, kNoDelayFirstReconnect, QString::number((int)m_noDelayFirstReconnect));
-    XmlParse::addElement(doc, docRoot, kReconnectFirstDelay, QString::number(m_reconnectFirstDelay));
+    XmlParse::addElement(doc,
+            docRoot,
+            kNoDelayFirstReconnect,
+            QString::number((int)m_noDelayFirstReconnect));
+    XmlParse::addElement(doc,
+            docRoot,
+            kReconnectFirstDelay,
+            QString::number(m_reconnectFirstDelay));
 
     XmlParse::addElement(doc, docRoot, kMountPoint, m_mountpoint);
     XmlParse::addElement(doc, docRoot, kStreamName, m_streamName);

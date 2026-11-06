@@ -139,7 +139,10 @@ WOverview::WOverview(
 
     setMouseTracking(true);
 
-    connect(pPlayerManager, &PlayerManager::trackAnalyzerProgress, this, &WOverview::onTrackAnalyzerProgress);
+    connect(pPlayerManager,
+            &PlayerManager::trackAnalyzerProgress,
+            this,
+            &WOverview::onTrackAnalyzerProgress);
 }
 
 void WOverview::setup(const QDomNode& node, const SkinContext& context) {
@@ -509,7 +512,8 @@ void WOverview::updateCues(const QList<CuePointer>& loadedCues) {
     for (const CuePointer& currentCue : loadedCues) {
         const WaveformMarkPointer pMark = m_marks.getHotCueMark(currentCue->getHotCue());
 
-        if (pMark != nullptr && pMark->isValid() && pMark->isVisible() && pMark->getSamplePosition() != Cue::kNoPosition) {
+        if (pMark != nullptr && pMark->isValid() && pMark->isVisible() &&
+                pMark->getSamplePosition() != Cue::kNoPosition) {
             QColor newColor = mixxx::RgbColor::toQColor(currentCue->getColor());
             if (newColor != pMark->fillColor() || newColor != pMark->m_textColor) {
                 pMark->setBaseColor(newColor, m_dimBrightThreshold);

@@ -1042,29 +1042,39 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
             m_androidBundledFallbackInFlight.remove(videoId);
         };
         auto pDoneConn = std::make_shared<QMetaObject::Connection>();
-        *pDoneConn = connect(this, &YouTubeService::downloadFinished, this, [this, videoId, pDoneConn](const QString& finishedId, const QString&) {
-            // Only this id's own completion clears its guard entry;
-            // other tracks finishing must not touch it. Disconnects
-            // itself (handle-scoped, so the feature's own
-            // onDownloadFinished slot is untouched).
-            if (finishedId == videoId) {
-                m_androidBundledFallbackInFlight.remove(videoId);
-                QObject::disconnect(*pDoneConn);
-            }
-        });
+        *pDoneConn = connect(this,
+                &YouTubeService::downloadFinished,
+                this,
+                [this, videoId, pDoneConn](
+                        const QString& finishedId, const QString&) {
+                    // Only this id's own completion clears its guard entry;
+                    // other tracks finishing must not touch it. Disconnects
+                    // itself (handle-scoped, so the feature's own
+                    // onDownloadFinished slot is untouched).
+                    if (finishedId == videoId) {
+                        m_androidBundledFallbackInFlight.remove(videoId);
+                        QObject::disconnect(*pDoneConn);
+                    }
+                });
         auto pConn = std::make_shared<QMetaObject::Connection>();
-        *pConn = connect(this, &YouTubeService::downloadFailed, [this, videoId, cacheDir, pConn, clearGuard](const QString& failedId, const QString&) {
-            if (failedId != videoId) {
-                return; // some other track
-            }
-            QObject::disconnect(*pConn);
-            kLogger.warning() << "Bundled yt-dlp failed for" << videoId
-                              << "— falling back to InnerTube direct";
-            downloadViaInnerTube(videoId, cacheDir, [this, videoId, clearGuard](const QString& innerTubeError) {
-                clearGuard();
-                Q_EMIT downloadFailed(videoId, innerTubeError);
-            });
-        });
+        *pConn = connect(this,
+                &YouTubeService::downloadFailed,
+                [this, videoId, cacheDir, pConn, clearGuard](
+                        const QString& failedId, const QString&) {
+                    if (failedId != videoId) {
+                        return; // some other track
+                    }
+                    QObject::disconnect(*pConn);
+                    kLogger.warning() << "Bundled yt-dlp failed for" << videoId
+                                      << "— falling back to InnerTube direct";
+                    downloadViaInnerTube(videoId,
+                            cacheDir,
+                            [this, videoId, clearGuard](
+                                    const QString& innerTubeError) {
+                                clearGuard();
+                                Q_EMIT downloadFailed(videoId, innerTubeError);
+                            });
+                });
         downloadViaAndroidBundled(videoId, cacheDir);
         return;
     }
@@ -2137,7 +2147,13 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
     // Fail fast when tokenless: a 403 on a URL with no &pot= means YouTube
     // is gating this client — every sibling URL will 403 the same way, so
     // skip the rest instead of burning ~1s per stream (~15s per track).
-    auto tryNextStream = [this, videoId, cacheDir, rest, onFailure, streamUserAgent, streamUrl](const QString& err) {
+    auto tryNextStream = [this,
+                                 videoId,
+                                 cacheDir,
+                                 rest,
+                                 onFailure,
+                                 streamUserAgent,
+                                 streamUrl](const QString& err) {
         const bool tokenless403 =
                 (err.contains(QStringLiteral("403")) ||
                         err.contains(QStringLiteral("Forbidden"))) &&
@@ -2502,7 +2518,14 @@ void YouTubeService::downloadViaInnerTubeClient(
     // exactly as before — TVHTML5 needs none, fallback chain unchanged.
     QPointer<YouTubeService> potGuard(this);
     fetchPoTokens(videoId,
-            [this, potGuard, videoId, cacheDir, clientIdx, userAgent, tryNext, onAllFailed](const QString& playerPot,
+            [this,
+                    potGuard,
+                    videoId,
+                    cacheDir,
+                    clientIdx,
+                    userAgent,
+                    tryNext,
+                    onAllFailed](const QString& playerPot,
                     const QString& streamingPot,
                     const QString& freshVd) {
                 if (!potGuard) {
@@ -2523,13 +2546,27 @@ void YouTubeService::downloadViaInnerTubeClient(
                     onAllFailed(tr("PO tokens unavailable — using yt-dlp fallback"));
                     return;
                 }
-                requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent, playerPot, streamingPot, tryNext, onAllFailed);
+                requestPlayerWithPoToken(videoId,
+                        cacheDir,
+                        clientIdx,
+                        userAgent,
+                        playerPot,
+                        streamingPot,
+                        tryNext,
+                        onAllFailed);
             });
     return;
 #else
     // Desktop/other: no WebView PO tokens — proceed tokenless (TVHTML5 needs
     // none; other clients fail over to yt-dlp as before).
-    requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent, QString(), QString(), tryNext, onAllFailed);
+    requestPlayerWithPoToken(videoId,
+            cacheDir,
+            clientIdx,
+            userAgent,
+            QString(),
+            QString(),
+            tryNext,
+            onAllFailed);
     return;
 #endif
 }
