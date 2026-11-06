@@ -355,6 +355,8 @@ void ScreenSaverHelper::uninhibitInternal() {
 }
 #elif defined(Q_OS_ANDROID)
 
+namespace {
+
 // FLAG_KEEP_SCREEN_ON is the supported way to keep the display awake; the
 // PowerManager screen wake locks are deprecated since API 17 and are ignored
 // on current Android versions. Window flags must be changed on the Android UI
@@ -385,6 +387,8 @@ void setKeepScreenOn(bool keepOn) {
                 return {};
             });
 }
+
+} // anonymous namespace
 
 // Screensavers are not supported
 void ScreenSaverHelper::triggerUserActivity() {
