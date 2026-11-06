@@ -34,8 +34,7 @@ public class AndroidScreenManager {
         new View.OnApplyWindowInsetsListener() {
             @Override
             public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-                if (v != null && (v.getPaddingLeft() != 0 || v.getPaddingTop() != 0
-                        || v.getPaddingRight() != 0 || v.getPaddingBottom() != 0)) {
+                if (v != null && (v.getPaddingLeft() != 0 || v.getPaddingTop() != 0 || v.getPaddingRight() != 0 || v.getPaddingBottom() != 0)) {
                     v.setPadding(0, 0, 0, 0);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -155,18 +154,17 @@ public class AndroidScreenManager {
             visibility -> applyFullScreen(activity));
 
         if (decorView instanceof ViewGroup) {
-            ((ViewGroup) decorView).setOnHierarchyChangeListener(
-                new ViewGroup.OnHierarchyChangeListener() {
-                    @Override
-                    public void onChildViewAdded(View parent, View child) {
-                        clearInsetsAndPaddingRecursive(child);
-                        applyFullScreen(activity);
-                    }
+            ((ViewGroup) decorView).setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
+                @Override
+                public void onChildViewAdded(View parent, View child) {
+                    clearInsetsAndPaddingRecursive(child);
+                    applyFullScreen(activity);
+                }
 
-                    @Override
-                    public void onChildViewRemoved(View parent, View child) {
-                    }
-                });
+                @Override
+                public void onChildViewRemoved(View parent, View child) {
+                }
+            });
         }
 
         decorView.getViewTreeObserver().addOnGlobalLayoutListener(

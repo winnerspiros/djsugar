@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocale>
+#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
@@ -18,8 +19,6 @@
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QRegularExpression>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QSet>
 #include <QSettings>
 #include <QStandardPaths>
@@ -30,6 +29,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVector>
+#include <QWaitCondition>
 #include <algorithm>
 #include <atomic>
 #include <cmath>

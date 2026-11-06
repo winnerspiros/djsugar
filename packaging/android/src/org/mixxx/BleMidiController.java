@@ -121,9 +121,9 @@ public class BleMidiController {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN)
-                    == PackageManager.PERMISSION_GRANTED
+                == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
-                    == PackageManager.PERMISSION_GRANTED;
+                == PackageManager.PERMISSION_GRANTED;
         } else {
             return ContextCompat.checkSelfPermission(
                        context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -556,8 +556,7 @@ public class BleMidiController {
             // Automatically connect if the peripheral explicitly advertises the
             // BLE-MIDI service UUID or is a known DJ controller (e.g. DDJ-FLX4).
             if (isNew && (hasMidiUuid || knownController) && !isDeviceConnected(address)) {
-                Log.i(TAG, "Auto-connecting discovered BLE MIDI controller: "
-                    + name + " (" + address + ")");
+                Log.i(TAG, "Auto-connecting discovered BLE MIDI controller: " + name + " (" + address + ")");
                 connectDevice(sContext, address, name);
             }
         }

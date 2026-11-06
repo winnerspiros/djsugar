@@ -185,18 +185,14 @@ double QmlYouTubeProxy::deckProgress(const QString& deckGroup) const {
     if (deckGroup.isEmpty() || !m_deckDownloadProgress.contains(deckGroup)) {
         return -1.0;
     }
-    return m_deckDownloadProgress.value(deckGroup).toMap()
-            .value(QStringLiteral("progress"), -1.0)
-            .toDouble();
+    return m_deckDownloadProgress.value(deckGroup).toMap().value(QStringLiteral("progress"), -1.0).toDouble();
 }
 
 QString QmlYouTubeProxy::deckDownloadingTitle(const QString& deckGroup) const {
     if (deckGroup.isEmpty() || !m_deckDownloadProgress.contains(deckGroup)) {
         return {};
     }
-    return m_deckDownloadProgress.value(deckGroup).toMap()
-            .value(QStringLiteral("title"))
-            .toString();
+    return m_deckDownloadProgress.value(deckGroup).toMap().value(QStringLiteral("title")).toString();
 }
 
 void QmlYouTubeProxy::search(const QString& query) {

@@ -98,7 +98,9 @@ void QmlMobileControllersProxy::startBleScan() {
                 "requestPermissionsIfNeeded",
                 "(Landroid/app/Activity;)V",
                 context.object<jobject>());
-        m_bleStatus = tr("Please allow Nearby Devices / Bluetooth permission, then tap Scan Bluetooth again");
+        m_bleStatus =
+                tr("Please allow Nearby Devices / Bluetooth permission, then "
+                   "tap Scan Bluetooth again");
         emit bleStateChanged();
         return;
     }
@@ -108,7 +110,9 @@ void QmlMobileControllersProxy::startBleScan() {
             "(Landroid/content/Context;)Z",
             context.object<jobject>());
     if (!btEnabled) {
-        m_bleStatus = tr("Bluetooth is turned off. Turn on Bluetooth in Android settings and scan again.");
+        m_bleStatus =
+                tr("Bluetooth is turned off. Turn on Bluetooth in Android "
+                   "settings and scan again.");
         emit bleStateChanged();
         return;
     }
@@ -148,9 +152,14 @@ void QmlMobileControllersProxy::stopBleScan() {
     m_bleScanning = false;
     refreshBleDevices();
     if (m_bleDevices.isEmpty()) {
-        m_bleStatus = tr("No Bluetooth MIDI devices found. Put your controller in pairing mode (e.g. hold SHIFT+BROWSE on DDJ-FLX4) and tap Scan Bluetooth.");
+        m_bleStatus =
+                tr("No Bluetooth MIDI devices found. Put your controller in "
+                   "pairing mode (e.g. hold SHIFT+BROWSE on DDJ-FLX4) and tap "
+                   "Scan Bluetooth.");
     } else {
-        m_bleStatus = tr("Found %1 Bluetooth device(s). Tap Connect to pair & enable.").arg(m_bleDevices.size());
+        m_bleStatus = tr(
+                "Found %1 Bluetooth device(s). Tap Connect to pair & enable.")
+                              .arg(m_bleDevices.size());
     }
     emit bleStateChanged();
 }
@@ -224,9 +233,11 @@ bool QmlMobileControllersProxy::connectBleDevice(
             QJniObject::fromString(name).object<jstring>());
 
     refreshBleDevices();
-    m_bleStatus = ok
-            ? tr("Connected to %1 — configuring controller mapping...").arg(name.isEmpty() ? address : name)
-            : tr("Could not connect to %1. Ensure Bluetooth MIDI pairing is active.").arg(name.isEmpty() ? address : name);
+    m_bleStatus = ok ? tr("Connected to %1 — configuring controller mapping...")
+                               .arg(name.isEmpty() ? address : name)
+                     : tr("Could not connect to %1. Ensure Bluetooth MIDI "
+                          "pairing is active.")
+                               .arg(name.isEmpty() ? address : name);
     emit bleStateChanged();
     return ok;
 #else

@@ -23,10 +23,10 @@ class QmlYouTubeProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantMap downloadProgressByVideo
                     READ downloadProgressByVideo
-                    NOTIFY downloadProgressChanged)
+                            NOTIFY downloadProgressChanged)
     Q_PROPERTY(QVariantMap deckDownloadProgress
                     READ deckDownloadProgress
-                    NOTIFY downloadProgressChanged)
+                            NOTIFY downloadProgressChanged)
     QML_NAMED_ELEMENT(YouTube)
     QML_SINGLETON
 
