@@ -29,6 +29,7 @@
 #include "util/sandbox.h"
 #ifdef __ANDROID__
 #include "util/androidpermissions.h"
+#include "util/removablestorage.h"
 #endif
 #ifdef __ANDROID_USB_DRIVE__
 #include "library/usbdrive/androidusbdrive.h"
@@ -214,6 +215,26 @@ QString QmlMobileLibraryProxy::defaultMusicDirectory() const {
     }
     return QDir::homePath();
 #endif
+}
+
+QVariantList QmlMobileLibraryProxy::removableVolumes() const {
+    QVariantList volumes;
+#ifdef __ANDROID__
+    for (const AndroidStorageVolume& volume : androidStorageVolumes()) {
+        if (volume.kind == AndroidStorageVolume::Kind::Internal) {
+            continue;
+        }
+        volumes.append(QVariantMap{
+                {QStringLiteral("path"), volume.path},
+                {QStringLiteral("name"), volume.name},
+                {QStringLiteral("kind"),
+                        volume.kind == AndroidStorageVolume::Kind::SdCard
+                                ? QStringLiteral("sd")
+                                : QStringLiteral("usb")},
+        });
+    }
+#endif
+    return volumes;
 }
 
 void QmlMobileLibraryProxy::analyzeTracksMatching(

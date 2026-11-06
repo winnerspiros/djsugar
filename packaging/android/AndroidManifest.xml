@@ -23,6 +23,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- Separating tracks into stems in the background, see StemsService.java (from JaviLabarumDJ/mixxx-android android-stable) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- In-app updates: install the APK downloaded from our GitHub releases (Settings → About) -->
@@ -89,6 +92,12 @@
           <meta-data
                 android:name="android.app.splash_screen_drawable"
                 android:value="@drawable/ic_launcher_foreground" />
+
+          <!-- Separating tracks into stems in the background (from JaviLabarumDJ/mixxx-android android-stable) -->
+          <service
+              android:name="org.mixxx.StemsService"
+              android:exported="false"
+              android:foregroundServiceType="dataSync" />
 
           <!-- Run the QML UI (MixxxApplication + Booth skin by default;
                Classic skin selectable in Settings). Keep the log level in
