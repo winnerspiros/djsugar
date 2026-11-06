@@ -2,6 +2,9 @@
 
 #include "analyzer/analyzertrack.h"
 #include "analyzer/constants.h"
+#ifdef Q_OS_ANDROID
+#include "track/androidautocue.h"
+#endif
 #include "track/track.h"
 
 namespace {
@@ -136,6 +139,9 @@ void AnalyzerSilence::storeResults(TrackPointer pTrack) {
 
     setupMainAndIntroCue(pTrack.get(), firstSoundPosition, m_pConfig.data());
     setupOutroCue(pTrack.get(), lastSoundPosition);
+#ifdef Q_OS_ANDROID
+    mixxx::android::snapAutoCueToBeat(pTrack.get());
+#endif
 }
 
 // static
