@@ -95,12 +95,12 @@ class AudioPath {
         // TODO: Why??
         return (static_cast<int>(m_type) << 8) |
                 m_index;
-  }
-  friend size_t qHash(
-          const AudioPath& path,
-          size_t seed = 0) {
-      return qHash(path.hashValue(), seed);
-  }
+    }
+    friend size_t qHash(
+            const AudioPath& path,
+            size_t seed = 0) {
+        return qHash(path.hashValue(), seed);
+    }
 
     // CppCoreGuidelines C.161: Use non-member functions for symmetric operators
     friend constexpr bool operator<(const AudioPath& lhs,

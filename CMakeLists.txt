@@ -2575,9 +2575,6 @@ cmake_dependent_option(
 )
 if(QML)
   add_compile_definitions(MIXXX_USE_QML)
-else()
-  message(STATUS "Building without QML")
-endif()
 
 
 # qt_add_executable() is the recommended initial call for qt_finalize_target()
