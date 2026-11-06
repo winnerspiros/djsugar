@@ -54,7 +54,7 @@ class Controller : public QObject {
         // The GUI thread reads this while the controller thread may assign it,
         // and copying a shared_ptr concurrently with an assignment is a data race.
         // (from JaviLabarumDJ/mixxx-android android-stable)
-        const auto locker = lockMutex(&m_mutableMappingMutex);
+        const auto locker = QMutexLocker(&m_mutableMappingMutex);
         return m_pMutableMapping;
     }
 
@@ -185,7 +185,7 @@ class Controller : public QObject {
     /// (from JaviLabarumDJ/mixxx-android android-stable)
 
     void setMutableMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
-        const auto locker = lockMutex(&m_mutableMappingMutex);
+        const auto locker = QMutexLocker(&m_mutableMappingMutex);
         m_pMutableMapping = std::move(pMapping);
     }
 

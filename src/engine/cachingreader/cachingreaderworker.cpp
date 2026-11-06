@@ -14,7 +14,6 @@
 #include "moc_cachingreaderworker.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
-#include "util/compatibility/qmutex.h"
 #include "util/event.h"
 #include "util/fifo.h"
 #include "util/logger.h"
@@ -113,7 +112,7 @@ void CachingReaderWorker::newTrack(TrackPointer pTrack, mixxx::StemChannelSelect
 void CachingReaderWorker::newTrack(TrackPointer pTrack) {
 #endif
     {
-        const auto locker = lockMutex(&m_newTrackMutex);
+        const auto locker = QMutexLocker(&m_newTrackMutex);
 #ifdef __STEM__
         m_pNewTrack = NewTrackRequest{
                 pTrack,
@@ -144,7 +143,7 @@ void CachingReaderWorker::run() {
             TrackPointer pLoadTrack;
 #endif
             { // locking scope
-                const auto locker = lockMutex(&m_newTrackMutex);
+                const auto locker = QMutexLocker(&m_newTrackMutex);
                 pLoadTrack = m_pNewTrack;
                 m_newTrackAvailable.storeRelease(0);
             } // implicitly unlocks the mutex
