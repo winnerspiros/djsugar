@@ -4625,12 +4625,15 @@ if(QML)
       src/qml/qmlmobilesingletons.cpp
       src/qml/qmlyoutubeproxy.cpp
       src/qml/qmlstreamingproxy.cpp
+      src/qml/qmlframeclock.cpp
+      src/qml/qmlstemsproxy.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp
       src/waveform/renderers/allshader/waveformrenderbeat.cpp
       src/waveform/renderers/allshader/waveformrenderer.cpp
       src/waveform/renderers/allshader/waveformrendererendoftrack.cpp
       src/waveform/renderers/allshader/waveformrendererpreroll.cpp
       src/waveform/renderers/allshader/waveformrendererrgb.cpp
+      src/waveform/renderers/allshader/waveformrendererrgbgpu.cpp
       src/waveform/renderers/allshader/waveformrenderersignalbase.cpp
       src/waveform/renderers/allshader/waveformrendermark.cpp
       src/waveform/renderers/allshader/waveformrendermarkrange.cpp
@@ -4651,6 +4654,7 @@ if(QML)
       mixxx-qml-lib
       PRIVATE
         src/waveform/renderers/allshader/waveformrendererstem.cpp
+        src/waveform/renderers/allshader/waveformrendererstemgpu.cpp
         src/qml/qmlstemsmodel.cpp
     )
   endif()
@@ -6350,4 +6354,10 @@ if(APPLE AND MACOS_BUNDLE)
     @ONLY
   )
   install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/BundleInstall.cmake")
+endif()
+
+# Android port (libccompat for Android 10-13, APK asset slimming, QML
+# overrides), from JaviLabarumDJ/mixxx-android android-stable
+if(ANDROID)
+  include(MixxxAndroid)
 endif()

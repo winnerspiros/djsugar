@@ -24,6 +24,12 @@ class ScannerUtil {
             "/_Serato_");
         blacklist << seratoDir;
 #endif
+#ifdef __ANDROID__
+        // Copies of USB sticks, read like the sticks themselves, see
+        // util/removablestorage.cpp (from JaviLabarumDJ/mixxx-android)
+        blacklist << QStringLiteral("/storage/emulated/0/Music/Mixxx/Rekordbox")
+                  << QStringLiteral("/sdcard/Music/Mixxx/Rekordbox");
+#endif
         return blacklist;
     }
 
