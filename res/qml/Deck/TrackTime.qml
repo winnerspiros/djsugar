@@ -58,5 +58,8 @@ Skin.EmbeddedText {
 
         group: root.group
         key: "playposition"
+        // Changes with every audio buffer; this is enough for the screen
+        // (from JaviLabarumDJ/mixxx-android android-stable)
+        updateInterval: 100
     }
 }

@@ -255,7 +255,10 @@ Item {
                     LibraryComponent.Browser {
                         id: browser
 
-                        onStorageAccessNeeded: storageAccessPopup.open()
+                        onStorageAccessNeeded: forFolders => {
+                            storageAccessPopup.forFolders = forFolders;
+                            storageAccessPopup.open();
+                        }
 
                         highlighted: libraryControl.sidebarFocused
                         SplitView.fillHeight: true
@@ -289,6 +292,8 @@ Item {
     Popup {
         id: storageAccessPopup
 
+        property bool forFolders: false
+
         anchors.centerIn: parent
         width: Math.min(460, root.width - 20)
         modal: true
@@ -308,13 +313,15 @@ Item {
                 color: Theme.white
                 font.bold: true
                 font.pixelSize: 15
-                text: qsTr("Permission to read USB")
+                text: storageAccessPopup.forFolders ? qsTr("Permission to read folders") : qsTr("Permission to read USB")
             }
             Text {
                 Layout.fillWidth: true
                 color: Theme.textColor
                 font.pixelSize: 13
-                text: qsTr("To read Rekordbox and Engine DJ playlists from a USB drive, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
+                text: storageAccessPopup.forFolders
+                    ? qsTr("To browse folders on SD cards and USB drives, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
+                    : qsTr("To read Rekordbox and Engine DJ playlists from a USB drive, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
                 wrapMode: Text.WordWrap
             }
             RowLayout {

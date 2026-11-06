@@ -25,17 +25,19 @@ Rectangle {
     // DJ) rather than one of its playlists
     property bool activeIsDrive: false
 
-    // Reading the databases on USB drives needs more than the music permission
-    signal storageAccessNeeded()
+    // Reading the databases on USB drives, and browsing folders (FOLDER, e.g.
+    // on SD cards), needs more than the music permission
+    // (from JaviLabarumDJ/mixxx-android android-stable)
+    signal storageAccessNeeded(bool forFolders)
 
     function checkStorageAccess(index) {
         // SidebarModel::IconNameRole
         const icon = root.model.data(index, Qt.UserRole + 1);
-        if (icon !== "rekordbox" && icon !== "enginedj") {
+        if (icon !== "rekordbox" && icon !== "enginedj" && icon !== "computer") {
             return;
         }
         if (!Mixxx.MobileLibrary.hasFullStorageAccess()) {
-            root.storageAccessNeeded();
+            root.storageAccessNeeded(icon === "computer");
         }
         // Opened on purpose: asks again for the USB permission of sticks
         // whose earlier request was dismissed
