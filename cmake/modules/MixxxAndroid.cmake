@@ -65,16 +65,19 @@ add_custom_target(
   VERBATIM
 )
 add_dependencies(mixxx android-qtcore-libccompat)
-# libmixxx links QtTest, which uses pthread_cond_clockwait too
-add_custom_target(
-  android-qttest-libccompat
-  COMMAND
-    ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
-    -DLIBRARY=$<TARGET_FILE:Qt6::Test> -DSYMBOLS=pthread_cond_clockwait -P
-    ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
-  VERBATIM
-)
-add_dependencies(mixxx android-qttest-libccompat)
+# libmixxx links QtTest, which uses pthread_cond_clockwait too.
+# Guarded: the Test component is only requested on non-Android builds.
+if(TARGET Qt6::Test)
+  add_custom_target(
+    android-qttest-libccompat
+    COMMAND
+      ${CMAKE_COMMAND} -DPATCHELF=${PATCHELF_EXECUTABLE} -DSTRIP=${CMAKE_STRIP}
+      -DLIBRARY=$<TARGET_FILE:Qt6::Test> -DSYMBOLS=pthread_cond_clockwait -P
+      ${CMAKE_SOURCE_DIR}/cmake/scripts/android_libccompat.cmake
+    VERBATIM
+  )
+  add_dependencies(mixxx android-qttest-libccompat)
+endif()
 add_custom_command(
   TARGET mixxx
   POST_BUILD

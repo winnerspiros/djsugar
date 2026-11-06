@@ -914,6 +914,12 @@ void CueControl::quantizeChanged(double v) {
 }
 
 void CueControl::loadCuesFromTrackAndFollow() {
+    // check if we were at the cue point before
+    bool wasTrackAtCue = getTrackAt() == TrackAt::Cue;
+    bool wasTrackAtIntro = isTrackAtIntroCue();
+
+    loadCuesFromTrack();
+
     // if we are playing (no matter what reason for) do not seek
     if (m_pPlay->toBool()) {
         return;
