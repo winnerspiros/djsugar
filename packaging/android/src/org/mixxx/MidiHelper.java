@@ -1,9 +1,5 @@
 package org.mixxx;
 
-import android.annotation.SuppressLint;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
@@ -14,26 +10,21 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
-import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /// Thin wrapper around android.media.midi used by AndroidMidiEnumerator and
 /// AndroidMidiController. All MIDI I/O happens in native code through AMidi;
-/// this class lists devices, opens USB & Bluetooth MIDI devices, and reports
-/// hotplug events.
+/// this class only lists devices, opens them and reports hotplug events.
 public class MidiHelper {
     private static final String TAG = "MixxxMidi";
     private static MidiManager sManager = null;
     private static Handler sHandler = null;
-    private static final ConcurrentHashMap<Integer, MidiDevice> sBluetoothMidiDevices =
-        new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, MidiDevice> sBluetoothMidiByAddress =
-        new ConcurrentHashMap<>();
 
     private static native void midiDevicesChanged();
 
-    public static void notifyDevicesChanged() {
+    private static void notifyDevicesChanged() {
         try {
             midiDevicesChanged();
         } catch (UnsatisfiedLinkError e) {
@@ -41,7 +32,6 @@ public class MidiHelper {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static synchronized boolean init(Context context) {
         if (sManager != null) {
             return true;
@@ -60,10 +50,6 @@ public class MidiHelper {
         HandlerThread thread = new HandlerThread("MixxxMidiCallbacks");
         thread.start();
         sHandler = new Handler(thread.getLooper());
-        // NOTE: registerDeviceCallback(DeviceCallback, Handler) is deprecated
-        // since API 34, but the Executor replacement overload only exists in
-        // compileSdk 34+. Keep the old call so we still build against older
-        // SDKs; the callback thread behavior is identical.
         sManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
             @Override
             public void onDeviceAdded(MidiDeviceInfo info) {
@@ -74,7 +60,6 @@ public class MidiHelper {
             @Override
             public void onDeviceRemoved(MidiDeviceInfo info) {
                 Log.i(TAG, "MIDI device removed: " + getName(info));
-                sBluetoothMidiDevices.remove(info.getId());
                 notifyDevicesChanged();
             }
         }, sHandler);
@@ -140,90 +125,11 @@ public class MidiHelper {
         return device == null ? -1 : device.getProductId();
     }
 
-    /// Connects a Bluetooth LE MIDI device through Android's MidiManager so it
-    /// appears as a native AndroidMidiController via AMidi.
-    @SuppressLint("MissingPermission")
-    public static boolean connectBluetoothDevice(Context context, String address, int timeoutMs) {
-        if (context == null || address == null || address.isEmpty()) {
-            return false;
-        }
-        if (sManager == null && !init(context)) {
-            return false;
-        }
-        if (sBluetoothMidiByAddress.containsKey(address)) {
-            return true;
-        }
-        try {
-            BluetoothManager bm =
-                (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-            BluetoothAdapter adapter = bm != null ? bm.getAdapter() : null;
-            if (adapter == null || !adapter.isEnabled()) {
-                return false;
-            }
-            BluetoothDevice btDevice = adapter.getRemoteDevice(address);
-            if (btDevice == null) {
-                return false;
-            }
-            final MidiDevice[] result = new MidiDevice[1];
-            final CountDownLatch latch = new CountDownLatch(1);
-            sManager.openBluetoothDevice(btDevice, device -> {
-                result[0] = device;
-                latch.countDown();
-            }, sHandler);
-            if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
-                Log.w(TAG, "Timeout opening Bluetooth MIDI device " + address);
-                return false;
-            }
-            if (result[0] == null) {
-                Log.w(TAG, "MidiManager.openBluetoothDevice returned null for " + address);
-                return false;
-            }
-            MidiDeviceInfo info = result[0].getInfo();
-            if (info != null) {
-                sBluetoothMidiDevices.put(info.getId(), result[0]);
-            }
-            sBluetoothMidiByAddress.put(address, result[0]);
-            Log.i(TAG, "Connected Bluetooth MIDI device via MidiManager: " + address);
-            notifyDevicesChanged();
-            return true;
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to open Bluetooth MIDI device via MidiManager: " + e.toString());
-            return false;
-        }
-    }
-
-    public static boolean isBluetoothDeviceOpen(String address) {
-        return address != null && sBluetoothMidiByAddress.containsKey(address);
-    }
-
-    public static void disconnectBluetoothDevice(String address) {
-        if (address == null) {
-            return;
-        }
-        MidiDevice device = sBluetoothMidiByAddress.remove(address);
-        if (device != null) {
-            MidiDeviceInfo info = device.getInfo();
-            if (info != null) {
-                sBluetoothMidiDevices.remove(info.getId());
-            }
-            try {
-                device.close();
-            } catch (Exception e) {
-                Log.w(TAG, "Error closing Bluetooth MIDI device: " + e.toString());
-            }
-            notifyDevicesChanged();
-        }
-    }
-
     /// Opens the device synchronously. Must not be called from the thread
     /// running sHandler.
     public static MidiDevice openDevice(MidiDeviceInfo info, int timeoutMs) {
-        if (sManager == null || info == null) {
+        if (sManager == null) {
             return null;
-        }
-        MidiDevice cachedBt = sBluetoothMidiDevices.get(info.getId());
-        if (cachedBt != null) {
-            return cachedBt;
         }
         final MidiDevice[] result = new MidiDevice[1];
         final CountDownLatch latch = new CountDownLatch(1);
@@ -249,14 +155,75 @@ public class MidiHelper {
         if (device == null) {
             return;
         }
-        if (sBluetoothMidiDevices.containsValue(device)) {
-            // Keep the Bluetooth MIDI link open until explicitly disconnected
-            return;
-        }
         try {
             device.close();
         } catch (Exception e) {
             Log.w(TAG, "Error closing MIDI device: " + e.toString());
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    public static boolean connectBluetoothDevice(Context context, String address, int timeoutMs) {
+        if (sManager == null) {
+            return false;
+        }
+        MidiDeviceInfo[] devices = getDevices();
+        for (MidiDeviceInfo info : devices) {
+            String name = getName(info);
+            if (name.contains(address) || address.contains(name)) {
+                final MidiDevice[] result = new MidiDevice[1];
+                final CountDownLatch latch = new CountDownLatch(1);
+                sManager.openDevice(info, device -> {
+                    result[0] = device;
+                    latch.countDown();
+                }, sHandler);
+                try {
+                    if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                        Log.w(TAG, "Timeout connecting Bluetooth MIDI device " + name);
+                        return false;
+                    }
+                } catch (InterruptedException e) {
+                    return false;
+                }
+                if (result[0] != null) {
+                    Log.i(TAG, "Connected Bluetooth MIDI device " + name + " via MidiManager");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void disconnectBluetoothDevice(String address) {
+        if (sManager == null) {
+            return;
+        }
+        MidiDeviceInfo[] devices = getDevices();
+        for (MidiDeviceInfo info : devices) {
+            String name = getName(info);
+            if (name.contains(address) || address.contains(name)) {
+                Log.i(TAG, "Disconnected Bluetooth MIDI device " + name);
+            }
+        }
+    }
+
+    /// Checks if a Bluetooth MIDI device is currently open via MidiManager.
+    /// Used by BleMidiEnumerator to avoid duplicate controllers.
+    public static boolean isBluetoothDeviceOpen(String address) {
+        if (sManager == null || address == null) {
+            return false;
+        }
+        MidiDeviceInfo[] devices = getDevices();
+        for (MidiDeviceInfo info : devices) {
+            String name = getName(info);
+            if (name.contains(address) || address.contains(name)) {
+                // Check if this device is a Bluetooth device and is open
+                // TYPE_BLUETOOTH = 3 from android.media.midi.MidiDeviceInfo
+                if (info.getType() == 3) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

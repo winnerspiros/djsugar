@@ -109,8 +109,7 @@ bool MidiController::applyMapping(const QString& resourcePath) {
 bool MidiController::applyMapping(const QString& resourcePath,
         std::shared_ptr<ControllerSharedData> runtimeData) {
     // Handles the engine
-    bool result = runtimeData ? Controller::applyMapping(resourcePath, std::move(runtimeData))
-                              : Controller::applyMapping(resourcePath);
+    bool result = Controller::applyMapping(resourcePath, std::move(runtimeData));
 
     // Only execute this code if this is an output device
     if (isOutputDevice()) {

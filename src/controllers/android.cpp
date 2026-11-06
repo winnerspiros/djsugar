@@ -15,6 +15,11 @@
 #include <memory>
 #include <optional>
 
+#ifdef Q_OS_ANDROID
+#include "controllers/midi/blemidicontroller.h"
+#include "controllers/midi/blemidienumerator.h"
+#endif
+
 namespace mixxx {
 namespace android {
 std::mutex s_androidLock = {};
@@ -222,6 +227,8 @@ void saveBeforeExit() {
 Q_DECLARE_JNI_CLASS(UsbPermissionClass, "org/mixxx/UsbPermission")
 Q_DECLARE_JNI_CLASS(MidiHelperClass, "org/mixxx/MidiHelper")
 Q_DECLARE_JNI_CLASS(MainActivityClass, "org/mixxx/MainActivity")
+Q_DECLARE_JNI_CLASS(BleMidiControllerClass, "org/mixxx/BleMidiController")
+Q_DECLARE_JNI_CLASS(BleMidiScannerClass, "org/mixxx/BleMidiScanner")
 
 void usbDeviceAccessResult(JNIEnv*, jclass, jobject device, jboolean granted) {
     mixxx::android::usbDeviceAccessResult(device, granted);
@@ -243,6 +250,36 @@ void saveBeforeExit(JNIEnv*, jclass) {
 }
 Q_DECLARE_JNI_NATIVE_METHOD(saveBeforeExit)
 
+void nativeOnMidiDataReceived(JNIEnv* env, jclass, jstring address, jbyteArray data) {
+    if (!env || !data) {
+        return;
+    }
+    const QString addr = address ? QJniObject(address).toString() : QString();
+    const jsize len = env->GetArrayLength(data);
+    if (len <= 0) {
+        return;
+    }
+    QByteArray bytes(len, Qt::Uninitialized);
+    env->GetByteArrayRegion(data, 0, len, reinterpret_cast<jbyte*>(bytes.data()));
+    BleMidiController::dispatchMidiData(addr, bytes);
+}
+Q_DECLARE_JNI_NATIVE_METHOD(nativeOnMidiDataReceived)
+
+void nativeOnDeviceConnected(JNIEnv*, jclass, jstring address, jstring name) {
+    const QString addr = address ? QJniObject(address).toString() : QString();
+    const QString devName = name ? QJniObject(name).toString() : QStringLiteral("BLE MIDI");
+    BleMidiEnumerator::notifyBleDeviceConnected(addr, devName);
+    mixxx::android::notifyDevicesChanged();
+}
+Q_DECLARE_JNI_NATIVE_METHOD(nativeOnDeviceConnected)
+
+void nativeOnDeviceDisconnected(JNIEnv*, jclass, jstring address) {
+    const QString addr = address ? QJniObject(address).toString() : QString();
+    BleMidiEnumerator::notifyBleDeviceDisconnected(addr);
+    mixxx::android::notifyDevicesChanged();
+}
+Q_DECLARE_JNI_NATIVE_METHOD(nativeOnDeviceDisconnected)
+
 namespace mixxx {
 namespace android {
 
@@ -260,6 +297,13 @@ void registerJniNativeMethods() {
         env.registerNativeMethods<QtJniTypes::MainActivityClass>({
                 Q_JNI_NATIVE_METHOD(saveBeforeExit),
         });
+        // Register BleMidiController native methods to prevent LTO stripping
+        env.registerNativeMethods<QtJniTypes::BleMidiControllerClass>({
+                Q_JNI_NATIVE_METHOD(nativeOnMidiDataReceived),
+                Q_JNI_NATIVE_METHOD(nativeOnDeviceConnected),
+                Q_JNI_NATIVE_METHOD(nativeOnDeviceDisconnected),
+        });
+        // BleMidiScanner has no native methods; class is loaded via QJniObject
     });
 }
 

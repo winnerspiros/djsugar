@@ -118,6 +118,11 @@ QList<Controller*> AndroidMidiEnumerator::queryDevices() {
 }
 
 void AndroidMidiEnumerator::updateUsbDevices(QSet<QString>* pUsedNames) {
+    // Scan for USB audio devices with MIDI interfaces. This populates the
+    // AndroidUsbAudioDevice registry which is used by devices().
+    mixxx::androidusb::AndroidUsbAudioDevice::scan(
+            mixxx::androidusb::AndroidUsbAudioDevice::DirectMode::WhenPossible,
+            false);
     const auto usbAudioDevices = mixxx::androidusb::AndroidUsbAudioDevice::devices();
     QSet<QString> present;
     for (const auto& pUsbDevice : usbAudioDevices) {

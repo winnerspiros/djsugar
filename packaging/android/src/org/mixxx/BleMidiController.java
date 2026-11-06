@@ -189,10 +189,10 @@ public class BleMidiController {
             || lower.contains("lpd8")
             || lower.contains("arturia")
             || lower.contains("novation")
-            || lower.contains("launch")
+            || lower.contains("launchpad")
+            || lower.contains("launchkey")
             || lower.contains("m-audio")
-            || lower.contains("midi")
-            || lower.contains("ble");
+            || lower.contains("midi");
     }
 
     @SuppressLint("MissingPermission")
@@ -237,10 +237,12 @@ public class BleMidiController {
                         String addr = device.getAddress();
                         String name = device.getName();
                         if (name == null || name.isEmpty()) {
-                            name = addr;
+                            continue;
                         }
                         sDiscoveredDevices.put(addr, name);
-                        sIsMidiCandidate.put(addr, true);
+                        if (matchesControllerName(name)) {
+                            sIsMidiCandidate.put(addr, true);
+                        }
                     }
                 }
             }
@@ -335,7 +337,8 @@ public class BleMidiController {
     }
 
     /**
-     * Connects to a specific BLE MIDI device by MAC address.
+     * Connects to a specific BLE MIDI device by MAC address on a background
+     * worker thread so the Android/Qt UI thread is never blocked.
      * Tries Android's MidiManager.openBluetoothDevice first, then falls back
      * to direct GATT BLE-MIDI connection.
      */
@@ -352,56 +355,59 @@ public class BleMidiController {
             sIsMidiCandidate.put(address, true);
         }
 
-        // 1. Try Android's native MidiManager.openBluetoothDevice first so the
-        //    controller is exposed via AMidi / AndroidMidiEnumerator.
-        if (sContext != null && MidiHelper.connectBluetoothDevice(sContext, address, 3500)) {
-            Log.i(TAG, "Connected " + address + " via Android MidiManager");
-            sConnected = true;
-            UsbPermission.notifyDevicesChanged();
-            return true;
-        }
-
-        // 2. Fallback: direct BluetoothGatt BLE-MIDI connection
-        if (sMidiChars.containsKey(address)) {
-            sConnected = true;
-            String devName = sDiscoveredDevices.getOrDefault(address, address);
-            safeOnDeviceConnected(address, devName);
-            UsbPermission.notifyDevicesChanged();
-            return true;
-        }
-
-        if (sBluetoothAdapter == null) {
-            return false;
-        }
-        try {
-            BluetoothDevice device = sBluetoothAdapter.getRemoteDevice(address);
-            if (device == null) {
-                return false;
+        final Context appCtx = sContext;
+        final String targetAddress = address;
+        new Thread(() -> {
+            // 1. Try Android's native MidiManager.openBluetoothDevice first so the
+            //    controller is exposed via AMidi / AndroidMidiEnumerator.
+            if (appCtx != null && MidiHelper.connectBluetoothDevice(appCtx, targetAddress, 2500)) {
+                Log.i(TAG, "Connected " + targetAddress + " via Android MidiManager");
+                sConnected = true;
+                UsbPermission.notifyDevicesChanged();
+                return;
             }
-            BluetoothGatt existing = sConnectedGatts.remove(address);
-            if (existing != null) {
-                try {
-                    existing.disconnect();
-                    existing.close();
-                } catch (Exception ignored) {
+
+            // 2. Fallback: direct BluetoothGatt BLE-MIDI connection
+            if (sMidiChars.containsKey(targetAddress)) {
+                sConnected = true;
+                String devName = sDiscoveredDevices.getOrDefault(targetAddress, targetAddress);
+                safeOnDeviceConnected(targetAddress, devName);
+                UsbPermission.notifyDevicesChanged();
+                return;
+            }
+
+            if (sBluetoothAdapter == null || appCtx == null) {
+                return;
+            }
+            try {
+                BluetoothDevice device = sBluetoothAdapter.getRemoteDevice(targetAddress);
+                if (device == null) {
+                    return;
                 }
+                BluetoothGatt existing = sConnectedGatts.remove(targetAddress);
+                if (existing != null) {
+                    try {
+                        existing.disconnect();
+                        existing.close();
+                    } catch (Exception ignored) {
+                    }
+                }
+                BluetoothGatt gatt;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    gatt = device.connectGatt(
+                        appCtx, false, sGattCallback, BluetoothDevice.TRANSPORT_LE);
+                } else {
+                    gatt = device.connectGatt(appCtx, false, sGattCallback);
+                }
+                if (gatt != null) {
+                    sConnectedGatts.put(targetAddress, gatt);
+                    Log.i(TAG, "Initiated direct BLE GATT connection to " + targetAddress);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error connecting BLE GATT to " + targetAddress + ": " + e.toString());
             }
-            BluetoothGatt gatt;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                gatt = device.connectGatt(
-                    sContext, false, sGattCallback, BluetoothDevice.TRANSPORT_LE);
-            } else {
-                gatt = device.connectGatt(sContext, false, sGattCallback);
-            }
-            if (gatt != null) {
-                sConnectedGatts.put(address, gatt);
-                Log.i(TAG, "Initiated direct BLE GATT connection to " + address);
-                return true;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error connecting BLE GATT to " + address + ": " + e.toString());
-        }
-        return false;
+        }, "MixxxBleConnect").start();
+        return true;
     }
 
     @SuppressLint("MissingPermission")
@@ -547,17 +553,9 @@ public class BleMidiController {
                 name = "BLE MIDI (" + address + ")";
             }
 
-            boolean isNew = !sDiscoveredDevices.containsKey(address);
             sDiscoveredDevices.put(address, name);
             if (hasMidiUuid || knownController) {
                 sIsMidiCandidate.put(address, true);
-            }
-
-            // Automatically connect if the peripheral explicitly advertises the
-            // BLE-MIDI service UUID or is a known DJ controller (e.g. DDJ-FLX4).
-            if (isNew && (hasMidiUuid || knownController) && !isDeviceConnected(address)) {
-                Log.i(TAG, "Auto-connecting discovered BLE MIDI controller: " + name + " (" + address + ")");
-                connectDevice(sContext, address, name);
             }
         }
 

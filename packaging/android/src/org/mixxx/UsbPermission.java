@@ -16,6 +16,16 @@ public class UsbPermission {
     private static native void usbDeviceAccessResult(Object device, boolean granted);
     private static native void usbDevicesChanged();
 
+    /// Asks the native ControllerManager to rescan devices. Safe to call before
+    /// the native library is loaded.
+    public static void notifyDevicesChanged() {
+        try {
+            usbDevicesChanged();
+        } catch (UnsatisfiedLinkError e) {
+            Log.v(TAG, "Native library not loaded yet, skipping rescan");
+        }
+    }
+
     @SuppressWarnings("deprecation")
     static UsbDevice getDeviceExtra(Intent intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -24,20 +34,11 @@ public class UsbPermission {
         return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
     }
 
-    /// Asks the native ControllerManager to rescan devices. Safe to call before
-    /// the native library is loaded (from JaviLabarumDJ/mixxx-android).
-    public static void notifyDevicesChanged() {
-        try {
-            usbDevicesChanged();
-        } catch (UnsatisfiedLinkError e) {
-            Log.v(TAG, "Native library not loaded yet, skipping rescan");
-        }
-    }
     public boolean registerServiceBroadcastReceiver(Context context) {
         try {
             IntentFilter intentFilter = new IntentFilter(ACTION_USB_PERMISSION);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_EXPORTED);
+                context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
             } else {
                 context.registerReceiver(usbPermissionReceiver, intentFilter);
             }

@@ -121,7 +121,7 @@ bool Controller::applyMapping(const QString& resourcePath,
 
 // Compatibility overload: HID/bulk/PortMIDI paths call the 1-arg form.
 bool Controller::applyMapping(const QString& resourcePath) {
-    return applyMapping(resourcePath, nullptr);
+    return Controller::applyMapping(resourcePath, nullptr);
 }
 
 void Controller::startLearning() {
