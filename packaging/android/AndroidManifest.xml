@@ -93,12 +93,6 @@
                 android:name="android.app.splash_screen_drawable"
                 android:value="@drawable/ic_launcher_foreground" />
 
-          <!-- Separating tracks into stems in the background (from JaviLabarumDJ/mixxx-android android-stable) -->
-          <service
-              android:name="org.mixxx.StemsService"
-              android:exported="false"
-              android:foregroundServiceType="dataSync" />
-
           <!-- Run the QML UI (MixxxApplication + Booth skin by default;
                Classic skin selectable in Settings). Keep the log level in
                sync with QT_ANDROID_APPLICATION_ARGUMENTS in CMakeLists.txt.
@@ -108,6 +102,12 @@
                 android:name="android.app.arguments"
                 android:value="--log-level warning" />
         </activity>
+
+          <!-- Separating tracks into stems in the background (from JaviLabarumDJ/mixxx-android android-stable) -->
+        <service
+            android:name="org.mixxx.StemsService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
