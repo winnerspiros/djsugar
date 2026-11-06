@@ -26,6 +26,7 @@
 #include "controllers/android.h"
 #include "library/usbdrive/fatvolume.h"
 #include "library/usbdrive/usbmassstorage.h"
+#include "util/removablestorage.h"
 
 namespace mixxx {
 namespace usbdrive {
@@ -125,13 +126,13 @@ QJniObject massStorageInterface(const QJniObject& usbDevice) {
     return {};
 }
 
-/// Drives that Android mounted itself are left alone
+/// Drives that Android mounted itself are left alone. SD cards don't count:
+/// with one inserted, USB sticks were never read.
+/// (from JaviLabarumDJ/mixxx-android android-stable)
 bool androidMountedRemovableStorage() {
-    const QFileInfoList volumes = QDir(QStringLiteral("/storage"))
-                                          .entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo& volume : volumes) {
-        if (volume.fileName() != QLatin1String("emulated") &&
-                volume.fileName() != QLatin1String("self")) {
+    const QList<mixxx::AndroidStorageVolume> volumes = mixxx::androidStorageVolumes();
+    for (const mixxx::AndroidStorageVolume& volume : volumes) {
+        if (volume.kind == mixxx::AndroidStorageVolume::Kind::UsbDrive) {
             return true;
         }
     }

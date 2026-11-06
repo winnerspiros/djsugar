@@ -51,6 +51,10 @@ class Controller : public QObject {
     std::shared_ptr<LegacyControllerMapping> getMapping() {
         // return the unused mutable copy of the mapping, that can be edited in the GUI thread
         // and than adopted again via setMapping()
+        // The GUI thread reads this while the controller thread may assign it,
+        // and copying a shared_ptr concurrently with an assignment is a data race.
+        // (from JaviLabarumDJ/mixxx-android android-stable)
+        const auto locker = lockMutex(&m_mutableMappingMutex);
         return m_pMutableMapping;
     }
 
