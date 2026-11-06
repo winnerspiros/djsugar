@@ -55,6 +55,9 @@ Item {
         id: playPositionControl
         group: root.group
         key: "playposition"
+        // Changes with every audio buffer; this is enough for the screen
+        // (from JaviLabarumDJ/mixxx-android)
+        updateInterval: 100
     }
     Mixxx.ControlProxy {
         id: keyControl
@@ -89,6 +92,13 @@ Item {
 
         anchors.fill: parent
         backgroundColor: "transparent"
+        // Drawn into a texture of its own: its geometry changes every frame
+        // and is translucent, and in the window that made the scene graph
+        // rebuild the batches of everything around it on every frame (most
+        // of the render thread's time with two decks playing). As a layer,
+        // the window only sees a texture that changes.
+        // (from JaviLabarumDJ/mixxx-android)
+        layer.enabled: true
         frameRate: Mixxx.Config.waveformFrameRate
         group: root.group
         options: Mixxx.Config.waveformOptions
@@ -189,7 +199,9 @@ Item {
             midColor: '#97632D'
         }
         Mixxx.WaveformRendererStem {
-            gainAll: root.splitStemTracks ? 2.0 : 1.0
+            // The visual gain of the other waveforms
+            // (from JaviLabarumDJ/mixxx-android)
+            gainAll: (root.splitStemTracks ? 2.0 : 1.0) * Mixxx.Config.waveformVisualGainAll
             opacity: Mixxx.Config.waveformStemOpacity
             outlineOpacity: Mixxx.Config.waveformStemOutlineOpacity
             reorderOnChange: Mixxx.Config.waveformStemReorderOnChange
