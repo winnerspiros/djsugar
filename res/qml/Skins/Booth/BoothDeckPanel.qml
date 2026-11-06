@@ -61,6 +61,7 @@ Rectangle {
 
         group: root.group
         key: "playposition"
+        updateInterval: 100
     }
     Mixxx.ControlProxy {
         id: bpmControl

@@ -13,7 +13,47 @@ Item {
     required property var currentTrack
     required property string group
 
-    property int activePadMode: 0 // 0: Hotcue, 1: Loop
+    property int activePadMode: 0 // 0: Hotcue, 1: Loop, 2: Stems
+
+    // The names of the stems of the stem files made by the app
+    function stemName(label) {
+        switch (label) {
+        case "Drums":
+            return qsTr("DRUMS");
+        case "Bass":
+            return qsTr("BASS");
+        case "Vocals":
+            return qsTr("VOCALS");
+        case "Other":
+            return qsTr("OTHER");
+        default:
+            return label.toUpperCase();
+        }
+    }
+
+    // Plays only one stem, or all again if it is the only one playing
+    function soloStem(index) {
+        let soloed = true;
+        for (let i = 0; i < stemRepeater.count; ++i) {
+            const muted = stemRepeater.itemAt(i).muteControl.value > 0;
+            if (muted !== (i !== index))
+                soloed = false;
+        }
+        for (let i = 0; i < stemRepeater.count; ++i)
+            stemRepeater.itemAt(i).muteControl.value = soloed ? 0 : (i === index ? 0 : 1);
+    }
+
+    Mixxx.ControlProxy {
+        id: stemCountControl
+
+        group: root.group
+        key: "stem_count"
+
+        onValueChanged: {
+            if (value <= 0 && root.activePadMode === 2)
+                root.activePadMode = 0;
+        }
+    }
 
     Rectangle {
         color: '#0E0E0E'
@@ -236,113 +276,165 @@ Item {
             }
         }
 
+        // The stems of the track, two by two like the pads of the booth
+        // skin: tap to mute, hold to play only that one
+        GridLayout {
+            id: stemTab
+
+            anchors.fill: parent
+            anchors.margins: root.width < 260 ? 4 : 8
+            columns: 2
+            columnSpacing: root.width < 260 ? 3 : 5
+            rowSpacing: root.width < 260 ? 3 : 5
+            visible: root.activePadMode === 2
+
+            Repeater {
+                id: stemRepeater
+
+                model: root.currentTrack ? root.currentTrack.stemsModel : 0
+
+                ColumnLayout {
+                    id: stem
+
+                    required property int index
+                    required property color color
+                    required property string label
+                    readonly property string group: `${root.group.substr(0, root.group.length - 1)}_Stem${index + 1}]`
+                    readonly property bool muted: muteControl.value > 0
+                    property alias muteControl: muteControl
+
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    // The stems share the space equally
+                    Layout.preferredWidth: 1
+                    Layout.preferredHeight: 1
+                    Layout.minimumWidth: 0
+                    Layout.minimumHeight: 0
+                    spacing: 0
+
+                    Mixxx.ControlProxy {
+                        id: muteControl
+
+                        group: stem.group
+                        key: "mute"
+                    }
+
+                    Rectangle {
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        radius: 4
+                        // A playing stem is tinted with its color
+                        color: stemMouse.pressed ? "#2e3440" : (stem.muted ? "#14171d" : Qt.darker(stem.color, 2.2))
+                        border.color: stemMouse.pressed ? "#ffffff" : stem.color
+                        border.width: stem.muted ? 1 : 2
+
+                        Text {
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            // Long names shrink to fit narrow decks
+                            fontSizeMode: Text.Fit
+                            minimumPixelSize: 7
+                            text: root.stemName(stem.label)
+                            color: stem.muted ? "#5c6068" : "#ffffff"
+                            font.bold: true
+                            font.pixelSize: root.width < 260 ? 11 : 14
+                            font.strikeout: stem.muted
+                        }
+
+                        MouseArea {
+                            id: stemMouse
+
+                            anchors.fill: parent
+                            onClicked: muteControl.value = stem.muted ? 0 : 1
+                            onPressAndHold: root.soloStem(stem.index)
+                        }
+                    }
+                }
+            }
+        }
     }
-    ColumnLayout {
+    // The pad modes: one segmented column, the mode in use in the color of
+    // the deck
+    Rectangle {
         id: tabs
+
+        readonly property color deckColor: root.group === "[Channel2]" ? "#e65100" : "#1565c0"
 
         anchors.bottom: parent.bottom
         anchors.right: parent.right
         anchors.rightMargin: root.width < 260 ? 3 : 6
         anchors.top: parent.top
-        spacing: root.width < 260 ? 3 : 6
-        width: root.width < 260 ? 36 : 44
+        border.color: "#2c3544"
+        border.width: 1
+        color: "#14171d"
+        radius: 5
+        width: root.width < 260 ? 38 : 46
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: 5
-            color: root.activePadMode === 0 ? ((root.group === "[Channel2]") ? "#e65100" : "#1565c0") : (cueTabMouse.pressed ? "#2e3440" : "#181c24")
-            border.color: root.activePadMode === 0 ? "#ffffff" : "#2c3544"
-            border.width: root.activePadMode === 0 ? 1.5 : 1
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 1
+            spacing: 0
 
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 3
+            Repeater {
+                model: stemCountControl.value > 0 ? ["CUE", "LOOP", "STEM"] : ["CUE", "LOOP"]
 
-                Shape {
-                    Layout.alignment: Qt.AlignHCenter
-                    width: 12
-                    height: 10
-                    antialiasing: true
-                    ShapePath {
-                        fillColor: root.activePadMode === 0 ? "#ffffff" : "#8293a7"
-                        strokeColor: "transparent"
-                        startX: 1; startY: 0
-                        PathLine { x: 11; y: 5 }
-                        PathLine { x: 1; y: 10 }
-                        PathLine { x: 1; y: 0 }
+                Rectangle {
+                    id: modeTab
+
+                    required property int index
+                    required property string modelData
+                    readonly property bool active: root.activePadMode === index
+
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: modeTabMouse.pressed ? "#2e3440" : (active ? Qt.darker(tabs.deckColor, 1.4) : "transparent")
+                    radius: 4
+
+                    // The line between two modes
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 6
+                        anchors.right: parent.right
+                        anchors.rightMargin: 6
+                        anchors.top: parent.top
+                        color: "#2c3544"
+                        height: 1
+                        visible: modeTab.index > 0 && !modeTab.active && root.activePadMode !== modeTab.index - 1
                     }
-                }
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "CUE"
-                    font.bold: true
-                    font.pixelSize: 9
-                    color: root.activePadMode === 0 ? "#ffffff" : "#8293a7"
-                }
-            }
-
-            MouseArea {
-                id: cueTabMouse
-                anchors.fill: parent
-                onClicked: {
-                    root.activePadMode = 0;
-                }
-            }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: 5
-            color: root.activePadMode === 1 ? "#00838f" : (loopTabMouse.pressed ? "#2e3440" : "#181c24")
-            border.color: root.activePadMode === 1 ? "#ffffff" : "#2c3544"
-            border.width: root.activePadMode === 1 ? 1.5 : 1
-
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 3
-
-                Shape {
-                    Layout.alignment: Qt.AlignHCenter
-                    width: 14
-                    height: 10
-                    antialiasing: true
-                    ShapePath {
-                        fillColor: "transparent"
-                        strokeColor: root.activePadMode === 1 ? "#ffffff" : "#8293a7"
-                        strokeWidth: 1.6
-                        capStyle: ShapePath.RoundCap
-                        startX: 2; startY: 2.5
-                        PathLine { x: 12; y: 2.5 }
-                        PathLine { x: 12; y: 7.5 }
-                        PathLine { x: 2; y: 7.5 }
+                    // The mark of the mode in use
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.topMargin: 5
+                        color: "#ffffff"
+                        radius: 1.5
+                        visible: modeTab.active
+                        width: 3
                     }
-                    ShapePath {
-                        fillColor: root.activePadMode === 1 ? "#ffffff" : "#8293a7"
-                        strokeColor: "transparent"
-                        startX: 0.5; startY: 5.5
-                        PathLine { x: 4; y: 5.5 }
-                        PathLine { x: 2.2; y: 2 }
-                        PathLine { x: 0.5; y: 5.5 }
+                    Text {
+                        anchors.fill: parent
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 2
+                        color: modeTab.active ? "#ffffff" : "#8293a7"
+                        font.bold: true
+                        font.pixelSize: root.width < 260 ? 9 : 10
+                        fontSizeMode: Text.HorizontalFit
+                        horizontalAlignment: Text.AlignHCenter
+                        minimumPixelSize: 7
+                        text: modeTab.modelData
+                        verticalAlignment: Text.AlignVCenter
                     }
-                }
+                    MouseArea {
+                        id: modeTabMouse
 
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "LOOP"
-                    font.bold: true
-                    font.pixelSize: 9
-                    color: root.activePadMode === 1 ? "#ffffff" : "#8293a7"
-                }
-            }
-
-            MouseArea {
-                id: loopTabMouse
-                anchors.fill: parent
-                onClicked: {
-                    root.activePadMode = 1;
+                        anchors.fill: parent
+                        onClicked: root.activePadMode = modeTab.index
+                    }
                 }
             }
         }

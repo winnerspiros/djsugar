@@ -292,7 +292,7 @@ Rectangle {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "✕"
+                    text: "X"
                     font.bold: true
                     font.pixelSize: 12
                     color: "#ffffff"

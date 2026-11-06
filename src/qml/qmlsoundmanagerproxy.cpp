@@ -105,6 +105,10 @@ QmlSoundManagerProxy::QmlSoundManagerProxy(
     });
 }
 
+void QmlSoundManagerProxy::reload() {
+    m_config = m_pSoundManager->getConfig();
+}
+
 // static
 QmlSoundManagerProxy* QmlSoundManagerProxy::create(
         QQmlEngine* pQmlEngine,

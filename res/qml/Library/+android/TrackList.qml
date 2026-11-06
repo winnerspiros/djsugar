@@ -826,4 +826,11 @@ Rectangle {
             }
         }
     }
+
+    LibraryComponent.StemsPopup {
+        id: stemsPopup
+
+        parent: Overlay.overlay
+        trackList: view.model
+    }
 }

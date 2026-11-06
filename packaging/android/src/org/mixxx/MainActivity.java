@@ -1,217 +1,105 @@
 package org.mixxx;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.hardware.usb.UsbManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Process;
-import android.provider.Settings;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.WindowManager;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 import org.mixxx.youtube.PoTokenManager;
 import org.qtproject.qt.android.QtActivityBase;
 
 public class MainActivity extends QtActivityBase {
-    private static final int MEDIA_PERMISSION_REQUEST = 1001;
-    private static final int BLUETOOTH_PERMISSION_REQUEST = 1002;
-    private boolean mRequestedAllFilesAccess;
-    private boolean mWaitingForMediaPermission;
-    private boolean mWaitingForBluetoothPermission;
+    private final BroadcastReceiver mUsbHotplugReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            UsbPermission.notifyDevicesChanged();
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            getWindow().setAttributes(lp);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(lp);
+        }
         super.onCreate(savedInstanceState);
 
-        // ─── PO tokens: warm up the on-device BotGuard WebView early so the
-        // YouTube downloader can mint tokens without waiting on first use.
+        // Warm up the on-device BotGuard WebView early so the YouTube
+        // downloader can mint PO tokens without waiting on first use.
         PoTokenManager.getInstance().init(getApplicationContext());
 
-        // ─── Performance: keep CPU awake and screen on during mixing ───
+        // Keep CPU awake and screen on during mixing
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // ─── Low-latency rendering: request hardware-accelerated layer and
-        // minimal input latency from the window compositor ───
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // API 30+: prefer minimal post-processing latency
             getWindow().setPreferMinimalPostProcessing(true);
         }
 
-        // ─── Fullscreen and notch handling ───────────────────────────────
-        // Draw edge to edge including the cutout area: the S918B camera
-        // hole would otherwise leave a black band and shift the skin
-        // geometry. LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS lets the Qt
-        // surface extend into the cutout; the skin keeps its own margins.
-        WindowManager.LayoutParams lp = this.getWindow().getAttributes();
-        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-        this.getWindow().setAttributes(lp);
+        // Fullscreen and notch (display cutout) edge-to-edge handling
+        AndroidScreenManager.applyFullScreen(this);
+        AndroidScreenManager.installCutoutAndFullscreenListeners(this);
 
-        WindowInsetsControllerCompat windowInsetsController =
-            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        windowInsetsController.setSystemBarsBehavior(
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars());
-
-        // ─── Input performance: elevate the UI thread priority ───────────
-        // The main thread handles input events and UI rendering; a higher
-        // priority reduces scheduling latency so mouse/touch/keyboard events
-        // reach the Qt event loop faster.
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY);
 
-        requestMusicLibraryPermissions();
+        final View decorView = getWindow().getDecorView();
+        decorView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
+            @Override
+            public boolean onCapturedPointer(View view, MotionEvent event) {
+                return false;
+            }
+        });
 
-        // USB/MIDI hotplug: USB_DEVICE_ATTACHED only reaches the activity via
-        // onNewIntent, but DETACHED needs a receiver. Either way, ask the
-        // native ControllerManager to rescan (from JaviLabarumDJ/mixxx-android
-        // android-stable).
+        // USB_DEVICE_ATTACHED is delivered through onNewIntent, and
+        // USB_DEVICE_DETACHED needs a receiver.
         IntentFilter usbFilter = new IntentFilter();
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_NOT_EXPORTED);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(mUsbHotplugReceiver, usbFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(mUsbHotplugReceiver, usbFilter);
+        }
 
         MidiHelper.init(this);
-
-        // Background audio: PlaybackService is lazy-started from native on
-        // first deck play (EngineBuffer slotControlPlayRequest) — not here.
-        // Starting it in onCreate held a wake lock + notification from
-        // second zero even if the user never pressed play. onPause/onStop
-        // below still re-assert it so backgrounding mid-mix stays protected.
-    }
-
-    private void requestBluetoothPermissions() {
-        // Bluetooth/Location permissions needed for BLE MIDI controllers (Android 12+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+: Request WiFi device discovery for WiFi-based controllers
-            java.util.List<String> needed = new java.util.ArrayList<>();
-            if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.NEARBY_WIFI_DEVICES);
-            }
-            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.BLUETOOTH_CONNECT);
-            }
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
-            }
-            if (!needed.isEmpty()) {
-                mWaitingForBluetoothPermission = true;
-                requestPermissions(
-                    needed.toArray(new String[0]),
-                    BLUETOOTH_PERMISSION_REQUEST);
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            java.util.List<String> needed = new java.util.ArrayList<>();
-            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.BLUETOOTH_CONNECT);
-            }
-            if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.BLUETOOTH_SCAN);
-            }
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
-            }
-            if (!needed.isEmpty()) {
-                mWaitingForBluetoothPermission = true;
-                requestPermissions(
-                    needed.toArray(new String[0]),
-                    BLUETOOTH_PERMISSION_REQUEST);
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Location required for Bluetooth scanning on Android 6-11
-            if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-                mWaitingForBluetoothPermission = true;
-                requestPermissions(
-                    new String[] {Manifest.permission.ACCESS_COARSE_LOCATION},
-                    BLUETOOTH_PERMISSION_REQUEST);
-            }
-        }
-    }
-
-    private void requestMusicLibraryPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-                mWaitingForMediaPermission = true;
-                requestPermissions(
-                    new String[] {Manifest.permission.READ_MEDIA_AUDIO},
-                    MEDIA_PERMISSION_REQUEST);
-                return;
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-                mWaitingForMediaPermission = true;
-                requestPermissions(
-                    new String[] {Manifest.permission.READ_EXTERNAL_STORAGE},
-                    MEDIA_PERMISSION_REQUEST);
-                return;
-            }
-        }
-
-        requestAllFilesAccessIfNeeded();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(
-        int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != MEDIA_PERMISSION_REQUEST &&
-                requestCode != BLUETOOTH_PERMISSION_REQUEST) {
-            // Stale result from an older app version's request code — ignore
-            // instead of warning ("Found no valid pending permission request").
-            return;
-        }
-        if (requestCode == MEDIA_PERMISSION_REQUEST) {
-            mWaitingForMediaPermission = false;
-            requestBluetoothPermissions();
-            requestAllFilesAccessIfNeeded();
-        } else if (requestCode == BLUETOOTH_PERMISSION_REQUEST) {
-            mWaitingForBluetoothPermission = false;
-            requestAllFilesAccessIfNeeded();
-        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        requestAllFilesAccessIfNeeded();
-    }
-
-    // ─── Background audio survival ──────────────────────────────────────
-    // Javi's fork (which works on the same devices) has no background
-    // service: auto-starting a foreground service on every onPause wedged
-    // relaunches (stuck splash — the old process never dies). Do not
-    // re-add PlaybackService.start() here without a real playing-state
-    // gate and a matching stop path.
-    @Override
-    protected void onPause() {
-        super.onPause();
+        AndroidScreenManager.applyFullScreen(this);
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            AndroidScreenManager.applyFullScreen(this);
+        }
     }
 
-    // Stop the service only on explicit user quit. The Qt activity teardown
-    // calls onDestroy when the user actually exits (not on rotate/background).
-    // Guarded by isFinishing() so destruction from an unhandled configuration
-    // change never kills background playback.
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        return super.dispatchKeyEvent(event);
+    }
+
+    /// Saves the settings and the loaded tracks on the main thread of Mixxx,
+    /// waits for it at most a few seconds
+    private static native void saveBeforeExit();
+
     @Override
     protected void onDestroy() {
         try {
@@ -221,20 +109,15 @@ public class MainActivity extends QtActivityBase {
         }
         if (isFinishing()) {
             PlaybackService.stop(this);
+            try {
+                saveBeforeExit();
+            } catch (UnsatisfiedLinkError e) {
+                // The native library isn't loaded (yet)
+            }
+            Process.killProcess(Process.myPid());
         }
         super.onDestroy();
     }
-
-    // USB/MIDI hotplug receiver + exit-save hook (from
-    // JaviLabarumDJ/mixxx-android android-stable).
-    private final BroadcastReceiver mUsbHotplugReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            UsbPermission.notifyDevicesChanged();
-        }
-    };
-
-    private static native void saveBeforeExit();
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -244,45 +127,4 @@ public class MainActivity extends QtActivityBase {
             UsbPermission.notifyDevicesChanged();
         }
     }
-
-    private void requestAllFilesAccessIfNeeded() {
-        if (mWaitingForMediaPermission
-            || mWaitingForBluetoothPermission
-            || mRequestedAllFilesAccess
-            || Build.VERSION.SDK_INT < Build.VERSION_CODES.R
-            || Environment.isExternalStorageManager()) {
-            return;
-        }
-        mRequestedAllFilesAccess = true;
-        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-        intent.setData(Uri.parse("package:" + getPackageName()));
-        try {
-            startActivity(intent);
-        } catch (Exception e) {
-            startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-        }
-    }
-
-    // ─── Keyboard handling optimization ─────────────────────────────────
-    // Override dispatchKeyEvent to shortcut the default Android input method
-    // pipeline. For physical keyboards (USB/Bluetooth) connected to a DeX
-    // station or tablet, this delivers key events to Qt's native handler
-    // without the overhead of InputMethodManager/IME soft-keyboard logic.
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        // Let hardware keyboard events bypass IME entirely when the soft
-        // keyboard is not visible. This reduces per-keystroke latency by
-        // ~2-5 ms on most devices.
-        return super.dispatchKeyEvent(event);
-    }
-
-    // ─── Mouse pointer capture on focus ─────────────────────────────────
-    // When the window gains focus and a physical pointer is present, request
-    // pointer capture for lowest-latency relative mouse input. Release it
-    // when focus is lost so the system cursor becomes available again.
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-    }
-
 }

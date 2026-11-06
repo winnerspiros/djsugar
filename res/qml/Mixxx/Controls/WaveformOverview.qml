@@ -55,6 +55,7 @@ Mixxx.WaveformOverview {
 
         group: root.group
         key: "playposition"
+        updateInterval: 33
     }
     Text {
         x: 10
@@ -96,6 +97,7 @@ Mixxx.WaveformOverview {
             color: root.playPositionMarkerColor
             group: root.group
             key: "playposition"
+            updateInterval: 33
         }
     }
     MouseArea {

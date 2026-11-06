@@ -96,6 +96,10 @@ void QmlPlayerProxy::loadSampleFromLocationUrl(const QUrl& trackLocationUrl) {
 
 void QmlPlayerProxy::slotTrackLoaded(TrackPointer pTrack) {
     m_pCurrentTrack = pTrack;
+    if (!m_trackLoaded) {
+        m_trackLoaded = true;
+        Q_EMIT trackLoadedChanged();
+    }
     Q_EMIT trackChanged();
     Q_EMIT trackLoaded();
 }
@@ -110,6 +114,11 @@ void QmlPlayerProxy::slotTrackUnloaded(TrackPointer pOldTrack) {
         disconnect(m_pCurrentTrack.get(), nullptr, this, nullptr);
     }
     m_pCurrentTrack.reset();
+    if (m_trackLoaded) {
+        m_trackLoaded = false;
+        Q_EMIT trackLoadedChanged();
+    }
+    setAnalyzerProgress(kAnalyzerProgressUnknown);
     Q_EMIT trackChanged();
     Q_EMIT trackUnloaded();
 }

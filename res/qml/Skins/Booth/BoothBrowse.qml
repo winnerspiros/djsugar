@@ -55,16 +55,8 @@ Item {
     // A whole USB drive (Rekordbox or Engine DJ) rather than a playlist
     property bool activeIsDrive: false
     readonly property bool showLevel: root.levelIndex !== null && !root.showTracks
-    // levelIndex, or the invisible root of the sources.
-    // A null index (sidebar gone/model resetting) disables the DelegateModel
-    // instead of crossing an invalid QModelIndex into C++ -> assert/hang.
-    readonly property var listRoot: {
-        if (root.levelIndex !== null && root.levelIndex.valid) {
-            return root.levelIndex;
-        }
-        const fallback = root.sidebar ? root.sidebar.index(-1, -1) : null;
-        return (fallback && fallback.valid) ? fallback : undefined;
-    }
+    // levelIndex, or the invisible root of the sources
+    readonly property var listRoot: root.levelIndex ?? root.sidebar?.index(-1, -1)
     // Entries below a top level source can show their own tracks too
     readonly property bool levelHasAll: root.levelPath !== null && root.levelPath.length > 1
     // The entries listed are drives, which list their playlists once read
@@ -110,11 +102,7 @@ Item {
     }
     // A fresh index for a path, or null if the entry is gone
     function indexOf(path) {
-        // The sidebar model object exists from C++ construction, but it is
-        // empty until componentComplete wires the sources: index(-1,-1) on
-        // an empty model is a crash. A tap that lands in that window (fast
-        // BROWSE right after the browser first shows) must be dropped.
-        if (!root.sidebar || root.sidebar.rowCount(root.sidebar.index(-1, -1)) === 0) {
+        if (!root.sidebar) {
             return null;
         }
         let index = root.sidebar.index(-1, -1);
@@ -135,7 +123,7 @@ Item {
         return path.length === 2 && (icon === "rekordbox" || icon === "enginedj");
     }
     function refreshLevel() {
-        if (root.levelPath === null || root.sidebar === null) {
+        if (root.levelPath === null) {
             root.levelIndex = null;
             return;
         }
@@ -151,23 +139,16 @@ Item {
     }
     // Reading the databases on USB drives needs more than the music
     // permission, as in Library/Browser.qml
-    // True when the drive at path may be read; false opens the grant
-    // popup and STOPS the open: without all-files access the USB scan
-    // blocks the UI thread up to 29s waiting for a permission that can
-    // never arrive (see androidusbdrive waitForPermission). Music-library
-    // browsing only needs READ_MEDIA_AUDIO (granted at startup) and is
-    // unaffected: this gate only fires for USB-drive sections.
     function checkStorageAccess(path) {
         const icon = root.sectionIcon(path);
-        if (icon !== "rekordbox" && icon !== "enginedj") {
-            return true;
+        if (icon !== "rekordbox" && icon !== "enginedj" && icon !== "computer") {
+            return;
         }
         if (!Mixxx.MobileLibrary.hasFullStorageAccess()) {
+            storageAccessPopup.forFolders = icon === "computer";
             storageAccessPopup.open();
-            return false;
         }
         Mixxx.MobileLibrary.allowUsbPermissionRequests();
-        return true;
     }
     // Shows the tracks of the entry at path
     function activate(path) {
@@ -184,79 +165,50 @@ Item {
     }
     // Opens a source or an entry. Returns true if its tracks are shown,
     // false if its entries are listed.
-    // True while open()/activate() is on the stack: a second tap then
-    // waits instead of re-entering mid-model-rebuild on half-built indexes.
-    property bool opening: false
     function open(path) {
-        // USB drives without all-files access would hang the UI thread in
-        // the scan below; the popup is shown and the open is abandoned.
-        // The user taps the section again after granting.
-        if (root.opening || !root.checkStorageAccess(path)) {
-            return false;
-        }
-        root.opening = true;
-        // Order matters, and levelIndex must be cleared FIRST: activate()
-        // replaces the model's tracklist (tracklistChanged), which rebuilds
-        // the track TableView; canFetchMore/fetchMore below then signal the
-        // model again, and our onDataChanged/onRowsInserted handlers call
-        // refreshLevel(). If levelIndex still held a pre-activate index
-        // during that, a handler reads a stale/deleted index.
-        // Guarded by deferredRefresh (below), never run inline.
-        root.levelIndex = null;
+        root.checkStorageAccess(path);
         root.activate(path);
         const index = root.indexOf(path);
         if (index === null) {
             root.levelPath = null;
+            root.refreshLevel();
             root.showTracks = true;
-            root.deferredRefresh();
-            root.opening = false;
             return true;
         }
         if (root.sidebar.canFetchMore(index)) {
             root.sidebar.fetchMore(index);
         }
         // Drives list their playlists once they have been read
-        if (root.sidebar.hasChildren(index) || root.pathIsDrive(path)) {
+        if (root.sidebar.hasChildren(root.indexOf(path)) || root.pathIsDrive(path)) {
             root.levelPath = path;
-            root.deferredRefresh();
+            root.refreshLevel();
             root.showTracks = false;
             root.cursor = root.levelHasAll ? -1 : 0;
-            root.opening = false;
             return false;
         }
         root.showTracks = true;
-        root.opening = false;
         return true;
     }
     function openEntry(row) {
-        if (root.levelPath === null) {
-            return false;
-        }
         return root.open(root.levelPath.concat([row]));
     }
     function openAllTracks() {
-        if (root.levelPath === null) {
-            return;
-        }
         root.activate(root.levelPath);
+        root.refreshLevel();
         root.showTracks = true;
-        root.deferredRefresh();
     }
     function back() {
         if (root.showTracks) {
             if (root.levelPath !== null) {
-                // Stale index check only; refresh is routed through the
-                // coalesced deferred path so this stays re-entrancy free.
-                root.levelIndex = null;
-                root.deferredRefresh();
-                root.showTracks = true;
+                root.refreshLevel();
+                root.showTracks = root.levelIndex === null;
             }
             return;
         }
         if (root.levelHasAll) {
             const row = root.levelPath[root.levelPath.length - 1];
             root.levelPath = root.levelPath.slice(0, -1);
-            root.deferredRefresh();
+            root.refreshLevel();
             root.cursor = row;
         }
     }
@@ -270,8 +222,7 @@ Item {
         } else {
             root.showTracks = true;
             root.levelPath = null;
-            root.levelIndex = null;
-            root.deferredRefresh();
+            root.refreshLevel();
             root.cursor = Math.max(0, Math.min(sections.count - 1, root.cursor + offset));
         }
     }
@@ -291,19 +242,16 @@ Item {
         const tracksShown = root.open([row]);
         if (tracksShown) {
             root.levelPath = null;
-            root.deferredRefresh();
+            root.refreshLevel();
         }
         return tracksShown;
     }
     function loadSelected(tableView) {
         if (root.loadTarget.length > 0) {
             tableView.loadSelectedTrack(root.loadTarget, false);
+            root.loadTarget = "";
         } else {
             tableView.loadSelectedTrackIntoNextAvailableDeck(false);
-        }
-        // Return to the play view after a load from LOAD 1/2
-        if (root.loadTarget.length > 0) {
-            root.loadTarget = "";
         }
     }
     function applySearch() {
@@ -331,7 +279,7 @@ Item {
         }
         onCollapseSidebarItem: root.back()
         onFocusWidgetChanged: {
-            if (!enabled || !root.visible || root.streaming) {
+            if (!enabled) {
                 return;
             }
             switch (focusWidget) {
@@ -341,9 +289,8 @@ Item {
             case Skin.FocusedWidgetControl.WidgetKind.Sidebar:
                 root.streaming = false;
                 if (root.levelPath !== null) {
-                    root.levelIndex = null;
-                    root.deferredRefresh();
-                    root.showTracks = true;
+                    root.refreshLevel();
+                    root.showTracks = root.levelIndex === null;
                 } else {
                     root.cursor = root.activeSection;
                 }
@@ -383,69 +330,40 @@ Item {
         target: root.sidebar
     }
 
-    // Opened lazily: activate([0]) rebuilds the model one entry at a time
-    // (each source's activate() emits signals), and doing that inside
-    // component creation - before the Loader's item tree is wired - hung
-    // the app on BROWSE. Runs once the browser is actually shown.
-    property bool initDone: false
-    onVisibleChanged: {
-        if (root.visible && !root.initDone) {
-            root.initDone = true;
-            // Deferred past first paint, and through open() so a USB
-            // drive at [0] without all-files access shows the grant popup
-            // instead of hanging the UI thread in the scan.
-            Qt.callLater(function() { root.open([0]); });
-        }
-    }
+    Component.onCompleted: root.activate([0])
 
     // While the sources change no index of them may be used: the list is
-    // emptied first and looked up again afterwards. All refreshes are
-    // deferred to the event loop AND coalesced: open()/activate() emit
-    // model signals synchronously (each feature activate, fetchMore,
-    // Rekordbox child inserts), inline refreshLevel() inside a signal
-    // handler re-enters indexOf() on a half-rebuilt model, an invalid
-    // QModelIndex crosses into C++ -> assert/hang of the UI thread.
-    property bool refreshQueued: false
-    function deferredRefresh() {
-        if (root.refreshQueued) {
-            return;
-        }
-        root.refreshQueued = true;
-        Qt.callLater(function() {
-            root.refreshQueued = false;
-            root.refreshLevel();
-        });
-    }
+    // emptied first and looked up again afterwards
     Connections {
         // The playlists of a Rekordbox drive are added while it is read,
         // without telling the model; only a repaint (dataChanged) follows.
         // The list is then built again.
         function onDataChanged() {
-            if (root.sidebar && root.levelIndex !== null && root.levelIndex.valid && root.sidebar.rowCount(root.levelIndex) !== levelEntries.count) {
+            if (root.levelIndex !== null && root.sidebar.rowCount(root.levelIndex) !== levelEntries.count) {
                 root.levelIndex = null;
-                root.deferredRefresh();
+                Qt.callLater(root.refreshLevel);
             }
         }
         function onLayoutAboutToBeChanged() {
             root.levelIndex = null;
         }
         function onLayoutChanged() {
-            root.deferredRefresh();
+            Qt.callLater(root.refreshLevel);
         }
         function onModelAboutToBeReset() {
             root.levelIndex = null;
         }
         function onModelReset() {
-            root.deferredRefresh();
+            Qt.callLater(root.refreshLevel);
         }
         function onRowsAboutToBeRemoved() {
             root.levelIndex = null;
         }
         function onRowsInserted() {
-            root.deferredRefresh();
+            Qt.callLater(root.refreshLevel);
         }
         function onRowsRemoved() {
-            root.deferredRefresh();
+            Qt.callLater(root.refreshLevel);
         }
 
         target: root.sidebar
@@ -481,7 +399,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 border.color: usable ? "#8a8d93" : "#2a2c30"
                 border.width: 1
-                color: "transparent"
+                color: backMouse.pressed ? "#2a2c30" : "transparent"
                 height: header.height - 8
                 width: height * 1.3
 
@@ -491,10 +409,12 @@ Item {
                     font.pixelSize: root.compact ? 14 : 17
                     text: "←"
                 }
-                TapHandler {
+                MouseArea {
+                    id: backMouse
+
+                    anchors.fill: parent
                     enabled: parent.usable
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                    onTapped: root.back()
+                    onClicked: root.back()
                 }
             }
             Text {
@@ -580,9 +500,9 @@ Item {
                 font.pixelSize: root.compact ? 10 : 12
                 text: qsTr("STREAMING")
             }
-            TapHandler {
-                gesturePolicy: TapHandler.ReleaseWithinBounds
-                onTapped: root.streaming = !root.streaming
+            MouseArea {
+                anchors.fill: parent
+                onClicked: root.streaming = !root.streaming
             }
         }
     }
@@ -617,7 +537,7 @@ Item {
                     model: DelegateModel {
                         id: sections
 
-                        model: root.sidebar ?? null
+                        model: root.sidebar
 
                         delegate: Rectangle {
                             id: section
@@ -627,7 +547,7 @@ Item {
                             readonly property bool active: root.activeSection === index
                             readonly property bool atCursor: libraryControl.sidebarFocused && !root.showLevel && root.cursor === index
 
-                            color: active ? "#3a3c40" : "transparent"
+                            color: active ? "#3a3c40" : (sectionMouse.pressed ? "#2a2c30" : "transparent")
                             height: sectionColumn.buttonHeight
                             width: sectionColumn.width
 
@@ -673,9 +593,11 @@ Item {
                                 text: root.sectionLabel(section.model.icon, section.model.label)
                                 width: parent.width - 4
                             }
-                            TapHandler {
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: root.openSection(section.index)
+                            MouseArea {
+                                id: sectionMouse
+
+                                anchors.fill: parent
+                                onClicked: root.openSection(section.index)
                             }
                         }
                     }
@@ -710,7 +632,7 @@ Item {
 
                 // The tracks of the entry itself, e.g. all of a drive
                 header: Rectangle {
-                    color: root.cursor === -1 ? "#1e5fb4" : "#16181b"
+                    color: root.cursor === -1 ? "#1e5fb4" : (allMouse.pressed ? "#2a2c30" : "#16181b")
                     height: root.levelHasAll ? (root.compact ? 40 : 46) : 0
                     visible: root.levelHasAll
                     width: ListView.view.width
@@ -723,15 +645,17 @@ Item {
                         font.pixelSize: root.compact ? 14 : 16
                         text: "♪  " + qsTr("ALL TRACKS")
                     }
-                    TapHandler {
-                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: root.openAllTracks()
+                    MouseArea {
+                        id: allMouse
+
+                        anchors.fill: parent
+                        onClicked: root.openAllTracks()
                     }
                 }
                 model: DelegateModel {
                     id: levelEntries
 
-                    model: root.sidebar ?? null
+                    model: root.sidebar
                     rootIndex: root.listRoot
 
                     delegate: Rectangle {
@@ -741,7 +665,7 @@ Item {
                         required property var model
                         required property bool hasModelChildren
 
-                        color: root.cursor === index ? "#1e5fb4" : (index % 2 === 0 ? "#0c0d0f" : "#16181b")
+                        color: root.cursor === index ? "#1e5fb4" : (entryMouse.pressed ? "#2a2c30" : (index % 2 === 0 ? "#0c0d0f" : "#16181b"))
                         height: root.compact ? 40 : 46
                         width: ListView.view.width
 
@@ -765,12 +689,11 @@ Item {
                             font.pixelSize: root.compact ? 15 : 17
                             text: entry.hasModelChildren || root.levelIsDrives ? "›" : ""
                         }
-                        TapHandler {
-                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: {
-                                if (root.levelPath === null) {
-                                    return;
-                                }
+                        MouseArea {
+                            id: entryMouse
+
+                            anchors.fill: parent
+                            onClicked: {
                                 root.cursor = entry.index;
                                 root.openEntry(entry.index);
                             }
@@ -795,39 +718,6 @@ Item {
             sortNewestFirst: root.activeIsDrive
             sourceName: root.activeLabel
             visible: !root.showLevel
-
-            // Default sort by playlist position (ascending) or date added (newest first)
-            function applyDefaultSort() {
-                horizontalHeader.sortingColumn = -1;
-                if (!trackList.model || !trackList.model.columns) {
-                    return;
-                }
-                const columns = trackList.model.columns;
-                let positionIndex = -1;
-                let dateAddedIndex = -1;
-                for (let i = 0; i < columns.length; ++i) {
-                    if (columns[i].columnIdx === Mixxx.TrackListColumn.SQLColumns.Position) {
-                        positionIndex = i;
-                    } else if (columns[i].columnIdx === Mixxx.TrackListColumn.SQLColumns.DateAdded) {
-                        dateAddedIndex = i;
-                    }
-                }
-                let index = -1;
-                let order = Qt.AscendingOrder;
-                if (positionIndex >= 0 && !trackList.sortNewestFirst) {
-                    index = positionIndex;
-                } else if (dateAddedIndex >= 0 && trackList.sortNewestFirst) {
-                    index = dateAddedIndex;
-                    order = Qt.DescendingOrder;
-                }
-                if (index < 0) {
-                    return;
-                }
-                horizontalHeader.sortingColumn = index;
-                horizontalHeader.sortingOrder = order;
-                trackList.model.sort(index, order);
-            }
-            onModelChanged: Qt.callLater(trackList.applyDefaultSort)
         }
 
         // The selected track, like the info panel of a player
@@ -932,8 +822,6 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: header.bottom
-        // The hub builds networked views on creation; keep it out of the
-        // item tree until streaming is actually opened.
         active: root.streaming
         visible: root.streaming
 
@@ -941,9 +829,13 @@ Item {
         }
     }
 
-    // Reading Rekordbox and Engine DJ drives needs access to all files
+    // Reading Rekordbox and Engine DJ drives, and browsing folders (FOLDER,
+    // e.g. on SD cards), needs access to all files
     Popup {
         id: storageAccessPopup
+
+        // For FOLDER rather than USB drives
+        property bool forFolders: false
 
         anchors.centerIn: parent
         modal: true
@@ -962,13 +854,15 @@ Item {
                 color: "#ffffff"
                 font.bold: true
                 font.pixelSize: 15
-                text: qsTr("Permission to read USB")
+                text: storageAccessPopup.forFolders ? qsTr("Permission to read folders") : qsTr("Permission to read USB")
                 width: parent.width
             }
             Text {
                 color: "#d8dadd"
                 font.pixelSize: 13
-                text: qsTr("To read Rekordbox and Engine DJ playlists from a USB drive, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
+                text: storageAccessPopup.forFolders
+                      ? qsTr("To browse the folders of the tablet, SD cards and USB drives, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
+                      : qsTr("To read Rekordbox and Engine DJ playlists from a USB drive, Android has to grant Mixxx access to all files. Enable it on the screen that opens, then tap the section again.")
                 width: parent.width
                 wrapMode: Text.WordWrap
             }

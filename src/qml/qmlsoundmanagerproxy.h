@@ -153,6 +153,9 @@ class QmlSoundManagerProxy : public QObject {
             int type,
             unsigned char channelGroup,
             unsigned char index);
+    /// Re-reads the active configuration, which the engine may have changed
+    /// (e.g. automatic routing to a DJ controller on Android).
+    Q_INVOKABLE void reload();
     Q_INVOKABLE void clearOutputs();
     Q_INVOKABLE void clearInputs();
     Q_INVOKABLE bool hasMicInputs();

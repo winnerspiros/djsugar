@@ -26,12 +26,14 @@ Rectangle {
 
             group: meter.group
             key: "vu_meter"
+            updateInterval: 33
         }
         Mixxx.ControlProxy {
             id: peakControl
 
             group: meter.group
             key: "peak_indicator"
+            updateInterval: 33
         }
         Rectangle {
             anchors.fill: parent

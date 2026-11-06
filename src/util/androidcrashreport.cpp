@@ -81,7 +81,7 @@ void writeAddress(int fd, int index, uintptr_t address) {
     writeString(fd, "\n");
 }
 
-void onCrash(int signalNumber, siginfo_t* pInfo, void* /*pContext*/) {
+void onCrash(int signalNumber, siginfo_t* pInfo, void* pContext) {
     // A fault while writing the report goes to the system's handler
     restorePreviousActions();
 
@@ -104,54 +104,54 @@ void onCrash(int signalNumber, siginfo_t* pInfo, void* /*pContext*/) {
     strcpy(pEnd, ".txt");
 
     const int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        raise(signalNumber);
-        return;
-    }
+    if (fd >= 0) {
+        writeString(fd, "Mixxx crashed\nsignal ");
+        writeNumber(fd, signalNumber, 10);
+        writeString(fd, " code ");
+        writeNumber(fd, static_cast<uint64_t>(pInfo->si_code), 10);
+        writeString(fd, " fault address 0x");
+        writeNumber(fd, reinterpret_cast<uintptr_t>(pInfo->si_addr), 16);
+        char threadName[17] = {};
+        prctl(PR_GET_NAME, threadName, 0, 0, 0);
+        writeString(fd, "\nthread ");
+        writeString(fd, threadName);
+        writeString(fd, "\nbuild ");
+        writeString(fd, s_build);
+        writeString(fd, "\n\n");
 
-    writeString(fd, "Mixxx crash report\n");
-    writeString(fd, "Build: ");
-    writeString(fd, s_build);
-    writeString(fd, "\n");
-    writeString(fd, "Signal: ");
-    writeNumber(fd, signalNumber, 10);
-    writeString(fd, "\n");
-    writeString(fd, "Fault address: 0x");
-    writeNumber(fd, reinterpret_cast<uintptr_t>(pInfo->si_addr), 16);
-    writeString(fd, "\n\n");
-
-    // Walk the stack using frame pointers (works on ARM64 and x86_64 with -fno-omit-frame-pointer)
-    uintptr_t fp;
 #if defined(__aarch64__)
-    asm("mov %0, x29" : "=r"(fp));
-#elif defined(__x86_64__)
-    asm("mov %0, rbp" : "=r"(fp));
-#else
-    fp = 0;
-#endif
-
-    if (fp != 0) {
-        for (int i = 0; i < kMaxFrames; ++i) {
-            // On ARM64, the frame record is [fp, lr]; on x86_64 it's [rbp, rip]
-            const uintptr_t* frame = reinterpret_cast<const uintptr_t*>(fp);
-            if (!frame) {
+        const auto* pUserContext = static_cast<const ucontext_t*>(pContext);
+        const mcontext_t& machine = pUserContext->uc_mcontext;
+        writeAddress(fd, 0, machine.pc);
+        writeAddress(fd, 1, machine.regs[30]);
+        // The frame records: {previous frame pointer, return address}
+        uintptr_t framePointer = machine.regs[29];
+        for (int i = 2; i < kMaxFrames && framePointer != 0 && (framePointer & 7) == 0; ++i) {
+            const auto* pRecord = reinterpret_cast<const uintptr_t*>(framePointer);
+            const uintptr_t returnAddress = pRecord[1];
+            if (returnAddress == 0) {
                 break;
             }
-            const uintptr_t lr = frame[1];
-            if (lr == 0) {
+            writeAddress(fd, i, returnAddress);
+            const uintptr_t previous = pRecord[0];
+            // Frames lie further up the same stack
+            if (previous <= framePointer || previous - framePointer > 1024 * 1024) {
                 break;
             }
-            writeAddress(fd, i, lr);
-            fp = frame[0];
-            if (fp < 0x1000 || fp == reinterpret_cast<uintptr_t>(frame)) {
-                break;
-            }
+            framePointer = previous;
         }
+#else
+        (void)pContext;
+#endif
+        close(fd);
     }
-    writeString(fd, "\n");
-    close(fd);
 
-    raise(signalNumber);
+    if (signalNumber == SIGABRT) {
+        // Raised explicitly; returning would continue after the raise()
+        raise(signalNumber);
+    }
+    // Returning executes the faulting instruction again, which now goes to
+    // the system's handler
 }
 
 } // namespace
@@ -160,43 +160,38 @@ namespace mixxx {
 namespace android {
 
 QString crashReportDirectory() {
-    const QString path = QDir::toNativeSeparators(
-            QDir::homePath() + "/Mixxx/logs");
-    QDir().mkpath(path);
-    return path;
+    return QStringLiteral("/storage/emulated/0/Mixxx/logs");
 }
 
 void installCrashReporter() {
-    // Prepare the directory string once (not async-signal-safe)
-    const QString dir = crashReportDirectory();
-    if (static_cast<size_t>(dir.length()) >= sizeof(s_directory)) {
+    const QString directory = crashReportDirectory();
+    QDir().mkpath(directory);
+    const QByteArray path = QFile::encodeName(directory);
+    if (path.size() >= static_cast<int>(sizeof(s_directory))) {
         return;
     }
-    strcpy(s_directory, dir.toUtf8().constData());
-
-    // Prepare the build string
-    const QString build = VersionStore::gitVersion();
-    if (static_cast<size_t>(build.length()) >= sizeof(s_build)) {
-        strncpy(s_build, build.toUtf8().constData(), sizeof(s_build) - 1);
-        s_build[sizeof(s_build) - 1] = '\0';
-    } else {
-        strcpy(s_build, build.toUtf8().constData());
-    }
+    strcpy(s_directory, path.constData());
+    const QByteArray build = VersionStore::gitDescribe().toUtf8().left(sizeof(s_build) - 1);
+    strcpy(s_build, build.constData());
 
     struct sigaction action = {};
     action.sa_sigaction = onCrash;
     action.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigemptyset(&action.sa_mask);
-
     for (int i = 0; i < kSignalCount; ++i) {
         sigaction(kSignals[i], &action, &s_previousActions[i]);
     }
 }
 
 void exportPreviousLog(const QString& logDirPath) {
-    const QString previousLog = logDirPath + "/mixxx.log.1";
-    const QString targetLog = crashReportDirectory() + "/mixxx-previous.log";
-    QFile::copy(previousLog, targetLog);
+    const QString previousLog = QDir(logDirPath).filePath(QStringLiteral("mixxx.log.1"));
+    if (!QFile::exists(previousLog)) {
+        return;
+    }
+    const QString target = crashReportDirectory() + QStringLiteral("/mixxx-previous.log");
+    QDir().mkpath(crashReportDirectory());
+    QFile::remove(target);
+    QFile::copy(previousLog, target);
 }
 
 } // namespace android

@@ -98,7 +98,8 @@ Popup {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 42
                     activeColor: Theme.accentColor
-                    text: "✕"
+                    font.bold: true
+                    text: "X"
                     onClicked: root.close()
                 }
             }
@@ -171,7 +172,7 @@ Popup {
                             color: "#bbdefb"
                             font.pixelSize: 12
                             font.bold: true
-                            text: "✕"
+                            text: "X"
                             visible: parent.active || searchInput.text.length > 0
                             MouseArea {
                                 anchors.fill: parent

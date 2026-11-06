@@ -56,7 +56,7 @@
         android:largeHeap="true"
         android:icon="@mipmap/ic_launcher"
         android:label="DJ Sugar"
-        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:theme="@style/MixxxFullScreenTheme"
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
         android:fullBackupOnly="false"

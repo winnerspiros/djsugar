@@ -88,7 +88,7 @@ Item {
         group: "[Waveform]"
         key: "WaveformOverviewType"
 
-        onInitializedChanged: {
+        onInitializedChanged: initialized => {
             // The C++ side owns this control (read-only, seeded from
             // config at startup). Only write back when the skin setting
             // actually differs, to avoid read-only write warnings.

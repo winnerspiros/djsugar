@@ -110,6 +110,14 @@ Popup {
                 font.pixelSize: 13
                 text: root.trackLoaded ? qsTr("%1 BPM").arg(Number(bpmProxy.value).toFixed(2)) : ""
             }
+            Skin.Button {
+                Layout.preferredHeight: 28
+                Layout.preferredWidth: 32
+                activeColor: Theme.accentColor
+                font.bold: true
+                text: "X"
+                onClicked: root.close()
+            }
         }
 
         Text {

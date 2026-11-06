@@ -106,7 +106,10 @@ QStringList QmlMobileAppProxy::skinsIn(const QUrl& skinsFolder) const {
     // APK assets: QDir::entryList() cannot list assets:/ subdirectories,
     // so probe the skins packaged under assets:/qml/Skins/ instead.
     if (skinsFolder.scheme() == QStringLiteral("assets")) {
-        const QStringList knownSkins{QStringLiteral("Booth")};
+        const QStringList knownSkins{
+                QStringLiteral("Booth"),
+                QStringLiteral("Lite"),
+        };
         for (const QString& folder : knownSkins) {
             if (QFileInfo::exists(
                         dir.filePath(folder + QStringLiteral("/MainWindow.qml")))) {

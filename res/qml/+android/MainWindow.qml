@@ -121,7 +121,7 @@ Item {
         group: "[Waveform]"
         key: "WaveformOverviewType"
 
-        onInitializedChanged: {
+        onInitializedChanged: initialized => {
             // The C++ side owns this control (read-only, seeded from
             // config at startup). Only write back when the skin setting
             // actually differs, to avoid read-only write warnings.
@@ -227,7 +227,7 @@ Item {
                 id: toolbarFlickable
                 anchors.left: logoText.right
                 anchors.leftMargin: 8
-                anchors.right: showPreferencesButton.left
+                anchors.right: stemsIndicator.active ? stemsIndicator.left : showPreferencesButton.left
                 anchors.rightMargin: 8
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom

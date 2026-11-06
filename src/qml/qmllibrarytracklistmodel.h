@@ -51,6 +51,7 @@ class QmlLibraryTrackListModel : public QIdentityProxyModel {
     Q_INVOKABLE bool hasCapabilities(TrackModel::Capabilities caps) const;
 
     Q_INVOKABLE void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+    Q_INVOKABLE void search(const QString& searchText);
 
     int sourceColumn(int column) const;
 

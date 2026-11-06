@@ -122,12 +122,25 @@ Popup {
             width: parent.width
             spacing: 10
 
-            Text {
+            RowLayout {
                 Layout.fillWidth: true
-                text: qsTr("🎚 Separate into stems")
-                color: "#ffffff"
-                font.bold: true
-                font.pixelSize: 15
+                spacing: 8
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("🎚 Separate into stems")
+                    color: "#ffffff"
+                    font.bold: true
+                    font.pixelSize: 15
+                }
+                Skin.Button {
+                    Layout.preferredHeight: 28
+                    Layout.preferredWidth: 32
+                    activeColor: "#ffffff"
+                    font.bold: true
+                    text: "X"
+                    onClicked: root.close()
+                }
             }
 
             // What: the selected track or the whole list

@@ -419,6 +419,27 @@ Category {
                                     }
                                 }
 
+                                // SD cards and USB drives
+                                Repeater {
+                                    model: Mixxx.MobileLibrary ? Mixxx.MobileLibrary.removableVolumes() : []
+
+                                    Skin.Button {
+                                        required property var modelData
+
+                                        Layout.preferredHeight: 32
+                                        activeColor: "#00ffff"
+                                        backgroundColor: "#1c2a38"
+                                        normalColor: "#ffffff"
+                                        font.bold: true
+                                        font.pixelSize: 11
+                                        text: "💾 " + modelData.label
+                                        onClicked: {
+                                            root.currentBrowserPath = modelData.path;
+                                            root.updateSubDirs();
+                                        }
+                                    }
+                                }
+
                                 TextField {
                                     id: pathInputField
                                     Layout.fillWidth: true

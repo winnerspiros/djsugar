@@ -14,6 +14,8 @@ namespace qml {
 void registerMobileQmlSingletons(CoreServices* pCoreServices) {
     QmlStreamingProxy::registerPlayerManager(pCoreServices->getPlayerManager());
     QmlStreamingProxy::registerUserSettings(pCoreServices->getSettings());
+    QmlYouTubeProxy::registerLibrary(pCoreServices->getLibrary().get());
+    QmlYouTubeProxy::registerPlayerManager(pCoreServices->getPlayerManager());
 #ifdef Q_OS_ANDROID
     // Before the automatic cue, which has to see the beatgrid of Rekordbox
     android::applyRekordboxDataOnLoad(pCoreServices->getPlayerManager().get(),

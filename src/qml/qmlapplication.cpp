@@ -361,6 +361,8 @@ QmlApplication::QmlApplication(
 #endif
     }
 
+    setupSpinnyCoverControls();
+
 #ifndef Q_OS_ANDROID
     // FIXME: DlgPreferences has some initialization logic that must be executed
     // before the GUI is shown, at least for the effects system.
@@ -387,6 +389,12 @@ QmlApplication::QmlApplication(
     QmlDlgPreferencesProxy::s_pInstance =
             std::make_unique<QmlDlgPreferencesProxy>(nullptr, this);
 #endif
+    QmlRecordingProxy::s_pRecordingManager = m_pCoreServices->getRecordingManager();
+    QmlApplicationProxy::registerReloadCallback([this]() {
+        QTimer::singleShot(0, this, [this]() {
+            loadQml(m_mainFilePath);
+        });
+    });
 
     const QStringList visualGroups =
             m_pCoreServices->getPlayerManager()->getVisualPlayerGroups();
@@ -523,6 +531,7 @@ QmlApplication::~QmlApplication() {
     m_pAppEngine.reset();
     // Delete all the QML singletons in order to prevent leak detection in CoreService
     QmlCoreServices::destroy();
+    QmlRecordingProxy::s_pRecordingManager.reset();
     QmlDlgPreferencesProxy::s_pInstance.reset();
     if (m_ownsWaveformWidgetFactory) {
         WaveformWidgetFactory::destroy();
@@ -535,10 +544,56 @@ QmlApplication::~QmlApplication() {
     m_pCoreServices.reset();
 }
 
+void QmlApplication::setupSpinnyCoverControls() {
+    m_pShowSpinny = make_parented<ControlProxy>("[Skin]", "show_spinnies", this);
+    m_pShowCover = make_parented<ControlProxy>("[Skin]", "show_coverart", this);
+    m_pSelectBigSpinnyCover = std::make_unique<ControlPushButton>(
+            ConfigKey("[Skin]", "select_big_spinny_or_cover"), true);
+    m_pSelectBigSpinnyCover->setButtonMode(mixxx::control::ButtonMode::Toggle);
+
+    m_pShowSpinnyAndOrCover = std::make_unique<ControlPushButton>(
+            ConfigKey("[Skin]", "show_spinny_or_cover"));
+    m_pShowSpinnyAndOrCover->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    m_pShowSpinnyAndOrCover->setReadOnly();
+
+    m_pShowSmallSpinnyCover = std::make_unique<ControlPushButton>(
+            ConfigKey("[Skin]", "show_small_spinny_or_cover"));
+    m_pShowSmallSpinnyCover->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    m_pShowSmallSpinnyCover->setReadOnly();
+
+    m_pShowBigSpinnyCover = std::make_unique<ControlPushButton>(
+            ConfigKey("[Skin]", "show_big_spinny_or_cover"));
+    m_pShowBigSpinnyCover->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    m_pShowBigSpinnyCover->setReadOnly();
+
+    m_pShowSpinny->connectValueChanged(this, &QmlApplication::updateSpinnyCoverControls);
+    m_pShowCover->connectValueChanged(this, &QmlApplication::updateSpinnyCoverControls);
+    connect(m_pSelectBigSpinnyCover.get(),
+            &ControlObject::valueChanged,
+            this,
+            &QmlApplication::updateSpinnyCoverControls);
+
+    updateSpinnyCoverControls();
+}
+
+void QmlApplication::updateSpinnyCoverControls() {
+    m_pShowSpinnyAndOrCover->setAndConfirm(
+            (m_pShowSpinny->toBool() || m_pShowCover->toBool()) ? 1.0 : 0.0);
+    m_pShowSmallSpinnyCover->setAndConfirm(
+            (m_pShowSpinnyAndOrCover->toBool() && !m_pSelectBigSpinnyCover->toBool())
+                    ? 1.0
+                    : 0.0);
+    m_pShowBigSpinnyCover->setAndConfirm(
+            (m_pShowSpinnyAndOrCover->toBool() && m_pSelectBigSpinnyCover->toBool())
+                    ? 1.0
+                    : 0.0);
+}
+
 bool QmlApplication::loadQml(const QString& path) {
     // QQmlApplicationEngine::load creates a new window but also leaves the old one,
     // so it is necessary to destroy the old QQmlApplicationEngine and create a new one.
     m_pAppEngine = std::make_unique<QQmlApplicationEngine>();
+    mixxx::qml::QmlLanguageProxy::installAndroidTranslations(m_pCoreServices->getSettings());
     m_pAppEngine->setUiLanguage(QLocale().name());
 
     m_autoReload.clear();

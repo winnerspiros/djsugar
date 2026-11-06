@@ -7,10 +7,12 @@
 #include <QSortFilterProxyModel>
 #include <QVariant>
 
+#include "library/basesqltablemodel.h"
 #include "library/basetracktablemodel.h"
 #include "library/browse/browsetablemodel.h"
 #include "library/columncache.h"
 #include "qml/asyncimageprovider.h"
+#include "qml/librarycoverloader.h"
 #include "qml/qmllibrarytracklistcolumn.h"
 #include "qml/qmltrackproxy.h"
 #include "qml_owned_ptr.h"
@@ -143,7 +145,9 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
 
     switch (role) {
     case TrackProxyRole: {
-        if (pTrackModel == nullptr) {
+        // Only for tracks of a database (not of the folder browser, see
+        // CoverArtRole)
+        if (dynamic_cast<const BaseSqlTableModel*>(pTrackModel) == nullptr) {
             return {};
         }
         auto pTrack = pTrackModel->getTrack(mapToSource(proxyIndex));
@@ -163,24 +167,13 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
                         .toDouble());
     }
     case CoverArtRole: {
-        QString location;
-        if (pTrackTableModel != nullptr) {
-            location = QIdentityProxyModel::data(
-                    proxyIndex.siblingAtColumn(pTrackTableModel->fieldIndex(
-                            ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION)),
-                    Qt::DisplayRole)
-                               .toString();
-        } else if (pTrackModel != nullptr) {
-            auto pTrack = pTrackModel->getTrack(mapToSource(proxyIndex));
-            if (pTrack) {
-                location = pTrack->getCoverInfo().coverLocation;
-            }
-        }
-        if (location.isEmpty()) {
+        // Loading the Track of a row of the folder browser adds the file to
+        // the library, which takes seconds when opening a folder. Only tracks
+        // of a database (Mixxx, Rekordbox, Engine DJ) have covers loaded here.
+        if (dynamic_cast<const BaseSqlTableModel*>(pTrackModel) == nullptr) {
             return {};
         }
-
-        return AsyncImageProvider::trackLocationToCoverArtUrl(location);
+        return LibraryCoverLoader::loadCover(pTrackModel, mapToSource(proxyIndex));
     }
     case FileURLRole: {
         if (pTrackModel == nullptr) {
@@ -270,6 +263,13 @@ void QmlLibraryTrackListModel::sort(int column, Qt::SortOrder order) {
             QAbstractItemModel::VerticalSortHint);
     sourceModel()->sort(sourceColumn(pColumn->columnIdx()), order);
     Q_EMIT layoutChanged(QList<QPersistentModelIndex>(), QAbstractItemModel::VerticalSortHint);
+}
+
+void QmlLibraryTrackListModel::search(const QString& searchText) {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel != nullptr) {
+        pTrackModel->search(searchText);
+    }
 }
 
 } // namespace qml

@@ -371,7 +371,7 @@ Rectangle {
                 columnSpacing: 3
                 columns: 2
                 rowSpacing: 3
-                visible: root.padMode !== "sampler"
+                visible: root.padMode !== "sampler" && root.padMode !== "stem"
 
                 Repeater {
                     model: 8
@@ -379,6 +379,26 @@ Rectangle {
                     Pad {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
+                    }
+                }
+            }
+            // The 4 stems (top row: MUTE, bottom row: FX), when padMode === "stem"
+            GridLayout {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                columnSpacing: 3
+                columns: 2
+                rowSpacing: 3
+                visible: root.padMode === "stem"
+
+                Repeater {
+                    model: 8
+
+                    Booth.StemPad {
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        group: root.group
+                        padIndex: index
                     }
                 }
             }
@@ -420,6 +440,8 @@ Rectangle {
                             return qsTr("BEAT JUMP") + "  ⇅";
                         case "beatloop":
                             return qsTr("BEAT LOOP") + "  ⇅";
+                        case "stem":
+                            return qsTr("STEMS") + "  ⇅";
                         case "sampler":
                             return qsTr("SAMPLER") + "  ⇅";
                         default:
@@ -431,7 +453,7 @@ Rectangle {
                     id: modeTap
 
                     onTapped: {
-                        const modes = ["hotcue", "beatjump", "beatloop", "sampler"];
+                        const modes = ["hotcue", "beatjump", "beatloop", "stem", "sampler"];
                         root.padMode = modes[(modes.indexOf(root.padMode) + 1) % modes.length];
                     }
                 }

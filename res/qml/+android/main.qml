@@ -16,10 +16,12 @@ ApplicationWindow {
     readonly property int designHeight: 1008
 
     color: Theme.backgroundColor
+    flags: isMobile ? (Qt.Window | Qt.FramelessWindowHint | Qt.MaximizeUsingFullscreenGeometryHint) : Qt.Window
     height: isMobile ? Screen.height : designHeight
     menuBar: content.item ? content.item.menuBar : null
     minimumHeight: isMobile ? 0 : 300
     minimumWidth: isMobile ? 0 : 680
+    visibility: isMobile ? Window.FullScreen : Window.Windowed
     visible: true
     width: isMobile ? Screen.width : designWidth
 

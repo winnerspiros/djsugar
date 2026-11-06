@@ -372,6 +372,13 @@ Category {
         load();
     }
 
+    onVisibleChanged: {
+        if (visible) {
+            manager.reload();
+            load();
+        }
+    }
+
     Mixxx.ControlProxy {
         id: mainEnabled
         group: "[Master]"

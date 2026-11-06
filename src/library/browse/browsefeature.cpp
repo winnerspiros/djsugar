@@ -587,11 +587,18 @@ QStringList BrowseFeature::getDefaultQuickLinks() const {
             QStandardPaths::HomeLocation));
     QDir osDesktopDir(QStandardPaths::writableLocation(
             QStandardPaths::DesktopLocation));
+#ifdef Q_OS_ANDROID
+    const QString downloadPath = QStandardPaths::writableLocation(
+            QStandardPaths::DownloadLocation);
+    QDir osDownloadsDir(downloadPath);
+    bool downloadsExists = !downloadPath.isEmpty() && osDownloadsDir.exists();
+#else
     QDir osDownloadsDir(osHomeDir);
     // TODO(XXX) i18n -- no good way to get the download path. We could tr() it
     // but the translator may not realize we want the usual name of the
     // downloads folder.
     bool downloadsExists = osDownloadsDir.cd("Downloads");
+#endif
 
     QStringList result;
     bool osMusicDirIncluded = false;
@@ -631,7 +638,8 @@ QStringList BrowseFeature::getDefaultQuickLinks() const {
         result << osDownloadsDir.canonicalPath() + "/";
     }
 
-    if (!osDesktopDirIncluded && Sandbox::canAccessDir(osDesktopDir)) {
+    if (!osDesktopDirIncluded && osDesktopDir != osHomeDir &&
+            Sandbox::canAccessDir(osDesktopDir)) {
         result << osDesktopDir.canonicalPath() + "/";
     }
 

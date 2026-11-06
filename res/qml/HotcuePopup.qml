@@ -87,4 +87,14 @@ Popup {
         onPressed: root.hotcue.clear = 1
         onReleased: root.hotcue.clear = 0
     }
+    Skin.Button {
+        activeColor: Theme.deckActiveColor
+        anchors.right: parent.right
+        anchors.top: colorGrid.bottom
+        anchors.topMargin: 5
+        font.bold: true
+        text: "X"
+
+        onClicked: root.close()
+    }
 }

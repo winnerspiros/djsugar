@@ -244,7 +244,7 @@ Item {
         group: "[Waveform]"
         key: "WaveformOverviewType"
 
-        onInitializedChanged: {
+        onInitializedChanged: initialized => {
             // The C++ side owns this control (read-only, seeded from
             // config at startup). Only write back when the skin setting
             // actually differs, to avoid read-only write warnings.
@@ -347,6 +347,7 @@ Item {
 
             group: deckInfo.group
             key: "playposition"
+            updateInterval: 100
         }
         Mixxx.ControlProxy {
             id: quantizeControl
@@ -475,12 +476,15 @@ Item {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        color: "#000000"
+    }
+
     Item {
         id: content
 
         readonly property int gap: 3
-        // Camera-hole inset in landscape: a fixed margin keeps the top
-        // bar clear of it (QtQuick 2.12 exposes no safe-area property).
 
         anchors.fill: parent
         enabled: !settingsPopup.opened
@@ -492,7 +496,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 4
             anchors.top: parent.top
-            anchors.topMargin: (root.applicationWindow.isMobile ? 28 : 0) + 3
+            anchors.topMargin: 3
             height: root.compact ? 26 : 34
             spacing: root.width < 760 ? 3 : 6
 
@@ -561,6 +565,14 @@ Item {
                 label: "BEAT FX"
                 visible: root.compact && !root.browsing && !root.xyView && root.itemShown("fx")
                 onClicked: root.beatFxShown = !root.beatFxShown
+            }
+            Tab {
+                active: stemsOverlay.visible
+                label: Mixxx.Stems.pendingCount > 1
+                    ? "🎚 %1% · %2".arg(Math.round(Mixxx.Stems.progress * 100)).arg(Mixxx.Stems.pendingCount)
+                    : "🎚 %1%".arg(Math.round(Mixxx.Stems.progress * 100))
+                visible: Mixxx.Stems.pendingCount > 0
+                onClicked: stemsOverlay.visible = !stemsOverlay.visible
             }
             Tab {
                 active: settingsPopup.opened
@@ -763,6 +775,9 @@ Item {
         Overlay.modal: Rectangle {
             color: "#99000000"
         }
+    }
+    Skin.StemsOverlay {
+        id: stemsOverlay
     }
 
     // ================= CONTROLLER ACCESS TO THE SCREENS =================

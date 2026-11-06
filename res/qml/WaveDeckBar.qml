@@ -82,7 +82,7 @@ Item {
         Mixxx.ControlProxy { id: bpmControl; group: card.group; key: "bpm" }
         Mixxx.ControlProxy { id: rateControl; group: card.group; key: "rate" }
         Mixxx.ControlProxy { id: durationControl; group: card.group; key: "duration" }
-        Mixxx.ControlProxy { id: playPositionControl; group: card.group; key: "playposition" }
+        Mixxx.ControlProxy { id: playPositionControl; group: card.group; key: "playposition"; updateInterval: 100 }
         Mixxx.ControlProxy { id: keyControl; group: card.group; key: "visual_key" }
         Mixxx.ControlProxy { id: playControl; group: card.group; key: "play" }
         Mixxx.ControlProxy { id: cueControl; group: card.group; key: "cue_default" }

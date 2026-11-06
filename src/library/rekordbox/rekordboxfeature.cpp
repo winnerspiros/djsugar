@@ -125,7 +125,8 @@ bool createLibraryTable(QSqlDatabase& database, const QString& tableName) {
             "    rating INTEGER,"
             "    analyze_path TEXT,"
             "    device TEXT,"
-            "    color INTEGER"
+            "    color INTEGER,"
+            "    datetime_added TEXT"
             ");");
 
     if (!query.exec()) {
