@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QQmlParserStatus>
+#include <QTimer>
 #include <memory>
 
 #include "control/controlproxy.h"
@@ -22,6 +23,15 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     Q_PROPERTY(bool initialized READ isInitialized NOTIFY initializedChanged)
     Q_PROPERTY(double value READ getValue WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(double parameter READ getParameter WRITE setParameter NOTIFY parameterChanged)
+    /// Mixxx Android: the minimum time in milliseconds between two
+    /// valueChanged/parameterChanged signals, 0 (the default) for every
+    /// change. For controls that change with every audio buffer, e.g.
+    /// playposition (up to some 250 times a second), whose texts and
+    /// markers don't need more than the frame rate: each signal re-evaluates
+    /// the bindings on the GUI thread. The last value is always delivered.
+    /// Not for buttons, whose presses and releases must all arrive.
+    Q_PROPERTY(int updateInterval READ updateInterval WRITE setUpdateInterval NOTIFY
+                    updateIntervalChanged)
     QML_NAMED_ELEMENT(ControlProxy)
 
   public:
@@ -55,6 +65,11 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     bool isKeyValid() const;
     bool isInitialized() const;
 
+    int updateInterval() const {
+        return m_updateInterval;
+    }
+    void setUpdateInterval(int updateInterval);
+
     /// Reset the control to the default value.
     Q_INVOKABLE void reset();
     Q_INVOKABLE void trigger();
@@ -67,10 +82,13 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     void initializedChanged(bool initialized);
     void valueChanged(double newValue);
     void parameterChanged(double newParameter);
+    void updateIntervalChanged(int updateInterval);
 
   private slots:
     /// Emits both the valueChanged and parameterChanged signals
     void slotControlProxyValueChanged(double newValue);
+    /// The update interval elapsed: delivers a value that changed meanwhile
+    void slotUpdateTimeout();
 
   private:
     /// (Re-)Initializes or resets the pointer to the underlying control proxy.
@@ -85,6 +103,9 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     /// QML object creation is complete.
     bool m_isComponentComplete;
     std::unique_ptr<ControlProxy> m_pControlProxy;
+    int m_updateInterval;
+    bool m_updatePending;
+    QTimer m_updateTimer;
 };
 
 } // namespace qml

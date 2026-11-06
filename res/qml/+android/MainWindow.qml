@@ -170,6 +170,37 @@ Item {
             }
 
             Skin.Button {
+                id: stemsIndicator
+
+                readonly property bool active: Mixxx.Stems.pendingCount > 0
+
+                anchors.right: showPreferencesButton.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                visible: active
+                height: 30
+                width: active ? stemsIndicatorMetrics.width + 20 : 0
+                activeColor: Theme.accentColor
+                backgroundColor: Mixxx.Stems.hold !== "" ? "#4a3a12" : "#1e3a5f"
+                normalColor: "#ffffff"
+                font.bold: true
+                font.pixelSize: 11
+                text: Mixxx.Stems.hold !== ""
+                        ? `🎚 ⏸ ${Mixxx.Stems.pendingCount}`
+                        : `🎚 ${Math.round(Mixxx.Stems.progress * 100)}% · ${Mixxx.Stems.pendingCount}`
+
+                onClicked: stemsOverlay.openQueue()
+
+                TextMetrics {
+                    id: stemsIndicatorMetrics
+
+                    font.bold: true
+                    font.pixelSize: 11
+                    text: stemsIndicator.text
+                }
+            }
+
+            Skin.Button {
                 id: showPreferencesButton
                 anchors.right: parent.right
                 anchors.rightMargin: 6
@@ -1009,5 +1040,12 @@ Item {
         width: Math.min(680, parent.width - 24)
         height: Math.min(380, parent.height - 50)
         onCloseRequested: visible = false
+    }
+
+    Skin.StemsOverlay {
+        id: stemsOverlay
+
+        anchors.fill: parent
+        z: 95
     }
 }

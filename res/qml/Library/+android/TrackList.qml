@@ -477,6 +477,21 @@ Rectangle {
                 onClicked: copyPopup.openForList()
             }
 
+            // Separates the selected track or the whole list into stems
+            Skin.Button {
+                Layout.preferredHeight: 38
+                Layout.preferredWidth: 100
+                activeColor: Theme.accentColor
+                backgroundColor: quickLoadBar.hasTracks ? Theme.libraryActionBackground : Theme.libraryActionDisabledBackground
+                normalColor: quickLoadBar.hasTracks ? Theme.libraryActionText : Theme.libraryActionDisabledText
+                enabled: quickLoadBar.hasTracks
+                font.bold: true
+                // Marked when the selected track has stems
+                text: quickLoadBar.hasTrack && Mixxx.Stems.jobs && Mixxx.Stems.hasStems(quickLoadBar.selectedUrls[0]) ? qsTr("🎚 STEMS ✓") : qsTr("🎚 STEMS")
+
+                onClicked: stemsPopup.openFor(quickLoadBar.hasTrack ? quickLoadBar.selectedUrls[0] : "")
+            }
+
             Skin.Button {
                 id: loadDeck1Btn
 

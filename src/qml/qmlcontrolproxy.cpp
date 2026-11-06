@@ -1,8 +1,11 @@
 #include "qml/qmlcontrolproxy.h"
 
 #include <QSet>
+#include <QTimer>
+#include <algorithm>
 
 #include "moc_qmlcontrolproxy.cpp"
+#include "qml/qmlframeclock.h"
 #include "util/cmdlineargs.h"
 
 namespace mixxx {
@@ -16,7 +19,30 @@ constexpr double kDefaultParameter = 0.0;
 QmlControlProxy::QmlControlProxy(QObject* parent)
         : QObject(parent),
           m_isComponentComplete(false),
-          m_pControlProxy(nullptr) {
+          m_pControlProxy(nullptr),
+          m_updateInterval(0),
+          m_updatePending(false) {
+    m_updateTimer.setSingleShot(true);
+    connect(&m_updateTimer,
+            &QTimer::timeout,
+            this,
+            &QmlControlProxy::slotUpdateTimeout);
+}
+
+void QmlControlProxy::setUpdateInterval(int updateInterval) {
+    updateInterval = std::max(0, updateInterval);
+    if (m_updateInterval == updateInterval) {
+        return;
+    }
+    m_updateInterval = updateInterval;
+    if (m_updateInterval == 0) {
+        m_updateTimer.stop();
+        if (m_updatePending && m_pControlProxy) {
+            m_updatePending = false;
+            slotControlProxyValueChanged(m_pControlProxy->get());
+        }
+    }
+    emit updateIntervalChanged(m_updateInterval);
 }
 
 void QmlControlProxy::componentComplete() {
@@ -195,8 +221,29 @@ void QmlControlProxy::reinitializeFromKey() {
 }
 
 void QmlControlProxy::slotControlProxyValueChanged(double newValue) {
+    if (m_updateInterval > 0) {
+        if (m_updateTimer.isActive()) {
+            // Delivered when the interval has elapsed
+            m_updatePending = true;
+            return;
+        }
+        // On a tick of the common frame clock, so that it is drawn in the
+        // same frame as the waveforms and the other throttled controls
+        m_updateTimer.start(frameclock::millisToNextTick(
+                std::chrono::milliseconds(m_updateInterval)));
+    }
     Q_EMIT valueChanged(newValue);
     Q_EMIT parameterChanged(m_pControlProxy->getParameter());
+}
+
+void QmlControlProxy::slotUpdateTimeout() {
+    if (!m_updatePending || !m_pControlProxy) {
+        return;
+    }
+    m_updatePending = false;
+    // Restarts the timer: a value that keeps changing is delivered once per
+    // interval
+    slotControlProxyValueChanged(m_pControlProxy->get());
 }
 
 void QmlControlProxy::trigger() {
