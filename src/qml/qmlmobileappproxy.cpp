@@ -16,7 +16,7 @@ namespace {
 
 const ConfigKey kSkinConfigKey(QStringLiteral("[Config]"), QStringLiteral("AndroidSkin"));
 const QString kClassicSkin = QStringLiteral("Classic");
-const QString kDefaultSkin = QStringLiteral("Booth");
+const QString kDefaultSkin = QStringLiteral("Classic");
 const ConfigKey kHiddenTopBarItemsKey(
         QStringLiteral("[Skin]"), QStringLiteral("AndroidHiddenTopBarItems"));
 

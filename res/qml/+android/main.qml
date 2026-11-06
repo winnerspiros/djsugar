@@ -131,16 +131,29 @@ ApplicationWindow {
         root.loadSkin();
     }
 
+    Timer {
+        id: activateContentTimer
+        interval: 45
+        repeat: false
+        running: Mixxx.Core.ready && !content.active
+        onTriggered: {
+            content.active = true;
+        }
+    }
+
     Loader {
         id: content
 
         anchors.fill: parent
 
-        active: Mixxx.Core.ready
-        asynchronous: true
+        active: false
+        asynchronous: false
         onStatusChanged: {
             if (status === Loader.Ready) {
                 root.applySkinTheme(item.skinTheme);
+                splash.progress = 1.0;
+                loadProgressTimer.stop();
+                dismissTimer.start();
             }
             if (status === Loader.Error) {
                 if (Mixxx.MobileApp.skin !== "Classic") {
@@ -244,31 +257,24 @@ ApplicationWindow {
         z: 99999
         visible: opacity > 0
 
-        property real progress: 0.0
+        property real progress: Mixxx.Core.ready ? 0.65 : 0.25
         property bool fadingOut: false
 
         opacity: fadingOut ? 0.0 : 1.0
         Behavior on opacity {
-            NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
         }
 
         Timer {
             id: loadProgressTimer
-            interval: 35
+            interval: 60
             running: !splash.fadingOut && splash.visible
             repeat: true
             onTriggered: {
                 var isReady = (content.status === Loader.Ready && content.item !== null);
-
-                // Gone as soon as the skin is loaded: it used to stay at
-                // least 1.4 s, plus 0.3 s full and a 0.5 s fade
                 if (!isReady) {
-                    if (splash.progress < 0.35) {
-                        splash.progress = Math.min(0.35, splash.progress + 0.045);
-                    } else if (splash.progress < 0.75) {
-                        splash.progress = Math.min(0.75, splash.progress + 0.025);
-                    } else if (splash.progress < 0.94) {
-                        splash.progress = Math.min(0.94, splash.progress + 0.012);
+                    if (splash.progress < 0.85) {
+                        splash.progress = Math.min(0.85, splash.progress + 0.06);
                     }
                 } else {
                     splash.progress = 1.0;
@@ -280,72 +286,10 @@ ApplicationWindow {
 
         Timer {
             id: dismissTimer
-            interval: 100
+            interval: 40
             repeat: false
             onTriggered: {
                 splash.fadingOut = true;
-            }
-        }
-
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#0b0610" }
-            GradientStop { position: 0.48; color: "#190c22" }
-            GradientStop { position: 1.0; color: "#0c0712" }
-        }
-
-        // Animated frosting pink & golden glaze ambient glow orb
-        Rectangle {
-            width: Math.min(parent.width, parent.height) * 0.85
-            height: width
-            radius: width / 2
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: -24
-            color: "#22e63380"
-            SequentialAnimation on scale {
-                running: splash.visible
-                loops: Animation.Infinite
-                NumberAnimation { from: 0.92; to: 1.12; duration: 1600; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 1.12; to: 0.92; duration: 1600; easing.type: Easing.InOutSine }
-            }
-        }
-
-        // Floating animated sugar sprinkles matching the Vinyl Donut logo palette
-        Repeater {
-            model: [
-                { "dx": -145, "dy": -88, "rot": -28, "col": "#0091ff", "w": 18, "dur": 1700 },
-                { "dx": 148,  "dy": -78, "rot": 32,  "col": "#ffb300", "w": 20, "dur": 1950 },
-                { "dx": -162, "dy": 22,  "rot": 18,  "col": "#ff6b57", "w": 16, "dur": 1800 },
-                { "dx": 165,  "dy": 28,  "rot": -24, "col": "#7cfc00", "w": 17, "dur": 2100 },
-                { "dx": -112, "dy": 96,  "rot": 40,  "col": "#ffffff", "w": 15, "dur": 1650 },
-                { "dx": 118,  "dy": 92,  "rot": -36, "col": "#ff99ca", "w": 19, "dur": 1850 }
-            ]
-            delegate: Rectangle {
-                required property var modelData
-                width: modelData.w
-                height: 5
-                radius: 2.5
-                color: modelData.col
-                opacity: 0.72
-                rotation: modelData.rot
-                x: splash.width / 2 + modelData.dx - width / 2
-                y: splash.height / 2 + modelData.dy
-
-                SequentialAnimation on y {
-                    running: splash.visible
-                    loops: Animation.Infinite
-                    NumberAnimation {
-                        from: splash.height / 2 + modelData.dy - 7
-                        to: splash.height / 2 + modelData.dy + 7
-                        duration: modelData.dur
-                        easing.type: Easing.InOutSine
-                    }
-                    NumberAnimation {
-                        from: splash.height / 2 + modelData.dy + 7
-                        to: splash.height / 2 + modelData.dy - 7
-                        duration: modelData.dur
-                        easing.type: Easing.InOutSine
-                    }
-                }
             }
         }
 
@@ -353,254 +297,247 @@ ApplicationWindow {
             id: splashContent
             anchors.centerIn: parent
             spacing: 12
-            opacity: 1
 
-            // Vinyl Donut Turntable Platter
+            // Clean Vinyl Donut Turntable (rotating vinyl donut disc + stationary tonearm)
             Item {
-                width: 142
-                height: 142
+                width: 92
+                height: 86
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                // Pulsing outer sugar-glaze aura ring
-                Rectangle {
-                    anchors.fill: parent
-                    radius: width / 2
-                    color: "transparent"
-                    border.width: 2
-                    border.color: "#66ff99ca"
+                // Spinning Vinyl Donut Platter
+                Item {
+                    id: vinylDonutDisc
+                    width: 82
+                    height: 82
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
 
-                    SequentialAnimation on scale {
-                        running: splash.visible
-                        loops: Animation.Infinite
-                        NumberAnimation { from: 0.96; to: 1.08; duration: 1100; easing.type: Easing.InOutQuad }
-                        NumberAnimation { from: 1.08; to: 0.96; duration: 1100; easing.type: Easing.InOutQuad }
+                    // Metallic platter rim & dark vinyl outer edge
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: "#15171c"
+                        border.color: "#383d47"
+                        border.width: 2
                     }
-                }
 
-                // Sprinkle-strobe platter rim
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 5
-                    radius: width / 2
-                    color: "#140b1c"
-                    border.width: 3
-                    border.color: "#e63380"
+                    // Vinyl groove ring
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 74
+                        height: 74
+                        radius: 37
+                        color: "transparent"
+                        border.color: "#252932"
+                        border.width: 1
+                    }
 
+                    // Golden donut dough ring
                     Rectangle {
-                        width: 9; height: 9; radius: 4.5
-                        color: "#0091ff"
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.top: parent.top
-                        anchors.topMargin: -4.5
+                        anchors.centerIn: parent
+                        width: 66
+                        height: 66
+                        radius: 33
+                        color: "#d5944a"
+                        border.color: "#b3722d"
+                        border.width: 2
                     }
+
+                    // Pink sugar frosting glaze
                     Rectangle {
-                        width: 9; height: 9; radius: 4.5
-                        color: "#ffb300"
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: -4.5
+                        anchors.centerIn: parent
+                        width: 56
+                        height: 56
+                        radius: 28
+                        color: "#e63380"
+                        border.color: "#ff99ca"
+                        border.width: 1.5
+
+                        // Subtle groove ring in the glaze
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 44
+                            height: 44
+                            radius: 22
+                            color: "transparent"
+                            border.color: "#ba1b5c"
+                            border.width: 1
+                        }
+
+                        // Rainbow sprinkles embedded on the frosting ring (spin with disc)
+                        Rectangle { x: 24; y: 5;  width: 8; height: 3; radius: 1.5; rotation: -22; color: "#0091ff" }
+                        Rectangle { x: 41; y: 15; width: 8; height: 3; radius: 1.5; rotation: 35;  color: "#ffffff" }
+                        Rectangle { x: 42; y: 34; width: 8; height: 3; radius: 1.5; rotation: -40; color: "#ffb300" }
+                        Rectangle { x: 25; y: 46; width: 8; height: 3; radius: 1.5; rotation: 15;  color: "#ff6b57" }
+                        Rectangle { x: 8;  y: 35; width: 8; height: 3; radius: 1.5; rotation: 48;  color: "#7cfc00" }
+                        Rectangle { x: 9;  y: 15; width: 8; height: 3; radius: 1.5; rotation: -32; color: "#ffffff" }
                     }
+
+                    // Dark vinyl center label & donut hole
                     Rectangle {
-                        width: 8; height: 8; radius: 4
-                        color: "#7cfc00"
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        anchors.leftMargin: -4
-                    }
-                    Rectangle {
-                        width: 8; height: 8; radius: 4
-                        color: "#ff6b57"
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: parent.right
-                        anchors.rightMargin: -4
+                        anchors.centerIn: parent
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: "#1b1c20"
+                        border.color: "#2c2e34"
+                        border.width: 1.5
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 16
+                            height: 16
+                            radius: 8
+                            color: "transparent"
+                            border.color: "#383b42"
+                            border.width: 1
+                        }
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: "#0e1117"
+                            border.color: "#cfd4dc"
+                            border.width: 1.5
+                        }
                     }
 
                     RotationAnimator on rotation {
                         running: splash.visible
                         from: 0
                         to: 360
-                        duration: 3200
+                        duration: 2800
                         loops: Animation.Infinite
                     }
                 }
 
-                // The Vinyl Donut Logo spinning on the platter
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 114
-                    height: 114
-                    radius: 57
-                    color: "#000000"
-                    border.color: "#ff99ca"
-                    border.width: 2
-                    clip: true
+                // Stationary Turntable Tonearm (top-right corner, resting on the groove)
+                Item {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    width: 30
+                    height: 54
 
-                    Image {
-                        id: logo
-                        anchors.centerIn: parent
-                        source: "qrc:/images/mixxx_logo.svg"
-                        fillMode: Image.PreserveAspectFit
-                        width: 108
-                        height: 108
-                        smooth: true
-                        antialiasing: true
-
-                        RotationAnimator on rotation {
-                            running: splash.visible
-                            from: 0
-                            to: 360
-                            duration: 4500
-                            loops: Animation.Infinite
-                        }
-                    }
-
-                    SequentialAnimation on scale {
-                        running: splash.visible
-                        loops: Animation.Infinite
-                        NumberAnimation { from: 1.0; to: 1.045; duration: 520; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: 1.045; to: 1.0; duration: 520; easing.type: Easing.InOutSine }
-                    }
-                }
-            }
-
-            // DJ SUGAR brand wordmark + vinyl donut subtitle pill
-            Column {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 4
-
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 6
-
-                    Text {
-                        text: "DJ"
-                        font.pixelSize: 23
-                        font.bold: true
-                        font.letterSpacing: 3
-                        color: "#ffffff"
-                    }
-                    Text {
-                        text: "SUGAR"
-                        font.pixelSize: 23
-                        font.bold: true
-                        font.letterSpacing: 3
-                        color: "#ff99ca"
-                    }
-                }
-
-                Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: 20
-                    width: taglineRow.implicitWidth + 18
-                    radius: 10
-                    color: "#24e63380"
-                    border.color: "#55ff99ca"
-                    border.width: 1
-
-                    Row {
-                        id: taglineRow
-                        anchors.centerIn: parent
-                        spacing: 6
-
-                        Row {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-                            Repeater {
-                                model: [
-                                    { "c": "#e63380", "d": 320 },
-                                    { "c": "#ffb300", "d": 260 },
-                                    { "c": "#0091ff", "d": 380 },
-                                    { "c": "#7cfc00", "d": 290 }
-                                ]
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    width: 2.5
-                                    height: 10
-                                    radius: 1
-                                    color: modelData.c
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    SequentialAnimation on height {
-                                        running: splash.visible
-                                        loops: Animation.Infinite
-                                        NumberAnimation { from: 3; to: 11; duration: modelData.d; easing.type: Easing.InOutSine }
-                                        NumberAnimation { from: 11; to: 3; duration: modelData.d; easing.type: Easing.InOutSine }
-                                    }
-                                }
-                            }
-                        }
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.pixelSize: 10
-                            font.bold: true
-                            font.letterSpacing: 1.8
-                            color: "#ffd6eb"
-                            text: "SWEET MIXING · PRO DJ STUDIO"
-                        }
-                    }
-                }
-            }
-
-            // Modern frosted progress card with sugar-glaze gradient bar
-            Rectangle {
-                id: progressBarContainer
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 280
-                height: 44
-                radius: 12
-                color: "#181022"
-                border.color: "#38ff99ca"
-                border.width: 1
-
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    spacing: 6
-
-                    Row {
-                        width: parent.width
-                        Text {
-                            text: splash.progress >= 1.0
-                                ? qsTr("Ready to drop the needle!")
-                                : (splash.progress > 0.7
-                                    ? qsTr("Glazing decks & controllers…")
-                                    : (splash.progress > 0.35
-                                        ? qsTr("Spinning up library & waveforms…")
-                                        : qsTr("Warming up audio engine…")))
-                            font.pixelSize: 11
-                            font.weight: Font.DemiBold
-                            color: "#f3d9e8"
-                        }
-                    }
-
+                    // Pivot base
                     Rectangle {
-                        id: progressTrack
-                        width: parent.width
-                        height: 7
-                        radius: 3.5
-                        color: "#281836"
-                        clip: true
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: "#252830"
+                        border.color: "#6c7380"
+                        border.width: 1.5
 
                         Rectangle {
-                            id: progressFill
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            width: Math.max(14, parent.width * splash.progress)
-                            radius: 3.5
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: "#e63380" }
-                                GradientStop { position: 0.45; color: "#ff99ca" }
-                                GradientStop { position: 0.78; color: "#ffb300" }
-                                GradientStop { position: 1.0; color: "#0091ff" }
-                            }
-
-                            Behavior on width {
-                                NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                            }
+                            anchors.centerIn: parent
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: "#d0d5dd"
                         }
                     }
+
+                    // Tonearm shaft + pink cartridge headshell
+                    Item {
+                        x: 18
+                        y: 8
+                        rotation: 28
+                        transformOrigin: Item.Top
+
+                        Rectangle {
+                            x: -1.5
+                            y: 0
+                            width: 3
+                            height: 36
+                            radius: 1.5
+                            color: "#d0d5dd"
+                        }
+
+                        Rectangle {
+                            x: -3.5
+                            y: 33
+                            width: 7
+                            height: 10
+                            radius: 2
+                            color: "#252830"
+                            border.color: "#ff99ca"
+                            border.width: 1
+                        }
+                    }
+                }
+            }
+
+            // Clean DJ SUGAR wordmark
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 8
+
+                Text {
+                    text: "DJ"
+                    font.pixelSize: 24
+                    font.bold: true
+                    font.letterSpacing: 3
+                    color: "#ffffff"
+                }
+                Text {
+                    text: "SUGAR"
+                    font.pixelSize: 24
+                    font.bold: true
+                    font.letterSpacing: 3
+                    color: "#ff99ca"
+                }
+            }
+
+            // Progress bar
+            Item {
+                id: progressBarContainer
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 240
+                height: 28
+
+                Rectangle {
+                    id: progressTrack
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    width: parent.width
+                    height: 6
+                    radius: 3
+                    color: "#161b24"
+                    border.color: "#283444"
+                    border.width: 1
+                    clip: true
+
+                    Rectangle {
+                        id: progressFill
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: Math.max(8, parent.width * splash.progress)
+                        radius: 3
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "#e63380" }
+                            GradientStop { position: 0.55; color: "#ff99ca" }
+                            GradientStop { position: 1.0; color: "#00e5ff" }
+                        }
+
+                        Behavior on width {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+                }
+
+                Text {
+                    anchors.top: progressTrack.bottom
+                    anchors.topMargin: 6
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: splash.progress >= 1.0 ? qsTr("Ready to mix!") : (splash.progress > 0.5 ? qsTr("Loading library and decks...") : qsTr("Starting audio engine..."))
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    color: "#8fa1b8"
                 }
             }
         }

@@ -351,6 +351,59 @@ Rectangle {
         key: ""
     }
 
+    component StemPad: Rectangle {
+        id: stemPadItem
+
+        required property string group
+        required property int padIndex
+        readonly property int stemNumber: (padIndex % 4) + 1
+        readonly property bool isFxPad: padIndex >= 4
+        readonly property var stemLabels: [qsTr("DRUMS"), qsTr("BASS"), qsTr("INST"), qsTr("VOCAL")]
+        readonly property var stemColors: ["#00e5ff", "#ff4081", "#ffab00", "#7c4dff"]
+        readonly property color padColor: stemColors[stemNumber - 1]
+        readonly property bool stemActive: isFxPad ? stemFxControl.value > 0 : stemMuteControl.value === 0
+
+        border.color: stemPadTap.pressed ? "#ffffff" : (stemActive ? padColor : "#2a2c30")
+        border.width: 1
+        color: stemPadTap.pressed ? "#2a2c30" : (stemActive ? Qt.alpha(padColor, 0.22) : "#141518")
+        radius: 2
+
+        Mixxx.ControlProxy {
+            id: stemMuteControl
+
+            group: `${stemPadItem.group}_stem${stemPadItem.stemNumber}`
+            key: "mute"
+        }
+        Mixxx.ControlProxy {
+            id: stemFxControl
+
+            group: `[QuickEffectRack1_${stemPadItem.group}_stem${stemPadItem.stemNumber}]`
+            key: "enabled"
+        }
+
+        Text {
+            anchors.centerIn: parent
+            color: stemPadItem.stemActive ? "#ffffff" : "#5c6068"
+            font.bold: true
+            font.pixelSize: Math.round(root.unit * 0.9)
+            horizontalAlignment: Text.AlignHCenter
+            text: stemPadItem.isFxPad ? `${stemPadItem.stemLabels[stemPadItem.stemNumber - 1]} FX` : stemPadItem.stemLabels[stemPadItem.stemNumber - 1]
+        }
+
+        TapHandler {
+            id: stemPadTap
+
+            gesturePolicy: TapHandler.WithinBounds
+            onTapped: {
+                if (stemPadItem.isFxPad) {
+                    stemFxControl.value = stemFxControl.value > 0 ? 0 : 1;
+                } else {
+                    stemMuteControl.value = stemMuteControl.value > 0 ? 0 : 1;
+                }
+            }
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: 4
@@ -394,7 +447,7 @@ Rectangle {
                 Repeater {
                     model: 8
 
-                    Booth.StemPad {
+                    StemPad {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
                         group: root.group

@@ -489,7 +489,7 @@ Item {
         anchors.fill: parent
         enabled: !settingsPopup.opened
 
-        // ---- Top bar: brand badge, tabs, deck loaders, settings ----
+        // ---- Top bar: tabs, deck loaders, settings ----
         Row {
             id: topBar
 
@@ -499,48 +499,6 @@ Item {
             anchors.topMargin: 3
             height: root.compact ? 26 : 34
             spacing: root.width < 760 ? 3 : 6
-
-            Rectangle {
-                id: brandBadge
-                height: parent.height
-                width: brandRow.implicitWidth + (root.width < 760 ? 10 : 14)
-                radius: 4
-                color: "#160d1e"
-                border.color: "#e63380"
-                border.width: 1
-
-                Row {
-                    id: brandRow
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    Image {
-                        width: root.compact ? 18 : 22
-                        height: width
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "qrc:/images/mixxx_logo.svg"
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-
-                        RotationAnimator on rotation {
-                            running: root.visible
-                            from: 0
-                            to: 360
-                            duration: 8000
-                            loops: Animation.Infinite
-                        }
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "DJ SUGAR"
-                        color: "#ff99ca"
-                        font.bold: true
-                        font.letterSpacing: 1.0
-                        font.pixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 12)
-                    }
-                }
-            }
 
             Tab {
                 active: root.viewMode === 1

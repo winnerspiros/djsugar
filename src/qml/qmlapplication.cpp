@@ -95,38 +95,6 @@ using PFN_APerformanceHint_reportActualWorkDuration = int (*)(
         APerformanceHintSession*, int64_t);
 
 static PFN_APerformanceHint_reportActualWorkDuration s_pfnReportActualWorkDuration = nullptr;
-
-// Directories under res/qml/ that are compiled into the binary as QML modules
-// and should not be copied to external storage.
-const QStringList kSkipQmlDirs = {
-        QStringLiteral("Mixxx"),
-};
-
-bool canWriteToExternalStorage() {
-    return mixxx::android::hasFullExternalStorageAccess();
-}
-
-void copyAssetDir(const QString& src, const QString& dst) {
-    QDir().mkpath(dst);
-
-    QDir srcDir(src);
-    const QStringList files = srcDir.entryList(QDir::Files);
-    for (const QString& file : files) {
-        QFile srcFile(srcDir.absoluteFilePath(file));
-        QFile dstFile(dst + '/' + file);
-        if (srcFile.open(QIODevice::ReadOnly) && dstFile.open(QIODevice::WriteOnly)) {
-            dstFile.write(srcFile.readAll());
-        }
-    }
-
-    const QStringList dirs = srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    for (const QString& dir : dirs) {
-        if (kSkipQmlDirs.contains(dir)) {
-            continue;
-        }
-        copyAssetDir(src + '/' + dir, dst + '/' + dir);
-    }
-}
 #endif
 #if defined(Q_OS_ANDROID)
 // Within the time MainActivity waits for the closing app to save, see
@@ -232,15 +200,6 @@ QmlApplication::QmlApplication(
 
 #if defined(Q_OS_ANDROID)
     mixxx::android::registerJniNativeMethods();
-    if (canWriteToExternalStorage()) {
-        const QString externalQmlDir = QStringLiteral("/storage/emulated/0/Mixxx/qml");
-        // Files of other versions would still be loaded (e.g. +android file
-        // selector folders), so start from an empty folder
-        // (from JaviLabarumDJ/mixxx-android android-stable).
-        QDir(externalQmlDir).removeRecursively();
-        copyAssetDir(QStringLiteral("assets:/qml"), externalQmlDir);
-        m_mainFilePath = externalQmlDir + QStringLiteral("/main.qml");
-    }
 #endif
 
     const QString colorScheme = m_pCoreServices->getSettings()->getValueString(
