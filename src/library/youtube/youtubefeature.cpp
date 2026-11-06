@@ -1299,9 +1299,14 @@ void YouTubeFeature::requestDownloadToPlayer(
     pendingLoad.group = group;
     pendingLoad.play = play;
     m_pendingPlayerLoads[videoId].append(pendingLoad);
-    QString title;
-    if (m_videoMetadata.contains(videoId)) {
-        title = m_videoMetadata.value(videoId).title;
+    QString title = m_downloadedTracks.value(videoId);
+    if (title.isEmpty()) {
+        for (const auto& info : std::as_const(m_lastResults)) {
+            if (info.id == videoId && !info.title.isEmpty()) {
+                title = info.title;
+                break;
+            }
+        }
     }
     Q_EMIT downloadToPlayerRequested(videoId, group, title);
     requestDownloadFile(videoId);

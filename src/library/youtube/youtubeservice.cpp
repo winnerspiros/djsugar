@@ -3414,7 +3414,9 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                 QDir::Files | QDir::NoDotAndDotDot);
         qint64 maxBytes = 0;
         for (const QString& f : files) {
-            if (isYouTubeSidecarFile(f)) {
+            const QString suffix = QFileInfo(f).suffix().toLower();
+            if (suffix == QStringLiteral("ytdl") ||
+                    suffix == QStringLiteral("json")) {
                 continue;
             }
             maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
