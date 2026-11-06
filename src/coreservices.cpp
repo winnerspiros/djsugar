@@ -586,7 +586,6 @@ void CoreServices::initialize() {
 
     m_pPlayerManager->addConfiguredDecks();
 
-
     for (int i = 0; i < kSamplerCount; ++i) {
         m_pPlayerManager->addSampler();
     }

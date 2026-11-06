@@ -14,14 +14,14 @@ class RecordingFeature final : public LibraryFeature {
     Q_OBJECT
   public:
     RecordingFeature(Library* parent,
-                     UserSettingsPointer pConfig,
-                     RecordingManager* pRecordingManager);
+            UserSettingsPointer pConfig,
+            RecordingManager* pRecordingManager);
     ~RecordingFeature() override = default;
 
     QVariant title() override;
 
     void bindLibraryWidget(WLibrary* libraryWidget,
-                    KeyboardEventFilter* keyboard) override;
+            KeyboardEventFilter* keyboard) override;
 
     TreeItemModel* sidebarModel() const override;
 

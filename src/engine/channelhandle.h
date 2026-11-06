@@ -29,7 +29,8 @@
 /// have been assigned.
 class ChannelHandle {
   public:
-    ChannelHandle() : m_iHandle(-1) {
+    ChannelHandle()
+            : m_iHandle(-1) {
     }
 
     inline bool valid() const {
@@ -144,7 +145,8 @@ inline size_t qHash(
 // EngineMixer.
 class ChannelHandleFactory {
   public:
-    ChannelHandleFactory() : m_iNextHandle(0) {
+    ChannelHandleFactory()
+            : m_iNextHandle(0) {
     }
 
     ChannelHandle getOrCreateHandle(const QString& group) {
@@ -180,10 +182,11 @@ typedef std::shared_ptr<ChannelHandleFactory> ChannelHandleFactoryPointer;
 // exist then no allocation will occur -- insertion is a mere copy). Lookups are
 // O(1) and quite fast -- a simple index into an array using the handle's
 // integer value.
-template <class T>
+template<class T>
 class ChannelHandleMap {
     static constexpr int kMaxExpectedGroups = 256;
     typedef QVarLengthArray<T, kMaxExpectedGroups> container_type;
+
   public:
     typedef typename QVarLengthArray<T, kMaxExpectedGroups>::const_iterator const_iterator;
     typedef typename QVarLengthArray<T, kMaxExpectedGroups>::iterator iterator;

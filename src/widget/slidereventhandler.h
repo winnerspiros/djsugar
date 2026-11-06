@@ -1,14 +1,14 @@
 #pragma once
 
-#include <QMouseEvent>
-#include <QWheelEvent>
-#include <QCursor>
 #include <QApplication>
+#include <QCursor>
+#include <QMouseEvent>
 #include <QPoint>
+#include <QWheelEvent>
 
 #include "util/math.h"
 
-template <class T>
+template<class T>
 class SliderEventHandler {
   public:
     SliderEventHandler()
@@ -21,7 +21,8 @@ class SliderEventHandler {
               m_dSliderLength(0),
               m_bHorizontal(false),
               m_bDrag(false),
-              m_bEventWhileDrag(true) { }
+              m_bEventWhileDrag(true) {
+    }
 
     void setHorizontal(bool horiz) {
         m_bHorizontal = horiz;

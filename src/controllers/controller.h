@@ -34,7 +34,7 @@ class Controller : public QObject {
     Q_OBJECT
   public:
     explicit Controller(const QString& deviceName);
-    ~Controller() override;  // Subclass should call close() at minimum.
+    ~Controller() override; // Subclass should call close() at minimum.
 
     /// The object that is exposed to the JS scripts as the "controller" object.
     /// Subclasses of Controller can return a subclass of ControllerJSProxy to further
@@ -202,7 +202,9 @@ class Controller : public QObject {
     virtual int close() = 0;
     // Requests that the device poll if it is a polling device. Returns true
     // if events were handled.
-    virtual bool poll() { return false; }
+    virtual bool poll() {
+        return false;
+    }
 
     // Returns true if this device should receive polling signals via calls to
     // its poll() method.

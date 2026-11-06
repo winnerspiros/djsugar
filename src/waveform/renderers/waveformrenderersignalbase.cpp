@@ -78,7 +78,7 @@ bool WaveformRendererSignalBase::init() {
 }
 
 void WaveformRendererSignalBase::setup(const QDomNode& node,
-                                       const SkinContext& context) {
+        const SkinContext& context) {
     QString orientationString = context.selectString(node, "Orientation").toLower();
     if (orientationString == "vertical") {
         m_orientation = Qt::Vertical;

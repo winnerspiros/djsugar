@@ -114,7 +114,7 @@ QUrl AsyncImageProvider::trackLocationToCoverArtUrl(const QString& trackLocation
                     QByteArray::Base64UrlEncoding)));
 }
 
-//static
+// static
 QString AsyncImageProvider::coverArtUrlIdToTrackLocation(const QString& coverArtUrlId) {
     return QString::fromUtf8(QByteArray::fromBase64(
             coverArtUrlId.mid(kCoverArtPrefix.size()).toLatin1(), QByteArray::Base64UrlEncoding));

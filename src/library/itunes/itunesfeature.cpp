@@ -157,7 +157,6 @@ bool ITunesFeature::isSupported() {
     return true;
 }
 
-
 QVariant ITunesFeature::title() {
     return m_title;
 }
@@ -175,10 +174,9 @@ void ITunesFeature::activate() {
 }
 
 void ITunesFeature::activate(bool forceReload) {
-    //qDebug("ITunesFeature::activate()");
+    // qDebug("ITunesFeature::activate()");
     if (!m_isActivated || forceReload) {
-
-        //Delete all table entries of iTunes feature
+        // Delete all table entries of iTunes feature
         ScopedTransaction transaction(m_database);
         clearTable("itunes_playlist_tracks");
         clearTable("itunes_library");
@@ -222,7 +220,7 @@ void ITunesFeature::activate(bool forceReload) {
                 settings.setValue(kItdbPathKey, m_dbfile);
             }
         }
-        m_isActivated =  true;
+        m_isActivated = true;
         // Let a worker thread do the XML parsing
         m_future = QtConcurrent::run(&ITunesFeature::importLibrary, this);
         m_future_watcher.setFuture(m_future);
@@ -236,7 +234,7 @@ void ITunesFeature::activate(bool forceReload) {
 }
 
 void ITunesFeature::activateChild(const QModelIndex& index) {
-    //qDebug() << "ITunesFeature::activateChild()" << index;
+    // qDebug() << "ITunesFeature::activateChild()" << index;
     TreeItem* treeItem = static_cast<TreeItem*>(index.internalPointer());
     const QString& playlistName = treeItem->getLabel();
     int playlistId = treeItem->getData().toInt();
@@ -268,7 +266,7 @@ void ITunesFeature::onRightClick(const QPoint& globalPos) {
     QAction chooseNew(tr("Choose Library..."), &menu);
     menu.addAction(&useDefault);
     menu.addAction(&chooseNew);
-    QAction *chosen(menu.exec(globalPos));
+    QAction* chosen(menu.exec(globalPos));
     if (chosen == &useDefault) {
         SettingsDAO settings(m_database);
         settings.setValue(kItdbPathKey, QString());
@@ -301,11 +299,9 @@ QString ITunesFeature::getiTunesMusicPath() {
         return "";
     }
 #if defined(__APPLE__)
-    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
-                  + "/iTunes/iTunes Music Library.xml";
+    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + "/iTunes/iTunes Music Library.xml";
 #elif defined(__WINDOWS__)
-    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
-                  + "\\iTunes\\iTunes Music Library.xml";
+    musicFolder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + "\\iTunes\\iTunes Music Library.xml";
 #else
     musicFolder = "";
 #endif
@@ -334,7 +330,7 @@ std::unique_ptr<ITunesImporter> ITunesFeature::makeImporter() {
 // This method is executed in a separate thread
 // via QtConcurrent::run
 TreeItem* ITunesFeature::importLibrary() {
-    //Give thread a low priority
+    // Give thread a low priority
     QThread* thisThread = QThread::currentThread();
     thisThread->setPriority(QThread::LowPriority);
 
@@ -354,7 +350,7 @@ TreeItem* ITunesFeature::importLibrary() {
 
 void ITunesFeature::clearTable(const QString& table_name) {
     QSqlQuery query(m_database);
-    query.prepare("delete from "+table_name);
+    query.prepare("delete from " + table_name);
     bool success = query.exec();
 
     if (!success) {
@@ -362,7 +358,7 @@ void ITunesFeature::clearTable(const QString& table_name) {
                  << table_name << " : " << query.lastError();
     } else {
         qDebug() << "iTunes table entries of '"
-                 << table_name <<"' have been cleared.";
+                 << table_name << "' have been cleared.";
     }
 }
 
@@ -374,7 +370,7 @@ void ITunesFeature::onTrackCollectionLoaded() {
         // Tell the rhythmbox track source that it should re-build its index.
         m_trackSource->buildIndex();
 
-        //m_pITunesTrackModel->select();
+        // m_pITunesTrackModel->select();
         emit showTrackModel(m_pITunesTrackModel);
         qDebug() << "Itunes library loaded: success";
     } else {

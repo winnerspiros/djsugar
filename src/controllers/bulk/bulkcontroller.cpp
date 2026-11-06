@@ -154,7 +154,7 @@ void BulkReader::run() {
 
 #ifndef Q_OS_ANDROID
 static QString get_string(libusb_device_handle* pHandle, uint8_t id) {
-    unsigned char buf[128] = { 0 };
+    unsigned char buf[128] = {0};
 
     if (id) {
         libusb_get_string_descriptor_ascii(pHandle, id, buf, sizeof(buf));

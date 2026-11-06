@@ -258,10 +258,10 @@ void DlgCoverArtFullSize::mouseReleaseEvent(QMouseEvent* event) {
 
     if (event->button() == Qt::LeftButton && isVisible()) {
         if (m_clickTimer.isActive()) {
-        // short press
+            // short press
             close();
         } else {
-        // long press
+            // long press
             return;
         }
         event->accept();
@@ -316,8 +316,8 @@ void DlgCoverArtFullSize::wheelEvent(QWheelEvent* event) {
     const auto newPointY = static_cast<int>(
             static_cast<double>(oldPointUnderCursor.y()) / oldHeight * newSize.height());
     QPoint newOrigin = QPoint(
-        oldOrigin.x() + (oldPointUnderCursor.x() - newPointX),
-        oldOrigin.y() + (oldPointUnderCursor.y() - newPointY));
+            oldOrigin.x() + (oldPointUnderCursor.x() - newPointX),
+            oldOrigin.y() + (oldPointUnderCursor.y() - newPointY));
 
     // Calling resize() then move() causes flickering, so resize and move the window
     // simultaneously with setGeometry().

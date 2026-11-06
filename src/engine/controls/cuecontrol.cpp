@@ -107,9 +107,7 @@ CueControl::CueControl(const QString& group,
     m_pTrackSamples = ControlObject::getControl(ConfigKey(group, "track_samples"));
 
     m_pQuantizeEnabled = ControlObject::getControl(ConfigKey(group, "quantize"));
-    connect(m_pQuantizeEnabled, &ControlObject::valueChanged,
-            this, &CueControl::quantizeChanged,
-            Qt::DirectConnection);
+    connect(m_pQuantizeEnabled, &ControlObject::valueChanged, this, &CueControl::quantizeChanged, Qt::DirectConnection);
 
     m_pClosestBeat = ControlObject::getControl(ConfigKey(group, "beat_closest"));
     m_pLoopStartPosition = make_parented<ControlProxy>(group, "loop_start_position", this);
@@ -429,9 +427,7 @@ void CueControl::connectControls() {
 
     // Hotcue controls
     for (const auto& pControl : std::as_const(m_hotcueControls)) {
-        connect(pControl, &HotcueControl::hotcuePositionChanged,
-                this, &CueControl::hotcuePositionChanged,
-                Qt::DirectConnection);
+        connect(pControl, &HotcueControl::hotcuePositionChanged, this, &CueControl::hotcuePositionChanged, Qt::DirectConnection);
         connect(pControl,
                 &HotcueControl::hotcueEndPositionChanged,
                 this,

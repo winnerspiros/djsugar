@@ -509,7 +509,7 @@ void WTrackMenu::createActions() {
         connect(m_pBpmLockAction, &QAction::triggered, this, &WTrackMenu::slotLockBpm);
         connect(m_pBpmUnlockAction, &QAction::triggered, this, &WTrackMenu::slotUnlockBpm);
 
-        //BPM edit actions
+        // BPM edit actions
         m_pBpmHalveAction = make_parented<QAction>(tr("Halve BPM"), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmHalveAction, 0.5);
         m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3 BPM"), m_pBPMMenu);
@@ -2153,7 +2153,7 @@ class ResetPlayCounterTrackPointerOperation : public mixxx::TrackPointerOperatio
 
 } // anonymous namespace
 
-//slot for reset played count, sets count to 0 of one or more tracks
+// slot for reset played count, sets count to 0 of one or more tracks
 void WTrackMenu::slotClearPlayCount() {
     const auto progressLabelText =
             tr("Resetting play count of %n track(s)", "", getTrackCount());
@@ -2202,7 +2202,7 @@ class ResetRatingTrackPointerOperation : public mixxx::TrackPointerOperation {
 
 } // anonymous namespace
 
-//slot for reset played count, sets count to 0 of one or more tracks
+// slot for reset played count, sets count to 0 of one or more tracks
 void WTrackMenu::slotClearRating() {
     const auto progressLabelText =
             tr("Clearing rating of %n track(s)", "", getTrackCount());
@@ -2225,7 +2225,7 @@ class ClearCommentTrackPointerOperation : public mixxx::TrackPointerOperation {
 
 } // anonymous namespace
 
-//slot for clearing the comment field of one or more tracks
+// slot for clearing the comment field of one or more tracks
 void WTrackMenu::slotClearComment() {
     const auto progressLabelText =
             tr("Clearing comment of %n track(s)", "", getTrackCount());

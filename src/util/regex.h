@@ -4,8 +4,8 @@
 
 // QRegularExpression::escape was introduced in Qt 5.15.
 #include <QRegularExpression>
-#include <QStringList>
 #include <QString>
+#include <QStringList>
 
 namespace RegexUtils {
 

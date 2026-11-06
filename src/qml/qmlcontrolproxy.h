@@ -40,7 +40,7 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     /// Implementing the QQmlParserStatus interface requires overriding this
     /// method, but we don't need it.
     // Invoked after class creation, but before any properties have been set.
-    void classBegin() override{};
+    void classBegin() override {};
 
     /// QML cannot pass arguments to C++ constructors so this class needs to
     /// rely on the QML object setting the group and key properties to

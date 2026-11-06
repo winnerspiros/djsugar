@@ -200,19 +200,19 @@ void WSliderComposed::unsetPixmaps() {
     m_pHandle.reset();
 }
 
-void WSliderComposed::mouseMoveEvent(QMouseEvent * e) {
+void WSliderComposed::mouseMoveEvent(QMouseEvent* e) {
     m_handler.mouseMoveEvent(this, e);
 }
 
-void WSliderComposed::wheelEvent(QWheelEvent *e) {
+void WSliderComposed::wheelEvent(QWheelEvent* e) {
     m_handler.wheelEvent(this, e);
 }
 
-void WSliderComposed::mouseReleaseEvent(QMouseEvent * e) {
+void WSliderComposed::mouseReleaseEvent(QMouseEvent* e) {
     m_handler.mouseReleaseEvent(this, e);
 }
 
-void WSliderComposed::mousePressEvent(QMouseEvent * e) {
+void WSliderComposed::mousePressEvent(QMouseEvent* e) {
     m_handler.mousePressEvent(this, e);
 }
 
@@ -220,7 +220,7 @@ void WSliderComposed::mouseDoubleClickEvent(QMouseEvent* e) {
     m_handler.mouseDoubleClickEvent(this, e);
 }
 
-void WSliderComposed::paintEvent(QPaintEvent * /*unused*/) {
+void WSliderComposed::paintEvent(QPaintEvent* /*unused*/) {
     QStyleOption option;
     option.initFrom(this);
     QStylePainter p(this);
@@ -265,11 +265,9 @@ void WSliderComposed::drawBar(QPainter* pPainter) {
         pPainter->setPen(barBgPen);
         QLineF barBg;
         if (m_bHorizontal) {
-            barBg = QLineF(m_dBarBgStart, m_dBarAxisPos,
-                    width() - m_dBarBgEnd, m_dBarAxisPos);
+            barBg = QLineF(m_dBarBgStart, m_dBarAxisPos, width() - m_dBarBgEnd, m_dBarAxisPos);
         } else {
-            barBg = QLineF(m_dBarAxisPos, height() - m_dBarBgEnd,
-                    m_dBarAxisPos, m_dBarBgStart);
+            barBg = QLineF(m_dBarAxisPos, height() - m_dBarBgEnd, m_dBarAxisPos, m_dBarBgStart);
         }
         pPainter->drawLine(barBg);
     }
@@ -287,7 +285,7 @@ void WSliderComposed::drawBar(QPainter* pPainter) {
             x1 = m_dBarStart;
         } else {
             // draw from center
-            x1 = m_dBarStart + (width() - m_dBarStart -m_dBarEnd) / 2;
+            x1 = m_dBarStart + (width() - m_dBarStart - m_dBarEnd) / 2;
         }
         x2 = m_dBarStart + value * (width() - m_dBarStart - m_dBarEnd);
         y1 = m_dBarAxisPos;
@@ -331,8 +329,7 @@ void WSliderComposed::fillDebugTooltip(QStringList* debug) {
     WWidget::fillDebugTooltip(debug);
     int sliderLength = m_bHorizontal ? width() : height();
     *debug << QString("Horizontal: %1").arg(toDebugString(m_bHorizontal))
-           << QString("SliderPosition: %1").arg(
-                   m_handler.parameterToPosition(getControlParameterDisplay()))
+           << QString("SliderPosition: %1").arg(m_handler.parameterToPosition(getControlParameterDisplay()))
            << QString("SliderLength: %1").arg(sliderLength)
            << QString("HandleLength: %1").arg(m_dHandleLength);
 }
@@ -348,11 +345,11 @@ double WSliderComposed::calculateHandleLength() {
             } else if (mode == Paintable::DrawMode::StretchAspect) {
                 const int iHeight = m_pHandle->height();
                 if (iHeight == 0) {
-                  qDebug() << "WSliderComposed: Invalid height.";
-                  return 0.0;
+                    qDebug() << "WSliderComposed: Invalid height.";
+                    return 0.0;
                 }
                 const qreal aspect =
-                  static_cast<qreal>(m_pHandle->width()) / iHeight;
+                        static_cast<qreal>(m_pHandle->width()) / iHeight;
                 return aspect * height();
             }
         } else {
@@ -363,11 +360,11 @@ double WSliderComposed::calculateHandleLength() {
             } else if (mode == Paintable::DrawMode::StretchAspect) {
                 const int iWidth = m_pHandle->width();
                 if (iWidth == 0) {
-                  qDebug() << "WSliderComposed: Invalid width.";
-                  return 0.0;
+                    qDebug() << "WSliderComposed: Invalid width.";
+                    return 0.0;
                 }
                 const qreal aspect =
-                  static_cast<qreal>(m_pHandle->height()) / iWidth;
+                        static_cast<qreal>(m_pHandle->height()) / iWidth;
                 return aspect * width();
             }
         }

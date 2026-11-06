@@ -442,9 +442,7 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     }
 
     if (parser.isSet(versionOption) ||
-            parser.isSet(helpOption)
-            || parser.isSet(QStringLiteral("help-all"))
-    ) {
+            parser.isSet(helpOption) || parser.isSet(QStringLiteral("help-all"))) {
         m_parseForUserFeedbackRequired = true;
     }
 

@@ -20,5 +20,7 @@ MidiKey::MidiKey(unsigned char status, unsigned char control)
           // not two bytes, signify that the second byte is part of the
           // payload with 0xFF.
           control(MidiUtils::isMessageTwoBytes(
-              MidiUtils::opCodeFromStatus(status)) ? control : 0xFF) {
+                          MidiUtils::opCodeFromStatus(status))
+                          ? control
+                          : 0xFF) {
 }

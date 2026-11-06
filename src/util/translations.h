@@ -71,8 +71,7 @@ class Translations {
         // mixxx_en.qm.
         if (locale.language() == QLocale::English &&
                 (locale.territory() == QLocale::UnitedStates ||
-                        locale.territory() == QLocale::AnyCountry)
-        ) {
+                        locale.territory() == QLocale::AnyCountry)) {
             qDebug() << "Skipping loading of translations because the locale is 'en' or 'en_US'.";
             return;
         }
@@ -124,4 +123,4 @@ class Translations {
     }
 };
 
-}  // namespace mixxx
+} // namespace mixxx

@@ -12,24 +12,24 @@ mixxx::Logger kLogger("CoverArt");
 
 QString sourceToString(CoverInfo::Source source) {
     switch (source) {
-        case CoverInfo::UNKNOWN:
-            return "UNKNOWN";
-        case CoverInfo::GUESSED:
-            return "GUESSED";
-        case CoverInfo::USER_SELECTED:
-            return "USER_SELECTED";
+    case CoverInfo::UNKNOWN:
+        return "UNKNOWN";
+    case CoverInfo::GUESSED:
+        return "GUESSED";
+    case CoverInfo::USER_SELECTED:
+        return "USER_SELECTED";
     }
     return "INVALID INFO VALUE";
 }
 
 QString typeToString(CoverInfo::Type type) {
     switch (type) {
-        case CoverInfo::NONE:
-            return "NONE";
-        case CoverInfo::METADATA:
-            return "METADATA";
-        case CoverInfo::FILE:
-            return "FILE";
+    case CoverInfo::NONE:
+        return "NONE";
+    case CoverInfo::METADATA:
+        return "METADATA";
+    case CoverInfo::FILE:
+        return "FILE";
     }
     return "INVALID TYPE VALUE";
 }

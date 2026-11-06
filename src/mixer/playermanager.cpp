@@ -120,19 +120,24 @@ PlayerManager::PlayerManager(UserSettingsPointer pConfig,
           m_pTrackAnalysisScheduler(TrackAnalysisScheduler::NullPointer()) {
     m_pCONumDecks->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_decks")));
     m_pCONumDecks->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumDecks, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumDecks,
+            Qt::DirectConnection);
     m_pCONumSamplers->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_samplers")));
     m_pCONumSamplers->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumSamplers, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumSamplers,
+            Qt::DirectConnection);
     m_pCONumPreviewDecks->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_preview_decks")));
     m_pCONumPreviewDecks->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumPreviewDecks, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumPreviewDecks,
+            Qt::DirectConnection);
     m_pCONumMicrophones->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_microphones")));
     m_pCONumMicrophones->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumMicrophones, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumMicrophones,
+            Qt::DirectConnection);
     m_pCONumAuxiliaries->addAlias(ConfigKey(kLegacyGroup, QStringLiteral("num_auxiliaries")));
     m_pCONumAuxiliaries->connectValueChangeRequest(this,
-            &PlayerManager::slotChangeNumAuxiliaries, Qt::DirectConnection);
+            &PlayerManager::slotChangeNumAuxiliaries,
+            Qt::DirectConnection);
 
     // This is parented to the PlayerManager so does not need to be deleted
     m_pSamplerBank = new SamplerBank(m_pConfig, this);
@@ -178,20 +183,18 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
             kNumberOfAnalyzerThreads,
             AnalyzerModeFlags::WithWaveform);
 
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::trackProgress,
-            this, &PlayerManager::onTrackAnalysisProgress);
-    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::finished,
-            this, &PlayerManager::onTrackAnalysisFinished);
+    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::trackProgress, this, &PlayerManager::onTrackAnalysisProgress);
+    connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::finished, this, &PlayerManager::onTrackAnalysisFinished);
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
-    foreach(Deck* pDeck, m_decks) {
+    foreach (Deck* pDeck, m_decks) {
         connect(pDeck, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
     }
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
-    foreach(Sampler* pSampler, m_samplers) {
+    foreach (Sampler* pSampler, m_samplers) {
         connect(pSampler, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
     }
 
@@ -624,7 +627,7 @@ Microphone* PlayerManager::getMicrophone(unsigned int microphone) const {
     const auto locker = QMutexLocker(&m_mutex);
     if (microphone < 1 || microphone >= static_cast<unsigned int>(m_microphones.size())) {
         kLogger.warning() << "Warning getMicrophone() called with invalid index: "
-                   << microphone;
+                          << microphone;
         return nullptr;
     }
     return m_microphones[microphone - 1];
@@ -634,7 +637,7 @@ Auxiliary* PlayerManager::getAuxiliary(unsigned int auxiliary) const {
     const auto locker = QMutexLocker(&m_mutex);
     if (auxiliary < 1 || auxiliary > static_cast<unsigned int>(m_auxiliaries.size())) {
         kLogger.warning() << "Warning getAuxiliary() called with invalid index: "
-                   << auxiliary;
+                          << auxiliary;
         return nullptr;
     }
     return m_auxiliaries[auxiliary - 1];

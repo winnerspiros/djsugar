@@ -40,7 +40,7 @@ const QRegularExpression s_keyRegex(
         QRegularExpression::CaseInsensitiveOption);
 
 const QString s_sharpSymbol = QString::fromUtf8("♯");
-//static const QString s_flatSymbol = QString::fromUtf8("♭");
+// static const QString s_flatSymbol = QString::fromUtf8("♭");
 
 const QString s_traditionalKeyNames[] = {
         QStringLiteral(u"INVALID"),
@@ -261,7 +261,7 @@ constexpr ScaleModeInfo s_scaleModeInfo[] = {
 // locrian to aeolian
 
 // Lancelot notation is OpenKey notation rotated counter-clockwise by 5.
-inline int openKeyNumberToLancelotNumber(const int okNumber)  {
+inline int openKeyNumberToLancelotNumber(const int okNumber) {
     int lancelotNumber = okNumber - 5;
     if (lancelotNumber < 1) {
         lancelotNumber += 12;
@@ -270,7 +270,7 @@ inline int openKeyNumberToLancelotNumber(const int okNumber)  {
 }
 
 // Lancelot notation is OpenKey notation rotated counter-clockwise by 5.
-inline int lancelotNumberToOpenKeyNumber(const int lancelotNumber)  {
+inline int lancelotNumberToOpenKeyNumber(const int lancelotNumber) {
     int okNumber = lancelotNumber + 5;
     if (okNumber > 12) {
         okNumber -= 12;
@@ -286,7 +286,7 @@ QMap<QString, ChromaticKey> KeyUtils::s_reverseNotation;
 
 // static
 ChromaticKey KeyUtils::openKeyNumberToKey(int openKeyNumber, bool major) {
-        return s_openKeyToKeys[openKeyNumber][major ? 0 : 1];
+    return s_openKeyToKeys[openKeyNumber][major ? 0 : 1];
 }
 
 // static
@@ -357,9 +357,9 @@ int KeyUtils::keyToOpenKeyNumber(mixxx::track::io::key::ChromaticKey key) {
 
 // static
 QString KeyUtils::keyToString(ChromaticKey key,
-                              KeyNotation notation) {
+        KeyNotation notation) {
     if (!ChromaticKey_IsValid(key) ||
-        key == mixxx::track::io::key::INVALID) {
+            key == mixxx::track::io::key::INVALID) {
         return {};
     }
 
@@ -515,7 +515,7 @@ ChromaticKey KeyUtils::guessKeyFromText(const QString& text) {
             }
         }
         ChromaticKey letterKey = static_cast<ChromaticKey>(
-            s_letterToMajorKey[letterIndex] + (major ? 0 : 12));
+                s_letterToMajorKey[letterIndex] + (major ? 0 : 12));
         return scaleKeySteps(letterKey, steps);
     }
 
@@ -540,8 +540,7 @@ ChromaticKey KeyUtils::keyFromNumericValue(int value) {
 
 KeyUtils::KeyNotation KeyUtils::keyNotationFromNumericValue(double value) {
     int value_floored = static_cast<int>(value);
-    if (value_floored < static_cast<int>(KeyNotation::Invalid)
-        || value_floored >= static_cast<int>(KeyNotation::NumKeyNotations)) {
+    if (value_floored < static_cast<int>(KeyNotation::Invalid) || value_floored >= static_cast<int>(KeyNotation::NumKeyNotations)) {
         return KeyNotation::Invalid;
     }
     return static_cast<KeyNotation>(value_floored);
@@ -590,7 +589,7 @@ QPair<ChromaticKey, double> KeyUtils::scaleKeyOctaves(ChromaticKey key, double o
     // so that a -1.0 and 1.0 scale of C makes it back to C.
     double key_changes_scaled = octave_change * 12;
     int key_changes = static_cast<int>(key_changes_scaled +
-                          (key_changes_scaled > 0 ? 0.5 : -0.5));
+            (key_changes_scaled > 0 ? 0.5 : -0.5));
 
     double diff_to_nearest_full_key = key_changes_scaled - key_changes;
     return QPair<ChromaticKey, double>(scaleKeySteps(key, key_changes), diff_to_nearest_full_key);
@@ -600,7 +599,7 @@ QPair<ChromaticKey, double> KeyUtils::scaleKeyOctaves(ChromaticKey key, double o
 ChromaticKey KeyUtils::scaleKeySteps(ChromaticKey key, int key_changes) {
     // Invalid scales to invalid.
     if (!ChromaticKey_IsValid(key) ||
-        key == mixxx::track::io::key::INVALID) {
+            key == mixxx::track::io::key::INVALID) {
         return mixxx::track::io::key::INVALID;
     }
 
@@ -645,12 +644,12 @@ mixxx::track::io::key::ChromaticKey KeyUtils::calculateGlobalKey(
         key_histogram[key] += (next_frame - start_frame);
     }
 
-
     double max_delta = 0;
     mixxx::track::io::key::ChromaticKey max_key = mixxx::track::io::key::INVALID;
     qDebug() << "Key Histogram";
     for (auto it = key_histogram.constBegin();
-         it != key_histogram.constEnd(); ++it) {
+            it != key_histogram.constEnd();
+            ++it) {
         qDebug() << it.key() << ":" << keyDebugName(it.key()) << it.value() / sampleRate;
         if (it.value() > max_delta) {
             max_key = it.key();
@@ -662,8 +661,8 @@ mixxx::track::io::key::ChromaticKey KeyUtils::calculateGlobalKey(
 
 // static
 int KeyUtils::shortestStepsToKey(
-    mixxx::track::io::key::ChromaticKey key,
-    mixxx::track::io::key::ChromaticKey target_key) {
+        mixxx::track::io::key::ChromaticKey key,
+        mixxx::track::io::key::ChromaticKey target_key) {
     // For invalid keys just return zero steps.
     if (!ChromaticKey_IsValid(key) ||
             key == mixxx::track::io::key::INVALID ||
@@ -693,7 +692,6 @@ int KeyUtils::shortestStepsToKey(
 int KeyUtils::shortestStepsToCompatibleKey(
         mixxx::track::io::key::ChromaticKey key,
         mixxx::track::io::key::ChromaticKey target_key) {
-
     if (!ChromaticKey_IsValid(key) ||
             key == mixxx::track::io::key::INVALID ||
             !ChromaticKey_IsValid(target_key) ||
@@ -702,7 +700,6 @@ int KeyUtils::shortestStepsToCompatibleKey(
         // For invalid keys just return zero steps.
         return 0;
     }
-
 
     if (key == target_key) {
         // Already matching
@@ -737,7 +734,8 @@ int KeyUtils::shortestStepsToCompatibleKey(
     if (shortestDistance < -2) {
         // Perfect 4th (Sub-Dominant)
         return 5 + shortestDistance;
-    } if (shortestDistance > 2) {
+    }
+    if (shortestDistance > 2) {
         // Perfect 5th (Dominant)
         return -5 + shortestDistance;
     }
@@ -792,7 +790,7 @@ QList<mixxx::track::io::key::ChromaticKey> KeyUtils::getCompatibleKeys(
 }
 
 int KeyUtils::keyToCircleOfFifthsOrder(mixxx::track::io::key::ChromaticKey key,
-                                       KeyNotation notation) {
+        KeyNotation notation) {
     if (!ChromaticKey_IsValid(key)) {
         key = mixxx::track::io::key::INVALID;
     }

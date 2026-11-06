@@ -45,8 +45,8 @@ class WLibrary : public QStackedWidget, public WBaseWidget {
 
     // Alpha value for row color background
     static constexpr double kDefaultTrackTableBackgroundColorOpacity = 0.125; // 12.5% opacity
-    static constexpr double kMinTrackTableBackgroundColorOpacity = 0.0; // 0% opacity
-    static constexpr double kMaxTrackTableBackgroundColorOpacity = 1.0; // 100% opacity
+    static constexpr double kMinTrackTableBackgroundColorOpacity = 0.0;       // 0% opacity
+    static constexpr double kMaxTrackTableBackgroundColorOpacity = 1.0;       // 100% opacity
 
     double getTrackTableBackgroundColorOpacity() const {
         return m_trackTableBackgroundColorOpacity;

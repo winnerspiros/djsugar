@@ -5,7 +5,6 @@
 
 #include "util/assert.h"
 
-
 QString SqlStringFormatter::format(
         const QSqlDatabase& database,
         const QString& value) {
@@ -19,22 +18,22 @@ QString SqlStringFormatter::format(
 }
 
 namespace {
-    template<typename T> // forward-iterable container type with values of type QString
-    QString formatListValues(
-            const QSqlDatabase& database,
-            const T& values) {
-        QString result;
-        QString previousString;
-        for (const QString& value: values) {
-            if (!previousString.isEmpty()) {
-                result.append(',');
-            }
-            previousString = SqlStringFormatter::format(database, value);
-            result += previousString;
+template<typename T> // forward-iterable container type with values of type QString
+QString formatListValues(
+        const QSqlDatabase& database,
+        const T& values) {
+    QString result;
+    QString previousString;
+    for (const QString& value : values) {
+        if (!previousString.isEmpty()) {
+            result.append(',');
         }
-        return result;
+        previousString = SqlStringFormatter::format(database, value);
+        result += previousString;
     }
-    } // namespace
+    return result;
+}
+} // namespace
 
 QString SqlStringFormatter::formatList(
         const QSqlDatabase& database,

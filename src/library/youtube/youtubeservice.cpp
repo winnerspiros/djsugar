@@ -985,8 +985,8 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
     }
 #if defined(Q_OS_ANDROID)
     kLogger.debug() << "[Android] downloadVideo: videoId=" << videoId
-                   << "cacheDir=" << cacheDir
-                   << "ytDlpPath=" << m_ytDlpPath;
+                    << "cacheDir=" << cacheDir
+                    << "ytDlpPath=" << m_ytDlpPath;
 #endif
     QDir().mkpath(cacheDir);
     Q_EMIT downloadStarted(videoId);
@@ -1042,35 +1042,29 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
             m_androidBundledFallbackInFlight.remove(videoId);
         };
         auto pDoneConn = std::make_shared<QMetaObject::Connection>();
-        *pDoneConn = connect(this, &YouTubeService::downloadFinished,
-                this, [this, videoId, pDoneConn](
-                        const QString& finishedId, const QString&) {
-                    // Only this id's own completion clears its guard entry;
-                    // other tracks finishing must not touch it. Disconnects
-                    // itself (handle-scoped, so the feature's own
-                    // onDownloadFinished slot is untouched).
-                    if (finishedId == videoId) {
-                        m_androidBundledFallbackInFlight.remove(videoId);
-                        QObject::disconnect(*pDoneConn);
-                    }
-                });
+        *pDoneConn = connect(this, &YouTubeService::downloadFinished, this, [this, videoId, pDoneConn](const QString& finishedId, const QString&) {
+            // Only this id's own completion clears its guard entry;
+            // other tracks finishing must not touch it. Disconnects
+            // itself (handle-scoped, so the feature's own
+            // onDownloadFinished slot is untouched).
+            if (finishedId == videoId) {
+                m_androidBundledFallbackInFlight.remove(videoId);
+                QObject::disconnect(*pDoneConn);
+            }
+        });
         auto pConn = std::make_shared<QMetaObject::Connection>();
-        *pConn = connect(this, &YouTubeService::downloadFailed,
-                [this, videoId, cacheDir, pConn, clearGuard](
-                        const QString& failedId, const QString&) {
-                    if (failedId != videoId) {
-                        return; // some other track
-                    }
-                    QObject::disconnect(*pConn);
-                    kLogger.warning() << "Bundled yt-dlp failed for" << videoId
-                                      << "— falling back to InnerTube direct";
-                    downloadViaInnerTube(videoId, cacheDir,
-                            [this, videoId, clearGuard](
-                                    const QString& innerTubeError) {
-                                clearGuard();
-                                Q_EMIT downloadFailed(videoId, innerTubeError);
-                            });
-                });
+        *pConn = connect(this, &YouTubeService::downloadFailed, [this, videoId, cacheDir, pConn, clearGuard](const QString& failedId, const QString&) {
+            if (failedId != videoId) {
+                return; // some other track
+            }
+            QObject::disconnect(*pConn);
+            kLogger.warning() << "Bundled yt-dlp failed for" << videoId
+                              << "— falling back to InnerTube direct";
+            downloadViaInnerTube(videoId, cacheDir, [this, videoId, clearGuard](const QString& innerTubeError) {
+                clearGuard();
+                Q_EMIT downloadFailed(videoId, innerTubeError);
+            });
+        });
         downloadViaAndroidBundled(videoId, cacheDir);
         return;
     }
@@ -2143,8 +2137,7 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
     // Fail fast when tokenless: a 403 on a URL with no &pot= means YouTube
     // is gating this client — every sibling URL will 403 the same way, so
     // skip the rest instead of burning ~1s per stream (~15s per track).
-    auto tryNextStream = [this, videoId, cacheDir, rest, onFailure,
-                                 streamUserAgent, streamUrl](const QString& err) {
+    auto tryNextStream = [this, videoId, cacheDir, rest, onFailure, streamUserAgent, streamUrl](const QString& err) {
         const bool tokenless403 =
                 (err.contains(QStringLiteral("403")) ||
                         err.contains(QStringLiteral("Forbidden"))) &&
@@ -2481,8 +2474,8 @@ void YouTubeService::downloadViaInnerTubeClient(
     const QString userAgent = QString::fromLatin1(c.userAgent);
 #if defined(Q_OS_ANDROID)
     kLogger.debug() << "[Android] downloadViaInnerTubeClient: videoId=" << videoId
-                   << "client=" << c.clientName
-                   << "clientIdx=" << clientIdx;
+                    << "client=" << c.clientName
+                    << "clientIdx=" << clientIdx;
 #endif
 
     // Helper to advance to the next client on any per-client failure.
@@ -2509,9 +2502,9 @@ void YouTubeService::downloadViaInnerTubeClient(
     // exactly as before — TVHTML5 needs none, fallback chain unchanged.
     QPointer<YouTubeService> potGuard(this);
     fetchPoTokens(videoId,
-            [this, potGuard, videoId, cacheDir, clientIdx, userAgent,
-                    tryNext, onAllFailed](const QString& playerPot,
-                    const QString& streamingPot, const QString& freshVd) {
+            [this, potGuard, videoId, cacheDir, clientIdx, userAgent, tryNext, onAllFailed](const QString& playerPot,
+                    const QString& streamingPot,
+                    const QString& freshVd) {
                 if (!potGuard) {
                     return;
                 }
@@ -2530,16 +2523,13 @@ void YouTubeService::downloadViaInnerTubeClient(
                     onAllFailed(tr("PO tokens unavailable — using yt-dlp fallback"));
                     return;
                 }
-                requestPlayerWithPoToken(videoId, cacheDir, clientIdx,
-                        userAgent, playerPot, streamingPot, tryNext,
-                        onAllFailed);
+                requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent, playerPot, streamingPot, tryNext, onAllFailed);
             });
     return;
 #else
     // Desktop/other: no WebView PO tokens — proceed tokenless (TVHTML5 needs
     // none; other clients fail over to yt-dlp as before).
-    requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent,
-            QString(), QString(), tryNext, onAllFailed);
+    requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent, QString(), QString(), tryNext, onAllFailed);
     return;
 #endif
 }
@@ -2787,13 +2777,10 @@ void YouTubeService::fetchPoTokens(const QString& videoId,
         const QString playerPot = cached->at(0);
         const QString streamingPot = cached->at(1);
         const QString visitorData = cached->at(2);
-        QMetaObject::invokeMethod(this,
-                [guard, playerPot, streamingPot, visitorData, cb]() {
+        QMetaObject::invokeMethod(this, [guard, playerPot, streamingPot, visitorData, cb]() {
                     if (guard) {
                         cb(playerPot, streamingPot, visitorData);
-                    }
-                },
-                Qt::QueuedConnection);
+                    } }, Qt::QueuedConnection);
         return;
     }
     // The JNI call blocks up to ~105s (init + 2 mints); offload so neither
@@ -3111,7 +3098,7 @@ namespace {
 void YouTubeService::downloadViaAndroidBundled(
         const QString& videoId, const QString& cacheDir) {
     kLogger.debug() << "[Android] downloadViaAndroidBundled: videoId=" << videoId
-                   << "cacheDir=" << cacheDir;
+                    << "cacheDir=" << cacheDir;
     // Straight to the JNI download with no PO-token fetch: the bundled
     // yt-dlp uses player_client=android_vr which needs no tokens, and the
     // token fetch (WebView BotGuard challenge or 400 round-trips) added
@@ -3125,13 +3112,12 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         const QString& playerPot,
         const QString& streamingPot) {
     kLogger.debug() << "[Android] runAndroidBundled: videoId=" << videoId
-                   << "poToken=" << (!playerPot.isEmpty() ? "yes" : "no");
+                    << "poToken=" << (!playerPot.isEmpty() ? "yes" : "no");
     QPointer<YouTubeService> guard(this);
     // Run the JNI download on a worker thread so we don't block the UI.
     // Use a QPointer to guard against YouTubeService being destroyed
     // before the thread completes.
-    QThread* thread = QThread::create([guard, videoId, cacheDir, playerPot,
-                                              streamingPot]() {
+    QThread* thread = QThread::create([guard, videoId, cacheDir, playerPot, streamingPot]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniEnvironment env; // function scope: used by the init check
         if (!context.isValid()) {
@@ -3185,7 +3171,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         if (needInit) {
             bool initOk = false;
             kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                           << "initializing YoutubeDL for" << videoId;
+                            << "initializing YoutubeDL for" << videoId;
             ytdl.callMethod<void>("init",
                     "(Landroid/content/Context;)V",
                     context.object());
@@ -3295,7 +3281,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         // "exec" method, so every bundled download threw NoSuchMethodError and
         // silently failed. This is the core download fix.
         kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                       << "executing yt-dlp request for" << videoId;
+                        << "executing yt-dlp request for" << videoId;
         const qint64 execStartMs = QDateTime::currentMSecsSinceEpoch();
         QJniObject response = ytdl.callObjectMethod(
                 "execute",
@@ -3382,8 +3368,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                            << bytes / 1024 << "KB in" << execMs << "ms"
                            << QString::number(kbPerSec, 'f', 1) << "KB/s";
             kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                           << "download complete for" << videoId
-                           << "→" << outputPath;
+                            << "download complete for" << videoId
+                            << "→" << outputPath;
             // Route through finalizeDownload for SponsorBlock/post-processing,
             // same as the desktop path. Use invokeMethod to marshal back to
             // the object's thread.

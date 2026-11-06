@@ -10,7 +10,8 @@
 // a QItemEditorFactory for the BPMDelegate.
 class BpmEditorCreator : public QItemEditorCreatorBase {
   public:
-    BpmEditorCreator() {}
+    BpmEditorCreator() {
+    }
     ~BpmEditorCreator() override {
     }
 

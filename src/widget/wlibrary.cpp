@@ -36,7 +36,7 @@ void WLibrary::setup(const QDomNode& node, const SkinContext& context) {
 }
 
 bool WLibrary::registerView(const QString& name, QWidget* pView) {
-    //qDebug() << "WLibrary::registerView" << name;
+    // qDebug() << "WLibrary::registerView" << name;
     const auto lock = QMutexLocker(&m_mutex);
     if (m_viewMap.contains(name)) {
         return false;
@@ -54,7 +54,7 @@ bool WLibrary::registerView(const QString& name, QWidget* pView) {
 
 void WLibrary::switchToView(const QString& name) {
     const auto lock = QMutexLocker(&m_mutex);
-    //qDebug() << "WLibrary::switchToView" << name;
+    // qDebug() << "WLibrary::switchToView" << name;
 
     QWidget* pWidget = m_viewMap.value(name, nullptr);
     if (pWidget != nullptr) {
@@ -71,7 +71,7 @@ void WLibrary::switchToView(const QString& name) {
             if (pOldLibraryView) {
                 pOldLibraryView->saveCurrentViewState();
             }
-            //qDebug() << "WLibrary::setCurrentWidget" << name;
+            // qDebug() << "WLibrary::setCurrentWidget" << name;
             setCurrentWidget(pWidget);
             pLibraryView->onShow();
             pLibraryView->restoreCurrentViewState();

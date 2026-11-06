@@ -13,7 +13,7 @@ namespace {
 // verify that the track samples have not changed since the last analysis
 constexpr CSAMPLE kSilenceThreshold = 0.001f; // -60 dB
 // TODO: Change the above line to:
-//constexpr CSAMPLE kSilenceThreshold = db2ratio(-60.0f);
+// constexpr CSAMPLE kSilenceThreshold = db2ratio(-60.0f);
 
 bool shouldAnalyze(TrackPointer pTrack) {
     CuePointer pIntroCue = pTrack->findCueByType(mixxx::CueType::Intro);

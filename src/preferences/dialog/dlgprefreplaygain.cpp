@@ -112,7 +112,6 @@ void DlgPrefReplayGain::slotResetToDefaults() {
     LabelCurrentDefaultBoost->setText(
             QString("%1 dB").arg(iDefaultBoost));
 
-
     slotUpdate();
     slotApply();
 }

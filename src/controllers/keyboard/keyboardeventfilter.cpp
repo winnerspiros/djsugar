@@ -135,7 +135,8 @@ bool KeyboardEventFilter::eventFilter(QObject*, QEvent* e) {
             bool result = false;
             // using const_iterator here is faster than QMultiHash::values()
             for (auto it = m_keySequenceToControlHash.constFind(ksv);
-                 it != m_keySequenceToControlHash.constEnd() && it.key() == ksv; ++it) {
+                    it != m_keySequenceToControlHash.constEnd() && it.key() == ksv;
+                    ++it) {
                 const ConfigKey& configKey = it.value();
 
                 if (configKey.group == QStringLiteral("[KeyboardShortcuts]")) {

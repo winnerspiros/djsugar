@@ -37,7 +37,7 @@ inline mixxx::audio::FramePos positionMillisToFrames(
 }
 } // namespace
 
-//static
+// static
 void CuePointer::deleteLater(Cue* pCue) {
     if (pCue) {
         pCue->deleteLater();

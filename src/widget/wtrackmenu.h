@@ -20,7 +20,7 @@
 class DlgTagFetcher;
 class DlgTrackInfo;
 class DlgTrackInfoMulti;
-//class DlgDeleteFilesConfirmation;
+// class DlgDeleteFilesConfirmation;
 class ExternalTrackCollection;
 class FindOnWebLast;
 class Library;

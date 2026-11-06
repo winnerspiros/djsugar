@@ -5,6 +5,7 @@
 #include <QVideoFrameFormat>
 #endif
 #include <QDir>
+#include <QFileInfo>
 #include <algorithm>
 #include <cstring>
 
@@ -17,7 +18,6 @@
 #include "qml/qmllibraryproxy.h"
 #include "util/assert.h"
 #include "util/xml.h"
-#include <QFileInfo>
 
 namespace mixxx {
 namespace qml {

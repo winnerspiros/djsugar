@@ -311,7 +311,7 @@ QList<TreeItem*> findRekordboxDevices() {
 }
 
 template<typename Base, typename T>
-inline bool instanceof (const T* ptr) {
+inline bool instanceof(const T* ptr) {
     return dynamic_cast<const Base*>(ptr) != nullptr;
 }
 
@@ -334,15 +334,15 @@ QString fromUtf16BeString(const std::string& toConvert) {
 QString getText(rekordbox_pdb_t::device_sql_string_t* deviceString) {
     QString text;
 
-    if (instanceof <rekordbox_pdb_t::device_sql_short_ascii_t>(deviceString->body())) {
+    if (instanceof<rekordbox_pdb_t::device_sql_short_ascii_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_short_ascii_t* shortAsciiString =
                 static_cast<rekordbox_pdb_t::device_sql_short_ascii_t*>(deviceString->body());
         text = QString::fromStdString(shortAsciiString->text());
-    } else if (instanceof <rekordbox_pdb_t::device_sql_long_ascii_t>(deviceString->body())) {
+    } else if (instanceof<rekordbox_pdb_t::device_sql_long_ascii_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_long_ascii_t* longAsciiString =
                 static_cast<rekordbox_pdb_t::device_sql_long_ascii_t*>(deviceString->body());
         text = QString::fromStdString(longAsciiString->text());
-    } else if (instanceof <rekordbox_pdb_t::device_sql_long_utf16le_t>(deviceString->body())) {
+    } else if (instanceof<rekordbox_pdb_t::device_sql_long_utf16le_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_long_utf16le_t* longUtf16leString =
                 static_cast<rekordbox_pdb_t::device_sql_long_utf16le_t*>(deviceString->body());
         text = fromUtf16LeString(longUtf16leString->text());
@@ -516,14 +516,14 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
     const mixxx::DbConnectionPooler dbConnectionPooler(dbConnectionPool);
     QSqlDatabase database = mixxx::DbConnectionPooled(dbConnectionPool);
 
-    //Open the database connection in this thread.
+    // Open the database connection in this thread.
     VERIFY_OR_DEBUG_ASSERT(database.isOpen()) {
         qDebug() << "Failed to open database for Rekordbox parser."
                  << database.lastError();
         return QString();
     }
 
-    //Give thread a low priority
+    // Give thread a low priority
     QThread* thisThread = QThread::currentThread();
     thisThread->setPriority(QThread::LowPriority);
 
@@ -662,7 +662,7 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
                                         playlistNameMap[playlistTree->id()] =
                                                 getText(playlistTree->name());
                                         playlistIsFolderMap[playlistTree
-                                                                    ->id()] =
+                                                        ->id()] =
                                                 playlistTree->is_folder();
                                         playlistTreeMap
                                                 [playlistTree->parent_id()]
@@ -1539,11 +1539,11 @@ QString RekordboxFeature::formatRootViewHtml() const {
     }
     html.append(QString("</ul>"));
 
-    //Colorize links in lighter blue, instead of QT default dark blue.
-    //Links are still different from regular text, but readable on dark/light backgrounds.
-    //https://github.com/mixxxdj/mixxx/issues/9103
+    // Colorize links in lighter blue, instead of QT default dark blue.
+    // Links are still different from regular text, but readable on dark/light backgrounds.
+    // https://github.com/mixxxdj/mixxx/issues/9103
     html.append(QString("<a style=\"color:#0496FF;\" href=\"refresh\">%1</a>")
-                        .arg(refreshLink));
+                    .arg(refreshLink));
     return html;
 }
 
@@ -1557,7 +1557,7 @@ void RekordboxFeature::activate() {
     m_devicesFuture = QtConcurrent::run(findRekordboxDevices);
     m_devicesFutureWatcher.setFuture(m_devicesFuture);
     m_title = tr("(loading) Rekordbox");
-    //calls a slot in the sidebar model such that 'Rekordbox (isLoading)' is displayed.
+    // calls a slot in the sidebar model such that 'Rekordbox (isLoading)' is displayed.
     emit featureIsLoading(this, true);
 
     emit enableCoverArtDisplay(true);
@@ -1570,7 +1570,7 @@ void RekordboxFeature::activateChild(const QModelIndex& index) {
         return;
     }
 
-    //access underlying TreeItem object
+    // access underlying TreeItem object
     TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
     if (!(item && item->getData().isValid())) {
         return;

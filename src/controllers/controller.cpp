@@ -130,9 +130,8 @@ void Controller::startLearning() {
 }
 
 void Controller::stopLearning() {
-    //qDebug() << m_sDeviceName << "stopped learning.";
+    // qDebug() << m_sDeviceName << "stopped learning.";
     m_bLearning = false;
-
 }
 
 void Controller::send(const QList<int>& data, unsigned int length) {
@@ -159,9 +158,9 @@ void Controller::triggerActivity() {
 
 void Controller::receive(const QByteArray& data, mixxx::Duration timestamp) {
     if (!m_pScriptEngineLegacy) {
-        //qWarning() << "Controller::receive called with no active engine!";
-        // Don't complain, since this will always show after closing a device as
-        //  queued signals flush out
+        // qWarning() << "Controller::receive called with no active engine!";
+        //  Don't complain, since this will always show after closing a device as
+        //   queued signals flush out
         return;
     }
     triggerActivity();

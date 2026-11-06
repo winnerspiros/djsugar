@@ -99,7 +99,7 @@ QString firstAvailableFilename(QSet<QString>& filenames,
     return filename;
 }
 
-bool controllerCompare(Controller *a,Controller *b) {
+bool controllerCompare(Controller* a, Controller* b) {
     return a->getName() < b->getName();
 }
 
@@ -312,7 +312,7 @@ QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, boo
 
     for (Controller* device : controllers) {
         if ((bOutputDevices == device->isOutputDevice()) ||
-            (bInputDevices == device->isInputDevice())) {
+                (bInputDevices == device->isInputDevice())) {
             filteredDeviceList.push_back(device);
         }
     }
@@ -467,7 +467,7 @@ void ControllerManager::slotPollDevices() {
     if (m_skipPoll) {
         // skip poll in overload situation
         m_skipPoll = false;
-        //qDebug() << "ControllerManager::pollDevices() skip";
+        // qDebug() << "ControllerManager::pollDevices() skip";
         return;
     }
 
@@ -482,7 +482,7 @@ void ControllerManager::slotPollDevices() {
     if (duration > kPollInterval) {
         m_skipPoll = true;
     }
-    //qDebug() << "ControllerManager::pollDevices()" << duration << start;
+    // qDebug() << "ControllerManager::pollDevices()" << duration << start;
 }
 
 void ControllerManager::openController(Controller* pController) {

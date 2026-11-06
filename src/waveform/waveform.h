@@ -17,7 +17,9 @@ enum BandIndex { AllBand = 0,
     Mid = 2,
     High = 3,
     BandCount = 4 };
-enum ChannelIndex { Left = 0, Right = 1, ChannelCount = 2};
+enum ChannelIndex { Left = 0,
+    Right = 1,
+    ChannelCount = 2 };
 
 struct WaveformFilteredData {
     unsigned char low;
@@ -113,30 +115,50 @@ class Waveform {
 
     // We do not lock the mutex since m_textureStride is not changed after
     // the constructor runs.
-    inline int getTextureStride() const { return m_textureStride; }
+    inline int getTextureStride() const {
+        return m_textureStride;
+    }
 
     // We do not lock the mutex since m_data is not resized after the
     // constructor runs.
-    inline int getTextureSize() const { return static_cast<int>(m_data.size()); }
+    inline int getTextureSize() const {
+        return static_cast<int>(m_data.size());
+    }
 
     // Atomically get the number of data elements in this Waveform. We do not
     // lock the mutex since m_dataSize is not changed after the constructor
     // runs.
-    inline int getDataSize() const { return m_dataSize; }
+    inline int getDataSize() const {
+        return m_dataSize;
+    }
 
-    inline const WaveformData& get(int i) const { return m_data[i];}
-    inline unsigned char getLow(int i) const { return m_data[i].filtered.low;}
-    inline unsigned char getMid(int i) const { return m_data[i].filtered.mid;}
-    inline unsigned char getHigh(int i) const { return m_data[i].filtered.high;}
-    inline unsigned char getAll(int i) const { return m_data[i].filtered.all;}
+    inline const WaveformData& get(int i) const {
+        return m_data[i];
+    }
+    inline unsigned char getLow(int i) const {
+        return m_data[i].filtered.low;
+    }
+    inline unsigned char getMid(int i) const {
+        return m_data[i].filtered.mid;
+    }
+    inline unsigned char getHigh(int i) const {
+        return m_data[i].filtered.high;
+    }
+    inline unsigned char getAll(int i) const {
+        return m_data[i].filtered.all;
+    }
 
     // We do not lock the mutex since m_data is not resized after the
     // constructor runs.
-    WaveformData* data() { return &m_data[0];}
+    WaveformData* data() {
+        return &m_data[0];
+    }
 
     // We do not lock the mutex since m_data is not resized after the
     // constructor runs.
-    const WaveformData* data() const { return &m_data[0];}
+    const WaveformData* data() const {
+        return &m_data[0];
+    }
 
     bool hasStem() const {
         return m_stemCount > 0;
@@ -149,12 +171,24 @@ class Waveform {
     void resize(int size);
     void assign(int size);
 
-    inline WaveformData& at(int i) { return m_data[i];}
-    inline unsigned char& low(int i) { return m_data[i].filtered.low;}
-    inline unsigned char& mid(int i) { return m_data[i].filtered.mid;}
-    inline unsigned char& high(int i) { return m_data[i].filtered.high;}
-    inline unsigned char& all(int i) { return m_data[i].filtered.all;}
-    double getVisualSampleRate() const { return m_visualSampleRate; }
+    inline WaveformData& at(int i) {
+        return m_data[i];
+    }
+    inline unsigned char& low(int i) {
+        return m_data[i].filtered.low;
+    }
+    inline unsigned char& mid(int i) {
+        return m_data[i].filtered.mid;
+    }
+    inline unsigned char& high(int i) {
+        return m_data[i].filtered.high;
+    }
+    inline unsigned char& all(int i) {
+        return m_data[i].filtered.all;
+    }
+    double getVisualSampleRate() const {
+        return m_visualSampleRate;
+    }
 
     // If stored in the database, the ID of the waveform.
     int m_id;

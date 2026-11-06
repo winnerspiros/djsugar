@@ -49,7 +49,7 @@ void EngineWorkerScheduler::run() {
         Event::start(tag);
         {
             const auto lock = QMutexLocker(&m_mutex);
-            for(const auto& pWorker: m_workers) {
+            for (const auto& pWorker : m_workers) {
                 pWorker->wakeIfReady();
             }
         }

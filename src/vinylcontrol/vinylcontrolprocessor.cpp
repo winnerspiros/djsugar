@@ -158,8 +158,8 @@ void VinylControlProcessor::reloadConfig() {
             continue;
         }
 
-        VinylControl *pNew = new VinylControlXwax(
-            m_pConfig, kVCGroup.arg(i + 1));
+        VinylControl* pNew = new VinylControlXwax(
+                m_pConfig, kVCGroup.arg(i + 1));
         m_processors.replace(i, pNew);
         locker.unlock();
         // Delete outside of the critical section to avoid deadlocks.
@@ -180,8 +180,8 @@ void VinylControlProcessor::onInputConfigured(const AudioInput& input) {
         return;
     }
 
-    VinylControl *pNew = new VinylControlXwax(
-        m_pConfig, kVCGroup.arg(index + 1));
+    VinylControl* pNew = new VinylControlXwax(
+            m_pConfig, kVCGroup.arg(index + 1));
 
     auto locker = QMutexLocker(&m_processorsLock);
     VinylControl* pCurrent = m_processors.at(index);

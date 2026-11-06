@@ -47,7 +47,8 @@ StatsManager::~StatsManager() {
     qDebug() << "ALL STATS";
     qDebug() << "=====================================";
     for (auto it = m_stats.constBegin();
-         it != m_stats.constEnd(); ++it) {
+            it != m_stats.constEnd();
+            ++it) {
         qDebug() << it.value();
     }
 
@@ -56,7 +57,8 @@ StatsManager::~StatsManager() {
         qDebug() << "BASE STATS";
         qDebug() << "=====================================";
         for (auto it = m_baseStats.constBegin();
-             it != m_baseStats.constEnd(); ++it) {
+                it != m_baseStats.constEnd();
+                ++it) {
             qDebug() << it.value();
         }
     }
@@ -66,7 +68,8 @@ StatsManager::~StatsManager() {
         qDebug() << "EXPERIMENT STATS";
         qDebug() << "=====================================";
         for (auto it = m_experimentStats.constBegin();
-             it != m_experimentStats.constEnd(); ++it) {
+                it != m_experimentStats.constEnd();
+                ++it) {
             qDebug() << it.value();
         }
     }
@@ -129,10 +132,8 @@ void StatsManager::writeTimeline(const QString& filename) {
         qint64 last_start = startTimes.value(event.m_tag, -1);
         qint64 last_end = endTimes.value(event.m_tag, -1);
 
-        qint64 duration_since_last_start = last_start == -1 ? 0 :
-                event.m_time.toIntegerNanos() - last_start;
-        qint64 duration_since_last_end = last_end == -1 ? 0 :
-                event.m_time.toIntegerNanos() - last_end;
+        qint64 duration_since_last_start = last_start == -1 ? 0 : event.m_time.toIntegerNanos() - last_start;
+        qint64 duration_since_last_end = last_end == -1 ? 0 : event.m_time.toIntegerNanos() - last_end;
 
         if (event.m_type == Stat::EVENT_START) {
             // We last saw a start and we just saw another start.
@@ -225,8 +226,8 @@ void StatsManager::processIncomingStatReports() {
 
             if (CmdlineArgs::Instance().getTimelineEnabled() &&
                     (report.type == Stat::EVENT ||
-                     report.type == Stat::EVENT_START ||
-                     report.type == Stat::EVENT_END)) {
+                            report.type == Stat::EVENT_START ||
+                            report.type == Stat::EVENT_END)) {
                 Event event;
                 event.m_tag = tag;
                 event.m_type = report.type;
@@ -249,7 +250,8 @@ void StatsManager::run() {
 
         if (m_emitAllStats.loadAcquire() == 1) {
             for (auto it = m_stats.constBegin();
-                 it != m_stats.constEnd(); ++it) {
+                    it != m_stats.constEnd();
+                    ++it) {
                 emit statUpdated(it.value());
             }
             m_emitAllStats = 0;

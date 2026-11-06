@@ -6,15 +6,14 @@
 #include <QSqlField>
 #include <QtDebug>
 
-
 #define LOG_FAILED_QUERY(query) qWarning() << __FILE__ << __LINE__ << "FAILED QUERY [" \
-    << (query).executedQuery() << "]" << (query).lastError()
+                                           << (query).executedQuery() << "]" << (query).lastError()
 
 class ScopedTransaction {
   public:
-    explicit ScopedTransaction(const QSqlDatabase& database) :
-            m_database(database),
-            m_active(false) {
+    explicit ScopedTransaction(const QSqlDatabase& database)
+            : m_database(database),
+              m_active(false) {
         if (!transaction()) {
             qDebug() << "ERROR: Could not start transaction on"
                      << m_database.connectionName();
@@ -68,6 +67,7 @@ class ScopedTransaction {
         m_active = false;
         return result;
     }
+
   private:
     QSqlDatabase m_database;
     bool m_active;
@@ -78,8 +78,7 @@ class FieldEscaper final {
     FieldEscaper(const QSqlDatabase& database)
             : m_database(database),
               m_stringField("string",
-                      QMetaType(QMetaType::QString)
-              ) {
+                      QMetaType(QMetaType::QString)) {
     }
 
     // Escapes a string for use in a SQL query by wrapping with quotes and

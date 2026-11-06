@@ -6,10 +6,10 @@
 namespace mixxx {
 
 class DesktopHelper {
-public:
-   static void openInFileBrowser(const QStringList& paths);
+  public:
+    static void openInFileBrowser(const QStringList& paths);
 
-   static bool openUrl(const QUrl& url);
+    static bool openUrl(const QUrl& url);
 };
 
 } // namespace mixxx

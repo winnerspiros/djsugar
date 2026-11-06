@@ -115,7 +115,7 @@ void MultiLineEditor::adjustSize(const QSizeF size) {
                 "QPlainTextEdit {"
                 "padding-top: %1px;"
                 "}")
-                              .arg(vOffset));
+                        .arg(vOffset));
     } else { // Reset if lines were added
         setStyleSheet(QStringLiteral(
                 "QPlainTextEdit {"

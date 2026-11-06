@@ -100,7 +100,7 @@ void WaveformRendererHSV::draw(
 
     const float heightFactor = allGain * halfBreadth / 255.0f;
 
-    //draw reference line
+    // draw reference line
     painter->setPen(pColors->getAxesColor());
     painter->drawLine(QLineF(0, halfBreadth, length, halfBreadth));
 
@@ -201,31 +201,31 @@ void WaveformRendererHSV::draw(
 
             painter->setPen(pen);
             switch (m_alignment) {
-                case Qt::AlignBottom :
-                case Qt::AlignRight :
-                    painter->drawLine(x,
-                            breadth,
-                            x,
-                            breadth -
-                                    static_cast<int>(heightFactor * math_max(eqGain[0], eqGain[1]) *
-                                            (float)math_max(
-                                                    maxAll[0], maxAll[1])));
-                    break;
-                case Qt::AlignTop :
-                case Qt::AlignLeft :
-                    painter->drawLine(x,
-                            0,
-                            x,
-                            static_cast<int>(heightFactor * math_max(eqGain[0], eqGain[1]) *
-                                    (float)math_max(maxAll[0], maxAll[1])));
-                    break;
-                default :
-                    painter->drawLine(x,
-                            static_cast<int>(halfBreadth -
-                                    heightFactor * eqGain[0] * (float)maxAll[0]),
-                            x,
-                            static_cast<int>(halfBreadth +
-                                    heightFactor * eqGain[1] * (float)maxAll[1]));
+            case Qt::AlignBottom:
+            case Qt::AlignRight:
+                painter->drawLine(x,
+                        breadth,
+                        x,
+                        breadth -
+                                static_cast<int>(heightFactor * math_max(eqGain[0], eqGain[1]) *
+                                        (float)math_max(
+                                                maxAll[0], maxAll[1])));
+                break;
+            case Qt::AlignTop:
+            case Qt::AlignLeft:
+                painter->drawLine(x,
+                        0,
+                        x,
+                        static_cast<int>(heightFactor * math_max(eqGain[0], eqGain[1]) *
+                                (float)math_max(maxAll[0], maxAll[1])));
+                break;
+            default:
+                painter->drawLine(x,
+                        static_cast<int>(halfBreadth -
+                                heightFactor * eqGain[0] * (float)maxAll[0]),
+                        x,
+                        static_cast<int>(halfBreadth +
+                                heightFactor * eqGain[1] * (float)maxAll[1]));
             }
         }
     }
