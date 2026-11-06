@@ -1,11 +1,11 @@
 #include "qml/qmllibrarytracklistmodel.h"
 
 #include <QAbstractProxyModel>
+#include <QColor>
 #include <QObject>
 #include <QQmlEngine>
 #include <QSortFilterProxyModel>
 #include <QVariant>
-#include <QColor>
 
 #include "library/basetracktablemodel.h"
 #include "library/browse/browsetablemodel.h"
