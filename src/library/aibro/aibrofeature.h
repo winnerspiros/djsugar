@@ -18,7 +18,7 @@ struct YouTubeVideoInfo;
 
 class Library;
 class PlayerManager;
-namespace mixxx { class YouTubeFeature; }
+class YouTubeFeature;
 
 /// AI Bro: Intelligent Auto-DJ that finds similar songs on YouTube,
 /// auto-downloads them, and seamlessly blends them together using
@@ -48,7 +48,7 @@ class AIBroFeature : public QObject {
     AIBroFeature(Library* pLibrary,
             UserSettingsPointer pConfig,
             PlayerManager* pPlayerManager,
-            mixxx::YouTubeFeature* pYouTubeFeature);
+            YouTubeFeature* pYouTubeFeature);
     ~AIBroFeature() override;
 
     void init();
@@ -196,5 +196,5 @@ class AIBroFeature : public QObject {
     Library* m_pLibrary;
     UserSettingsPointer m_pConfig;
     PlayerManager* m_pPlayerManager;
-    mixxx::YouTubeFeature* m_pYouTubeFeature;
+    YouTubeFeature* m_pYouTubeFeature;
 };
