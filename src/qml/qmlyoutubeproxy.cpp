@@ -87,9 +87,11 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                 QTimer::singleShot(350, this, [this, videoId]() {
                     clearVideoProgress(videoId);
                 });
-                if (!m_pendingDeck.isEmpty() && s_pPlayerManager) {
-                    const QString deck = m_pendingDeck;
-                    m_pendingDeck.clear();
+                // Each download loads into the deck it was started for. A
+                // single pending deck would send every finished download to
+                // whichever deck was clicked last.
+                const QString deck = m_videoToDeck.value(videoId);
+                if (!deck.isEmpty() && s_pPlayerManager) {
                     QMetaObject::invokeMethod(
                             s_pPlayerManager.get(),
                             [deck, localPath]() {
@@ -104,7 +106,6 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
             &mixxx::YouTubeService::downloadFailed,
             this,
             [this](const QString& videoId, const QString& error) {
-                m_pendingDeck.clear();
                 clearVideoProgress(videoId);
                 emit downloadFailed(videoId, error);
             });
@@ -228,7 +229,6 @@ void QmlYouTubeProxy::downloadToDeck(const QString& videoId, const QString& deck
         emit downloadFailed(videoId, tr("YouTube is not available"));
         return;
     }
-    m_pendingDeck = deckGroup;
     m_videoToDeck.insert(videoId, deckGroup);
     updateVideoProgress(videoId, 0.04);
     pFeature->requestDownloadToPlayer(videoId, deckGroup, false);

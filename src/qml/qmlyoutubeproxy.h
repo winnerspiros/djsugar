@@ -68,7 +68,6 @@ class QmlYouTubeProxy : public QObject {
 
     static inline Library* s_pLibrary = nullptr;
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
-    QString m_pendingDeck;
     QVariantMap m_downloadProgressByVideo;
     QVariantMap m_deckDownloadProgress;
     QHash<QString, QString> m_videoToDeck;

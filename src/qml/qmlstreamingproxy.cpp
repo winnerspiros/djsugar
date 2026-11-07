@@ -33,7 +33,12 @@ QmlStreamingProxy::QmlStreamingProxy(QObject* parent)
           m_pNetworkManager(new QNetworkAccessManager(this)) {
     // Determine the best cache directory for streaming tracks
 #if defined(Q_OS_ANDROID)
-    QString baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    // Same external base as the YouTube cache: files in the app's private
+    // data dir were refused by FFmpeg (av_seek_frame EPERM) on device.
+    QString baseDir = s_pConfig ? s_pConfig->getSettingsPath() : QString();
+    if (baseDir.isEmpty()) {
+        baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    }
     if (baseDir.isEmpty()) {
         baseDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     }

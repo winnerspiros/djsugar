@@ -398,9 +398,9 @@ Popup {
             }
             Skin.Button {
                 Layout.fillWidth: true
-                visible: !choice.installed
+                visible: !!choice && !choice.installed
                 implicitHeight: 30
-                enabled: choice.downloading || Mixxx.Stems.downloadingModel === ""
+                enabled: (!!choice && choice.downloading) || Mixxx.Stems.downloadingModel === ""
                 activeColor: "#ffffff"
                 backgroundColor: choice.downloading ? "#5f1e1e" : "#1e5f3a"
                 normalColor: "#ffffff"
