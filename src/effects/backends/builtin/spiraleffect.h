@@ -24,8 +24,8 @@ class SpiralState : public EffectState {
     unsigned int maxFrames = 0;
     unsigned int writeFrame = 0;
     double lfoPhase = 0.0;
-    QVector<CSAMPLE> buffer;   // interleaved delay line, maxFrames * channelCount
-    QVector<double> lowpass;   // one-pole lowpass state per channel
+    QVector<CSAMPLE> buffer; // interleaved delay line, maxFrames * channelCount
+    QVector<double> lowpass; // one-pole lowpass state per channel
 };
 
 class SpiralEffect : public EffectProcessorImpl<SpiralState> {
