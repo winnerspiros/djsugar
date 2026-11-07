@@ -3965,7 +3965,7 @@ QString YouTubeVideoInfo::inferGenre(const QString& title, const QString& upload
 {
     // YouTube music categories: 10 = Music
     if (categoryId == "10") {
-        return qsTr("Music");
+        return "Music";
     }
 
     static const QVector<QPair<QRegularExpression, QString>> rules = {
