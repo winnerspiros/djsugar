@@ -284,9 +284,5 @@ void QmlYouTubeProxy::setSponsorBlockAutoSkip(bool enabled) {
     }
 }
 
-void QmlYouTubeProxy::sponsorBlockAutoSkipChanged() {
-    // Signal is emitted via Q_PROPERTY NOTIFY
-}
-
 } // namespace qml
 } // namespace mixxx
