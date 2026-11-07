@@ -3960,7 +3960,7 @@ void YouTubeService::fetchSponsorSegmentsInternal(
 
 #include "moc_youtubeservice.cpp"
 
-QString YouTubeVideoInfo::inferGenre(const QString& title,
+QString mixxx::YouTubeVideoInfo::inferGenre(const QString& title,
         const QString& uploader,
         const QString& categoryId) {
     // YouTube music categories: 10 = Music
