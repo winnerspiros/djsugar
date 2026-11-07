@@ -1,5 +1,6 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
