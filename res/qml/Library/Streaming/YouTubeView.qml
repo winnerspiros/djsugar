@@ -100,16 +100,22 @@ Item {
                 onClicked: root.doSearch()
             }
         }
-        ComboBox {
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            ComboBox {
                 id: genreFilter
+
                 Layout.preferredHeight: 44
-                Layout.preferredWidth: 140
+                Layout.preferredWidth: 160
                 model: root.genreOptions
-                currentText: root.selectedGenre
-                onCurrentTextChanged: root.selectedGenre = genreFilter.currentText
+                currentIndex: Math.max(0, root.genreOptions.indexOf(root.selectedGenre))
+                onActivated: index => root.selectedGenre = root.genreOptions[index]
+
                 background: Rectangle {
                     color: "#0c0d0f"
-                    border.color: activeFocus ? "Theme.accentColor" : "Theme.midGray3"
+                    border.color: genreFilter.activeFocus ? Theme.accentColor : Theme.midGray3
                     border.width: 1
                     radius: 4
                 }
@@ -119,47 +125,74 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: "#ffffff"
                     font.pixelSize: 12
-                    text: control.currentText === "" ? qsTr("ALL GENRES") : control.currentText
+                    text: genreFilter.currentText === "" ? qsTr("ALL GENRES") : genreFilter.currentText
+                }
+                delegate: ItemDelegate {
+                    id: genreDelegate
+
+                    required property int index
+                    required property var modelData
+
+                    width: genreFilter.width
+                    highlighted: genreFilter.highlightedIndex === genreDelegate.index
+                    contentItem: Text {
+                        color: "#ffffff"
+                        font.pixelSize: 12
+                        text: genreDelegate.modelData === "" ? qsTr("ALL GENRES") : genreDelegate.modelData
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: genreDelegate.highlighted ? Theme.midGray3 : "#0c0d0f"
+                    }
                 }
             }
             Switch {
                 id: sponsorBlockSwitch
+
                 Layout.preferredHeight: 44
-                Layout.preferredWidth: 160
+                Layout.preferredWidth: 180
                 checked: Mixxx.YouTube.sponsorBlockAutoSkip
                 onToggled: Mixxx.YouTube.sponsorBlockAutoSkip = sponsorBlockSwitch.checked
-                background: Rectangle {
-                    implicitWidth: 60
+
+                indicator: Rectangle {
+                    x: sponsorBlockSwitch.leftPadding
+                    y: (sponsorBlockSwitch.height - height) / 2
+                    implicitWidth: 52
                     implicitHeight: 28
                     radius: 14
-                    color: sponsorBlockSwitch.checked ? "Theme.accentColor" : "Theme.midGray3"
-                    border.color: "Theme.midGray2"
+                    color: sponsorBlockSwitch.checked ? Theme.accentColor : Theme.midGray3
+                    border.color: Theme.midGray2
                     border.width: 1
-                }
-                indicator: Rectangle {
-                    x: sponsorBlockSwitch.checked ? width - height : 0
-                    y: 0
-                    width: height
-                    height: height
-                    radius: 14
-                    color: "#ffffff"
-                    border.color: "Theme.midGray2"
-                    border.width: 1
-                    Behavior on x { NumberAnimation { duration: 150 } }
+
+                    Rectangle {
+                        x: sponsorBlockSwitch.checked ? parent.width - width - 2 : 2
+                        y: 2
+                        width: parent.height - 4
+                        height: width
+                        radius: width / 2
+                        color: "#ffffff"
+
+                        Behavior on x {
+                            NumberAnimation {
+                                duration: 150
+                            }
+                        }
+                    }
                 }
                 contentItem: Text {
-                    leftPadding: 8
-                    rightPadding: 8
+                    leftPadding: sponsorBlockSwitch.indicator.width + 10
                     verticalAlignment: Text.AlignVCenter
                     color: "#ffffff"
-                    font.pixelSize: 11
                     font.bold: true
-                    text: qsTr("AUTO SKIP")
+                    font.pixelSize: 11
+                    text: qsTr("AUTO SKIP SPONSORS")
                     elide: Text.ElideRight
                 }
             }
-
-
+            Item {
+                Layout.fillWidth: true
+            }
+        }
         Text {
             Layout.fillWidth: true
             color: "#9a9ea6"
