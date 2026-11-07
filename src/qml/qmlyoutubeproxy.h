@@ -11,7 +11,7 @@
 
 class Library;
 class PlayerManager;
-class YouTubeFeature;
+namespace mixxx { class YouTubeFeature; }
 
 namespace mixxx {
 namespace qml {

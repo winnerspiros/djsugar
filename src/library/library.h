@@ -18,7 +18,7 @@
 #include "util/parented_ptr.h"
 
 class AnalysisFeature;
-class YouTubeFeature;
+namespace mixxx { class YouTubeFeature; }
 namespace mixxx {
 class SponsorBlockController;
 } // namespace mixxx
@@ -100,7 +100,7 @@ class Library : public QObject {
     BrowseFeature* browseFeature() const {
         return m_pBrowseFeature.get();
     }
-    YouTubeFeature* youtubeFeature() const {
+    mixxx::YouTubeFeature* youtubeFeature() const {
         return m_pYouTubeFeature.get();
     }
     void setLibraryFocus(FocusWidget widget, Qt::FocusReason reason) {
@@ -245,7 +245,7 @@ class Library : public QObject {
     parented_ptr<AnalysisFeature> m_pAnalysisFeature;
     // YouTube is the only always-on online music library feature. Spotify is
     // deliberately omitted because its public API does not provide audio.
-    parented_ptr<YouTubeFeature> m_pYouTubeFeature;
+    parented_ptr<mixxx::YouTubeFeature> m_pYouTubeFeature;
     parented_ptr<mixxx::SponsorBlockController> m_pSponsorBlockController;
     QFont m_trackTableFont;
     int m_iTrackTableRowHeight;

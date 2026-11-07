@@ -410,7 +410,7 @@ static double fadeIn(double t) {
 AIBroFeature::AIBroFeature(Library* pLibrary,
         UserSettingsPointer pConfig,
         PlayerManager* pPlayerManager,
-        YouTubeFeature* pYouTubeFeature)
+        mixxx::YouTubeFeature* pYouTubeFeature)
         : m_pProgressTimer(new QTimer(this)),
           m_pBlendTimer(new QTimer(this)),
           m_keyEnabled("[AIBro]", "enabled"),
