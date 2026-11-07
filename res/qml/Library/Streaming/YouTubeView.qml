@@ -23,6 +23,9 @@ Item {
         Mixxx.YouTube.search(searchField.text);
     }
 
+    // Map videoId -> target deck group
+    property var videoTargetDecks: {}
+
     Connections {
         target: Mixxx.YouTube
 
@@ -39,7 +42,8 @@ Item {
         }
         function onDownloadFinished(videoId, path) {
             root.statusMessage = qsTr("Downloaded, loading...");
-            const player = Mixxx.PlayerManager.getPlayer(root.targetDeck);
+            const deck = root.videoTargetDecks[videoId] || root.targetDeck;
+            const player = Mixxx.PlayerManager.getPlayer(deck);
             if (player) {
                 player.loadTrackFromLocation(path, false);
             }
@@ -117,6 +121,7 @@ Item {
                 id: videoCard
                 required property var modelData
                 required property int index
+                property string targetDeck: "[Channel1]"
 
                 width: ListView.view.width
                 height: 68
@@ -213,37 +218,35 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
 
-                    Skin.Button {
+                    // Deck selector for this track
+                    Skin.ComboBox {
+                        id: deckSelector
+                        Layout.preferredWidth: 100
                         Layout.preferredHeight: 36
-                        Layout.preferredWidth: 64
-                        activeColor: "#64b5f6"
-                        normalColor: "#ffffff"
-                        font.bold: true
-                        font.pixelSize: 12
-                        text: videoCard.isDownloading ? `${Math.round(videoCard.downloadProg * 100)}%` : "D1"
-                        onClicked: {
-                            const player = Mixxx.PlayerManager.getPlayer("[Channel1]");
-                            if (player && video.file_url) {
-                                player.loadTrackFromLocationUrl(video.file_url);
-                            } else if (player) {
-                                Mixxx.YouTube.downloadToDeck(video.id, "[Channel1]");
-                            }
+                        model: ["[Channel1]", "[Channel2]", "[Channel3]", "[Channel4]"]
+                        currentIndex: 0
+                        onCurrentIndexChanged: {
+                            videoCard.targetDeck = model[currentIndex]
                         }
                     }
+
                     Skin.Button {
                         Layout.preferredHeight: 36
-                        Layout.preferredWidth: 64
-                        activeColor: "#ffb74d"
+                        Layout.preferredWidth: 80
+                        activeColor: Theme.accentColor
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 12
-                        text: videoCard.isDownloading ? `${Math.round(videoCard.downloadProg * 100)}%` : "D2"
+                        text: videoCard.isDownloading ? `${Math.round(videoCard.downloadProg * 100)}%` : qsTr("Load")
                         onClicked: {
-                            const player = Mixxx.PlayerManager.getPlayer("[Channel2]");
+                            const deck = videoCard.targetDeck || "[Channel1]";
+                            // Remember which deck this video is for, so onDownloadFinished loads to the right deck
+                            root.videoTargetDecks[video.id] = deck;
+                            const player = Mixxx.PlayerManager.getPlayer(deck);
                             if (player && video.file_url) {
                                 player.loadTrackFromLocationUrl(video.file_url);
                             } else if (player) {
-                                Mixxx.YouTube.downloadToDeck(video.id, "[Channel2]");
+                                Mixxx.YouTube.downloadToDeck(video.id, deck);
                             }
                         }
                     }
