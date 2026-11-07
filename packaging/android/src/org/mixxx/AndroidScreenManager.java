@@ -2,15 +2,15 @@ package org.mixxx;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
-import android.graphics.Rect;
-import android.view.DisplayCutout;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;

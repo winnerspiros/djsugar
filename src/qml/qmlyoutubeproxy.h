@@ -29,8 +29,8 @@ class QmlYouTubeProxy : public QObject {
                             NOTIFY downloadProgressChanged)
     Q_PROPERTY(bool sponsorBlockAutoSkip
                     READ sponsorBlockAutoSkip
-                    WRITE setSponsorBlockAutoSkip
-                    NOTIFY sponsorBlockAutoSkipChanged)
+                            WRITE setSponsorBlockAutoSkip
+                                    NOTIFY sponsorBlockAutoSkipChanged)
     QML_NAMED_ELEMENT(YouTube)
     QML_SINGLETON
 

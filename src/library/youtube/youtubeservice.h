@@ -40,8 +40,7 @@ struct YouTubeVideoInfo {
     QString genre; // inferred from title/uploader/YouTube category
 
     // Infer genre from title patterns, uploader channel, or YouTube category
-    static QString inferGenre(const QString& title, const QString& uploader,
-                              const QString& categoryId = QString());
+    static QString inferGenre(const QString& title, const QString& uploader, const QString& categoryId = QString());
 };
 
 /// YouTube extractor + downloader.

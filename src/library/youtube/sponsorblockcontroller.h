@@ -77,7 +77,7 @@ class SponsorBlockController : public QObject {
             const QString& group, const QString& videoId);
 
     QString m_cacheDir;
-    bool m_autoSkipEnabled = true; // default: ON
+    bool m_autoSkipEnabled = true;     // default: ON
     QHash<QString, DeckState> m_decks; // key = "[Channel1]" etc.
     YouTubeService m_service;
 };

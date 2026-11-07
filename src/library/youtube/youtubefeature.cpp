@@ -930,7 +930,6 @@ QString YouTubeFeature::resolvedTrendingRegion() const {
     return kDefaultRegion;
 }
 
-
 bool YouTubeFeature::sponsorBlockAutoSkip() const {
     return m_pConfig->getValue<bool>(kCfgSponsorBlockAutoSkip, true);
 }
