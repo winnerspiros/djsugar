@@ -257,9 +257,35 @@ QVariantList QmlYouTubeProxy::toVariantList(const QList<mixxx::YouTubeVideoInfo>
         m[QStringLiteral("uploader")] = v.uploader;
         m[QStringLiteral("durationSec")] = v.durationSec;
         m[QStringLiteral("isLive")] = v.isLive;
+        m[QStringLiteral("genre")] = v.genre;
         out.append(m);
     }
     return out;
+}
+
+bool QmlYouTubeProxy::sponsorBlockAutoSkip() const {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    if (pFeature) {
+        return pFeature->sponsorBlockAutoSkip();
+    }
+    return true; // default: ON
+}
+
+void QmlYouTubeProxy::setSponsorBlockAutoSkip(bool enabled) {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    if (pFeature) {
+        pFeature->setSponsorBlockAutoSkip(enabled);
+        // Also update the SponsorBlockController
+        if (Library* pLib = s_pLibrary) {
+            // Access the controller through library - need a way to do this
+            // For now, just update the feature setting; controller reads it on next track
+        }
+        emit sponsorBlockAutoSkipChanged();
+    }
+}
+
+void QmlYouTubeProxy::sponsorBlockAutoSkipChanged() {
+    // Signal is emitted via Q_PROPERTY NOTIFY
 }
 
 } // namespace qml

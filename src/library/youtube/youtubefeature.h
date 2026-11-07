@@ -72,11 +72,16 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// Always returns a non-empty 2-letter uppercase code.
     QString resolvedTrendingRegion() const;
 
+    /// Whether SponsorBlock auto-skip is enabled (default: true).
+    bool sponsorBlockAutoSkip() const;
+    void setSponsorBlockAutoSkip(bool enabled);
+
   signals:
     void downloadToPlayerRequested(
             const QString& videoId,
             const QString& group,
             const QString& title);
+    void sponsorBlockAutoSkipChanged(bool enabled);
 
   protected:
     void appendTrackIdsFromRightClickIndex(

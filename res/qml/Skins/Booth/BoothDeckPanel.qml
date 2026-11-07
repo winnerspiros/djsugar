@@ -311,14 +311,14 @@ Rectangle {
                 spacing: 3
 
                 Caption {
-                    color: root.showElapsed ? "Theme.midGray3" : "#d8dadd"
+                    color: root.showElapsed ? Theme.midGray3 : "#d8dadd"
                     text: "• " + qsTr("REMAIN")
                 }
                 Caption {
                     text: "/"
                 }
                 Caption {
-                    color: root.showElapsed ? "#d8dadd" : "Theme.midGray3"
+                    color: root.showElapsed ? "#d8dadd" : Theme.midGray3
                     text: qsTr("TIME")
                 }
             }
@@ -336,7 +336,7 @@ Rectangle {
                 Text {
                     id: minutesSeconds
 
-                    color: root.loaded ? "#ffffff" : "Theme.midGray3"
+                    color: root.loaded ? "#ffffff" : Theme.midGray3
                     font.pixelSize: Math.round(root.unit * 3.4)
                     text: {
                         const total = Math.floor(Math.max(0, root.seconds));
@@ -390,7 +390,7 @@ Rectangle {
             Text {
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
-                color: root.loaded ? "#d8dadd" : "Theme.midGray3"
+                color: root.loaded ? "#d8dadd" : Theme.midGray3
                 font.pixelSize: Math.round(root.unit * 1.45)
                 text: {
                     const percent = rateControl.value * rateRangeControl.value * 100;
@@ -449,7 +449,7 @@ Rectangle {
                 Text {
                     id: bpmWhole
 
-                    color: root.leader ? "#ff6a13" : (root.loaded ? "#ffffff" : "Theme.midGray3")
+                    color: root.leader ? "#ff6a13" : (root.loaded ? "#ffffff" : Theme.midGray3)
                     font.pixelSize: Math.round(root.unit * 2.6)
                     text: root.loaded ? Math.floor(bpmControl.value) : "--"
                 }

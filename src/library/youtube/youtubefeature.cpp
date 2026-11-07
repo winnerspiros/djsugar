@@ -602,6 +602,8 @@ const ConfigKey kCfgTrendingOverride(
         QStringLiteral("[YouTube]"), QStringLiteral("trending_region"));
 const ConfigKey kCfgAutoAnalyzeResults(
         QStringLiteral("[YouTube]"), QStringLiteral("auto_analyze_results"));
+const ConfigKey kCfgSponsorBlockAutoSkip(
+        QStringLiteral("[YouTube]"), QStringLiteral("sponsorblock_auto_skip"));
 
 // Project default region. Per project requirement: open on Greek top songs
 // unless the user explicitly overrides it.
@@ -928,6 +930,15 @@ QString YouTubeFeature::resolvedTrendingRegion() const {
     return kDefaultRegion;
 }
 
+
+bool YouTubeFeature::sponsorBlockAutoSkip() const {
+    return m_pConfig->getValue<bool>(kCfgSponsorBlockAutoSkip, true);
+}
+
+void YouTubeFeature::setSponsorBlockAutoSkip(bool enabled) {
+    m_pConfig->setValue(kCfgSponsorBlockAutoSkip, enabled);
+    emit sponsorBlockAutoSkipChanged(enabled);
+}
 void YouTubeFeature::activate() {
     kLogger.debug() << "YouTube feature activated";
     // Show the real WTrackTableView backed by our YouTubeTrackModel — this

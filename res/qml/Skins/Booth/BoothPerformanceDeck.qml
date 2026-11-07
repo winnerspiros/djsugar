@@ -244,7 +244,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                color: padItem.hotcueSet ? "#000000" : "Theme.midGray3"
+                color: padItem.hotcueSet ? "#000000" : Theme.midGray3
                 font.bold: true
                 font.pixelSize: Math.round(letter.height * 0.75)
                 text: String.fromCharCode(65 + padItem.index)
@@ -385,7 +385,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            color: stemPadItem.stemActive ? "#ffffff" : "Theme.midGray3"
+            color: stemPadItem.stemActive ? "#ffffff" : Theme.midGray3
             font.bold: true
             font.pixelSize: Math.round(root.unit * 0.9)
             horizontalAlignment: Text.AlignHCenter
@@ -578,7 +578,7 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.unit * 3.8)
-                border.color: parent.looping ? "#ff6a13" : "Theme.midGray3"
+                border.color: parent.looping ? "#ff6a13" : Theme.midGray3
                 border.width: parent.looping ? 2 : 1
                 color: loopTap.pressed ? "#5a2a08" : (parent.looping ? Theme.warningColor : Theme.darkGray4)
                 radius: 3

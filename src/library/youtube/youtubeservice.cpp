@@ -3970,7 +3970,7 @@ QString YouTubeVideoInfo::inferGenre(const QString& title, const QString& upload
 
     static const QVector<QPair<QRegularExpression, QString>> rules = {
         // Explicit genre tags in title
-        {QRegularExpression(R"(\b(EDM|House|Techno|Trance|Drum\s*&\s*Bass|DnB|Dubstep|Hardstyle|Psytrance|Ambient|Chillout|Lo-fi|Synthwave|Retrowave|Vaporwave|Future\s*Bass|Trap|Hip\s*Hop|Rap|R&B|Soul|Funk|Disco|Pop|Rock|Metal|Punk|Indie|Alternative|Classical|Jazz|Blues|Country|Folk|Reggae|Ska|Latin|Afrobeat|K-Pop|J-Pop|C-Pop|Bollywood|Desi)\b)", QRegularExpression::CaseInsensitiveOption),
+        {QRegularExpression(R"(\b(EDM|House|Techno|Trance|Drum\s*&\s*Bass|DnB|Dubstep|Hardstyle|Psytrance|Ambient|Chillout|Lo-fi|Synthwave|Retrowave|Vaporwave|Future\s*Bass|Trap|Hip\s*Hop|Rap|R&B|Soul|Funk|Disco|Pop|Rock|Metal|Punk|Indie|Alternative|Classical|Jazz|Blues|Country|Folk|Reggae|Ska|Latin|Afrobeat|K-Pop|J-Pop|C-Pop|Bollywood|Desi|La[iï]ko|Rebetiko|Éntekhna|Entehna|Skiladiko|Nisiotika|Mantinades|Hasapiko|Zeibekiko|Tsifteteli|Syrtos|Kalamatianos)\b)", QRegularExpression::CaseInsensitiveOption),
          ""},
         // Bracketed genres like [House], (Techno)
         {QRegularExpression(R"(\[([A-Za-z0-9\s&]+)\]|\(([A-Za-z0-9\s&]+)\))"), ""},
@@ -4003,6 +4003,20 @@ QString YouTubeVideoInfo::inferGenre(const QString& title, const QString& upload
         {"rock", "Rock"}, {"metal", "Metal"}, {"indie", "Indie"},
         {"pop", "Pop"}, {"country", "Country"}, {"folk", "Folk"},
         {"reggae", "Reggae"}, {"kpop", "K-Pop"}, {"jpop", "J-Pop"},
+        // Greek music channels / keywords
+        {"greece", "Greek"}, {"greek", "Greek"}, {"grmusic", "Greek"},
+        {"laiko", "Laïko"}, {"laiko", "Laïko"}, {"laika", "Laïka"},
+        {"repetiko", "Rebetiko"}, {"rebetiko", "Rebetiko"},
+        {"entexna", "Éntekhna"}, {"entehna", "Éntekhna"},
+        {"skiladiko", "Skiladiko"}, {"skyladiko", "Skiladiko"},
+        {"nisiotika", "Nisiotika"}, {"nistika", "Nisiotika"},
+        {"mantinades", "Mantinades"}, {"xasapiko", "Hasapiko"},
+        {"zeibekiko", "Zeibekiko"}, {"tsifteteli", "Tsifteteli"},
+        {"syrtos", "Syrtos"}, {"kalamatianos", "Kalamatianos"},
+        {"greekpop", "Greek Pop"}, {"greekrock", "Greek Rock"},
+        {"greekhiphop", "Greek Hip Hop"}, {"grektrap", "Greek Trap"},
+        {"laikopop", "Laïko-Pop"}, {"skiladiko", "Skiladiko"},
+        {"ellinika", "Greek"}, {"ellinika", "Greek"},
     };
     const QString uLow = uploader.toLower().remove(QRegularExpression(R"([\s\W]+)"));
     if (channelHints.contains(uLow)) {

@@ -63,7 +63,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 44
                 color: "#000000"
-                border.color: searchField.activeFocus ? "Theme.accentColor" : "Theme.midGray3"
+                border.color: searchField.activeFocus ? Theme.accentColor : Theme.midGray3
                 border.width: 1
                 radius: 4
 
@@ -80,7 +80,7 @@ Item {
                 Text {
                     anchors.fill: parent
                     anchors.margins: 10
-                    color: "Theme.lightGray3"
+                    color: Theme.lightGray3
                     font.pixelSize: 14
                     text: qsTr("SEARCH YOUTUBE")
                     verticalAlignment: Text.AlignVCenter
@@ -90,7 +90,7 @@ Item {
             Skin.Button {
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 120
-                activeColor: "Theme.accentColor"
+                activeColor: Theme.accentColor
                 normalColor: "#ffffff"
                 font.bold: true
                 font.pixelSize: 12
@@ -99,6 +99,65 @@ Item {
                 onClicked: root.doSearch()
             }
         }
+        ComboBox {
+                id: genreFilter
+                Layout.preferredHeight: 44
+                Layout.preferredWidth: 140
+                model: root.genreOptions
+                currentText: root.selectedGenre
+                onCurrentTextChanged: root.selectedGenre = genreFilter.currentText
+                background: Rectangle {
+                    color: "#0c0d0f"
+                    border.color: activeFocus ? "Theme.accentColor" : "Theme.midGray3"
+                    border.width: 1
+                    radius: 4
+                }
+                contentItem: Text {
+                    leftPadding: 10
+                    rightPadding: 10
+                    verticalAlignment: Text.AlignVCenter
+                    color: "#ffffff"
+                    font.pixelSize: 12
+                    text: control.currentText === "" ? qsTr("ALL GENRES") : control.currentText
+                }
+            }
+            Switch {
+                id: sponsorBlockSwitch
+                Layout.preferredHeight: 44
+                Layout.preferredWidth: 160
+                checked: Mixxx.YouTube.sponsorBlockAutoSkip
+                onClicked: Mixxx.YouTube.sponsorBlockAutoSkip = !Mixxx.YouTube.sponsorBlockAutoSkip
+                background: Rectangle {
+                    implicitWidth: 60
+                    implicitHeight: 28
+                    radius: 14
+                    color: sponsorBlockSwitch.checked ? "Theme.accentColor" : "Theme.midGray3"
+                    border.color: "Theme.midGray2"
+                    border.width: 1
+                }
+                indicator: Rectangle {
+                    x: sponsorBlockSwitch.checked ? width - height : 0
+                    y: 0
+                    width: height
+                    height: height
+                    radius: 14
+                    color: "#ffffff"
+                    border.color: "Theme.midGray2"
+                    border.width: 1
+                    Behavior on x { NumberAnimation { duration: 150 } }
+                }
+                contentItem: Text {
+                    leftPadding: 8
+                    rightPadding: 8
+                    verticalAlignment: Text.AlignVCenter
+                    color: "#ffffff"
+                    font.pixelSize: 11
+                    font.bold: true
+                    text: qsTr("AUTO SKIP")
+                    elide: Text.ElideRight
+                }
+            }
+
 
         Text {
             Layout.fillWidth: true
@@ -217,8 +276,8 @@ Item {
 
                     Repeater {
                         model: [
-                            { deck: "[Channel1]", label: "D1", color: Theme.libraryDeck1Background },
-                            { deck: "[Channel2]", label: "D2", color: Theme.libraryDeck2Background }
+                            { deck: "[Channel1]", label: "D1", color: Qt.lighter(Theme.accentColor, 1.2) },
+                            { deck: "[Channel2]", label: "D2", color: "#e8650f" }
                         ]
                         delegate: Skin.Button {
                             required property var modelData

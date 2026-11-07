@@ -185,8 +185,21 @@ Library::Library(
     // The SponsorBlock controller observes deck loads globally and skips
     // segments inside YouTube-cached tracks. It is owned by Library so it
     // lives as long as the player decks do.
+    // Read SponsorBlock auto-skip preference (default: true)
+    const bool sponsorBlockAutoSkip = m_pConfig->getValue(
+            mixxx::preferences::kCfgSponsorBlockAutoSkip, true);
     m_pSponsorBlockController = make_parented<mixxx::SponsorBlockController>(
-            m_pYouTubeFeature->cacheDir(), this);
+            m_pYouTubeFeature->cacheDir(), sponsorBlockAutoSkip, this);
+
+    // Keep SponsorBlockController in sync with preference changes
+    connect(m_pYouTubeFeature,
+            &YouTubeFeature::sponsorBlockAutoSkipChanged,
+            this,
+            [this](bool enabled) {
+                if (m_pSponsorBlockController) {
+                    m_pSponsorBlockController->setAutoSkipEnabled(enabled);
+                }
+            });
 
     // AI Bro: intelligent Auto-DJ with YouTube similarity + auto-mix
     m_pAIBroFeature = make_parented<AIBroFeature>(

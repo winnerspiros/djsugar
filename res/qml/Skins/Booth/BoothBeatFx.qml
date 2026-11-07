@@ -41,7 +41,7 @@ Rectangle {
 
         Layout.fillWidth: true
         Layout.preferredHeight: root.compact ? 24 : 30
-        border.color: toggleControl.value > 0 ? onColor : "Theme.midGray3"
+        border.color: toggleControl.value > 0 ? onColor : Theme.midGray3
         border.width: 1
         color: toggleControl.value > 0 ? onColor : Theme.backgroundColor
 
@@ -159,7 +159,7 @@ Rectangle {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                border.color: "Theme.midGray3"
+                border.color: Theme.midGray3
                 border.width: 1
                 color: Theme.darkGray4
 
@@ -215,7 +215,7 @@ Rectangle {
 
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.compact ? 20 : 24
-                    border.color: focused ? "#d8dadd" : "Theme.midGray3"
+                    border.color: focused ? "#d8dadd" : Theme.midGray3
                     border.width: 1
                     color: slotEnabledControl.value > 0 ? "#123a5c" : Theme.backgroundColor
 
@@ -295,7 +295,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: root.compact ? 34 : 44
-            border.color: enabledControl.value > 0 ? "#ff6a13" : "Theme.midGray3"
+            border.color: enabledControl.value > 0 ? "#ff6a13" : Theme.midGray3
             border.width: 1
             color: enabledControl.value > 0 ? Theme.warningColor : Theme.backgroundColor
 

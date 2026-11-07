@@ -27,6 +27,10 @@ class QmlYouTubeProxy : public QObject {
     Q_PROPERTY(QVariantMap deckDownloadProgress
                     READ deckDownloadProgress
                             NOTIFY downloadProgressChanged)
+    Q_PROPERTY(bool sponsorBlockAutoSkip
+                    READ sponsorBlockAutoSkip
+                    WRITE setSponsorBlockAutoSkip
+                    NOTIFY sponsorBlockAutoSkipChanged)
     QML_NAMED_ELEMENT(YouTube)
     QML_SINGLETON
 
@@ -54,12 +58,16 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE void downloadToDeck(const QString& videoId, const QString& deckGroup);
     void prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results);
 
+    bool sponsorBlockAutoSkip() const;
+    void setSponsorBlockAutoSkip(bool enabled);
+
   signals:
     void searchFinished(const QVariantList& results);
     void searchFailed(const QString& error);
     void downloadProgressChanged(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
+    void sponsorBlockAutoSkipChanged();
 
   private:
     static QString extractVideoId(const QString& videoIdOrUrl);
