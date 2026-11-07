@@ -989,6 +989,17 @@
         <script-binding />
     </options>
 </control>
+      <!-- SMART FADER -->
+      <control>
+        <description>SMART FADER - press - toggle Smart Fader (beat sync on, EQ LOW follows crossfader)</description>
+        <group>[App]</group>
+        <key>PioneerDDJFLX4.smartFaderPress</key>
+        <status>0x96</status>
+        <midino>0x01</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
       <!-- SMART CFX -->
       <control>
         <description>SMART CFX - press - toggle Smart CFX mode</description>

@@ -666,6 +666,9 @@ PioneerDDJFLX4.init = function() {
         }
     }
 
+    // Smart Fader follows the crossfader while it is on
+    engine.makeConnection("[Master]", "crossfader", PioneerDDJFLX4.smartFaderApply);
+
     // Smart CFX LED sync
     engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
     engine.makeConnection(PioneerDDJFLX4._qfxGroup(2), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
@@ -2250,19 +2253,61 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     const g2 = PioneerDDJFLX4._qfxGroup(2);
 
     if (isShiftVariant) {
-        // Shift: toggle Smart CFX on/off
-        PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
-
-        engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-        engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-
-        PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
+        // SHIFT+SMART CFX: next Smart CFX preset (Rekordbox: preset screen)
+        engine.setValue(g1, "next_chain_preset", 1);
+        engine.setValue(g2, "next_chain_preset", 1);
         return;
     }
 
-    // Normal: cycle effect preset
-    engine.setValue(g1, "next_chain_preset", 1);
-    engine.setValue(g2, "next_chain_preset", 1);
+    // SMART CFX: toggle Smart CFX on/off (Rekordbox behaviour)
+    PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
+    engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+    engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+    PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
+};
+
+// --- SMART FADER (Rekordbox: automatic transition from the crossfader) ---
+// Button 0x96/0x01. While on:
+//  - Beat Sync is forced on for both decks (Rekordbox: cannot be cancelled)
+//  - EQ LOW of the deck the crossfader is leaving is cut, the other deck
+//    is restored, so the bass hands over with the fader.
+// Echo / reverb presets are not implemented in this mapping.
+PioneerDDJFLX4.SMART_FADER_MAX_LOW_CUT = 1.0; // 1.0 = full kill at the edge
+
+// Pure: EQ LOW gains (0..1, 1 = unity) for [Channel1] and [Channel2] for a
+// crossfader position xf in -1..1 (-1 = left deck full, 1 = right deck full).
+PioneerDDJFLX4.smartFaderLowGains = function(xf) {
+    const x = Math.max(-1, Math.min(1, xf));
+    const cut = PioneerDDJFLX4.SMART_FADER_MAX_LOW_CUT;
+    const left = 1 - cut * Math.max(0, x);   // leaving the left deck when x > 0
+    const right = 1 - cut * Math.max(0, -x); // leaving the right deck when x < 0
+    return {ch1: left, ch2: right};
+};
+
+PioneerDDJFLX4._smartFader = PioneerDDJFLX4._smartFader || {enabled: false};
+
+PioneerDDJFLX4.smartFaderApply = function() {
+    if (!PioneerDDJFLX4._smartFader.enabled) { return; }
+    const xf = engine.getValue("[Master]", "crossfader");
+    const g = PioneerDDJFLX4.smartFaderLowGains(xf);
+    engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel1]"), "parameter1", g.ch1);
+    engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel2]"), "parameter1", g.ch2);
+};
+
+PioneerDDJFLX4.smartFaderPress = function(_ch, _control, value, _status, _group) {
+    if (value !== 0x7F) { return; } // only on press
+    const on = !PioneerDDJFLX4._smartFader.enabled;
+    PioneerDDJFLX4._smartFader.enabled = on;
+    if (on) {
+        engine.setValue("[Channel1]", "sync_enabled", 1);
+        engine.setValue("[Channel2]", "sync_enabled", 1);
+        PioneerDDJFLX4.smartFaderApply();
+    } else {
+        // Restore full EQ LOW on both decks
+        engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel1]"), "parameter1", 1.0);
+        engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel2]"), "parameter1", 1.0);
+    }
+    PioneerDDJFLX4.setLed(0x96, 0x01, on);
 };
 
 /**
