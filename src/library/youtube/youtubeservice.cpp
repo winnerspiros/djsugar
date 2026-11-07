@@ -4059,7 +4059,8 @@ QString mixxx::YouTubeVideoInfo::inferGenre(const QString& title,
             {"ellinika", "Greek"},
             {"ellinika", "Greek"},
     };
-    const QString uLow = uploader.toLower().remove(QRegularExpression(R"([\s\W]+)"));
+    static const QRegularExpression kNonAlphaNumeric(R"([\s\W]+)");
+    const QString uLow = uploader.toLower().remove(kNonAlphaNumeric);
     if (channelHints.contains(uLow)) {
         return channelHints.value(uLow);
     }
