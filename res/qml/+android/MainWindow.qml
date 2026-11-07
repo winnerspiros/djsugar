@@ -355,6 +355,22 @@ Item {
                     }
 
                     Skin.Button {
+                        id: showSamplersButton
+                        visible: root.topBarItemShown("smpl")
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 54
+                        activeColor: "#FF6600"
+                        backgroundColor: root.showSamplers ? "#663300" : "#222733"
+                        normalColor: root.showSamplers ? "#FFB340" : "#b0bec5"
+                        checkable: true
+                        checked: root.showSamplers
+                        text: "SMPL"
+                        font.bold: true
+                        font.pixelSize: 10
+                        onClicked: root.showSamplers = !root.showSamplers
+                    }
+
+                    Skin.Button {
                         id: xyPadButton
                         visible: root.topBarItemShown("xy")
                         Layout.preferredHeight: 30
@@ -423,6 +439,13 @@ Item {
             id: effects
             visible: root.showEffects
             width: parent.width
+        }
+
+        Skin.SamplerRow {
+            id: samplers
+            visible: root.showSamplers
+            width: parent.width
+            samplerOffset: 0
         }
 
         SplitView {
