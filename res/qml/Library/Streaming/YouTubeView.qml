@@ -126,7 +126,7 @@ Item {
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 160
                 checked: Mixxx.YouTube.sponsorBlockAutoSkip
-                onClicked: Mixxx.YouTube.sponsorBlockAutoSkip = !Mixxx.YouTube.sponsorBlockAutoSkip
+                onToggled: Mixxx.YouTube.sponsorBlockAutoSkip = sponsorBlockSwitch.checked
                 background: Rectangle {
                     implicitWidth: 60
                     implicitHeight: 28
