@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <samplerbank>
- <!-- Default 16 Rekordbox-style sample slots -->
- <sampler group="[Sampler1]" location="samples/kick.ogg"/>
- <sampler group="[Sampler2]" location="samples/kick-hard.ogg"/>
- <sampler group="[Sampler3]" location="samples/snare.ogg"/>
- <sampler group="[Sampler4]" location="samples/hi-hat.ogg"/>
- <sampler group="[Sampler5]" location="samples/clap.ogg"/>
- <sampler group="[Sampler6]" location="samples/tom-drum.ogg"/>
- <sampler group="[Sampler7]" location="samples/crash-cymbal.ogg"/>
- <sampler group="[Sampler8]" location="samples/percussion.ogg"/>
- <sampler group="[Sampler9]" location="samples/riser-classic.ogg"/>
- <sampler group="[Sampler10]" location="samples/transition-sweep.ogg"/>
- <sampler group="[Sampler11]" location="samples/horn.ogg"/>
- <sampler group="[Sampler12]" location="samples/siren-police.ogg"/>
- <sampler group="[Sampler13]" location="samples/shotgun-blast.ogg"/>
- <sampler group="[Sampler14]" location="samples/laser.ogg"/>
- <sampler group="[Sampler15]" location="samples/explosion.ogg"/>
- <sampler group="[Sampler16]" location="samples/vinyl-scratch.ogg"/>
+  <!-- Default 16 sample slots: the built-in djsugar pack (res/samples/djsugar) -->
+  <sampler group="[Sampler1]" location="samples/djsugar/01_kick.wav"/>
+  <sampler group="[Sampler2]" location="samples/djsugar/02_snare.wav"/>
+  <sampler group="[Sampler3]" location="samples/djsugar/03_clap.wav"/>
+  <sampler group="[Sampler4]" location="samples/djsugar/04_hat_closed.wav"/>
+  <sampler group="[Sampler5]" location="samples/djsugar/05_hat_open.wav"/>
+  <sampler group="[Sampler6]" location="samples/djsugar/06_rim.wav"/>
+  <sampler group="[Sampler7]" location="samples/djsugar/07_tom.wav"/>
+  <sampler group="[Sampler8]" location="samples/djsugar/08_crash.wav"/>
+  <sampler group="[Sampler9]" location="samples/djsugar/09_riser.wav"/>
+  <sampler group="[Sampler10]" location="samples/djsugar/10_downlifter.wav"/>
+  <sampler group="[Sampler11]" location="samples/djsugar/11_sub_drop.wav"/>
+  <sampler group="[Sampler12]" location="samples/djsugar/12_808.wav"/>
+  <sampler group="[Sampler13]" location="samples/djsugar/13_stab_minor.wav"/>
+  <sampler group="[Sampler14]" location="samples/djsugar/14_airhorn.wav"/>
+  <sampler group="[Sampler15]" location="samples/djsugar/15_vinyl_stop.wav"/>
+  <sampler group="[Sampler16]" location="samples/djsugar/16_noise_sweep.wav"/>
 </samplerbank>

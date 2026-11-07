@@ -9,6 +9,7 @@ import android.hardware.usb.UsbDevice;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -52,7 +53,7 @@ public class MidiHelper {
         HandlerThread thread = new HandlerThread("MixxxMidiCallbacks");
         thread.start();
         sHandler = new Handler(thread.getLooper());
-        sManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
+        MidiManager.DeviceCallback callback = new MidiManager.DeviceCallback() {
             @Override
             public void onDeviceAdded(MidiDeviceInfo info) {
                 Log.i(TAG, "MIDI device added: " + getName(info));
@@ -64,8 +65,19 @@ public class MidiHelper {
                 Log.i(TAG, "MIDI device removed: " + getName(info));
                 notifyDevicesChanged();
             }
-        }, sHandler);
+        };
+        registerCallback(callback);
         return true;
+    }
+
+    // API 34+ takes an Executor; older releases need the Handler overload.
+    @SuppressWarnings("deprecation")
+    private static void registerCallback(MidiManager.DeviceCallback callback) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            sManager.registerDeviceCallback(sHandler::post, callback);
+        } else {
+            sManager.registerDeviceCallback(callback, sHandler);
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -111,7 +123,9 @@ public class MidiHelper {
         if (properties == null) {
             return null;
         }
-        Object device = properties.getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE);
+        Object device = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            ? properties.getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE, UsbDevice.class)
+            : getParcelableLegacy(properties, MidiDeviceInfo.PROPERTY_USB_DEVICE);
         return device instanceof UsbDevice ? (UsbDevice) device : null;
     }
 
@@ -236,13 +250,25 @@ public class MidiHelper {
         return false;
     }
 
+    // Pre-API-33 Bundle lookup; the typed overload above does not exist there.
+    @SuppressWarnings("deprecation")
+    private static Object getParcelableLegacy(Bundle properties, String key) {
+        return properties.getParcelable(key);
+    }
+
     /// Returns the MAC address of a Bluetooth MIDI device, or null for other types.
     private static String getBluetoothAddress(MidiDeviceInfo info) {
         Bundle properties = info.getProperties();
         if (properties == null) {
             return null;
         }
-        Object device = properties.getParcelable(MidiDeviceInfo.PROPERTY_BLUETOOTH_DEVICE);
+        Object device;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            device = properties.getParcelable(
+                MidiDeviceInfo.PROPERTY_BLUETOOTH_DEVICE, BluetoothDevice.class);
+        } else {
+            device = getParcelableLegacy(properties, MidiDeviceInfo.PROPERTY_BLUETOOTH_DEVICE);
+        }
         return device instanceof BluetoothDevice ? ((BluetoothDevice) device).getAddress() : null;
     }
 }
