@@ -48,7 +48,7 @@ WaveformWidgetRenderer::WaveformWidgetRenderer(const QString& group)
           m_playMarkerPosition(s_defaultPlayMarkerPosition),
           m_pContext(nullptr),
           m_passthroughEnabled(false) {
-    //qDebug() << "WaveformWidgetRenderer";
+    // qDebug() << "WaveformWidgetRenderer";
     for (int type = ::WaveformRendererAbstract::Play;
             type <= ::WaveformRendererAbstract::Slip;
             type++) {
@@ -74,7 +74,7 @@ WaveformWidgetRenderer::WaveformWidgetRenderer(const QString& group)
 }
 
 WaveformWidgetRenderer::~WaveformWidgetRenderer() {
-    //qDebug() << "~WaveformWidgetRenderer";
+    // qDebug() << "~WaveformWidgetRenderer";
 
     for (int i = 0; i < m_rendererStack.size(); ++i) {
         delete m_rendererStack[i];
@@ -157,7 +157,7 @@ void WaveformWidgetRenderer::onPreRender(VSyncTimeProvider* vsyncThread) {
         return;
     }
 
-    //Fetch parameters before rendering in order the display all sub-renderers with the same values
+    // Fetch parameters before rendering in order the display all sub-renderers with the same values
     double rateRatio = m_pRateRatioCO ? m_pRateRatioCO->get() : 1.0;
 
     m_gain = m_pGainControlObject ? m_pGainControlObject->get() : 1.0;
@@ -192,12 +192,12 @@ void WaveformWidgetRenderer::onPreRender(VSyncTimeProvider* vsyncThread) {
         double displayedLengthLeft = (static_cast<double>(getLength()) / m_trackPixelCount) * leftOffset;
         double displayedLengthRight = (static_cast<double>(getLength()) / m_trackPixelCount) * rightOffset;
 
-        //qDebug() << "WaveformWidgetRenderer::onPreRender" <<
-        //        "m_playMarkerPosition=" << m_playMarkerPosition <<
-        //        "leftOffset=" << leftOffset <<
-        //        "rightOffset=" << rightOffset <<
-        //        "displayedLengthLeft=" << displayedLengthLeft <<
-        //        "displayedLengthRight=" << displayedLengthRight;
+        // qDebug() << "WaveformWidgetRenderer::onPreRender" <<
+        //         "m_playMarkerPosition=" << m_playMarkerPosition <<
+        //         "leftOffset=" << leftOffset <<
+        //         "rightOffset=" << rightOffset <<
+        //         "displayedLengthLeft=" << displayedLengthLeft <<
+        //         "displayedLengthRight=" << displayedLengthRight;
 
         m_totalVSamples = static_cast<int>(m_trackPixelCount * m_visualSamplePerPixel);
         for (int type = ::WaveformRendererAbstract::Play;
@@ -234,8 +234,8 @@ void WaveformWidgetRenderer::draw(QPainter* painter, QPaintEvent* event) {
     m_lastSystemFrameTime = m_timer->restart().toIntegerNanos();
 #endif
 
-    //PerformanceTimer timer;
-    //timer.start();
+    // PerformanceTimer timer;
+    // timer.start();
 
     // not ready to display need to wait until track initialization is done
     // draw only first in stack (background)
@@ -250,9 +250,9 @@ void WaveformWidgetRenderer::draw(QPainter* painter, QPaintEvent* event) {
         return;
     } else {
         for (int i = 0; i < stackSize; i++) {
-            //qDebug() << i << " a  " << timer.restart().formatNanosWithUnit();
+            // qDebug() << i << " a  " << timer.restart().formatNanosWithUnit();
             m_rendererStack.at(i)->draw(painter, event);
-            //qDebug() << i << " e " << timer.restart().formatNanosWithUnit();
+            // qDebug() << i << " e " << timer.restart().formatNanosWithUnit();
         }
 
         drawPlayPosmarker(painter);
@@ -292,7 +292,7 @@ void WaveformWidgetRenderer::draw(QPainter* painter, QPaintEvent* event) {
     m_lastFramesTime[currentFrame] = m_lastFrameTime;
 #endif
 
-    //qDebug() << "draw() end" << timer.restart().formatNanosWithUnit();
+    // qDebug() << "draw() end" << timer.restart().formatNanosWithUnit();
 }
 
 void WaveformWidgetRenderer::drawPlayPosmarker(QPainter* painter) {
@@ -370,11 +370,7 @@ void WaveformWidgetRenderer::drawPassthroughLabel(QPainter* painter) {
     font.setFamily("Open Sans"); // default label font
     // Make the label always fit
     font.setPixelSize(math_min(25, int(m_height * 0.8)));
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    font.setWeight(75); // bold
-#else
     font.setWeight(QFont::Bold); // bold
-#endif
     font.setItalic(false);
 
     QString label = QObject::tr("Passthrough");
@@ -442,7 +438,7 @@ void WaveformWidgetRenderer::setup(
 }
 
 void WaveformWidgetRenderer::setZoom(double zoom) {
-    //qDebug() << "WaveformWidgetRenderer::setZoom" << zoom;
+    // qDebug() << "WaveformWidgetRenderer::setZoom" << zoom;
     m_zoomFactor = math_clamp<double>(zoom, s_waveformMinZoom, s_waveformMaxZoom);
 }
 
@@ -458,7 +454,7 @@ void WaveformWidgetRenderer::selectStem(mixxx::StemChannelSelection stemMask) {
 
 void WaveformWidgetRenderer::setTrack(TrackPointer track) {
     m_pTrack = track;
-    //used to postpone first display until track sample is actually available
+    // used to postpone first display until track sample is actually available
     m_trackSamples = -1.0;
 
     for (int i = 0; i < m_rendererStack.size(); ++i) {

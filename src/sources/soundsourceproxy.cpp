@@ -44,6 +44,9 @@
 // the YouTube library entry.
 #include "library/coverartutils.h"
 #include "sources/youtube/soundsourceyoutube.h"
+#ifdef __STEM_SEPARATION__
+#include "stems/stemcompanion.h"
+#endif
 #include "track/globaltrackcache.h"
 #include "track/track.h"
 #include "util/logger.h"
@@ -970,11 +973,63 @@ mixxx::AudioSourcePointer SoundSourceProxy::openAudioSource(
     VERIFY_OR_DEBUG_ASSERT(m_pTrack) {
         return nullptr;
     }
+#ifdef __STEM_SEPARATION__
+    // A track separated into stems plays its stem file, which keeps the
+    // track's cues and beats (see src/stems/)
+    const QString stemFile = mixxx::stems::findStemFile(m_pTrack->getLocation());
+    if (!stemFile.isEmpty()) {
+        auto pAudioSource = openSeparatedStems(stemFile, params);
+        if (pAudioSource) {
+            return pAudioSource;
+        }
+        kLogger.warning() << "Failed to open the stem file" << stemFile
+                          << ", playing the track's file";
+    }
+#endif
     if (!openSoundSource(params)) {
         return nullptr;
     }
     // Overwrite metadata with actual audio properties
     m_pTrack->updateStreamInfoFromSource(
             m_pSoundSource->getStreamInfo());
+#ifdef __STEM_SEPARATION__
+    // The stems of a stem file that was deleted
+    if (m_pTrack->hasStem() &&
+            !mixxx::StemInfoImporter::hasStemAtom(m_pTrack->getLocation())) {
+        m_pTrack->setSeparatedStemInfos({});
+    }
+#endif
     return mixxx::AudioSourceTrackProxy::create(m_pTrack, m_pSoundSource);
 }
+
+#ifdef __STEM_SEPARATION__
+mixxx::AudioSourcePointer SoundSourceProxy::openTrackFileAudioSource(
+        const mixxx::AudioSource::OpenParams& params) {
+    VERIFY_OR_DEBUG_ASSERT(m_pTrack) {
+        return nullptr;
+    }
+    if (!openSoundSource(params)) {
+        return nullptr;
+    }
+    return mixxx::AudioSourceTrackProxy::create(m_pTrack, m_pSoundSource);
+}
+
+mixxx::AudioSourcePointer SoundSourceProxy::openSeparatedStems(
+        const QString& stemFile,
+        const mixxx::AudioSource::OpenParams& params) {
+    SoundSourceProxy stemProxy(QUrl::fromLocalFile(stemFile));
+    if (!stemProxy.m_pSoundSource || !stemProxy.openSoundSource(params)) {
+        return nullptr;
+    }
+    const auto stemInfos = mixxx::StemInfoImporter::importStemInfos(stemFile);
+    if (stemInfos.isEmpty()) {
+        stemProxy.m_pSoundSource->close();
+        return nullptr;
+    }
+    m_pProvider = stemProxy.m_pProvider;
+    m_pSoundSource = stemProxy.m_pSoundSource;
+    m_pTrack->updateStreamInfoFromSource(m_pSoundSource->getStreamInfo());
+    m_pTrack->setSeparatedStemInfos(stemInfos);
+    return mixxx::AudioSourceTrackProxy::create(m_pTrack, m_pSoundSource);
+}
+#endif

@@ -28,6 +28,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     Q_OBJECT
   public:
     YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig);
+    // Caches thumbnails of search results on disk, so decks can show cover art.
+    void prefetchThumbnails(const QList<mixxx::YouTubeVideoInfo>& videos) {
+        fetchThumbnails(videos);
+    }
     ~YouTubeFeature() override = default;
 
     QVariant title() override {
@@ -67,6 +71,17 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     ///      cache and en_US locales must not switch this fork to United States.
     /// Always returns a non-empty 2-letter uppercase code.
     QString resolvedTrendingRegion() const;
+
+    /// Whether SponsorBlock auto-skip is enabled (default: true).
+    bool sponsorBlockAutoSkip() const;
+    void setSponsorBlockAutoSkip(bool enabled);
+
+  signals:
+    void downloadToPlayerRequested(
+            const QString& videoId,
+            const QString& group,
+            const QString& title);
+    void sponsorBlockAutoSkipChanged(bool enabled);
 
   protected:
     void appendTrackIdsFromRightClickIndex(

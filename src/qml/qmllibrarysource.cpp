@@ -23,7 +23,7 @@
 #include "track/track.h"
 
 AllTrackLibraryFeature::AllTrackLibraryFeature(Library* pLibrary, UserSettingsPointer pConfig)
-        : LibraryFeature(pLibrary, pConfig, QString()),
+        : LibraryFeature(pLibrary, pConfig, QStringLiteral("tracks")),
           m_pSidebarModel(make_parented<TreeItemModel>(this)),
           m_pLibraryTableModel(pLibrary->trackTableModel()) {
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));

@@ -64,7 +64,7 @@ QString HidController::mappingExtension() {
 }
 
 void HidController::setMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
-    m_pMutableMapping = pMapping;
+    setMutableMapping(pMapping);
     m_pMapping = downcastAndClone<LegacyHidControllerMapping>(pMapping.get());
 }
 
@@ -179,29 +179,6 @@ int HidController::open(const QString& resourcePath) {
         return -1;
     }
 
-    // Must claim the HID interface before using bulkTransfer on the
-    // interrupt IN endpoint. Without this, UsbDeviceConnection.bulkTransfer()
-    // returns -1 (permission error) and no data arrives.
-    {
-        auto usbInterface = usbDevice.callMethod<jobject>(
-                "getInterface",
-                "(I)Landroid/hardware/usb/UsbInterface;",
-                m_deviceInfo.getUsbInterfaceNumber().value());
-        if (!usbInterface.isValid()) {
-            qWarning() << "Could not get HID interface"
-                       << m_deviceInfo.getUsbInterfaceNumber().value();
-            return -1;
-        }
-        if (!usbDeviceConnection.callMethod<jboolean>("claimInterface",
-                    "(Landroid/hardware/usb/UsbInterface;Z)Z",
-                    usbInterface,
-                    true)) {
-            qWarning() << "Failed to claim HID interface"
-                       << m_deviceInfo.getUsbInterfaceNumber().value();
-            return -1;
-        }
-    }
-
     auto fileDescriptor = static_cast<intptr_t>(
             usbDeviceConnection.callMethod<jint>("getFileDescriptor"));
 
@@ -211,6 +188,7 @@ int HidController::open(const QString& resourcePath) {
                       << fileDescriptor << "and interface"
                       << m_deviceInfo.getUsbInterfaceNumber();
 
+    libusb_set_option(nullptr, LIBUSB_OPTION_NO_DEVICE_DISCOVERY);
     hid_device* pHidDevice = hid_libusb_wrap_sys_device(
             fileDescriptor, m_deviceInfo.getUsbInterfaceNumber().value());
 #else

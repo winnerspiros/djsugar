@@ -429,6 +429,7 @@ PioneerDDJFLX4.PADMODE = {
     BEATLOOP: "beatloop",
     SAMPLER: "sampler",
     KEYSHIFT: "keyshift",
+    STEMS: "stems",       // SHIFT + SAMPLER: stem mute/solo (pads 1-4), stem FX (5-8)
 };
 
 PioneerDDJFLX4.padMode = {
@@ -531,8 +532,12 @@ PioneerDDJFLX4.updateDeckLeds = function(group) {
     PioneerDDJFLX4.toggleLight(deckLights.padFX2Mode,   mode === PioneerDDJFLX4.PADMODE.PADFX2);
     PioneerDDJFLX4.toggleLight(deckLights.beatJumpMode, mode === PioneerDDJFLX4.PADMODE.BEATJUMP);
     PioneerDDJFLX4.toggleLight(deckLights.beatLoopMode, mode === PioneerDDJFLX4.PADMODE.BEATLOOP);
-    PioneerDDJFLX4.toggleLight(deckLights.samplerMode,  mode === PioneerDDJFLX4.PADMODE.SAMPLER);
+    PioneerDDJFLX4.toggleLight(deckLights.samplerMode,  mode === PioneerDDJFLX4.PADMODE.SAMPLER || mode === PioneerDDJFLX4.PADMODE.STEMS);
     PioneerDDJFLX4.toggleLight(deckLights.keyShiftMode, mode === PioneerDDJFLX4.PADMODE.KEYSHIFT);
+
+    if (mode === PioneerDDJFLX4.PADMODE.STEMS) {
+        PioneerDDJFLX4._refreshKeyboardStemLeds(group);
+    }
 
     // Loop LEDs
     if (typeof PioneerDDJFLX4._updateLoopLeds === "function") {
@@ -665,6 +670,9 @@ PioneerDDJFLX4.init = function() {
             );
         }
     }
+
+    // Smart Fader follows the crossfader while it is on
+    engine.makeConnection("[Master]", "crossfader", PioneerDDJFLX4.smartFaderApply);
 
     // Smart CFX LED sync
     engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
@@ -1425,6 +1433,12 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
 
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
     const deck = deckIdx + 1;
+
+    // A scratch left over from a jog touch would hold the audio back. Drop it
+    // immediately so Play starts at once.
+    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+        PioneerDDJFLX4._scratchDisable(deck, false);
+    }
 
     const vinylOn = !!PioneerDDJFLX4._vinylWanted[deckIdx];
     const brakeMode = !!PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL;
@@ -2250,19 +2264,61 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     const g2 = PioneerDDJFLX4._qfxGroup(2);
 
     if (isShiftVariant) {
-        // Shift: toggle Smart CFX on/off
-        PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
-
-        engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-        engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-
-        PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
+        // SHIFT+SMART CFX: next Smart CFX preset (Rekordbox: preset screen)
+        engine.setValue(g1, "next_chain_preset", 1);
+        engine.setValue(g2, "next_chain_preset", 1);
         return;
     }
 
-    // Normal: cycle effect preset
-    engine.setValue(g1, "next_chain_preset", 1);
-    engine.setValue(g2, "next_chain_preset", 1);
+    // SMART CFX: toggle Smart CFX on/off (Rekordbox behaviour)
+    PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
+    engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+    engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+    PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
+};
+
+// --- SMART FADER (Rekordbox: automatic transition from the crossfader) ---
+// Button 0x96/0x01. While on:
+//  - Beat Sync is forced on for both decks (Rekordbox: cannot be cancelled)
+//  - EQ LOW of the deck the crossfader is leaving is cut, the other deck
+//    is restored, so the bass hands over with the fader.
+// Echo / reverb presets are not implemented in this mapping.
+PioneerDDJFLX4.SMART_FADER_MAX_LOW_CUT = 1.0; // 1.0 = full kill at the edge
+
+// Pure: EQ LOW gains (0..1, 1 = unity) for [Channel1] and [Channel2] for a
+// crossfader position xf in -1..1 (-1 = left deck full, 1 = right deck full).
+PioneerDDJFLX4.smartFaderLowGains = function(xf) {
+    const x = Math.max(-1, Math.min(1, xf));
+    const cut = PioneerDDJFLX4.SMART_FADER_MAX_LOW_CUT;
+    const left = 1 - cut * Math.max(0, x);   // leaving the left deck when x > 0
+    const right = 1 - cut * Math.max(0, -x); // leaving the right deck when x < 0
+    return {ch1: left, ch2: right};
+};
+
+PioneerDDJFLX4._smartFader = PioneerDDJFLX4._smartFader || {enabled: false};
+
+PioneerDDJFLX4.smartFaderApply = function() {
+    if (!PioneerDDJFLX4._smartFader.enabled) { return; }
+    const xf = engine.getValue("[Master]", "crossfader");
+    const g = PioneerDDJFLX4.smartFaderLowGains(xf);
+    engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel1]"), "parameter1", g.ch1);
+    engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel2]"), "parameter1", g.ch2);
+};
+
+PioneerDDJFLX4.smartFaderPress = function(_ch, _control, value, _status, _group) {
+    if (value !== 0x7F) { return; } // only on press
+    const on = !PioneerDDJFLX4._smartFader.enabled;
+    PioneerDDJFLX4._smartFader.enabled = on;
+    if (on) {
+        engine.setValue("[Channel1]", "sync_enabled", 1);
+        engine.setValue("[Channel2]", "sync_enabled", 1);
+        PioneerDDJFLX4.smartFaderApply();
+    } else {
+        // Restore full EQ LOW on both decks
+        engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel1]"), "parameter1", 1.0);
+        engine.setParameter(PioneerDDJFLX4._eqGroupFromChannelGroup("[Channel2]"), "parameter1", 1.0);
+    }
+    PioneerDDJFLX4.setLed(0x96, 0x01, on);
 };
 
 /**
@@ -3131,9 +3187,10 @@ PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
         return;
     }
 
-    // Touch released
+    // Touch released. Only ramp the scratch out while the deck is still playing;
+    // a ramp on a paused deck keeps the scratch engaged and delays the next Play.
     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-        PioneerDDJFLX4._scratchDisable(deckNum, true);
+        PioneerDDJFLX4._scratchDisable(deckNum, engine.getValue(group, "play") === 1);
     } else {
         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
@@ -3420,7 +3477,11 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     } else if (_control === 0x6D) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
     } else if (_control === 0x22) {
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
+        // SHIFT + SAMPLER: stems (Rekordbox uses this combo for Key Shift; this
+        // mapping keeps Key Shift on its own button, 0x6F)
+        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4._deckShiftActive(ch)
+            ? PioneerDDJFLX4.PADMODE.STEMS
+            : PioneerDDJFLX4.PADMODE.SAMPLER;
     } else if (_control === 0x6F) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
     } else {
@@ -3430,7 +3491,37 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     PioneerDDJFLX4.updateDeckLeds(ch);
 };
 
+// STEMS mode router. The hardware reports pad notes for whatever pad mode it
+// is in, so every pad path that can carry a stem pad calls this first.
+// Pads 1-4 (padIndex 0-3): toggle stem, SHIFT = only this stem.
+// Pads 5-8 (padIndex 4-7): toggle stem FX, SHIFT = cycle FX of this stem.
+// Returns true when the press belongs to STEMS and was consumed.
+PioneerDDJFLX4._stemPadRoute = function(status, padIndex, shift, value) {
+    const low = status & 0x0F;
+    const ch = (low === 0x07 || low === 0x08) ? "[Channel1]" : "[Channel2]";
+    if (PioneerDDJFLX4.padMode[ch] !== PioneerDDJFLX4.PADMODE.STEMS) { return false; }
+    if (padIndex < 0 || padIndex > 7) { return false; }
+    if (value !== 0x7F) { return true; } // swallow releases, no sample/cue action
+    if (padIndex < 4) {
+        const control = PioneerDDJFLX4.stemMutePadsFirstControl + padIndex;
+        if (shift) {
+            PioneerDDJFLX4.stemMutePadShiftPressed(0, control, value, status, ch);
+        } else {
+            PioneerDDJFLX4.stemMutePadPressed(0, control, value, status, ch);
+        }
+    } else {
+        const control = PioneerDDJFLX4.stemFxPadsFirstControl + (padIndex - 4);
+        if (shift) {
+            PioneerDDJFLX4.stemFxPadShiftPressed(0, control, value, status, ch);
+        } else {
+            PioneerDDJFLX4.stemFxPadPressed(0, control, value, status, ch);
+        }
+    }
+    return true;
+};
+
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - 0x30, false, value)) { return; }
     // Press
     if (value === 0x7F) {
         // long-press nur sinnvoll, wenn überhaupt was geladen ist
@@ -3484,6 +3575,7 @@ PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - 0x30, true, value)) { return; }
     if (engine.getValue(group, "play")) {
         engine.setValue(group, "cue_gotoandstop", value);
     } else if (engine.getValue(group, "track_loaded")) {
@@ -3766,6 +3858,18 @@ PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _statu
 // ------------------- ENGINE CALLBACKS (LED sync) -------------------
 // Diese beiden müssen FUNKTIONEN sein, weil init() sie an makeConnection übergibt.
 
+// Writes one stem pad LED. Stems live on SHIFT+SAMPLER only (no keyboard mode),
+// so the LED goes to the sampler note (0x30+) and the key-shift note (0x70+) of
+// that pad, and only while the deck is in STEMS mode. padIndex 0..7 = pads 1..8.
+PioneerDDJFLX4._stemPadLed = function(ch, padIndex, code) {
+    if (PioneerDDJFLX4.padMode[ch] !== PioneerDDJFLX4.PADMODE.STEMS) { return; }
+    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
+    for (const st of statuses) {
+        midi.sendShortMsg(st, 0x30 + padIndex, code);
+        midi.sendShortMsg(st, 0x70 + padIndex, code);
+    }
+};
+
 PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _control) {
     const m = /\[Channel(\d+)_Stem(\d+)\]/.exec(group);
     if (!m) { return; }
@@ -3780,10 +3884,7 @@ PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _
     const on = (stem <= stemCount) && (value <= 0.5);
     const code = on ? 0x7F : 0x00;
 
-    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
-    for (const st of statuses) {
-        midi.sendShortMsg(st, PioneerDDJFLX4.stemMutePadsFirstControl + stem - 1, code);
-    }
+    PioneerDDJFLX4._stemPadLed(ch, stem - 1, code);
 };
 
 PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[ChannelX_StemY]] */, _control) {
@@ -3796,10 +3897,7 @@ PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[Chann
     const ch = `[Channel${deck}]`;
     const code = (value <= 0.5) ? 0x00 : 0x7F;
 
-    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
-    for (const st of statuses) {
-        midi.sendShortMsg(st, PioneerDDJFLX4.stemFxPadsFirstControl + stem - 1, code);
-    }
+    PioneerDDJFLX4._stemPadLed(ch, 4 + stem - 1, code);
 };
 
 // stem_count changed -> refresh LEDs (this is what fixes “only updates after pressing pads”)
@@ -3841,6 +3939,7 @@ PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
 };
 
 PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, control - PioneerDDJFLX4.pitchPadsFirstControl, false, value)) { return; }
     if (value !== 0x7F) { return; }
 
     const padIndex = control - PioneerDDJFLX4.pitchPadsFirstControl; // 0..7
@@ -3853,7 +3952,8 @@ PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, gro
 // MUSS man das also eigenen Offset/Bank implementieren.
 // Solange du das nicht sauber nachbaust: lieber gar nichts tun, statt „irgendwie“.
 PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _status, _group) {
-    // absichtlich leer
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - PioneerDDJFLX4.pitchPadsFirstControl, true, _value)) { return; }
+    // otherwise intentionally empty
 };
 
 //

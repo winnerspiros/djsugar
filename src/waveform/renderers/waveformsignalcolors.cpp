@@ -1,6 +1,5 @@
 #include "waveformsignalcolors.h"
 
-#include "util/colorcomponents.h"
 #include "widget/wskincolor.h"
 
 class QDomNode;
@@ -13,7 +12,7 @@ WaveformSignalColors::WaveformSignalColors()
         : m_dimBrightThreshold(kDefaultDimBrightThreshold) {
 }
 
-bool WaveformSignalColors::setup(const QDomNode &node, const SkinContext& context) {
+bool WaveformSignalColors::setup(const QDomNode& node, const SkinContext& context) {
     // NOTE(rryan): It is critical that every color is converted to RGB with
     // toRgb(). Otherwise Mixxx will waste 3% of its CPU time while rendering
     // the filtered waveform doing RGB color space conversions!
@@ -71,7 +70,7 @@ bool WaveformSignalColors::setup(const QDomNode &node, const SkinContext& contex
 
     m_axesColor = context.selectColor(node, "AxesColor");
     if (!m_axesColor.isValid()) {
-        m_axesColor = QColor(245,245,245);
+        m_axesColor = QColor(245, 245, 245);
     }
     m_axesColor = WSkinColor::getCorrectColor(m_axesColor).toRgb();
 
@@ -117,11 +116,11 @@ bool WaveformSignalColors::setup(const QDomNode &node, const SkinContext& contex
     bool filteredColorValid = m_lowColor.isValid() && m_midColor.isValid() && m_highColor.isValid();
 
     if (m_signalColor.isValid() && filteredColorValid) {
-        return true; //default
+        return true; // default
     }
 
     if (m_signalColor.isValid() && !filteredColorValid) {
-        fallBackFromSignalColor(); //pre waveform-2.0 skins
+        fallBackFromSignalColor(); // pre waveform-2.0 skins
         return false;
     }
 
@@ -134,24 +133,24 @@ void WaveformSignalColors::fallBackFromSignalColor() {
     //           << "skin do not provide low/mid/high signal colors";
 
     float h, s, l, a;
-    getHslF(m_signalColor, &h, &s, &l, &a);
+    m_signalColor.getHslF(&h, &s, &l, &a);
 
     constexpr double analogousAngle = 1.0 / 12.0;
 
     if (s < 0.1) { // gray
         const float sMax = 1.0f - h;
-        m_lowColor.setHslF(h,s,l);
+        m_lowColor.setHslF(h, s, l);
         m_midColor.setHslF(h, s + sMax * 0.2f, l);
         m_highColor.setHslF(h, s + sMax * 0.4f, l);
     } else {
         if (l < 0.1) { // ~white
             const float lMax = 1.0f - l;
-            m_lowColor.setHslF(h,s,l);
+            m_lowColor.setHslF(h, s, l);
             m_midColor.setHslF(h, s, l + lMax * 0.2f);
             m_highColor.setHslF(h, s, l + lMax * 0.4f);
         } else if (l < 0.5) {
             const float lMax = 1.0f - l;
-            m_lowColor.setHslF(h,s,l);
+            m_lowColor.setHslF(h, s, l);
             m_midColor.setHslF(
                     static_cast<float>(stableHue(h - analogousAngle * 0.3)),
                     s,
@@ -162,7 +161,7 @@ void WaveformSignalColors::fallBackFromSignalColor() {
                     l + lMax * 0.4f);
         } else if (l < 0.9) {
             const float lMin = l;
-            m_lowColor.setHslF(h,s,l);
+            m_lowColor.setHslF(h, s, l);
             m_midColor.setHslF(
                     static_cast<float>(stableHue(h - analogousAngle * 0.3)),
                     s,
@@ -173,12 +172,11 @@ void WaveformSignalColors::fallBackFromSignalColor() {
                     l - lMin * 0.4f);
         } else { // ~black
             const float lMin = l;
-            m_lowColor.setHslF(h,s,l);
+            m_lowColor.setHslF(h, s, l);
             m_midColor.setHslF(h, s, l - lMin * 0.2f);
             m_highColor.setHslF(h, s, l - lMin * 0.4f);
         }
     }
-
 
     // NOTE(rryan): It is critical that every color is converted to RGB with
     // toRgb(). Otherwise Mixxx will waste 3% of its CPU time while rendering
@@ -197,7 +195,8 @@ void WaveformSignalColors::fallBackDefaultColor() {
     fallBackFromSignalColor();
 }
 
-//NOTE(vRince) this sabilise hue between -1.0 and 2.0 but not more !
+// NOTE(vRince) this sabilise hue between -1.0 and 2.0 but not more !
 double WaveformSignalColors::stableHue(double hue) const {
-    return hue < 0.0 ? hue + 1.0 : hue > 1.0 ? hue - 1.0 : hue;
+    return hue < 0.0 ? hue + 1.0 : hue > 1.0 ? hue - 1.0
+                                             : hue;
 }

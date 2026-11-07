@@ -602,6 +602,8 @@ const ConfigKey kCfgTrendingOverride(
         QStringLiteral("[YouTube]"), QStringLiteral("trending_region"));
 const ConfigKey kCfgAutoAnalyzeResults(
         QStringLiteral("[YouTube]"), QStringLiteral("auto_analyze_results"));
+const ConfigKey kCfgSponsorBlockAutoSkip(
+        QStringLiteral("[YouTube]"), QStringLiteral("sponsorblock_auto_skip"));
 
 // Project default region. Per project requirement: open on Greek top songs
 // unless the user explicitly overrides it.
@@ -872,11 +874,10 @@ void YouTubeFeature::pumpThumbnailQueue() {
             continue; // landed while queued
         }
         m_thumbnailsDownloading.insert(videoId);
-        // default.jpg (120x90) keeps search fast on mobile data (~3KB vs
-        // ~15KB for mqdefault); list cells are small so the difference
-        // is barely visible.
+        // mqdefault.jpg (320x180, ~15 KB): sharp enough for the deck vinyl
+        // and the browse cards, while default.jpg (120x90) looked blurry.
         const QUrl url(QStringLiteral("https://i.ytimg.com/vi/") + videoId +
-                QStringLiteral("/default.jpg"));
+                QStringLiteral("/mqdefault.jpg"));
         QNetworkRequest req(url);
         req.setTransferTimeout(10 * 1000); // 10 s
         QNetworkReply* reply = m_pSamplesNam->get(req);
@@ -929,6 +930,14 @@ QString YouTubeFeature::resolvedTrendingRegion() const {
     return kDefaultRegion;
 }
 
+bool YouTubeFeature::sponsorBlockAutoSkip() const {
+    return m_pConfig->getValue<bool>(kCfgSponsorBlockAutoSkip, true);
+}
+
+void YouTubeFeature::setSponsorBlockAutoSkip(bool enabled) {
+    m_pConfig->setValue(kCfgSponsorBlockAutoSkip, enabled);
+    emit sponsorBlockAutoSkipChanged(enabled);
+}
 void YouTubeFeature::activate() {
     kLogger.debug() << "YouTube feature activated";
     // Show the real WTrackTableView backed by our YouTubeTrackModel — this
@@ -1299,6 +1308,16 @@ void YouTubeFeature::requestDownloadToPlayer(
     pendingLoad.group = group;
     pendingLoad.play = play;
     m_pendingPlayerLoads[videoId].append(pendingLoad);
+    QString title = m_downloadedTracks.value(videoId);
+    if (title.isEmpty()) {
+        for (const auto& info : std::as_const(m_lastResults)) {
+            if (info.id == videoId && !info.title.isEmpty()) {
+                title = info.title;
+                break;
+            }
+        }
+    }
+    Q_EMIT downloadToPlayerRequested(videoId, group, title);
     requestDownloadFile(videoId);
 }
 

@@ -31,10 +31,13 @@ class ControllerMappingTableModel : public QAbstractTableModel {
     ////////////////////////////////////////////////////////////////////////////
     // QAbstractItemModel methods
     ////////////////////////////////////////////////////////////////////////////
-    bool setHeaderData(int section, Qt::Orientation orientation,
-                       const QVariant& value, int role = Qt::EditRole) override;
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override;
+    bool setHeaderData(int section,
+            Qt::Orientation orientation,
+            const QVariant& value,
+            int role = Qt::EditRole) override;
+    QVariant headerData(int section,
+            Qt::Orientation orientation,
+            int role = Qt::DisplayRole) const override;
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     virtual QString getDisplayString(const QModelIndex& index) const = 0;
@@ -49,11 +52,7 @@ class ControllerMappingTableModel : public QAbstractTableModel {
         VERIFY_OR_DEBUG_ASSERT(m_pTableView) {
             return nullptr;
         }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         return qobject_cast<QStyledItemDelegate*>(m_pTableView->itemDelegateForIndex(index));
-#else
-        return qobject_cast<QStyledItemDelegate*>(m_pTableView->itemDelegate(index));
-#endif
     }
 
     QVector<QHash<int, QVariant>> m_headerInfo;

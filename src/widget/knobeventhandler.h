@@ -14,7 +14,7 @@
 // src/widget/weffectparameternamebase.cpp
 constexpr int wheelEventCursorTimeout = 800;
 
-template <class T>
+template<class T>
 class KnobEventHandler {
   public:
     KnobEventHandler()
@@ -26,11 +26,7 @@ class KnobEventHandler {
     }
 
     double valueFromMouseEvent(T* pWidget, QMouseEvent* e) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         QPoint cur = e->globalPosition().toPoint();
-#else
-        QPoint cur = e->globalPos();
-#endif
         QPoint diff = cur - m_prevPos;
         m_prevPos = cur;
         double dist = sqrt(static_cast<double>(diff.x() * diff.x() + diff.y() * diff.y()));
@@ -62,28 +58,24 @@ class KnobEventHandler {
 
     void mousePressEvent(T* pWidget, QMouseEvent* e) {
         switch (e->button()) {
-            case Qt::RightButton:
-                pWidget->resetControlParameter();
-                m_bRightButtonPressed = true;
-                break;
-            case Qt::LeftButton:
-            case Qt::MiddleButton:
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-                m_startPos = e->globalPosition().toPoint();
-#else
-                m_startPos = e->globalPos();
-#endif
-                m_prevPos = m_startPos;
-                // Somehow using Qt::BlankCursor does not work on Windows
-                // https://mixxx.org/forums/viewtopic.php?p=40298#p40298
-                // On Android/DeX the blank cursor hides the physical mouse
-                // pointer permanently, so we skip it there.
+        case Qt::RightButton:
+            pWidget->resetControlParameter();
+            m_bRightButtonPressed = true;
+            break;
+        case Qt::LeftButton:
+        case Qt::MiddleButton:
+            m_startPos = e->globalPosition().toPoint();
+            m_prevPos = m_startPos;
+            // Somehow using Qt::BlankCursor does not work on Windows
+            // https://mixxx.org/forums/viewtopic.php?p=40298#p40298
+            // On Android/DeX the blank cursor hides the physical mouse
+            // pointer permanently, so we skip it there.
 #ifndef Q_OS_ANDROID
-                pWidget->setCursor(m_blankCursor);
+            pWidget->setCursor(m_blankCursor);
 #endif
-                break;
-            default:
-                break;
+            break;
+        default:
+            break;
         }
     }
 
@@ -96,23 +88,23 @@ class KnobEventHandler {
     void mouseReleaseEvent(T* pWidget, QMouseEvent* e) {
         double value = 0.0;
         switch (e->button()) {
-            case Qt::LeftButton:
-            case Qt::MiddleButton:
-                // On Android/DeX skip the cursor warp — QCursor::setPos is a
-                // no-op on Android and is not needed with touch synthesis.
+        case Qt::LeftButton:
+        case Qt::MiddleButton:
+            // On Android/DeX skip the cursor warp — QCursor::setPos is a
+            // no-op on Android and is not needed with touch synthesis.
 #ifndef Q_OS_ANDROID
-                QCursor::setPos(m_startPos);
+            QCursor::setPos(m_startPos);
 #endif
-                pWidget->unsetCursor();
-                value = valueFromMouseEvent(pWidget, e);
-                pWidget->setControlParameterUp(value);
-                pWidget->inputActivity();
-                break;
-            case Qt::RightButton:
-                m_bRightButtonPressed = false;
-                break;
-            default:
-                break;
+            pWidget->unsetCursor();
+            value = valueFromMouseEvent(pWidget, e);
+            pWidget->setControlParameterUp(value);
+            pWidget->inputActivity();
+            break;
+        case Qt::RightButton:
+            m_bRightButtonPressed = false;
+            break;
+        default:
+            break;
         }
     }
 

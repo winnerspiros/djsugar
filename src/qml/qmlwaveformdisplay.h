@@ -9,7 +9,9 @@
 #include <QSGNode>
 #include <QSGSimpleRectNode>
 #include <QTimer>
+#include <atomic>
 #include <chrono>
+#include <map>
 
 #include "qml/qmlplayerproxy.h"
 #include "qml/qmlwaveformrenderer.h"
@@ -106,6 +108,7 @@ class QmlWaveformDisplay : public QQuickItem, VSyncTimeProvider, public Waveform
     void setZoom(double zoom) {
         WaveformWidgetRenderer::setZoom(zoom);
         Q_EMIT zoomChanged();
+        update();
     }
     int getFrameRate() const {
         return m_frameRate;
@@ -164,6 +167,9 @@ class QmlWaveformDisplay : public QQuickItem, VSyncTimeProvider, public Waveform
   private:
     void setCurrentTrack(TrackPointer pTrack);
     void requestUpdateAtFrameRate();
+    /// The frame interval from the refresh rate of the display and the
+    /// frame rate, see frameclock::setDisplay()
+    void updateFrameInterval();
 
     const QmlWaveformRendererFactory::Renderer& createOrCached(
             QmlWaveformRendererFactory* pQmlRenderer);
@@ -180,6 +186,16 @@ class QmlWaveformDisplay : public QQuickItem, VSyncTimeProvider, public Waveform
 
     std::chrono::microseconds m_syncInterval;
     int m_frameRate;
+    double m_lastFramePlayPos{-1.0};
+    QElapsedTimer m_lastMove;
+    /// Drawn in the frame being rendered (render thread)
+    std::atomic<bool> m_drawnInFrame{false};
+
+    // Cached backing-store geometry: resizeRenderer() is skipped when
+    // neither the size nor the pixel ratio changed since the last call.
+    QSizeF m_lastResizeSize;
+    qreal m_lastResizePixelRatio{-1.0};
+
     enum class DirtyFlag : int {
         None = 0x0,
         Geometry = 0x1,

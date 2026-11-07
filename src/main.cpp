@@ -75,13 +75,14 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
     auto pCoreServices = std::make_shared<mixxx::CoreServices>(args, pApp);
 #ifdef MIXXX_USE_QML
     // The user can opt in to the experimental QML UI on any platform with
-    // `--qml`. On Android we used to force this on (no Qt-Widgets support
-    // assumption was wrong — Qt 6 supports Widgets on Android, and on Samsung
-    // DeX / large tablets the desktop skin is actually preferred), so the
-    // override is now opt-in everywhere. The skin engine + LateNight skin run
-    // on Android via `MixxxApplication` (QApplication) below.
+    // `--qml`. On Android it is always on: the Booth skin is the mobile UI
+    // (from JaviLabarumDJ/mixxx-android).
     QString mainQmlFilePath;
+#if defined(Q_OS_ANDROID)
+    bool loadQml = true;
+#else
     bool loadQml = args.isQml();
+#endif
     if (!loadQml && args.getDeveloper()) {
         mixxx::skin::SkinLoader skinLoader(pCoreServices->getSettings());
         const mixxx::skin::SkinPointer pSkin = skinLoader.getConfiguredSkin();
@@ -128,7 +129,7 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
         QPixmapCache::setCacheLimit(static_cast<int>(kPixmapCacheLimitAt100PercentZoom *
                 pow(pApp->devicePixelRatio(), 2.0f)));
 
-        pCoreServices->initialize(pApp);
+        pCoreServices->initialize();
 
         if (pCoreServices->getSettings()->getValue(
                     ConfigKey("[Config]", "did_run_with_unstable"), false)) {
@@ -443,27 +444,14 @@ int main(int argc, char* argv[]) {
     // performance and GPU driver optimizations.
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
-
-    // High DPI scaling is always enabled in Qt6.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This needs to be set before initializing the QApplication.
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
 #ifdef MIXXX_USE_QOPENGL
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
-    // workaround for https://bugreports.qt.io/browse/QTBUG-84363
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1)
-    qputenv("QV4_FORCE_INTERPRETER", QByteArrayLiteral("1"));
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     // Follow whatever factor the user has selected in the system settings
     // By default the value is always rounded to the nearest int.
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
 #ifdef __LINUX__
     // Needed by Wayland compositors to set proper app_id and window icon

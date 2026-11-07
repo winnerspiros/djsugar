@@ -358,12 +358,15 @@ if(ANDROID)
     # baked into youtubedl-android 0.18.1 (2025.11.12).
     set(_ytdlp_fresh_blob "${_ytdlp_android_dir}/ytdlp")
     if(NOT EXISTS "${_ytdlp_fresh_blob}")
-      message(STATUS "Rebuilding yt-dlp blob ${YTDLP_VERSION} for Android AAR...")
+      message(
+        STATUS
+        "Rebuilding yt-dlp blob ${YTDLP_VERSION} for Android AAR..."
+      )
       execute_process(
         COMMAND
           ${CMAKE_COMMAND} -DYTDLP_VERSION=${YTDLP_VERSION}
-          -DOUT_BLOB=${_ytdlp_fresh_blob}
-          -P ${CMAKE_SOURCE_DIR}/cmake/modules/RebuildYtdlpBlob.cmake
+          -DOUT_BLOB=${_ytdlp_fresh_blob} -P
+          ${CMAKE_SOURCE_DIR}/cmake/modules/RebuildYtdlpBlob.cmake
         RESULT_VARIABLE _ytdlp_rebuild_result
       )
       if(NOT _ytdlp_rebuild_result EQUAL 0)
@@ -380,8 +383,8 @@ if(ANDROID)
       message(STATUS "Repacking youtubedl-android AAR with fresh yt-dlp...")
       execute_process(
         COMMAND
-          ${CMAKE_COMMAND} -E tar cf "${_ytdlp_aar_patched}" --format=zip
-          -- R.txt AndroidManifest.xml classes.jar res jni META-INF
+          ${CMAKE_COMMAND} -E tar cf "${_ytdlp_aar_patched}" --format=zip --
+          R.txt AndroidManifest.xml classes.jar res jni META-INF
         WORKING_DIRECTORY "${_ytdlp_aar_extracted}"
         RESULT_VARIABLE _repack_result
       )
@@ -426,13 +429,20 @@ if(ANDROID)
     # QT_ANDROID_EXTRA_LIBS alongside the AAR's own jni libs (which Gradle
     # merges from the .aar automatically).
     # ---------------------------------------------------------------------------
-    set(_ytdlp_stub_c
-      "${CMAKE_SOURCE_DIR}/packaging/android/stub/android_support_stub.c")
+    set(
+      _ytdlp_stub_c
+      "${CMAKE_SOURCE_DIR}/packaging/android/stub/android_support_stub.c"
+    )
     set(_ytdlp_stub_so "${_ytdlp_android_dir}/libandroid-support.so")
     if(NOT EXISTS "${_ytdlp_stub_so}")
-      message(STATUS "Building libandroid-support.so stub for youtubedl-android...")
-      message(STATUS
-        "  NDK=${CMAKE_ANDROID_NDK} host=${ANDROID_NDK_HOST_SYSTEM_NAME} api=${CMAKE_SYSTEM_VERSION}")
+      message(
+        STATUS
+        "Building libandroid-support.so stub for youtubedl-android..."
+      )
+      message(
+        STATUS
+        "  NDK=${CMAKE_ANDROID_NDK} host=${ANDROID_NDK_HOST_SYSTEM_NAME} api=${CMAKE_SYSTEM_VERSION}"
+      )
       execute_process(
         COMMAND
           "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/aarch64-linux-android${CMAKE_SYSTEM_VERSION}-clang"
@@ -441,14 +451,18 @@ if(ANDROID)
         OUTPUT_VARIABLE _stub_out
         ERROR_VARIABLE _stub_err
       )
-      message(STATUS "  stub build rc=${_stub_result} out=[${_stub_out}] err=[${_stub_err}]")
+      message(
+        STATUS
+        "  stub build rc=${_stub_result} out=[${_stub_out}] err=[${_stub_err}]"
+      )
       if(NOT _stub_result EQUAL 0)
         message(FATAL_ERROR "Failed to build libandroid-support.so stub")
       endif()
     endif()
     set_property(
       TARGET mixxx
-      APPEND PROPERTY QT_ANDROID_EXTRA_LIBS "${_ytdlp_stub_so}"
+      APPEND
+      PROPERTY QT_ANDROID_EXTRA_LIBS "${_ytdlp_stub_so}"
     )
     message(STATUS "  yt-dlp native stub: libandroid-support.so")
     file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/packaging/android/libs")
@@ -464,7 +478,8 @@ if(ANDROID)
     # Gradle template already pulls org.jetbrains.kotlin:kotlin-stdlib
     # (1.8.22) for its own bindings, and shipping a second copy fails the
     # build at :checkReleaseDuplicateClasses.
-    set(_ytdlp_dep_files
+    set(
+      _ytdlp_dep_files
       "io/github/junkfood02/youtubedl-android/common/0.18.1/common-0.18.1.aar"
       "com/fasterxml/jackson/core/jackson-databind/2.11.1/jackson-databind-2.11.1.jar"
       "com/fasterxml/jackson/core/jackson-core/2.11.1/jackson-core-2.11.1.jar"

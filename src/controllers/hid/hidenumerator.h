@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QHash>
+
 #include "controllers/controllerenumerator.h"
 #include "controllers/hid/hiddevice.h"
 
@@ -15,4 +17,13 @@ class HidEnumerator : public ControllerEnumerator {
 
   private:
     QList<Controller*> m_devices;
+#ifdef __ANDROID__
+    /// Devices by "<usbDeviceName>#<interfaceNumber>", so a replugged
+    /// controller gets a fresh Controller instead of reusing the stale USB
+    /// handle.
+    QHash<QString, Controller*> m_androidDevicesByKey;
+    /// Unplugged devices are only deleted on shutdown, because the GUI may
+    /// still hold pointers to them until it processed devicesChanged().
+    QList<Controller*> m_removedDevices;
+#endif
 };

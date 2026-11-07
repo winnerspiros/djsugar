@@ -24,30 +24,31 @@ https://github.com/awjackson/bsnes-classic/blob/038e2e051ffc8abe7c56a3bf27e3016c
 #include "util/versionstore.h"
 
 #if defined(Q_OS_MACOS)
-#  include "util/mac.h"
+#include "util/mac.h"
 #elif defined(Q_OS_IOS)
 #include "util/screensaverios.h"
 #elif defined(Q_OS_ANDROID)
-#include <android/api-level.h>
-#include <android/log.h>
+#include <QCoreApplication>
+#include <QJniObject>
+#include <QVariant>
 #define HAS_XWINDOW_SCREENSAVER 0
 #elif defined(_WIN32)
-#  include <windows.h>
+#include <windows.h>
 #elif defined(__LINUX__)
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #elif defined(HAVE_XSCREENSAVER_SUSPEND) && HAVE_XSCREENSAVER_SUSPEND
-#  include <X11/extensions/scrnsaver.h>
+#include <X11/extensions/scrnsaver.h>
 #endif
 
 #if (defined(__LINUX__) && defined(__X11__)) || \
         (defined(HAVE_XSCREENSAVER_SUSPEND) && HAVE_XSCREENSAVER_SUSPEND)
-#  define None XNone
-#  define Window XWindow
-#  include <X11/Xlib.h>
-#  undef None
-#  undef Window
+#define None XNone
+#define Window XWindow
+#include <X11/Xlib.h>
+#undef None
+#undef Window
 #endif
 
 namespace mixxx {
@@ -56,35 +57,32 @@ bool ScreenSaverHelper::s_enabled = false;
 
 // inhibitInternal and unihibitInternal should be called the same amount of times
 // depending on the implementation used. This ensures it.
-void ScreenSaverHelper::inhibit()
-{
+void ScreenSaverHelper::inhibit() {
     if (!s_enabled) {
         inhibitInternal();
     }
 }
-void ScreenSaverHelper::uninhibit()
-{
+void ScreenSaverHelper::uninhibit() {
     if (s_enabled) {
         uninhibitInternal();
     }
 }
 
 #ifdef Q_OS_MACOS
-IOPMAssertionID ScreenSaverHelper::s_systemSleepAssertionID=0;
-IOPMAssertionID ScreenSaverHelper::s_userActivityAssertionID=0;
+IOPMAssertionID ScreenSaverHelper::s_systemSleepAssertionID = 0;
+IOPMAssertionID ScreenSaverHelper::s_userActivityAssertionID = 0;
 
-void ScreenSaverHelper::triggerUserActivity()
-{
+void ScreenSaverHelper::triggerUserActivity() {
     /* Declare user activity.
      This wakes the display if it is off, and postpones display sleep according to the users system preferences
      Available from 10.7.3 */
-    if (&IOPMAssertionDeclareUserActivity)
-    {
-        CFStringRef reasonForActivity = CFStringCreateWithCString(kCFAllocatorDefault, 
-                "Mixxx digital DJ software", kCFStringEncodingUTF8);
+    if (&IOPMAssertionDeclareUserActivity) {
+        CFStringRef reasonForActivity = CFStringCreateWithCString(kCFAllocatorDefault,
+                "Mixxx digital DJ software",
+                kCFStringEncodingUTF8);
         IOReturn success = IOPMAssertionDeclareUserActivity(reasonForActivity,
-                                         kIOPMUserActiveLocal,
-                                         &s_userActivityAssertionID);
+                kIOPMUserActiveLocal,
+                &s_userActivityAssertionID);
         CFRelease(reasonForActivity);
 
         if (success != kIOReturnSuccess) {
@@ -93,10 +91,9 @@ void ScreenSaverHelper::triggerUserActivity()
     }
 }
 
-void ScreenSaverHelper::inhibitInternal()
-{
-     triggerUserActivity();
- 
+void ScreenSaverHelper::inhibitInternal() {
+    triggerUserActivity();
+
     /* prevent the system from sleeping */
     if (s_systemSleepAssertionID > 0) {
         qDebug() << "IOKit releasing old screensaver inhibitor" << s_systemSleepAssertionID;
@@ -104,21 +101,23 @@ void ScreenSaverHelper::inhibitInternal()
     }
 
     IOReturn success;
-    CFStringRef reasonForActivity = CFStringCreateWithCString(kCFAllocatorDefault, 
-            "Mixxx digital DJ software", kCFStringEncodingUTF8);
-    success = IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep, kIOPMAssertionLevelOn, 
-            reasonForActivity, &s_systemSleepAssertionID);
+    CFStringRef reasonForActivity = CFStringCreateWithCString(kCFAllocatorDefault,
+            "Mixxx digital DJ software",
+            kCFStringEncodingUTF8);
+    success = IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep,
+            kIOPMAssertionLevelOn,
+            reasonForActivity,
+            &s_systemSleepAssertionID);
     CFRelease(reasonForActivity);
 
     if (success == kIOReturnSuccess) {
         s_enabled = true;
         qDebug() << "IOKit screensaver inhibited " << s_systemSleepAssertionID;
     } else {
-        qWarning("failed to prevent system sleep through IOKit");    
+        qWarning("failed to prevent system sleep through IOKit");
     }
 }
-void ScreenSaverHelper::uninhibitInternal()
-{
+void ScreenSaverHelper::uninhibitInternal() {
     /* allow the system to sleep again */
     if (s_systemSleepAssertionID > 0) {
         s_enabled = false;
@@ -133,34 +132,30 @@ void ScreenSaverHelper::uninhibitInternal()
 }
 
 #elif defined(Q_OS_WIN)
-void ScreenSaverHelper::triggerUserActivity()
-{
-    SetThreadExecutionState( ES_DISPLAY_REQUIRED );
+void ScreenSaverHelper::triggerUserActivity() {
+    SetThreadExecutionState(ES_DISPLAY_REQUIRED);
 }
-void ScreenSaverHelper::inhibitInternal()
-{
+void ScreenSaverHelper::inhibitInternal() {
     // Calling once without "ES_CONTINUOUS" to force the monitor to wake up.
     triggerUserActivity();
-    SetThreadExecutionState( ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED | ES_CONTINUOUS );
+    SetThreadExecutionState(ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED | ES_CONTINUOUS);
     qDebug() << "screensaver inhibited";
     s_enabled = true;
 }
-void ScreenSaverHelper::uninhibitInternal()
-{
+void ScreenSaverHelper::uninhibitInternal() {
     SetThreadExecutionState(ES_CONTINUOUS);
     qDebug() << "screensaver uninhibited";
     s_enabled = false;
 }
 
 #elif (defined(Q_OS_LINUX) && defined(__X11__))
-const char *SCREENSAVERS[][4] = {
-    // org.freedesktop.ScreenSaver is the standard. should work for gnome and kde too, 
-    // but I add their specific names too
-    {"org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "Inhibit"},
-    {"org.gnome.ScreenSaver", "/org/gnome/ScreenSaver", "org.gnome.ScreenSaver", "Inhibit"},
-    {"org.kde.screensaver", "/ScreenSaver", "org.kde.screensaver", "Inhibit"},
-    {nullptr, nullptr, nullptr, nullptr}
-};
+const char* SCREENSAVERS[][4] = {
+        // org.freedesktop.ScreenSaver is the standard. should work for gnome and kde too,
+        // but I add their specific names too
+        {"org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "Inhibit"},
+        {"org.gnome.ScreenSaver", "/org/gnome/ScreenSaver", "org.gnome.ScreenSaver", "Inhibit"},
+        {"org.kde.screensaver", "/ScreenSaver", "org.kde.screensaver", "Inhibit"},
+        {nullptr, nullptr, nullptr, nullptr}};
 // Disabling the method with DBus since it seems to be failing on several systems.
 #if 0
 const char *USERACTIVITY[][4] = {
@@ -177,14 +172,13 @@ uint32_t ScreenSaverHelper::s_cookie = 0;
 int ScreenSaverHelper::s_saverindex = -1;
 bool ScreenSaverHelper::s_sendActivity = true;
 
-void ScreenSaverHelper::triggerUserActivity()
-{
+void ScreenSaverHelper::triggerUserActivity() {
     const char* name = ":0.0";
-    Display *display;
+    Display* display;
     if (getenv("DISPLAY")) {
-        name=getenv("DISPLAY");
+        name = getenv("DISPLAY");
     }
-    display=XOpenDisplay(name);
+    display = XOpenDisplay(name);
     if (display != nullptr) {
         XResetScreenSaver(display);
         XCloseDisplay(display);
@@ -237,10 +231,10 @@ void ScreenSaverHelper::triggerUserActivity()
 }
 #endif // 0
 
-void ScreenSaverHelper::inhibitInternal()
-{
+void ScreenSaverHelper::inhibitInternal() {
     if (!QDBusConnection::sessionBus().isConnected()) {
-        qWarning("Cannot connect to the D-Bus session bus.\nTo start it, run:\n"
+        qWarning(
+                "Cannot connect to the D-Bus session bus.\nTo start it, run:\n"
                 "\teval `dbus-launch --auto-syntax`");
         return;
     }
@@ -248,40 +242,45 @@ void ScreenSaverHelper::inhibitInternal()
         uninhibit();
     }
     s_cookie = 0;
-    for (int i=0; SCREENSAVERS[i][0] != nullptr; i++ ) {
-        QDBusInterface iface(SCREENSAVERS[i][0], SCREENSAVERS[i][1], SCREENSAVERS[i][2], 
-            QDBusConnection::sessionBus());
+    for (int i = 0; SCREENSAVERS[i][0] != nullptr; i++) {
+        QDBusInterface iface(SCREENSAVERS[i][0],
+                SCREENSAVERS[i][1],
+                SCREENSAVERS[i][2],
+                QDBusConnection::sessionBus());
         if (iface.isValid()) {
-            QDBusReply<uint32_t> reply = iface.call(SCREENSAVERS[i][3], "org.mixxxdj","Mixxx active");
+            QDBusReply<uint32_t> reply = iface.call(
+                    SCREENSAVERS[i][3], "org.mixxxdj", "Mixxx active");
             if (reply.isValid()) {
                 s_cookie = reply.value();
                 s_saverindex = i;
                 s_enabled = true;
-                qDebug() << "DBus screensaver " << SCREENSAVERS[i][0] <<" inhibited";
+                qDebug() << "DBus screensaver " << SCREENSAVERS[i][0] << " inhibited";
                 break;
             } else {
-                qWarning() << "Call to inhibit for " << SCREENSAVERS[i][0] << " failed: " 
-                    << reply.error().message();
+                qWarning() << "Call to inhibit for " << SCREENSAVERS[i][0] << " failed: "
+                           << reply.error().message();
             }
         } else {
             qDebug() << "DBus interface " << SCREENSAVERS[i][0] << " not valid";
         }
     }
 }
-void ScreenSaverHelper::uninhibitInternal()
-{
+void ScreenSaverHelper::uninhibitInternal() {
     if (s_cookie > 0) {
         s_enabled = false;
-        QDBusInterface iface(SCREENSAVERS[s_saverindex][0], SCREENSAVERS[s_saverindex][1], 
-            SCREENSAVERS[s_saverindex][2],  QDBusConnection::sessionBus());
+        QDBusInterface iface(SCREENSAVERS[s_saverindex][0],
+                SCREENSAVERS[s_saverindex][1],
+                SCREENSAVERS[s_saverindex][2],
+                QDBusConnection::sessionBus());
         if (iface.isValid()) {
             QDBusReply<void> reply = iface.call("UnInhibit", s_cookie);
             if (reply.isValid()) {
                 s_cookie = 0;
                 qDebug() << "DBus screensaver " << SCREENSAVERS[s_saverindex][0] << " uninhibited";
             } else {
-                qWarning() << "Call to uninhibit for " << SCREENSAVERS[s_saverindex][0] << " failed: " 
-                    << reply.error().message();
+                qWarning() << "Call to uninhibit for "
+                           << SCREENSAVERS[s_saverindex][0]
+                           << " failed: " << reply.error().message();
             }
         } else {
             qDebug() << "DBus interface " << SCREENSAVERS[s_saverindex][0] << " not valid";
@@ -292,43 +291,40 @@ void ScreenSaverHelper::uninhibitInternal()
 #elif defined(HAS_XWINDOW_SCREENSAVER) && HAS_XWINDOW_SCREENSAVER
 // This is untested.
 struct LibXtst : public library {
-  function<int (Display*, unsigned int, Bool, unsigned long)> XTestFakeKeyEvent;
+    function<int(Display*, unsigned int, Bool, unsigned long)> XTestFakeKeyEvent;
 
-  LibXtst() {
-    if(open("Xtst")) {
-      XTestFakeKeyEvent = sym("XTestFakeKeyEvent");
+    LibXtst() {
+        if (open("Xtst")) {
+            XTestFakeKeyEvent = sym("XTestFakeKeyEvent");
+        }
     }
-  }
 } libXtst;
 
-void ScreenSaverHelper::triggerUserActivity()
-{
-    char *name = ":0.0";
-    Display *display;
+void ScreenSaverHelper::triggerUserActivity() {
+    char* name = ":0.0";
+    Display* display;
     if (getenv("DISPLAY"))
-        name=getenv("DISPLAY");
-    display=XOpenDisplay(name);
-    libXtst.XTestFakeKeyEvent(display, 255, True,  0);
+        name = getenv("DISPLAY");
+    display = XOpenDisplay(name);
+    libXtst.XTestFakeKeyEvent(display, 255, True, 0);
     libXtst.XTestFakeKeyEvent(display, 255, False, 0);
     XCloseDisplay(display);
 }
-void ScreenSaverHelper::inhibitInternal()
-{
-    char *name = ":0.0";
-    Display *display;
+void ScreenSaverHelper::inhibitInternal() {
+    char* name = ":0.0";
+    Display* display;
     if (getenv("DISPLAY"))
-        name=getenv("DISPLAY");
-    display=XOpenDisplay(name);
-    XScreenSaverSuspend(display,True);
+        name = getenv("DISPLAY");
+    display = XOpenDisplay(name);
+    XScreenSaverSuspend(display, True);
     s_enabled = true;
 }
-void ScreenSaverHelper::uninhibitInternal()
-{
-    char *name = ":0.0";
-    Display *display;
+void ScreenSaverHelper::uninhibitInternal() {
+    char* name = ":0.0";
+    Display* display;
     if (getenv("DISPLAY"))
-        name=getenv("DISPLAY");
-    display=XOpenDisplay(name);
+        name = getenv("DISPLAY");
+    display = XOpenDisplay(name);
     XScreenSaverSuspend(display, False);
     s_enabled = false;
 }
@@ -354,61 +350,60 @@ void ScreenSaverHelper::uninhibitInternal() {
 }
 #elif defined(Q_OS_ANDROID)
 
-QJniObject ScreenSaverHelper::s_wakeLock = {};
+namespace {
+
+// FLAG_KEEP_SCREEN_ON is the supported way to keep the display awake; the
+// PowerManager screen wake locks are deprecated since API 17 and are ignored
+// on current Android versions. Window flags must be changed on the Android UI
+// thread, which is not the thread Qt runs main() on. (from mixxxdj/mixxx#17059)
+void setKeepScreenOn(bool keepOn) {
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread(
+            [keepOn]() -> QVariant {
+                QJniObject activity =
+                        QNativeInterface::QAndroidApplication::context();
+                if (!activity.isValid()) {
+                    qWarning() << "ScreenSaverHelper: no activity";
+                    return {};
+                }
+                QJniObject window = activity.callObjectMethod(
+                        "getWindow", "()Landroid/view/Window;");
+                if (!window.isValid()) {
+                    qWarning() << "ScreenSaverHelper: no window";
+                    return {};
+                }
+                const jint kFlagKeepScreenOn = QJniObject::getStaticField<jint>(
+                        "android/view/WindowManager$LayoutParams",
+                        "FLAG_KEEP_SCREEN_ON");
+                if (keepOn) {
+                    window.callMethod<void>("addFlags", "(I)V", kFlagKeepScreenOn);
+                } else {
+                    window.callMethod<void>("clearFlags", "(I)V", kFlagKeepScreenOn);
+                }
+                return {};
+            });
+}
+
+} // anonymous namespace
+
 // Screensavers are not supported
 void ScreenSaverHelper::triggerUserActivity() {
 }
 void ScreenSaverHelper::inhibitInternal() {
-    if (!ScreenSaverHelper::s_wakeLock.isValid()) {
-        QJniObject context = QNativeInterface::QAndroidApplication::context();
-        QJniObject POWER_SERVICE =
-                QJniObject::getStaticObjectField(
-                        "android/content/Context",
-                        "POWER_SERVICE",
-                        "Ljava/lang/String;");
-        auto powerService = context.callObjectMethod("getSystemService",
-                "(Ljava/lang/String;)Ljava/lang/Object;",
-                POWER_SERVICE.object());
-        if (!powerService.isValid()) {
-            qDebug() << "powerService invalid";
-            return;
-        }
-
-        jint FULL_WAKE_LOCK =
-                QJniObject::getStaticField<jint>(
-                        "android/os/PowerManager",
-                        "FULL_WAKE_LOCK");
-        ScreenSaverHelper::s_wakeLock =
-                powerService.callObjectMethod("newWakeLock",
-                        "(ILjava/lang/String;)Landroid/os/PowerManager$WakeLock;",
-                        FULL_WAKE_LOCK,
-                        QJniObject::fromString(VersionStore::applicationName()).object<jstring>());
-        if (!ScreenSaverHelper::s_wakeLock.isValid()) {
-            __android_log_print(ANDROID_LOG_WARN, "mixxx", "powerService wakeLock invalid");
-            qWarning() << "ScreenSaverHelper::inhibitInternal - wakeLock invalid";
-            return;
-        }
-    }
-    ScreenSaverHelper::s_wakeLock.callMethod<void>("acquire");
+    setKeepScreenOn(true);
+    s_enabled = true;
 }
 void ScreenSaverHelper::uninhibitInternal() {
-    // QNativeInterface::QAndroidApplication::runOnAndroidMainThread([]() {
-    if (ScreenSaverHelper::s_wakeLock.isValid()) {
-        ScreenSaverHelper::s_wakeLock.callMethod<void>("release");
-    }
-    // }).waitForFinished();
+    setKeepScreenOn(false);
+    s_enabled = false;
 }
 #else
-void ScreenSaverHelper::triggerUserActivity()
-{
+void ScreenSaverHelper::triggerUserActivity() {
     DEBUG_ASSERT(!"Screensaver trigger activity not implemented");
 }
-void ScreenSaverHelper::inhibitInternal()
-{
+void ScreenSaverHelper::inhibitInternal() {
     DEBUG_ASSERT(!"Screensaver suspending not implemented");
 }
-void ScreenSaverHelper::uninhibitInternal()
-{
+void ScreenSaverHelper::uninhibitInternal() {
     DEBUG_ASSERT(!"Screensaver suspending not implemented");
 }
 #endif // Q_OS_MACOS

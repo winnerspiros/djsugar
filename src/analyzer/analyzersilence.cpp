@@ -2,6 +2,9 @@
 
 #include "analyzer/analyzertrack.h"
 #include "analyzer/constants.h"
+#ifdef Q_OS_ANDROID
+#include "track/androidautocue.h"
+#endif
 #include "track/track.h"
 
 namespace {
@@ -10,7 +13,7 @@ namespace {
 // verify that the track samples have not changed since the last analysis
 constexpr CSAMPLE kSilenceThreshold = 0.001f; // -60 dB
 // TODO: Change the above line to:
-//constexpr CSAMPLE kSilenceThreshold = db2ratio(-60.0f);
+// constexpr CSAMPLE kSilenceThreshold = db2ratio(-60.0f);
 
 bool shouldAnalyze(TrackPointer pTrack) {
     CuePointer pIntroCue = pTrack->findCueByType(mixxx::CueType::Intro);
@@ -136,6 +139,9 @@ void AnalyzerSilence::storeResults(TrackPointer pTrack) {
 
     setupMainAndIntroCue(pTrack.get(), firstSoundPosition, m_pConfig.data());
     setupOutroCue(pTrack.get(), lastSoundPosition);
+#ifdef Q_OS_ANDROID
+    mixxx::android::snapAutoCueToBeat(pTrack.get());
+#endif
 }
 
 // static

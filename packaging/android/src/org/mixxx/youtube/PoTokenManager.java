@@ -2,7 +2,6 @@ package org.mixxx.youtube;
 
 import android.content.Context;
 import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -41,7 +40,9 @@ public class PoTokenManager {
         mLastError = "init ok, generator not yet created";
     }
 
-    /** Last failure reason, for surfacing Java-side errors to C++ logs. */
+    /**
+     * Last failure reason, for surfacing Java-side errors to C++ logs.
+     */
     public String getLastError() {
         return mLastError;
     }

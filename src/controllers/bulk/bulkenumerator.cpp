@@ -3,6 +3,9 @@
 #include <libusb.h>
 #include <qglobal.h>
 
+#include <QSet>
+#include <algorithm>
+
 #ifdef __ANDROID__
 #include <QtCore/private/qandroidextras_p.h>
 #include <android/api-level.h>
@@ -38,6 +41,9 @@ BulkEnumerator::~BulkEnumerator() {
     while (m_devices.size() > 0) {
         delete m_devices.takeLast();
     }
+#ifdef __ANDROID__
+    qDeleteAll(m_removedDevices);
+#endif
 #ifndef __ANDROID__
     if (m_pContext) {
         libusb_exit(m_pContext);
@@ -80,18 +86,33 @@ QList<Controller*> BulkEnumerator::queryDevices() {
             "found %d USB devices for BULK enumerator",
             deviceList.size());
 
+    QSet<QString> presentKeys;
     for (const auto& pUsbDevice : deviceList) {
         const uint16_t idVendor = static_cast<unsigned short>(
                 pUsbDevice->callMethod<jint>("getVendorId"));
-        ;
         const uint16_t idProduct = static_cast<unsigned short>(
                 pUsbDevice->callMethod<jint>("getProductId"));
-        ;
-        if (is_interesting(idVendor, idProduct)) {
-            BulkController* pCurrentDevice =
-                    new BulkController(pUsbDevice);
-            m_devices.push_back(pCurrentDevice);
+        if (!is_interesting(idVendor, idProduct)) {
+            continue;
         }
+        const QString key = pUsbDevice->callMethod<jstring>("getDeviceName").toString();
+        presentKeys.insert(key);
+        if (m_androidDevicesByKey.contains(key)) {
+            continue;
+        }
+        BulkController* pCurrentDevice = new BulkController(pUsbDevice);
+        m_androidDevicesByKey.insert(key, pCurrentDevice);
+        m_devices.push_back(pCurrentDevice);
+    }
+    // ControllerManager closes controllers that disappeared from the list
+    for (auto it = m_androidDevicesByKey.begin(); it != m_androidDevicesByKey.end();) {
+        if (presentKeys.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        m_devices.removeAll(it.value());
+        m_removedDevices.append(it.value());
+        it = m_androidDevicesByKey.erase(it);
     }
 #else
     VERIFY_OR_DEBUG_ASSERT(m_pContext) {

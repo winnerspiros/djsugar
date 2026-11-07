@@ -39,6 +39,7 @@
 #include "effects/backends/builtin/pitchshifteffect.h"
 #endif
 #include "effects/backends/builtin/gaineffect.h"
+#include "effects/backends/builtin/spiraleffect.h"
 #include "effects/backends/builtin/tremoloeffect.h"
 #include "effects/backends/builtin/whitenoiseeffect.h"
 
@@ -79,6 +80,7 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<PhaserEffect>();
     registerEffect<MetronomeEffect>();
     registerEffect<KeyComparisonEffect>();
+    registerEffect<SpiralEffect>();
     registerEffect<TremoloEffect>();
 #ifdef __RUBBERBAND__
     registerEffect<PitchShiftEffect>();

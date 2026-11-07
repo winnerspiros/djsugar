@@ -146,10 +146,17 @@ Item {
     MouseArea {
         acceptedButtons: Qt.NoButton
         anchors.fill: parent
-        // Mouse wheel is not available on Android/touch-only devices;
-        // disabling this MouseArea prevents it from intercepting touch events
-        // and interfering with the DragHandler above.
-        enabled: Qt.platform.os !== "android"
+        // Fullscreen drag capture from JaviLabarumDJ/mixxx-android: keeps the
+        // drag alive when the finger/mouse leaves the knob. Gated off on
+        // Android, where an invisible fullscreen MouseArea would swallow
+        // touches meant for other controls.
+        anchors.margins: Qt.platform.os === "android" ? 0 : -Math.max(Screen.desktopAvailableWidth, Screen.desktopAvailableHeight)
+        cursorShape: Qt.BlankCursor
+        enabled: Qt.platform.os !== "android" ? (root.enabled && root.visible && pointerHandler.enabled && pointerHandler.active) : false
+        hoverEnabled: true
+        parent: Qt.platform.os === "android" ? parent : (root.Window.window ? root.Window.window.contentItem : null)
+        visible: enabled
+        z: 2147483647
 
         onWheel: event => {
             const wheelAdjustment = event.angleDelta.y / root.wheelDeltaStep * root.wheelStepSize;

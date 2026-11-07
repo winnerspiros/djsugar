@@ -41,7 +41,7 @@ void WStarRating::slotSetRating(int starCount) {
     updateVisualRating(starCount);
 }
 
-void WStarRating::paintEvent(QPaintEvent * /*unused*/) {
+void WStarRating::paintEvent(QPaintEvent* /*unused*/) {
     QStyleOption option;
     option.initFrom(this);
     QStylePainter painter(this);
@@ -52,12 +52,8 @@ void WStarRating::paintEvent(QPaintEvent * /*unused*/) {
     m_visualStarRating.paint(&painter, m_contentRect);
 }
 
-void WStarRating::mouseMoveEvent(QMouseEvent *event) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void WStarRating::mouseMoveEvent(QMouseEvent* event) {
     const int pos = event->position().toPoint().x();
-#else
-    const int pos = event->x();
-#endif
     int star = m_visualStarRating.starAtPosition(pos, rect());
 
     if (star == StarRating::kInvalidStarCount) {

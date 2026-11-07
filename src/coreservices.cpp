@@ -6,6 +6,7 @@
 #include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QtGlobal>
+#include <algorithm>
 #include <gsl/pointers>
 
 #ifdef __BROADCAST__
@@ -49,12 +50,18 @@
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmleffectsmanagerproxy.h"
 #include "qml/qmllibraryproxy.h"
+#include "qml/qmlmobilesingletons.h"
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
 #include "qml/qmlsoundmanagerproxy.h"
+#include "qml/qmlyoutubeproxy.h"
 #endif
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
+#ifdef Q_OS_ANDROID
+#include "util/androidcrashreport.h"
+#include "util/androidpermissions.h"
+#endif
 #include "util/clipboard.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/font.h"
@@ -77,23 +84,18 @@
 #include <QtCore/private/qandroidextras_p.h>
 #endif
 
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <X11/Xlibint.h>
-
-#include <QtX11Extras/QX11Info>
-
-#include "engine/channelhandle.h"
-// Xlibint.h predates C++ and defines macros which conflict
-// with references to std::max and std::min
-#undef max
-#undef min
-#endif
-
 namespace {
 const mixxx::Logger kLogger("CoreServices");
 constexpr int kMicrophoneCount = 4;
 constexpr int kAuxiliaryCount = 4;
+#ifdef Q_OS_ANDROID
+// Mappings like the DDJ-400 one ask for 16 samplers when they start. They
+// are created here, on the main thread, so controllers don't have to.
+// (from JaviLabarumDJ/mixxx-android)
+constexpr int kSamplerCount = 16;
+#else
 constexpr int kSamplerCount = 4;
+#endif
 
 #define CLEAR_AND_CHECK_DELETED(x) clearHelper(x, #x);
 
@@ -106,28 +108,6 @@ void clearHelper(std::shared_ptr<T>& ref_ptr, const char* name) {
         DEBUG_ASSERT(false);
     }
 }
-
-// hack around https://gitlab.freedesktop.org/xorg/lib/libx11/issues/25
-// https://github.com/mixxxdj/mixxx/issues/9533
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-typedef Bool (*WireToErrorType)(Display*, XErrorEvent*, xError*);
-
-constexpr int NUM_HANDLERS = 256;
-WireToErrorType __oldHandlers[NUM_HANDLERS] = {nullptr};
-
-Bool __xErrorHandler(Display* display, XErrorEvent* event, xError* error) {
-    // Call any previous handler first in case it needs to do real work.
-    auto code = static_cast<int>(event->error_code);
-    if (__oldHandlers[code] != nullptr) {
-        __oldHandlers[code](display, event, error);
-    }
-
-    // Always return false so the error does not get passed to the normal
-    // application defined handler.
-    return False;
-}
-
-#endif
 
 #if defined(Q_OS_LINUX) && defined(__X11__)
 QLocale localeFromXkbSymbol(const QString& xkbLayout) {
@@ -479,12 +459,25 @@ void CoreServices::initializeLogging() {
     }
     mixxx::Logging::initialize(
             m_pSettingsManager->settings()->getSettingsPath(),
+#ifdef Q_OS_ANDROID
+            // The log is the only trace of a crash on Android, see
+            // util/androidcrashreport.h. Only critical messages are flushed at once:
+            // flushing every line (e.g. warnings of the audio thread) made the audio
+            // and the UI stutter.
+            // (from JaviLabarumDJ/mixxx-android)
+            std::max(m_cmdlineArgs.getLogLevel(), mixxx::LogLevel::Info),
+#else
             m_cmdlineArgs.getLogLevel(),
+#endif
             m_cmdlineArgs.getLogFlushLevel(),
             logFlags);
+#ifdef Q_OS_ANDROID
+    mixxx::android::installCrashReporter();
+    mixxx::android::exportPreviousLog(m_pSettingsManager->settings()->getSettingsPath());
+#endif
 }
 
-void CoreServices::initialize(QGuiApplication* pApp) {
+void CoreServices::initialize() {
     VERIFY_OR_DEBUG_ASSERT(!m_isInitialized) {
         return;
     }
@@ -498,15 +491,11 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     VersionStore::logBuildDetails();
 
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // XESetWireToError will segfault if running as a Wayland client
-    if (pApp->platformName() == QLatin1String("xcb")) {
-        for (auto i = 0; i < NUM_HANDLERS; ++i) {
-            XESetWireToError(QX11Info::display(), i, &__xErrorHandler);
-        }
-    }
-#else
-    Q_UNUSED(pApp);
+#if defined(Q_OS_ANDROID)
+    // Ask for collection access on every start: the user may have revoked the
+    // permission in the system settings since the last run, and without it the
+    // library scan finds nothing at all. (from JaviLabarumDJ/mixxx-android)
+    mixxx::android::requestMusicLibraryPermissions();
 #endif
 
     UserSettingsPointer pConfig = m_pSettingsManager->settings();
@@ -597,11 +586,6 @@ void CoreServices::initialize(QGuiApplication* pApp) {
 
     m_pPlayerManager->addConfiguredDecks();
 
-#ifdef Q_OS_ANDROID
-    // Snap analysis cues to nearest beat on load for Android
-    mixxx::android::snapAutoCuesOnLoad(m_pPlayerManager.get());
-#endif
-
     for (int i = 0; i < kSamplerCount; ++i) {
         m_pPlayerManager->addSampler();
     }
@@ -659,6 +643,13 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     // the uninitialized singleton instance!
     m_pPlayerManager->bindToLibrary(m_pLibrary.get());
 
+    // Android-UI singletons: streaming, Rekordbox-on-load, cue snap
+    // (from JaviLabarumDJ/mixxx-android). Must run after the Library and the
+    // TrackCollectionManager exist (applyRekordboxDataOnLoad dereferences both).
+#ifdef __ANDROID__
+    mixxx::qml::registerMobileQmlSingletons(this);
+#endif
+
     bool musicDirAdded = false;
 
     if (m_pTrackCollectionManager->internalCollection()->loadRootDirs().isEmpty()) {
@@ -676,72 +667,11 @@ void CoreServices::initialize(QGuiApplication* pApp) {
             dir.mkpath(".");
         }
 #elif defined(Q_OS_ANDROID)
-        jboolean hasAllFilesAccess = QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-        if (hasAllFilesAccess) {
-            qDebug() << "Got ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION";
-        } else {
-            // Do NOT open the system Settings activity — the user explicitly
-            // does not want the app to "open a browser view". Instead, log a
-            // message and work with whatever storage is already accessible.
-            qInfo() << "MANAGE_EXTERNAL_STORAGE not granted; scanning "
-                       "app-internal music folder and any readable external "
-                       "storage. Grant the permission manually via Android "
-                       "Settings > Apps > Mixxx > Permissions if you want the "
-                       "full device scan.";
-        }
-
-        // Build the list of directories to scan. Always include the app's
-        // own internal music folder (data/data/org.mixxx.Mixxx/files/music)
-        // as a guaranteed-accessible fallback — the user confirmed they can
-        // see and place files there.
-        QStringList androidRoots;
-
-        // 1. App-internal music folder — always accessible, no permission
-        //    needed. This is where the user can drop songs via a file manager
-        //    and where YouTube downloads are cached.
-        const QString appMusicDir =
-                QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-        if (!appMusicDir.isEmpty()) {
-            QDir appMusicQDir(appMusicDir);
-            if (!appMusicQDir.exists()) {
-                appMusicQDir.mkpath(QStringLiteral("."));
-            }
-            androidRoots.append(appMusicDir);
-        }
-
-        // 2. If we have broad storage access, also scan external volumes.
-        if (hasAllFilesAccess) {
-            const QString primaryStorage = QStringLiteral("/storage/emulated/0");
-            if (QFileInfo::exists(primaryStorage) &&
-                    !androidRoots.contains(primaryStorage)) {
-                androidRoots.append(primaryStorage);
-            }
-            const QDir storageDir(QStringLiteral("/storage"));
-            const QStringList volumes = storageDir.entryList(
-                    QDir::Dirs | QDir::NoDotAndDotDot);
-            for (const QString& vol : volumes) {
-                if (vol == QStringLiteral("emulated") ||
-                        vol == QStringLiteral("self")) {
-                    continue;
-                }
-                const QString volPath = storageDir.absoluteFilePath(vol);
-                const QFileInfo volInfo(volPath);
-                if (volInfo.isDir() && volInfo.isReadable() &&
-                        !androidRoots.contains(volPath)) {
-                    androidRoots.append(volPath);
-                }
-            }
-        }
-
-        qInfo() << "Android library bootstrap: candidate storage roots ="
-                << androidRoots;
-        for (const QString& root : androidRoots) {
-            if (m_pLibrary->requestAddDir(root, /*silent=*/true)) {
-                qInfo() << "Android library bootstrap: registered root" << root;
-                musicDirAdded = true;
-            }
-        }
+        // "All files access" is what allows Mixxx to browse directories
+        // outside of the media store. It is optional: if the user declines,
+        // the default music directory below is still readable.
+        mixxx::android::requestFullExternalStorageAccess();
+        QString fd = mixxx::android::defaultMusicDirectory();
 #else
         // TODO(XXX) this needs to be smarter, we can't distinguish between an empty
         // path return value (not sure if this is normally possible, but it is
@@ -756,9 +686,19 @@ void CoreServices::initialize(QGuiApplication* pApp) {
                         QStandardPaths::MusicLocation),
                 QFileDialog::ShowDirsOnly);
 #endif
-#if !defined(Q_OS_ANDROID)
-        // request to add directory to database. On Android the directories are
-        // added above (potentially several volumes), so this is skipped there.
+        // request to add directory to database.
+#if defined(Q_OS_ANDROID)
+        if (!fd.isEmpty() && m_pLibrary->requestAddDir(fd, /*silent=*/true)) {
+            musicDirAdded = true;
+        }
+        const QString downloadDir = QStandardPaths::writableLocation(
+                QStandardPaths::DownloadLocation);
+        if (!downloadDir.isEmpty() && downloadDir != fd &&
+                QFileInfo::exists(downloadDir) &&
+                m_pLibrary->requestAddDir(downloadDir, /*silent=*/true)) {
+            musicDirAdded = true;
+        }
+#else
         if (!fd.isEmpty() && m_pLibrary->requestAddDir(fd)) {
             musicDirAdded = true;
         }
@@ -780,11 +720,7 @@ void CoreServices::initialize(QGuiApplication* pApp) {
             pConfig->getValueString(
                            ConfigKey("[Library]", "SupportedFileExtensions"))
                     .split(',',
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
                             Qt::SkipEmptyParts);
-#else
-                            QString::SkipEmptyParts);
-#endif
 
     // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
     // replaced with QSet<T>(list.begin(), list.end()).
@@ -792,76 +728,46 @@ void CoreServices::initialize(QGuiApplication* pApp) {
     // 5.14. Until the minimum required Qt version of Mixxx is increased,
     // we need a version check here
     QSet<QString> prev_plugins =
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
             QSet<QString>(prev_plugins_list.begin(), prev_plugins_list.end());
-#else
-            QSet<QString>::fromList(prev_plugins_list);
-#endif
 
     const QList<QString> supportedFileSuffixes = SoundSourceProxy::getSupportedFileSuffixes();
     auto curr_plugins =
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
             QSet<QString>(supportedFileSuffixes.begin(), supportedFileSuffixes.end());
-#else
-            QSet<QString>::fromList(supportedFileSuffixes);
-#endif
 
     rescan = rescan || (prev_plugins != curr_plugins);
     pConfig->set(ConfigKey("[Library]", "SupportedFileExtensions"),
             supportedFileSuffixes.join(","));
 
 #if defined(Q_OS_ANDROID)
-    // The MANAGE_EXTERNAL_STORAGE grant requested above is asynchronous: on the
-    // very first launch the storage scan below starts *before* the user has
-    // granted all-files access. Every directory under shared storage is then
-    // unreadable, so requestAddDir() fails for /storage/emulated/0 and the
-    // library shows up empty. Worse, QStandardPaths::MusicLocation (an
-    // app-specific path that *is* readable without the grant) may get
-    // registered as the sole root, so on later launches loadRootDirs() is no
-    // longer empty and the real music volume never gets scanned — leaving the
-    // library permanently empty even after the user grants the permission.
-    //
-    // So: once all-files access is granted, make sure the primary shared-storage
-    // volume itself is registered (unless an existing root already covers it),
-    // then force a rescan so the music that only became readable after the grant
-    // finally appears. addDirectory() transparently replaces any now-redundant
-    // child roots (e.g. the app-specific fallback) when a parent is added.
+    // Ensure default Android Music and Download directories are registered
+    // even if a previous run started before storage permissions were granted.
     {
-        const bool hasAllFilesAccess = QJniObject::callStaticMethod<jboolean>(
-                "android/os/Environment", "isExternalStorageManager");
-        if (hasAllFilesAccess) {
-            const QString primaryStorage = QStringLiteral("/storage/emulated/0");
-            // Is the primary volume already watched, either directly or via an
-            // ancestor root? If so, skip the add to avoid the "already in your
-            // library" dialog; the rescan below still picks up its contents.
-            bool primaryCovered = false;
-            const QStringList rootDirs =
-                    m_pTrackCollectionManager->internalCollection()
-                            ->getRootDirStrings();
-            for (const QString& root : rootDirs) {
-                if (primaryStorage == root ||
-                        primaryStorage.startsWith(root + QLatin1Char('/'))) {
-                    primaryCovered = true;
+        const QStringList rootDirs =
+                m_pTrackCollectionManager->internalCollection()
+                        ->getRootDirStrings();
+        const QStringList defaultDirs = {
+                mixxx::android::defaultMusicDirectory(),
+                QStandardPaths::writableLocation(QStandardPaths::DownloadLocation),
+        };
+        for (const QString& candidate : defaultDirs) {
+            if (candidate.isEmpty() || !QFileInfo::exists(candidate)) {
+                continue;
+            }
+            const QString cleanCandidate = QDir::cleanPath(candidate);
+            bool alreadyPresent = false;
+            for (const QString& existing : rootDirs) {
+                if (QDir::cleanPath(existing) == cleanCandidate) {
+                    alreadyPresent = true;
                     break;
                 }
             }
-            if (!primaryCovered && QFileInfo::exists(primaryStorage) &&
-                    m_pLibrary->requestAddDir(primaryStorage, /*silent=*/true)) {
-                qInfo() << "Android library: registered primary storage after "
-                           "all-files-access grant"
-                        << primaryStorage;
+            if (!alreadyPresent &&
+                    m_pLibrary->requestAddDir(cleanCandidate, /*silent=*/true)) {
+                qInfo() << "Android library: added music directory" << cleanCandidate;
                 musicDirAdded = true;
             }
-            // Force a rescan so storage that became readable only after the
-            // permission grant is picked up. The scanner is incremental, so
-            // this stays cheap once the first successful scan has completed.
-            rescan = true;
-        } else {
-            qInfo() << "Android library: all-files-access NOT granted; "
-                       "library will use app-internal music folder. "
-                       "Grant the permission via Settings > Apps > Mixxx "
-                       "> Permissions to scan the full device.";
         }
+        rescan = true;
     }
 #endif
 
@@ -936,6 +842,11 @@ void CoreServices::initializeQMLSingletons() {
     mixxx::qml::QmlControllerManagerProxy::registerManager(
             getControllerManager(),
             CmdlineArgs::Instance().getControllerPreviewScreens());
+    // Android-UI singletons (Booth skin + streaming + YouTube bridge,
+    // from JaviLabarumDJ/mixxx-android).
+    mixxx::qml::registerMobileQmlSingletons(this);
+    mixxx::qml::QmlYouTubeProxy::registerLibrary(getLibrary().get());
+    mixxx::qml::QmlYouTubeProxy::registerPlayerManager(getPlayerManager());
 
     ControllerScriptEngineBase::registerTrackCollectionManager(getTrackCollectionManager());
 
@@ -1046,6 +957,9 @@ void CoreServices::finalize() {
     mixxx::qml::QmlLibraryProxy::registerKeyboardEventFilter(nullptr);
     mixxx::qml::QmlSoundManagerProxy::registerManager(nullptr);
     mixxx::qml::QmlControllerManagerProxy::registerManager(nullptr);
+    // Release the mobile singletons (they hold shared ownership of core
+    // objects, which must be destroyed here in order)
+    mixxx::qml::unregisterMobileQmlSingletons();
 
     ControllerScriptEngineBase::registerTrackCollectionManager(nullptr);
 #endif

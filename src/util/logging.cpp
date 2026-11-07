@@ -10,15 +10,18 @@
 #include <QIODevice>
 #include <QLoggingCategory>
 #include <QMutex>
+#include <QMutexLocker>
 #include <QString>
 #include <QTextStream>
 #include <QThread>
 #include <atomic>
 #include <string_view>
+#if defined(Q_OS_ANDROID)
+#include <android/log.h>
+#endif
 
 #include "util/assert.h"
 #include "util/cmdlineargs.h"
-#include "util/compatibility/qmutex.h"
 
 namespace {
 
@@ -164,7 +167,7 @@ inline void writeToFile(
             QChar('\n');
     QByteArray formattedMessage = formattedMessageStr.toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexLogfile);
+    const auto locked = QMutexLocker(&s_mutexLogfile);
     // Writing to a closed QFile could cause an infinite recursive loop
     // by logging to qWarning!
     if (s_logfile.isOpen()) {
@@ -198,7 +201,7 @@ inline void writeToStdErr(
             formattedMessageStr.replace(kThreadNamePattern, threadName)
                     .toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexStdErr);
+    const auto locked = QMutexLocker(&s_mutexStdErr);
     const std::size_t written = fwrite(
             formattedMessage.constData(), sizeof(char), formattedMessage.size(), stderr);
     Q_UNUSED(written);
@@ -375,6 +378,27 @@ void handleMessage(
     }
 
     writeToLog(type, context, input, writeFlags);
+
+#if defined(Q_OS_ANDROID)
+    // Mirror to logcat so on-device debugging works without pulling the
+    // log file (from JaviLabarumDJ/mixxx-android). Kept after the normal
+    // routing so existing desktop behavior is unchanged.
+    android_LogPriority prio = ANDROID_LOG_INFO;
+    if (type == QtDebugMsg) {
+        prio = ANDROID_LOG_DEBUG;
+    } else if (type == QtWarningMsg) {
+        prio = ANDROID_LOG_WARN;
+    } else if (type == QtCriticalMsg) {
+        prio = ANDROID_LOG_ERROR;
+    } else if (type == QtFatalMsg) {
+        prio = ANDROID_LOG_FATAL;
+    }
+    __android_log_print(prio,
+            "MixxxNative",
+            "[%s] %s",
+            context.category ? context.category : "default",
+            input.toLocal8Bit().constData());
+#endif
 }
 
 } // anonymous namespace
@@ -463,7 +487,7 @@ void Logging::shutdown() {
 
     // Even though we uninstalled the message handler, other threads may have
     // already entered it.
-    const auto locker = lockMutex(&s_mutexLogfile);
+    const auto locker = QMutexLocker(&s_mutexLogfile);
     if (s_logfile.isOpen()) {
         s_logfile.close();
     }
@@ -471,7 +495,7 @@ void Logging::shutdown() {
 
 // static
 void Logging::flushLogFile() {
-    QMutexLocker locker(&s_mutexLogfile);
+    auto locker = QMutexLocker(&s_mutexLogfile);
     if (s_logfile.isOpen()) {
         s_logfile.flush();
     }

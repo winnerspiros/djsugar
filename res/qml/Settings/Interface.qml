@@ -220,9 +220,15 @@ Category {
                             Skin.ComboBox {
                                 id: skinInput
 
-                                model: ["Unnamed"]
+                                // Applied immediately, like the language: the
+                                // interface is reloaded with the other skin
+                                readonly property var skins: Mixxx.MobileApp.skinsIn(Qt.resolvedUrl("../Skins/"))
 
-                                onCurrentIndexChanged: themeColorTab.dirty = true
+                                model: skins.map(skin => skin === "Classic" ? qsTr("Classic") : skin)
+                                currentIndex: Math.max(0, skins.indexOf(Mixxx.MobileApp.skin))
+                                onActivated: index => {
+                                    Mixxx.MobileApp.skin = skins[index];
+                                }
                             }
                         }
                         RowLayout {

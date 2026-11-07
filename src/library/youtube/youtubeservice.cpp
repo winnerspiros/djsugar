@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocale>
+#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
@@ -18,8 +19,6 @@
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QRegularExpression>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QSet>
 #include <QSettings>
 #include <QStandardPaths>
@@ -30,8 +29,10 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVector>
+#include <QWaitCondition>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -59,24 +60,24 @@ const Logger kLogger("YouTubeService");
 // is generous so a slow connection or long mix doesn't get killed.
 // 15 s is enough for InnerTube (typically <1s); a faster fail means the
 // yt-dlp fallback kicks in sooner on flaky connections.
-constexpr int kSearchTimeoutMs = 15 * 1000;
+constexpr int kSearchTimeoutMs = 10 * 1000;
 constexpr int kDownloadTimeoutMs = 10 * 60 * 1000; // 10 min
 // Piped HTTP requests get a tighter ceiling — each instance failure should
 // surface fast so we can fail over to the next one without burning too long
 // per dead instance. With 10 instances at 10s each, worst case is ~100s.
-constexpr int kPipedHttpTimeoutMs = 10 * 1000;
+constexpr int kPipedHttpTimeoutMs = 6 * 1000;
 // Minimum file size before we switch from a single-connection download to 8
 // parallel Range requests. Below this threshold the connection-setup overhead
 // outweighs the gain; above it, 8 TCP streams typically deliver 2-4x higher
 // throughput on cellular links where a single window saturates slowly.
-constexpr qint64 kChunkedDownloadThresholdBytes = 2LL * 1024 * 1024; // 2 MB
-constexpr int kParallelDownloadChunks = 8;
+constexpr qint64 kChunkedDownloadThresholdBytes = 1LL * 1024 * 1024; // 2 MB
+constexpr int kParallelDownloadChunks = 16;
 constexpr int kMaxPipedSearchPages = 5;
 // SponsorBlock API timeout — prevents indefinite hangs if the service is slow.
 // 4 s is generous for a single HTTP GET backed by a CDN; most responses arrive
 // in < 500 ms. Keeping it short prevents blocking track load on a slow or
 // unreachable SponsorBlock server.
-constexpr int kSponsorBlockTimeoutMs = 4 * 1000;
+constexpr int kSponsorBlockTimeoutMs = 3 * 1000;
 // Project default for this fork: the requested first-open YouTube feed is Greek
 // top songs, not generic global/United States YouTube trends.
 const QString kDefaultRegion = QStringLiteral("GR");
@@ -501,6 +502,7 @@ QList<YouTubeVideoInfo> parsePipedItems(const QJsonArray& items, int cap) {
         }
         info.title = obj.value(QStringLiteral("title")).toString();
         info.uploader = obj.value(QStringLiteral("uploaderName")).toString();
+        info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
         const QJsonValue dur = obj.value(QStringLiteral("duration"));
         if (dur.isDouble()) {
             info.durationSec = static_cast<int>(dur.toDouble());
@@ -584,6 +586,7 @@ void collectInnerTubeVideos(const QJsonValue& node,
                         video.value(QStringLiteral("shortBylineText")).toObject());
             }
             info.uploader = uploader;
+            info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
             const int dur = parseTimestampToSeconds(innerTubeText(
                     video.value(QStringLiteral("lengthText")).toObject()));
             // No lengthText -> live/upcoming/non-playable: skip it.
@@ -984,10 +987,12 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
     }
 #if defined(Q_OS_ANDROID)
     kLogger.debug() << "[Android] downloadVideo: videoId=" << videoId
-                   << "cacheDir=" << cacheDir
-                   << "ytDlpPath=" << m_ytDlpPath;
+                    << "cacheDir=" << cacheDir
+                    << "ytDlpPath=" << m_ytDlpPath;
 #endif
     QDir().mkpath(cacheDir);
+    Q_EMIT downloadStarted(videoId);
+    Q_EMIT downloadProgress(videoId, 0.04);
 
     // Prefetch SponsorBlock segments NOW, in parallel with the audio download.
     // By the time the audio file lands on disk the segments are (usually) ready
@@ -1039,8 +1044,10 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
             m_androidBundledFallbackInFlight.remove(videoId);
         };
         auto pDoneConn = std::make_shared<QMetaObject::Connection>();
-        *pDoneConn = connect(this, &YouTubeService::downloadFinished,
-                this, [this, videoId, pDoneConn](
+        *pDoneConn = connect(this,
+                &YouTubeService::downloadFinished,
+                this,
+                [this, videoId, pDoneConn](
                         const QString& finishedId, const QString&) {
                     // Only this id's own completion clears its guard entry;
                     // other tracks finishing must not touch it. Disconnects
@@ -1052,7 +1059,8 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                     }
                 });
         auto pConn = std::make_shared<QMetaObject::Connection>();
-        *pConn = connect(this, &YouTubeService::downloadFailed,
+        *pConn = connect(this,
+                &YouTubeService::downloadFailed,
                 [this, videoId, cacheDir, pConn, clearGuard](
                         const QString& failedId, const QString&) {
                     if (failedId != videoId) {
@@ -1061,7 +1069,8 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                     QObject::disconnect(*pConn);
                     kLogger.warning() << "Bundled yt-dlp failed for" << videoId
                                       << "— falling back to InnerTube direct";
-                    downloadViaInnerTube(videoId, cacheDir,
+                    downloadViaInnerTube(videoId,
+                            cacheDir,
                             [this, videoId, clearGuard](
                                     const QString& innerTubeError) {
                                 clearGuard();
@@ -2140,8 +2149,13 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
     // Fail fast when tokenless: a 403 on a URL with no &pot= means YouTube
     // is gating this client — every sibling URL will 403 the same way, so
     // skip the rest instead of burning ~1s per stream (~15s per track).
-    auto tryNextStream = [this, videoId, cacheDir, rest, onFailure,
-                                 streamUserAgent, streamUrl](const QString& err) {
+    auto tryNextStream = [this,
+                                 videoId,
+                                 cacheDir,
+                                 rest,
+                                 onFailure,
+                                 streamUserAgent,
+                                 streamUrl](const QString& err) {
         const bool tokenless403 =
                 (err.contains(QStringLiteral("403")) ||
                         err.contains(QStringLiteral("Forbidden"))) &&
@@ -2201,6 +2215,18 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
     connect(reply, &QNetworkReply::readyRead, this, [reply, outFile]() {
         outFile->write(reply->readAll());
     });
+    connect(reply,
+            &QNetworkReply::downloadProgress,
+            this,
+            [this, videoId, contentLength](qint64 bytesReceived, qint64 bytesTotal) {
+                const qint64 total = bytesTotal > 0 ? bytesTotal : contentLength;
+                if (total > 0 && bytesReceived > 0) {
+                    const double frac = std::min(1.0,
+                            static_cast<double>(bytesReceived) /
+                                    static_cast<double>(total));
+                    Q_EMIT downloadProgress(videoId, 0.12 + 0.80 * frac);
+                }
+            });
     connect(reply,
             &QNetworkReply::finished,
             this,
@@ -2313,8 +2339,11 @@ void YouTubeService::downloadAudioStreamChunked(
         int remaining;
         bool failed = false;
         QString error;
+        qint64 downloadedBytes = 0;
+        qint64 lastEmitBytes = 0;
     };
-    auto* state = new ChunkState{kParallelDownloadChunks, false, {}};
+    auto* state = new ChunkState{kParallelDownloadChunks, false, {}, 0, 0};
+    Q_EMIT downloadProgress(videoId, 0.12);
 
     const QByteArray ua = streamUserAgent.isEmpty()
             ? QByteArray("Mixxx/YouTube")
@@ -2344,17 +2373,30 @@ void YouTubeService::downloadAudioStreamChunked(
         // Write each batch of incoming bytes at the correct file offset.
         // seek() is O(1) and safe to call interleaved with other chunks
         // because all readyRead signals fire serially on the UI thread.
-        connect(reply, &QNetworkReply::readyRead, this, [reply, outFile, writePos, state]() {
-            if (state->failed) {
-                return;
-            }
-            const QByteArray data = reply->readAll();
-            if (!data.isEmpty()) {
-                outFile->seek(*writePos);
-                outFile->write(data);
-                *writePos += data.size();
-            }
-        });
+        connect(reply,
+                &QNetworkReply::readyRead,
+                this,
+                [this, reply, outFile, writePos, state, videoId, contentLength]() {
+                    if (state->failed) {
+                        return;
+                    }
+                    const QByteArray data = reply->readAll();
+                    if (!data.isEmpty()) {
+                        outFile->seek(*writePos);
+                        outFile->write(data);
+                        *writePos += data.size();
+                        state->downloadedBytes += data.size();
+                        if (contentLength > 0 &&
+                                state->downloadedBytes - state->lastEmitBytes >=
+                                        std::max<qint64>(32768, contentLength / 40)) {
+                            state->lastEmitBytes = state->downloadedBytes;
+                            const double frac = std::min(1.0,
+                                    static_cast<double>(state->downloadedBytes) /
+                                            static_cast<double>(contentLength));
+                            Q_EMIT downloadProgress(videoId, 0.12 + 0.80 * frac);
+                        }
+                    }
+                });
 
         connect(reply,
                 &QNetworkReply::finished,
@@ -2450,8 +2492,8 @@ void YouTubeService::downloadViaInnerTubeClient(
     const QString userAgent = QString::fromLatin1(c.userAgent);
 #if defined(Q_OS_ANDROID)
     kLogger.debug() << "[Android] downloadViaInnerTubeClient: videoId=" << videoId
-                   << "client=" << c.clientName
-                   << "clientIdx=" << clientIdx;
+                    << "client=" << c.clientName
+                    << "clientIdx=" << clientIdx;
 #endif
 
     // Helper to advance to the next client on any per-client failure.
@@ -2478,9 +2520,16 @@ void YouTubeService::downloadViaInnerTubeClient(
     // exactly as before — TVHTML5 needs none, fallback chain unchanged.
     QPointer<YouTubeService> potGuard(this);
     fetchPoTokens(videoId,
-            [this, potGuard, videoId, cacheDir, clientIdx, userAgent,
-                    tryNext, onAllFailed](const QString& playerPot,
-                    const QString& streamingPot, const QString& freshVd) {
+            [this,
+                    potGuard,
+                    videoId,
+                    cacheDir,
+                    clientIdx,
+                    userAgent,
+                    tryNext,
+                    onAllFailed](const QString& playerPot,
+                    const QString& streamingPot,
+                    const QString& freshVd) {
                 if (!potGuard) {
                     return;
                 }
@@ -2499,16 +2548,27 @@ void YouTubeService::downloadViaInnerTubeClient(
                     onAllFailed(tr("PO tokens unavailable — using yt-dlp fallback"));
                     return;
                 }
-                requestPlayerWithPoToken(videoId, cacheDir, clientIdx,
-                        userAgent, playerPot, streamingPot, tryNext,
+                requestPlayerWithPoToken(videoId,
+                        cacheDir,
+                        clientIdx,
+                        userAgent,
+                        playerPot,
+                        streamingPot,
+                        tryNext,
                         onAllFailed);
             });
     return;
 #else
     // Desktop/other: no WebView PO tokens — proceed tokenless (TVHTML5 needs
     // none; other clients fail over to yt-dlp as before).
-    requestPlayerWithPoToken(videoId, cacheDir, clientIdx, userAgent,
-            QString(), QString(), tryNext, onAllFailed);
+    requestPlayerWithPoToken(videoId,
+            cacheDir,
+            clientIdx,
+            userAgent,
+            QString(),
+            QString(),
+            tryNext,
+            onAllFailed);
     return;
 #endif
 }
@@ -2756,13 +2816,10 @@ void YouTubeService::fetchPoTokens(const QString& videoId,
         const QString playerPot = cached->at(0);
         const QString streamingPot = cached->at(1);
         const QString visitorData = cached->at(2);
-        QMetaObject::invokeMethod(this,
-                [guard, playerPot, streamingPot, visitorData, cb]() {
+        QMetaObject::invokeMethod(this, [guard, playerPot, streamingPot, visitorData, cb]() {
                     if (guard) {
                         cb(playerPot, streamingPot, visitorData);
-                    }
-                },
-                Qt::QueuedConnection);
+                    } }, Qt::QueuedConnection);
         return;
     }
     // The JNI call blocks up to ~105s (init + 2 mints); offload so neither
@@ -2948,6 +3005,7 @@ void YouTubeService::searchViaYtDlp(const QString& query, int cap) {
                         info.uploader = entry.value(QStringLiteral("uploader"))
                                                 .toString();
                     }
+                    info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
                     const QJsonValue dur = entry.value(QStringLiteral("duration"));
                     if (dur.isDouble()) {
                         info.durationSec = static_cast<int>(dur.toDouble());
@@ -3080,7 +3138,7 @@ namespace {
 void YouTubeService::downloadViaAndroidBundled(
         const QString& videoId, const QString& cacheDir) {
     kLogger.debug() << "[Android] downloadViaAndroidBundled: videoId=" << videoId
-                   << "cacheDir=" << cacheDir;
+                    << "cacheDir=" << cacheDir;
     // Straight to the JNI download with no PO-token fetch: the bundled
     // yt-dlp uses player_client=android_vr which needs no tokens, and the
     // token fetch (WebView BotGuard challenge or 400 round-trips) added
@@ -3094,13 +3152,12 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         const QString& playerPot,
         const QString& streamingPot) {
     kLogger.debug() << "[Android] runAndroidBundled: videoId=" << videoId
-                   << "poToken=" << (!playerPot.isEmpty() ? "yes" : "no");
+                    << "poToken=" << (!playerPot.isEmpty() ? "yes" : "no");
     QPointer<YouTubeService> guard(this);
     // Run the JNI download on a worker thread so we don't block the UI.
     // Use a QPointer to guard against YouTubeService being destroyed
     // before the thread completes.
-    QThread* thread = QThread::create([guard, videoId, cacheDir, playerPot,
-                                              streamingPot]() {
+    QThread* thread = QThread::create([guard, videoId, cacheDir, playerPot, streamingPot]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniEnvironment env; // function scope: used by the init check
         if (!context.isValid()) {
@@ -3154,7 +3211,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         if (needInit) {
             bool initOk = false;
             kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                           << "initializing YoutubeDL for" << videoId;
+                            << "initializing YoutubeDL for" << videoId;
             ytdl.callMethod<void>("init",
                     "(Landroid/content/Context;)V",
                     context.object());
@@ -3238,6 +3295,22 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         request.callMethod<QJniObject>("addOption",
                 "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
                 QJniObject::fromString("--no-check-formats").object());
+        // Skip the HLS/DASH manifest fetches (one extra round-trip each; the
+        // direct m4a stream URL already comes from the player API response)
+        // and the translated-subtitle probe.
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--extractor-args").object(),
+                QJniObject::fromString("youtube:skip=hls,dash,translated_subs").object());
+        // Don't spawn ffmpeg to rewrite the m4a container brand after the
+        // download: FFmpeg's demuxer opens and seeks the original file fine
+        // (checked), and the extra process costs a noticeable moment per track.
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--fixup").object(),
+                QJniObject::fromString("never").object());
         // Bound network stalls: without this, a hung connection blocks
         // execute() forever, and teardown joins this thread -> ANR.
         request.callMethod<QJniObject>("addOption",
@@ -3264,7 +3337,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         // "exec" method, so every bundled download threw NoSuchMethodError and
         // silently failed. This is the core download fix.
         kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                       << "executing yt-dlp request for" << videoId;
+                        << "executing yt-dlp request for" << videoId;
         const qint64 execStartMs = QDateTime::currentMSecsSinceEpoch();
         QJniObject response = ytdl.callObjectMethod(
                 "execute",
@@ -3351,8 +3424,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                            << bytes / 1024 << "KB in" << execMs << "ms"
                            << QString::number(kbPerSec, 'f', 1) << "KB/s";
             kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                           << "download complete for" << videoId
-                           << "→" << outputPath;
+                            << "download complete for" << videoId
+                            << "→" << outputPath;
             // Route through finalizeDownload for SponsorBlock/post-processing,
             // same as the desktop path. Use invokeMethod to marshal back to
             // the object's thread.
@@ -3369,7 +3442,38 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     });
 
     thread->setParent(this);
+    auto* progressTimer = new QTimer(this);
+    progressTimer->setInterval(160);
+    auto tickCount = std::make_shared<int>(0);
+    connect(progressTimer, &QTimer::timeout, this, [this, videoId, cacheDir, tickCount]() {
+        ++(*tickCount);
+        // Smooth asymptotic baseline (0.06 -> 0.85) blended with actual bytes
+        // written to <cacheDir>/<videoId>.* (.part) while yt-dlp downloads.
+        double progress = 0.06 + 0.79 * (1.0 - std::exp(-(*tickCount) * 0.08));
+        QDir dir(cacheDir);
+        const QStringList files = dir.entryList(
+                {videoId + QStringLiteral(".*")},
+                QDir::Files | QDir::NoDotAndDotDot);
+        qint64 maxBytes = 0;
+        for (const QString& f : files) {
+            const QString suffix = QFileInfo(f).suffix().toLower();
+            if (suffix == QStringLiteral("ytdl") ||
+                    suffix == QStringLiteral("json")) {
+                continue;
+            }
+            maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
+        }
+        if (maxBytes > 0) {
+            // Typical 3.5-min opus/m4a audio stream is ~3.5 MB
+            const double byteFrac = std::min(0.90,
+                    static_cast<double>(maxBytes) / (3.5 * 1024.0 * 1024.0));
+            progress = std::max(progress, 0.12 + 0.78 * byteFrac);
+        }
+        Q_EMIT downloadProgress(videoId, std::min(0.90, progress));
+    });
+    connect(thread, &QThread::finished, progressTimer, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    progressTimer->start();
     thread->start();
 }
 #endif // Q_OS_ANDROID && HAVE_YTDLP_ANDROID
@@ -3711,6 +3815,7 @@ void YouTubeService::maybeUpdateDesktopYtDlp() {
 // =============================================================================
 
 void YouTubeService::finalizeDownload(const QString& videoId, const QString& outPath) {
+    Q_EMIT downloadProgress(videoId, 0.94);
     // Helper lambda: given segments (possibly empty), do the cut on a
     // background thread and emit downloadFinished when done. We run
     // cutAudioRanges() off the UI thread so the app stays responsive while
@@ -3774,6 +3879,7 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                                 // Clean up the prefetch cache entry now that
                                 // finalization is complete.
                                 m_sponsorPrefetchCache.remove(videoId);
+                                Q_EMIT downloadProgress(videoId, 1.0);
                                 Q_EMIT downloadFinished(videoId, outPath);
                             },
                             Qt::QueuedConnection);
@@ -3853,3 +3959,110 @@ void YouTubeService::fetchSponsorSegmentsInternal(
 } // namespace mixxx
 
 #include "moc_youtubeservice.cpp"
+
+QString YouTubeVideoInfo::inferGenre(const QString& title,
+        const QString& uploader,
+        const QString& categoryId) {
+    // YouTube music categories: 10 = Music
+    if (categoryId == "10") {
+        return "Music";
+    }
+
+    static const QVector<QPair<QRegularExpression, QString>> rules = {
+            // Explicit genre tags in title
+            {QRegularExpression(
+                     R"(\b(EDM|House|Techno|Trance|Drum\s*&\s*Bass|DnB|Dubstep|Hardstyle|Psytrance|Ambient|Chillout|Lo-fi|Synthwave|Retrowave|Vaporwave|Future\s*Bass|Trap|Hip\s*Hop|Rap|R&B|Soul|Funk|Disco|Pop|Rock|Metal|Punk|Indie|Alternative|Classical|Jazz|Blues|Country|Folk|Reggae|Ska|Latin|Afrobeat|K-Pop|J-Pop|C-Pop|Bollywood|Desi|La[iï]ko|Rebetiko|Éntekhna|Entehna|Skiladiko|Nisiotika|Mantinades|Hasapiko|Zeibekiko|Tsifteteli|Syrtos|Kalamatianos)\b)",
+                     QRegularExpression::CaseInsensitiveOption),
+                    ""},
+            // Bracketed genres like [House], (Techno)
+            {QRegularExpression(
+                     R"(\[([A-Za-z0-9\s&]+)\]|\(([A-Za-z0-9\s&]+)\))"),
+                    ""},
+    };
+
+    const QString combined = title + " " + uploader;
+    for (const auto& rule : rules) {
+        auto match = rule.first.match(combined);
+        if (match.hasMatch()) {
+            QString g = match.captured(1).isEmpty() ? match.captured(2) : match.captured(1);
+            if (!g.isEmpty() && g.length() < 30) {
+                return g.trimmed();
+            }
+        }
+    }
+
+    // Common channel-name hints
+    static const QHash<QString, QString> channelHints = {
+            {"mrsuicidesheep", "Chill/Electronic"},
+            {"proximity", "EDM"},
+            {"monstercat", "Electronic"},
+            {"spinninrecords", "EDM/House"},
+            {"trapnation", "Trap"},
+            {"rapnation", "Hip Hop"},
+            {"majesticcasual", "Chill/Indie"},
+            {"colors", "R&B/Soul"},
+            {"aesthetic", "Lo-fi/Chill"},
+            {"loud", "EDM"},
+            {"edm", "EDM"},
+            {"house", "House"},
+            {"techno", "Techno"},
+            {"trance", "Trance"},
+            {"dubstep", "Dubstep"},
+            {"dnb", "DnB"},
+            {"ambient", "Ambient"},
+            {"chill", "Chillout"},
+            {"lofi", "Lo-fi"},
+            {"synthwave", "Synthwave"},
+            {"vaporwave", "Vaporwave"},
+            {"hiphop", "Hip Hop"},
+            {"rap", "Rap"},
+            {"rnb", "R&B"},
+            {"jazz", "Jazz"},
+            {"blues", "Blues"},
+            {"classical", "Classical"},
+            {"rock", "Rock"},
+            {"metal", "Metal"},
+            {"indie", "Indie"},
+            {"pop", "Pop"},
+            {"country", "Country"},
+            {"folk", "Folk"},
+            {"reggae", "Reggae"},
+            {"kpop", "K-Pop"},
+            {"jpop", "J-Pop"},
+            // Greek music channels / keywords
+            {"greece", "Greek"},
+            {"greek", "Greek"},
+            {"grmusic", "Greek"},
+            {"laiko", "Laïko"},
+            {"laiko", "Laïko"},
+            {"laika", "Laïka"},
+            {"repetiko", "Rebetiko"},
+            {"rebetiko", "Rebetiko"},
+            {"entexna", "Éntekhna"},
+            {"entehna", "Éntekhna"},
+            {"skiladiko", "Skiladiko"},
+            {"skyladiko", "Skiladiko"},
+            {"nisiotika", "Nisiotika"},
+            {"nistika", "Nisiotika"},
+            {"mantinades", "Mantinades"},
+            {"xasapiko", "Hasapiko"},
+            {"zeibekiko", "Zeibekiko"},
+            {"tsifteteli", "Tsifteteli"},
+            {"syrtos", "Syrtos"},
+            {"kalamatianos", "Kalamatianos"},
+            {"greekpop", "Greek Pop"},
+            {"greekrock", "Greek Rock"},
+            {"greekhiphop", "Greek Hip Hop"},
+            {"grektrap", "Greek Trap"},
+            {"laikopop", "Laïko-Pop"},
+            {"skiladiko", "Skiladiko"},
+            {"ellinika", "Greek"},
+            {"ellinika", "Greek"},
+    };
+    const QString uLow = uploader.toLower().remove(QRegularExpression(R"([\s\W]+)"));
+    if (channelHints.contains(uLow)) {
+        return channelHints.value(uLow);
+    }
+
+    return QString();
+}

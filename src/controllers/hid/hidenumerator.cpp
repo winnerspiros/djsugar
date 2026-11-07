@@ -19,7 +19,6 @@
 
 #ifdef __ANDROID__
 #include "controllers/android.h"
-#include "controllers/midi/androidusbmidicontroller.h"
 #endif
 
 namespace mixxx {
@@ -141,6 +140,9 @@ HidEnumerator::~HidEnumerator() {
     while (m_devices.size() > 0) {
         delete m_devices.takeLast();
     }
+#ifdef __ANDROID__
+    qDeleteAll(m_removedDevices);
+#endif
     hid_exit();
 }
 
@@ -168,62 +170,35 @@ QList<Controller*> HidEnumerator::queryDevices() {
 
     QJniObject deviceListObject =
             usbManager.callMethod<QJniObject>("getDeviceList", "()Ljava/util/HashMap;");
-    deviceListObject = deviceListObject.callMethod<QJniObject>(
-            "values", "()Ljava/util/Collection;");
-    if (!deviceListObject.isValid()) {
-        qWarning() << "HID enumerator: getDeviceList returned null";
-        return {};
-    }
+    deviceListObject = deviceListObject.callMethod<jobject>("values", "()Ljava/util/Collection;");
     QJniArray<QJniObject> deviceList = QJniArray<QJniObject>(
-            deviceListObject.callMethod<QJniArray<QJniObject>>("toArray"));
-    qInfo() << "HID enumerator: found" << deviceList.size() << "USB devices";
-    if (deviceList.size() == 0) {
-        qInfo() << "HID enumerator: no USB devices with permission. "
-                   "Unplug/replug controller and grant permission.";
-        QThread::msleep(500);
-        deviceListObject = usbManager.callMethod<QJniObject>(
-                "getDeviceList", "()Ljava/util/HashMap;");
-        deviceListObject = deviceListObject.callMethod<QJniObject>(
-                "values", "()Ljava/util/Collection;");
-        if (deviceListObject.isValid()) {
-            deviceList = QJniArray<QJniObject>(
-                    deviceListObject.callMethod<QJniArray<QJniObject>>(
-                            "toArray"));
-            qInfo() << "HID enumerator: retry found" << deviceList.size()
-                    << "USB devices";
-        }
-    }
+            deviceListObject.callMethod<jobjectArray>("toArray"));
+    __android_log_print(ANDROID_LOG_VERBOSE,
+            "mixxx",
+            "found %d USB devices for HID enumerator",
+            deviceList.size());
 
+    QSet<QString> presentKeys;
     for (const auto& usbDevice : deviceList) {
         if (!usbDevice->isValid()) {
             continue;
         }
-        QString productName =
-                usbDevice->callObjectMethod("getProductName",
-                                 "()Ljava/lang/String;")
-                        .toString();
-        jint vid = usbDevice->callMethod<jint>("getVendorId");
-        jint pid = usbDevice->callMethod<jint>("getProductId");
-        jint ifaceCount = usbDevice->callMethod<jint>("getInterfaceCount");
-        qInfo() << "HID enumerator: USB device" << productName
-                << "VID=0x" << Qt::hex << vid << "PID=0x" << pid
-                << Qt::dec << "interfaces=" << ifaceCount;
+        const QString usbDeviceName =
+                usbDevice->callMethod<jstring>("getDeviceName").toString();
         for (jint ifaceIdx = 0;
                 ifaceIdx < usbDevice->callMethod<jint>("getInterfaceCount");
                 ifaceIdx++) {
             auto usbInterface = usbDevice->callMethod<QJniObject>("getInterface",
                     "(I)Landroid/hardware/usb/UsbInterface;",
                     ifaceIdx);
-            jint ifaceClass = usbInterface.callMethod<jint>("getInterfaceClass");
-            jint ifaceSubclass = usbInterface.callMethod<jint>("getInterfaceSubclass");
-            qInfo() << "HID enumerator: iface" << ifaceIdx
-                    << "class=" << ifaceClass
-                    << "subclass=" << ifaceSubclass;
-            if (ifaceClass == LIBUSB_CLASS_HID
-#ifdef __ANDROID__
-                    || ifaceClass == 0xFF // vendor-specific — DDJ-FLX4 deck HID on Android
-#endif
-            ) {
+            if (usbInterface.callMethod<jint>("getInterfaceClass") == LIBUSB_CLASS_HID) {
+                const QString key = QStringLiteral("%1#%2").arg(
+                        usbDeviceName,
+                        QString::number(usbInterface.callMethod<jint>("getId")));
+                presentKeys.insert(key);
+                if (m_androidDevicesByKey.contains(key)) {
+                    continue;
+                }
                 auto deviceInfo = mixxx::hid::DeviceInfo(usbDevice, usbInterface);
 
                 if (!recognizeDevice(deviceInfo)) {
@@ -240,134 +215,20 @@ QList<Controller*> HidEnumerator::queryDevices() {
                 }
 
                 HidController* newDevice = new HidController(std::move(deviceInfo));
+                m_androidDevicesByKey.insert(key, newDevice);
                 m_devices.push_back(newDevice);
-#ifdef __ANDROID__
-            } else if (ifaceClass == 1 && // LIBUSB_CLASS_AUDIO
-                    ifaceSubclass == 3) {
-                // MIDI Streaming interface (class 1 subclass 3)
-                // Found on DDJ-FLX4 main chip interface 3
-                // Use direct bulkTransfer instead of MidiManager
-                qInfo() << "Found USB MIDI interface" << ifaceIdx
-                        << "on device"
-                        << usbDevice->callObjectMethod("getProductName",
-                                            "()Ljava/lang/String;")
-                                   .toString();
-
-                // Open device and claim interface for raw MIDI access
-                auto usbManager = context.callObjectMethod("getSystemService",
-                        "(Ljava/lang/String;)Ljava/lang/Object;",
-                        USB_SERVICE.object());
-                if (!usbManager.isValid()) {
-                    qWarning() << "Cannot get UsbManager for MIDI device";
-                    continue;
-                }
-
-                if (!usbManager.callMethod<jboolean>("hasPermission",
-                            "(Landroid/hardware/usb/UsbDevice;)Z",
-                            usbDevice)) {
-                    auto pendingIntent = mixxx::android::getIntent();
-                    usbManager.callMethod<void>("requestPermission",
-                            "(Landroid/hardware/usb/UsbDevice;Landroid/app/"
-                            "PendingIntent;)V",
-                            usbDevice,
-                            pendingIntent);
-                    if (!mixxx::android::waitForPermission(usbDevice)) {
-                        qWarning() << "MIDI device permission denied";
-                        continue;
-                    }
-                }
-
-                auto usbConnection = usbManager.callMethod<QJniObject>(
-                        "openDevice",
-                        "(Landroid/hardware/usb/UsbDevice;)"
-                        "Landroid/hardware/usb/UsbDeviceConnection;",
-                        usbDevice);
-                if (!usbConnection.isValid()) {
-                    qWarning() << "Failed to open MIDI USB connection";
-                    continue;
-                }
-
-                // Get the file descriptor — we'll use libusb to claim the
-                // interface and do bulk transfers, because Android's JNI
-                // claimInterface fails on composite audio/MIDI devices
-                // (the audio subsystem owns the kernel driver).
-                jint fd = usbConnection.callMethod<jint>("getFileDescriptor");
-                int ifaceId = usbInterface.callMethod<jint>("getId");
-                qInfo() << "HID enumerator: MIDI USB device opened FD="
-                        << fd << "interface=" << ifaceId;
-
-                // Discover bulk endpoint addresses (we need the raw addresses
-                // for libusb_bulk_transfer, not JNI endpoint objects)
-                uint8_t bulkInEp = 0, bulkOutEp = 0;
-                jint epCount = usbInterface.callMethod<jint>("getEndpointCount");
-                qInfo() << "HID enumerator: MIDI iface" << ifaceId
-                        << "has" << epCount << "endpoints";
-                for (jint i = 0; i < epCount; i++) {
-                    auto ep = usbInterface.callMethod<QJniObject>(
-                            "getEndpoint",
-                            "(I)Landroid/hardware/usb/UsbEndpoint;",
-                            i);
-                    jint epAddr = ep.callMethod<jint>("getAddress");
-                    jint epType = ep.callMethod<jint>("getType");
-                    jint epMaxPkt = ep.callMethod<jint>("getMaxPacketSize");
-                    jint epDir = ep.callMethod<jint>("getDirection");
-                    qInfo() << "HID enumerator:   ep" << i
-                            << "addr=0x" << Qt::hex << epAddr
-                            << "type=" << Qt::dec << epType
-                            << "dir=" << epDir
-                            << "maxPkt=" << epMaxPkt;
-                    if (epType != 2)
-                        continue;
-                    if (epAddr & 0x80) {
-                        bulkInEp = static_cast<uint8_t>(epAddr);
-                    } else {
-                        bulkOutEp = static_cast<uint8_t>(epAddr);
-                    }
-                }
-
-                if (!bulkInEp && !bulkOutEp) {
-                    qWarning() << "No bulk endpoints found on MIDI interface";
-                    continue;
-                }
-
-                QString productName =
-                        usbDevice->callObjectMethod("getProductName",
-                                         "()Ljava/lang/String;")
-                                .toString();
-                QString manufacturerName =
-                        usbDevice->callObjectMethod("getManufacturerName",
-                                         "()Ljava/lang/String;")
-                                .toString();
-                jint vendorId = usbDevice->callMethod<jint>("getVendorId");
-                jint productId = usbDevice->callMethod<jint>("getProductId");
-                int ifaceNum =
-                        usbInterface.callMethod<jint>("getId");
-
-                // Create a unique name including interface number
-                QString devName = QString("%1 M%2")
-                                          .arg(productName)
-                                          .arg(ifaceNum);
-
-                auto* midiDevice = new AndroidUsbMidiController(
-                        devName, vendorId, productId, manufacturerName, productName);
-                midiDevice->setAndroidDevice(
-                        QJniObject(*usbDevice),
-                        fd,
-                        ifaceId,
-                        bulkInEp,
-                        bulkOutEp,
-                        static_cast<uint16_t>(vendorId),
-                        static_cast<uint16_t>(productId));
-                m_devices.push_back(midiDevice);
-#endif
-            } else {
-                qInfo() << "Skipping non-HID interface" << ifaceIdx << "class"
-                        << ifaceClass << "on device"
-                        << usbDevice->callObjectMethod("getProductName",
-                                            "()Ljava/lang/String;")
-                                   .toString();
             }
         }
+    }
+    // ControllerManager closes controllers that disappeared from the list
+    for (auto it = m_androidDevicesByKey.begin(); it != m_androidDevicesByKey.end();) {
+        if (presentKeys.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        m_devices.removeAll(it.value());
+        m_removedDevices.append(it.value());
+        it = m_androidDevicesByKey.erase(it);
     }
 #else
 

@@ -11,7 +11,7 @@ import "Theme"
 Window {
     id: root
 
-    title: "Developer Tools"
+    title: qsTr("Developer Tools")
     color: Theme.toolbarBackgroundColor
 
     ColumnLayout {
@@ -22,7 +22,7 @@ Window {
             id: searchField
 
             Layout.fillWidth: true
-            placeholderText: "Search Term..."
+            placeholderText: qsTr("Search Term...")
             onTextChanged: controlModel.setFilterFixedString(text)
         }
 

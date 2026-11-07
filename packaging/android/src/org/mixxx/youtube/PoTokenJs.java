@@ -1,10 +1,9 @@
 package org.mixxx.youtube;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  * Pure-Java port of NewPipe's JavaScriptUtil.kt: parses BotGuard challenge /
@@ -14,7 +13,9 @@ public final class PoTokenJs {
     private PoTokenJs() {
     }
 
-    /** Parse Create-endpoint challenge into a JSON object embeddable in JS. */
+    /**
+     * Parse Create-endpoint challenge into a JSON object embeddable in JS.
+     */
     public static String parseChallengeData(String raw) throws Exception {
         JSONArray scrambled = new JSONArray(raw);
         JSONArray challengeData;
@@ -80,15 +81,19 @@ public final class PoTokenJs {
         JSONArray arr = new JSONArray(raw);
         String tokenB64 = arr.getString(0);
         long ttl = arr.getLong(1);
-        return new String[] { base64ToU8(tokenB64), Long.toString(ttl) };
+        return new String[] {base64ToU8(tokenB64), Long.toString(ttl)};
     }
 
-    /** String -> "new Uint8Array([...])" literal. */
+    /**
+     * String -> "new Uint8Array([...])" literal.
+     */
     public static String stringToU8(String s) {
         return newUint8Array(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    /** "97,98,99" (Uint8Array.toString) -> base64url no padding. */
+    /**
+     * "97,98,99" (Uint8Array.toString) -> base64url no padding.
+     */
     public static String u8ToBase64(String csv) throws Exception {
         String[] parts = csv.split(",");
         byte[] raw = new byte[parts.length];

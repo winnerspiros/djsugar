@@ -18,7 +18,7 @@ class LegacyControllerMapping;
 class ControllerEnumerator;
 
 /// Function to sort controllers by name
-bool controllerCompare(Controller *a, Controller *b);
+bool controllerCompare(Controller* a, Controller* b);
 
 /// Manages enumeration/operation/deletion of hardware controllers.
 class ControllerManager : public QObject {
@@ -30,7 +30,7 @@ class ControllerManager : public QObject {
     static const mixxx::Duration kPollInterval;
 
     QList<Controller*> getControllers() const;
-    QList<Controller*> getControllerList(bool outputDevices=true, bool inputDevices=true);
+    QList<Controller*> getControllerList(bool outputDevices = true, bool inputDevices = true);
     ControllerLearningEventFilter* getControllerLearningEventFilter() const;
     QSharedPointer<MappingInfoEnumerator> getMainThreadUserMappingEnumerator() const {
         return m_pMainThreadUserMappingEnumerator;
@@ -41,7 +41,9 @@ class ControllerManager : public QObject {
     QString getConfiguredMappingFileForDevice(const QString& name) const;
 
     /// Prevent other parts of Mixxx from having to manually connect to our slots
-    void setUpDevices() { emit requestSetUpDevices(); };
+    void setUpDevices() {
+        emit requestSetUpDevices();
+    };
 
     static QList<QString> getMappingPaths(UserSettingsPointer pConfig);
 
@@ -72,6 +74,9 @@ class ControllerManager : public QObject {
 
   private:
     void updateControllerList();
+    /// Assigns and enables a system mapping matching the controller name if
+    /// the controller has never been configured. Returns true on success.
+    bool autoAssignMapping(Controller* pController);
     void startPolling();
     void stopPolling();
     void pollIfAnyControllersOpen();
@@ -83,6 +88,9 @@ class ControllerManager : public QObject {
     // because the CM is moved to its own thread and runs its own event loop.
     std::unique_ptr<ControllerLearningEventFilter> m_pControllerLearningEventFilter;
     QTimer m_pollTimer;
+    /// Debounces hotplug notifications, which arrive in bursts.
+    QTimer m_hotplugTimer;
+    int m_hotplugListenerId = 0;
     mutable QMutex m_mutex;
     /// Guarded by m_mutex for main-thread reads.
     /// Written/iterated only on the ControllerManager thread

@@ -12,20 +12,15 @@
 #include <QTextStream>
 
 #ifdef __QTKEYCHAIN__
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <qt6keychain/keychain.h>
-#else
-#include <qt5keychain/keychain.h>
 #endif
 using namespace QKeychain;
-#endif // __QTKEYCHAIN__
 
 #include "broadcast/defs_broadcast.h"
 #include "defs_urls.h"
 #include "errordialoghandler.h"
 #include "moc_broadcastprofile.cpp"
 #include "recording/defs_recording.h"
-#include "util/compatibility/qatomic.h"
 #include "util/logger.h"
 #include "util/versionstore.h"
 #include "util/xml.h"
@@ -103,8 +98,8 @@ const mixxx::Logger kLogger("BroadcastProfile");
 } // anonymous namespace
 
 BroadcastProfile::BroadcastProfile(const QString& profileName,
-                                   QObject* parent)
-    : QObject(parent) {
+        QObject* parent)
+        : QObject(parent) {
     adoptDefaultValues();
 
     // Direct assignment to avoid triggering the
@@ -184,42 +179,40 @@ QString BroadcastProfile::getLastFilename() const {
 }
 
 bool BroadcastProfile::equals(BroadcastProfilePtr other) {
-    return ((getProfileName() == other->getProfileName())
-            && valuesEquals(other));
+    return ((getProfileName() == other->getProfileName()) && valuesEquals(other));
 }
 
 bool BroadcastProfile::valuesEquals(BroadcastProfilePtr other) {
-    if (getEnabled() == other->getEnabled()
-            && secureCredentialStorage() == other->secureCredentialStorage()
-            && getHost() == other->getHost()
-            && getPort() == other->getPort()
-            && getServertype() == other->getServertype()
-            && getLogin() == other->getLogin()
-            && getPassword() == other->getPassword()
-            && getEnableReconnect() == other->getEnableReconnect()
-            && getReconnectPeriod() == other->getReconnectPeriod()
-            && getLimitReconnects() == other->getLimitReconnects()
-            && getMaximumRetries() == other->getMaximumRetries()
-            && getNoDelayFirstReconnect() == other->getNoDelayFirstReconnect()
-            && getReconnectFirstDelay() == other->getReconnectFirstDelay()
-            && getFormat() == other->getFormat()
-            && getBitrate() == other->getBitrate()
-            && getChannels() == other->getChannels()
-            && getMountpoint() == other->getMountpoint()
-            && getStreamName() == other->getStreamName()
-            && getStreamDesc() == other->getStreamDesc()
-            && getStreamGenre() == other->getStreamGenre()
-            && getStreamPublic() == other->getStreamPublic()
-            && getStreamWebsite() == other->getStreamWebsite()
-            && getStreamIRC() == other->getStreamIRC()
-            && getStreamAIM() == other->getStreamAIM()
-            && getStreamICQ() == other->getStreamICQ()
-            && getEnableMetadata() == other->getEnableMetadata()
-            && getMetadataCharset() == other->getMetadataCharset()
-            && getCustomArtist() == other->getCustomArtist()
-            && getCustomTitle() == other->getCustomTitle()
-            && getMetadataFormat() == other->getMetadataFormat()
-            && getOggDynamicUpdate() == other->getOggDynamicUpdate()) {
+    if (getEnabled() == other->getEnabled() &&
+            secureCredentialStorage() == other->secureCredentialStorage() &&
+            getHost() == other->getHost() && getPort() == other->getPort() &&
+            getServertype() == other->getServertype() &&
+            getLogin() == other->getLogin() &&
+            getPassword() == other->getPassword() &&
+            getEnableReconnect() == other->getEnableReconnect() &&
+            getReconnectPeriod() == other->getReconnectPeriod() &&
+            getLimitReconnects() == other->getLimitReconnects() &&
+            getMaximumRetries() == other->getMaximumRetries() &&
+            getNoDelayFirstReconnect() == other->getNoDelayFirstReconnect() &&
+            getReconnectFirstDelay() == other->getReconnectFirstDelay() &&
+            getFormat() == other->getFormat() &&
+            getBitrate() == other->getBitrate() &&
+            getChannels() == other->getChannels() &&
+            getMountpoint() == other->getMountpoint() &&
+            getStreamName() == other->getStreamName() &&
+            getStreamDesc() == other->getStreamDesc() &&
+            getStreamGenre() == other->getStreamGenre() &&
+            getStreamPublic() == other->getStreamPublic() &&
+            getStreamWebsite() == other->getStreamWebsite() &&
+            getStreamIRC() == other->getStreamIRC() &&
+            getStreamAIM() == other->getStreamAIM() &&
+            getStreamICQ() == other->getStreamICQ() &&
+            getEnableMetadata() == other->getEnableMetadata() &&
+            getMetadataCharset() == other->getMetadataCharset() &&
+            getCustomArtist() == other->getCustomArtist() &&
+            getCustomTitle() == other->getCustomTitle() &&
+            getMetadataFormat() == other->getMetadataFormat() &&
+            getOggDynamicUpdate() == other->getOggDynamicUpdate()) {
         return true;
     }
 
@@ -426,10 +419,11 @@ bool BroadcastProfile::save(const QString& filename) {
 
     XmlParse::addElement(doc, docRoot, kProfileName, m_profileName);
 
-    XmlParse::addElement(doc, docRoot,
-                         kSecureCredentials, QString::number((int)m_secureCredentials));
-    XmlParse::addElement(doc, docRoot,
-                         kEnabled, QString::number((int)m_enabled));
+    XmlParse::addElement(doc,
+            docRoot,
+            kSecureCredentials,
+            QString::number((int)m_secureCredentials));
+    XmlParse::addElement(doc, docRoot, kEnabled, QString::number((int)m_enabled));
 
     XmlParse::addElement(doc, docRoot, kHost, m_host);
     XmlParse::addElement(doc, docRoot, kPort, QString::number(m_port));
@@ -442,46 +436,41 @@ bool BroadcastProfile::save(const QString& filename) {
         XmlParse::addElement(doc, docRoot, kPassword, m_password);
     }
 
-    XmlParse::addElement(doc, docRoot, kEnableReconnect,
-                         QString::number((int)m_enableReconnect));
-    XmlParse::addElement(doc, docRoot, kReconnectPeriod,
-                         QString::number(m_reconnectPeriod));
+    XmlParse::addElement(doc, docRoot, kEnableReconnect, QString::number((int)m_enableReconnect));
+    XmlParse::addElement(doc, docRoot, kReconnectPeriod, QString::number(m_reconnectPeriod));
 
-    XmlParse::addElement(doc, docRoot, kLimitReconnects,
-                         QString::number((int)m_limitReconnects));
-    XmlParse::addElement(doc, docRoot, kMaximumRetries,
-                         QString::number(m_maximumRetries));
+    XmlParse::addElement(doc, docRoot, kLimitReconnects, QString::number((int)m_limitReconnects));
+    XmlParse::addElement(doc, docRoot, kMaximumRetries, QString::number(m_maximumRetries));
 
-    XmlParse::addElement(doc, docRoot, kNoDelayFirstReconnect,
-                         QString::number((int)m_noDelayFirstReconnect));
-    XmlParse::addElement(doc, docRoot, kReconnectFirstDelay,
-                         QString::number(m_reconnectFirstDelay));
+    XmlParse::addElement(doc,
+            docRoot,
+            kNoDelayFirstReconnect,
+            QString::number((int)m_noDelayFirstReconnect));
+    XmlParse::addElement(doc,
+            docRoot,
+            kReconnectFirstDelay,
+            QString::number(m_reconnectFirstDelay));
 
     XmlParse::addElement(doc, docRoot, kMountPoint, m_mountpoint);
     XmlParse::addElement(doc, docRoot, kStreamName, m_streamName);
     XmlParse::addElement(doc, docRoot, kStreamDesc, m_streamDesc);
     XmlParse::addElement(doc, docRoot, kStreamGenre, m_streamGenre);
-    XmlParse::addElement(doc, docRoot, kStreamPublic,
-                         QString::number((int)m_streamPublic));
+    XmlParse::addElement(doc, docRoot, kStreamPublic, QString::number((int)m_streamPublic));
     XmlParse::addElement(doc, docRoot, kStreamWebsite, m_streamWebsite);
     XmlParse::addElement(doc, docRoot, kStreamIRC, m_streamIRC);
     XmlParse::addElement(doc, docRoot, kStreamAIM, m_streamAIM);
     XmlParse::addElement(doc, docRoot, kStreamICQ, m_streamICQ);
 
     XmlParse::addElement(doc, docRoot, kFormat, m_format);
-    XmlParse::addElement(doc, docRoot, kBitrate,
-                         QString::number(m_bitrate));
-    XmlParse::addElement(doc, docRoot, kChannels,
-                         QString::number(m_channels));
+    XmlParse::addElement(doc, docRoot, kBitrate, QString::number(m_bitrate));
+    XmlParse::addElement(doc, docRoot, kChannels, QString::number(m_channels));
 
-    XmlParse::addElement(doc, docRoot, kEnableMetadata,
-                         QString::number((int)m_enableMetadata));
+    XmlParse::addElement(doc, docRoot, kEnableMetadata, QString::number((int)m_enableMetadata));
     XmlParse::addElement(doc, docRoot, kMetadataCharset, m_metadataCharset);
     XmlParse::addElement(doc, docRoot, kCustomArtist, m_customArtist);
     XmlParse::addElement(doc, docRoot, kCustomTitle, m_customTitle);
     XmlParse::addElement(doc, docRoot, kMetadataFormat, m_metadataFormat);
-    XmlParse::addElement(doc, docRoot, kOggDynamicUpdate,
-                         QString::number((int)m_oggDynamicUpdate));
+    XmlParse::addElement(doc, docRoot, kOggDynamicUpdate, QString::number((int)m_oggDynamicUpdate));
 
     doc.appendChild(docRoot);
 
@@ -497,7 +486,7 @@ bool BroadcastProfile::save(const QString& filename) {
     return false;
 }
 
-void BroadcastProfile::setProfileName(const QString &profileName) {
+void BroadcastProfile::setProfileName(const QString& profileName) {
     QString oldName(m_profileName);
     m_profileName = removeControlCharacters(profileName, kProfileName);
 
@@ -514,7 +503,7 @@ void BroadcastProfile::setConnectionStatus(int newState) {
 }
 
 int BroadcastProfile::connectionStatus() {
-    return atomicLoadRelaxed(m_connectionStatus);
+    return m_connectionStatus.loadRelaxed();
 }
 
 void BroadcastProfile::setSecureCredentialStorage(bool value) {
@@ -547,7 +536,7 @@ bool BroadcastProfile::setSecurePassword(const QString& login, const QString& pa
         return true;
     } else {
         kLogger.warning() << "setSecureValue: write job failed with error:"
-                << writeJob.errorString();
+                          << writeJob.errorString();
         errorDialog(tr("Can't use secure password storage: keychain access failed."),
                 writeJob.errorString());
         return false;
@@ -584,9 +573,9 @@ QString BroadcastProfile::getSecurePassword(const QString& login) {
         return password;
     } else {
         kLogger.warning() << "getSecureValue: read job failed with error:"
-                        << readJob.errorString();
+                          << readJob.errorString();
         errorDialog(tr("Secure password retrieval unsuccessful: keychain access failed."),
-                        readJob.errorString());
+                readJob.errorString());
     }
 #else
     Q_UNUSED(login);
@@ -599,9 +588,10 @@ void BroadcastProfile::errorDialog(const QString& text, const QString& detailedE
     props->setType(DLG_WARNING);
     props->setTitle(tr("Settings error"));
     props->setText(tr("<b>Error with settings for '%1':</b><br>")
-            .arg(getProfileName()) + text);
+                           .arg(getProfileName()) +
+            text);
     props->setDetails(detailedError);
-    props->setKey(detailedError);   // To prevent multiple windows for the same error
+    props->setKey(detailedError); // To prevent multiple windows for the same error
     props->setDefaultButton(QMessageBox::Close);
     props->setModal(false);
     ErrorDialogHandler::instance()->requestErrorDialog(props);

@@ -12,39 +12,33 @@ mixxx::Logger kLogger("CoverArt");
 
 QString sourceToString(CoverInfo::Source source) {
     switch (source) {
-        case CoverInfo::UNKNOWN:
-            return "UNKNOWN";
-        case CoverInfo::GUESSED:
-            return "GUESSED";
-        case CoverInfo::USER_SELECTED:
-            return "USER_SELECTED";
+    case CoverInfo::UNKNOWN:
+        return "UNKNOWN";
+    case CoverInfo::GUESSED:
+        return "GUESSED";
+    case CoverInfo::USER_SELECTED:
+        return "USER_SELECTED";
     }
     return "INVALID INFO VALUE";
 }
 
 QString typeToString(CoverInfo::Type type) {
     switch (type) {
-        case CoverInfo::NONE:
-            return "NONE";
-        case CoverInfo::METADATA:
-            return "METADATA";
-        case CoverInfo::FILE:
-            return "FILE";
+    case CoverInfo::NONE:
+        return "NONE";
+    case CoverInfo::METADATA:
+        return "METADATA";
+    case CoverInfo::FILE:
+        return "FILE";
     }
     return "INVALID TYPE VALUE";
 }
 
 quint16 calculateLegacyHash(
         const QImage& image) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     auto legacyHash = qChecksum(QByteArrayView(
             reinterpret_cast<const char*>(image.constBits()),
             image.sizeInBytes()));
-#else
-    auto legacyHash = qChecksum(
-            reinterpret_cast<const char*>(image.constBits()),
-            image.sizeInBytes());
-#endif
     // In rare cases the calculated checksum could be equal to the
     // reserved value CoverInfo::defaultLegacyHash() which might cause
     // unexpected behavior. In this case we simply invert all bits to

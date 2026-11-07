@@ -228,6 +228,37 @@ PioneerDDJFLX4.pitchPadsFirstControl = 0x70;
 
 PioneerDDJFLX4.quickJumpSize = 32;
 
+// rekordbox behaviour (mapping settings, see Pioneer-DDJ-FLX4.midi.xml). The
+// defaults keep the Mixxx behaviour of this mapping.
+PioneerDDJFLX4.option = function(name) {
+    return engine.getSetting(name);
+};
+
+// Memory cues of CUE/LOOP CALL use the hot cues beyond the 8 pads
+PioneerDDJFLX4.firstMemoryCue = 9;
+PioneerDDJFLX4.lastMemoryCue = 36;
+PioneerDDJFLX4.calledMemoryCue = {"[Channel1]": 0, "[Channel2]": 0};
+
+// BEAT SYNC: whether the press became a long press (rekordbox mode)
+PioneerDDJFLX4.syncLongPress = {"[Channel1]": false, "[Channel2]": false};
+
+// LOAD: time of the last press, for Instant Doubles
+PioneerDDJFLX4.lastLoadPress = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJFLX4.instantDoublesTime = 400;
+
+// rekordbox Keyboard mode: the hot cue played and the pitch range
+PioneerDDJFLX4.keyboardCue = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJFLX4.keyboardOffset = {"[Channel1]": 0, "[Channel2]": 0};
+
+// rekordbox Key Shift and Keyboard pads, in semitones: top row, then bottom row
+PioneerDDJFLX4.rekordboxPitchPads = [4, 5, 6, 7, 0, 1, 2, 3];
+PioneerDDJFLX4.keyShiftOffset = {"[Channel1]": 0, "[Channel2]": 0};
+
+// PAD FX1: loop rolls (beats) of pads 1-8
+PioneerDDJFLX4.padFxRolls = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8];
+// PAD FX2: the effects held by the pads, set while a pad is held
+PioneerDDJFLX4.padFxHeld = {};
+
 // Used for tempo slider
 PioneerDDJFLX4.highResMSB = {
     "[Channel1]": {},
@@ -252,6 +283,11 @@ PioneerDDJFLX4.toggleLight = function(midiIn, active) {
 
 PioneerDDJFLX4.init = function() {
     engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
+    // focused_effect is 0 (no focus) on a fresh install, so BEAT FX would
+    // address a non-existing effect slot until BEAT LEFT/RIGHT is pressed
+    if (engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect") < 1) {
+        engine.setValue("[EffectRack1_EffectUnit1]", "focused_effect", 1);
+    }
 
     engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
     engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
@@ -272,8 +308,15 @@ PioneerDDJFLX4.init = function() {
     }
     for (let i = 1; i <= samplerCount; ++i) {
         engine.makeConnection("[Sampler" + i + "]", "play", PioneerDDJFLX4.samplerPlayOutputCallbackFunction);
+        // Lit by the script for both pad layouts (mapping setting)
+        engine.makeConnection("[Sampler" + i + "]", "track_loaded", PioneerDDJFLX4.samplerLoadedLED).trigger();
     }
 
+    engine.makeConnection("[QuickEffectRack1_[Channel1]]", "super1", PioneerDDJFLX4.cfxMoved);
+    engine.makeConnection("[QuickEffectRack1_[Channel2]]", "super1", PioneerDDJFLX4.cfxMoved);
+    PioneerDDJFLX4.smartCfxGroups.forEach(group =>
+        engine.makeConnection(group, "enabled", PioneerDDJFLX4.smartCfxLED));
+    PioneerDDJFLX4.smartCfxLED();
     engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
     engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
 
@@ -291,6 +334,8 @@ PioneerDDJFLX4.init = function() {
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect" + i +"]", "enabled", PioneerDDJFLX4.toggleFxLight);
     }
     engine.makeConnection("[EffectRack1_EffectUnit1]", "focused_effect", PioneerDDJFLX4.toggleFxLight);
+    // Show the state of effects restored from the previous session
+    PioneerDDJFLX4.toggleFxLight();
 
     // Register callbacks for each deck, when a file is loaded and the number of stems is available
     engine.makeConnection("[Channel1]", "stem_count", PioneerDDJFLX4.stemCountChanged);
@@ -360,12 +405,17 @@ PioneerDDJFLX4.toggleFxLight = function(_value, _group, _control) {
 };
 
 PioneerDDJFLX4.focusedFxGroup = function() {
-    const focusedFx = engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect");
+    // The skin can remove the focus (0); fall back to the first slot
+    const focusedFx = Math.min(3, Math.max(1,
+        engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect")));
     return "[EffectRack1_EffectUnit1_Effect" + focusedFx + "]";
 };
 
+// LEVEL/DEPTH changes the dry/wet of the unit and, with SHIFT, the amount
+// of the selected effect, or the other way round (mapping setting)
 PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, _control, value) {
-    if (PioneerDDJFLX4.shiftButtonDown[0] || PioneerDDJFLX4.shiftButtonDown[1]) {
+    const shifted = PioneerDDJFLX4.shiftButtonDown[0] || PioneerDDJFLX4.shiftButtonDown[1];
+    if (shifted !== (engine.getSetting("levelDepthMode") === "meta")) {
         engine.softTakeoverIgnoreNextValue("[EffectRack1_EffectUnit1]", "mix");
         engine.setParameter(PioneerDDJFLX4.focusedFxGroup(), "meta", value / 0x7F);
     } else {
@@ -455,7 +505,7 @@ PioneerDDJFLX4.beatFxChannel2 = function(_channel, control, value, _status, grou
 //
 
 PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled" === 0)) {
+    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
         return;
     }
     PioneerDDJFLX4.loopAdjustIn[channel] = !PioneerDDJFLX4.loopAdjustIn[channel];
@@ -463,7 +513,7 @@ PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.toggleLoopAdjustOut = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled" === 0)) {
+    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
         return;
     }
     PioneerDDJFLX4.loopAdjustOut[channel] = !PioneerDDJFLX4.loopAdjustOut[channel];
@@ -537,17 +587,117 @@ PioneerDDJFLX4.loopToggle = function(value, group, control) {
     }
 };
 
+// IN and OUT: in rekordbox mode, pressed during a loop they adjust its in or
+// out point with the jog wheel, like SHIFT + IN/OUT
+// Whether the last press of IN/OUT adjusts the loop (rekordbox mode with a
+// loop on), by deck and button. The release must go the same way as the
+// press: the press may have turned a loop on, and a loop_in/loop_out press
+// that is never released leaves the engine adjusting the loop.
+PioneerDDJFLX4.loopButtonAdjusts = {};
+
+PioneerDDJFLX4.loopButtonPressed = function(key, toggleAdjust, channel, control, value, status, group) {
+    const id = `${group}${key}`;
+    if (value) {
+        PioneerDDJFLX4.loopButtonAdjusts[id] =
+                PioneerDDJFLX4.option("loopButtonsMode") === "rekordbox" &&
+                engine.getValue(group, "loop_enabled") > 0;
+    }
+    if (PioneerDDJFLX4.loopButtonAdjusts[id]) {
+        toggleAdjust(channel, control, value, status, group);
+        return;
+    }
+    engine.setValue(group, key, value ? 1 : 0);
+};
+
+PioneerDDJFLX4.loopInPressed = function(channel, control, value, status, group) {
+    PioneerDDJFLX4.loopButtonPressed("loop_in", PioneerDDJFLX4.toggleLoopAdjustIn,
+        channel, control, value, status, group);
+};
+
+PioneerDDJFLX4.loopOutPressed = function(channel, control, value, status, group) {
+    PioneerDDJFLX4.loopButtonPressed("loop_out", PioneerDDJFLX4.toggleLoopAdjustOut,
+        channel, control, value, status, group);
+};
+
+// 4 BEAT/EXIT: exits a playing loop; otherwise turns the last loop on again
+// (Mixxx) or starts a loop of 4 beats (rekordbox)
+PioneerDDJFLX4.fourBeatExitPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4.option("loopButtonsMode") !== "rekordbox" || engine.getValue(group, "loop_enabled")) {
+        engine.setValue(group, "reloop_toggle", value ? 1 : 0);
+        return;
+    }
+    if (value) {
+        script.triggerControl(group, "beatloop_4_activate");
+    }
+};
+
 //
 // CUE/LOOP CALL
 //
 
+// rekordbox mode: memory cues are the hot cues 9-36. Calls the memory cue
+// before (direction < 0) or after the play position.
+PioneerDDJFLX4.callMemoryCue = function(group, direction) {
+    const position = engine.getValue(group, "playposition") * engine.getValue(group, "track_samples");
+    // At a cue, ◀ calls the one before it
+    const tolerance = engine.getValue(group, "track_samplerate") * 2 * 0.05;
+    let best = 0;
+    let bestPosition = 0;
+    for (let n = PioneerDDJFLX4.firstMemoryCue; n <= PioneerDDJFLX4.lastMemoryCue; n++) {
+        if (engine.getValue(group, `hotcue_${n}_status`) <= 0) {
+            continue;
+        }
+        const cuePosition = engine.getValue(group, `hotcue_${n}_position`);
+        if (direction < 0 && cuePosition < position - tolerance && (best === 0 || cuePosition > bestPosition)) {
+            best = n;
+            bestPosition = cuePosition;
+        } else if (direction > 0 && cuePosition > position + tolerance && (best === 0 || cuePosition < bestPosition)) {
+            best = n;
+            bestPosition = cuePosition;
+        }
+    }
+    if (best > 0) {
+        script.triggerControl(group, `hotcue_${best}_goto`);
+        PioneerDDJFLX4.calledMemoryCue[group] = best;
+    }
+};
+
+// rekordbox mode: SHIFT + ▶ saves a memory cue (or the playing loop) in the
+// first free hot cue from 9 on
+PioneerDDJFLX4.saveMemoryCue = function(group) {
+    for (let n = PioneerDDJFLX4.firstMemoryCue; n <= PioneerDDJFLX4.lastMemoryCue; n++) {
+        if (engine.getValue(group, `hotcue_${n}_status`) <= 0) {
+            script.triggerControl(group, engine.getValue(group, "loop_enabled") ? `hotcue_${n}_setloop` : `hotcue_${n}_setcue`);
+            PioneerDDJFLX4.calledMemoryCue[group] = n;
+            return;
+        }
+    }
+};
+
+// rekordbox mode: SHIFT + ◀ deletes the memory cue called last
+PioneerDDJFLX4.deleteMemoryCue = function(group) {
+    const n = PioneerDDJFLX4.calledMemoryCue[group];
+    if (n > 0 && engine.getValue(group, `hotcue_${n}_status`) > 0) {
+        script.triggerControl(group, `hotcue_${n}_clear`);
+    }
+    PioneerDDJFLX4.calledMemoryCue[group] = 0;
+};
+
 PioneerDDJFLX4.cueLoopCallLeft = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("cueLoopCallMode") === "rekordbox" && !engine.getValue(group, "loop_enabled")) {
+        PioneerDDJFLX4.callMemoryCue(group, -1);
+        return;
+    }
     if (value) {
         engine.setValue(group, "loop_scale", 0.5);
     }
 };
 
 PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("cueLoopCallMode") === "rekordbox" && !engine.getValue(group, "loop_enabled")) {
+        PioneerDDJFLX4.callMemoryCue(group, 1);
+        return;
+    }
     if (value) {
         engine.setValue(group, "loop_scale", 2.0);
     }
@@ -561,6 +711,15 @@ PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, g
 //
 
 PioneerDDJFLX4.syncPressed = function(channel, control, value, status, group) {
+    // rekordbox mode: acts on release, unless the press became a long press
+    if (PioneerDDJFLX4.option("syncMode") === "rekordbox") {
+        if (value) {
+            PioneerDDJFLX4.syncLongPress[group] = false;
+        } else if (!PioneerDDJFLX4.syncLongPress[group]) {
+            script.toggleControl(group, "sync_enabled");
+        }
+        return;
+    }
     if (engine.getValue(group, "sync_enabled") && value > 0) {
         engine.setValue(group, "sync_enabled", 0);
     } else {
@@ -569,6 +728,14 @@ PioneerDDJFLX4.syncPressed = function(channel, control, value, status, group) {
 };
 
 PioneerDDJFLX4.syncLongPressed = function(channel, control, value, status, group) {
+    // rekordbox mode: a long press makes the deck the master (sync leader)
+    if (PioneerDDJFLX4.option("syncMode") === "rekordbox") {
+        if (value) {
+            PioneerDDJFLX4.syncLongPress[group] = true;
+            engine.setValue(group, "sync_leader", 1);
+        }
+        return;
+    }
     if (value) {
         engine.setValue(group, "sync_enabled", 1);
     }
@@ -589,6 +756,97 @@ PioneerDDJFLX4.cycleTempoRange = function(_channel, _control, value, _status, gr
         }
     }
     engine.setValue(group, "rateRange", this.tempoRanges[idx]);
+};
+
+// SHIFT + BEAT SYNC: key lock (MASTER TEMPO), or the tempo range like
+// rekordbox
+PioneerDDJFLX4.shiftSyncPressed = function(channel, control, value, status, group) {
+    if (PioneerDDJFLX4.option("shiftSyncMode") === "tempoRange") {
+        PioneerDDJFLX4.cycleTempoRange(channel, control, value, status, group);
+        return;
+    }
+    if (value === 0) { return; } // ignore release
+    script.toggleControl(group, "keylock");
+};
+
+//
+// TRIM, with the TRIM / CFX guard option
+//
+
+PioneerDDJFLX4.trimMsbValue = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJFLX4.trimLockedUntil = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJFLX4.trimPickedUp = {"[Channel1]": false, "[Channel2]": false};
+PioneerDDJFLX4.trimPickupTimer = {"[Channel1]": 0, "[Channel2]": 0};
+// After CFX moved, TRIM is ignored this long
+PioneerDDJFLX4.trimCfxGuardMs = 2000;
+// TRIM changes once the knob is this close to the current value
+PioneerDDJFLX4.trimPickupDistance = 0.02;
+// After this long without TRIM, it has to be picked up again
+PioneerDDJFLX4.trimPickupHoldMs = 1000;
+
+PioneerDDJFLX4.trimMsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4.trimMsbValue[group] = value;
+};
+
+PioneerDDJFLX4.trimLsb = function(_channel, _control, value, _status, group) {
+    const parameter = ((PioneerDDJFLX4.trimMsbValue[group] << 7) + value) / 0x3FFF;
+    if (!PioneerDDJFLX4.option("trimCfxGuard")) {
+        engine.setParameter(group, "pregain", parameter);
+        return;
+    }
+    // Some units send stray TRIM messages while CFX is turned
+    if (Date.now() < PioneerDDJFLX4.trimLockedUntil[group]) {
+        PioneerDDJFLX4.trimPickedUp[group] = false;
+        return;
+    }
+    if (!PioneerDDJFLX4.trimPickedUp[group]) {
+        if (Math.abs(parameter - engine.getParameter(group, "pregain")) > PioneerDDJFLX4.trimPickupDistance) {
+            return;
+        }
+        PioneerDDJFLX4.trimPickedUp[group] = true;
+    }
+    engine.setParameter(group, "pregain", parameter);
+    if (PioneerDDJFLX4.trimPickupTimer[group]) {
+        engine.stopTimer(PioneerDDJFLX4.trimPickupTimer[group]);
+    }
+    PioneerDDJFLX4.trimPickupTimer[group] = engine.beginTimer(PioneerDDJFLX4.trimPickupHoldMs, function() {
+        PioneerDDJFLX4.trimPickupTimer[group] = 0;
+        PioneerDDJFLX4.trimPickedUp[group] = false;
+    }, true);
+};
+
+// CFX of a deck moved: its TRIM is locked for a while
+PioneerDDJFLX4.cfxMoved = function(_value, group, _control) {
+    const deck = group.match(/\[Channel(\d)\]/);
+    if (!deck || !PioneerDDJFLX4.option("trimCfxGuard")) {
+        return;
+    }
+    const channelGroup = `[Channel${deck[1]}]`;
+    PioneerDDJFLX4.trimLockedUntil[channelGroup] = Date.now() + PioneerDDJFLX4.trimCfxGuardMs;
+    PioneerDDJFLX4.trimPickedUp[channelGroup] = false;
+};
+
+//
+// SMART CFX: the CFX (QuickEffect) of decks 1 and 2 on or off, with SHIFT
+// the next CFX preset
+//
+
+PioneerDDJFLX4.smartCfxGroups = ["[QuickEffectRack1_[Channel1]]", "[QuickEffectRack1_[Channel2]]"];
+
+PioneerDDJFLX4.smartCfxPressed = function(_channel, control, value) {
+    if (value === 0) { return; } // ignore release
+    const groups = PioneerDDJFLX4.smartCfxGroups;
+    if (control === 0x08) {
+        groups.forEach(group => engine.setValue(group, "next_chain_preset", 1));
+        return;
+    }
+    const on = groups.some(group => engine.getValue(group, "enabled") > 0);
+    groups.forEach(group => engine.setValue(group, "enabled", on ? 0 : 1));
+};
+
+PioneerDDJFLX4.smartCfxLED = function() {
+    const on = PioneerDDJFLX4.smartCfxGroups.some(group => engine.getValue(group, "enabled") > 0);
+    midi.sendShortMsg(0x96, 0x00, on ? 0x7F : 0x00);
 };
 
 //
@@ -711,37 +969,101 @@ PioneerDDJFLX4.decreaseBeatjumpSizes = function(_channel, control, value, _statu
 };
 
 //
+// Keyboard mode (rekordbox), instead of stems
+//
+// The first pad pressed picks the hot cue (and sets it if it's empty); then
+// the pads play it at the pitches of rekordboxPitchPads. SHIFT + pad 7/8
+// moves the range up or down, SHIFT + pads 1-6 delete the hot cue. Pressing
+// SHIFT + HOT CUE again picks another hot cue.
+//
+
+PioneerDDJFLX4.keyboardPadPressed = function(group, pad, value, shift) {
+    if (value !== 0x7f) {
+        return;
+    }
+    if (shift) {
+        if (pad === 6) {
+            PioneerDDJFLX4.keyboardOffset[group] = Math.min(PioneerDDJFLX4.keyboardOffset[group] + 4, 5);
+        } else if (pad === 7) {
+            PioneerDDJFLX4.keyboardOffset[group] = Math.max(PioneerDDJFLX4.keyboardOffset[group] - 4, -12);
+        } else {
+            const cue = PioneerDDJFLX4.keyboardCue[group];
+            if (cue > 0 && engine.getValue(group, `hotcue_${cue}_status`) > 0) {
+                script.triggerControl(group, `hotcue_${cue}_clear`);
+            }
+            PioneerDDJFLX4.keyboardCue[group] = 0;
+            PioneerDDJFLX4.keyboardLights(group);
+        }
+        return;
+    }
+    const cue = PioneerDDJFLX4.keyboardCue[group];
+    if (cue === 0) {
+        const picked = pad + 1;
+        if (engine.getValue(group, `hotcue_${picked}_status`) <= 0) {
+            script.triggerControl(group, `hotcue_${picked}_set`);
+        }
+        PioneerDDJFLX4.keyboardCue[group] = picked;
+        PioneerDDJFLX4.keyboardLights(group);
+        return;
+    }
+    engine.setValue(group, "pitch_adjust",
+        PioneerDDJFLX4.rekordboxPitchPads[pad] + PioneerDDJFLX4.keyboardOffset[group]);
+    script.triggerControl(group, `hotcue_${cue}_gotoandplay`);
+};
+
+// All pads lit once a hot cue is picked
+PioneerDDJFLX4.keyboardLights = function(group) {
+    const code = PioneerDDJFLX4.keyboardCue[group] > 0 ? 0x7F : 0x00;
+    for (let i = 0; i < 8; i++) {
+        PioneerDDJFLX4.stemsPadsModesStatus[group].forEach(
+            (padMode) => midi.sendShortMsg(padMode, PioneerDDJFLX4.stemMutePadsFirstControl + i, code));
+    }
+};
+
+//
 // Sampler mode
 //
 
+// The pad of a sampler slot, as [status, control] of the pad without SHIFT
+PioneerDDJFLX4.samplerPad = function(slot) {
+    if (PioneerDDJFLX4.option("samplerLayout") === "rekordbox") {
+        // Deck 1: slots 1-8, deck 2: slots 9-16
+        return [slot <= 8 ? 0x97 : 0x99, 0x30 + (slot - 1) % 8];
+    }
+    // Deck 1: slots 1-4 and 9-12, deck 2: slots 5-8 and 13-16
+    const deck2 = (slot >= 5 && slot <= 8) || slot >= 13;
+    return [deck2 ? 0x99 : 0x97, 0x30 + (slot <= 8 ? (slot - 1) % 4 : 4 + (slot - 9) % 4)];
+};
+
+// The sampler group of a pad; the mapping file names the Mixxx layout
+PioneerDDJFLX4.samplerGroupForPad = function(status, control, group) {
+    if (PioneerDDJFLX4.option("samplerLayout") !== "rekordbox") {
+        return group;
+    }
+    const deck = (status === 0x97 || status === 0x98) ? 0 : 1;
+    return `[Sampler${deck * 8 + control - 0x30 + 1}]`;
+};
+
+PioneerDDJFLX4.samplerLoadedLED = function(value, group, _control) {
+    const pad = PioneerDDJFLX4.samplerPad(Number(group.match(script.samplerRegEx)[1]));
+    midi.sendShortMsg(pad[0], pad[1], value > 0.5 ? 0x7F : 0x00);
+    midi.sendShortMsg(pad[0] + 1, pad[1], value > 0.5 ? 0x7F : 0x00);
+};
+
 PioneerDDJFLX4.samplerPlayOutputCallbackFunction = function(value, group, _control) {
     if (value === 1) {
-        const curPad = group.match(script.samplerRegEx)[1];
-        let deckIndex = 0;
-        let padIndex = 0;
-
-        if (curPad >=1 && curPad <= 4) {
-            deckIndex = 0;
-            padIndex = curPad - 1;
-        } else if (curPad >=5 && curPad <= 8) {
-            deckIndex = 2;
-            padIndex = curPad - 5;
-        } else if (curPad >=9 && curPad <= 12) {
-            deckIndex = 0;
-            padIndex = curPad - 5;
-        } else if (curPad >=13 && curPad <= 16) {
-            deckIndex = 2;
-            padIndex = curPad - 9;
-        }
-
-        PioneerDDJFLX4.startSamplerBlink(
-            0x97 + deckIndex,
-            0x30 + padIndex,
-            group);
+        const pad = PioneerDDJFLX4.samplerPad(Number(group.match(script.samplerRegEx)[1]));
+        PioneerDDJFLX4.startSamplerBlink(pad[0], pad[1], group);
     }
 };
 
 PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, _group) {
+    // SHIFT + HOT CUE (Keyboard mode) picks a new hot cue
+    if (value && _control === 0x69 && PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        const group = _status === 0x90 ? "[Channel1]" : "[Channel2]";
+        PioneerDDJFLX4.keyboardCue[group] = 0;
+        PioneerDDJFLX4.keyboardLights(group);
+    }
     const deck = (_status === 0x90 ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2);
 
     if (_control === 0x1B) {
@@ -764,6 +1086,14 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4.option("samplerLayout") === "rekordbox") {
+        // rekordbox: plays the slot; loading is SHIFT + pad
+        group = PioneerDDJFLX4.samplerGroupForPad(_status, _control, group);
+        if (engine.getValue(group, "track_loaded")) {
+            engine.setValue(group, "cue_gotoandplay", value);
+        }
+        return;
+    }
     if (engine.getValue(group, "track_loaded")) {
         engine.setValue(group, "cue_gotoandplay", value);
     } else {
@@ -772,6 +1102,16 @@ PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4.option("samplerLayout") === "rekordbox") {
+        // rekordbox: stops a playing slot, or loads the selected track
+        group = PioneerDDJFLX4.samplerGroupForPad(_status, _control, group);
+        if (engine.getValue(group, "play")) {
+            engine.setValue(group, "cue_gotoandstop", value);
+        } else {
+            engine.setValue(group, "LoadSelectedTrack", value);
+        }
+        return;
+    }
     if (engine.getValue(group, "play")) {
         engine.setValue(group, "cue_gotoandstop", value);
     } else if (engine.getValue(group, "track_loaded")) {
@@ -815,18 +1155,30 @@ PioneerDDJFLX4.stopSamplerBlink = function(channel, control) {
 
 
 PioneerDDJFLX4.toggleQuantize = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4.option("shiftHeadphoneCue") === "tap") {
+        engine.setValue(group, "bpm_tap", value ? 1 : 0);
+        return;
+    }
     if (value) {
         script.toggleControl(group, "quantize");
     }
 };
 
 PioneerDDJFLX4.quickJumpForward = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("cueLoopCallMode") === "rekordbox") {
+        PioneerDDJFLX4.saveMemoryCue(group);
+        return;
+    }
     if (value) {
         engine.setValue(group, "beatjump", PioneerDDJFLX4.quickJumpSize);
     }
 };
 
 PioneerDDJFLX4.quickJumpBack = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("cueLoopCallMode") === "rekordbox") {
+        PioneerDDJFLX4.deleteMemoryCue(group);
+        return;
+    }
     if (value) {
         engine.setValue(group, "beatjump", -PioneerDDJFLX4.quickJumpSize);
     }
@@ -837,6 +1189,10 @@ PioneerDDJFLX4.quickJumpBack = function(_channel, _control, value, _status, grou
 //
 
 PioneerDDJFLX4.stemMutePadPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        PioneerDDJFLX4.keyboardPadPressed(group, control - PioneerDDJFLX4.stemMutePadsFirstControl, value, false);
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -857,6 +1213,10 @@ PioneerDDJFLX4.stemMutePadPressed = function(_channel, control, value, _status, 
 };
 
 PioneerDDJFLX4.stemMutePadShiftPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        PioneerDDJFLX4.keyboardPadPressed(group, control - PioneerDDJFLX4.stemMutePadsFirstControl, value, true);
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -879,6 +1239,10 @@ PioneerDDJFLX4.stemMutePadShiftPressed = function(_channel, control, value, _sta
 };
 
 PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        PioneerDDJFLX4.keyboardPadPressed(group, control - PioneerDDJFLX4.stemMutePadsFirstControl, value, false);
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -897,6 +1261,10 @@ PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, gr
 };
 
 PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        PioneerDDJFLX4.keyboardPadPressed(group, control - PioneerDDJFLX4.stemMutePadsFirstControl, value, true);
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -930,6 +1298,10 @@ PioneerDDJFLX4.stemCountChanged = function(_value, group, _control) {
 };
 
 PioneerDDJFLX4.stemMuteChanged = function(value, group, _control) {
+    // The pads show the Keyboard mode instead
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        return;
+    }
     const channelStem = group.match(/\[Channel(\d+)_Stem(\d+)\]/);
     const deck = Number(channelStem[1]);
     const stem = Number(channelStem[2]);
@@ -956,6 +1328,10 @@ PioneerDDJFLX4.stemMuteChanged = function(value, group, _control) {
 };
 
 PioneerDDJFLX4.stemFxChanged = function(value, group, _control) {
+    // The pads show the Keyboard mode instead
+    if (PioneerDDJFLX4.option("keyboardMode") === "keyboard") {
+        return;
+    }
     const channelStem = group.match(/\[QuickEffectRack1_\[Channel(\d+)_Stem(\d+)\]\]/);
     const deck = Number(channelStem[1]);
     const stem = Number(channelStem[2]);
@@ -979,6 +1355,16 @@ PioneerDDJFLX4.stemFxChanged = function(value, group, _control) {
 //
 
 PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
+    // rekordbox layout: the pad of the current key is lit
+    if (PioneerDDJFLX4.option("keyShiftLayout") === "rekordbox") {
+        const pitch = Math.round(engine.getValue(group, "pitch_adjust"));
+        for (let i = 0; i < 8; i++) {
+            const lit = PioneerDDJFLX4.rekordboxPitchPads[i] + PioneerDDJFLX4.keyShiftOffset[group] === pitch;
+            PioneerDDJFLX4.pitchPadsModesStatus[group].forEach(
+                (padMode) => midi.sendShortMsg(padMode, PioneerDDJFLX4.pitchPadsFirstControl + i, lit ? 0x7F : 0x00));
+        }
+        return;
+    }
     const pitchAdjust = Math.round(engine.getValue(group, "pitch_adjust"));
     let lights = 0b00000000;
 
@@ -1045,6 +1431,14 @@ PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
 };
 
 PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4.option("keyShiftLayout") === "rekordbox") {
+        if (value === 0x7f) {
+            engine.setValue(group, "pitch_adjust",
+                PioneerDDJFLX4.rekordboxPitchPads[control - this.pitchPadsFirstControl] +
+                PioneerDDJFLX4.keyShiftOffset[group]);
+        }
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -1074,6 +1468,17 @@ PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, gro
 };
 
 PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, control, value, _status, group) {
+    // rekordbox: SHIFT + pad 7/8 moves the range of the pads up or down
+    if (PioneerDDJFLX4.option("keyShiftLayout") === "rekordbox") {
+        const pad = control - this.pitchPadsFirstControl;
+        if (value === 0x7f && pad === 6) {
+            PioneerDDJFLX4.keyShiftOffset[group] = Math.min(PioneerDDJFLX4.keyShiftOffset[group] + 4, 5);
+        } else if (value === 0x7f && pad === 7) {
+            PioneerDDJFLX4.keyShiftOffset[group] = Math.max(PioneerDDJFLX4.keyShiftOffset[group] - 4, -12);
+        }
+        PioneerDDJFLX4.pitchAdjusted(0, group);
+        return;
+    }
     if (value !== 0x7f) {
         return;
     }
@@ -1108,10 +1513,129 @@ PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, control, value, _status
 // Shutdown
 //
 
+//
+// PAD FX modes
+//
+// PAD FX1: loop rolls (with SHIFT reverse rolls) while a pad is held.
+// PAD FX2: while a pad is held, pads 1-3 play the effects of effect unit 2 and
+// pads 4-6 those of unit 3 on this deck, pad 7 brakes and pad 8 spins back;
+// with SHIFT, pads 1-3 play effect unit 4. The effects are chosen in Mixxx.
+//
+
+// What each held PAD FX pad turned on, by deck and pad, released the same
+// way: SHIFT may be let go before the pad
+PioneerDDJFLX4.padFxReleases = {};
+
+PioneerDDJFLX4.padFxPressed = function(_channel, control, value, status, group) {
+    if (!PioneerDDJFLX4.option("padFx")) {
+        return;
+    }
+    const shift = status === 0x98 || status === 0x9A;
+    const pad = control & 0x07;
+    const deck = group === "[Channel1]" ? 1 : 2;
+    const id = `${group}${control < 0x50 ? 1 : 2}_${pad}`;
+
+    midi.sendShortMsg(status, control, value ? 0x7F : 0x00);
+
+    if (!value) {
+        const release = PioneerDDJFLX4.padFxReleases[id];
+        delete PioneerDDJFLX4.padFxReleases[id];
+        if (release) {
+            release();
+        }
+        return;
+    }
+
+    let hold;
+    if (control < 0x50) {
+        const key = `beatlooproll_${shift ? "r" : ""}${PioneerDDJFLX4.padFxRolls[pad]}_activate`;
+        hold = (held) => engine.setValue(group, key, held ? 1 : 0);
+    } else if (!shift && pad === 6) {
+        hold = (held) => engine.brake(deck, held);
+    } else if (!shift && pad === 7) {
+        hold = (held) => engine.spinback(deck, held);
+    } else if (shift && pad > 2) {
+        return;
+    } else {
+        const unit = shift ? 4 : (pad < 3 ? 2 : 3);
+        hold = (held) => PioneerDDJFLX4.holdEffect(group, unit, pad % 3 + 1, held);
+    }
+    hold(true);
+    PioneerDDJFLX4.padFxReleases[id] = () => hold(false);
+};
+
+// Turns an effect of an effect unit on for this deck while a pad is held,
+// and restores the unit afterwards
+PioneerDDJFLX4.holdEffect = function(group, unit, slot, held) {
+    const unitGroup = `[EffectRack1_EffectUnit${unit}]`;
+    const slotGroup = `[EffectRack1_EffectUnit${unit}_Effect${slot}]`;
+    const route = `group_${group}_enable`;
+    const key = unitGroup + slot + group;
+
+    if (held) {
+        PioneerDDJFLX4.padFxHeld[key] = {
+            route: engine.getValue(unitGroup, route),
+            enabled: engine.getValue(slotGroup, "enabled"),
+            mix: engine.getValue(unitGroup, "mix"),
+        };
+        engine.setValue(unitGroup, route, 1);
+        if (engine.getValue(unitGroup, "mix") === 0) {
+            engine.setValue(unitGroup, "mix", 1);
+        }
+        engine.setValue(slotGroup, "enabled", 1);
+        return;
+    }
+    const before = PioneerDDJFLX4.padFxHeld[key];
+    if (before === undefined) {
+        return;
+    }
+    engine.setValue(slotGroup, "enabled", before.enabled);
+    engine.setValue(unitGroup, route, before.route);
+    engine.setValue(unitGroup, "mix", before.mix);
+    delete PioneerDDJFLX4.padFxHeld[key];
+};
+
+//
+// Fader Start (SHIFT + channel fader or crossfader)
+//
+
+PioneerDDJFLX4.faderStartPlay = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("faderStart")) {
+        engine.setValue(group, "play", 1);
+    }
+};
+
+PioneerDDJFLX4.faderStartCue = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("faderStart")) {
+        script.triggerControl(group, "cue_gotoandstop");
+    }
+};
+
+//
+// LOAD, with Instant Doubles: pressed twice, loads the other deck's track
+// at the same position
+//
+
+PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJFLX4.option("instantDoubles")) {
+        const now = Date.now();
+        if (now - PioneerDDJFLX4.lastLoadPress[group] < PioneerDDJFLX4.instantDoublesTime) {
+            PioneerDDJFLX4.lastLoadPress[group] = 0;
+            engine.setValue(group, "CloneFromDeck", group === "[Channel1]" ? 2 : 1);
+            return;
+        }
+        PioneerDDJFLX4.lastLoadPress[group] = now;
+    }
+    engine.setValue(group, "LoadSelectedTrack", value ? 1 : 0);
+};
+
 PioneerDDJFLX4.shutdown = function() {
     // reset vumeter
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
+
+    // SMART CFX
+    midi.sendShortMsg(0x96, 0x00, 0x00);
 
     // housekeeping
     // turn off all Sampler LEDs
@@ -1127,6 +1651,15 @@ PioneerDDJFLX4.shutdown = function() {
         midi.sendShortMsg(0x98, 0x00 + i, 0x00);    // Deck 1 pads with SHIFT
         midi.sendShortMsg(0x99, 0x00 + i, 0x00);    // Deck 2 pads
         midi.sendShortMsg(0x9A, 0x00 + i, 0x00);    // Deck 2 pads with SHIFT
+    }
+
+    // turn off all Pad FX and Keyboard LEDs
+    for (i = 0; i <= 7; ++i) {
+        [0x97, 0x98, 0x99, 0x9A].forEach((status) => {
+            midi.sendShortMsg(status, 0x10 + i, 0x00);
+            midi.sendShortMsg(status, 0x50 + i, 0x00);
+            midi.sendShortMsg(status, 0x40 + i, 0x00);
+        });
     }
 
     // turn off loop in and out lights

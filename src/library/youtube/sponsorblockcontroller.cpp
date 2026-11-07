@@ -39,9 +39,10 @@ QString deriveVideoIdFromTrackPath(
 } // namespace
 
 SponsorBlockController::SponsorBlockController(
-        const QString& cacheDir, QObject* parent)
+        const QString& cacheDir, bool autoSkipEnabled, QObject* parent)
         : QObject(parent),
           m_cacheDir(cacheDir),
+          m_autoSkipEnabled(autoSkipEnabled),
           m_service(this) {
     connect(&m_service,
             &YouTubeService::sponsorSegmentsFetched,

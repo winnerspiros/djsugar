@@ -21,7 +21,6 @@
 #include "preferences/dialog/dlgprefsound.h"
 #include "util/color/color.h"
 #include "util/desktophelper.h"
-#include "util/widgethelper.h"
 
 #ifdef __VINYLCONTROL__
 #include "preferences/dialog/dlgprefvinyl.h"
@@ -53,6 +52,7 @@
 #ifdef Q_OS_MACOS
 #include "util/darkappearance.h"
 #endif
+#include "util/widgethelper.h"
 
 DlgPreferences::DlgPreferences(
         std::shared_ptr<mixxx::ScreensaverManager> pScreensaverManager,

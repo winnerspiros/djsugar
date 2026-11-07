@@ -22,6 +22,10 @@ class AndroidUsbSoundDevices {
             std::vector<SoundDevicePointer>* pRemoved,
             bool waitForPermission);
 
+    /// True if the output of a USB sound card stopped by itself (see
+    /// AndroidUsbAudioDevice::outputFailed())
+    bool outputFailed() const;
+
     const std::vector<SoundDevicePointer>& devices() const {
         return m_devices;
     }

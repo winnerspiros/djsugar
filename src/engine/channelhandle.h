@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "util/assert.h"
-#include "util/compatibility/qhash.h"
 
 // ChannelHandle defines a unique identifier for channels of audio in the engine
 // (e.g. headphone output, main output, deck 1, microphone 3). Previously we
@@ -30,7 +29,8 @@
 /// have been assigned.
 class ChannelHandle {
   public:
-    ChannelHandle() : m_iHandle(-1) {
+    ChannelHandle()
+            : m_iHandle(-1) {
     }
 
     inline bool valid() const {
@@ -92,9 +92,9 @@ inline QDebug operator<<(QDebug stream, const ChannelHandle& h) {
     return stream;
 }
 
-inline qhash_seed_t qHash(
+inline size_t qHash(
         const ChannelHandle& handle,
-        qhash_seed_t seed = 0) {
+        size_t seed = 0) {
     return qHash(handle.handle(), seed);
 }
 
@@ -132,9 +132,9 @@ inline QDebug operator<<(QDebug stream, const ChannelHandleAndGroup& g) {
     return stream;
 }
 
-inline qhash_seed_t qHash(
+inline size_t qHash(
         const ChannelHandleAndGroup& handleGroup,
-        qhash_seed_t seed = 0) {
+        size_t seed = 0) {
     return qHash(handleGroup.handle(), seed);
 }
 
@@ -145,7 +145,8 @@ inline qhash_seed_t qHash(
 // EngineMixer.
 class ChannelHandleFactory {
   public:
-    ChannelHandleFactory() : m_iNextHandle(0) {
+    ChannelHandleFactory()
+            : m_iNextHandle(0) {
     }
 
     ChannelHandle getOrCreateHandle(const QString& group) {
@@ -181,10 +182,11 @@ typedef std::shared_ptr<ChannelHandleFactory> ChannelHandleFactoryPointer;
 // exist then no allocation will occur -- insertion is a mere copy). Lookups are
 // O(1) and quite fast -- a simple index into an array using the handle's
 // integer value.
-template <class T>
+template<class T>
 class ChannelHandleMap {
     static constexpr int kMaxExpectedGroups = 256;
     typedef QVarLengthArray<T, kMaxExpectedGroups> container_type;
+
   public:
     typedef typename QVarLengthArray<T, kMaxExpectedGroups>::const_iterator const_iterator;
     typedef typename QVarLengthArray<T, kMaxExpectedGroups>::iterator iterator;

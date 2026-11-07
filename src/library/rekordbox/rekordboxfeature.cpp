@@ -12,6 +12,7 @@
 #include <QStringList>
 #include <QTextCodec>
 #include <QtDebug>
+#include <algorithm>
 
 #include "engine/engine.h"
 #include "library/dao/trackschema.h"
@@ -29,6 +30,13 @@
 #include "util/color/color.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
+#include "util/removablestorage.h"
+#ifdef __ANDROID_USB_DRIVE__
+#include "library/usbdrive/androidusbdrive.h"
+#endif
+#ifdef Q_OS_ANDROID
+#include "library/rekordbox/rekordboxandroid.h"
+#endif
 #include "util/sandbox.h"
 #include "waveform/waveform.h"
 #include "widget/wlibrary.h"
@@ -105,21 +113,31 @@ bool createLibraryTable(QSqlDatabase& database, const QString& tableName) {
             "    year INTEGER,"
             "    genre TEXT,"
             "    tracknumber TEXT,"
-            "    location TEXT UNIQUE,"
+            // Not UNIQUE, nor analyze_path: a Rekordbox collection can list
+            // the same file twice, and playlists may use either entry
+            // (from JaviLabarumDJ/mixxx-android)
+            "    location TEXT,"
             "    comment TEXT,"
             "    duration INTEGER,"
             "    bitrate TEXT,"
             "    bpm FLOAT,"
             "    key TEXT,"
             "    rating INTEGER,"
-            "    analyze_path TEXT UNIQUE,"
+            "    analyze_path TEXT,"
             "    device TEXT,"
-            "    color INTEGER"
+            "    color INTEGER,"
+            "    datetime_added TEXT"
             ");");
 
     if (!query.exec()) {
         LOG_FAILED_QUERY(query);
         return false;
+    }
+    // Tracks are looked up by their file, e.g. when a deck loads one
+    // (from JaviLabarumDJ/mixxx-android)
+    if (!query.exec("CREATE INDEX IF NOT EXISTS " + tableName + "_location ON " +
+                tableName + " (location)")) {
+        LOG_FAILED_QUERY(query);
     }
 
     return true;
@@ -243,6 +261,36 @@ QList<TreeItem*> findRekordboxDevices() {
             foundDevices << pFoundDevice;
         }
     }
+#elif defined(__ANDROID__)
+    // USB drives are mounted under /storage
+    // (from JaviLabarumDJ/mixxx-android)
+    const QFileInfoList devices = mixxx::removableStorageRoots();
+    for (const QFileInfo& device : devices) {
+#ifdef __ANDROID_USB_DRIVE__
+        // Copies the database of drives that Mixxx reads itself
+        mixxx::usbdrive::prepareFiles(device.filePath(),
+                {QStringLiteral("PIONEER/rekordbox/export.pdb"),
+                        QStringLiteral(".PIONEER/rekordbox/export.pdb")});
+#endif
+        if (!findRekordboxPdbPath(device.filePath()).isEmpty()) {
+            // The devices are identified by their label, which must be unique
+            const QString baseLabel = mixxx::removableStorageLabel(device);
+            QString label = baseLabel;
+            for (int i = 2; std::any_of(foundDevices.cbegin(),
+                         foundDevices.cend(),
+                         [&label](const TreeItem* pItem) { return pItem->getLabel() == label; });
+                    ++i) {
+                label = QStringLiteral("%1 (%2)").arg(baseLabel).arg(i);
+            }
+            QList<QString> data;
+            data << device.filePath();
+            data << IS_RECORDBOX_DEVICE;
+            auto* pFoundDevice = new TreeItem(
+                    std::move(label),
+                    QVariant(data));
+            foundDevices << pFoundDevice;
+        }
+    }
 #else // __APPLE__
     QFileInfoList devices = QDir(QStringLiteral("/Volumes")).entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
 
@@ -263,7 +311,7 @@ QList<TreeItem*> findRekordboxDevices() {
 }
 
 template<typename Base, typename T>
-inline bool instanceof (const T* ptr) {
+inline bool instanceof(const T* ptr) {
     return dynamic_cast<const Base*>(ptr) != nullptr;
 }
 
@@ -286,15 +334,15 @@ QString fromUtf16BeString(const std::string& toConvert) {
 QString getText(rekordbox_pdb_t::device_sql_string_t* deviceString) {
     QString text;
 
-    if (instanceof <rekordbox_pdb_t::device_sql_short_ascii_t>(deviceString->body())) {
+    if (instanceof<rekordbox_pdb_t::device_sql_short_ascii_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_short_ascii_t* shortAsciiString =
                 static_cast<rekordbox_pdb_t::device_sql_short_ascii_t*>(deviceString->body());
         text = QString::fromStdString(shortAsciiString->text());
-    } else if (instanceof <rekordbox_pdb_t::device_sql_long_ascii_t>(deviceString->body())) {
+    } else if (instanceof<rekordbox_pdb_t::device_sql_long_ascii_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_long_ascii_t* longAsciiString =
                 static_cast<rekordbox_pdb_t::device_sql_long_ascii_t*>(deviceString->body());
         text = QString::fromStdString(longAsciiString->text());
-    } else if (instanceof <rekordbox_pdb_t::device_sql_long_utf16le_t>(deviceString->body())) {
+    } else if (instanceof<rekordbox_pdb_t::device_sql_long_utf16le_t>(deviceString->body())) {
         rekordbox_pdb_t::device_sql_long_utf16le_t* longUtf16leString =
                 static_cast<rekordbox_pdb_t::device_sql_long_utf16le_t*>(deviceString->body());
         text = fromUtf16LeString(longUtf16leString->text());
@@ -468,14 +516,14 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
     const mixxx::DbConnectionPooler dbConnectionPooler(dbConnectionPool);
     QSqlDatabase database = mixxx::DbConnectionPooled(dbConnectionPool);
 
-    //Open the database connection in this thread.
+    // Open the database connection in this thread.
     VERIFY_OR_DEBUG_ASSERT(database.isOpen()) {
         qDebug() << "Failed to open database for Rekordbox parser."
                  << database.lastError();
         return QString();
     }
 
-    //Give thread a low priority
+    // Give thread a low priority
     QThread* thisThread = QThread::currentThread();
     thisThread->setPriority(QThread::LowPriority);
 
@@ -614,7 +662,7 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
                                         playlistNameMap[playlistTree->id()] =
                                                 getText(playlistTree->name());
                                         playlistIsFolderMap[playlistTree
-                                                                    ->id()] =
+                                                        ->id()] =
                                                 playlistTree->is_folder();
                                         playlistTreeMap
                                                 [playlistTree->parent_id()]
@@ -1286,6 +1334,10 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
         readAnalyze(track, sampleRate, timingOffset, true, anlzPath);
         readAnalyze(track, sampleRate, timingOffset, false, anlzPathExt);
     } else {
+        // Without an .EXT, the .DAT has the beatgrid and the cues, which
+        // readAnalyze() reads in two passes
+        // (from JaviLabarumDJ/mixxx-android)
+        readAnalyze(track, sampleRate, timingOffset, true, anlzPath);
         readAnalyze(track, sampleRate, timingOffset, false, anlzPath);
     }
 
@@ -1389,6 +1441,9 @@ RekordboxFeature::RekordboxFeature(
             &RekordboxFeature::onTracksFound);
     // initialize the model
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));
+#ifdef Q_OS_ANDROID
+    mixxx::android::watchUsbDevices(this);
+#endif
 }
 
 RekordboxFeature::~RekordboxFeature() {
@@ -1484,11 +1539,11 @@ QString RekordboxFeature::formatRootViewHtml() const {
     }
     html.append(QString("</ul>"));
 
-    //Colorize links in lighter blue, instead of QT default dark blue.
-    //Links are still different from regular text, but readable on dark/light backgrounds.
-    //https://github.com/mixxxdj/mixxx/issues/9103
+    // Colorize links in lighter blue, instead of QT default dark blue.
+    // Links are still different from regular text, but readable on dark/light backgrounds.
+    // https://github.com/mixxxdj/mixxx/issues/9103
     html.append(QString("<a style=\"color:#0496FF;\" href=\"refresh\">%1</a>")
-                        .arg(refreshLink));
+                    .arg(refreshLink));
     return html;
 }
 
@@ -1502,7 +1557,7 @@ void RekordboxFeature::activate() {
     m_devicesFuture = QtConcurrent::run(findRekordboxDevices);
     m_devicesFutureWatcher.setFuture(m_devicesFuture);
     m_title = tr("(loading) Rekordbox");
-    //calls a slot in the sidebar model such that 'Rekordbox (isLoading)' is displayed.
+    // calls a slot in the sidebar model such that 'Rekordbox (isLoading)' is displayed.
     emit featureIsLoading(this, true);
 
     emit enableCoverArtDisplay(true);
@@ -1515,7 +1570,7 @@ void RekordboxFeature::activateChild(const QModelIndex& index) {
         return;
     }
 
-    //access underlying TreeItem object
+    // access underlying TreeItem object
     TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
     if (!(item && item->getData().isValid())) {
         return;
@@ -1645,3 +1700,7 @@ void RekordboxFeature::onTracksFound() {
     m_pRekordboxPlaylistModel->setPlaylist(devicePlaylist);
     emit showTrackModel(m_pRekordboxPlaylistModel);
 }
+
+#ifdef Q_OS_ANDROID
+#include "library/rekordbox/rekordboxandroid.inc"
+#endif

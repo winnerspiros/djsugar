@@ -1,50 +1,87 @@
 #pragma once
 
-#ifdef __ANDROID__
-
-#include <QAtomicInt>
-#include <QByteArray>
 #include <QJniObject>
-#include <QMutex>
-#include <QString>
-#include <QThread>
+#include <cstdint>
+#include <memory>
 
 #include "controllers/midi/midicontroller.h"
+#include "rigtorp/SPSCQueue.h"
+#include "util/duration.h"
 
-/// Android MIDI controller — enumerates via MidiManager, I/O via USB bulk.
-class AndroidMidiController : public MidiController {
+struct AMidiDevice;
+struct AMidiInputPort;
+struct AMidiOutputPort;
+
+// Length of SysEx buffer in byte
+#define MIXXX_ANDROID_MIDI_SYSEX_BUFFER_LEN 1024
+
+namespace mixxx {
+namespace androidusb {
+class AndroidUsbAudioDevice;
+}
+} // namespace mixxx
+
+/// Common base of the Android MIDI controllers: parses a raw MIDI byte stream.
+class AndroidMidiControllerBase : public MidiController {
     Q_OBJECT
   public:
-    AndroidMidiController(const QString& name,
-            const QJniObject& usbDevice,
-            int interfaceNumber,
-            uint16_t vendorId,
-            uint16_t productId,
-            const QString& vendorStr,
-            const QString& productStr);
+    explicit AndroidMidiControllerBase(const QString& deviceName);
+
+  protected:
+    void resetParser();
+    void parseBytes(const uint8_t* pData, size_t length, mixxx::Duration timestamp);
+
+  private:
+    unsigned char m_runningStatus;
+    unsigned char m_data[2];
+    int m_dataCount;
+    bool m_bInSysex;
+    QByteArray m_sysexBuffer;
+};
+
+/// Android MIDI implementation of MidiController
+///
+/// Devices are listed and opened through android.media.midi (see
+/// org.mixxx.MidiHelper) and the actual I/O uses the NDK AMidi API, which is
+/// resolved at runtime because it requires API level 29.
+class AndroidMidiController : public AndroidMidiControllerBase {
+    Q_OBJECT
+  public:
+    AndroidMidiController(const QJniObject& deviceInfo, const QString& deviceName);
     ~AndroidMidiController() override;
 
-    PhysicalTransportProtocol getPhysicalTransportProtocol() const override {
-        return PhysicalTransportProtocol::USB;
+    /// Returns true if the AMidi NDK library could be loaded.
+    static bool isSupported();
+
+    /// Android's MIDI device id, which is unique for as long as the device is
+    /// plugged in.
+    int androidDeviceId() const {
+        return m_androidDeviceId;
     }
+
+    PhysicalTransportProtocol getPhysicalTransportProtocol() const override;
+
     QString getVendorString() const override {
-        return m_vendor;
+        return m_manufacturer;
     }
     QString getProductString() const override {
         return m_product;
     }
     std::optional<uint16_t> getVendorId() const override {
-        return m_vendorId ? std::optional<uint16_t>(m_vendorId) : std::nullopt;
+        return m_vendorId;
     }
     std::optional<uint16_t> getProductId() const override {
-        return m_productId ? std::optional<uint16_t>(m_productId) : std::nullopt;
+        return m_productId;
     }
     QString getSerialNumber() const override {
-        return {};
+        return m_serialNumber;
     }
     std::optional<uint8_t> getUsbInterfaceNumber() const override {
         return std::nullopt;
     }
+
+  private slots:
+    bool poll() override;
 
   protected:
     void sendShortMsg(unsigned char status,
@@ -54,42 +91,82 @@ class AndroidMidiController : public MidiController {
   private:
     int open(const QString& resourcePath) override;
     int close() override;
+
     bool sendBytes(const QByteArray& data) override;
-    bool poll() override;
-    bool isPolling() const override;
 
-    class IoThread : public QThread {
-      public:
-        IoThread(const QJniObject& usbDevice,
-                jint usbFd,
-                int interfaceNumber,
-                AndroidMidiController* controller);
-        void stop();
-        void send(const QByteArray& data);
+    bool isPolling() const override {
+        return true;
+    }
 
-      protected:
-        void run() override;
+    void closePorts();
 
-      private:
-        void processUsbMidiPacket(const unsigned char* packet, int len);
+    QJniObject m_deviceInfo;
+    QJniObject m_midiDevice;
+    AMidiDevice* m_pDevice;
+    AMidiOutputPort* m_pOutputPort; // messages coming from the controller
+    AMidiInputPort* m_pInputPort;   // messages sent to the controller
 
-        QJniObject m_usbDevice;
-        jint m_usbFd;
-        int m_interfaceNumber;
-        AndroidMidiController* m_controller;
-        QAtomicInt m_stop{0};
-        QMutex m_sendMutex;
-        QByteArray m_pendingSend;
-        bool m_hasPending{false};
-    };
-
-    IoThread* m_pIoThread{nullptr};
-    QJniObject m_usbDevice;
-    int m_interfaceNumber{0};
-    uint16_t m_vendorId{0};
-    uint16_t m_productId{0};
-    QString m_vendor;
+    int m_androidDeviceId;
+    int m_androidDeviceType;
+    QString m_manufacturer;
     QString m_product;
+    QString m_serialNumber;
+    std::optional<uint16_t> m_vendorId;
+    std::optional<uint16_t> m_productId;
 };
 
-#endif // __ANDROID__
+/// USB-MIDI controller driven directly over libusb. Used for USB audio
+/// interfaces whose kernel driver was detached by AndroidUsbAudioDevice, which
+/// also removes them from the Android MIDI service.
+class AndroidUsbMidiController : public AndroidMidiControllerBase {
+    Q_OBJECT
+  public:
+    explicit AndroidUsbMidiController(
+            std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice> pDevice);
+    ~AndroidUsbMidiController() override;
+
+    const std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice>& usbDevice() const {
+        return m_pDevice;
+    }
+
+    PhysicalTransportProtocol getPhysicalTransportProtocol() const override {
+        return PhysicalTransportProtocol::USB;
+    }
+    QString getVendorString() const override;
+    QString getProductString() const override;
+    std::optional<uint16_t> getVendorId() const override;
+    std::optional<uint16_t> getProductId() const override;
+    QString getSerialNumber() const override {
+        return QString();
+    }
+    std::optional<uint8_t> getUsbInterfaceNumber() const override {
+        return std::nullopt;
+    }
+
+  private slots:
+    bool poll() override;
+
+  protected:
+    void sendShortMsg(unsigned char status,
+            unsigned char byte1,
+            unsigned char byte2) override;
+
+  private:
+    int open(const QString& resourcePath) override;
+    int close() override;
+
+    bool sendBytes(const QByteArray& data) override;
+
+    bool isPolling() const override {
+        return true;
+    }
+
+    std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice> m_pDevice;
+    // USB-MIDI event packets received on the USB thread, which may also run
+    // the audio engine: no locks or allocations there
+    struct MidiPacket {
+        uint8_t bytes[4];
+        mixxx::Duration timestamp;
+    };
+    rigtorp::SPSCQueue<MidiPacket> m_packets;
+};

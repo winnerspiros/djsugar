@@ -29,11 +29,7 @@ QKeySequence safeKeySequence(const QString& str) {
     }
     const QKeySequence ks(str);
     for (int i = 0; i < ks.count(); ++i) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         const Qt::Key key = ks[i].key();
-#else
-        const int key = ks[i] & ~Qt::KeyboardModifierMask;
-#endif
         if (key == Qt::Key_unknown) {
             qWarning() << "Ignoring invalid keyboard shortcut:" << str;
             return {};
@@ -139,7 +135,8 @@ bool KeyboardEventFilter::eventFilter(QObject*, QEvent* e) {
             bool result = false;
             // using const_iterator here is faster than QMultiHash::values()
             for (auto it = m_keySequenceToControlHash.constFind(ksv);
-                 it != m_keySequenceToControlHash.constEnd() && it.key() == ksv; ++it) {
+                    it != m_keySequenceToControlHash.constEnd() && it.key() == ksv;
+                    ++it) {
                 const ConfigKey& configKey = it.value();
 
                 if (configKey.group == QStringLiteral("[KeyboardShortcuts]")) {

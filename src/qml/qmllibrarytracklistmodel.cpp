@@ -1,12 +1,14 @@
 #include "qml/qmllibrarytracklistmodel.h"
 
+#include <QAbstractProxyModel>
+#include <QColor>
 #include <QObject>
 #include <QQmlEngine>
 #include <QSortFilterProxyModel>
 #include <QVariant>
-#include <QColor>
 
 #include "library/basetracktablemodel.h"
+#include "library/browse/browsetablemodel.h"
 #include "library/columncache.h"
 #include "qml/asyncimageprovider.h"
 #include "qml/qmllibrarytracklistcolumn.h"
@@ -36,7 +38,54 @@ QColor colorFromRgbCode(double colorValue) {
     QRgb rgbValue = static_cast<QRgb>(colorValue) | 0xFF000000;
     return QColor(rgbValue);
 }
+
+/// The folder browser has its own fixed columns
+int browseColumn(int column) {
+    switch (static_cast<ColumnCache::Column>(column)) {
+    case ColumnCache::COLUMN_LIBRARYTABLE_ALBUM:
+        return COLUMN_ALBUM;
+    case ColumnCache::COLUMN_LIBRARYTABLE_ARTIST:
+        return COLUMN_ARTIST;
+    case ColumnCache::COLUMN_LIBRARYTABLE_TITLE:
+        return COLUMN_TITLE;
+    case ColumnCache::COLUMN_LIBRARYTABLE_YEAR:
+        return COLUMN_YEAR;
+    case ColumnCache::COLUMN_LIBRARYTABLE_BPM:
+        return COLUMN_BPM;
+    case ColumnCache::COLUMN_LIBRARYTABLE_KEY:
+        return COLUMN_KEY;
+    case ColumnCache::COLUMN_LIBRARYTABLE_FILETYPE:
+        return COLUMN_TYPE;
+    case ColumnCache::COLUMN_LIBRARYTABLE_BITRATE:
+        return COLUMN_BITRATE;
+    // Folders have no "date added", the time the file was last modified
+    // takes its place
+    case ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED:
+        return COLUMN_FILE_MODIFIED_TIME;
+    default:
+        return column;
+    }
+}
 } // namespace
+
+int QmlLibraryTrackListModel::sourceColumn(int column) const {
+    if (column < 0) {
+        return column;
+    }
+    if (auto* const pTrackTableModel = qobject_cast<BaseTrackTableModel*>(sourceModel())) {
+        return pTrackTableModel->fieldIndex(static_cast<ColumnCache::Column>(column));
+    }
+    // The folder browser is wrapped in a ProxyTrackModel, which keeps the
+    // columns of its source
+    QAbstractItemModel* pModel = sourceModel();
+    while (auto* const pProxyModel = qobject_cast<QAbstractProxyModel*>(pModel)) {
+        pModel = pProxyModel->sourceModel();
+    }
+    if (qobject_cast<BrowseTableModel*>(pModel)) {
+        return browseColumn(column);
+    }
+    return column;
+}
 
 QmlLibraryTrackListModel::QmlLibraryTrackListModel(
         const QList<QmlLibraryTrackListColumn*>& librarySource,
@@ -94,7 +143,7 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
 
     switch (role) {
     case TrackProxyRole: {
-        if (pTrackModel == nullptr) {
+        if (pTrackTableModel == nullptr) {
             return {};
         }
         auto pTrack = pTrackModel->getTrack(mapToSource(proxyIndex));
@@ -121,11 +170,6 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
                             ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION)),
                     Qt::DisplayRole)
                                .toString();
-        } else if (pTrackModel != nullptr) {
-            auto pTrack = pTrackModel->getTrack(mapToSource(proxyIndex));
-            if (pTrack) {
-                location = pTrack->getCoverInfo().coverLocation;
-            }
         }
         if (location.isEmpty()) {
             return {};
@@ -148,12 +192,7 @@ QVariant QmlLibraryTrackListModel::data(const QModelIndex& proxyIndex, int role)
     }
 
     return QIdentityProxyModel::data(
-            proxyIndex.siblingAtColumn(pTrackTableModel != nullptr
-                            ? pTrackTableModel->fieldIndex(
-                                      static_cast<ColumnCache::Column>(
-                                              pColumn->columnIdx()))
-                            : pColumn->columnIdx()),
-            role);
+            proxyIndex.siblingAtColumn(sourceColumn(pColumn->columnIdx())), role);
 }
 
 QVariant QmlLibraryTrackListModel::headerData(
@@ -173,18 +212,32 @@ QHash<int, QByteArray> QmlLibraryTrackListModel::roleNames() const {
 
 QUrl QmlLibraryTrackListModel::getUrl(int row) const {
     auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
-    if (pTrackModel == nullptr) {
+    if (pTrackModel == nullptr || sourceModel() == nullptr) {
         return {};
     }
-    return pTrackModel->getTrackUrl(sourceModel()->index(row, 0));
+    if (row < 0 || row >= sourceModel()->rowCount()) {
+        return {};
+    }
+    const QModelIndex srcIndex = sourceModel()->index(row, 0);
+    if (!srcIndex.isValid()) {
+        return {};
+    }
+    return pTrackModel->getTrackUrl(srcIndex);
 }
 
 QmlTrackProxy* QmlLibraryTrackListModel::getTrack(int row) const {
     auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
-    if (pTrackModel == nullptr) {
+    if (pTrackModel == nullptr || sourceModel() == nullptr) {
         return nullptr;
     }
-    auto pTrack = pTrackModel->getTrack(sourceModel()->index(row, 0));
+    if (row < 0 || row >= sourceModel()->rowCount()) {
+        return nullptr;
+    }
+    const QModelIndex srcIndex = sourceModel()->index(row, 0);
+    if (!srcIndex.isValid()) {
+        return nullptr;
+    }
+    auto pTrack = pTrackModel->getTrack(srcIndex);
     if (!pTrack) {
         return nullptr;
     }
@@ -204,24 +257,21 @@ bool QmlLibraryTrackListModel::hasCapabilities(TrackModel::Capabilities caps) co
 }
 
 void QmlLibraryTrackListModel::sort(int column, Qt::SortOrder order) {
-    if (column < 0 || column >= m_columns.size()) {
+    if (column < 0 || column >= m_columns.size() || sourceModel() == nullptr) {
         return;
     }
     const auto& pColumn = m_columns[column];
     Q_EMIT layoutAboutToBeChanged(QList<QPersistentModelIndex>(),
             QAbstractItemModel::VerticalSortHint);
-    if (pColumn->columnIdx() < 0) {
-        sourceModel()->sort(column, order);
-    } else {
-        auto* const pTrackTableModel = qobject_cast<BaseTrackTableModel*>(sourceModel());
-        sourceModel()->sort(pTrackTableModel != nullptr
-                        ? pTrackTableModel->fieldIndex(
-                                  static_cast<ColumnCache::Column>(
-                                          pColumn->columnIdx()))
-                        : pColumn->columnIdx(),
-                order);
-    }
+    sourceModel()->sort(sourceColumn(pColumn->columnIdx()), order);
     Q_EMIT layoutChanged(QList<QPersistentModelIndex>(), QAbstractItemModel::VerticalSortHint);
+}
+
+void QmlLibraryTrackListModel::search(const QString& searchText) {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel != nullptr) {
+        pTrackModel->search(searchText);
+    }
 }
 
 } // namespace qml

@@ -33,12 +33,21 @@ class SponsorBlockController : public QObject {
     Q_OBJECT
   public:
     explicit SponsorBlockController(
-            const QString& cacheDir, QObject* parent = nullptr);
+            const QString& cacheDir, bool autoSkipEnabled, QObject* parent = nullptr);
     ~SponsorBlockController() override;
 
     /// Override the YouTube cache directory used for resolving sidecars.
     void setCacheDir(const QString& cacheDir) {
         m_cacheDir = cacheDir;
+    }
+
+    /// Enable/disable automatic skipping of SponsorBlock segments.
+    void setAutoSkipEnabled(bool enabled) {
+        m_autoSkipEnabled = enabled;
+    }
+
+    bool isAutoSkipEnabled() const {
+        return m_autoSkipEnabled;
     }
 
   private slots:
@@ -68,6 +77,7 @@ class SponsorBlockController : public QObject {
             const QString& group, const QString& videoId);
 
     QString m_cacheDir;
+    bool m_autoSkipEnabled = true;     // default: ON
     QHash<QString, DeckState> m_decks; // key = "[Channel1]" etc.
     YouTubeService m_service;
 };

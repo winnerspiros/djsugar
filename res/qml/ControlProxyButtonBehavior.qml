@@ -17,10 +17,6 @@ Item {
     property bool longPressLatching: false
     property bool handlePointerInput: true
     property int numberStates: 2
-    // Touchscreens have no right mouse button. Where the secondary action is
-    // the only way to reach a feature (e.g. the hotcue popup), a long press
-    // stands in for it.
-    property bool longPressTriggersSecondary: false
     property int longPressDuration: 300
     property real activeDisplayThreshold: 0
     property bool visualActiveState: false
@@ -167,51 +163,41 @@ Item {
         key: root.displayKey.length > 0 ? root.displayKey : root.key
     }
 
-    // Primary action (left button / single tap). A TapHandler tracks one
-    // touch point, so several buttons can be pressed at the same time.
-    TapHandler {
-        id: tapHandler
-
-        acceptedButtons: Qt.LeftButton
-        enabled: root.enabled && root.handlePointerInput
-        gesturePolicy: TapHandler.ReleaseWithinBounds
-
-        onTapped: root.clickPrimary()
-        onGrabChanged: {
-            if (tapHandler.active) {
-                root.pressPrimary();
-            } else {
-                root.releasePrimary();
-            }
-        }
-
-        // Long press for touchscreens without a right mouse button.
-        onLongPressed: {
-            if (root.longPressTriggersSecondary) {
-                root.pressSecondary(tapHandler.point.position.x, tapHandler.point.position.y);
-                root.releaseSecondary();
-            }
-        }
-    }
-
-    // Secondary action (right mouse button). Touch points never reach this
-    // MouseArea because Qt synthesizes left button presses from them.
     MouseArea {
         id: interactionArea
 
         anchors.fill: parent
-        acceptedButtons: Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         enabled: root.enabled && root.handlePointerInput
 
-        onPressed: mouse => root.pressSecondary(mouse.x, mouse.y)
+        onPressed: function(mouse) {
+            if (mouse.button === Qt.LeftButton) {
+                root.pressPrimary();
+            } else if (mouse.button === Qt.RightButton) {
+                root.pressSecondary(mouse.x, mouse.y);
+            }
+        }
+
         onPressAndHold: {
             if (root.pressAndHoldKey.length > 0) {
                 root.pressAndHoldTriggered = true;
                 root.triggerPressAndHoldAction();
             }
         }
-        onClicked: mouse => { if (mouse.button === Qt.RightButton) root.clickPrimary(); }
-        onReleased: mouse => { if (mouse.button === Qt.RightButton) root.releaseSecondary(); }
+
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.LeftButton) {
+                root.clickPrimary();
+            }
+        }
+
+        onReleased: function(mouse) {
+            if (mouse.button === Qt.LeftButton) {
+                root.releasePrimary();
+            } else if (mouse.button === Qt.RightButton) {
+                root.releaseSecondary();
+            }
+        }
     }
 
     Timer {

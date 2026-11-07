@@ -96,7 +96,7 @@ Row {
                             activeColor: Theme.deckActiveColor
                             group: root.group
                             key: "main_mix"
-                            text: "Main"
+                            text: qsTr("Main")
                             toggleable: true
                         }
                     }
@@ -145,7 +145,7 @@ Row {
             Skin.ControlButton {
                 group: root.group
                 key: "main_mix"
-                text: "Configure"
+                text: qsTr("Configure")
                 width: 80
             }
         }

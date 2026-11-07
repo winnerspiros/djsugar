@@ -21,6 +21,8 @@ module.exports = tseslint.config(
             "res/controllers/Novation-Launchpad Mini MK3-scripts.js",
             "res/controllers/Novation-Launchpad-scripts.js",
             "res/controllers/mixxx-controls.d.ts",
+            // Node-only test harnesses for the controller scripts (run with `node`).
+            "tools/controller-tests/**",
         ],
     },
     {

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <QMap>
+#include <QRecursiveMutex>
 #include <QStackedWidget>
 #include <QString>
 
 #include "library/library_decl.h"
 #include "library/libraryview.h"
 #include "skin/legacy/skincontext.h"
-#include "util/compatibility/qmutex.h"
 #include "waveform/renderers/waveformsignalcolors.h"
 #include "widget/wbasewidget.h"
 
@@ -45,8 +45,8 @@ class WLibrary : public QStackedWidget, public WBaseWidget {
 
     // Alpha value for row color background
     static constexpr double kDefaultTrackTableBackgroundColorOpacity = 0.125; // 12.5% opacity
-    static constexpr double kMinTrackTableBackgroundColorOpacity = 0.0; // 0% opacity
-    static constexpr double kMaxTrackTableBackgroundColorOpacity = 1.0; // 100% opacity
+    static constexpr double kMinTrackTableBackgroundColorOpacity = 0.0;       // 0% opacity
+    static constexpr double kMaxTrackTableBackgroundColorOpacity = 1.0;       // 100% opacity
 
     double getTrackTableBackgroundColorOpacity() const {
         return m_trackTableBackgroundColorOpacity;
@@ -79,7 +79,7 @@ class WLibrary : public QStackedWidget, public WBaseWidget {
     void keyPressEvent(QKeyEvent* event) override;
 
   private:
-    QT_RECURSIVE_MUTEX m_mutex;
+    QRecursiveMutex m_mutex;
     QMap<QString, QWidget*> m_viewMap;
     double m_trackTableBackgroundColorOpacity;
     bool m_bShowButtonText;

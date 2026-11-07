@@ -7,6 +7,52 @@
         <manual>pioneer_ddj_400</manual>
         <forums>https://mixxx.discourse.group/t/pioneer-ddj-400/17476</forums>
     </info>
+    <!-- Mixxx Android: rekordbox behaviour, as in the DDJ-FLX4 mapping. The
+         defaults keep the behaviour of this mapping. -->
+    <settings>
+        <group label="Beat FX">
+            <option variable="levelDepthMode" type="enum" label="LEVEL/DEPTH controls">
+                <value label="Dry/wet of the unit (SHIFT: effect amount)" default="true">mix</value>
+                <value label="Amount of the selected effect (SHIFT: dry/wet)">meta</value>
+                <description>
+                    What the LEVEL/DEPTH knob changes. With SHIFT held it changes the other one.
+                </description>
+            </option>
+        </group>
+        <group label="rekordbox behaviour">
+            <option variable="loopButtonsMode" type="enum" label="IN, OUT and 4 BEAT/EXIT">
+                <value label="Mixxx: 4 BEAT/EXIT turns the last loop on again, SHIFT + IN/OUT adjusts a loop" default="true">mixxx</value>
+                <value label="rekordbox: 4 BEAT/EXIT starts a 4-beat loop, IN/OUT during a loop adjusts it with the jog">rekordbox</value>
+            </option>
+            <option variable="syncMode" type="enum" label="BEAT SYNC">
+                <value label="Mixxx: press syncs once, hold turns sync lock on" default="true">mixxx</value>
+                <value label="rekordbox: press turns sync on or off, hold makes the deck the master">rekordbox</value>
+            </option>
+            <option variable="cueLoopCallMode" type="enum" label="CUE/LOOP CALL">
+                <value label="Mixxx: loop size; SHIFT jumps 32 beats" default="true">mixxx</value>
+                <value label="rekordbox: memory cues (hot cues 9-36); loop size during a loop; SHIFT deletes or saves">rekordbox</value>
+            </option>
+            <option variable="shiftSyncMode" type="enum" label="SHIFT + BEAT SYNC">
+                <value label="Tempo range (rekordbox)" default="true">tempoRange</value>
+                <value label="Key lock (MASTER TEMPO) on/off">keylock</value>
+            </option>
+            <option variable="shiftHeadphoneCue" type="enum" label="SHIFT + headphones CUE">
+                <value label="Quantize on/off" default="true">quantize</value>
+                <value label="Tap tempo (rekordbox)">tap</value>
+            </option>
+            <option variable="faderStart" type="boolean" default="false" label="Fader Start (SHIFT + channel fader or crossfader)">
+                <description>
+                    With SHIFT held, moving a channel fader up from the bottom (or the crossfader away
+                    from the far side) plays the deck; moving it back returns the deck to its cue.
+                </description>
+            </option>
+            <option variable="instantDoubles" type="boolean" default="false" label="Instant Doubles (press LOAD twice)">
+                <description>
+                    Pressing LOAD twice quickly loads the track of the other deck at the same position.
+                </description>
+            </option>
+        </group>
+    </settings>
     <controller id="DDJ-400">
         <scriptfiles>
             <file functionprefix="PioneerDDJ400" filename="Pioneer-DDJ-400-script.js"/>
@@ -49,25 +95,59 @@
             <control>
                 <description>LOAD (DECK1) - press - Load a Track into Deck 1</description>
                 <group>[Channel1]</group>
-                <key>LoadSelectedTrack</key>
+                <key>PioneerDDJ400.loadPressed</key>
                 <status>0x96</status>
                 <midino>0x46</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOAD (DECK2) - press - Load a Track into Deck 2</description>
                 <group>[Channel2]</group>
-                <key>LoadSelectedTrack</key>
+                <key>PioneerDDJ400.loadPressed</key>
                 <status>0x96</status>
                 <midino>0x47</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <!-- Mixxx Android: SHIFT+LOAD shows the LIB view or returns to the
+                 previous view, see res/qml/+android/MainWindow.qml -->
+            <control>
+                <description>LOAD +SHIFT (DECK1) - press - Show or hide the full library (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_library_toggle</key>
+                <status>0x96</status>
+                <midino>0x68</midino>
+                <options>
+                    <Normal/>
+                </options>
+            </control>
+            <control>
+                <description>LOAD +SHIFT (DECK2) - press - Show or hide the full library (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_library_toggle</key>
+                <status>0x96</status>
+                <midino>0x7A</midino>
                 <options>
                     <Normal/>
                 </options>
             </control>
             <!-- BROWSER Section END -->
+            <!-- Mixxx Android: SHIFT + BEAT ▶ shows or hides the effects of the
+                 skin (FX bar of the Classic skin, BEAT FX of the Booth skin) -->
+            <control>
+                <description>BEAT RIGHT +SHIFT - press - Show or hide the effects (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_fx_toggle</key>
+                <status>0x94</status>
+                <midino>0x6B</midino>
+                <options>
+                    <Normal/>
+                </options>
+            </control>
 
             <!--
             DECK Section START
@@ -367,9 +447,9 @@
                 </options>
             </control>
             <control>
-                <description>BEAT SYNC +SHIFT (DECK1) - press - change Tempo range</description>
+                <description>BEAT SYNC +SHIFT (DECK1) - press - Tempo range or key lock</description>
                 <group>[Channel1]</group>
-                <key>PioneerDDJ400.cycleTempoRange</key>
+                <key>PioneerDDJ400.shiftSyncPressed</key>
                 <status>0x90</status>
                 <midino>0x60</midino>
                 <options>
@@ -398,9 +478,9 @@
                 </options>
             </control>
             <control>
-                <description>BEAT SYNC +SHIFT (DECK2) - press - change Tempo range</description>
+                <description>BEAT SYNC +SHIFT (DECK2) - press - Tempo range or key lock</description>
                 <group>[Channel2]</group>
-                <key>PioneerDDJ400.cycleTempoRange</key>
+                <key>PioneerDDJ400.shiftSyncPressed</key>
                 <status>0x91</status>
                 <midino>0x60</midino>
                 <options>
@@ -411,64 +491,64 @@
             <control>
                 <description>LOOP IN/4 BEAT (DECK1) - press - Set loop in</description>
                 <group>[Channel1]</group>
-                <key>loop_in</key>
+                <key>PioneerDDJ400.loopInPressed</key>
                 <status>0x90</status>
                 <midino>0x10</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOOP IN/4 BEAT (DECK2) - press - Set loop in</description>
                 <group>[Channel2]</group>
-                <key>loop_in</key>
+                <key>PioneerDDJ400.loopInPressed</key>
                 <status>0x91</status>
                 <midino>0x10</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOOP OUT (DECK1) - press - Set loop out</description>
                 <group>[Channel1]</group>
-                <key>loop_out</key>
+                <key>PioneerDDJ400.loopOutPressed</key>
                 <status>0x90</status>
                 <midino>0x11</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
                 <description>LOOP OUT (DECK2) - press - Set loop out</description>
                 <group>[Channel2]</group>
-                <key>loop_out</key>
+                <key>PioneerDDJ400.loopOutPressed</key>
                 <status>0x91</status>
                 <midino>0x11</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>RELOOP/EXIT (DECK1) - press - (loop off) Reloop, (loop on) Loop exit</description>
                 <group>[Channel1]</group>
-                <key>reloop_toggle</key>
+                <key>PioneerDDJ400.fourBeatExitPressed</key>
                 <status>0x90</status>
                 <midino>0x4D</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
                 <description>RELOOP/EXIT (DECK2) - press - (loop off) Reloop, (loop on) Loop exit</description>
                 <group>[Channel2]</group>
-                <key>reloop_toggle</key> <!-- check if correct -->
+                <key>PioneerDDJ400.fourBeatExitPressed</key> <!-- check if correct -->
                 <status>0x91</status>
                 <midino>0x4D</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
@@ -2088,6 +2168,47 @@
             <!-- SAMPLER MODE END -->
 
             <!-- PAD Section END -->
+            <!-- Mixxx Android: Fader Start, see the mapping settings -->
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start play</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJ400.faderStartPlay</key>
+                <status>0x90</status>
+                <midino>0x66</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start cue</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJ400.faderStartCue</key>
+                <status>0x90</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start play</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJ400.faderStartPlay</key>
+                <status>0x91</status>
+                <midino>0x66</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start cue</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJ400.faderStartCue</key>
+                <status>0x91</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
         </controls>
         <outputs>
             <!-- PLAY -->

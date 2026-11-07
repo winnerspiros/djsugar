@@ -6,11 +6,79 @@
         <description>Controller Midi Mapping for the Pioneer DDJ-FLX4 (based on DDJ-400 mapping)</description>
         <manual>pioneer_ddj_FLX4</manual>
         <forums>https://mixxx.discourse.group/t/pioneer-ddj-flx4</forums>
-        <devices>
-            <product protocol="midi" vendor_id="0x2b73" product_id="0x0045" />
-            <product protocol="midi" vendor_id="0x08e4" product_id="0x017b" />
-        </devices>
     </info>
+    <settings>
+        <group label="Beat FX">
+            <option variable="levelDepthMode" type="enum" label="LEVEL/DEPTH controls">
+                <value label="Dry/wet of the unit (SHIFT: effect amount)" default="true">mix</value>
+                <value label="Amount of the selected effect (SHIFT: dry/wet)">meta</value>
+                <description>
+                    What the LEVEL/DEPTH knob changes. With SHIFT held it changes the other one.
+                </description>
+            </option>
+        </group>
+        <group label="rekordbox behaviour">
+            <option variable="loopButtonsMode" type="enum" label="IN, OUT and 4 BEAT/EXIT">
+                <value label="Mixxx: 4 BEAT/EXIT turns the last loop on again, SHIFT + IN/OUT adjusts a loop" default="true">mixxx</value>
+                <value label="rekordbox: 4 BEAT/EXIT starts a 4-beat loop, IN/OUT during a loop adjusts it with the jog">rekordbox</value>
+            </option>
+            <option variable="syncMode" type="enum" label="BEAT SYNC">
+                <value label="Mixxx: press syncs once, hold turns sync lock on" default="true">mixxx</value>
+                <value label="rekordbox: press turns sync on or off, hold makes the deck the master">rekordbox</value>
+            </option>
+            <option variable="cueLoopCallMode" type="enum" label="CUE/LOOP CALL">
+                <value label="Mixxx: loop size; SHIFT jumps 32 beats" default="true">mixxx</value>
+                <value label="rekordbox: memory cues (hot cues 9-36); loop size during a loop; SHIFT deletes or saves">rekordbox</value>
+            </option>
+            <option variable="keyboardMode" type="enum" label="KEYBOARD mode (SHIFT + HOT CUE)">
+                <value label="Stems" default="true">stems</value>
+                <value label="rekordbox Keyboard: a hot cue played at 8 pitches">keyboard</value>
+            </option>
+            <option variable="samplerLayout" type="enum" label="SAMPLER pads">
+                <value label="Mixxx: deck 1 slots 1-4 and 9-12, deck 2 slots 5-8 and 13-16; an empty pad loads" default="true">mixxx</value>
+                <value label="rekordbox: deck 1 slots 1-8, deck 2 slots 9-16; SHIFT + pad loads">rekordbox</value>
+            </option>
+            <option variable="keyShiftLayout" type="enum" label="KEY SHIFT pads">
+                <value label="Mixxx: 0 to +3 and -3 to 0; SHIFT changes by 1-4 semitones" default="true">mixxx</value>
+                <value label="rekordbox: +4 to +7 and 0 to +3; SHIFT + pad 7/8 shifts the range">rekordbox</value>
+            </option>
+            <option variable="shiftSyncMode" type="enum" label="SHIFT + BEAT SYNC">
+                <value label="Key lock (MASTER TEMPO) on/off" default="true">keylock</value>
+                <value label="Tempo range (rekordbox)">tempoRange</value>
+            </option>
+            <option variable="shiftHeadphoneCue" type="enum" label="SHIFT + headphones CUE">
+                <value label="Quantize on/off" default="true">quantize</value>
+                <value label="Tap tempo (rekordbox)">tap</value>
+            </option>
+            <option variable="padFx" type="boolean" default="true" label="PAD FX modes">
+                <description>
+                    PAD FX1: hold a pad for a loop roll (1/16 to 8 beats), with SHIFT a reverse roll.
+                    PAD FX2: hold pads 1-3 for the effects of effect unit 2, pads 4-6 for effect unit 3,
+                    pad 7 for a brake and pad 8 for a spinback; with SHIFT pads 1-3 for effect unit 4.
+                </description>
+            </option>
+            <option variable="faderStart" type="boolean" default="false" label="Fader Start (SHIFT + channel fader or crossfader)">
+                <description>
+                    With SHIFT held, moving a channel fader up from the bottom (or the crossfader away
+                    from the far side) plays the deck; moving it back returns the deck to its cue.
+                </description>
+            </option>
+            <option variable="instantDoubles" type="boolean" default="false" label="Instant Doubles (press LOAD twice)">
+                <description>
+                    Pressing LOAD twice quickly loads the track of the other deck at the same position.
+                </description>
+            </option>
+        </group>
+        <group label="Mixer">
+            <option variable="trimCfxGuard" type="boolean" default="false" label="TRIM / CFX guard">
+                <description>
+                    For TRIM jumping while CFX is turned: some FLX4 units send stray TRIM messages
+                    then. TRIM is ignored for 2 seconds after CFX moves, and afterwards (or after a
+                    second without TRIM) changes only once the knob reaches the current TRIM value.
+                </description>
+            </option>
+        </group>
+    </settings>
     <controller id="DDJ-FLX4">
         <scriptfiles>
             <file functionprefix="PioneerDDJFLX4" filename="Pioneer-DDJ-FLX4-script.js"/>
@@ -63,25 +131,81 @@
             <control>
                 <description>LOAD (DECK1) - press - Load a Track into Deck 1</description>
                 <group>[Channel1]</group>
-                <key>LoadSelectedTrack</key>
+                <key>PioneerDDJFLX4.loadPressed</key>
                 <status>0x96</status>
                 <midino>0x46</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOAD (DECK2) - press - Load a Track into Deck 2</description>
                 <group>[Channel2]</group>
-                <key>LoadSelectedTrack</key>
+                <key>PioneerDDJFLX4.loadPressed</key>
                 <status>0x96</status>
                 <midino>0x47</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <!-- Mixxx Android: SHIFT+LOAD shows the LIB view or returns to the
+                 previous view, see res/qml/+android/MainWindow.qml -->
+            <control>
+                <description>LOAD +SHIFT (DECK1) - press - Show or hide the full library (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_library_toggle</key>
+                <status>0x96</status>
+                <midino>0x68</midino>
+                <options>
+                    <Normal/>
+                </options>
+            </control>
+            <control>
+                <description>LOAD +SHIFT (DECK2) - press - Show or hide the full library (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_library_toggle</key>
+                <status>0x96</status>
+                <midino>0x7A</midino>
                 <options>
                     <Normal/>
                 </options>
             </control>
             <!-- BROWSER Section END -->
+            <!-- SMART CFX: the CFX (QuickEffect) of decks 1 and 2 on or off,
+                 with SHIFT the next CFX preset -->
+            <control>
+                <description>SMART CFX - press - CFX of decks 1 and 2 on or off</description>
+                <group>[Master]</group>
+                <key>PioneerDDJFLX4.smartCfxPressed</key>
+                <status>0x96</status>
+                <midino>0x00</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>SMART CFX +SHIFT - press - next CFX preset of decks 1 and 2</description>
+                <group>[Master]</group>
+                <key>PioneerDDJFLX4.smartCfxPressed</key>
+                <status>0x96</status>
+                <midino>0x08</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <!-- Mixxx Android: SHIFT + BEAT ▶ shows or hides the effects of the
+                 skin (FX bar of the Classic skin, BEAT FX of the Booth skin) -->
+            <control>
+                <description>BEAT RIGHT +SHIFT - press - Show or hide the effects (Android)</description>
+                <group>[Skin]</group>
+                <key>mobile_fx_toggle</key>
+                <status>0x94</status>
+                <midino>0x6B</midino>
+                <options>
+                    <Normal/>
+                </options>
+            </control>
 
             <!--
             DECK Section START
@@ -381,9 +505,9 @@
                 </options>
             </control>
             <control>
-                <description>BEAT SYNC +SHIFT (DECK1) - press - change Tempo range</description>
+                <description>BEAT SYNC +SHIFT (DECK1) - press - key lock or Tempo range</description>
                 <group>[Channel1]</group>
-                <key>PioneerDDJFLX4.cycleTempoRange</key>
+                <key>PioneerDDJFLX4.shiftSyncPressed</key>
                 <status>0x90</status>
                 <midino>0x60</midino>
                 <options>
@@ -412,9 +536,9 @@
                 </options>
             </control>
             <control>
-                <description>BEAT SYNC +SHIFT (DECK2) - press - change Tempo range</description>
+                <description>BEAT SYNC +SHIFT (DECK2) - press - key lock or Tempo range</description>
                 <group>[Channel2]</group>
-                <key>PioneerDDJFLX4.cycleTempoRange</key>
+                <key>PioneerDDJFLX4.shiftSyncPressed</key>
                 <status>0x91</status>
                 <midino>0x60</midino>
                 <options>
@@ -425,64 +549,64 @@
             <control>
                 <description>LOOP IN/4 BEAT (DECK1) - press - Set loop in</description>
                 <group>[Channel1]</group>
-                <key>loop_in</key>
+                <key>PioneerDDJFLX4.loopInPressed</key>
                 <status>0x90</status>
                 <midino>0x10</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOOP IN/4 BEAT (DECK2) - press - Set loop in</description>
                 <group>[Channel2]</group>
-                <key>loop_in</key>
+                <key>PioneerDDJFLX4.loopInPressed</key>
                 <status>0x91</status>
                 <midino>0x10</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>LOOP OUT (DECK1) - press - Set loop out</description>
                 <group>[Channel1]</group>
-                <key>loop_out</key>
+                <key>PioneerDDJFLX4.loopOutPressed</key>
                 <status>0x90</status>
                 <midino>0x11</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
                 <description>LOOP OUT (DECK2) - press - Set loop out</description>
                 <group>[Channel2]</group>
-                <key>loop_out</key>
+                <key>PioneerDDJFLX4.loopOutPressed</key>
                 <status>0x91</status>
                 <midino>0x11</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
             <control>
                 <description>RELOOP/EXIT (DECK1) - press - (loop off) Reloop, (loop on) Loop exit</description>
                 <group>[Channel1]</group>
-                <key>reloop_toggle</key>
+                <key>PioneerDDJFLX4.fourBeatExitPressed</key>
                 <status>0x90</status>
                 <midino>0x4D</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
                 <description>RELOOP/EXIT (DECK2) - press - (loop off) Reloop, (loop on) Loop exit</description>
                 <group>[Channel2]</group>
-                <key>reloop_toggle</key> <!-- check if correct -->
+                <key>PioneerDDJFLX4.fourBeatExitPressed</key> <!-- check if correct -->
                 <status>0x91</status>
                 <midino>0x4D</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
@@ -719,46 +843,45 @@
             </control>
 
             <control>
-                <description>TRIM - rotate</description>
+                <description>TRIM - rotate (script, for the TRIM / CFX guard)</description>
                 <group>[Channel1]</group>
-                <key>pregain</key>
+                <key>PioneerDDJFLX4.trimLsb</key>
                 <status>0xB0</status>
                 <midino>0x24</midino>
                 <options>
-                    <fourteen-bit-lsb/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
-                <description>TRIM - rotate</description>
+                <description>TRIM - rotate (script, for the TRIM / CFX guard)</description>
                 <group>[Channel1]</group>
-                <key>pregain</key>
+                <key>PioneerDDJFLX4.trimMsb</key>
                 <status>0xB0</status>
                 <midino>0x04</midino>
                 <options>
-                    <fourteen-bit-msb/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
-                <description>TRIM - rotate</description>
+                <description>TRIM - rotate (script, for the TRIM / CFX guard)</description>
                 <group>[Channel2]</group>
-                <key>pregain</key>
+                <key>PioneerDDJFLX4.trimLsb</key>
                 <status>0xB1</status>
                 <midino>0x24</midino>
                 <options>
-                    <fourteen-bit-lsb/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
-                <description>TRIM - rotate</description>
+                <description>TRIM - rotate (script, for the TRIM / CFX guard)</description>
                 <group>[Channel2]</group>
-                <key>pregain</key>
+                <key>PioneerDDJFLX4.trimMsb</key>
                 <status>0xB1</status>
                 <midino>0x04</midino>
                 <options>
-                    <fourteen-bit-msb/>
+                    <Script-Binding/>
                 </options>
             </control>
-
 
             <control>
                 <description>EQ HI - rotate</description>
@@ -2428,7 +2551,6 @@
                 </options>
             </control>
 
-
             <control>
                 <description>PAD 1 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
                 <group>[Sampler5]</group>
@@ -2915,6 +3037,687 @@
             <!-- KEYBOARD MODE END -->
 
             <!-- PAD Section END -->
+            <!-- rekordbox behaviour options: PAD FX pads and Fader Start -->
+            <control>
+                <description>PAD 1 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x10</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x10</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x11</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x11</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x12</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x12</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x13</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x13</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x14</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x14</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x15</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x15</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x16</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x16</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x17</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 +SHIFT (DECK1) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x17</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x50</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x50</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x51</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x51</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x53</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x53</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x54</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x54</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x55</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x55</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x56</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x56</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x97</status>
+                <midino>0x57</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 +SHIFT (DECK1) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x98</status>
+                <midino>0x57</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x10</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x10</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x11</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x11</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x12</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x12</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x13</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x13</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x14</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x14</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x15</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x15</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x16</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x16</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x17</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 +SHIFT (DECK2) PAD FX1 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x17</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x50</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 1 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x50</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x51</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 2 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x51</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 3 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x53</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 4 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x53</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x54</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 5 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x54</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x55</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 6 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x55</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x56</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 7 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x56</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x99</status>
+                <midino>0x57</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>PAD 8 +SHIFT (DECK2) PAD FX2 MODE - hold - Pad FX</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.padFxPressed</key>
+                <status>0x9A</status>
+                <midino>0x57</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start play</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.faderStartPlay</key>
+                <status>0x90</status>
+                <midino>0x66</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start cue</description>
+                <group>[Channel1]</group>
+                <key>PioneerDDJFLX4.faderStartCue</key>
+                <status>0x90</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start play</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.faderStartPlay</key>
+                <status>0x91</status>
+                <midino>0x66</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
+            <control>
+                <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start cue</description>
+                <group>[Channel2]</group>
+                <key>PioneerDDJFLX4.faderStartCue</key>
+                <status>0x91</status>
+                <midino>0x52</midino>
+                <options>
+                    <Script-Binding/>
+                </options>
+            </control>
         </controls>
         <outputs>
             <!-- PLAY -->
@@ -3581,275 +4384,7 @@
                 <minimum>0.5</minimum>
             </output>
 
-            <!-- SAMPLER Mode Pads (while SHIFT is NOT pressed)-->
-            <!-- Deck 1 pads -->
-            <output>
-                <group>[Sampler1]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x30</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler2]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x31</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler3]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x32</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler4]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x33</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler9]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x34</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler10]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x35</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler11]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x36</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler12]</group>
-                <key>track_loaded</key>
-                <status>0x97</status>
-                <midino>0x37</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <!-- SAMPLER Mode Pads (while SHIFT is NOT pressed)-->
-            <!-- Deck 2 pads -->
-            <output>
-                <group>[Sampler5]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x30</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler6]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x31</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler7]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x32</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler8]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x33</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler13]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x34</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler14]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x35</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler15]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x36</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler16]</group>
-                <key>track_loaded</key>
-                <status>0x99</status>
-                <midino>0x37</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-
-            <!-- SAMPLER Mode Pads (while SHIFT IS pressed)-->
-            <!-- Deck 1 pads -->
-
-            <output>
-                <group>[Sampler1]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x30</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler2]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x31</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler3]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x32</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler4]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x33</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler9]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x34</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler10]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x35</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler11]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x36</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler12]</group>
-                <key>track_loaded</key>
-                <status>0x98</status>
-                <midino>0x37</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-
-            <!-- SAMPLER Mode Pads (while SHIFT IS pressed)-->
-            <!-- Deck 2 pads -->
-
-            <output>
-                <group>[Sampler5]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x30</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler6]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x31</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler7]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x32</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler8]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x33</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler13]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x34</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler14]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x35</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler15]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x36</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <output>
-                <group>[Sampler16]</group>
-                <key>track_loaded</key>
-                <status>0x9A</status>
-                <midino>0x37</midino>
-                <on>0x7F</on>
-                <minimum>0.5</minimum>
-            </output>
-            <!-- SAMPLER Mode Pads end-->
+            <!-- The SAMPLER pads are lit by the script, for both pad layouts -->
         </outputs>
     </controller>
 </MixxxControllerPreset>

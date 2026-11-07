@@ -37,6 +37,12 @@ struct YouTubeVideoInfo {
     QString uploader;
     int durationSec = 0;
     bool isLive = false;
+    QString genre; // inferred from title/uploader/YouTube category
+
+    // Infer genre from title patterns, uploader channel, or YouTube category
+    static QString inferGenre(const QString& title,
+            const QString& uploader,
+            const QString& categoryId = QString());
 };
 
 /// YouTube extractor + downloader.
@@ -139,6 +145,8 @@ class YouTubeService : public QObject {
     /// fetchMoreSearchResults().
     void searchMoreReady(const QString& query, const QList<mixxx::YouTubeVideoInfo>& results);
     void searchFailed(const QString& query, const QString& error);
+    void downloadStarted(const QString& videoId);
+    void downloadProgress(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
     void sponsorSegmentsFetched(

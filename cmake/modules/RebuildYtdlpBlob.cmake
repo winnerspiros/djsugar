@@ -7,7 +7,10 @@
 # yt_dlp.main()`).
 
 if(NOT DEFINED YTDLP_VERSION OR NOT DEFINED OUT_BLOB)
-  message(FATAL_ERROR "RebuildYtdlpBlob.cmake needs -DYTDLP_VERSION and -DOUT_BLOB")
+  message(
+    FATAL_ERROR
+    "RebuildYtdlpBlob.cmake needs -DYTDLP_VERSION and -DOUT_BLOB"
+  )
 endif()
 
 find_program(_py NAMES python3 REQUIRED)
@@ -17,19 +20,24 @@ file(MAKE_DIRECTORY "${_work}")
 
 # Which ejs version the pinned wheel needs (default dep pin).
 execute_process(
-  COMMAND ${_py} -c
+  COMMAND
+    ${_py} -c
     "import json,urllib.request; d=json.load(urllib.request.urlopen('https://pypi.org/pypi/yt-dlp/${YTDLP_VERSION}/json')); print([u['url'] for u in d['urls'] if u['packagetype']=='bdist_wheel'][0]); print([r for r in d['info']['requires_dist'] or [] if 'ejs' in r][0] if any('ejs' in r for r in d['info']['requires_dist'] or []) else '')"
   OUTPUT_VARIABLE _meta
   RESULT_VARIABLE _meta_rc
 )
 if(NOT _meta_rc EQUAL 0)
-  message(FATAL_ERROR "Could not fetch yt-dlp ${YTDLP_VERSION} metadata from PyPI")
+  message(
+    FATAL_ERROR
+    "Could not fetch yt-dlp ${YTDLP_VERSION} metadata from PyPI"
+  )
 endif()
 string(REPLACE "\n" ";" _meta_lines "${_meta}")
 list(GET _meta_lines 0 _wheel_url)
 
 execute_process(
-  COMMAND ${_py} -c
+  COMMAND
+    ${_py} -c
     "import urllib.request; urllib.request.urlretrieve('${_wheel_url}', '${_work}/ytdlp.whl')"
   RESULT_VARIABLE _dl_rc
 )

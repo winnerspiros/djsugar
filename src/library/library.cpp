@@ -24,6 +24,9 @@
 #include "library/libraryfeature.h"
 #include "library/mixxxlibraryfeature.h"
 #include "library/recording/recordingfeature.h"
+#ifdef __ENGINEPRIME__
+#include "library/enginedj/enginedjfeature.h"
+#endif
 #include "library/rekordbox/rekordboxfeature.h"
 #include "library/rhythmbox/rhythmboxfeature.h"
 #include "library/samples/samplesfeature.h"
@@ -182,8 +185,21 @@ Library::Library(
     // The SponsorBlock controller observes deck loads globally and skips
     // segments inside YouTube-cached tracks. It is owned by Library so it
     // lives as long as the player decks do.
+    // YouTubeFeature reads its own config and passes it to the controller.
     m_pSponsorBlockController = make_parented<mixxx::SponsorBlockController>(
-            m_pYouTubeFeature->cacheDir(), this);
+            m_pYouTubeFeature->cacheDir(),
+            m_pYouTubeFeature->sponsorBlockAutoSkip(),
+            this);
+
+    // Keep SponsorBlockController in sync with preference changes
+    connect(m_pYouTubeFeature,
+            &YouTubeFeature::sponsorBlockAutoSkipChanged,
+            this,
+            [this](bool enabled) {
+                if (m_pSponsorBlockController) {
+                    m_pSponsorBlockController->setAutoSkipEnabled(enabled);
+                }
+            });
 
     // AI Bro: intelligent Auto-DJ with YouTube similarity + auto-mix
     m_pAIBroFeature = make_parented<AIBroFeature>(
@@ -243,6 +259,13 @@ Library::Library(
                 ConfigKey(kConfigGroup, "ShowSeratoLibrary"), true)) {
         addFeature(new SeratoFeature(this, m_pConfig));
     }
+
+#ifdef __ENGINEPRIME__
+    if (m_pConfig->getValue(
+                ConfigKey(kConfigGroup, "ShowEngineDJLibrary"), true)) {
+        addFeature(new EngineDJFeature(this, m_pConfig));
+    }
+#endif
 
     for (const auto& externalTrackCollection : m_pTrackCollectionManager->externalCollections()) {
         auto* feature = externalTrackCollection->newLibraryFeature(this, m_pConfig);

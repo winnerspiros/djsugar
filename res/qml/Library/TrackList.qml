@@ -13,6 +13,9 @@ Rectangle {
     id: root
 
     required property var model
+    // Booth browse sets this so LOAD 1/2 (and the deck buttons below)
+    // target the chosen deck; empty = next available deck.
+    property string loadTarget: ""
 
     function focusView() {
         view.forceActiveFocus();
@@ -167,7 +170,17 @@ Rectangle {
         property int dynamicColumnCount: 0
         property int usedWidth: 0
 
+        // Keyboard navigation lives here (not on LibraryComponent.Control,
+        // which is a QtObject and cannot carry Keys): view holds focus.
+        Keys.onDownPressed: this.selectionModel.moveSelectionVertical(1)
+        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
+        Keys.onUpPressed: this.selectionModel.moveSelectionVertical(-1)
+
         function loadSelectedTrack(group, play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
@@ -175,10 +188,17 @@ Rectangle {
             Mixxx.PlayerManager.getPlayer(group).loadTrackFromLocationUrl(urls[0], play);
         }
         function loadSelectedTrackIntoNextAvailableDeck(play) {
+            if (!this.selectionModel) {
+                return;
+            }
             const urls = this.selectionModel.selectedTrackUrls();
             if (urls.length == 0)
                 return;
 
+            if (root.loadTarget.length > 0) {
+                Mixxx.PlayerManager.getPlayer(root.loadTarget).loadTrackFromLocationUrl(urls[0], play);
+                return;
+            }
             Mixxx.PlayerManager.loadLocationUrlIntoNextAvailableDeck(urls[0], play);
         }
         function updateColumnSize() {
@@ -201,14 +221,23 @@ Rectangle {
             return oldDynamicColumnCount != dynamicColumnCount || oldUsedWidth != usedWidth;
         }
 
-        anchors.bottom: parent.bottom
+        anchors.bottom: quickLoadBar.top
         anchors.left: parent.left
         anchors.margins: 5
         anchors.right: parent.right
         anchors.top: horizontalHeader.bottom
         clip: true
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: true
         columnWidthProvider: function (column) {
+            if (!view.model) {
+                return 0;
+            }
             const columnDef = view.model.columns[column];
+            if (!columnDef) {
+                return 0;
+            }
             if (columnDef.hidden) {
                 return 0;
             }
@@ -227,7 +256,23 @@ Rectangle {
         reuseItems: true
 
         ScrollBar.vertical: ScrollBar {
+            id: verticalScrollBar
+
             policy: ScrollBar.AlwaysOn
+            width: 16
+            interactive: true
+            contentItem: Rectangle {
+                implicitWidth: 12
+                implicitHeight: 48
+                radius: 6
+                color: verticalScrollBar.pressed ? "#00e5ff" : (verticalScrollBar.hovered ? "#78909c" : "#546e7a")
+            }
+            background: Rectangle {
+                implicitWidth: 16
+                color: "#181a20"
+                opacity: 0.7
+                radius: 4
+            }
         }
         delegate: Item {
             id: item
@@ -240,7 +285,7 @@ Rectangle {
             required property bool selected
             required property var track
 
-            implicitHeight: 30
+            implicitHeight: 38
 
             Loader {
                 id: loader
@@ -266,26 +311,39 @@ Rectangle {
         }
         selectionModel: ItemSelectionModel {
             function moveSelectionVertical(value) {
-                if (value == 0)
+                if (value == 0 || !this.model) {
                     return;
+                }
 
                 const selected = this.selectedIndexes;
                 const oldRow = (selected.length == 0) ? 0 : selected[0].row;
                 this.selectRow(oldRow + value);
             }
             function selectRow(row) {
+                if (!this.model) {
+                    this.clear();
+                    return;
+                }
                 const rowCount = this.model.rowCount();
                 if (rowCount == 0) {
                     this.clear();
                     return;
                 }
                 const newRow = Mixxx.MathUtils.positiveModulo(row, rowCount);
-                this.select(this.model.index(newRow, 0), ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
+                const idx = this.model.index(newRow, 0);
+                if (!idx || !idx.valid) {
+                    this.clear();
+                    return;
+                }
+                this.select(idx, ItemSelectionModel.Rows | ItemSelectionModel.Select | ItemSelectionModel.Clear | ItemSelectionModel.Current);
                 if (!view.isRowLoaded(newRow)) {
                     view.positionViewAtRow(newRow, TableView.Visible | TableView.AlignVCenter)
                 }
             }
             function selectedTrackUrls() {
+                if (!this.model) {
+                    return [];
+                }
                 return this.selectedIndexes.map(index => {
                     return this.model.getUrl(index.row);
                 });
@@ -294,16 +352,117 @@ Rectangle {
             model: view.model
         }
 
+        // Touch: double-tap loads the selected track (into loadTarget when
+        // set by the Booth browser, else the next available deck). Single
+        // taps select via the delegates' own handlers (Booth RowCell);
+        // the quick-load bar below is the explicit touch load path.
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+
+            onDoubleTapped: {
+                view.loadSelectedTrackIntoNextAvailableDeck(false);
+            }
+        }
+
         Component.onCompleted: this.updateColumnSize()
-        Keys.onDownPressed: this.selectionModel.moveSelectionVertical(1)
-        Keys.onEnterPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onReturnPressed: this.loadSelectedTrackIntoNextAvailableDeck(false)
-        Keys.onUpPressed: this.selectionModel.moveSelectionVertical(-1)
         onModelChanged: this.updateColumnSize()
         onWidthChanged: {
             if (view.updateColumnSize()) {
                 // forceLayout is costly - only invoke if there was a change in the column layouts
                 view.forceLayout();
+            }
+        }
+    }
+
+    Rectangle {
+        id: quickLoadBar
+
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        color: Theme.sunkenBackgroundColor
+        height: 48
+        border.color: Theme.panelSplitterBackground
+        border.width: 1
+
+        // Refreshed on every selection change (a plain binding to
+        // selectedTrackUrls() would never re-evaluate: it is a JS call).
+        property var selectedUrls: []
+        readonly property bool hasTrack: selectedUrls.length > 0
+
+        Connections {
+            target: view.selectionModel
+            function onSelectionChanged() {
+                quickLoadBar.selectedUrls = view.selectionModel.selectedTrackUrls();
+            }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 5
+            spacing: 8
+
+            Rectangle {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                color: Theme.darkGray3
+                radius: 4
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+
+                    Text {
+                        Layout.fillWidth: true
+                        color: quickLoadBar.hasTrack ? Theme.white : Theme.lightGray3
+                        elide: Text.ElideRight
+                        font.bold: quickLoadBar.hasTrack
+                        font.pixelSize: 13
+                        text: {
+                            if (!quickLoadBar.hasTrack)
+                                return qsTr("Select a track to load");
+                            const urlStr = quickLoadBar.selectedUrls[0].toString();
+                            return decodeURIComponent(urlStr.substring(urlStr.lastIndexOf('/') + 1));
+                        }
+                    }
+                }
+            }
+
+            Skin.Button {
+                id: loadDeck1Btn
+
+                Layout.preferredHeight: 38
+                Layout.preferredWidth: 115
+                activeColor: "#64b5f6"
+                backgroundColor: quickLoadBar.hasTrack ? "#1565c0" : "#262930"
+                normalColor: quickLoadBar.hasTrack ? "#ffffff" : "#78909c"
+                highlight: quickLoadBar.hasTrack
+                enabled: quickLoadBar.hasTrack
+                font.bold: true
+                text: "\u25C0 DECK 1"
+
+                onClicked: {
+                    view.loadSelectedTrack(root.loadTarget.length > 0 ? root.loadTarget : "[Channel1]", false);
+                }
+            }
+
+            Skin.Button {
+                id: loadDeck2Btn
+
+                Layout.preferredHeight: 38
+                Layout.preferredWidth: 115
+                activeColor: "#ffb74d"
+                backgroundColor: quickLoadBar.hasTrack ? "#e65100" : "#262930"
+                normalColor: quickLoadBar.hasTrack ? "#ffffff" : "#78909c"
+                highlight: quickLoadBar.hasTrack
+                enabled: quickLoadBar.hasTrack
+                font.bold: true
+                text: "DECK 2 \u25B6"
+
+                onClicked: {
+                    view.loadSelectedTrack(root.loadTarget.length > 0 ? root.loadTarget : "[Channel2]", false);
+                }
             }
         }
     }
