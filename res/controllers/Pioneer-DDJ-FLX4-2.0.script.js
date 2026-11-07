@@ -429,6 +429,7 @@ PioneerDDJFLX4.PADMODE = {
     BEATLOOP: "beatloop",
     SAMPLER: "sampler",
     KEYSHIFT: "keyshift",
+    STEMS: "stems",       // SHIFT + SAMPLER: stem mute/solo (pads 1-4), stem FX (5-8)
 };
 
 PioneerDDJFLX4.padMode = {
@@ -531,8 +532,12 @@ PioneerDDJFLX4.updateDeckLeds = function(group) {
     PioneerDDJFLX4.toggleLight(deckLights.padFX2Mode,   mode === PioneerDDJFLX4.PADMODE.PADFX2);
     PioneerDDJFLX4.toggleLight(deckLights.beatJumpMode, mode === PioneerDDJFLX4.PADMODE.BEATJUMP);
     PioneerDDJFLX4.toggleLight(deckLights.beatLoopMode, mode === PioneerDDJFLX4.PADMODE.BEATLOOP);
-    PioneerDDJFLX4.toggleLight(deckLights.samplerMode,  mode === PioneerDDJFLX4.PADMODE.SAMPLER);
+    PioneerDDJFLX4.toggleLight(deckLights.samplerMode,  mode === PioneerDDJFLX4.PADMODE.SAMPLER || mode === PioneerDDJFLX4.PADMODE.STEMS);
     PioneerDDJFLX4.toggleLight(deckLights.keyShiftMode, mode === PioneerDDJFLX4.PADMODE.KEYSHIFT);
+
+    if (mode === PioneerDDJFLX4.PADMODE.STEMS) {
+        PioneerDDJFLX4._refreshKeyboardStemLeds(group);
+    }
 
     // Loop LEDs
     if (typeof PioneerDDJFLX4._updateLoopLeds === "function") {
@@ -3465,7 +3470,11 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     } else if (_control === 0x6D) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
     } else if (_control === 0x22) {
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
+        // SHIFT + SAMPLER: stems (Rekordbox uses this combo for Key Shift; this
+        // mapping keeps Key Shift on its own button, 0x6F)
+        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4._deckShiftActive(ch)
+            ? PioneerDDJFLX4.PADMODE.STEMS
+            : PioneerDDJFLX4.PADMODE.SAMPLER;
     } else if (_control === 0x6F) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
     } else {
@@ -3475,7 +3484,37 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     PioneerDDJFLX4.updateDeckLeds(ch);
 };
 
+// STEMS mode router. The hardware reports pad notes for whatever pad mode it
+// is in, so every pad path that can carry a stem pad calls this first.
+// Pads 1-4 (padIndex 0-3): toggle stem, SHIFT = only this stem.
+// Pads 5-8 (padIndex 4-7): toggle stem FX, SHIFT = cycle FX of this stem.
+// Returns true when the press belongs to STEMS and was consumed.
+PioneerDDJFLX4._stemPadRoute = function(status, padIndex, shift, value) {
+    const low = status & 0x0F;
+    const ch = (low === 0x07 || low === 0x08) ? "[Channel1]" : "[Channel2]";
+    if (PioneerDDJFLX4.padMode[ch] !== PioneerDDJFLX4.PADMODE.STEMS) { return false; }
+    if (padIndex < 0 || padIndex > 7) { return false; }
+    if (value !== 0x7F) { return true; } // swallow releases, no sample/cue action
+    if (padIndex < 4) {
+        const control = PioneerDDJFLX4.stemMutePadsFirstControl + padIndex;
+        if (shift) {
+            PioneerDDJFLX4.stemMutePadShiftPressed(0, control, value, status, ch);
+        } else {
+            PioneerDDJFLX4.stemMutePadPressed(0, control, value, status, ch);
+        }
+    } else {
+        const control = PioneerDDJFLX4.stemFxPadsFirstControl + (padIndex - 4);
+        if (shift) {
+            PioneerDDJFLX4.stemFxPadShiftPressed(0, control, value, status, ch);
+        } else {
+            PioneerDDJFLX4.stemFxPadPressed(0, control, value, status, ch);
+        }
+    }
+    return true;
+};
+
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - 0x30, false, value)) { return; }
     // Press
     if (value === 0x7F) {
         // long-press nur sinnvoll, wenn überhaupt was geladen ist
@@ -3529,6 +3568,7 @@ PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - 0x30, true, value)) { return; }
     if (engine.getValue(group, "play")) {
         engine.setValue(group, "cue_gotoandstop", value);
     } else if (engine.getValue(group, "track_loaded")) {
@@ -3886,6 +3926,7 @@ PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
 };
 
 PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, group) {
+    if (PioneerDDJFLX4._stemPadRoute(_status, control - PioneerDDJFLX4.pitchPadsFirstControl, false, value)) { return; }
     if (value !== 0x7F) { return; }
 
     const padIndex = control - PioneerDDJFLX4.pitchPadsFirstControl; // 0..7
@@ -3898,7 +3939,8 @@ PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, gro
 // MUSS man das also eigenen Offset/Bank implementieren.
 // Solange du das nicht sauber nachbaust: lieber gar nichts tun, statt „irgendwie“.
 PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _status, _group) {
-    // absichtlich leer
+    if (PioneerDDJFLX4._stemPadRoute(_status, _control - PioneerDDJFLX4.pitchPadsFirstControl, true, _value)) { return; }
+    // otherwise intentionally empty
 };
 
 //
