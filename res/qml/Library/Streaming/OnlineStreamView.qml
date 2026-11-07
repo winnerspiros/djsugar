@@ -296,18 +296,25 @@ Item {
                             clip: true
 
                             Image {
+                                id: coverImage
                                 anchors.fill: parent
                                 source: track.coverArtUrl ? track.coverArtUrl : ""
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 visible: status === Image.Ready
+
+                                onStatusChanged: {
+                                    if (status === Image.Error) {
+                                        console.warn("Audius cover art load failed:", track.coverArtUrl, errorString);
+                                    }
+                                }
                             }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: "🔥"
                                 font.pixelSize: 16
-                                visible: !track.coverArtUrl
+                                visible: !track.coverArtUrl || coverImage.status === Image.Error
                             }
                         }
 
