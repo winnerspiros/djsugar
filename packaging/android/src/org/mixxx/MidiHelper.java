@@ -1,6 +1,8 @@
 package org.mixxx;
 
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
@@ -164,32 +166,43 @@ public class MidiHelper {
 
     @SuppressWarnings("deprecation")
     public static boolean connectBluetoothDevice(Context context, String address, int timeoutMs) {
-        if (sManager == null) {
+        if (sManager == null || context == null || address == null || address.isEmpty()) {
             return false;
         }
-        MidiDeviceInfo[] devices = getDevices();
-        for (MidiDeviceInfo info : devices) {
-            String name = getName(info);
-            if (name.contains(address) || address.contains(name)) {
-                final MidiDevice[] result = new MidiDevice[1];
-                final CountDownLatch latch = new CountDownLatch(1);
-                sManager.openDevice(info, device -> {
-                    result[0] = device;
-                    latch.countDown();
-                }, sHandler);
-                try {
-                    if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
-                        Log.w(TAG, "Timeout connecting Bluetooth MIDI device " + name);
-                        return false;
-                    }
-                } catch (InterruptedException e) {
-                    return false;
-                }
-                if (result[0] != null) {
-                    Log.i(TAG, "Connected Bluetooth MIDI device " + name + " via MidiManager");
-                    return true;
-                }
+        // A BLE-MIDI peripheral only appears in MidiManager.getDevices() after
+        // openBluetoothDevice() has been called for its BluetoothDevice (see
+        // the MidiManager docs). Matching by name, as this code used to do,
+        // never found it, so the connect always fell through to GATT.
+        BluetoothManager bm = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+        BluetoothAdapter adapter = bm != null ? bm.getAdapter() : BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null) {
+            return false;
+        }
+        BluetoothDevice bluetoothDevice;
+        try {
+            bluetoothDevice = adapter.getRemoteDevice(address);
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "Invalid Bluetooth address " + address);
+            return false;
+        }
+        final MidiDevice[] result = new MidiDevice[1];
+        final CountDownLatch latch = new CountDownLatch(1);
+        sManager.openBluetoothDevice(bluetoothDevice, device -> {
+            result[0] = device;
+            latch.countDown();
+        }, sHandler);
+        try {
+            if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                Log.w(TAG, "Timeout opening Bluetooth MIDI device " + address);
+                return false;
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        if (result[0] != null) {
+            Log.i(TAG, "Opened Bluetooth MIDI device " + address + " via MidiManager");
+            return true;
         }
         return false;
     }
