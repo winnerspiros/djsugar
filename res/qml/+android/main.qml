@@ -206,7 +206,7 @@ ApplicationWindow {
 
             Text {
                 Layout.fillWidth: true
-                text: qsTr("Quit Mixxx?")
+                text: qsTr("Quit DJ Sugar?")
                 font.bold: true
                 font.pixelSize: 15
                 color: Theme.white
