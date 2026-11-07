@@ -5,7 +5,10 @@
 
 #ifdef Q_OS_ANDROID
 #include <QCoreApplication>
+#include <QGuiApplication>
+#include <QJniEnvironment>
 #include <QJniObject>
+#include <QScreen>
 #endif
 
 #include "moc_qmlmobileappproxy.cpp"
@@ -27,6 +30,51 @@ namespace qml {
 
 QmlMobileAppProxy::QmlMobileAppProxy(QObject* pParent)
         : QObject(pParent) {
+#ifdef Q_OS_ANDROID
+    // The cutout moves to the other side when the phone is turned around,
+    // which Android reports through no signal that is cheap to hook here.
+    m_cutoutTimer.setInterval(1000);
+    connect(&m_cutoutTimer, &QTimer::timeout, this, &QmlMobileAppProxy::refreshCutouts);
+    m_cutoutTimer.start();
+    refreshCutouts();
+#endif
+}
+
+void QmlMobileAppProxy::refreshCutouts() {
+#ifdef Q_OS_ANDROID
+    QJniObject activity = QNativeInterface::QAndroidApplication::context();
+    if (!activity.isValid()) {
+        return;
+    }
+    QJniObject rects = QJniObject::callStaticObjectMethod(
+            "org/mixxx/AndroidScreenManager",
+            "getCutoutRects",
+            "(Landroid/app/Activity;)[I",
+            activity.object());
+    QVariantList cutouts;
+    if (rects.isValid()) {
+        QJniEnvironment env;
+        const auto array = rects.object<jintArray>();
+        const jsize count = env->GetArrayLength(array);
+        QList<jint> values(count);
+        env->GetIntArrayRegion(array, 0, count, values.data());
+        // QML pixels are device pixels divided by the density
+        const QScreen* pScreen = QGuiApplication::primaryScreen();
+        const qreal ratio = pScreen && pScreen->devicePixelRatio() > 0
+                ? pScreen->devicePixelRatio()
+                : 1.0;
+        for (jsize i = 0; i + 3 < count; i += 4) {
+            cutouts.append(QRectF(values[i] / ratio,
+                    values[i + 1] / ratio,
+                    (values[i + 2] - values[i]) / ratio,
+                    (values[i + 3] - values[i + 1]) / ratio));
+        }
+    }
+    if (cutouts != m_cutouts) {
+        m_cutouts = cutouts;
+        emit cutoutsChanged();
+    }
+#endif
 }
 
 // static

@@ -1,6 +1,7 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
+import "../../Theme"
 
 // The DJ view of the booth skin, for playing without a controller: the two
 // decks with the mixer between them, like the PERFORMANCE layout of
@@ -50,9 +51,9 @@ Item {
 
             Layout.fillWidth: true
             Layout.preferredHeight: root.compact ? 30 : 40
-            border.color: "#2a2c30"
+            border.color: Theme.midGray3
             border.width: 1
-            color: "#0c0d0f"
+            color: Theme.darkGray4
 
             Row {
                 anchors.left: parent.left
@@ -62,13 +63,13 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    color: "#9a9ea6"
+                    color: Theme.lightGray3
                     font.pixelSize: Math.round(bottomBar.height * 0.45)
                     text: "🎧"
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    color: "#9a9ea6"
+                    color: Theme.lightGray3
                     font.pixelSize: Math.round(bottomBar.height * 0.28)
                     text: qsTr("MIXING")
                 }
@@ -80,7 +81,7 @@ Item {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    color: "#9a9ea6"
+                    color: Theme.lightGray3
                     font.pixelSize: Math.round(bottomBar.height * 0.28)
                     text: qsTr("LEVEL")
                 }
@@ -109,7 +110,7 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    color: "#9a9ea6"
+                    color: Theme.lightGray3
                     font.pixelSize: Math.round(bottomBar.height * 0.28)
                     text: qsTr("MASTER")
                 }

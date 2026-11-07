@@ -3,6 +3,7 @@ import "." as Booth
 import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Controls
+import "../../Theme"
 
 // Booth skin: a main window in the style of the screen of a booth player,
 // for landscape phones and tablets. The waveforms are stacked over the
@@ -69,30 +70,30 @@ Item {
     // The colors of the shared parts (library, settings, popups) in this
     // skin, applied by main.qml; see Theme/+android/Theme.qml
     readonly property var skinTheme: ({
-            "accentColor": "#1e5fb4",
+            "accentColor": "#ff4fa8",
             "backgroundColor": "#000000",
-            "sunkenBackgroundColor": "#0c0d0f",
+            "sunkenBackgroundColor": "#000000",
             "darkGray": "#000000",
-            "darkGray2": "#1c1e22",
-            "darkGray3": "#2a2c30",
-            "darkGray4": "#141518",
-            "textColor": "#e6e8eb",
+            "darkGray2": "#0a0b10",
+            "darkGray3": "#14161c",
+            "darkGray4": "#0d0e13",
+            "textColor": "#e8e8e8",
             "panelSplitterBackground": "#000000",
-            "libraryScrollHandle": "#3a3c40",
-            "libraryScrollHandleHovered": "#5c6068",
-            "libraryScrollHandlePressed": "#d8dadd",
+            "libraryScrollHandle": "#333333",
+            "libraryScrollHandleHovered": "#7c5cff",
+            "libraryScrollHandlePressed": "#ff4fa8",
             "libraryScrollTrack": "#000000",
-            "libraryActionBackground": "#1c1e22",
-            "libraryActionDisabledBackground": "#111214",
-            "libraryActionText": "#ffffff",
-            "libraryActionDisabledText": "#5c6068",
+            "libraryActionBackground": "#0a0b10",
+            "libraryActionDisabledBackground": "#0d0e13",
+            "libraryActionText": "#eeeeee",
+            "libraryActionDisabledText": "#666666",
             "libraryDeck1Background": "#1f6fd1",
-            "libraryDeck1Pressed": "#5a9be8",
+            "libraryDeck1Pressed": "#4aa3f5",
             "libraryDeck2Background": "#e8650f",
             "libraryDeck2Pressed": "#ff9a52",
-            "libraryConfirmBackground": "#1e5fb4",
-            "libraryKeyMatchColor": "#3ad33a",
-            "libraryKeyMatchBackground": "#1a3ad33a"
+            "libraryConfirmBackground": "#ff4fa8",
+            "libraryKeyMatchColor": "#00e676",
+            "libraryKeyMatchBackground": "#00e67633"
         })
 
     // The deck loader of the Classic skin is the browser here
@@ -272,9 +273,9 @@ Item {
         property bool active: false
         signal clicked
 
-        border.color: active ? "#d4e157" : "#5c6068"
+        border.color: active ? Theme.accentColor : Theme.midGray3
         border.width: active ? 2 : 1
-        color: tabTap.pressed ? "#1c1e22" : "#000000"
+        color: tabTap.pressed ? Theme.darkGray3 : Theme.backgroundColor
 
         height: parent.height
         // Narrow phones: smaller tabs, so that both rows of the top bar fit
@@ -286,7 +287,7 @@ Item {
             id: tabText
 
             anchors.centerIn: parent
-            color: tab.active ? "#d4e157" : "#9a9ea6"
+            color: tab.active ? Theme.accentColor : Theme.lightGray3
             font.bold: true
             font.pixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 13)
             text: tab.label
@@ -368,14 +369,14 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            color: "#2a2c30"
+            color: Theme.midGray3
             height: root.compact ? 18 : 24
 
             Text {
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                color: "#d8dadd"
+                color: Theme.lightGray2
                 font.pixelSize: root.compact ? 10 : 12
                 text: qsTr("DECK %1").arg(deckInfo.deckNumber)
             }
@@ -383,7 +384,7 @@ Item {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
-                color: deckInfo.deckNumber === 1 ? "#1f6fd1" : "#e8650f"
+                color: deckInfo.deckNumber === 1 ? Theme.libraryDeck1Background : Theme.libraryDeck2Background
                 height: 2
             }
         }
@@ -409,9 +410,9 @@ Item {
                 Rectangle {
                     required property var modelData
 
-                    border.color: "#2a2c30"
+                    border.color: Theme.midGray3
                     border.width: 1
-                    color: "#141518"
+                    color: Theme.darkGray4
                     height: deckInfo.rowHeight
                     width: parent.width
 
@@ -453,9 +454,9 @@ Item {
                     required property var modelData
                     readonly property bool on: modelData.control.value > 0
 
-                    border.color: on ? "#ff6a13" : "#2a2c30"
+                    border.color: on ? Theme.warningColor : Theme.midGray3
                     border.width: 1
-                    color: on ? "#3a1a08" : "#141518"
+                    color: on ? "#3a1a08" : Theme.darkGray4
                     height: deckInfo.rowHeight
                     width: parent.width
 
@@ -463,7 +464,7 @@ Item {
                         anchors.left: parent.left
                         anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
-                        color: toggleRow.on ? "#ff6a13" : "#9a9ea6"
+                        color: toggleRow.on ? Theme.warningColor : Theme.lightGray3
                         font.pixelSize: Math.round(deckInfo.rowHeight * 0.42)
                         text: toggleRow.modelData.label
                     }
@@ -478,7 +479,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#000000"
+        color: Theme.backgroundColor
     }
 
     Item {
@@ -489,10 +490,27 @@ Item {
         anchors.fill: parent
         enabled: !settingsPopup.opened
 
+        // How far each band keeps clear of the camera cutout; the window is
+        // drawn edge to edge and only the controls move
+        Skin.CutoutInsets {
+            id: panelInset
+
+            target: deckPanels
+        }
+        Skin.CutoutInsets {
+            id: middleInset
+
+            target: middle
+        }
+        Skin.CutoutInsets {
+            id: djViewInset
+
+            target: djView
+        }
+
         // ---- Top bar: tabs, deck loaders, settings ----
         Row {
             id: topBar
-
             anchors.left: parent.left
             anchors.leftMargin: 4
             anchors.top: parent.top
@@ -500,6 +518,11 @@ Item {
             height: root.compact ? 26 : 34
             spacing: root.width < 760 ? 3 : 6
 
+            Skin.SugarLogo {
+                anchors.verticalCenter: parent.verticalCenter
+                showWordmark: root.width >= 1000
+                size: root.compact ? 24 : 30
+            }
             Tab {
                 active: root.viewMode === 1
                 label: qsTr("WAVE")
@@ -548,8 +571,8 @@ Item {
             Skin.MobileRecordButton {
                 fontPixelSize: root.width < 760 ? 10 : (root.compact ? 11 : 13)
                 height: parent.height
-                idleBorderColor: "#5c6068"
-                idleColor: "#000000"
+                idleBorderColor: Theme.midGray3
+                idleColor: Theme.backgroundColor
                 radius: 0
                 visible: root.itemShown("rec")
                 width: Math.max(root.width < 760 ? 44 : (root.compact ? 64 : 80), implicitWidth)
@@ -588,9 +611,9 @@ Item {
             anchors.bottom: root.djView ? djView.top : parent.bottom
             anchors.bottomMargin: content.gap
             anchors.left: parent.left
-            anchors.leftMargin: content.gap
+            anchors.leftMargin: panelInset.left + content.gap
             anchors.right: parent.right
-            anchors.rightMargin: content.gap
+            anchors.rightMargin: panelInset.right + content.gap
             height: root.viewMode !== 1 ? (root.compact ? 58 : 84) : Math.round(root.height * (root.compact ? 0.36 : 0.3))
             spacing: content.gap
 
@@ -617,9 +640,9 @@ Item {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: content.gap
             anchors.left: parent.left
-            anchors.leftMargin: content.gap
+            anchors.leftMargin: djViewInset.left + content.gap
             anchors.right: parent.right
-            anchors.rightMargin: content.gap
+            anchors.rightMargin: djViewInset.right + content.gap
             compact: root.compact
             height: Math.round(root.height * (root.compact ? 0.5 : 0.46))
             visible: root.djView
@@ -640,12 +663,13 @@ Item {
                 anchors.fill: parent
                 visible: !root.browsing && !root.xyView
 
+
                 Column {
                     id: deckInfos
 
                     anchors.bottom: parent.bottom
                     anchors.left: parent.left
-                    anchors.leftMargin: content.gap
+                    anchors.leftMargin: middleInset.left + content.gap
                     anchors.top: parent.top
                     spacing: content.gap
                     visible: !(root.djView && root.compact)
@@ -694,7 +718,7 @@ Item {
                     compact: root.djView
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
-                    anchors.rightMargin: content.gap
+                    anchors.rightMargin: middleInset.right + content.gap
                     anchors.top: parent.top
                     visible: !root.compact && root.itemShown("fx") && root.beatFxPanelShown
                     width: 180
@@ -726,24 +750,24 @@ Item {
             // The XY pad of the Classic skin, in the colors of this one
             Skin.XYPad {
                 anchors.fill: parent
-                accentColor: "#2f9bff"
-                border.color: "#2a2c30"
-                buttonBorderColor: "#3a3c40"
-                buttonColor: "#141518"
-                buttonTextColor: "#9a9ea6"
+                accentColor: Theme.libraryDeck1Background
+                border.color: Theme.midGray3
+                buttonBorderColor: Theme.midGray2
+                buttonColor: Theme.darkGray4
+                buttonTextColor: Theme.lightGray3
                 closable: false
-                color: "#0c0d0f"
+                color: Theme.darkGray4
                 controlRadius: 2
-                deck1Color: "#1f6fd1"
-                deck2Color: "#e8650f"
-                holdColor: "#ff6a13"
+                deck1Color: Theme.libraryDeck1Background
+                deck2Color: Theme.libraryDeck2Background
+                holdColor: Theme.warningColor
                 radius: 0
-                surfaceBorderColor: "#2a2c30"
-                surfaceColor: "#000000"
+                surfaceBorderColor: Theme.midGray3
+                surfaceColor: Theme.backgroundColor
                 surfaceRadius: 0
                 title: qsTr("XY PAD")
                 visible: root.xyView
-                wetColor: "#d4e157"
+                wetColor: Theme.accentColor
             }
 
             // BEAT FX of phones, over the waveforms
@@ -763,8 +787,8 @@ Item {
     Skin.Settings {
         id: settingsPopup
 
-        backgroundColor: "#000000"
-        headerColor: "#1c1e22"
+        backgroundColor: Theme.backgroundColor
+        headerColor: Theme.darkGray3
         title: qsTr("UTILITY")
         height: root.applicationWindow.isMobile ? parent.height : Math.min(840, parent.height)
         modal: true

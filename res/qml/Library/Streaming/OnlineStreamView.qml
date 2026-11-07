@@ -81,8 +81,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
-            color: "#1c202a"
-            border.color: "#282d3b"
+            color: Theme.darkGray3
+            border.color: Theme.midGray3
             border.width: 1
 
             RowLayout {
@@ -96,7 +96,7 @@ Item {
                     font.bold: true
                     font.pixelSize: 13
                     font.letterSpacing: 1
-                    color: "#ea80fc"
+                    color: Theme.activeColor
                 }
 
                 Rectangle {
@@ -123,7 +123,7 @@ Item {
                     visible: root.statusMessage !== ""
                     text: root.statusMessage
                     font.pixelSize: 11
-                    color: "#b0bec5"
+                    color: Theme.lightGray2
                     elide: Text.ElideRight
                     Layout.maximumWidth: 320
                 }
@@ -131,7 +131,7 @@ Item {
                 Skin.Button {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 120
-                    activeColor: "#ea80fc"
+                    activeColor: Theme.activeColor
                     normalColor: "#ffffff"
                     font.bold: true
                     font.pixelSize: 11
@@ -149,8 +149,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
-            color: "#181b24"
-            border.color: "#232834"
+            color: Theme.darkGray3
+            border.color: Theme.midGray3
             border.width: 1
 
             RowLayout {
@@ -167,8 +167,8 @@ Item {
                     color: "#ffffff"
                     font.pixelSize: 13
                     background: Rectangle {
-                        color: "#212632"
-                        border.color: searchInput.activeFocus ? "#ff9100" : "#2e3646"
+                        color: Theme.darkGray2
+                        border.color: searchInput.activeFocus ? Theme.libraryDeck2Background : Theme.midGray3
                         border.width: 1
                         radius: 4
                     }
@@ -215,8 +215,8 @@ Item {
                                 width: chipText.implicitWidth + 20
                                 height: 32
                                 radius: 16
-                                color: root.currentGenre === modelData.genre && searchInput.text === "" ? "#e65100" : "#222734"
-                                border.color: root.currentGenre === modelData.genre && searchInput.text === "" ? "#ff9100" : "#323a4d"
+                                color: root.currentGenre === modelData.genre && searchInput.text === "" ? "#e65100" : Theme.darkGray2
+                                border.color: root.currentGenre === modelData.genre && searchInput.text === "" ? Theme.libraryDeck2Background : Theme.midGray3
                                 border.width: 1
 
                                 Text {
@@ -265,7 +265,7 @@ Item {
                         implicitWidth: 10
                         implicitHeight: 40
                         radius: 5
-                        color: onlineScroll.pressed ? "#ea80fc" : "#4a5568"
+                        color: onlineScroll.pressed ? Theme.activeColor : Theme.midGray2
                     }
                 }
 
@@ -273,8 +273,8 @@ Item {
                     id: trackDelegate
                     width: tracksList.width
                     height: 58
-                    color: index % 2 === 0 ? "#171a22" : "#13161e"
-                    border.color: "#222734"
+                    color: index % 2 === 0 ? Theme.darkGray3 : Theme.darkGray4
+                    border.color: Theme.darkGray2
                     border.width: 1
 
                     readonly property var track: modelData
@@ -292,7 +292,7 @@ Item {
                             Layout.preferredWidth: 42
                             Layout.preferredHeight: 42
                             radius: 4
-                            color: "#262d3d"
+                            color: Theme.darkGray2
                             clip: true
 
                             Image {
@@ -339,7 +339,7 @@ Item {
                                 Text {
                                     text: track.artist
                                     font.pixelSize: 11
-                                    color: "#ffab40"
+                                    color: Theme.yellow
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
@@ -351,7 +351,7 @@ Item {
                             visible: track.genre !== undefined && track.genre !== ""
                             Layout.preferredHeight: 18
                             Layout.preferredWidth: genreText.implicitWidth + 8
-                            color: "#2d1f0a"
+                            color: Theme.darkGray2
                             radius: 3
 
                             Text {
@@ -360,7 +360,7 @@ Item {
                                 text: track.genre || ""
                                 font.pixelSize: 9
                                 font.bold: true
-                                color: "#ffb74d"
+                                color: Theme.libraryDeck2Background
                             }
                         }
 
@@ -373,7 +373,7 @@ Item {
                                 return m + ":" + (sec < 10 ? "0" : "") + sec;
                             }
                             font.pixelSize: 11
-                            color: "#78909c"
+                            color: Theme.lightGray3
                         }
 
                         // Cache status badge
@@ -382,7 +382,7 @@ Item {
                             Layout.preferredWidth: cacheStatusText.implicitWidth + 10
                             radius: 10
                             color: track.isCached ? "#00e67622" : "#ff910022"
-                            border.color: track.isCached ? "#00e676" : "#ff9100"
+                            border.color: track.isCached ? "#00e676" : Theme.libraryDeck2Background
                             border.width: 1
 
                             Text {
@@ -390,7 +390,7 @@ Item {
                                 anchors.centerIn: parent
                                 font.pixelSize: 9
                                 font.bold: true
-                                color: track.isCached ? "#00e676" : "#ff9100"
+                                color: track.isCached ? "#00e676" : Theme.libraryDeck2Background
                                 text: track.isCached ? qsTr("💾 Ready") : qsTr("☁️ Stream")
                             }
                         }
@@ -399,7 +399,7 @@ Item {
                         Skin.Button {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
-                            activeColor: "#64b5f6"
+                            activeColor: Theme.libraryDeck1Background
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11
@@ -417,7 +417,7 @@ Item {
                         Skin.Button {
                             Layout.preferredHeight: 34
                             Layout.preferredWidth: 80
-                            activeColor: "#ffb74d"
+                            activeColor: Theme.libraryDeck2Background
                             normalColor: "#ffffff"
                             font.bold: true
                             font.pixelSize: 11
@@ -439,7 +439,7 @@ Item {
                         height: 3
                         visible: trackDelegate.isDownloading
                         width: parent.width * Math.max(0.05, trackDelegate.downloadProg)
-                        color: "#ff9100"
+                        color: Theme.libraryDeck2Background
                     }
                 }
 
@@ -458,7 +458,7 @@ Item {
                         Text {
                             text: qsTr("🔥 Explore music by genre or search for any track or artist")
                             font.pixelSize: 13
-                            color: "#78909c"
+                            color: Theme.lightGray3
                             horizontalAlignment: Text.AlignHCenter
                             Layout.alignment: Qt.AlignHCenter
                         }
@@ -472,8 +472,8 @@ Item {
                 width: 140
                 height: 40
                 radius: 6
-                color: "#1e2433"
-                border.color: "#ff9100"
+                color: Theme.darkGray3
+                border.color: Theme.libraryDeck2Background
                 border.width: 1
                 visible: root.isBusy
 
@@ -484,7 +484,7 @@ Item {
                     Text {
                         text: "🔄"
                         font.pixelSize: 16
-                        color: "#ff9100"
+                        color: Theme.libraryDeck2Background
                         RotationAnimation on rotation {
                             from: 0
                             to: 360

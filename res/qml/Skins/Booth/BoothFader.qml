@@ -1,5 +1,6 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import "../../Theme"
 
 // A fader of the booth skin: the channel faders, the crossfader and the
 // tempo. The handle follows the finger, a double tap resets it. Pointer
@@ -13,7 +14,7 @@ Item {
     // The top (or the left) is the start of the range, like the tempo
     // slider of a player, whose top is minus
     property bool inverted: false
-    property color color: "#d8dadd"
+    property color color: Theme.lightGray2
     // A mark in the middle of the track, e.g. for the tempo and the
     // crossfader
     property bool centerMark: false
@@ -40,14 +41,14 @@ Item {
         id: track
 
         anchors.centerIn: parent
-        color: "#2a2c30"
+        color: Theme.midGray3
         height: root.horizontal ? 4 : parent.height - root.handleLength / 2
         radius: 2
         width: root.horizontal ? parent.width - root.handleLength / 2 : 4
     }
     Rectangle {
         anchors.centerIn: parent
-        color: "#5c6068"
+        color: Theme.midGray3
         height: root.horizontal ? parent.height * 0.6 : 1
         visible: root.centerMark
         width: root.horizontal ? 1 : parent.width * 0.6
@@ -55,9 +56,9 @@ Item {
     Rectangle {
         id: handle
 
-        border.color: dragHandler.active ? "#ffffff" : "#8a8d93"
+        border.color: dragHandler.active ? Theme.buttonActiveColor : Theme.lightGray3
         border.width: 1
-        color: "#3a3c40"
+        color: Theme.midGray2
         height: root.horizontal ? parent.height : root.handleLength * 0.55
         radius: 2
         width: root.horizontal ? root.handleLength * 0.55 : parent.width

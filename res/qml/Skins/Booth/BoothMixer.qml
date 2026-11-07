@@ -1,6 +1,7 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
+import "../../Theme"
 
 // The mixer of the DJ view of the booth skin, like the one of the
 // PERFORMANCE layout of rekordbox: for each of the two decks TRIM, HIGH,
@@ -11,9 +12,9 @@ Rectangle {
 
     readonly property real unit: Math.max(9, Math.min(height / 14, width / 11))
 
-    border.color: "#2a2c30"
+    border.color: Theme.midGray3
     border.width: 1
-    color: "#0c0d0f"
+    color: Theme.darkGray4
 
     // A meter of the level of a channel
     component LevelMeter: Item {
@@ -37,13 +38,13 @@ Rectangle {
         }
         Rectangle {
             anchors.fill: parent
-            color: "#141518"
+            color: Theme.darkGray4
         }
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            color: peakControl.value > 0 ? "#e5332a" : (vuControl.value > 0.8 ? "#f0a020" : "#2fbf4f")
+            color: peakControl.value > 0 ? Theme.warningColor : (vuControl.value > 0.8 ? Theme.yellow : Theme.green)
             height: Math.round(parent.height * Math.max(0, Math.min(1, vuControl.value)))
         }
     }
@@ -116,7 +117,7 @@ Rectangle {
             BoothKnob {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                color: "#2fbf9f"
+                color: Theme.green
                 group: channel.quickEffectGroup
                 key: "super1"
                 label: qsTr("FILTER")
@@ -132,13 +133,13 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.unit * 1.8)
-                border.color: pflControl.value > 0 ? "#ff6a13" : "#3a3c40"
-                color: pflControl.value > 0 ? "#3a1a08" : "#141518"
+                border.color: pflControl.value > 0 ? Theme.warningColor : Theme.midGray2
+                color: pflControl.value > 0 ? "#3a1a08" : Theme.darkGray4
                 radius: 2
 
                 Text {
                     anchors.centerIn: parent
-                    color: pflControl.value > 0 ? "#ff6a13" : "#d8dadd"
+                    color: pflControl.value > 0 ? Theme.warningColor : Theme.lightGray2
                     font.bold: true
                     font.pixelSize: Math.round(root.unit * 0.95)
                     text: "CUE"
@@ -176,18 +177,18 @@ Rectangle {
         Channel {
             Layout.fillHeight: true
             Layout.fillWidth: true
-            deckColor: "#1f6fd1"
+            deckColor: Theme.libraryDeck1Background
             group: "[Channel1]"
         }
         Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: 1
-            color: "#2a2c30"
+            color: Theme.midGray3
         }
         Channel {
             Layout.fillHeight: true
             Layout.fillWidth: true
-            deckColor: "#e8650f"
+            deckColor: Theme.libraryDeck2Background
             group: "[Channel2]"
         }
     }

@@ -1,5 +1,6 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import "../../Theme"
 
 // A knob of the booth skin: a ring that lights from its middle (EQ, trim)
 // or from its start. Dragging up or down turns it, a double tap resets it.
@@ -13,7 +14,7 @@ Item {
     property string label: ""
     // The ring lights from the middle, for controls whose default is there
     property bool bipolar: true
-    property color color: "#2f9bff"
+    property color color: Theme.libraryDeck1Background
     // The drag that turns the knob from one end to the other
     property real dragRange: 160
     readonly property real value: control.parameter
@@ -57,7 +58,7 @@ Item {
             const from = root.bipolar ? Math.PI * 1.5 : start;
             ctx.lineCap = "round";
             ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = "#2a2c30";
+            ctx.strokeStyle = Theme.midGray3;
             ctx.beginPath();
             ctx.arc(center, center, radius, start, end);
             ctx.stroke();
@@ -68,7 +69,7 @@ Item {
                 ctx.stroke();
             }
             ctx.lineWidth = Math.max(1.5, width / 18);
-            ctx.strokeStyle = "#ffffff";
+            ctx.strokeStyle = Theme.buttonActiveColor;
             ctx.beginPath();
             ctx.moveTo(center + Math.cos(at) * radius * 0.3, center + Math.sin(at) * radius * 0.3);
             ctx.lineTo(center + Math.cos(at) * radius * 0.8, center + Math.sin(at) * radius * 0.8);
@@ -103,7 +104,7 @@ Item {
 
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        color: "#9a9ea6"
+        color: Theme.lightGray3
         font.pixelSize: Math.max(8, Math.min(13, Math.round(root.width * 0.22)))
         text: root.label
         visible: root.label.length > 0

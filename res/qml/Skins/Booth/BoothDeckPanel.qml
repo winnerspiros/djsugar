@@ -2,6 +2,7 @@ import "../.." as Skin
 import "../../Deck" as DeckComponent
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import "../../Theme"
 
 // The deck display of the booth skin, in the style of the lower half of a
 // booth player screen: the title bar, the deck number, the remaining time,
@@ -34,8 +35,8 @@ Rectangle {
         return ("000" + number).slice(-digits);
     }
 
-    color: "#000000"
-    border.color: root.playing ? "#d8dadd" : "#2a2c30"
+    color: Theme.backgroundColor
+    border.color: root.playing ? Theme.lightGray2 : Theme.midGray3
     border.width: 1
 
     Mixxx.ControlProxy {
@@ -102,7 +103,7 @@ Rectangle {
 
     // A small grey caption, like "REMAIN" or "TEMPO"
     component Caption: Text {
-        color: "#9a9ea6"
+        color: Theme.lightGray3
         font.pixelSize: Math.round(root.unit * 0.95)
     }
     // A small outlined switch, where a player has A.HOT CUE / AUTO CUE
@@ -111,11 +112,11 @@ Rectangle {
 
         required property string label
         property bool on: false
-        property color onColor: "#ff6a13"
+        property color onColor: Theme.warningColor
         signal clicked
         signal pressAndHold
 
-        border.color: on ? onColor : "#8a8d93"
+        border.color: on ? onColor : Theme.lightGray3
         border.width: 1
         color: "transparent"
         height: Math.round(root.unit * 1.8)
@@ -123,7 +124,7 @@ Rectangle {
 
         Text {
             anchors.fill: parent
-            color: chip.on ? chip.onColor : "#d8dadd"
+            color: chip.on ? chip.onColor : Theme.lightGray2
             fontSizeMode: Text.HorizontalFit
             font.pixelSize: Math.round(root.unit * 0.95)
             horizontalAlignment: Text.AlignHCenter
@@ -158,7 +159,7 @@ Rectangle {
         anchors.rightMargin: 1
         anchors.top: parent.top
         anchors.topMargin: 1
-        color: "#1c1e22"
+        color: Theme.darkGray3
         height: Math.round(root.unit * 2.3)
         clip: true
 
@@ -178,7 +179,7 @@ Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            color: root.deckNumber === 1 ? "#1f6fd1" : "#e8650f"
+            color: root.deckNumber === 1 ? Theme.libraryDeck1Background : Theme.libraryDeck2Background
             height: 2
         }
         Column {
@@ -191,13 +192,13 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                color: "#9a9ea6"
+                color: Theme.lightGray3
                 font.pixelSize: Math.round(root.unit * 0.62)
                 text: qsTr("DECK")
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                color: root.playing ? "#ff6a13" : "#ffffff"
+                color: root.playing ? Theme.warningColor : Theme.buttonActiveColor
                 font.bold: true
                 font.pixelSize: Math.round(root.unit * 1.0)
                 text: root.playing ? `((${root.deckNumber}))` : root.deckNumber
@@ -209,7 +210,7 @@ Rectangle {
             anchors.right: keyLabel.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            color: titleBar.ytDeckProgress >= 0 ? "#ff99ca" : "#ffffff"
+            color: titleBar.ytDeckProgress >= 0 ? "#ff99ca" : Theme.buttonActiveColor
             elide: Text.ElideRight
             font.pixelSize: Math.round(root.unit * 1.45)
             text: {
@@ -226,7 +227,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            color: "#ffffff"
+            color: Theme.buttonActiveColor
             font.pixelSize: Math.round(root.unit * 1.3)
             text: root.loaded ? (root.currentTrack?.keyText ?? "") : ""
         }
@@ -238,7 +239,7 @@ Rectangle {
             anchors.bottom: parent.bottom
             height: 3
             visible: titleBar.ytDeckProgress >= 0
-            color: "#14161a"
+            color: Theme.darkGray2
 
             Rectangle {
                 anchors.left: parent.left
@@ -247,9 +248,9 @@ Rectangle {
                 width: parent.width * Math.max(0.04, Math.min(1.0, titleBar.ytDeckProgress))
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: "#e63380" }
+                    GradientStop { position: 0.0; color: Theme.accentColor }
                     GradientStop { position: 0.55; color: "#ff99ca" }
-                    GradientStop { position: 1.0; color: "#00e5ff" }
+                    GradientStop { position: 1.0; color: Theme.blue }
                 }
                 Behavior on width {
                     NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -287,7 +288,7 @@ Rectangle {
             Chip {
                 label: "SYNC"
                 on: syncControl.value > 0
-                onColor: "#2f9bff"
+                onColor: Theme.libraryDeck1Background
                 onClicked: syncControl.value = syncControl.value > 0 ? 0 : 1
                 onPressAndHold: syncLeaderControl.value = root.leader ? 0 : 1
             }
@@ -310,14 +311,14 @@ Rectangle {
                 spacing: 3
 
                 Caption {
-                    color: root.showElapsed ? "#5c6068" : "#d8dadd"
+                    color: root.showElapsed ? "Theme.midGray3" : "#d8dadd"
                     text: "• " + qsTr("REMAIN")
                 }
                 Caption {
                     text: "/"
                 }
                 Caption {
-                    color: root.showElapsed ? "#d8dadd" : "#5c6068"
+                    color: root.showElapsed ? "#d8dadd" : "Theme.midGray3"
                     text: qsTr("TIME")
                 }
             }
@@ -335,7 +336,7 @@ Rectangle {
                 Text {
                     id: minutesSeconds
 
-                    color: root.loaded ? "#ffffff" : "#5c6068"
+                    color: root.loaded ? "#ffffff" : "Theme.midGray3"
                     font.pixelSize: Math.round(root.unit * 3.4)
                     text: {
                         const total = Math.floor(Math.max(0, root.seconds));
@@ -373,7 +374,7 @@ Rectangle {
             Rectangle {
                 anchors.right: parent.right
                 anchors.top: parent.top
-                color: "#e8501a"
+                color: Theme.libraryDeck2Background
                 height: rangeText.implicitHeight + 2
                 width: rangeText.implicitWidth + 8
 
@@ -381,7 +382,7 @@ Rectangle {
                     id: rangeText
 
                     anchors.centerIn: parent
-                    color: "#ffffff"
+                    color: Theme.buttonActiveColor
                     font.pixelSize: Math.round(root.unit * 0.95)
                     text: Math.round(rateRangeControl.value * 100) + "%"
                 }
@@ -389,7 +390,7 @@ Rectangle {
             Text {
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
-                color: root.loaded ? "#d8dadd" : "#5c6068"
+                color: root.loaded ? "#d8dadd" : "Theme.midGray3"
                 font.pixelSize: Math.round(root.unit * 1.45)
                 text: {
                     const percent = rateControl.value * rateRangeControl.value * 100;
@@ -405,7 +406,7 @@ Rectangle {
             anchors.bottom: parent.bottom
             anchors.right: parent.right
             anchors.top: parent.top
-            border.color: root.leader ? "#ff6a13" : "#d8dadd"
+            border.color: root.leader ? Theme.warningColor : Theme.lightGray2
             border.width: 1
             color: "transparent"
             width: Math.max(Math.round(root.unit * 6.2), bpmCaption.implicitWidth + masterText.implicitWidth + 12)
@@ -419,13 +420,13 @@ Rectangle {
                 Caption {
                     id: bpmCaption
 
-                    color: "#d8dadd"
+                    color: Theme.lightGray2
                     leftPadding: 4
                     rightPadding: 4
                     text: "BPM"
                 }
                 Rectangle {
-                    color: "#ff6a13"
+                    color: Theme.warningColor
                     height: bpmCaption.implicitHeight
                     visible: root.leader
                     width: masterText.implicitWidth + 8
@@ -434,7 +435,7 @@ Rectangle {
                         id: masterText
 
                         anchors.centerIn: parent
-                        color: "#000000"
+                        color: Theme.backgroundColor
                         font.pixelSize: Math.round(root.unit * 0.95)
                         text: qsTr("MASTER")
                     }
@@ -448,7 +449,7 @@ Rectangle {
                 Text {
                     id: bpmWhole
 
-                    color: root.leader ? "#ff6a13" : (root.loaded ? "#ffffff" : "#5c6068")
+                    color: root.leader ? "#ff6a13" : (root.loaded ? "#ffffff" : "Theme.midGray3")
                     font.pixelSize: Math.round(root.unit * 2.6)
                     text: root.loaded ? Math.floor(bpmControl.value) : "--"
                 }

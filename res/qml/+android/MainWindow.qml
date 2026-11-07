@@ -157,16 +157,20 @@ Item {
             width: parent.width
             z: 20
 
-            Text {
+            // Keeps the controls clear of a camera cutout in the toolbar's rows
+            Skin.CutoutInsets {
+                id: toolbarInset
+
+                target: toolbar
+            }
+
+            Skin.SugarLogo {
                 id: logoText
+
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: toolbarInset.left + 10
                 anchors.verticalCenter: parent.verticalCenter
-                color: Theme.accentColor
-                font.bold: true
-                font.pixelSize: 14
-                font.letterSpacing: 1.5
-                text: "DJ SUGAR"
+                size: 26
             }
 
             Skin.Button {
@@ -203,7 +207,7 @@ Item {
             Skin.Button {
                 id: showPreferencesButton
                 anchors.right: parent.right
-                anchors.rightMargin: 6
+                anchors.rightMargin: toolbarInset.right + 6
                 anchors.verticalCenter: parent.verticalCenter
                 height: 30
                 width: 36
@@ -246,9 +250,9 @@ Item {
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 236 * root.shownTopBarViews / 4
                         visible: root.shownTopBarViews > 0
-                        color: "#181a20"
+                        color: Theme.darkGray3
                         radius: 4
-                        border.color: "#2a2e39"
+                        border.color: Theme.midGray3
                         border.width: 1
 
                         RowLayout {
@@ -261,7 +265,7 @@ Item {
                                 Layout.fillWidth: true
                                 activeColor: Theme.accentColor
                                 backgroundColor: root.viewMode === 1 ? Theme.accentColor : "transparent"
-                                normalColor: root.viewMode === 1 ? "#ffffff" : "#90a4ae"
+                                normalColor: root.viewMode === 1 ? "#ffffff" : Theme.lightGray3
                                 text: "DJ"
                                 font.bold: true
                                 font.pixelSize: 10
@@ -274,7 +278,7 @@ Item {
                                 Layout.fillWidth: true
                                 activeColor: Theme.accentColor
                                 backgroundColor: root.viewMode === 3 ? Theme.accentColor : "transparent"
-                                normalColor: root.viewMode === 3 ? "#ffffff" : "#90a4ae"
+                                normalColor: root.viewMode === 3 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("WAVE")
                                 font.bold: true
                                 font.pixelSize: 10
@@ -287,7 +291,7 @@ Item {
                                 Layout.fillWidth: true
                                 activeColor: Theme.accentColor
                                 backgroundColor: root.viewMode === 2 ? Theme.accentColor : "transparent"
-                                normalColor: root.viewMode === 2 ? "#ffffff" : "#90a4ae"
+                                normalColor: root.viewMode === 2 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("LIB")
                                 font.bold: true
                                 font.pixelSize: 10
@@ -300,7 +304,7 @@ Item {
                                 Layout.fillWidth: true
                                 activeColor: Theme.accentColor
                                 backgroundColor: root.viewMode === 0 ? Theme.accentColor : "transparent"
-                                normalColor: root.viewMode === 0 ? "#ffffff" : "#90a4ae"
+                                normalColor: root.viewMode === 0 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("CTL")
                                 font.bold: true
                                 font.pixelSize: 10
@@ -315,8 +319,8 @@ Item {
                         visible: root.topBarItemShown("load1")
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 62
-                        activeColor: "#64b5f6"
-                        backgroundColor: "#1565c0"
+                        activeColor: Theme.libraryDeck1Background
+                        backgroundColor: Theme.libraryDeck1Background
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 10
@@ -329,7 +333,7 @@ Item {
                         visible: root.topBarItemShown("load2")
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 62
-                        activeColor: "#ffb74d"
+                        activeColor: Theme.libraryDeck2Background
                         backgroundColor: "#e65100"
                         normalColor: "#ffffff"
                         font.bold: true
@@ -344,8 +348,8 @@ Item {
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 42
                         activeColor: "#e040fb"
-                        backgroundColor: root.showEffects ? "#4a148c" : "#222733"
-                        normalColor: root.showEffects ? "#ea80fc" : "#b0bec5"
+                        backgroundColor: root.showEffects ? "#4a148c" : Theme.darkGray3
+                        normalColor: root.showEffects ? Theme.activeColor : Theme.lightGray2
                         checkable: true
                         checked: root.showEffects
                         text: "FX"
@@ -360,8 +364,8 @@ Item {
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 54
                         activeColor: "#FF6600"
-                        backgroundColor: root.showSamplers ? "#663300" : "#222733"
-                        normalColor: root.showSamplers ? "#FFB340" : "#b0bec5"
+                        backgroundColor: root.showSamplers ? "#663300" : Theme.darkGray3
+                        normalColor: root.showSamplers ? "#FFB340" : Theme.lightGray2
                         checkable: true
                         checked: root.showSamplers
                         text: "SMPL"
@@ -376,8 +380,8 @@ Item {
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 54
                         activeColor: "#D85486"
-                        backgroundColor: xyPadOverlay.visible ? "#006064" : "#222733"
-                        normalColor: xyPadOverlay.visible ? "#D85486" : "#b0bec5"
+                        backgroundColor: xyPadOverlay.visible ? "#006064" : Theme.darkGray3
+                        normalColor: xyPadOverlay.visible ? "#D85486" : Theme.lightGray2
                         checkable: true
                         checked: xyPadOverlay.visible
                         text: "XY"
@@ -391,9 +395,9 @@ Item {
                         visible: root.topBarItemShown("split")
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 52
-                        activeColor: "#ff9100"
-                        backgroundColor: headSplitControl.value > 0 ? "#e65100" : "#222733"
-                        normalColor: headSplitControl.value > 0 ? "#ffffff" : "#b0bec5"
+                        activeColor: Theme.libraryDeck2Background
+                        backgroundColor: headSplitControl.value > 0 ? "#e65100" : Theme.darkGray3
+                        normalColor: headSplitControl.value > 0 ? "#ffffff" : Theme.lightGray2
                         checkable: true
                         checked: headSplitControl.value > 0
                         text: "SPLIT"

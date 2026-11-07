@@ -44,6 +44,7 @@ Item {
     Mixxx.ControlProxy {
         id: playControl
 
+        updateInterval: 100
         group: root.group
         key: "play"
     }

@@ -2,9 +2,12 @@
 
 #include <QObject>
 #include <QQmlEngine>
+#include <QRectF>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QUrl>
+#include <QVariantList>
 
 namespace mixxx {
 namespace qml {
@@ -26,6 +29,10 @@ class QmlMobileAppProxy : public QObject {
     /// "xy" (see res/qml/Skins/Booth/MainWindow.qml)
     Q_PROPERTY(QStringList hiddenTopBarItems READ hiddenTopBarItems WRITE
                     setHiddenTopBarItems NOTIFY hiddenTopBarItemsChanged)
+    /// The camera cutouts (notch, punch hole) of the display as QRectF in the
+    /// QML coordinates of the window, empty without one. The skins draw edge
+    /// to edge and move their controls clear of these.
+    Q_PROPERTY(QVariantList cutouts READ cutouts NOTIFY cutoutsChanged)
     QML_NAMED_ELEMENT(MobileApp)
     QML_SINGLETON
 
@@ -46,12 +53,23 @@ class QmlMobileAppProxy : public QObject {
     /// subfolders that contain a MainWindow.qml
     Q_INVOKABLE QStringList skinsIn(const QUrl& skinsFolder) const;
 
+    QVariantList cutouts() const {
+        return m_cutouts;
+    }
+
     QStringList hiddenTopBarItems() const;
     void setHiddenTopBarItems(const QStringList& items);
 
   signals:
     void skinChanged();
     void hiddenTopBarItemsChanged();
+    void cutoutsChanged();
+
+  private:
+    void refreshCutouts();
+
+    QVariantList m_cutouts;
+    QTimer m_cutoutTimer;
 };
 
 } // namespace qml

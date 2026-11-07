@@ -3,6 +3,7 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../../Theme"
 
 // BEAT FX of the booth skin: effect unit 1, which the BEAT FX section of
 // controllers like the DDJ-FLX4 drives as well. Shows the focused effect
@@ -15,16 +16,16 @@ Rectangle {
     readonly property int focusedSlot: Math.min(3, Math.max(1, focusedControl.value))
     readonly property string slotGroup: `[EffectRack1_EffectUnit1_Effect${root.focusedSlot}]`
     readonly property var slot: Mixxx.EffectsManager.getEffectSlot(1, root.focusedSlot)
-    readonly property color accent: "#1e88e5"
+    readonly property color accent: Theme.activeColor
     // Landscape phones: smaller rows
     property bool compact: false
 
-    color: "#000000"
-    border.color: "#3a3c40"
+    color: Theme.backgroundColor
+    border.color: Theme.midGray2
     border.width: 1
 
     component SmallLabel: Text {
-        color: "#9a9ea6"
+        color: Theme.lightGray3
         font.pixelSize: root.compact ? 9 : 10
         horizontalAlignment: Text.AlignHCenter
         Layout.fillWidth: true
@@ -40,9 +41,9 @@ Rectangle {
 
         Layout.fillWidth: true
         Layout.preferredHeight: root.compact ? 24 : 30
-        border.color: toggleControl.value > 0 ? onColor : "#5c6068"
+        border.color: toggleControl.value > 0 ? onColor : "Theme.midGray3"
         border.width: 1
-        color: toggleControl.value > 0 ? onColor : "#000000"
+        color: toggleControl.value > 0 ? onColor : Theme.backgroundColor
 
         Mixxx.ControlProxy {
             id: toggleControl
@@ -52,7 +53,7 @@ Rectangle {
         }
         Text {
             anchors.centerIn: parent
-            color: toggleControl.value > 0 ? "#ffffff" : "#d8dadd"
+            color: toggleControl.value > 0 ? Theme.buttonActiveColor : Theme.lightGray2
             font.pixelSize: root.compact ? 11 : 13
             text: toggleBox.label
         }
@@ -107,12 +108,12 @@ Rectangle {
         anchors.margins: 1
         anchors.right: parent.right
         anchors.top: parent.top
-        color: "#2a2c30"
+        color: Theme.midGray3
         height: root.compact ? 20 : 26
 
         Text {
             anchors.centerIn: parent
-            color: "#d8dadd"
+            color: Theme.lightGray2
             font.pixelSize: root.compact ? 11 : 13
             text: "BEAT FX"
         }
@@ -136,7 +137,7 @@ Rectangle {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.preferredWidth: 24
-                color: prevMouse.pressed ? "#2a2d33" : "#141518"
+                color: prevMouse.pressed ? Theme.darkGray3 : Theme.darkGray4
                 radius: 3
 
                 Skin.Triangle {
@@ -158,14 +159,14 @@ Rectangle {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                border.color: "#5c6068"
+                border.color: "Theme.midGray3"
                 border.width: 1
-                color: "#141518"
+                color: Theme.darkGray4
 
                 Text {
                     anchors.fill: parent
                     anchors.margins: 3
-                    color: "#ffffff"
+                    color: Theme.buttonActiveColor
                     elide: Text.ElideRight
                     fontSizeMode: Text.HorizontalFit
                     font.pixelSize: root.compact ? 14 : 17
@@ -177,7 +178,7 @@ Rectangle {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.preferredWidth: 24
-                color: nextMouse.pressed ? "#2a2d33" : "#141518"
+                color: nextMouse.pressed ? Theme.darkGray3 : Theme.darkGray4
                 radius: 3
 
                 Skin.Triangle {
@@ -214,9 +215,9 @@ Rectangle {
 
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.compact ? 20 : 24
-                    border.color: focused ? "#d8dadd" : "#5c6068"
+                    border.color: focused ? "#d8dadd" : "Theme.midGray3"
                     border.width: 1
-                    color: slotEnabledControl.value > 0 ? "#123a5c" : "#000000"
+                    color: slotEnabledControl.value > 0 ? "#123a5c" : Theme.backgroundColor
 
                     Mixxx.ControlProxy {
                         id: slotEnabledControl
@@ -226,7 +227,7 @@ Rectangle {
                     }
                     Text {
                         anchors.centerIn: parent
-                        color: slotBox.focused ? "#ffffff" : "#8a9099"
+                        color: slotBox.focused ? Theme.buttonActiveColor : Theme.lightGray3
                         font.bold: slotBox.focused
                         font.pixelSize: 11
                         text: slotBox.index + 1
@@ -294,13 +295,13 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: root.compact ? 34 : 44
-            border.color: enabledControl.value > 0 ? "#ff6a13" : "#5c6068"
+            border.color: enabledControl.value > 0 ? "#ff6a13" : "Theme.midGray3"
             border.width: 1
-            color: enabledControl.value > 0 ? "#ff6a13" : "#000000"
+            color: enabledControl.value > 0 ? Theme.warningColor : Theme.backgroundColor
 
             Text {
                 anchors.centerIn: parent
-                color: enabledControl.value > 0 ? "#000000" : "#d8dadd"
+                color: enabledControl.value > 0 ? Theme.backgroundColor : Theme.lightGray2
                 font.bold: true
                 font.pixelSize: root.compact ? 13 : 15
                 text: "ON / OFF"

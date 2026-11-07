@@ -15,12 +15,19 @@ ApplicationWindow {
     readonly property int designWidth: 1792
     readonly property int designHeight: 1008
 
+    // Mobile: the window covers the whole display, camera cutout included.
+    // Qt would pad the content by the safe area; the skins draw edge to edge
+    // and keep their controls clear of the cutout themselves (CutoutInsets).
+    bottomPadding: 0
     color: Theme.backgroundColor
-    flags: isMobile ? (Qt.Window | Qt.FramelessWindowHint | Qt.MaximizeUsingFullscreenGeometryHint) : Qt.Window
+    flags: isMobile ? (Qt.Window | Qt.FramelessWindowHint | Qt.MaximizeUsingFullscreenGeometryHint | Qt.ExpandedClientAreaHint) : Qt.Window
     height: isMobile ? Screen.height : designHeight
+    leftPadding: 0
     menuBar: content.item ? content.item.menuBar : null
     minimumHeight: isMobile ? 0 : 300
     minimumWidth: isMobile ? 0 : 680
+    rightPadding: 0
+    topPadding: 0
     visibility: isMobile ? Window.FullScreen : Window.Windowed
     visible: true
     width: isMobile ? Screen.width : designWidth

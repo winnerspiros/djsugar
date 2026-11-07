@@ -1,6 +1,7 @@
 import "../../Library" as LibraryComponent
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import "../../Theme"
 
 // The library sources of the booth skin: the same sources as the shared
 // library (Library/SourceTree.qml), with fewer columns and rows drawn like
@@ -157,7 +158,7 @@ Mixxx.LibrarySourceTree {
 
         readonly property var caps: capabilities
 
-        color: selected ? "#1e5fb4" : (row % 2 === 0 ? "#0c0d0f" : "#16181b")
+        color: selected ? Theme.activeColor : (row % 2 === 0 ? Theme.darkGray4 : Theme.darkGray2)
         implicitHeight: 40
 
         LibraryComponent.Track {
@@ -180,7 +181,7 @@ Mixxx.LibrarySourceTree {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            color: "#000000"
+            color: Theme.backgroundColor
             height: 1
         }
     }
@@ -196,7 +197,7 @@ Mixxx.LibrarySourceTree {
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
-            color: selected ? "#ffffff" : (textCell.dim ? "#9a9ea6" : "#e6e8eb")
+            color: selected ? Theme.buttonActiveColor : (textCell.dim ? Theme.lightGray3 : Theme.textColor)
             elide: Text.ElideRight
             font.pixelSize: 15
             horizontalAlignment: textCell.alignRight ? Text.AlignRight : Text.AlignLeft

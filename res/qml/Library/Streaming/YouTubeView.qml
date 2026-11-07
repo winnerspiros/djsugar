@@ -2,6 +2,7 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
 import "../.." as Skin
+import "../../Theme"
 
 // YouTube search tab of the Booth streaming hub: searches the built-in
 // YouTube service and loads results straight into a deck. Downloads are
@@ -13,6 +14,8 @@ Item {
     property var results: []
     property string statusMessage: qsTr("Search YouTube and load straight into a deck")
     property bool isBusy: false
+    property string selectedGenre: ""
+    readonly property var genreOptions: ["", "EDM", "House", "Techno", "Trance", "DnB", "Dubstep", "Hip Hop", "Rap", "R&B", "Pop", "Rock", "Lo-fi", "Chillout", "Ambient", "Synthwave", "Classical", "Jazz", "Blues", "Country", "Reggae", "K-Pop", "J-Pop", "Latin", "Afrobeat"]
 
     function doSearch() {
         if (searchField.text.length === 0) {
@@ -22,9 +25,6 @@ Item {
         root.statusMessage = qsTr("Searching YouTube...");
         Mixxx.YouTube.search(searchField.text);
     }
-
-    // Map videoId -> target deck group
-    property var videoTargetDecks: {}
 
     Connections {
         target: Mixxx.YouTube
@@ -40,13 +40,10 @@ Item {
             root.isBusy = false;
             root.statusMessage = qsTr("Search error: %1").arg(error);
         }
+        // The proxy loads each finished download into the deck its button
+        // was pressed for; the view only reports status.
         function onDownloadFinished(videoId, path) {
-            root.statusMessage = qsTr("Downloaded, loading...");
-            const deck = root.videoTargetDecks[videoId] || root.targetDeck;
-            const player = Mixxx.PlayerManager.getPlayer(deck);
-            if (player) {
-                player.loadTrackFromLocation(path, false);
-            }
+            root.statusMessage = qsTr("Downloaded and loaded");
         }
         function onDownloadFailed(videoId, error) {
             root.statusMessage = qsTr("Download error: %1").arg(error);
@@ -66,7 +63,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 44
                 color: "#000000"
-                border.color: searchField.activeFocus ? "#ff5252" : "#5c6068"
+                border.color: searchField.activeFocus ? "Theme.accentColor" : "Theme.midGray3"
                 border.width: 1
                 radius: 4
 
@@ -83,7 +80,7 @@ Item {
                 Text {
                     anchors.fill: parent
                     anchors.margins: 10
-                    color: "#6c7078"
+                    color: "Theme.lightGray3"
                     font.pixelSize: 14
                     text: qsTr("SEARCH YOUTUBE")
                     verticalAlignment: Text.AlignVCenter
@@ -93,7 +90,7 @@ Item {
             Skin.Button {
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 120
-                activeColor: "#ff5252"
+                activeColor: "Theme.accentColor"
                 normalColor: "#ffffff"
                 font.bold: true
                 font.pixelSize: 12
@@ -115,13 +112,12 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: root.results
+            model: root.selectedGenre === "" ? root.results : root.results.filter(r => r.genre && r.genre.toLowerCase().includes(root.selectedGenre.toLowerCase()))
             spacing: 4
             delegate: Rectangle {
                 id: videoCard
                 required property var modelData
                 required property int index
-                property string targetDeck: "[Channel1]"
 
                 width: ListView.view.width
                 height: 68
@@ -203,7 +199,8 @@ Item {
                         font.pixelSize: 11
                         font.bold: videoCard.downloadProg >= 0
                         text: {
-                            const base = (video.uploader ?? "") + (video.durationSec > 0 ? " - " + Math.floor(video.durationSec / 60) + ":" + String(video.durationSec % 60).padStart(2, "0") : "");
+                            const genrePart = video.genre ? (video.genre + " · ") : "";
+                            const base = genrePart + (video.uploader ?? "") + (video.durationSec > 0 ? " - " + Math.floor(video.durationSec / 60) + ":" + String(video.durationSec % 60).padStart(2, "0") : "");
                             if (videoCard.downloadProg >= 0) {
                                 return qsTr("⬇ Downloading %1% · ").arg(Math.round(videoCard.downloadProg * 100)) + base;
                             }
@@ -218,36 +215,24 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
 
-                    // Deck selector for this track
-                    Skin.ComboBox {
-                        id: deckSelector
-                        Layout.preferredWidth: 100
-                        Layout.preferredHeight: 36
-                        model: ["[Channel1]", "[Channel2]", "[Channel3]", "[Channel4]"]
-                        currentIndex: 0
-                        onCurrentIndexChanged: {
-                            videoCard.targetDeck = model[currentIndex]
-                        }
-                    }
-
-                    Skin.Button {
-                        Layout.preferredHeight: 36
-                        Layout.preferredWidth: 80
-                        activeColor: Theme.accentColor
-                        normalColor: "#ffffff"
-                        font.bold: true
-                        font.pixelSize: 12
-                        text: videoCard.isDownloading ? `${Math.round(videoCard.downloadProg * 100)}%` : qsTr("Load")
-                        onClicked: {
-                            const deck = videoCard.targetDeck || "[Channel1]";
-                            // Remember which deck this video is for, so onDownloadFinished loads to the right deck
-                            root.videoTargetDecks[video.id] = deck;
-                            const player = Mixxx.PlayerManager.getPlayer(deck);
-                            if (player && video.file_url) {
-                                player.loadTrackFromLocationUrl(video.file_url);
-                            } else if (player) {
-                                Mixxx.YouTube.downloadToDeck(video.id, deck);
-                            }
+                    Repeater {
+                        model: [
+                            { deck: "[Channel1]", label: "D1", color: Theme.libraryDeck1Background },
+                            { deck: "[Channel2]", label: "D2", color: Theme.libraryDeck2Background }
+                        ]
+                        delegate: Skin.Button {
+                            required property var modelData
+                            Layout.preferredHeight: 36
+                            Layout.preferredWidth: 64
+                            activeColor: modelData.color
+                            normalColor: "#ffffff"
+                            font.bold: true
+                            font.pixelSize: 12
+                            text: videoCard.isDownloading
+                                ? `${Math.round(videoCard.downloadProg * 100)}%`
+                                : modelData.label
+                            enabled: !videoCard.isDownloading
+                            onClicked: Mixxx.YouTube.downloadToDeck(videoCard.video.id, modelData.deck)
                         }
                     }
                 }

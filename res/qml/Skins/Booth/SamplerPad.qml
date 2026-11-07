@@ -1,5 +1,6 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import "../../Theme"
 
 // A sampler pad for the Booth skin's SAMPLER pad mode: tapping plays or
 // cues the sampler, holding repeats it while held. Lit orange when loaded,
@@ -37,14 +38,14 @@ Rectangle {
     readonly property bool lit: loadedControl.value > 0
     readonly property bool playing: playControl.value > 0
 
-    border.color: padTap.pressed ? "#ffffff" : (playing ? "#ff6a13" : (lit ? "#e8650f" : "#2a2c30"))
+    border.color: padTap.pressed ? Theme.buttonActiveColor : (playing ? Theme.warningColor : (lit ? Theme.libraryDeck2Background : Theme.midGray3))
     border.width: playing ? 2 : 1
-    color: padTap.pressed ? "#2a2c30" : (playing ? Qt.alpha("#ff6a13", 0.3) : (lit ? Qt.alpha("#e8650f", 0.18) : "#141518"))
+    color: padTap.pressed ? Theme.midGray3 : (playing ? Qt.alpha(Theme.warningColor, 0.3) : (lit ? Qt.alpha(Theme.libraryDeck2Background, 0.18) : Theme.darkGray4))
     radius: 2
 
     Text {
         anchors.centerIn: parent
-        color: padItem.playing ? "#ffffff" : (padItem.lit ? "#e8650f" : "#5c6068")
+        color: padItem.playing ? Theme.buttonActiveColor : (padItem.lit ? Theme.libraryDeck2Background : Theme.midGray3)
         font.bold: true
         font.pixelSize: Math.round(parent.height * 0.28)
         text: padItem.samplerGroup.replace("[Sampler", "S").replace("]", "")

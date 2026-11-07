@@ -60,24 +60,24 @@ const Logger kLogger("YouTubeService");
 // is generous so a slow connection or long mix doesn't get killed.
 // 15 s is enough for InnerTube (typically <1s); a faster fail means the
 // yt-dlp fallback kicks in sooner on flaky connections.
-constexpr int kSearchTimeoutMs = 15 * 1000;
+constexpr int kSearchTimeoutMs = 10 * 1000;
 constexpr int kDownloadTimeoutMs = 10 * 60 * 1000; // 10 min
 // Piped HTTP requests get a tighter ceiling — each instance failure should
 // surface fast so we can fail over to the next one without burning too long
 // per dead instance. With 10 instances at 10s each, worst case is ~100s.
-constexpr int kPipedHttpTimeoutMs = 10 * 1000;
+constexpr int kPipedHttpTimeoutMs = 6 * 1000;
 // Minimum file size before we switch from a single-connection download to 8
 // parallel Range requests. Below this threshold the connection-setup overhead
 // outweighs the gain; above it, 8 TCP streams typically deliver 2-4x higher
 // throughput on cellular links where a single window saturates slowly.
-constexpr qint64 kChunkedDownloadThresholdBytes = 2LL * 1024 * 1024; // 2 MB
-constexpr int kParallelDownloadChunks = 8;
+constexpr qint64 kChunkedDownloadThresholdBytes = 1LL * 1024 * 1024; // 2 MB
+constexpr int kParallelDownloadChunks = 16;
 constexpr int kMaxPipedSearchPages = 5;
 // SponsorBlock API timeout — prevents indefinite hangs if the service is slow.
 // 4 s is generous for a single HTTP GET backed by a CDN; most responses arrive
 // in < 500 ms. Keeping it short prevents blocking track load on a slow or
 // unreachable SponsorBlock server.
-constexpr int kSponsorBlockTimeoutMs = 4 * 1000;
+constexpr int kSponsorBlockTimeoutMs = 3 * 1000;
 // Project default for this fork: the requested first-open YouTube feed is Greek
 // top songs, not generic global/United States YouTube trends.
 const QString kDefaultRegion = QStringLiteral("GR");
@@ -502,6 +502,7 @@ QList<YouTubeVideoInfo> parsePipedItems(const QJsonArray& items, int cap) {
         }
         info.title = obj.value(QStringLiteral("title")).toString();
         info.uploader = obj.value(QStringLiteral("uploaderName")).toString();
+        info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
         const QJsonValue dur = obj.value(QStringLiteral("duration"));
         if (dur.isDouble()) {
             info.durationSec = static_cast<int>(dur.toDouble());
@@ -585,6 +586,7 @@ void collectInnerTubeVideos(const QJsonValue& node,
                         video.value(QStringLiteral("shortBylineText")).toObject());
             }
             info.uploader = uploader;
+            info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
             const int dur = parseTimestampToSeconds(innerTubeText(
                     video.value(QStringLiteral("lengthText")).toObject()));
             // No lengthText -> live/upcoming/non-playable: skip it.
@@ -3003,6 +3005,7 @@ void YouTubeService::searchViaYtDlp(const QString& query, int cap) {
                         info.uploader = entry.value(QStringLiteral("uploader"))
                                                 .toString();
                     }
+                    info.genre = YouTubeVideoInfo::inferGenre(info.title, info.uploader);
                     const QJsonValue dur = entry.value(QStringLiteral("duration"));
                     if (dur.isDouble()) {
                         info.durationSec = static_cast<int>(dur.toDouble());
@@ -3292,6 +3295,22 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         request.callMethod<QJniObject>("addOption",
                 "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
                 QJniObject::fromString("--no-check-formats").object());
+        // Skip the HLS/DASH manifest fetches (one extra round-trip each; the
+        // direct m4a stream URL already comes from the player API response)
+        // and the translated-subtitle probe.
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--extractor-args").object(),
+                QJniObject::fromString("youtube:skip=hls,dash,translated_subs").object());
+        // Don't spawn ffmpeg to rewrite the m4a container brand after the
+        // download: FFmpeg's demuxer opens and seeks the original file fine
+        // (checked), and the extra process costs a noticeable moment per track.
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--fixup").object(),
+                QJniObject::fromString("never").object());
         // Bound network stalls: without this, a hung connection blocks
         // execute() forever, and teardown joins this thread -> ANR.
         request.callMethod<QJniObject>("addOption",
@@ -3940,3 +3959,55 @@ void YouTubeService::fetchSponsorSegmentsInternal(
 } // namespace mixxx
 
 #include "moc_youtubeservice.cpp"
+
+QString YouTubeVideoInfo::inferGenre(const QString& title, const QString& uploader,
+                                     const QString& categoryId)
+{
+    // YouTube music categories: 10 = Music
+    if (categoryId == "10") {
+        return qsTr("Music");
+    }
+
+    static const QVector<QPair<QRegularExpression, QString>> rules = {
+        // Explicit genre tags in title
+        {QRegularExpression(R"(\b(EDM|House|Techno|Trance|Drum\s*&\s*Bass|DnB|Dubstep|Hardstyle|Psytrance|Ambient|Chillout|Lo-fi|Synthwave|Retrowave|Vaporwave|Future\s*Bass|Trap|Hip\s*Hop|Rap|R&B|Soul|Funk|Disco|Pop|Rock|Metal|Punk|Indie|Alternative|Classical|Jazz|Blues|Country|Folk|Reggae|Ska|Latin|Afrobeat|K-Pop|J-Pop|C-Pop|Bollywood|Desi)\b)", QRegularExpression::CaseInsensitiveOption),
+         ""},
+        // Bracketed genres like [House], (Techno)
+        {QRegularExpression(R"(\[([A-Za-z0-9\s&]+)\]|\(([A-Za-z0-9\s&]+)\))"), ""},
+    };
+
+    const QString combined = title + " " + uploader;
+    for (const auto& rule : rules) {
+        auto match = rule.first.match(combined);
+        if (match.hasMatch()) {
+            QString g = match.captured(1).isEmpty() ? match.captured(2) : match.captured(1);
+            if (!g.isEmpty() && g.length() < 30) {
+                return g.trimmed();
+            }
+        }
+    }
+
+    // Common channel-name hints
+    static const QHash<QString, QString> channelHints = {
+        {"mrsuicidesheep", "Chill/Electronic"}, {"proximity", "EDM"},
+        {"monstercat", "Electronic"}, {"spinninrecords", "EDM/House"},
+        {"trapnation", "Trap"}, {"rapnation", "Hip Hop"},
+        {"majesticcasual", "Chill/Indie"}, {"colors", "R&B/Soul"},
+        {"aesthetic", "Lo-fi/Chill"}, {"loud", "EDM"},
+        {"edm", "EDM"}, {"house", "House"}, {"techno", "Techno"},
+        {"trance", "Trance"}, {"dubstep", "Dubstep"}, {"dnb", "DnB"},
+        {"ambient", "Ambient"}, {"chill", "Chillout"}, {"lofi", "Lo-fi"},
+        {"synthwave", "Synthwave"}, {"vaporwave", "Vaporwave"},
+        {"hiphop", "Hip Hop"}, {"rap", "Rap"}, {"rnb", "R&B"},
+        {"jazz", "Jazz"}, {"blues", "Blues"}, {"classical", "Classical"},
+        {"rock", "Rock"}, {"metal", "Metal"}, {"indie", "Indie"},
+        {"pop", "Pop"}, {"country", "Country"}, {"folk", "Folk"},
+        {"reggae", "Reggae"}, {"kpop", "K-Pop"}, {"jpop", "J-Pop"},
+    };
+    const QString uLow = uploader.toLower().remove(QRegularExpression(R"([\s\W]+)"));
+    if (channelHints.contains(uLow)) {
+        return channelHints.value(uLow);
+    }
+
+    return QString();
+}

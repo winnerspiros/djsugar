@@ -52,7 +52,7 @@ Item {
 
                 Text {
                     text: qsTr("🔗 DIRECT URL / WEB STREAMING")
-                    color: "#ffb300"
+                    color: Theme.yellow
                     font.bold: true
                     font.pixelSize: 14
                     font.letterSpacing: 1
@@ -61,7 +61,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: root.statusMessage
-                    color: "#ffe082"
+                    color: Theme.yellow
                     font.pixelSize: 11
                     elide: Text.ElideRight
                 }
@@ -71,8 +71,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 110
-            color: "#16181f"
-            border.color: "#282d3c"
+            color: Theme.darkGray4
+            border.color: Theme.midGray3
             border.width: 1
             radius: 6
 
@@ -97,9 +97,9 @@ Item {
                     color: "#ffffff"
                     font.pixelSize: 12
                     background: Rectangle {
-                        color: "#202533"
+                        color: Theme.darkGray3
                         radius: 4
-                        border.color: customUrlInput.activeFocus ? "#ffb300" : "#323b50"
+                        border.color: customUrlInput.activeFocus ? Theme.yellow : Theme.midGray3
                         border.width: 1
                     }
                 }
@@ -116,16 +116,16 @@ Item {
                         color: "#ffffff"
                         font.pixelSize: 11
                         background: Rectangle {
-                            color: "#1c202a"
+                            color: Theme.darkGray3
                             radius: 3
-                            border.color: "#282d3c"
+                            border.color: Theme.midGray3
                         }
                     }
 
                     Skin.Button {
                         Layout.preferredHeight: 34
                         Layout.preferredWidth: 140
-                        activeColor: "#64b5f6"
+                        activeColor: Theme.libraryDeck1Background
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 11
@@ -151,7 +151,7 @@ Item {
                     Skin.Button {
                         Layout.preferredHeight: 34
                         Layout.preferredWidth: 140
-                        activeColor: "#ffb74d"
+                        activeColor: Theme.libraryDeck2Background
                         normalColor: "#ffffff"
                         font.bold: true
                         font.pixelSize: 11

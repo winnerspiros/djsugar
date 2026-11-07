@@ -4,6 +4,7 @@ import "../../Deck" as DeckComponent
 import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
+import "../../Theme"
 
 // The controls of a deck in the DJ view of the booth skin, for playing
 // without a controller, in the style of the PERFORMANCE layout of
@@ -20,7 +21,7 @@ Rectangle {
     property bool compact: false
     // hotcue, beatjump or beatloop
     property string padMode: "hotcue"
-    readonly property color deckColor: deckNumber === 1 ? "#1f6fd1" : "#e8650f"
+    readonly property color deckColor: deckNumber === 1 ? Theme.libraryDeck1Background : Theme.libraryDeck2Background
     readonly property bool loaded: trackLoadedControl.value > 0
     readonly property real unit: Math.max(9, Math.min(height / 14, width / 34))
 
@@ -32,9 +33,9 @@ Rectangle {
         return root.pad(Math.floor(total / 60), 2) + ":" + root.pad(total % 60, 2);
     }
 
-    border.color: "#2a2c30"
+    border.color: Theme.midGray3
     border.width: 1
-    color: "#0c0d0f"
+    color: Theme.darkGray4
 
     Mixxx.ControlProxy {
         id: trackLoadedControl
@@ -45,6 +46,7 @@ Rectangle {
     Mixxx.ControlProxy {
         id: playControl
 
+        updateInterval: 100
         group: root.group
         key: "play"
     }
@@ -133,19 +135,19 @@ Rectangle {
 
         property string label: ""
         property bool on: false
-        property color onColor: "#ff6a13"
+        property color onColor: Theme.warningColor
         signal pressed
         signal released
         signal pressAndHold
 
-        border.color: on ? onColor : "#3a3c40"
+        border.color: on ? onColor : Theme.midGray2
         border.width: 1
-        color: buttonTap.pressed ? "#2a2c30" : (on ? Qt.alpha(onColor, 0.18) : "#141518")
+        color: buttonTap.pressed ? Theme.midGray3 : (on ? Qt.alpha(onColor, 0.18) : Theme.darkGray4)
         radius: 2
 
         Text {
             anchors.fill: parent
-            color: smallButton.on ? smallButton.onColor : "#d8dadd"
+            color: smallButton.on ? smallButton.onColor : Theme.lightGray2
             fontSizeMode: Text.Fit
             font.bold: true
             font.pixelSize: Math.round(root.unit * 1.05)
@@ -179,7 +181,7 @@ Rectangle {
         readonly property bool hotcueSet: hotcueStatus.value > 0
         readonly property color hotcueColor: {
             const rgb = hotcueColorControl.value;
-            return rgb >= 0 ? Qt.rgba(((rgb >> 16) & 255) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255, 1) : "#3ad33a";
+            return rgb >= 0 ? Qt.rgba(((rgb >> 16) & 255) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255, 1) : Theme.green;
         }
         readonly property bool lit: {
             switch (root.padMode) {
@@ -191,11 +193,11 @@ Rectangle {
                 return false;
             }
         }
-        readonly property color litColor: root.padMode === "hotcue" ? hotcueColor : "#2f9bff"
+        readonly property color litColor: root.padMode === "hotcue" ? hotcueColor : Theme.libraryDeck1Background
 
-        border.color: padTap.pressed ? "#ffffff" : (lit ? litColor : "#2a2c30")
+        border.color: padTap.pressed ? Theme.buttonActiveColor : (lit ? litColor : Theme.midGray3)
         border.width: 1
-        color: padTap.pressed ? "#2a2c30" : "#141518"
+        color: padTap.pressed ? Theme.midGray3 : Theme.darkGray4
 
         Mixxx.ControlProxy {
             id: hotcueStatus
@@ -242,7 +244,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                color: padItem.hotcueSet ? "#000000" : "#5c6068"
+                color: padItem.hotcueSet ? "#000000" : "Theme.midGray3"
                 font.bold: true
                 font.pixelSize: Math.round(letter.height * 0.75)
                 text: String.fromCharCode(65 + padItem.index)
@@ -253,7 +255,7 @@ Rectangle {
             anchors.leftMargin: root.padMode === "hotcue" ? 5 : 0
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            color: padItem.lit ? "#ffffff" : "#9a9ea6"
+            color: padItem.lit ? Theme.buttonActiveColor : Theme.lightGray3
             elide: Text.ElideRight
             font.pixelSize: Math.round(root.unit * 1.05)
             horizontalAlignment: root.padMode === "hotcue" ? Text.AlignLeft : Text.AlignHCenter
@@ -280,7 +282,7 @@ Rectangle {
                 anchors.right: modelData ? parent.right : undefined
                 anchors.rightMargin: Math.round(padItem.width * 0.12)
                 anchors.verticalCenter: parent.verticalCenter
-                color: "#e5332a"
+                color: Theme.warningColor
                 height: Math.round(root.unit * 1.1)
                 pointsRight: modelData
                 width: Math.round(height * 0.8)
@@ -359,13 +361,13 @@ Rectangle {
         readonly property int stemNumber: (padIndex % 4) + 1
         readonly property bool isFxPad: padIndex >= 4
         readonly property var stemLabels: [qsTr("DRUMS"), qsTr("BASS"), qsTr("INST"), qsTr("VOCAL")]
-        readonly property var stemColors: ["#00e5ff", "#ff4081", "#ffab00", "#7c4dff"]
+        readonly property var stemColors: [Theme.blue, Theme.accentColor, Theme.yellow, Theme.activeColor]
         readonly property color padColor: stemColors[stemNumber - 1]
         readonly property bool stemActive: isFxPad ? stemFxControl.value > 0 : stemMuteControl.value === 0
 
-        border.color: stemPadTap.pressed ? "#ffffff" : (stemActive ? padColor : "#2a2c30")
+        border.color: stemPadTap.pressed ? Theme.buttonActiveColor : (stemActive ? padColor : Theme.midGray3)
         border.width: 1
-        color: stemPadTap.pressed ? "#2a2c30" : (stemActive ? Qt.alpha(padColor, 0.22) : "#141518")
+        color: stemPadTap.pressed ? Theme.midGray3 : (stemActive ? Qt.alpha(padColor, 0.22) : Theme.darkGray4)
         radius: 2
 
         Mixxx.ControlProxy {
@@ -383,7 +385,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            color: stemPadItem.stemActive ? "#ffffff" : "#5c6068"
+            color: stemPadItem.stemActive ? "#ffffff" : "Theme.midGray3"
             font.bold: true
             font.pixelSize: Math.round(root.unit * 0.9)
             horizontalAlignment: Text.AlignHCenter
@@ -480,12 +482,12 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.unit * 1.8)
-                border.color: "#2a2c30"
-                color: modeTap.pressed ? "#2a2c30" : "#141518"
+                border.color: Theme.midGray3
+                color: modeTap.pressed ? Theme.midGray3 : Theme.darkGray4
 
                 Text {
                     anchors.centerIn: parent
-                    color: "#d8dadd"
+                    color: Theme.lightGray2
                     font.pixelSize: Math.round(root.unit * 1.0)
                     text: {
                         switch (root.padMode) {
@@ -565,7 +567,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                color: parent.looping ? "#ff6a13" : "#8a8e96"
+                color: parent.looping ? Theme.warningColor : Theme.lightGray3
                 font.bold: true
                 font.letterSpacing: 1
                 font.pixelSize: Math.round(root.unit * 0.95)
@@ -576,9 +578,9 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.round(root.unit * 3.8)
-                border.color: parent.looping ? "#ff6a13" : "#5c6068"
+                border.color: parent.looping ? "#ff6a13" : "Theme.midGray3"
                 border.width: parent.looping ? 2 : 1
-                color: loopTap.pressed ? "#5a2a08" : (parent.looping ? "#ff6a13" : "#141518")
+                color: loopTap.pressed ? "#5a2a08" : (parent.looping ? Theme.warningColor : Theme.darkGray4)
                 radius: 3
 
                 Column {
@@ -587,7 +589,7 @@ Rectangle {
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        color: loopEnabledControl.value > 0 ? "#000000" : "#ff9a52"
+                        color: loopEnabledControl.value > 0 ? Theme.backgroundColor : Theme.libraryDeck2Background
                         font.bold: true
                         font.pixelSize: Math.round(root.unit * 1.8)
                         text: {
@@ -597,7 +599,7 @@ Rectangle {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        color: loopEnabledControl.value > 0 ? "#000000" : "#8a8e96"
+                        color: loopEnabledControl.value > 0 ? Theme.backgroundColor : Theme.lightGray3
                         font.bold: true
                         font.pixelSize: Math.round(root.unit * 0.8)
                         text: loopEnabledControl.value > 0 ? qsTr("EXIT") : qsTr("BEATS")
@@ -694,7 +696,7 @@ Rectangle {
                 Layout.preferredHeight: Math.round(root.unit * 2.2)
                 label: syncLeaderControl.value > 0 ? qsTr("MASTER") : "SYNC"
                 on: syncControl.value > 0 || syncLeaderControl.value > 0
-                onColor: syncLeaderControl.value > 0 ? "#ff6a13" : "#2f9bff"
+                onColor: syncLeaderControl.value > 0 ? Theme.warningColor : Theme.libraryDeck1Background
                 onPressAndHold: syncLeaderControl.value = syncLeaderControl.value > 0 ? 0 : 1
                 onPressed: syncControl.value = syncControl.value > 0 ? 0 : 1
             }
@@ -706,7 +708,7 @@ Rectangle {
                 Layout.preferredWidth: parent.buttonSize
                 border.color: cueIndicatorControl.value > 0 ? "#ff9a1f" : "#8a5a20"
                 border.width: 2
-                color: cueTap.pressed ? "#3a2408" : "#141518"
+                color: cueTap.pressed ? "#3a2408" : Theme.darkGray4
                 radius: width / 2
 
                 Text {
@@ -726,9 +728,9 @@ Rectangle {
             Rectangle {
                 Layout.preferredHeight: parent.buttonSize
                 Layout.preferredWidth: parent.buttonSize
-                border.color: playControl.value > 0 ? "#3ad33a" : "#2a6a2a"
+                border.color: playControl.value > 0 ? Theme.green : "#2a6a2a"
                 border.width: 2
-                color: playTap.pressed ? "#0c2a0c" : "#141518"
+                color: playTap.pressed ? "#0c2a0c" : Theme.darkGray4
                 radius: width / 2
 
                 // Drawn, as the fonts of some phones lack the pause sign and
@@ -744,7 +746,7 @@ Rectangle {
                         model: 2
 
                         Rectangle {
-                            color: "#3ad33a"
+                            color: Theme.green
                             height: parent.barHeight
                             width: Math.round(parent.barHeight * 0.3)
                         }
@@ -753,7 +755,7 @@ Rectangle {
                 Skin.Triangle {
                     anchors.centerIn: parent
                     anchors.horizontalCenterOffset: Math.round(width * 0.1)
-                    color: "#6ab86a"
+                    color: Theme.green
                     height: Math.round(parent.height * 0.36)
                     visible: playControl.value <= 0
                     width: Math.round(height * 0.9)
@@ -785,9 +787,9 @@ Rectangle {
                 id: platter
 
                 anchors.centerIn: parent
-                border.color: "#3a3c40"
+                border.color: Theme.midGray2
                 border.width: Math.max(2, Math.round(jogArea.size * 0.04))
-                color: "#000000"
+                color: Theme.backgroundColor
                 height: jogArea.size
                 radius: width / 2
                 width: jogArea.size
@@ -795,7 +797,7 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: Math.round(jogArea.size * 0.1)
-                    border.color: "#1c1e22"
+                    border.color: Theme.darkGray3
                     border.width: 1
                     color: "transparent"
                     radius: width / 2
@@ -831,7 +833,7 @@ Rectangle {
                         Text {
                             id: bpmWhole
 
-                            color: syncLeaderControl.value > 0 ? "#ff6a13" : "#ffffff"
+                            color: syncLeaderControl.value > 0 ? Theme.warningColor : Theme.buttonActiveColor
                             font.pixelSize: Math.round(jogArea.size * 0.17)
                             text: root.loaded ? Math.floor(bpmControl.value) : "--"
                         }
@@ -844,7 +846,7 @@ Rectangle {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#9a9ea6"
+                        color: Theme.lightGray3
                         font.pixelSize: Math.round(jogArea.size * 0.075)
                         text: {
                             const percent = (rateRatioControl.value - 1) * 100;

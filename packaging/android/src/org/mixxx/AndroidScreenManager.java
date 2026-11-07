@@ -9,6 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
+import android.graphics.Rect;
+import android.view.DisplayCutout;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
@@ -66,6 +68,37 @@ public class AndroidScreenManager {
                 clearInsetsAndPaddingRecursive(group.getChildAt(i));
             }
         }
+    }
+
+    /**
+     * The camera cutouts (notch / punch hole) of the display in the pixel
+     * coordinates of the window in its current rotation, flattened as
+     * left, top, right, bottom for each cutout. Empty without a cutout.
+     * Read from the root window insets, which no view of the hierarchy can
+     * consume, so the UI can draw edge to edge and keep its controls clear of
+     * the camera.
+     */
+    public static int[] getCutoutRects(final Activity activity) {
+        if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return new int[0];
+        }
+        final Window window = activity.getWindow();
+        final View decorView = window != null ? window.getDecorView() : null;
+        final WindowInsets insets = decorView != null ? decorView.getRootWindowInsets() : null;
+        final DisplayCutout cutout = insets != null ? insets.getDisplayCutout() : null;
+        if (cutout == null) {
+            return new int[0];
+        }
+        final java.util.List<Rect> rects = cutout.getBoundingRects();
+        final int[] out = new int[rects.size() * 4];
+        for (int i = 0; i < rects.size(); i++) {
+            final Rect r = rects.get(i);
+            out[i * 4] = r.left;
+            out[i * 4 + 1] = r.top;
+            out[i * 4 + 2] = r.right;
+            out[i * 4 + 3] = r.bottom;
+        }
+        return out;
     }
 
     public static void applyFullScreen(final Activity activity) {
