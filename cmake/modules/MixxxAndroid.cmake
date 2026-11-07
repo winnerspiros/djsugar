@@ -225,10 +225,19 @@ if(STEM)
     src/stems/spleeterseparator.cpp
     PROPERTIES COMPILE_OPTIONS "-fcx-limited-range"
   )
-  # The STFT of Spleeter
+  # The STFT of Spleeter. Look FFTW up explicitly: KeyFinder is off on
+  # Android, so nothing else calls find_package(FFTW3) and the old
+  # ${FFTW3_INCLUDE_DIR} variable was empty (broken include and link path).
+  find_path(MIXXX_FFTW3_INCLUDE_DIR NAMES fftw3.h REQUIRED)
+  find_library(MIXXX_FFTW3F_LIBRARY NAMES fftw3f REQUIRED)
+  target_include_directories(
+    mixxx-lib
+    SYSTEM
+    PRIVATE "${MIXXX_FFTW3_INCLUDE_DIR}"
+  )
   target_link_libraries(
     mixxx-lib
-    PRIVATE "${FFTW3_INCLUDE_DIR}/../lib/libfftw3f.a"
+    PRIVATE "${MIXXX_FFTW3F_LIBRARY}"
   )
   set_property(
     TARGET mixxx

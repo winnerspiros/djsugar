@@ -272,7 +272,7 @@ jobs:
               -DMAD=OFF
               -DMODPLUG=OFF
               -DWAVPACK=OFF
-              -DSTEM=OFF
+              -DSTEM=ON
               -DENGINEPRIME=OFF
               -DKEYFINDER=OFF
               -DRUBBERBAND=OFF
