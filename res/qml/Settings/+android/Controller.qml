@@ -16,6 +16,7 @@ Category {
     property var manager: Mixxx.ControllerManager
     property bool processing: false
     property var selectedController: null
+    property bool showBlePanel: true
     property bool isRescanning: false
     property bool showGuide: true
     // MIDI controllers carry no product information, so they are never
@@ -217,9 +218,9 @@ Category {
                             Layout.preferredHeight: 38
                             radius: 8
                             color: Mixxx.MobileControllers.bleScanning
-                                ? "#ad1457"
-                                : (bleScanMouse.containsMouse ? "#d81b60" : "#e63380")
-                            border.color: "#ff99ca"
+                                ? "#CC5500"
+                                : (bleScanMouse.containsMouse ? "#FF6600" : "#FF6600")
+                            border.color: "#FFB340"
                             border.width: 1
 
                             RowLayout {
@@ -231,7 +232,7 @@ Category {
                                     text: "BT"
                                     font.pixelSize: 11
                                     font.bold: true
-                                    color: "#ff99ca"
+                                    color: "#FFB340"
                                 }
 
                                 Text {
@@ -266,11 +267,11 @@ Category {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: blePanelCol.implicitHeight + 24
-                color: "#1a1423"
+                color: "#1A1A1A"
                 radius: 12
-                border.color: Mixxx.MobileControllers.bleScanning ? "#e63380" : "#3a284e"
+                border.color: Mixxx.MobileControllers.bleScanning ? "#FF6600" : "#3D2A0A"
                 border.width: Mixxx.MobileControllers.bleScanning ? 2 : 1
-                visible: root.selectedController == null
+                visible: root.selectedController == null && root.showBlePanel
 
                 ColumnLayout {
                     id: blePanelCol
@@ -286,8 +287,8 @@ Category {
                             width: 38
                             height: 38
                             radius: 19
-                            color: "#311b47"
-                            border.color: "#e63380"
+                            color: "#3D2A0A"
+                            border.color: "#FF6600"
                             border.width: 1
 
                             Text {
@@ -296,7 +297,7 @@ Category {
                                 font.bold: true
                                 font.pixelSize: 11
                                 font.letterSpacing: 1
-                                color: "#ff99ca"
+                                color: "#FFB340"
                             }
                         }
 
@@ -316,9 +317,38 @@ Category {
                             Text {
                                 text: Mixxx.MobileControllers.bleStatus
                                 font.pixelSize: 12
-                                color: "#d1b3ff"
+                                color: "#FFDDAA"
                                 Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
+                            }
+                        }
+
+                        // Close button to hide BLE panel
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            width: 32
+                            height: 32
+                            radius: 16
+                            color: "transparent"
+                            border.color: "#FF6600"
+                            border.width: 1
+                            visible: true
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "×"
+                                font.bold: true
+                                font.pixelSize: 20
+                                color: "#FFB340"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.showBlePanel = false
+                                }
                             }
                         }
                     }
@@ -331,10 +361,10 @@ Category {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 48
                             radius: 8
-                            color: modelData.connected ? "#162d24" : "#231c30"
+                            color: modelData.connected ? "#1A2A16" : "#2A1E16"
                             border.color: modelData.connected
-                                ? "#00e676"
-                                : (modelData.isMidi ? "#e63380" : "#3a304d")
+                                ? "#00E676"
+                                : (modelData.isMidi ? "#FF6600" : "#3D2A0A")
                             border.width: 1
 
                             RowLayout {
@@ -348,8 +378,8 @@ Category {
                                     height: 8
                                     radius: 4
                                     color: modelData.connected
-                                        ? "#00e676"
-                                        : (modelData.isMidi ? "#ff99ca" : "#888888")
+                                        ? "#00E676"
+                                        : (modelData.isMidi ? "#FFB340" : "#888888")
                                 }
 
                                 ColumnLayout {
@@ -369,7 +399,7 @@ Category {
                                             visible: !!modelData.isMidi
                                             radius: 4
                                             color: "#4a1535"
-                                            border.color: "#e63380"
+                                            border.color: "#FF6600"
                                             border.width: 1
                                             implicitWidth: midiBadgeText.implicitWidth + 10
                                             implicitHeight: 18
@@ -379,7 +409,7 @@ Category {
                                                 text: "MIDI"
                                                 font.pixelSize: 9
                                                 font.bold: true
-                                                color: "#ff99ca"
+                                                color: "#FFB340"
                                             }
                                         }
                                     }
@@ -395,8 +425,8 @@ Category {
                                     Layout.preferredWidth: 100
                                     Layout.preferredHeight: 32
                                     radius: 6
-                                    color: modelData.connected ? "#b71c1c" : "#e63380"
-                                    border.color: modelData.connected ? "#ef5350" : "#ff99ca"
+                                    color: modelData.connected ? "#b71c1c" : "#FF6600"
+                                    border.color: modelData.connected ? "#ef5350" : "#FFB340"
                                     border.width: 1
 
                                     Text {
@@ -1093,7 +1123,7 @@ Category {
                         text: root.dirty ? "●" : (root.activeDevices.length > 0 ? "✓" : "🎛️")
                         font.bold: true
                         font.pixelSize: 13
-                        color: root.dirty ? "#ffb300" : (root.activeDevices.length > 0 ? "#00e676" : "#64b5f6")
+                        color: root.dirty ? "#ffb300" : (root.activeDevices.length > 0 ? "#00E676" : "#64b5f6")
                     }
                     Text {
                         text: root.dirty
@@ -1191,7 +1221,7 @@ Category {
                 Layout.preferredWidth: 220
                 radius: 6
                 color: root.dirty
-                       ? (saveMouse.pressed ? "#009624" : (saveMouse.containsMouse ? "#00e676" : "#00c853"))
+                       ? (saveMouse.pressed ? "#009624" : (saveMouse.containsMouse ? "#00E676" : "#00c853"))
                        : (saveMouse.pressed ? "#0d47a1" : (saveMouse.containsMouse ? "#1e88e5" : "#1976d2"))
                 border.color: root.dirty ? "#69f0ae" : "#64b5f6"
                 border.width: 1.5
