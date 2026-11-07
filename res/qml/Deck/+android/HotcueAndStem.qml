@@ -1,6 +1,5 @@
 import ".." as Skin
 import Mixxx 1.0 as Mixxx
-import Qt5Compat.GraphicalEffects
 import QtQuick 2.12
 import QtQuick.Layouts
 import QtQuick.Shapes
@@ -112,9 +111,9 @@ Item {
                             id: backgroundImage
 
                             anchors.fill: parent
-                            color: hotcue.isSet ? hotcue.color : (activator.pressed ? "#3b4252" : "#20242b")
-                            radius: 3
-                            border.color: hotcue.isSet ? "#ffffff" : "#323946"
+                            color: hotcue.isSet ? hotcue.color : (activator.pressed ? Theme.darkGray3 : Theme.darkGray4)
+                            radius: 10
+                            border.color: hotcue.isSet ? Theme.white : Theme.darkGray3
                             border.width: 1
 
                             MouseArea {
@@ -123,38 +122,6 @@ Item {
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 anchors.fill: parent
                             }
-                        }
-                        DropShadow {
-                            id: effect1
-
-                            anchors.fill: backgroundImage
-                            color: "#80000000"
-                            horizontalOffset: 0
-                            radius: 1.0
-                            source: backgroundImage
-                            verticalOffset: 0
-                        }
-                        InnerShadow {
-                            id: effect2
-
-                            anchors.fill: parent
-                            color: "#353535"
-                            horizontalOffset: 1
-                            radius: 12
-                            samples: 24
-                            source: effect1
-                            spread: 0.2
-                            verticalOffset: 1
-                        }
-                        InnerShadow {
-                            anchors.fill: parent
-                            color: "#353535"
-                            horizontalOffset: -1
-                            radius: 12
-                            samples: 24
-                            source: effect2
-                            spread: 0.2
-                            verticalOffset: -1
                         }
                         ColumnLayout {
                             anchors.centerIn: backgroundImage

@@ -2,7 +2,6 @@ import "." as Skin
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Shapes
-import Qt5Compat.GraphicalEffects
 import Mixxx 1.0 as Mixxx
 import "Theme"
 
@@ -36,49 +35,13 @@ ComboBox {
 
     indicator.width: 20
 
-    background: Item {
-        Rectangle {
-            id: background
+    background: Rectangle {
+        id: background
 
-            anchors.fill: parent
-            anchors.margins: 4
-            border.color: '#000000'
-            border.width: 1
-            color: '#232323'
-            radius: 4
-        }
-        InnerShadow {
-            id: bottomInnerEffect
-
-            anchors.fill: parent
-            color: "#40000000"
-            horizontalOffset: -2
-            radius: 4
-            samples: 16
-            source: background
-            spread: 0.3
-            verticalOffset: -2
-        }
-        InnerShadow {
-            id: topInnerEffect
-
-            anchors.fill: parent
-            color: "#40000000"
-            horizontalOffset: 2
-            radius: 4
-            samples: 16
-            source: bottomInnerEffect
-            spread: 0.3
-            verticalOffset: 2
-        }
-        DropShadow {
-            anchors.fill: parent
-            color: "#40000000"
-            horizontalOffset: 0
-            radius: 4.0
-            source: topInnerEffect
-            verticalOffset: 0
-        }
+        anchors.fill: parent
+        anchors.margins: 4
+        color: Theme.darkGray4
+        radius: 10
     }
     contentItem: Text {
         clip: root.clip
