@@ -70,14 +70,11 @@ public class MidiHelper {
         return true;
     }
 
-    // API 34+ takes an Executor; older releases need the Handler overload.
+    // The Handler overload is deprecated since API 33, but the Executor overload
+    // did not compile in the Android 15 CI build, so it stays for now.
     @SuppressWarnings("deprecation")
     private static void registerCallback(MidiManager.DeviceCallback callback) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            sManager.registerDeviceCallback(sHandler::post, callback);
-        } else {
-            sManager.registerDeviceCallback(callback, sHandler);
-        }
+        sManager.registerDeviceCallback(callback, sHandler);
     }
 
     @SuppressWarnings("deprecation")
