@@ -185,11 +185,11 @@ Library::Library(
     // The SponsorBlock controller observes deck loads globally and skips
     // segments inside YouTube-cached tracks. It is owned by Library so it
     // lives as long as the player decks do.
-    // Read SponsorBlock auto-skip preference (default: true)
-    const bool sponsorBlockAutoSkip = m_pConfig->getValue(
-            mixxx::preferences::kCfgSponsorBlockAutoSkip, true);
+    // YouTubeFeature reads its own config and passes it to the controller.
     m_pSponsorBlockController = make_parented<mixxx::SponsorBlockController>(
-            m_pYouTubeFeature->cacheDir(), sponsorBlockAutoSkip, this);
+            m_pYouTubeFeature->cacheDir(),
+            m_pYouTubeFeature->sponsorBlockAutoSkip(),
+            this);
 
     // Keep SponsorBlockController in sync with preference changes
     connect(m_pYouTubeFeature,
