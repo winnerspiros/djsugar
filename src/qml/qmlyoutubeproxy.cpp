@@ -22,7 +22,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
         return;
     }
     connect(pFeature,
-            &YouTubeFeature::downloadToPlayerRequested,
+            &YouTubeFeature::mixxx::YouTubeFeature::downloadToPlayerRequested,
             this,
             [this](const QString& videoId, const QString& group, const QString& title) {
                 if (!group.isEmpty()) {
