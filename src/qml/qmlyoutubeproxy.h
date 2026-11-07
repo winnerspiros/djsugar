@@ -52,6 +52,7 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE bool hasMore() const;
     Q_INVOKABLE void downloadToDeck(const QString& videoId, const QString& deckGroup);
+    void prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results);
 
   signals:
     void searchFinished(const QVariantList& results);

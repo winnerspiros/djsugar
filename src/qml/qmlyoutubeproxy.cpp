@@ -48,6 +48,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                         m_videoTitles.insert(v.id, v.title);
                     }
                 }
+                prefetchCovers(results);
                 emit searchFinished(toVariantList(results));
             });
     connect(pService,
@@ -59,6 +60,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                         m_videoTitles.insert(v.id, v.title);
                     }
                 }
+                prefetchCovers(results);
                 emit searchFinished(toVariantList(results));
             });
     connect(pService,
@@ -232,6 +234,16 @@ void QmlYouTubeProxy::downloadToDeck(const QString& videoId, const QString& deck
     m_videoToDeck.insert(videoId, deckGroup);
     updateVideoProgress(videoId, 0.04);
     pFeature->requestDownloadToPlayer(videoId, deckGroup, false);
+}
+
+void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results) {
+    // Cover art for the deck: a track played straight from the search list
+    // needs its thumbnail on disk (the backfill then sets it on the deck).
+    if (s_pLibrary) {
+        if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
+            pFeature->prefetchThumbnails(results);
+        }
+    }
 }
 
 // static

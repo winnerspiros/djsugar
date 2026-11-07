@@ -235,10 +235,7 @@ if(STEM)
     SYSTEM
     PRIVATE "${MIXXX_FFTW3_INCLUDE_DIR}"
   )
-  target_link_libraries(
-    mixxx-lib
-    PRIVATE "${MIXXX_FFTW3F_LIBRARY}"
-  )
+  target_link_libraries(mixxx-lib PRIVATE "${MIXXX_FFTW3F_LIBRARY}")
   set_property(
     TARGET mixxx
     APPEND

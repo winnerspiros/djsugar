@@ -872,11 +872,10 @@ void YouTubeFeature::pumpThumbnailQueue() {
             continue; // landed while queued
         }
         m_thumbnailsDownloading.insert(videoId);
-        // default.jpg (120x90) keeps search fast on mobile data (~3KB vs
-        // ~15KB for mqdefault); list cells are small so the difference
-        // is barely visible.
+        // mqdefault.jpg (320x180, ~15 KB): sharp enough for the deck vinyl
+        // and the browse cards, while default.jpg (120x90) looked blurry.
         const QUrl url(QStringLiteral("https://i.ytimg.com/vi/") + videoId +
-                QStringLiteral("/default.jpg"));
+                QStringLiteral("/mqdefault.jpg"));
         QNetworkRequest req(url);
         req.setTransferTimeout(10 * 1000); // 10 s
         QNetworkReply* reply = m_pSamplesNam->get(req);

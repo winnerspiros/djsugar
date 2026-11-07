@@ -28,6 +28,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     Q_OBJECT
   public:
     YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig);
+    // Caches thumbnails of search results on disk, so decks can show cover art.
+    void prefetchThumbnails(const QList<mixxx::YouTubeVideoInfo>& videos) {
+        fetchThumbnails(videos);
+    }
     ~YouTubeFeature() override = default;
 
     QVariant title() override {

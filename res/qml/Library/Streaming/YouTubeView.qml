@@ -148,9 +148,39 @@ Item {
                     }
                 }
 
+                // Thumbnail straight from YouTube: Qt caches it, so scrolling
+                // back is instant and no download is needed for browsing.
+                Rectangle {
+                    id: thumbFrame
+
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 88
+                    height: 50
+                    radius: 4
+                    color: "#1e222a"
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        source: video.id ? "https://i.ytimg.com/vi/" + video.id + "/mqdefault.jpg" : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        cache: true
+                        sourceSize.width: 176
+                        sourceSize.height: 100
+                    }
+                }
+
                 ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 8
+                    anchors.left: thumbFrame.right
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 8
+                    anchors.topMargin: 8
                     anchors.bottomMargin: 11
                     spacing: 2
 

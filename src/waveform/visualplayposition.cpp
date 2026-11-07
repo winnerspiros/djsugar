@@ -77,8 +77,8 @@ double VisualPlayPosition::calcOffsetAtNextVSync(
         if (offsetMicros < minOffsetMicros) {
             offsetMicros = minOffsetMicros;
             if (!m_noTransport) {
-                qWarning() << "VisualPlayPosition::calcOffsetAtNextVSync"
-                           << m_key << "outdated position request (offset < minOffset)";
+                qDebug() << "VisualPlayPosition::calcOffsetAtNextVSync"
+                         << m_key << "outdated position request (offset < minOffset)";
                 qDebug() << m_key << "refToVSync:" << refToVSync
                          << "data.m_callbackEntrytoDac:"
                          << data.m_callbackEntrytoDac;
@@ -87,8 +87,8 @@ double VisualPlayPosition::calcOffsetAtNextVSync(
         } else if (offsetMicros > maxOffsetMicros) {
             offsetMicros = maxOffsetMicros;
             if (!m_noTransport) {
-                qWarning() << "VisualPlayPosition::calcOffsetAtNextVSync"
-                           << m_key << "no transport (offsetMicros > maxOffsetMicros)";
+                qDebug() << "VisualPlayPosition::calcOffsetAtNextVSync"
+                         << m_key << "no transport (offsetMicros > maxOffsetMicros)";
                 qDebug() << m_key << "refToVSync:" << refToVSync
                          << "data.m_callbackEntrytoDac:"
                          << data.m_callbackEntrytoDac;
