@@ -193,7 +193,7 @@ Library::Library(
 
     // Keep SponsorBlockController in sync with preference changes
     connect(m_pYouTubeFeature,
-            &YouTubeFeature::sponsorBlockAutoSkipChanged,
+            &mixxx::YouTubeFeature::sponsorBlockAutoSkipChanged,
             this,
             [this](bool enabled) {
                 if (m_pSponsorBlockController) {
