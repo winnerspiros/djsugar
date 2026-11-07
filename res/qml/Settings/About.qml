@@ -195,7 +195,7 @@ Category {
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: qsTr("Look for updates when Mixxx starts (once a day at most). The versions are read from the GitHub releases of DJ Sugar, and nothing is downloaded without asking.")
+                            text: qsTr("Look for updates when Mixxx starts (once a day at most). The versions are read from the GitHub releases of Mixxx, and nothing is downloaded without asking.")
                             font.pixelSize: 10
                             color: "#90a4ae"
                             wrapMode: Text.WordWrap

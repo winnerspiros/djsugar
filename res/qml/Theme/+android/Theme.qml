@@ -2,40 +2,42 @@ pragma Singleton
 import QtQuick 2.12
 
 QtObject {
-    property color accentColor: "#623857"
-    property color backgroundColor: "#1f1d1f"
-    property color blue: "#D85486"
-    property color bpmSliderBarColor: blue
-    property color buttonActiveColor: white
-    property color buttonDisableColor: lightGray
+    // ---- Rekordbox-inspired color scheme ----
+    // Dark professional grays with orange accent
+    property color accentColor: "#FF6600"          // Rekordbox orange
+    property color backgroundColor: "#1A1A1A"      // Near black
+    property color blue: "#FF6600"                 // Use accent for blue roles
+    property color bpmSliderBarColor: accentColor
+    property color buttonActiveColor: "#FFFFFF"
+    property color buttonDisableColor: "#555555"
     property int buttonFontPixelSize: 10
-    property color buttonNormalColor: midGray
-    property color crossfaderBarColor: blue
-    property color crossfaderOrientationColor: lightGray
-    property color darkGray: "#151416"
-    property color darkGray2: "#3C3A3C"
-    property color darkGray3: "#424143"
-    property color darkGray4: "#282628"
-    property color deckActiveColor: white
-    property color deckBackgroundColor: darkGray
-    property color deckBeatjumpBackgroundColor: midGray3
-    property color deckBeatjumpLabelColor: darkGray3
-    property color deckEmptyCoverArt: darkGray3
-    property color deckInfoBarBackgroundColor: '#0e0e0e'
-    property color deckLineColor: darkGray2
-    property color deckLoopBackgroundColor: midGray3
-    property color deckLoopLabelColor: darkGray3
-    property color deckTextColor: lightGray2
-    property color effectColor: yellow
-    property color effectUnitColor: red
-    property color embeddedBackgroundColor: "#a0000000"
-    property color eqFxColor: red
-    property color eqHighColor: white
-    property color eqLowColor: white
-    property color eqMidColor: white
+    property color buttonNormalColor: "#888888"
+    property color crossfaderBarColor: accentColor
+    property color crossfaderOrientationColor: "#666666"
+    property color darkGray: "#121212"
+    property color darkGray2: "#2A2A2A"
+    property color darkGray3: "#333333"
+    property color darkGray4: "#1E1E1E"
+    property color deckActiveColor: "#FFFFFF"
+    property color deckBackgroundColor: "#1A1A1A"
+    property color deckBeatjumpBackgroundColor: "#333333"
+    property color deckBeatjumpLabelColor: "#555555"
+    property color deckEmptyCoverArt: "#333333"
+    property color deckInfoBarBackgroundColor: '#0D0D0D'
+    property color deckLineColor: "#2A2A2A"
+    property color deckLoopBackgroundColor: "#333333"
+    property color deckLoopLabelColor: "#555555"
+    property color deckTextColor: "#CCCCCC"
+    property color effectColor: "#FF6600"
+    property color effectUnitColor: "#FF6600"
+    property color embeddedBackgroundColor: "#E0000000"
+    property color eqFxColor: "#FF6600"
+    property color eqHighColor: "#FFFFFF"
+    property color eqLowColor: "#FFFFFF"
+    property color eqMidColor: "#FFFFFF"
     property string fontFamily: "Open Sans"
-    property color gainKnobColor: blue
-    property color green: "#85c85b"
+    property color gainKnobColor: accentColor
+    property color green: "#00E676"
     property string imgBpmSliderBackground: "images/slider_bpm.svg"
     property string imgButton: "images/button.svg"
     property string imgButtonPressed: "images/button_pressed.svg"
@@ -51,70 +53,68 @@ QtObject {
     property string imgSectionBackground: "images/section.svg"
     property string imgSliderHandle: "images/slider_handle.svg"
     property string imgVolumeSliderBackground: "images/slider_volume.svg"
-    property color knobBackgroundColor: "#2b292b"
-    property color libraryPanelSplitterBackground: "#1e1e1e"
-    property color libraryPanelSplitterHandle: "#5f5f5f"
-    property color libraryPanelSplitterHandleActive: "#7a7a7a"
-    property color lightGray: "#747474"
-    property color lightGray2: "#B0B0B2"
-    property color lightGray3: "#939393"
-    property color midGray: "#696969"
-    property color midGray2: "#676767"
-    property color midGray3: "#626262"
+    property color knobBackgroundColor: "#1E1E1E"
+    property color libraryPanelSplitterBackground: "#1A1A1A"
+    property color libraryPanelSplitterHandle: "#444444"
+    property color libraryPanelSplitterHandleActive: "#666666"
+    property color lightGray: "#777777"
+    property color lightGray2: "#AAAAAA"
+    property color lightGray3: "#888888"
+    property color midGray: "#666666"
+    property color midGray2: "#555555"
+    property color midGray3: "#444444"
     property color panelSplitterBackground: backgroundColor
     property color panelSplitterHandle: midGray
     property color panelSplitterHandleActive: lightGray2
-    property color pflActiveButtonColor: blue
-    property color red: "#D85486"
-    property color samplerColor: blue
-    property color sunkenBackgroundColor: "#121112"
-    property color textColor: lightGray2
+    property color pflActiveButtonColor: accentColor
+    property color red: "#FF3300"
+    property color samplerColor: "#FF9500"
+    property color sunkenBackgroundColor: "#0F0F0F"
+    property color textColor: "#CCCCCC"
     property int textFontPixelSize: 14
-    property color toolbarActiveColor: white
-    property color toolbarBackgroundColor: darkGray2
-    property color volumeSliderBarColor: blue
-    property color warningColor: "#7D3B3B"
-    property color waveformBeatColor: lightGray
-    property color waveformCursorColor: white
-    property color waveformMarkerDefault: '#ff7a01'
-    property color waveformMarkerIntroOutroColor: '#2c5c9a'
-    property color waveformMarkerLabel: Qt.rgba(255, 255, 255, 0.8)
-    property color waveformMarkerLoopColor: '#00b400'
+    property color toolbarActiveColor: "#FFFFFF"
+    property color toolbarBackgroundColor: "#2A2A2A"
+    property color volumeSliderBarColor: accentColor
+    property color warningColor: "#CC3300"
+    property color waveformBeatColor: "#555555"
+    property color waveformCursorColor: "#FFFFFF"
+    property color waveformMarkerDefault: '#FF6600'
+    property color waveformMarkerIntroOutroColor: '#FF9500'
+    property color waveformMarkerLabel: Qt.rgba(255, 255, 255, 0.9)
+    property color waveformMarkerLoopColor: '#00E676'
     property color waveformMarkerLoopColorDisabled: '#FFFFFF'
-    property color waveformPostrollColor: midGray
-    property color waveformPrerollColor: midGray
-    property color white: "#EDEDEE"
-    property color yellow: "#E9A4C0"
+    property color waveformPostrollColor: "#444444"
+    property color waveformPrerollColor: "#444444"
+    property color white: "#EDEDED"
+    property color yellow: "#FFB340"
 
-    // ---- Android port: colors of the library that were written into the
-    // components. Skins can change them, see "Skins" in
-    // packaging/android/README.md ----
-    property color libraryScrollHandle: "#546e7a"
-    property color libraryScrollHandleHovered: "#78909c"
-    property color libraryScrollHandlePressed: "#D85486"
-    property color libraryScrollTrack: "#151416"
-    property color libraryActionBackground: "#3C3A3C"
-    property color libraryActionDisabledBackground: "#2b292b"
-    property color libraryActionText: "#ffffff"
-    property color libraryActionDisabledText: "#78909c"
-    property color libraryDeck1Background: "#623857"
-    property color libraryDeck1Pressed: "#D85486"
-    property color libraryDeck2Background: "#8a4a6e"
-    property color libraryDeck2Pressed: "#E9A4C0"
-    property color libraryConfirmBackground: "#623857"
-    property color librarySuccessColor: "#69f0ae"
-    property color librarySourceBarBackground: "#151416"
-    property color librarySourceBarBorder: "#3C3A3C"
-    property color librarySourceTabBackground: "#2b292b"
-    property color librarySourceTabText: "#B0B0B2"
-    property color libraryLocalTabColor: "#D85486"
-    property color libraryLocalTabBackground: "#4a2c40"
-    property color libraryStreamingTabColor: "#E9A4C0"
-    property color libraryStreamingTabText: "#E9A4C0"
-    property color libraryStreamingTabBackground: "#3a2a35"
-    property color libraryKeyMatchColor: "#00e676"
-    property color libraryKeyMatchBackground: "#00c85333"
-    property color libraryKeyHarmonicColor: "#D85486"
-    property color libraryKeyHarmonicText: "#E9A4C0"
-    property color libraryKeyHarmonicBackground: "#D8548622"
+    // ---- Android port: library colors ----
+    property color libraryScrollHandle: "#444444"
+    property color libraryScrollHandleHovered: "#666666"
+    property color libraryScrollHandlePressed: accentColor
+    property color libraryScrollTrack: "#121212"
+    property color libraryActionBackground: "#2A2A2A"
+    property color libraryActionDisabledBackground: "#1E1E1E"
+    property color libraryActionText: "#FFFFFF"
+    property color libraryActionDisabledText: "#666666"
+    property color libraryDeck1Background: accentColor
+    property color libraryDeck1Pressed: "#CC5500"
+    property color libraryDeck2Background: "#CC5500"
+    property color libraryDeck2Pressed: "#FF9500"
+    property color libraryConfirmBackground: accentColor
+    property color librarySuccessColor: "#00E676"
+    property color librarySourceBarBackground: "#121212"
+    property color librarySourceBarBorder: "#2A2A2A"
+    property color librarySourceTabBackground: "#1E1E1E"
+    property color librarySourceTabText: "#AAAAAA"
+    property color libraryLocalTabColor: accentColor
+    property color libraryLocalTabBackground: "#2A1A0A"
+    property color libraryStreamingTabColor: "#FF9500"
+    property color libraryStreamingTabText: "#FF9500"
+    property color libraryStreamingTabBackground: "#2A1A0A"
+    property color libraryKeyMatchColor: "#00E676"
+    property color libraryKeyMatchBackground: "#00E67633"
+    property color libraryKeyHarmonicColor: "#FF9500"
+    property color libraryKeyHarmonicText: "#FFB340"
+    property color libraryKeyHarmonicBackground: "#FF950022"
 }
