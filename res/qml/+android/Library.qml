@@ -10,7 +10,6 @@ import QtQuick.Shapes 1.6
 import "Theme"
 import "Library" as LibraryComponent
 import "Library/Streaming" as StreamingComponent
-import "Library/Streaming/YouTubeView.qml"
 
 Item {
     id: root
@@ -302,7 +301,7 @@ Item {
         }
 
         // 3. YOUTUBE SEARCH & LOAD
-        YouTubeView {
+        StreamingComponent.YouTubeView {
             id: youtubeArea
             anchors.fill: parent
             visible: root.librarySourceMode === 2
