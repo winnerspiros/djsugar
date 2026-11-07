@@ -1434,6 +1434,12 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
     const deck = deckIdx + 1;
 
+    // A scratch left over from a jog touch would hold the audio back. Drop it
+    // immediately so Play starts at once.
+    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+        PioneerDDJFLX4._scratchDisable(deck, false);
+    }
+
     const vinylOn = !!PioneerDDJFLX4._vinylWanted[deckIdx];
     const brakeMode = !!PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL;
 
@@ -3181,9 +3187,10 @@ PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
         return;
     }
 
-    // Touch released
+    // Touch released. Only ramp the scratch out while the deck is still playing;
+    // a ramp on a paused deck keeps the scratch engaged and delays the next Play.
     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-        PioneerDDJFLX4._scratchDisable(deckNum, true);
+        PioneerDDJFLX4._scratchDisable(deckNum, engine.getValue(group, "play") === 1);
     } else {
         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
@@ -3851,6 +3858,18 @@ PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _statu
 // ------------------- ENGINE CALLBACKS (LED sync) -------------------
 // Diese beiden müssen FUNKTIONEN sein, weil init() sie an makeConnection übergibt.
 
+// Writes one stem pad LED. Stems live on SHIFT+SAMPLER only (no keyboard mode),
+// so the LED goes to the sampler note (0x30+) and the key-shift note (0x70+) of
+// that pad, and only while the deck is in STEMS mode. padIndex 0..7 = pads 1..8.
+PioneerDDJFLX4._stemPadLed = function(ch, padIndex, code) {
+    if (PioneerDDJFLX4.padMode[ch] !== PioneerDDJFLX4.PADMODE.STEMS) { return; }
+    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
+    for (const st of statuses) {
+        midi.sendShortMsg(st, 0x30 + padIndex, code);
+        midi.sendShortMsg(st, 0x70 + padIndex, code);
+    }
+};
+
 PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _control) {
     const m = /\[Channel(\d+)_Stem(\d+)\]/.exec(group);
     if (!m) { return; }
@@ -3865,10 +3884,7 @@ PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _
     const on = (stem <= stemCount) && (value <= 0.5);
     const code = on ? 0x7F : 0x00;
 
-    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
-    for (const st of statuses) {
-        midi.sendShortMsg(st, PioneerDDJFLX4.stemMutePadsFirstControl + stem - 1, code);
-    }
+    PioneerDDJFLX4._stemPadLed(ch, stem - 1, code);
 };
 
 PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[ChannelX_StemY]] */, _control) {
@@ -3881,10 +3897,7 @@ PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[Chann
     const ch = `[Channel${deck}]`;
     const code = (value <= 0.5) ? 0x00 : 0x7F;
 
-    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
-    for (const st of statuses) {
-        midi.sendShortMsg(st, PioneerDDJFLX4.stemFxPadsFirstControl + stem - 1, code);
-    }
+    PioneerDDJFLX4._stemPadLed(ch, 4 + stem - 1, code);
 };
 
 // stem_count changed -> refresh LEDs (this is what fixes “only updates after pressing pads”)
