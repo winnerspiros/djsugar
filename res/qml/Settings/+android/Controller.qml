@@ -58,6 +58,10 @@ Category {
 
     Component.onCompleted: {
         load();
+        // Start scanning right away so Bluetooth MIDI controllers show up
+        // without an extra tap. Falls back to a status message when the
+        // permission or the Bluetooth adapter is not available.
+        Mixxx.MobileControllers.startBleScan();
         Mixxx.MobileControllers.refreshBleDevices();
     }
 

@@ -128,7 +128,7 @@ MappingInfo::MappingInfo(const QFileInfo& fileInfo) {
                     } else if (protocol == QStringLiteral("bulk")) {
                         product = parseBulkProduct(xml.attributes());
                     } else if (protocol == QStringLiteral("midi")) {
-                        qCInfo(kLogger) << "MIDI product info parsing not yet implemented";
+                        qCDebug(kLogger) << "MIDI product info parsing not yet implemented";
                     } else {
                         qCCritical(kLogger)
                                 << "Product info element contains missing or "
