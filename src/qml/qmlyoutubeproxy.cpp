@@ -15,7 +15,7 @@ namespace qml {
 
 QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
         : QObject(pParent) {
-    YouTubeFeature* pFeature = s_pLibrary
+    mixxx::YouTubeFeature* pFeature = s_pLibrary
             ? s_pLibrary->youtubeFeature()
             : nullptr;
     if (!pFeature) {
@@ -205,7 +205,7 @@ QString QmlYouTubeProxy::deckDownloadingTitle(const QString& deckGroup) const {
 }
 
 void QmlYouTubeProxy::search(const QString& query) {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         pFeature->searchAndActivate(query);
     } else {
@@ -214,19 +214,19 @@ void QmlYouTubeProxy::search(const QString& query) {
 }
 
 void QmlYouTubeProxy::loadMore() {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         pFeature->service()->fetchMoreSearchResults(QString());
     }
 }
 
 bool QmlYouTubeProxy::hasMore() const {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     return pFeature && pFeature->service()->hasMoreSearchResults();
 }
 
 void QmlYouTubeProxy::downloadToDeck(const QString& videoId, const QString& deckGroup) {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (!pFeature) {
         emit downloadFailed(videoId, tr("YouTube is not available"));
         return;
@@ -240,7 +240,7 @@ void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& resul
     // Cover art for the deck: a track played straight from the search list
     // needs its thumbnail on disk (the backfill then sets it on the deck).
     if (s_pLibrary) {
-        if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
+        if (mixxx::YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
             pFeature->prefetchThumbnails(results);
         }
     }
@@ -264,7 +264,7 @@ QVariantList QmlYouTubeProxy::toVariantList(const QList<mixxx::YouTubeVideoInfo>
 }
 
 bool QmlYouTubeProxy::sponsorBlockAutoSkip() const {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         return pFeature->sponsorBlockAutoSkip();
     }
@@ -272,7 +272,7 @@ bool QmlYouTubeProxy::sponsorBlockAutoSkip() const {
 }
 
 void QmlYouTubeProxy::setSponsorBlockAutoSkip(bool enabled) {
-    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    mixxx::YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         pFeature->setSponsorBlockAutoSkip(enabled);
         // Also update the SponsorBlockController

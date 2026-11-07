@@ -180,7 +180,7 @@ Library::Library(
     // Playlists/Crates/...). Spotify is intentionally not registered: Spotify's
     // Web API does not return playable audio, so the usable online music path is
     // YouTube search/download/cache.
-    m_pYouTubeFeature = make_parented<YouTubeFeature>(this, m_pConfig);
+    m_pYouTubeFeature = make_parented<mixxx::YouTubeFeature>(this, m_pConfig);
     addFeature(m_pYouTubeFeature);
     // The SponsorBlock controller observes deck loads globally and skips
     // segments inside YouTube-cached tracks. It is owned by Library so it
