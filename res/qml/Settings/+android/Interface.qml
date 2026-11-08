@@ -258,6 +258,15 @@ Category {
                             }
 
                             Text {
+                                Layout.fillWidth: true
+                                visible: !Mixxx.MobileApp.graphicsApis.some(api => api.value === "vulkan")
+                                text: qsTr("Vulkan: not available in this build or on this device.")
+                                color: "#90a4ae"
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
                                 id: rendererRestartHint
 
                                 Layout.fillWidth: true

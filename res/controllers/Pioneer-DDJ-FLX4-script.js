@@ -126,7 +126,11 @@
 //
 // =============================================================================
 
-const PioneerDDJFLX4 = {};
+// Must be "var": Mixxx looks the mapping object up on the global object, and
+// a top-level const/let is not a property of it. With const the whole script
+// was unreachable (play, pads, knobs dead; only XML-only controls worked).
+// eslint-disable-next-line no-var
+var PioneerDDJFLX4 = {};
 
 //
 // LED definitions

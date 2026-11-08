@@ -374,7 +374,8 @@ Category {
 
     onVisibleChanged: {
         if (visible) {
-            manager.reload();
+            // (a manager.reload() call here threw "not a function" and
+            // stopped load() from running when the page was shown again)
             load();
         }
     }

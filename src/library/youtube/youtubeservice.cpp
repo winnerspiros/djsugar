@@ -1031,7 +1031,7 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
     // InnerTube client fails — this avoids the long stall the user hit while
     // cycling through unreachable Piped hosts before each download.
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
-    // On Android the bundled yt-dlp (android_vr, no tokens needed) is the
+    // On Android the bundled yt-dlp (no tokens needed) is the
     // path that actually works — InnerTube direct needs PO tokens that 400
     // (BotGuard), burning ~0.5s per download before falling through here
     // anyway. So bundled goes first; if it fails for this videoId, fall
@@ -3180,8 +3180,8 @@ QMutex s_ytdlInitMutex;
 QWaitCondition s_ytdlInitCond;
 bool s_ytdlInitDone = false;
 bool s_ytdlInitInProgress = false;
-// Consecutive android_vr failures; after a few, downloads use yt-dlp's
-// default clients until a fast download works again.
+// Consecutive aria2c download failures; after a few, downloads use yt-dlp's
+// own downloader until an aria2c download works again.
 std::atomic<int> s_fastClientFailures{0};
 // aria2c (bundled youtubedl-android module) unpacked and usable.
 std::atomic<bool> s_aria2cReady{false};
@@ -3288,7 +3288,7 @@ void YouTubeService::downloadViaAndroidBundled(
     kLogger.debug() << "[Android] downloadViaAndroidBundled: videoId=" << videoId
                     << "cacheDir=" << cacheDir;
     // Straight to the JNI download with no PO-token fetch: the bundled
-    // yt-dlp uses player_client=android_vr which needs no tokens, and the
+    // yt-dlp solves YouTube's challenges itself (yt-dlp-ejs), and the
     // token fetch (WebView BotGuard challenge or 400 round-trips) added
     // 0.5-3 s per download for zero benefit on this path. Tokens are
     // still fetched for search/player where they matter.
@@ -3360,22 +3360,19 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         QString videoUrl = "https://www.youtube.com/watch?v=" + videoId;
         QString outputTemplate = QDir(cacheDir).filePath("%(id)s.%(ext)s");
 
-        // The android_vr client gets direct, un-throttled audio URLs from one
-        // player request: no PO token, no player JavaScript to download and
-        // run through yt-dlp's (slow, on a phone) JS interpreter for the
-        // signature and "n" challenge. The bundled path never set a client,
-        // so every download paid for yt-dlp's default web clients. If
-        // android_vr fails (YouTube changes it now and then), the download
-        // is retried once with yt-dlp's defaults.
+        // yt-dlp's default clients pick the format; aria2c then fetches it over
+        // up to 16 connections in 1 MB ranges. YouTube paces each connection
+        // (~150 KB/s seen in the logs), so parallel ranges are where the speed
+        // is. (player_client=android_vr was tried and dropped: by late 2026 it
+        // returned no audio format, "Requested format is not available", for
+        // every video in the logs.) If aria2c fails the download is retried
+        // once with yt-dlp's own downloader.
         const QString ytdlCacheDir =
                 QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
                         .filePath(QStringLiteral("yt-dlp"));
         auto buildRequest = [&](bool fastClient) {
             QString extractorArgs = QStringLiteral("youtube:skip=hls,dash,translated_subs");
-            if (fastClient) {
-                extractorArgs += QStringLiteral(";player_client=android_vr");
-            }
-            const bool useAria2c = fastClient && s_aria2cReady.load();
+            const bool useAria2c = fastClient;
             QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
                     "(Ljava/lang/String;)V",
                     QJniObject::fromString(videoUrl).object());
@@ -3496,7 +3493,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             return request;
         };
         const bool useFastClient =
-                playerPot.isEmpty() && s_fastClientFailures.load() < kMaxFastClientFailures;
+                s_aria2cReady.load() && s_fastClientFailures.load() < kMaxFastClientFailures;
         QJniObject request = buildRequest(useFastClient);
 
         // Execute the download (blocks this thread until complete). The
@@ -3541,8 +3538,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         }
         if ((hasJniException || !response.isValid()) && useFastClient) {
             ++s_fastClientFailures;
-            kLogger.warning() << "[Android] android_vr download failed for" << videoId
-                              << ", retrying with yt-dlp's default clients:" << errDetail;
+            kLogger.warning() << "[Android] aria2c download failed for" << videoId
+                              << ", retrying with yt-dlp's own downloader:" << errDetail;
             if (settled->load()) {
                 return; // the stall watchdog already failed it over
             }
@@ -3973,12 +3970,10 @@ QStringList YouTubeService::ytDlpAntiBotArgs() const {
          << QStringLiteral("firefox");
 #endif
 
-    // 2. Tell yt-dlp to use the same ANDROID_VR client we use for InnerTube.
-    //    This avoids the WEB client which is more heavily rate-limited.
-    //    Prefer IPv4: on mobile the IPv6 googlevideo route throttles hard
-    //    (log: 85-135s per 3-4MB track at ~40KB/s over 2a02:... URLs).
-    args << QStringLiteral("--extractor-args")
-         << QStringLiteral("youtube:player_client=android_vr");
+    // 2. yt-dlp's default clients (android_vr returned no audio format
+    //    for any video by late 2026). Prefer IPv4: on mobile the IPv6
+    //    googlevideo route throttles hard (log: 85-135s per 3-4MB track at
+    //    ~40KB/s over 2a02:... URLs).
     args << QStringLiteral("--force-ipv4");
 
     // 3. No sleep intervals on the download path. yt-dlp's --sleep-interval
