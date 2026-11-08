@@ -1608,7 +1608,9 @@ void YouTubeFeature::onDownloadFinished(
     }
     pTrack->setArtist(uploader);
     pTrack->setTitle(title.isEmpty() ? videoId : title);
-    pTrack->setAlbum(QStringLiteral("YouTube"));
+    pTrack->setAlbum(videoId.startsWith(QStringLiteral("sc-"))
+                    ? QStringLiteral("SoundCloud")
+                    : QStringLiteral("YouTube"));
     pTrack->setComment(videoId);
     // Set cover info from the thumbnail if it has already been downloaded
     // (e.g. from a previous search). This ensures the vinyl widget and

@@ -83,13 +83,6 @@ Item {
         key: "bpm"
     }
 
-    Mixxx.ControlProxy {
-        id: numDecks
-
-        group: "[App]"
-        key: "num_decks"
-    }
-
     Connections {
         function onSoundCloudResults(results, append) {
             root.isBusy = false;
@@ -373,25 +366,53 @@ Item {
                         }
                     }
 
-                    // One button per deck; the download lands on that deck
+                    // D1/D2 like the YouTube list: the download lands on that
+                    // deck and the button shows its progress meanwhile
                     Repeater {
-                        model: Math.max(2, numDecks.value)
+                        model: [
+                            {
+                                "deck": "[Channel1]",
+                                "label": "D1",
+                                "color": Qt.lighter(Theme.accentColor, 1.2)
+                            },
+                            {
+                                "deck": "[Channel2]",
+                                "label": "D2",
+                                "color": "#e8650f"
+                            }
+                        ]
 
                         delegate: Skin.Button {
-                            required property int index
+                            required property var modelData
 
                             Layout.preferredHeight: 30
-                            Layout.preferredWidth: 34
-                            activeColor: "#ff5500"
+                            Layout.preferredWidth: 46
+                            activeColor: modelData.color
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
-                            text: (index + 1).toString()
+                            font.pixelSize: 10
+                            text: trackRow.isDownloading ? `${Math.round(trackRow.downloadProg * 100)}%` : modelData.label
                             enabled: !trackRow.isDownloading && !trackRow.preview
                             onClicked: {
                                 resultList.currentIndex = trackRow.index;
-                                Mixxx.YouTube.downloadToDeck(trackRow.vid, "[Channel" + (index + 1) + "]");
+                                Mixxx.YouTube.downloadToDeck(trackRow.vid, modelData.deck);
                             }
+                        }
+                    }
+
+                    // Download only: keeps the track in the library
+                    Skin.Button {
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 46
+                        activeColor: "#00e676"
+                        normalColor: "#00e676"
+                        font.bold: true
+                        font.pixelSize: 14
+                        text: "⤓"
+                        enabled: !trackRow.isDownloading && !trackRow.preview
+                        onClicked: {
+                            root.statusMessage = qsTr("Downloading to your library...");
+                            Mixxx.YouTube.download(trackRow.vid);
                         }
                     }
                 }

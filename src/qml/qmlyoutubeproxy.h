@@ -62,6 +62,9 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE bool hasMore() const;
     Q_INVOKABLE void download(const QString& videoId);
     Q_INVOKABLE void downloadToDeck(const QString& videoId, const QString& deckGroup);
+    /// Extracts the stream link of a result the user is about to load (the
+    /// controller highlight is on it), so LOAD starts the download at once
+    Q_INVOKABLE void prefetchLink(const QString& videoId);
 
     /// SoundCloud search (api-v2, with the web player's public client id).
     /// Results use "sc-<track id>" ids and download/load like YouTube ones.

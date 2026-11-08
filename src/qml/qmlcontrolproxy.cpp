@@ -176,9 +176,7 @@ void QmlControlProxy::reinitializeFromKey() {
     std::unique_ptr<ControlProxy> pControlProxy =
             std::make_unique<ControlProxy>(m_coKey,
                     this,
-                    CmdlineArgs::Instance().getDeveloper()
-                            ? ControlFlag::NoWarnIfMissing
-                            : ControlFlag::AllowMissingOrInvalid);
+                    ControlFlag::AllowMissingOrInvalid | ControlFlag::NoWarnIfMissing);
 
     // This should never happen, but it doesn't hurt to check.
     VERIFY_OR_DEBUG_ASSERT(pControlProxy != nullptr) {
@@ -200,8 +198,16 @@ void QmlControlProxy::reinitializeFromKey() {
         const QString keyStr = m_coKey.group + QStringLiteral(",") + m_coKey.item;
         if (!s_warnedMissing.contains(keyStr)) {
             s_warnedMissing.insert(keyStr);
-            qWarning() << "QmlControlProxy: Requested CO" << m_coKey
-                       << " does not exist, resetting...";
+            // A skin asking for a control that isn't there is normal: decks
+            // 3/4 and their EQs only exist once enabled, there is no vinyl
+            // input on Android, effects have different parameter counts.
+            // Developers (--developer) still get it as a warning.
+            if (CmdlineArgs::Instance().getDeveloper()) {
+                qWarning() << "QmlControlProxy: Requested CO" << m_coKey
+                           << " does not exist, resetting...";
+            } else {
+                qDebug() << "QmlControlProxy: Requested CO" << m_coKey << " does not exist";
+            }
         }
         if (isInitialized()) {
             m_pControlProxy.reset();

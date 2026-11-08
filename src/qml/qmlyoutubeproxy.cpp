@@ -5,7 +5,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
-#include <QNetworkInformation>
 #include <QNetworkReply>
 #include <QRegularExpression>
 #include <QSettings>
@@ -275,29 +274,34 @@ void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& resul
     if (s_pLibrary) {
         if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
             pFeature->prefetchThumbnails(results);
-            // On Wi-Fi (or any unmetered link) download the top results in
-            // the background, so a tap on one of them loads the deck from
-            // disk at once. Never on mobile data. A deck load still jumps
-            // ahead of these in the download queue.
-            QNetworkInformation::loadBackendByFeatures(
-                    QNetworkInformation::Feature::Metered);
-            const QNetworkInformation* pNet = QNetworkInformation::instance();
-            if (pNet && pNet->supports(QNetworkInformation::Feature::Metered) &&
-                    !pNet->isMetered() &&
-                    pNet->reachability() == QNetworkInformation::Reachability::Online) {
-                constexpr int kPrefetchTopResults = 3;
-                int queued = 0;
-                for (const auto& v : results) {
-                    if (queued >= kPrefetchTopResults) {
-                        break;
-                    }
-                    if (!v.id.isEmpty() && v.durationSec < 15 * 60) {
-                        pFeature->requestDownload(v.id);
-                        ++queued;
-                    }
+            // Download the top results in the background (Wi-Fi and mobile
+            // data alike), so a tap on one of them loads the deck from disk
+            // at once, and extract the stream links of the next ones, so a
+            // tap on those skips yt-dlp and starts the 16-way download
+            // straight away. A deck load still jumps ahead of these.
+            constexpr int kPrefetchTopResults = 3;
+            constexpr int kPrefetchLinks = 10;
+            int queued = 0;
+            QStringList linkIds;
+            for (const auto& v : results) {
+                if (v.id.isEmpty() || v.durationSec >= 15 * 60) {
+                    continue;
+                }
+                if (queued < kPrefetchTopResults) {
+                    pFeature->requestDownload(v.id);
+                    ++queued;
+                } else if (linkIds.size() < kPrefetchLinks) {
+                    linkIds.append(v.id);
                 }
             }
+            pFeature->service()->prefetchStreamLinks(linkIds);
         }
+    }
+}
+
+void QmlYouTubeProxy::prefetchLink(const QString& videoId) {
+    if (YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr) {
+        pFeature->service()->prefetchStreamLinks({videoId});
     }
 }
 

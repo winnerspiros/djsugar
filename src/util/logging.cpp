@@ -290,12 +290,40 @@ bool isControllerLoggingCategory(const QString& categoryName) {
     return categoryName.startsWith("controller.");
 }
 
+// Qt warnings that are expected and need no action, logged as debug
+// messages instead:
+// - "point is not in activePoints": a touch handler losing a point another
+//   handler grabbed (a tap turning into a list flick)
+// - the audio/ogg vs video/ogg mime clash, for every .ogg file looked at
+// - Android destroying the window surface while the app is in the background,
+//   rendering resumes when it is back
+bool isHarmlessQtWarning(const QString& message) {
+    static const QLatin1String kHarmless[] = {
+            QLatin1String("point is not in activePoints"),
+            QLatin1String("MimeType is ambiguous between audio/ogg and video/ogg"),
+#ifdef Q_OS_ANDROID
+            QLatin1String("no EGLSurface, likely Surface destroyed by Android"),
+            QLatin1String("QRhiGles2: Failed to make context current"),
+            QLatin1String("Failed to start frame"),
+#endif
+    };
+    for (const auto& harmless : kHarmless) {
+        if (message.contains(harmless)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Debug message handler which outputs to stderr and a logfile,
 // prepending the thread name, log category, and log level.
 void handleMessage(
         QtMsgType type,
         const QMessageLogContext& context,
         const QString& input) {
+    if (type == QtWarningMsg && isHarmlessQtWarning(input)) {
+        type = QtDebugMsg;
+    }
     const char* levelName = nullptr;
     WriteFlags writeFlags = WriteFlag::None;
     bool isDebugAssert = false;

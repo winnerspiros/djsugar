@@ -124,6 +124,7 @@ Item {
         const next = resultList.currentIndex < 0 ? 0 : resultList.currentIndex + offset;
         resultList.currentIndex = Math.max(0, Math.min(resultsModel.count - 1, next));
         resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain);
+        Mixxx.YouTube.prefetchLink(resultsModel.get(resultList.currentIndex).vid);
     }
     function controllerLoad(group, _play) {
         const row = resultList.currentIndex;

@@ -135,6 +135,10 @@ class YouTubeService : public QObject {
     /// `<cacheDir>/<videoId>.<ext>`. Emits downloadFinished(videoId, path)
     /// or downloadFailed(videoId, error).
     void downloadVideo(const QString& videoId, const QString& cacheDir);
+    /// Extracts the stream links of these videos in the background (Android,
+    /// bundled yt-dlp), so a tap on one starts the ranged download at once.
+    /// No-op elsewhere.
+    void prefetchStreamLinks(const QStringList& videoIds);
 
     /// Fetch SponsorBlock segments for the given videoId from the public
     /// SponsorBlock API at sponsor.ajay.app.

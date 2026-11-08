@@ -1,6 +1,7 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick 2.12
 import "../.." as Skin
+import ".." as LibraryComponent
 
 // Controller input for the streaming hub. While the hub is on screen the
 // library's own Control is disabled, so BROWSE and LOAD act on what is
@@ -105,38 +106,15 @@ Item {
     Instantiator {
         model: numDecksControl.value
 
-        delegate: ControlLoadSelectedTrackHandlerProxy {
+        // the library's own handler, as Library/Control.qml uses it (an
+        // inline component here was created with an unset index first and
+        // logged "[Channel0] LoadSelectedTrack does not exist")
+        delegate: LibraryComponent.ControlLoadSelectedTrackHandler {
             required property int index
 
             group: "[Channel" + (index + 1) + "]"
             enabled: root.enabled
             onLoadTrackRequested: (play) => root.loadResult(this.group, play)
-        }
-    }
-
-    component ControlLoadSelectedTrackHandlerProxy: Item {
-        id: handler
-
-        required property string group
-
-        signal loadTrackRequested(bool play)
-
-        Mixxx.ControlProxy {
-            group: handler.group
-            key: "LoadSelectedTrack"
-            onValueChanged: (value) => {
-                if (value != 0 && handler.enabled)
-                    handler.loadTrackRequested(false);
-            }
-        }
-
-        Mixxx.ControlProxy {
-            group: handler.group
-            key: "LoadSelectedTrackAndPlay"
-            onValueChanged: (value) => {
-                if (value != 0 && handler.enabled)
-                    handler.loadTrackRequested(true);
-            }
         }
     }
 }
