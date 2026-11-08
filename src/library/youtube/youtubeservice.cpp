@@ -3183,6 +3183,8 @@ bool s_ytdlInitInProgress = false;
 // Consecutive android_vr failures; after a few, downloads use yt-dlp's
 // default clients until a fast download works again.
 std::atomic<int> s_fastClientFailures{0};
+// aria2c (bundled youtubedl-android module) unpacked and usable.
+std::atomic<bool> s_aria2cReady{false};
 constexpr int kMaxFastClientFailures = 3;
 
 bool ensureYoutubeDlInitialized(const QJniObject& ytdl, const QJniObject& context) {
@@ -3202,6 +3204,19 @@ bool ensureYoutubeDlInitialized(const QJniObject& ytdl, const QJniObject& contex
     const bool ok = !env.checkAndClearExceptions();
     kLogger.info() << "[Android] YoutubeDL init" << (ok ? "done in" : "failed after")
                    << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
+    if (ok) {
+        // aria2c downloads one file over up to 16 connections in 1 MB
+        // ranges. Each googlevideo connection is paced separately, so this
+        // is several times faster than yt-dlp's single connection. Optional:
+        // without it yt-dlp's own downloader is used.
+        QJniObject aria2c = QJniObject::getStaticObjectField(
+                "com/yausername/aria2c/Aria2c", "INSTANCE", "Lcom/yausername/aria2c/Aria2c;");
+        if (!env.checkAndClearExceptions() && aria2c.isValid()) {
+            aria2c.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+            s_aria2cReady = !env.checkAndClearExceptions();
+        }
+        kLogger.info() << "[Android] aria2c" << (s_aria2cReady ? "ready" : "not available");
+    }
     QMutexLocker locker(&s_ytdlInitMutex);
     s_ytdlInitDone = ok;
     s_ytdlInitInProgress = false;
@@ -3228,7 +3243,40 @@ void YouTubeService::prewarmAndroidBundled() {
         if (env.checkAndClearExceptions() || !context.isValid() || !ytdl.isValid()) {
             return;
         }
-        ensureYoutubeDlInitialized(ytdl, context);
+        if (!ensureYoutubeDlInitialized(ytdl, context)) {
+            return;
+        }
+        // Auto-update yt-dlp (at most once a day): the bundled launcher
+        // fetches the newest yt-dlp + yt-dlp-ejs wheels from PyPI, checks
+        // their hashes, test-imports them and only then switches over;
+        // every later download uses them, with the bundled copy as fallback.
+        // This run also unpacks the bundle once (cached .pyc), which is
+        // what makes later yt-dlp starts ~1.5 s faster.
+        QSettings settings;
+        const QString key = QStringLiteral("YouTube/ytdlpLastUpdateCheck");
+        const qint64 now = QDateTime::currentSecsSinceEpoch();
+        if (now - settings.value(key, 0).toLongLong() < 24 * 3600) {
+            return;
+        }
+        QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
+                "(Ljava/lang/String;)V",
+                QJniObject::fromString(QStringLiteral("https://example.invalid/")).object());
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                QJniObject::fromString(QStringLiteral("--djsugar-update")).object());
+        QJniObject response = ytdl.callObjectMethod("execute",
+                "(Lcom/yausername/youtubedl_android/YoutubeDLRequest;)"
+                "Lcom/yausername/youtubedl_android/YoutubeDLResponse;",
+                request.object());
+        if (env.checkAndClearExceptions() || !response.isValid()) {
+            kLogger.warning() << "[Android] yt-dlp update check failed";
+            return;
+        }
+        settings.setValue(key, now);
+        kLogger.info() << "[Android]"
+                       << response.callObjectMethod("getOut", "()Ljava/lang/String;")
+                                  .toString()
+                                  .trimmed();
     });
     thread->setPriority(QThread::LowPriority);
     QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
@@ -3327,6 +3375,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             if (fastClient) {
                 extractorArgs += QStringLiteral(";player_client=android_vr");
             }
+            const bool useAria2c = fastClient && s_aria2cReady.load();
             QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
                     "(Ljava/lang/String;)V",
                     QJniObject::fromString(videoUrl).object());
@@ -3422,6 +3471,16 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                     "YoutubeDLRequest;",
                     QJniObject::fromString("--socket-timeout").object(),
                     QJniObject::fromString("30").object());
+            if (useAria2c) {
+                // youtubedl-android adds aria2c's CA bundle and progress
+                // args itself; yt-dlp's aria2c defaults are already
+                // -x16 -s16 --min-split-size 1M.
+                request.callMethod<QJniObject>("addOption",
+                        "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/"
+                        "youtubedl_android/YoutubeDLRequest;",
+                        QJniObject::fromString("--downloader").object(),
+                        QJniObject::fromString("libaria2c.so").object());
+            }
             if (!playerPot.isEmpty() && !streamingPot.isEmpty()) {
                 // Our on-device PO tokens as extractor args — same shape ytdlnis
                 // uses: youtube:player_client=web;po_token=web.gvs+...+web.player+...

@@ -27,7 +27,7 @@
 
 set(
   YTDLP_VERSION
-  "2026.10.21"
+  "2026.10.26"
   CACHE STRING
   "Pinned yt-dlp release tag to bundle inside Mixxx"
 )
@@ -39,14 +39,14 @@ if(WIN32)
   set(_ytdlp_asset "yt-dlp.exe")
   set(
     _ytdlp_sha256
-    "33121d192d706e62f684a06f80918e3f3a8ba52ac3a65213b6951c39c7d9f555"
+    "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d"
   )
   set(_ytdlp_install_name "yt-dlp.exe")
 elseif(APPLE)
   set(_ytdlp_asset "yt-dlp_macos")
   set(
     _ytdlp_sha256
-    "7a6fe71d7d680f1fb0ac18d4949873d77db2859e90017c0f44bd94b23be4ee40"
+    "0f922c15ccc0b83eefa1c8bc9104e434318c4bf16e408e1ee93b7745a6efe0aa"
   )
   set(_ytdlp_install_name "yt-dlp")
 elseif(UNIX)
@@ -57,7 +57,7 @@ elseif(UNIX)
     set(_ytdlp_asset "yt-dlp_linux")
     set(
       _ytdlp_sha256
-      "d8bd33fca9d5b23bd5b9952b3fca36db5c46331933fda9f598a3da14ce2c243f"
+      "767ba9dce7052aa196f8b12652f433d76de128ba168966fa84b6394d5e6c6795"
     )
     set(_ytdlp_install_name "yt-dlp")
   endif()
@@ -481,6 +481,8 @@ if(ANDROID)
     set(
       _ytdlp_dep_files
       "io/github/junkfood02/youtubedl-android/common/0.18.1/common-0.18.1.aar"
+      # aria2c: multi-connection downloader for yt-dlp (libaria2c.so)
+      "io/github/junkfood02/youtubedl-android/aria2c/0.18.1/aria2c-0.18.1.aar"
       "com/fasterxml/jackson/core/jackson-databind/2.11.1/jackson-databind-2.11.1.jar"
       "com/fasterxml/jackson/core/jackson-core/2.11.1/jackson-core-2.11.1.jar"
       "com/fasterxml/jackson/core/jackson-annotations/2.11.1/jackson-annotations-2.11.1.jar"

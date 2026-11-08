@@ -1,6 +1,7 @@
 #include "qml/qmlyoutubeproxy.h"
 
 #include <QFileInfo>
+#include <QNetworkInformation>
 #include <QRegularExpression>
 #include <QTimer>
 #include <algorithm>
@@ -267,6 +268,28 @@ void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& resul
     if (s_pLibrary) {
         if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
             pFeature->prefetchThumbnails(results);
+            // On Wi-Fi (or any unmetered link) download the top results in
+            // the background, so a tap on one of them loads the deck from
+            // disk at once. Never on mobile data. A deck load still jumps
+            // ahead of these in the download queue.
+            QNetworkInformation::loadBackendByFeatures(
+                    QNetworkInformation::Feature::Metered);
+            const QNetworkInformation* pNet = QNetworkInformation::instance();
+            if (pNet && pNet->supports(QNetworkInformation::Feature::Metered) &&
+                    !pNet->isMetered() &&
+                    pNet->reachability() == QNetworkInformation::Reachability::Online) {
+                constexpr int kPrefetchTopResults = 3;
+                int queued = 0;
+                for (const auto& v : results) {
+                    if (queued >= kPrefetchTopResults) {
+                        break;
+                    }
+                    if (!v.id.isEmpty() && v.durationSec < 15 * 60) {
+                        pFeature->requestDownload(v.id);
+                        ++queued;
+                    }
+                }
+            }
         }
     }
 }
