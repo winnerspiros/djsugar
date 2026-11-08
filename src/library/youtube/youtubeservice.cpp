@@ -3566,30 +3566,6 @@ bool extractStreamLink(const QJniObject& ytdl, const QString& videoId, StreamLin
     return ok;
 }
 
-void YouTubeService::prefetchSponsorSegments(const QString& videoId) {
-    if (!m_sponsorBlockEnabled || isSoundCloudId(videoId)) {
-        return;
-    }
-    if (!m_sponsorPrefetchCache.contains(videoId) &&
-            !m_sponsorPrefetchWaiters.contains(videoId)) {
-        // Insert an empty entry so a second downloadVideo() call for the same
-        // id (e.g. retry) doesn't launch a duplicate fetch.
-        m_sponsorPrefetchWaiters.insert(videoId, {});
-        fetchSponsorSegmentsInternal(videoId,
-                [this, videoId](const QList<SponsorSegment>& segments) {
-                    // Store segments whether or not anyone is waiting yet.
-                    m_sponsorPrefetchCache.insert(videoId, segments);
-                    // Notify any finalizeDownload() that arrived while we
-                    // were still fetching.
-                    const auto waiters =
-                            m_sponsorPrefetchWaiters.take(videoId);
-                    for (const auto& cb : waiters) {
-                        cb(segments);
-                    }
-                });
-    }
-}
-
 void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
     // SponsorBlock answers in well under 100 ms and its replies are tiny:
     // asked for with the links, so a download never waits for it
@@ -4570,6 +4546,30 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
     } else {
         // No prefetch was started — fetch now (legacy / direct path).
         fetchSponsorSegmentsInternal(videoId, doFinalize);
+    }
+}
+
+void YouTubeService::prefetchSponsorSegments(const QString& videoId) {
+    if (!m_sponsorBlockEnabled || isSoundCloudId(videoId)) {
+        return;
+    }
+    if (!m_sponsorPrefetchCache.contains(videoId) &&
+            !m_sponsorPrefetchWaiters.contains(videoId)) {
+        // Insert an empty entry so a second downloadVideo() call for the same
+        // id (e.g. retry) doesn't launch a duplicate fetch.
+        m_sponsorPrefetchWaiters.insert(videoId, {});
+        fetchSponsorSegmentsInternal(videoId,
+                [this, videoId](const QList<SponsorSegment>& segments) {
+                    // Store segments whether or not anyone is waiting yet.
+                    m_sponsorPrefetchCache.insert(videoId, segments);
+                    // Notify any finalizeDownload() that arrived while we
+                    // were still fetching.
+                    const auto waiters =
+                            m_sponsorPrefetchWaiters.take(videoId);
+                    for (const auto& cb : waiters) {
+                        cb(segments);
+                    }
+                });
     }
 }
 
