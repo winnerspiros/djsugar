@@ -238,6 +238,72 @@ Category {
         }
     }
 
+    // Rounded button in the picker's accent colour: outlined, or filled for
+    // the main action; the play icon is drawn, not an emoji glyph
+    component PillButton: Rectangle {
+        id: pill
+
+        property string label
+        property bool filled: false
+        property bool playIcon: false
+
+        signal clicked
+
+        implicitWidth: pillRow.implicitWidth + 32
+        implicitHeight: 40
+        radius: height / 2
+        color: filled ? picker.accent : pillArea.pressed ? Qt.rgba(picker.accent.r, picker.accent.g, picker.accent.b, 0.2) : "transparent"
+        border.color: picker.accent
+        border.width: filled ? 0 : 1.5
+        opacity: pillArea.pressed && filled ? 0.8 : 1
+
+        Row {
+            id: pillRow
+
+            anchors.centerIn: parent
+            spacing: 8
+
+            Canvas {
+                id: playCanvas
+
+                visible: pill.playIcon
+                width: 12
+                height: 14
+                anchors.verticalCenter: parent.verticalCenter
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.fillStyle = pill.filled ? "#000000" : picker.accent;
+                    ctx.beginPath();
+                    ctx.moveTo(1, 1);
+                    ctx.lineTo(width - 1, height / 2);
+                    ctx.lineTo(1, height - 1);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                Connections {
+                    target: picker
+                    function onAccentChanged() {
+                        playCanvas.requestPaint();
+                    }
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: pill.label
+                color: pill.filled ? "#000000" : picker.accent
+                font.pixelSize: 14
+                font.bold: true
+            }
+        }
+        MouseArea {
+            id: pillArea
+
+            anchors.fill: parent
+            onClicked: pill.clicked()
+        }
+    }
+
     Mixxx.ControlProxy {
         id: previewPlay
 
@@ -251,6 +317,27 @@ Category {
         property int pad: 1
         property int mode: 0
         readonly property bool sampler: mode === 0
+        readonly property color accent: mode === 0 ? "#00e5ff" : mode === 1 ? "#ff4081" : "#ffab00"
+        // Sample paths picked in this session (the sampler's track only
+        // knows its title, which may differ from the sample name)
+        property var pickedPaths: ({})
+
+        // The row that is assigned to the pad right now
+        function isCurrent(item) {
+            root.revision;
+            if (mode === 2) {
+                return item.key === Mixxx.EffectsManager.beatFxSlot(pad);
+            }
+            if (mode === 1) {
+                return item.key === Mixxx.EffectsManager.padFxEffect(pad);
+            }
+            if (pickedPaths[pad] !== undefined) {
+                return pickedPaths[pad] === item.path;
+            }
+            const player = Mixxx.PlayerManager.getPlayer("[Sampler" + pad + "]");
+            const track = player ? player.currentTrack : null;
+            return !!track && track.title !== "" && track.title === item.name;
+        }
 
         function openFor(newPad, newMode) {
             picker.pad = newPad;
@@ -268,7 +355,7 @@ Category {
         background: Rectangle {
             color: "#000000"
             radius: 8
-            border.color: picker.mode === 0 ? "#00e5ff" : picker.mode === 1 ? "#ff4081" : "#ffab00"
+            border.color: picker.accent
             border.width: 1
         }
 
@@ -294,18 +381,44 @@ Category {
 
                     width: ListView.view.width
                     height: 44
-                    color: rowArea.pressed ? "#1a1a1a" : "#000000"
+                    readonly property bool current: picker.isCurrent(modelData)
 
+                    color: rowArea.pressed ? "#1a1a1a" : current ? Qt.rgba(picker.accent.r, picker.accent.g, picker.accent.b, 0.16) : "#000000"
+                    radius: 6
+
+                    // Accent bar on the assigned row
+                    Rectangle {
+                        visible: row.current
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 4
+                        height: parent.height - 12
+                        radius: 2
+                        color: picker.accent
+                    }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
-                        anchors.leftMargin: 10
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
+                        anchors.leftMargin: 14
+                        anchors.right: checkMark.left
+                        anchors.rightMargin: 8
                         elide: Text.ElideRight
                         text: row.modelData.name
-                        color: Theme.white
+                        color: row.current ? picker.accent : Theme.white
                         font.pixelSize: 14
+                        font.bold: row.current
+                    }
+                    Text {
+                        id: checkMark
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        text: "✓"
+                        visible: row.current
+                        color: picker.accent
+                        font.pixelSize: 16
+                        font.bold: true
                     }
                     Rectangle {
                         anchors.bottom: parent.bottom
@@ -320,6 +433,9 @@ Category {
                         onClicked: {
                             if (picker.sampler) {
                                 Mixxx.PlayerManager.loadLocationToPlayer(row.modelData.path, "[Sampler" + picker.pad + "]", false);
+                                const paths = picker.pickedPaths;
+                                paths[picker.pad] = row.modelData.path;
+                                picker.pickedPaths = paths;
                             } else if (picker.mode === 2) {
                                 Mixxx.EffectsManager.setBeatFxSlot(picker.pad, row.modelData.key);
                                 picker.close();
@@ -335,17 +451,21 @@ Category {
 
             RowLayout {
                 Layout.fillWidth: true
+                Layout.topMargin: 4
+                spacing: 8
 
-                Button {
+                PillButton {
                     visible: picker.sampler
-                    text: qsTr("▶ Preview")
+                    label: qsTr("Preview")
+                    playIcon: true
                     onClicked: previewPlay.value = 1
                 }
                 Item {
                     Layout.fillWidth: true
                 }
-                Button {
-                    text: qsTr("Done")
+                PillButton {
+                    label: qsTr("Done")
+                    filled: true
                     onClicked: picker.close()
                 }
             }
