@@ -49,6 +49,7 @@ class AnalysisFeature : public LibraryFeature {
     void onTrackAnalysisSchedulerFinished();
 
   private:
+    bool m_analysisSuspended = false;
     // Sets the title of this feature to the default name, given by
     // m_sAnalysisTitleName
     void resetTitle();

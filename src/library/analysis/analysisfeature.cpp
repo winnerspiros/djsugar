@@ -223,6 +223,12 @@ void AnalysisFeature::suspendAnalysis() {
     if (!m_pTrackAnalysisScheduler) {
         return; // inactive
     }
+    // Called on every progress step of a deck's analysis: logged and
+    // forwarded once per suspension (it filled the log with ~40 lines a track)
+    if (m_analysisSuspended) {
+        return;
+    }
+    m_analysisSuspended = true;
     kLogger.info() << "Suspending analysis";
     m_pTrackAnalysisScheduler->suspend();
 }
@@ -231,6 +237,7 @@ void AnalysisFeature::resumeAnalysis() {
     if (!m_pTrackAnalysisScheduler) {
         return; // inactive
     }
+    m_analysisSuspended = false;
     kLogger.info() << "Resuming analysis";
     m_pTrackAnalysisScheduler->resume();
 }
