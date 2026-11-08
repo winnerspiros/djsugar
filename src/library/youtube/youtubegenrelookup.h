@@ -11,9 +11,10 @@ namespace mixxx {
 
 /// Finds the genre of a song downloaded from YouTube. YouTube itself only
 /// knows the category ("Music"), so the artist and title are looked up in the
-/// iTunes Search API (US, then the Greek store) and, failing that, in Deezer's catalogue. Both are free
-/// and need no account. A hit only counts when artist, title and (if known)
-/// duration agree, so a namesake song from another artist is not taken.
+/// iTunes Search API (US, then the Greek store) and, failing that, in Deezer's
+/// catalogue. Both are free and need no account. A hit only counts when artist,
+/// title and (if known) duration agree, so a namesake song from another artist
+/// is not taken.
 class YouTubeGenreLookup : public QObject {
     Q_OBJECT
   public:

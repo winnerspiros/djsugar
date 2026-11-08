@@ -1696,8 +1696,9 @@ QHash<QString, QVariantMap> YouTubeFeature::libraryInfoForResults(
     if (results.isEmpty() || !m_pTrackCollection) {
         return out;
     }
-    // Tracks played this session (Mixxx clears `played` on every start), by video id (the cached file is named after it) and by
-    // song (artist + title), so another upload of a played song counts too.
+    // Tracks played this session (Mixxx clears `played` on every start), by
+    // video id (the cached file is named after it) and by song (artist +
+    // title), so another upload of a played song counts too.
     struct LibraryTrack {
         int timesPlayed = 0; // played this session: 0 or 1
         double bpm = 0.0;

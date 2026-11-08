@@ -28,10 +28,10 @@ QString sidecarPathFor(const QString& cacheDir, const QString& videoId) {
 // Titles of music videos, which may carry a non-music lead-in, as opposed
 // to audio uploads ("Official Audio", "Topic" channels) that start with the song.
 bool isMusicVideoTitle(const QString& title) {
-    static const QRegularExpression kMusicVideo(QStringLiteral(
-                                                        "official\\s+(music\\s+)?video|music\\s+video|"
-                                                        "video\\s*clip|video\\s+oficial|clip\\s+officiel|"
-                                                        "\\bm/?v\\b"),
+    static const QRegularExpression kMusicVideo(
+            QStringLiteral("official\\s+(music\\s+)?video|music\\s+video|"
+                           "video\\s*clip|video\\s+official|clip\\s+officiel|"
+                           "\\bm/?v\\b"),
             QRegularExpression::CaseInsensitiveOption);
     return kMusicVideo.match(title).hasMatch();
 }

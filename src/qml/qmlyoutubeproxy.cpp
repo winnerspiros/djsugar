@@ -300,7 +300,9 @@ void QmlYouTubeProxy::pumpGenreLookups() {
         // "Artist - Title (Official Video)" or the channel as the artist.
         QString artist = v.uploader;
         QString title = v.title;
-        for (const QString& sep : {QStringLiteral(" - "), QStringLiteral(" – "), QStringLiteral(" — ")}) {
+        for (const QString& sep : {QStringLiteral(" - "),
+                     QStringLiteral(" – "),
+                     QStringLiteral(" — ")}) {
             const int pos = v.title.indexOf(sep);
             if (pos > 0) {
                 artist = v.title.left(pos);

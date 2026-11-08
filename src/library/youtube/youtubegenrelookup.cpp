@@ -115,8 +115,9 @@ YouTubeGenreLookup::YouTubeGenreLookup(QObject* parent)
 
 // static
 QString YouTubeGenreLookup::normalize(const QString& text) {
-    static const QRegularExpression kCredits(QStringLiteral(
-                                                     R"(\s*[\[(]?\b(feat|ft|featuring|prod|with)\b\.?.*$)"),
+    static const QRegularExpression kCredits(
+            QStringLiteral(
+                    R"(\s*[\[(]?\b(feat|ft|featuring|prod|with)\b\.?.*$)"),
             QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression kBrackets(QStringLiteral(R"(\s*[\[(][^\])]*[\])])"));
     static const QRegularExpression kNonWord(QStringLiteral(R"([^\p{L}\p{N}]+)"));
@@ -337,24 +338,33 @@ void YouTubeGenreLookup::lookupDeezer(const QString& artist,
     query.addQueryItem(QStringLiteral("limit"), QStringLiteral("10"));
     url.setQuery(query);
     QNetworkReply* reply = m_pNam->get(makeRequest(url));
-    connect(reply, &QNetworkReply::finished, this, [this, reply, artist, title, durationSec, done]() {
-        reply->deleteLater();
-        const qint64 albumId = reply->error() == QNetworkReply::NoError
-                ? albumFromDeezer(reply->readAll(), artist, title, durationSec)
-                : 0;
-        if (albumId <= 0) {
-            done(QString());
-            return;
-        }
-        QNetworkReply* albumReply = m_pNam->get(makeRequest(
-                QUrl(QStringLiteral("https://api.deezer.com/album/%1").arg(albumId))));
-        connect(albumReply, &QNetworkReply::finished, this, [albumReply, done]() {
-            albumReply->deleteLater();
-            done(albumReply->error() == QNetworkReply::NoError
-                            ? genreFromDeezerAlbum(albumReply->readAll())
-                            : QString());
-        });
-    });
+    connect(reply,
+            &QNetworkReply::finished,
+            this,
+            [this, reply, artist, title, durationSec, done]() {
+                reply->deleteLater();
+                const qint64 albumId = reply->error() == QNetworkReply::NoError
+                        ? albumFromDeezer(
+                                  reply->readAll(), artist, title, durationSec)
+                        : 0;
+                if (albumId <= 0) {
+                    done(QString());
+                    return;
+                }
+                QNetworkReply* albumReply = m_pNam->get(makeRequest(
+                        QUrl(QStringLiteral("https://api.deezer.com/album/%1")
+                                        .arg(albumId))));
+                connect(albumReply,
+                        &QNetworkReply::finished,
+                        this,
+                        [albumReply, done]() {
+                            albumReply->deleteLater();
+                            done(albumReply->error() == QNetworkReply::NoError
+                                            ? genreFromDeezerAlbum(
+                                                      albumReply->readAll())
+                                            : QString());
+                        });
+            });
 }
 
 } // namespace mixxx
