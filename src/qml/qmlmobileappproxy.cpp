@@ -62,7 +62,10 @@ QStringList supportedApis() {
     apis << QStringLiteral("metal");
 #endif
 #ifdef Q_OS_WIN
-    apis << QStringLiteral("d3d11") << QStringLiteral("d3d12");
+    apis << QStringLiteral("d3d11");
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    apis << QStringLiteral("d3d12");
+#endif
 #endif
     return apis;
 }
@@ -304,8 +307,10 @@ QString QmlMobileAppProxy::activeGraphicsApi() const {
         return apiLabel(QStringLiteral("metal"));
     case QSGRendererInterface::Direct3D11:
         return apiLabel(QStringLiteral("d3d11"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     case QSGRendererInterface::Direct3D12:
         return apiLabel(QStringLiteral("d3d12"));
+#endif
     case QSGRendererInterface::Software:
         return QStringLiteral("Software");
     default:
@@ -356,8 +361,10 @@ void QmlMobileAppProxy::applyGraphicsSettings(const UserSettingsPointer& pConfig
         QQuickWindow::setGraphicsApi(QSGRendererInterface::Metal);
     } else if (api == QLatin1String("d3d11")) {
         QQuickWindow::setGraphicsApi(QSGRendererInterface::Direct3D11);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     } else if (api == QLatin1String("d3d12")) {
         QQuickWindow::setGraphicsApi(QSGRendererInterface::Direct3D12);
+#endif
     } else {
 #if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
         QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
