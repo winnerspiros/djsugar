@@ -91,14 +91,24 @@ Popup {
                     text: root.title
                 }
 
+                // Close (Settings and Utility): a finger-sized button, and
+                // the area around it closes too, so a tap just beside it
+                // still counts
                 Skin.Button {
                     id: closeButton
-                    Layout.preferredHeight: 32
-                    Layout.preferredWidth: 42
+                    Layout.preferredHeight: 44
+                    Layout.preferredWidth: 56
                     activeColor: Theme.accentColor
                     font.bold: true
+                    font.pixelSize: 20
                     text: "X"
                     onClicked: root.close()
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -12
+                        onClicked: root.close()
+                    }
                 }
             }
         }

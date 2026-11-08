@@ -124,17 +124,19 @@ Item {
                     // SoundCloud: orange cloud icon (ic_library_soundcloud.svg)
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 104
+                        // wide enough that the centered text starts right
+                        // of the 20 px cloud icon instead of under it
+                        Layout.preferredWidth: 128
                         activeColor: "#ff5500"
                         normalColor: root.activePlatform === 4 ? "#ff7733" : "#ffab80"
                         font.bold: true
                         font.pixelSize: 9
-                        text: "   " + qsTr("SOUNDCLOUD")
+                        text: qsTr("SOUNDCLOUD")
                         onClicked: root.activePlatform = 4
 
                         Image {
                             anchors.left: parent.left
-                            anchors.leftMargin: 4
+                            anchors.leftMargin: 6
                             anchors.verticalCenter: parent.verticalCenter
                             width: 20
                             height: 20
