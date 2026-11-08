@@ -273,6 +273,17 @@ Category {
                                 }
                             }
 
+                            // The deck vinyl (spinny), shown when the deck
+                            // is wide enough (UI size Normal or smaller)
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { Layout.fillWidth: true; text: qsTr("Show vinyl"); color: Theme.white; font.pixelSize: 13 }
+                                CheckBox {
+                                    checked: Mixxx.MobileApp.showVinyl
+                                    onToggled: Mixxx.MobileApp.showVinyl = checked
+                                }
+                            }
+
                             Text {
                                 id: uiScaleRestartHint
 

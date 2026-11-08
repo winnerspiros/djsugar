@@ -251,9 +251,26 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
         *pMainClockRef = targetDevice;
         ++*pOutputDevicesOpened;
         pDevicesNotFound->remove(targetDevice->getDeviceId());
-        // Not saved to the configuration on purpose: the configured device
-        // (e.g. a DJ controller that isn't plugged in yet) must be used
-        // again next time.
+        // A configured device that is missing (e.g. a DJ controller that
+        // isn't plugged in yet) stays configured, to be used again next
+        // time. With nothing configured (fresh install) the pick is saved,
+        // so it shows in Settings → Sound Hardware and is used from then on
+        // instead of having to be picked by hand after every install.
+        bool anyOutputConfigured = false;
+        const auto configuredOutputs = config.getOutputs();
+        for (auto it = configuredOutputs.cbegin(); it != configuredOutputs.cend(); ++it) {
+            if (it.key().name != kNetworkDeviceInternalName) {
+                anyOutputConfigured = true;
+                break;
+            }
+        }
+        if (!anyOutputConfigured) {
+            SoundManagerConfig& mutableConfig = m_pSoundManager->m_config;
+            mutableConfig.setAPI(targetDevice->getHostAPI());
+            mutableConfig.addOutput(targetDevice->getDeviceId(), forcedOut);
+            mutableConfig.writeToDisk();
+            qInfo() << "Saved the fallback Android audio device as the main output";
+        }
         qInfo() << "Successfully opened fallback Android audio device:"
                 << targetDevice->getDisplayName();
     }

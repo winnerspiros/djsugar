@@ -288,6 +288,24 @@ void QmlMobileAppProxy::setGraphicsApi(const QString& api) {
     emit graphicsApiChanged();
 }
 
+bool QmlMobileAppProxy::showVinyl() const {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    return !pConfig ||
+            pConfig->getValue(ConfigKey(QStringLiteral("[Config]"),
+                                      QStringLiteral("AndroidShowVinyl")),
+                    true);
+}
+
+void QmlMobileAppProxy::setShowVinyl(bool show) {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    if (!pConfig || show == showVinyl()) {
+        return;
+    }
+    pConfig->setValue(ConfigKey(QStringLiteral("[Config]"), QStringLiteral("AndroidShowVinyl")),
+            show);
+    emit showVinylChanged();
+}
+
 double QmlMobileAppProxy::uiScale() const {
     const UserSettingsPointer pConfig = QmlConfigProxy::get();
     const double scale = pConfig
