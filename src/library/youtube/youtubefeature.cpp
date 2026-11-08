@@ -1455,7 +1455,7 @@ void YouTubeFeature::autoAnalyzeCurrentResults() {
 }
 
 void YouTubeFeature::abandonPendingLoads(const QString& videoId) {
-    if (m_pendingPlayerLoads.remove(videoId) > 0) {
+    if (m_pendingPlayerLoads.remove(videoId)) {
         Q_EMIT playerLoadsSettled(videoId);
     }
 }
