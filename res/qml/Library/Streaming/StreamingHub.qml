@@ -19,8 +19,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
-            color: "#12151c"
-            border.color: "#222734"
+            color: Theme.backgroundColor
+            border.color: Theme.darkGray3
             border.width: 1
 
             RowLayout {
@@ -69,13 +69,35 @@ Item {
 
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 130
+                        Layout.preferredWidth: 150
                         activeColor: "#ff0000"
                         normalColor: root.activePlatform === 3 ? "#ff5252" : "#ff8a80"
                         font.bold: true
                         font.pixelSize: 11
-                        text: qsTr("▶️ YOUTUBE")
+                        text: qsTr("YOUTUBE")
                         onClicked: root.activePlatform = 3
+
+                        // YouTube logo: red rounded plate with a white play
+                        // triangle. Drawn in QML (Triangle, not a ▶ glyph that
+                        // Android renders as emoji) so it needs no image asset.
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 26
+                            height: 18
+                            radius: 5
+                            color: "#ff0000"
+
+                            Skin.Triangle {
+                                anchors.centerIn: parent
+                                anchors.horizontalCenterOffset: 1
+                                color: "#ffffff"
+                                height: 10
+                                pointsRight: true
+                                width: 9
+                            }
+                        }
                     }
                 }
 

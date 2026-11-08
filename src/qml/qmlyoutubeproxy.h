@@ -55,6 +55,7 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE void search(const QString& query);
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE bool hasMore() const;
+    Q_INVOKABLE void download(const QString& videoId);
     Q_INVOKABLE void downloadToDeck(const QString& videoId, const QString& deckGroup);
     void prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results);
 
@@ -63,6 +64,9 @@ class QmlYouTubeProxy : public QObject {
 
   signals:
     void searchFinished(const QVariantList& results);
+    /// Next batch of the current search; empty when the fetch ended without
+    /// results. `hasMore` is false once YouTube has no further pages.
+    void searchMoreFinished(const QVariantList& results, bool hasMore);
     void searchFailed(const QString& error);
     void downloadProgressChanged(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);

@@ -17,6 +17,7 @@
 #include <QTextBrowser>
 #include <QTimer>
 #include <QUrl>
+#include <algorithm>
 
 #include "analyzer/analyzerscheduledtrack.h"
 #include "control/controlproxy.h"
@@ -49,6 +50,11 @@ constexpr int kSearchResultsMax = 50;
 #else
 constexpr int kSearchResultsMax = 100;
 #endif
+
+// A search delivers at least this many videos up front, and every scroll to
+// the end of the list fetches this many more. InnerTube pages hold about 20
+// videos, so several pages are chained per batch.
+constexpr int kSearchBatchSize = 50;
 
 // Upper duration bound (seconds) for items shown in the trending/home feed.
 // The Greek "top songs" feed otherwise mixes in hour-long "megamix" / "best
@@ -614,6 +620,7 @@ YouTubeFeature::YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig)
         : BaseExternalLibraryFeature(pLibrary, pConfig, "youtube"),
           m_pSidebarModel(make_parented<TreeItemModel>(this)),
           m_service(this) {
+    m_service.setSponsorBlockEnabled(sponsorBlockAutoSkip());
     // Debounce timer for sidebar + home HTML rebuilds. Rapid-fire download
     // completions (e.g. batch auto-analyze) each want to rebuild; coalescing
     // them to a single repaint 120 ms after the last event keeps the UI
@@ -936,6 +943,7 @@ bool YouTubeFeature::sponsorBlockAutoSkip() const {
 
 void YouTubeFeature::setSponsorBlockAutoSkip(bool enabled) {
     m_pConfig->setValue(kCfgSponsorBlockAutoSkip, enabled);
+    m_service.setSponsorBlockEnabled(enabled);
     emit sponsorBlockAutoSkipChanged(enabled);
 }
 void YouTubeFeature::activate() {
@@ -1145,7 +1153,7 @@ void YouTubeFeature::searchAndActivate(const QString& query) {
         m_pTrackModel->setSearch(query);
     }
     replaceTrackTable({});
-    m_service.searchVideos(query, kSearchResultsMax, 20);
+    m_service.searchVideos(query, kSearchResultsMax, kSearchBatchSize);
 }
 
 void YouTubeFeature::onSearchResultsReady(
@@ -1244,6 +1252,16 @@ void YouTubeFeature::onSearchResultsReady(
     }
 }
 
+void YouTubeFeature::loadMoreResults() {
+    if (m_lastQuery.isEmpty() ||
+            m_lastQuery.startsWith(mixxx::YouTubeService::kTrendingQueryPrefix)) {
+        // Nothing to continue: tell listeners the batch is empty.
+        Q_EMIT m_service.searchMoreReady(m_lastQuery, {});
+        return;
+    }
+    m_service.fetchMoreSearchResults(m_lastQuery, kSearchResultsMax, kSearchBatchSize);
+}
+
 void YouTubeFeature::onSearchMoreReady(
         const QString& query, const QList<mixxx::YouTubeVideoInfo>& results) {
     if (query != m_lastQuery) {
@@ -1304,10 +1322,21 @@ void YouTubeFeature::requestDownloadToPlayer(
                           << videoId << group;
         return;
     }
-    PendingPlayerLoad pendingLoad;
-    pendingLoad.group = group;
-    pendingLoad.play = play;
-    m_pendingPlayerLoads[videoId].append(pendingLoad);
+    // One pending load per deck: a second tap on the same deck while the
+    // download runs must not load it twice (two loads inside the double-tap
+    // window clone the other deck instead).
+    QList<PendingPlayerLoad>& pendingLoads = m_pendingPlayerLoads[videoId];
+    const auto sameDeck = std::find_if(pendingLoads.begin(),
+            pendingLoads.end(),
+            [&group](const PendingPlayerLoad& load) { return load.group == group; });
+    if (sameDeck != pendingLoads.end()) {
+        sameDeck->play = sameDeck->play || play;
+    } else {
+        PendingPlayerLoad pendingLoad;
+        pendingLoad.group = group;
+        pendingLoad.play = play;
+        pendingLoads.append(pendingLoad);
+    }
     QString title = m_downloadedTracks.value(videoId);
     if (title.isEmpty()) {
         for (const auto& info : std::as_const(m_lastResults)) {
@@ -1425,6 +1454,12 @@ void YouTubeFeature::autoAnalyzeCurrentResults() {
     }
 }
 
+void YouTubeFeature::abandonPendingLoads(const QString& videoId) {
+    if (m_pendingPlayerLoads.remove(videoId) > 0) {
+        Q_EMIT playerLoadsSettled(videoId);
+    }
+}
+
 void YouTubeFeature::onDownloadFinished(
         const QString& videoId, const QString& localPath) {
     m_videoIdsDownloading.remove(videoId);
@@ -1432,6 +1467,7 @@ void YouTubeFeature::onDownloadFinished(
     pumpDownloadQueue();
     if (!QFileInfo::exists(localPath)) {
         kLogger.warning() << "Downloaded file disappeared:" << localPath;
+        abandonPendingLoads(videoId);
         return;
     }
     // SponsorBlock cuts have already been physically applied to the file by
@@ -1481,6 +1517,7 @@ void YouTubeFeature::onDownloadFinished(
     if (!pTrack) {
         kLogger.warning() << "Could not add downloaded track to library:"
                           << localPath;
+        abandonPendingLoads(videoId);
         return;
     }
     pTrack->setArtist(uploader);
@@ -1538,6 +1575,9 @@ void YouTubeFeature::onDownloadFinished(
             Q_EMIT loadTrackToPlayer(pTrack, pendingLoad.group, pendingLoad.play);
 #endif
         }
+    }
+    if (!pendingLoads.isEmpty()) {
+        Q_EMIT playerLoadsSettled(videoId);
     }
     const QList<PlaylistDAO::AutoDJSendLoc> pendingAutoDjLoads =
             m_pendingAutoDjLoads.take(videoId);

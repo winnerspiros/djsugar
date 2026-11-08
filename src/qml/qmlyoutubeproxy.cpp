@@ -38,6 +38,18 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                                 : 0.04);
             });
 
+    connect(pFeature,
+            &YouTubeFeature::playerLoadsSettled,
+            this,
+            [this](const QString& videoId) {
+                // A cached track loads without any download event, so the
+                // progress shown for its deck button is cleared here.
+                updateVideoProgress(videoId, 1.0);
+                QTimer::singleShot(350, this, [this, videoId]() {
+                    clearVideoProgress(videoId);
+                });
+            });
+
     mixxx::YouTubeService* pService = pFeature->service();
     connect(pService,
             &mixxx::YouTubeService::searchResultsReady,
@@ -54,14 +66,17 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
     connect(pService,
             &mixxx::YouTubeService::searchMoreReady,
             this,
-            [this](const QString&, const QList<mixxx::YouTubeVideoInfo>& results) {
+            [this, pFeature, pService](const QString& query, const QList<mixxx::YouTubeVideoInfo>& results) {
+                if (query != pFeature->lastQuery()) {
+                    return; // superseded by a newer search
+                }
                 for (const auto& v : results) {
                     if (!v.id.isEmpty() && !v.title.isEmpty()) {
                         m_videoTitles.insert(v.id, v.title);
                     }
                 }
                 prefetchCovers(results);
-                emit searchFinished(toVariantList(results));
+                emit searchMoreFinished(toVariantList(results), pService->hasMoreSearchResults());
             });
     connect(pService,
             &mixxx::YouTubeService::searchFailed,
@@ -89,19 +104,10 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                 QTimer::singleShot(350, this, [this, videoId]() {
                     clearVideoProgress(videoId);
                 });
-                // Each download loads into the deck it was started for. A
-                // single pending deck would send every finished download to
-                // whichever deck was clicked last.
-                const QString deck = m_videoToDeck.value(videoId);
-                if (!deck.isEmpty() && s_pPlayerManager) {
-                    QMetaObject::invokeMethod(
-                            s_pPlayerManager.get(),
-                            [deck, localPath]() {
-                                s_pPlayerManager->slotLoadLocationToPlayer(
-                                        localPath, deck, false);
-                            },
-                            Qt::QueuedConnection);
-                }
+                // The deck load itself is done by YouTubeFeature, which holds
+                // the pending load per deck. Loading here as well would hit
+                // the same deck twice within the double-tap window, and the
+                // second load then clones the other deck instead.
                 emit downloadFinished(videoId, localPath);
             });
     connect(pService,
@@ -216,13 +222,26 @@ void QmlYouTubeProxy::search(const QString& query) {
 void QmlYouTubeProxy::loadMore() {
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
-        pFeature->service()->fetchMoreSearchResults(QString());
+        pFeature->loadMoreResults();
+    } else {
+        emit searchMoreFinished({}, false);
     }
 }
 
 bool QmlYouTubeProxy::hasMore() const {
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     return pFeature && pFeature->service()->hasMoreSearchResults();
+}
+
+void QmlYouTubeProxy::download(const QString& videoId) {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    if (!pFeature) {
+        emit downloadFailed(videoId, tr("YouTube is not available"));
+        return;
+    }
+    // Download only: the file lands in the YouTube cache and library without
+    // touching any deck. Progress comes from the service's downloadStarted.
+    pFeature->requestDownload(videoId);
 }
 
 void QmlYouTubeProxy::downloadToDeck(const QString& videoId, const QString& deckGroup) {
@@ -274,12 +293,9 @@ bool QmlYouTubeProxy::sponsorBlockAutoSkip() const {
 void QmlYouTubeProxy::setSponsorBlockAutoSkip(bool enabled) {
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
+        // The feature's change signal reaches SponsorBlockController (playback
+        // skipping) and the service (cutting downloads).
         pFeature->setSponsorBlockAutoSkip(enabled);
-        // Also update the SponsorBlockController
-        if (Library* pLib = s_pLibrary) {
-            // Access the controller through library - need a way to do this
-            // For now, just update the feature setting; controller reads it on next track
-        }
         emit sponsorBlockAutoSkipChanged();
     }
 }

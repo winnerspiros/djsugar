@@ -186,7 +186,7 @@ Rectangle {
                             id: background
 
                             anchors.fill: parent
-                            color: depth == 0 ? Theme.midGray2 : 'transparent'
+                            color: Theme.backgroundColor
 
                             MouseArea {
                                 id: rowMouseArea
@@ -211,7 +211,7 @@ Rectangle {
                                 anchors.leftMargin: 10 + 15 * depth
                                 anchors.right: parent.right
                                 anchors.top: parent.top
-                                color: current ? Theme.midGray : 'transparent'
+                                color: current ? Theme.darkGray3 : 'transparent'
                                 width: 25
 
                                 // The features give the name of their icon

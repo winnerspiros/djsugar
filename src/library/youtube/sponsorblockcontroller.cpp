@@ -6,7 +6,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <algorithm>
 
+#include "control/controlobject.h"
 #include "mixer/playerinfo.h"
 #include "track/track.h"
 #include "util/logger.h"
@@ -79,6 +81,8 @@ void SponsorBlockController::clearDeck(const QString& group) {
     it->videoId.clear();
     it->segments.clear();
     it->durationSec = 0.0;
+    it->pTrack.reset();
+    it->leadSilenceSkipped = false;
 }
 
 void SponsorBlockController::onTrackChanged(
@@ -107,6 +111,7 @@ void SponsorBlockController::onTrackChanged(
     auto it = m_decks.find(group);
     it->videoId = videoId;
     it->durationSec = pNewTrack->getDuration();
+    it->pTrack = pNewTrack;
 
     if (!tryLoadSegmentsFromSidecar(group, videoId)) {
         // Fall back to the network. The reply is correlated by videoId, and
@@ -182,24 +187,61 @@ void SponsorBlockController::onSponsorSegmentsFetched(
 
 void SponsorBlockController::onPlayPositionChanged(
         const QString& group, double pos) {
+    if (!m_autoSkipEnabled) {
+        return;
+    }
     auto it = m_decks.find(group);
-    if (it == m_decks.end() || it->segments.isEmpty() || it->durationSec <= 0.0) {
+    if (it == m_decks.end() || it->videoId.isEmpty() || it->durationSec <= 0.0) {
+        return;
+    }
+    // Only a playing deck skips: seeking around a paused deck (cueing, setting
+    // loops) must not be fought.
+    if (ControlObject::get(ConfigKey(group, QStringLiteral("play"))) <= 0.0) {
         return;
     }
     const double currentSec = pos * it->durationSec;
+    // Skip whenever the playhead is INSIDE a segment, not only when it crosses
+    // the start: the segments arrive over the network a moment after the load
+    // and the intro (a segment from 0:00) is already playing by then, and a
+    // seek or a coarse position update can jump straight past a start edge.
+    double skipTo = -1.0;
     for (const auto& seg : std::as_const(it->segments)) {
-        // Use a tight window so we only trigger once per crossing rather than
-        // continuously re-seeking inside the segment.
-        constexpr double kTriggerWindow = 0.5; // seconds
-        if (currentSec >= seg.start && currentSec < seg.start + kTriggerWindow) {
-            const double newPos = qBound(0.0, seg.end / it->durationSec, 1.0);
-            kLogger.info() << "[" << group << "] Skipping" << seg.category
-                           << "segment" << seg.start << "→" << seg.end;
-            // set() is async-safe; the engine will pick it up on the next pass.
-            it->pPlayPosition->set(newPos);
-            return;
+        if (seg.end > seg.start && currentSec >= seg.start && currentSec < seg.end) {
+            skipTo = std::max(skipTo, seg.end);
         }
     }
+    if (skipTo < 0.0 && !it->leadSilenceSkipped) {
+        // No SponsorBlock data covers this spot (the database has nothing for
+        // most music videos). Fall back to the analyzer's audible range and
+        // skip silence or near-silence before the music starts.
+        const TrackPointer pTrack = it->pTrack.lock();
+        const CuePointer pSound = pTrack
+                ? pTrack->findCueByType(mixxx::CueType::N60dBSound)
+                : CuePointer();
+        const auto sampleRate = pTrack ? pTrack->getSampleRate() : mixxx::audio::SampleRate();
+        if (pSound && sampleRate.isValid() && pSound->getPosition().isValid()) {
+            const double soundStartSec =
+                    pSound->getPosition().value() / sampleRate.value();
+            constexpr double kMinLeadSilenceSec = 1.0;
+            if (soundStartSec >= kMinLeadSilenceSec &&
+                    currentSec < soundStartSec - 0.25) {
+                skipTo = soundStartSec;
+            }
+        }
+        if (currentSec > 0.0) {
+            // Decided for this load: either skipped now or the music has
+            // already started.
+            it->leadSilenceSkipped = true;
+        }
+    }
+    if (skipTo < 0.0) {
+        return;
+    }
+    const double newPos = qBound(0.0, skipTo / it->durationSec, 1.0);
+    kLogger.info() << "[" << group << "] Skipping non-music segment"
+                   << currentSec << "→" << skipTo;
+    // set() is async-safe; the engine will pick it up on the next pass.
+    it->pPlayPosition->set(newPos);
 }
 
 } // namespace mixxx

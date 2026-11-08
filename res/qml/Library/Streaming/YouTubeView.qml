@@ -12,39 +12,131 @@ Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    property var results: []
+    // Every video the search has delivered so far, in order. `resultsModel`
+    // holds the ones that pass the genre filter.
+    property var allResults: []
     property string statusMessage: qsTr("Search YouTube and load straight into a deck")
     property bool isBusy: false
+    property bool isLoadingMore: false
+    property bool hasMore: false
+    // A fetch that ended empty is not retried until this time, so a flagged or
+    // offline connection is not hammered while the user keeps scrolling.
+    property double retryMoreAfter: 0
     property string selectedGenre: ""
     readonly property var genreOptions: ["", "EDM", "House", "Techno", "Trance", "DnB", "Dubstep", "Hip Hop", "Rap", "R&B", "Pop", "Rock", "Lo-fi", "Chillout", "Ambient", "Synthwave", "Classical", "Jazz", "Blues", "Country", "Reggae", "K-Pop", "J-Pop", "Latin", "Afrobeat"]
+
+    function matchesGenre(video) {
+        return root.selectedGenre === "" || (video.genre && video.genre.toLowerCase().includes(root.selectedGenre.toLowerCase()));
+    }
+
+    function toRow(video) {
+        return {
+            "vid": video.id ?? "",
+            "title": video.title ?? "",
+            "uploader": video.uploader ?? "",
+            "durationSec": video.durationSec ?? 0,
+            "genre": video.genre ?? ""
+        };
+    }
+
+    function rebuildModel() {
+        resultsModel.clear();
+        for (const video of root.allResults) {
+            if (root.matchesGenre(video)) {
+                resultsModel.append(root.toRow(video));
+            }
+        }
+    }
+
+    // Adds a batch below what is already listed, skipping videos the search
+    // has already delivered. Returns how many were new.
+    function appendResults(batch) {
+        const seen = new Set(root.allResults.map(v => v.id));
+        const fresh = batch.filter(v => v.id && !seen.has(v.id));
+        root.allResults = root.allResults.concat(fresh);
+        for (const video of fresh) {
+            if (root.matchesGenre(video)) {
+                resultsModel.append(root.toRow(video));
+            }
+        }
+        return fresh.length;
+    }
+
+    // After a batch lands, keep fetching while the list is still too short to
+    // scroll, but only if the batch put something on screen: a genre filter
+    // that matches nothing must not pull every page YouTube has.
+    function continueIfShort(shownBefore) {
+        if (resultsModel.count > shownBefore) {
+            root.maybeLoadMore();
+        }
+    }
 
     function doSearch() {
         if (searchField.text.length === 0) {
             return;
         }
         root.isBusy = true;
+        root.isLoadingMore = false;
+        root.hasMore = false;
         root.statusMessage = qsTr("Searching YouTube...");
         Mixxx.YouTube.search(searchField.text);
     }
+
+    // Infinite scroll: the next batch is fetched when the list nears its end.
+    function maybeLoadMore() {
+        if (root.isBusy || root.isLoadingMore || !root.hasMore || !root.visible || root.allResults.length === 0 || Date.now() < root.retryMoreAfter) {
+            return;
+        }
+        if (resultList.contentHeight - resultList.contentY - resultList.height > 900) {
+            return;
+        }
+        root.isLoadingMore = true;
+        Mixxx.YouTube.loadMore();
+    }
+
+    ListModel {
+        id: resultsModel
+    }
+
+    onSelectedGenreChanged: rebuildModel()
 
     Connections {
         target: Mixxx.YouTube
 
         function onSearchFinished(results) {
             root.isBusy = false;
-            root.results = results;
-            root.statusMessage = results.length > 0
-                ? qsTr("%1 results").arg(results.length)
+            root.isLoadingMore = false;
+            root.allResults = [];
+            resultsModel.clear();
+            root.appendResults(results);
+            root.hasMore = Mixxx.YouTube.hasMore();
+            root.retryMoreAfter = 0;
+            root.statusMessage = root.allResults.length > 0
+                ? qsTr("%1 results").arg(root.allResults.length)
                 : qsTr("No results");
+            resultList.positionViewAtBeginning();
+            root.continueIfShort(0);
+        }
+        function onSearchMoreFinished(results, hasMore) {
+            root.isLoadingMore = false;
+            const shownBefore = resultsModel.count;
+            const added = root.appendResults(results);
+            root.hasMore = hasMore;
+            if (added === 0) {
+                root.retryMoreAfter = Date.now() + 4000;
+            }
+            root.statusMessage = qsTr("%1 results").arg(root.allResults.length);
+            root.continueIfShort(shownBefore);
         }
         function onSearchFailed(error) {
             root.isBusy = false;
+            root.isLoadingMore = false;
             root.statusMessage = qsTr("Search error: %1").arg(error);
         }
-        // The proxy loads each finished download into the deck its button
+        // The feature loads each finished download into the deck its button
         // was pressed for; the view only reports status.
         function onDownloadFinished(videoId, path) {
-            root.statusMessage = qsTr("Downloaded and loaded");
+            root.statusMessage = qsTr("Download finished");
         }
         function onDownloadFailed(videoId, error) {
             root.statusMessage = qsTr("Download error: %1").arg(error);
@@ -202,14 +294,33 @@ Item {
         }
 
         ListView {
+            id: resultList
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: root.selectedGenre === "" ? root.results : root.results.filter(r => r.genre && r.genre.toLowerCase().includes(root.selectedGenre.toLowerCase()))
+            model: resultsModel
             spacing: 4
+            onContentYChanged: root.maybeLoadMore()
+            footer: Item {
+                width: ListView.view.width
+                height: root.isLoadingMore ? 48 : 0
+                visible: root.isLoadingMore
+
+                Text {
+                    anchors.centerIn: parent
+                    color: "#9a9ea6"
+                    font.pixelSize: 12
+                    text: qsTr("Loading more results...")
+                }
+            }
             delegate: Rectangle {
                 id: videoCard
-                required property var modelData
+                required property string vid
+                required property string title
+                required property string uploader
+                required property int durationSec
+                required property string genre
                 required property int index
 
                 width: ListView.view.width
@@ -220,7 +331,13 @@ Item {
                 radius: 6
                 clip: true
 
-                property var video: modelData
+                readonly property var video: ({
+                    "id": vid,
+                    "title": title,
+                    "uploader": uploader,
+                    "durationSec": durationSec,
+                    "genre": genre
+                })
                 readonly property real downloadProg: {
                     const map = Mixxx.YouTube.downloadProgressByVideo;
                     return (video && video.id && map && map[video.id] !== undefined)
@@ -273,7 +390,8 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     anchors.leftMargin: 10
-                    anchors.rightMargin: 8
+                    // Clear of the D1, D2 and download buttons
+                    anchors.rightMargin: 224
                     anchors.topMargin: 8
                     anchors.bottomMargin: 11
                     spacing: 2
@@ -326,6 +444,54 @@ Item {
                                 : modelData.label
                             enabled: !videoCard.isDownloading
                             onClicked: Mixxx.YouTube.downloadToDeck(videoCard.video.id, modelData.deck)
+                        }
+                    }
+
+                    // Download only: keeps the song in the library without
+                    // loading it on a deck.
+                    AbstractButton {
+                        id: saveButton
+
+                        Layout.preferredHeight: 36
+                        Layout.preferredWidth: 64
+                        enabled: !videoCard.isDownloading
+                        opacity: enabled ? 1.0 : 0.5
+                        onClicked: {
+                            root.statusMessage = qsTr("Downloading to your library...");
+                            Mixxx.YouTube.download(videoCard.video.id);
+                        }
+
+                        background: Rectangle {
+                            color: saveButton.pressed ? "#1500e676" : "transparent"
+                            border.color: "#00e676"
+                            border.width: 2
+                            radius: 10
+                        }
+                        contentItem: Item {
+                            // Arrow down: a stem over a triangle (the shared
+                            // Triangle turned 90 degrees to point down)
+                            Item {
+                                anchors.centerIn: parent
+                                height: 22
+                                width: 18
+
+                                Rectangle {
+                                    color: "#00e676"
+                                    height: 11
+                                    width: 4
+                                    x: 7
+                                    y: 0
+                                }
+                                Skin.Triangle {
+                                    color: "#00e676"
+                                    height: 16
+                                    pointsRight: true
+                                    rotation: 90
+                                    width: 9
+                                    x: 4.5
+                                    y: 6.5
+                                }
+                            }
                         }
                     }
                 }

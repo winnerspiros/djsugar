@@ -90,10 +90,21 @@ class YouTubeService : public QObject {
     /// search response. Emits searchMoreReady(query, results) on success, or
     /// does nothing when no continuation is available or bot-flagged.
     /// The feature calls this from YouTubeTrackModel::fetchMore().
-    void fetchMoreSearchResults(const QString& emittedQuery, int cap = 25);
+    /// When `minResults` is set, continuation pages (about 20 videos each)
+    /// are chained until the batch holds at least that many, so every scroll
+    /// step delivers a full batch. An empty batch is emitted when the fetch
+    /// ends without results (end of results, throttle/bot flag, network
+    /// error) so callers can stop their loading indicator.
+    void fetchMoreSearchResults(const QString& emittedQuery, int cap = 25, int minResults = 0);
 
     /// True when the last InnerTube search response included a continuation
     /// token, i.e. there are more results the user can scroll to.
+    /// Whether downloads cut non-music segments out of the file. Mirrors the
+    /// "auto skip" preference: off keeps every downloaded file whole.
+    void setSponsorBlockEnabled(bool enabled) {
+        m_sponsorBlockEnabled = enabled;
+    }
+
     bool hasMoreSearchResults() const {
         return !m_searchContinuationToken.isEmpty();
     }
@@ -327,7 +338,14 @@ class YouTubeService : public QObject {
             int cap,
             int minResults,
             QList<mixxx::YouTubeVideoInfo> accumulated,
-            int clientIdx);
+            int clientIdx,
+            bool more = false);
+
+    /// Emits searchMoreReady (`more`) or searchResultsReady for a finished
+    /// auto-fetch.
+    void finishSearchBatch(const QString& emittedQuery,
+            const QList<mixxx::YouTubeVideoInfo>& results,
+            bool more);
 
     /// Attempt to self-update the bundled yt-dlp binary on desktop. This runs
     /// `yt-dlp --update-to stable` in the background at most once per process
@@ -426,6 +444,9 @@ class YouTubeService : public QObject {
 
     /// Parse and apply a remote config JSON. Returns true if applied.
     bool applyRemoteConfig(const QJsonObject& config, int remoteVersion);
+
+    /// Cut non-music segments out of downloads (see setSponsorBlockEnabled()).
+    bool m_sponsorBlockEnabled = true;
 
     QNetworkAccessManager* m_pNam;
     QString m_ytDlpPath;

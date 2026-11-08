@@ -1532,7 +1532,7 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
 }
 
 void YouTubeService::fetchMoreSearchResults(
-        const QString& emittedQuery, int cap) {
+        const QString& emittedQuery, int cap, int minResults) {
     if (m_searchContinuationToken.isEmpty()) {
         // The token is cleared at search start and set when the first page
         // lands (~800 ms window). fetchMore firing inside that window used
@@ -1544,20 +1544,22 @@ void YouTubeService::fetchMoreSearchResults(
         if (waits < kMaxTokenWaits) {
             waits++;
             QPointer<YouTubeService> guard(this);
-            QTimer::singleShot(kTokenWaitMs, this, [guard, emittedQuery, cap]() {
+            QTimer::singleShot(kTokenWaitMs, this, [guard, emittedQuery, cap, minResults]() {
                 if (guard) {
-                    guard->fetchMoreSearchResults(emittedQuery, cap);
+                    guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
                 }
             });
             return;
         }
         m_fetchMoreTokenWaits.remove(emittedQuery);
         kLogger.debug() << "fetchMoreSearchResults: no continuation token";
+        Q_EMIT searchMoreReady(emittedQuery, {});
         return;
     }
     m_fetchMoreTokenWaits.remove(emittedQuery);
     const QVector<InnerTubeClient>& clients = innerTubeSearchClients();
     if (clients.isEmpty()) {
+        Q_EMIT searchMoreReady(emittedQuery, {});
         return;
     }
     const InnerTubeClient& c = clients.at(0);
@@ -1596,6 +1598,7 @@ void YouTubeService::fetchMoreSearchResults(
     maybeRecoverFromBotFlag();
     if (m_botFlagActive) {
         kLogger.info() << "Bot-flagged: skipping continuation fetch";
+        Q_EMIT searchMoreReady(emittedQuery, {});
         return;
     }
     if (shouldThrottleRequest()) {
@@ -1609,9 +1612,9 @@ void YouTubeService::fetchMoreSearchResults(
         kLogger.info() << "Throttled: retrying continuation fetch in"
                        << delay << "ms";
         QPointer<YouTubeService> guard(this);
-        QTimer::singleShot(delay, this, [guard, emittedQuery, cap]() {
+        QTimer::singleShot(delay, this, [guard, emittedQuery, cap, minResults]() {
             if (guard) {
-                guard->fetchMoreSearchResults(emittedQuery, cap);
+                guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
             }
         });
         return;
@@ -1624,13 +1627,15 @@ void YouTubeService::fetchMoreSearchResults(
     connect(reply,
             &QNetworkReply::finished,
             this,
-            [this, reply, emittedQuery, cap]() {
+            [this, reply, emittedQuery, cap, minResults]() {
                 reply->deleteLater();
                 if (reply->error() != QNetworkReply::NoError) {
                     kLogger.warning()
                             << "InnerTube continuation request failed:"
                             << reply->errorString();
-                    m_searchContinuationToken.clear();
+                    // Keep the token: a dropped connection should not end
+                    // the scroll for good, the next scroll retries.
+                    Q_EMIT searchMoreReady(emittedQuery, {});
                     return;
                 }
                 const QByteArray rawBody = reply->readAll();
@@ -1642,35 +1647,57 @@ void YouTubeService::fetchMoreSearchResults(
                     kLogger.debug()
                             << "InnerTube continuation returned 0 results";
                     m_searchContinuationToken.clear();
+                    Q_EMIT searchMoreReady(emittedQuery, {});
                     return;
                 }
                 kLogger.info() << "InnerTube continuation returned"
                                << results.size() << "more results";
                 m_searchContinuationToken = extractContinuationToken(root);
+                if (minResults > 0 && results.size() < minResults &&
+                        !m_searchContinuationToken.isEmpty()) {
+                    autoFetchContinuationPages(emittedQuery,
+                            std::max(cap, minResults),
+                            minResults,
+                            results,
+                            /*clientIdx=*/0,
+                            /*more=*/true);
+                    return;
+                }
                 Q_EMIT searchMoreReady(emittedQuery, results);
             });
+}
+
+void YouTubeService::finishSearchBatch(const QString& emittedQuery,
+        const QList<mixxx::YouTubeVideoInfo>& results,
+        bool more) {
+    if (more) {
+        Q_EMIT searchMoreReady(emittedQuery, results);
+    } else {
+        Q_EMIT searchResultsReady(emittedQuery, results);
+    }
 }
 
 void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
         int cap,
         int minResults,
         QList<mixxx::YouTubeVideoInfo> accumulated,
-        int clientIdx) {
+        int clientIdx,
+        bool more) {
     // Guard: no continuation token or already have enough.
     if (m_searchContinuationToken.isEmpty() ||
             accumulated.size() >= minResults) {
-        Q_EMIT searchResultsReady(emittedQuery, accumulated);
+        finishSearchBatch(emittedQuery, accumulated, more);
         return;
     }
     // Guard: cap is the hard upper bound — don't exceed it.
     if (accumulated.size() >= cap) {
-        Q_EMIT searchResultsReady(emittedQuery, accumulated);
+        finishSearchBatch(emittedQuery, accumulated, more);
         return;
     }
 
     const QVector<InnerTubeClient>& clients = innerTubeSearchClients();
     if (clientIdx < 0 || clientIdx >= clients.size()) {
-        Q_EMIT searchResultsReady(emittedQuery, accumulated);
+        finishSearchBatch(emittedQuery, accumulated, more);
         return;
     }
     const InnerTubeClient& c = clients.at(clientIdx);
@@ -1710,7 +1737,7 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
     if (m_botFlagActive) {
         kLogger.info() << "Bot-flagged: stopping auto-fetch, emitting"
                        << accumulated.size() << "results";
-        Q_EMIT searchResultsReady(emittedQuery, accumulated);
+        finishSearchBatch(emittedQuery, accumulated, more);
         return;
     }
     if (shouldThrottleRequest()) {
@@ -1725,13 +1752,15 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                         cap,
                         minResults,
                         accumulated,
-                        clientIdx]() {
+                        clientIdx,
+                        more]() {
                     if (guard) {
                         guard->autoFetchContinuationPages(emittedQuery,
                                 cap,
                                 minResults,
                                 accumulated,
-                                clientIdx);
+                                clientIdx,
+                                more);
                     }
                 });
         return;
@@ -1753,7 +1782,8 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                     cap,
                     minResults,
                     accumulated,
-                    clientIdx]() mutable {
+                    clientIdx,
+                    more]() mutable {
                 if (!guard) {
                     return;
                 }
@@ -1763,7 +1793,7 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                             << "Auto-fetch continuation failed:"
                             << reply->errorString()
                             << "— emitting" << accumulated.size() << "results so far";
-                    Q_EMIT searchResultsReady(emittedQuery, accumulated);
+                    finishSearchBatch(emittedQuery, accumulated, more);
                     return;
                 }
                 const QByteArray rawBody = reply->readAll();
@@ -1776,7 +1806,7 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                             rawBody)) {
                     kLogger.info() << "Bot-flagged during auto-fetch: emitting"
                                    << accumulated.size() << "results so far";
-                    Q_EMIT searchResultsReady(emittedQuery, accumulated);
+                    finishSearchBatch(emittedQuery, accumulated, more);
                     return;
                 }
                 const QList<YouTubeVideoInfo> pageResults =
@@ -1801,7 +1831,8 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                         cap,
                         minResults,
                         accumulated,
-                        clientIdx);
+                        clientIdx,
+                        more);
             });
 }
 
@@ -3154,10 +3185,14 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     kLogger.debug() << "[Android] runAndroidBundled: videoId=" << videoId
                     << "poToken=" << (!playerPot.isEmpty() ? "yes" : "no");
     QPointer<YouTubeService> guard(this);
+    // Set by whichever side reports the outcome first: the worker when
+    // execute() returns, or the stall watchdog below. The other side then
+    // stays silent, so a download is never reported twice.
+    auto settled = std::make_shared<std::atomic<bool>>(false);
     // Run the JNI download on a worker thread so we don't block the UI.
     // Use a QPointer to guard against YouTubeService being destroyed
     // before the thread completes.
-    QThread* thread = QThread::create([guard, videoId, cacheDir, playerPot, streamingPot]() {
+    QThread* thread = QThread::create([guard, settled, videoId, cacheDir, playerPot, streamingPot]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniEnvironment env; // function scope: used by the init check
         if (!context.isValid()) {
@@ -3289,6 +3324,19 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         request.callMethod<QJniObject>("addOption",
                 "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
                 QJniObject::fromString("--force-ipv4").object());
+        // YouTube throttles one long request for a direct (non-DASH) audio
+        // URL to roughly playback speed (logs showed 140-200 KB/s). Range
+        // requests of 10 MB each are served at full line speed.
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--http-chunk-size").object(),
+                QJniObject::fromString("10M").object());
+        request.callMethod<QJniObject>("addOption",
+                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                "YoutubeDLRequest;",
+                QJniObject::fromString("--retries").object(),
+                QJniObject::fromString("3").object());
         // Skip format availability probes: with an explicit -f selector we
         // don't need yt-dlp to HEAD-check every format before downloading.
         // Cuts 1-3 player-API round-trips before the first byte.
@@ -3339,6 +3387,7 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         kLogger.debug() << "[Android] downloadViaAndroidBundled:"
                         << "executing yt-dlp request for" << videoId;
         const qint64 execStartMs = QDateTime::currentMSecsSinceEpoch();
+
         QJniObject response = ytdl.callObjectMethod(
                 "execute",
                 "(Lcom/yausername/youtubedl_android/YoutubeDLRequest;)"
@@ -3370,6 +3419,12 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                 excEnv.checkAndClearExceptions();
             }
         }
+        if (settled->exchange(true)) {
+            // The stall watchdog already failed this download over.
+            kLogger.info() << "[Android] late yt-dlp result ignored for" << videoId;
+            return;
+        }
+
         if (hasJniException || !response.isValid()) {
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "execute() failed or returned invalid for"
@@ -3445,7 +3500,22 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     auto* progressTimer = new QTimer(this);
     progressTimer->setInterval(160);
     auto tickCount = std::make_shared<int>(0);
-    connect(progressTimer, &QTimer::timeout, this, [this, videoId, cacheDir, tickCount]() {
+    // Stall watchdog. It runs here on the service thread: the worker thread
+    // has no event loop while execute() blocks it, so a timer created there
+    // never fires (that is how a download stayed stuck forever). A download
+    // fails over once its file has not grown for kStallMs; before the first
+    // byte that allows for yt-dlp start-up and extraction.
+    constexpr qint64 kStallMs = 45 * 1000;
+    auto lastBytes = std::make_shared<qint64>(-1);
+    auto lastGrowthMs = std::make_shared<qint64>(QDateTime::currentMSecsSinceEpoch());
+    connect(progressTimer,
+            &QTimer::timeout,
+            this,
+            [this, progressTimer, settled, videoId, cacheDir, tickCount, lastBytes, lastGrowthMs]() {
+        if (settled->load()) {
+            progressTimer->stop();
+            return;
+        }
         ++(*tickCount);
         // Smooth asymptotic baseline (0.06 -> 0.85) blended with actual bytes
         // written to <cacheDir>/<videoId>.* (.part) while yt-dlp downloads.
@@ -3462,6 +3532,19 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                 continue;
             }
             maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
+        }
+        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+        if (maxBytes != *lastBytes) {
+            *lastBytes = maxBytes;
+            *lastGrowthMs = nowMs;
+        } else if (nowMs - *lastGrowthMs > kStallMs && !settled->exchange(true)) {
+            progressTimer->stop();
+            kLogger.warning() << "[Android] yt-dlp stalled for" << videoId
+                              << "at" << maxBytes / 1024 << "KB, failing over";
+            Q_EMIT downloadFailed(videoId,
+                    QStringLiteral("Download stalled (no data for %1 s)")
+                            .arg(kStallMs / 1000));
+            return;
         }
         if (maxBytes > 0) {
             // Typical 3.5-min opus/m4a audio stream is ~3.5 MB
@@ -3823,6 +3906,9 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
     // QThreadPool::globalInstance() reuses pre-warmed OS threads, eliminating
     // the ~5-20 ms thread-creation overhead of the previous QThread::create().
     auto doFinalize = [this, videoId, outPath](const QList<SponsorSegment>& segments) {
+        const QString sidecarPath =
+                QDir(QFileInfo(outPath).absolutePath())
+                        .filePath(videoId + QStringLiteral(".sponsorblock.json"));
         // Capture a copy of segments for the worker (QList is CoW, cheap).
         QThreadPool::globalInstance()->start(
                 [this, videoId, outPath, segments]() {
@@ -3841,11 +3927,6 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                             // {"segment":[start,end], "category":"..."} schema — NOT
                             // the old {start,end} format that was written as
                             // VIDEOID.m4a.sponsor.json (those were silently ignored).
-                            const QString sidecarPath =
-                                    QDir(QFileInfo(outPath).absolutePath())
-                                            .filePath(videoId +
-                                                    QStringLiteral(
-                                                            ".sponsorblock.json"));
                             QFile sidecar(sidecarPath);
                             if (sidecar.open(
                                         QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -3869,6 +3950,15 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                         } else {
                             kLogger.info() << "SponsorBlock: cut" << segments.size()
                                            << "non-music segment(s) from" << videoId;
+                            // The file is clean now. An empty sidecar tells
+                            // SponsorBlockController there is nothing left to
+                            // skip: without it the controller would fetch the
+                            // original timestamps and skip real music in the
+                            // already shortened file.
+                            QFile marker(sidecarPath);
+                            if (marker.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                                marker.write("[]");
+                            }
                         }
                     }
                     // Signal from the worker — Qt queues it to the main thread
@@ -3892,7 +3982,10 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
     // register as a waiter so we get called as soon as it completes. If there
     // was no prefetch at all (e.g. a path that bypassed downloadVideo) fall
     // back to a direct fetch.
-    if (m_sponsorPrefetchCache.contains(videoId)) {
+    if (!m_sponsorBlockEnabled) {
+        // Skipping is off: keep the file whole and do not wait for segments.
+        doFinalize({});
+    } else if (m_sponsorPrefetchCache.contains(videoId)) {
         // Segments arrived before the download finished — zero wait.
         doFinalize(m_sponsorPrefetchCache.value(videoId));
     } else if (m_sponsorPrefetchWaiters.contains(videoId)) {
@@ -3915,16 +4008,18 @@ void YouTubeService::fetchSponsorSegmentsInternal(
         const QString& videoId,
         const std::function<void(const QList<SponsorSegment>&)>& cb) {
     // SponsorBlock public API: https://wiki.sponsor.ajay.app/w/API_Docs
-    // Categories include third-party sponsorships, creator self-promo,
-    // intros/outros, viewer-interaction reminders, content previews, and
-    // non-music sections within music videos. We download audio-only
+    // Categories are the parts that are not the music: third-party
+    // sponsorships, creator self-promo, viewer-interaction reminders and
+    // non-music sections within music videos, and SponsorBlock's intro,
+    // outro, preview and filler (its rules reserve those for non-content
+    // such as intro animations and end cards, not a song's intro). We download audio-only
     // streams from Piped/yt-dlp, so YouTube's pre/mid/post-roll ads are
     // already absent — SponsorBlock only needs to handle the in-content
     // creator-inserted breaks.
     const QUrl url(
             QStringLiteral("https://sponsor.ajay.app/api/skipSegments?videoID=%1"
                            "&categories=[\"sponsor\",\"selfpromo\",\"interaction\","
-                           "\"intro\",\"outro\",\"preview\",\"music_offtopic\"]")
+                           "\"music_offtopic\",\"intro\",\"outro\",\"preview\",\"filler\"]")
                     .arg(videoId));
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mixxx/SponsorBlock");

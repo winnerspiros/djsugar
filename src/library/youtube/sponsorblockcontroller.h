@@ -64,6 +64,12 @@ class SponsorBlockController : public QObject {
         // Track duration (sec). playposition is normalised 0..1, so we need
         // duration to convert SponsorBlock's seconds back to a position.
         double durationSec = 0.0;
+        // The loaded track, read for the analyzer's audible-sound range when
+        // SponsorBlock knows no segments (most songs have none).
+        TrackWeakPointer pTrack;
+        // Leading silence is skipped once per load, so seeking back to the
+        // very start afterwards is not fought.
+        bool leadSilenceSkipped = false;
     };
 
     void ensureDeckTracked(const QString& group);

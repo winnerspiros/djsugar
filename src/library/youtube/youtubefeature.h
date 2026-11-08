@@ -49,6 +49,15 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
 
     void searchAndActivate(const QString& query);
 
+    /// Fetch the next batch of results for the current search (infinite
+    /// scroll). The service answers with searchMoreReady, an empty batch
+    /// when there is nothing more.
+    void loadMoreResults();
+
+    const QString& lastQuery() const {
+        return m_lastQuery;
+    }
+
     void requestDownloadToPlayer(
             const QString& videoId, const QString& group, bool play);
     void requestDownload(const QString& videoId);
@@ -81,6 +90,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
             const QString& videoId,
             const QString& group,
             const QString& title);
+    /// Every deck waiting on `videoId` has been handed its track, or the load
+    /// was abandoned. Fires for fresh downloads and for cache hits, which
+    /// never reach the service's downloadFinished signal.
+    void playerLoadsSettled(const QString& videoId);
     void sponsorBlockAutoSkipChanged(bool enabled);
 
   protected:
@@ -212,6 +225,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
         bool play = false;
     };
     QHash<QString, QList<PendingPlayerLoad>> m_pendingPlayerLoads;
+    /// Drops the deck loads waiting on `videoId` after a failed hand-over.
+    void abandonPendingLoads(const QString& videoId);
     QHash<QString, QList<PlaylistDAO::AutoDJSendLoc>> m_pendingAutoDjLoads;
     QSet<QString> m_videoIdsDownloading;
     /// Track download retry attempts per video id. After kMaxDownloadRetries

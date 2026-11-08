@@ -15,7 +15,7 @@ Item {
     id: root
 
     property var sidebar: librarySources.sidebar()
-    property int librarySourceMode: 0 // 0: Local, 1: Streaming Hub, 2: YouTube
+    property int librarySourceMode: 0 // 0: Local, 1: Streaming Hub (YouTube lives inside the hub)
     // False while a popup (e.g. a deck loader with its own library) covers
     // this library, so only the library in front follows the controller
     property bool acceptsController: true
@@ -133,18 +133,6 @@ Item {
                 font.pixelSize: 11
                 text: qsTr("STREAMING HUB")
                 onClicked: root.librarySourceMode = 1
-            }
-
-            Skin.Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
-                activeColor: Theme.libraryStreamingTabColor
-                backgroundColor: root.librarySourceMode === 2 ? Theme.libraryStreamingTabBackground : Theme.librarySourceTabBackground
-                normalColor: root.librarySourceMode === 2 ? Theme.libraryStreamingTabColor : Theme.libraryStreamingTabText
-                font.bold: true
-                font.pixelSize: 11
-                text: qsTr("YOUTUBE")
-                onClicked: root.librarySourceMode = 2
             }
 
             Item { Layout.fillWidth: true }
@@ -298,13 +286,6 @@ Item {
             id: streamingHubArea
             anchors.fill: parent
             visible: root.librarySourceMode === 1
-        }
-
-        // 3. YOUTUBE SEARCH & LOAD
-        StreamingComponent.YouTubeView {
-            id: youtubeArea
-            anchors.fill: parent
-            visible: root.librarySourceMode === 2
         }
     }
 
