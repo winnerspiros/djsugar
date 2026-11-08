@@ -203,30 +203,35 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
 
     qWarning() << "SoundManager on Android: No physical output device opened! "
                   "Forcing first available output device...";
+    // Pick order: a USB audio device (the DJ controller's sound card, e.g.
+    // the FLX4), then the built-in speaker, then any other Oboe output, then
+    // anything else. Earpiece and network outputs are never picked.
+    auto rank = [](const SoundDevicePointer& pDevice) {
+        if (!pDevice || pDevice->getNumOutputChannels() <= 0 ||
+                pDevice->getDeviceId().name == kNetworkDeviceInternalName) {
+            return 0;
+        }
+        const QString name = pDevice->getDisplayName();
+        if (name.contains(QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
+            return 0;
+        }
+        const bool oboe = pDevice->getHostAPI().contains(
+                QStringLiteral("Oboe"), Qt::CaseInsensitive);
+        if (name.contains(QStringLiteral("USB"), Qt::CaseInsensitive)) {
+            return oboe ? 5 : 4;
+        }
+        if (oboe && name.contains(QStringLiteral("Speaker"))) {
+            return 3;
+        }
+        return oboe ? 2 : 1;
+    };
     SoundDevicePointer targetDevice;
+    int bestRank = 0;
     for (const auto& pDevice : devices) {
-        if (pDevice && pDevice->getNumOutputChannels() > 0 &&
-                pDevice->getDeviceId().name != kNetworkDeviceInternalName) {
-            if (pDevice->getDisplayName().contains(
-                        QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
-                continue;
-            }
-            if (pDevice->getHostAPI().contains(QStringLiteral("Oboe"), Qt::CaseInsensitive)) {
-                // Prefer the built-in speaker, which is always present
-                if (pDevice->getDisplayName().contains(QStringLiteral("Speaker"))) {
-                    targetDevice = pDevice;
-                    break;
-                }
-                if (!targetDevice ||
-                        !targetDevice->getHostAPI().contains(
-                                QStringLiteral("Oboe"), Qt::CaseInsensitive)) {
-                    targetDevice = pDevice;
-                }
-                continue;
-            }
-            if (!targetDevice) {
-                targetDevice = pDevice;
-            }
+        const int r = rank(pDevice);
+        if (r > bestRank) {
+            bestRank = r;
+            targetDevice = pDevice;
         }
     }
     if (!targetDevice) {
@@ -251,22 +256,26 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
         *pMainClockRef = targetDevice;
         ++*pOutputDevicesOpened;
         pDevicesNotFound->remove(targetDevice->getDeviceId());
-        // A configured device that is missing (e.g. a DJ controller that
-        // isn't plugged in yet) stays configured, to be used again next
-        // time. With nothing configured (fresh install) the pick is saved,
-        // so it shows in Settings → Sound Hardware and is used from then on
-        // instead of having to be picked by hand after every install.
-        bool anyOutputConfigured = false;
+        // Reaching this point means no configured physical output could be
+        // opened: nothing configured (fresh install), or the saved device is
+        // gone (Android device IDs change between installs and reboots).
+        // The pick is saved, so it is used from then on and shows in
+        // Settings → Sound Hardware, instead of having to be picked by hand.
+        // A saved USB device that is just unplugged is kept for next time.
+        bool keepSavedUsbDevice = false;
         const auto configuredOutputs = config.getOutputs();
         for (auto it = configuredOutputs.cbegin(); it != configuredOutputs.cend(); ++it) {
-            if (it.key().name != kNetworkDeviceInternalName) {
-                anyOutputConfigured = true;
+            if (it.key().name != kNetworkDeviceInternalName &&
+                    it.key().name.contains(QStringLiteral("USB"), Qt::CaseInsensitive) &&
+                    bestRank < 4) {
+                keepSavedUsbDevice = true;
                 break;
             }
         }
-        if (!anyOutputConfigured) {
+        if (!keepSavedUsbDevice) {
             SoundManagerConfig& mutableConfig = m_pSoundManager->m_config;
             mutableConfig.setAPI(targetDevice->getHostAPI());
+            mutableConfig.clearOutputs();
             mutableConfig.addOutput(targetDevice->getDeviceId(), forcedOut);
             mutableConfig.writeToDisk();
             qInfo() << "Saved the fallback Android audio device as the main output";

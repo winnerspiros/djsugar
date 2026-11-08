@@ -281,25 +281,20 @@ void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& resul
     if (s_pLibrary) {
         if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
             pFeature->prefetchThumbnails(results);
-            // Download the top results in the background (Wi-Fi and mobile
-            // data alike), so a tap on one of them loads the deck from disk
-            // at once, and extract the stream links of the next ones, so a
-            // tap on those skips yt-dlp and starts the 16-way download
-            // straight away. A deck load still jumps ahead of these.
-            constexpr int kPrefetchTopResults = 3;
+            // Extract the stream links of the first results, so a tap skips
+            // yt-dlp and starts the 16-way download straight away. The top 3
+            // used to be downloaded too, but that lagged the app while
+            // browsing; links (and SponsorBlock) are small and quick.
             constexpr int kPrefetchLinks = 10;
-            int queued = 0;
             QStringList linkIds;
             for (const auto& v : results) {
                 if (v.id.isEmpty() || v.durationSec >= 15 * 60) {
                     continue;
                 }
-                if (queued < kPrefetchTopResults) {
-                    pFeature->requestDownload(v.id);
-                    ++queued;
-                } else if (linkIds.size() < kPrefetchLinks) {
-                    linkIds.append(v.id);
+                if (linkIds.size() >= kPrefetchLinks) {
+                    break;
                 }
+                linkIds.append(v.id);
             }
             pFeature->service()->prefetchStreamLinks(linkIds);
         }
