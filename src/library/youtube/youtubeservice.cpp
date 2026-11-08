@@ -3923,7 +3923,7 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                         .filePath(videoId + QStringLiteral(".sponsorblock.json"));
         // Capture a copy of segments for the worker (QList is CoW, cheap).
         QThreadPool::globalInstance()->start(
-                [this, videoId, outPath, segments]() {
+                [this, videoId, outPath, sidecarPath, segments]() {
                     if (!segments.isEmpty()) {
                         // Physically cut non-music segments out of the file so that
                         // duration, BPM, and waveform all reflect the clean music
