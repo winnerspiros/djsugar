@@ -192,17 +192,12 @@ void adjustScaleFactor(CmdlineArgs* pArgs) {
     // maybeAutoDetectScaleFactor() still re-runs post-QApplication so the
     // skin parser pixmaps are correct even on first launch. Persisted value
     // matching the current display closes the Qt-widget-vs-skin scale gap.
-    auto config = ConfigObject<ConfigValue>(
-            QDir(pArgs->getSettingsPath()).filePath(MIXXX_SETTINGS_FILE),
-            QString(),
-            QString());
-    const QString strScaleFactor = config.getValue(
-            ConfigKey(kConfigGroup, kScaleFactorKey));
-    bool ok = false;
-    const double persistedScale = strScaleFactor.toDouble(&ok);
+    // The phone UI is laid out for 0.45 (the deck shows its vinyl). The
+    // screen-fitted factor below was persisted after the first launch and
+    // used from the second one on: the UI came up bigger, without the vinyl,
+    // so the first launch and every later one looked different. 0.45 always.
     constexpr double kAndroidDefaultScaleFactor = 0.45;
-    const double scale = (ok && persistedScale > 0) ? persistedScale
-                                                    : kAndroidDefaultScaleFactor;
+    const double scale = kAndroidDefaultScaleFactor;
     const QByteArray scaleFactorBytes =
             QByteArray::number(scale, 'f', 2);
     qDebug() << "Using Android ScaleFactor" << scaleFactorBytes;
@@ -270,11 +265,9 @@ void maybeAutoDetectScaleFactor(CmdlineArgs* pArgs) {
     // intentionally ignored here so phone ↔ DeX/external-screen switches
     // recalculate every time the app opens. If we set the env var ourselves
     // as a safe pre-QApplication default, always proceed with detection.
-    if (!s_androidScaleSetInternally &&
-            qEnvironmentVariableIsSet(kScaleFactorEnvVar) &&
-            !qgetenv(kScaleFactorEnvVar).isEmpty()) {
-        return;
-    }
+    // The fixed phone scale of adjustScaleFactor() is kept (see there); a
+    // user-provided QT_SCALE_FACTOR is kept as well.
+    return;
 #endif
 
     QScreen* pScreen = QGuiApplication::primaryScreen();

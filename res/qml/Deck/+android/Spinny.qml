@@ -120,7 +120,13 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     color: "#ffffff"
                     font.bold: true
-                    font.pixelSize: Math.max(10, Math.round(tempoInfo.height * 0.34))
+                    // shrinks to the width of the label, so "128.00 BPM" fits the
+                    // label on small spinners instead of being cut off
+                    width: Math.round(tempoInfo.width * 0.84)
+                    horizontalAlignment: Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 6
+                    font.pixelSize: Math.max(8, Math.round(tempoInfo.height * 0.30))
                     text: bpm > 0 ? (bpm.toFixed(2) + " BPM") : "--.-- BPM"
 
                     Mixxx.ControlProxy {
@@ -138,7 +144,13 @@ Item {
 
                     anchors.horizontalCenter: parent.horizontalCenter
                     color: root.deckAccentColor
-                    font.pixelSize: Math.max(8, Math.round(tempoInfo.height * 0.26))
+                    // shrinks to the width of the label, so "128.00 BPM" fits the
+                    // label on small spinners instead of being cut off
+                    width: Math.round(tempoInfo.width * 0.84)
+                    horizontalAlignment: Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 6
+                    font.pixelSize: Math.max(8, Math.round(tempoInfo.height * 0.22))
                     text: ((ratio > 0) ? "+" + ratio.toFixed(2) : ratio.toFixed(2)) + "%"
 
                     Mixxx.ControlProxy {
