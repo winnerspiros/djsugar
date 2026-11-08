@@ -3,12 +3,13 @@
   <info>
     <name>Pioneer DDJ-FLX4</name>
     <author>Robert904, ElHanko</author>
-    <descript<description>rekordbox-style mapping for the Pioneer DDJ-FLX4.
+    <description>rekordbox-style mapping for the Pioneer DDJ-FLX4.
             Pads: HOT CUE (4 banks), PAD FX 1/2 (one effect per pad, set in Settings > Pads),
             BEAT JUMP, SAMPLER (bank A/B, set in Settings > Pads), KEYBOARD, BEAT LOOP, KEY SHIFT,
             SHIFT + SAMPLER = stems. BEAT FX: Echo, Spiral, Reverb, Trans, Flanger, Phaser, Roll,
             Filter, Crush, Tape stop. Smart Fader, Smart CFX, Fader Start (SHIFT + fader),
-            SHIFT + PLAY = stutter, SHIFT + CUE = back to track start.</description>ual />
+            SHIFT + PLAY = stutter, SHIFT + CUE = back to track start.</description>
+    <manual />
     <forums />
     <devices>
       <product protocol="midi" vendor_id="0x2b73" product_id="0x0045" />
