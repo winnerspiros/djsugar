@@ -32,6 +32,7 @@
 #include "qml/qmlcoreservices.h"
 #include "qml/qmldlgpreferencesproxy.h"
 #include "qml/qmllanguageproxy.h"
+#include "qml/qmlmobileappproxy.h"
 #include "qml/qmlrecordingproxy.h"
 #include "recording/recordingmanager.h"
 #include "soundio/soundmanager.h"
@@ -189,12 +190,9 @@ QmlApplication::QmlApplication(
 #ifdef MIXXX_USE_QML
     WaveformWidgetFactory::setQmlMode(true);
 #endif
-    // 4x MSAA so QtQuick.Shapes strokes (knob value arcs, waveform markers)
-    // are antialiased; the Shape "antialiasing" property is a no-op without a
-    // multisampled surface. Must be set before any QQuickWindow is created.
-    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
-    format.setSamples(4);
-    QSurfaceFormat::setDefaultFormat(format);
+    // Graphics API (Settings -> Interface -> Renderer) and multisampling.
+    // Must be set before any QQuickWindow is created.
+    QmlMobileAppProxy::applyGraphicsSettings(m_pCoreServices->getSettings());
 
     QQuickStyle::setStyle("Basic");
 
@@ -595,6 +593,7 @@ bool QmlApplication::loadQml(const QString& path) {
             continue;
         }
         slotWindowChanged(pWindow);
+        QmlMobileAppProxy::watchGraphicsStartup(pWindow, m_pCoreServices->getSettings());
         break;
     }
     return true;

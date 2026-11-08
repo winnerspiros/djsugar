@@ -10,6 +10,7 @@
 #include <QQuickRenderControl>
 #include <QQuickRenderTarget>
 #include <QQuickWindow>
+#include <QSGRendererInterface>
 #include <QThread>
 #include <QTimer>
 
@@ -178,6 +179,14 @@ void ControllerRenderingEngine::setup(std::shared_ptr<QQmlEngine> qmlEngine) {
     }
     if (!m_isValid) {
         DEBUG_ASSERT(!"Trying to setup an invalid engine");
+        return;
+    }
+    // The screen is drawn through an OpenGL context, and Qt Quick has one
+    // graphics API for all windows: with Vulkan/Metal/Direct3D picked for the
+    // interface the render control cannot start on it.
+    if (QQuickWindow::graphicsApi() != QSGRendererInterface::OpenGL) {
+        kLogger.warning() << "Controller screens need the OpenGL renderer "
+                             "(Settings -> Interface -> Renderer)";
         return;
     }
     QSurfaceFormat format;

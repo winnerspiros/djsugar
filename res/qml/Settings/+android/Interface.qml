@@ -212,59 +212,57 @@ Category {
                                 color: "#D85486"
                             }
 
-                            // Applied immediately, independently of the Save button
+                            // The graphics API and antialiasing of the interface:
+                            // Qt Quick picks them once, so they apply at the
+                            // next start (a start that never draws falls back
+                            // to the default automatically)
                             RowLayout {
                                 Layout.fillWidth: true
-                                Text { Layout.fillWidth: true; text: qsTr("Language"); color: Theme.white; font.pixelSize: 13 }
+                                Text { Layout.fillWidth: true; text: qsTr("Renderer"); color: Theme.white; font.pixelSize: 13 }
                                 Skin.ComboBox {
-                                    id: languageInput
-
-                                    function syncCurrentIndex() {
-                                        currentIndex = Math.max(0, indexOfValue(Mixxx.Language.locale));
-                                    }
-
                                     Layout.preferredWidth: 220
-                                    popupMaxItem: 10
                                     textRole: "label"
-                                    valueRole: "locale"
-                                    model: [{
-                                            "locale": "",
-                                            "label": qsTr("System default")
-                                        }].concat(Mixxx.Language.availableLocales.map(entry => ({
-                                                "locale": entry.locale,
-                                                "label": entry.nativeName === entry.name ? entry.name : `${entry.nativeName} – ${entry.name}`
-                                            })))
-
-                                    Component.onCompleted: syncCurrentIndex()
-                                    onModelChanged: Qt.callLater(syncCurrentIndex)
-                                    // Wait for the popup to close: the texts of its items are
-                                    // rebuilt by the change.
+                                    valueRole: "value"
+                                    model: Mixxx.MobileApp.graphicsApis
+                                    Component.onCompleted: currentIndex = Math.max(0, indexOfValue(Mixxx.MobileApp.graphicsApi))
                                     onActivated: {
-                                        const locale = currentValue;
-                                        Qt.callLater(() => {
-                                            if (locale !== Mixxx.Language.locale) {
-                                                languageRestartHint.visible = true;
-                                                Mixxx.Language.locale = locale;
-                                            }
-                                        });
+                                        Mixxx.MobileApp.graphicsApi = currentValue;
+                                        rendererRestartHint.visible = true;
                                     }
+                                }
+                            }
 
-                                    Connections {
-                                        function onLocaleChanged() {
-                                            languageInput.syncCurrentIndex();
-                                        }
-
-                                        target: Mixxx.Language
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { Layout.fillWidth: true; text: qsTr("Antialiasing"); color: Theme.white; font.pixelSize: 13 }
+                                Skin.ComboBox {
+                                    Layout.preferredWidth: 220
+                                    textRole: "label"
+                                    valueRole: "value"
+                                    model: [{
+                                            "value": 4,
+                                            "label": qsTr("4x (smoothest)")
+                                        }, {
+                                            "value": 2,
+                                            "label": qsTr("2x")
+                                        }, {
+                                            "value": 0,
+                                            "label": qsTr("Off (fastest)")
+                                        }]
+                                    Component.onCompleted: currentIndex = Math.max(0, indexOfValue(Mixxx.MobileApp.antialiasing))
+                                    onActivated: {
+                                        Mixxx.MobileApp.antialiasing = currentValue;
+                                        rendererRestartHint.visible = true;
                                     }
                                 }
                             }
 
                             Text {
-                                id: languageRestartHint
+                                id: rendererRestartHint
 
                                 Layout.fillWidth: true
                                 visible: false
-                                text: qsTr("Library and effect names change after restarting Mixxx.")
+                                text: qsTr("Applies after restarting Mixxx. Now running: %1. Controller screens need OpenGL.").arg(Mixxx.MobileApp.activeGraphicsApi)
                                 color: "#ffb74d"
                                 font.pixelSize: 11
                                 wrapMode: Text.WordWrap
@@ -273,7 +271,7 @@ Category {
                             RowLayout {
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Skin"); color: Theme.white; font.pixelSize: 13 }
-                                // Applied immediately, like the language: the
+                                // Applied immediately: the
                                 // interface is reloaded with the other skin
                                 Skin.ComboBox {
                                     id: skinInput

@@ -12,6 +12,7 @@
 #include "mixer/playerinfo.h"
 #include "moc_analysisfeature.cpp"
 #include "sources/soundsourceproxy.h"
+#include "track/track.h"
 #include "util/dnd.h"
 #include "util/logger.h"
 #include "util/math.h"

@@ -2,6 +2,12 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
+#include <QSurfaceFormat>
+#if QT_CONFIG(vulkan)
+#include <QVulkanInstance>
+#endif
 
 #ifdef Q_OS_ANDROID
 #include <QCoreApplication>
@@ -22,6 +28,71 @@ const QString kClassicSkin = QStringLiteral("Classic");
 const QString kDefaultSkin = QStringLiteral("Classic");
 const ConfigKey kHiddenTopBarItemsKey(
         QStringLiteral("[Skin]"), QStringLiteral("AndroidHiddenTopBarItems"));
+
+const ConfigKey kGraphicsApiKey(QStringLiteral("[Config]"), QStringLiteral("GraphicsApi"));
+// Set to the chosen API before the window starts and cleared after its first
+// frame: still set at the next start means that start never drew anything
+// (driver crash, black window), so the default API is used again.
+const ConfigKey kGraphicsApiPendingKey(
+        QStringLiteral("[Config]"), QStringLiteral("GraphicsApiPending"));
+const ConfigKey kAntialiasingKey(QStringLiteral("[Config]"), QStringLiteral("Antialiasing"));
+const QString kAutoApi = QStringLiteral("auto");
+constexpr int kDefaultSamples = 4;
+
+bool vulkanAvailable() {
+#if QT_CONFIG(vulkan)
+    // Creating an instance is cheap and tells whether a Vulkan driver (the
+    // loader and at least one device layer) is there at all.
+    static const bool available = []() {
+        QVulkanInstance instance;
+        return instance.create();
+    }();
+    return available;
+#else
+    return false;
+#endif
+}
+
+QStringList supportedApis() {
+    QStringList apis{kAutoApi, QStringLiteral("opengl")};
+    if (vulkanAvailable()) {
+        apis << QStringLiteral("vulkan");
+    }
+#if defined(Q_OS_MACOS) || defined(Q_OS_IOS)
+    apis << QStringLiteral("metal");
+#endif
+#ifdef Q_OS_WIN
+    apis << QStringLiteral("d3d11") << QStringLiteral("d3d12");
+#endif
+    return apis;
+}
+
+QString apiLabel(const QString& api) {
+    if (api == QLatin1String("opengl")) {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+        return QStringLiteral("OpenGL ES");
+#else
+        return QStringLiteral("OpenGL");
+#endif
+    }
+    if (api == QLatin1String("vulkan")) {
+        return QStringLiteral("Vulkan");
+    }
+    if (api == QLatin1String("metal")) {
+        return QStringLiteral("Metal");
+    }
+    if (api == QLatin1String("d3d11")) {
+        return QStringLiteral("Direct3D 11");
+    }
+    if (api == QLatin1String("d3d12")) {
+        return QStringLiteral("Direct3D 12");
+    }
+    return QObject::tr("Automatic");
+}
+
+int normalizedSamples(int samples) {
+    return samples >= 4 ? 4 : (samples >= 2 ? 2 : 0);
+}
 
 } // namespace
 
@@ -196,6 +267,147 @@ void QmlMobileAppProxy::setHiddenTopBarItems(const QStringList& items) {
     // Android may close the app without the usual shutdown
     pConfig->save();
     emit hiddenTopBarItemsChanged();
+}
+
+QString QmlMobileAppProxy::graphicsApi() const {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    const QString api = pConfig ? pConfig->getValue(kGraphicsApiKey, kAutoApi) : kAutoApi;
+    return supportedApis().contains(api) ? api : kAutoApi;
+}
+
+void QmlMobileAppProxy::setGraphicsApi(const QString& api) {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    if (!pConfig || !supportedApis().contains(api) || api == graphicsApi()) {
+        return;
+    }
+    pConfig->setValue(kGraphicsApiKey, api);
+    pConfig->save();
+    emit graphicsApiChanged();
+}
+
+QVariantList QmlMobileAppProxy::graphicsApis() const {
+    QVariantList list;
+    for (const QString& api : supportedApis()) {
+        list.append(QVariantMap{{QStringLiteral("value"), api},
+                {QStringLiteral("label"), apiLabel(api)}});
+    }
+    return list;
+}
+
+QString QmlMobileAppProxy::activeGraphicsApi() const {
+    switch (QQuickWindow::graphicsApi()) {
+    case QSGRendererInterface::OpenGL:
+        return apiLabel(QStringLiteral("opengl"));
+    case QSGRendererInterface::Vulkan:
+        return apiLabel(QStringLiteral("vulkan"));
+    case QSGRendererInterface::Metal:
+        return apiLabel(QStringLiteral("metal"));
+    case QSGRendererInterface::Direct3D11:
+        return apiLabel(QStringLiteral("d3d11"));
+    case QSGRendererInterface::Direct3D12:
+        return apiLabel(QStringLiteral("d3d12"));
+    case QSGRendererInterface::Software:
+        return QStringLiteral("Software");
+    default:
+        return QString();
+    }
+}
+
+int QmlMobileAppProxy::antialiasing() const {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    return normalizedSamples(
+            pConfig ? pConfig->getValue(kAntialiasingKey, kDefaultSamples) : kDefaultSamples);
+}
+
+void QmlMobileAppProxy::setAntialiasing(int samples) {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    samples = normalizedSamples(samples);
+    if (!pConfig || samples == antialiasing()) {
+        return;
+    }
+    pConfig->setValue(kAntialiasingKey, samples);
+    pConfig->save();
+    emit antialiasingChanged();
+}
+
+// static
+void QmlMobileAppProxy::applyGraphicsSettings(const UserSettingsPointer& pConfig) {
+    QString api = pConfig->getValue(kGraphicsApiKey, kAutoApi);
+    const QString pending = pConfig->getValue(kGraphicsApiPendingKey, QString());
+    if (!pending.isEmpty() && pending == api && api != kAutoApi) {
+        qWarning() << "The" << apiLabel(api)
+                   << "interface did not start last time, using the default graphics API";
+        api = kAutoApi;
+        pConfig->setValue(kGraphicsApiKey, api);
+    }
+    if (!supportedApis().contains(api)) {
+        api = kAutoApi;
+    }
+    pConfig->setValue(kGraphicsApiPendingKey, api == kAutoApi ? QString() : api);
+    pConfig->save();
+
+    // Automatic: the native API on macOS and Windows; OpenGL (ES) elsewhere,
+    // which the offscreen rendering of controller screens needs.
+    if (api == QLatin1String("opengl")) {
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+    } else if (api == QLatin1String("vulkan")) {
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::Vulkan);
+    } else if (api == QLatin1String("metal")) {
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::Metal);
+    } else if (api == QLatin1String("d3d11")) {
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::Direct3D11);
+    } else if (api == QLatin1String("d3d12")) {
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::Direct3D12);
+    } else {
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+#endif
+    }
+
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    // Multisampling antialiases the QtQuick.Shapes strokes (knob arcs,
+    // waveform markers); their "antialiasing" property does nothing without
+    // it. 4x costs four samples per pixel of the whole window, which a
+    // 3088x1440 phone screen feels: 2x or off trade edges for speed.
+    format.setSamples(normalizedSamples(pConfig->getValue(kAntialiasingKey, kDefaultSamples)));
+    // Nothing draws through the window background: no alpha channel spares
+    // the compositor blending the whole window every frame.
+    format.setAlphaBufferSize(0);
+    // Qt Quick only needs depth/stencil for opaque batching and clipping;
+    // 24/8 is what every GPU stores natively.
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    QSurfaceFormat::setDefaultFormat(format);
+    qInfo() << "Graphics:" << apiLabel(api) << "requested," << format.samples()
+            << "x multisampling";
+}
+
+// static
+void QmlMobileAppProxy::watchGraphicsStartup(
+        QQuickWindow* pWindow, const UserSettingsPointer& pConfig) {
+    if (!pWindow || pConfig->getValue(kGraphicsApiPendingKey, QString()).isEmpty()) {
+        return;
+    }
+    QObject::connect(
+            pWindow,
+            &QQuickWindow::frameSwapped,
+            pWindow,
+            [pConfig]() {
+                pConfig->setValue(kGraphicsApiPendingKey, QString());
+                pConfig->save();
+            },
+            Qt::SingleShotConnection);
+    QObject::connect(pWindow,
+            &QQuickWindow::sceneGraphError,
+            pWindow,
+            [pConfig](QQuickWindow::SceneGraphError, const QString& message) {
+                qWarning() << "Scene graph failed:" << message
+                           << "- using the default graphics API from the next start";
+                pConfig->setValue(kGraphicsApiKey, kAutoApi);
+                pConfig->setValue(kGraphicsApiPendingKey, QString());
+                pConfig->save();
+            });
 }
 
 } // namespace qml
