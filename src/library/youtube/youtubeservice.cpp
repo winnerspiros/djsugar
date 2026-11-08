@@ -1049,24 +1049,7 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
     // so finalizeDownload() can skip the sequential SponsorBlock round-trip and
     // proceed directly to cut → emit downloadFinished. This removes the 0–8s
     // wait that made downloads feel slow.
-    if (!m_sponsorPrefetchCache.contains(videoId) &&
-            !m_sponsorPrefetchWaiters.contains(videoId)) {
-        // Insert an empty entry so a second downloadVideo() call for the same
-        // id (e.g. retry) doesn't launch a duplicate fetch.
-        m_sponsorPrefetchWaiters.insert(videoId, {});
-        fetchSponsorSegmentsInternal(videoId,
-                [this, videoId](const QList<SponsorSegment>& segments) {
-                    // Store segments whether or not anyone is waiting yet.
-                    m_sponsorPrefetchCache.insert(videoId, segments);
-                    // Notify any finalizeDownload() that arrived while we
-                    // were still fetching.
-                    const auto waiters =
-                            m_sponsorPrefetchWaiters.take(videoId);
-                    for (const auto& cb : waiters) {
-                        cb(segments);
-                    }
-                });
-    }
+    prefetchSponsorSegments(videoId);
 
     // Primary: the YouTube InnerTube player API (same reliable, proxy-free path
     // used for search). The Android client context returns plain (non-cipher)
@@ -3581,7 +3564,36 @@ bool extractStreamLink(const QJniObject& ytdl, const QString& videoId, StreamLin
     return ok;
 }
 
+void YouTubeService::prefetchSponsorSegments(const QString& videoId) {
+    if (!m_sponsorBlockEnabled || isSoundCloudId(videoId)) {
+        return;
+    }
+    if (!m_sponsorPrefetchCache.contains(videoId) &&
+            !m_sponsorPrefetchWaiters.contains(videoId)) {
+        // Insert an empty entry so a second downloadVideo() call for the same
+        // id (e.g. retry) doesn't launch a duplicate fetch.
+        m_sponsorPrefetchWaiters.insert(videoId, {});
+        fetchSponsorSegmentsInternal(videoId,
+                [this, videoId](const QList<SponsorSegment>& segments) {
+                    // Store segments whether or not anyone is waiting yet.
+                    m_sponsorPrefetchCache.insert(videoId, segments);
+                    // Notify any finalizeDownload() that arrived while we
+                    // were still fetching.
+                    const auto waiters =
+                            m_sponsorPrefetchWaiters.take(videoId);
+                    for (const auto& cb : waiters) {
+                        cb(segments);
+                    }
+                });
+    }
+}
+
 void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
+    // SponsorBlock answers in well under 100 ms and its replies are tiny:
+    // asked for with the links, so a download never waits for it
+    for (const auto& id : videoIds) {
+        prefetchSponsorSegments(id);
+    }
     QStringList todo;
     for (const QString& id : videoIds) {
         StreamLink link;
@@ -4461,7 +4473,15 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
         // Capture a copy of segments for the worker (QList is CoW, cheap).
         QThreadPool::globalInstance()->start(
                 [this, videoId, outPath, sidecarPath, segments]() {
-                    if (!segments.isEmpty()) {
+                    if (segments.isEmpty()) {
+                        // SponsorBlock answered with nothing: recorded, so
+                        // loading the track doesn't ask again
+                        QFile marker(sidecarPath);
+                        if (!QFile::exists(sidecarPath) &&
+                                marker.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                            marker.write("[]");
+                        }
+                    } else {
                         // Physically cut non-music segments out of the file so that
                         // duration, BPM, and waveform all reflect the clean music
                         // length. This is strongly preferred over skip-at-playback
@@ -4566,14 +4586,16 @@ void YouTubeService::fetchSponsorSegmentsInternal(
     // sponsorships, creator self-promo, viewer-interaction reminders and
     // non-music sections within music videos, and SponsorBlock's intro,
     // outro, preview and filler (its rules reserve those for non-content
-    // such as intro animations and end cards, not a song's intro). We download audio-only
-    // streams from Piped/yt-dlp, so YouTube's pre/mid/post-roll ads are
-    // already absent — SponsorBlock only needs to handle the in-content
-    // creator-inserted breaks.
-    const QUrl url(
-            QStringLiteral("https://sponsor.ajay.app/api/skipSegments?videoID=%1"
-                           "&categories=[\"sponsor\",\"selfpromo\",\"interaction\","
-                           "\"music_offtopic\",\"intro\",\"outro\",\"preview\",\"filler\"]")
+    // such as intro animations and end cards, not a song's intro), and "hook"
+    // (added upstream: a teaser of the video or a greeting before it starts).
+    // We download audio-only streams from Piped/yt-dlp, so YouTube's
+    // pre/mid/post-roll ads are already absent — SponsorBlock only needs to
+    // handle the in-content creator-inserted breaks.
+    const QUrl url(QStringLiteral(
+            "https://sponsor.ajay.app/api/skipSegments?videoID=%1"
+            "&categories=[\"sponsor\",\"selfpromo\",\"interaction\","
+            "\"music_offtopic\",\"intro\",\"outro\",\"preview\",\"filler\","
+            "\"hook\"]")
                     .arg(videoId));
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mixxx/SponsorBlock");

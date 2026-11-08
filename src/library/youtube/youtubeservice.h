@@ -85,6 +85,8 @@ class YouTubeService : public QObject {
     /// initial result set is large enough for infinite scroll to work.
     /// Opens the connection to YouTube ahead of a search
     void warmUpConnection();
+    /// SponsorBlock segments fetched ahead (search results, downloads)
+    void prefetchSponsorSegments(const QString& videoId);
     void searchVideos(const QString& query, int cap = 25, int minResults = 0);
 
     /// Fetch the next page of results for the most recent search() call.
