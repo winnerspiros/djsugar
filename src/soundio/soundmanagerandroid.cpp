@@ -25,6 +25,42 @@ bool isConfiguredOutput(const SoundManagerConfig& config, const SoundDevicePoint
     return config.getOutputs().contains(pDevice->getDeviceId());
 }
 
+template<typename Devices>
+SoundDevicePointer pickBestOutput(const Devices& devices, int* pRank) {
+    // Pick order: a USB audio device (the DJ controller's sound card, e.g.
+    // the FLX4), then the built-in speaker, then any other Oboe output, then
+    // anything else. Earpiece and network outputs are never picked.
+    auto rank = [](const SoundDevicePointer& pDevice) {
+        if (!pDevice || pDevice->getNumOutputChannels() <= 0 ||
+                pDevice->getDeviceId().name == kNetworkDeviceInternalName) {
+            return 0;
+        }
+        const QString name = pDevice->getDisplayName();
+        if (name.contains(QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
+            return 0;
+        }
+        const bool oboe = pDevice->getHostAPI().contains(
+                QStringLiteral("Oboe"), Qt::CaseInsensitive);
+        if (name.contains(QStringLiteral("USB"), Qt::CaseInsensitive)) {
+            return oboe ? 5 : 4;
+        }
+        if (oboe && name.contains(QStringLiteral("Speaker"))) {
+            return 3;
+        }
+        return oboe ? 2 : 1;
+    };
+    SoundDevicePointer best;
+    *pRank = 0;
+    for (const auto& pDevice : devices) {
+        const int r = rank(pDevice);
+        if (r > *pRank) {
+            *pRank = r;
+            best = pDevice;
+        }
+    }
+    return best;
+}
+
 } // namespace
 
 SoundManagerAndroid::SoundManagerAndroid(SoundManager* pSoundManager)
@@ -35,6 +71,30 @@ SoundManagerAndroid::SoundManagerAndroid(SoundManager* pSoundManager)
         config.loadDefaults(m_pSoundManager,
                 SoundManagerConfig::API | SoundManagerConfig::DEVICES |
                         SoundManagerConfig::OTHER);
+        // The generic default is the first stereo device in the list, which
+        // on phones can be the earpiece or an unrouted "default" device. It
+        // opens fine, so the fallback never replaced it and the output had
+        // to be picked by hand after every install. Same pick as the
+        // fallback instead: USB audio, then the built-in speaker.
+        QList<SoundDevicePointer> outputs;
+        for (const QString& api : m_pSoundManager->getHostAPIList()) {
+            outputs.append(m_pSoundManager->getDeviceList(api, true, false));
+        }
+        int rank = 0;
+        const SoundDevicePointer pBest = pickBestOutput(outputs, &rank);
+        if (pBest) {
+            config.setAPI(pBest->getHostAPI());
+            config.clearOutputs();
+            config.addOutput(pBest->getDeviceId(),
+                    AudioOutput(AudioPathType::Main,
+                            0,
+                            pBest->getNumOutputChannels() >= 2
+                                    ? mixxx::audio::ChannelCount::stereo()
+                                    : mixxx::audio::ChannelCount::mono(),
+                            0));
+            qInfo() << "Android audio output picked:" << pBest->getDisplayName()
+                    << pBest->getHostAPI();
+        }
         config.writeToDisk();
     }
 
@@ -131,6 +191,30 @@ void SoundManagerAndroid::prepareSetup() {
         config.loadDefaults(m_pSoundManager,
                 SoundManagerConfig::API | SoundManagerConfig::DEVICES |
                         SoundManagerConfig::OTHER);
+        // The generic default is the first stereo device in the list, which
+        // on phones can be the earpiece or an unrouted "default" device. It
+        // opens fine, so the fallback never replaced it and the output had
+        // to be picked by hand after every install. Same pick as the
+        // fallback instead: USB audio, then the built-in speaker.
+        QList<SoundDevicePointer> outputs;
+        for (const QString& api : m_pSoundManager->getHostAPIList()) {
+            outputs.append(m_pSoundManager->getDeviceList(api, true, false));
+        }
+        int rank = 0;
+        const SoundDevicePointer pBest = pickBestOutput(outputs, &rank);
+        if (pBest) {
+            config.setAPI(pBest->getHostAPI());
+            config.clearOutputs();
+            config.addOutput(pBest->getDeviceId(),
+                    AudioOutput(AudioPathType::Main,
+                            0,
+                            pBest->getNumOutputChannels() >= 2
+                                    ? mixxx::audio::ChannelCount::stereo()
+                                    : mixxx::audio::ChannelCount::mono(),
+                            0));
+            qInfo() << "Android audio output picked:" << pBest->getDisplayName()
+                    << pBest->getHostAPI();
+        }
         config.writeToDisk();
     }
     autoRouteToController();
@@ -203,37 +287,8 @@ void SoundManagerAndroid::openFallbackOutput(const std::vector<SoundDevicePointe
 
     qWarning() << "SoundManager on Android: No physical output device opened! "
                   "Forcing first available output device...";
-    // Pick order: a USB audio device (the DJ controller's sound card, e.g.
-    // the FLX4), then the built-in speaker, then any other Oboe output, then
-    // anything else. Earpiece and network outputs are never picked.
-    auto rank = [](const SoundDevicePointer& pDevice) {
-        if (!pDevice || pDevice->getNumOutputChannels() <= 0 ||
-                pDevice->getDeviceId().name == kNetworkDeviceInternalName) {
-            return 0;
-        }
-        const QString name = pDevice->getDisplayName();
-        if (name.contains(QStringLiteral("earpiece"), Qt::CaseInsensitive)) {
-            return 0;
-        }
-        const bool oboe = pDevice->getHostAPI().contains(
-                QStringLiteral("Oboe"), Qt::CaseInsensitive);
-        if (name.contains(QStringLiteral("USB"), Qt::CaseInsensitive)) {
-            return oboe ? 5 : 4;
-        }
-        if (oboe && name.contains(QStringLiteral("Speaker"))) {
-            return 3;
-        }
-        return oboe ? 2 : 1;
-    };
-    SoundDevicePointer targetDevice;
     int bestRank = 0;
-    for (const auto& pDevice : devices) {
-        const int r = rank(pDevice);
-        if (r > bestRank) {
-            bestRank = r;
-            targetDevice = pDevice;
-        }
-    }
+    SoundDevicePointer targetDevice = pickBestOutput(devices, &bestRank);
     if (!targetDevice) {
         return;
     }
