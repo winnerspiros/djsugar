@@ -106,6 +106,8 @@ Rectangle {
                 asynchronous: true
                 source: root.currentTrack?.coverArtUrl || ""
                 fillMode: Image.PreserveAspectCrop
+                sourceSize.width: 128
+                sourceSize.height: 128
                 visible: status === Image.Ready
             }
 

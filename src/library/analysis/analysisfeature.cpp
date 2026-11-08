@@ -1,6 +1,7 @@
 #include "library/analysis/analysisfeature.h"
 
 #include <QList>
+#include <QSet>
 #include <QtDebug>
 
 #include "analyzer/analyzerscheduledtrack.h"
@@ -8,6 +9,7 @@
 #include "library/analysis/dlganalysis.h"
 #include "library/library.h"
 #include "library/trackcollectionmanager.h"
+#include "mixer/playerinfo.h"
 #include "moc_analysisfeature.cpp"
 #include "sources/soundsourceproxy.h"
 #include "util/dnd.h"
@@ -184,7 +186,31 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
         emit analysisActive(true);
     }
 
-    if (m_pTrackAnalysisScheduler->scheduleTracks(tracks) > 0) {
+    // A track on a deck is analyzed by the deck's own analyzer when it is
+    // loaded. Scheduling it here as well ran the same 5 s analysis twice at
+    // once on the phone (seen in the logs for every YouTube load). Explicit
+    // re-analysis requests (with options) still go through.
+    QSet<TrackId> loadedTrackIds;
+    const auto loadedTracks = PlayerInfo::instance().getLoadedTracks();
+    for (const TrackPointer& pTrack : loadedTracks) {
+        if (pTrack) {
+            loadedTrackIds.insert(pTrack->getId());
+        }
+    }
+    QList<AnalyzerScheduledTrack> toSchedule;
+    toSchedule.reserve(tracks.size());
+    for (const auto& track : tracks) {
+        const auto& options = track.getOptions();
+        if (loadedTrackIds.contains(track.getTrackId()) && !options.useFixedTempo &&
+                !options.redoBeats) {
+            continue;
+        }
+        toSchedule.append(track);
+    }
+    if (toSchedule.isEmpty()) {
+        return;
+    }
+    if (m_pTrackAnalysisScheduler->scheduleTracks(toSchedule) > 0) {
         resumeAnalysis();
     }
 }

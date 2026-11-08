@@ -770,6 +770,8 @@ Item {
                         asynchronous: true
                         fillMode: Image.PreserveAspectCrop
                         source: root.cover
+                        sourceSize.width: Math.max(64, Math.ceil(width))
+                        sourceSize.height: Math.max(64, Math.ceil(height))
                     }
                     Text {
                         anchors.centerIn: parent

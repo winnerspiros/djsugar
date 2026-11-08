@@ -450,6 +450,9 @@ Item {
                                 source: song.coverArtUrl ? song.coverArtUrl : ""
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
+                                // Decode at thumbnail size, not the full cover
+                                sourceSize.width: 96
+                                sourceSize.height: 96
                                 visible: status === Image.Ready
                             }
 

@@ -6,7 +6,7 @@ import "../Theme"
 Rectangle {
     id: root
 
-    readonly property alias dragImage: dragImageEffect
+    readonly property alias dragImage: dragImageLoader.item
 
     Drag.dragType: Drag.Automatic
     Drag.mimeData: {
@@ -86,16 +86,23 @@ Rectangle {
             }
         }
     }
-    DropShadow {
-        id: dragImageEffect
+    // Drag image for desktop drag & drop. A DropShadow is several items and
+    // shader sources: built per row it made long library lists slow to
+    // scroll on phones, where rows are never dragged.
+    Loader {
+        id: dragImageLoader
 
         anchors.fill: dragImageSource
-        color: "#80000000"
-        horizontalOffset: 0
-        radius: 10.0
-        source: dragImageSource
-        verticalOffset: 0
+        active: Qt.platform.os !== "android"
         visible: false
+
+        sourceComponent: DropShadow {
+            color: "#80000000"
+            horizontalOffset: 0
+            radius: 10.0
+            source: dragImageSource
+            verticalOffset: 0
+        }
     }
     Rectangle {
         id: border

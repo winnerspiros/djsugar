@@ -3180,6 +3180,10 @@ QMutex s_ytdlInitMutex;
 QWaitCondition s_ytdlInitCond;
 bool s_ytdlInitDone = false;
 bool s_ytdlInitInProgress = false;
+// Consecutive android_vr failures; after a few, downloads use yt-dlp's
+// default clients until a fast download works again.
+std::atomic<int> s_fastClientFailures{0};
+constexpr int kMaxFastClientFailures = 3;
 
 bool ensureYoutubeDlInitialized(const QJniObject& ytdl, const QJniObject& context) {
     {
@@ -3308,108 +3312,133 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         QString videoUrl = "https://www.youtube.com/watch?v=" + videoId;
         QString outputTemplate = QDir(cacheDir).filePath("%(id)s.%(ext)s");
 
-        QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
-                "(Ljava/lang/String;)V",
-                QJniObject::fromString(videoUrl).object());
+        // The android_vr client gets direct, un-throttled audio URLs from one
+        // player request: no PO token, no player JavaScript to download and
+        // run through yt-dlp's (slow, on a phone) JS interpreter for the
+        // signature and "n" challenge. The bundled path never set a client,
+        // so every download paid for yt-dlp's default web clients. If
+        // android_vr fails (YouTube changes it now and then), the download
+        // is retried once with yt-dlp's defaults.
+        const QString ytdlCacheDir =
+                QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+                        .filePath(QStringLiteral("yt-dlp"));
+        auto buildRequest = [&](bool fastClient) {
+            QString extractorArgs = QStringLiteral("youtube:skip=hls,dash,translated_subs");
+            if (fastClient) {
+                extractorArgs += QStringLiteral(";player_client=android_vr");
+            }
+            QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
+                    "(Ljava/lang/String;)V",
+                    QJniObject::fromString(videoUrl).object());
 
-        // Add download options. Prefer a native m4a (AAC in MP4) over raw
-        // Opus-in-WebM: raw bestaudio Opus streams carry no seekable duration
-        // header, so SoundSourceFFmpeg refuses them ("Unknown or unlimited
-        // stream duration"). The -f selector below already lands a muxed
-        // .m4a with a proper moov box (no --merge-output-format needed:
-        // that flag is only for combining separate audio+video streams and
-        // yt-dlp rejects m4a as a merge format).
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("-f").object(),
-                QJniObject::fromString(
-                        "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio")
-                        .object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("-o").object(),
-                QJniObject::fromString(outputTemplate).object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--no-playlist").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--no-warnings").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--no-cache-dir").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--ignore-config").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--no-mtime").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--concurrent-fragments").object(),
-                QJniObject::fromString("8").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--force-ipv4").object());
-        // YouTube throttles one long request for a direct (non-DASH) audio
-        // URL to roughly playback speed (logs showed 140-200 KB/s). Only the
-        // first ~1 MB of each request comes at full line speed, and a song is
-        // 3-8 MB, so 10 MB chunks were still one throttled request (153 KB/s
-        // in the logs). 1 MB ranges keep every request inside the fast burst.
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--http-chunk-size").object(),
-                QJniObject::fromString("1M").object());
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--retries").object(),
-                QJniObject::fromString("3").object());
-        // Skip format availability probes: with an explicit -f selector we
-        // don't need yt-dlp to HEAD-check every format before downloading.
-        // Cuts 1-3 player-API round-trips before the first byte.
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
-                QJniObject::fromString("--no-check-formats").object());
-        // Skip the HLS/DASH manifest fetches (one extra round-trip each; the
-        // direct m4a stream URL already comes from the player API response)
-        // and the translated-subtitle probe.
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--extractor-args").object(),
-                QJniObject::fromString("youtube:skip=hls,dash,translated_subs").object());
-        // Don't spawn ffmpeg to rewrite the m4a container brand after the
-        // download: FFmpeg's demuxer opens and seeks the original file fine
-        // (checked), and the extra process costs a noticeable moment per track.
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--fixup").object(),
-                QJniObject::fromString("never").object());
-        // Bound network stalls: without this, a hung connection blocks
-        // execute() forever, and teardown joins this thread -> ANR.
-        request.callMethod<QJniObject>("addOption",
-                "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
-                "YoutubeDLRequest;",
-                QJniObject::fromString("--socket-timeout").object(),
-                QJniObject::fromString("30").object());
-        if (!playerPot.isEmpty() && !streamingPot.isEmpty()) {
-            // Our on-device PO tokens as extractor args — same shape ytdlnis
-            // uses: youtube:player_client=web;po_token=web.gvs+...+web.player+...
-            const QString args = QStringLiteral(
-                    "youtube:player_client=web;po_token=web.gvs+%1+web.player+%2")
-                                         .arg(streamingPot, playerPot);
+            // Add download options. Prefer a native m4a (AAC in MP4) over raw
+            // Opus-in-WebM: raw bestaudio Opus streams carry no seekable duration
+            // header, so SoundSourceFFmpeg refuses them ("Unknown or unlimited
+            // stream duration"). The -f selector below already lands a muxed
+            // .m4a with a proper moov box (no --merge-output-format needed:
+            // that flag is only for combining separate audio+video streams and
+            // yt-dlp rejects m4a as a merge format).
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("-f").object(),
+                    QJniObject::fromString(
+                            "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio")
+                            .object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("-o").object(),
+                    QJniObject::fromString(outputTemplate).object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--no-playlist").object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--no-warnings").object());
+            // Keep yt-dlp's cache (player JS, signature functions) in the app
+            // cache: with --no-cache-dir every fallback download fetched and
+            // parsed the ~2.5 MB player script again.
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--cache-dir").object(),
+                    QJniObject::fromString(ytdlCacheDir).object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--ignore-config").object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--no-mtime").object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--concurrent-fragments").object(),
+                    QJniObject::fromString("8").object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--force-ipv4").object());
+            // YouTube throttles one long request for a direct (non-DASH) audio
+            // URL to roughly playback speed (logs showed 140-200 KB/s). Only the
+            // first ~1 MB of each request comes at full line speed, and a song is
+            // 3-8 MB, so 10 MB chunks were still one throttled request (153 KB/s
+            // in the logs). 1 MB ranges keep every request inside the fast burst.
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--http-chunk-size").object(),
+                    QJniObject::fromString("1M").object());
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--retries").object(),
+                    QJniObject::fromString("3").object());
+            // Skip format availability probes: with an explicit -f selector we
+            // don't need yt-dlp to HEAD-check every format before downloading.
+            // Cuts 1-3 player-API round-trips before the first byte.
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
+                    QJniObject::fromString("--no-check-formats").object());
+            // Skip the HLS/DASH manifest fetches (one extra round-trip each; the
+            // direct m4a stream URL already comes from the player API response)
+            // and the translated-subtitle probe.
             request.callMethod<QJniObject>("addOption",
                     "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
                     "YoutubeDLRequest;",
                     QJniObject::fromString("--extractor-args").object(),
-                    QJniObject::fromString(args).object());
-        }
+                    QJniObject::fromString(extractorArgs).object());
+            // Don't spawn ffmpeg to rewrite the m4a container brand after the
+            // download: FFmpeg's demuxer opens and seeks the original file fine
+            // (checked), and the extra process costs a noticeable moment per track.
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--fixup").object(),
+                    QJniObject::fromString("never").object());
+            // Bound network stalls: without this, a hung connection blocks
+            // execute() forever, and teardown joins this thread -> ANR.
+            request.callMethod<QJniObject>("addOption",
+                    "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                    "YoutubeDLRequest;",
+                    QJniObject::fromString("--socket-timeout").object(),
+                    QJniObject::fromString("30").object());
+            if (!playerPot.isEmpty() && !streamingPot.isEmpty()) {
+                // Our on-device PO tokens as extractor args — same shape ytdlnis
+                // uses: youtube:player_client=web;po_token=web.gvs+...+web.player+...
+                const QString args = QStringLiteral(
+                        "youtube:player_client=web;po_token=web.gvs+%1+web.player+%2")
+                                             .arg(streamingPot, playerPot);
+                request.callMethod<QJniObject>("addOption",
+                        "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                        "YoutubeDLRequest;",
+                        QJniObject::fromString("--extractor-args").object(),
+                        QJniObject::fromString(args).object());
+            }
+            return request;
+        };
+        const bool useFastClient =
+                playerPot.isEmpty() && s_fastClientFailures.load() < kMaxFastClientFailures;
+        QJniObject request = buildRequest(useFastClient);
 
         // Execute the download (blocks this thread until complete). The
         // youtubedl-android API method is execute(YoutubeDLRequest) (with a
@@ -3450,6 +3479,33 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             } else {
                 excEnv.checkAndClearExceptions();
             }
+        }
+        if ((hasJniException || !response.isValid()) && useFastClient) {
+            ++s_fastClientFailures;
+            kLogger.warning() << "[Android] android_vr download failed for" << videoId
+                              << ", retrying with yt-dlp's default clients:" << errDetail;
+            if (settled->load()) {
+                return; // the stall watchdog already failed it over
+            }
+            QDir(cacheDir).remove(videoId + QStringLiteral(".m4a.part"));
+            request = buildRequest(false);
+            response = ytdl.callObjectMethod("execute",
+                    "(Lcom/yausername/youtubedl_android/YoutubeDLRequest;)"
+                    "Lcom/yausername/youtubedl_android/YoutubeDLResponse;",
+                    request.object());
+            QJniEnvironment retryEnv;
+            hasJniException = false;
+            errDetail.clear();
+            if (retryEnv->ExceptionCheck()) {
+                hasJniException = true;
+                QJniObject exc(retryEnv->ExceptionOccurred());
+                retryEnv->ExceptionClear();
+                if (exc.isValid()) {
+                    errDetail = exc.callObjectMethod("toString", "()Ljava/lang/String;").toString();
+                }
+            }
+        } else if (useFastClient && response.isValid()) {
+            s_fastClientFailures = 0;
         }
         if (settled->exchange(true)) {
             // The stall watchdog already failed this download over.
