@@ -291,17 +291,10 @@ void QmlWaveformDisplay::slotWindowChanged(QQuickWindow* window) {
         // both waveforms (and the other periodic updates on the frame clock)
         // are drawn in one frame instead of one frame each.
         // (from JaviLabarumDJ/mixxx-android frameclock)
-        connect(
-                window,
-                &QQuickWindow::afterFrameEnd,
-                this,
-                [this]() {
-                    frameclock::frameShown();
-                    if (m_drawnInFrame.exchange(false)) {
-                        frameclock::tickShown();
-                    }
-                },
-                Qt::UniqueConnection);
+        // (from JaviLabarumDJ/mixxx-android frameclock; reported to the
+        // frame clock in slotFrameSwapped: Qt::UniqueConnection doesn't work
+        // with a lambda, Qt refused that connection with a warning, so the
+        // frame clock never heard of a frame)
         connect(window,
                 &QQuickWindow::afterFrameEnd,
                 this,
@@ -340,6 +333,10 @@ std::chrono::microseconds QmlWaveformDisplay::fromTimerToNextSync(const Performa
 }
 
 void QmlWaveformDisplay::slotFrameSwapped() {
+    frameclock::frameShown();
+    if (m_drawnInFrame.exchange(false)) {
+        frameclock::tickShown();
+    }
     m_timer.restart();
     // Android may switch the refresh rate of the display (e.g. 60/90 Hz)
     updateFrameInterval();
