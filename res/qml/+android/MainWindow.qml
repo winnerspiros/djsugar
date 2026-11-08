@@ -182,7 +182,7 @@ Item {
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 visible: active
-                height: 30
+                height: 40
                 width: active ? stemsIndicatorMetrics.width + 20 : 0
                 activeColor: Theme.accentColor
                 backgroundColor: Mixxx.Stems.hold !== "" ? "#4a3a12" : "#1e3a5f"
@@ -209,13 +209,13 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: toolbarInset.right + 6
                 anchors.verticalCenter: parent.verticalCenter
-                height: 30
-                width: 36
+                height: 40
+                width: 54
                 activeColor: Theme.accentColor
                 checked: settingsPopup.opened
-                icon.height: 18
+                icon.height: 24
                 icon.source: "images/gear.svg"
-                icon.width: 18
+                icon.width: 24
 
                 onClicked: {
                     if (!settingsPopup.opened) {
@@ -247,8 +247,8 @@ Item {
                     spacing: 4
 
                     Rectangle {
-                        Layout.preferredHeight: 30
-                        Layout.preferredWidth: 236 * root.shownTopBarViews / 4
+                        Layout.preferredHeight: 40
+                        Layout.preferredWidth: 300 * root.shownTopBarViews / 4
                         visible: root.shownTopBarViews > 0
                         color: Theme.darkGray3
                         radius: 4
@@ -268,7 +268,7 @@ Item {
                                 normalColor: root.viewMode === 1 ? "#ffffff" : Theme.lightGray3
                                 text: "DJ"
                                 font.bold: true
-                                font.pixelSize: 10
+                                font.pixelSize: 12
                                 onClicked: root.viewMode = 1
                                 visible: root.topBarItemShown("dj")
                             }
@@ -281,7 +281,7 @@ Item {
                                 normalColor: root.viewMode === 3 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("WAVE")
                                 font.bold: true
-                                font.pixelSize: 10
+                                font.pixelSize: 12
                                 onClicked: root.viewMode = 3
                                 visible: root.topBarItemShown("wave")
                             }
@@ -294,7 +294,7 @@ Item {
                                 normalColor: root.viewMode === 2 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("LIB")
                                 font.bold: true
-                                font.pixelSize: 10
+                                font.pixelSize: 12
                                 onClicked: root.viewMode = 2
                                 visible: root.topBarItemShown("lib")
                             }
@@ -307,7 +307,7 @@ Item {
                                 normalColor: root.viewMode === 0 ? "#ffffff" : Theme.lightGray3
                                 text: qsTr("CTL")
                                 font.bold: true
-                                font.pixelSize: 10
+                                font.pixelSize: 12
                                 onClicked: root.viewMode = 0
                                 visible: root.topBarItemShown("ctl")
                             }
@@ -317,13 +317,13 @@ Item {
                     Skin.Button {
                         id: quickLoadD1Button
                         visible: root.topBarItemShown("load1")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 62
                         activeColor: Theme.libraryDeck1Background
                         backgroundColor: Theme.libraryDeck1Background
                         normalColor: "#ffffff"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         text: qsTr("LOAD %1").arg(1)
                         onClicked: root.openQuickLoad("[Channel1]")
                     }
@@ -331,13 +331,13 @@ Item {
                     Skin.Button {
                         id: quickLoadD2Button
                         visible: root.topBarItemShown("load2")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 62
                         activeColor: Theme.libraryDeck2Background
                         backgroundColor: "#e65100"
                         normalColor: "#ffffff"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         text: qsTr("LOAD %1").arg(2)
                         onClicked: root.openQuickLoad("[Channel2]")
                     }
@@ -345,7 +345,7 @@ Item {
                     Skin.Button {
                         id: showEffectsButton
                         visible: root.topBarItemShown("fx")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 42
                         activeColor: "#e040fb"
                         backgroundColor: root.showEffects ? "#4a148c" : Theme.darkGray3
@@ -354,14 +354,14 @@ Item {
                         checked: root.showEffects
                         text: "FX"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         onClicked: root.showEffects = !root.showEffects
                     }
 
                     Skin.Button {
                         id: showSamplersButton
                         visible: root.topBarItemShown("smpl")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 54
                         activeColor: "#FF6600"
                         backgroundColor: root.showSamplers ? "#663300" : Theme.darkGray3
@@ -370,14 +370,14 @@ Item {
                         checked: root.showSamplers
                         text: "SMPL"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         onClicked: root.showSamplers = !root.showSamplers
                     }
 
                     Skin.Button {
                         id: xyPadButton
                         visible: root.topBarItemShown("xy")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 54
                         activeColor: "#D85486"
                         backgroundColor: xyPadOverlay.visible ? "#006064" : Theme.darkGray3
@@ -386,14 +386,14 @@ Item {
                         checked: xyPadOverlay.visible
                         text: "XY"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         onClicked: xyPadOverlay.visible = !xyPadOverlay.visible
                     }
 
                     Skin.Button {
                         id: splitCueButton
                         visible: root.topBarItemShown("split")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 52
                         activeColor: Theme.libraryDeck2Background
                         backgroundColor: headSplitControl.value > 0 ? "#e65100" : Theme.darkGray3
@@ -402,7 +402,7 @@ Item {
                         checked: headSplitControl.value > 0
                         text: "SPLIT"
                         font.bold: true
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         onClicked: {
                             headSplitControl.value = (headSplitControl.value > 0) ? 0 : 1;
                         }
@@ -412,13 +412,13 @@ Item {
                     Skin.MobileRecordButton {
                         id: recButton
                         visible: root.topBarItemShown("rec")
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: implicitWidth
                     }
 
                     Skin.Button {
                         id: editDeckButton
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 42
                         activeColor: Theme.white
                         checkable: true
@@ -428,7 +428,7 @@ Item {
 
                     Skin.Button {
                         id: show4DecksButton
-                        Layout.preferredHeight: 30
+                        Layout.preferredHeight: 40
                         Layout.preferredWidth: 42
                         activeColor: Theme.white
                         checkable: true
@@ -503,7 +503,7 @@ Item {
                     if (root.viewMode === 3) return splitView.height;
                     if (root.viewMode === 0) return Math.round(splitView.height * 0.42);
                     if (root.viewMode === 2 || root.maximizeLibrary) return 0;
-                    return Math.max(80, Math.min(130, Math.round(splitView.height * 0.32)));
+                    return Math.max(56, Math.min(96, Math.round(splitView.height * 0.22)));
                 }
                 visible: root.viewMode !== 2 && !root.maximizeLibrary
 

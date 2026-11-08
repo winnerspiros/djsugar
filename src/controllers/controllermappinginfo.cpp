@@ -98,22 +98,26 @@ MappingInfo::MappingInfo(const QFileInfo& fileInfo) {
 
             // Parse simple info children when inside the info block
             if (inInfo) {
-                if (!inInfo && xmlElementName == QStringLiteral("info") && xmlHierachyDepth == 2) {
-                    m_name = xml.readElementText();
-                    continue;
+                // readElementText() consumes the end element, so the depth
+                // has to be dropped here
+                QString* pText = nullptr;
+                if (xmlElementName == QStringLiteral("name")) {
+                    pText = &m_name;
                 } else if (xmlElementName == QStringLiteral("author")) {
-                    m_author = xml.readElementText();
-                    continue;
+                    pText = &m_author;
                 } else if (xmlElementName == QStringLiteral("description")) {
-                    m_description = xml.readElementText();
-                    continue;
+                    pText = &m_description;
                 } else if (xmlElementName == QStringLiteral("forums")) {
-                    m_forumlink = xml.readElementText();
-                    continue;
+                    pText = &m_forumlink;
                 } else if (xmlElementName == QStringLiteral("wiki")) {
-                    m_wikilink = xml.readElementText();
+                    pText = &m_wikilink;
+                }
+                if (pText) {
+                    *pText = xml.readElementText().trimmed();
+                    --xmlHierachyDepth;
                     continue;
-                } else if (xmlElementName == QStringLiteral("devices")) {
+                }
+                if (xmlElementName == QStringLiteral("devices")) {
                     // Enter devices block
                     inInfoDevices = true;
                     continue;

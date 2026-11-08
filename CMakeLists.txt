@@ -1578,8 +1578,6 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/samples/bundledsamples.cpp
-  src/library/samples/dlgsamples.cpp
-  src/library/samples/samplesfeature.cpp
   src/library/enginedj/enginedjfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp

@@ -1,7 +1,7 @@
 // Node test for the FLX4 mapping script: stem LEDs in STEMS mode and the
 // pause -> play path. No device needed. Usage: node flx4-transport-leds.test.js [script]
 const fs = require('fs'), vm = require('vm');
-const file = process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-2.0.script.js';
+const file = process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-script.js';
 const src = fs.readFileSync(file, 'utf8');
 const state = {}, calls = [], sent = [];
 const engine = {

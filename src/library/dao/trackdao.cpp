@@ -19,6 +19,7 @@
 #include "library/dao/trackschema.h"
 #include "library/library_prefs.h"
 #include "library/queryutil.h"
+#include "library/samples/bundledsamples.h"
 #include "moc_trackdao.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/beats.h"
@@ -120,6 +121,22 @@ TrackDAO::~TrackDAO() {
     kLogger.debug() << "~TrackDAO()";
     // clear all leftover Transactions and rollback the db
     addTracksFinish(true);
+}
+
+void TrackDAO::initialize(const QSqlDatabase& database) {
+    DAO::initialize(database);
+    // Pad samples loaded by older versions were added as tracks: hide them
+    QSqlQuery query(m_database);
+    query.prepare(
+            "UPDATE library SET mixxx_deleted=1 WHERE mixxx_deleted=0 AND "
+            "location IN (SELECT id FROM track_locations "
+            "WHERE substr(location, 1, :len) = :dir)");
+    const QString dir = mixxx::samples::bundledSamplesCacheDir();
+    query.bindValue(":len", static_cast<int>(dir.size()));
+    query.bindValue(":dir", dir);
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "Failed to hide bundled samples";
+    }
 }
 
 void TrackDAO::finish() {
@@ -739,7 +756,9 @@ bool insertTrackLibrary(
     // Column datetime_added is set implicitly
     // pTrackLibraryInsert->bindValue(":datetime_added", track.getDateAdded());
 
-    pTrackLibraryInsert->bindValue(":mixxx_deleted", 0);
+    // Bundled pad samples stay out of the library views
+    pTrackLibraryInsert->bindValue(":mixxx_deleted",
+            mixxx::samples::isBundledSample(fileInfo.location()) ? 1 : 0);
 
     // We no longer store the wavesummary in the library table.
     pTrackLibraryInsert->bindValue(":wavesummaryhex", QVariant(QMetaType(QMetaType::QByteArray)));
@@ -843,7 +862,8 @@ TrackId TrackDAO::addTracksAddTrack(const TrackPointer& pTrack, bool unremove) {
         pTrack->initId(trackId);
         // Track already included in library, but maybe marked as deleted
         bool mixxx_deleted = m_pQueryLibrarySelect->value(m_queryLibraryMixxxDeletedColumn).toBool();
-        if (unremove && mixxx_deleted) {
+        if (unremove && mixxx_deleted &&
+                !mixxx::samples::isBundledSample(fileInfo.location())) {
             // Set mixxx_deleted back to 0
             m_pQueryLibraryUpdate->bindValue(":id", trackId.toVariant());
             if (!m_pQueryLibraryUpdate->exec()) {

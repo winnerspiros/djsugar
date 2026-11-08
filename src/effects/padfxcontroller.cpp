@@ -18,6 +18,8 @@
 namespace {
 
 const QString kConfigGroup = QStringLiteral("[PadFx]");
+// Saved BEAT FX order, separate from the [BeatFx] controls
+const QString kBeatFxConfigGroup = QStringLiteral("[BeatFxSlots]");
 
 // Effect unit that plays the pad effects of deck 1 and deck 2.
 constexpr int kUnitForDeck[PadFxController::kNumDecks] = {3, 4};
@@ -157,17 +159,20 @@ PadFxController::PadFxController(
     // BEAT FX on units 1 and 2. beatParam takes the beat value (or its
     // inverse for Trans, whose rate is pulses per beat); empty = no beats.
     m_beatFx = {
-            {tr("Echo"),
+            {QStringLiteral("echo"),
+                    tr("Echo"),
                     djEcho,
                     QStringLiteral("delay_time"),
                     false,
                     {{"feedback_amount", 0.6}, {"send_amount", 1.0}}},
-            {tr("Spiral"),
+            {QStringLiteral("spiral"),
+                    tr("Spiral"),
                     QStringLiteral("org.mixxx.effects.spiral"),
                     QStringLiteral("beats"),
                     false,
                     {{"feedback", 0.75}}},
-            {tr("Reverb"),
+            {QStringLiteral("reverb"),
+                    tr("Reverb"),
                     QStringLiteral("org.mixxx.effects.proreverb"),
                     QString(),
                     false,
@@ -175,37 +180,72 @@ PadFxController::PadFxController(
                             {"size", 0.8},
                             {"feedback", 0.75},
                             {"drywet", 1.0}}},
-            {tr("Trans"),
+            {QStringLiteral("trans"),
+                    tr("Trans"),
                     tremolo,
                     QStringLiteral("rate"),
                     true,
                     {{"depth", 1.0}, {"waveform", 0.005}}},
-            {tr("Flanger"),
+            {QStringLiteral("flanger"),
+                    tr("Flanger"),
                     QStringLiteral("org.mixxx.effects.proflanger"),
                     QString(),
                     false,
                     {{"depth", 0.8}, {"feedback", 0.6}}},
-            {tr("Phaser"),
+            {QStringLiteral("phaser"),
+                    tr("Phaser"),
                     QStringLiteral("org.mixxx.effects.phaser"),
                     QStringLiteral("lfo_period"),
                     false,
                     {{"feedback", 0.5}, {"depth", 1.0}}},
-            {tr("Roll"),
+            {QStringLiteral("roll"),
+                    tr("Roll"),
                     QStringLiteral("org.mixxx.effects.beatrepeat"),
                     QStringLiteral("interval"),
                     false,
                     {{"enable", 1.0}}},
-            {tr("Filter"), filter, QString(), false, {}},
-            {tr("Crush"),
+            {QStringLiteral("filter"),
+                    tr("Filter"),
+                    filter,
+                    QString(),
+                    false,
+                    {}},
+            {QStringLiteral("crush"),
+                    tr("Crush"),
                     QStringLiteral("org.mixxx.effects.bitcrusher"),
                     QString(),
                     false,
                     {}},
-            {tr("Tape stop"),
+            {QStringLiteral("tapestop"),
+                    tr("Tape stop"),
                     QStringLiteral("org.mixxx.effects.tapestop"),
                     QStringLiteral("duration"),
                     false,
                     {{"enable", 1.0}}},
+            {QStringLiteral("delay"),
+                    tr("Delay"),
+                    QStringLiteral("org.mixxx.effects.vintagedelay"),
+                    QString(),
+                    false,
+                    {}},
+            {QStringLiteral("pitch"),
+                    tr("Pitch"),
+                    QStringLiteral("org.mixxx.effects.pitchshift"),
+                    QString(),
+                    false,
+                    {}},
+            {QStringLiteral("noise"),
+                    tr("Noise"),
+                    QStringLiteral("org.mixxx.effects.whitenoise"),
+                    QString(),
+                    false,
+                    {}},
+            {QStringLiteral("glitch"),
+                    tr("Glitch"),
+                    QStringLiteral("org.mixxx.effects.glitch"),
+                    QString(),
+                    false,
+                    {}},
     };
     m_pBeatFxEffect = std::make_unique<ControlObject>(
             ConfigKey(QStringLiteral("[BeatFx]"), QStringLiteral("effect")));
@@ -243,9 +283,14 @@ PadFxController::PadFxController(
 PadFxController::~PadFxController() = default;
 
 void PadFxController::loadBeatFx() {
-    const int count = static_cast<int>(m_beatFx.size());
-    const int index = ((static_cast<int>(m_pBeatFxEffect->get()) % count) + count) % count;
-    const BeatFx& fx = m_beatFx[index];
+    const int index = ((static_cast<int>(m_pBeatFxEffect->get()) % kNumBeatFxSlots) +
+                              kNumBeatFxSlots) %
+            kNumBeatFxSlots;
+    const BeatFx* pFx = beatFxEntry(beatFxSlot(index + 1));
+    if (!pFx) {
+        return;
+    }
+    const BeatFx& fx = *pFx;
     const double beats = std::clamp(m_pBeatFxBeats->get(), 1.0 / 16, 16.0);
     QList<QPair<QString, double>> parameters = fx.parameters;
     if (!fx.beatParam.isEmpty()) {
@@ -269,9 +314,49 @@ void PadFxController::loadBeatFx() {
     }
 }
 
-QString PadFxController::beatFxName(int index) const {
-    const int count = static_cast<int>(m_beatFx.size());
-    return m_beatFx[((index % count) + count) % count].name;
+const PadFxController::BeatFx* PadFxController::beatFxEntry(const QString& key) const {
+    for (const BeatFx& fx : m_beatFx) {
+        if (fx.key == key) {
+            return &fx;
+        }
+    }
+    return nullptr;
+}
+
+QVariantList PadFxController::beatFxCatalog() const {
+    QVariantList list;
+    for (const BeatFx& fx : m_beatFx) {
+        list.append(QVariantMap{{QStringLiteral("key"), fx.key},
+                {QStringLiteral("name"), fx.name}});
+    }
+    return list;
+}
+
+QString PadFxController::beatFxSlot(int slot) const {
+    if (slot < 1 || slot > kNumBeatFxSlots) {
+        return QString();
+    }
+    const QString fallback = m_beatFx[slot - 1].key;
+    const QString key = m_pConfig->getValue(
+            ConfigKey(kBeatFxConfigGroup, QStringLiteral("slot%1").arg(slot)), fallback);
+    return beatFxEntry(key) ? key : fallback;
+}
+
+void PadFxController::setBeatFxSlot(int slot, const QString& key) {
+    if (slot < 1 || slot > kNumBeatFxSlots || !beatFxEntry(key)) {
+        return;
+    }
+    m_pConfig->setValue(
+            ConfigKey(kBeatFxConfigGroup, QStringLiteral("slot%1").arg(slot)), key);
+    if (static_cast<int>(m_pBeatFxEffect->get()) == slot - 1) {
+        loadBeatFx();
+    }
+}
+
+void PadFxController::resetBeatFx() {
+    for (int slot = 1; slot <= kNumBeatFxSlots; ++slot) {
+        setBeatFxSlot(slot, m_beatFx[slot - 1].key);
+    }
 }
 
 QVariantList PadFxController::catalog() const {

@@ -14,6 +14,13 @@ namespace samples {
 /// Returns an empty string when no bundled samples exist.
 QString bundledSamplesDir(const UserSettingsPointer& pConfig);
 
+/// Folder the bundled samples are copied to (ends with a slash).
+QString bundledSamplesCacheDir();
+
+/// True for files inside bundledSamplesDir(). These are kept out of the
+/// track library: they are pad sounds, not tracks.
+bool isBundledSample(const QString& path);
+
 /// Absolute paths of all bundled samples, sorted by their path relative to
 /// bundledSamplesDir() (so "djsugar/01_kick.wav" sorts before "kick.ogg").
 QStringList bundledSampleFiles(const UserSettingsPointer& pConfig);

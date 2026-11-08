@@ -210,28 +210,39 @@ void SponsorBlockController::onPlayPositionChanged(
             skipTo = std::max(skipTo, seg.end);
         }
     }
-    if (skipTo < 0.0 && !it->leadSilenceSkipped) {
+    if (skipTo < 0.0) {
         // No SponsorBlock data covers this spot (the database has nothing for
-        // most music videos). Fall back to the analyzer's audible range and
-        // skip silence or near-silence before the music starts.
+        // most music videos). Fall back to the analyzer's audible range:
+        // skip the silence/talk-free lead-in before the music starts and the
+        // silent tail after it ends. The range only exists once the analyzer
+        // has run, which can be a few seconds after the track starts.
         const TrackPointer pTrack = it->pTrack.lock();
         const CuePointer pSound = pTrack
                 ? pTrack->findCueByType(mixxx::CueType::N60dBSound)
                 : CuePointer();
         const auto sampleRate = pTrack ? pTrack->getSampleRate() : mixxx::audio::SampleRate();
         if (pSound && sampleRate.isValid() && pSound->getPosition().isValid()) {
+            constexpr double kMinSilenceSec = 1.0;
             const double soundStartSec =
                     pSound->getPosition().value() / sampleRate.value();
-            constexpr double kMinLeadSilenceSec = 1.0;
-            if (soundStartSec >= kMinLeadSilenceSec &&
-                    currentSec < soundStartSec - 0.25) {
-                skipTo = soundStartSec;
+            if (!it->leadSilenceSkipped) {
+                if (soundStartSec >= kMinSilenceSec &&
+                        currentSec < soundStartSec - 0.25) {
+                    skipTo = soundStartSec;
+                }
+                // Decided for this load: skipped now, or the music already
+                // plays (the user may seek back into the lead-in on purpose)
+                it->leadSilenceSkipped = true;
             }
-        }
-        if (currentSec > 0.0) {
-            // Decided for this load: either skipped now or the music has
-            // already started.
-            it->leadSilenceSkipped = true;
+            const auto endPos = pSound->getEndPosition();
+            if (skipTo < 0.0 && endPos.isValid()) {
+                const double soundEndSec = endPos.value() / sampleRate.value();
+                if (it->durationSec - soundEndSec >= kMinSilenceSec &&
+                        currentSec > soundEndSec + 0.25 &&
+                        currentSec < it->durationSec - 0.5) {
+                    skipTo = it->durationSec;
+                }
+            }
         }
     }
     if (skipTo < 0.0) {

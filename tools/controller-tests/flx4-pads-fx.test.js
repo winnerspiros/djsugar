@@ -2,7 +2,7 @@
 // BEAT FX select/beats and Fader Start. No device needed.
 // Usage (from the repo root): node tools/controller-tests/flx4-pads-fx.test.js [script]
 const fs = require('fs'), vm = require('vm');
-const file = process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-2.0.script.js';
+const file = process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-script.js';
 const src = fs.readFileSync(file, 'utf8');
 const state = {}, calls = [], sent = [];
 const engine = {

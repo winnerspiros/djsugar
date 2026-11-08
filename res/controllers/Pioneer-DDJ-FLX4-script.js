@@ -1,4 +1,4 @@
-// Pioneer-DDJ-FLX4-2.0.script.js
+// Pioneer-DDJ-FLX4-script.js
 // =============================================================================
 // Mixxx MIDI Mapping for Pioneer DDJ-FLX4
 // =============================================================================
@@ -214,7 +214,7 @@ PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 // BEAT FX (rekordbox): BEAT FX SELECT steps the effect type, BEAT LEFT/RIGHT
 // halve/double its length. The app loads the effect into slot 1 of effect
 // units 1 and 2 ([BeatFx],effect / [BeatFx],beats).
-PioneerDDJFLX4.BEAT_FX_COUNT = 10; // Echo Spiral Reverb Trans Flanger Phaser Roll Filter Crush TapeStop
+PioneerDDJFLX4.BEAT_FX_COUNT = 10; // positions; which effect sits on each is set in Settings > Pads & FX
 PioneerDDJFLX4.BEAT_FX_BEATS = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 3 / 4, 1, 2, 4, 8, 16];
 
 // -----------------------------------------------------------------------------
@@ -2624,7 +2624,7 @@ PioneerDDJFLX4.loopInPressed = function(_channel, _control, value, _status, grou
     PioneerDDJFLX4._loopPendingOut[group] = true;
     PioneerDDJFLX4.loopAdjustIn[channelIdx] = true;     // makes OUT off in your blink routine
     PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;   // keeps IN blinking
-    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, st, group);
+    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, _status, group);
 };
 
 PioneerDDJFLX4.loopOutPressed = function(_channel, _control, value, _status, group) {

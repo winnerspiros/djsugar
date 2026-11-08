@@ -18,7 +18,7 @@
   </info>
   <controller id="DDJ-FLX4">
     <scriptfiles>
-      <file functionprefix="PioneerDDJFLX4" filename="Pioneer-DDJ-FLX4-2.0.script.js" />
+      <file functionprefix="PioneerDDJFLX4" filename="Pioneer-DDJ-FLX4-script.js" />
     </scriptfiles>
     <controls>
       <!--

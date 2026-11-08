@@ -504,9 +504,9 @@ Popup {
             subtext: QT_TR_NOOP("Drums, bass, vocals with AI")
         }
         ListElement {
-            label: QT_TR_NOOP("Pads")
+            label: QT_TR_NOOP("Pads & FX")
             iconGlyph: "🥁"
-            subtext: QT_TR_NOOP("Samples & Pad FX on each pad")
+            subtext: QT_TR_NOOP("Samples, Pad FX and Beat FX")
         }
         ListElement {
             label: QT_TR_NOOP("About")

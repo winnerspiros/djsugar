@@ -29,7 +29,6 @@
 #endif
 #include "library/rekordbox/rekordboxfeature.h"
 #include "library/rhythmbox/rhythmboxfeature.h"
-#include "library/samples/samplesfeature.h"
 #include "library/serato/seratofeature.h"
 #include "library/sidebarmodel.h"
 #include "library/trackcollection.h"
@@ -157,8 +156,6 @@ Library::Library(
     addFeature(m_pBrowseFeature);
 
     addFeature(new RecordingFeature(this, m_pConfig, pRecordingManager));
-
-    addFeature(new SamplesFeature(this, m_pConfig));
 
     addFeature(new SetlogFeature(this, UserSettingsPointer(m_pConfig)));
 

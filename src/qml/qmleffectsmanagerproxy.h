@@ -39,6 +39,10 @@ class QmlEffectsManagerProxy : public QObject {
     Q_INVOKABLE QString padFxEffect(int pad) const;
     Q_INVOKABLE void setPadFxEffect(int pad, const QString& key);
     Q_INVOKABLE void resetPadFx();
+    Q_INVOKABLE QVariantList beatFxCatalog() const;
+    Q_INVOKABLE QString beatFxSlot(int slot) const;
+    Q_INVOKABLE void setBeatFxSlot(int slot, const QString& key);
+    Q_INVOKABLE void resetBeatFx();
 
     static QmlEffectsManagerProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
     static void registerEffectsManager(std::shared_ptr<EffectsManager> pEffectsManager) {

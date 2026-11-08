@@ -317,6 +317,10 @@ public class BleMidiController {
             boolean isMidi = Boolean.TRUE.equals(sIsMidiCandidate.get(addr))
                 || matchesControllerName(name);
             boolean connected = isDeviceConnected(addr);
+            // Only DJ / MIDI controllers: no headphones, watches, TVs...
+            if (!isMidi && !connected) {
+                continue;
+            }
             result.add(addr + "|" + name + "|" + (isMidi ? "1" : "0") + "|"
                 + (connected ? "1" : "0"));
         }

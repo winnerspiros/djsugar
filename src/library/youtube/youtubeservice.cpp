@@ -3096,6 +3096,9 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
             // range requests and reassembles on disk).
             QStringLiteral("--concurrent-fragments"),
             QStringLiteral("8"),
+            // 1 MB ranges dodge YouTube's per-request throttling
+            QStringLiteral("--http-chunk-size"),
+            QStringLiteral("1M"),
             // Skip per-format availability probes with our explicit -f.
             QStringLiteral("--no-check-formats"),
             QStringLiteral("-o"),
@@ -3330,13 +3333,15 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                 "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
                 QJniObject::fromString("--force-ipv4").object());
         // YouTube throttles one long request for a direct (non-DASH) audio
-        // URL to roughly playback speed (logs showed 140-200 KB/s). Range
-        // requests of 10 MB each are served at full line speed.
+        // URL to roughly playback speed (logs showed 140-200 KB/s). Only the
+        // first ~1 MB of each request comes at full line speed, and a song is
+        // 3-8 MB, so 10 MB chunks were still one throttled request (153 KB/s
+        // in the logs). 1 MB ranges keep every request inside the fast burst.
         request.callMethod<QJniObject>("addOption",
                 "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
                 "YoutubeDLRequest;",
                 QJniObject::fromString("--http-chunk-size").object(),
-                QJniObject::fromString("10M").object());
+                QJniObject::fromString("1M").object());
         request.callMethod<QJniObject>("addOption",
                 "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
                 "YoutubeDLRequest;",

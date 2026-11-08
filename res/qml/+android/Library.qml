@@ -101,7 +101,7 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 38
+        height: 34
         color: Theme.librarySourceBarBackground
         border.color: Theme.librarySourceBarBorder
         border.width: 1

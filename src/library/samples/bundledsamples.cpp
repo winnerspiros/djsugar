@@ -36,15 +36,23 @@ QString bundledSourceDir(const UserSettingsPointer& pConfig) {
 
 } // namespace
 
+QString bundledSamplesCacheDir() {
+    return QStandardPaths::writableLocation(QStandardPaths::CacheLocation) +
+            QStringLiteral("/samples/");
+}
+
+bool isBundledSample(const QString& path) {
+    static const QString dir = bundledSamplesCacheDir();
+    return path.startsWith(dir);
+}
+
 QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     const QString sourceDir = bundledSourceDir(pConfig);
     if (sourceDir.isEmpty()) {
         return QString();
     }
     // Cache location keeps the library scanner away from the samples
-    const QString destDir =
-            QStandardPaths::writableLocation(QStandardPaths::CacheLocation) +
-            QStringLiteral("/samples/");
+    const QString destDir = bundledSamplesCacheDir();
     const QDir source(sourceDir);
     QDirIterator it(sourceDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {

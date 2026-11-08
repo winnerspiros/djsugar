@@ -93,6 +93,28 @@ void QmlEffectsManagerProxy::resetPadFx() {
     }
 }
 
+QVariantList QmlEffectsManagerProxy::beatFxCatalog() const {
+    const PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->beatFxCatalog() : QVariantList();
+}
+
+QString QmlEffectsManagerProxy::beatFxSlot(int slot) const {
+    const PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->beatFxSlot(slot) : QString();
+}
+
+void QmlEffectsManagerProxy::setBeatFxSlot(int slot, const QString& key) {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->setBeatFxSlot(slot, key);
+    }
+}
+
+void QmlEffectsManagerProxy::resetBeatFx() {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->resetBeatFx();
+    }
+}
+
 // static
 QmlEffectsManagerProxy* QmlEffectsManagerProxy::create(
         QQmlEngine* pQmlEngine, QJSEngine* pJsEngine) {

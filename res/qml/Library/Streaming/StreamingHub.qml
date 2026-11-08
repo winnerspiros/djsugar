@@ -18,7 +18,7 @@ Item {
         // ================= MULTI-PLATFORM SELECTOR BAR =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: 36
             color: Theme.backgroundColor
             border.color: Theme.darkGray3
             border.width: 1
@@ -105,7 +105,7 @@ Item {
 
                 // Quick Deck Destination Indicator
                 Rectangle {
-                    Layout.preferredHeight: 32
+                    Layout.preferredHeight: 28
                     Layout.preferredWidth: 120
                     radius: 4
                     color: root.targetDeck === "[Channel1]" ? "#0d47a1" : "#bf360c"

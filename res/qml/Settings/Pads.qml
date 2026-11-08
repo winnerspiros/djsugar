@@ -12,27 +12,32 @@ import "../Theme"
 Category {
     id: root
 
-    label: qsTr("Pads")
+    label: qsTr("Pads & FX")
     selectedIndex: 0
 
     property var samples: []
     property var effects: []
+    property var beatEffects: []
     // Bumped after each change so the pad labels re-read their value
     property int revision: 0
 
     function refresh() {
         root.samples = Mixxx.PlayerManager.bundledSamples();
         root.effects = Mixxx.EffectsManager.padFxCatalog();
+        root.beatEffects = Mixxx.EffectsManager.beatFxCatalog();
         root.revision++;
     }
 
-    function effectName(key) {
-        for (let i = 0; i < root.effects.length; i++) {
-            if (root.effects[i].key === key) {
-                return root.effects[i].name;
+    function nameIn(list, key) {
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].key === key) {
+                return list[i].name;
             }
         }
         return key;
+    }
+    function effectName(key) {
+        return root.nameIn(root.effects, key);
     }
 
     Component.onCompleted: refresh()
@@ -56,7 +61,7 @@ Category {
                 wrapMode: Text.WordWrap
                 color: "#cfd8dc"
                 font.pixelSize: 12
-                text: qsTr("Tap a pad to choose what it plays. Your choices are used by the controller pads in SAMPLER and PAD FX mode.")
+                text: qsTr("Tap a pad to choose what it plays. Your choices are used by the controller pads in SAMPLER and PAD FX mode, and by BEAT FX SELECT.")
             }
 
             // ================= SAMPLER =================
@@ -101,6 +106,44 @@ Category {
                     root.revision++;
                 }
             }
+
+            // ================= BEAT FX =================
+            Text {
+                text: qsTr("🎛 BEAT FX")
+                font.bold: true
+                font.pixelSize: 14
+                color: "#ffab00"
+            }
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: "#cfd8dc"
+                font.pixelSize: 12
+                text: qsTr("BEAT FX SELECT steps through these 10 effects in order; BEAT ◀ ▶ sets the length, LEVEL/DEPTH the amount.")
+            }
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 5
+                rowSpacing: 6
+                columnSpacing: 6
+
+                Repeater {
+                    model: 10
+                    delegate: PadButton {
+                        required property int index
+
+                        pad: index + 1
+                        mode: 2
+                    }
+                }
+            }
+            Button {
+                text: qsTr("Reset BEAT FX to defaults")
+                onClicked: {
+                    Mixxx.EffectsManager.resetBeatFx();
+                    root.revision++;
+                }
+            }
         }
     }
 
@@ -132,7 +175,7 @@ Category {
                     required property int index
 
                     pad: grid.first + index
-                    sampler: grid.sampler
+                    mode: grid.sampler ? 0 : 1
                 }
             }
         }
@@ -142,7 +185,9 @@ Category {
         id: padButton
 
         property int pad: 1
-        property bool sampler: true
+        // 0 = sampler, 1 = PAD FX, 2 = BEAT FX
+        property int mode: 0
+        readonly property bool sampler: mode === 0
         readonly property string samplerGroup: "[Sampler" + pad + "]"
         readonly property var player: sampler ? Mixxx.PlayerManager.getPlayer(samplerGroup) : null
         readonly property string text: {
@@ -150,6 +195,9 @@ Category {
             if (sampler) {
                 const track = player ? player.currentTrack : null;
                 return track && track.title !== "" ? track.title : qsTr("(empty)");
+            }
+            if (mode === 2) {
+                return root.nameIn(root.beatEffects, Mixxx.EffectsManager.beatFxSlot(pad));
             }
             return root.effectName(Mixxx.EffectsManager.padFxEffect(pad));
         }
@@ -159,7 +207,7 @@ Category {
         radius: 6
         color: "#000000"
         border.width: 2
-        border.color: sampler ? "#00e5ff" : "#ff4081"
+        border.color: mode === 0 ? "#00e5ff" : mode === 1 ? "#ff4081" : "#ffab00"
 
         Column {
             anchors.centerIn: parent
@@ -186,7 +234,7 @@ Category {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: picker.openFor(padButton.pad, padButton.sampler)
+            onClicked: picker.openFor(padButton.pad, padButton.mode)
         }
     }
 
@@ -201,11 +249,12 @@ Category {
         id: picker
 
         property int pad: 1
-        property bool sampler: true
+        property int mode: 0
+        readonly property bool sampler: mode === 0
 
-        function openFor(newPad, isSampler) {
+        function openFor(newPad, newMode) {
             picker.pad = newPad;
-            picker.sampler = isSampler;
+            picker.mode = newMode;
             picker.open();
         }
 
@@ -219,7 +268,7 @@ Category {
         background: Rectangle {
             color: "#000000"
             radius: 8
-            border.color: picker.sampler ? "#00e5ff" : "#ff4081"
+            border.color: picker.mode === 0 ? "#00e5ff" : picker.mode === 1 ? "#ff4081" : "#ffab00"
             border.width: 1
         }
 
@@ -227,7 +276,7 @@ Category {
             spacing: 6
 
             Text {
-                text: (picker.sampler ? qsTr("Sample for pad %1") : qsTr("Effect for pad %1")).arg(picker.pad)
+                text: (picker.mode === 0 ? qsTr("Sample for pad %1") : picker.mode === 1 ? qsTr("Effect for pad %1") : qsTr("BEAT FX %1")).arg(picker.pad)
                 color: Theme.white
                 font.bold: true
                 font.pixelSize: 14
@@ -237,7 +286,7 @@ Category {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: picker.sampler ? root.samples : root.effects
+                model: picker.mode === 0 ? root.samples : picker.mode === 1 ? root.effects : root.beatEffects
                 delegate: Rectangle {
                     id: row
 
@@ -271,6 +320,9 @@ Category {
                         onClicked: {
                             if (picker.sampler) {
                                 Mixxx.PlayerManager.loadLocationToPlayer(row.modelData.path, "[Sampler" + picker.pad + "]", false);
+                            } else if (picker.mode === 2) {
+                                Mixxx.EffectsManager.setBeatFxSlot(picker.pad, row.modelData.key);
+                                picker.close();
                             } else {
                                 Mixxx.EffectsManager.setPadFxEffect(picker.pad, row.modelData.key);
                                 picker.close();

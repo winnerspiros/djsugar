@@ -1,5 +1,5 @@
 const fs = require('fs'), vm = require('vm');
-const src = fs.readFileSync(process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-2.0.script.js', 'utf8');
+const src = fs.readFileSync(process.argv[2] || 'res/controllers/Pioneer-DDJ-FLX4-script.js', 'utf8');
 const state = {};            // "group|key" -> value
 const sets = [];
 const engine = {
