@@ -1,7 +1,6 @@
 #pragma once
 
 #include "track/trackid.h"
-#include "util/compatibility/qhash.h"
 #include "util/fileinfo.h"
 
 // A track in the library is identified by a location and an id.
@@ -57,9 +56,9 @@ class TrackRef final {
     TrackRef(
             const TrackRef& other,
             TrackId id)
-        : m_location(other.m_location),
-          m_canonicalLocation(other.m_canonicalLocation),
-          m_id(id) {
+            : m_location(other.m_location),
+              m_canonicalLocation(other.m_canonicalLocation),
+              m_id(id) {
         DEBUG_ASSERT(verifyConsistency());
     }
 
@@ -96,19 +95,19 @@ class TrackRef final {
         return hasId() || hasCanonicalLocation();
     }
 
-protected:
+  protected:
     // Initializing constructor
     TrackRef(
             const QString& location,
             const QString& canonicalLocation,
             TrackId id = TrackId())
-        : m_location(location),
-          m_canonicalLocation(canonicalLocation),
-          m_id(id) {
+            : m_location(location),
+              m_canonicalLocation(canonicalLocation),
+              m_id(id) {
         DEBUG_ASSERT(verifyConsistency());
     }
 
-private:
+  private:
     // Checks if all class invariants are met
     bool verifyConsistency() const;
 
@@ -117,15 +116,13 @@ private:
     TrackId m_id;
 };
 
-inline
-bool operator==(const TrackRef& lhs, const TrackRef& rhs) {
+inline bool operator==(const TrackRef& lhs, const TrackRef& rhs) {
     return (lhs.getId() == rhs.getId()) &&
             (lhs.getLocation() == rhs.getLocation()) &&
             (lhs.getCanonicalLocation() == rhs.getCanonicalLocation());
 }
 
-inline
-bool operator!=(const TrackRef& lhs, const TrackRef& rhs) {
+inline bool operator!=(const TrackRef& lhs, const TrackRef& rhs) {
     return !(lhs == rhs);
 }
 
@@ -135,10 +132,10 @@ std::ostream& operator<<(std::ostream& os, const TrackRef& trackRef);
 
 QDebug operator<<(QDebug debug, const TrackRef& trackRef);
 
-inline qhash_seed_t qHash(
+inline size_t qHash(
         const TrackRef& key,
-        qhash_seed_t seed = 0) {
+        size_t seed = 0) {
     return qHash(
-            key.getLocation(), seed) ^
+                   key.getLocation(), seed) ^
             qHash(key.getId(), seed);
 }

@@ -9,6 +9,7 @@
 #include "effects/chains/standardeffectchain.h"
 #include "effects/effectslot.h"
 #include "effects/effectsmessenger.h"
+#include "effects/padfxcontroller.h"
 #include "effects/presets/effectchainpreset.h"
 #include "effects/presets/effectpresetmanager.h"
 #include "effects/presets/effectxmlelements.h"
@@ -53,6 +54,7 @@ EffectsManager::~EffectsManager() {
     m_pMessenger->initiateShutdown();
 
     saveEffectsXml();
+    m_pPadFx.reset();
 
     // The EffectChains must be deleted before the EffectsBackends in case
     // there is an LV2 effect currently loaded.
@@ -80,6 +82,7 @@ void EffectsManager::setup() {
     // readEffectsXml() is running is also initialized.
     m_initializedFromEffectsXml = true;
     readEffectsXml();
+    m_pPadFx = std::make_unique<PadFxController>(m_pConfig, this);
 }
 
 void EffectsManager::registerInputChannel(const ChannelHandleAndGroup& handle_group) {
@@ -246,6 +249,32 @@ void EffectsManager::readEffectsXml() {
 
     for (int i = 0; i < data.standardEffectChainPresets.size(); i++) {
         m_standardEffectChains.value(i)->loadChainPreset(data.standardEffectChainPresets.at(i));
+    }
+
+    if (data.standardEffectChainPresets.isEmpty()) {
+        // First run: fill the effect units, otherwise controllers like the
+        // DDJ-400 have nothing to switch on with their effect buttons
+        // (from JaviLabarumDJ/mixxx-android android-stable)
+        const QStringList defaultEffects[] = {
+                {QStringLiteral("org.mixxx.effects.echo"),
+                        QStringLiteral("org.mixxx.effects.reverb"),
+                        QStringLiteral("org.mixxx.effects.flanger")},
+                {QStringLiteral("org.mixxx.effects.filter"),
+                        QStringLiteral("org.mixxx.effects.phaser"),
+                        QStringLiteral("org.mixxx.effects.bitcrusher")},
+        };
+        for (int unit = 0; unit < m_standardEffectChains.size(); ++unit) {
+            const QStringList& effectIds = defaultEffects[unit % 2];
+            const auto& pChain = m_standardEffectChains.at(unit);
+            for (int slot = 0; slot < effectIds.size(); ++slot) {
+                const auto pManifest = m_pBackendManager->getManifest(
+                        effectIds.at(slot), EffectBackendType::BuiltIn);
+                const auto pEffectSlot = pChain->getEffectSlot(slot);
+                if (pManifest && pEffectSlot) {
+                    pEffectSlot->loadEffectWithDefaults(pManifest);
+                }
+            }
+        }
     }
 
     if (!data.outputChainPreset.isNull()) {

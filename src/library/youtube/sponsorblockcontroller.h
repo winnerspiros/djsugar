@@ -33,12 +33,21 @@ class SponsorBlockController : public QObject {
     Q_OBJECT
   public:
     explicit SponsorBlockController(
-            const QString& cacheDir, QObject* parent = nullptr);
+            const QString& cacheDir, bool autoSkipEnabled, QObject* parent = nullptr);
     ~SponsorBlockController() override;
 
     /// Override the YouTube cache directory used for resolving sidecars.
     void setCacheDir(const QString& cacheDir) {
         m_cacheDir = cacheDir;
+    }
+
+    /// Enable/disable automatic skipping of SponsorBlock segments.
+    void setAutoSkipEnabled(bool enabled) {
+        m_autoSkipEnabled = enabled;
+    }
+
+    bool isAutoSkipEnabled() const {
+        return m_autoSkipEnabled;
     }
 
   private slots:
@@ -55,11 +64,27 @@ class SponsorBlockController : public QObject {
         // Track duration (sec). playposition is normalised 0..1, so we need
         // duration to convert SponsorBlock's seconds back to a position.
         double durationSec = 0.0;
+        // The loaded track, read for the analyzer's audible-sound range when
+        // SponsorBlock knows no segments (most songs have none).
+        TrackWeakPointer pTrack;
+        // Leading silence is skipped once per load, so seeking back to the
+        // very start afterwards is not fought.
+        bool leadSilenceSkipped = false;
+        // SponsorBlock answered (from the sidecar or the network).
+        bool segmentsKnown = false;
+        // SponsorBlock has segments for this video (to skip, or already cut
+        // from the file): they are preferred, the analysis skip stays off.
+        bool sponsorBlockCovered = false;
+        // "(Official Music Video)" and the like: may open with a skit.
+        bool isMusicVideo = false;
     };
 
     void ensureDeckTracked(const QString& group);
     void clearDeck(const QString& group);
     void onPlayPositionChanged(const QString& group, double pos);
+    /// End of a music video's non-music lead-in (the Intro End marker) when
+    /// SponsorBlock has no segments for it, or -1.
+    double musicVideoLeadInEndSec(const DeckState& state, const TrackPointer& pTrack) const;
     /// Read sidecar JSON written by yt-dlp's --write-info-json (`<id>.info.json`)
     /// next to a sibling `<id>.sponsorblock.json` if we have one. Returns true
     /// if segments were applied immediately; false if the controller had to
@@ -68,6 +93,7 @@ class SponsorBlockController : public QObject {
             const QString& group, const QString& videoId);
 
     QString m_cacheDir;
+    bool m_autoSkipEnabled = true;     // default: ON
     QHash<QString, DeckState> m_decks; // key = "[Channel1]" etc.
     YouTubeService m_service;
 };

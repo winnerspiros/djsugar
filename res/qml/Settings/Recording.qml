@@ -2,10 +2,10 @@ import QtQuick
 import Mixxx 1.0 as Mixxx
 
 Category {
-    label: "Recording"
+    label: qsTr("Recording")
 
     Mixxx.SettingParameter {
-        label: "A red square"
+        label: qsTr("A red square")
 
         Rectangle {
             color: 'red'

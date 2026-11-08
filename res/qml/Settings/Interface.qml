@@ -220,10 +220,80 @@ Category {
                             Skin.ComboBox {
                                 id: skinInput
 
-                                model: ["Unnamed"]
+                                // Applied immediately, like the language: the
+                                // interface is reloaded with the other skin
+                                readonly property var skins: Mixxx.MobileApp.skinsIn(Qt.resolvedUrl("../Skins/"))
 
-                                onCurrentIndexChanged: themeColorTab.dirty = true
+                                model: skins.map(skin => skin === "Classic" ? qsTr("Classic") : skin)
+                                currentIndex: Math.max(0, skins.indexOf(Mixxx.MobileApp.skin))
+                                onActivated: index => {
+                                    Mixxx.MobileApp.skin = skins[index];
+                                }
                             }
+                        }
+                        RowLayout {
+                            Mixxx.SettingParameter {
+                                Layout.fillWidth: true
+                                label: "Renderer"
+
+                                Text {
+                                    color: Theme.white
+                                    font.pixelSize: 14
+                                    text: parent.label
+                                }
+                            }
+                            // Applies at the next start, see Mixxx.MobileApp.graphicsApi
+                            Skin.ComboBox {
+                                textRole: "label"
+                                valueRole: "value"
+                                model: Mixxx.MobileApp.graphicsApis
+                                Component.onCompleted: currentIndex = Math.max(0, indexOfValue(Mixxx.MobileApp.graphicsApi))
+                                onActivated: {
+                                    Mixxx.MobileApp.graphicsApi = currentValue;
+                                    rendererRestartHint.visible = true;
+                                }
+                            }
+                        }
+                        RowLayout {
+                            Mixxx.SettingParameter {
+                                Layout.fillWidth: true
+                                label: "Antialiasing"
+
+                                Text {
+                                    color: Theme.white
+                                    font.pixelSize: 14
+                                    text: parent.label
+                                }
+                            }
+                            Skin.ComboBox {
+                                textRole: "label"
+                                valueRole: "value"
+                                model: [{
+                                        "value": 4,
+                                        "label": qsTr("4x (smoothest)")
+                                    }, {
+                                        "value": 2,
+                                        "label": qsTr("2x")
+                                    }, {
+                                        "value": 0,
+                                        "label": qsTr("Off (fastest)")
+                                    }]
+                                Component.onCompleted: currentIndex = Math.max(0, indexOfValue(Mixxx.MobileApp.antialiasing))
+                                onActivated: {
+                                    Mixxx.MobileApp.antialiasing = currentValue;
+                                    rendererRestartHint.visible = true;
+                                }
+                            }
+                        }
+                        Text {
+                            id: rendererRestartHint
+
+                            Layout.fillWidth: true
+                            visible: false
+                            text: qsTr("Applies after restarting Mixxx. Now running: %1. Controller screens need OpenGL.").arg(Mixxx.MobileApp.activeGraphicsApi)
+                            color: "#ffb74d"
+                            font.pixelSize: 11
+                            wrapMode: Text.WordWrap
                         }
                         RowLayout {
                             Mixxx.SettingParameter {

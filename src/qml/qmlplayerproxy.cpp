@@ -7,6 +7,9 @@
 #include "moc_qmlplayerproxy.cpp"
 #include "qml/qmltrackproxy.h"
 #include "track/track.h"
+#ifdef __ANDROID_USB_DRIVE__
+#include "library/usbdrive/androidusbdrive.h"
+#endif
 
 namespace mixxx {
 namespace qml {
@@ -49,7 +52,15 @@ void QmlPlayerProxy::loadTrackFromLocation(const QString& trackLocation, bool pl
     if (m_pCurrentTrack && m_pCurrentTrack->getLocation() == trackLocation) {
         return;
     }
+#ifdef __ANDROID_USB_DRIVE__
+    // Tracks of USB drives that Mixxx reads itself are copied first
+    // (from JaviLabarumDJ/mixxx-android android-stable).
+    mixxx::usbdrive::fetchTrack(trackLocation, this, [this, trackLocation, play]() {
+        Q_EMIT loadTrackFromLocationRequested(trackLocation, play);
+    });
+#else
     Q_EMIT loadTrackFromLocationRequested(trackLocation, play);
+#endif
 }
 
 void QmlPlayerProxy::loadTrackFromLocationUrl(const QUrl& trackLocationUrl, bool play) {
@@ -85,6 +96,10 @@ void QmlPlayerProxy::loadSampleFromLocationUrl(const QUrl& trackLocationUrl) {
 
 void QmlPlayerProxy::slotTrackLoaded(TrackPointer pTrack) {
     m_pCurrentTrack = pTrack;
+    if (!m_trackLoaded) {
+        m_trackLoaded = true;
+        Q_EMIT trackLoadedChanged();
+    }
     Q_EMIT trackChanged();
     Q_EMIT trackLoaded();
 }
@@ -99,6 +114,11 @@ void QmlPlayerProxy::slotTrackUnloaded(TrackPointer pOldTrack) {
         disconnect(m_pCurrentTrack.get(), nullptr, this, nullptr);
     }
     m_pCurrentTrack.reset();
+    if (m_trackLoaded) {
+        m_trackLoaded = false;
+        Q_EMIT trackLoadedChanged();
+    }
+    setAnalyzerProgress(kAnalyzerProgressUnknown);
     Q_EMIT trackChanged();
     Q_EMIT trackUnloaded();
 }

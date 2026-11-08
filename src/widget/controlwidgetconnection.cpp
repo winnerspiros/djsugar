@@ -88,11 +88,12 @@ void ControlParameterWidgetConnection::Init() {
 QString ControlParameterWidgetConnection::toDebugString() const {
     const ConfigKey& key = getKey();
     return QString("%1,%2 Parameter: %3 Value: %4 Direction: %5 Emit: %6")
-            .arg(key.group, key.item,
-                 QString::number(m_pControl->getParameter()),
-                 QString::number(m_pControl->get()),
-                 directionOptionToString(m_directionOption),
-                 emitOptionToString(m_emitOption));
+            .arg(key.group,
+                    key.item,
+                    QString::number(m_pControl->getParameter()),
+                    QString::number(m_pControl->get()),
+                    directionOptionToString(m_directionOption),
+                    emitOptionToString(m_emitOption));
 }
 
 void ControlParameterWidgetConnection::slotControlValueChanged(double value) {
@@ -153,20 +154,12 @@ QString ControlWidgetPropertyConnection::toDebugString() const {
 void ControlWidgetPropertyConnection::slotControlValueChanged(double v) {
     const double parameter = getControlParameterForValue(v);
     QVariant vParameter;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (m_property.metaType().id() == QMetaType::Bool) {
-#else
-    if (m_property.type() == QVariant::Bool) {
-#endif
         vParameter = (parameter > 0);
     } else {
         vParameter = parameter;
     }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     bool success = vParameter.convert(m_property.metaType());
-#else
-    bool success = vParameter.convert(m_property.type());
-#endif
     VERIFY_OR_DEBUG_ASSERT(success) {
         return;
     }

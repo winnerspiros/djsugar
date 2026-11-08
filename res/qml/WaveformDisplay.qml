@@ -290,6 +290,13 @@ Item {
     }
 
     // Pinch to zoom, the touch equivalent of the mouse wheel below.
+    // Double-tap toggles stem-track splitting (touch equivalent of
+    // JaviLabarumDJ/mixxx-android's right-click on desktop).
+    TapHandler {
+        acceptedButtons: Qt.LeftButton
+        onDoubleTapped: root.splitStemTracks = !root.splitStemTracks
+    }
+
     PinchHandler {
         id: zoomPinchHandler
 

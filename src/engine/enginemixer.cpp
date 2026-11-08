@@ -190,7 +190,12 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
     m_pHeadMix->set(-1.);
 
     m_pHeadSplitEnabled->setButtonMode(mixxx::control::ButtonMode::Toggle);
+#ifndef Q_OS_ANDROID
+    // On Android the "split cable" audio preset relies on head split, so the
+    // persisted value is kept there.
+    // (from JaviLabarumDJ/mixxx-android android-stable)
     m_pHeadSplitEnabled->set(0.0);
+#endif
 
     // zero out otherwise uninitialized buffers
     m_head.clear();
@@ -481,11 +486,13 @@ void EngineMixer::process(const std::size_t bufferSize) {
 
     // Calculate the crossfader gains for left and right side of the crossfader
     CSAMPLE_GAIN crossfaderLeftGain, crossfaderRightGain;
-    EngineXfader::getXfadeGains(m_pCrossfader->get(), m_pXFaderCurve->get(),
-                                m_pXFaderCalibration->get(),
-                                m_pXFaderMode->get(),
-                                m_pXFaderReverse->toBool(),
-                                &crossfaderLeftGain, &crossfaderRightGain);
+    EngineXfader::getXfadeGains(m_pCrossfader->get(),
+            m_pXFaderCurve->get(),
+            m_pXFaderCalibration->get(),
+            m_pXFaderMode->get(),
+            m_pXFaderReverse->toBool(),
+            &crossfaderLeftGain,
+            &crossfaderRightGain);
 
     // Make the mix for each crossfader orientation output bus.
     // m_mainGain takes care of applying the attenuation from
@@ -547,7 +554,7 @@ void EngineMixer::process(const std::size_t bufferSize) {
                 static_cast<int>(bufferSize));
 
         MicMonitorMode configuredMicMonitorMode = static_cast<MicMonitorMode>(
-            static_cast<int>(m_pMicMonitorMode->get()));
+                static_cast<int>(m_pMicMonitorMode->get()));
 
         // Process main, booth, and record/broadcast buffers according to the
         // MicMonitorMode configured in DlgPrefSound

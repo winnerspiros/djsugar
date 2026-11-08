@@ -129,7 +129,15 @@ QString DeviceInfo::formatName() const {
     // We include the last 4 digits of the serial number and the
     // interface number to allow the user (and Mixxx!) to keep
     // track of which is which
+#ifdef __ANDROID__
+    // Android blocks UsbDevice.getSerialNumber() until the user grants USB
+    // permission, so a name built from the serial number changes after open()
+    // and no longer matches the configuration key under which the mapping was
+    // saved.
+    const QString serialSuffix = QStringLiteral("USB");
+#else
     const auto serialSuffix = getSerialNumber().right(4);
+#endif
     if (m_usbInterfaceNumber >= 0) {
         return getProductString() +
                 QChar(' ') +

@@ -20,7 +20,43 @@ Rectangle {
     property bool minimized: false
     required property int rightColumnWidth
 
+    readonly property real ytDeckProgress: {
+        const _ = Mixxx.YouTube.deckDownloadProgress;
+        return Mixxx.YouTube.deckProgress(root.group);
+    }
+    readonly property string ytDeckTitle: {
+        const _ = Mixxx.YouTube.deckDownloadProgress;
+        return Mixxx.YouTube.deckDownloadingTitle(root.group);
+    }
+
     radius: 5
+    clip: true
+
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 3
+        z: 10
+        visible: root.ytDeckProgress >= 0
+        color: "#1a1d24"
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: parent.width * Math.max(0.04, Math.min(1.0, root.ytDeckProgress))
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "#e63380" }
+                GradientStop { position: 0.55; color: "#ff99ca" }
+                GradientStop { position: 1.0; color: "#00e5ff" }
+            }
+            Behavior on width {
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
+        }
+    }
 
     gradient: Gradient {
         orientation: Gradient.Horizontal
@@ -81,9 +117,11 @@ Rectangle {
             roleValue: "title"
 
             Cell {
-                item.font.bold: false
-                item.font.weight: root.deckPlayer?.isLoaded ? Font.DemiBold : Font.Thin
-                item.text: root.deckPlayer?.isLoaded ? root.currentTrack?.title : "No track loaded"
+                item.font.bold: root.ytDeckProgress >= 0
+                item.font.weight: (root.deckPlayer?.isLoaded || root.ytDeckProgress >= 0) ? Font.DemiBold : Font.Thin
+                item.text: root.ytDeckProgress >= 0
+                    ? qsTr("⬇ Downloading %1% · %2").arg(Math.round(root.ytDeckProgress * 100)).arg(root.ytDeckTitle)
+                    : (root.deckPlayer?.isLoaded ? root.currentTrack?.title : "No track loaded")
                 item.visible: true
             }
         }

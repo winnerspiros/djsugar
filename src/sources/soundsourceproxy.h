@@ -196,6 +196,13 @@ class SoundSourceProxy {
     mixxx::AudioSourcePointer openAudioSource(
             const mixxx::AudioSource::OpenParams& params = mixxx::AudioSource::OpenParams());
 
+#ifdef __STEM_SEPARATION__
+    /// Opens the track's file even if the track was separated into stems,
+    /// without updating the track. Used to separate it.
+    mixxx::AudioSourcePointer openTrackFileAudioSource(
+            const mixxx::AudioSource::OpenParams& params);
+#endif
+
   private:
     static mixxx::SoundSourceProviderRegistry s_soundSourceProviders;
     static QStringList s_supportedFileNamePatterns;
@@ -215,6 +222,13 @@ class SoundSourceProxy {
 
     bool openSoundSource(
             const mixxx::AudioSource::OpenParams& params = mixxx::AudioSource::OpenParams());
+
+#ifdef __STEM_SEPARATION__
+    /// Opens the stem file of a separated track instead of its file
+    mixxx::AudioSourcePointer openSeparatedStems(
+            const QString& stemFile,
+            const mixxx::AudioSource::OpenParams& params);
+#endif
 
     const TrackPointer m_pTrack;
 

@@ -167,14 +167,22 @@ class QmlControllerMappingProxy : public QObject {
 
 class QmlControllerDeviceProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerDevice)
+    QML_UNCREATABLE("Use Mixxx.ControllerManager to get devices")
+    Q_PROPERTY(QString sinceVersion READ getSinceVersion CONSTANT)
     Q_PROPERTY(mixxx::qml::QmlControllerDeviceProxy::Type type READ getType CONSTANT)
-    Q_PROPERTY(QString name READ getName CONSTANT)
+    Q_PROPERTY(QString name READ getName WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QUrl visualUrl READ getVisualUrl WRITE setVisualUrl NOTIFY visualUrlChanged)
     Q_PROPERTY(mixxx::qml::QmlControllerMappingProxy* mapping READ getMapping WRITE setMapping NOTIFY mappingChanged)
     Q_PROPERTY(bool enabled READ getEnabled WRITE setEnabled NOTIFY enabledChanged)
+    Q_PROPERTY(bool edited MEMBER m_edited NOTIFY editedChanged)
     Q_PROPERTY(QString vendor READ vendor CONSTANT)
     Q_PROPERTY(QString product READ product CONSTANT)
     Q_PROPERTY(QString serialNumber READ serialNumber CONSTANT)
-    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> mappings READ getMappings CONSTANT)
+    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> mappings READ
+                    getMappings NOTIFY mappingsChanged)
+    Q_PROPERTY(QList<mixxx::qml::QmlControllerMappingProxy*> availableMappings
+                    READ getMappings NOTIFY mappingsChanged)
   public:
     enum class Type {
         MIDI,
@@ -191,6 +199,10 @@ class QmlControllerDeviceProxy : public QObject {
 
     Type getType() const;
     QString getName() const;
+    void setName(const QString& name);
+    QString getSinceVersion() const;
+    QUrl getVisualUrl() const;
+    void setVisualUrl(const QUrl& url);
     mixxx::qml::QmlControllerMappingProxy* getMapping() const;
     void setMapping(mixxx::qml::QmlControllerMappingProxy* mapping);
     bool getEnabled() const;
@@ -208,13 +220,24 @@ class QmlControllerDeviceProxy : public QObject {
     Q_INVOKABLE bool save(const mixxx::qml::QmlConfigProxy* pConfig);
     Q_INVOKABLE void clear();
 
+    Controller* internal() const {
+        return m_pInternal;
+    }
+
     std::shared_ptr<LegacyControllerMapping> instanceFor(const QString& mappingPath) const;
     void setInstanceFor(const QString& mappingPath, std::shared_ptr<LegacyControllerMapping> pMapping);
 
   signals:
+    void nameChanged();
+    void visualUrlChanged();
     void mappingChanged();
+    void mappingsChanged();
     void enabledChanged();
-    void mappingAssigned(Controller* pInternal, LegacyControllerMapping* pMapping, bool enabled);
+    void editedChanged();
+    void deviceLearned();
+    void mappingAssigned(Controller* pController,
+            std::shared_ptr<LegacyControllerMapping> pMapping,
+            bool bEnabled);
     void mappingCreated(mixxx::qml::QmlControllerDeviceProxy::Type type, const MappingInfo& mapping);
     void mappingUpdated(mixxx::qml::QmlControllerMappingProxy* pMapping, const MappingInfo& mapping);
 
@@ -222,13 +245,19 @@ class QmlControllerDeviceProxy : public QObject {
     void setEdited() {
         if (!m_edited) {
             m_edited = true;
+            Q_EMIT editedChanged();
         }
     }
     void clearEdited() {
-        m_edited = false;
+        if (m_edited) {
+            m_edited = false;
+            Q_EMIT editedChanged();
+        }
     }
 
     bool m_edited;
+    QString m_editedFriendlyName;
+    QUrl m_editedVisualUrl;
     Controller* m_pInternal;
     std::optional<ProductInfo> m_productInfo;
     QList<mixxx::qml::QmlControllerMappingProxy*> m_mappings;
@@ -242,8 +271,11 @@ using QmlControllerMappingProxyList = QList<QmlControllerMappingProxy*>;
 
 class QmlControllerManagerProxy : public QObject {
     Q_OBJECT
+    QML_NAMED_ELEMENT(ControllerManager)
+    QML_SINGLETON
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> knownDevices READ knownDevices NOTIFY deviceListChanged)
     Q_PROPERTY(QQmlListProperty<mixxx::qml::QmlControllerDeviceProxy> unknownDevices READ unknownDevices NOTIFY deviceListChanged)
+    Q_PROPERTY(bool showControllerScreen MEMBER s_controllerPreviewScreens CONSTANT)
     Q_PROPERTY(bool controllerScreenDebug READ isControllerScreenDebug CONSTANT)
   public:
     QmlControllerManagerProxy(std::shared_ptr<ControllerManager> pControllerManager, QObject* parent = nullptr);
@@ -265,6 +297,11 @@ class QmlControllerManagerProxy : public QObject {
 
   public slots:
     void refreshKnownDevices();
+    Q_INVOKABLE void rescan();
+    Q_INVOKABLE mixxx::qml::QmlControllerMappingProxyList mappings(
+            mixxx::qml::QmlControllerDeviceProxy::Type type) const {
+        return m_knownMappings.value(type);
+    }
     void refreshMappings();
     void loadNewMapping(mixxx::qml::QmlControllerDeviceProxy::Type type, const MappingInfo& mapping);
     void updateExistingMapping(mixxx::qml::QmlControllerMappingProxy* pMapping, const MappingInfo& mapping);

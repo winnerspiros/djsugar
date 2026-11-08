@@ -4,6 +4,16 @@
 
 #include <QLibrary>
 #include <QSharedPointer>
+#ifdef Q_OS_ANDROID
+#include <QDir>
+#include <QDomDocument>
+#include <QFile>
+#include <algorithm>
+#include <bit>
+
+#include "soundio/soundmanagerconfig.h"
+#include "util/cmdlineargs.h"
+#endif
 
 #include "audio/types.h"
 #include "soundio/sounddevice.h"
@@ -22,9 +32,47 @@
 #include <sys/syscall.h>
 
 #include <QJniObject>
+#include <cstdlib>
+
+/// Called by PortAudio instead of malloc() (see MixxxAndroid.cmake): its
+/// Oboe host API allocates strlen(name) bytes for a copy of each device name
+/// and strcpy() then writes the terminating null byte past the end.
+// (from JaviLabarumDJ/mixxx-android)
+extern "C" void* mixxx_portaudio_malloc(size_t size) {
+    return std::malloc(size + 1);
+}
 #endif
 
 typedef PaError (*SetJackClientName)(const char* name);
+
+#ifdef Q_OS_ANDROID
+namespace {
+/// Number of Oboe bursts that hold two engine buffers of the configured size.
+unsigned int oboeBufferCount(unsigned int framesPerBurst) {
+    constexpr unsigned int kMinBuffers = 2;
+    if (framesPerBurst == 0) {
+        return kMinBuffers;
+    }
+    unsigned int framesPerBuffer = 1024;
+    QFile file(QDir(CmdlineArgs::Instance().getSettingsPath())
+                    .filePath(SOUNDMANAGERCONFIG_FILENAME));
+    QDomDocument doc;
+    if (file.open(QIODevice::ReadOnly) && doc.setContent(&file)) {
+        const QDomElement root = doc.documentElement();
+        const unsigned int index = root.attribute(QStringLiteral("latency"), "0").toUInt();
+        const unsigned int rateKhz =
+                root.attribute(QStringLiteral("samplerate"), "48000").toUInt() / 1000;
+        if (index > 0 && index <= SoundManagerConfig::kMaxAudioBufferSizeIndex && rateKhz > 0) {
+            framesPerBuffer = std::bit_ceil(rateKhz) << (index - 1);
+        }
+    }
+    const unsigned int buffers = (2 * framesPerBuffer + framesPerBurst - 1) / framesPerBurst;
+    qInfo() << "Oboe:" << buffers << "bursts of" << framesPerBurst << "frames for"
+            << framesPerBuffer << "frames per engine buffer";
+    return std::max(kMinBuffers, buffers);
+}
+} // namespace
+#endif
 
 PortAudioEnumerator::PortAudioEnumerator(UserSettingsPointer config, SoundManager* sm)
         : m_pConfig(config),
@@ -50,7 +98,8 @@ void PortAudioEnumerator::initialize() {
 #ifdef Q_OS_IOS
     mixxx::initializeAVAudioSession();
 #elif defined(Q_OS_ANDROID)
-    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([]() {
+    unsigned int nativeFramesPerBurst = 0;
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([&nativeFramesPerBurst]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniObject AUDIO_SERVICE =
                 QJniObject::getStaticObjectField(
@@ -78,7 +127,9 @@ void PortAudioEnumerator::initialize() {
         auto const supportedFriendlyName = [](int type) -> std::optional<QString> {
             switch (type) {
             case 1: // AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
-                return tr("Earpiece");
+                // An earpiece is exclusively for phone calls and cannot be opened
+                // for low-latency media playback on Android. Ignore it.
+                return std::nullopt;
             case 2: // AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
                 return tr("Speaker");
             case 4: // AudioDeviceInfo.TYPE_WIRED_HEADPHONES
@@ -93,13 +144,16 @@ void PortAudioEnumerator::initialize() {
                 return tr("Microphone");
             case 25: // AudioDeviceInfo.TYPE_REMOTE_SUBMIX:
                 return tr("Mixed");
-            case 8:  // AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+            // The suffixes below let the QML presets tell devices apart
             case 11: // AudioDeviceInfo.TYPE_USB_DEVICE
             case 22: // AudioDeviceInfo.TYPE_USB_HEADSET
-            case 13: // AudioDeviceInfo.TYPE_DOCK
             case 12: // AudioDeviceInfo.TYPE_USB_ACCESSORY
+                return QStringLiteral("USB");
+            case 8:  // AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
             case 26: // AudioDeviceInfo.TYPE_BLE_HEADSET
             case 27: // AudioDeviceInfo.TYPE_BLE_SPEAKER
+                return QStringLiteral("Bluetooth");
+            case 13: // AudioDeviceInfo.TYPE_DOCK
             case 23: // AudioDeviceInfo.TYPE_HEARING_AID
                 // supported, but no friendly name
                 return QStringLiteral();
@@ -110,7 +164,24 @@ void PortAudioEnumerator::initialize() {
             return std::nullopt;
         };
 
-        auto const parse = [supportedFriendlyName](PaOboe_Direction direction,
+        QJniObject PROPERTY_OUTPUT_SAMPLE_RATE =
+                QJniObject::getStaticField<jstring>(
+                        "android/media/AudioManager",
+                        "PROPERTY_OUTPUT_SAMPLE_RATE");
+        int defaultNativeSampleRate =
+                audioManager
+                        .callMethod<jstring>("getProperty",
+                                "(Ljava/lang/String;)Ljava/lang/String;",
+                                PROPERTY_OUTPUT_SAMPLE_RATE)
+                        .toString()
+                        .toInt();
+        if (defaultNativeSampleRate <= 0) {
+            defaultNativeSampleRate = 48000;
+        }
+        qDebug() << "audioManager defaultNativeSampleRate:" << defaultNativeSampleRate;
+
+        auto const parse = [supportedFriendlyName, defaultNativeSampleRate](
+                                   PaOboe_Direction direction,
                                    QJniArray<QJniObject>& devices) {
             for (const auto& device : devices) {
                 jint type = device->callMethod<jint>("getType");
@@ -126,26 +197,52 @@ void PortAudioEnumerator::initialize() {
                 }
                 int32_t id = device->callMethod<jint>("getId");
                 auto channelCounts = device->callMethod<QJniArray<jint>>("getChannelCounts");
-                int channelCount = *std::max_element(
-                        channelCounts.begin(), channelCounts.end());
+                // AudioDeviceInfo.getChannelCounts() returns an empty array
+                // when the device accepts arbitrary channel counts (common for
+                // the built-in speaker and Bluetooth A2DP). Default to stereo
+                // for outputs and mono for inputs; previously std::max_element
+                // dereferenced end() and passed garbage (or 0) to PortAudio.
+                int channelCount = 0;
+                if (!channelCounts.isEmpty()) {
+                    channelCount = *std::max_element(
+                            channelCounts.begin(), channelCounts.end());
+                }
+                if (channelCount <= 0) {
+                    channelCount = (direction == PaOboe_Direction::Output) ? 2 : 1;
+                }
                 auto sampleRates = device->callMethod<QJniArray<jint>>("getSampleRates");
+                // Likewise, getSampleRates() is empty when the device supports
+                // arbitrary rates (e.g. A2DP Bluetooth or the system mixer);
+                // fall back to AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE instead
+                // of silently dropping the device.
+                int sampleRate = defaultNativeSampleRate;
+                if (!sampleRates.isEmpty()) {
+                    if (std::find(sampleRates.cbegin(),
+                                sampleRates.cend(),
+                                defaultNativeSampleRate) != sampleRates.cend()) {
+                        sampleRate = defaultNativeSampleRate;
+                    } else {
+                        sampleRate = *std::max_element(
+                                sampleRates.cbegin(), sampleRates.cend());
+                    }
+                }
                 qDebug() << "audioManager - Type:" << type
                          << "- Name:" << name
+                         << "- Id:" << id
+                         << "- Direction:" << static_cast<int>(direction)
                          << "- ChannelCount:" << channelCount
-                         << channelCounts.size();
-                if (!sampleRates.isEmpty()) {
-                    int sampleRate = *sampleRates.cbegin();
-                    qDebug() << "audioManager - SampleRates:" << sampleRate;
-                    auto result = PaOboe_RegisterDevice(name.toStdString().c_str(),
-                            id,
-                            direction,
-                            channelCount,
-                            sampleRate);
-                    if (result != paNoError) {
-                        qWarning()
-                                << "Error registering device to PortAudio:"
-                                << Pa_GetErrorText(result);
-                    }
+                         << "(" << channelCounts.size() << "reported)"
+                         << "- SampleRate:" << sampleRate
+                         << "(" << sampleRates.size() << "reported)";
+                auto result = PaOboe_RegisterDevice(name.toStdString().c_str(),
+                        id,
+                        direction,
+                        channelCount,
+                        sampleRate);
+                if (result != paNoError) {
+                    qWarning()
+                            << "Error registering device to PortAudio:"
+                            << Pa_GetErrorText(result);
                 }
             }
         };
@@ -177,24 +274,23 @@ void PortAudioEnumerator::initialize() {
                         .toUInt();
         qDebug() << "audioManager outputFramePerBuffer:" << outputFramePerBuffer;
         PaOboe_SetNativeBufferSize(outputFramePerBuffer);
+        nativeFramesPerBurst = outputFramePerBuffer;
     }).waitForFinished();
-    PaOboe_SetNumberOfBuffers(4);
+    // PortAudio's Oboe stream asks for one engine buffer (framesPerBuffer,
+    // 1024 frames by default) per callback, but sizes the AAudio buffer to
+    // burst * numberOfBuffers. With 2 buffers of a 192 frame burst the
+    // device buffer (384 frames) cannot even hold one callback, so AAudio
+    // underruns on every cycle: the "popcorn" crackle on the phone output.
+    // Keep room for two engine buffers. The count is fixed before
+    // Pa_Initialize(), so it is taken from the saved buffer size.
+    PaOboe_SetNumberOfBuffers(oboeBufferCount(nativeFramesPerBurst));
 
-    // The following snippets pins the audio thread to a performance core
-    int32_t thread32 = gettid();
-    uint mask = 0b10000;
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    for (uint32_t i = 0; i < 32; ++i) {
-        if ((mask >> i) & 1) {
-            CPU_SET(i, &cpuset);
-        }
-    }
-    if (sched_setaffinity(thread32, sizeof(cpu_set_t), &cpuset) != 0) {
-        __android_log_print(ANDROID_LOG_WARN, "mixxx", "Error setting CPU affinity: %d", errno);
-    } else {
-        __android_log_print(ANDROID_LOG_VERBOSE, "mixxx", "CPU affinity set");
-    }
+    // NOTE: Do NOT call sched_setaffinity on the calling thread here.
+    // PortAudioEnumerator::initialize() runs on the Qt main thread (or the
+    // CoreServices init thread), and child threads spawned afterwards inherit
+    // the affinity mask — pinning the whole app to a single core (#4), which
+    // may not even exist on 4-core devices. Oboe's callback thread is created
+    // internally by AAudio/OpenSL ES and scheduled by Android's audio server.
 #endif
     err = Pa_Initialize();
     m_initialized = true;
@@ -257,9 +353,21 @@ void PortAudioEnumerator::initialize() {
         }
     }
 
+#ifdef __ANDROID_USB_AUDIO__
+    m_androidUsbDevices.clear();
+    // At startup the audio can only be configured once the permission for
+    // the sound card is known
+    refreshAndroidUsbDevices(nullptr, true);
+#endif
+
     for (PaHostApiIndex i = 0; i < Pa_GetHostApiCount(); i++) {
         const PaHostApiInfo* api = Pa_GetHostApiInfo(i);
         if (api && std::strcmp(api->name, "skeleton implementation")) {
+#ifdef Q_OS_ANDROID
+            if (std::strcmp(api->name, "ALSA") == 0) {
+                continue;
+            }
+#endif
             m_apis.push_back(api->name);
         }
     }
@@ -274,6 +382,11 @@ std::vector<SoundDevicePointer> PortAudioEnumerator::queryDevices() const {
     for (const auto& device : m_devices) {
         devices.push_back(device);
     }
+#ifdef __ANDROID_USB_AUDIO__
+    for (const auto& device : m_androidUsbDevices.devices()) {
+        devices.push_back(device);
+    }
+#endif
 
     return devices;
 }
@@ -309,6 +422,9 @@ void PortAudioEnumerator::deinitialize() {
     }
 
     m_devices.clear();
+#ifdef __ANDROID_USB_AUDIO__
+    m_androidUsbDevices.clear();
+#endif
 
     PaError err = Pa_Terminate();
     if (err == paNoError) {
@@ -323,3 +439,11 @@ QList<mixxx::audio::SampleRate> PortAudioEnumerator::getSampleRates(bool jackSam
 
     return {};
 }
+
+#ifdef __ANDROID_USB_AUDIO__
+bool PortAudioEnumerator::refreshAndroidUsbDevices(
+        std::vector<SoundDevicePointer>* pRemoved, bool waitForPermission) {
+    return m_androidUsbDevices.refresh(
+            m_pConfig, m_pSoundManager, &m_devices, pRemoved, waitForPermission);
+}
+#endif

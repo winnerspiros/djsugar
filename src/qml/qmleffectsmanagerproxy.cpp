@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "effects/effectchain.h"
+#include "effects/padfxcontroller.h"
 #include "moc_qmleffectsmanagerproxy.cpp"
 #include "qml/qmlchainpresetmodel.h"
 
@@ -68,6 +69,50 @@ QmlEffectSlotProxy* QmlEffectsManagerProxy::getEffectSlot(int unitNumber, int ef
             m_pEffectsManager, unitNumber, pEffectUnit, pEffectSlot);
     QQmlEngine::setObjectOwnership(pEffectSlotProxy, QQmlEngine::JavaScriptOwnership);
     return pEffectSlotProxy;
+}
+
+QVariantList QmlEffectsManagerProxy::padFxCatalog() const {
+    PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->catalog() : QVariantList();
+}
+
+QString QmlEffectsManagerProxy::padFxEffect(int pad) const {
+    PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->padEffect(pad) : QString();
+}
+
+void QmlEffectsManagerProxy::setPadFxEffect(int pad, const QString& key) {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->setPadEffect(pad, key);
+    }
+}
+
+void QmlEffectsManagerProxy::resetPadFx() {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->resetToDefaults();
+    }
+}
+
+QVariantList QmlEffectsManagerProxy::beatFxCatalog() const {
+    const PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->beatFxCatalog() : QVariantList();
+}
+
+QString QmlEffectsManagerProxy::beatFxSlot(int slot) const {
+    const PadFxController* pPadFx = m_pEffectsManager->padFx();
+    return pPadFx ? pPadFx->beatFxSlot(slot) : QString();
+}
+
+void QmlEffectsManagerProxy::setBeatFxSlot(int slot, const QString& key) {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->setBeatFxSlot(slot, key);
+    }
+}
+
+void QmlEffectsManagerProxy::resetBeatFx() {
+    if (PadFxController* pPadFx = m_pEffectsManager->padFx()) {
+        pPadFx->resetBeatFx();
+    }
 }
 
 // static

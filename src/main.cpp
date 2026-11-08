@@ -75,13 +75,14 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
     auto pCoreServices = std::make_shared<mixxx::CoreServices>(args, pApp);
 #ifdef MIXXX_USE_QML
     // The user can opt in to the experimental QML UI on any platform with
-    // `--qml`. On Android we used to force this on (no Qt-Widgets support
-    // assumption was wrong — Qt 6 supports Widgets on Android, and on Samsung
-    // DeX / large tablets the desktop skin is actually preferred), so the
-    // override is now opt-in everywhere. The skin engine + LateNight skin run
-    // on Android via `MixxxApplication` (QApplication) below.
+    // `--qml`. On Android it is always on: the Booth skin is the mobile UI
+    // (from JaviLabarumDJ/mixxx-android).
     QString mainQmlFilePath;
+#if defined(Q_OS_ANDROID)
+    bool loadQml = true;
+#else
     bool loadQml = args.isQml();
+#endif
     if (!loadQml && args.getDeveloper()) {
         mixxx::skin::SkinLoader skinLoader(pCoreServices->getSettings());
         const mixxx::skin::SkinPointer pSkin = skinLoader.getConfiguredSkin();
@@ -128,7 +129,7 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
         QPixmapCache::setCacheLimit(static_cast<int>(kPixmapCacheLimitAt100PercentZoom *
                 pow(pApp->devicePixelRatio(), 2.0f)));
 
-        pCoreServices->initialize(pApp);
+        pCoreServices->initialize();
 
         if (pCoreServices->getSettings()->getValue(
                     ConfigKey("[Config]", "did_run_with_unstable"), false)) {
@@ -191,17 +192,25 @@ void adjustScaleFactor(CmdlineArgs* pArgs) {
     // maybeAutoDetectScaleFactor() still re-runs post-QApplication so the
     // skin parser pixmaps are correct even on first launch. Persisted value
     // matching the current display closes the Qt-widget-vs-skin scale gap.
+    // The phone UI is laid out for 0.45 (the deck shows its vinyl). The
+    // screen-fitted factor below was persisted after the first launch and
+    // used from the second one on: the UI came up bigger, without the vinyl,
+    // so the first launch and every later one looked different. 0.45 always.
+    // Settings → Interface → UI size can pick another one ([Config]/
+    // AndroidUiScale, its own key: the old ScaleFactor holds the screen-
+    // fitted value of earlier builds).
+    constexpr double kAndroidDefaultScaleFactor = 0.45;
     auto config = ConfigObject<ConfigValue>(
             QDir(pArgs->getSettingsPath()).filePath(MIXXX_SETTINGS_FILE),
             QString(),
             QString());
-    const QString strScaleFactor = config.getValue(
-            ConfigKey(kConfigGroup, kScaleFactorKey));
     bool ok = false;
-    const double persistedScale = strScaleFactor.toDouble(&ok);
-    constexpr double kAndroidDefaultScaleFactor = 0.45;
-    const double scale = (ok && persistedScale > 0) ? persistedScale
-                                                    : kAndroidDefaultScaleFactor;
+    const double chosenScale =
+            config.getValue(ConfigKey(kConfigGroup, QStringLiteral("AndroidUiScale")))
+                    .toDouble(&ok);
+    const double scale = (ok && chosenScale >= 0.3 && chosenScale <= 1.5)
+            ? chosenScale
+            : kAndroidDefaultScaleFactor;
     const QByteArray scaleFactorBytes =
             QByteArray::number(scale, 'f', 2);
     qDebug() << "Using Android ScaleFactor" << scaleFactorBytes;
@@ -269,11 +278,9 @@ void maybeAutoDetectScaleFactor(CmdlineArgs* pArgs) {
     // intentionally ignored here so phone ↔ DeX/external-screen switches
     // recalculate every time the app opens. If we set the env var ourselves
     // as a safe pre-QApplication default, always proceed with detection.
-    if (!s_androidScaleSetInternally &&
-            qEnvironmentVariableIsSet(kScaleFactorEnvVar) &&
-            !qgetenv(kScaleFactorEnvVar).isEmpty()) {
-        return;
-    }
+    // The fixed phone scale of adjustScaleFactor() is kept (see there); a
+    // user-provided QT_SCALE_FACTOR is kept as well.
+    return;
 #endif
 
     QScreen* pScreen = QGuiApplication::primaryScreen();
@@ -443,27 +450,14 @@ int main(int argc, char* argv[]) {
     // performance and GPU driver optimizations.
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
-
-    // High DPI scaling is always enabled in Qt6.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This needs to be set before initializing the QApplication.
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
 #ifdef MIXXX_USE_QOPENGL
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
-    // workaround for https://bugreports.qt.io/browse/QTBUG-84363
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1)
-    qputenv("QV4_FORCE_INTERPRETER", QByteArrayLiteral("1"));
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     // Follow whatever factor the user has selected in the system settings
     // By default the value is always rounded to the nearest int.
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
 #ifdef __LINUX__
     // Needed by Wayland compositors to set proper app_id and window icon

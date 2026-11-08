@@ -10,12 +10,15 @@ Item {
 
     required property string group
     property bool enabled: true
+    // Instantiator delegates see index -1 for a moment while being created,
+    // which made "[Channel0]": the controls are only looked up for a real deck
+    readonly property bool validGroup: /^\[Channel[1-9][0-9]*\]$/.test(group)
 
     signal loadTrackRequested(bool play)
 
     Mixxx.ControlProxy {
         group: root.group
-        key: "LoadSelectedTrack"
+        key: root.validGroup ? "LoadSelectedTrack" : ""
         onValueChanged: (value) => {
             if (value == 0 || !root.enabled)
                 return ;
@@ -26,7 +29,7 @@ Item {
 
     Mixxx.ControlProxy {
         group: root.group
-        key: "LoadSelectedTrackAndPlay"
+        key: root.validGroup ? "LoadSelectedTrackAndPlay" : ""
         onValueChanged: (value) => {
             if (value == 0 || !root.enabled)
                 return ;

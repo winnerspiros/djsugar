@@ -64,16 +64,25 @@ QmlSidebarModelProxy::~QmlSidebarModelProxy() = default;
 
 void QmlSidebarModelProxy::update(const QList<QmlLibraryAbstractSource*>& sources) {
     beginResetModel();
-    qDeleteAll(m_sFeatures);
+    // The features are owned by the sources or shared with the library
+    for (LibraryFeature* pFeature : std::as_const(m_sFeatures)) {
+        pFeature->disconnect(this);
+        pFeature->sidebarModel()->disconnect(this);
+    }
+    m_sFeatures.clear();
     for (const auto& librarySource : sources) {
         VERIFY_OR_DEBUG_ASSERT(librarySource) {
+            continue;
+        }
+        auto* pLibrarySource = librarySource->internal();
+        if (!pLibrarySource) {
             continue;
         }
         connect(librarySource,
                 &QmlLibraryAbstractSource::requestTrackModel,
                 this,
-                &QmlSidebarModelProxy::slotShowTrackModel);
-        auto* pLibrarySource = librarySource->internal();
+                &QmlSidebarModelProxy::slotShowTrackModel,
+                Qt::UniqueConnection);
         addLibraryFeature(pLibrarySource);
     }
     endResetModel();

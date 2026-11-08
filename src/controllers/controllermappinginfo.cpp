@@ -98,22 +98,26 @@ MappingInfo::MappingInfo(const QFileInfo& fileInfo) {
 
             // Parse simple info children when inside the info block
             if (inInfo) {
-                if (!inInfo && xmlElementName == QStringLiteral("info") && xmlHierachyDepth == 2) {
-                    m_name = xml.readElementText();
-                    continue;
+                // readElementText() consumes the end element, so the depth
+                // has to be dropped here
+                QString* pText = nullptr;
+                if (xmlElementName == QStringLiteral("name")) {
+                    pText = &m_name;
                 } else if (xmlElementName == QStringLiteral("author")) {
-                    m_author = xml.readElementText();
-                    continue;
+                    pText = &m_author;
                 } else if (xmlElementName == QStringLiteral("description")) {
-                    m_description = xml.readElementText();
-                    continue;
+                    pText = &m_description;
                 } else if (xmlElementName == QStringLiteral("forums")) {
-                    m_forumlink = xml.readElementText();
-                    continue;
+                    pText = &m_forumlink;
                 } else if (xmlElementName == QStringLiteral("wiki")) {
-                    m_wikilink = xml.readElementText();
+                    pText = &m_wikilink;
+                }
+                if (pText) {
+                    *pText = xml.readElementText().trimmed();
+                    --xmlHierachyDepth;
                     continue;
-                } else if (xmlElementName == QStringLiteral("devices")) {
+                }
+                if (xmlElementName == QStringLiteral("devices")) {
                     // Enter devices block
                     inInfoDevices = true;
                     continue;
@@ -128,7 +132,7 @@ MappingInfo::MappingInfo(const QFileInfo& fileInfo) {
                     } else if (protocol == QStringLiteral("bulk")) {
                         product = parseBulkProduct(xml.attributes());
                     } else if (protocol == QStringLiteral("midi")) {
-                        qCInfo(kLogger) << "MIDI product info parsing not yet implemented";
+                        qCDebug(kLogger) << "MIDI product info parsing not yet implemented";
                     } else {
                         qCCritical(kLogger)
                                 << "Product info element contains missing or "
@@ -205,6 +209,7 @@ ProductInfo MappingInfo::parseBulkProduct(const QXmlStreamAttributes& xmlElement
                     .toString();
     productInfo.friendlyName = xmlElementAttributes.value("friendly_name").toString();
 
+    productInfo.sinceVersion = xmlElementAttributes.value(QStringLiteral("since")).toString();
     productInfo.visualUrl = QUrl(xmlElementAttributes.value("image").toString());
     return productInfo;
 }
@@ -220,6 +225,7 @@ ProductInfo MappingInfo::parseHIDProduct(const QXmlStreamAttributes& xmlElementA
     productInfo.product_id = xmlElementAttributes.value(QStringLiteral("product_id")).toString();
     productInfo.usage_page = xmlElementAttributes.value(QStringLiteral("usage_page")).toString();
     productInfo.usage = xmlElementAttributes.value(QStringLiteral("usage")).toString();
+    productInfo.sinceVersion = xmlElementAttributes.value(QStringLiteral("since")).toString();
     // Check for bulk-specific attributes which are not allowed for hid protocol
     if (xmlElementAttributes.hasAttribute(QStringLiteral("in_epaddr"))) {
         qCCritical(kLogger) << "Product info element for hid contains "

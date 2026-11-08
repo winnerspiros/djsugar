@@ -54,6 +54,8 @@ class Library : public QObject {
     Q_OBJECT
 
   public:
+    /// See AnalysisFeature::isAnalyzingTrackWithWaveform()
+    bool isTrackBeingAnalyzed(TrackId trackId) const;
     Library(QObject* parent,
             UserSettingsPointer pConfig,
             mixxx::DbConnectionPoolPtr pDbConnectionPool,
@@ -80,6 +82,11 @@ class Library : public QObject {
             KeyboardEventFilter* pKeyboard);
 
     void addFeature(LibraryFeature* feature);
+
+    /// Needed for exposing the sidebar features to QML
+    const QList<LibraryFeature*>& features() const {
+        return m_features;
+    }
 
     /// Needed for exposing models to QML
     LibraryTableModel* trackTableModel() const;

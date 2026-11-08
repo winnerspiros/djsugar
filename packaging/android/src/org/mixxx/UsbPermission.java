@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.util.Log;
 
 public class UsbPermission {
@@ -13,10 +14,34 @@ public class UsbPermission {
         "org.mixxx.permissions.USB_PERMISSION";
     private static final String TAG = "MixxxUsbPermission";
     private static native void usbDeviceAccessResult(Object device, boolean granted);
+    private static native void usbDevicesChanged();
+
+    /// Asks the native ControllerManager to rescan devices. Safe to call before
+    /// the native library is loaded.
+    public static void notifyDevicesChanged() {
+        try {
+            usbDevicesChanged();
+        } catch (UnsatisfiedLinkError e) {
+            Log.v(TAG, "Native library not loaded yet, skipping rescan");
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    static UsbDevice getDeviceExtra(Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+        }
+        return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    }
+
     public boolean registerServiceBroadcastReceiver(Context context) {
         try {
             IntentFilter intentFilter = new IntentFilter(ACTION_USB_PERMISSION);
-            context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(usbPermissionReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                context.registerReceiver(usbPermissionReceiver, intentFilter);
+            }
             Log.i(TAG, "Registered broadcast receiver");
             return true;
         } catch (Exception e) {
@@ -32,7 +57,7 @@ public class UsbPermission {
             Log.v(TAG, "Received " + action);
             if (ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
-                    UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+                    UsbDevice usbDevice = getDeviceExtra(intent);
                     if (usbDevice == null) {
                         Log.e(TAG, "USB device is null");
                         return;

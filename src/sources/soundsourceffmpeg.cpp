@@ -1119,6 +1119,18 @@ bool SoundSourceFFmpeg::adjustCurrentPosition(SINT startIndex) {
             m_pavStream->index,
             seekTimestamp,
             AVSEEK_FLAG_BACKWARD);
+    if (av_seek_frame_result < 0 && seekTimestamp < 0) {
+        // The preroll places the seek target before the start of the stream.
+        // Demuxers that rely on generic seeking (e.g. MP3 without a Xing/Info
+        // header, as served by Audius) reject a negative timestamp with
+        // EPERM, which made every such file fail to open. Start from the
+        // beginning of the stream instead; there is nothing to preroll there.
+        av_seek_frame_result = av_seek_frame(
+                m_pavInputFormatContext,
+                m_pavStream->index,
+                0,
+                AVSEEK_FLAG_BACKWARD);
+    }
     if (av_seek_frame_result < 0) {
         // Unrecoverable seek error: Invalidate the current position and abort
         kLogger.warning().noquote()

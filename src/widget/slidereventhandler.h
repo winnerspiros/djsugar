@@ -1,14 +1,14 @@
 #pragma once
 
-#include <QMouseEvent>
-#include <QWheelEvent>
-#include <QCursor>
 #include <QApplication>
+#include <QCursor>
+#include <QMouseEvent>
 #include <QPoint>
+#include <QWheelEvent>
 
 #include "util/math.h"
 
-template <class T>
+template<class T>
 class SliderEventHandler {
   public:
     SliderEventHandler()
@@ -21,7 +21,8 @@ class SliderEventHandler {
               m_dSliderLength(0),
               m_bHorizontal(false),
               m_bDrag(false),
-              m_bEventWhileDrag(true) { }
+              m_bEventWhileDrag(true) {
+    }
 
     void setHorizontal(bool horiz) {
         m_bHorizontal = horiz;
@@ -42,17 +43,9 @@ class SliderEventHandler {
     void mouseMoveEvent(T* pWidget, QMouseEvent* e) {
         if (!m_bRightButtonPressed) {
             if (m_bHorizontal) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                 m_dPos = e->position().x() - m_dHandleLength / 2;
-#else
-                m_dPos = e->x() - m_dHandleLength / 2;
-#endif
             } else {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                 m_dPos = e->position().y() - m_dHandleLength / 2;
-#else
-                m_dPos = e->y() - m_dHandleLength / 2;
-#endif
             }
 
             m_dPos = m_dStartHandlePos + (m_dPos - m_dStartMousePos);
@@ -89,17 +82,9 @@ class SliderEventHandler {
                 m_bRightButtonPressed = true;
             } else {
                 if (m_bHorizontal) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                     m_dStartMousePos = e->position().x() - m_dHandleLength / 2;
-#else
-                    m_dStartMousePos = e->x() - m_dHandleLength / 2;
-#endif
                 } else {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                     m_dStartMousePos = e->position().y() - m_dHandleLength / 2;
-#else
-                    m_dStartMousePos = e->y() - m_dHandleLength / 2;
-#endif
                 }
                 m_dStartHandlePos = m_dPos;
             }

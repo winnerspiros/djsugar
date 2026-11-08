@@ -1,6 +1,8 @@
 #include "controllers/controllermanager.h"
 
+#include <QMutexLocker>
 #include <QSet>
+#include <QStandardPaths>
 #include <QThread>
 
 #include "controllers/controller.h"
@@ -8,10 +10,10 @@
 #include "controllers/controllermappinginfoenumerator.h"
 #include "controllers/defs_controllers.h"
 #include "controllers/legacycontrollermappingfilehandler.h"
+#include "controllers/mappingmatcher.h"
 #include "moc_controllermanager.cpp"
 #include "preferences/usersettings.h"
 #include "util/cmdlineargs.h"
-#include "util/compatibility/qmutex.h"
 #include "util/duration.h"
 #include "util/thread_affinity.h"
 #include "util/time.h"
@@ -24,16 +26,24 @@
 #include "controllers/midi/hss1394enumerator.h"
 #endif
 
+#ifdef __ANDROID_MIDI__
+#include "controllers/midi/androidmidienumerator.h"
+#endif
+
+#ifdef __BLE_MIDI__
+#include "controllers/midi/blemidienumerator.h"
+#endif
+
+#ifdef __ANDROID__
+#include "controllers/android.h"
+#endif
+
 #ifdef __HID__
 #include "controllers/hid/hidenumerator.h"
 #endif
 
 #ifdef __BULK__
 #include "controllers/bulk/bulkenumerator.h"
-#endif
-
-#ifdef __ANDROID__
-#include "controllers/midi/androidmidienumerator.h"
 #endif
 
 // http://developer.qt.nokia.com/wiki/Threads_Events_QObjects
@@ -89,7 +99,7 @@ QString firstAvailableFilename(QSet<QString>& filenames,
     return filename;
 }
 
-bool controllerCompare(Controller *a,Controller *b) {
+bool controllerCompare(Controller* a, Controller* b) {
     return a->getName() < b->getName();
 }
 
@@ -103,6 +113,7 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
           m_pControllerLearningEventFilter(
                   std::make_unique<ControllerLearningEventFilter>()),
           m_pollTimer(this),
+          m_hotplugTimer(this),
           m_pThread(std::make_unique<QThread>()),
           m_skipPoll(false) {
     qRegisterMetaType<std::shared_ptr<LegacyControllerMapping>>(
@@ -117,6 +128,10 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
 
     m_pollTimer.setInterval(kPollInterval.toIntegerMillis());
     connect(&m_pollTimer, &QTimer::timeout, this, &ControllerManager::slotPollDevices);
+
+    m_hotplugTimer.setSingleShot(true);
+    m_hotplugTimer.setInterval(750);
+    connect(&m_hotplugTimer, &QTimer::timeout, this, &ControllerManager::slotSetUpDevices);
 
     m_pThread->setObjectName("ControllerManager");
 
@@ -163,9 +178,17 @@ void ControllerManager::slotInitialize() {
 
     // Initialize mapping info parsers. This object is only for use in the main
     // thread. Do not touch it from within ControllerManager.
+    QStringList userPaths;
+    userPaths.append(userMappingsPath(m_pConfig));
+#if defined(Q_OS_ANDROID)
+    userPaths.append(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
+    userPaths.append(
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            QStringLiteral("/Mixxx/controllers/"));
+    QDir().mkpath(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
+#endif
     m_pMainThreadUserMappingEnumerator =
-            QSharedPointer<MappingInfoEnumerator>::create(
-                    userMappingsPath(m_pConfig));
+            QSharedPointer<MappingInfoEnumerator>::create(userPaths);
     m_pMainThreadSystemMappingEnumerator =
             QSharedPointer<MappingInfoEnumerator>::create(
                     resourceMappingsPath(m_pConfig));
@@ -173,9 +196,15 @@ void ControllerManager::slotInitialize() {
     // Instantiate all enumerators. Enumerators can take a long time to
     // construct since they interact with host MIDI APIs.
     {
-        auto locker = lockMutex(&m_mutex);
+        auto locker = QMutexLocker(&m_mutex);
 #ifdef __PORTMIDI__
         m_enumerators.push_back(std::make_unique<PortMidiEnumerator>(m_pConfig));
+#endif
+#ifdef __ANDROID_MIDI__
+        m_enumerators.push_back(std::make_unique<AndroidMidiEnumerator>());
+#endif
+#ifdef __BLE_MIDI__
+        m_enumerators.push_back(std::make_unique<BleMidiEnumerator>(m_pConfig));
 #endif
 #ifdef __HSS1394__
         m_enumerators.push_back(std::make_unique<Hss1394Enumerator>());
@@ -186,20 +215,30 @@ void ControllerManager::slotInitialize() {
 #ifdef __HID__
         m_enumerators.push_back(std::make_unique<HidEnumerator>());
 #endif
-#ifdef __ANDROID__
-        m_enumerators.push_back(std::make_unique<AndroidMidiEnumerator>());
-#endif
     } // Mutex locker released here
+
+#ifdef __ANDROID__
+    mixxx::android::registerJniNativeMethods();
+    // USB and MIDI hotplug notifications arrive on Java threads.
+    m_hotplugListenerId = mixxx::android::addDevicesChangedListener([this]() {
+        QMetaObject::invokeMethod(
+                this, [this]() { m_hotplugTimer.start(); }, Qt::QueuedConnection);
+    });
+#endif
     emit initialized();
 }
 
 void ControllerManager::slotShutdown() {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+#ifdef __ANDROID__
+    mixxx::android::removeDevicesChangedListener(m_hotplugListenerId);
+#endif
+    m_hotplugTimer.stop();
     stopPolling();
 
     // Clear m_enumerators before deleting the enumerators to prevent other code
     // paths from accessing them during teardown.
-    auto locker = lockMutex(&m_mutex);
+    auto locker = QMutexLocker(&m_mutex);
     std::vector<std::unique_ptr<ControllerEnumerator>> enumerators =
             std::move(m_enumerators); // m_enumerators is guaranteed empty after move
     locker.unlock();
@@ -218,7 +257,7 @@ void ControllerManager::updateControllerList() {
     // NOTE: Currently this function is only called on startup. If hotplug is added, changes to the
     // controller list must be synchronized with dlgprefcontrollers to avoid dangling connections
     // and possible crashes.
-    auto locker = lockMutex(&m_mutex);
+    auto locker = QMutexLocker(&m_mutex);
     if (m_enumerators.empty()) {
         qWarning() << "updateControllerList called but no enumerators have been added!";
         return;
@@ -240,20 +279,30 @@ void ControllerManager::updateControllerList() {
     if (newDeviceList == m_controllers) {
         return;
     }
-    m_controllers = std::move(newDeviceList);
+    const QList<Controller*> oldDeviceList = std::exchange(m_controllers, newDeviceList);
     locker.unlock();
+
+    // Close controllers that have been unplugged. They stay allocated (owned
+    // by their enumerator) so that pointers held by the GUI remain valid.
+    for (Controller* pController : oldDeviceList) {
+        if (!newDeviceList.contains(pController) && pController->isOpen()) {
+            qInfo() << "Closing unplugged controller" << pController->getName();
+            pController->close();
+        }
+    }
+    pollIfAnyControllersOpen();
     emit devicesChanged();
 }
 
 QList<Controller*> ControllerManager::getControllers() const {
-    const auto locker = lockMutex(&m_mutex);
+    const auto locker = QMutexLocker(&m_mutex);
     return m_controllers;
 }
 
 QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, bool bInputDevices) {
     qDebug() << "ControllerManager::getControllerList";
 
-    auto locker = lockMutex(&m_mutex);
+    auto locker = QMutexLocker(&m_mutex);
     QList<Controller*> controllers = m_controllers;
     locker.unlock();
 
@@ -263,7 +312,7 @@ QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, boo
 
     for (Controller* device : controllers) {
         if ((bOutputDevices == device->isOutputDevice()) ||
-            (bInputDevices == device->isInputDevice())) {
+                (bInputDevices == device->isInputDevice())) {
             filteredDeviceList.push_back(device);
         }
     }
@@ -286,15 +335,32 @@ void ControllerManager::slotSetUpDevices() {
     for (Controller* pController : deviceList) {
         QString name = pController->getName();
 
+        // Rescans and hotplug events must not restart controllers that are
+        // already running, it would reset their scripts and LEDs.
         if (pController->isOpen()) {
-            pController->close();
+            continue;
         }
 
         // The filename for this device name.
         QString deviceName = sanitizeDeviceName(name);
 
-        // Check if device is enabled
-        if (!m_pConfig->getValue(ConfigKey("[Controller]", deviceName), 0)) {
+        // Plug and play: a controller without a usable mapping (never
+        // configured, or the configured file was renamed/removed by an
+        // update) gets a matching mapping from the ones shipped with Mixxx.
+        // The enabled flag is not checked here: closeController() writes 0
+        // on every unplug, which would otherwise block auto-assign forever.
+        const QString configuredMapping = getConfiguredMappingFileForDevice(deviceName);
+        if ((configuredMapping.isEmpty() ||
+                    !findMappingFile(configuredMapping, mappingPaths).exists()) &&
+                autoAssignMapping(pController)) {
+            continue;
+        }
+
+        // Check if device is enabled (default to enabled if a mapping is
+        // configured and the user has not explicitly disabled it).
+        const int defaultEnabled =
+                getConfiguredMappingFileForDevice(deviceName).isEmpty() ? 0 : 1;
+        if (!m_pConfig->getValue(ConfigKey("[Controller]", deviceName), defaultEnabled)) {
             continue;
         }
 
@@ -345,7 +411,7 @@ void ControllerManager::slotSetUpDevices() {
 void ControllerManager::pollIfAnyControllersOpen() {
     // Not Thread-Safe because calls startPolling()/stopPolling()
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
-    auto locker = lockMutex(&m_mutex);
+    auto locker = QMutexLocker(&m_mutex);
     QList<Controller*> controllers = m_controllers;
     locker.unlock();
 
@@ -405,7 +471,7 @@ void ControllerManager::slotPollDevices() {
     if (m_skipPoll) {
         // skip poll in overload situation
         m_skipPoll = false;
-        //qDebug() << "ControllerManager::pollDevices() skip";
+        // qDebug() << "ControllerManager::pollDevices() skip";
         return;
     }
 
@@ -420,7 +486,7 @@ void ControllerManager::slotPollDevices() {
     if (duration > kPollInterval) {
         m_skipPoll = true;
     }
-    //qDebug() << "ControllerManager::pollDevices()" << duration << start;
+    // qDebug() << "ControllerManager::pollDevices()" << duration << start;
 }
 
 void ControllerManager::openController(Controller* pController) {
@@ -502,10 +568,52 @@ void ControllerManager::slotApplyMapping(Controller* pController,
             Qt::QueuedConnection);
 }
 
+bool ControllerManager::autoAssignMapping(Controller* pController) {
+    DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+    if (CmdlineArgs::Instance().getSafeMode()) {
+        return false;
+    }
+
+    MappingInfoEnumerator enumerator(resourceMappingsPath(m_pConfig));
+    enumerator.loadSupportedMappings();
+    const QList<MappingInfo> mappings =
+            enumerator.getMappingsByExtension(pController->mappingExtension());
+
+    const MappingInfo* pBestMatch = mixxx::bestMatchingMapping(pController, mappings);
+    if (!pBestMatch) {
+        qInfo() << "No mapping found for new controller" << pController->getName();
+        return false;
+    }
+
+    std::shared_ptr<LegacyControllerMapping> pMapping =
+            LegacyControllerMappingFileHandler::loadMapping(
+                    QFileInfo(pBestMatch->getPath()), resourceMappingsPath(m_pConfig));
+    if (!pMapping) {
+        return false;
+    }
+    qInfo() << "Automatically assigning mapping" << pBestMatch->getName()
+            << "to new controller" << pController->getName();
+    pMapping->loadSettings(m_pConfig, pController->getName());
+    m_pConfig->set(ConfigKey(kSettingsGroup, sanitizeDeviceName(pController->getName())),
+            pMapping->filePath());
+    m_pConfig->setValue(
+            ConfigKey("[Controller]", sanitizeDeviceName(pController->getName())), 1);
+    pController->setMapping(std::move(pMapping));
+    // Marks the controller as enabled in the configuration on success
+    openController(pController);
+    return true;
+}
+
 // static
 QList<QString> ControllerManager::getMappingPaths(UserSettingsPointer pConfig) {
     QList<QString> scriptPaths;
     scriptPaths.append(userMappingsPath(pConfig));
+#if defined(Q_OS_ANDROID)
+    scriptPaths.append(QStringLiteral("/storage/emulated/0/Mixxx/controllers/"));
+    scriptPaths.append(
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation) +
+            QStringLiteral("/Mixxx/controllers/"));
+#endif
     scriptPaths.append(resourceMappingsPath(pConfig));
     return scriptPaths;
 }

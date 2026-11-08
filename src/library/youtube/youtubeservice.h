@@ -37,6 +37,12 @@ struct YouTubeVideoInfo {
     QString uploader;
     int durationSec = 0;
     bool isLive = false;
+    QString genre = QString(); // inferred from title/uploader/YouTube category
+
+    // Infer genre from title patterns, uploader channel, or YouTube category
+    static QString inferGenre(const QString& title,
+            const QString& uploader,
+            const QString& categoryId = QString());
 };
 
 /// YouTube extractor + downloader.
@@ -77,6 +83,10 @@ class YouTubeService : public QObject {
     /// When the first page returns fewer than `minResults` and a continuation
     /// token is available, additional pages are fetched automatically so the
     /// initial result set is large enough for infinite scroll to work.
+    /// Opens the connection to YouTube ahead of a search
+    void warmUpConnection();
+    /// SponsorBlock segments fetched ahead (search results, downloads)
+    void prefetchSponsorSegments(const QString& videoId);
     void searchVideos(const QString& query, int cap = 25, int minResults = 0);
 
     /// Fetch the next page of results for the most recent search() call.
@@ -84,10 +94,21 @@ class YouTubeService : public QObject {
     /// search response. Emits searchMoreReady(query, results) on success, or
     /// does nothing when no continuation is available or bot-flagged.
     /// The feature calls this from YouTubeTrackModel::fetchMore().
-    void fetchMoreSearchResults(const QString& emittedQuery, int cap = 25);
+    /// When `minResults` is set, continuation pages (about 20 videos each)
+    /// are chained until the batch holds at least that many, so every scroll
+    /// step delivers a full batch. An empty batch is emitted when the fetch
+    /// ends without results (end of results, throttle/bot flag, network
+    /// error) so callers can stop their loading indicator.
+    void fetchMoreSearchResults(const QString& emittedQuery, int cap = 25, int minResults = 0);
 
     /// True when the last InnerTube search response included a continuation
     /// token, i.e. there are more results the user can scroll to.
+    /// Whether downloads cut non-music segments out of the file. Mirrors the
+    /// "auto skip" preference: off keeps every downloaded file whole.
+    void setSponsorBlockEnabled(bool enabled) {
+        m_sponsorBlockEnabled = enabled;
+    }
+
     bool hasMoreSearchResults() const {
         return !m_searchContinuationToken.isEmpty();
     }
@@ -118,6 +139,10 @@ class YouTubeService : public QObject {
     /// `<cacheDir>/<videoId>.<ext>`. Emits downloadFinished(videoId, path)
     /// or downloadFailed(videoId, error).
     void downloadVideo(const QString& videoId, const QString& cacheDir);
+    /// Extracts the stream links of these videos in the background (Android,
+    /// bundled yt-dlp), so a tap on one starts the ranged download at once.
+    /// No-op elsewhere.
+    void prefetchStreamLinks(const QStringList& videoIds);
 
     /// Fetch SponsorBlock segments for the given videoId from the public
     /// SponsorBlock API at sponsor.ajay.app.
@@ -139,6 +164,8 @@ class YouTubeService : public QObject {
     /// fetchMoreSearchResults().
     void searchMoreReady(const QString& query, const QList<mixxx::YouTubeVideoInfo>& results);
     void searchFailed(const QString& query, const QString& error);
+    void downloadStarted(const QString& videoId);
+    void downloadProgress(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
     void sponsorSegmentsFetched(
@@ -319,7 +346,14 @@ class YouTubeService : public QObject {
             int cap,
             int minResults,
             QList<mixxx::YouTubeVideoInfo> accumulated,
-            int clientIdx);
+            int clientIdx,
+            bool more = false);
+
+    /// Emits searchMoreReady (`more`) or searchResultsReady for a finished
+    /// auto-fetch.
+    void finishSearchBatch(const QString& emittedQuery,
+            const QList<mixxx::YouTubeVideoInfo>& results,
+            bool more);
 
     /// Attempt to self-update the bundled yt-dlp binary on desktop. This runs
     /// `yt-dlp --update-to stable` in the background at most once per process
@@ -334,6 +368,9 @@ class YouTubeService : public QObject {
     /// Primary path on Android. No external Python, Termux, or system
     /// dependency needed.
     void downloadViaAndroidBundled(const QString& videoId, const QString& cacheDir);
+    /// Unpacks the bundled yt-dlp runtime in the background ahead of the
+    /// first download.
+    static void prewarmAndroidBundled();
     /// JNI worker behind downloadViaAndroidBundled: runs bundled yt-dlp with
     /// our on-device PO tokens attached. Fully in-app — no Termux needed.
     void runAndroidBundled(const QString& videoId,
@@ -418,6 +455,9 @@ class YouTubeService : public QObject {
 
     /// Parse and apply a remote config JSON. Returns true if applied.
     bool applyRemoteConfig(const QJsonObject& config, int remoteVersion);
+
+    /// Cut non-music segments out of downloads (see setSponsorBlockEnabled()).
+    bool m_sponsorBlockEnabled = true;
 
     QNetworkAccessManager* m_pNam;
     QString m_ytDlpPath;

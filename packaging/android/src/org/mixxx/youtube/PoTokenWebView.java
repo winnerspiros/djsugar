@@ -8,9 +8,6 @@ import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-
-import org.json.JSONArray;
-
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -22,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.json.JSONArray;
 
 /**
  * Generates YouTube Proof-of-Origin (PO) tokens on-device using a headless
@@ -37,8 +35,8 @@ public class PoTokenWebView {
     private static final String GOOGLE_API_KEY = "«redacted:AIza…»";
     private static final String REQUEST_KEY = "O43z0dpjhgX20SCx4KAo";
     private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3";
     private static final String JS_INTERFACE = "PoTokenWebView";
 
     private final Context mAppContext;
@@ -73,9 +71,11 @@ public class PoTokenWebView {
         mWebView.addJavascriptInterface(this, JS_INTERFACE);
     }
 
-    /** Async init: loads BotGuard, runs challenge, obtains integrityToken.
+    /**
+     * Async init: loads BotGuard, runs challenge, obtains integrityToken.
      * Safe to call from any thread: construction happens on the main thread
-     * (WebView requires a Looper). */
+     * (WebView requires a Looper).
+     */
     public static void create(Context context, InitCallback cb) {
         final Context appContext = context.getApplicationContext();
         // WebView must be constructed on a Looper thread — post everything.
@@ -100,27 +100,28 @@ public class PoTokenWebView {
         return mReady && !isExpired();
     }
 
-    /** Mint a PO token bound to identifier (video id for player, visitorData for GVS). */
+    /**
+     * Mint a PO token bound to identifier (video id for player, visitorData for GVS).
+     */
     public void generatePoToken(final String identifier, final PoTokenCallback cb) {
         synchronized (mPending) {
             mPending.put(identifier, cb);
         }
         final String u8Identifier = PoTokenJs.stringToU8(identifier);
-        mMain.post(() -> mWebView.evaluateJavascript(
-                "try {\n"
-                        + "  identifier = \"" + identifier + "\"\n"
-                        + "  u8Identifier = " + u8Identifier + "\n"
-                        + "  poTokenU8 = obtainPoToken(webPoSignalOutput, integrityToken, u8Identifier)\n"
-                        + "  poTokenU8String = \"\"\n"
-                        + "  for (i = 0; i < poTokenU8.length; i++) {\n"
-                        + "    if (i != 0) poTokenU8String += \",\"\n"
-                        + "    poTokenU8String += poTokenU8[i]\n"
-                        + "  }\n"
-                        + "  " + JS_INTERFACE + ".onObtainPoTokenResult(identifier, poTokenU8String)\n"
-                        + "} catch (error) {\n"
-                        + "  " + JS_INTERFACE + ".onObtainPoTokenError(identifier, error + \"\\n\" + error.stack)\n"
-                        + "}",
-                null));
+        mMain.post(() -> mWebView.evaluateJavascript("try {\n"
+                              + "  identifier = \"" + identifier + "\"\n"
+                              + "  u8Identifier = " + u8Identifier + "\n"
+                              + "  poTokenU8 = obtainPoToken(webPoSignalOutput, integrityToken, u8Identifier)\n"
+                              + "  poTokenU8String = \"\"\n"
+                              + "  for (i = 0; i < poTokenU8.length; i++) {\n"
+                              + "    if (i != 0) poTokenU8String += \",\"\n"
+                              + "    poTokenU8String += poTokenU8[i]\n"
+                              + "  }\n"
+                              + "  " + JS_INTERFACE + ".onObtainPoTokenResult(identifier, poTokenU8String)\n"
+                              + "} catch (error) {\n"
+                              + "  " + JS_INTERFACE + ".onObtainPoTokenError(identifier, error + \"\\n\" + error.stack)\n"
+                              + "}",
+                          null));
     }
 
     @JavascriptInterface
@@ -168,11 +169,7 @@ public class PoTokenWebView {
                 }
                 in.close();
                 final String html = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-                mMain.post(() -> mWebView.loadDataWithBaseURL(
-                        "https://www.youtube.com",
-                        html.replaceFirst("</script>",
-                                "\n" + JS_INTERFACE + ".downloadAndRunBotguard()</script>"),
-                        "text/html", "utf-8", null));
+                mMain.post(() -> mWebView.loadDataWithBaseURL("https://www.youtube.com", html.replaceFirst("</script>", "\n" + JS_INTERFACE + ".downloadAndRunBotguard()</script>"), "text/html", "utf-8", null));
             } catch (Exception e) {
                 failInit(e.getMessage());
             }
@@ -184,21 +181,20 @@ public class PoTokenWebView {
         mIo.execute(() -> {
             try {
                 String challenge = postJson("https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/Create",
-                        new JSONArray().put(REQUEST_KEY).toString());
+                    new JSONArray().put(REQUEST_KEY).toString());
                 final String parsed = PoTokenJs.parseChallengeData(challenge);
-                mMain.post(() -> mWebView.evaluateJavascript(
-                        "try {\n"
-                                + "  data = " + parsed + "\n"
-                                + "  runBotGuard(data).then(function (result) {\n"
-                                + "    this.webPoSignalOutput = result.webPoSignalOutput\n"
-                                + "    " + JS_INTERFACE + ".onRunBotguardResult(result.botguardResponse)\n"
-                                + "  }, function (error) {\n"
-                                + "    " + JS_INTERFACE + ".onJsInitializationError(error + \"\\n\" + error.stack)\n"
-                                + "  })\n"
-                                + "} catch (error) {\n"
-                                + "  " + JS_INTERFACE + ".onJsInitializationError(error + \"\\n\" + error.stack)\n"
-                                + "}",
-                        null));
+                mMain.post(() -> mWebView.evaluateJavascript("try {\n"
+                                      + "  data = " + parsed + "\n"
+                                      + "  runBotGuard(data).then(function (result) {\n"
+                                      + "    this.webPoSignalOutput = result.webPoSignalOutput\n"
+                                      + "    " + JS_INTERFACE + ".onRunBotguardResult(result.botguardResponse)\n"
+                                      + "  }, function (error) {\n"
+                                      + "    " + JS_INTERFACE + ".onJsInitializationError(error + \"\\n\" + error.stack)\n"
+                                      + "  })\n"
+                                      + "} catch (error) {\n"
+                                      + "  " + JS_INTERFACE + ".onJsInitializationError(error + \"\\n\" + error.stack)\n"
+                                      + "}",
+                                  null));
             } catch (Exception e) {
                 failInit(e.getMessage());
             }
@@ -216,20 +212,18 @@ public class PoTokenWebView {
         mIo.execute(() -> {
             try {
                 String resp = postJson("https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT",
-                        new JSONArray().put(REQUEST_KEY).put(botguardResponse).toString());
+                    new JSONArray().put(REQUEST_KEY).put(botguardResponse).toString());
                 String[] parsed = PoTokenJs.parseIntegrityTokenData(resp);
                 mIntegrityTokenJs = parsed[0];
                 long ttlSec = Long.parseLong(parsed[1]);
                 mExpiration = Instant.now().plusSeconds(Math.max(0, ttlSec - 600));
-                mMain.post(() -> mWebView.evaluateJavascript(
-                        "this.integrityToken = " + mIntegrityTokenJs,
-                        value -> {
-                            mReady = true;
-                            Log.i(TAG, "PO token generator ready, ttl=" + ttlSec + "s");
-                            if (mInitCallback != null) {
-                                mInitCallback.onReady(PoTokenWebView.this);
-                            }
-                        }));
+                mMain.post(() -> mWebView.evaluateJavascript("this.integrityToken = " + mIntegrityTokenJs, value -> {
+                    mReady = true;
+                    Log.i(TAG, "PO token generator ready, ttl=" + ttlSec + "s");
+                    if (mInitCallback != null) {
+                        mInitCallback.onReady(PoTokenWebView.this);
+                    }
+                }));
             } catch (Exception e) {
                 failInit(e.getMessage());
             }
@@ -281,7 +275,9 @@ public class PoTokenWebView {
         return new String(bos.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    /** Base64url (no padding) for raw bytes — mirrors u8ToBase64 in PoTokenJs. */
+    /**
+     * Base64url (no padding) for raw bytes — mirrors u8ToBase64 in PoTokenJs.
+     */
     static String base64UrlNoPad(byte[] raw) {
         return Base64.encodeToString(raw, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
     }

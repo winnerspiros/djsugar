@@ -84,7 +84,7 @@ Row {
                         activeColor: Theme.deckActiveColor
                         group: root.group
                         key: "talkover"
-                        text: "Talk"
+                        text: qsTr("Talk")
                         toggleable: true
                     }
                     RowLayout {
@@ -132,7 +132,7 @@ Row {
             Skin.ControlButton {
                 group: root.group
                 key: "talkover"
-                text: "Configure"
+                text: qsTr("Configure")
                 width: 80
             }
         }

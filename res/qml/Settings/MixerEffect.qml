@@ -2,10 +2,10 @@ import QtQuick
 import Mixxx 1.0 as Mixxx
 
 Category {
-    label: "Mixer & Effects"
+    label: qsTr("Mixer & Effects")
 
     Mixxx.SettingParameter {
-        label: "A green square"
+        label: qsTr("A green square")
 
         Rectangle {
             color: 'green'

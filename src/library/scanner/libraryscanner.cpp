@@ -221,36 +221,41 @@ void LibraryScanner::slotStartScan() {
     m_libraryRootDirs = m_directoryDao.loadAllDirectories();
 
 #ifdef Q_OS_ANDROID
-    // Performance fix for Android: restrict scanning to only the primary Music
-    // folder and our YouTube cache. Android storage (especially emulated or
-    // SD-card backups) is extremely slow to walk; a full scan can hold the
-    // SQLite write lock for long stretches, blocking the YouTube feature from saving
-    // search results (the user-reported "no results" / "lag" symptom).
+    // Ensure user-configured directories (Music, Download, SD cards, folders
+    // added in Settings -> Library) are all scanned, while avoiding walking
+    // the bare /storage/emulated/0 root if an earlier build registered it.
     {
-        QList<mixxx::FileInfo> filteredRoots;
-        const QString musicPath = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-        if (!musicPath.isEmpty()) {
-            filteredRoots.append(mixxx::FileInfo(musicPath));
+        QList<mixxx::FileInfo> expandedRoots;
+        QSet<QString> seen;
+        const auto appendUnique = [&](const QString& path) {
+            const QString clean = QDir::cleanPath(path);
+            if (clean.isEmpty() || seen.contains(clean)) {
+                return;
+            }
+            const mixxx::FileInfo fi(clean);
+            if (fi.asQFileInfo().exists()) {
+                seen.insert(clean);
+                expandedRoots.append(fi);
+            }
+        };
+        for (const auto& fi : std::as_const(m_libraryRootDirs)) {
+            const QString clean = QDir::cleanPath(fi.location());
+            if (clean == QStringLiteral("/storage/emulated/0")) {
+                appendUnique(QStringLiteral("/storage/emulated/0/Music"));
+                appendUnique(QStringLiteral("/storage/emulated/0/Download"));
+                continue;
+            }
+            appendUnique(clean);
         }
         if (m_pConfig) {
             QString base = m_pConfig->getSettingsPath();
             if (base.isEmpty()) {
                 base = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
             }
-            const QString ytCache = QDir(base).filePath(QStringLiteral("youtube_cache"));
-            filteredRoots.append(mixxx::FileInfo(ytCache));
+            appendUnique(QDir(base).filePath(QStringLiteral("youtube_cache")));
         }
-        QSet<QString> seen;
-        m_libraryRootDirs.clear();
-        for (const auto& fi : std::as_const(filteredRoots)) {
-            const QString loc = fi.location();
-            if (!loc.isEmpty() && !seen.contains(loc) && fi.asQFileInfo().exists()) {
-                seen.insert(loc);
-                m_libraryRootDirs.append(fi);
-            }
-        }
-        kLogger.info() << "Android: restricted library scan to" << seen.size()
-                       << "root(s):" << seen.values();
+        m_libraryRootDirs = std::move(expandedRoots);
+        kLogger.info() << "Android: scanning library root(s):" << seen.values();
     }
 #endif
     // If there are no directories then we still have to scan independently added tracks.

@@ -28,6 +28,25 @@ if(TARGET rendergraph_sg)
   )
 endif()
 
+if(TARGET rendergraph_sg)
+  # Shaders of the waveforms drawn by the GPU (QML only). The vertex shader
+  # reads a texture and loops: GLSL ES 3.0 for OpenGL ES 3 devices.
+  # (from JaviLabarumDJ/mixxx-android android-stable)
+  qt6_add_shaders(rendergraph_sg "waveform-shaders-qsb"
+      BATCHABLE
+      PRECOMPILE
+      GLSL
+          "300 es,100 es,120,150"
+      PREFIX
+          /shaders/rendergraph
+      FILES
+          waveformrgb.frag
+          waveformrgb.vert
+          waveformstem.frag
+          waveformstem.vert
+  )
+endif()
+
 if(TARGET rendergraph_gl)
   # USE_QSHADER_FOR_GL is set in src/rendergraph/CMakeLists.txt when Qt >= 6.6
   if(USE_QSHADER_FOR_GL)

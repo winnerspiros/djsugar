@@ -1,7 +1,9 @@
 #pragma once
 
 #include <QList>
+#include <QMutexLocker>
 #include <QObject>
+#include <QRecursiveMutex>
 #include <QStack>
 #include <QUrl>
 #include <memory>
@@ -18,7 +20,6 @@
 #include "track/track_decl.h"
 #include "track/trackrecord.h"
 #include "util/color/predefinedcolorpalettes.h"
-#include "util/compatibility/qmutex.h"
 #include "util/fileaccess.h"
 #include "util/performancetimer.h"
 #include "waveform/waveform.h"
@@ -92,7 +93,7 @@ class Track : public QObject {
     }
 
     mixxx::FileAccess getFileAccess() const {
-        const auto locked = lockMutex(&m_qMutex);
+        const auto locked = QMutexLocker(&m_qMutex);
         return m_fileAccess;
     }
 
@@ -361,6 +362,12 @@ class Track : public QObject {
     }
     // Setter is only available internally. See setStemPointsWhileLocked
 
+#ifdef __STEM_SEPARATION__
+    /// Sets the stems of the separated stem file that plays instead of the
+    /// track's file, see SoundSourceProxy::openAudioSource()
+    void setSeparatedStemInfos(QList<StemInfo> stemInfos);
+#endif
+
     bool hasStem() const {
         const QMutexLocker lock(&m_qMutex);
         // lock thread-unsafe copy constructors of QList
@@ -463,7 +470,7 @@ class Track : public QObject {
     // stream info of the track need to be updated to reflect
     // these values.
     bool hasStreamInfoFromSource() const {
-        const auto locked = lockMutex(&m_qMutex);
+        const auto locked = QMutexLocker(&m_qMutex);
         return m_record.hasStreamInfoFromSource();
     }
 
@@ -526,14 +533,14 @@ class Track : public QObject {
     // Set whether the TIO is dirty or not and unlock before emitting
     // any signals. This must only be called from member functions
     // while the TIO is locked.
-    void markDirtyAndUnlock(QT_RECURSIVE_MUTEX_LOCKER* pLock) {
+    void markDirtyAndUnlock(QMutexLocker<QRecursiveMutex>* pLock) {
         setDirtyAndUnlock(pLock, true);
     }
-    void setDirtyAndUnlock(QT_RECURSIVE_MUTEX_LOCKER* pLock, bool bDirty);
+    void setDirtyAndUnlock(QMutexLocker<QRecursiveMutex>* pLock, bool bDirty);
 
-    void afterKeysUpdated(QT_RECURSIVE_MUTEX_LOCKER* pLock);
+    void afterKeysUpdated(QMutexLocker<QRecursiveMutex>* pLock);
 
-    void afterBeatsAndBpmUpdated(QT_RECURSIVE_MUTEX_LOCKER* pLock);
+    void afterBeatsAndBpmUpdated(QMutexLocker<QRecursiveMutex>* pLock);
     void emitBeatsAndBpmUpdated();
 
     /// Emits a changed signal for each Q_PROPERTY
@@ -575,18 +582,18 @@ class Track : public QObject {
             bool lockBpmAfterSet = false);
 
     bool trySetBeatsMarkDirtyAndUnlock(
-            QT_RECURSIVE_MUTEX_LOCKER* pLock,
+            QMutexLocker<QRecursiveMutex>* pLock,
             mixxx::BeatsPointer pBeats,
             bool lockBpmAfterSet);
     bool tryImportPendingBeatsMarkDirtyAndUnlock(
-            QT_RECURSIVE_MUTEX_LOCKER* pLock,
+            QMutexLocker<QRecursiveMutex>* pLock,
             bool lockBpmAfterSet);
 
     void setCuePointsMarkDirtyAndUnlock(
-            QT_RECURSIVE_MUTEX_LOCKER* pLock,
+            QMutexLocker<QRecursiveMutex>* pLock,
             const QList<CuePointer>& cuePoints);
     void importPendingCueInfosMarkDirtyAndUnlock(
-            QT_RECURSIVE_MUTEX_LOCKER* pLock);
+            QMutexLocker<QRecursiveMutex>* pLock);
 
     /// Merge additional metadata that is not (yet) stored in the database
     /// and only available from file tags.
@@ -609,7 +616,7 @@ class Track : public QObject {
             mixxx::audio::StreamInfo&& streamInfo);
 
     // Mutex protecting access to object
-    mutable QT_RECURSIVE_MUTEX m_qMutex;
+    mutable QRecursiveMutex m_qMutex;
 
     // The file
     mixxx::FileAccess m_fileAccess;

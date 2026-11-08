@@ -1,77 +1,91 @@
-# DJ Sugar
+# 🍬 DJ Sugar
 
 ![DJ Sugar logo](https://raw.githubusercontent.com/winnerspiros/djsugar/main/res/images/icons/scalable/apps/mixxx.svg)
 
-**Free, open-source DJ software for everybody.**
+**Free, open-source DJ software — on your phone and on your desktop.**
+
+DJ Sugar is a fork of [Mixxx](https://github.com/mixxxdj/mixxx) 🎛️, built on the Android port by
+[JaviLabarumDJ/mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) 📱. Everything Mixxx
+does stays; DJ Sugar adds streaming sources and a touch UI made for phones. Upstream Mixxx is merged
+in regularly.
 
 ---
 
-## What is DJ Sugar?
+## ✨ What DJ Sugar adds
 
-DJ Sugar is a fork of [Mixxx](https://mixxxdj.org) — the free, open-source DJ software. It adds first-class **Android** support, built-in **YouTube** search & streaming, **SponsorBlock** integration, and a mobile-optimized experience while keeping everything that makes Mixxx great on desktop.
+### 📺 YouTube
 
-Available on **Android**, **Linux**, **macOS**, and **Windows**.
+- Search inside the app and load results straight to deck 1 or deck 2 (D1 / D2), or save them to the library
+- Genre bubbles to browse, Greek genres included 🇬🇷
+- Played, BPM, key and duplicate markers on results
+- Fast downloads: yt-dlp finds the audio link, then the file comes in 16 parallel parts
+- The links of the top results are fetched in the background, so a tap usually starts the download at once
+- yt-dlp is bundled on Android and updates itself
+- **SponsorBlock** ⏭️ skips sponsor segments, intros and other non-music parts
 
-## Downloads
+### ☁️ SoundCloud
 
-Grab the latest builds from the [Releases](https://github.com/winnerspiros/djsugar/releases) page. Every push to `main` publishes a new pre-release automatically.
+- Search with genre, cover art and play counts
+- D1 / D2 / save buttons, same as YouTube
+- Go+ tracks are marked; they are 30-second previews and can't be loaded
 
-- **Android** — `*.apk` (ARM64, side-load & play)
-- **Windows** — `*.msi` (x64 + ARM64)
-- **macOS** — `*.dmg` (Intel + Apple Silicon)
-- **Ubuntu** — `*.deb` (24.04 LTS)
+### 🎚️ Controllers
 
-> Nightly builds are marked as pre-release. Tag a commit with `vX.Y.Z` for a stable release.
+- **Pioneer DDJ-FLX4** over USB and Bluetooth (BLE MIDI), picked up automatically when connected
+- Jog wheels with scratch (vinyl mode on by default), browse, load, back and stems mode
+  (SHIFT + SAMPLER: pads 1–4 mute, pads 5–8 solo)
+- BROWSE and LOAD work on whichever screen is open: library, YouTube or SoundCloud
+- All of Mixxx's controller mappings are included
 
-## Features
+### 📱 Android
 
-- **YouTube integration** — search, stream, and mix YouTube audio directly; no yt-dlp binary on Android
-- **SponsorBlock** — auto-skips sponsored segments in YouTube videos
-- **Android-optimized** — Oboe audio, correct scaling, MANAGE_EXTERNAL_STORAGE, controller USB permissions
-- **InnerTube direct streams** — ANDROID_VR client for no-cipher stream URLs; HTTP/1.1 forced on Android
-- **4-deck mixing** — pitch, EQ, effects, looping, hot cues
-- **Controller support** — MIDI and HID devices (USB on Android 13+)
-- **Local library** — scans device storage, SD card, cloud-synced folders; MP3, FLAC, OGG, OPUS, WAV, AAC, M4A, and more
+- Touch UI with a compact library and a streaming hub
+- Low-latency audio through Oboe
+- USB controller permission handling
+- Renderer choice in Settings → Interface
 
-## Building
+### 🤖 AI Bro
 
-### Android
+- Auto-DJ that finds similar songs on YouTube, downloads them and mixes them in
 
-```bash
-git clone https://github.com/winnerspiros/djsugar.git
-cd djsugar
-# Install Android SDK/NDK, then:
-cmake -B build -DANDROID=ON -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 \
-  -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --parallel
-# APK output: build/android-build/build/outputs/apk/release/
-```
+---
 
-### Desktop (Linux / macOS / Windows)
+## 📥 Downloads
 
-Follow the [upstream Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md) — DJ Sugar uses the same CMake/vcpkg toolchain.
+Get the latest build from [Releases](https://github.com/winnerspiros/djsugar/releases). Every push to
+`main` publishes a new pre-release.
 
-```bash
-git clone https://github.com/winnerspiros/djsugar.git
-cd djsugar
-# See CONTRIBUTING.md for full cmake/vcpkg setup
-```
+| Platform | File |
+| --- | --- |
+| 🤖 Android (ARM64) | `.apk` |
+| 🪟 Windows (x64, ARM64) | `.msi` |
+| 🍎 macOS (Intel, Apple Silicon) | `.dmg` |
+| 🐧 Ubuntu / Debian (x86_64) | `.deb` |
 
-## Contributing
+## 🛠️ Building
 
-1. Fork and create a branch
-2. Read [CONTRIBUTING.md](CONTRIBUTING.md) for code style and PR guidelines
-3. Open a pull request
+DJ Sugar uses the same CMake + vcpkg setup as Mixxx: follow the
+[Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md). The Android
+APK is built by the Android job in [`.github/workflows/build.yml`](.github/workflows/build.yml), the
+reference for the exact steps.
 
-Found a bug? [Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose).
-Attach `mixxx.log` from your device:
+## 🐞 Bug reports
 
-- **Android** — `Android/data/org.mixxx/files/Documents/Mixxx/`
-- **Linux** — `~/.local/share/mixxx/`
-- **Windows** — `%LOCALAPPDATA%\Mixxx\`
-- **macOS** — `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
+[Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`:
 
-## License
+- 🤖 Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
+- 🐧 Linux: `~/.local/share/mixxx/`
+- 🪟 Windows: `%LOCALAPPDATA%\Mixxx\`
+- 🍎 macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
 
-GPLv2. See [LICENSE](LICENSE). DJ Sugar is a fork of [Mixxx](https://github.com/mixxxdj/mixxx), copyright the Mixxx contributors.
+## 🤝 Contributing
+
+Fork, branch, open a pull request. Code style and guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## 📜 License and credits
+
+GPLv2 — see [LICENSE](LICENSE).
+
+- [Mixxx](https://github.com/mixxxdj/mixxx), copyright the Mixxx contributors
+- [mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) by JaviLabarumDJ, the Android port DJ Sugar builds on
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [SponsorBlock](https://sponsor.ajay.app)

@@ -16,6 +16,9 @@
 #include "util/parented_ptr.h"
 
 class BaseTrackCache;
+namespace mixxx {
+class YouTubeGenreLookup;
+} // namespace mixxx
 class KeyboardEventFilter;
 class QSqlDatabase;
 class TreeItem;
@@ -28,6 +31,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     Q_OBJECT
   public:
     YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig);
+    // Caches thumbnails of search results on disk, so decks can show cover art.
+    void prefetchThumbnails(const QList<mixxx::YouTubeVideoInfo>& videos) {
+        fetchThumbnails(videos);
+    }
     ~YouTubeFeature() override = default;
 
     QVariant title() override {
@@ -45,9 +52,21 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
 
     void searchAndActivate(const QString& query);
 
+    /// Fetch the next batch of results for the current search (infinite
+    /// scroll). The service answers with searchMoreReady, an empty batch
+    /// when there is nothing more.
+    void loadMoreResults();
+
+    const QString& lastQuery() const {
+        return m_lastQuery;
+    }
+
     void requestDownloadToPlayer(
             const QString& videoId, const QString& group, bool play);
     void requestDownload(const QString& videoId);
+    /// Results shown outside the YouTube search (SoundCloud), so a download
+    /// of one gets its title and artist like a YouTube result
+    void rememberExternalResults(const QList<mixxx::YouTubeVideoInfo>& results);
     void requestDownloadToAutoDJ(
             const QString& videoId, PlaylistDAO::AutoDJSendLoc loc);
 
@@ -59,6 +78,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
 
     /// Absolute path to the per-user yt-dlp cache directory. Created on demand.
     QString cacheDir() const;
+    /// Per video id of a search result: "timesPlayed", "bpm" and "key" from
+    /// the library, and "sameAs" (id of an earlier result of the same song).
+    QHash<QString, QVariantMap> libraryInfoForResults(
+            const QList<mixxx::YouTubeVideoInfo>& results) const;
 
     /// Resolve the ISO 3166-1 alpha-2 region used for the YouTube top-songs
     /// feed. Resolution order:
@@ -67,6 +90,21 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     ///      cache and en_US locales must not switch this fork to United States.
     /// Always returns a non-empty 2-letter uppercase code.
     QString resolvedTrendingRegion() const;
+
+    /// Whether SponsorBlock auto-skip is enabled (default: true).
+    bool sponsorBlockAutoSkip() const;
+    void setSponsorBlockAutoSkip(bool enabled);
+
+  signals:
+    void downloadToPlayerRequested(
+            const QString& videoId,
+            const QString& group,
+            const QString& title);
+    /// Every deck waiting on `videoId` has been handed its track, or the load
+    /// was abandoned. Fires for fresh downloads and for cache hits, which
+    /// never reach the service's downloadFinished signal.
+    void playerLoadsSettled(const QString& videoId);
+    void sponsorBlockAutoSkipChanged(bool enabled);
 
   protected:
     void appendTrackIdsFromRightClickIndex(
@@ -119,6 +157,11 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// in it is present on disk — re-downloading any that have been swept.
     void prefetchAutoDjQueue();
     void syncAnalyzedTrackMetadata(const TrackPointer& pTrack);
+    void fetchGenre(const TrackPointer& pTrack,
+            const QString& videoId,
+            const QString& artist,
+            const QString& title,
+            int durationSec);
     /// Persistent track table backing the right-hand pane. See
     /// YouTubeTrackModel for the placeholder/downloaded row model.
     QSharedPointer<BaseTrackCache> m_pTrackCache;
@@ -188,6 +231,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     bool m_thumbnailsDirty = false;
     QString m_lastQuery;
     QList<mixxx::YouTubeVideoInfo> m_lastResults;
+    QHash<QString, mixxx::YouTubeVideoInfo> m_externalResults;
+    const mixxx::YouTubeVideoInfo* resultInfo(const QString& videoId) const;
     /// Guards the deferred one-shot genre fetch in activate().
     bool m_genresFetchScheduled = false;
     // videoId -> human-readable label (used for the "Downloaded" branch).
@@ -197,6 +242,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
         bool play = false;
     };
     QHash<QString, QList<PendingPlayerLoad>> m_pendingPlayerLoads;
+    /// Drops the deck loads waiting on `videoId` after a failed hand-over.
+    void abandonPendingLoads(const QString& videoId);
     QHash<QString, QList<PlaylistDAO::AutoDJSendLoc>> m_pendingAutoDjLoads;
     QSet<QString> m_videoIdsDownloading;
     /// Track download retry attempts per video id. After kMaxDownloadRetries
@@ -251,6 +298,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// downloads). Kept separate from YouTubeService's QNetworkAccessManager so cookie jars
     /// and rate-limiting for YouTube are not shared with an unrelated host.
     QNetworkAccessManager* m_pSamplesNam = nullptr;
+    /// Genre of downloaded songs from the iTunes/Deezer catalogues.
+    mixxx::YouTubeGenreLookup* m_pGenreLookup = nullptr;
     /// Set of myinstants CDN URLs currently being downloaded (prevent dupes).
     QSet<QString> m_myInstantsDownloading;
 

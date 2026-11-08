@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QMutex>
 
 #include "controllers/controllermappinginfo.h"
 #include "controllers/legacycontrollermapping.h"
@@ -33,7 +34,7 @@ class Controller : public QObject {
     Q_OBJECT
   public:
     explicit Controller(const QString& deviceName);
-    ~Controller() override;  // Subclass should call close() at minimum.
+    ~Controller() override; // Subclass should call close() at minimum.
 
     /// The object that is exposed to the JS scripts as the "controller" object.
     /// Subclasses of Controller can return a subclass of ControllerJSProxy to further
@@ -49,6 +50,10 @@ class Controller : public QObject {
     std::shared_ptr<LegacyControllerMapping> getMapping() {
         // return the unused mutable copy of the mapping, that can be edited in the GUI thread
         // and than adopted again via setMapping()
+        // The GUI thread reads this while the controller thread may assign it,
+        // and copying a shared_ptr concurrently with an assignment is a data race.
+        // (from JaviLabarumDJ/mixxx-android android-stable)
+        const auto locker = QMutexLocker(&m_mutableMappingMutex);
         return m_pMutableMapping;
     }
 
@@ -175,6 +180,17 @@ class Controller : public QObject {
     const RuntimeLoggingCategory m_logOutput;
     std::shared_ptr<LegacyControllerMapping> m_pMutableMapping;
 
+    /// Must only be assigned through setMutableMapping()
+    /// (from JaviLabarumDJ/mixxx-android android-stable)
+
+    void setMutableMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
+        const auto locker = QMutexLocker(&m_mutableMappingMutex);
+        m_pMutableMapping = std::move(pMapping);
+    }
+
+  private:
+    mutable QMutex m_mutableMappingMutex;
+
   public:
     // This must be reimplemented by sub-classes desiring to send raw bytes to a
     // controller. Return true in case of successful completion, false in case
@@ -186,7 +202,9 @@ class Controller : public QObject {
     virtual int close() = 0;
     // Requests that the device poll if it is a polling device. Returns true
     // if events were handled.
-    virtual bool poll() { return false; }
+    virtual bool poll() {
+        return false;
+    }
 
     // Returns true if this device should receive polling signals via calls to
     // its poll() method.

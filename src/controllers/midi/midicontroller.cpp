@@ -57,7 +57,7 @@ QString MidiController::mappingExtension() {
 }
 
 void MidiController::setMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
-    m_pMutableMapping = pMapping;
+    setMutableMapping(pMapping);
     m_pMapping = downcastAndClone<LegacyMidiControllerMapping>(pMapping.get());
 }
 
@@ -109,8 +109,7 @@ bool MidiController::applyMapping(const QString& resourcePath) {
 bool MidiController::applyMapping(const QString& resourcePath,
         std::shared_ptr<ControllerSharedData> runtimeData) {
     // Handles the engine
-    bool result = runtimeData ? Controller::applyMapping(resourcePath, std::move(runtimeData))
-                              : Controller::applyMapping(resourcePath);
+    bool result = Controller::applyMapping(resourcePath, std::move(runtimeData));
 
     // Only execute this code if this is an output device
     if (isOutputDevice()) {
@@ -197,9 +196,10 @@ void MidiController::createOutputHandlers() {
                 "One or more MixxxControls specified in the "
                 "outputs section of the loaded mapping were invalid."));
         props->setInfoText(tr("Some LEDs or other feedback may not work correctly."));
-        QString detailsText = tr("* Check to see that the MixxxControl "
-                                 "names are spelled correctly in the mapping "
-                                 "file (.xml)\n");
+        QString detailsText = tr(
+                "* Check to see that the MixxxControl "
+                "names are spelled correctly in the mapping "
+                "file (.xml)\n");
         detailsText += tr(
                 "* Make sure the MixxxControls in question actually exist."
                 " Visit the manual for a complete list: ");
@@ -229,12 +229,15 @@ void MidiController::learnTemporaryInputMappings(const MidiInputMappings& mappin
 
         MidiOpCode opCode = MidiUtils::opCodeFromStatus(mapping.key.status);
         bool twoBytes = MidiUtils::isMessageTwoBytes(opCode);
-        QString message = twoBytes ? QString("0x%1 0x%2")
-                .arg(QString::number(mapping.key.status, 16).toUpper(),
-                     QString::number(mapping.key.control, 16).toUpper()
-                     .rightJustified(2,'0')) :
-                QString("0x%1")
-                .arg(QString::number(mapping.key.status, 16).toUpper());
+        QString message = twoBytes
+                ? QString("0x%1 0x%2")
+                          .arg(QString::number(mapping.key.status, 16)
+                                          .toUpper(),
+                                  QString::number(mapping.key.control, 16)
+                                          .toUpper()
+                                          .rightJustified(2, '0'))
+                : QString("0x%1").arg(
+                          QString::number(mapping.key.status, 16).toUpper());
 
         std::visit(
                 MidiUtils::overloaded{
@@ -263,7 +266,8 @@ void MidiController::commitTemporaryInputMappings() {
     // in m_temporaryInputMappings. To do this, we first remove every key in
     // m_temporaryInputMappings from m_mapping's input mappings.
     for (auto it = m_temporaryInputMappings.constBegin();
-         it != m_temporaryInputMappings.constEnd(); ++it) {
+            it != m_temporaryInputMappings.constEnd();
+            ++it) {
         m_pMapping->removeInputMapping(it.key());
     }
 
@@ -402,7 +406,7 @@ void MidiController::processInputMapping(const MidiInputMapping& mapping,
         m_fourteen_bit_queued_mappings.clear();
     }
 
-    //qDebug() << "MIDI Options" << QString::number(mapping.options, 2).rightJustified(16,'0');
+    // qDebug() << "MIDI Options" << QString::number(mapping.options, 2).rightJustified(16,'0');
 
     if (mapping_is_14bit) {
         bool found = false;
@@ -611,8 +615,8 @@ void MidiController::receive(const QByteArray& data, mixxx::Duration timestamp) 
 }
 
 void MidiController::processInputMapping(const MidiInputMapping& mapping,
-                                         const QByteArray& data,
-                                         mixxx::Duration timestamp) {
+        const QByteArray& data,
+        mixxx::Duration timestamp) {
     // Custom script handler
     if (mapping.options.testFlag(MidiOption::Script)) {
         auto pEngine = getScriptEngine();

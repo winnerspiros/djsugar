@@ -160,13 +160,13 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
     if (PlayerManager::isDeckGroup(getGroup())) {
         m_pVCEnabled = ControlObject::getControl(
                 ConfigKey(getGroup(), QStringLiteral("vinylcontrol_enabled")),
-                ControlFlag::NoAssertIfMissing);
+                ControlFlag::NoWarnIfMissing);
         m_pVCScratching = ControlObject::getControl(
                 ConfigKey(getGroup(), QStringLiteral("vinylcontrol_scratching")),
-                ControlFlag::NoAssertIfMissing);
+                ControlFlag::NoWarnIfMissing);
         m_pVCMode = ControlObject::getControl(
                 ConfigKey(getGroup(), QStringLiteral("vinylcontrol_mode")),
-                ControlFlag::NoAssertIfMissing);
+                ControlFlag::NoWarnIfMissing);
     }
     // This is the resulting rate ratio that can be used for display or calculations.
     // The track original rate ratio is 1.

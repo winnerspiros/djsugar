@@ -9,12 +9,12 @@
 #include <QStorageInfo>
 #include <QTemporaryFile>
 #include <QtDebug>
+#include <algorithm>
 
 #include "analyzer/analyzersilence.h"
 #include "moc_cachingreaderworker.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
-#include "util/compatibility/qmutex.h"
 #include "util/event.h"
 #include "util/fifo.h"
 #include "util/logger.h"
@@ -113,7 +113,7 @@ void CachingReaderWorker::newTrack(TrackPointer pTrack, mixxx::StemChannelSelect
 void CachingReaderWorker::newTrack(TrackPointer pTrack) {
 #endif
     {
-        const auto locker = lockMutex(&m_newTrackMutex);
+        const auto locker = QMutexLocker(&m_newTrackMutex);
 #ifdef __STEM__
         m_pNewTrack = NewTrackRequest{
                 pTrack,
@@ -144,7 +144,7 @@ void CachingReaderWorker::run() {
             TrackPointer pLoadTrack;
 #endif
             { // locking scope
-                const auto locker = lockMutex(&m_newTrackMutex);
+                const auto locker = QMutexLocker(&m_newTrackMutex);
                 pLoadTrack = m_pNewTrack;
                 m_newTrackAvailable.storeRelease(0);
             } // implicitly unlocks the mutex
@@ -731,11 +731,18 @@ void CachingReaderWorker::verifyFirstSound(const CachingReaderChunk* pChunk,
         sampleBuffer.clear(); // we need to clear the buffer, for the case the
                               // very first sample is the first sound.
         SINT end = static_cast<SINT>(m_firstSoundFrameToVerify.toLowerFrameBoundary().value()) + 1;
-        mixxx::IndexRange probeFrameIndexRange =
-                mixxx::IndexRange::between(end - kNumSoundFrameToVerify, end);
+        // Sound right at the start of the file (one-shot samples): there is
+        // no silent frame before it, so the cleared buffer stands in for it
+        // and only the frames from 0 are read, behind it. Reading from -1
+        // shifted the frames and reported every such sample as "moved".
+        const SINT start = std::max(SINT(0), end - kNumSoundFrameToVerify);
+        const SINT bufferOffsetFrames = start - (end - kNumSoundFrameToVerify);
+        mixxx::IndexRange probeFrameIndexRange = mixxx::IndexRange::between(start, end);
         mixxx::IndexRange bufferedFrameIndexRange =
                 pChunk->readBufferedSampleFrames(
-                        sampleBuffer.data(), channelCount, probeFrameIndexRange);
+                        sampleBuffer.data() + bufferOffsetFrames * channelCount,
+                        channelCount,
+                        probeFrameIndexRange);
         VERIFY_OR_DEBUG_ASSERT(bufferedFrameIndexRange.end() == probeFrameIndexRange.end()) {
             qWarning() << "skipping verifyFirstSound()";
             return;

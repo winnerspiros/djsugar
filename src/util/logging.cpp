@@ -10,15 +10,18 @@
 #include <QIODevice>
 #include <QLoggingCategory>
 #include <QMutex>
+#include <QMutexLocker>
 #include <QString>
 #include <QTextStream>
 #include <QThread>
 #include <atomic>
 #include <string_view>
+#if defined(Q_OS_ANDROID)
+#include <android/log.h>
+#endif
 
 #include "util/assert.h"
 #include "util/cmdlineargs.h"
-#include "util/compatibility/qmutex.h"
 
 namespace {
 
@@ -164,7 +167,7 @@ inline void writeToFile(
             QChar('\n');
     QByteArray formattedMessage = formattedMessageStr.toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexLogfile);
+    const auto locked = QMutexLocker(&s_mutexLogfile);
     // Writing to a closed QFile could cause an infinite recursive loop
     // by logging to qWarning!
     if (s_logfile.isOpen()) {
@@ -178,6 +181,13 @@ inline void writeToFile(
         const int written = s_logfile.write(formattedMessage);
         Q_UNUSED(written);
         DEBUG_ASSERT(written == formattedMessage.size());
+#ifdef Q_OS_ANDROID
+        // Android kills an app without notice (swiped away, not responding)
+        // and buffered lines are lost: the log of a stuck start ended at an
+        // arbitrary point, without the lines that would show where it got
+        // stuck. The file is written through on every line there.
+        flush = true;
+#endif
         if (flush) {
             const bool flushed = s_logfile.flush();
             Q_UNUSED(flushed);
@@ -198,7 +208,7 @@ inline void writeToStdErr(
             formattedMessageStr.replace(kThreadNamePattern, threadName)
                     .toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexStdErr);
+    const auto locked = QMutexLocker(&s_mutexStdErr);
     const std::size_t written = fwrite(
             formattedMessage.constData(), sizeof(char), formattedMessage.size(), stderr);
     Q_UNUSED(written);
@@ -287,12 +297,40 @@ bool isControllerLoggingCategory(const QString& categoryName) {
     return categoryName.startsWith("controller.");
 }
 
+// Qt warnings that are expected and need no action, logged as debug
+// messages instead:
+// - "point is not in activePoints": a touch handler losing a point another
+//   handler grabbed (a tap turning into a list flick)
+// - the audio/ogg vs video/ogg mime clash, for every .ogg file looked at
+// - Android destroying the window surface while the app is in the background,
+//   rendering resumes when it is back
+bool isHarmlessQtWarning(const QString& message) {
+    static const QLatin1String kHarmless[] = {
+            QLatin1String("point is not in activePoints"),
+            QLatin1String("MimeType is ambiguous between audio/ogg and video/ogg"),
+#ifdef Q_OS_ANDROID
+            QLatin1String("no EGLSurface, likely Surface destroyed by Android"),
+            QLatin1String("QRhiGles2: Failed to make context current"),
+            QLatin1String("Failed to start frame"),
+#endif
+    };
+    for (const auto& harmless : kHarmless) {
+        if (message.contains(harmless)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Debug message handler which outputs to stderr and a logfile,
 // prepending the thread name, log category, and log level.
 void handleMessage(
         QtMsgType type,
         const QMessageLogContext& context,
         const QString& input) {
+    if (type == QtWarningMsg && isHarmlessQtWarning(input)) {
+        type = QtDebugMsg;
+    }
     const char* levelName = nullptr;
     WriteFlags writeFlags = WriteFlag::None;
     bool isDebugAssert = false;
@@ -375,6 +413,27 @@ void handleMessage(
     }
 
     writeToLog(type, context, input, writeFlags);
+
+#if defined(Q_OS_ANDROID)
+    // Mirror to logcat so on-device debugging works without pulling the
+    // log file (from JaviLabarumDJ/mixxx-android). Kept after the normal
+    // routing so existing desktop behavior is unchanged.
+    android_LogPriority prio = ANDROID_LOG_INFO;
+    if (type == QtDebugMsg) {
+        prio = ANDROID_LOG_DEBUG;
+    } else if (type == QtWarningMsg) {
+        prio = ANDROID_LOG_WARN;
+    } else if (type == QtCriticalMsg) {
+        prio = ANDROID_LOG_ERROR;
+    } else if (type == QtFatalMsg) {
+        prio = ANDROID_LOG_FATAL;
+    }
+    __android_log_print(prio,
+            "MixxxNative",
+            "[%s] %s",
+            context.category ? context.category : "default",
+            input.toLocal8Bit().constData());
+#endif
 }
 
 } // anonymous namespace
@@ -463,7 +522,7 @@ void Logging::shutdown() {
 
     // Even though we uninstalled the message handler, other threads may have
     // already entered it.
-    const auto locker = lockMutex(&s_mutexLogfile);
+    const auto locker = QMutexLocker(&s_mutexLogfile);
     if (s_logfile.isOpen()) {
         s_logfile.close();
     }
@@ -471,7 +530,7 @@ void Logging::shutdown() {
 
 // static
 void Logging::flushLogFile() {
-    QMutexLocker locker(&s_mutexLogfile);
+    auto locker = QMutexLocker(&s_mutexLogfile);
     if (s_logfile.isOpen()) {
         s_logfile.flush();
     }

@@ -16,7 +16,6 @@
 #include "moc_woverview.cpp"
 #include "preferences/colorpalettesettings.h"
 #include "track/track.h"
-#include "util/colorcomponents.h"
 #include "util/dnd.h"
 #include "util/duration.h"
 #include "util/math.h"
@@ -140,8 +139,10 @@ WOverview::WOverview(
 
     setMouseTracking(true);
 
-    connect(pPlayerManager, &PlayerManager::trackAnalyzerProgress,
-            this, &WOverview::onTrackAnalyzerProgress);
+    connect(pPlayerManager,
+            &PlayerManager::trackAnalyzerProgress,
+            this,
+            &WOverview::onTrackAnalyzerProgress);
 }
 
 void WOverview::setup(const QDomNode& node, const SkinContext& context) {
@@ -331,7 +332,7 @@ void WOverview::onConnectedControlChanged(double dParameter, double dValue) {
 }
 
 void WOverview::slotWaveformSummaryUpdated() {
-    //qDebug() << "WOverview::slotWaveformSummaryUpdated()";
+    // qDebug() << "WOverview::slotWaveformSummaryUpdated()";
 
     TrackPointer pTrack(m_pCurrentTrack);
     if (!pTrack) {
@@ -372,7 +373,7 @@ void WOverview::onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyz
 
 void WOverview::slotTrackLoaded(TrackPointer pTrack) {
     Q_UNUSED(pTrack); // only used in DEBUG_ASSERT
-    //qDebug() << "WOverview::slotTrackLoaded()" << m_pCurrentTrack.get() << pTrack.get();
+    // qDebug() << "WOverview::slotTrackLoaded()" << m_pCurrentTrack.get() << pTrack.get();
     DEBUG_ASSERT(m_pCurrentTrack == pTrack);
     m_trackLoaded = true;
     if (m_pCurrentTrack) {
@@ -383,7 +384,7 @@ void WOverview::slotTrackLoaded(TrackPointer pTrack) {
 
 void WOverview::slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack) {
     Q_UNUSED(pOldTrack); // only used in DEBUG_ASSERT
-    //qDebug() << this << "WOverview::slotLoadingTrack" << pNewTrack.get() << pOldTrack.get();
+    // qDebug() << this << "WOverview::slotLoadingTrack" << pNewTrack.get() << pOldTrack.get();
     DEBUG_ASSERT(m_pCurrentTrack == pOldTrack);
     if (m_pCurrentTrack != nullptr) {
         disconnect(m_pCurrentTrack.get(),
@@ -432,14 +433,14 @@ void WOverview::slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack)
 }
 
 void WOverview::onEndOfTrackChange(double v) {
-    //qDebug() << "WOverview::onEndOfTrackChange()" << v;
+    // qDebug() << "WOverview::onEndOfTrackChange()" << v;
     m_endOfTrack = v > 0.0;
     update();
 }
 
 void WOverview::onMarkChanged(double v) {
     Q_UNUSED(v);
-    //qDebug() << "WOverview::onMarkChanged()" << v;
+    // qDebug() << "WOverview::onMarkChanged()" << v;
     if (m_pCurrentTrack) {
         updateCues(m_pCurrentTrack->getCuePoints());
         update();
@@ -448,7 +449,7 @@ void WOverview::onMarkChanged(double v) {
 
 void WOverview::onMarkRangeChange(double v) {
     Q_UNUSED(v);
-    //qDebug() << "WOverview::onMarkRangeChange()" << v;
+    // qDebug() << "WOverview::onMarkRangeChange()" << v;
     update();
 }
 
@@ -507,12 +508,12 @@ void WOverview::slotScalingChanged() {
     update();
 }
 
-void WOverview::updateCues(const QList<CuePointer> &loadedCues) {
+void WOverview::updateCues(const QList<CuePointer>& loadedCues) {
     for (const CuePointer& currentCue : loadedCues) {
         const WaveformMarkPointer pMark = m_marks.getHotCueMark(currentCue->getHotCue());
 
-        if (pMark != nullptr && pMark->isValid() && pMark->isVisible()
-            && pMark->getSamplePosition() != Cue::kNoPosition) {
+        if (pMark != nullptr && pMark->isValid() && pMark->isVisible() &&
+                pMark->getSamplePosition() != Cue::kNoPosition) {
             QColor newColor = mixxx::RgbColor::toQColor(currentCue->getColor());
             if (newColor != pMark->fillColor() || newColor != pMark->m_textColor) {
                 pMark->setBaseColor(newColor, m_dimBrightThreshold);
@@ -600,7 +601,7 @@ void WOverview::mouseReleaseEvent(QMouseEvent* e) {
         unsetCursor();
         return;
     }
-    //qDebug() << "WOverview::mouseReleaseEvent" << e->pos() << m_iPos << ">>" << dValue;
+    // qDebug() << "WOverview::mouseReleaseEvent" << e->pos() << m_iPos << ">>" << dValue;
 
     if (e->button() == Qt::LeftButton) {
         if (m_bLeftClickDragging) {
@@ -627,7 +628,7 @@ void WOverview::mouseReleaseEvent(QMouseEvent* e) {
 }
 
 void WOverview::mousePressEvent(QMouseEvent* e) {
-    //qDebug() << "WOverview::mousePressEvent" << e->pos();
+    // qDebug() << "WOverview::mousePressEvent" << e->pos();
     mouseMoveEvent(e);
     if (m_bPassthroughEnabled) {
         m_bLeftClickDragging = false;
@@ -689,11 +690,7 @@ void WOverview::mousePressEvent(QMouseEvent* e) {
                     leaveEvent(nullptr);
                     auto* pCueMenuPopup = getMenu();
                     pCueMenuPopup->setTrackCueGroup(m_pCurrentTrack, pHoveredCue, m_group);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                     pCueMenuPopup->popup(e->globalPosition().toPoint());
-#else
-                    pCueMenuPopup->popup(e->globalPos());
-#endif
                 }
             }
         }
@@ -1313,11 +1310,7 @@ void WOverview::drawTimeRuler(QPainter* pPainter) {
     QFontMetricsF fontMetrics(markerFont);
 
     QFont shadowFont = pPainter->font();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    shadowFont.setWeight(99);
-#else
     shadowFont.setWeight(QFont::Black);
-#endif
     shadowFont.setPixelSize(static_cast<int>(m_iLabelFontSize * m_scaleFactor));
     QPen shadowPen(Qt::black, 2.5 * m_scaleFactor);
 

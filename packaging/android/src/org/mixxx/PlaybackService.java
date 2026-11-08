@@ -93,7 +93,9 @@ public class PlaybackService extends Service {
         context.startForegroundService(intent);
     }
 
-    /** JNI entry: lazy-start from native deck-play (see EngineBuffer). */
+    /**
+     * JNI entry: lazy-start from native deck-play (see EngineBuffer).
+     */
     public static void startFromNative(Context context) {
         start(context);
     }

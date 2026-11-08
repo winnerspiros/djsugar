@@ -1,5 +1,7 @@
 #include "library/autodj/smart/energystore.h"
 
+#include <QMutex>
+#include <QMutexLocker>
 #include <QSet>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -11,6 +13,11 @@
 
 // static
 bool EnergyStore::ensureTable(const QSqlDatabase& db) {
+    // Analyzer threads each call this on their own connection. Without
+    // serialising, two of them both see a missing column and the second
+    // ALTER TABLE fails with "duplicate column name".
+    static QMutex s_schemaMutex;
+    const QMutexLocker locker(&s_schemaMutex);
     QSqlQuery query(db);
     if (!query.exec(QStringLiteral(
                 "CREATE TABLE IF NOT EXISTS autodj_energy ("

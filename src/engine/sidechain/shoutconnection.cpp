@@ -23,7 +23,6 @@
 #include "preferences/usersettings.h"
 #include "recording/defs_recording.h"
 #include "track/track.h"
-#include "util/compatibility/qatomic.h"
 #include "util/logger.h"
 
 // SHOUT_ATTR_F_DEPRECATED was first introduced in libshout-idjc 2.4.6.
@@ -123,7 +122,7 @@ ShoutConnection::~ShoutConnection() {
 
     // Signal user if thread doesn't die
     VERIFY_OR_DEBUG_ASSERT(!isRunning()) {
-       qWarning() << "ShoutOutput::~ShoutOutput(): Thread didn't die.\
+        qWarning() << "ShoutOutput::~ShoutOutput(): Thread didn't die.\
        Ignored but file a bug report if problems rise!";
     }
 }
@@ -150,8 +149,8 @@ void ShoutConnection::applySettings() {
     // processDisconnect manually
 
     int dStatus = getStatus();
-    if((dStatus == BroadcastProfile::STATUS_UNCONNECTED
-            || dStatus == BroadcastProfile::STATUS_FAILURE)) {
+    if ((dStatus == BroadcastProfile::STATUS_UNCONNECTED ||
+                dStatus == BroadcastProfile::STATUS_FAILURE)) {
         serverConnect();
     }
 }
@@ -163,7 +162,7 @@ QByteArray ShoutConnection::encodeString(const QString& string) {
     return string.toLatin1();
 }
 
-void ShoutConnection::insertMetaData(const char *pName, const char *pValue) {
+void ShoutConnection::insertMetaData(const char* pName, const char* pValue) {
     int ret = shout_metadata_add(m_pShoutMetaData, pName, pValue);
     if (ret != SHOUTERR_SUCCESS) {
         kLogger.warning() << "shout_metadata_add" << pName << "fails with error code" << ret;
@@ -212,7 +211,7 @@ void ShoutConnection::updateFromPreferences() {
                     << " defaulting to ISO-8859-1.";
         } else {
             // Indicates our metadata is in the provided charset.
-            insertMetaData("charset",  baCodec.constData());
+            insertMetaData("charset", baCodec.constData());
         }
     }
 
@@ -287,33 +286,29 @@ void ShoutConnection::updateFromPreferences() {
     int format;
     int protocol;
 
-    if (shout_set_host(m_pShout, serverUrl.host().toLatin1().constData())
-            != SHOUTERR_SUCCESS) {
+    if (shout_set_host(m_pShout, serverUrl.host().toLatin1().constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting hostname!"), shout_get_error(m_pShout));
         return;
     }
 
     if (shout_set_port(m_pShout,
-            static_cast<unsigned short>(serverUrl.port(BROADCAST_DEFAULT_PORT)))
-            != SHOUTERR_SUCCESS) {
+                static_cast<unsigned short>(serverUrl.port(
+                        BROADCAST_DEFAULT_PORT))) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting port!"), shout_get_error(m_pShout));
         return;
     }
 
-    if (shout_set_password(m_pShout, baPassword.constData())
-            != SHOUTERR_SUCCESS) {
+    if (shout_set_password(m_pShout, baPassword.constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting password!"), shout_get_error(m_pShout));
         return;
     }
 
-    if (shout_set_mount(m_pShout, serverUrl.path().toLatin1().constData())
-            != SHOUTERR_SUCCESS) {
+    if (shout_set_mount(m_pShout, serverUrl.path().toLatin1().constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting mount!"), shout_get_error(m_pShout));
         return;
     }
 
-    if (shout_set_user(m_pShout, serverUrl.userName().toLatin1().constData())
-            != SHOUTERR_SUCCESS) {
+    if (shout_set_user(m_pShout, serverUrl.userName().toLatin1().constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting username!"), shout_get_error(m_pShout));
         return;
     }
@@ -420,24 +415,23 @@ void ShoutConnection::updateFromPreferences() {
         errorDialog(tr("Broadcasting at 96 kHz with Ogg Vorbis is not currently "
                        "supported. Please try a different sample rate or switch "
                        "to a different encoding."),
-                    tr("See https://github.com/mixxxdj/mixxx/issues/5701 for more "
-                       "information."));
+                tr("See https://github.com/mixxxdj/mixxx/issues/5701 for more "
+                   "information."));
         return;
     }
 
 #ifdef __OPUS__
     if (m_format_is_opus && mainSamplerate != EncoderOpus::getMainSampleRate()) {
         errorDialog(
-            EncoderOpus::getInvalidSamplerateMessage(),
-            tr("Unsupported sample rate")
-        );
+                EncoderOpus::getInvalidSamplerateMessage(),
+                tr("Unsupported sample rate"));
         return;
     }
 #endif
 
-    if (shout_set_audio_info(
-            m_pShout, SHOUT_AI_BITRATE,
-            QByteArray::number(iBitrate).constData()) != SHOUTERR_SUCCESS) {
+    if (shout_set_audio_info(m_pShout,
+                SHOUT_AI_BITRATE,
+                QByteArray::number(iBitrate).constData()) != SHOUTERR_SUCCESS) {
         errorDialog(tr("Error setting bitrate"), shout_get_error(m_pShout));
         return;
     }
@@ -472,7 +466,7 @@ void ShoutConnection::updateFromPreferences() {
     EncoderSettingsPointer pBroadcastSettings =
             std::make_shared<EncoderBroadcastSettings>(m_pProfile);
     m_encoder = EncoderFactory::getFactory().createEncoder(
-                    pBroadcastSettings, this);
+            pBroadcastSettings, this);
 
     QString userErrorMsg;
     int ret = -1;
@@ -532,7 +526,7 @@ bool ShoutConnection::processConnect() {
     m_iMetaDataLife = 31337;
     // clear metadata, to make sure the first track is not skipped
     // because it was sent via an previous connection (see metaDataHasChanged)
-    if(m_pMetaData) {
+    if (m_pMetaData) {
         m_pMetaData.reset();
     }
     // If static metadata is available, we only need to send metadata one time
@@ -547,9 +541,8 @@ bool ShoutConnection::processConnect() {
         }
 
         if ((m_iShoutStatus == SHOUTERR_BUSY) ||
-            (m_iShoutStatus == SHOUTERR_CONNECTED) ||
-            (m_iShoutStatus == SHOUTERR_SUCCESS))
-        {
+                (m_iShoutStatus == SHOUTERR_CONNECTED) ||
+                (m_iShoutStatus == SHOUTERR_SUCCESS)) {
             break;
         }
 
@@ -558,9 +551,9 @@ bool ShoutConnection::processConnect() {
         // SHOUTERR_NOLOGIN The server refused login
         // SHOUTERR_MALLOC There wasn't enough memory to complete the operation
         if (m_iShoutStatus == SHOUTERR_INSANE ||
-            m_iShoutStatus == SHOUTERR_UNSUPPORTED ||
-            m_iShoutStatus == SHOUTERR_NOLOGIN ||
-            m_iShoutStatus == SHOUTERR_MALLOC) {
+                m_iShoutStatus == SHOUTERR_UNSUPPORTED ||
+                m_iShoutStatus == SHOUTERR_NOLOGIN ||
+                m_iShoutStatus == SHOUTERR_MALLOC) {
             m_lastErrorStr = shout_get_error(m_pShout);
             qWarning() << "Streaming server made fatal error. Can't continue connecting:"
                        << m_lastErrorStr;
@@ -577,15 +570,15 @@ bool ShoutConnection::processConnect() {
 
     // If we don't have any fatal errors let's try to connect
     if ((m_iShoutStatus == SHOUTERR_BUSY ||
-             m_iShoutStatus == SHOUTERR_CONNECTED ||
-             m_iShoutStatus == SHOUTERR_SUCCESS) &&
-             m_iShoutFailures < kMaxShoutFailures) {
+                m_iShoutStatus == SHOUTERR_CONNECTED ||
+                m_iShoutStatus == SHOUTERR_SUCCESS) &&
+            m_iShoutFailures < kMaxShoutFailures) {
         m_iShoutFailures = 0;
         int timeout = 0;
         while (m_iShoutStatus == SHOUTERR_BUSY &&
                 timeout < kConnectRetries &&
                 m_pProfile->getEnabled()) {
-        	setState(NETWORKSTREAMWORKER_STATE_WAITING);
+            setState(NETWORKSTREAMWORKER_STATE_WAITING);
             kLogger.debug() << "Connection pending. Waiting...";
             m_iShoutStatus = shout_get_connected(m_pShout);
 
@@ -602,16 +595,16 @@ bool ShoutConnection::processConnect() {
                 m_enabledMutex.unlock();
             }
 
-            ++ timeout;
+            ++timeout;
         }
         if (m_iShoutStatus == SHOUTERR_CONNECTED) {
-        	setState(NETWORKSTREAMWORKER_STATE_READY);
+            setState(NETWORKSTREAMWORKER_STATE_READY);
             kLogger.debug() << "***********Connected to streaming server...";
 
             m_retryCount = 0;
 
-            if(m_pOutputFifo->readAvailable()) {
-            	m_pOutputFifo->flushReadData(m_pOutputFifo->readAvailable());
+            if (m_pOutputFifo->readAvailable()) {
+                m_pOutputFifo->flushReadData(m_pOutputFifo->readAvailable());
             }
             m_threadWaiting = true;
 
@@ -657,7 +650,7 @@ bool ShoutConnection::processDisconnect() {
     kLogger.debug() << "processDisconnect()";
     bool disconnected = false;
     if (isConnected()) {
-    	m_threadWaiting = false;
+        m_threadWaiting = false;
 
         // We are connected but broadcast is disabled. Disconnect.
         shout_close(m_pShout);
@@ -672,10 +665,12 @@ bool ShoutConnection::processDisconnect() {
     return disconnected;
 }
 
-void ShoutConnection::write(const unsigned char* header, const unsigned char* body,
-                            int headerLen, int bodyLen) {
+void ShoutConnection::write(const unsigned char* header,
+        const unsigned char* body,
+        int headerLen,
+        int bodyLen) {
     setFunctionCode(7);
-	if (!m_pShout || m_iShoutStatus != SHOUTERR_CONNECTED) {
+    if (!m_pShout || m_iShoutStatus != SHOUTERR_CONNECTED) {
         // This happens when the decoder calls flush() and the connection is
         // already down
         return;
@@ -683,12 +678,12 @@ void ShoutConnection::write(const unsigned char* header, const unsigned char* bo
 
     // Send header if there is one
     if (headerLen > 0) {
-        if(!writeSingle(header, headerLen)) {
+        if (!writeSingle(header, headerLen)) {
             return;
         }
     }
 
-    if(!writeSingle(body, bodyLen)) {
+    if (!writeSingle(body, bodyLen)) {
         return;
     }
 
@@ -795,7 +790,7 @@ bool ShoutConnection::metaDataHasChanged() {
     if (m_pMetaData) {
         if (!pTrack->getId().isValid() || !m_pMetaData->getId().isValid()) {
             if ((pTrack->getArtist() == m_pMetaData->getArtist()) &&
-                (pTrack->getTitle() == m_pMetaData->getArtist())) {
+                    (pTrack->getTitle() == m_pMetaData->getArtist())) {
                 return false;
             }
         } else if (pTrack->getId() == m_pMetaData->getId()) {
@@ -879,10 +874,9 @@ void ShoutConnection::updateMetaData() {
         // Otherwise we might use static metadata
         // If we use static metadata, we only need to call the following line once
         if (m_custom_metadata && !m_firstCall) {
-
             // see comment above...
             if (!m_format_is_mp3 && m_protocol_is_icecast2) {
-            	setFunctionCode(12);
+                setFunctionCode(12);
                 insertMetaData("artist", encodeString(m_customArtist).constData());
                 insertMetaData("title", encodeString(m_customTitle).constData());
             } else {
@@ -910,10 +904,11 @@ void ShoutConnection::errorDialog(const QString& text, const QString& detailedEr
     props->setType(DLG_WARNING);
     props->setTitle(tr("Connection error"));
     props->setText(tr("One of the Live Broadcasting connections raised this error:<br>"
-            "<b>Error with connection '%1':</b><br>")
-            .arg(profile()->getProfileName()) + text);
+                      "<b>Error with connection '%1':</b><br>")
+                           .arg(profile()->getProfileName()) +
+            text);
     props->setDetails(detailedError);
-    props->setKey(detailedError);   // To prevent multiple windows for the same error
+    props->setKey(detailedError); // To prevent multiple windows for the same error
     props->setDefaultButton(QMessageBox::Close);
     props->setModal(false);
     ErrorDialogHandler::instance()->requestErrorDialog(props);
@@ -925,7 +920,8 @@ void ShoutConnection::infoDialog(const QString& text, const QString& detailedInf
     props->setType(DLG_INFO);
     props->setTitle(tr("Connection message"));
     props->setText(tr("<b>Message from Live Broadcasting connection '%1':</b><br>")
-            .arg(profile()->getProfileName()) + text);
+                           .arg(profile()->getProfileName()) +
+            text);
     props->setDetails(detailedInfo);
     props->setKey(text + detailedInfo);
     props->setDefaultButton(QMessageBox::Close);
@@ -975,14 +971,14 @@ void ShoutConnection::tryReconnect() {
         QString errorText;
         if (m_retryCount > 0) {
             errorText = tr("Lost connection to streaming server and %1 attempts to reconnect have failed.")
-                    .arg(m_retryCount);
+                                .arg(m_retryCount);
         } else {
             errorText = tr("Lost connection to streaming server.");
         }
         errorDialog(errorText,
-                    originalErrorStr + "\n" +
-                    m_lastErrorStr + "\n" +
-                    tr("Please check your connection to the Internet."));
+                originalErrorStr + "\n" +
+                        m_lastErrorStr + "\n" +
+                        tr("Please check your connection to the Internet."));
     }
 }
 
@@ -999,7 +995,7 @@ QSharedPointer<FIFO<CSAMPLE>> ShoutConnection::getOutputFifo() {
 }
 
 bool ShoutConnection::threadWaiting() {
-    return atomicLoadRelaxed(m_threadWaiting);
+    return m_threadWaiting.loadRelaxed();
 }
 
 void ShoutConnection::run() {
@@ -1027,14 +1023,14 @@ void ShoutConnection::run() {
 
     setStatus(BroadcastProfile::STATUS_CONNECTED);
 
-    while(true) {
+    while (true) {
         // Stop the thread if broadcasting is turned off
         if (!m_pProfile->getEnabled() || !m_broadcastEnabled.toBool() ||
                 getStatus() == BroadcastProfile::STATUS_FAILURE ||
                 getStatus() == BroadcastProfile::STATUS_UNCONNECTED) {
             m_threadWaiting = false;
             kLogger.debug() << "run: Connection disabled or failed. Disconnecting";
-            if(processDisconnect()) {
+            if (processDisconnect()) {
                 setStatus(BroadcastProfile::STATUS_UNCONNECTED);
             }
             setFunctionCode(2);
@@ -1043,7 +1039,7 @@ void ShoutConnection::run() {
 
         setFunctionCode(1);
         incRunCount();
-        if(!m_readSema.tryAcquire(1, 1000)) {
+        if (!m_readSema.tryAcquire(1, 1000)) {
             continue;
         }
 
@@ -1056,8 +1052,8 @@ void ShoutConnection::run() {
             ring_buffer_size_t size2;
 
             // We use size1 and size2, so we can ignore the return value
-            (void)m_pOutputFifo->aquireReadRegions(readAvailable, &dataPtr1, &size1,
-                    &dataPtr2, &size2);
+            (void)m_pOutputFifo->aquireReadRegions(
+                    readAvailable, &dataPtr1, &size1, &dataPtr2, &size2);
 
             // Push frames to the encoder.
             process(dataPtr1, size1);

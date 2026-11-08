@@ -1,15 +1,21 @@
 #include "qml/qmlplayermanagerproxy.h"
 
+#include <QFileInfo>
 #include <QQmlEngine>
+#include <QRegularExpression>
 
 #include "library/library.h"
 #include "library/library_prefs.h"
+#include "library/samples/bundledsamples.h"
 #include "mixer/playermanager.h"
 #include "moc_qmlplayermanagerproxy.cpp"
 #include "qml/qmlconfigproxy.h"
 #include "qml/qmllibraryproxy.h"
 #include "qml/qmlplayerproxy.h"
 #include "sources/soundsourceproxy.h"
+#ifdef __ANDROID_USB_DRIVE__
+#include "library/usbdrive/androidusbdrive.h"
+#endif
 #include "track/track_decl.h"
 #include "util/fileinfo.h"
 #include "util/sandbox.h"
@@ -75,7 +81,15 @@ QmlPlayerProxy* QmlPlayerManagerProxy::getPlayer(const QString& group) {
 
 void QmlPlayerManagerProxy::loadLocationIntoNextAvailableDeck(
         const QString& trackLocation, bool play) {
+#ifdef __ANDROID_USB_DRIVE__
+    // Tracks of USB drives that Mixxx reads itself are copied first
+    // (from JaviLabarumDJ/mixxx-android android-stable).
+    mixxx::usbdrive::fetchTrack(trackLocation, this, [this, trackLocation, play]() {
+        m_pPlayerManager->slotLoadLocationIntoNextAvailableDeck(trackLocation, play);
+    });
+#else
     m_pPlayerManager->slotLoadLocationIntoNextAvailableDeck(trackLocation, play);
+#endif
 }
 
 void QmlPlayerManagerProxy::loadLocationUrlIntoNextAvailableDeck(
@@ -97,14 +111,48 @@ void QmlPlayerManagerProxy::loadLocationUrlToDeck(
                    << "is not a local file!";
         return;
     }
-    mixxx::FileInfo fileInfo(locationUrl.toLocalFile());
-    Sandbox::createSecurityToken(&fileInfo);
-    m_pPlayerManager->slotLoadToDeck(fileInfo.location(), deck);
+    const QString location = locationUrl.toLocalFile();
+    auto load = [this, location, deck]() {
+        mixxx::FileInfo fileInfo(location);
+        Sandbox::createSecurityToken(&fileInfo);
+        m_pPlayerManager->slotLoadToDeck(fileInfo.location(), deck);
+    };
+#ifdef __ANDROID_USB_DRIVE__
+    // Tracks of USB drives that Mixxx reads itself are copied first
+    // (from JaviLabarumDJ/mixxx-android android-stable).
+    mixxx::usbdrive::fetchTrack(location, this, load);
+#else
+    load();
+#endif
+}
+
+QVariantList QmlPlayerManagerProxy::bundledSamples() const {
+    QVariantList list;
+    const QStringList files = mixxx::samples::bundledSampleFiles(m_pPlayerManager->config());
+    for (const QString& path : files) {
+        QString name = QFileInfo(path).completeBaseName();
+        // "01_kick" -> "kick", "dj-scratch" -> "dj scratch"
+        static const QRegularExpression kNumberPrefix(QStringLiteral("^\\d+_"));
+        name.remove(kNumberPrefix);
+        name.replace(QLatin1Char('_'), QLatin1Char(' '));
+        name.replace(QLatin1Char('-'), QLatin1Char(' '));
+        list.append(QVariantMap{{QStringLiteral("name"), name},
+                {QStringLiteral("path"), path}});
+    }
+    return list;
 }
 
 void QmlPlayerManagerProxy::loadLocationToPlayer(
         const QString& location, const QString& group, bool play) {
+#ifdef __ANDROID_USB_DRIVE__
+    // Tracks of USB drives that Mixxx reads itself are copied first
+    // (from JaviLabarumDJ/mixxx-android android-stable).
+    mixxx::usbdrive::fetchTrack(location, this, [this, location, group, play]() {
+        m_pPlayerManager->slotLoadLocationToPlayer(location, group, play);
+    });
+#else
     m_pPlayerManager->slotLoadLocationToPlayer(location, group, play);
+#endif
 }
 
 void QmlPlayerManagerProxy::loadTrackToPlayer(TrackPointer track,

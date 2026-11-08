@@ -8,6 +8,7 @@ class QFileInfo;
 
 struct ProductInfo {
     QString friendlyName;
+    QString sinceVersion;
     QUrl visualUrl;
 
     QString protocol;

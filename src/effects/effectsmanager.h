@@ -3,6 +3,7 @@
 #include <QHash>
 #include <QList>
 #include <QSet>
+#include <memory>
 
 #include "control/controlpotmeter.h"
 #include "effects/backends/effectsbackendmanager.h"
@@ -10,6 +11,8 @@
 #include "engine/channelhandle.h"
 #include "preferences/usersettings.h"
 #include "util/class.h"
+
+class PadFxController;
 
 class EngineEffectsManager;
 
@@ -65,6 +68,10 @@ class EffectsManager {
         return m_pBackendManager;
     }
 
+    PadFxController* padFx() const {
+        return m_pPadFx.get();
+    }
+
     const VisibleEffectsListPointer getVisibleEffectsList() const {
         return m_pVisibleEffectsList;
     }
@@ -81,6 +88,10 @@ class EffectsManager {
 
     bool isAdoptMetaknobSettingEnabled() const;
 
+    // Called on shutdown, and on Android also when the app goes to the
+    // background (from JaviLabarumDJ/mixxx-android, where it is public).
+    void saveEffectsXml();
+
   private:
     void addStandardEffectChains();
     void addOutputEffectChain();
@@ -91,11 +102,11 @@ class EffectsManager {
     void readEffectsXml();
     void readEffectsXmlSingleDeck(const QString& deckGroup);
     void readEffectsXmlSingleDeckStem(const QString& deckStemGroup);
-    void saveEffectsXml();
 
     QSet<ChannelHandleAndGroup> m_registeredInputChannels;
     QSet<ChannelHandleAndGroup> m_registeredOutputChannels;
     UserSettingsPointer m_pConfig;
+    std::unique_ptr<PadFxController> m_pPadFx;
     QHash<QString, EffectChainPointer> m_effectChainSlotsByGroup;
 
     QList<StandardEffectChainPointer> m_standardEffectChains;

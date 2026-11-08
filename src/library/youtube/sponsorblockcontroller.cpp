@@ -6,7 +6,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
+#include <algorithm>
 
+#include "control/controlobject.h"
 #include "mixer/playerinfo.h"
 #include "track/track.h"
 #include "util/logger.h"
@@ -20,6 +23,29 @@ constexpr int kMaxDecks = 8;
 
 QString sidecarPathFor(const QString& cacheDir, const QString& videoId) {
     return QDir(cacheDir).filePath(videoId + QStringLiteral(".sponsorblock.json"));
+}
+
+// Titles of music videos, which may carry a non-music lead-in, as opposed
+// to audio uploads ("Official Audio", "Topic" channels) that start with the song.
+bool isMusicVideoTitle(const QString& title) {
+    static const QRegularExpression kMusicVideo(
+            QStringLiteral("official\\s+(music\\s+)?video|music\\s+video|"
+                           "video\\s*clip|video\\s+oficial|clip\\s+officiel|"
+                           "\\bm/?v\\b"),
+            QRegularExpression::CaseInsensitiveOption);
+    return kMusicVideo.match(title).hasMatch();
+}
+
+// Raw YouTube title written by YouTubeFeature at download time.
+QString rawVideoTitle(const QString& cacheDir, const QString& videoId) {
+    QFile file(QDir(cacheDir).filePath(videoId + QStringLiteral(".meta.json")));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return QJsonDocument::fromJson(file.readAll())
+            .object()
+            .value(QStringLiteral("title"))
+            .toString();
 }
 
 QString deriveVideoIdFromTrackPath(
@@ -39,9 +65,10 @@ QString deriveVideoIdFromTrackPath(
 } // namespace
 
 SponsorBlockController::SponsorBlockController(
-        const QString& cacheDir, QObject* parent)
+        const QString& cacheDir, bool autoSkipEnabled, QObject* parent)
         : QObject(parent),
           m_cacheDir(cacheDir),
+          m_autoSkipEnabled(autoSkipEnabled),
           m_service(this) {
     connect(&m_service,
             &YouTubeService::sponsorSegmentsFetched,
@@ -78,6 +105,11 @@ void SponsorBlockController::clearDeck(const QString& group) {
     it->videoId.clear();
     it->segments.clear();
     it->durationSec = 0.0;
+    it->pTrack.reset();
+    it->leadSilenceSkipped = false;
+    it->segmentsKnown = false;
+    it->sponsorBlockCovered = false;
+    it->isMusicVideo = false;
 }
 
 void SponsorBlockController::onTrackChanged(
@@ -106,6 +138,8 @@ void SponsorBlockController::onTrackChanged(
     auto it = m_decks.find(group);
     it->videoId = videoId;
     it->durationSec = pNewTrack->getDuration();
+    it->pTrack = pNewTrack;
+    it->isMusicVideo = isMusicVideoTitle(rawVideoTitle(m_cacheDir, videoId));
 
     if (!tryLoadSegmentsFromSidecar(group, videoId)) {
         // Fall back to the network. The reply is correlated by videoId, and
@@ -122,6 +156,16 @@ bool SponsorBlockController::tryLoadSegmentsFromSidecar(
     }
     const QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
     f.close();
+    if (doc.isObject() && doc.object().value(QStringLiteral("cut")).toInt() > 0) {
+        // Segments were cut from the file at download: nothing to skip,
+        // and no analysis skip either (SponsorBlock is preferred)
+        auto it = m_decks.find(group);
+        if (it != m_decks.end()) {
+            it->segmentsKnown = true;
+            it->sponsorBlockCovered = true;
+        }
+        return true;
+    }
     if (!doc.isArray()) {
         return false;
     }
@@ -140,6 +184,8 @@ bool SponsorBlockController::tryLoadSegmentsFromSidecar(
     auto it = m_decks.find(group);
     if (it != m_decks.end()) {
         it->segments = segments;
+        it->segmentsKnown = true;
+        it->sponsorBlockCovered = !segments.isEmpty();
     }
     if (!segments.isEmpty()) {
         kLogger.info() << "Loaded" << segments.size()
@@ -173,32 +219,125 @@ void SponsorBlockController::onSponsorSegmentsFetched(
     for (auto it = m_decks.begin(); it != m_decks.end(); ++it) {
         if (it->videoId == videoId) {
             it->segments = segments;
+            it->segmentsKnown = true;
+            it->sponsorBlockCovered = !segments.isEmpty();
             kLogger.info() << "Applied" << segments.size()
                            << "SponsorBlock segments to" << it.key();
         }
     }
 }
 
+double SponsorBlockController::musicVideoLeadInEndSec(
+        const DeckState& state, const TrackPointer& pTrack) const {
+    constexpr double kMinLeadInSec = 8.0;
+    constexpr double kMaxLeadInSec = 120.0;
+    if (!pTrack || !state.isMusicVideo || !state.segmentsKnown || !state.segments.isEmpty()) {
+        return -1.0;
+    }
+    const CuePointer pIntro = pTrack->findCueByType(mixxx::CueType::Intro);
+    const auto sampleRate = pTrack->getSampleRate();
+    if (!pIntro || !sampleRate.isValid()) {
+        return -1.0;
+    }
+    const auto introEnd = pIntro->getEndPosition();
+    if (!introEnd.isValid()) {
+        return -1.0;
+    }
+    const double introEndSec = introEnd.value() / sampleRate.value();
+    if (introEndSec < kMinLeadInSec || introEndSec > kMaxLeadInSec) {
+        return -1.0;
+    }
+    return introEndSec;
+}
+
 void SponsorBlockController::onPlayPositionChanged(
         const QString& group, double pos) {
+    if (!m_autoSkipEnabled) {
+        return;
+    }
     auto it = m_decks.find(group);
-    if (it == m_decks.end() || it->segments.isEmpty() || it->durationSec <= 0.0) {
+    if (it == m_decks.end() || it->videoId.isEmpty() || it->durationSec <= 0.0) {
+        return;
+    }
+    // Only a playing deck skips: seeking around a paused deck (cueing, setting
+    // loops) must not be fought.
+    if (ControlObject::get(ConfigKey(group, QStringLiteral("play"))) <= 0.0) {
         return;
     }
     const double currentSec = pos * it->durationSec;
+    // Skip whenever the playhead is INSIDE a segment, not only when it crosses
+    // the start: the segments arrive over the network a moment after the load
+    // and the intro (a segment from 0:00) is already playing by then, and a
+    // seek or a coarse position update can jump straight past a start edge.
+    double skipTo = -1.0;
     for (const auto& seg : std::as_const(it->segments)) {
-        // Use a tight window so we only trigger once per crossing rather than
-        // continuously re-seeking inside the segment.
-        constexpr double kTriggerWindow = 0.5; // seconds
-        if (currentSec >= seg.start && currentSec < seg.start + kTriggerWindow) {
-            const double newPos = qBound(0.0, seg.end / it->durationSec, 1.0);
-            kLogger.info() << "[" << group << "] Skipping" << seg.category
-                           << "segment" << seg.start << "→" << seg.end;
-            // set() is async-safe; the engine will pick it up on the next pass.
-            it->pPlayPosition->set(newPos);
-            return;
+        if (seg.end > seg.start && currentSec >= seg.start && currentSec < seg.end) {
+            skipTo = std::max(skipTo, seg.end);
         }
     }
+    // A video SponsorBlock knows is skipped by its segments only. Until its
+    // reply is in (normally well under a second), the analysis skip waits
+    // for the first seconds, so it doesn't jump ahead of SponsorBlock.
+    constexpr double kWaitForSponsorBlockSec = 5.0;
+    const bool analysisSkipAllowed = !it->sponsorBlockCovered &&
+            (it->segmentsKnown || currentSec >= kWaitForSponsorBlockSec);
+    if (skipTo < 0.0 && analysisSkipAllowed) {
+        // No SponsorBlock data covers this spot (the database has nothing for
+        // most music videos). Fall back to the analyzer's audible range:
+        // skip the silence/talk-free lead-in before the music starts and the
+        // silent tail after it ends. The range only exists once the analyzer
+        // has run, which can be a few seconds after the track starts.
+        const TrackPointer pTrack = it->pTrack.lock();
+        const CuePointer pSound = pTrack
+                ? pTrack->findCueByType(mixxx::CueType::N60dBSound)
+                : CuePointer();
+        const auto sampleRate = pTrack ? pTrack->getSampleRate() : mixxx::audio::SampleRate();
+        if (pSound && sampleRate.isValid() && pSound->getPosition().isValid()) {
+            constexpr double kMinSilenceSec = 1.0;
+            const double soundStartSec =
+                    pSound->getPosition().value() / sampleRate.value();
+            if (!it->leadSilenceSkipped) {
+                double leadInEndSec = soundStartSec >= kMinSilenceSec ? soundStartSec : -1.0;
+                // Music videos often open with a skit, talking or ambience
+                // that SponsorBlock has no entry for. The energy analyzer's
+                // Intro End marker is where the bass and the level of the
+                // song come in; before it, there is no music to mix.
+                const double introEndSec = musicVideoLeadInEndSec(*it, pTrack);
+                if (introEndSec > leadInEndSec) {
+                    leadInEndSec = introEndSec;
+                }
+                if (leadInEndSec > 0.0 && currentSec < leadInEndSec - 0.25) {
+                    skipTo = leadInEndSec;
+                }
+                // Decided for this load once skipped, or once the music plays
+                // past the lead-in (the user may seek back into it on
+                // purpose). The analysis and SponsorBlock reply can land a
+                // few seconds after the start, so an unknown lead-in stays open.
+                constexpr double kLeadInDecidedSec = 120.0;
+                if (skipTo >= 0.0 || (leadInEndSec > 0.0 && currentSec >= leadInEndSec) ||
+                        currentSec > kLeadInDecidedSec) {
+                    it->leadSilenceSkipped = true;
+                }
+            }
+            const auto endPos = pSound->getEndPosition();
+            if (skipTo < 0.0 && endPos.isValid()) {
+                const double soundEndSec = endPos.value() / sampleRate.value();
+                if (it->durationSec - soundEndSec >= kMinSilenceSec &&
+                        currentSec > soundEndSec + 0.25 &&
+                        currentSec < it->durationSec - 0.5) {
+                    skipTo = it->durationSec;
+                }
+            }
+        }
+    }
+    if (skipTo < 0.0) {
+        return;
+    }
+    const double newPos = qBound(0.0, skipTo / it->durationSec, 1.0);
+    kLogger.info() << "[" << group << "] Skipping non-music segment"
+                   << currentSec << "→" << skipTo;
+    // set() is async-safe; the engine will pick it up on the next pass.
+    it->pPlayPosition->set(newPos);
 }
 
 } // namespace mixxx

@@ -134,6 +134,25 @@ PioneerDDJ400.beatjumpSizeForPad = {
 
 PioneerDDJ400.quickJumpSize = 32;
 
+// Mixxx Android: rekordbox behaviour (mapping settings, see
+// Pioneer-DDJ-400.midi.xml), as in the DDJ-FLX4 mapping. The defaults keep
+// the behaviour of this mapping.
+PioneerDDJ400.option = function(name) {
+    return engine.getSetting(name);
+};
+
+// Memory cues of CUE/LOOP CALL use the hot cues beyond the 8 pads
+PioneerDDJ400.firstMemoryCue = 9;
+PioneerDDJ400.lastMemoryCue = 36;
+PioneerDDJ400.calledMemoryCue = {"[Channel1]": 0, "[Channel2]": 0};
+
+// BEAT SYNC: whether the press became a long press (rekordbox mode)
+PioneerDDJ400.syncLongPress = {"[Channel1]": false, "[Channel2]": false};
+
+// LOAD: time of the last press, for Instant Doubles
+PioneerDDJ400.lastLoadPress = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJ400.instantDoublesTime = 400;
+
 // Used for tempo slider
 PioneerDDJ400.highResMSB = {
     "[Channel1]": {},
@@ -158,6 +177,11 @@ PioneerDDJ400.toggleLight = function(midiIn, active) {
 
 PioneerDDJ400.init = function() {
     engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
+    // focused_effect is 0 (no focus) on a fresh install, so BEAT FX would
+    // address a non-existing effect slot until BEAT LEFT/RIGHT is pressed
+    if (engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect") < 1) {
+        engine.setValue("[EffectRack1_EffectUnit1]", "focused_effect", 1);
+    }
 
     engine.makeUnbufferedConnection("[Channel1]", "vu_meter", PioneerDDJ400.vuMeterUpdate);
     engine.makeUnbufferedConnection("[Channel2]", "vu_meter", PioneerDDJ400.vuMeterUpdate);
@@ -197,6 +221,8 @@ PioneerDDJ400.init = function() {
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect" + i +"]", "enabled", PioneerDDJ400.toggleFxLight);
     }
     engine.makeConnection("[EffectRack1_EffectUnit1]", "focused_effect", PioneerDDJ400.toggleFxLight);
+    // Show the state of effects restored from the previous session
+    PioneerDDJ400.toggleFxLight();
 
     // query the controller for current control positions on startup
     midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x02, 0x06, 0x00, 0x03, 0x01, 0xf7], 12);
@@ -232,12 +258,17 @@ PioneerDDJ400.toggleFxLight = function(_value, _group, _control) {
 };
 
 PioneerDDJ400.focusedFxGroup = function() {
-    const focusedFx = engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect");
+    // The skin can remove the focus (0); fall back to the first slot
+    const focusedFx = Math.min(3, Math.max(1,
+        engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect")));
     return "[EffectRack1_EffectUnit1_Effect" + focusedFx + "]";
 };
 
+// LEVEL/DEPTH changes the dry/wet of the unit and, with SHIFT, the amount
+// of the selected effect, or the other way round (mapping setting)
 PioneerDDJ400.beatFxLevelDepthRotate = function(_channel, _control, value) {
-    if (PioneerDDJ400.shiftButtonDown[0] || PioneerDDJ400.shiftButtonDown[1]) {
+    const shifted = PioneerDDJ400.shiftButtonDown[0] || PioneerDDJ400.shiftButtonDown[1];
+    if (shifted !== (PioneerDDJ400.option("levelDepthMode") === "meta")) {
         engine.softTakeoverIgnoreNextValue("[EffectRack1_EffectUnit1]", "mix");
         engine.setParameter(PioneerDDJ400.focusedFxGroup(), "meta", value / 0x7F);
     } else {
@@ -405,17 +436,117 @@ PioneerDDJ400.loopToggle = function(value, group, control) {
     }
 };
 
+// IN and OUT: in rekordbox mode, pressed during a loop they adjust its in or
+// out point with the jog wheel, like SHIFT + IN/OUT
+// Whether the last press of IN/OUT adjusts the loop (rekordbox mode with a
+// loop on), by deck and button. The release must go the same way as the
+// press: the press may have turned a loop on, and a loop_in/loop_out press
+// that is never released leaves the engine adjusting the loop.
+PioneerDDJ400.loopButtonAdjusts = {};
+
+PioneerDDJ400.loopButtonPressed = function(key, toggleAdjust, channel, control, value, status, group) {
+    const id = `${group}${key}`;
+    if (value) {
+        PioneerDDJ400.loopButtonAdjusts[id] =
+                PioneerDDJ400.option("loopButtonsMode") === "rekordbox" &&
+                engine.getValue(group, "loop_enabled") > 0;
+    }
+    if (PioneerDDJ400.loopButtonAdjusts[id]) {
+        toggleAdjust(channel, control, value, status, group);
+        return;
+    }
+    engine.setValue(group, key, value ? 1 : 0);
+};
+
+PioneerDDJ400.loopInPressed = function(channel, control, value, status, group) {
+    PioneerDDJ400.loopButtonPressed("loop_in", PioneerDDJ400.toggleLoopAdjustIn,
+        channel, control, value, status, group);
+};
+
+PioneerDDJ400.loopOutPressed = function(channel, control, value, status, group) {
+    PioneerDDJ400.loopButtonPressed("loop_out", PioneerDDJ400.toggleLoopAdjustOut,
+        channel, control, value, status, group);
+};
+
+// 4 BEAT/EXIT: exits a playing loop; otherwise turns the last loop on again
+// (Mixxx) or starts a loop of 4 beats (rekordbox)
+PioneerDDJ400.fourBeatExitPressed = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJ400.option("loopButtonsMode") !== "rekordbox" || engine.getValue(group, "loop_enabled")) {
+        engine.setValue(group, "reloop_toggle", value ? 1 : 0);
+        return;
+    }
+    if (value) {
+        script.triggerControl(group, "beatloop_4_activate");
+    }
+};
+
 //
 // CUE/LOOP CALL
 //
 
+// rekordbox mode: memory cues are the hot cues 9-36. Calls the memory cue
+// before (direction < 0) or after the play position.
+PioneerDDJ400.callMemoryCue = function(group, direction) {
+    const position = engine.getValue(group, "playposition") * engine.getValue(group, "track_samples");
+    // At a cue, ◀ calls the one before it
+    const tolerance = engine.getValue(group, "track_samplerate") * 2 * 0.05;
+    let best = 0;
+    let bestPosition = 0;
+    for (let n = PioneerDDJ400.firstMemoryCue; n <= PioneerDDJ400.lastMemoryCue; n++) {
+        if (engine.getValue(group, `hotcue_${n}_status`) <= 0) {
+            continue;
+        }
+        const cuePosition = engine.getValue(group, `hotcue_${n}_position`);
+        if (direction < 0 && cuePosition < position - tolerance && (best === 0 || cuePosition > bestPosition)) {
+            best = n;
+            bestPosition = cuePosition;
+        } else if (direction > 0 && cuePosition > position + tolerance && (best === 0 || cuePosition < bestPosition)) {
+            best = n;
+            bestPosition = cuePosition;
+        }
+    }
+    if (best > 0) {
+        script.triggerControl(group, `hotcue_${best}_goto`);
+        PioneerDDJ400.calledMemoryCue[group] = best;
+    }
+};
+
+// rekordbox mode: SHIFT + ▶ saves a memory cue (or the playing loop) in the
+// first free hot cue from 9 on
+PioneerDDJ400.saveMemoryCue = function(group) {
+    for (let n = PioneerDDJ400.firstMemoryCue; n <= PioneerDDJ400.lastMemoryCue; n++) {
+        if (engine.getValue(group, `hotcue_${n}_status`) <= 0) {
+            script.triggerControl(group, engine.getValue(group, "loop_enabled") ? `hotcue_${n}_setloop` : `hotcue_${n}_setcue`);
+            PioneerDDJ400.calledMemoryCue[group] = n;
+            return;
+        }
+    }
+};
+
+// rekordbox mode: SHIFT + ◀ deletes the memory cue called last
+PioneerDDJ400.deleteMemoryCue = function(group) {
+    const n = PioneerDDJ400.calledMemoryCue[group];
+    if (n > 0 && engine.getValue(group, `hotcue_${n}_status`) > 0) {
+        script.triggerControl(group, `hotcue_${n}_clear`);
+    }
+    PioneerDDJ400.calledMemoryCue[group] = 0;
+};
+
 PioneerDDJ400.cueLoopCallLeft = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("cueLoopCallMode") === "rekordbox" && !engine.getValue(group, "loop_enabled")) {
+        PioneerDDJ400.callMemoryCue(group, -1);
+        return;
+    }
     if (value) {
         engine.setValue(group, "loop_scale", 0.5);
     }
 };
 
 PioneerDDJ400.cueLoopCallRight = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("cueLoopCallMode") === "rekordbox" && !engine.getValue(group, "loop_enabled")) {
+        PioneerDDJ400.callMemoryCue(group, 1);
+        return;
+    }
     if (value) {
         engine.setValue(group, "loop_scale", 2.0);
     }
@@ -429,6 +560,15 @@ PioneerDDJ400.cueLoopCallRight = function(_channel, _control, value, _status, gr
 //
 
 PioneerDDJ400.syncPressed = function(channel, control, value, status, group) {
+    // rekordbox mode: acts on release, unless the press became a long press
+    if (PioneerDDJ400.option("syncMode") === "rekordbox") {
+        if (value) {
+            PioneerDDJ400.syncLongPress[group] = false;
+        } else if (!PioneerDDJ400.syncLongPress[group]) {
+            script.toggleControl(group, "sync_enabled");
+        }
+        return;
+    }
     if (engine.getValue(group, "sync_enabled") && value > 0) {
         engine.setValue(group, "sync_enabled", 0);
     } else {
@@ -437,6 +577,14 @@ PioneerDDJ400.syncPressed = function(channel, control, value, status, group) {
 };
 
 PioneerDDJ400.syncLongPressed = function(channel, control, value, status, group) {
+    // rekordbox mode: a long press makes the deck the master (sync leader)
+    if (PioneerDDJ400.option("syncMode") === "rekordbox") {
+        if (value) {
+            PioneerDDJ400.syncLongPress[group] = true;
+            engine.setValue(group, "sync_leader", 1);
+        }
+        return;
+    }
     if (value) {
         engine.setValue(group, "sync_enabled", 1);
     }
@@ -455,6 +603,17 @@ PioneerDDJ400.cycleTempoRange = function(_channel, _control, value, _status, gro
         }
     }
     engine.setValue(group, "rateRange", this.tempoRanges[idx]);
+};
+
+// SHIFT + BEAT SYNC: the tempo range like rekordbox, or key lock (MASTER
+// TEMPO) like the DDJ-FLX4 mapping
+PioneerDDJ400.shiftSyncPressed = function(channel, control, value, status, group) {
+    if (PioneerDDJ400.option("shiftSyncMode") !== "keylock") {
+        PioneerDDJ400.cycleTempoRange(channel, control, value, status, group);
+        return;
+    }
+    if (value === 0) { return; } // ignore release
+    script.toggleControl(group, "keylock");
 };
 
 //
@@ -645,21 +804,67 @@ PioneerDDJ400.stopSamplerBlink = function(channel, control) {
 //
 
 PioneerDDJ400.toggleQuantize = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJ400.option("shiftHeadphoneCue") === "tap") {
+        engine.setValue(group, "bpm_tap", value ? 1 : 0);
+        return;
+    }
     if (value) {
         script.toggleControl(group, "quantize");
     }
 };
 
 PioneerDDJ400.quickJumpForward = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("cueLoopCallMode") === "rekordbox") {
+        PioneerDDJ400.saveMemoryCue(group);
+        return;
+    }
     if (value) {
         engine.setValue(group, "beatjump", PioneerDDJ400.quickJumpSize);
     }
 };
 
 PioneerDDJ400.quickJumpBack = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("cueLoopCallMode") === "rekordbox") {
+        PioneerDDJ400.deleteMemoryCue(group);
+        return;
+    }
     if (value) {
         engine.setValue(group, "beatjump", -PioneerDDJ400.quickJumpSize);
     }
+};
+
+//
+// Fader Start (SHIFT + channel fader or crossfader)
+//
+
+PioneerDDJ400.faderStartPlay = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("faderStart")) {
+        engine.setValue(group, "play", 1);
+    }
+};
+
+PioneerDDJ400.faderStartCue = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("faderStart")) {
+        script.triggerControl(group, "cue_gotoandstop");
+    }
+};
+
+//
+// LOAD, with Instant Doubles: pressed twice, loads the other deck's track
+// at the same position
+//
+
+PioneerDDJ400.loadPressed = function(_channel, _control, value, _status, group) {
+    if (value && PioneerDDJ400.option("instantDoubles")) {
+        const now = Date.now();
+        if (now - PioneerDDJ400.lastLoadPress[group] < PioneerDDJ400.instantDoublesTime) {
+            PioneerDDJ400.lastLoadPress[group] = 0;
+            engine.setValue(group, "CloneFromDeck", group === "[Channel1]" ? 2 : 1);
+            return;
+        }
+        PioneerDDJ400.lastLoadPress[group] = now;
+    }
+    engine.setValue(group, "LoadSelectedTrack", value ? 1 : 0);
 };
 
 //

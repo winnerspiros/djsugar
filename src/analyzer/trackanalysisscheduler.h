@@ -53,6 +53,12 @@ class TrackAnalysisScheduler : public QObject {
     bool scheduleTrack(AnalyzerScheduledTrack track);
     int scheduleTracks(const QList<AnalyzerScheduledTrack>& tracks);
 
+  public:
+    /// Submitted to a worker and not finished yet
+    bool isTrackPending(TrackId trackId) const {
+        return m_pendingTrackIds.count(trackId) > 0;
+    }
+
   public slots:
     void suspend();
 

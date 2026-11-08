@@ -1,6 +1,7 @@
 #include "library/analysis/analysisfeature.h"
 
 #include <QList>
+#include <QSet>
 #include <QtDebug>
 
 #include "analyzer/analyzerscheduledtrack.h"
@@ -8,10 +9,13 @@
 #include "library/analysis/dlganalysis.h"
 #include "library/library.h"
 #include "library/trackcollectionmanager.h"
+#include "mixer/playerinfo.h"
 #include "moc_analysisfeature.cpp"
 #include "sources/soundsourceproxy.h"
+#include "track/track.h"
 #include "util/dnd.h"
 #include "util/logger.h"
+#include "util/math.h"
 #include "widget/wlibrary.h"
 
 namespace {
@@ -20,16 +24,20 @@ const mixxx::Logger kLogger("AnalysisFeature");
 
 const QString kViewName = QStringLiteral("Analysis");
 
+#ifdef Q_OS_ANDROID
+// Phones have few big cores: a full set of batch workers starves the audio
+// and UI threads (audible as crackle). Keep cores free for playback.
+const int kNumberOfAnalyzerThreads = math_max(1, math_min(3, QThread::idealThreadCount() / 2));
+#else
 // Utilize all available cores for batch analysis of tracks
 const int kNumberOfAnalyzerThreads = math_max(1, QThread::idealThreadCount());
+#endif
 
-inline
-int numberOfAnalyzerThreads() {
+inline int numberOfAnalyzerThreads() {
     return kNumberOfAnalyzerThreads;
 }
 
-inline
-AnalyzerModeFlags getAnalyzerModeFlags(
+inline AnalyzerModeFlags getAnalyzerModeFlags(
         const UserSettingsPointer& pConfig) {
     // Always enable at least BPM detection for batch analysis, even if disabled
     // in the config for ad-hoc analysis of tracks.
@@ -76,10 +84,10 @@ void AnalysisFeature::setTitleProgress(int currentTrackNumber, int totalTracksCo
 }
 
 void AnalysisFeature::bindLibraryWidget(WLibrary* libraryWidget,
-                                 KeyboardEventFilter* keyboard) {
+        KeyboardEventFilter* keyboard) {
     m_pAnalysisView = new DlgAnalysis(libraryWidget,
-                                      m_pConfig,
-                                      m_pLibrary);
+            m_pConfig,
+            m_pLibrary);
     connect(m_pAnalysisView,
             &DlgAnalysis::loadTrack,
             this,
@@ -132,7 +140,7 @@ void AnalysisFeature::refreshLibraryModels() {
 }
 
 void AnalysisFeature::activate() {
-    //qDebug() << "AnalysisFeature::activate()";
+    // qDebug() << "AnalysisFeature::activate()";
     emit switchToView(kViewName);
     if (m_pAnalysisView) {
         emit restoreSearch(m_pAnalysisView->currentSearch());
@@ -147,18 +155,23 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
                 << "Starting analysis using"
                 << numAnalyzerThreads
                 << "analyzer threads";
+        const AnalyzerModeFlags modeFlags = getAnalyzerModeFlags(m_pConfig);
+        m_analysisWithWaveform = modeFlags & AnalyzerModeFlags::WithWaveform;
         m_pTrackAnalysisScheduler = m_pLibrary->createTrackAnalysisScheduler(
                 numAnalyzerThreads,
-                getAnalyzerModeFlags(m_pConfig));
+                modeFlags);
 
-        connect(m_pTrackAnalysisScheduler.get(),
-                &TrackAnalysisScheduler::progress,
-                m_pAnalysisView,
-                &DlgAnalysis::onTrackAnalysisSchedulerProgress);
-        connect(m_pTrackAnalysisScheduler.get(),
-                &TrackAnalysisScheduler::finished,
-                m_pAnalysisView,
-                &DlgAnalysis::onTrackAnalysisSchedulerFinished);
+        // The QML UI has no analysis view (it is a widget skin dialog)
+        if (m_pAnalysisView) {
+            connect(m_pTrackAnalysisScheduler.get(),
+                    &TrackAnalysisScheduler::progress,
+                    m_pAnalysisView,
+                    &DlgAnalysis::onTrackAnalysisSchedulerProgress);
+            connect(m_pTrackAnalysisScheduler.get(),
+                    &TrackAnalysisScheduler::finished,
+                    m_pAnalysisView,
+                    &DlgAnalysis::onTrackAnalysisSchedulerFinished);
+        }
         connect(m_pTrackAnalysisScheduler.get(),
                 &TrackAnalysisScheduler::progress,
                 this,
@@ -179,15 +192,50 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
         emit analysisActive(true);
     }
 
-    if (m_pTrackAnalysisScheduler->scheduleTracks(tracks) > 0) {
+    // A track on a deck is analyzed by the deck's own analyzer when it is
+    // loaded. Scheduling it here as well ran the same 5 s analysis twice at
+    // once on the phone (seen in the logs for every YouTube load). Explicit
+    // re-analysis requests (with options) still go through.
+    QSet<TrackId> loadedTrackIds;
+    const auto loadedTracks = PlayerInfo::instance().getLoadedTracks();
+    for (const TrackPointer& pTrack : loadedTracks) {
+        if (pTrack) {
+            loadedTrackIds.insert(pTrack->getId());
+        }
+    }
+    QList<AnalyzerScheduledTrack> toSchedule;
+    toSchedule.reserve(tracks.size());
+    for (const auto& track : tracks) {
+        const auto& options = track.getOptions();
+        if (loadedTrackIds.contains(track.getTrackId()) && !options.useFixedTempo &&
+                !options.redoBeats) {
+            continue;
+        }
+        toSchedule.append(track);
+    }
+    if (toSchedule.isEmpty()) {
+        return;
+    }
+    if (m_pTrackAnalysisScheduler->scheduleTracks(toSchedule) > 0) {
         resumeAnalysis();
     }
+}
+
+bool AnalysisFeature::isAnalyzingTrackWithWaveform(TrackId trackId) const {
+    return m_pTrackAnalysisScheduler && m_analysisWithWaveform &&
+            m_pTrackAnalysisScheduler->isTrackPending(trackId);
 }
 
 void AnalysisFeature::suspendAnalysis() {
     if (!m_pTrackAnalysisScheduler) {
         return; // inactive
     }
+    // Called on every progress step of a deck's analysis: logged and
+    // forwarded once per suspension (it filled the log with ~40 lines a track)
+    if (m_analysisSuspended) {
+        return;
+    }
+    m_analysisSuspended = true;
     kLogger.info() << "Suspending analysis";
     m_pTrackAnalysisScheduler->suspend();
 }
@@ -196,6 +244,7 @@ void AnalysisFeature::resumeAnalysis() {
     if (!m_pTrackAnalysisScheduler) {
         return; // inactive
     }
+    m_analysisSuspended = false;
     kLogger.info() << "Resuming analysis";
     m_pTrackAnalysisScheduler->resume();
 }

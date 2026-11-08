@@ -25,11 +25,7 @@ DlgPrefReplayGain::DlgPrefReplayGain(QWidget* parent, UserSettingsPointer pConfi
     connect(EnableGain, &QCheckBox::stateChanged, this, &DlgPrefReplayGain::slotSetRGEnabled);
 #endif
     connect(buttonGroupAnalyzer,
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
             &QButtonGroup::idClicked,
-#else
-            QOverload<int>::of(&QButtonGroup::buttonClicked),
-#endif
             this,
             &DlgPrefReplayGain::slotSetRGAnalyzerChanged);
     connect(SliderReplayGainBoost,
@@ -115,7 +111,6 @@ void DlgPrefReplayGain::slotResetToDefaults() {
     SliderDefaultBoost->setValue(iDefaultBoost);
     LabelCurrentDefaultBoost->setText(
             QString("%1 dB").arg(iDefaultBoost));
-
 
     slotUpdate();
     slotApply();
