@@ -20,6 +20,7 @@
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QSet>
 #include <QSettings>
 #include <QStandardPaths>
@@ -35,6 +36,7 @@
 #include <atomic>
 #include <cmath>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
@@ -3368,7 +3370,10 @@ QMutex s_linkMutex;
 QHash<QString, StreamLink> s_streamLinks;
 constexpr qint64 kStreamLinkMaxAgeMs = 4 * 60 * 60 * 1000;
 
+void loadStreamLinksOnce();
+
 bool cachedStreamLink(const QString& videoId, StreamLink* pOut) {
+    loadStreamLinksOnce();
     QMutexLocker lock(&s_linkMutex);
     const auto it = s_streamLinks.constFind(videoId);
     if (it == s_streamLinks.constEnd() ||
@@ -3379,17 +3384,76 @@ bool cachedStreamLink(const QString& videoId, StreamLink* pOut) {
     return true;
 }
 
+// Links being extracted right now: a tap on one of them waits for that
+// extraction instead of starting a second one next to it
+QSet<QString> s_linksInFlight;
+QWaitCondition s_linkDone;
+
 void forgetStreamLink(const QString& videoId) {
     QMutexLocker lock(&s_linkMutex);
     s_streamLinks.remove(videoId);
 }
 
+QString streamLinkCacheFile() {
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+            .filePath(QStringLiteral("yt-stream-links.json"));
+}
+
+// The links survive a restart of the app (they stay valid for hours), so
+// the results of the last search load at once after it. Called with
+// s_linkMutex held.
+void saveStreamLinksLocked() {
+    QJsonObject root;
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    for (auto it = s_streamLinks.constBegin(); it != s_streamLinks.constEnd(); ++it) {
+        if (nowMs - it->atMs > kStreamLinkMaxAgeMs) {
+            continue;
+        }
+        root.insert(it.key(),
+                QJsonObject{{QStringLiteral("url"), it->url},
+                        {QStringLiteral("size"), it->size},
+                        {QStringLiteral("ext"), it->ext},
+                        {QStringLiteral("ua"), it->userAgent},
+                        {QStringLiteral("at"), it->atMs}});
+    }
+    QSaveFile file(streamLinkCacheFile());
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(QJsonDocument(root).toJson(QJsonDocument::Compact));
+        file.commit();
+    }
+}
+
+void loadStreamLinksOnce() {
+    static std::once_flag s_loaded;
+    std::call_once(s_loaded, [] {
+        QFile file(streamLinkCacheFile());
+        if (!file.open(QIODevice::ReadOnly)) {
+            return;
+        }
+        const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+        QMutexLocker lock(&s_linkMutex);
+        for (auto it = root.constBegin(); it != root.constEnd(); ++it) {
+            const QJsonObject o = it.value().toObject();
+            StreamLink link;
+            link.url = o.value(QStringLiteral("url")).toString();
+            link.size = static_cast<qint64>(o.value(QStringLiteral("size")).toDouble());
+            link.ext = o.value(QStringLiteral("ext")).toString();
+            link.userAgent = o.value(QStringLiteral("ua")).toString();
+            link.atMs = static_cast<qint64>(o.value(QStringLiteral("at")).toDouble());
+            if (nowMs - link.atMs <= kStreamLinkMaxAgeMs && !s_streamLinks.contains(it.key())) {
+                s_streamLinks.insert(it.key(), link);
+            }
+        }
+    });
+}
+
 // Asks the bundled yt-dlp for the audio stream URL only (--print, nothing
-// downloaded). It goes straight to the visionos player API: no watch page
-// (about 1 MB of HTML to parse), no player configs and no player JS, which
-// on a phone's Python was most of the 15-16 s an extraction took in the
-// logs; visionos needs no JS challenge (it is yt-dlp's own pick when no JS
-// runtime is around, as on Android). Runs on a worker thread.
+// downloaded). The lean request skips the player configs and the player JS
+// (base.js, about 2.5 MB fetched and scanned by the phone's Python for
+// nothing: visionos URLs carry no signature to solve). It keeps the watch
+// page: without its visitor data YouTube answered every request with "Sign
+// in to confirm you're not a bot" in the logs. Runs on a worker thread.
 bool extractStreamLinkWith(
         const QJniObject& ytdl, const QString& videoId, StreamLink* pOut, bool lean) {
     QJniObject probe("com/yausername/youtubedl_android/YoutubeDLRequest",
@@ -3407,7 +3471,7 @@ bool extractStreamLinkWith(
             {QStringLiteral("--extractor-args"),
                     lean ? QStringLiteral(
                                    "youtube:skip=hls,dash,translated_subs;player_client=visionos;"
-                                   "player_skip=webpage,configs,js,initial_data")
+                                   "player_skip=configs,js")
                          : QStringLiteral("youtube:skip=hls,dash,translated_subs")},
             {QStringLiteral("--cache-dir"), cacheDirYtdl},
             {QStringLiteral("--socket-timeout"), QStringLiteral("20")},
@@ -3453,6 +3517,7 @@ bool extractStreamLinkWith(
     }
     QMutexLocker lock(&s_linkMutex);
     s_streamLinks.insert(videoId, *pOut);
+    saveStreamLinksLocked();
     return true;
 }
 
@@ -3463,7 +3528,8 @@ bool extractStreamLinkWith(
 std::atomic<int> s_leanFailures{0};
 constexpr int kMaxLeanFailures = 3;
 
-bool extractStreamLink(const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
+bool extractStreamLinkUncached(
+        const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
     if (s_leanFailures.load() < kMaxLeanFailures) {
         if (extractStreamLinkWith(ytdl, videoId, pOut, true)) {
             s_leanFailures.store(0);
@@ -3476,9 +3542,32 @@ bool extractStreamLink(const QJniObject& ytdl, const QString& videoId, StreamLin
     return extractStreamLinkWith(ytdl, videoId, pOut, false);
 }
 
+// Cached link, else the result of an extraction already running for this
+// video, else a new extraction.
+bool extractStreamLink(const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
+    {
+        QMutexLocker lock(&s_linkMutex);
+        while (s_linksInFlight.contains(videoId)) {
+            s_linkDone.wait(&s_linkMutex);
+        }
+        const auto it = s_streamLinks.constFind(videoId);
+        if (it != s_streamLinks.constEnd() &&
+                QDateTime::currentMSecsSinceEpoch() - it->atMs <= kStreamLinkMaxAgeMs) {
+            *pOut = *it;
+            return true;
+        }
+        s_linksInFlight.insert(videoId);
+    }
+    const bool ok = extractStreamLinkUncached(ytdl, videoId, pOut);
+    {
+        QMutexLocker lock(&s_linkMutex);
+        s_linksInFlight.remove(videoId);
+    }
+    s_linkDone.wakeAll();
+    return ok;
+}
+
 void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
-    // One worker for the whole batch: extractions run one after another on
-    // the bundled Python, never several at once next to the decks.
     QStringList todo;
     for (const QString& id : videoIds) {
         StreamLink link;
@@ -3489,31 +3578,45 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
     if (todo.isEmpty()) {
         return;
     }
-    QThread* thread = QThread::create([todo]() {
-        QJniObject context = QNativeInterface::QAndroidApplication::context();
-        QJniObject ytdl = QJniObject::callStaticObjectMethod(
-                "com/yausername/youtubedl_android/YoutubeDL",
-                "getInstance",
-                "()Lcom/yausername/youtubedl_android/YoutubeDL;");
-        if (!context.isValid() || !ytdl.isValid() ||
-                !ensureYoutubeDlInitialized(ytdl, context)) {
-            return;
-        }
-        for (const QString& id : todo) {
-            StreamLink link;
-            if (cachedStreamLink(id, &link)) {
-                continue; // a tap extracted it meanwhile
+    // A few extractions side by side: the logs showed 4 at once taking the
+    // same ~16 s each as one alone (the time is spent waiting on YouTube,
+    // not on the CPU), so 4 workers get the links 4x sooner. Results are
+    // handed out in list order, the top ones first.
+    constexpr int kWorkers = 4;
+    auto queue = std::make_shared<QStringList>(todo);
+    auto queueMutex = std::make_shared<QMutex>();
+    for (int w = 0; w < std::min<int>(kWorkers, todo.size()); ++w) {
+        QThread* thread = QThread::create([queue, queueMutex]() {
+            QJniObject context = QNativeInterface::QAndroidApplication::context();
+            QJniObject ytdl = QJniObject::callStaticObjectMethod(
+                    "com/yausername/youtubedl_android/YoutubeDL",
+                    "getInstance",
+                    "()Lcom/yausername/youtubedl_android/YoutubeDL;");
+            if (!context.isValid() || !ytdl.isValid() ||
+                    !ensureYoutubeDlInitialized(ytdl, context)) {
+                return;
             }
-            const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
-            const bool ok = extractStreamLink(ytdl, id, &link);
-            kLogger.info() << "[Android] prefetched stream link for" << id << ":"
-                           << (ok ? "ok" : "failed") << "in"
-                           << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
-        }
-    });
-    thread->setObjectName(QStringLiteral("YtLinkPrefetch"));
-    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start(QThread::LowPriority);
+            for (;;) {
+                QString id;
+                {
+                    QMutexLocker lock(queueMutex.get());
+                    if (queue->isEmpty()) {
+                        return;
+                    }
+                    id = queue->takeFirst();
+                }
+                const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
+                StreamLink link;
+                const bool ok = extractStreamLink(ytdl, id, &link);
+                kLogger.info() << "[Android] prefetched stream link for" << id << ":"
+                               << (ok ? "ok" : "failed") << "in"
+                               << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
+            }
+        });
+        thread->setObjectName(QStringLiteral("YtLinkPrefetch%1").arg(w + 1));
+        connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+        thread->start(QThread::LowPriority);
+    }
 }
 
 void YouTubeService::runAndroidBundled(const QString& videoId,

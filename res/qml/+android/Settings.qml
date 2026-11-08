@@ -47,8 +47,6 @@ Popup {
     horizontalPadding: 8
     verticalPadding: 8
 
-    Keys.onBackPressed: root.close()
-    Keys.onEscapePressed: root.close()
 
     background: Rectangle {
         anchors.fill: parent
