@@ -83,6 +83,8 @@ class YouTubeService : public QObject {
     /// When the first page returns fewer than `minResults` and a continuation
     /// token is available, additional pages are fetched automatically so the
     /// initial result set is large enough for infinite scroll to work.
+    /// Opens the connection to YouTube ahead of a search
+    void warmUpConnection();
     void searchVideos(const QString& query, int cap = 25, int minResults = 0);
 
     /// Fetch the next page of results for the most recent search() call.

@@ -223,6 +223,13 @@ QString QmlYouTubeProxy::deckDownloadingTitle(const QString& deckGroup) const {
             .toString();
 }
 
+void QmlYouTubeProxy::warmUp() {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    if (pFeature) {
+        pFeature->service()->warmUpConnection();
+    }
+}
+
 void QmlYouTubeProxy::search(const QString& query) {
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {

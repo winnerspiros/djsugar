@@ -108,6 +108,7 @@ void SponsorBlockController::clearDeck(const QString& group) {
     it->pTrack.reset();
     it->leadSilenceSkipped = false;
     it->segmentsKnown = false;
+    it->sponsorBlockCovered = false;
     it->isMusicVideo = false;
 }
 
@@ -155,6 +156,16 @@ bool SponsorBlockController::tryLoadSegmentsFromSidecar(
     }
     const QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
     f.close();
+    if (doc.isObject() && doc.object().value(QStringLiteral("cut")).toInt() > 0) {
+        // Segments were cut from the file at download: nothing to skip,
+        // and no analysis skip either (SponsorBlock is preferred)
+        auto it = m_decks.find(group);
+        if (it != m_decks.end()) {
+            it->segmentsKnown = true;
+            it->sponsorBlockCovered = true;
+        }
+        return true;
+    }
     if (!doc.isArray()) {
         return false;
     }
@@ -174,6 +185,7 @@ bool SponsorBlockController::tryLoadSegmentsFromSidecar(
     if (it != m_decks.end()) {
         it->segments = segments;
         it->segmentsKnown = true;
+        it->sponsorBlockCovered = !segments.isEmpty();
     }
     if (!segments.isEmpty()) {
         kLogger.info() << "Loaded" << segments.size()
@@ -208,6 +220,7 @@ void SponsorBlockController::onSponsorSegmentsFetched(
         if (it->videoId == videoId) {
             it->segments = segments;
             it->segmentsKnown = true;
+            it->sponsorBlockCovered = !segments.isEmpty();
             kLogger.info() << "Applied" << segments.size()
                            << "SponsorBlock segments to" << it.key();
         }
@@ -262,7 +275,13 @@ void SponsorBlockController::onPlayPositionChanged(
             skipTo = std::max(skipTo, seg.end);
         }
     }
-    if (skipTo < 0.0) {
+    // A video SponsorBlock knows is skipped by its segments only. Until its
+    // reply is in (normally well under a second), the analysis skip waits
+    // for the first seconds, so it doesn't jump ahead of SponsorBlock.
+    constexpr double kWaitForSponsorBlockSec = 5.0;
+    const bool analysisSkipAllowed = !it->sponsorBlockCovered &&
+            (it->segmentsKnown || currentSec >= kWaitForSponsorBlockSec);
+    if (skipTo < 0.0 && analysisSkipAllowed) {
         // No SponsorBlock data covers this spot (the database has nothing for
         // most music videos). Fall back to the analyzer's audible range:
         // skip the silence/talk-free lead-in before the music starts and the

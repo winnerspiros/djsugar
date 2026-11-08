@@ -236,6 +236,11 @@ Item {
                     font.pixelSize: 12
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: root.doSearch()
+                    // connection to YouTube opened while typing
+                    onActiveFocusChanged: {
+                        if (activeFocus)
+                            Mixxx.YouTube.warmUp();
+                    }
                 }
                 Text {
                     anchors.fill: parent

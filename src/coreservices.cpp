@@ -665,10 +665,10 @@ void CoreServices::initialize() {
             dir.mkpath(".");
         }
 #elif defined(Q_OS_ANDROID)
-        // "All files access" is what allows Mixxx to browse directories
-        // outside of the media store. It is optional: if the user declines,
-        // the default music directory below is still readable.
-        mixxx::android::requestFullExternalStorageAccess();
+        // "All files access" (browsing outside the media store) is optional
+        // and asked for from the library ("Allow full storage access"), not
+        // here: on the first start this opened the system settings screen
+        // while the UI was still loading, and the UI didn't show on return.
         QString fd = mixxx::android::defaultMusicDirectory();
 #else
         // TODO(XXX) this needs to be smarter, we can't distinguish between an empty

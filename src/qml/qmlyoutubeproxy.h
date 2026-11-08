@@ -58,6 +58,8 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE QString deckDownloadingTitle(const QString& deckGroup) const;
 
     Q_INVOKABLE void search(const QString& query);
+    /// Opens the YouTube connection ahead (search field focused)
+    Q_INVOKABLE void warmUp();
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE bool hasMore() const;
     Q_INVOKABLE void download(const QString& videoId);

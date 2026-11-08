@@ -376,8 +376,6 @@ Item {
                 editOverlay.radius: height
                 height: 140
                 width: 140
-                // Settings → Interface → Show vinyl
-                visible: Mixxx.MobileApp.showVinyl
 
                 DeckComponent.Spinny {
                     anchors.fill: parent

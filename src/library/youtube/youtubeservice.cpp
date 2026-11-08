@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -794,6 +795,16 @@ YouTubeService::YouTubeService(QObject* parent)
         QTimer::singleShot(3000, this, &YouTubeService::fetchRemoteClientConfig);
         kLogger.info() << "InnerTube client auto-update enabled, URL:" << kRemoteConfigUrl;
     }
+    QTimer::singleShot(4000, this, &YouTubeService::warmUpConnection);
+}
+
+void YouTubeService::warmUpConnection() {
+    // DNS + TCP + TLS to www.youtube.com take seconds on a cold mobile
+    // connection (the first search of a session took 6.7 s, the following
+    // pages 0.6 s). Opened ahead (app start, search field focused), the
+    // search request reuses the open connection. Qt keeps it alive while
+    // idle, so this is cheap to repeat.
+    m_pNam->connectToHostEncrypted(QStringLiteral("www.youtube.com"));
 }
 
 void YouTubeService::fetchRemoteClientConfig() {
@@ -1482,12 +1493,15 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
     }
     recordRequest();
 
+    QElapsedTimer searchTimer;
+    searchTimer.start();
     QNetworkReply* reply = m_pNam->post(
             req, QJsonDocument(body).toJson(QJsonDocument::Compact));
     connect(reply,
             &QNetworkReply::finished,
             this,
             [this,
+                    searchTimer,
                     reply,
                     emittedQuery,
                     requestQuery,
@@ -1553,20 +1567,20 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                 // Use the request-scoped minResults (captured from the caller)
                 // instead of the member variable to avoid races between
                 // concurrent searches.
-                if (minResults > 0 &&
-                        results.size() < minResults &&
-                        !m_searchContinuationToken.isEmpty()) {
-                    kLogger.info()
-                            << "Auto-fetching continuation pages: have"
-                            << results.size() << "need" << minResults;
-                    autoFetchContinuationPages(emittedQuery,
-                            cap,
-                            minResults,
-                            results,
-                            clientIdx);
-                    return;
-                }
+                // The first page is shown right away; more pages follow
+                // through fetchMoreSearchResults() (searchMoreReady, appended
+                // by the list). Waiting for minResults first held the list
+                // back by a round trip per page (~0.6 s each on mobile).
+                Q_UNUSED(minResults);
+                Q_UNUSED(clientIdx);
+                kLogger.info() << "InnerTube search answered in"
+                               << searchTimer.elapsed() << "ms,"
+                               << rawBody.size() / 1024 << "KB";
                 Q_EMIT searchResultsReady(emittedQuery, results);
+                if (minResults > 0 && results.size() < minResults &&
+                        !m_searchContinuationToken.isEmpty()) {
+                    fetchMoreSearchResults(emittedQuery, cap, minResults);
+                }
             });
 }
 
@@ -4492,7 +4506,12 @@ void YouTubeService::finalizeDownload(const QString& videoId, const QString& out
                             // already shortened file.
                             QFile marker(sidecarPath);
                             if (marker.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                                marker.write("[]");
+                                // {"cut":N}: SponsorBlock had this video,
+                                // so playback trusts it and doesn't add the
+                                // analysis-based intro/outro skip on top
+                                marker.write(QStringLiteral("{\"cut\":%1}")
+                                                .arg(segments.size())
+                                                .toUtf8());
                             }
                         }
                     }

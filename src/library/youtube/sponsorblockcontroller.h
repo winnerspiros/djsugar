@@ -72,6 +72,9 @@ class SponsorBlockController : public QObject {
         bool leadSilenceSkipped = false;
         // SponsorBlock answered (from the sidecar or the network).
         bool segmentsKnown = false;
+        // SponsorBlock has segments for this video (to skip, or already cut
+        // from the file): they are preferred, the analysis skip stays off.
+        bool sponsorBlockCovered = false;
         // "(Official Music Video)" and the like: may open with a skit.
         bool isMusicVideo = false;
     };

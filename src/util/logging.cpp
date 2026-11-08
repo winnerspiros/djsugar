@@ -181,6 +181,13 @@ inline void writeToFile(
         const int written = s_logfile.write(formattedMessage);
         Q_UNUSED(written);
         DEBUG_ASSERT(written == formattedMessage.size());
+#ifdef Q_OS_ANDROID
+        // Android kills an app without notice (swiped away, not responding)
+        // and buffered lines are lost: the log of a stuck start ended at an
+        // arbitrary point, without the lines that would show where it got
+        // stuck. The file is written through on every line there.
+        flush = true;
+#endif
         if (flush) {
             const bool flushed = s_logfile.flush();
             Q_UNUSED(flushed);

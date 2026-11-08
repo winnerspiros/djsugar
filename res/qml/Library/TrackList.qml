@@ -324,7 +324,8 @@ Rectangle {
                     this.clear();
                     return;
                 }
-                const rowCount = this.model.rowCount();
+                // rowCount is a property of the QML model, not a function
+                const rowCount = this.model.rowCount;
                 if (rowCount == 0) {
                     this.clear();
                     return;
