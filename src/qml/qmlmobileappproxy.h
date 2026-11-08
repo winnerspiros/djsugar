@@ -45,6 +45,9 @@ class QmlMobileAppProxy : public QObject {
     /// The choices for graphicsApi on this platform and build, as
     /// {value, label} maps
     Q_PROPERTY(QVariantList graphicsApis READ graphicsApis CONSTANT)
+    /// Scale of the whole UI (Android, applies at the next start; smaller
+    /// shows more, 0.45 is the default)
+    Q_PROPERTY(double uiScale READ uiScale WRITE setUiScale NOTIFY uiScaleChanged)
     /// The graphics API the interface runs with now, as a label
     Q_PROPERTY(QString activeGraphicsApi READ activeGraphicsApi CONSTANT)
     /// Multisample antialiasing of the window: 0 (off), 2 or 4 samples.
@@ -74,6 +77,8 @@ class QmlMobileAppProxy : public QObject {
     QString graphicsApi() const;
     void setGraphicsApi(const QString& api);
     QVariantList graphicsApis() const;
+    double uiScale() const;
+    void setUiScale(double scale);
     QString activeGraphicsApi() const;
     int antialiasing() const;
     void setAntialiasing(int samples);
@@ -95,6 +100,7 @@ class QmlMobileAppProxy : public QObject {
   signals:
     void skinChanged();
     void graphicsApiChanged();
+    void uiScaleChanged();
     void antialiasingChanged();
     void hiddenTopBarItemsChanged();
     void cutoutsChanged();

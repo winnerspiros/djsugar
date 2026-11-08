@@ -232,6 +232,58 @@ Category {
                                 }
                             }
 
+                            // Size of the whole UI, read before Qt starts: the
+                            // next start uses it. Smaller shows more (the deck
+                            // vinyl from "Normal" down).
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { Layout.fillWidth: true; text: qsTr("UI size"); color: Theme.white; font.pixelSize: 13 }
+                                Skin.ComboBox {
+                                    Layout.preferredWidth: 220
+                                    textRole: "label"
+                                    valueRole: "value"
+                                    model: [{
+                                            "value": 0.38,
+                                            "label": qsTr("Smallest")
+                                        }, {
+                                            "value": 0.41,
+                                            "label": qsTr("Small")
+                                        }, {
+                                            "value": 0.45,
+                                            "label": qsTr("Normal")
+                                        }, {
+                                            "value": 0.5,
+                                            "label": qsTr("Large")
+                                        }, {
+                                            "value": 0.58,
+                                            "label": qsTr("Largest")
+                                        }]
+                                    Component.onCompleted: {
+                                        let best = 0;
+                                        for (let i = 0; i < model.length; ++i) {
+                                            if (Math.abs(model[i].value - Mixxx.MobileApp.uiScale) < Math.abs(model[best].value - Mixxx.MobileApp.uiScale))
+                                                best = i;
+                                        }
+                                        currentIndex = best;
+                                    }
+                                    onActivated: {
+                                        Mixxx.MobileApp.uiScale = currentValue;
+                                        uiScaleRestartHint.visible = true;
+                                    }
+                                }
+                            }
+
+                            Text {
+                                id: uiScaleRestartHint
+
+                                Layout.fillWidth: true
+                                visible: false
+                                text: qsTr("UI size applies after restarting Mixxx.")
+                                color: "#ffb74d"
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+
                             RowLayout {
                                 Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: qsTr("Antialiasing"); color: Theme.white; font.pixelSize: 13 }

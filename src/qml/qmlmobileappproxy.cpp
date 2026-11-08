@@ -288,6 +288,28 @@ void QmlMobileAppProxy::setGraphicsApi(const QString& api) {
     emit graphicsApiChanged();
 }
 
+double QmlMobileAppProxy::uiScale() const {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    const double scale = pConfig
+            ? pConfig->getValue(ConfigKey(QStringLiteral("[Config]"),
+                                        QStringLiteral("AndroidUiScale")),
+                      0.45)
+            : 0.45;
+    return (scale >= 0.3 && scale <= 1.5) ? scale : 0.45;
+}
+
+void QmlMobileAppProxy::setUiScale(double scale) {
+    const UserSettingsPointer pConfig = QmlConfigProxy::get();
+    if (!pConfig || scale < 0.3 || scale > 1.5 || qFuzzyCompare(scale, uiScale())) {
+        return;
+    }
+    // Read by main.cpp before Qt starts, so it applies at the next start
+    pConfig->setValue(ConfigKey(QStringLiteral("[Config]"), QStringLiteral("AndroidUiScale")),
+            QString::number(scale, 'f', 2));
+    pConfig->save();
+    emit uiScaleChanged();
+}
+
 QVariantList QmlMobileAppProxy::graphicsApis() const {
     QVariantList list;
     for (const QString& api : supportedApis()) {

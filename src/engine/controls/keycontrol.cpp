@@ -105,10 +105,12 @@ KeyControl::KeyControl(const QString& group,
 
     // VinylControl is only available on main decks
     if (PlayerManager::isDeckGroup(group)) {
-        m_pVCEnabled = make_parented<ControlProxy>(group, "vinylcontrol_enabled", this);
+        m_pVCEnabled = make_parented<ControlProxy>(
+                group, "vinylcontrol_enabled", this, ControlFlag::NoWarnIfMissing);
         m_pVCEnabled->connectValueChanged(this, &KeyControl::slotRateChanged, Qt::DirectConnection);
 
-        m_pVCRate = make_parented<ControlProxy>(group, "vinylcontrol_rate", this);
+        m_pVCRate = make_parented<ControlProxy>(
+                group, "vinylcontrol_rate", this, ControlFlag::NoWarnIfMissing);
         m_pVCRate->connectValueChanged(this, &KeyControl::slotRateChanged, Qt::DirectConnection);
     }
 

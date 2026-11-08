@@ -196,8 +196,21 @@ void adjustScaleFactor(CmdlineArgs* pArgs) {
     // screen-fitted factor below was persisted after the first launch and
     // used from the second one on: the UI came up bigger, without the vinyl,
     // so the first launch and every later one looked different. 0.45 always.
+    // Settings → Interface → UI size can pick another one ([Config]/
+    // AndroidUiScale, its own key: the old ScaleFactor holds the screen-
+    // fitted value of earlier builds).
     constexpr double kAndroidDefaultScaleFactor = 0.45;
-    const double scale = kAndroidDefaultScaleFactor;
+    auto config = ConfigObject<ConfigValue>(
+            QDir(pArgs->getSettingsPath()).filePath(MIXXX_SETTINGS_FILE),
+            QString(),
+            QString());
+    bool ok = false;
+    const double chosenScale =
+            config.getValue(ConfigKey(kConfigGroup, QStringLiteral("AndroidUiScale")))
+                    .toDouble(&ok);
+    const double scale = (ok && chosenScale >= 0.3 && chosenScale <= 1.5)
+            ? chosenScale
+            : kAndroidDefaultScaleFactor;
     const QByteArray scaleFactorBytes =
             QByteArray::number(scale, 'f', 2);
     qDebug() << "Using Android ScaleFactor" << scaleFactorBytes;
