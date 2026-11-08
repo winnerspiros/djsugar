@@ -8,11 +8,13 @@
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
+#include <functional>
 
 #include "library/youtube/youtubegenrelookup.h"
 #include "library/youtube/youtubeservice.h"
 
 class Library;
+class QNetworkAccessManager;
 class PlayerManager;
 class YouTubeFeature;
 
@@ -60,6 +62,14 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE bool hasMore() const;
     Q_INVOKABLE void download(const QString& videoId);
     Q_INVOKABLE void downloadToDeck(const QString& videoId, const QString& deckGroup);
+
+    /// SoundCloud search (api-v2, with the web player's public client id).
+    /// Results use "sc-<track id>" ids and download/load like YouTube ones.
+    Q_INVOKABLE void soundCloudSearch(const QString& query);
+    Q_INVOKABLE void soundCloudMore();
+    Q_INVOKABLE bool soundCloudHasMore() const {
+        return !m_scNextHref.isEmpty();
+    }
     void prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results);
 
     bool sponsorBlockAutoSkip() const;
@@ -71,6 +81,8 @@ class QmlYouTubeProxy : public QObject {
     /// results. `hasMore` is false once YouTube has no further pages.
     void searchMoreFinished(const QVariantList& results, bool hasMore);
     void searchFailed(const QString& error);
+    void soundCloudResults(const QVariantList& results, bool append);
+    void soundCloudFailed(const QString& error);
     void downloadProgressChanged(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
@@ -97,6 +109,13 @@ class QmlYouTubeProxy : public QObject {
     QHash<QString, QString> m_genreCache; // videoId -> genre ("" = unknown)
     QSet<QString> m_genreQueued;
     int m_genreLookupsRunning = 0;
+
+    void soundCloudRequest(const QUrl& url, bool append, bool clientIdRetried);
+    void fetchSoundCloudClientId(std::function<void(bool)> done);
+    QNetworkAccessManager* m_pScNetwork = nullptr;
+    QString m_scClientId;
+    QString m_scNextHref;
+    quint64 m_scGeneration = 0; // drops the replies of superseded searches
 };
 
 } // namespace qml

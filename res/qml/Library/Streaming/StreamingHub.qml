@@ -9,9 +9,9 @@ Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube
+    property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube, 4: SoundCloud
     property bool acceptsController: false
-    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView]
+    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView, soundCloudView]
 
     // BROWSE/LOAD on the controller act on the service that is shown
     StreamingControl {
@@ -120,6 +120,18 @@ Item {
                             }
                         }
                     }
+
+                    // SoundCloud: orange plate, logo-less (no image asset)
+                    Skin.Button {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 104
+                        activeColor: "#ff5500"
+                        normalColor: root.activePlatform === 4 ? "#ff7733" : "#ffab80"
+                        font.bold: true
+                        font.pixelSize: 9
+                        text: qsTr("SOUNDCLOUD")
+                        onClicked: root.activePlatform = 4
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -193,6 +205,14 @@ Item {
                 anchors.fill: parent
                 targetDeck: root.targetDeck
                 visible: root.activePlatform === 3
+            }
+
+            SoundCloudView {
+                id: soundCloudView
+
+                anchors.fill: parent
+                targetDeck: root.targetDeck
+                visible: root.activePlatform === 4
             }
         }
     }

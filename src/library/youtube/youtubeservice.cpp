@@ -405,9 +405,24 @@ bool isPipedLiveStream(const QJsonObject& obj) {
 }
 
 bool isValidYouTubeVideoId(const QString& videoId) {
+    // YouTube video ids, plus "sc-<track id>" for SoundCloud tracks, which
+    // go through the same yt-dlp download, cache and deck-load path
     static const QRegularExpression kVideoIdPattern(
-            QStringLiteral(R"(^[A-Za-z0-9_-]{11}$)"));
+            QStringLiteral(R"(^([A-Za-z0-9_-]{11}|sc-[0-9]{1,19})$)"));
     return kVideoIdPattern.match(videoId).hasMatch();
+}
+
+bool isSoundCloudId(const QString& videoId) {
+    return videoId.startsWith(QStringLiteral("sc-"));
+}
+
+// The page yt-dlp downloads a video id from: SoundCloud ids map to the API
+// track URL yt-dlp's SoundCloud extractor accepts.
+QString mediaUrlForId(const QString& videoId) {
+    if (isSoundCloudId(videoId)) {
+        return QStringLiteral("https://api.soundcloud.com/tracks/") + videoId.mid(3);
+    }
+    return QStringLiteral("https://www.youtube.com/watch?v=") + videoId;
 }
 
 bool isYtDlpLiveStream(const QJsonObject& obj) {
@@ -999,6 +1014,22 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
     QDir().mkpath(cacheDir);
     Q_EMIT downloadStarted(videoId);
     Q_EMIT downloadProgress(videoId, 0.04);
+
+    if (isSoundCloudId(videoId)) {
+        // SoundCloud: no SponsorBlock, no InnerTube/Piped; yt-dlp only
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+        if (m_ytDlpPath == QStringLiteral("android-bundled")) {
+            downloadViaAndroidBundled(videoId, cacheDir);
+            return;
+        }
+#endif
+        if (m_ytDlpPath.isEmpty()) {
+            Q_EMIT downloadFailed(videoId, tr("SoundCloud needs yt-dlp"));
+            return;
+        }
+        downloadViaYtDlp(videoId, cacheDir);
+        return;
+    }
 
     // Prefetch SponsorBlock segments NOW, in parallel with the audio download.
     // By the time the audio file lands on disk the segments are (usually) ready
@@ -3078,8 +3109,10 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
     // download (yt-dlp's self-update is atomic and fast on a good connection).
     maybeUpdateDesktopYtDlp();
 
+    // Named after our id, not yt-dlp's (a SoundCloud "%(id)s" is the bare
+    // track number, not "sc-<number>")
     const QString outTemplate =
-            QDir(cacheDir).filePath(QStringLiteral("%(id)s.%(ext)s"));
+            QDir(cacheDir).filePath(videoId + QStringLiteral(".%(ext)s"));
     const bool isPythonInterpreter =
             m_ytDlpPath.endsWith(QStringLiteral("python"), Qt::CaseInsensitive) ||
             m_ytDlpPath.endsWith(QStringLiteral("python3"), Qt::CaseInsensitive);
@@ -3124,7 +3157,7 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
     args.append(ytDlpAntiBotArgs());
     args.append({
             QStringLiteral("--"),
-            QStringLiteral("https://www.youtube.com/watch?v=") + videoId,
+            mediaUrlForId(videoId),
     });
     runYtDlp(
             args,
@@ -3388,7 +3421,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         // even with aria2c, measured 104-134 KB/s in the logs; the time of
         // the extraction is logged on its own so the two can be told apart.
         // A video whose direct download fails goes the full yt-dlp way.
-        if (useDirectDownload(videoId)) {
+        // (SoundCloud serves HLS only: no single URL to fetch in ranges)
+        if (!isSoundCloudId(videoId) && useDirectDownload(videoId)) {
             const qint64 extractStartMs = QDateTime::currentMSecsSinceEpoch();
             QJniObject probe("com/yausername/youtubedl_android/YoutubeDLRequest",
                     "(Ljava/lang/String;)V",
@@ -3483,8 +3517,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         }
 
         // Build the request: URL + options.
-        QString videoUrl = "https://www.youtube.com/watch?v=" + videoId;
-        QString outputTemplate = QDir(cacheDir).filePath("%(id)s.%(ext)s");
+        QString videoUrl = mediaUrlForId(videoId);
+        QString outputTemplate = QDir(cacheDir).filePath(videoId + QStringLiteral(".%(ext)s"));
 
         // yt-dlp's default clients pick the format; aria2c then fetches it over
         // up to 16 connections in 1 MB ranges. YouTube paces each connection
@@ -3498,7 +3532,8 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                         .filePath(QStringLiteral("yt-dlp"));
         auto buildRequest = [&](bool fastClient) {
             QString extractorArgs = QStringLiteral("youtube:skip=hls,dash,translated_subs");
-            const bool useAria2c = fastClient;
+            // (SoundCloud is HLS: yt-dlp's own fragment downloader, 8 at once)
+            const bool useAria2c = fastClient && !isSoundCloudId(videoId);
             QJniObject request("com/yausername/youtubedl_android/YoutubeDLRequest",
                     "(Ljava/lang/String;)V",
                     QJniObject::fromString(videoUrl).object());

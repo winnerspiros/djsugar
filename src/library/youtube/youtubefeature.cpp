@@ -647,8 +647,10 @@ TrackDisplayMetadata displayMetadataForVideo(
 }
 
 bool isValidYouTubeVideoId(const QString& videoId) {
+    // YouTube video ids, plus "sc-<track id>" for SoundCloud tracks, which
+    // go through the same yt-dlp download, cache and deck-load path
     static const QRegularExpression kVideoIdPattern(
-            QStringLiteral(R"(^[A-Za-z0-9_-]{11}$)"));
+            QStringLiteral(R"(^([A-Za-z0-9_-]{11}|sc-[0-9]{1,19})$)"));
     return kVideoIdPattern.match(videoId).hasMatch();
 }
 
@@ -1380,6 +1382,23 @@ void YouTubeFeature::onSearchFailed(const QString& query, const QString& error) 
 #endif
 }
 
+void YouTubeFeature::rememberExternalResults(
+        const QList<mixxx::YouTubeVideoInfo>& results) {
+    for (const auto& info : results) {
+        m_externalResults.insert(info.id, info);
+    }
+}
+
+const mixxx::YouTubeVideoInfo* YouTubeFeature::resultInfo(const QString& videoId) const {
+    for (const auto& info : m_lastResults) {
+        if (info.id == videoId && !info.title.isEmpty()) {
+            return &info;
+        }
+    }
+    const auto it = m_externalResults.constFind(videoId);
+    return it != m_externalResults.constEnd() ? &it.value() : nullptr;
+}
+
 void YouTubeFeature::requestDownload(const QString& videoId) {
     if (!isValidYouTubeVideoId(videoId)) {
         kLogger.warning() << "Ignoring invalid YouTube video id:" << videoId;
@@ -1412,11 +1431,8 @@ void YouTubeFeature::requestDownloadToPlayer(
     }
     QString title = m_downloadedTracks.value(videoId);
     if (title.isEmpty()) {
-        for (const auto& info : std::as_const(m_lastResults)) {
-            if (info.id == videoId && !info.title.isEmpty()) {
-                title = info.title;
-                break;
-            }
+        if (const auto* pInfo = resultInfo(videoId)) {
+            title = pInfo->title;
         }
     }
     Q_EMIT downloadToPlayerRequested(videoId, group, title);
@@ -1552,11 +1568,8 @@ void YouTubeFeature::onDownloadFinished(
     // Look up a friendly label from m_lastResults if the video came from the
     // current search, otherwise just fall back to the videoId.
     QString label = videoId;
-    for (const auto& info : std::as_const(m_lastResults)) {
-        if (info.id == videoId) {
-            label = displayLabelForVideo(info);
-            break;
-        }
+    if (const auto* pInfo = resultInfo(videoId)) {
+        label = displayLabelForVideo(*pInfo);
     }
     m_downloadedTracks.insert(videoId, label);
     // Batch downloads (auto-analyze) each emit onDownloadFinished; debounce
@@ -1571,17 +1584,14 @@ void YouTubeFeature::onDownloadFinished(
     int durationSec = 0;
     QString uploader;
     QString title = label;
-    for (const auto& info : std::as_const(m_lastResults)) {
-        if (info.id == videoId) {
-            const TrackDisplayMetadata metadata = displayMetadataForVideo(info);
-            durationSec = info.durationSec;
-            uploader = metadata.artist;
-            title = metadata.title;
-            // The cleaned title loses "(Official Music Video)", which tells
-            // SponsorBlockController the file may open with a non-music skit.
-            writeVideoMetaSidecar(cacheDir(), videoId, info.title);
-            break;
-        }
+    if (const auto* pInfo = resultInfo(videoId)) {
+        const TrackDisplayMetadata metadata = displayMetadataForVideo(*pInfo);
+        durationSec = pInfo->durationSec;
+        uploader = metadata.artist;
+        title = metadata.title;
+        // The cleaned title loses "(Official Music Video)", which tells
+        // SponsorBlockController the file may open with a non-music skit.
+        writeVideoMetaSidecar(cacheDir(), videoId, pInfo->title);
     }
     upsertDownloadedRow(videoId, localPath, title, uploader, durationSec);
 

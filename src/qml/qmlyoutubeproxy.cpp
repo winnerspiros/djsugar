@@ -1,9 +1,16 @@
 #include "qml/qmlyoutubeproxy.h"
 
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
 #include <QNetworkInformation>
+#include <QNetworkReply>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QTimer>
+#include <QUrlQuery>
 #include <algorithm>
 
 #include "library/library.h"
@@ -371,6 +378,192 @@ QVariantList QmlYouTubeProxy::toVariantList(const QList<mixxx::YouTubeVideoInfo>
         out.append(m);
     }
     return out;
+}
+
+namespace {
+const QString kScClientIdKey = QStringLiteral("SoundCloud/clientId");
+const QString kScUserAgent = QStringLiteral(
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/130.0 Safari/537.36");
+constexpr int kScPageSize = 30;
+
+QNetworkRequest scRequest(const QUrl& url) {
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, kScUserAgent);
+    request.setTransferTimeout(15000);
+    return request;
+}
+} // namespace
+
+// SoundCloud's api-v2 needs the client id its web player uses. It sits in
+// one of the player's JS bundles (the last ones, usually); found once and
+// kept in the settings, looked up again only when the API refuses it.
+void QmlYouTubeProxy::fetchSoundCloudClientId(std::function<void(bool)> done) {
+    QNetworkReply* pPage = m_pScNetwork->get(
+            scRequest(QUrl(QStringLiteral("https://soundcloud.com/"))));
+    connect(pPage, &QNetworkReply::finished, this, [this, pPage, done]() {
+        pPage->deleteLater();
+        static const QRegularExpression kScript(
+                QStringLiteral(R"(https://a-v2\.sndcdn\.com/assets/[^"]+\.js)"));
+        QStringList scripts;
+        auto it = kScript.globalMatch(QString::fromUtf8(pPage->readAll()));
+        while (it.hasNext()) {
+            scripts.prepend(it.next().captured(0)); // newest bundles last
+        }
+        auto tryNext = std::make_shared<std::function<void(int)>>();
+        *tryNext = [this, scripts, done, tryNext](int index) {
+            if (index >= std::min<int>(scripts.size(), 8)) {
+                done(false);
+                return;
+            }
+            QNetworkReply* pJs = m_pScNetwork->get(scRequest(QUrl(scripts.at(index))));
+            connect(pJs, &QNetworkReply::finished, this, [this, pJs, index, done, tryNext]() {
+                pJs->deleteLater();
+                static const QRegularExpression kClientId(
+                        QStringLiteral(R"(client_id\s*:\s*"([0-9A-Za-z]{32})")"));
+                const auto match = kClientId.match(QString::fromUtf8(pJs->readAll()));
+                if (match.hasMatch()) {
+                    m_scClientId = match.captured(1);
+                    QSettings().setValue(kScClientIdKey, m_scClientId);
+                    done(true);
+                    return;
+                }
+                (*tryNext)(index + 1);
+            });
+        };
+        (*tryNext)(0);
+    });
+}
+
+void QmlYouTubeProxy::soundCloudSearch(const QString& query) {
+    if (!m_pScNetwork) {
+        m_pScNetwork = new QNetworkAccessManager(this);
+        m_scClientId = QSettings().value(kScClientIdKey).toString();
+    }
+    m_scNextHref.clear();
+    ++m_scGeneration;
+    QUrl url(QStringLiteral("https://api-v2.soundcloud.com/search/tracks"));
+    QUrlQuery urlQuery;
+    urlQuery.addQueryItem(QStringLiteral("q"), query.trimmed());
+    urlQuery.addQueryItem(QStringLiteral("limit"), QString::number(kScPageSize));
+    url.setQuery(urlQuery);
+    soundCloudRequest(url, false, false);
+}
+
+void QmlYouTubeProxy::soundCloudMore() {
+    if (m_scNextHref.isEmpty() || !m_pScNetwork) {
+        return;
+    }
+    const QUrl next(m_scNextHref);
+    m_scNextHref.clear();
+    soundCloudRequest(next, true, false);
+}
+
+void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool clientIdRetried) {
+    if (m_scClientId.isEmpty()) {
+        if (clientIdRetried) {
+            emit soundCloudFailed(tr("SoundCloud is not reachable"));
+            return;
+        }
+        fetchSoundCloudClientId([this, baseUrl, append](bool ok) {
+            if (!ok) {
+                emit soundCloudFailed(tr("SoundCloud is not reachable"));
+                return;
+            }
+            soundCloudRequest(baseUrl, append, true);
+        });
+        return;
+    }
+    QUrl url(baseUrl);
+    QUrlQuery urlQuery(url);
+    urlQuery.removeAllQueryItems(QStringLiteral("client_id"));
+    urlQuery.addQueryItem(QStringLiteral("client_id"), m_scClientId);
+    url.setQuery(urlQuery);
+    const quint64 generation = m_scGeneration;
+    QNetworkReply* pReply = m_pScNetwork->get(scRequest(url));
+    connect(pReply,
+            &QNetworkReply::finished,
+            this,
+            [this, pReply, baseUrl, append, clientIdRetried, generation]() {
+                pReply->deleteLater();
+                if (generation != m_scGeneration) {
+                    return; // a newer search started
+                }
+                const int status =
+                        pReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                if ((status == 401 || status == 403) && !clientIdRetried) {
+                    // The web player rotated its client id
+                    m_scClientId.clear();
+                    soundCloudRequest(baseUrl, append, false);
+                    return;
+                }
+                if (pReply->error() != QNetworkReply::NoError) {
+                    emit soundCloudFailed(pReply->errorString());
+                    return;
+                }
+                const QJsonObject root = QJsonDocument::fromJson(pReply->readAll()).object();
+                m_scNextHref = root.value(QStringLiteral("next_href")).toString();
+                QList<mixxx::YouTubeVideoInfo> videos;
+                QHash<QString, QVariantMap> extra;
+                const QJsonArray tracks = root.value(QStringLiteral("collection")).toArray();
+                for (const QJsonValue& value : tracks) {
+                    const QJsonObject track = value.toObject();
+                    const qint64 id =
+                            static_cast<qint64>(track.value(QStringLiteral("id")).toDouble());
+                    const QString title = track.value(QStringLiteral("title")).toString();
+                    if (id <= 0 || title.isEmpty()) {
+                        continue;
+                    }
+                    const QJsonObject user = track.value(QStringLiteral("user")).toObject();
+                    mixxx::YouTubeVideoInfo info;
+                    info.id = QStringLiteral("sc-") + QString::number(id);
+                    info.title = title;
+                    info.uploader = user.value(QStringLiteral("username")).toString();
+                    info.durationSec = static_cast<int>(
+                            track.value(QStringLiteral("duration")).toDouble() / 1000);
+                    // The uploader's genre; else the first tag, which is
+                    // often the genre on SoundCloud ("techno", "rebetiko")
+                    info.genre = track.value(QStringLiteral("genre")).toString().trimmed();
+                    if (info.genre.isEmpty()) {
+                        static const QRegularExpression kTag(
+                                QStringLiteral(R"(^\s*(?:"([^"]+)" | (\S +))) "));
+                                const auto tag = kTag.match(
+                                        track.value(QStringLiteral("tag_list")).toString());
+                        info.genre = tag.captured(1).isEmpty() ? tag.captured(2)
+                                                               : tag.captured(1);
+                    }
+                    QString artwork = track.value(QStringLiteral("artwork_url")).toString();
+                    if (artwork.isEmpty()) {
+                        artwork = user.value(QStringLiteral("avatar_url")).toString();
+                    }
+                    QVariantMap more;
+                    more[QStringLiteral("artwork")] = artwork; // "-large" = 100 px
+                    more[QStringLiteral("plays")] =
+                            track.value(QStringLiteral("playback_count")).toDouble();
+                    // SNIP = Go+ only: a 30 s preview without the subscription
+                    more[QStringLiteral("preview")] =
+                            track.value(QStringLiteral("policy")).toString() ==
+                            QStringLiteral("SNIP");
+                    extra.insert(info.id, more);
+                    videos.append(info);
+                    m_videoTitles.insert(info.id, info.title);
+                }
+                if (s_pLibrary) {
+                    if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
+                        pFeature->rememberExternalResults(videos);
+                    }
+                }
+                QVariantList out = toVariantList(videos);
+                for (QVariant& entry : out) {
+                    QVariantMap map = entry.toMap();
+                    const QVariantMap more = extra.value(map.value(QStringLiteral("id")).toString());
+                    for (auto it = more.cbegin(); it != more.cend(); ++it) {
+                        map.insert(it.key(), it.value());
+                    }
+                    entry = map;
+                }
+                emit soundCloudResults(out, append);
+            });
 }
 
 bool QmlYouTubeProxy::sponsorBlockAutoSkip() const {

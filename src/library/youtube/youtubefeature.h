@@ -64,6 +64,9 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     void requestDownloadToPlayer(
             const QString& videoId, const QString& group, bool play);
     void requestDownload(const QString& videoId);
+    /// Results shown outside the YouTube search (SoundCloud), so a download
+    /// of one gets its title and artist like a YouTube result
+    void rememberExternalResults(const QList<mixxx::YouTubeVideoInfo>& results);
     void requestDownloadToAutoDJ(
             const QString& videoId, PlaylistDAO::AutoDJSendLoc loc);
 
@@ -228,6 +231,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     bool m_thumbnailsDirty = false;
     QString m_lastQuery;
     QList<mixxx::YouTubeVideoInfo> m_lastResults;
+    QHash<QString, mixxx::YouTubeVideoInfo> m_externalResults;
+    const mixxx::YouTubeVideoInfo* resultInfo(const QString& videoId) const;
     /// Guards the deferred one-shot genre fetch in activate().
     bool m_genresFetchScheduled = false;
     // videoId -> human-readable label (used for the "Downloaded" branch).
