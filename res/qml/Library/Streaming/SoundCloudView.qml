@@ -400,19 +400,51 @@ Item {
                         }
                     }
 
-                    // Download only: keeps the track in the library
-                    Skin.Button {
+                    // Download only: keeps the track in the library (the
+                    // same drawn arrow as YouTube; the font has no ⤓ glyph)
+                    AbstractButton {
+                        id: saveButton
+
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 46
-                        activeColor: "#00e676"
-                        normalColor: "#00e676"
-                        font.bold: true
-                        font.pixelSize: 14
-                        text: "⤓"
                         enabled: !trackRow.isDownloading && !trackRow.preview
+                        opacity: enabled ? 1.0 : 0.5
                         onClicked: {
                             root.statusMessage = qsTr("Downloading to your library...");
                             Mixxx.YouTube.download(trackRow.vid);
+                        }
+
+                        background: Rectangle {
+                            color: saveButton.pressed ? "#1500e676" : "transparent"
+                            border.color: "#00e676"
+                            border.width: 2
+                            radius: 10
+                        }
+                        contentItem: Item {
+                            // Arrow down: a stem over a triangle (the shared
+                            // Triangle turned 90 degrees to point down)
+                            Item {
+                                anchors.centerIn: parent
+                                height: 22
+                                width: 18
+
+                                Rectangle {
+                                    color: "#00e676"
+                                    height: 11
+                                    width: 4
+                                    x: 7
+                                    y: 0
+                                }
+                                Skin.Triangle {
+                                    color: "#00e676"
+                                    height: 16
+                                    pointsRight: true
+                                    rotation: 90
+                                    width: 9
+                                    x: 4.5
+                                    y: 6.5
+                                }
+                            }
                         }
                     }
                 }
