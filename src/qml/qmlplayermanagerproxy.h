@@ -3,6 +3,7 @@
 #include <QQmlEngine>
 #include <QString>
 #include <QStringList>
+#include <QVariantList>
 
 #include "mixer/playermanager.h"
 #include "qml/qmlplayerproxy.h"
@@ -35,6 +36,8 @@ class QmlPlayerManagerProxy : public QObject {
             mixxx::StemChannelSelection stemSelection,
 #endif
             bool play);
+    /// Samples shipped with the app as {name, path}, for the pad picker.
+    Q_INVOKABLE QVariantList bundledSamples() const;
     Q_INVOKABLE void showNoDeckPassthroughInputConfiguredWarning();
     Q_INVOKABLE void showNoVinylControlInputConfiguredWarning();
 

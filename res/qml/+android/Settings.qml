@@ -426,10 +426,17 @@ Popup {
                         enabled: visible
                     }
 
+                    Settings.Pads {
+                        id: padsSection
+                        anchors.fill: parent
+                        visible: categoryList.currentIndex === 6
+                        enabled: visible
+                    }
+
                     Settings.About {
                         id: aboutSection
                         anchors.fill: parent
-                        visible: categoryList.currentIndex === 6
+                        visible: categoryList.currentIndex === 7
                         enabled: visible
                     }
 
@@ -441,6 +448,7 @@ Popup {
                             waveformSection,
                             interfaceSection,
                             stemsSection,
+                            padsSection,
                             aboutSection
                         ];
                         soundHardwareSection.activated.connect(function() { categoryList.currentIndex = 0; });
@@ -450,7 +458,8 @@ Popup {
                         waveformSection.activated.connect(function() { categoryList.currentIndex = 3; });
                         interfaceSection.activated.connect(function() { categoryList.currentIndex = 4; });
                         stemsSection.activated.connect(function() { categoryList.currentIndex = 5; });
-                        aboutSection.activated.connect(function() { categoryList.currentIndex = 6; });
+                        padsSection.activated.connect(function() { categoryList.currentIndex = 6; });
+                        aboutSection.activated.connect(function() { categoryList.currentIndex = 7; });
                         root.updateActiveCategory();
                     }
                 }
@@ -493,6 +502,11 @@ Popup {
             label: QT_TR_NOOP("Stems")
             iconGlyph: "🎚️"
             subtext: QT_TR_NOOP("Drums, bass, vocals with AI")
+        }
+        ListElement {
+            label: QT_TR_NOOP("Pads")
+            iconGlyph: "🥁"
+            subtext: QT_TR_NOOP("Samples & Pad FX on each pad")
         }
         ListElement {
             label: QT_TR_NOOP("About")

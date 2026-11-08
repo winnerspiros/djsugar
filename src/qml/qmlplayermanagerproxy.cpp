@@ -1,9 +1,12 @@
 #include "qml/qmlplayermanagerproxy.h"
 
+#include <QFileInfo>
 #include <QQmlEngine>
+#include <QRegularExpression>
 
 #include "library/library.h"
 #include "library/library_prefs.h"
+#include "library/samples/bundledsamples.h"
 #include "mixer/playermanager.h"
 #include "moc_qmlplayermanagerproxy.cpp"
 #include "qml/qmlconfigproxy.h"
@@ -121,6 +124,22 @@ void QmlPlayerManagerProxy::loadLocationUrlToDeck(
 #else
     load();
 #endif
+}
+
+QVariantList QmlPlayerManagerProxy::bundledSamples() const {
+    QVariantList list;
+    const QStringList files = mixxx::samples::bundledSampleFiles(m_pPlayerManager->config());
+    for (const QString& path : files) {
+        QString name = QFileInfo(path).completeBaseName();
+        // "01_kick" -> "kick", "dj-scratch" -> "dj scratch"
+        static const QRegularExpression kNumberPrefix(QStringLiteral("^\\d+_"));
+        name.remove(kNumberPrefix);
+        name.replace(QLatin1Char('_'), QLatin1Char(' '));
+        name.replace(QLatin1Char('-'), QLatin1Char(' '));
+        list.append(QVariantMap{{QStringLiteral("name"), name},
+                {QStringLiteral("path"), path}});
+    }
+    return list;
 }
 
 void QmlPlayerManagerProxy::loadLocationToPlayer(

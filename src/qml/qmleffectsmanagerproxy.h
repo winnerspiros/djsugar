@@ -33,6 +33,13 @@ class QmlEffectsManagerProxy : public QObject {
             int unitNumber, int effectNumber) const;
     Q_INVOKABLE mixxx::qml::QmlEffectUnitProxy* getEffectUnit(int unitNumber) const;
 
+    /// Pad FX: effects assignable to the 16 performance pads ({key, name}).
+    Q_INVOKABLE QVariantList padFxCatalog() const;
+    /// Key of the effect on pad 1..16 (pads 1-8 = PAD FX 1, 9-16 = PAD FX 2).
+    Q_INVOKABLE QString padFxEffect(int pad) const;
+    Q_INVOKABLE void setPadFxEffect(int pad, const QString& key);
+    Q_INVOKABLE void resetPadFx();
+
     static QmlEffectsManagerProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
     static void registerEffectsManager(std::shared_ptr<EffectsManager> pEffectsManager) {
         s_pEffectManager = std::move(pEffectsManager);

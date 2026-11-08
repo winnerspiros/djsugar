@@ -9,6 +9,7 @@
 #include "effects/chains/standardeffectchain.h"
 #include "effects/effectslot.h"
 #include "effects/effectsmessenger.h"
+#include "effects/padfxcontroller.h"
 #include "effects/presets/effectchainpreset.h"
 #include "effects/presets/effectpresetmanager.h"
 #include "effects/presets/effectxmlelements.h"
@@ -53,6 +54,7 @@ EffectsManager::~EffectsManager() {
     m_pMessenger->initiateShutdown();
 
     saveEffectsXml();
+    m_pPadFx.reset();
 
     // The EffectChains must be deleted before the EffectsBackends in case
     // there is an LV2 effect currently loaded.
@@ -80,6 +82,7 @@ void EffectsManager::setup() {
     // readEffectsXml() is running is also initialized.
     m_initializedFromEffectsXml = true;
     readEffectsXml();
+    m_pPadFx = std::make_unique<PadFxController>(m_pConfig, this);
 }
 
 void EffectsManager::registerInputChannel(const ChannelHandleAndGroup& handle_group) {

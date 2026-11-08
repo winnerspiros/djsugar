@@ -11,6 +11,7 @@
 #include "engine/channels/enginedeck.h"
 #include "engine/enginemixer.h"
 #include "library/library.h"
+#include "library/samples/bundledsamples.h"
 #include "library/trackcollectionmanager.h"
 #include "mixer/auxiliary.h"
 #include "mixer/deck.h"
@@ -454,7 +455,18 @@ void PlayerManager::addDeckInner() {
 }
 
 void PlayerManager::loadSamplers() {
-    m_pSamplerBank->loadSamplerBankFromPath(getDefaultSamplerPath(m_pConfig));
+    if (m_pSamplerBank->loadSamplerBankFromPath(getDefaultSamplerPath(m_pConfig))) {
+        return;
+    }
+    // No saved bank yet (fresh install): load the bundled kit so the pads
+    // play something straight away. The bank is saved on exit, so the user's
+    // own choices replace this from then on.
+    const QStringList kit = mixxx::samples::defaultSamplerKit(m_pConfig);
+    for (int i = 0; i < kit.size() && i < m_samplers.size(); ++i) {
+        if (!kit.at(i).isEmpty()) {
+            slotLoadLocationToPlayer(kit.at(i), groupForSampler(i), false);
+        }
+    }
 }
 
 void PlayerManager::addSampler() {

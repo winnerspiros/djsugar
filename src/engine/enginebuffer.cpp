@@ -834,30 +834,14 @@ void EngineBuffer::slotControlPlayRequest(double v) {
     bool oldPlay = m_playButton->toBool();
 
 #ifdef __ANDROID__
-    // ─── VINYL PAUSE: intercept play 1→0 to decelerate instead of stop ───
+    // Vinyl pause: the deck is paused right away (play = 0, so cue, sync and
+    // the indicators all see a paused deck), only the audio winds down over
+    // kVinylPauseDuration in process(). Pressing play again ends the wind-down.
     if (oldPlay && v <= 0.0 && m_vinylPauseState == VINYL_PAUSE_OFF) {
-        m_vinylPauseState = VINYL_PAUSE_DECEL;
         m_vinylPauseFactor = 1.0;
-        // Keep play=1.0 so the engine continues processing with decelerating speed
-        // (reject the value change by not calling setAndConfirm)
-        return;
-    }
-
-    // ─── VINYL PAUSE completion: deceleration finished, now actually stop ──
-    if (m_vinylPauseState == VINYL_PAUSE_STOP) {
+        m_vinylPauseState = VINYL_PAUSE_DECEL;
+    } else if (v > 0.0) {
         m_vinylPauseState = VINYL_PAUSE_OFF;
-        bool verifiedPlay = updateIndicatorsAndModifyPlay(false, true);
-        m_playButton->setAndConfirm(verifiedPlay ? 1.0 : 0.0);
-        return;
-    }
-
-    // ─── Cancel vinyl pause if user presses play during deceleration ──
-    if (m_vinylPauseState == VINYL_PAUSE_DECEL && v > 0.0) {
-        m_vinylPauseState = VINYL_PAUSE_OFF;
-        m_vinylPauseFactor = 0.0;
-        // Keep playing at normal speed
-        m_playButton->setAndConfirm(1.0);
-        return;
     }
 #endif // __ANDROID__
 
@@ -980,6 +964,16 @@ void EngineBuffer::processTrackLocked(
 
     // Note: play is also active during cue preview
     bool paused = !m_playButton->toBool();
+#ifdef __ANDROID__
+    if (m_vinylPauseState == VINYL_PAUSE_DECEL) {
+        if (m_queuedSeek.getValue().seekType != SEEK_NONE) {
+            // A cue or seek while winding down: stop the wind-down there
+            m_vinylPauseState = VINYL_PAUSE_OFF;
+        } else {
+            paused = false;
+        }
+    }
+#endif // __ANDROID__
     KeyControl::PitchTempoRatio pitchTempoRatio = m_pKeyControl->getPitchTempoRatio();
 
     // The pitch adjustment in Ratio (1.0 being normal
@@ -1219,9 +1213,7 @@ void EngineBuffer::processTrackLocked(
         }
         if (m_vinylPauseFactor <= 0.0) {
             m_vinylPauseFactor = 0.0;
-            // Signal slotControlPlayRequest to do the final stop
-            m_vinylPauseState = VINYL_PAUSE_STOP;
-            m_playButton->setAndConfirm(0.0);
+            m_vinylPauseState = VINYL_PAUSE_OFF;
         }
     }
 #endif // __ANDROID__

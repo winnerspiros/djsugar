@@ -211,30 +211,11 @@ PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
 //
 PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 
-//beatFx
-// Preset order expected:
-//   0  = 01_ECHO_1_4
-//   1  = 02_ECHO_1_2
-//   2  = 03_ECHO_1
-//   3  = 04_ECHO_2
-//   4  = 05_ECHO_4
-//   5  = 06_REVERB_DJ
-//   6  = 07_REVERB_WASH
-//   7  = 08_TRANS_1_4
-//   8  = 09_TRANS_1_2
-//   9  = 10_TRANS_1
-//   10 = 11_TRANS_2
-//   11 = 12_TRANS_4
-//   12 = 13_FLANGER_DJ
-//   13 = 14_PHASER_DJ
-
-PioneerDDJFLX4._beatFxPresetGroups = [
-    {name: "Echo",    presets: [0, 1, 2, 3, 4]},
-    {name: "Reverb",  presets: [5, 6]},
-    {name: "Trans",   presets: [7, 8, 9, 10, 11]},
-    {name: "Flanger", presets: [12]},
-    {name: "Phaser",  presets: [13]}
-];
+// BEAT FX (rekordbox): BEAT FX SELECT steps the effect type, BEAT LEFT/RIGHT
+// halve/double its length. The app loads the effect into slot 1 of effect
+// units 1 and 2 ([BeatFx],effect / [BeatFx],beats).
+PioneerDDJFLX4.BEAT_FX_COUNT = 10; // Echo Spiral Reverb Trans Flanger Phaser Roll Filter Crush TapeStop
+PioneerDDJFLX4.BEAT_FX_BEATS = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 3 / 4, 1, 2, 4, 8, 16];
 
 // -----------------------------------------------------------------------------
 // LOOP BEHAVIOUR
@@ -384,18 +365,6 @@ if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
     PioneerDDJFLX4._vinylWanted = [false, false];
 }
 
-/**
- * Internal Beat FX preset state.
- *
- * groupIndex    = currently selected effect type
- * variantIndex  = currently selected preset inside that type
- * absoluteIndex = absolute preset index in Mixxx preset order
- */
-PioneerDDJFLX4._beatFxPresetState = PioneerDDJFLX4._beatFxPresetState || {
-    groupIndex: 0,
-    variantIndex: 0,
-    absoluteIndex: 0
-};
 
 //
 // Timer buckets
@@ -1809,225 +1778,27 @@ PioneerDDJFLX4._beatFxTargets = function() {
 //   truth and always applies the same preset delta to both Beat FX units.
 // - Manual preset changes in the Mixxx GUI will desync this state.
 
-/**
- * Returns the current Beat FX group object.
- * @returns {object} The current Beat FX group.
- */
-PioneerDDJFLX4._getBeatFxGroup = function() {
-    return PioneerDDJFLX4._beatFxPresetGroups[PioneerDDJFLX4._beatFxPresetState.groupIndex];
+PioneerDDJFLX4._beatFxBeatIndex = 5; // 1 beat
+
+PioneerDDJFLX4._stepBeatFx = function(step) {
+    const n = PioneerDDJFLX4.BEAT_FX_COUNT;
+    const cur = engine.getValue("[BeatFx]", "effect");
+    engine.setValue("[BeatFx]", "effect", (cur + step + n) % n);
 };
 
-/**
- * Returns the default variant index for a Beat FX group.
- *
- * This allows the preset order to stay musically/logically sorted
- * (1/4, 1/2, 1, 2, 4) while still choosing a more useful default
- * when switching effect types.
- *
- * Defaults:
- * - Echo   -> 1 beat
- * - Reverb -> DJ
- * - Trans  -> 1 beat
- * - Flanger/Phaser -> only available variant
- * @param groupIndex
- */
-PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
-    const groups = PioneerDDJFLX4._beatFxPresetGroups;
-    const group = groups[groupIndex];
-    if (!group) { return 0; }
-
-    switch (group.name) {
-    case "Echo":
-        return 2; // 01_ECHO_1_4, 02_ECHO_1_2, 03_ECHO_1
-    case "Reverb":
-        return 0; // 06_REVERB_DJ
-    case "Trans":
-        return 2; // 08_TRANS_1_4, 09_TRANS_1_2, 10_TRANS_1
-    case "Flanger":
-        return 0;
-    case "Phaser":
-        return 0;
-    default:
-        return 0;
-    }
+PioneerDDJFLX4._stepBeatFxBeats = function(step) {
+    const beats = PioneerDDJFLX4.BEAT_FX_BEATS;
+    PioneerDDJFLX4._beatFxBeatIndex =
+        Math.max(0, Math.min(beats.length - 1, PioneerDDJFLX4._beatFxBeatIndex + step));
+    engine.setValue("[BeatFx]", "beats", beats[PioneerDDJFLX4._beatFxBeatIndex]);
 };
 
-/**
- * Read the currently loaded Beat FX preset slot of one unit.
- *
- * Mixxx uses:
- *   -1 = invalid / unsaved
- *    0 = empty/passthrough preset ("---")
- *    1 = first real preset
- *    2 = second real preset
- *    ...
- * @param u
- */
-PioneerDDJFLX4._getBeatFxUnitLoadedSlot = function(u) {
-    return engine.getValue(u, "loaded_chain_preset");
-};
-
-/**
- * Step one Beat FX unit by a relative number of presets.
- *
- * Positive delta -> next_chain_preset
- * Negative delta -> prev_chain_preset
- * @param u
- * @param delta
- */
-PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
-    if (!delta) { return; }
-
-    const stepControl = delta > 0 ? "next_chain_preset" : "prev_chain_preset";
-    const steps = Math.abs(delta);
-
-    for (let i = 0; i < steps; i++) {
-        engine.setValue(u, stepControl, 1);
-    }
-};
-
-/**
- * Force one Beat FX unit to a specific internal absolute preset index.
- *
- * Internal mapping index:
- *   0 = first real preset file (01_ECHO_1_4)
- *   1 = second real preset file
- *   ...
- *
- * Mixxx slot index:
- *   0 = passthrough ("---")
- *   1 = first real preset
- *   2 = second real preset
- *   ...
- * @param u
- * @param targetAbsolute
- */
-PioneerDDJFLX4._setBeatFxUnitToAbsolute = function(u, targetAbsolute) {
-    const currentSlot = PioneerDDJFLX4._getBeatFxUnitLoadedSlot(u);
-    if (currentSlot < 0) { return; }
-
-    const targetSlot = targetAbsolute + 1; // convert internal index -> Mixxx slot
-    const delta = targetSlot - currentSlot;
-
-    PioneerDDJFLX4._stepBeatFxUnitPresetBy(u, delta);
-};
-
-/**
- * Force both Beat FX units to the same absolute preset index.
- *
- * The mapping state is still the source of truth for the TARGET,
- * but each unit is moved from its own actual current Mixxx slot.
- * @param targetAbsolute
- */
-PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState = function(targetAbsolute) {
-    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit1, targetAbsolute);
-    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit2, targetAbsolute);
-};
-
-/**
- * Set Beat FX group + variant.
- *
- * The internal mapping state is treated as the source of truth.
- * Both Beat FX units are always stepped to the same target preset.
- *
- * @param {number} groupIndex Index of the Beat FX preset group.
- * @param {number} variantIndex Index of the variant within the group.
- */
-PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
-    const group = PioneerDDJFLX4._beatFxPresetGroups[groupIndex];
-    if (!group) { return; }
-    if (variantIndex < 0 || variantIndex >= group.presets.length) { return; }
-
-    const targetAbsolute = group.presets[variantIndex];
-
-    // Move both units using the current internal state as reference.
-    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
-
-    // Update internal state afterwards.
-    PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
-    PioneerDDJFLX4._beatFxPresetState.variantIndex = variantIndex;
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = targetAbsolute;
-};
-
-/**
- * Select next Beat FX type and jump to its default variant.
- *
- * Example:
- * Echo -> Reverb -> Trans -> Flanger -> Phaser -> Echo
- */
-PioneerDDJFLX4._nextBeatFxGroup = function() {
-    const groups = PioneerDDJFLX4._beatFxPresetGroups;
-    const nextGroup = (PioneerDDJFLX4._beatFxPresetState.groupIndex + 1) % groups.length;
-    const defaultVariant = PioneerDDJFLX4._getBeatFxDefaultVariant(nextGroup);
-
-    PioneerDDJFLX4._setBeatFxGroupVariant(nextGroup, defaultVariant);
-};
-
-/**
- * Select previous Beat FX type and jump to its default variant.
- */
-PioneerDDJFLX4._prevBeatFxGroup = function() {
-    const groups = PioneerDDJFLX4._beatFxPresetGroups;
-    const prevGroup =
-        (PioneerDDJFLX4._beatFxPresetState.groupIndex - 1 + groups.length) % groups.length;
-    const defaultVariant = PioneerDDJFLX4._getBeatFxDefaultVariant(prevGroup);
-
-    PioneerDDJFLX4._setBeatFxGroupVariant(prevGroup, defaultVariant);
-};
-
-/**
- * Select previous preset variant inside the current Beat FX group.
- */
-PioneerDDJFLX4._prevBeatFxVariant = function() {
-    const group = PioneerDDJFLX4._getBeatFxGroup();
-    const currentVariant = PioneerDDJFLX4._beatFxPresetState.variantIndex;
-
-    if (group.presets.length <= 1) { return; }
-    if (currentVariant <= 0) { return; }
-
-    PioneerDDJFLX4._setBeatFxGroupVariant(
-        PioneerDDJFLX4._beatFxPresetState.groupIndex,
-        currentVariant - 1
-    );
-};
-
-/**
- * Select next preset variant inside the current Beat FX group.
- */
-PioneerDDJFLX4._nextBeatFxVariant = function() {
-    const group = PioneerDDJFLX4._getBeatFxGroup();
-    const currentVariant = PioneerDDJFLX4._beatFxPresetState.variantIndex;
-
-    if (group.presets.length <= 1) { return; }
-    if (currentVariant >= group.presets.length - 1) { return; }
-
-    PioneerDDJFLX4._setBeatFxGroupVariant(
-        PioneerDDJFLX4._beatFxPresetState.groupIndex,
-        currentVariant + 1
-    );
-};
-
-/**
- * Force a known Beat FX startup state on both units.
- *
- * Default:
- * Echo group -> 1 beat variant
- */
+// Start on Echo, 1 beat
 PioneerDDJFLX4._initBeatFx = function() {
-    const groupIndex = 0;
-    const variantIndex = PioneerDDJFLX4._getBeatFxDefaultVariant(groupIndex);
-    const targetAbsolute = PioneerDDJFLX4._beatFxPresetGroups[groupIndex].presets[variantIndex];
-
-    // Assume startup state begins at preset 0 in the mapping logic.
-    PioneerDDJFLX4._beatFxPresetState.groupIndex = 0;
-    PioneerDDJFLX4._beatFxPresetState.variantIndex = 0;
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = 0;
-
-    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
-
-    PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
-    PioneerDDJFLX4._beatFxPresetState.variantIndex = variantIndex;
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = targetAbsolute;
+    PioneerDDJFLX4._beatFxBeatIndex = 5;
+    engine.setValue("[BeatFx]", "beats", 1);
+    engine.setValue("[BeatFx]", "effect", 0);
+    engine.setValue("[BeatFx]", "load", 1);
 };
 
 // ---- helpers: unit index, routing key, slot state ----
@@ -2114,26 +1885,26 @@ PioneerDDJFLX4._updateBeatFxOnOffLed = function() {
 PioneerDDJFLX4.beatFxSelectPressed = function(_channel, _control, value) {
     if (value !== 0x7F) { return; }
 
-    PioneerDDJFLX4._nextBeatFxGroup();
+    PioneerDDJFLX4._stepBeatFx(1);
 };
 
 PioneerDDJFLX4.beatFxSelectShiftPressed = function(_channel, _control, value) {
     if (value !== 0x7F) { return; }
 
-    PioneerDDJFLX4._prevBeatFxGroup();
+    PioneerDDJFLX4._stepBeatFx(-1);
 };
 
 // ---- BEAT LEFT/RIGHT: cycle variants inside current Beat FX group ----
 PioneerDDJFLX4.beatFxLeftPressed = function(_channel, _control, value) {
     if (value !== 0x7F) { return; }
 
-    PioneerDDJFLX4._prevBeatFxVariant();
+    PioneerDDJFLX4._stepBeatFxBeats(-1);
 };
 
 PioneerDDJFLX4.beatFxRightPressed = function(_channel, _control, value) {
     if (value !== 0x7F) { return; }
 
-    PioneerDDJFLX4._nextBeatFxVariant();
+    PioneerDDJFLX4._stepBeatFxBeats(1);
 };
 
 // ---- Channel selector: CH1 / CH2 / 1&2 ----
@@ -2442,20 +2213,6 @@ PioneerDDJFLX4.filterCh2Rotate = function(_channel, control, value) {
     engine.setParameter("[QuickEffectRack1_[Channel2]]", "super1", out);
 };
 
-///////////////////////////////////////////////////////////////
-// PAD FX for FLX4
-// - PAD FX1 Mode: Deck1->Unit1, Deck2->Unit2
-// - PAD FX2 Mode: Deck1->Unit3, Deck2->Unit4
-//
-// Pads (within PAD FX modes):
-//  1-3 : toggle slot 1-3
-//  4   : toggle unit enabled
-//  5   : toggle routing to own deck (group_[ChannelX]_enable)
-//  6   : toggle routing to other deck
-//  8   : toggle ALL slots (all-on <-> all-off)
-//  7   : unused
-///////////////////////////////////////////////////////////////
-
 PioneerDDJFLX4._padLedStatusesForGroup = function(group) {
     // deck1: 0x97 normal, 0x98 shift
     // deck2: 0x99 normal, 0x9A shift
@@ -2468,183 +2225,35 @@ PioneerDDJFLX4._padLed = function(group, midino, on) {
     sts.forEach((s) => midi.sendShortMsg(s, midino, v));
 };
 
-PioneerDDJFLX4._fxUnitsForDeckAndMode = function(group) {
-    const deck = (group === "[Channel1]") ? 1 : 2;
-    const mode = PioneerDDJFLX4.padMode[group];
-
-    if (mode === "padfx1") {
-        return deck === 1 ? 1 : 2;
-    }
-    if (mode === "padfx2") {
-        return deck === 1 ? 3 : 4;
-    }
-    return null;
-};
-
-PioneerDDJFLX4._fxRouteKey = function(group) {
-    return `group_${group}_enable`; // e.g. group_[Channel1]_enable
-};
-
-PioneerDDJFLX4._otherDeckGroup = function(group) {
-    return (group === "[Channel1]") ? "[Channel2]" : "[Channel1]";
-};
-
-PioneerDDJFLX4._U = function(unitIdx) {
-    return `[EffectRack1_EffectUnit${unitIdx}]`;
-};
-
-PioneerDDJFLX4._S = function(unitIdx, slotIdx) {
-    return `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`;
-};
-
-PioneerDDJFLX4._slotEnabled = function(unitIdx, slotIdx) {
-    return engine.getValue(PioneerDDJFLX4._S(unitIdx, slotIdx), "enabled") > 0.5;
-};
-
-PioneerDDJFLX4._anySlotOn = function(unitIdx) {
-    return PioneerDDJFLX4._slotEnabled(unitIdx, 1) ||
-           PioneerDDJFLX4._slotEnabled(unitIdx, 2) ||
-           PioneerDDJFLX4._slotEnabled(unitIdx, 3);
-};
-
-PioneerDDJFLX4._allSlotsOn = function(unitIdx) {
-    const Uon = engine.getValue(PioneerDDJFLX4._U(unitIdx), "enabled") > 0.5;
-    return Uon &&
-           PioneerDDJFLX4._slotEnabled(unitIdx, 1) &&
-           PioneerDDJFLX4._slotEnabled(unitIdx, 2) &&
-           PioneerDDJFLX4._slotEnabled(unitIdx, 3);
-};
-
-PioneerDDJFLX4._autoArmIfNeeded = function(unitIdx, group) {
-    // if any slot is on -> ensure Unit enabled + routing to current deck ON
-    if (!PioneerDDJFLX4._anySlotOn(unitIdx)) { return; }
-
-    const U = PioneerDDJFLX4._U(unitIdx);
-    const rk = PioneerDDJFLX4._fxRouteKey(group);
-
-    if (engine.getValue(U, "enabled") <= 0.5) { engine.setValue(U, "enabled", 1); }
-    if (engine.getValue(U, rk) <= 0.5) { engine.setValue(U, rk, 1); }
-};
-
-PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
-    const U = PioneerDDJFLX4._U(unitIdx);
-    const S1 = PioneerDDJFLX4._S(unitIdx, 1);
-    const S2 = PioneerDDJFLX4._S(unitIdx, 2);
-    const S3 = PioneerDDJFLX4._S(unitIdx, 3);
-
-    const rk = PioneerDDJFLX4._fxRouteKey(group);
-
-    if (!on) {
-        // OFF: slots first, then unit, then optionally unrouted
-        engine.setValue(S3, "enabled", 0);
-        engine.setValue(S2, "enabled", 0);
-        engine.setValue(S1, "enabled", 0);
-        engine.setValue(U,  "enabled", 0);
-        try { engine.setValue(U, rk, 0); } catch (e) { /* ignored */ }
-        return;
-    }
-
-    // ON: route + unit first, then slots
-    try { engine.setValue(U, rk, 1); } catch (e) { /* ignored */ }
-    engine.setValue(U, "enabled", 1);
-    engine.setValue(S1, "enabled", 1);
-    engine.setValue(S2, "enabled", 1);
-    engine.setValue(S3, "enabled", 1);
-};
+// PAD FX (rekordbox style): each pad plays one effect while held. Which
+// effect sits on which pad is set in the app (Settings -> Pads) and handled
+// by the [PadFx_ChannelN] controls: PAD FX 1 = pads 1-8, PAD FX 2 = pads 9-16.
+PioneerDDJFLX4._padFxHeld = PioneerDDJFLX4._padFxHeld || {};
 
 PioneerDDJFLX4.updatePadFxUI = function(group) {
-    const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
-    if (!unitIdx) { return; }
-
-    // auto-arm if needed (prevents “it’s on but does nothing”)
-    PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
-
     const mode = PioneerDDJFLX4.padMode[group];
-    const base = (mode === "padfx1") ? 0x10 : 0x50; // pad notes: FX1=16..23, FX2=80..87
-
-    const U = PioneerDDJFLX4._U(unitIdx);
-    const rkOwn   = PioneerDDJFLX4._fxRouteKey(group);
-    const rkOther = PioneerDDJFLX4._fxRouteKey(PioneerDDJFLX4._otherDeckGroup(group));
-
-    const unitOn  = engine.getValue(U, "enabled") > 0.5;
-    const rOwnOn  = engine.getValue(U, rkOwn) > 0.5;
-    const rOthOn  = engine.getValue(U, rkOther) > 0.5;
-
-    // pads 1-3: slots
-    PioneerDDJFLX4._padLed(group, base + 0, PioneerDDJFLX4._slotEnabled(unitIdx, 1));
-    PioneerDDJFLX4._padLed(group, base + 1, PioneerDDJFLX4._slotEnabled(unitIdx, 2));
-    PioneerDDJFLX4._padLed(group, base + 2, PioneerDDJFLX4._slotEnabled(unitIdx, 3));
-
-    // pad 4: unit enabled
-    PioneerDDJFLX4._padLed(group, base + 3, unitOn);
-
-    // pad 5: routing own deck
-    PioneerDDJFLX4._padLed(group, base + 4, rOwnOn);
-
-    // pad 6: routing other deck
-    PioneerDDJFLX4._padLed(group, base + 5, rOthOn);
-
-    // pad 7: unused off
-    PioneerDDJFLX4._padLed(group, base + 6, false);
-
-    // pad 8: any slot on (quick status)
-    PioneerDDJFLX4._padLed(group, base + 7, PioneerDDJFLX4._anySlotOn(unitIdx));
-};
-
-PioneerDDJFLX4._toggleRoute = function(unitIdx, routeGroup) {
-    const U = PioneerDDJFLX4._U(unitIdx);
-    const rk = PioneerDDJFLX4._fxRouteKey(routeGroup);
-    const cur = engine.getValue(U, rk) > 0.5;
-    engine.setValue(U, rk, cur ? 0 : 1);
+    if (mode !== "padfx1" && mode !== "padfx2") { return; }
+    const base = (mode === "padfx1") ? 0x10 : 0x50;
+    for (let i = 0; i < 8; i++) {
+        const pad = (mode === "padfx1" ? 1 : 9) + i;
+        PioneerDDJFLX4._padLed(group, base + i, PioneerDDJFLX4._padFxHeld[group] === pad);
+    }
 };
 
 PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
-    if (value !== 0x7F) { return; }
-
-    const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
-    if (!unitIdx) { return; }
-
-    const mode = PioneerDDJFLX4.padMode[group];
-    const base = (mode === "padfx1") ? 0x10 : 0x50;
-
-    const idx = (control - base) + 1; // 1..8
-    const U = PioneerDDJFLX4._U(unitIdx);
-
-    if (idx >= 1 && idx <= 3) {
-        const S = PioneerDDJFLX4._S(unitIdx, idx);
-        const cur = engine.getValue(S, "enabled") > 0.5;
-        engine.setValue(S, "enabled", cur ? 0 : 1);
-        // auto-arm prevents “slot on but routed off”
-        PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
-        PioneerDDJFLX4.updatePadFxUI(group);
-        return;
+    const deck = group === "[Channel2]" ? 2 : 1;
+    const pad = (control >= 0x50 ? 9 : 1) + (control & 0x07);
+    const fxGroup = `[PadFx_Channel${deck}]`;
+    if (value === 0x7F) {
+        PioneerDDJFLX4._padFxHeld[group] = pad;
+        engine.setValue(fxGroup, `pad${pad}`, 1);
+    } else {
+        if (PioneerDDJFLX4._padFxHeld[group] === pad) {
+            delete PioneerDDJFLX4._padFxHeld[group];
+        }
+        engine.setValue(fxGroup, `pad${pad}`, 0);
     }
-
-    if (idx === 4) {
-        const cur = engine.getValue(U, "enabled") > 0.5;
-        engine.setValue(U, "enabled", cur ? 0 : 1);
-        PioneerDDJFLX4.updatePadFxUI(group);
-        return;
-    }
-
-    if (idx === 5) {
-        PioneerDDJFLX4._toggleRoute(unitIdx, group);
-        PioneerDDJFLX4.updatePadFxUI(group);
-        return;
-    }
-
-    if (idx === 6) {
-        PioneerDDJFLX4._toggleRoute(unitIdx, PioneerDDJFLX4._otherDeckGroup(group));
-        PioneerDDJFLX4.updatePadFxUI(group);
-        return;
-    }
-
-    if (idx === 8) {
-        const allOn = PioneerDDJFLX4._allSlotsOn(unitIdx);
-        PioneerDDJFLX4._setUnitAndSlots(unitIdx, group, !allOn);
-        PioneerDDJFLX4.updatePadFxUI(group);
-
-    }
+    PioneerDDJFLX4.updatePadFxUI(group);
 };
 
 // mode switches (call these from your PAD MODE buttons)
@@ -3447,10 +3056,13 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
 
     const ch = (_status === 0x90) ? "[Channel1]" : "[Channel2]";
 
-    // KEYBOARD MODE = STEMS
     if (_control === 0x69) {
+        if (PioneerDDJFLX4.padMode[ch] === PioneerDDJFLX4.PADMODE.KEYBOARD) {
+            PioneerDDJFLX4.keyboardCue[ch] = 0;
+        }
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
         PioneerDDJFLX4.updateDeckLeds(ch);
+        PioneerDDJFLX4.keyboardLights(ch);
         return;
     }
 
@@ -3786,6 +3398,81 @@ PioneerDDJFLX4._refreshKeyboardStemLeds = function(channelGroup) {
             }
         }
     }
+};
+
+// ------------------- FADER START (rekordbox) -------------------
+// With SHIFT held, moving a channel fader up from the bottom (or the
+// crossfader away from the far side) plays the deck; moving it back returns
+// the deck to its cue point.
+PioneerDDJFLX4.faderStartPlay = function(_channel, _control, value, _status, group) {
+    if (value) {
+        engine.setValue(group, "play", 1);
+    }
+};
+
+PioneerDDJFLX4.faderStartCue = function(_channel, _control, value, _status, group) {
+    if (value) {
+        script.triggerControl(group, "cue_gotoandstop");
+    }
+};
+
+// ------------------- KEYBOARD MODE (rekordbox) -------------------
+// The first pad pressed picks the hot cue (and sets it if it's empty); then
+// the pads play it at the pitches of _keyShiftPadToSemitone. SHIFT + pad 7/8
+// moves the range up or down, SHIFT + pads 1-6 delete the picked hot cue.
+// Pressing KEYBOARD again picks another hot cue.
+PioneerDDJFLX4.keyboardCue = {"[Channel1]": 0, "[Channel2]": 0};
+PioneerDDJFLX4.keyboardOffset = {"[Channel1]": 0, "[Channel2]": 0};
+
+PioneerDDJFLX4.keyboardPadPressed = function(group, pad, value, shift) {
+    if (value !== 0x7F) { return; }
+    if (shift) {
+        if (pad === 6) {
+            PioneerDDJFLX4.keyboardOffset[group] = Math.min(PioneerDDJFLX4.keyboardOffset[group] + 4, 5);
+        } else if (pad === 7) {
+            PioneerDDJFLX4.keyboardOffset[group] = Math.max(PioneerDDJFLX4.keyboardOffset[group] - 4, -12);
+        } else {
+            const cue = PioneerDDJFLX4.keyboardCue[group];
+            if (cue > 0 && engine.getValue(group, `hotcue_${cue}_status`) > 0) {
+                script.triggerControl(group, `hotcue_${cue}_clear`);
+            }
+            PioneerDDJFLX4.keyboardCue[group] = 0;
+            PioneerDDJFLX4.keyboardLights(group);
+        }
+        return;
+    }
+    const cue = PioneerDDJFLX4.keyboardCue[group];
+    if (cue === 0) {
+        const picked = pad + 1;
+        if (engine.getValue(group, `hotcue_${picked}_status`) <= 0) {
+            script.triggerControl(group, `hotcue_${picked}_set`);
+        }
+        PioneerDDJFLX4.keyboardCue[group] = picked;
+        PioneerDDJFLX4.keyboardLights(group);
+        return;
+    }
+    engine.setValue(group, "pitch_adjust",
+        PioneerDDJFLX4._keyShiftPadToSemitone(pad) + PioneerDDJFLX4.keyboardOffset[group]);
+    script.triggerControl(group, `hotcue_${cue}_gotoandplay`);
+};
+
+// All pads lit once a hot cue is picked
+PioneerDDJFLX4.keyboardLights = function(group) {
+    if (PioneerDDJFLX4.padMode[group] !== PioneerDDJFLX4.PADMODE.KEYBOARD) { return; }
+    const code = PioneerDDJFLX4.keyboardCue[group] > 0 ? 0x7F : 0x00;
+    for (let i = 0; i < 8; i++) {
+        PioneerDDJFLX4.stemsPadsModesStatus[group].forEach(
+            (st) => midi.sendShortMsg(st, 0x40 + i, code));
+    }
+};
+
+// KEYBOARD pads: notes 0x40-0x47 (0x97/0x99, SHIFT 0x98/0x9A)
+PioneerDDJFLX4.keyboardPad = function(_channel, control, value, _status, group) {
+    PioneerDDJFLX4.keyboardPadPressed(group, control - 0x40, value, false);
+};
+
+PioneerDDJFLX4.keyboardPadShift = function(_channel, control, value, _status, group) {
+    PioneerDDJFLX4.keyboardPadPressed(group, control - 0x40, value, true);
 };
 
 // ------------------- PAD HANDLERS -------------------

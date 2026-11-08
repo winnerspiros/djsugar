@@ -1,0 +1,118 @@
+#include "library/samples/bundledsamples.h"
+
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QFileInfo>
+#include <QStandardPaths>
+
+namespace mixxx {
+namespace samples {
+
+namespace {
+
+const QStringList kSampleFilters = {
+        QStringLiteral("*.mp3"),
+        QStringLiteral("*.wav"),
+        QStringLiteral("*.aiff"),
+        QStringLiteral("*.m4a"),
+        QStringLiteral("*.ogg"),
+        QStringLiteral("*.flac"),
+};
+
+QString bundledSourceDir(const UserSettingsPointer& pConfig) {
+    const QStringList candidates = {
+            pConfig->getResourcePath() + QStringLiteral("samples/"),
+            QStringLiteral("res/samples/"),
+    };
+    for (const auto& candidate : candidates) {
+        const QFileInfo fi(candidate);
+        if (fi.isDir()) {
+            return fi.absoluteFilePath();
+        }
+    }
+    return QString();
+}
+
+} // namespace
+
+QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
+    const QString sourceDir = bundledSourceDir(pConfig);
+    if (sourceDir.isEmpty()) {
+        return QString();
+    }
+    // Cache location keeps the library scanner away from the samples
+    const QString destDir =
+            QStandardPaths::writableLocation(QStandardPaths::CacheLocation) +
+            QStringLiteral("/samples/");
+    const QDir source(sourceDir);
+    QDirIterator it(sourceDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString path = it.next();
+        const QString destPath = destDir + source.relativeFilePath(path);
+        if (QFile::exists(destPath)) {
+            continue;
+        }
+        QDir().mkpath(QFileInfo(destPath).absolutePath());
+        if (!QFile::copy(path, destPath)) {
+            qWarning() << "Failed to copy sample" << path << "to" << destPath;
+        }
+    }
+    return destDir;
+}
+
+QStringList bundledSampleFiles(const UserSettingsPointer& pConfig) {
+    const QString dir = bundledSamplesDir(pConfig);
+    if (dir.isEmpty()) {
+        return {};
+    }
+    const QDir root(dir);
+    QStringList relative;
+    QDirIterator it(dir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        relative.append(root.relativeFilePath(it.next()));
+    }
+    relative.sort(Qt::CaseInsensitive);
+    QStringList files;
+    files.reserve(relative.size());
+    for (const auto& path : std::as_const(relative)) {
+        files.append(root.absoluteFilePath(path));
+    }
+    return files;
+}
+
+QStringList defaultSamplerKit(const UserSettingsPointer& pConfig) {
+    const QString dir = bundledSamplesDir(pConfig);
+    if (dir.isEmpty()) {
+        return {};
+    }
+    const QStringList kit = {
+            // Bank A: drums
+            QStringLiteral("djsugar/01_kick.wav"),
+            QStringLiteral("djsugar/02_snare.wav"),
+            QStringLiteral("djsugar/03_clap.wav"),
+            QStringLiteral("djsugar/04_hat_closed.wav"),
+            QStringLiteral("djsugar/05_hat_open.wav"),
+            QStringLiteral("djsugar/06_rim.wav"),
+            QStringLiteral("djsugar/12_808.wav"),
+            QStringLiteral("djsugar/08_crash.wav"),
+            // Bank B: FX
+            QStringLiteral("djsugar/14_airhorn.wav"),
+            QStringLiteral("djsugar/09_riser.wav"),
+            QStringLiteral("djsugar/10_downlifter.wav"),
+            QStringLiteral("djsugar/11_sub_drop.wav"),
+            QStringLiteral("djsugar/16_noise_sweep.wav"),
+            QStringLiteral("dj-scratch.ogg"),
+            QStringLiteral("djsugar/15_vinyl_stop.wav"),
+            QStringLiteral("djsugar/17_siren.ogg"),
+    };
+    QStringList files;
+    for (const auto& name : kit) {
+        const QString path = dir + name;
+        files.append(QFile::exists(path) ? path : QString());
+    }
+    return files;
+}
+
+} // namespace samples
+} // namespace mixxx

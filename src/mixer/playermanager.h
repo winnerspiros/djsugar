@@ -62,6 +62,10 @@ class PlayerManagerInterface : public QObject {
 class PlayerManager : public PlayerManagerInterface {
     Q_OBJECT
   public:
+    UserSettingsPointer config() const {
+        return m_pConfig;
+    }
+
     PlayerManager(UserSettingsPointer pConfig,
             SoundManager* pSoundManager,
             EffectsManager* pEffectsManager,

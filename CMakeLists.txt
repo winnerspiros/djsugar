@@ -1412,6 +1412,7 @@ add_library(
   src/effects/effectparameterslotbase.cpp
   src/effects/effectslot.cpp
   src/effects/effectsmanager.cpp
+  src/effects/padfxcontroller.cpp
   src/effects/effectsmessenger.cpp
   src/effects/presets/effectchainpreset.cpp
   src/effects/presets/effectchainpresetmanager.cpp
@@ -1576,6 +1577,7 @@ add_library(
   src/library/recording/dlgrecording.cpp
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
+  src/library/samples/bundledsamples.cpp
   src/library/samples/dlgsamples.cpp
   src/library/samples/samplesfeature.cpp
   src/library/enginedj/enginedjfeature.cpp

@@ -4,91 +4,16 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QStandardPaths>
 #include <QVBoxLayout>
 
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/library.h"
+#include "library/samples/bundledsamples.h"
 #include "library/trackcollectionmanager.h"
 #include "moc_dlgsamples.cpp"
 #include "track/track.h"
 #include "util/assert.h"
 #include "widget/wlibrary.h"
-
-namespace {
-
-// Resolve the samples directory to a writable location.
-// On platforms where samples are bundled as read-only resources (Android assets:/),
-// this copies them to a writable location so the audio engine can load them.
-QString resolveSamplesPath(UserSettingsPointer pConfig) {
-    const QString kSamplesSubdir = QStringLiteral("samples/");
-
-    // Candidates for source: resource path first, then fallback
-    QStringList sourceCandidates = {
-            pConfig->getResourcePath() + kSamplesSubdir,
-            QStringLiteral("res/samples/"),
-    };
-
-    QString sourceDir;
-    for (const auto& candidate : sourceCandidates) {
-        QFileInfo fi(candidate);
-        if (fi.exists() && fi.isDir()) {
-            sourceDir = fi.absoluteFilePath();
-            break;
-        }
-    }
-
-    if (sourceDir.isEmpty()) {
-        return QString();
-    }
-
-    // Determine writable destination — use CacheLocation to avoid the
-    // library scanner picking up sample files as regular tracks.
-    QString destDir = QStandardPaths::writableLocation(
-                              QStandardPaths::CacheLocation) +
-            QStringLiteral("/") + kSamplesSubdir;
-    QDir dest(destDir);
-    if (!dest.exists()) {
-        dest.mkpath(QStringLiteral("."));
-    }
-
-    // Check if already extracted
-    QFileInfo destMarker(destDir + QStringLiteral(".extracted"));
-    if (destMarker.exists()) {
-        return destDir;
-    }
-
-    // Copy sample files from source to writable destination
-    QDir source(sourceDir);
-    QStringList filters = {QStringLiteral("*.mp3"),
-            QStringLiteral("*.wav"),
-            QStringLiteral("*.aiff"),
-            QStringLiteral("*.m4a"),
-            QStringLiteral("*.ogg")};
-    const QFileInfoList files = source.entryInfoList(filters, QDir::Files);
-
-    for (const auto& fi : std::as_const(files)) {
-        QString destPath = destDir + fi.fileName();
-        if (!QFile::exists(destPath)) {
-            if (!QFile::copy(fi.absoluteFilePath(), destPath)) {
-                qWarning() << "Failed to copy sample:"
-                           << fi.absoluteFilePath();
-            }
-        }
-    }
-
-    // Create marker to avoid re-extracting
-    QFile markerFile(destDir + QStringLiteral(".extracted"));
-    if (!markerFile.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to create .extracted marker file:"
-                   << destDir + QStringLiteral(".extracted");
-    }
-    markerFile.close();
-
-    return destDir;
-}
-
-} // anonymous namespace
 
 DlgSamples::DlgSamples(
         WLibrary* parent,
@@ -119,24 +44,20 @@ DlgSamples::~DlgSamples() {
 void DlgSamples::refreshBrowseModel() {
     m_pSampleList->clear();
     m_sampleFiles.clear();
-    m_samplesPath = resolveSamplesPath(m_pConfig);
+    m_samplesPath = mixxx::samples::bundledSamplesDir(m_pConfig);
 
     if (m_samplesPath.isEmpty()) {
         qWarning() << "Samples path is empty, no samples to display";
         return;
     }
 
-    QDir dir(m_samplesPath);
-    QStringList filters = {QStringLiteral("*.mp3"),
-            QStringLiteral("*.wav"),
-            QStringLiteral("*.aiff"),
-            QStringLiteral("*.m4a"),
-            QStringLiteral("*.ogg")};
-    m_sampleFiles = dir.entryList(filters, QDir::Files, QDir::Name);
-
-    foreach (const QString& filename, m_sampleFiles) {
+    const QDir dir(m_samplesPath);
+    const QStringList files = mixxx::samples::bundledSampleFiles(m_pConfig);
+    for (const QString& path : files) {
+        const QString filename = dir.relativeFilePath(path);
+        m_sampleFiles.append(filename);
         QListWidgetItem* pItem = new QListWidgetItem(filename);
-        pItem->setToolTip(dir.absoluteFilePath(filename));
+        pItem->setToolTip(path);
         pItem->setFlags(pItem->flags() | Qt::ItemIsDragEnabled);
         m_pSampleList->addItem(pItem);
     }

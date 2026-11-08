@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.6">
   <info>
-    <name>Pioneer DDJ-FLX4 (Custom)</name>
+    <name>Pioneer DDJ-FLX4</name>
     <author>Robert904, ElHanko</author>
-    <description>Community-maintained custom Mixxx MIDI mapping for the Pioneer DDJ-FLX4.
-            Not an official Pioneer or Mixxx default mapping.
-            Focused on predictable behavior, consistent LED feedback
-            and a Pioneer-like workflow without automation gimmicks.</description>
-    <manual />
+    <descript<description>rekordbox-style mapping for the Pioneer DDJ-FLX4.
+            Pads: HOT CUE (4 banks), PAD FX 1/2 (one effect per pad, set in Settings > Pads),
+            BEAT JUMP, SAMPLER (bank A/B, set in Settings > Pads), KEYBOARD, BEAT LOOP, KEY SHIFT,
+            SHIFT + SAMPLER = stems. BEAT FX: Echo, Spiral, Reverb, Trans, Flanger, Phaser, Roll,
+            Filter, Crush, Tape stop. Smart Fader, Smart CFX, Fader Start (SHIFT + fader),
+            SHIFT + PLAY = stutter, SHIFT + CUE = back to track start.</description>ual />
     <forums />
     <devices>
       <product protocol="midi" vendor_id="0x2b73" product_id="0x0045" />
@@ -183,9 +184,19 @@
       <control>
         <description>CUE +SHIFT (DECK1) - press - Jump to track start</description>
         <group>[Channel1]</group>
-        <key>start_stop</key>
+        <key>start</key>
         <status>0x90</status>
         <midino>0x48</midino>
+        <options>
+          <Normal />
+        </options>
+      </control>
+      <control>
+        <description>PLAY +SHIFT (DECK1) - Stutter: back to the cue point and play</description>
+        <group>[Channel1]</group>
+        <key>cue_gotoandplay</key>
+        <status>0x90</status>
+        <midino>0x47</midino>
         <options>
           <Normal />
         </options>
@@ -203,9 +214,19 @@
       <control>
         <description>CUE +SHIFT (DECK2) - press - Jump to track start</description>
         <group>[Channel2]</group>
-        <key>start_stop</key>
+        <key>start</key>
         <status>0x91</status>
         <midino>0x48</midino>
+        <options>
+          <Normal />
+        </options>
+      </control>
+      <control>
+        <description>PLAY +SHIFT (DECK2) - Stutter: back to the cue point and play</description>
+        <group>[Channel2]</group>
+        <key>cue_gotoandplay</key>
+        <status>0x91</status>
+        <midino>0x47</midino>
         <options>
           <Normal />
         </options>
@@ -1668,6 +1689,366 @@
       <!-- KEYBOARD MODE END -->
       <!-- PAD FX MODE START -->
       <!-- PAD FX1 (Deck 1) -->
+      <control>
+        <description>KEYBOARD Deck1 Pad1</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x40</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad1 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x40</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad2</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x41</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad2 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x41</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad3</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x42</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad3 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x42</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad4</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x43</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad4 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x43</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad5</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x44</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad5 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x44</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad6</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x45</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad6 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x45</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad7</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x46</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad7 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x46</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad8</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x97</status>
+        <midino>0x47</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck1 Pad8 + SHIFT</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x98</status>
+        <midino>0x47</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad1</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x40</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad1 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x40</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad2</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x41</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad2 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x41</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad3</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x42</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad3 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x42</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad4</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x43</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad4 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x43</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad5</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x44</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad5 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x44</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad6</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x45</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad6 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x45</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad7</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x46</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad7 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x46</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad8</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPad</key>
+        <status>0x99</status>
+        <midino>0x47</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>KEYBOARD Deck2 Pad8 + SHIFT</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.keyboardPadShift</key>
+        <status>0x9A</status>
+        <midino>0x47</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start play</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.faderStartPlay</key>
+        <status>0x90</status>
+        <midino>0x66</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK1) - Fader Start back to cue</description>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.faderStartCue</key>
+        <status>0x90</status>
+        <midino>0x52</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start play</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.faderStartPlay</key>
+        <status>0x91</status>
+        <midino>0x66</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>CHANNEL FADER / CROSSFADER +SHIFT (DECK2) - Fader Start back to cue</description>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.faderStartCue</key>
+        <status>0x91</status>
+        <midino>0x52</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
       <control>
         <description>PAD FX1 Deck1 Pad1</description>
         <group>[Channel1]</group>
