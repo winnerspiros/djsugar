@@ -30,7 +30,7 @@ QString sidecarPathFor(const QString& cacheDir, const QString& videoId) {
 bool isMusicVideoTitle(const QString& title) {
     static const QRegularExpression kMusicVideo(
             QStringLiteral("official\\s+(music\\s+)?video|music\\s+video|"
-                           "video\\s*clip|video\\s+official|clip\\s+officiel|"
+                           "video\\s*clip|video\\s+oficial|clip\\s+officiel|"
                            "\\bm/?v\\b"),
             QRegularExpression::CaseInsensitiveOption);
     return kMusicVideo.match(title).hasMatch();
