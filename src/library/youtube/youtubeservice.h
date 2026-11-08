@@ -360,6 +360,9 @@ class YouTubeService : public QObject {
     /// Primary path on Android. No external Python, Termux, or system
     /// dependency needed.
     void downloadViaAndroidBundled(const QString& videoId, const QString& cacheDir);
+    /// Unpacks the bundled yt-dlp runtime in the background ahead of the
+    /// first download.
+    static void prewarmAndroidBundled();
     /// JNI worker behind downloadViaAndroidBundled: runs bundled yt-dlp with
     /// our on-device PO tokens attached. Fully in-app — no Termux needed.
     void runAndroidBundled(const QString& videoId,

@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLocale>
 #include <QMenu>
 #include <QMessageBox>
@@ -18,6 +20,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <algorithm>
+#include <cstdlib>
 
 #include "analyzer/analyzerscheduledtrack.h"
 #include "control/controlproxy.h"
@@ -30,6 +33,7 @@
 #include "library/trackcollectionmanager.h"
 #include "library/treeitem.h"
 #include "library/treeitemmodel.h"
+#include "library/youtube/youtubegenrelookup.h"
 #include "library/youtube/youtubetrackmodel.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
@@ -312,6 +316,63 @@ const QStringList kGenreMatchList = {
         QStringLiteral("Έντεχνα"),
         QStringLiteral("Λαϊκά"),
         QStringLiteral("Greek trap"),
+        QStringLiteral("Ελληνικό χιπ χοπ"),
+        QStringLiteral("Ελληνικό drill"),
+        QStringLiteral("Ελληνικό house"),
+        QStringLiteral("Ελαφρολαϊκά"),
+        QStringLiteral("Λαϊκοπόπ"),
+        QStringLiteral("Τσιφτετέλι"),
+        QStringLiteral("Χασάπικο"),
+        QStringLiteral("Συρτάκι"),
+        QStringLiteral("Καλαματιανό"),
+        QStringLiteral("Μπαλάντες"),
+        QStringLiteral("Νέο κύμα"),
+        QStringLiteral("Greek hip hop"),
+        QStringLiteral("Greek drill"),
+        QStringLiteral("Greek house"),
+        QStringLiteral("Greek rap"),
+        QStringLiteral("Greek pop"),
+        QStringLiteral("Greek rock"),
+        QStringLiteral("Rebetiko"),
+        QStringLiteral("Skiladiko"),
+        QStringLiteral("Zeibekiko"),
+        QStringLiteral("Tsifteteli"),
+        QStringLiteral("Hasapiko"),
+        QStringLiteral("Syrtaki"),
+        QStringLiteral("Nisiotika"),
+        QStringLiteral("Dimotika"),
+        QStringLiteral("Pontiaka"),
+        QStringLiteral("Kritika"),
+        QStringLiteral("Entexno"),
+        QStringLiteral("Laiko"),
+        // Other styles, ahead of the broad names they contain
+        QStringLiteral("Melodic House"),
+        QStringLiteral("Organic House"),
+        QStringLiteral("Slap House"),
+        QStringLiteral("Disco House"),
+        QStringLiteral("Hard House"),
+        QStringLiteral("Big Room"),
+        QStringLiteral("Progressive Psy"),
+        QStringLiteral("Electro Swing"),
+        QStringLiteral("Eurodance"),
+        QStringLiteral("Italo Dance"),
+        QStringLiteral("UK Funky"),
+        QStringLiteral("Hyperpop"),
+        QStringLiteral("Indie Rock"),
+        QStringLiteral("Alternative"),
+        QStringLiteral("Bossa Nova"),
+        QStringLiteral("Flamenco"),
+        QStringLiteral("Balkan"),
+        QStringLiteral("Turkish Pop"),
+        QStringLiteral("Arabic"),
+        QStringLiteral("Bollywood"),
+        QStringLiteral("Jazz"),
+        QStringLiteral("Blues"),
+        QStringLiteral("Country"),
+        QStringLiteral("Folk"),
+        QStringLiteral("Gospel"),
+        QStringLiteral("Classical"),
+        QStringLiteral("Soundtrack"),
         // House — most specific first
         QStringLiteral("Progressive House"),
         QStringLiteral("Soulful House"),
@@ -506,8 +567,20 @@ QString inferGenreFromQuery(const QString& query) {
 /// fallback sidecar), .part (incomplete download temp file).
 bool isYouTubeSidecarFile(const QString& name) {
     return name.endsWith(QStringLiteral(".info.json")) ||
+            name.endsWith(QStringLiteral(".meta.json")) ||
             name.endsWith(QStringLiteral(".sponsorblock.json")) ||
             name.endsWith(QStringLiteral(".part"));
+}
+
+// `<videoId>.meta.json` next to the cached audio: the raw video title.
+void writeVideoMetaSidecar(const QString& dir, const QString& videoId, const QString& rawTitle) {
+    QFile file(QDir(dir).filePath(videoId + QStringLiteral(".meta.json")));
+    if (rawTitle.isEmpty() || !file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return;
+    }
+    QJsonObject meta;
+    meta.insert(QStringLiteral("title"), rawTitle);
+    file.write(QJsonDocument(meta).toJson(QJsonDocument::Compact));
 }
 
 struct TrackDisplayMetadata {
@@ -1504,6 +1577,9 @@ void YouTubeFeature::onDownloadFinished(
             durationSec = info.durationSec;
             uploader = metadata.artist;
             title = metadata.title;
+            // The cleaned title loses "(Official Music Video)", which tells
+            // SponsorBlockController the file may open with a non-music skit.
+            writeVideoMetaSidecar(cacheDir(), videoId, info.title);
             break;
         }
     }
@@ -1539,26 +1615,25 @@ void YouTubeFeature::onDownloadFinished(
             pTrack->setCoverInfo(coverInfo);
         }
     }
-    // Auto-detect genre from the search query that found this track. If the
-    // user searched for "frenchcore 2024" or clicked the "Hard Techno" genre
-    // shortcut, the track gets tagged automatically so the library's genre
-    // column is useful without manual tagging.
-    if (pTrack->getGenre().isEmpty() && !m_lastQuery.isEmpty()) {
-        const QString detectedGenre = inferGenreFromQuery(m_lastQuery);
-        if (!detectedGenre.isEmpty()) {
-            pTrack->updateGenre(detectedGenre);
-        }
+    // Genre: YouTube only knows "Music", so look the song up in the iTunes
+    // and Deezer catalogues. The genre of the search query ("frenchcore
+    // 2024") is the fallback when neither knows the song.
+    if (pTrack->getGenre().isEmpty()) {
+        fetchGenre(pTrack, videoId, uploader, title, durationSec);
     }
+    const QList<PendingPlayerLoad> pendingLoads = m_pendingPlayerLoads.take(videoId);
     if (pTrack->getId().isValid()) {
         if (pTrack->getBpm() > 0) {
             syncAnalyzedTrackMetadata(pTrack);
-        } else {
+        } else if (pendingLoads.isEmpty()) {
+            // A track that goes straight to a deck is analyzed by the deck
+            // load; queueing it here as well ran two full analyses of the
+            // same file side by side.
             QList<AnalyzerScheduledTrack> tracks;
             tracks.append(AnalyzerScheduledTrack(pTrack->getId()));
             Q_EMIT analyzeTracks(tracks);
         }
     }
-    const QList<PendingPlayerLoad> pendingLoads = m_pendingPlayerLoads.take(videoId);
     for (const auto& pendingLoad : pendingLoads) {
         if (pendingLoad.group.isEmpty()) {
             // Empty group = "load to next available deck" (double-click path).
@@ -1613,6 +1688,139 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
     kLogger.warning() << "YouTube download failed for" << videoId
                       << "after" << kMaxDownloadRetries + 1
                       << "attempts:" << error;
+}
+
+QHash<QString, QVariantMap> YouTubeFeature::libraryInfoForResults(
+        const QList<mixxx::YouTubeVideoInfo>& results) const {
+    QHash<QString, QVariantMap> out;
+    if (results.isEmpty() || !m_pTrackCollection) {
+        return out;
+    }
+    // Tracks played this session (Mixxx clears `played` on every start), by video id (the cached file is named after it) and by
+    // song (artist + title), so another upload of a played song counts too.
+    struct LibraryTrack {
+        int timesPlayed = 0; // played this session: 0 or 1
+        double bpm = 0.0;
+        QString key;
+    };
+    QHash<QString, LibraryTrack> byVideoId;
+    QHash<QString, LibraryTrack> bySong;
+    const QString cachePrefix = QDir(cacheDir()).absolutePath() + QLatin1Char('/');
+    QSqlQuery query(m_pTrackCollection->database());
+    query.prepare(QStringLiteral(
+            "SELECT track_locations.location, library.artist, library.title, "
+            "library.played, library.bpm, library.key FROM library "
+            "JOIN track_locations ON library.location = track_locations.id "
+            "WHERE library.mixxx_deleted = 0 AND "
+            "(library.played > 0 OR track_locations.location LIKE :prefix)"));
+    query.bindValue(QStringLiteral(":prefix"), QString(cachePrefix + QLatin1Char('%')));
+    if (!query.exec()) {
+        kLogger.warning() << "library info query failed:" << query.lastError().text();
+        return out;
+    }
+    while (query.next()) {
+        const LibraryTrack track{query.value(3).toInt(),
+                query.value(4).toDouble(),
+                query.value(5).toString()};
+        const QString location = query.value(0).toString();
+        if (location.startsWith(cachePrefix)) {
+            const QString name = location.mid(cachePrefix.size());
+            byVideoId.insert(name.left(name.lastIndexOf(QLatin1Char('.'))), track);
+        }
+        if (track.timesPlayed > 0) {
+            bySong.insert(mixxx::YouTubeGenreLookup::normalize(query.value(1).toString()) +
+                            QLatin1Char('|') +
+                            mixxx::YouTubeGenreLookup::normalize(query.value(2).toString()),
+                    track);
+        }
+    }
+    // The same song is often uploaded many times (official video, lyric
+    // video, audio, re-uploads). Results with the same artist and title and
+    // a length within a few seconds are one song: later ones point to the
+    // first through "sameAs".
+    constexpr int kSameSongMaxDiffSec = 8;
+    struct Seen {
+        QString id;
+        int durationSec;
+    };
+    QHash<QString, QList<Seen>> seenSongs;
+    for (const auto& info : results) {
+        const TrackDisplayMetadata metadata = displayMetadataForVideo(info);
+        const QString songKey = mixxx::YouTubeGenreLookup::normalize(metadata.artist) +
+                QLatin1Char('|') + mixxx::YouTubeGenreLookup::normalize(metadata.title);
+        QVariantMap entry;
+        const auto local = byVideoId.constFind(info.id);
+        const auto played = bySong.constFind(songKey);
+        const LibraryTrack* pTrack = local != byVideoId.constEnd() ? &*local
+                : played != bySong.constEnd()                      ? &*played
+                                                                   : nullptr;
+        const int timesPlayed = std::max(local != byVideoId.constEnd() ? local->timesPlayed : 0,
+                played != bySong.constEnd() ? played->timesPlayed : 0);
+        if (timesPlayed > 0) {
+            entry.insert(QStringLiteral("timesPlayed"), timesPlayed);
+        }
+        if (pTrack && pTrack->bpm > 0.0) {
+            entry.insert(QStringLiteral("bpm"), pTrack->bpm);
+        }
+        if (pTrack && !pTrack->key.isEmpty()) {
+            entry.insert(QStringLiteral("key"), pTrack->key);
+        }
+        auto& versions = seenSongs[songKey];
+        for (const Seen& seen : std::as_const(versions)) {
+            if (info.durationSec <= 0 || seen.durationSec <= 0 ||
+                    std::abs(info.durationSec - seen.durationSec) <= kSameSongMaxDiffSec) {
+                entry.insert(QStringLiteral("sameAs"), seen.id);
+                break;
+            }
+        }
+        if (!entry.contains(QStringLiteral("sameAs"))) {
+            versions.append(Seen{info.id, info.durationSec});
+        }
+        if (!entry.isEmpty()) {
+            out.insert(info.id, entry);
+        }
+    }
+    return out;
+}
+
+void YouTubeFeature::fetchGenre(const TrackPointer& pTrack,
+        const QString& videoId,
+        const QString& artist,
+        const QString& title,
+        int durationSec) {
+    if (!m_pGenreLookup) {
+        m_pGenreLookup = new mixxx::YouTubeGenreLookup(this);
+    }
+    const QString queryGenre = inferGenreFromQuery(m_lastQuery);
+    const TrackId trackId = pTrack->getId();
+    m_pGenreLookup->lookup(artist,
+            title,
+            durationSec,
+            [this, trackId, videoId, queryGenre](const QString& foundGenre) {
+                const QString genre = foundGenre.isEmpty() ? queryGenre : foundGenre;
+                if (genre.isEmpty()) {
+                    return;
+                }
+                const TrackPointer pTrack =
+                        m_pLibrary->trackCollectionManager()->getTrackById(trackId);
+                if (!pTrack || !pTrack->getGenre().isEmpty()) {
+                    return; // gone, or tagged by the user in the meantime
+                }
+                pTrack->updateGenre(genre);
+                kLogger.info() << "Genre of" << videoId << ":" << genre
+                               << (foundGenre.isEmpty() ? "(from the search)" : "");
+                if (m_pTrackCollection) {
+                    QSqlQuery upd(m_pTrackCollection->database());
+                    upd.prepare(QStringLiteral(
+                            "UPDATE youtube_library SET genre = :genre "
+                            "WHERE comment = :comment AND (genre IS NULL OR genre = '')"));
+                    upd.bindValue(QStringLiteral(":genre"), genre);
+                    upd.bindValue(QStringLiteral(":comment"), videoId);
+                    if (upd.exec() && upd.numRowsAffected() > 0 && m_pTrackCache) {
+                        m_pTrackCache->buildIndex();
+                    }
+                }
+            });
 }
 
 void YouTubeFeature::onTrackAnalysisProgress(

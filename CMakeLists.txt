@@ -3281,6 +3281,7 @@ if(FFMPEG)
       src/library/youtube/sponsorblockcontroller.cpp
       src/library/youtube/youtubeaudiocutter.cpp
       src/library/youtube/youtubefeature.cpp
+      src/library/youtube/youtubegenrelookup.cpp
       src/library/youtube/youtubeservice.cpp
       src/library/youtube/youtubetrackmodel.cpp
       src/sources/youtube/soundsourceyoutube.cpp

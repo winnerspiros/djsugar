@@ -80,7 +80,7 @@ Item {
         // ================= TOP HEADER & BRAND =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: 33
             color: Theme.darkGray3
             border.color: Theme.midGray3
             border.width: 1
@@ -94,7 +94,7 @@ Item {
                 Text {
                     text: qsTr("🔥 AUDIUS STREAMING (FREE MUSIC)")
                     font.bold: true
-                    font.pixelSize: 13
+                    font.pixelSize: 11
                     font.letterSpacing: 1
                     color: Theme.activeColor
                 }
@@ -122,19 +122,19 @@ Item {
                 Text {
                     visible: root.statusMessage !== ""
                     text: root.statusMessage
-                    font.pixelSize: 11
+                    font.pixelSize: 9
                     color: Theme.lightGray2
                     elide: Text.ElideRight
                     Layout.maximumWidth: 320
                 }
 
                 Skin.Button {
-                    Layout.preferredHeight: 32
-                    Layout.preferredWidth: 120
+                    Layout.preferredHeight: 23
+                    Layout.preferredWidth: 96
                     activeColor: Theme.activeColor
                     normalColor: "#ffffff"
                     font.bold: true
-                    font.pixelSize: 11
+                    font.pixelSize: 9
                     text: root.isBusy ? qsTr("🔄 Loading...") : qsTr("🔄 Trending")
                     enabled: !root.isBusy
                     onClicked: {
@@ -148,7 +148,7 @@ Item {
         // ================= SEARCH & GENRE PILLS =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: 33
             color: Theme.darkGray3
             border.color: Theme.midGray3
             border.width: 1
@@ -161,11 +161,11 @@ Item {
                 // Search Input
                 TextField {
                     id: searchInput
-                    Layout.preferredWidth: 260
-                    Layout.preferredHeight: 34
+                    Layout.preferredWidth: 208
+                    Layout.preferredHeight: 24
                     placeholderText: qsTr("Search tracks, remixes, acapellas...")
                     color: "#ffffff"
-                    font.pixelSize: 13
+                    font.pixelSize: 11
                     background: Rectangle {
                         color: Theme.darkGray2
                         border.color: searchInput.activeFocus ? Theme.libraryDeck2Background : Theme.midGray3
@@ -182,7 +182,7 @@ Item {
                 }
 
                 Skin.Button {
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 24
                     Layout.preferredWidth: 38
                     normalColor: "#ffffff"
                     text: "🔍"
@@ -192,7 +192,7 @@ Item {
                 // Genre Chips Row (Flickable for small screens)
                 Flickable {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 24
                     contentWidth: genreRow.implicitWidth
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
@@ -213,7 +213,7 @@ Item {
 
                             delegate: Rectangle {
                                 width: chipText.implicitWidth + 20
-                                height: 32
+                                height: 23
                                 radius: 16
                                 color: root.currentGenre === modelData.genre && searchInput.text === "" ? "#e65100" : Theme.darkGray2
                                 border.color: root.currentGenre === modelData.genre && searchInput.text === "" ? Theme.libraryDeck2Background : Theme.midGray3
@@ -224,7 +224,7 @@ Item {
                                     anchors.centerIn: parent
                                     text: modelData.name
                                     font.bold: true
-                                    font.pixelSize: 11
+                                    font.pixelSize: 9
                                     color: "#ffffff"
                                 }
 
@@ -272,7 +272,7 @@ Item {
                 delegate: Rectangle {
                     id: trackDelegate
                     width: tracksList.width
-                    height: 58
+                    height: 42
                     color: index % 2 === 0 ? Theme.darkGray3 : Theme.darkGray4
                     border.color: Theme.darkGray2
                     border.width: 1
@@ -290,7 +290,7 @@ Item {
                         // Cover Art Thumbnail
                         Rectangle {
                             Layout.preferredWidth: 42
-                            Layout.preferredHeight: 42
+                            Layout.preferredHeight: 30
                             radius: 4
                             color: Theme.darkGray2
                             clip: true
@@ -313,7 +313,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: "🔥"
-                                font.pixelSize: 16
+                                font.pixelSize: 14
                                 visible: !track.coverArtUrl || coverImage.status === Image.Error
                             }
                         }
@@ -327,7 +327,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: track.title
                                 font.bold: true
-                                font.pixelSize: 13
+                                font.pixelSize: 11
                                 color: "#ffffff"
                                 elide: Text.ElideRight
                             }
@@ -338,7 +338,7 @@ Item {
 
                                 Text {
                                     text: track.artist
-                                    font.pixelSize: 11
+                                    font.pixelSize: 9
                                     color: Theme.yellow
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
@@ -372,7 +372,7 @@ Item {
                                 var sec = Math.floor(s % 60);
                                 return m + ":" + (sec < 10 ? "0" : "") + sec;
                             }
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             color: Theme.lightGray3
                         }
 
@@ -397,12 +397,12 @@ Item {
 
                         // Load Deck 1 Button
                         Skin.Button {
-                            Layout.preferredHeight: 34
+                            Layout.preferredHeight: 24
                             Layout.preferredWidth: 80
                             activeColor: Theme.libraryDeck1Background
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             arrowLeft: true
                             text: "D1"
                             enabled: !trackDelegate.isDownloading
@@ -415,12 +415,12 @@ Item {
 
                         // Load Deck 2 Button
                         Skin.Button {
-                            Layout.preferredHeight: 34
+                            Layout.preferredHeight: 24
                             Layout.preferredWidth: 80
                             activeColor: Theme.libraryDeck2Background
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             arrowRight: true
                             text: "D2"
                             enabled: !trackDelegate.isDownloading
@@ -447,7 +447,7 @@ Item {
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width * 0.7
-                    height: 120
+                    height: 86
                     color: "transparent"
                     visible: tracksList.count === 0 && !root.isBusy
 
@@ -457,7 +457,7 @@ Item {
 
                         Text {
                             text: qsTr("🔥 Explore music by genre or search for any track or artist")
-                            font.pixelSize: 13
+                            font.pixelSize: 11
                             color: Theme.lightGray3
                             horizontalAlignment: Text.AlignHCenter
                             Layout.alignment: Qt.AlignHCenter
@@ -470,7 +470,7 @@ Item {
             Rectangle {
                 anchors.centerIn: parent
                 width: 140
-                height: 40
+                height: 29
                 radius: 6
                 color: Theme.darkGray3
                 border.color: Theme.libraryDeck2Background
@@ -483,7 +483,7 @@ Item {
 
                     Text {
                         text: "🔄"
-                        font.pixelSize: 16
+                        font.pixelSize: 14
                         color: Theme.libraryDeck2Background
                         RotationAnimation on rotation {
                             from: 0
@@ -497,7 +497,7 @@ Item {
                     Text {
                         text: qsTr("Connecting...")
                         font.bold: true
-                        font.pixelSize: 12
+                        font.pixelSize: 10
                         color: "#ffffff"
                     }
                 }

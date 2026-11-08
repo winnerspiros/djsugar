@@ -101,36 +101,36 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 34
+        height: 26
         color: Theme.librarySourceBarBackground
         border.color: Theme.librarySourceBarBorder
         border.width: 1
 
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 3
-            spacing: 6
+            anchors.margins: 2
+            spacing: 4
 
             Skin.Button {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 90
                 activeColor: Theme.libraryLocalTabColor
                 backgroundColor: root.librarySourceMode === 0 ? Theme.libraryLocalTabBackground : Theme.librarySourceTabBackground
                 normalColor: root.librarySourceMode === 0 ? Theme.libraryLocalTabColor : Theme.librarySourceTabText
                 font.bold: true
-                font.pixelSize: 11
+                font.pixelSize: 10
                 text: qsTr("LOCAL MUSIC")
                 onClicked: root.librarySourceMode = 0
             }
 
             Skin.Button {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 140
+                Layout.preferredWidth: 106
                 activeColor: Theme.libraryStreamingTabColor
                 backgroundColor: root.librarySourceMode === 1 ? Theme.libraryStreamingTabBackground : Theme.librarySourceTabBackground
                 normalColor: root.librarySourceMode === 1 ? Theme.libraryStreamingTabColor : Theme.libraryStreamingTabText
                 font.bold: true
-                font.pixelSize: 11
+                font.pixelSize: 10
                 text: qsTr("STREAMING HUB")
                 onClicked: root.librarySourceMode = 1
             }
@@ -143,12 +143,12 @@ Item {
             Skin.Button {
                 visible: root.librarySourceMode === 0
                 Layout.fillHeight: true
-                Layout.preferredWidth: 130
+                Layout.preferredWidth: 64
                 activeColor: Theme.libraryActionText
                 normalColor: Theme.librarySourceTabText
                 highlight: root.showSidebar
                 font.bold: true
-                font.pixelSize: 10
+                font.pixelSize: 9
                 text: qsTr("SIDEBAR")
                 onClicked: Mixxx.MobileLibrary.sidebarVisible = !Mixxx.MobileLibrary.sidebarVisible
             }

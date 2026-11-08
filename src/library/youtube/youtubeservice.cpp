@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -753,6 +754,11 @@ YouTubeService::YouTubeService(QObject* parent)
     loadSessionState();
     if (!m_ytDlpPath.isEmpty()) {
         kLogger.info() << "yt-dlp fallback available at" << m_ytDlpPath;
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+        if (m_ytDlpPath == QStringLiteral("android-bundled")) {
+            QTimer::singleShot(5000, this, []() { prewarmAndroidBundled(); });
+        }
+#endif
     } else {
         kLogger.info() << "yt-dlp not found; YouTube tab will rely on Piped only "
                           "(this is normal on Android and minimal desktop installs)";
@@ -3166,8 +3172,64 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
 // process. The update is a one-shot best-effort network call; we don't want to
 // repeat it on every download.
 namespace {
-// (fresh yt-dlp is baked into the APK at build time; no runtime update)
+// YoutubeDL is a process-wide singleton and init() extracts the Python
+// environment (~1.5 s on a phone). Done once; a download starting while
+// another thread is inside init() waits for it instead of racing into
+// execute() -> "instance not initialized".
+QMutex s_ytdlInitMutex;
+QWaitCondition s_ytdlInitCond;
+bool s_ytdlInitDone = false;
+bool s_ytdlInitInProgress = false;
+
+bool ensureYoutubeDlInitialized(const QJniObject& ytdl, const QJniObject& context) {
+    {
+        QMutexLocker locker(&s_ytdlInitMutex);
+        while (s_ytdlInitInProgress) {
+            s_ytdlInitCond.wait(&s_ytdlInitMutex);
+        }
+        if (s_ytdlInitDone) {
+            return true;
+        }
+        s_ytdlInitInProgress = true;
+    }
+    QJniEnvironment env;
+    const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
+    ytdl.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+    const bool ok = !env.checkAndClearExceptions();
+    kLogger.info() << "[Android] YoutubeDL init" << (ok ? "done in" : "failed after")
+                   << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
+    QMutexLocker locker(&s_ytdlInitMutex);
+    s_ytdlInitDone = ok;
+    s_ytdlInitInProgress = false;
+    s_ytdlInitCond.wakeAll();
+    return ok;
+}
 } // namespace
+
+// static
+void YouTubeService::prewarmAndroidBundled() {
+    static std::atomic<bool> s_started{false};
+    if (s_started.exchange(true)) {
+        return;
+    }
+    // Unpack the Python environment in the background at startup, so the
+    // first download goes straight to yt-dlp instead of waiting for it.
+    QThread* thread = QThread::create([]() {
+        QJniObject context = QNativeInterface::QAndroidApplication::context();
+        QJniObject ytdl = QJniObject::callStaticObjectMethod(
+                "com/yausername/youtubedl_android/YoutubeDL",
+                "getInstance",
+                "()Lcom/yausername/youtubedl_android/YoutubeDL;");
+        QJniEnvironment env;
+        if (env.checkAndClearExceptions() || !context.isValid() || !ytdl.isValid()) {
+            return;
+        }
+        ensureYoutubeDlInitialized(ytdl, context);
+    });
+    thread->setPriority(QThread::LowPriority);
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
 
 void YouTubeService::downloadViaAndroidBundled(
         const QString& videoId, const QString& cacheDir) {
@@ -3202,7 +3264,6 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                                               playerPot,
                                               streamingPot]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
-        QJniEnvironment env; // function scope: used by the init check
         if (!context.isValid()) {
             kLogger.warning() << "[Android] downloadViaAndroidBundled:"
                               << "QAndroidApplication::context() invalid for"
@@ -3228,52 +3289,13 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             return;
         }
 
-        // Initialize with the Android context (required before first download).
-        // One-time per process: YoutubeDL is a singleton and init() extracts
-        // the Python env (~0.7 s). The static exchange() flag was racy: a
-        // second download starting while the first was still inside init()
-        // skipped init and hit execute() -> "instance not initialized",
-        // failing every parallel/prefetch track. Serialize with a mutex and
-        // wait for the in-flight init instead.
-        static QMutex s_initMutex;
-        static QWaitCondition s_initCond;
-        static bool s_initDone = false;
-        static bool s_initInProgress = false;
-        bool needInit = false;
-        {
-            QMutexLocker locker(&s_initMutex);
-            if (!s_initDone && !s_initInProgress) {
-                s_initInProgress = true;
-                needInit = true;
-            } else {
-                while (s_initInProgress) {
-                    s_initCond.wait(&s_initMutex);
-                }
-            }
-        }
-        if (needInit) {
-            bool initOk = false;
-            kLogger.debug() << "[Android] downloadViaAndroidBundled:"
-                            << "initializing YoutubeDL for" << videoId;
-            ytdl.callMethod<void>("init",
-                    "(Landroid/content/Context;)V",
-                    context.object());
-            initOk = !env.checkAndClearExceptions();
-            {
-                QMutexLocker locker(&s_initMutex);
-                s_initDone = initOk;
-                s_initInProgress = false;
-                s_initCond.wakeAll();
-            }
-            if (!initOk) {
-                kLogger.warning() << "[Android] downloadViaAndroidBundled:"
-                                  << "YoutubeDL.init() threw exception for"
-                                  << videoId;
-                if (guard)
-                    Q_EMIT guard->downloadFailed(
-                            videoId, "yt-dlp init failed (youtubedl-android)");
-                return;
-            }
+        if (!ensureYoutubeDlInitialized(ytdl, context)) {
+            kLogger.warning() << "[Android] downloadViaAndroidBundled:"
+                              << "YoutubeDL.init() threw exception for" << videoId;
+            if (guard)
+                Q_EMIT guard->downloadFailed(
+                        videoId, "yt-dlp init failed (youtubedl-android)");
+            return;
         }
 
         // The yt-dlp packaged inside the AAR is rebuilt at configure time from

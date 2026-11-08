@@ -344,10 +344,14 @@ void ControllerManager::slotSetUpDevices() {
         // The filename for this device name.
         QString deviceName = sanitizeDeviceName(name);
 
-        // Plug and play: a controller that has never been configured gets a
-        // matching mapping from the ones shipped with Mixxx.
-        if (!m_pConfig->exists(ConfigKey("[Controller]", deviceName)) &&
-                getConfiguredMappingFileForDevice(deviceName).isEmpty() &&
+        // Plug and play: a controller without a usable mapping (never
+        // configured, or the configured file was renamed/removed by an
+        // update) gets a matching mapping from the ones shipped with Mixxx.
+        // The enabled flag is not checked here: closeController() writes 0
+        // on every unplug, which would otherwise block auto-assign forever.
+        const QString configuredMapping = getConfiguredMappingFileForDevice(deviceName);
+        if ((configuredMapping.isEmpty() ||
+                    !findMappingFile(configuredMapping, mappingPaths).exists()) &&
                 autoAssignMapping(pController)) {
             continue;
         }

@@ -70,11 +70,18 @@ class SponsorBlockController : public QObject {
         // Leading silence is skipped once per load, so seeking back to the
         // very start afterwards is not fought.
         bool leadSilenceSkipped = false;
+        // SponsorBlock answered (from the sidecar or the network).
+        bool segmentsKnown = false;
+        // "(Official Music Video)" and the like: may open with a skit.
+        bool isMusicVideo = false;
     };
 
     void ensureDeckTracked(const QString& group);
     void clearDeck(const QString& group);
     void onPlayPositionChanged(const QString& group, double pos);
+    /// End of a music video's non-music lead-in (the Intro End marker) when
+    /// SponsorBlock has no segments for it, or -1.
+    double musicVideoLeadInEndSec(const DeckState& state, const TrackPointer& pTrack) const;
     /// Read sidecar JSON written by yt-dlp's --write-info-json (`<id>.info.json`)
     /// next to a sibling `<id>.sponsorblock.json` if we have one. Returns true
     /// if segments were applied immediately; false if the controller had to

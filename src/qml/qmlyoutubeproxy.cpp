@@ -1,6 +1,7 @@
 #include "qml/qmlyoutubeproxy.h"
 
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QTimer>
 #include <algorithm>
 
@@ -61,7 +62,10 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                     }
                 }
                 prefetchCovers(results);
+                m_genreQueue.clear();
+                m_genreQueued.clear();
                 emit searchFinished(toVariantList(results));
+                queueGenreLookups(results);
             });
     connect(pService,
             &mixxx::YouTubeService::searchMoreReady,
@@ -78,6 +82,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                 }
                 prefetchCovers(results);
                 emit searchMoreFinished(toVariantList(results), pService->hasMoreSearchResults());
+                queueGenreLookups(results);
             });
     connect(pService,
             &mixxx::YouTubeService::searchFailed,
@@ -266,12 +271,72 @@ void QmlYouTubeProxy::prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& resul
     }
 }
 
+void QmlYouTubeProxy::queueGenreLookups(const QList<mixxx::YouTubeVideoInfo>& results) {
+    for (const auto& v : results) {
+        if (v.id.isEmpty() || m_genreQueued.contains(v.id)) {
+            continue;
+        }
+        m_genreQueued.insert(v.id);
+        const auto cached = m_genreCache.constFind(v.id);
+        if (cached != m_genreCache.constEnd()) {
+            if (!cached->isEmpty()) {
+                emit genreResolved(v.id, *cached);
+            }
+            continue;
+        }
+        m_genreQueue.enqueue(v);
+    }
+    pumpGenreLookups();
+}
+
+void QmlYouTubeProxy::pumpGenreLookups() {
+    // A few at a time: the catalogue APIs rate-limit bursts.
+    constexpr int kMaxRunning = 3;
+    if (!m_pGenreLookup) {
+        m_pGenreLookup = new mixxx::YouTubeGenreLookup(this);
+    }
+    while (m_genreLookupsRunning < kMaxRunning && !m_genreQueue.isEmpty()) {
+        const mixxx::YouTubeVideoInfo v = m_genreQueue.dequeue();
+        // "Artist - Title (Official Video)" or the channel as the artist.
+        QString artist = v.uploader;
+        QString title = v.title;
+        for (const QString& sep : {QStringLiteral(" - "), QStringLiteral(" – "), QStringLiteral(" — ")}) {
+            const int pos = v.title.indexOf(sep);
+            if (pos > 0) {
+                artist = v.title.left(pos);
+                title = v.title.mid(pos + sep.size());
+                break;
+            }
+        }
+        artist.remove(QRegularExpression(QStringLiteral(R"(\s*(-\s*Topic|VEVO|Official)\s*$)"),
+                QRegularExpression::CaseInsensitiveOption));
+        ++m_genreLookupsRunning;
+        const QString videoId = v.id;
+        const QString fallback = v.genre;
+        m_pGenreLookup->lookup(artist,
+                title,
+                v.durationSec,
+                [this, videoId, fallback](const QString& found) {
+                    --m_genreLookupsRunning;
+                    const QString genre = found.isEmpty() ? fallback : found;
+                    m_genreCache.insert(videoId, genre);
+                    if (!found.isEmpty()) {
+                        emit genreResolved(videoId, found);
+                    }
+                    pumpGenreLookups();
+                });
+    }
+}
+
 // static
 QVariantList QmlYouTubeProxy::toVariantList(const QList<mixxx::YouTubeVideoInfo>& videos) {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    const QHash<QString, QVariantMap> libraryInfo =
+            pFeature ? pFeature->libraryInfoForResults(videos) : QHash<QString, QVariantMap>();
     QVariantList out;
     out.reserve(videos.size());
     for (const auto& v : videos) {
-        QVariantMap m;
+        QVariantMap m = libraryInfo.value(v.id);
         m[QStringLiteral("id")] = v.id;
         m[QStringLiteral("title")] = v.title;
         m[QStringLiteral("uploader")] = v.uploader;

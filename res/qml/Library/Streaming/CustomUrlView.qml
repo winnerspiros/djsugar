@@ -33,12 +33,12 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 12
+        anchors.margins: 7
+        spacing: 6
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 52
+            Layout.preferredHeight: 37
             color: "#1f1b0a"
             border.color: "#ffb30044"
             border.width: 1
@@ -48,13 +48,13 @@ Item {
                 anchors.fill: parent
                 anchors.leftMargin: 12
                 anchors.rightMargin: 12
-                spacing: 10
+                spacing: 5
 
                 Text {
                     text: qsTr("🔗 DIRECT URL / WEB STREAMING")
                     color: Theme.yellow
                     font.bold: true
-                    font.pixelSize: 14
+                    font.pixelSize: 12
                     font.letterSpacing: 1
                 }
 
@@ -62,7 +62,7 @@ Item {
                     Layout.fillWidth: true
                     text: root.statusMessage
                     color: Theme.yellow
-                    font.pixelSize: 11
+                    font.pixelSize: 9
                     elide: Text.ElideRight
                 }
             }
@@ -70,7 +70,7 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 110
+            Layout.preferredHeight: 79
             color: Theme.darkGray4
             border.color: Theme.midGray3
             border.width: 1
@@ -78,24 +78,24 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 10
+                anchors.margins: 5
                 spacing: 8
 
                 Text {
                     text: qsTr("URL of the audio file or stream:")
                     color: "#ffffff"
                     font.bold: true
-                    font.pixelSize: 12
+                    font.pixelSize: 10
                 }
 
                 TextField {
                     id: customUrlInput
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 38
+                    Layout.preferredHeight: 27
                     placeholderText: qsTr("https://example.com/dj-set.mp3")
                     text: "https://cdn.freesound.org/previews/682/682245_11861866-lq.mp3"
                     color: "#ffffff"
-                    font.pixelSize: 12
+                    font.pixelSize: 10
                     background: Rectangle {
                         color: Theme.darkGray3
                         radius: 4
@@ -111,10 +111,10 @@ Item {
                     TextField {
                         id: trackTitleInput
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 32
+                        Layout.preferredHeight: 23
                         placeholderText: qsTr("Optional title (e.g. Future Rave Set)")
                         color: "#ffffff"
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         background: Rectangle {
                             color: Theme.darkGray3
                             radius: 3
@@ -123,12 +123,12 @@ Item {
                     }
 
                     Skin.Button {
-                        Layout.preferredHeight: 34
-                        Layout.preferredWidth: 140
+                        Layout.preferredHeight: 24
+                        Layout.preferredWidth: 112
                         activeColor: Theme.libraryDeck1Background
                         normalColor: "#ffffff"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         arrowLeft: true
                         text: qsTr("Load into DECK 1")
 
@@ -149,12 +149,12 @@ Item {
                     }
 
                     Skin.Button {
-                        Layout.preferredHeight: 34
-                        Layout.preferredWidth: 140
+                        Layout.preferredHeight: 24
+                        Layout.preferredWidth: 112
                         activeColor: Theme.libraryDeck2Background
                         normalColor: "#ffffff"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         arrowRight: true
                         text: qsTr("Load into DECK 2")
 

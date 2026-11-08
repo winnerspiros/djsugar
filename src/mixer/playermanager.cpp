@@ -202,7 +202,10 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
     foreach (Sampler* pSampler, m_samplers) {
-        connect(pSampler, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
+        connect(pSampler,
+                &BaseTrackPlayer::newTrackLoaded,
+                this,
+                &PlayerManager::slotAnalyzeSamplerTrack);
     }
 
     // Connect the player to the analyzer queue so that loaded tracks are
@@ -496,7 +499,7 @@ void PlayerManager::addSamplerInner() {
         connect(pSampler,
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
-                &PlayerManager::slotAnalyzeTrack);
+                &PlayerManager::slotAnalyzeSamplerTrack);
     }
     connect(pSampler,
             &BaseTrackPlayer::trackUnloaded,
@@ -863,6 +866,21 @@ void PlayerManager::slotAnalyzeTrack(TrackPointer track) {
         // before any signals from the analyzer queue arrive.
         emit trackAnalyzerProgress(track->getId(), kAnalyzerProgressUnknown);
     }
+}
+
+void PlayerManager::slotAnalyzeSamplerTrack(TrackPointer track) {
+    VERIFY_OR_DEBUG_ASSERT(track) {
+        return;
+    }
+    // One-shot pad samples (kick, airhorn, ...) have no tempo or key to find,
+    // and the beat detector never stores a result for them, so they were
+    // analyzed again on every start, holding up the decks' own analysis.
+    constexpr double kOneShotMaxSeconds = 20.0;
+    const double duration = track->getDuration();
+    if (duration > 0.0 && duration < kOneShotMaxSeconds) {
+        return;
+    }
+    slotAnalyzeTrack(std::move(track));
 }
 
 void PlayerManager::reanalyzeLoadedWaveforms() {

@@ -4,6 +4,16 @@
 
 #include <QLibrary>
 #include <QSharedPointer>
+#ifdef Q_OS_ANDROID
+#include <QDir>
+#include <QDomDocument>
+#include <QFile>
+#include <algorithm>
+#include <bit>
+
+#include "soundio/soundmanagerconfig.h"
+#include "util/cmdlineargs.h"
+#endif
 
 #include "audio/types.h"
 #include "soundio/sounddevice.h"
@@ -35,6 +45,35 @@ extern "C" void* mixxx_portaudio_malloc(size_t size) {
 
 typedef PaError (*SetJackClientName)(const char* name);
 
+#ifdef Q_OS_ANDROID
+namespace {
+/// Number of Oboe bursts that hold two engine buffers of the configured size.
+unsigned int oboeBufferCount(unsigned int framesPerBurst) {
+    constexpr unsigned int kMinBuffers = 2;
+    if (framesPerBurst == 0) {
+        return kMinBuffers;
+    }
+    unsigned int framesPerBuffer = 1024;
+    QFile file(QDir(CmdlineArgs::Instance().getSettingsPath())
+                    .filePath(SOUNDMANAGERCONFIG_FILENAME));
+    QDomDocument doc;
+    if (file.open(QIODevice::ReadOnly) && doc.setContent(&file)) {
+        const QDomElement root = doc.documentElement();
+        const unsigned int index = root.attribute(QStringLiteral("latency"), "0").toUInt();
+        const unsigned int rateKhz =
+                root.attribute(QStringLiteral("samplerate"), "48000").toUInt() / 1000;
+        if (index > 0 && index <= SoundManagerConfig::kMaxAudioBufferSizeIndex && rateKhz > 0) {
+            framesPerBuffer = std::bit_ceil(rateKhz) << (index - 1);
+        }
+    }
+    const unsigned int buffers = (2 * framesPerBuffer + framesPerBurst - 1) / framesPerBurst;
+    qInfo() << "Oboe:" << buffers << "bursts of" << framesPerBurst << "frames for"
+            << framesPerBuffer << "frames per engine buffer";
+    return std::max(kMinBuffers, buffers);
+}
+} // namespace
+#endif
+
 PortAudioEnumerator::PortAudioEnumerator(UserSettingsPointer config, SoundManager* sm)
         : m_pConfig(config),
           m_pSoundManager(sm) {
@@ -59,7 +98,8 @@ void PortAudioEnumerator::initialize() {
 #ifdef Q_OS_IOS
     mixxx::initializeAVAudioSession();
 #elif defined(Q_OS_ANDROID)
-    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([]() {
+    unsigned int nativeFramesPerBurst = 0;
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([&nativeFramesPerBurst]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniObject AUDIO_SERVICE =
                 QJniObject::getStaticObjectField(
@@ -234,8 +274,16 @@ void PortAudioEnumerator::initialize() {
                         .toUInt();
         qDebug() << "audioManager outputFramePerBuffer:" << outputFramePerBuffer;
         PaOboe_SetNativeBufferSize(outputFramePerBuffer);
+        nativeFramesPerBurst = outputFramePerBuffer;
     }).waitForFinished();
-    PaOboe_SetNumberOfBuffers(2);
+    // PortAudio's Oboe stream asks for one engine buffer (framesPerBuffer,
+    // 1024 frames by default) per callback, but sizes the AAudio buffer to
+    // burst * numberOfBuffers. With 2 buffers of a 192 frame burst the
+    // device buffer (384 frames) cannot even hold one callback, so AAudio
+    // underruns on every cycle: the "popcorn" crackle on the phone output.
+    // Keep room for two engine buffers. The count is fixed before
+    // Pa_Initialize(), so it is taken from the saved buffer size.
+    PaOboe_SetNumberOfBuffers(oboeBufferCount(nativeFramesPerBurst));
 
     // NOTE: Do NOT call sched_setaffinity on the calling thread here.
     // PortAudioEnumerator::initialize() runs on the Qt main thread (or the

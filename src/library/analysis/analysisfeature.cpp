@@ -12,6 +12,7 @@
 #include "sources/soundsourceproxy.h"
 #include "util/dnd.h"
 #include "util/logger.h"
+#include "util/math.h"
 #include "widget/wlibrary.h"
 
 namespace {
@@ -20,16 +21,20 @@ const mixxx::Logger kLogger("AnalysisFeature");
 
 const QString kViewName = QStringLiteral("Analysis");
 
+#ifdef Q_OS_ANDROID
+// Phones have few big cores: a full set of batch workers starves the audio
+// and UI threads (audible as crackle). Keep cores free for playback.
+const int kNumberOfAnalyzerThreads = math_max(1, math_min(3, QThread::idealThreadCount() / 2));
+#else
 // Utilize all available cores for batch analysis of tracks
 const int kNumberOfAnalyzerThreads = math_max(1, QThread::idealThreadCount());
+#endif
 
-inline
-int numberOfAnalyzerThreads() {
+inline int numberOfAnalyzerThreads() {
     return kNumberOfAnalyzerThreads;
 }
 
-inline
-AnalyzerModeFlags getAnalyzerModeFlags(
+inline AnalyzerModeFlags getAnalyzerModeFlags(
         const UserSettingsPointer& pConfig) {
     // Always enable at least BPM detection for batch analysis, even if disabled
     // in the config for ad-hoc analysis of tracks.
@@ -76,10 +81,10 @@ void AnalysisFeature::setTitleProgress(int currentTrackNumber, int totalTracksCo
 }
 
 void AnalysisFeature::bindLibraryWidget(WLibrary* libraryWidget,
-                                 KeyboardEventFilter* keyboard) {
+        KeyboardEventFilter* keyboard) {
     m_pAnalysisView = new DlgAnalysis(libraryWidget,
-                                      m_pConfig,
-                                      m_pLibrary);
+            m_pConfig,
+            m_pLibrary);
     connect(m_pAnalysisView,
             &DlgAnalysis::loadTrack,
             this,
@@ -132,7 +137,7 @@ void AnalysisFeature::refreshLibraryModels() {
 }
 
 void AnalysisFeature::activate() {
-    //qDebug() << "AnalysisFeature::activate()";
+    // qDebug() << "AnalysisFeature::activate()";
     emit switchToView(kViewName);
     if (m_pAnalysisView) {
         emit restoreSearch(m_pAnalysisView->currentSearch());

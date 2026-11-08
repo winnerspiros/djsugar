@@ -18,62 +18,62 @@ Item {
         // ================= MULTI-PLATFORM SELECTOR BAR =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 36
+            Layout.preferredHeight: 26
             color: Theme.backgroundColor
             border.color: Theme.darkGray3
             border.width: 1
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 8
+                anchors.leftMargin: 4
+                anchors.rightMargin: 4
+                spacing: 4
 
                 // Platforms tabs
                 RowLayout {
                     Layout.fillHeight: true
-                    spacing: 8
+                    spacing: 4
 
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 170
+                        Layout.preferredWidth: 132
                         activeColor: "#00e5ff"
                         normalColor: root.activePlatform === 0 ? "#00e5ff" : "#80d8ff"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         text: "☁️ NAVIDROME / SUBSONIC"
                         onClicked: root.activePlatform = 0
                     }
 
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 130
+                        Layout.preferredWidth: 100
                         activeColor: "#ea80fc"
                         normalColor: root.activePlatform === 1 ? "#ea80fc" : "#e1bee7"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         text: qsTr("🔥 AUDIUS (free)")
                         onClicked: root.activePlatform = 1
                     }
 
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 122
                         activeColor: "#ffb300"
                         normalColor: root.activePlatform === 2 ? "#ffb300" : "#ffe082"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         text: qsTr("🔗 DIRECT URL / RADIO")
                         onClicked: root.activePlatform = 2
                     }
 
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 96
                         activeColor: "#ff0000"
                         normalColor: root.activePlatform === 3 ? "#ff5252" : "#ff8a80"
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         text: qsTr("YOUTUBE")
                         onClicked: root.activePlatform = 3
 
@@ -82,20 +82,20 @@ Item {
                         // Android renders as emoji) so it needs no image asset.
                         Rectangle {
                             anchors.left: parent.left
-                            anchors.leftMargin: 10
+                            anchors.leftMargin: 5
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 26
-                            height: 18
-                            radius: 5
+                            width: 18
+                            height: 12
+                            radius: 3
                             color: "#ff0000"
 
                             Skin.Triangle {
                                 anchors.centerIn: parent
                                 anchors.horizontalCenterOffset: 1
                                 color: "#ffffff"
-                                height: 10
+                                height: 7
                                 pointsRight: true
-                                width: 9
+                                width: 6
                             }
                         }
                     }
@@ -105,8 +105,8 @@ Item {
 
                 // Quick Deck Destination Indicator
                 Rectangle {
-                    Layout.preferredHeight: 28
-                    Layout.preferredWidth: 120
+                    Layout.preferredHeight: 20
+                    Layout.preferredWidth: 90
                     radius: 4
                     color: root.targetDeck === "[Channel1]" ? "#0d47a1" : "#bf360c"
                     border.color: root.targetDeck === "[Channel1]" ? "#00b0ff" : "#ff6d00"
@@ -114,20 +114,20 @@ Item {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 4
-                        spacing: 4
+                        anchors.margins: 2
+                        spacing: 3
 
                         Text {
                             text: qsTr("Target:")
                             color: "#b0bec5"
-                            font.pixelSize: 10
+                            font.pixelSize: 9
                         }
 
                         Text {
                             text: root.targetDeck === "[Channel1]" ? "DECK 1" : "DECK 2"
                             color: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                         }
                     }
 

@@ -3,10 +3,13 @@
 #include <QHash>
 #include <QObject>
 #include <QQmlEngine>
+#include <QQueue>
+#include <QSet>
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "library/youtube/youtubegenrelookup.h"
 #include "library/youtube/youtubeservice.h"
 
 class Library;
@@ -72,12 +75,16 @@ class QmlYouTubeProxy : public QObject {
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
     void sponsorBlockAutoSkipChanged();
+    /// Genre of a search result, found in the iTunes/Deezer catalogues.
+    void genreResolved(const QString& videoId, const QString& genre);
 
   private:
     static QString extractVideoId(const QString& videoIdOrUrl);
     static QVariantList toVariantList(const QList<mixxx::YouTubeVideoInfo>& videos);
     void updateVideoProgress(const QString& videoId, double progress);
     void clearVideoProgress(const QString& videoId);
+    void queueGenreLookups(const QList<mixxx::YouTubeVideoInfo>& results);
+    void pumpGenreLookups();
 
     static inline Library* s_pLibrary = nullptr;
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
@@ -85,6 +92,11 @@ class QmlYouTubeProxy : public QObject {
     QVariantMap m_deckDownloadProgress;
     QHash<QString, QString> m_videoToDeck;
     QHash<QString, QString> m_videoTitles;
+    mixxx::YouTubeGenreLookup* m_pGenreLookup = nullptr;
+    QQueue<mixxx::YouTubeVideoInfo> m_genreQueue;
+    QHash<QString, QString> m_genreCache; // videoId -> genre ("" = unknown)
+    QSet<QString> m_genreQueued;
+    int m_genreLookupsRunning = 0;
 };
 
 } // namespace qml

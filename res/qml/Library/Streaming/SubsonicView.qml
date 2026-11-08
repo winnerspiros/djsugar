@@ -103,7 +103,7 @@ Item {
         // ================= TOP HEADER & TOGGLE BAR =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: 33
             color: "#1c202a"
             border.color: "#282d3b"
             border.width: 1
@@ -117,7 +117,7 @@ Item {
                 Text {
                     text: "☁️ NAVIDROME / SUBSONIC"
                     font.bold: true
-                    font.pixelSize: 13
+                    font.pixelSize: 11
                     font.letterSpacing: 1
                     color: "#00e5ff"
                 }
@@ -145,15 +145,15 @@ Item {
                 Text {
                     visible: root.statusMessage !== ""
                     text: root.statusMessage
-                    font.pixelSize: 11
+                    font.pixelSize: 9
                     color: "#b0bec5"
                     elide: Text.ElideRight
                     Layout.maximumWidth: 280
                 }
 
                 Skin.Button {
-                    Layout.preferredHeight: 32
-                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: 23
+                    Layout.preferredWidth: 80
                     activeColor: "#00e5ff"
                     normalColor: "#ffffff"
                     font.bold: true
@@ -191,11 +191,11 @@ Item {
                     TextField {
                         id: serverUrlField
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 34
+                        Layout.preferredHeight: 24
                         placeholderText: qsTr("Server URL (e.g. http://192.168.1.50:4533)")
                         text: Mixxx.StreamingManager.subsonicUrl
                         color: "#ffffff"
-                        font.pixelSize: 12
+                        font.pixelSize: 10
                         background: Rectangle {
                             color: "#1f2430"
                             border.color: serverUrlField.activeFocus ? "#00e5ff" : "#374151"
@@ -207,12 +207,12 @@ Item {
 
                     TextField {
                         id: userField
-                        Layout.preferredWidth: 130
-                        Layout.preferredHeight: 34
+                        Layout.preferredWidth: 104
+                        Layout.preferredHeight: 24
                         placeholderText: qsTr("Username")
                         text: Mixxx.StreamingManager.subsonicUsername
                         color: "#ffffff"
-                        font.pixelSize: 12
+                        font.pixelSize: 10
                         background: Rectangle {
                             color: "#1f2430"
                             border.color: userField.activeFocus ? "#00e5ff" : "#374151"
@@ -224,13 +224,13 @@ Item {
 
                     TextField {
                         id: passField
-                        Layout.preferredWidth: 130
-                        Layout.preferredHeight: 34
+                        Layout.preferredWidth: 104
+                        Layout.preferredHeight: 24
                         placeholderText: qsTr("Password")
                         echoMode: TextInput.Password
                         text: Mixxx.StreamingManager.subsonicPassword
                         color: "#ffffff"
-                        font.pixelSize: 12
+                        font.pixelSize: 10
                         background: Rectangle {
                             color: "#1f2430"
                             border.color: passField.activeFocus ? "#00e5ff" : "#374151"
@@ -241,8 +241,8 @@ Item {
                     }
 
                     Skin.Button {
-                        Layout.preferredHeight: 34
-                        Layout.preferredWidth: 110
+                        Layout.preferredHeight: 24
+                        Layout.preferredWidth: 88
                         activeColor: "#00e676"
                         normalColor: "#ffffff"
                         font.bold: true
@@ -265,14 +265,14 @@ Item {
 
                     Text {
                         text: qsTr("💡 Compatible with Navidrome, Funkwhale, Ampache, Subsonic, Airsonic and Nextcloud Music.")
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         color: "#78909c"
                         Layout.fillWidth: true
                     }
 
                     Skin.Button {
                         Layout.preferredHeight: 26
-                        Layout.preferredWidth: 140
+                        Layout.preferredWidth: 112
                         normalColor: "#90a4ae"
                         font.pixelSize: 10
                         text: qsTr("🧹 Clear cache")
@@ -288,7 +288,7 @@ Item {
         // ================= SEARCH & NAVIGATION TOOLBAR =================
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: 33
             color: "#181b24"
             border.color: "#232834"
             border.width: 1
@@ -299,8 +299,8 @@ Item {
                 spacing: 8
 
                 Skin.Button {
-                    Layout.preferredHeight: 34
-                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: 80
                     activeColor: "#00e5ff"
                     normalColor: "#ffffff"
                     font.bold: true
@@ -315,8 +315,8 @@ Item {
                 }
 
                 Skin.Button {
-                    Layout.preferredHeight: 34
-                    Layout.preferredWidth: 105
+                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: 84
                     activeColor: "#00e5ff"
                     normalColor: "#ffffff"
                     font.bold: true
@@ -331,10 +331,10 @@ Item {
                 TextField {
                     id: searchInput
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 24
                     placeholderText: qsTr("Search artists, tracks or albums in your cloud...")
                     color: "#ffffff"
-                    font.pixelSize: 13
+                    font.pixelSize: 11
                     background: Rectangle {
                         color: "#212632"
                         border.color: searchInput.activeFocus ? "#00e5ff" : "#2e3646"
@@ -351,7 +351,7 @@ Item {
                 }
 
                 Skin.Button {
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 24
                     Layout.preferredWidth: 40
                     normalColor: "#ffffff"
                     text: "🔍"
@@ -386,7 +386,7 @@ Item {
                 Text {
                     text: "📁 " + root.currentPlaylistName
                     font.bold: true
-                    font.pixelSize: 13
+                    font.pixelSize: 11
                     color: "#80d8ff"
                     Layout.fillWidth: true
                 }
@@ -422,7 +422,7 @@ Item {
                 delegate: Rectangle {
                     id: trackDelegate
                     width: tracksList.width
-                    height: 56
+                    height: 40
                     color: index % 2 === 0 ? "#171a22" : "#13161e"
                     border.color: "#222734"
                     border.width: 1
@@ -440,7 +440,7 @@ Item {
                         // Cover Art Thumbnail or Icon
                         Rectangle {
                             Layout.preferredWidth: 40
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 29
                             radius: 4
                             color: "#262d3d"
                             clip: true
@@ -456,7 +456,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: "🎵"
-                                font.pixelSize: 16
+                                font.pixelSize: 14
                                 visible: !song.coverArtUrl
                             }
                         }
@@ -470,7 +470,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: song.title
                                 font.bold: true
-                                font.pixelSize: 13
+                                font.pixelSize: 11
                                 color: "#ffffff"
                                 elide: Text.ElideRight
                             }
@@ -481,7 +481,7 @@ Item {
 
                                 Text {
                                     text: song.artist + (song.album ? (" • " + song.album) : "")
-                                    font.pixelSize: 11
+                                    font.pixelSize: 9
                                     color: "#90a4ae"
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
@@ -514,7 +514,7 @@ Item {
                                 var sec = Math.floor(s % 60);
                                 return m + ":" + (sec < 10 ? "0" : "") + sec;
                             }
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             color: "#78909c"
                         }
 
@@ -539,12 +539,12 @@ Item {
 
                         // Load Deck 1 Button
                         Skin.Button {
-                            Layout.preferredHeight: 34
+                            Layout.preferredHeight: 24
                             Layout.preferredWidth: 80
                             activeColor: "#64b5f6"
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             arrowLeft: true
                             text: "D1"
                             enabled: !trackDelegate.isDownloading
@@ -557,12 +557,12 @@ Item {
 
                         // Load Deck 2 Button
                         Skin.Button {
-                            Layout.preferredHeight: 34
+                            Layout.preferredHeight: 24
                             Layout.preferredWidth: 80
                             activeColor: "#ffb74d"
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             arrowRight: true
                             text: "D2"
                             enabled: !trackDelegate.isDownloading
@@ -589,7 +589,7 @@ Item {
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width * 0.7
-                    height: 120
+                    height: 86
                     color: "transparent"
                     visible: tracksList.count === 0 && !root.isBusy
 
@@ -601,7 +601,7 @@ Item {
                             text: Mixxx.StreamingManager.isSubsonicConnected
                                 ? qsTr("🔍 Type an artist, title or album to search your server")
                                 : qsTr("☁️ Connect your Navidrome / Subsonic server in the settings above")
-                            font.pixelSize: 13
+                            font.pixelSize: 11
                             color: "#78909c"
                             horizontalAlignment: Text.AlignHCenter
                             Layout.alignment: Qt.AlignHCenter
@@ -626,7 +626,7 @@ Item {
 
                 delegate: Rectangle {
                     width: playlistsList.width
-                    height: 52
+                    height: 37
                     color: index % 2 === 0 ? "#171a22" : "#13161e"
                     border.color: "#222734"
                     border.width: 1
@@ -635,11 +635,11 @@ Item {
                         anchors.fill: parent
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
-                        spacing: 12
+                        spacing: 6
 
                         Text {
                             text: "📜"
-                            font.pixelSize: 20
+                            font.pixelSize: 18
                         }
 
                         ColumnLayout {
@@ -649,7 +649,7 @@ Item {
                             Text {
                                 text: modelData.name
                                 font.bold: true
-                                font.pixelSize: 14
+                                font.pixelSize: 12
                                 color: "#ffffff"
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -657,18 +657,18 @@ Item {
 
                             Text {
                                 text: qsTr("%1 tracks").arg(modelData.songCount)
-                                font.pixelSize: 11
+                                font.pixelSize: 9
                                 color: "#90a4ae"
                             }
                         }
 
                         Skin.Button {
-                            Layout.preferredHeight: 32
-                            Layout.preferredWidth: 95
+                            Layout.preferredHeight: 23
+                            Layout.preferredWidth: 76
                             activeColor: "#00e5ff"
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 9
                             arrowRight: true
                             text: qsTr("Show tracks")
                             onClicked: {
@@ -686,7 +686,7 @@ Item {
             Rectangle {
                 anchors.centerIn: parent
                 width: 140
-                height: 40
+                height: 29
                 radius: 6
                 color: "#1e2433"
                 border.color: "#00e5ff"
@@ -699,7 +699,7 @@ Item {
 
                     Text {
                         text: "🔄"
-                        font.pixelSize: 16
+                        font.pixelSize: 14
                         color: "#00e5ff"
                         RotationAnimation on rotation {
                             from: 0
@@ -713,7 +713,7 @@ Item {
                     Text {
                         text: qsTr("Loading...")
                         font.bold: true
-                        font.pixelSize: 12
+                        font.pixelSize: 10
                         color: "#ffffff"
                     }
                 }

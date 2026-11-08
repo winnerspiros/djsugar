@@ -16,6 +16,9 @@
 #include "util/parented_ptr.h"
 
 class BaseTrackCache;
+namespace mixxx {
+class YouTubeGenreLookup;
+} // namespace mixxx
 class KeyboardEventFilter;
 class QSqlDatabase;
 class TreeItem;
@@ -72,6 +75,10 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
 
     /// Absolute path to the per-user yt-dlp cache directory. Created on demand.
     QString cacheDir() const;
+    /// Per video id of a search result: "timesPlayed", "bpm" and "key" from
+    /// the library, and "sameAs" (id of an earlier result of the same song).
+    QHash<QString, QVariantMap> libraryInfoForResults(
+            const QList<mixxx::YouTubeVideoInfo>& results) const;
 
     /// Resolve the ISO 3166-1 alpha-2 region used for the YouTube top-songs
     /// feed. Resolution order:
@@ -147,6 +154,11 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// in it is present on disk — re-downloading any that have been swept.
     void prefetchAutoDjQueue();
     void syncAnalyzedTrackMetadata(const TrackPointer& pTrack);
+    void fetchGenre(const TrackPointer& pTrack,
+            const QString& videoId,
+            const QString& artist,
+            const QString& title,
+            int durationSec);
     /// Persistent track table backing the right-hand pane. See
     /// YouTubeTrackModel for the placeholder/downloaded row model.
     QSharedPointer<BaseTrackCache> m_pTrackCache;
@@ -281,6 +293,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// downloads). Kept separate from YouTubeService's QNetworkAccessManager so cookie jars
     /// and rate-limiting for YouTube are not shared with an unrelated host.
     QNetworkAccessManager* m_pSamplesNam = nullptr;
+    /// Genre of downloaded songs from the iTunes/Deezer catalogues.
+    mixxx::YouTubeGenreLookup* m_pGenreLookup = nullptr;
     /// Set of myinstants CDN URLs currently being downloaded (prevent dupes).
     QSet<QString> m_myInstantsDownloading;
 

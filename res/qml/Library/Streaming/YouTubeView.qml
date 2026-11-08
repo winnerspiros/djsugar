@@ -12,8 +12,7 @@ Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    // Every video the search has delivered so far, in order. `resultsModel`
-    // holds the ones that pass the genre filter.
+    // Every video the search has delivered so far, in order.
     property var allResults: []
     property string statusMessage: qsTr("Search YouTube and load straight into a deck")
     property bool isBusy: false
@@ -22,12 +21,6 @@ Item {
     // A fetch that ended empty is not retried until this time, so a flagged or
     // offline connection is not hammered while the user keeps scrolling.
     property double retryMoreAfter: 0
-    property string selectedGenre: ""
-    readonly property var genreOptions: ["", "EDM", "House", "Techno", "Trance", "DnB", "Dubstep", "Hip Hop", "Rap", "R&B", "Pop", "Rock", "Lo-fi", "Chillout", "Ambient", "Synthwave", "Classical", "Jazz", "Blues", "Country", "Reggae", "K-Pop", "J-Pop", "Latin", "Afrobeat"]
-
-    function matchesGenre(video) {
-        return root.selectedGenre === "" || (video.genre && video.genre.toLowerCase().includes(root.selectedGenre.toLowerCase()));
-    }
 
     function toRow(video) {
         return {
@@ -35,17 +28,36 @@ Item {
             "title": video.title ?? "",
             "uploader": video.uploader ?? "",
             "durationSec": video.durationSec ?? 0,
-            "genre": video.genre ?? ""
+            "genre": video.genre ?? "",
+            "timesPlayed": video.timesPlayed ?? 0,
+            "bpm": video.bpm ?? 0,
+            "musicKey": video.key ?? "",
+            "versions": 1
         };
     }
 
-    function rebuildModel() {
-        resultsModel.clear();
-        for (const video of root.allResults) {
-            if (root.matchesGenre(video)) {
-                resultsModel.append(root.toRow(video));
+    // Same song, another upload: artist and title without the "(Official
+    // Video)" / "[Lyrics]" decorations, and a length within a few seconds.
+    function songKey(video) {
+        return (video.title ?? "").toLowerCase()
+            .replace(/[\(\[][^\)\]]*[\)\]]/g, " ")
+            .replace(/\b(official|music|video|lyrics?|audio|hd|4k|visuali[sz]er|clip)\b/g, " ")
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim();
+    }
+    function findSameSong(video) {
+        const key = root.songKey(video);
+        for (let i = 0; i < resultsModel.count; ++i) {
+            const row = resultsModel.get(i);
+            if (row.vid === video.sameAs) {
+                return i;
+            }
+            if (key.length > 0 && root.songKey(row) === key
+                    && (video.durationSec <= 0 || row.durationSec <= 0 || Math.abs(video.durationSec - row.durationSec) <= 8)) {
+                return i;
             }
         }
+        return -1;
     }
 
     // Adds a batch below what is already listed, skipping videos the search
@@ -54,17 +66,26 @@ Item {
         const seen = new Set(root.allResults.map(v => v.id));
         const fresh = batch.filter(v => v.id && !seen.has(v.id));
         root.allResults = root.allResults.concat(fresh);
+        let shown = 0;
         for (const video of fresh) {
-            if (root.matchesGenre(video)) {
-                resultsModel.append(root.toRow(video));
+            // Other uploads of a listed song are folded into its row.
+            const same = root.findSameSong(video);
+            if (same >= 0) {
+                const row = resultsModel.get(same);
+                resultsModel.setProperty(same, "versions", row.versions + 1);
+                if ((video.timesPlayed ?? 0) > row.timesPlayed) {
+                    resultsModel.setProperty(same, "timesPlayed", video.timesPlayed);
+                }
+                continue;
             }
+            resultsModel.append(root.toRow(video));
+            ++shown;
         }
-        return fresh.length;
+        return shown;
     }
 
     // After a batch lands, keep fetching while the list is still too short to
-    // scroll, but only if the batch put something on screen: a genre filter
-    // that matches nothing must not pull every page YouTube has.
+    // scroll, but only if the batch put something new on screen.
     function continueIfShort(shownBefore) {
         if (resultsModel.count > shownBefore) {
             root.maybeLoadMore();
@@ -98,7 +119,23 @@ Item {
         id: resultsModel
     }
 
-    onSelectedGenreChanged: rebuildModel()
+    // Tempo of the deck results load into, to flag tracks that mix with it.
+    Mixxx.ControlProxy {
+        id: deckBpm
+        group: root.targetDeck
+        key: "bpm"
+    }
+    function fitsDeck(bpm) {
+        if (bpm <= 0 || deckBpm.value <= 0) {
+            return false;
+        }
+        for (const factor of [1, 2, 0.5]) {
+            if (Math.abs(bpm * factor - deckBpm.value) / deckBpm.value <= 0.06) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     Connections {
         target: Mixxx.YouTube
@@ -128,6 +165,18 @@ Item {
             root.statusMessage = qsTr("%1 results").arg(root.allResults.length);
             root.continueIfShort(shownBefore);
         }
+        function onGenreResolved(videoId, genre) {
+            for (const video of root.allResults) {
+                if (video.id === videoId) {
+                    video.genre = genre;
+                }
+            }
+            for (let i = 0; i < resultsModel.count; ++i) {
+                if (resultsModel.get(i).vid === videoId) {
+                    resultsModel.setProperty(i, "genre", genre);
+                }
+            }
+        }
         function onSearchFailed(error) {
             root.isBusy = false;
             root.isLoadingMore = false;
@@ -145,16 +194,16 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 12
+        anchors.margins: 6
+        spacing: 4
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 6
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 44
+                Layout.preferredHeight: 30
                 color: "#000000"
                 border.color: searchField.activeFocus ? Theme.accentColor : Theme.midGray3
                 border.width: 1
@@ -164,94 +213,47 @@ Item {
                     id: searchField
 
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 6
                     color: "#ffffff"
-                    font.pixelSize: 14
+                    font.pixelSize: 12
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: root.doSearch()
                 }
                 Text {
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 6
                     color: Theme.lightGray3
-                    font.pixelSize: 14
+                    font.pixelSize: 12
                     text: qsTr("SEARCH YOUTUBE")
                     verticalAlignment: Text.AlignVCenter
                     visible: searchField.text.length === 0
                 }
             }
             Skin.Button {
-                Layout.preferredHeight: 44
-                Layout.preferredWidth: 120
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 80
                 activeColor: Theme.accentColor
                 normalColor: "#ffffff"
                 font.bold: true
-                font.pixelSize: 12
+                font.pixelSize: 10
                 text: root.isBusy ? "..." : qsTr("SEARCH")
                 enabled: !root.isBusy
                 onClicked: root.doSearch()
             }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            ComboBox {
-                id: genreFilter
-
-                Layout.preferredHeight: 44
-                Layout.preferredWidth: 160
-                model: root.genreOptions
-                currentIndex: Math.max(0, root.genreOptions.indexOf(root.selectedGenre))
-                onActivated: index => root.selectedGenre = root.genreOptions[index]
-
-                background: Rectangle {
-                    color: "#0c0d0f"
-                    border.color: genreFilter.activeFocus ? Theme.accentColor : Theme.midGray3
-                    border.width: 1
-                    radius: 4
-                }
-                contentItem: Text {
-                    leftPadding: 10
-                    rightPadding: 10
-                    verticalAlignment: Text.AlignVCenter
-                    color: "#ffffff"
-                    font.pixelSize: 12
-                    text: genreFilter.currentText === "" ? qsTr("ALL GENRES") : genreFilter.currentText
-                }
-                delegate: ItemDelegate {
-                    id: genreDelegate
-
-                    required property int index
-                    required property var modelData
-
-                    width: genreFilter.width
-                    highlighted: genreFilter.highlightedIndex === genreDelegate.index
-                    contentItem: Text {
-                        color: "#ffffff"
-                        font.pixelSize: 12
-                        text: genreDelegate.modelData === "" ? qsTr("ALL GENRES") : genreDelegate.modelData
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        color: genreDelegate.highlighted ? Theme.midGray3 : "#0c0d0f"
-                    }
-                }
-            }
             Switch {
                 id: sponsorBlockSwitch
 
-                Layout.preferredHeight: 44
-                Layout.preferredWidth: 180
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 150
                 checked: Mixxx.YouTube.sponsorBlockAutoSkip
                 onToggled: Mixxx.YouTube.sponsorBlockAutoSkip = sponsorBlockSwitch.checked
 
                 indicator: Rectangle {
                     x: sponsorBlockSwitch.leftPadding
                     y: (sponsorBlockSwitch.height - height) / 2
-                    implicitWidth: 52
-                    implicitHeight: 28
-                    radius: 14
+                    implicitWidth: 38
+                    implicitHeight: 20
+                    radius: 10
                     color: sponsorBlockSwitch.checked ? Theme.accentColor : Theme.midGray3
                     border.color: Theme.midGray2
                     border.width: 1
@@ -272,23 +274,20 @@ Item {
                     }
                 }
                 contentItem: Text {
-                    leftPadding: sponsorBlockSwitch.indicator.width + 10
+                    leftPadding: sponsorBlockSwitch.indicator.width + 6
                     verticalAlignment: Text.AlignVCenter
                     color: "#ffffff"
                     font.bold: true
-                    font.pixelSize: 11
+                    font.pixelSize: 9
                     text: qsTr("AUTO SKIP SPONSORS")
                     elide: Text.ElideRight
                 }
-            }
-            Item {
-                Layout.fillWidth: true
             }
         }
         Text {
             Layout.fillWidth: true
             color: "#9a9ea6"
-            font.pixelSize: 12
+            font.pixelSize: 10
             text: root.statusMessage
             elide: Text.ElideRight
         }
@@ -300,7 +299,7 @@ Item {
             Layout.fillHeight: true
             clip: true
             model: resultsModel
-            spacing: 4
+            spacing: 2
             onContentYChanged: root.maybeLoadMore()
             footer: Item {
                 width: ListView.view.width
@@ -321,10 +320,14 @@ Item {
                 required property string uploader
                 required property int durationSec
                 required property string genre
+                required property int timesPlayed
+                required property double bpm
+                required property string musicKey
+                required property int versions
                 required property int index
 
                 width: ListView.view.width
-                height: 68
+                height: 48
                 color: index % 2 === 0 ? "#0c0d0f" : "#16181b"
                 border.color: isDownloading ? "#e63380" : "#2a2c30"
                 border.width: 1
@@ -367,8 +370,8 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 6
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 88
-                    height: 50
+                    width: 64
+                    height: 36
                     radius: 4
                     color: "#1e222a"
                     clip: true
@@ -379,8 +382,8 @@ Item {
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         cache: true
-                        sourceSize.width: 176
-                        sourceSize.height: 100
+                        sourceSize.width: 128
+                        sourceSize.height: 72
                     }
                 }
 
@@ -389,29 +392,85 @@ Item {
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    anchors.leftMargin: 10
+                    anchors.leftMargin: 8
                     // Clear of the D1, D2 and download buttons
-                    anchors.rightMargin: 224
-                    anchors.topMargin: 8
-                    anchors.bottomMargin: 11
-                    spacing: 2
+                    anchors.rightMargin: 162
+                    anchors.topMargin: 5
+                    anchors.bottomMargin: 6
+                    spacing: 1
 
-                    Text {
+                    RowLayout {
                         Layout.fillWidth: true
-                        color: "#ffffff"
-                        font.pixelSize: 13
-                        font.bold: true
-                        text: video.title ?? ""
-                        elide: Text.ElideRight
+                        spacing: 5
+
+                        // Genre bubble, like the Audius list
+                        Rectangle {
+                            visible: videoCard.genre !== ""
+                            Layout.preferredHeight: 14
+                            Layout.preferredWidth: genreLabel.implicitWidth + 10
+                            Layout.maximumWidth: 110
+                            radius: 7
+                            color: "#2a1640"
+                            border.color: "#ea80fc"
+                            border.width: 1
+
+                            Text {
+                                id: genreLabel
+                                anchors.centerIn: parent
+                                width: Math.min(implicitWidth, 100)
+                                color: "#f3c4fb"
+                                font.pixelSize: 8
+                                font.bold: true
+                                text: videoCard.genre
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            color: "#ffffff"
+                            font.pixelSize: 11
+                            font.bold: true
+                            text: video.title ?? ""
+                            elide: Text.ElideRight
+                        }
                     }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        // Played this session (this upload or another of the song)
+                        Repeater {
+                            model: [
+                                { show: videoCard.timesPlayed > 0, text: qsTr("▶ played"), fg: "#a5d6a7", bg: "#14301a" },
+                                { show: videoCard.bpm > 0, text: videoCard.bpm.toFixed(0) + " BPM", fg: root.fitsDeck(videoCard.bpm) ? "#ffe082" : "#b0bec5", bg: root.fitsDeck(videoCard.bpm) ? "#3a2f0a" : "#1e252b" },
+                                { show: videoCard.musicKey !== "", text: videoCard.musicKey, fg: "#90caf9", bg: "#0f2233" },
+                                { show: videoCard.versions > 1, text: qsTr("%1 versions").arg(videoCard.versions), fg: "#cfd8dc", bg: "#262b31" }
+                            ]
+                            delegate: Rectangle {
+                                required property var modelData
+                                visible: modelData.show
+                                Layout.preferredHeight: 12
+                                Layout.preferredWidth: chipLabel.implicitWidth + 8
+                                radius: 6
+                                color: modelData.bg
+
+                                Text {
+                                    id: chipLabel
+                                    anchors.centerIn: parent
+                                    color: modelData.fg
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    text: modelData.text
+                                }
+                            }
+                        }
                     Text {
                         Layout.fillWidth: true
                         color: videoCard.downloadProg >= 0 ? "#ff99ca" : "#9a9ea6"
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         font.bold: videoCard.downloadProg >= 0
                         text: {
-                            const genrePart = video.genre ? (video.genre + " · ") : "";
-                            const base = genrePart + (video.uploader ?? "") + (video.durationSec > 0 ? " - " + Math.floor(video.durationSec / 60) + ":" + String(video.durationSec % 60).padStart(2, "0") : "");
+                            const base = (video.uploader ?? "") + (video.durationSec > 0 ? " - " + Math.floor(video.durationSec / 60) + ":" + String(video.durationSec % 60).padStart(2, "0") : "");
                             if (videoCard.downloadProg >= 0) {
                                 return qsTr("⬇ Downloading %1% · ").arg(Math.round(videoCard.downloadProg * 100)) + base;
                             }
@@ -419,12 +478,13 @@ Item {
                         }
                         elide: Text.ElideRight
                     }
+                    }
                 }
                 RowLayout {
                     anchors.right: parent.right
-                    anchors.rightMargin: 8
+                    anchors.rightMargin: 6
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
+                    spacing: 4
 
                     Repeater {
                         model: [
@@ -433,12 +493,12 @@ Item {
                         ]
                         delegate: Skin.Button {
                             required property var modelData
-                            Layout.preferredHeight: 36
-                            Layout.preferredWidth: 64
+                            Layout.preferredHeight: 30
+                            Layout.preferredWidth: 46
                             activeColor: modelData.color
                             normalColor: "#ffffff"
                             font.bold: true
-                            font.pixelSize: 12
+                            font.pixelSize: 10
                             text: videoCard.isDownloading
                                 ? `${Math.round(videoCard.downloadProg * 100)}%`
                                 : modelData.label
@@ -452,8 +512,8 @@ Item {
                     AbstractButton {
                         id: saveButton
 
-                        Layout.preferredHeight: 36
-                        Layout.preferredWidth: 64
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 46
                         enabled: !videoCard.isDownloading
                         opacity: enabled ? 1.0 : 0.5
                         onClicked: {

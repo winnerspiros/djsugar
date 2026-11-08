@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <algorithm>
 
 #include "control/controlobject.h"
@@ -22,6 +23,29 @@ constexpr int kMaxDecks = 8;
 
 QString sidecarPathFor(const QString& cacheDir, const QString& videoId) {
     return QDir(cacheDir).filePath(videoId + QStringLiteral(".sponsorblock.json"));
+}
+
+// Titles of music videos, which may carry a non-music lead-in, as opposed
+// to audio uploads ("Official Audio", "Topic" channels) that start with the song.
+bool isMusicVideoTitle(const QString& title) {
+    static const QRegularExpression kMusicVideo(QStringLiteral(
+                                                        "official\\s+(music\\s+)?video|music\\s+video|"
+                                                        "video\\s*clip|video\\s+oficial|clip\\s+officiel|"
+                                                        "\\bm/?v\\b"),
+            QRegularExpression::CaseInsensitiveOption);
+    return kMusicVideo.match(title).hasMatch();
+}
+
+// Raw YouTube title written by YouTubeFeature at download time.
+QString rawVideoTitle(const QString& cacheDir, const QString& videoId) {
+    QFile file(QDir(cacheDir).filePath(videoId + QStringLiteral(".meta.json")));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return QJsonDocument::fromJson(file.readAll())
+            .object()
+            .value(QStringLiteral("title"))
+            .toString();
 }
 
 QString deriveVideoIdFromTrackPath(
@@ -83,6 +107,8 @@ void SponsorBlockController::clearDeck(const QString& group) {
     it->durationSec = 0.0;
     it->pTrack.reset();
     it->leadSilenceSkipped = false;
+    it->segmentsKnown = false;
+    it->isMusicVideo = false;
 }
 
 void SponsorBlockController::onTrackChanged(
@@ -112,6 +138,7 @@ void SponsorBlockController::onTrackChanged(
     it->videoId = videoId;
     it->durationSec = pNewTrack->getDuration();
     it->pTrack = pNewTrack;
+    it->isMusicVideo = isMusicVideoTitle(rawVideoTitle(m_cacheDir, videoId));
 
     if (!tryLoadSegmentsFromSidecar(group, videoId)) {
         // Fall back to the network. The reply is correlated by videoId, and
@@ -146,6 +173,7 @@ bool SponsorBlockController::tryLoadSegmentsFromSidecar(
     auto it = m_decks.find(group);
     if (it != m_decks.end()) {
         it->segments = segments;
+        it->segmentsKnown = true;
     }
     if (!segments.isEmpty()) {
         kLogger.info() << "Loaded" << segments.size()
@@ -179,10 +207,34 @@ void SponsorBlockController::onSponsorSegmentsFetched(
     for (auto it = m_decks.begin(); it != m_decks.end(); ++it) {
         if (it->videoId == videoId) {
             it->segments = segments;
+            it->segmentsKnown = true;
             kLogger.info() << "Applied" << segments.size()
                            << "SponsorBlock segments to" << it.key();
         }
     }
+}
+
+double SponsorBlockController::musicVideoLeadInEndSec(
+        const DeckState& state, const TrackPointer& pTrack) const {
+    constexpr double kMinLeadInSec = 8.0;
+    constexpr double kMaxLeadInSec = 120.0;
+    if (!pTrack || !state.isMusicVideo || !state.segmentsKnown || !state.segments.isEmpty()) {
+        return -1.0;
+    }
+    const CuePointer pIntro = pTrack->findCueByType(mixxx::CueType::Intro);
+    const auto sampleRate = pTrack->getSampleRate();
+    if (!pIntro || !sampleRate.isValid()) {
+        return -1.0;
+    }
+    const auto introEnd = pIntro->getEndPosition();
+    if (!introEnd.isValid()) {
+        return -1.0;
+    }
+    const double introEndSec = introEnd.value() / sampleRate.value();
+    if (introEndSec < kMinLeadInSec || introEndSec > kMaxLeadInSec) {
+        return -1.0;
+    }
+    return introEndSec;
 }
 
 void SponsorBlockController::onPlayPositionChanged(
@@ -226,13 +278,27 @@ void SponsorBlockController::onPlayPositionChanged(
             const double soundStartSec =
                     pSound->getPosition().value() / sampleRate.value();
             if (!it->leadSilenceSkipped) {
-                if (soundStartSec >= kMinSilenceSec &&
-                        currentSec < soundStartSec - 0.25) {
-                    skipTo = soundStartSec;
+                double leadInEndSec = soundStartSec >= kMinSilenceSec ? soundStartSec : -1.0;
+                // Music videos often open with a skit, talking or ambience
+                // that SponsorBlock has no entry for. The energy analyzer's
+                // Intro End marker is where the bass and the level of the
+                // song come in; before it, there is no music to mix.
+                const double introEndSec = musicVideoLeadInEndSec(*it, pTrack);
+                if (introEndSec > leadInEndSec) {
+                    leadInEndSec = introEndSec;
                 }
-                // Decided for this load: skipped now, or the music already
-                // plays (the user may seek back into the lead-in on purpose)
-                it->leadSilenceSkipped = true;
+                if (leadInEndSec > 0.0 && currentSec < leadInEndSec - 0.25) {
+                    skipTo = leadInEndSec;
+                }
+                // Decided for this load once skipped, or once the music plays
+                // past the lead-in (the user may seek back into it on
+                // purpose). The analysis and SponsorBlock reply can land a
+                // few seconds after the start, so an unknown lead-in stays open.
+                constexpr double kLeadInDecidedSec = 120.0;
+                if (skipTo >= 0.0 || (leadInEndSec > 0.0 && currentSec >= leadInEndSec) ||
+                        currentSec > kLeadInDecidedSec) {
+                    it->leadSilenceSkipped = true;
+                }
             }
             const auto endPos = pSound->getEndPosition();
             if (skipTo < 0.0 && endPos.isValid()) {

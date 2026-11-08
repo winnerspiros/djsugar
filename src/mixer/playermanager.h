@@ -240,6 +240,7 @@ class PlayerManager : public PlayerManagerInterface {
 
   private slots:
     void slotAnalyzeTrack(TrackPointer track);
+    void slotAnalyzeSamplerTrack(TrackPointer track);
 
     void onTrackAnalysisProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
     void onTrackAnalysisFinished();

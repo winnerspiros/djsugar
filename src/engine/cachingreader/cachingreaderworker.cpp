@@ -9,6 +9,7 @@
 #include <QStorageInfo>
 #include <QTemporaryFile>
 #include <QtDebug>
+#include <algorithm>
 
 #include "analyzer/analyzersilence.h"
 #include "moc_cachingreaderworker.cpp"
@@ -730,11 +731,18 @@ void CachingReaderWorker::verifyFirstSound(const CachingReaderChunk* pChunk,
         sampleBuffer.clear(); // we need to clear the buffer, for the case the
                               // very first sample is the first sound.
         SINT end = static_cast<SINT>(m_firstSoundFrameToVerify.toLowerFrameBoundary().value()) + 1;
-        mixxx::IndexRange probeFrameIndexRange =
-                mixxx::IndexRange::between(end - kNumSoundFrameToVerify, end);
+        // Sound right at the start of the file (one-shot samples): there is
+        // no silent frame before it, so the cleared buffer stands in for it
+        // and only the frames from 0 are read, behind it. Reading from -1
+        // shifted the frames and reported every such sample as "moved".
+        const SINT start = std::max(SINT(0), end - kNumSoundFrameToVerify);
+        const SINT bufferOffsetFrames = start - (end - kNumSoundFrameToVerify);
+        mixxx::IndexRange probeFrameIndexRange = mixxx::IndexRange::between(start, end);
         mixxx::IndexRange bufferedFrameIndexRange =
                 pChunk->readBufferedSampleFrames(
-                        sampleBuffer.data(), channelCount, probeFrameIndexRange);
+                        sampleBuffer.data() + bufferOffsetFrames * channelCount,
+                        channelCount,
+                        probeFrameIndexRange);
         VERIFY_OR_DEBUG_ASSERT(bufferedFrameIndexRange.end() == probeFrameIndexRange.end()) {
             qWarning() << "skipping verifyFirstSound()";
             return;
