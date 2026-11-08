@@ -16,7 +16,7 @@ in regularly.
 ### YouTube
 
 - Search inside the app and load results straight to deck 1 or deck 2 (D1 / D2), or save them to the library
-- Genre bubbles to browse, Greek genres included 🇬🇷
+- Genre bubbles to browse
 - Played, BPM, key and duplicate markers on results
 - Fast downloads: yt-dlp finds the audio link, then the file comes in 16 parallel parts
 - The links of the top results are fetched in the background, so a tap usually starts the download at once
