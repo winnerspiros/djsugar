@@ -2380,6 +2380,7 @@ void YouTubeService::downloadAudioStreamChunked(
         qint64 lastEmitBytes = 0;
     };
     auto* state = new ChunkState{kParallelDownloadChunks, false, {}, 0, 0};
+    const qint64 chunkedStartMs = QDateTime::currentMSecsSinceEpoch();
     Q_EMIT downloadProgress(videoId, 0.12);
 
     const QByteArray ua = streamUserAgent.isEmpty()
@@ -2445,6 +2446,8 @@ void YouTubeService::downloadAudioStreamChunked(
                         state,
                         outPath,
                         videoId,
+                        contentLength,
+                        chunkedStartMs,
                         onFailure]() {
                     reply->deleteLater();
 
@@ -2489,9 +2492,14 @@ void YouTubeService::downloadAudioStreamChunked(
                             return;
                         }
                         delete outFile;
+                        const qint64 tookMs = std::max<qint64>(
+                                1, QDateTime::currentMSecsSinceEpoch() - chunkedStartMs);
                         kLogger.info()
-                                << "Chunked download completed:" << videoId
-                                << "→" << outPath;
+                                << "Chunked download completed:" << videoId << "→"
+                                << outPath << contentLength / 1024 << "KB in" << tookMs
+                                << "ms"
+                                << QString::number(contentLength / 1.024 / tookMs, 'f', 1)
+                                << "KB/s";
                         finalizeDownload(videoId, outPath);
                     }
                 });
@@ -3186,6 +3194,24 @@ std::atomic<int> s_fastClientFailures{0};
 // aria2c (bundled youtubedl-android module) unpacked and usable.
 std::atomic<bool> s_aria2cReady{false};
 constexpr int kMaxFastClientFailures = 3;
+// Videos whose direct (extract + parallel Range) download failed this
+// session, and how many failed in a row: after kMaxDirectFailures in a row the
+// direct path is skipped until the app restarts.
+QMutex s_directMutex;
+QSet<QString> s_directFailedVideos;
+int s_directFailuresInRow = 0;
+constexpr int kMaxDirectFailures = 3;
+
+bool useDirectDownload(const QString& videoId) {
+    QMutexLocker lock(&s_directMutex);
+    return s_directFailuresInRow < kMaxDirectFailures && !s_directFailedVideos.contains(videoId);
+}
+
+void markDirectDownloadFailed(const QString& videoId) {
+    QMutexLocker lock(&s_directMutex);
+    s_directFailedVideos.insert(videoId);
+    ++s_directFailuresInRow;
+}
 
 bool ensureYoutubeDlInitialized(const QJniObject& ytdl, const QJniObject& context) {
     {
@@ -3355,6 +3381,106 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
         // always current — no in-app update needed. (The old
         // updateYoutubeDL() self-update crashed on Android with
         // ExceptionInInitializerError from commons-io 2.5 and is removed.)
+
+        // Fast path: yt-dlp only extracts the stream URL (--print, nothing
+        // downloaded), then the download runs in our own 16-way parallel
+        // Range downloader (downloadAudioStreamChunked). yt-dlp's downloader,
+        // even with aria2c, measured 104-134 KB/s in the logs; the time of
+        // the extraction is logged on its own so the two can be told apart.
+        // A video whose direct download fails goes the full yt-dlp way.
+        if (useDirectDownload(videoId)) {
+            const qint64 extractStartMs = QDateTime::currentMSecsSinceEpoch();
+            QJniObject probe("com/yausername/youtubedl_android/YoutubeDLRequest",
+                    "(Ljava/lang/String;)V",
+                    QJniObject::fromString(
+                            QStringLiteral("https://www.youtube.com/watch?v=") + videoId)
+                            .object());
+            const QString cacheDirYtdl =
+                    QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+                            .filePath(QStringLiteral("yt-dlp"));
+            const QList<QPair<QString, QString>> probeOptions = {
+                    {QStringLiteral("-f"),
+                            QStringLiteral("bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/"
+                                           "bestaudio")},
+                    {QStringLiteral("--extractor-args"),
+                            QStringLiteral("youtube:skip=hls,dash,translated_subs")},
+                    {QStringLiteral("--cache-dir"), cacheDirYtdl},
+                    {QStringLiteral("--socket-timeout"), QStringLiteral("20")},
+                    {QStringLiteral("--print"), QStringLiteral("%(url)s")},
+                    {QStringLiteral("--print"),
+                            QStringLiteral("%(filesize,filesize_approx|0)s")},
+                    {QStringLiteral("--print"), QStringLiteral("%(ext)s")},
+                    {QStringLiteral("--print"),
+                            QStringLiteral("%(http_headers.User-Agent|)s")}};
+            for (const auto& [key, value] : probeOptions) {
+                probe.callMethod<QJniObject>("addOption",
+                        "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/"
+                        "youtubedl_android/YoutubeDLRequest;",
+                        QJniObject::fromString(key).object(),
+                        QJniObject::fromString(value).object());
+            }
+            for (const char* flag : {"--no-playlist", "--ignore-config", "--force-ipv4"}) {
+                probe.callMethod<QJniObject>("addOption",
+                        "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/"
+                        "YoutubeDLRequest;",
+                        QJniObject::fromString(QString::fromLatin1(flag)).object());
+            }
+            QJniObject probeResponse = ytdl.callObjectMethod("execute",
+                    "(Lcom/yausername/youtubedl_android/YoutubeDLRequest;)"
+                    "Lcom/yausername/youtubedl_android/YoutubeDLResponse;",
+                    probe.object());
+            QJniEnvironment probeEnv;
+            const bool probeFailed = probeEnv.checkAndClearExceptions() ||
+                    !probeResponse.isValid();
+            const QStringList lines = probeFailed
+                    ? QStringList()
+                    : probeResponse.callObjectMethod("getOut", "()Ljava/lang/String;")
+                              .toString()
+                              .split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+            const qint64 extractMs = QDateTime::currentMSecsSinceEpoch() - extractStartMs;
+            const QString streamUrl = lines.value(0).trimmed();
+            const qint64 size = lines.value(1).trimmed().toLongLong();
+            const QString ext = lines.value(2).trimmed().isEmpty()
+                    ? QStringLiteral("m4a")
+                    : lines.value(2).trimmed();
+            const QString userAgent = lines.value(3).trimmed();
+            if (streamUrl.startsWith(QStringLiteral("http")) && size > 0) {
+                kLogger.info() << "[Android] yt-dlp extracted" << videoId << "in"
+                               << extractMs << "ms," << size / 1024 << "KB" << ext;
+                if (settled->exchange(true)) {
+                    return; // the stall watchdog already failed it over
+                }
+                const QString outPath = QDir(cacheDir).filePath(videoId + QLatin1Char('.') + ext);
+                QMetaObject::invokeMethod(
+                        guard,
+                        [guard, videoId, cacheDir, outPath, streamUrl, size, userAgent]() {
+                            if (!guard) {
+                                return;
+                            }
+                            guard->downloadAudioStreamChunked(videoId,
+                                    outPath,
+                                    streamUrl,
+                                    size,
+                                    userAgent,
+                                    [guard, videoId, cacheDir](const QString& error) {
+                                        kLogger.warning()
+                                                << "[Android] direct download failed for"
+                                                << videoId << ":" << error
+                                                << "- downloading with yt-dlp";
+                                        markDirectDownloadFailed(videoId);
+                                        if (guard) {
+                                            guard->runAndroidBundled(
+                                                    videoId, cacheDir, QString(), QString());
+                                        }
+                                    });
+                        },
+                        Qt::QueuedConnection);
+                return;
+            }
+            kLogger.warning() << "[Android] yt-dlp URL extraction failed for" << videoId
+                              << "after" << extractMs << "ms, downloading with yt-dlp";
+            markDirectDownloadFailed(videoId);
+        }
 
         // Build the request: URL + options.
         QString videoUrl = "https://www.youtube.com/watch?v=" + videoId;

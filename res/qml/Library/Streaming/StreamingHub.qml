@@ -10,6 +10,27 @@ Item {
 
     property string targetDeck: "[Channel1]"
     property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube
+    property bool acceptsController: false
+    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView]
+
+    // BROWSE/LOAD on the controller act on the service that is shown
+    StreamingControl {
+        enabled: root.visible && root.acceptsController
+        onMoveTab: (offset) => {
+            const count = root.platformViews.length;
+            root.activePlatform = (root.activePlatform + offset + count) % count;
+        }
+        onMoveResult: (offset) => {
+            const view = root.platformViews[root.activePlatform];
+            if (view && typeof view.controllerMove === "function")
+                view.controllerMove(offset);
+        }
+        onLoadResult: (group, play) => {
+            const view = root.platformViews[root.activePlatform];
+            if (view && typeof view.controllerLoad === "function")
+                view.controllerLoad(group || root.targetDeck, play);
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -147,11 +168,15 @@ Item {
             Layout.fillHeight: true
 
             SubsonicView {
+                id: subsonicView
+
                 anchors.fill: parent
                 visible: root.activePlatform === 0
             }
 
             OnlineStreamView {
+                id: onlineStreamView
+
                 anchors.fill: parent
                 visible: root.activePlatform === 1
             }
@@ -163,6 +188,8 @@ Item {
             }
 
             YouTubeView {
+                id: youTubeView
+
                 anchors.fill: parent
                 targetDeck: root.targetDeck
                 visible: root.activePlatform === 3

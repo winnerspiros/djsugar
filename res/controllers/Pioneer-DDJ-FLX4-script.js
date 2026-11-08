@@ -366,7 +366,7 @@ PioneerDDJFLX4._scratchEnabled = [false, false];
 PioneerDDJFLX4._scratchAction = ["bend", "bend"];
 
 if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
-    PioneerDDJFLX4._vinylWanted = [false, false];
+    PioneerDDJFLX4._vinylWanted = [true, true];
 }
 
 
@@ -390,7 +390,9 @@ PioneerDDJFLX4.alpha = 1.0 / 8;
 PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha / 32;
 PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;
 PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1 / 3);
-PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.8;
+// 1.0 = the platter moves the track exactly as far as a record (720 ticks
+// per turn at 33 1/3); 1.8 overshot every scratch
+PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0;
 PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
 
 PioneerDDJFLX4.PADMODE = {
@@ -727,11 +729,13 @@ PioneerDDJFLX4.init = function() {
     PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
 
 
-    // Force deterministic startup state:
-    // Set both decks to Vinyl OFF in script + hardware.
+    // Force deterministic startup state: Vinyl ON on both decks, as
+    // rekordbox starts the FLX4. With it OFF the platter top sent the bend
+    // CC (0x23) and touching a playing deck only nudged it: no scratching
+    // unless SHIFT+4BEAT was found first. SHIFT+4BEAT/EXIT still toggles.
     if (typeof PioneerDDJFLX4._applyVinylState === "function") {
-        PioneerDDJFLX4._applyVinylState(0, false);
-        PioneerDDJFLX4._applyVinylState(1, false);
+        PioneerDDJFLX4._applyVinylState(0, true);
+        PioneerDDJFLX4._applyVinylState(1, true);
     }
 };
 
@@ -748,8 +752,12 @@ PioneerDDJFLX4.init = function() {
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
     if (value !== 0x7F) { return; }
 
-    // SHIFT+BROWSE currently unused
-    if (control === 0x42) { return; }
+    // SHIFT+BROWSE press = BACK: focus the tree / service tabs, where the
+    // knob then picks a folder or, in the streaming hub, a service
+    if (control === 0x42) {
+        engine.setValue("[Library]", "focused_widget", 2);
+        return;
+    }
     if (control !== 0x41) { return; }
 
     if (PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY) {
@@ -933,25 +941,25 @@ PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group)
 
     const state = PioneerDDJFLX4._loadPress;
 
-    // Zweiter Druck innerhalb des Fensters => Instant Double
+    // Second press within the window => instant double (clone the other
+    // deck over the track just loaded; refused while this deck plays)
     if (state.waiting[group]) {
         if (state.timer[group]) {
             engine.stopTimer(state.timer[group]);
             state.timer[group] = 0;
         }
         state.waiting[group] = false;
-
-        // Wenn Instant Double nicht geht, lieber gar keinen Unsinn machen
         PioneerDDJFLX4._doInstantDouble(group);
         return;
     }
 
-    // Erster Druck => kurz warten, ob zweiter Druck kommt
+    // First press loads at once (it used to wait the whole double-press
+    // window first, so every LOAD felt 400 ms late) and opens the window
+    PioneerDDJFLX4._doNormalLoad(group);
     state.waiting[group] = true;
     state.timer[group] = engine.beginTimer(PioneerDDJFLX4.LOAD_DOUBLEPRESS_MS, function() {
         state.timer[group] = 0;
         state.waiting[group] = false;
-        PioneerDDJFLX4._doNormalLoad(group);
     }, true);
 };
 
@@ -2425,6 +2433,16 @@ PioneerDDJFLX4.loopToggle = function(value, group, _control) {
 };
 
 // track_loaded callback: keep Loop LEDs correct even when no loop state changes
+// The "track loaded" flash of the deck's jog ring when a track lands on it
+// (the same MIDI message init() sends at start). It was connected but never
+// defined, so Mixxx logged "invalid callback" and the ring stayed dark.
+PioneerDDJFLX4.trackLoadedLED = function(value, group, _control) {
+    if (value !== 1) {
+        return;
+    }
+    midi.sendShortMsg(0x9F, PioneerDDJFLX4._deckIndexFromGroup(group), 0x7F);
+};
+
 PioneerDDJFLX4.loopTrackLoaded = function(_value, group, _control) {
     const status = (group === "[Channel1]") ? 0x90 : 0x91;
     // any of the loop buttons is fine as "control key" for our blink timer bucket
@@ -2834,7 +2852,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     if (engine.getValue(group, "loop_enabled") > 0) {
         if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
             // _handleJogLoopAdjust expects deckIdx (0/1), not MIDI channel number
-            if (PioneerDDJFLX4._handleJogLoopAdjust(deckIdx, group, delta, _control, st)) {
+            if (PioneerDDJFLX4._handleJogLoopAdjust(deckIdx, group, delta, _control, _status)) {
                 return;
             }
         }
@@ -2842,7 +2860,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
         // Simple-mode legacy adjust
         if (PioneerDDJFLX4.loopAdjustIn[deckIdx]) {
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
-                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, st);
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, _status);
             }
             const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply
                 + engine.getValue(group, "loop_start_position");
@@ -2852,7 +2870,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
 
         if (PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
-                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, st);
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, _status);
             }
             const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply
                 + engine.getValue(group, "loop_end_position");
@@ -2931,7 +2949,7 @@ PioneerDDJFLX4._setHardwareVinyl = function(deckIdx, on) {
 // You previously initialized _vinylWanted as a boolean earlier, and later treated it as an array.
 // If it ever becomes true, `|| [false,false]` would *not* replace it -> runtime bugs.
 if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
-    PioneerDDJFLX4._vinylWanted = [false, false];
+    PioneerDDJFLX4._vinylWanted = [true, true];
 }
 
 PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {

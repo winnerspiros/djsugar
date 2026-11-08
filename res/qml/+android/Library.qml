@@ -44,8 +44,9 @@ Item {
     LibraryComponent.Control {
         id: libraryControl
 
-        // Only the library view that is on screen follows the controller
-        enabled: root.visible && root.acceptsController
+        // Only the library view that is on screen follows the controller;
+        // while the streaming hub is shown, it gets the controller instead
+        enabled: root.visible && root.acceptsController && root.librarySourceMode !== 1
 
         onFocusWidgetChanged: {
             if (!enabled) {
@@ -286,6 +287,7 @@ Item {
             id: streamingHubArea
             anchors.fill: parent
             visible: root.librarySourceMode === 1
+            acceptsController: root.visible && root.acceptsController
         }
     }
 

@@ -115,6 +115,23 @@ Item {
         Mixxx.YouTube.loadMore();
     }
 
+    // Controller: BROWSE moves the highlighted result, LOAD downloads it
+    // to the deck (play = start it once loaded is not supported by the
+    // download path, it loads paused)
+    function controllerMove(offset) {
+        if (resultsModel.count === 0)
+            return;
+        const next = resultList.currentIndex < 0 ? 0 : resultList.currentIndex + offset;
+        resultList.currentIndex = Math.max(0, Math.min(resultsModel.count - 1, next));
+        resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain);
+    }
+    function controllerLoad(group, _play) {
+        const row = resultList.currentIndex;
+        if (row < 0 || row >= resultsModel.count)
+            return;
+        Mixxx.YouTube.downloadToDeck(resultsModel.get(row).vid, group);
+    }
+
     ListModel {
         id: resultsModel
     }
@@ -300,6 +317,16 @@ Item {
             clip: true
             model: resultsModel
             spacing: 2
+            currentIndex: -1
+            highlightFollowsCurrentItem: true
+            highlightMoveDuration: 0
+            highlight: Rectangle {
+                z: 2
+                color: "transparent"
+                border.color: "#00e5ff"
+                border.width: 2
+                radius: 4
+            }
             onContentYChanged: root.maybeLoadMore()
             footer: Item {
                 width: ListView.view.width
