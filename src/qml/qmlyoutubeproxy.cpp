@@ -556,7 +556,8 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                 QVariantList out = toVariantList(videos);
                 for (QVariant& entry : out) {
                     QVariantMap map = entry.toMap();
-                    const QVariantMap more = extra.value(map.value(QStringLiteral("id")).toString());
+                    const QVariantMap more = extra.value(
+                            map.value(QStringLiteral("id")).toString());
                     for (auto it = more.cbegin(); it != more.cend(); ++it) {
                         map.insert(it.key(), it.value());
                     }

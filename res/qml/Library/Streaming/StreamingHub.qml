@@ -121,7 +121,7 @@ Item {
                         }
                     }
 
-                    // SoundCloud: orange plate, logo-less (no image asset)
+                    // SoundCloud: orange cloud icon (ic_library_soundcloud.svg)
                     Skin.Button {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 104
@@ -129,8 +129,19 @@ Item {
                         normalColor: root.activePlatform === 4 ? "#ff7733" : "#ffab80"
                         font.bold: true
                         font.pixelSize: 9
-                        text: qsTr("SOUNDCLOUD")
+                        text: "   " + qsTr("SOUNDCLOUD")
                         onClicked: root.activePlatform = 4
+
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 20
+                            height: 20
+                            source: "qrc:/images/library/ic_library_soundcloud.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
                     }
                 }
 

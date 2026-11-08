@@ -69,7 +69,7 @@ repos:
     rev: v10.11.0
     hooks:
       - id: eslint
-        args: [--fix, --report-unused-disable-directives]
+        args: [--fix, --report-unused-disable-directives, --no-warn-ignored]
         files: \.m?[jt]s$
         types: [file]
         verbose: true # always show output so we don't swallow warnings
