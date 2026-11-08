@@ -155,9 +155,11 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
                 << "Starting analysis using"
                 << numAnalyzerThreads
                 << "analyzer threads";
+        const AnalyzerModeFlags modeFlags = getAnalyzerModeFlags(m_pConfig);
+        m_analysisWithWaveform = modeFlags & AnalyzerModeFlags::WithWaveform;
         m_pTrackAnalysisScheduler = m_pLibrary->createTrackAnalysisScheduler(
                 numAnalyzerThreads,
-                getAnalyzerModeFlags(m_pConfig));
+                modeFlags);
 
         // The QML UI has no analysis view (it is a widget skin dialog)
         if (m_pAnalysisView) {
@@ -217,6 +219,11 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
     if (m_pTrackAnalysisScheduler->scheduleTracks(toSchedule) > 0) {
         resumeAnalysis();
     }
+}
+
+bool AnalysisFeature::isAnalyzingTrackWithWaveform(TrackId trackId) const {
+    return m_pTrackAnalysisScheduler && m_analysisWithWaveform &&
+            m_pTrackAnalysisScheduler->isTrackPending(trackId);
 }
 
 void AnalysisFeature::suspendAnalysis() {

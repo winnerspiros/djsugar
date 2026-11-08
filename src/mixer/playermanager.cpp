@@ -857,6 +857,17 @@ void PlayerManager::slotAnalyzeTrack(TrackPointer track) {
     VERIFY_OR_DEBUG_ASSERT(track) {
         return;
     }
+    if (m_pLibrary && m_pLibrary->isTrackBeingAnalyzed(track->getId())) {
+        // A downloaded track is analyzed in the background right away, and
+        // it is often still running when the track is loaded. The deck used
+        // to suspend that analysis halfway and analyze the track again from
+        // the start; afterwards the suspended one resumed and finished it a
+        // second time. It now keeps running (results land on the same Track
+        // object, so the deck shows its waveform as it is made).
+        qDebug() << "Track" << track->getId()
+                 << "is already being analyzed, no second analysis for the deck";
+        return;
+    }
     if (m_pTrackAnalysisScheduler) {
         if (m_pTrackAnalysisScheduler->scheduleTrack(track->getId())) {
             m_pTrackAnalysisScheduler->resume();

@@ -54,6 +54,8 @@ class Library : public QObject {
     Q_OBJECT
 
   public:
+    /// See AnalysisFeature::isAnalyzingTrackWithWaveform()
+    bool isTrackBeingAnalyzed(TrackId trackId) const;
     Library(QObject* parent,
             UserSettingsPointer pConfig,
             mixxx::DbConnectionPoolPtr pDbConnectionPool,

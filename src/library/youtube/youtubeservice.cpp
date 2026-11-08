@@ -805,6 +805,8 @@ void YouTubeService::warmUpConnection() {
     // search request reuses the open connection. Qt keeps it alive while
     // idle, so this is cheap to repeat.
     m_pNam->connectToHostEncrypted(QStringLiteral("www.youtube.com"));
+    // SponsorBlock, asked right after every search and download
+    m_pNam->connectToHostEncrypted(QStringLiteral("sponsor.ajay.app"));
 }
 
 void YouTubeService::fetchRemoteClientConfig() {

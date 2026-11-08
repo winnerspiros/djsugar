@@ -619,6 +619,10 @@ void Library::onPlayerManagerTrackAnalyzerProgress(
     }
 }
 
+bool Library::isTrackBeingAnalyzed(TrackId trackId) const {
+    return m_pAnalysisFeature && m_pAnalysisFeature->isAnalyzingTrackWithWaveform(trackId);
+}
+
 void Library::onPlayerManagerTrackAnalyzerIdle() {
     if (m_pAnalysisFeature) {
         m_pAnalysisFeature->resumeAnalysis();

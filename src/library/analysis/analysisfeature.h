@@ -16,6 +16,9 @@ class DlgAnalysis;
 class AnalysisFeature : public LibraryFeature {
     Q_OBJECT
   public:
+    /// The batch analysis is working on this track right now, waveform
+    /// included (a deck loading it then needs no analysis of its own)
+    bool isAnalyzingTrackWithWaveform(TrackId trackId) const;
     AnalysisFeature(Library* pLibrary,
                     UserSettingsPointer pConfig);
     ~AnalysisFeature() override;
@@ -50,6 +53,7 @@ class AnalysisFeature : public LibraryFeature {
 
   private:
     bool m_analysisSuspended = false;
+    bool m_analysisWithWaveform = false;
     // Sets the title of this feature to the default name, given by
     // m_sAnalysisTitleName
     void resetTitle();
