@@ -420,7 +420,7 @@ void QmlYouTubeProxy::fetchSoundCloudClientId(std::function<void(bool)> done) {
             connect(pJs, &QNetworkReply::finished, this, [this, pJs, index, done, tryNext]() {
                 pJs->deleteLater();
                 static const QRegularExpression kClientId(
-                        QStringLiteral(R"(client_id\s*:\s*"([0-9A-Za-z]{32})")"));
+                        QStringLiteral(R"re(client_id\s*:\s*"([0-9A-Za-z]{32})")re"));
                 const auto match = kClientId.match(QString::fromUtf8(pJs->readAll()));
                 if (match.hasMatch()) {
                     m_scClientId = match.captured(1);
@@ -526,9 +526,9 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                     info.genre = track.value(QStringLiteral("genre")).toString().trimmed();
                     if (info.genre.isEmpty()) {
                         static const QRegularExpression kTag(
-                                QStringLiteral(R"(^\s*(?:"([^"]+)" | (\S +))) "));
-                                const auto tag = kTag.match(
-                                        track.value(QStringLiteral("tag_list")).toString());
+                                QStringLiteral(R"re(^\s*(?:"([^"]+)"|(\S+)))re"));
+                        const auto tag = kTag.match(
+                                track.value(QStringLiteral("tag_list")).toString());
                         info.genre = tag.captured(1).isEmpty() ? tag.captured(2)
                                                                : tag.captured(1);
                     }
