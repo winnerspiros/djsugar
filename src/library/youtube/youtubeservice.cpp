@@ -3192,7 +3192,12 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     // Run the JNI download on a worker thread so we don't block the UI.
     // Use a QPointer to guard against YouTubeService being destroyed
     // before the thread completes.
-    QThread* thread = QThread::create([guard, settled, videoId, cacheDir, playerPot, streamingPot]() {
+    QThread* thread = QThread::create([guard,
+                                              settled,
+                                              videoId,
+                                              cacheDir,
+                                              playerPot,
+                                              streamingPot]() {
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         QJniEnvironment env; // function scope: used by the init check
         if (!context.isValid()) {
@@ -3511,49 +3516,56 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
     connect(progressTimer,
             &QTimer::timeout,
             this,
-            [this, progressTimer, settled, videoId, cacheDir, tickCount, lastBytes, lastGrowthMs]() {
-        if (settled->load()) {
-            progressTimer->stop();
-            return;
-        }
-        ++(*tickCount);
-        // Smooth asymptotic baseline (0.06 -> 0.85) blended with actual bytes
-        // written to <cacheDir>/<videoId>.* (.part) while yt-dlp downloads.
-        double progress = 0.06 + 0.79 * (1.0 - std::exp(-(*tickCount) * 0.08));
-        QDir dir(cacheDir);
-        const QStringList files = dir.entryList(
-                {videoId + QStringLiteral(".*")},
-                QDir::Files | QDir::NoDotAndDotDot);
-        qint64 maxBytes = 0;
-        for (const QString& f : files) {
-            const QString suffix = QFileInfo(f).suffix().toLower();
-            if (suffix == QStringLiteral("ytdl") ||
-                    suffix == QStringLiteral("json")) {
-                continue;
-            }
-            maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
-        }
-        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
-        if (maxBytes != *lastBytes) {
-            *lastBytes = maxBytes;
-            *lastGrowthMs = nowMs;
-        } else if (nowMs - *lastGrowthMs > kStallMs && !settled->exchange(true)) {
-            progressTimer->stop();
-            kLogger.warning() << "[Android] yt-dlp stalled for" << videoId
-                              << "at" << maxBytes / 1024 << "KB, failing over";
-            Q_EMIT downloadFailed(videoId,
-                    QStringLiteral("Download stalled (no data for %1 s)")
-                            .arg(kStallMs / 1000));
-            return;
-        }
-        if (maxBytes > 0) {
-            // Typical 3.5-min opus/m4a audio stream is ~3.5 MB
-            const double byteFrac = std::min(0.90,
-                    static_cast<double>(maxBytes) / (3.5 * 1024.0 * 1024.0));
-            progress = std::max(progress, 0.12 + 0.78 * byteFrac);
-        }
-        Q_EMIT downloadProgress(videoId, std::min(0.90, progress));
-    });
+            [this,
+                    progressTimer,
+                    settled,
+                    videoId,
+                    cacheDir,
+                    tickCount,
+                    lastBytes,
+                    lastGrowthMs]() {
+                if (settled->load()) {
+                    progressTimer->stop();
+                    return;
+                }
+                ++(*tickCount);
+                // Smooth asymptotic baseline (0.06 -> 0.85) blended with actual bytes
+                // written to <cacheDir>/<videoId>.* (.part) while yt-dlp downloads.
+                double progress = 0.06 + 0.79 * (1.0 - std::exp(-(*tickCount) * 0.08));
+                QDir dir(cacheDir);
+                const QStringList files = dir.entryList(
+                        {videoId + QStringLiteral(".*")},
+                        QDir::Files | QDir::NoDotAndDotDot);
+                qint64 maxBytes = 0;
+                for (const QString& f : files) {
+                    const QString suffix = QFileInfo(f).suffix().toLower();
+                    if (suffix == QStringLiteral("ytdl") ||
+                            suffix == QStringLiteral("json")) {
+                        continue;
+                    }
+                    maxBytes = std::max(maxBytes, QFileInfo(dir.filePath(f)).size());
+                }
+                const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+                if (maxBytes != *lastBytes) {
+                    *lastBytes = maxBytes;
+                    *lastGrowthMs = nowMs;
+                } else if (nowMs - *lastGrowthMs > kStallMs && !settled->exchange(true)) {
+                    progressTimer->stop();
+                    kLogger.warning() << "[Android] yt-dlp stalled for" << videoId
+                                      << "at" << maxBytes / 1024 << "KB, failing over";
+                    Q_EMIT downloadFailed(videoId,
+                            QStringLiteral("Download stalled (no data for %1 s)")
+                                    .arg(kStallMs / 1000));
+                    return;
+                }
+                if (maxBytes > 0) {
+                    // Typical 3.5-min opus/m4a audio stream is ~3.5 MB
+                    const double byteFrac = std::min(0.90,
+                            static_cast<double>(maxBytes) / (3.5 * 1024.0 * 1024.0));
+                    progress = std::max(progress, 0.12 + 0.78 * byteFrac);
+                }
+                Q_EMIT downloadProgress(videoId, std::min(0.90, progress));
+            });
     connect(thread, &QThread::finished, progressTimer, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     progressTimer->start();

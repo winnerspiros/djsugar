@@ -66,7 +66,8 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
     connect(pService,
             &mixxx::YouTubeService::searchMoreReady,
             this,
-            [this, pFeature, pService](const QString& query, const QList<mixxx::YouTubeVideoInfo>& results) {
+            [this, pFeature, pService](const QString& query,
+                    const QList<mixxx::YouTubeVideoInfo>& results) {
                 if (query != pFeature->lastQuery()) {
                     return; // superseded by a newer search
                 }
