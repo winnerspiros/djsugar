@@ -1,7 +1,5 @@
 #include "qml/qmlmobileappproxy.h"
 
-#include <rhi/qrhi.h>
-
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFileInfo>
@@ -423,7 +421,7 @@ void QmlMobileAppProxy::watchGraphicsStartup(
     if (!pWindow) {
         return;
     }
-    // The time to the first frame and the GPU in the log: a renderer that
+    // The time to the first frame and the graphics API in the log: one that
     // starts slowly (e.g. Vulkan building its pipelines) shows up there
     auto pTimer = std::make_shared<QElapsedTimer>();
     pTimer->start();
@@ -432,10 +430,8 @@ void QmlMobileAppProxy::watchGraphicsStartup(
             &QQuickWindow::frameSwapped,
             pWindow,
             [pWindow, pTimer]() {
-                const QRhi* pRhi = pWindow->rhi();
                 qInfo() << "Graphics: first frame after" << pTimer->elapsed() << "ms with"
-                        << (pRhi ? pRhi->backendName() : "no RHI")
-                        << (pRhi ? pRhi->driverInfo().deviceName : QByteArray());
+                        << pWindow->rendererInterface()->graphicsApi();
             },
             Qt::SingleShotConnection);
     QObject::connect(pWindow,
