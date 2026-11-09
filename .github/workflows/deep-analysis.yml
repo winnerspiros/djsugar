@@ -1,0 +1,51 @@
+name: deep analysis
+
+# Whole-codebase bug hunt (Mixxx + djsugar): clang static analyzer and the
+# bugprone/performance/concurrency clang-tidy checks, spread over 8 runners.
+# Report only, never fails the build. Run by hand or by pushing analysis/*.
+on:
+  workflow_dispatch:
+  push:
+    branches: [analysis/**]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    runs-on: ubuntu-24.04
+    name: shard ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install build dependencies
+        run: tools/debian_buildenv.sh setup && sudo apt-get install -y clang-tidy
+      - name: Configure
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DQT6=ON -DBATTERY=ON -DBROADCAST=ON -DBULK=ON -DHID=ON -DLILV=ON \
+            -DOPUS=ON -DQTKEYCHAIN=ON -DVINYLCONTROL=ON -DFFMPEG=ON -DKEYFINDER=ON \
+            -DMAD=ON -DMODPLUG=ON -DWAVPACK=ON -DBUILD_TESTING=OFF \
+            -DCMAKE_CXX_FLAGS="-Wno-nan-infinity-disabled"
+        env:
+          CC: clang
+          CXX: clang++
+      - name: Generate sources (moc, uic, rcc)
+        run: cmake --build build --target mixxx-lib_autogen mixxx-qml-lib_autogen -j4 || true
+      - name: clang-tidy
+        run: |
+          git ls-files 'src/*.cpp' | grep -v '^src/test/' | sort \
+            | awk -v n=8 -v s=${{ matrix.shard }} 'NR % n == s' > files.txt
+          wc -l files.txt
+          xargs -a files.txt -P "$(nproc)" -n 4 clang-tidy -p build --quiet \
+            --checks='-*,clang-analyzer-*,-clang-analyzer-optin.*,-clang-analyzer-osx.*,bugprone-*,-bugprone-easily-swappable-parameters,-bugprone-narrowing-conversions,-bugprone-implicit-widening-of-multiplication-result,-bugprone-reserved-identifier,concurrency-*,performance-*,-performance-enum-size,-performance-avoid-endl' \
+            > report.txt 2>/dev/null || true
+          grep -E '(warning|error): ' report.txt | sort -u > findings.txt || true
+          wc -l findings.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: findings-${{ matrix.shard }}
+          path: findings.txt
