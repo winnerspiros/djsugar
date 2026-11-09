@@ -5,6 +5,7 @@
 #include "analyzer/constants.h"
 #include "engine/engine.h"
 #include "proto/waveform.pb.h"
+#include "util/assert.h"
 
 using namespace mixxx::track;
 
@@ -135,7 +136,10 @@ QByteArray Waveform::toByteArray() const {
              << "audioVisualRatio" << waveform.audio_visual_ratio();
 
     std::string output;
-    waveform.SerializeToString(&output);
+    // Protobuf 30+ marks Serialize* [[nodiscard]].
+    VERIFY_OR_DEBUG_ASSERT(waveform.SerializeToString(&output)) {
+        return {};
+    }
     return QByteArray(output.data(), static_cast<int>(output.length()));
 }
 

@@ -184,6 +184,7 @@ Library::Library(
     // lives as long as the player decks do.
     // YouTubeFeature reads its own config and passes it to the controller.
     m_pSponsorBlockController = make_parented<mixxx::SponsorBlockController>(
+            m_pYouTubeFeature->service(),
             m_pYouTubeFeature->cacheDir(),
             m_pYouTubeFeature->sponsorBlockAutoSkip(),
             this);

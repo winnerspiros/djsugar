@@ -1,6 +1,8 @@
+#include "track/keys.h"
+
 #include <QtDebug>
 
-#include "track/keys.h"
+#include "util/assert.h"
 
 using mixxx::track::io::key::ChromaticKey;
 using mixxx::track::io::key::KeyMap;
@@ -17,7 +19,10 @@ Keys::Keys(const KeyMap& keyMap)
 
 QByteArray Keys::toByteArray() const {
     std::string output;
-    m_keyMap.SerializeToString(&output);
+    // Protobuf 30+ marks Serialize* [[nodiscard]].
+    VERIFY_OR_DEBUG_ASSERT(m_keyMap.SerializeToString(&output)) {
+        return {};
+    }
     return QByteArray(output.data(), static_cast<int>(output.length()));
 }
 

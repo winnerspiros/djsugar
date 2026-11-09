@@ -64,13 +64,15 @@ QString deriveVideoIdFromTrackPath(
 }
 } // namespace
 
-SponsorBlockController::SponsorBlockController(
-        const QString& cacheDir, bool autoSkipEnabled, QObject* parent)
+SponsorBlockController::SponsorBlockController(YouTubeService* pService,
+        const QString& cacheDir,
+        bool autoSkipEnabled,
+        QObject* parent)
         : QObject(parent),
           m_cacheDir(cacheDir),
           m_autoSkipEnabled(autoSkipEnabled),
-          m_service(this) {
-    connect(&m_service,
+          m_pService(pService) {
+    connect(m_pService.data(),
             &YouTubeService::sponsorSegmentsFetched,
             this,
             &SponsorBlockController::onSponsorSegmentsFetched);
@@ -141,10 +143,10 @@ void SponsorBlockController::onTrackChanged(
     it->pTrack = pNewTrack;
     it->isMusicVideo = isMusicVideoTitle(rawVideoTitle(m_cacheDir, videoId));
 
-    if (!tryLoadSegmentsFromSidecar(group, videoId)) {
+    if (!tryLoadSegmentsFromSidecar(group, videoId) && m_pService) {
         // Fall back to the network. The reply is correlated by videoId, and
         // multiple decks can be waiting on the same id concurrently.
-        m_service.fetchSponsorSegments(videoId);
+        m_pService->fetchSponsorSegments(videoId);
     }
 }
 

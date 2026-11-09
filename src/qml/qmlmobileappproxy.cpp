@@ -1,10 +1,13 @@
 #include "qml/qmlmobileappproxy.h"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSurfaceFormat>
+#include <memory>
 #if QT_CONFIG(vulkan)
 #include <QVulkanInstance>
 #endif
@@ -415,16 +418,20 @@ void QmlMobileAppProxy::applyGraphicsSettings(const UserSettingsPointer& pConfig
 // static
 void QmlMobileAppProxy::watchGraphicsStartup(
         QQuickWindow* pWindow, const UserSettingsPointer& pConfig) {
-    if (!pWindow || pConfig->getValue(kGraphicsApiPendingKey, QString()).isEmpty()) {
+    if (!pWindow) {
         return;
     }
+    // The time to the first frame and the graphics API in the log: one that
+    // starts slowly (e.g. Vulkan building its pipelines) shows up there
+    auto pTimer = std::make_shared<QElapsedTimer>();
+    pTimer->start();
     QObject::connect(
             pWindow,
             &QQuickWindow::frameSwapped,
             pWindow,
-            [pConfig]() {
-                pConfig->setValue(kGraphicsApiPendingKey, QString());
-                pConfig->save();
+            [pWindow, pTimer]() {
+                qInfo() << "Graphics: first frame after" << pTimer->elapsed() << "ms with"
+                        << pWindow->rendererInterface()->graphicsApi();
             },
             Qt::SingleShotConnection);
     QObject::connect(pWindow,
@@ -436,6 +443,28 @@ void QmlMobileAppProxy::watchGraphicsStartup(
                 pConfig->setValue(kGraphicsApiKey, kAutoApi);
                 pConfig->setValue(kGraphicsApiPendingKey, QString());
                 pConfig->save();
+            });
+    if (pConfig->getValue(kGraphicsApiPendingKey, QString()).isEmpty()) {
+        return;
+    }
+    // A chosen API is kept once Mixxx has run with it until it was put in
+    // the background or closed. Confirming it at the first frame kept a
+    // renderer that crashed later on, at every start.
+    const auto confirm = [pConfig]() {
+        if (pConfig->getValue(kGraphicsApiPendingKey, QString()).isEmpty()) {
+            return;
+        }
+        pConfig->setValue(kGraphicsApiPendingKey, QString());
+        pConfig->save();
+    };
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, pWindow, confirm);
+    QObject::connect(qGuiApp,
+            &QGuiApplication::applicationStateChanged,
+            pWindow,
+            [confirm](Qt::ApplicationState state) {
+                if (state == Qt::ApplicationSuspended || state == Qt::ApplicationHidden) {
+                    confirm();
+                }
             });
 }
 

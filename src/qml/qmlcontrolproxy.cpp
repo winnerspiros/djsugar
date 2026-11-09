@@ -154,11 +154,9 @@ void QmlControlProxy::reinitializeFromKey() {
 
     // If the key is invalid, reset the control proxy if necessary.
     // An empty key is a legitimate "not yet bound" state (e.g. skin
-    // ControlProxy waiting on its SkinControlCreator), so only debug it.
+    // ControlProxy waiting on its SkinControlCreator), so it is not logged.
     if (!isKeyValid()) {
-        if (m_coKey.item.isEmpty()) {
-            qDebug() << "QmlControlProxy: CO" << m_coKey << "not created yet, deferring...";
-        } else {
+        if (!m_coKey.item.isEmpty()) {
             qWarning() << "QmlControlProxy: Tried to initialize CO" << m_coKey
                        << " with invalid key, resetting...";
         }

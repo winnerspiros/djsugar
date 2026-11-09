@@ -1578,7 +1578,6 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/samples/bundledsamples.cpp
-  src/library/enginedj/enginedjfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -2616,7 +2615,11 @@ if(ANDROID)
   # (from JaviLabarumDJ/mixxx-android android-stable)
   set_target_properties(
     mixxx
-    PROPERTIES QT_ANDROID_MIN_SDK_VERSION 29 QT_ANDROID_TARGET_SDK_VERSION 35
+    PROPERTIES
+      QT_ANDROID_MIN_SDK_VERSION 29
+      QT_ANDROID_TARGET_SDK_VERSION 35
+      # androidx.core 1.17 (Qt 6.12 Gradle template) needs compile SDK 36.
+      QT_ANDROID_COMPILE_SDK_VERSION 36
   )
   qt_add_android_permission(mixxx
     NAME android.permission.ACCESS_NETWORK_STATE
@@ -3935,6 +3938,7 @@ if(ENGINEPRIME)
   target_sources(
     mixxx-lib
     PRIVATE
+      src/library/enginedj/enginedjfeature.cpp
       src/library/export/dlglibraryexport.cpp
       src/library/export/engineprimeexportjob.cpp
       src/library/export/libraryexporter.cpp
@@ -4315,7 +4319,9 @@ if(NOT ANDROID)
 endif()
 set(QT_EXTRA_COMPONENTS "")
 find_package(QT 6.2 NAMES Qt6 COMPONENTS Core REQUIRED)
-list(APPEND QT_EXTRA_COMPONENTS "ShaderTools")
+# For qt_add_shaders at build time only. Not linked: nothing uses it at run
+# time, and it is a 5 MB library in the Android package.
+find_package(Qt6 COMPONENTS ShaderTools REQUIRED)
 # SvgWidgets needed for QSvgWidget (dlgkeywheel.h includes it unconditionally)
 list(APPEND QT_EXTRA_COMPONENTS "SvgWidgets")
 # Core5Compat needed for QStringRef (used in src/util/string.h)
@@ -4343,7 +4349,6 @@ if(QML)
   list(APPEND QT_EXTRA_COMPONENTS "QuickLayouts")
   list(APPEND QT_EXTRA_COMPONENTS "QuickShapesPrivate")
   list(APPEND QT_EXTRA_COMPONENTS "QuickTemplates2")
-  list(APPEND QT_EXTRA_COMPONENTS "ShaderTools")
   if(QT_VERSION VERSION_GREATER_EQUAL 6.7)
     list(APPEND QT_EXTRA_COMPONENTS "QuickControls2Basic")
     list(APPEND QT_EXTRA_COMPONENTS "QuickControls2BasicStyleImpl")

@@ -67,7 +67,7 @@ QVector<int> SmartSequencer::greedyPath(const Costs& c, int start) {
         int best = -1;
         double bestCost = std::numeric_limits<double>::max();
         for (int j = 0; j < n; ++j) {
-            if (!used[j] && c.pair[last][j] < bestCost) {
+            if (!used[j] && (best < 0 || c.pair[last][j] < bestCost)) {
                 bestCost = c.pair[last][j];
                 best = j;
             }

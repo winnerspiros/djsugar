@@ -159,7 +159,7 @@ Item {
                     activeColor: Theme.effectColor
                     group: root.group
                     height: 8
-                    key: parameter.controlKey + "_link_inverse"
+                    key: parameter.isKnob ? parameter.controlKey + "_link_inverse" : ""
                     text: "I"
                     toggleable: true
                     width: 12
@@ -184,7 +184,7 @@ Item {
                         id: linkTypeControl
 
                         group: root.group
-                        key: parameter.controlKey + "_link_type"
+                        key: parameter.isKnob ? parameter.controlKey + "_link_type" : ""
                     }
                 }
             }

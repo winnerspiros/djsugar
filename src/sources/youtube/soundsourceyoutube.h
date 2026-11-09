@@ -1,6 +1,5 @@
 #pragma once
 
-#include "library/youtube/youtubeservice.h"
 #include "sources/soundsource.h"
 #include "sources/soundsourceprovider.h"
 
@@ -13,8 +12,6 @@ class SoundSourceYouTube : public SoundSource {
 
     void close() override;
 
-    void onSponsorSegmentsFetched(const QString& videoId, const QList<::mixxx::SponsorSegment>& segments);
-
   protected:
     ReadableSampleFrames readSampleFramesClamped(
             const WritableSampleFrames& sampleFrames) override;
@@ -22,10 +19,6 @@ class SoundSourceYouTube : public SoundSource {
     OpenResult tryOpen(
             OpenMode mode,
             const OpenParams& params) override;
-
-  private:
-    QList<::mixxx::SponsorSegment> m_sponsorSegments;
-    bool m_segmentsLoaded;
 };
 
 class SoundSourceProviderYouTube : public SoundSourceProvider {

@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -714,6 +715,33 @@ QString extractContinuationToken(const QJsonObject& root) {
     QStringList tokens;
     extractContinuationTokens(QJsonValue(root), &tokens);
     return tokens.isEmpty() ? QString() : tokens.first();
+}
+
+/// An InnerTube search page, parsed on the thread pool: the replies are about
+/// 1 MB of JSON, which held the UI thread (and the waveforms) for a frame or
+/// more per page.
+struct ParsedSearchPage {
+    QJsonObject root;
+    QList<YouTubeVideoInfo> results;
+    QString continuationToken;
+};
+
+/// Parses `body` off the UI thread, then calls `done` on it. `done` checks
+/// itself that its receiver still exists.
+void parseSearchPageAsync(QByteArray body,
+        int cap,
+        std::function<void(const ParsedSearchPage&)> done) {
+    QThreadPool::globalInstance()->start(
+            [body = std::move(body), cap, done = std::move(done)]() {
+                auto pPage = std::make_shared<ParsedSearchPage>();
+                pPage->root = QJsonDocument::fromJson(body).object();
+                pPage->results = parseInnerTubeSearch(pPage->root, cap);
+                pPage->continuationToken = extractContinuationToken(pPage->root);
+                QMetaObject::invokeMethod(
+                        QCoreApplication::instance(),
+                        [pPage, done]() { done(*pPage); },
+                        Qt::QueuedConnection);
+            });
 }
 
 // Build the InnerTube `context.client` object for the given client descriptor.
@@ -1517,55 +1545,73 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                     return;
                 }
                 const QByteArray rawBody = reply->readAll();
-                const QJsonObject root =
-                        QJsonDocument::fromJson(rawBody).object();
-                // Check for bot flagging even on HTTP 200 (YouTube sometimes
-                // returns 200 with a LOGIN_REQUIRED playability status).
-                if (detectBotFlagging(httpStatus, root, rawBody)) {
-                    tryNext(tr("Bot detection triggered on search response"));
-                    return;
-                }
-                const QList<YouTubeVideoInfo> results =
-                        parseInnerTubeSearch(root, cap);
-                if (results.isEmpty()) {
-                    // A 200 with no parseable videos usually means this client
-                    // returned a renderer shape we don't handle (e.g. the iOS
-                    // elementRenderer). Fail over to the next client.
-                    kLogger.warning()
-                            << "InnerTube search returned HTTP" << httpStatus
-                            << "but 0 parseable results for" << requestQuery
-                            << "— response size:" << rawBody.size() << "bytes"
-                            << "— first 200 chars:"
-                            << QString::fromUtf8(rawBody.left(200));
-                    tryNext(tr("InnerTube search returned no usable results (HTTP %1, %2 bytes)")
-                                    .arg(httpStatus)
-                                    .arg(rawBody.size()));
-                    return;
-                }
-                kLogger.info() << "InnerTube search returned" << results.size()
-                               << "results for" << requestQuery;
-                // Store continuation token for fetchMoreSearchResults().
-                m_searchContinuationToken = extractContinuationToken(root);
-                // If we need more results and a continuation token is available,
-                // auto-fetch additional pages before emitting. This ensures the
-                // initial result set is large enough for infinite scroll.
-                // Use the request-scoped minResults (captured from the caller)
-                // instead of the member variable to avoid races between
-                // concurrent searches.
-                // The first page is shown right away; more pages follow
-                // through fetchMoreSearchResults() (searchMoreReady, appended
-                // by the list). Waiting for minResults first held the list
-                // back by a round trip per page (~0.6 s each on mobile).
-                Q_UNUSED(minResults);
-                Q_UNUSED(clientIdx);
-                kLogger.info() << "InnerTube search answered in"
-                               << searchTimer.elapsed() << "ms,"
-                               << rawBody.size() / 1024 << "KB";
-                Q_EMIT searchResultsReady(emittedQuery, results);
-                if (minResults > 0 && results.size() < minResults &&
-                        !m_searchContinuationToken.isEmpty()) {
-                    fetchMoreSearchResults(emittedQuery, cap, minResults);
-                }
+                QPointer<YouTubeService> guard(this);
+                parseSearchPageAsync(rawBody,
+                        cap,
+                        [this,
+                                guard,
+                                rawBody,
+                                httpStatus,
+                                searchTimer,
+                                emittedQuery,
+                                requestQuery,
+                                cap,
+                                tryNext,
+                                clientIdx,
+                                minResults](const ParsedSearchPage& page) {
+                            if (!guard) {
+                                return;
+                            }
+                            const QJsonObject& root = page.root;
+                            // Check for bot flagging even on HTTP 200 (YouTube sometimes
+                            // returns 200 with a LOGIN_REQUIRED playability status).
+                            if (detectBotFlagging(httpStatus, root, rawBody)) {
+                                tryNext(tr("Bot detection triggered on search response"));
+                                return;
+                            }
+                            const QList<YouTubeVideoInfo>& results = page.results;
+                            if (results.isEmpty()) {
+                                // A 200 with no parseable videos usually means this client
+                                // returned a renderer shape we don't handle (e.g. the iOS
+                                // elementRenderer). Fail over to the next client.
+                                kLogger.warning()
+                                        << "InnerTube search returned HTTP" << httpStatus
+                                        << "but 0 parseable results for" << requestQuery
+                                        << "— response size:" << rawBody.size() << "bytes"
+                                        << "— first 200 chars:"
+                                        << QString::fromUtf8(rawBody.left(200));
+                                tryNext(
+                                        tr("InnerTube search returned no "
+                                           "usable results (HTTP %1, %2 bytes)")
+                                                .arg(httpStatus)
+                                                .arg(rawBody.size()));
+                                return;
+                            }
+                            kLogger.info() << "InnerTube search returned" << results.size()
+                                           << "results for" << requestQuery;
+                            // Store continuation token for fetchMoreSearchResults().
+                            m_searchContinuationToken = page.continuationToken;
+                            // If we need more results and a continuation token is available,
+                            // auto-fetch additional pages before emitting. This ensures the
+                            // initial result set is large enough for infinite scroll.
+                            // Use the request-scoped minResults (captured from the caller)
+                            // instead of the member variable to avoid races between
+                            // concurrent searches.
+                            // The first page is shown right away; more pages follow
+                            // through fetchMoreSearchResults() (searchMoreReady, appended
+                            // by the list). Waiting for minResults first held the list
+                            // back by a round trip per page (~0.6 s each on mobile).
+                            Q_UNUSED(minResults);
+                            Q_UNUSED(clientIdx);
+                            kLogger.info() << "InnerTube search answered in"
+                                           << searchTimer.elapsed() << "ms,"
+                                           << rawBody.size() / 1024 << "KB";
+                            Q_EMIT searchResultsReady(emittedQuery, results);
+                            if (minResults > 0 && results.size() < minResults &&
+                                    !m_searchContinuationToken.isEmpty()) {
+                                fetchMoreSearchResults(emittedQuery, cap, minResults);
+                            }
+                        });
             });
 }
 
@@ -1646,7 +1692,7 @@ void YouTubeService::fetchMoreSearchResults(
         // results arrive (the model's m_hasMore was already set to false by
         // fetchMore() before emitting fetchMoreRequested, so without the retry
         // the user would never see more results for this search).
-        const int delay = jitterDelayMs();
+        const int delay = throttleDelayMs();
         kLogger.info() << "Throttled: retrying continuation fetch in"
                        << delay << "ms";
         QPointer<YouTubeService> guard(this);
@@ -1676,32 +1722,37 @@ void YouTubeService::fetchMoreSearchResults(
                     Q_EMIT searchMoreReady(emittedQuery, {});
                     return;
                 }
-                const QByteArray rawBody = reply->readAll();
-                const QJsonObject root =
-                        QJsonDocument::fromJson(rawBody).object();
-                const QList<YouTubeVideoInfo> results =
-                        parseInnerTubeSearch(root, cap);
-                if (results.isEmpty()) {
-                    kLogger.debug()
-                            << "InnerTube continuation returned 0 results";
-                    m_searchContinuationToken.clear();
-                    Q_EMIT searchMoreReady(emittedQuery, {});
-                    return;
-                }
-                kLogger.info() << "InnerTube continuation returned"
-                               << results.size() << "more results";
-                m_searchContinuationToken = extractContinuationToken(root);
-                if (minResults > 0 && results.size() < minResults &&
-                        !m_searchContinuationToken.isEmpty()) {
-                    autoFetchContinuationPages(emittedQuery,
-                            std::max(cap, minResults),
-                            minResults,
-                            results,
-                            /*clientIdx=*/0,
-                            /*more=*/true);
-                    return;
-                }
-                Q_EMIT searchMoreReady(emittedQuery, results);
+                QPointer<YouTubeService> guard(this);
+                parseSearchPageAsync(reply->readAll(),
+                        cap,
+                        [this, guard, emittedQuery, cap, minResults](
+                                const ParsedSearchPage& page) {
+                            if (!guard) {
+                                return;
+                            }
+                            const QList<YouTubeVideoInfo>& results = page.results;
+                            if (results.isEmpty()) {
+                                kLogger.debug()
+                                        << "InnerTube continuation returned 0 results";
+                                m_searchContinuationToken.clear();
+                                Q_EMIT searchMoreReady(emittedQuery, {});
+                                return;
+                            }
+                            kLogger.info() << "InnerTube continuation returned"
+                                           << results.size() << "more results";
+                            m_searchContinuationToken = page.continuationToken;
+                            if (minResults > 0 && results.size() < minResults &&
+                                    !m_searchContinuationToken.isEmpty()) {
+                                autoFetchContinuationPages(emittedQuery,
+                                        std::max(cap, minResults),
+                                        minResults,
+                                        results,
+                                        /*clientIdx=*/0,
+                                        /*more=*/true);
+                                return;
+                            }
+                            Q_EMIT searchMoreReady(emittedQuery, results);
+                        });
             });
 }
 
@@ -1779,8 +1830,8 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
         return;
     }
     if (shouldThrottleRequest()) {
-        // Defer: retry after jitter delay, preserving accumulated results.
-        const int delay = jitterDelayMs();
+        // Defer until a request is allowed, preserving accumulated results.
+        const int delay = throttleDelayMs();
         kLogger.info() << "Throttled: retrying auto-fetch in" << delay << "ms";
         QPointer<YouTubeService> guard(this);
         QTimer::singleShot(delay,
@@ -1835,42 +1886,54 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                     return;
                 }
                 const QByteArray rawBody = reply->readAll();
-                const QJsonObject root =
-                        QJsonDocument::fromJson(rawBody).object();
-                if (detectBotFlagging(
-                            reply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
-                                    .toInt(),
-                            root,
-                            rawBody)) {
-                    kLogger.info() << "Bot-flagged during auto-fetch: emitting"
-                                   << accumulated.size() << "results so far";
-                    finishSearchBatch(emittedQuery, accumulated, more);
-                    return;
-                }
-                const QList<YouTubeVideoInfo> pageResults =
-                        parseInnerTubeSearch(root, cap);
-                // Merge, deduplicating by video id.
-                QSet<QString> seen;
-                for (const auto& v : std::as_const(accumulated)) {
-                    seen.insert(v.id);
-                }
-                for (const auto& v : std::as_const(pageResults)) {
-                    if (!seen.contains(v.id)) {
-                        accumulated.append(v);
-                        seen.insert(v.id);
-                    }
-                }
-                kLogger.info()
-                        << "Auto-fetch page returned" << pageResults.size()
-                        << "results, total now" << accumulated.size();
-                m_searchContinuationToken = extractContinuationToken(root);
-                // Recurse if we still need more and there are more pages.
-                autoFetchContinuationPages(emittedQuery,
+                const int httpStatus =
+                        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                parseSearchPageAsync(rawBody,
                         cap,
-                        minResults,
-                        accumulated,
-                        clientIdx,
-                        more);
+                        [this,
+                                guard,
+                                rawBody,
+                                httpStatus,
+                                emittedQuery,
+                                cap,
+                                minResults,
+                                accumulated,
+                                clientIdx,
+                                more](const ParsedSearchPage& page) mutable {
+                            if (!guard) {
+                                return;
+                            }
+                            const QJsonObject& root = page.root;
+                            if (detectBotFlagging(httpStatus, root, rawBody)) {
+                                kLogger.info() << "Bot-flagged during auto-fetch: emitting"
+                                               << accumulated.size() << "results so far";
+                                finishSearchBatch(emittedQuery, accumulated, more);
+                                return;
+                            }
+                            const QList<YouTubeVideoInfo>& pageResults = page.results;
+                            // Merge, deduplicating by video id.
+                            QSet<QString> seen;
+                            for (const auto& v : std::as_const(accumulated)) {
+                                seen.insert(v.id);
+                            }
+                            for (const auto& v : std::as_const(pageResults)) {
+                                if (!seen.contains(v.id)) {
+                                    accumulated.append(v);
+                                    seen.insert(v.id);
+                                }
+                            }
+                            kLogger.info()
+                                    << "Auto-fetch page returned" << pageResults.size()
+                                    << "results, total now" << accumulated.size();
+                            m_searchContinuationToken = page.continuationToken;
+                            // Recurse if we still need more and there are more pages.
+                            autoFetchContinuationPages(emittedQuery,
+                                    cap,
+                                    minResults,
+                                    accumulated,
+                                    clientIdx,
+                                    more);
+                        });
             });
 }
 
@@ -3338,9 +3401,9 @@ void YouTubeService::prewarmAndroidBundled() {
                                   .toString()
                                   .trimmed();
     });
-    thread->setPriority(QThread::LowPriority);
     QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start();
+    // A priority can only be set on a running thread: given to start()
+    thread->start(QThread::LowPriority);
 }
 
 void YouTubeService::downloadViaAndroidBundled(
@@ -3584,30 +3647,42 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
     }
     // A few extractions side by side: the logs showed 4 at once taking the
     // same ~16 s each as one alone (the time is spent waiting on YouTube,
-    // not on the CPU), so 4 workers get the links 4x sooner. Results are
-    // handed out in list order, the top ones first.
+    // not on the CPU), so 4 workers get the links 4x sooner. One queue and
+    // at most 4 workers for all calls: every search used to start its own 4,
+    // and 8 yt-dlp runs at once made the playing app stutter. The newest
+    // results come first, ids already waiting are not queued again.
     constexpr int kWorkers = 4;
-    auto queue = std::make_shared<QStringList>(todo);
-    auto queueMutex = std::make_shared<QMutex>();
-    for (int w = 0; w < std::min<int>(kWorkers, todo.size()); ++w) {
-        QThread* thread = QThread::create([queue, queueMutex]() {
+    static QMutex s_queueMutex;
+    static QStringList s_queue;
+    static int s_workers = 0;
+    int toStart = 0;
+    {
+        QMutexLocker lock(&s_queueMutex);
+        for (auto it = todo.crbegin(); it != todo.crend(); ++it) {
+            s_queue.removeAll(*it);
+            s_queue.prepend(*it);
+        }
+        toStart = std::min<int>(kWorkers - s_workers, s_queue.size());
+        s_workers += std::max(toStart, 0);
+    }
+    for (int w = 0; w < toStart; ++w) {
+        QThread* thread = QThread::create([]() {
             QJniObject context = QNativeInterface::QAndroidApplication::context();
             QJniObject ytdl = QJniObject::callStaticObjectMethod(
                     "com/yausername/youtubedl_android/YoutubeDL",
                     "getInstance",
                     "()Lcom/yausername/youtubedl_android/YoutubeDL;");
-            if (!context.isValid() || !ytdl.isValid() ||
-                    !ensureYoutubeDlInitialized(ytdl, context)) {
-                return;
-            }
+            const bool ready = context.isValid() && ytdl.isValid() &&
+                    ensureYoutubeDlInitialized(ytdl, context);
             for (;;) {
                 QString id;
                 {
-                    QMutexLocker lock(queueMutex.get());
-                    if (queue->isEmpty()) {
+                    QMutexLocker lock(&s_queueMutex);
+                    if (!ready || s_queue.isEmpty()) {
+                        --s_workers;
                         return;
                     }
-                    id = queue->takeFirst();
+                    id = s_queue.takeFirst();
                 }
                 const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
                 StreamLink link;
@@ -3617,7 +3692,7 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
                                << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
             }
         });
-        thread->setObjectName(QStringLiteral("YtLinkPrefetch%1").arg(w + 1));
+        thread->setObjectName(QStringLiteral("YtLinkPrefetch"));
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         thread->start(QThread::LowPriority);
     }
@@ -4243,6 +4318,17 @@ bool YouTubeService::shouldThrottleRequest() {
 void YouTubeService::recordRequest() {
     // All callers are on the main/UI thread — no mutex needed.
     m_requestTimestamps.append(m_rateLimitTimer.elapsed());
+}
+
+int YouTubeService::throttleDelayMs() const {
+    // Until the oldest request leaves the window, plus the jitter: retrying
+    // every few hundred ms only spun the main thread until then.
+    int delay = jitterDelayMs();
+    if (m_requestTimestamps.size() >= kRateLimitBurst) {
+        const qint64 freeAt = m_requestTimestamps.first() + kRateLimitWindowMs;
+        delay += static_cast<int>(std::max<qint64>(0, freeAt - m_rateLimitTimer.elapsed()));
+    }
+    return delay;
 }
 
 int YouTubeService::jitterDelayMs() const {

@@ -113,7 +113,6 @@ Category {
                     console.error(`unsupported entity: ${connection.source.entity.name} ${connection.sink.entity.name}`);
                     continue;
                 }
-                console.log(isOutput ? "addOutput" : "addInput", device, type, channel * 2, index);
                 if (isOutput) {
                     manager.addOutput(device, type, channel * 2, index);
                 } else {

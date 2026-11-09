@@ -53,7 +53,7 @@ Item {
         };
         const trackLocationUrl = currentTrack.trackLocationUrl;
         if (trackLocationUrl)
-            data["text/uri-list"] = trackLocationUrl;
+            data["text/uri-list"] = trackLocationUrl.toString();
 
         return data;
     }

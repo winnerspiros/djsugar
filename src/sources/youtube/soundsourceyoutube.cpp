@@ -1,8 +1,5 @@
 #include "sources/youtube/soundsourceyoutube.h"
 
-#include <QProcess>
-
-#include "library/youtube/youtubeservice.h"
 #include "util/logger.h"
 
 namespace mixxx {
@@ -14,8 +11,7 @@ const Logger kLogger("SoundSourceYouTube");
 const QString SoundSourceProviderYouTube::kDisplayName = "YouTube";
 
 SoundSourceYouTube::SoundSourceYouTube(const QUrl& url)
-        : SoundSource(url),
-          m_segmentsLoaded(false) {
+        : SoundSource(url) {
 }
 
 SoundSourceYouTube::~SoundSourceYouTube() {
@@ -37,29 +33,8 @@ SoundSource::OpenResult SoundSourceYouTube::tryOpen(
     Q_UNUSED(params);
     kLogger.info() << "Opening YouTube stream:" << getUrl().toString();
 
-    // Fetch SponsorBlock segments. The service is parented to `this` so it
-    // shares our lifetime; passing the SoundSource as the connect context
-    // is what clazy wants here (and is what we logically need).
-    QString videoId = getUrl().toString().split("v=").last();
-    YouTubeService* service = new YouTubeService();
-    QObject::connect(service,
-            &YouTubeService::sponsorSegmentsFetched,
-            service,
-            [this, service](const QString& videoId,
-                    const QList<::mixxx::SponsorSegment>& segments) {
-                this->onSponsorSegmentsFetched(videoId, segments);
-                service->deleteLater();
-            });
-    service->fetchSponsorSegments(videoId);
-
+    // SponsorBlock segments are handled per deck by SponsorBlockController
     return OpenResult::Succeeded;
-}
-
-void SoundSourceYouTube::onSponsorSegmentsFetched(const QString& videoId, const QList<::mixxx::SponsorSegment>& segments) {
-    Q_UNUSED(videoId);
-    m_sponsorSegments = segments;
-    m_segmentsLoaded = true;
-    kLogger.info() << "Loaded" << segments.size() << "SponsorBlock segments";
 }
 
 } // namespace mixxx

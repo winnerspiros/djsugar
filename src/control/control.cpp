@@ -220,13 +220,14 @@ QList<QSharedPointer<ControlDoublePrivate>> ControlDoublePrivate::getAllInstance
     QList<QSharedPointer<ControlDoublePrivate>> result;
     MMutexLocker locker(&s_qCOHashMutex);
     result.reserve(s_qCOHash.size());
-    for (auto it = s_qCOHash.constBegin(); it != s_qCOHash.constEnd(); ++it) {
+    for (auto it = s_qCOHash.begin(); it != s_qCOHash.end();) {
         auto pControl = it.value().lock();
         if (pControl) {
             result.append(std::move(pControl));
+            ++it;
         } else {
             // The weak pointer has become invalid and can be cleaned up
-            s_qCOHash.erase(it);
+            it = s_qCOHash.erase(it);
         }
     }
     return result;
