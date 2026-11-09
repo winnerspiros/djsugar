@@ -3683,8 +3683,6 @@ if(QML AND ANDROID)
         "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge"
   )
   add_dependencies(spotify-bridge spotify-bridge-build)
-  target_link_libraries(mixxx-lib PRIVATE spotify-bridge)
-  target_compile_definitions(mixxx-lib PRIVATE HAVE_SPOTIFY_BRIDGE)
 endif()
 
 if(BUILD_TESTING)
@@ -4654,6 +4652,11 @@ if(QML)
       # needed for qml/qmlautoreload.cpp
       src/util/autofilereloader.cpp
   )
+  # Mixxx.Spotify (qmlspotifyproxy.cpp) is built here, not in mixxx-lib
+  if(TARGET spotify-bridge)
+    target_link_libraries(mixxx-qml-lib PRIVATE spotify-bridge)
+    target_compile_definitions(mixxx-qml-lib PRIVATE HAVE_SPOTIFY_BRIDGE)
+  endif()
 
   if(STEM)
     target_compile_definitions(mixxx-qml-lib PUBLIC __STEM__)
