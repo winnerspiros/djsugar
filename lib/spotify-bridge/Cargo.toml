@@ -1,0 +1,24 @@
+[package]
+name = "spotify-bridge"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+description = "Downloads Spotify tracks (librespot) for the DJ Sugar decks"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# rustls + webpki roots: no OpenSSL to build or ship on Android
+librespot-core = { version = "0.8.0", default-features = false, features = ["rustls-tls-webpki-roots"] }
+librespot-audio = { version = "0.8.0", default-features = false }
+librespot-metadata = { version = "0.8.0", default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+futures-util = "0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

@@ -102,6 +102,28 @@
                 android:value="--log-level warning" />
         </activity>
 
+        <!-- Spotify login through the installed Spotify app (see
+             org.mixxx.spotify.SpotifyAuthActivity). Translucent: the user
+             only sees the Spotify consent sheet. -->
+        <activity
+            android:name="org.mixxx.spotify.SpotifyAuthActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Return path of the Spotify login when it falls back to the web
+             page (no Spotify app); matches the redirect URI registered for
+             the Spotify client id: djsugar://spotify-callback -->
+        <activity
+            android:name="com.spotify.sdk.android.auth.browser.RedirectUriReceiverActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="djsugar" android:host="spotify-callback" />
+            </intent-filter>
+        </activity>
+
           <!-- Separating tracks into stems in the background (from JaviLabarumDJ/mixxx-android android-stable) -->
         <service
             android:name="org.mixxx.StemsService"

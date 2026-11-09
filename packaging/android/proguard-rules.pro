@@ -15,6 +15,9 @@
 # abstract ("AsiExtraField is not a concrete class") and YoutubeDL.init fails.
 -keep class org.apache.commons.compress.** { *; }
 -keep class org.apache.commons.io.** { *; }
+# Spotify auth: its login activities are started by class name and the
+# responses travel as Parcelables
+-keep class com.spotify.sdk.android.auth.** { *; }
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 -keepclasseswithmembernames class * {

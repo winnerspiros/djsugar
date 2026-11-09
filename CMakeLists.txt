@@ -3275,9 +3275,7 @@ if(FFMPEG)
 
   target_sources(mixxx-lib PRIVATE src/sources/soundsourceffmpeg.cpp)
   # YouTube library support requires FFmpeg for cached audio playback and uses
-  # anonymous Piped/yt-dlp requests via QNetworkAccessManager. Spotify is not
-  # compiled or shown because Spotify's public API does not provide playable
-  # audio.
+  # anonymous Piped/yt-dlp requests via QNetworkAccessManager.
   target_sources(
     mixxx-lib
     PRIVATE
@@ -3624,6 +3622,86 @@ endif()
 
 target_sources(mixxx PRIVATE res/mixxx.qrc)
 set_target_properties(mixxx PROPERTIES AUTORCC ON)
+# Spotify (Mixxx.Spotify, Android): login through the installed Spotify app,
+# browsing with the Web API and the audio from lib/spotify-bridge, a Rust
+# static library on librespot (needs Spotify Premium). SPOTIFY_CLIENT_ID is
+# the client id of the Spotify developer app; its redirect URI is
+# djsugar://spotify-callback and its Android package entry org.mixxx with the
+# SHA-1 of the APK signing key.
+set(
+  SPOTIFY_CLIENT_ID
+  "$ENV{SPOTIFY_CLIENT_ID}"
+  CACHE STRING
+  "Spotify Web API client id (Android login through the Spotify app)"
+)
+if(QML AND ANDROID)
+  find_program(CARGO_EXECUTABLE cargo HINTS "$ENV{HOME}/.cargo/bin")
+  if(NOT CARGO_EXECUTABLE)
+    message(
+      FATAL_ERROR
+      "Spotify support needs Rust: install rustup, then rustup target add aarch64-linux-android"
+    )
+  endif()
+  if(ANDROID_ABI STREQUAL "armeabi-v7a")
+    set(SPOTIFY_RUST_TARGET "armv7-linux-androideabi")
+    set(SPOTIFY_CLANG_TRIPLE "armv7a-linux-androideabi")
+  else()
+    set(SPOTIFY_RUST_TARGET "${ANDROID_TOOLCHAIN_TRIPLE}")
+    set(SPOTIFY_CLANG_TRIPLE "${ANDROID_TOOLCHAIN_TRIPLE}")
+  endif()
+  string(REPLACE "-" "_" SPOTIFY_RUST_TARGET_ENV "${SPOTIFY_RUST_TARGET}")
+  string(TOUPPER "${SPOTIFY_RUST_TARGET_ENV}" SPOTIFY_RUST_TARGET_ENV_UPPER)
+  set(
+    SPOTIFY_NDK_BIN
+    "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin"
+  )
+  set(
+    SPOTIFY_NDK_CC
+    "${SPOTIFY_NDK_BIN}/${SPOTIFY_CLANG_TRIPLE}${CMAKE_SYSTEM_VERSION}-clang"
+  )
+  set(SPOTIFY_CARGO_DIR "${CMAKE_CURRENT_BINARY_DIR}/spotify-bridge")
+  set(
+    SPOTIFY_BRIDGE_LIB
+    "${SPOTIFY_CARGO_DIR}/${SPOTIFY_RUST_TARGET}/release/libspotify_bridge.a"
+  )
+  # ring (TLS) compiles C and assembly: the NDK compiler of the app's ABI
+  add_custom_command(
+    OUTPUT "${SPOTIFY_BRIDGE_LIB}"
+    COMMAND
+      ${CMAKE_COMMAND} -E env "CC_${SPOTIFY_RUST_TARGET_ENV}=${SPOTIFY_NDK_CC}"
+      "AR_${SPOTIFY_RUST_TARGET_ENV}=${SPOTIFY_NDK_BIN}/llvm-ar"
+      "CARGO_TARGET_${SPOTIFY_RUST_TARGET_ENV_UPPER}_LINKER=${SPOTIFY_NDK_CC}"
+      "CARGO_TARGET_DIR=${SPOTIFY_CARGO_DIR}" ${CARGO_EXECUTABLE} build --release
+      --locked --target ${SPOTIFY_RUST_TARGET} --manifest-path
+      "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.toml"
+    DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.toml"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.lock"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/src/lib.rs"
+    COMMENT "Building the Spotify bridge (librespot, ${SPOTIFY_RUST_TARGET})"
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_custom_target(spotify-bridge-build DEPENDS "${SPOTIFY_BRIDGE_LIB}")
+  add_library(spotify-bridge STATIC IMPORTED GLOBAL)
+  set_target_properties(
+    spotify-bridge
+    PROPERTIES
+      IMPORTED_LOCATION "${SPOTIFY_BRIDGE_LIB}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge"
+  )
+  add_dependencies(spotify-bridge spotify-bridge-build)
+  target_link_libraries(mixxx-lib PRIVATE spotify-bridge)
+  target_compile_definitions(mixxx-lib PRIVATE HAVE_SPOTIFY_BRIDGE)
+  if(SPOTIFY_CLIENT_ID)
+    target_compile_definitions(
+      mixxx-lib
+      PRIVATE DJSUGAR_SPOTIFY_CLIENT_ID="${SPOTIFY_CLIENT_ID}"
+    )
+  endif()
+endif()
+
 if(BUILD_TESTING)
   target_sources(mixxx-test PRIVATE res/mixxx.qrc)
   set_target_properties(mixxx-test PROPERTIES AUTORCC ON)
@@ -4568,6 +4646,7 @@ if(QML)
       src/qml/qmlappupdateproxy.cpp
       src/qml/qmlmobilesingletons.cpp
       src/qml/qmlyoutubeproxy.cpp
+      src/qml/qmlspotifyproxy.cpp
       src/qml/qmlstreamingproxy.cpp
       src/qml/qmlframeclock.cpp
       src/waveform/renderers/allshader/digitsrenderer.cpp

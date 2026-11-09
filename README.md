@@ -29,12 +29,19 @@ in regularly.
 - D1 / D2 / save buttons, same as YouTube
 - Go+ tracks are marked; they are 30-second previews and can't be loaded
 
+### Spotify (Android)
+
+- Log in with the account of the installed Spotify app: one tap, nothing to type (without the app, Spotify's own login page opens in the app)
+- Search, Liked Songs, top tracks and your playlists
+- D1 / D2 load Spotify's own audio (Ogg Vorbis 320 kbit/s), downloaded once into the cache: waveform, beatgrid, loops and scratching work as with a local file
+- Playing tracks needs **Spotify Premium**; the audio comes through [librespot](https://github.com/librespot-org/librespot)
+
 ### Controllers
 
 - **Pioneer DDJ-FLX4** over USB and Bluetooth (BLE MIDI), picked up automatically when connected
 - Jog wheels with scratch (vinyl mode on by default), browse, load, back and stems mode
   (SHIFT + SAMPLER: pads 1–4 mute, pads 5–8 solo)
-- BROWSE and LOAD work on whichever screen is open: library, YouTube or SoundCloud
+- BROWSE and LOAD work on whichever screen is open: library, YouTube, SoundCloud or Spotify
 - All of Mixxx's controller mappings are included
 
 ### Android
@@ -68,6 +75,13 @@ DJ Sugar uses the same CMake + vcpkg setup as Mixxx: follow the
 [Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md). The Android
 APK is built by the Android job in [`.github/workflows/build.yml`](.github/workflows/build.yml), the
 reference for the exact steps.
+
+Spotify needs Rust (`rustup target add aarch64-linux-android`) and a Spotify developer app: set
+`SPOTIFY_CLIENT_ID` (CMake option or environment variable; the `SPOTIFY_CLIENT_ID` secret in CI). In the
+app's settings on [developer.spotify.com](https://developer.spotify.com/dashboard) add the redirect URI
+`djsugar://spotify-callback` and the Android package `org.mixxx` with the SHA-1 fingerprint of the APK
+signing key. While the app is in development mode, add each Spotify account that logs in under
+*User Management*.
 
 ## Bug reports
 

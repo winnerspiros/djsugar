@@ -337,6 +337,8 @@ jobs:
       # Android signing
       ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+      # Spotify developer app (Spotify tab); unset builds explain it isn't set up
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -556,6 +558,21 @@ jobs:
 
       - name: "Create build directory"
         run: mkdir build
+
+      - name: "[android] Rust target for the Spotify bridge"
+        if: startsWith(matrix.artifacts_slug, 'android')
+        run: |
+          rustup target add aarch64-linux-android
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: "[android] Cache Rust build of the Spotify bridge"
+        if: startsWith(matrix.artifacts_slug, 'android')
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            build/spotify-bridge
+          key: spotify-bridge-${{ hashFiles('lib/spotify-bridge/Cargo.lock') }}
 
       - name: "[android] Cache yt-dlp Android AAR"
         if: startsWith(matrix.artifacts_slug, 'android')

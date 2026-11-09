@@ -26,6 +26,8 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     //noinspection GradleDependency
     implementation 'androidx.core:core:1.17.0'
+    // Spotify login through the installed Spotify app (SpotifyAuthActivity)
+    implementation 'com.spotify.android:auth:5.0.0'
 }
 
 android {

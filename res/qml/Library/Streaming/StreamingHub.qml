@@ -9,9 +9,9 @@ Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube, 4: SoundCloud
+    property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube, 4: SoundCloud, 5: Spotify
     property bool acceptsController: false
-    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView, soundCloudView]
+    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView, soundCloudView, spotifyView]
 
     // BROWSE/LOAD on the controller act on the service that is shown
     StreamingControl {
@@ -145,6 +145,47 @@ Item {
                             sourceSize.height: 40
                         }
                     }
+
+                    // Spotify: green disc with the three sound waves
+                    Skin.Button {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 104
+                        activeColor: "#1db954"
+                        normalColor: root.activePlatform === 5 ? "#1ed760" : "#a7e8bd"
+                        font.bold: true
+                        font.pixelSize: 9
+                        text: qsTr("SPOTIFY")
+                        onClicked: root.activePlatform = 5
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 16
+                            height: 16
+                            radius: 8
+                            color: "#1db954"
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 1
+
+                                Repeater {
+                                    model: [10, 8, 6]
+
+                                    delegate: Rectangle {
+                                        required property int modelData
+
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: modelData
+                                        height: 2
+                                        radius: 1
+                                        color: "#000000"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -226,6 +267,14 @@ Item {
                 anchors.fill: parent
                 targetDeck: root.targetDeck
                 visible: root.activePlatform === 4
+            }
+
+            SpotifyView {
+                id: spotifyView
+
+                anchors.fill: parent
+                targetDeck: root.targetDeck
+                visible: root.activePlatform === 5
             }
         }
     }
