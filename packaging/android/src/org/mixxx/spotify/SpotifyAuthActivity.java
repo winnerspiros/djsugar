@@ -3,6 +3,7 @@ package org.mixxx.spotify;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import com.spotify.sdk.android.auth.AuthorizationClient;
 import com.spotify.sdk.android.auth.AuthorizationRequest;
@@ -71,7 +72,7 @@ public class SpotifyAuthActivity extends Activity {
         if (savedInstanceState != null) {
             // Recreated while the Spotify app was in front: the login is
             // already running, its result still arrives here
-            mPkce = savedInstanceState.getParcelable(STATE_PKCE);
+            mPkce = savedPkce(savedInstanceState);
             return;
         }
         try {
@@ -155,6 +156,24 @@ public class SpotifyAuthActivity extends Activity {
             // The native library isn't loaded (yet)
         }
         finish();
-        overridePendingTransition(0, 0);
+        noCloseAnimation();
+    }
+
+    // The typed getParcelable() is API 33+; minSdk is lower
+    @SuppressWarnings("deprecation")
+    private static PKCEInformation savedPkce(Bundle state) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                ? state.getParcelable(STATE_PKCE, PKCEInformation.class)
+                : state.getParcelable(STATE_PKCE);
+    }
+
+    // overrideActivityTransition() is API 34+; minSdk is lower
+    @SuppressWarnings("deprecation")
+    private void noCloseAnimation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0);
+        } else {
+            overridePendingTransition(0, 0);
+        }
     }
 }
