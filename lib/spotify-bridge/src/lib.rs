@@ -206,9 +206,8 @@ fn form_encode(pairs: &[(&str, &str)]) -> String {
         .join("&")
 }
 
-/// Opens DJ Sugar again (Android's intent: links; Chrome follows them)
-const BACK_TO_APP: &str = "intent:#Intent;action=android.intent.action.MAIN;\
-category=android.intent.category.LAUNCHER;package=org.mixxx;end";
+/// Opens DJ Sugar again (BackToAppActivity)
+const BACK_TO_APP: &str = "djsugar://back";
 
 fn html_page(title: &str, text: &str) -> String {
     format!(
@@ -218,6 +217,14 @@ fn html_page(title: &str, text: &str) -> String {
          <p><a href=\"{BACK_TO_APP}\" style=\"color:#1ed760;font-size:1.2em\">Back to DJ Sugar</a></p>\
          <script>location.href=\"{BACK_TO_APP}\";</script></body></html>"
     )
+}
+
+/// No connection (DNS, connect), not an answer from Spotify
+fn is_network_error(error: &str) -> bool {
+    let error = error.to_lowercase();
+    ["unavailable", "lookup address", "connect", "timed out", "dns"]
+        .iter()
+        .any(|marker| error.contains(marker))
 }
 
 /// Android keeps the network from an app in the background for a moment:
@@ -232,7 +239,7 @@ where
     loop {
         match step().await {
             Ok(value) => return Ok(value),
-            Err(e) if attempt < 30 && e.to_lowercase().contains("unavailable") => {
+            Err(e) if attempt < 30 && is_network_error(&e) => {
                 attempt += 1;
                 tokio::time::sleep(Duration::from_secs(2)).await;
             }
@@ -607,6 +614,14 @@ mod tests {
         assert_eq!(query_value("state=s1", "code"), None);
         assert_eq!(percent_decode("a%zz%4"), "a%zz%4");
         assert_eq!(percent_decode("a+b%20c"), "a b c");
+    }
+
+    #[test]
+    fn tells_network_errors() {
+        assert!(is_network_error("Spotify login: Unknown error {failed to lookup address information: No address associated with hostname}"));
+        assert!(is_network_error("Spotify login: Service unavailable { client error (Connect) }"));
+        assert!(!is_network_error("Error { kind: InvalidArgument, error: StatusCode(400) }"));
+        assert!(!is_network_error("Spotify login: Permission denied { Login failed with reason: Bad credentials }"));
     }
 
     #[test]
