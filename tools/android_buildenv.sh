@@ -49,9 +49,9 @@ if [ "$HOST_ARCH" == "x86_64" ]; then
     # Oboe from google/oboe main, release-only libraries (NDK 28).
     # BUILDENV_RELEASE is kept for compatibility; there is one buildenv.
     VCPKG_TARGET_TRIPLET="arm64-android-release"
-    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-android-rel-751c0036"
+    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-android-rel-61b9bd5d"
     BUILDENV_TAG="${BUILDENV_NAME}"
-    BUILDENV_SHA256="e3dbbc4cb45d45e249ba0617773ffc02b3278879630d25018ca4e757b348330a"
+    BUILDENV_SHA256="5812253813a294eba9a02b8d439eed5a52de0a9491fdc18c508d2cfe086cff75"
 else
     echo "ERROR: Unsupported architecture detected: $HOST_ARCH"
     echo "Please refer to the following guide to manually build the vcpkg environment:"
