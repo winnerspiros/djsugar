@@ -32,7 +32,7 @@ import org.json.JSONArray;
  */
 public class PoTokenWebView {
     private static final String TAG = "PoTokenWebView";
-    private static final String GOOGLE_API_KEY = "«redacted:AIza…»";
+    private static final String GOOGLE_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";
     private static final String REQUEST_KEY = "O43z0dpjhgX20SCx4KAo";
     private static final String USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

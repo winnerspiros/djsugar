@@ -458,6 +458,10 @@ void PlayerManager::addDeckInner() {
 }
 
 void PlayerManager::loadSamplers() {
+    // The bundled samples live in the cache directory, which Android empties
+    // when storage runs low; the saved bank still points there. Copying the
+    // missing files back first keeps those pads playing.
+    mixxx::samples::bundledSamplesDir(m_pConfig);
     if (m_pSamplerBank->loadSamplerBankFromPath(getDefaultSamplerPath(m_pConfig))) {
         return;
     }

@@ -143,13 +143,11 @@ Item {
 
     Shape {
         anchors.fill: parent
-        // anchors.centerIn: parent
+        // No layer: the window's multisampling already smooths the curve.
+        // A layer is an offscreen texture per cable, re-created whenever the
+        // cable resizes; with Vulkan the sound hardware page died there.
         antialiasing: true
-        layer.enabled: true
 
-        // FIXME: This is causing GL glitched in Android
-        // layer.samples: 16
-        // layer.textureMirroring: ShaderEffectSource.MirrorHorizontally
         ShapePath {
             id: line
 

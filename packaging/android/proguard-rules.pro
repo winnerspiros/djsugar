@@ -10,6 +10,11 @@
 -keep class com.yausername.** { *; }
 # Jackson maps the yt-dlp JSON onto the classes above by reflection
 -keep class com.fasterxml.jackson.** { *; }
+# commons-compress unzips the bundled Python/yt-dlp/aria2c; ExtraFieldUtils
+# instantiates the zip extra-field classes by reflection. Shrunk, they turn
+# abstract ("AsiExtraField is not a concrete class") and YoutubeDL.init fails.
+-keep class org.apache.commons.compress.** { *; }
+-keep class org.apache.commons.io.** { *; }
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 -keepclasseswithmembernames class * {

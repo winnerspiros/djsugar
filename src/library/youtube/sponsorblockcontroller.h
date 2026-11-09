@@ -2,6 +2,7 @@
 
 #include <QHash>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 
 #include "control/controlproxy.h"
@@ -32,8 +33,12 @@ namespace mixxx {
 class SponsorBlockController : public QObject {
     Q_OBJECT
   public:
-    explicit SponsorBlockController(
-            const QString& cacheDir, bool autoSkipEnabled, QObject* parent = nullptr);
+    /// Uses the YouTube feature's service: a second service would repeat its
+    /// startup work (remote config fetch, yt-dlp warm-up, session state).
+    SponsorBlockController(YouTubeService* pService,
+            const QString& cacheDir,
+            bool autoSkipEnabled,
+            QObject* parent = nullptr);
     ~SponsorBlockController() override;
 
     /// Override the YouTube cache directory used for resolving sidecars.
@@ -95,7 +100,7 @@ class SponsorBlockController : public QObject {
     QString m_cacheDir;
     bool m_autoSkipEnabled = true;     // default: ON
     QHash<QString, DeckState> m_decks; // key = "[Channel1]" etc.
-    YouTubeService m_service;
+    const QPointer<YouTubeService> m_pService;
 };
 
 } // namespace mixxx

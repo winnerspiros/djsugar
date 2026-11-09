@@ -211,7 +211,6 @@ Rectangle {
         return [rawName, ""];
     }
     function generateDeviceList(api, devices, existing) {
-        console.log(`generating device list for: ${JSON.stringify(devices)}`);
         let cards = {};
         // cardName -> deviceName -> duplicateCount
         let deviceNameDuplicate = {};
@@ -219,7 +218,6 @@ Rectangle {
             let [cardName, deviceName] = root.friendlyName(api, device.displayName);
             cardName = !cardName ? "Unnamed card" : cardName;
             deviceName = !deviceName ? "Default" : deviceName;
-            console.log(`cardName=${cardName},deviceName=${deviceName}`);
             if (cards[cardName] === undefined) {
                 cards[cardName] = {
                     gateways: {
@@ -234,7 +232,6 @@ Rectangle {
                 };
                 continue;
             }
-            console.log(`cards=${cards[cardName]}`);
 
             // If the group (card name) has already a "Default" channel, we add the new channel as "Default #N" for better UX
             if (cards[cardName].gateways[deviceName] !== undefined) {
@@ -285,7 +282,6 @@ Rectangle {
                 let gateway = root.inputs[device].gateways[address];
                 let node = gateway.node;
                 let connections = root.inputs[device].gateways[address].device.connections(Mixxx.SoundManager);
-                console.log("INPUT", gateway, node, connections);
 
                 if (!connections)
                     continue;
@@ -314,7 +310,6 @@ Rectangle {
         }
     }
     function update(api) {
-        console.log(`Using sound api: ${api} ${typeof api}`);
         root.inputs = generateDeviceList(api, manager.availableInputDevices(api), root.inputs);
         let availableOutputs = manager.availableOutputDevices(api);
         root.outputDevices = {};
@@ -873,7 +868,6 @@ Rectangle {
                 nodeIdxOffset = address.startsWith("Left ") ? 0 : address.startsWith("Right ") ? 2 : 1;
                 address = "Bus";
             }
-            console.log("register", address, nodeIdxOffset);
             if (!root.system["Mixer"].gateways[address]) {
                 root.system["Mixer"].gateways[address] = [];
             }
