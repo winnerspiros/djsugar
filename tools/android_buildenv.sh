@@ -44,17 +44,14 @@ if [ "$ANDROID_ABI" != "arm64-v8a" ]; then
 fi
 
 if [ "$HOST_ARCH" == "x86_64" ]; then
-    if [ -n "${BUILDENV_RELEASE}" ]; then
-        VCPKG_TARGET_TRIPLET="arm64-android-rel"
-        BUILDENV_BRANCH="2.7-rel"
-        BUILDENV_NAME="mixxx-deps-2.7-arm64-android-rel-ee6dc7fe"
-        BUILDENV_SHA256="35e68a27bf0a8b1298a141cd69f2a509978b45eea810fd7a9c262ec8e556a131"
-    else
-        VCPKG_TARGET_TRIPLET="arm64-android"
-        BUILDENV_BRANCH="2.7"
-        BUILDENV_NAME="mixxx-deps-2.7-arm64-android-1c20f84a"
-        BUILDENV_SHA256="6786c09f491166352880984842ffa6f554e974f30a3766a2392298444c1be83c"
-    fi
+    # Built by github.com/winnerspiros/vcpkg (branch djsugar-qt6.12): current
+    # microsoft/vcpkg + Mixxx 2.7 overlays, Qt 6.12.1 branch with Vulkan,
+    # Oboe from google/oboe main, release-only libraries (NDK 28).
+    # BUILDENV_RELEASE is kept for compatibility; there is one buildenv.
+    VCPKG_TARGET_TRIPLET="arm64-android-release"
+    BUILDENV_NAME="@BUILDENV_NAME@"
+    BUILDENV_TAG="${BUILDENV_NAME}"
+    BUILDENV_SHA256="@BUILDENV_SHA256@"
 else
     echo "ERROR: Unsupported architecture detected: $HOST_ARCH"
     echo "Please refer to the following guide to manually build the vcpkg environment:"
@@ -62,7 +59,7 @@ else
     exit 1
 fi
 
-BUILDENV_URL="https://downloads.mixxx.org/dependencies/${BUILDENV_BRANCH}/Linux/${BUILDENV_NAME}.zip"
+BUILDENV_URL="https://github.com/winnerspiros/vcpkg/releases/download/${BUILDENV_TAG}/${BUILDENV_NAME}.zip"
 MIXXX_ROOT="$(realpath "$(dirname "$THIS_SCRIPT_NAME")/..")"
 ANDROID_API=35
 ANDROID_VERSION=35.0.0
@@ -111,8 +108,14 @@ case "$1" in
             pkg-config \
             python3-jinja2
         (yes | sudo sdkmanager --licenses) || true
-        sudo sdkmanager "platforms;android-${ANDROID_API}" "platform-tools" "build-tools;${ANDROID_VERSION}" "ndk;${ANDROID_NDK}"
+        # Qt 6.12 packages the APK with Android Gradle Plugin 9.2, which needs
+        # build-tools 36 and only one SDK path in the environment.
+        sudo sdkmanager "platforms;android-${ANDROID_API}" "platform-tools" "build-tools;${ANDROID_VERSION}" "build-tools;36.0.0" "ndk;${ANDROID_NDK}"
         ANDROID_SDK=/usr/lib/android-sdk
+        ANDROID_HOME="${ANDROID_SDK}"
+        ANDROID_SDK_ROOT="${ANDROID_SDK}"
+        export ANDROID_HOME
+        export ANDROID_SDK_ROOT
         ANDROID_NDK_HOME=/usr/lib/android-sdk/ndk/${ANDROID_NDK}
         JAVA_HOME=$(find /usr/lib/jvm -maxdepth 1 -name 'java-17-openjdk*')
         export ANDROID_SDK
@@ -130,6 +133,8 @@ case "$1" in
 
         echo_exported_variables() {
             echo "ANDROID_SDK=${ANDROID_SDK}"
+            echo "ANDROID_HOME=${ANDROID_HOME}"
+            echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
             echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}"
             echo "JAVA_HOME=${JAVA_HOME}"
             echo "BUILDENV_NAME=${BUILDENV_NAME}"

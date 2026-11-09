@@ -1,4 +1,4 @@
-// Mixxx Android: the build.gradle template of Qt 6.10 with the packaging
+// Mixxx Android: the build.gradle template of Qt 6.12 with the packaging
 // options below. Files in packaging/android replace the template of Qt, so
 // compare with build-android/android-build/build.gradle of a build without
 // this file when Qt is updated.
@@ -11,7 +11,7 @@ buildscript {
 
     dependencies {
         //noinspection AndroidGradlePluginVersion
-        classpath 'com.android.tools.build:gradle:8.10.1'
+        classpath 'com.android.tools.build:gradle:9.2.1'
     }
 }
 
@@ -25,7 +25,7 @@ apply plugin: qtGradlePluginType
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     //noinspection GradleDependency
-    implementation 'androidx.core:core:1.16.0'
+    implementation 'androidx.core:core:1.17.0'
 }
 
 android {
@@ -52,6 +52,7 @@ android {
         main {
             manifest.srcFile 'AndroidManifest.xml'
             java.srcDirs = [qtAndroidDir + '/src', 'src', 'java']
+            kotlin.srcDirs = [qtAndroidDir + '/src', 'src', 'kotlin']
             aidl.srcDirs = [qtAndroidDir + '/src', 'src', 'aidl']
             res.srcDirs = [qtAndroidDir + '/res', 'res']
             resources.srcDirs = ['resources']
@@ -67,11 +68,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    lintOptions {
+    lint {
         abortOnError = false
     }
 
@@ -82,6 +83,7 @@ android {
 
     packagingOptions {
         jniLibs {
+            useLegacyPackaging = legacyPackaging.toBoolean()
             // Patched for Android 10 to 13 after they were stripped (see
             // cmake/scripts/android_libccompat.cmake). Stripping them again
             // moves the segment patchelf adds, and Android can't load them.
@@ -89,8 +91,11 @@ android {
         }
     }
 
+    androidResources {
+        localeFilters += ['en']
+    }
+
     defaultConfig {
-        resConfig "en"
         minSdkVersion qtMinSdkVersion
         targetSdkVersion qtTargetSdkVersion
         ndk.abiFilters = qtTargetAbiList.split(",")

@@ -283,7 +283,7 @@ jobs:
               -DCMAKE_CXX_FLAGS=-ffunction-sections\ -fdata-sections\ -fvisibility=hidden\ -fvisibility-inlines-hidden\ -O2\ -fmerge-all-constants
               -DCMAKE_EXE_LINKER_FLAGS=-Wl,--gc-sections,--icf=safe,--as-needed,--no-merge-exidx-entries,-O2,-s
               -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections,--icf=safe,--as-needed,--no-merge-exidx-entries,-O2,-s
-              -DVCPKG_TARGET_TRIPLET=arm64-android
+              -DVCPKG_TARGET_TRIPLET=arm64-android-release
               -DVCPKG_DEFAULT_HOST_TRIPLET=x64-linux-release
               -DCMAKE_SYSTEM_NAME=Android
               -DBUILD_TESTING=OFF
