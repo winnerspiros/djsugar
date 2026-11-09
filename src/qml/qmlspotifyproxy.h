@@ -22,20 +22,23 @@ namespace qml {
 
 /// Spotify for the QML skin, exposed as `Mixxx.Spotify`.
 ///
-/// Login: on Android the installed Spotify app hands over the account it is
-/// signed in to (SpotifyAuthActivity, PKCE, nothing to type); the refresh
-/// token is kept, so this happens once. Browsing: search, Liked Songs, the
-/// user's playlists and top tracks through the Spotify Web API.
+/// Everything goes through lib/spotify-bridge (librespot), no Spotify
+/// developer app: login from the Spotify app (DJ Sugar is offered as a
+/// Spotify Connect device; picking it hands the account over) or on Spotify's
+/// web login. The account is stored, so this happens once. Browsing: search,
+/// Liked Songs, the user's playlists and top tracks through the Spotify Web
+/// API with tokens from the session.
 ///
-/// Audio: Spotify's own files. lib/spotify-bridge (librespot) logs in with
-/// the same token, downloads and decrypts the track's Ogg Vorbis (320 kbit/s)
-/// into the cache; it then loads to the deck like a local file, so beatgrid,
-/// waveform, scratching and loops work. Needs Spotify Premium.
+/// Audio: Spotify's own files, downloaded and decrypted (Ogg Vorbis
+/// 320 kbit/s) into the cache; they load to the deck like local files, so
+/// beatgrid, waveform, scratching and loops work. Needs Spotify Premium.
 class QmlSpotifyProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool available READ available CONSTANT)
     Q_PROPERTY(bool loggedIn READ loggedIn NOTIFY loginChanged)
     Q_PROPERTY(bool loggingIn READ loggingIn NOTIFY loginChanged)
+    /// "app" or "web" while a login waits, "" otherwise
+    Q_PROPERTY(QString loginStep READ loginStep NOTIFY loginChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY loginChanged)
     Q_PROPERTY(bool appInstalled READ appInstalled CONSTANT)
     QML_NAMED_ELEMENT(Spotify)
@@ -49,22 +52,27 @@ class QmlSpotifyProxy : public QObject {
     static void registerLibrary(Library* pLibrary);
     static void registerPlayerManager(std::shared_ptr<PlayerManager> pPlayerManager);
 
-    /// A client id is built in, the platform has a login and the audio
-    /// downloader is compiled in
+    /// The librespot bridge is compiled in
     bool available() const;
     bool loggedIn() const {
-        return !m_refreshToken.isEmpty() || !m_accessToken.isEmpty();
+        return m_loggedIn;
     }
     bool loggingIn() const {
         return m_loggingIn;
+    }
+    QString loginStep() const {
+        return m_loginStep;
     }
     QString userName() const {
         return m_userName;
     }
     bool appInstalled() const;
 
-    /// Through the Spotify app when installed, or Spotify's web login
+    /// From the Spotify app (Spotify Connect; opens the app) or Spotify's
+    /// web login in the browser. Waits until done or cancelLogin().
     Q_INVOKABLE void login(bool browser = false);
+    Q_INVOKABLE void cancelLogin();
+    Q_INVOKABLE void openSpotifyApp();
     Q_INVOKABLE void logout();
 
     Q_INVOKABLE void search(const QString& query);
@@ -85,12 +93,6 @@ class QmlSpotifyProxy : public QObject {
         return m_progress.value(spotifyId, -1.0);
     }
 
-    /// Called from the Android auth activity (any thread)
-    static void authResult(const QString& accessToken,
-            const QString& refreshToken,
-            int expiresIn,
-            const QString& error);
-
   signals:
     void loginChanged();
     void loginFailed(const QString& error);
@@ -107,11 +109,8 @@ class QmlSpotifyProxy : public QObject {
         Playlists,
     };
 
-    void onAuthResult(const QString& accessToken,
-            const QString& refreshToken,
-            int expiresIn,
-            const QString& error);
-    void setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn);
+    static QString accountDir();
+    void onLoginResult(const QString& user, const QString& error);
     void refreshAccessToken(std::function<void(bool)> done);
     void fetchProfile();
     void apiGet(const QUrl& url,
@@ -127,15 +126,15 @@ class QmlSpotifyProxy : public QObject {
 
     static inline Library* s_pLibrary = nullptr;
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
-    static inline QmlSpotifyProxy* s_pInstance = nullptr;
 
     QNetworkAccessManager* m_pNetwork;
-    QString m_clientId;
+    bool m_loggedIn = false;
     QString m_accessToken;
-    QString m_refreshToken;
     QDateTime m_accessExpiry;
     QString m_userName;
     bool m_loggingIn = false;
+    QString m_loginStep;
+    quint64 m_loginAttempt = 0; // drops the results of cancelled logins
     QString m_nextUrl;
     quint64 m_generation = 0; // drops the replies of superseded lists
     QList<std::function<void(bool)>> m_refreshWaiters;

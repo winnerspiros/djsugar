@@ -76,12 +76,8 @@ DJ Sugar uses the same CMake + vcpkg setup as Mixxx: follow the
 APK is built by the Android job in [`.github/workflows/build.yml`](.github/workflows/build.yml), the
 reference for the exact steps.
 
-Spotify needs Rust (`rustup target add aarch64-linux-android`) and a Spotify developer app: set
-`SPOTIFY_CLIENT_ID` (CMake option or environment variable; the `SPOTIFY_CLIENT_ID` secret in CI). In the
-app's settings on [developer.spotify.com](https://developer.spotify.com/dashboard) add the redirect URI
-`djsugar://spotify-callback` and the Android package `org.mixxx` with the SHA-1 fingerprint of the APK
-signing key. While the app is in development mode, add each Spotify account that logs in under
-*User Management*.
+Spotify needs Rust (`rustup target add aarch64-linux-android`); nothing to register: login, browsing
+and audio go through [librespot](https://github.com/librespot-org/librespot).
 
 ## Bug reports
 

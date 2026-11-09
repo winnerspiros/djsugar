@@ -191,7 +191,7 @@ Item {
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: !Mixxx.Spotify.available ? qsTr("Spotify is not set up in this build (no Spotify client id).") : Mixxx.Spotify.appInstalled ? qsTr("Uses the account of your Spotify app: one tap, nothing to type. Playing tracks on the decks needs Spotify Premium.") : qsTr("Log in with your Spotify account. Playing tracks on the decks needs Spotify Premium.")
+            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loginStep === "app" ? qsTr("In the Spotify app, tap the devices icon and pick \"DJ Sugar\" (same Wi-Fi). Done once: the login is kept.") : Mixxx.Spotify.loginStep === "web" ? qsTr("Log in on the Spotify page in your browser, then come back here.") : qsTr("Log in once with your Spotify account. Playing tracks on the decks needs Spotify Premium.")
         }
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
@@ -201,21 +201,32 @@ Item {
             normalColor: root.spotifyGreen
             font.bold: true
             font.pixelSize: 12
-            visible: Mixxx.Spotify.available
-            text: Mixxx.Spotify.loggingIn ? qsTr("CONNECTING...") : Mixxx.Spotify.appInstalled ? qsTr("CONTINUE WITH SPOTIFY APP") : qsTr("LOG IN TO SPOTIFY")
-            onClicked: Mixxx.Spotify.login(false)
+            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled && Mixxx.Spotify.loginStep !== "web"
+            text: Mixxx.Spotify.loginStep === "app" ? qsTr("OPEN SPOTIFY") : qsTr("LOG IN WITH SPOTIFY APP")
+            onClicked: Mixxx.Spotify.loginStep === "app" ? Mixxx.Spotify.openSpotifyApp() : Mixxx.Spotify.login(false)
         }
-        // Any account, on Spotify's web page (also without the Spotify app)
+        // Spotify's login page in the browser (also without the Spotify app)
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: 32
             Layout.preferredWidth: 240
             activeColor: root.spotifyGreen
-            normalColor: "#b3b3b3"
+            normalColor: Mixxx.Spotify.appInstalled ? "#b3b3b3" : root.spotifyGreen
             font.pixelSize: 11
-            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled
-            text: qsTr("LOG IN WITH EMAIL / PASSWORD")
+            visible: Mixxx.Spotify.available && Mixxx.Spotify.loginStep !== "app"
+            text: Mixxx.Spotify.loginStep === "web" ? qsTr("OPEN LOGIN PAGE AGAIN") : qsTr("LOG IN IN THE BROWSER")
             onClicked: Mixxx.Spotify.login(true)
+        }
+        Skin.Button {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: 28
+            Layout.preferredWidth: 120
+            activeColor: root.spotifyGreen
+            normalColor: "#9a9ea6"
+            font.pixelSize: 11
+            visible: Mixxx.Spotify.loggingIn
+            text: qsTr("CANCEL")
+            onClicked: Mixxx.Spotify.cancelLogin()
         }
         Text {
             Layout.fillWidth: true

@@ -337,8 +337,6 @@ jobs:
       # Android signing
       ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
-      # Spotify developer app (Spotify tab); unset builds explain it isn't set up
-      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}

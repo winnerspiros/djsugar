@@ -3622,18 +3622,9 @@ endif()
 
 target_sources(mixxx PRIVATE res/mixxx.qrc)
 set_target_properties(mixxx PROPERTIES AUTORCC ON)
-# Spotify (Mixxx.Spotify, Android): login through the installed Spotify app,
-# browsing with the Web API and the audio from lib/spotify-bridge, a Rust
-# static library on librespot (needs Spotify Premium). SPOTIFY_CLIENT_ID is
-# the client id of the Spotify developer app; its redirect URI is
-# djsugar://spotify-callback and its Android package entry org.mixxx with the
-# SHA-1 of the APK signing key.
-set(
-  SPOTIFY_CLIENT_ID
-  "$ENV{SPOTIFY_CLIENT_ID}"
-  CACHE STRING
-  "Spotify Web API client id (Android login through the Spotify app)"
-)
+# Spotify (Mixxx.Spotify, Android): login, browsing and audio through
+# lib/spotify-bridge, a Rust static library on librespot (no Spotify developer
+# app; the audio needs Spotify Premium).
 if(QML AND ANDROID)
   find_program(CARGO_EXECUTABLE cargo HINTS "$ENV{HOME}/.cargo/bin")
   if(NOT CARGO_EXECUTABLE)
@@ -3694,12 +3685,6 @@ if(QML AND ANDROID)
   add_dependencies(spotify-bridge spotify-bridge-build)
   target_link_libraries(mixxx-lib PRIVATE spotify-bridge)
   target_compile_definitions(mixxx-lib PRIVATE HAVE_SPOTIFY_BRIDGE)
-  if(SPOTIFY_CLIENT_ID)
-    target_compile_definitions(
-      mixxx-lib
-      PRIVATE DJSUGAR_SPOTIFY_CLIENT_ID="${SPOTIFY_CLIENT_ID}"
-    )
-  endif()
 endif()
 
 if(BUILD_TESTING)
