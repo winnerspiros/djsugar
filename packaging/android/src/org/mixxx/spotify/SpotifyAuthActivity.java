@@ -3,6 +3,8 @@ package org.mixxx.spotify;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import com.spotify.sdk.android.auth.AuthorizationClient;
@@ -13,9 +15,11 @@ import com.spotify.sdk.android.auth.PKCEInformationFactory;
 import com.spotify.sdk.android.auth.TokenExchangeRequest;
 import com.spotify.sdk.android.auth.TokenExchangeResponse;
 
-/// Spotify login without a browser: the installed Spotify app is asked for the
-/// account it is signed in to (one "Agree" tap, nothing to type). Without the
-/// app, the Spotify auth library shows its own in-app login page instead.
+/// Spotify login, two ways:
+/// - app: the installed Spotify app is asked for the account it is signed in
+///   to (one "Agree" tap, nothing to type)
+/// - web: Spotify's login page in the browser (any account, or no Spotify
+///   app); it comes back through djsugar://spotify-callback to this activity
 /// The authorization code is exchanged with PKCE (no client secret in the app)
 /// and the tokens are handed to C++ (QmlSpotifyProxy), which browses with the
 /// Web API and downloads the audio with librespot (lib/spotify-bridge).
@@ -23,7 +27,14 @@ public class SpotifyAuthActivity extends Activity {
     private static final int REQUEST_CODE = 0x5907;
     private static final String EXTRA_CLIENT_ID = "clientId";
     private static final String EXTRA_REDIRECT_URI = "redirectUri";
-    private static final String STATE_PKCE = "pkce";
+    private static final String EXTRA_BROWSER = "browser";
+    // The web login can outlive this process (the browser is in front):
+    // what the answer is checked against is kept on disk until it arrives
+    private static final String PREFS = "spotify_login";
+    private static final String KEY_VERIFIER = "verifier";
+    private static final String KEY_STATE = "state";
+    private static final String KEY_CLIENT_ID = "clientId";
+    private static final String KEY_REDIRECT_URI = "redirectUri";
     private static final String[] SCOPES = {
         // Playing the audio (librespot, Spotify Premium)
         "streaming",
@@ -35,19 +46,22 @@ public class SpotifyAuthActivity extends Activity {
         "user-read-recently-played",
     };
 
-    private PKCEInformation mPkce;
+    private String mVerifier;
     private String mClientId;
     private String mRedirectUri;
+    private boolean mDone;
 
     /// Tokens on success, or the error ("" access token). Runs on any thread.
     private static native void nativeAuthResult(
         String accessToken, String refreshToken, int expiresIn, String error);
 
     /// Called from C++
-    public static void login(Context context, String clientId, String redirectUri) {
+    public static void login(
+            Context context, String clientId, String redirectUri, boolean browser) {
         Intent intent = new Intent(context, SpotifyAuthActivity.class);
         intent.putExtra(EXTRA_CLIENT_ID, clientId);
         intent.putExtra(EXTRA_REDIRECT_URI, redirectUri);
+        intent.putExtra(EXTRA_BROWSER, browser || !isSpotifyInstalled(context));
         if (!(context instanceof Activity)) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
@@ -67,32 +81,70 @@ public class SpotifyAuthActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mClientId = getIntent().getStringExtra(EXTRA_CLIENT_ID);
-        mRedirectUri = getIntent().getStringExtra(EXTRA_REDIRECT_URI);
-        if (savedInstanceState != null) {
-            // Recreated while the Spotify app was in front: the login is
-            // already running, its result still arrives here
-            mPkce = savedPkce(savedInstanceState);
+        if (getIntent().getData() != null) {
+            onRedirect(getIntent().getData()); // web login, app restarted
             return;
         }
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (savedInstanceState != null) {
+            // Recreated while Spotify was in front: the login is already
+            // running, its result still arrives here
+            mClientId = prefs.getString(KEY_CLIENT_ID, "");
+            mRedirectUri = prefs.getString(KEY_REDIRECT_URI, "");
+            mVerifier = prefs.getString(KEY_VERIFIER, "");
+            return;
+        }
+        mClientId = getIntent().getStringExtra(EXTRA_CLIENT_ID);
+        mRedirectUri = getIntent().getStringExtra(EXTRA_REDIRECT_URI);
+        PKCEInformation pkce;
         try {
-            mPkce = PKCEInformationFactory.create();
+            pkce = PKCEInformationFactory.create();
         } catch (Exception e) {
             finishWith(null, null, 0, "PKCE: " + e.getMessage());
             return;
         }
+        mVerifier = pkce.getVerifier();
+        final String state = Long.toHexString(new java.security.SecureRandom().nextLong());
+        prefs.edit()
+                .putString(KEY_CLIENT_ID, mClientId)
+                .putString(KEY_REDIRECT_URI, mRedirectUri)
+                .putString(KEY_VERIFIER, mVerifier)
+                .putString(KEY_STATE, state)
+                .apply();
         AuthorizationRequest request = new AuthorizationRequest.Builder(
-                                                                   mClientId, AuthorizationResponse.Type.CODE, mRedirectUri)
-                                           .setScopes(SCOPES)
-                                           .setPkceInformation(mPkce)
-                                           .build();
-        AuthorizationClient.openLoginActivity(this, REQUEST_CODE, request);
+                mClientId, AuthorizationResponse.Type.CODE, mRedirectUri)
+                                               .setScopes(SCOPES)
+                                               .setPkceInformation(pkce)
+                                               .setState(state)
+                                               .build();
+        if (getIntent().getBooleanExtra(EXTRA_BROWSER, false)) {
+            AuthorizationClient.openLoginInBrowser(this, request);
+        } else {
+            AuthorizationClient.openLoginActivity(this, REQUEST_CODE, request);
+        }
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelable(STATE_PKCE, mPkce);
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent.getData() != null) {
+            onRedirect(intent.getData());
+        }
+    }
+
+    /// The web login's answer (djsugar://spotify-callback?code=...&state=...)
+    private void onRedirect(Uri uri) {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        mClientId = prefs.getString(KEY_CLIENT_ID, "");
+        mRedirectUri = prefs.getString(KEY_REDIRECT_URI, "");
+        mVerifier = prefs.getString(KEY_VERIFIER, "");
+        final String state = prefs.getString(KEY_STATE, "");
+        if (state.isEmpty() || !state.equals(uri.getQueryParameter("state"))) {
+            // Not an answer to a login started here
+            finishWith(null, null, 0, "unexpected login answer");
+            return;
+        }
+        handle(AuthorizationResponse.fromUri(uri));
     }
 
     @Override
@@ -101,7 +153,13 @@ public class SpotifyAuthActivity extends Activity {
         if (requestCode != REQUEST_CODE) {
             return;
         }
-        AuthorizationResponse response = AuthorizationClient.getResponse(resultCode, data);
+        handle(AuthorizationClient.getResponse(resultCode, data));
+    }
+
+    private void handle(AuthorizationResponse response) {
+        if (mDone) {
+            return; // the web answer came first (the app login fell back to the web)
+        }
         switch (response.getType()) {
             case CODE:
                 exchange(response.getCode());
@@ -124,7 +182,7 @@ public class SpotifyAuthActivity extends Activity {
                                                  .setClientId(mClientId)
                                                  .setCode(code)
                                                  .setRedirectUri(mRedirectUri)
-                                                 .setCodeVerifier(mPkce != null ? mPkce.getVerifier() : "")
+                                                 .setCodeVerifier(mVerifier)
                                                  .build();
         new Thread(() -> {
             TokenExchangeResponse tokens;
@@ -147,6 +205,11 @@ public class SpotifyAuthActivity extends Activity {
     }
 
     private void finishWith(String access, String refresh, int expiresIn, String error) {
+        if (mDone) {
+            return;
+        }
+        mDone = true;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
         try {
             nativeAuthResult(access != null ? access : "",
                 refresh != null ? refresh : "",
@@ -157,14 +220,6 @@ public class SpotifyAuthActivity extends Activity {
         }
         finish();
         noCloseAnimation();
-    }
-
-    // The typed getParcelable() is API 33+; minSdk is lower
-    @SuppressWarnings("deprecation")
-    private static PKCEInformation savedPkce(Bundle state) {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                ? state.getParcelable(STATE_PKCE, PKCEInformation.class)
-                : state.getParcelable(STATE_PKCE);
     }
 
     // overrideActivityTransition() is API 34+; minSdk is lower

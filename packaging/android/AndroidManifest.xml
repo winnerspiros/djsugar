@@ -102,19 +102,16 @@
                 android:value="--log-level warning" />
         </activity>
 
-        <!-- Spotify login through the installed Spotify app (see
-             org.mixxx.spotify.SpotifyAuthActivity). Translucent: the user
-             only sees the Spotify consent sheet. -->
+        <!-- Spotify login (org.mixxx.spotify.SpotifyAuthActivity): through
+             the installed Spotify app, or on the web. Translucent: only the
+             Spotify consent sheet or login page shows. singleTask + the
+             filter: the web login comes back here through the redirect URI
+             registered with the Spotify client id, djsugar://spotify-callback.
+             An answer is only taken with the state of a login started here. -->
         <activity
             android:name="org.mixxx.spotify.SpotifyAuthActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-        <!-- Return path of the Spotify login when it falls back to the web
-             page (no Spotify app); matches the redirect URI registered for
-             the Spotify client id: djsugar://spotify-callback -->
-        <activity
-            android:name="com.spotify.sdk.android.auth.browser.RedirectUriReceiverActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

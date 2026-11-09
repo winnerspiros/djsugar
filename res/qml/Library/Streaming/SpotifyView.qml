@@ -202,9 +202,20 @@ Item {
             font.bold: true
             font.pixelSize: 12
             visible: Mixxx.Spotify.available
-            enabled: !Mixxx.Spotify.loggingIn
             text: Mixxx.Spotify.loggingIn ? qsTr("CONNECTING...") : Mixxx.Spotify.appInstalled ? qsTr("CONTINUE WITH SPOTIFY APP") : qsTr("LOG IN TO SPOTIFY")
-            onClicked: Mixxx.Spotify.login()
+            onClicked: Mixxx.Spotify.login(false)
+        }
+        // Any account, on Spotify's web page (also without the Spotify app)
+        Skin.Button {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: 32
+            Layout.preferredWidth: 240
+            activeColor: root.spotifyGreen
+            normalColor: "#b3b3b3"
+            font.pixelSize: 11
+            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled
+            text: qsTr("LOG IN WITH EMAIL / PASSWORD")
+            onClicked: Mixxx.Spotify.login(true)
         }
         Text {
             Layout.fillWidth: true

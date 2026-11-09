@@ -63,7 +63,8 @@ class QmlSpotifyProxy : public QObject {
     }
     bool appInstalled() const;
 
-    Q_INVOKABLE void login();
+    /// Through the Spotify app when installed, or Spotify's web login
+    Q_INVOKABLE void login(bool browser = false);
     Q_INVOKABLE void logout();
 
     Q_INVOKABLE void search(const QString& query);

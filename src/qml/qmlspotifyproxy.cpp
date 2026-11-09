@@ -113,8 +113,9 @@ bool QmlSpotifyProxy::appInstalled() const {
 #endif
 }
 
-void QmlSpotifyProxy::login() {
-    if (!available() || m_loggingIn) {
+void QmlSpotifyProxy::login(bool browser) {
+    // Not blocked while one runs: a web login left in the browser never answers
+    if (!available()) {
         return;
     }
     m_loggingIn = true;
@@ -122,10 +123,13 @@ void QmlSpotifyProxy::login() {
 #ifdef Q_OS_ANDROID
     QJniObject::callStaticMethod<void>("org/mixxx/spotify/SpotifyAuthActivity",
             "login",
-            "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)V",
+            "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Z)V",
             QNativeInterface::QAndroidApplication::context().object(),
             QJniObject::fromString(m_clientId).object<jstring>(),
-            QJniObject::fromString(kRedirectUri).object<jstring>());
+            QJniObject::fromString(kRedirectUri).object<jstring>(),
+            static_cast<jboolean>(browser));
+#else
+    Q_UNUSED(browser);
 #endif
 }
 
