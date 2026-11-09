@@ -4,17 +4,17 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
-import "webinput.js" as WebInput
+import "webinput.mjs" as WebInput
 
-// Navidrome / Subsonic, Audius and direct URLs / radio behind one box: it
-// works out what it was fed (see webinput.js). The chips show where it went
-// and switch by hand.
+// Navidrome / Subsonic and direct URLs / radio behind one box: it works out
+// what it was fed (see webinput.mjs). The chips show where it went and
+// switch by hand.
 Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    // 0: Navidrome / Subsonic, 1: Audius, 2: URL / radio
-    property int source: Mixxx.StreamingManager.isSubsonicConnected ? 0 : 1
+    // 0: Navidrome / Subsonic, 1: URL / radio
+    property int source: 0
     property string hint: ""
 
     readonly property var sources: [
@@ -22,11 +22,6 @@ Item {
             "label": qsTr("NAVIDROME"),
             "icon": "qrc:/images/library/ic_library_navidrome.svg",
             "color": "#00e5ff"
-        },
-        {
-            "label": qsTr("AUDIUS"),
-            "icon": "qrc:/images/library/ic_library_audius.svg",
-            "color": "#ea80fc"
         },
         {
             "label": qsTr("URL / RADIO"),
@@ -39,22 +34,12 @@ Item {
         const input = WebInput.classify(text);
         switch (input.kind) {
         case "search":
-            if (root.source === 2)
-                root.source = Mixxx.StreamingManager.isSubsonicConnected ? 0 : 1;
-            if (root.source === 0)
-                subsonicView.search(input.query);
-            else
-                audiusView.search(input.query);
-            root.hint = root.source === 0 ? qsTr("Searching your Navidrome library") : qsTr("Searching Audius");
-            break;
-        case "audius":
-            root.source = 1;
-            if (input.query !== "")
-                audiusView.search(input.query);
-            root.hint = qsTr("Audius link");
+            root.source = 0;
+            subsonicView.search(input.query);
+            root.hint = Mixxx.StreamingManager.isSubsonicConnected ? qsTr("Searching your Navidrome / Subsonic library") : qsTr("Connect a Navidrome / Subsonic server first: paste its address");
             break;
         case "url":
-            root.source = 2;
+            root.source = 1;
             urlView.openUrl(input.url);
             root.hint = qsTr("Audio file or stream: pick a deck");
             break;
@@ -92,7 +77,7 @@ Item {
                     color: "#ffffff"
                     font.pixelSize: 11
                     inputMethodHints: Qt.ImhNoPredictiveText
-                    placeholderText: qsTr("Search, or paste a link: Navidrome server, Audius, MP3, radio stream...")
+                    placeholderText: qsTr("Search your library, or paste a link: Navidrome / Subsonic server, MP3, radio stream...")
                     background: Rectangle {
                         color: Theme.darkGray2
                         border.color: smartInput.activeFocus ? root.sources[root.source].color : Theme.midGray3
@@ -132,9 +117,7 @@ Item {
                             const input = WebInput.classify(smartInput.text);
                             if (input.kind === "search" && index === 0)
                                 subsonicView.search(input.query);
-                            else if (input.kind === "search" && index === 1)
-                                audiusView.search(input.query);
-                            else if (input.kind === "url" && index === 2)
+                            else if (input.kind === "url" && index === 1)
                                 urlView.openUrl(input.url);
                         }
 
@@ -169,10 +152,6 @@ Item {
 
             SubsonicView {
                 id: subsonicView
-
-            }
-            OnlineStreamView {
-                id: audiusView
 
             }
             CustomUrlView {
