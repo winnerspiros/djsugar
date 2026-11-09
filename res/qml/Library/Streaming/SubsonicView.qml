@@ -17,6 +17,21 @@ Item {
     property bool isBusy: false
     property var downloadProgressMap: ({})
 
+    // Smart box of the streaming hub (WebView)
+    function search(query) {
+        searchInput.text = query;
+        root.activeMode = "search";
+        root.isBusy = true;
+        root.statusMessage = qsTr("Searching...");
+        Mixxx.StreamingManager.searchSubsonic(query);
+    }
+    function openServer(url) {
+        serverUrlField.text = url;
+        Mixxx.StreamingManager.subsonicUrl = url;
+        root.showSettings = true;
+        userField.forceActiveFocus();
+    }
+
     Connections {
         target: Mixxx.StreamingManager
 

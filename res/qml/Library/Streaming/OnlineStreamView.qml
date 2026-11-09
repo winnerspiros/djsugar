@@ -15,6 +15,14 @@ Item {
     property bool isBusy: false
     property var downloadProgressMap: ({})
 
+    // Smart box of the streaming hub (WebView)
+    function search(query) {
+        searchInput.text = query;
+        root.isBusy = true;
+        root.statusMessage = qsTr("Searching Audius...");
+        Mixxx.StreamingManager.searchAudius(query);
+    }
+
     Connections {
         target: Mixxx.StreamingManager
 

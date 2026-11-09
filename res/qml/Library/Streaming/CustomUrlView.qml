@@ -12,6 +12,13 @@ Item {
     property string statusMessage: qsTr("Enter a direct audio link (MP3, WAV, FLAC, stream)")
     property bool isDownloading: false
 
+    // Smart box of the streaming hub (WebView)
+    function openUrl(url) {
+        customUrlInput.text = url;
+        trackTitleInput.text = "";
+        root.statusMessage = qsTr("Pick a deck to load it");
+    }
+
     Connections {
         target: Mixxx.StreamingManager
 
