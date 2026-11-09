@@ -1,14 +1,15 @@
 #include "qml/qmlmobileappproxy.h"
 
+#include <rhi/qrhi.h>
+
 #include <QDir>
 #include <QElapsedTimer>
-#include <QGuiApplication>
-#include <rhi/qrhi.h>
 #include <QFileInfo>
-#include <memory>
+#include <QGuiApplication>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSurfaceFormat>
+#include <memory>
 #if QT_CONFIG(vulkan)
 #include <QVulkanInstance>
 #endif
