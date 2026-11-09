@@ -191,8 +191,9 @@ Item {
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loginStep === "app" ? qsTr("In the Spotify app, tap the devices icon and pick \"DJ Sugar\" (same Wi-Fi). Done once: the login is kept.") : Mixxx.Spotify.loginStep === "web" ? qsTr("Log in on the Spotify page in your browser, then come back here.") : qsTr("Log in once with your Spotify account. Playing tracks on the decks needs Spotify Premium.")
+            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loginStep === "app" ? qsTr("In the Spotify app, tap the devices icon and pick \"DJ Sugar\".") : Mixxx.Spotify.loginStep === "web" ? qsTr("Log in on the Spotify page, then come back here.") : qsTr("Log in once with your Spotify account (Wi-Fi or mobile data). Playing tracks on the decks needs Spotify Premium.")
         }
+        // Spotify's login page: works on any connection
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: 40
@@ -201,21 +202,21 @@ Item {
             normalColor: root.spotifyGreen
             font.bold: true
             font.pixelSize: 12
-            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled && Mixxx.Spotify.loginStep !== "web"
-            text: Mixxx.Spotify.loginStep === "app" ? qsTr("OPEN SPOTIFY") : qsTr("LOG IN WITH SPOTIFY APP")
-            onClicked: Mixxx.Spotify.loginStep === "app" ? Mixxx.Spotify.openSpotifyApp() : Mixxx.Spotify.login(false)
+            visible: Mixxx.Spotify.available && Mixxx.Spotify.loginStep !== "app"
+            text: Mixxx.Spotify.loginStep === "web" ? qsTr("OPEN LOGIN PAGE AGAIN") : qsTr("LOG IN TO SPOTIFY")
+            onClicked: Mixxx.Spotify.login(true)
         }
-        // Spotify's login page in the browser (also without the Spotify app)
+        // Spotify Connect hand-over from the app: only on a shared Wi-Fi
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: 32
             Layout.preferredWidth: 240
             activeColor: root.spotifyGreen
-            normalColor: Mixxx.Spotify.appInstalled ? "#b3b3b3" : root.spotifyGreen
+            normalColor: "#b3b3b3"
             font.pixelSize: 11
-            visible: Mixxx.Spotify.available && Mixxx.Spotify.loginStep !== "app"
-            text: Mixxx.Spotify.loginStep === "web" ? qsTr("OPEN LOGIN PAGE AGAIN") : qsTr("LOG IN IN THE BROWSER")
-            onClicked: Mixxx.Spotify.login(true)
+            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled && Mixxx.Spotify.loginStep !== "web"
+            text: Mixxx.Spotify.loginStep === "app" ? qsTr("OPEN SPOTIFY") : qsTr("USE SPOTIFY APP (SAME WI-FI)")
+            onClicked: Mixxx.Spotify.loginStep === "app" ? Mixxx.Spotify.openSpotifyApp() : Mixxx.Spotify.login(false)
         }
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
