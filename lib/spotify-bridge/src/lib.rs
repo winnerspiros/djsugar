@@ -206,12 +206,39 @@ fn form_encode(pairs: &[(&str, &str)]) -> String {
         .join("&")
 }
 
+/// Opens DJ Sugar again (Android's intent: links; Chrome follows them)
+const BACK_TO_APP: &str = "intent:#Intent;action=android.intent.action.MAIN;\
+category=android.intent.category.LAUNCHER;package=org.mixxx;end";
+
 fn html_page(title: &str, text: &str) -> String {
     format!(
         "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width\">\
          </head><body style=\"font-family:sans-serif;text-align:center;margin-top:30vh;\
-         background:#121212;color:#fff\"><h2>{title}</h2><p>{text}</p></body></html>"
+         background:#121212;color:#fff\"><h2>{title}</h2><p>{text}</p>\
+         <p><a href=\"{BACK_TO_APP}\" style=\"color:#1ed760;font-size:1.2em\">Back to DJ Sugar</a></p>\
+         <script>location.href=\"{BACK_TO_APP}\";</script></body></html>"
     )
+}
+
+/// Android keeps the network from an app in the background for a moment:
+/// the login steps after the browser are tried again (only when the
+/// network failed) until it is in front
+async fn retry<T, F, Fut>(mut step: F) -> Result<T, String>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, String>>,
+{
+    let mut attempt = 0;
+    loop {
+        match step().await {
+            Ok(value) => return Ok(value),
+            Err(e) if attempt < 30 && e.to_lowercase().contains("unavailable") => {
+                attempt += 1;
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+            Err(e) => return Err(e),
+        }
+    }
 }
 
 /// The code from the browser's redirect to http://127.0.0.1:5588/login
@@ -290,22 +317,26 @@ async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<S
         ("client_id", WEB_CLIENT_ID),
         ("code_verifier", &verifier),
     ]);
-    let request = http::Request::post("https://accounts.spotify.com/api/token")
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(bytes::Bytes::from(body))
-        .map_err(|e| e.to_string())?;
-    let response = HttpClient::new(None)
-        .request_body(request)
-        .await
-        .map_err(|e| format!("Spotify login: {e}"))?;
+    let response = retry(|| async {
+        let request = http::Request::post("https://accounts.spotify.com/api/token")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(bytes::Bytes::from(body.clone()))
+            .map_err(|e| e.to_string())?;
+        HttpClient::new(None)
+            .request_body(request)
+            .await
+            .map_err(|e| format!("Spotify login: {e:?}"))
+    })
+    .await?;
     let json: serde_json::Value =
         serde_json::from_slice(&response).map_err(|e| format!("Spotify login: {e}"))?;
     let token = json["access_token"]
         .as_str()
-        .ok_or_else(|| format!("Spotify login: {json}"))?;
-    Ok(connect(&dir, Credentials::with_access_token(token))
-        .await?
-        .username())
+        .ok_or_else(|| format!("Spotify login: {json}"))?
+        .to_owned();
+    retry(|| connect(&dir, Credentials::with_access_token(token.clone())))
+        .await
+        .map(|session| session.username())
 }
 
 /// A Web API access token of the logged-in account and its seconds left
