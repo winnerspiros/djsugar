@@ -44,6 +44,16 @@ ApplicationWindow {
         }
     }
 
+    // From Qt 6.12 a Back that nothing takes moves the app to the background
+    // instead of closing the window, so the quit question never came: Back
+    // asks it here. Open popups (the quit question too) take Back themselves.
+    Shortcut {
+        context: Qt.ApplicationShortcut
+        enabled: root.isMobile && root.Overlay.overlay.children.length === 0
+        sequences: ["Back"]
+        onActivated: quitPopup.open()
+    }
+
     function quit() {
         root.quitConfirmed = true;
         Qt.quit();

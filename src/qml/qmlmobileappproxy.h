@@ -86,8 +86,9 @@ class QmlMobileAppProxy : public QObject {
     /// Picks the graphics API and the surface format from the settings.
     /// Must run before the first QQuickWindow is created.
     static void applyGraphicsSettings(const UserSettingsPointer& pConfig);
-    /// Confirms the chosen graphics API once `pWindow` has shown a frame,
-    /// and goes back to the default one if the scene graph fails.
+    /// Logs the first frame of `pWindow`, confirms the chosen graphics API
+    /// once Mixxx went to the background or quit with it, and goes back to
+    /// the default one if the scene graph fails.
     static void watchGraphicsStartup(QQuickWindow* pWindow, const UserSettingsPointer& pConfig);
 
     QVariantList cutouts() const {
