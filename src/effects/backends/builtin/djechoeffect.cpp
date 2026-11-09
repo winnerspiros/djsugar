@@ -186,7 +186,7 @@ void DJEchoEffect::processChannel(
     delay_seconds = std::min(delay_seconds,
             static_cast<double>(DJEchoGroupState::kMaxDelaySeconds));
     VERIFY_OR_DEBUG_ASSERT(delay_seconds > 0) {
-        delay_seconds = 1 / engineParameters.sampleRate();
+        delay_seconds = 1.0 / engineParameters.sampleRate().toDouble();
     }
 
     int delay_frames = static_cast<int>(delay_seconds * engineParameters.sampleRate());

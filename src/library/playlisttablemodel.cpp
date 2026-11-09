@@ -264,11 +264,13 @@ void PlaylistTableModel::removeTracks(const QModelIndexList& indices) {
         trackPositions.append(trackPosition);
     }
 
+    // Asked before trackPositions is moved away
+    const bool firstTrackRemoved = trackPositions.contains(1);
     m_pTrackCollectionManager->internalCollection()->getPlaylistDAO().removeTracksFromPlaylist(
             m_iPlaylistId,
             std::move(trackPositions));
 
-    if (trackPositions.contains(1)) {
+    if (firstTrackRemoved) {
         emit firstTrackChanged();
     }
 }
