@@ -107,10 +107,11 @@ case "$1" in
             openjdk-17-jdk \
             pkg-config \
             python3-jinja2
-        (yes | sudo sdkmanager --licenses) || true
+        (yes | sudo sdkmanager --sdk_root=/usr/lib/android-sdk --licenses) || true
         # Qt 6.12 packages the APK with Android Gradle Plugin 9.2, which needs
-        # build-tools 36 and only one SDK path in the environment.
-        sudo sdkmanager "platforms;android-${ANDROID_API}" "platform-tools" "build-tools;${ANDROID_VERSION}" "build-tools;36.0.0" "ndk;${ANDROID_NDK}"
+        # build-tools 36, compile SDK 36 (androidx.core 1.17) and only one SDK
+        # path in the environment.
+        sudo sdkmanager --sdk_root=/usr/lib/android-sdk "platforms;android-${ANDROID_API}" "platforms;android-36" "platform-tools" "build-tools;${ANDROID_VERSION}" "build-tools;36.0.0" "ndk;${ANDROID_NDK}"
         ANDROID_SDK=/usr/lib/android-sdk
         ANDROID_HOME="${ANDROID_SDK}"
         ANDROID_SDK_ROOT="${ANDROID_SDK}"

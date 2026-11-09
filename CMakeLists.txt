@@ -1578,7 +1578,6 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/samples/bundledsamples.cpp
-  src/library/enginedj/enginedjfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -2616,7 +2615,11 @@ if(ANDROID)
   # (from JaviLabarumDJ/mixxx-android android-stable)
   set_target_properties(
     mixxx
-    PROPERTIES QT_ANDROID_MIN_SDK_VERSION 29 QT_ANDROID_TARGET_SDK_VERSION 35
+    PROPERTIES
+      QT_ANDROID_MIN_SDK_VERSION 29
+      QT_ANDROID_TARGET_SDK_VERSION 35
+      # androidx.core 1.17 (Qt 6.12 Gradle template) needs compile SDK 36.
+      QT_ANDROID_COMPILE_SDK_VERSION 36
   )
   qt_add_android_permission(mixxx
     NAME android.permission.ACCESS_NETWORK_STATE
@@ -3935,6 +3938,7 @@ if(ENGINEPRIME)
   target_sources(
     mixxx-lib
     PRIVATE
+      src/library/enginedj/enginedjfeature.cpp
       src/library/export/dlglibraryexport.cpp
       src/library/export/engineprimeexportjob.cpp
       src/library/export/libraryexporter.cpp

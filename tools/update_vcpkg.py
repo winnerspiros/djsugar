@@ -73,12 +73,9 @@ PLATFORMS = [
         "release_triplet": "arm64-osx-rel",
         "file": "tools/macos_buildenv.sh",
     },
-    {
-        "host_os": "Linux",
-        "triplet": "arm64-android",
-        "release_triplet": "arm64-android-rel",
-        "file": "tools/android_buildenv.sh",
-    },
+    # Android: djsugar's buildenv is built and published by
+    # github.com/winnerspiros/vcpkg (djsugar-qt6.12), not downloads.mixxx.org,
+    # so it is updated by hand in tools/android_buildenv.sh.
     {
         # The AppImage buildenv defaults use the `${VAR:=value}` form, so they
         # need a dedicated pattern instead of the `VAR="value"` default.
