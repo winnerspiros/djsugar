@@ -58,7 +58,7 @@ Item {
                     // Navidrome / Subsonic: record icon (ic_library_navidrome.svg)
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 172
                         activeColor: "#00e5ff"
                         normalColor: root.activePlatform === 0 ? "#00e5ff" : "#80d8ff"
                         font.bold: true
