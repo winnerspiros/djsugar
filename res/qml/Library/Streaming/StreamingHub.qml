@@ -55,26 +55,50 @@ Item {
                     Layout.fillHeight: true
                     spacing: 4
 
+                    // Navidrome / Subsonic: record icon (ic_library_navidrome.svg)
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 132
+                        Layout.preferredWidth: 150
                         activeColor: "#00e5ff"
                         normalColor: root.activePlatform === 0 ? "#00e5ff" : "#80d8ff"
                         font.bold: true
                         font.pixelSize: 9
-                        text: "☁️ NAVIDROME / SUBSONIC"
+                        text: qsTr("NAVIDROME / SUBSONIC")
                         onClicked: root.activePlatform = 0
+
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_navidrome.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
                     }
 
+                    // Audius: triangle icon (ic_library_audius.svg)
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 96
                         activeColor: "#ea80fc"
                         normalColor: root.activePlatform === 1 ? "#ea80fc" : "#e1bee7"
                         font.bold: true
                         font.pixelSize: 9
-                        text: qsTr("🔥 AUDIUS (free)")
+                        text: qsTr("AUDIUS")
                         onClicked: root.activePlatform = 1
+
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_audius.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
                     }
 
                     Skin.Button {
