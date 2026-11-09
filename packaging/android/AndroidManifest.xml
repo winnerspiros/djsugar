@@ -59,8 +59,7 @@
         android:theme="@style/MixxxFullScreenTheme"
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
-        android:fullBackupOnly="false"
-        android:extractNativeLibs="true">
+        android:fullBackupOnly="false">
         <activity
             android:name="org.mixxx.MainActivity"
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"

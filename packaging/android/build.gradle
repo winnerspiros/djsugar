@@ -83,7 +83,10 @@ android {
 
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = legacyPackaging.toBoolean()
+            // Extract .so files on install: yt-dlp's Python runtime
+            // (libpython.so / libpython.zip.so) is loaded from nativeLibraryDir.
+            // AGP 9 rejects android:extractNativeLibs in the manifest.
+            useLegacyPackaging = true
             // Patched for Android 10 to 13 after they were stripped (see
             // cmake/scripts/android_libccompat.cmake). Stripping them again
             // moves the segment patchelf adds, and Android can't load them.
