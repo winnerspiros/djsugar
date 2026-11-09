@@ -1,6 +1,7 @@
+#include "track/keys.h"
+
 #include <QtDebug>
 
-#include "track/keys.h"
 #include "util/assert.h"
 
 using mixxx::track::io::key::ChromaticKey;
