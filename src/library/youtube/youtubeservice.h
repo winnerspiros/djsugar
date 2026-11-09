@@ -418,6 +418,7 @@ class YouTubeService : public QObject {
     /// Randomized delay (jitter) to add between requests. Returns a random
     /// value in [minMs, maxMs] to make request timing look more human.
     int jitterDelayMs() const;
+    int throttleDelayMs() const;
 
     /// Called when a bot flag is detected. Sets the flag, starts the cooldown
     /// timer, and emits the signal. Subsequent calls extend the backoff.

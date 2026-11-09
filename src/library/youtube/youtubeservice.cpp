@@ -1646,7 +1646,7 @@ void YouTubeService::fetchMoreSearchResults(
         // results arrive (the model's m_hasMore was already set to false by
         // fetchMore() before emitting fetchMoreRequested, so without the retry
         // the user would never see more results for this search).
-        const int delay = jitterDelayMs();
+        const int delay = throttleDelayMs();
         kLogger.info() << "Throttled: retrying continuation fetch in"
                        << delay << "ms";
         QPointer<YouTubeService> guard(this);
@@ -1779,8 +1779,8 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
         return;
     }
     if (shouldThrottleRequest()) {
-        // Defer: retry after jitter delay, preserving accumulated results.
-        const int delay = jitterDelayMs();
+        // Defer until a request is allowed, preserving accumulated results.
+        const int delay = throttleDelayMs();
         kLogger.info() << "Throttled: retrying auto-fetch in" << delay << "ms";
         QPointer<YouTubeService> guard(this);
         QTimer::singleShot(delay,
@@ -3584,30 +3584,42 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
     }
     // A few extractions side by side: the logs showed 4 at once taking the
     // same ~16 s each as one alone (the time is spent waiting on YouTube,
-    // not on the CPU), so 4 workers get the links 4x sooner. Results are
-    // handed out in list order, the top ones first.
+    // not on the CPU), so 4 workers get the links 4x sooner. One queue and
+    // at most 4 workers for all calls: every search used to start its own 4,
+    // and 8 yt-dlp runs at once made the playing app stutter. The newest
+    // results come first, ids already waiting are not queued again.
     constexpr int kWorkers = 4;
-    auto queue = std::make_shared<QStringList>(todo);
-    auto queueMutex = std::make_shared<QMutex>();
-    for (int w = 0; w < std::min<int>(kWorkers, todo.size()); ++w) {
-        QThread* thread = QThread::create([queue, queueMutex]() {
+    static QMutex s_queueMutex;
+    static QStringList s_queue;
+    static int s_workers = 0;
+    int toStart = 0;
+    {
+        QMutexLocker lock(&s_queueMutex);
+        for (auto it = todo.crbegin(); it != todo.crend(); ++it) {
+            s_queue.removeAll(*it);
+            s_queue.prepend(*it);
+        }
+        toStart = std::min<int>(kWorkers - s_workers, s_queue.size());
+        s_workers += std::max(toStart, 0);
+    }
+    for (int w = 0; w < toStart; ++w) {
+        QThread* thread = QThread::create([]() {
             QJniObject context = QNativeInterface::QAndroidApplication::context();
             QJniObject ytdl = QJniObject::callStaticObjectMethod(
                     "com/yausername/youtubedl_android/YoutubeDL",
                     "getInstance",
                     "()Lcom/yausername/youtubedl_android/YoutubeDL;");
-            if (!context.isValid() || !ytdl.isValid() ||
-                    !ensureYoutubeDlInitialized(ytdl, context)) {
-                return;
-            }
+            const bool ready = context.isValid() && ytdl.isValid() &&
+                    ensureYoutubeDlInitialized(ytdl, context);
             for (;;) {
                 QString id;
                 {
-                    QMutexLocker lock(queueMutex.get());
-                    if (queue->isEmpty()) {
+                    QMutexLocker lock(&s_queueMutex);
+                    if (!ready || s_queue.isEmpty()) {
+                        --s_workers;
                         return;
                     }
-                    id = queue->takeFirst();
+                    id = s_queue.takeFirst();
                 }
                 const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
                 StreamLink link;
@@ -3617,7 +3629,7 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
                                << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
             }
         });
-        thread->setObjectName(QStringLiteral("YtLinkPrefetch%1").arg(w + 1));
+        thread->setObjectName(QStringLiteral("YtLinkPrefetch"));
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         thread->start(QThread::LowPriority);
     }
@@ -4243,6 +4255,17 @@ bool YouTubeService::shouldThrottleRequest() {
 void YouTubeService::recordRequest() {
     // All callers are on the main/UI thread — no mutex needed.
     m_requestTimestamps.append(m_rateLimitTimer.elapsed());
+}
+
+int YouTubeService::throttleDelayMs() const {
+    // Until the oldest request leaves the window, plus the jitter: retrying
+    // every few hundred ms only spun the main thread until then.
+    int delay = jitterDelayMs();
+    if (m_requestTimestamps.size() >= kRateLimitBurst) {
+        const qint64 freeAt = m_requestTimestamps.first() + kRateLimitWindowMs;
+        delay += static_cast<int>(std::max<qint64>(0, freeAt - m_rateLimitTimer.elapsed()));
+    }
+    return delay;
 }
 
 int YouTubeService::jitterDelayMs() const {
