@@ -28,7 +28,7 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DQT6=ON -DBATTERY=ON -DBROADCAST=ON -DBULK=ON -DHID=ON -DLILV=ON \
             -DOPUS=ON -DQTKEYCHAIN=ON -DVINYLCONTROL=ON -DFFMPEG=ON -DKEYFINDER=ON \
-            -DMAD=ON -DMODPLUG=ON -DWAVPACK=ON -DBUILD_TESTING=OFF \
+            -DMAD=ON -DMODPLUG=ON -DWAVPACK=ON \
             -DCMAKE_CXX_FLAGS="-Wno-nan-infinity-disabled"
         env:
           CC: clang
