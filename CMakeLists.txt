@@ -3671,8 +3671,8 @@ if(QML AND ANDROID)
       ${CMAKE_COMMAND} -E env "CC_${SPOTIFY_RUST_TARGET_ENV}=${SPOTIFY_NDK_CC}"
       "AR_${SPOTIFY_RUST_TARGET_ENV}=${SPOTIFY_NDK_BIN}/llvm-ar"
       "CARGO_TARGET_${SPOTIFY_RUST_TARGET_ENV_UPPER}_LINKER=${SPOTIFY_NDK_CC}"
-      "CARGO_TARGET_DIR=${SPOTIFY_CARGO_DIR}" ${CARGO_EXECUTABLE} build --release
-      --locked --target ${SPOTIFY_RUST_TARGET} --manifest-path
+      "CARGO_TARGET_DIR=${SPOTIFY_CARGO_DIR}" ${CARGO_EXECUTABLE} build
+      --release --locked --target ${SPOTIFY_RUST_TARGET} --manifest-path
       "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.toml"
     DEPENDS
       "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.toml"

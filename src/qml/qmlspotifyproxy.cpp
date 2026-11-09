@@ -26,9 +26,10 @@
 #endif
 
 #ifdef Q_OS_ANDROID
+#include <jni.h>
+
 #include <QCoreApplication>
 #include <QJniObject>
-#include <jni.h>
 #endif
 
 namespace {
@@ -276,10 +277,10 @@ void QmlSpotifyProxy::apiGet(const QUrl& url,
         if (status == 403) {
             // Development-mode apps only answer users added to the app
             emit failed(tr("Spotify refused the request: %1")
-                                .arg(root.value(QStringLiteral("error"))
-                                                .toObject()
-                                                .value(QStringLiteral("message"))
-                                                .toString()));
+                            .arg(root.value(QStringLiteral("error"))
+                                            .toObject()
+                                            .value(QStringLiteral("message"))
+                                            .toString()));
             return;
         }
         if (pReply->error() != QNetworkReply::NoError) {
@@ -424,9 +425,7 @@ void QmlSpotifyProxy::playlistTracks(const QString& playlistId) {
     }
     // Since 2026 only playlists the user owns or collaborates on list their
     // items; others answer with 403
-    fetchList(QUrl(kApi + QStringLiteral("/playlists/%1/items?limit=%2")
-                                  .arg(playlistId)
-                                  .arg(kListPage)),
+    fetchList(QUrl(kApi + QStringLiteral("/playlists/%1/items?limit=%2").arg(playlistId).arg(kListPage)),
             ListKind::Tracks,
             false);
 }

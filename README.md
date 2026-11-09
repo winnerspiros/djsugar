@@ -64,10 +64,10 @@ Get the latest build from [Releases](https://github.com/winnerspiros/djsugar/rel
 
 | Platform | File |
 | --- | --- |
-|  Android (ARM64) | `.apk` |
-|  Windows (x64, ARM64) | `.msi` |
-|  macOS (Intel, Apple Silicon) | `.dmg` |
-|  Ubuntu / Debian (x86_64) | `.deb` |
+| Android (ARM64) | `.apk` |
+| Windows (x64, ARM64) | `.msi` |
+| macOS (Intel, Apple Silicon) | `.dmg` |
+| Ubuntu / Debian (x86_64) | `.deb` |
 
 ## Building
 
@@ -87,16 +87,16 @@ signing key. While the app is in development mode, add each Spotify account that
 
 [Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`:
 
--  Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
--  Linux: `~/.local/share/mixxx/`
--  Windows: `%LOCALAPPDATA%\Mixxx\`
--  macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
+- Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
+- Linux: `~/.local/share/mixxx/`
+- Windows: `%LOCALAPPDATA%\Mixxx\`
+- macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
 
-##  Contributing
+## Contributing
 
 Fork, branch, open a pull request. Code style and guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-##  License and credits
+## License and credits
 
 GPLv2 — see [LICENSE](LICENSE).
 
