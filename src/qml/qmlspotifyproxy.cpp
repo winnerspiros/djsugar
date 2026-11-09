@@ -224,7 +224,8 @@ void QmlSpotifyProxy::openSpotifyApp() {
         return;
     }
     intent.callObjectMethod("addFlags", "(I)Landroid/content/Intent;", jint(0x10000000));
-    androidContext().callMethod<void>("startActivity", "(Landroid/content/Intent;)V", intent.object());
+    androidContext().callMethod<void>(
+            "startActivity", "(Landroid/content/Intent;)V", intent.object());
 #endif
 }
 
