@@ -98,6 +98,14 @@ android {
         localeFilters += ['en']
     }
 
+    buildTypes {
+        release {
+            // R8: drops the unused library classes (about 2/3 of the dex)
+            minifyEnabled = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
     defaultConfig {
         minSdkVersion qtMinSdkVersion
         targetSdkVersion qtTargetSdkVersion
