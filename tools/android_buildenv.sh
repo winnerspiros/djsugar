@@ -46,12 +46,13 @@ fi
 if [ "$HOST_ARCH" == "x86_64" ]; then
     # Built by github.com/winnerspiros/vcpkg (branch djsugar-qt6.12): current
     # microsoft/vcpkg + Mixxx 2.7 overlays, Qt 6.12.1 branch with Vulkan,
-    # Oboe from google/oboe main, release-only libraries (NDK 28).
+    # Oboe from google/oboe main, release-only libraries (NDK 28), Qt without
+    # ICU and with only the Basic and Fusion Quick Controls styles.
     # BUILDENV_RELEASE is kept for compatibility; there is one buildenv.
     VCPKG_TARGET_TRIPLET="arm64-android-release"
-    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-android-rel-61b9bd5d"
+    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-android-rel-89a5f306"
     BUILDENV_TAG="${BUILDENV_NAME}"
-    BUILDENV_SHA256="5812253813a294eba9a02b8d439eed5a52de0a9491fdc18c508d2cfe086cff75"
+    BUILDENV_SHA256="53810db3e1101ade1b84fdb62ed3406046ec95f4165761da67342a4a4c11d931"
 else
     echo "ERROR: Unsupported architecture detected: $HOST_ARCH"
     echo "Please refer to the following guide to manually build the vcpkg environment:"
