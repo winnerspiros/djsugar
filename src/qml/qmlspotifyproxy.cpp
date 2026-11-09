@@ -425,7 +425,10 @@ void QmlSpotifyProxy::playlistTracks(const QString& playlistId) {
     }
     // Since 2026 only playlists the user owns or collaborates on list their
     // items; others answer with 403
-    fetchList(QUrl(kApi + QStringLiteral("/playlists/%1/items?limit=%2").arg(playlistId).arg(kListPage)),
+    fetchList(QUrl(kApi +
+                      QStringLiteral("/playlists/%1/items?limit=%2")
+                              .arg(playlistId)
+                              .arg(kListPage)),
             ListKind::Tracks,
             false);
 }

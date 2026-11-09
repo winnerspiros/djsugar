@@ -146,7 +146,7 @@ Item {
                         }
                     }
 
-                    // Spotify: green disc with the three sound waves
+                    // Spotify: green disc with three arcs (ic_library_spotify.svg)
                     Skin.Button {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 104
@@ -157,33 +157,15 @@ Item {
                         text: qsTr("SPOTIFY")
                         onClicked: root.activePlatform = 5
 
-                        Rectangle {
+                        Image {
                             anchors.left: parent.left
                             anchors.leftMargin: 6
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 16
-                            height: 16
-                            radius: 8
-                            color: "#1db954"
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 1
-
-                                Repeater {
-                                    model: [10, 8, 6]
-
-                                    delegate: Rectangle {
-                                        required property int modelData
-
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                        width: modelData
-                                        height: 2
-                                        radius: 1
-                                        color: "#000000"
-                                    }
-                                }
-                            }
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_spotify.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
                         }
                     }
                 }
