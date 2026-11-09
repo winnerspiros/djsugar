@@ -87,10 +87,12 @@ int EncoderMp3::bufferOutGrow(std::size_t bufferSize) {
         return 0;
     }
 
-    m_bufferOut = (unsigned char*)realloc(m_bufferOut, bufferSize);
-    if (m_bufferOut == nullptr) {
+    auto* pGrown = static_cast<unsigned char*>(realloc(m_bufferOut, bufferSize));
+    if (pGrown == nullptr) {
+        // The old buffer stays valid (and owned) when realloc fails
         return -1;
     }
+    m_bufferOut = pGrown;
 
     m_bufferOutSize = bufferSize;
     return 0;
