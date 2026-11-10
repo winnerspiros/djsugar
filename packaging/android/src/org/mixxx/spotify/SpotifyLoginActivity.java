@@ -64,14 +64,14 @@ public class SpotifyLoginActivity extends Activity {
             // Any thread; never lets the WebView load the loopback address
             @Override
             public WebResourceResponse shouldInterceptRequest(
-                    WebView v, WebResourceRequest request) {
+                WebView v, WebResourceRequest request) {
                 final String url = request.getUrl().toString();
                 if (!url.startsWith(REDIRECT_PREFIX)) {
                     return null;
                 }
                 runOnUiThread(() -> redirect(url));
                 return new WebResourceResponse(
-                        "text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
+                    "text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
             }
         });
         setContentView(view);
