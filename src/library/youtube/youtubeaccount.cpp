@@ -420,6 +420,12 @@ void YouTubeAccount::openList(const QString& list) {
                 const QList<YouTubeVideoInfo> list = tracks(page);
                 kLogger.info() << id << "answered" << list.size() << "tracks, signed in:"
                                << signedInPage(page) << ", more:" << !m_continuation.isEmpty();
+                if (list.isEmpty() && id == QStringLiteral("VLLM") && signedInPage(page)) {
+                    // YouTube Music's liked songs are empty when the likes
+                    // were given on YouTube: its liked videos then
+                    openList(QStringLiteral("VLLL"));
+                    return;
+                }
                 if (list.isEmpty() && !signedInPage(page)) {
                     kLogger.warning() << "YouTube answered the list as signed out";
                     emit failed(tr(
@@ -468,8 +474,10 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
             }
             const QString id = browseId(item);
             // Playlists only ("VL<playlist id>"), not "New playlist" and
-            // the like
-            if (!id.startsWith(QStringLiteral("VL"))) {
+            // the like, nor the liked songs (their own button) and
+            // "Episodes for later"
+            if (!id.startsWith(QStringLiteral("VL")) || id == QStringLiteral("VLLM") ||
+                    id == QStringLiteral("VLLL") || id == QStringLiteral("VLSE")) {
                 return true;
             }
             const bool twoRow = kind == QStringLiteral("musicTwoRowItemRenderer");

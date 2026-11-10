@@ -1,6 +1,7 @@
 #include "qml/qmlyoutubeproxy.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -578,11 +579,24 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                     return;
                 }
                 if (pReply->error() != QNetworkReply::NoError) {
+                    qWarning() << "SoundCloud" << baseUrl.path() << "failed:" << status
+                               << pReply->errorString();
+                    if ((status == 401 || status == 403) &&
+                            !mixxx::soundcloud::token().isEmpty()) {
+                        // A fresh client id did not help: the sign-in is
+                        // what SoundCloud refuses
+                        mixxx::soundcloud::setToken(QString());
+                        emit accountsChanged();
+                        emit accountFailed(tr("SoundCloud wants a new sign-in"));
+                    }
                     emit soundCloudFailed(pReply->errorString());
                     return;
                 }
                 const QJsonObject root = QJsonDocument::fromJson(pReply->readAll()).object();
                 m_scNextHref = root.value(QStringLiteral("next_href")).toString();
+                qInfo() << "SoundCloud" << baseUrl.path() << "answered"
+                        << root.value(QStringLiteral("collection")).toArray().size()
+                        << "items";
                 QList<mixxx::YouTubeVideoInfo> videos;
                 QHash<QString, QVariantMap> extra;
                 const QJsonArray tracks = root.value(QStringLiteral("collection")).toArray();
@@ -711,11 +725,13 @@ void QmlYouTubeProxy::onSignedIn(const QString& service, const QString& cookies)
         }
     }
     if (token.isEmpty()) {
+        qInfo() << "SoundCloud: sign-in page closed without a sign-in";
         if (s_pInstance) {
             emit s_pInstance->accountFailed(tr("Not signed in"));
         }
         return;
     }
+    qInfo() << "SoundCloud: signed in";
     soundcloud::setToken(token);
     if (s_pInstance) {
         emit s_pInstance->accountsChanged();

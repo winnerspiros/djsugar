@@ -344,35 +344,76 @@ Item {
                 onClicked: {
                     if (Mixxx.YouTube.youTubeSignedIn) {
                         Mixxx.YouTube.youTubeAccounts();
-                        accountMenu.popup(this, 0, height);
+                        accountMenu.open();
                     } else {
                         Mixxx.YouTube.signIn("youtube");
                     }
                 }
 
                 // The account's channels, sign out: only on tap
-                Menu {
+                // The account's channels and sign out, in the view's style
+                Popup {
                     id: accountMenu
 
-                    Instantiator {
-                        model: root.channels.length > 1 ? root.channels : []
-                        delegate: MenuItem {
-                            required property var modelData
-                            text: (modelData.selected ? "✓ " : "   ") + modelData.name
-                            onTriggered: {
-                                Mixxx.YouTube.selectYouTubeAccount(modelData.pageId, modelData.name);
-                                root.playlists = [];
-                                root.openList("liked", qsTr("Liked songs"));
+                    y: parent.height + 2
+                    x: parent.width - width
+                    width: 220
+                    padding: 4
+                    modal: false
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                    background: Rectangle {
+                        color: "#14161b"
+                        border.color: Theme.accentColor
+                        border.width: 1
+                        radius: 6
+                    }
+                    contentItem: Column {
+                        spacing: 2
+
+                        Text {
+                            width: parent.width
+                            leftPadding: 6
+                            visible: root.channels.length > 1
+                            color: "#9a9ea6"
+                            font.bold: true
+                            font.pixelSize: 9
+                            text: qsTr("CHANNEL")
+                        }
+                        Repeater {
+                            model: root.channels.length > 1 ? root.channels : []
+
+                            delegate: Skin.Button {
+                                required property var modelData
+
+                                width: parent.width
+                                height: 30
+                                activeColor: Theme.accentColor
+                                normalColor: modelData.selected ? Theme.accentColor : "#ffffff"
+                                font.bold: modelData.selected
+                                font.pixelSize: 10
+                                text: (modelData.selected ? "✓  " : "") + modelData.name
+                                onClicked: {
+                                    accountMenu.close();
+                                    Mixxx.YouTube.selectYouTubeAccount(modelData.pageId, modelData.name);
+                                    root.playlists = [];
+                                    root.openList("liked", qsTr("Liked songs"));
+                                }
                             }
                         }
-                        onObjectAdded: (index, object) => accountMenu.insertItem(accountMenu.count - 1, object)
-                        onObjectRemoved: (index, object) => accountMenu.removeItem(object)
-                    }
-                    MenuItem {
-                        text: qsTr("Sign out")
-                        onTriggered: {
-                            Mixxx.YouTube.signOut("youtube");
-                            root.statusMessage = qsTr("Signed out of YouTube");
+                        Skin.Button {
+                            width: parent.width
+                            height: 30
+                            activeColor: "#ff5252"
+                            normalColor: "#ff5252"
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: qsTr("SIGN OUT")
+                            onClicked: {
+                                accountMenu.close();
+                                Mixxx.YouTube.signOut("youtube");
+                                root.statusMessage = qsTr("Signed out of YouTube");
+                            }
                         }
                     }
                 }

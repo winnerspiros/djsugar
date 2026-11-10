@@ -78,6 +78,16 @@ public class AccountLoginActivity extends Activity {
         mDoneHost = intent.getStringExtra(EXTRA_DONE_HOST);
         mCookie = intent.getStringExtra(EXTRA_COOKIE) + "=";
         CookieManager.getInstance().setAcceptCookie(true);
+        if ("soundcloud".equals(mService)) {
+            // A sign-in cookie left from before would close the page at
+            // once, signed in as nobody: SoundCloud's form is shown fresh
+            for (String domain : new String[] {".soundcloud.com", "soundcloud.com"}) {
+                CookieManager.getInstance().setCookie("https://soundcloud.com",
+                    mCookie + "; Domain=" + domain + "; Path=/; Max-Age=0");
+            }
+            CookieManager.getInstance().setCookie(
+                "https://soundcloud.com", mCookie + "; Path=/; Max-Age=0");
+        }
         mClient = new WebViewClient() {
             @Override
             public void onPageFinished(WebView page, String url) {
@@ -117,6 +127,17 @@ public class AccountLoginActivity extends Activity {
         mHandler.postDelayed(mCheck, CHECK_MS);
     }
 
+    /// The sign-in cookie's value in a Cookie header, "" when not there
+    private String cookieValue(String header) {
+        for (String part : header.split(";")) {
+            String pair = part.trim();
+            if (pair.startsWith(mCookie)) {
+                return pair.substring(mCookie.length());
+            }
+        }
+        return "";
+    }
+
     /// Answers and closes once the service's sign-in cookie is set
     private boolean checkSignedIn() {
         if (mAnswered) {
@@ -124,8 +145,7 @@ public class AccountLoginActivity extends Activity {
         }
         CookieManager cookies = CookieManager.getInstance();
         String signedIn = cookies.getCookie("https://" + mDoneHost);
-        if (signedIn == null
-            || !(signedIn.startsWith(mCookie) || signedIn.contains("; " + mCookie))) {
+        if (signedIn == null || cookieValue(signedIn).isEmpty()) {
             return false; // still signed out
         }
         cookies.flush();
