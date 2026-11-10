@@ -2,9 +2,9 @@ package org.mixxx.spotify;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ActivityNotFoundException;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -117,7 +117,8 @@ public class SpotifyLoginActivity extends Activity {
             return false; // no browser: the WebView shows Google's refusal
         }
         Toast.makeText(this, "Continue the Spotify login in the browser",
-            Toast.LENGTH_LONG).show();
+                 Toast.LENGTH_LONG)
+            .show();
         mAnswered = true; // not a cancel: the browser answers
         finish();
         return true;
