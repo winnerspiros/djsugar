@@ -5,15 +5,17 @@ use bytes::Bytes;
 use thiserror::Error;
 use tokio::sync::oneshot;
 
-use crate::{Error, FileId, SpotifyId, packet::PacketType, util::SeqGenerator};
+use crate::{packet::PacketType, util::SeqGenerator, Error, FileId, SpotifyId};
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub struct AudioKey(pub [u8; 16]);
 
 #[derive(Debug, Error)]
 pub enum AudioKeyError {
-    #[error("audio key error")]
-    AesKey,
+    // DJ Sugar: the code Spotify refused the key with (0x0001: this account
+    // gets no keys, 0x0002: refused for now), librespot-org/librespot#1649
+    #[error("audio key error {0:#06x}")]
+    AesKey(u16),
     #[error("other end of channel disconnected")]
     Channel,
     #[error("unexpected packet type {0}")]
@@ -27,7 +29,7 @@ pub enum AudioKeyError {
 impl From<AudioKeyError> for Error {
     fn from(err: AudioKeyError) -> Self {
         match err {
-            AudioKeyError::AesKey => Error::unavailable(err),
+            AudioKeyError::AesKey(_) => Error::unavailable(err),
             AudioKeyError::Channel => Error::aborted(err),
             AudioKeyError::Sequence(_) => Error::aborted(err),
             AudioKeyError::Packet(_) => Error::unimplemented(err),
@@ -65,8 +67,9 @@ impl AudioKeyManager {
                     data.as_ref()[0],
                     data.as_ref()[1]
                 );
+                let code = BigEndian::read_u16(data.as_ref());
                 sender
-                    .send(Err(AudioKeyError::AesKey.into()))
+                    .send(Err(AudioKeyError::AesKey(code).into()))
                     .map_err(|_| AudioKeyError::Channel)?
             }
             _ => {

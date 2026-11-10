@@ -474,7 +474,14 @@ async fn download(
     // from the CDN
     let key = keys::request(|| session.audio_key().request(file_id_track, file_id))
         .await
-        .map_err(|e| format!("Spotify refused the audio key ({e}); try again in a minute"))?;
+        .map_err(|e| match keys::refusal(&e) {
+            Some(1) => "Spotify gives this account no audio keys: it locked out \
+                        librespot-based apps (librespot issue #1649), so tracks \
+                        can't be loaded"
+                .to_owned(),
+            Some(_) => format!("Spotify refused the audio key ({e}); try again in a minute"),
+            None => format!("Audio key: {e}"),
+        })?;
     let encrypted = AudioFile::open(&session, file_id, 40 * 1024)
         .await
         .map_err(|e| format!("Audio file: {e}"))?;

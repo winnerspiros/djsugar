@@ -34,12 +34,21 @@ fn pacer() -> &'static Pacer {
     PACER.get_or_init(Pacer::default)
 }
 
-fn is_refusal(error: &Error) -> bool {
-    matches!(
-        error.error.downcast_ref::<AudioKeyError>(),
-        Some(AudioKeyError::AesKey)
-    )
+/// Spotify's code when it refused the key
+pub fn refusal(error: &Error) -> Option<u16> {
+    match error.error.downcast_ref::<AudioKeyError>() {
+        Some(AudioKeyError::AesKey(code)) => Some(*code),
+        _ => None,
+    }
 }
+
+fn is_refusal(error: &Error) -> bool {
+    refusal(error).is_some()
+}
+
+/// Code 1: Spotify gives this account no keys at all (librespot can't play
+/// for accounts Spotify locked out; #1649). Asking again changes nothing
+const NO_KEYS_FOR_ACCOUNT: u16 = 0x0001;
 
 impl Pacer {
     async fn ask<F, Fut>(&self, ask: F) -> Result<AudioKey, Error>
@@ -79,7 +88,13 @@ impl Pacer {
         let mut retries = 0;
         loop {
             match self.ask(&mut ask).await {
-                Err(e) if is_refusal(&e) && retries < REFUSAL_RETRIES => retries += 1,
+                Err(e)
+                    if is_refusal(&e)
+                        && refusal(&e) != Some(NO_KEYS_FOR_ACCOUNT)
+                        && retries < REFUSAL_RETRIES =>
+                {
+                    retries += 1
+                }
                 result => return result,
             }
         }
@@ -125,7 +140,7 @@ mod tests {
             if self.answers.lock().unwrap().pop().unwrap_or(false) {
                 Ok(AudioKey([7; 16]))
             } else {
-                Err(AudioKeyError::AesKey.into())
+                Err(AudioKeyError::AesKey(2).into())
             }
         }
         fn asked(&self) -> Vec<u128> {
@@ -152,6 +167,23 @@ mod tests {
         let results = futures_util::future::join_all(all).await;
         assert!(results.iter().all(Result::is_ok));
         assert_eq!(server.asked(), [0, 200, 400]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_account_without_keys_is_not_asked_again() {
+        let pacer = Pacer::default();
+        let asked = Arc::new(Mutex::new(0));
+        let result = pacer
+            .request(|| {
+                let asked = asked.clone();
+                async move {
+                    *asked.lock().unwrap() += 1;
+                    Err(AudioKeyError::AesKey(NO_KEYS_FOR_ACCOUNT).into())
+                }
+            })
+            .await;
+        assert_eq!(result.as_ref().err().and_then(refusal), Some(1));
+        assert_eq!(*asked.lock().unwrap(), 1);
     }
 
     #[tokio::test(start_paused = true)]
