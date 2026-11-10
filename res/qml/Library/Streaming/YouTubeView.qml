@@ -138,6 +138,7 @@ Item {
     }
 
     property bool showAccount: true
+    property bool wasSignedIn: false
     // LIKED, the account's playlists, SIGN OUT
     ListModel {
         id: accountListsModel
@@ -158,7 +159,8 @@ Item {
         Mixxx.YouTube.youTubePlaylists();
     }
     Component.onCompleted: {
-        if (Mixxx.YouTube.youTubeSignedIn)
+        root.wasSignedIn = Mixxx.YouTube.youTubeSignedIn;
+        if (root.wasSignedIn)
             root.openAccount();
     }
 
@@ -220,14 +222,14 @@ Item {
                 }
             }
         }
-        property bool wasSignedIn: Mixxx.YouTube.youTubeSignedIn
         function onAccountsChanged() {
+            // (a plain value: a binding would already be true here)
             const signedIn = Mixxx.YouTube.youTubeSignedIn;
-            if (signedIn && !wasSignedIn)
+            if (signedIn && !root.wasSignedIn)
                 root.openAccount();
             if (!signedIn)
                 accountListsModel.clear();
-            wasSignedIn = signedIn;
+            root.wasSignedIn = signedIn;
         }
         function onYouTubePlaylistsLoaded(playlists) {
             root.fillAccountLists(playlists);

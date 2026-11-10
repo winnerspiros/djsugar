@@ -6,16 +6,25 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Message;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import androidx.webkit.WebSettingsCompat;
+import androidx.webkit.WebViewFeature;
 
 /// A service's own sign-in page inside DJ Sugar (YouTube, SoundCloud): once
 /// the page lands back on the service with the sign-in cookie set, the
 /// service's cookies go to the app and the page closes. The device's saved
-/// passwords (Google Password Manager, Samsung Pass) are offered on the form
+/// passwords and passkeys (Google Password Manager, Samsung Pass) are
+/// offered on the form. "Continue with Google/Facebook" opens as a popup
+/// over the page, as in a browser, and once signed in to Google here, the
+/// other service's Google button only asks which account
 public class AccountLoginActivity extends Activity {
     private static final String EXTRA_SERVICE = "service";
     private static final String EXTRA_URL = "url";
@@ -24,6 +33,8 @@ public class AccountLoginActivity extends Activity {
 
     private String mService;
     private boolean mAnswered;
+    private FrameLayout mFrame;
+    private WebViewClient mClient;
 
     /// The service's cookies after a sign-in, "" when the page was closed
     private static native void nativeSignedIn(String service, String cookies);
@@ -41,7 +52,6 @@ public class AccountLoginActivity extends Activity {
         context.startActivity(intent);
     }
 
-    @SuppressLint("SetJavaScriptEnabled") // the sign-in pages need it
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,15 +59,9 @@ public class AccountLoginActivity extends Activity {
         mService = intent.getStringExtra(EXTRA_SERVICE);
         final String doneHost = intent.getStringExtra(EXTRA_DONE_HOST);
         final String cookie = intent.getStringExtra(EXTRA_COOKIE) + "=";
-        WebView view = new WebView(this);
-        view.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
-        WebSettings settings = view.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(view, true);
-        view.setWebViewClient(new WebViewClient() {
+        mClient = new WebViewClient() {
             @Override
             public void onPageFinished(WebView page, String url) {
                 if (mAnswered || !doneHost.equals(Uri.parse(url).getHost())) {
@@ -71,9 +75,71 @@ public class AccountLoginActivity extends Activity {
                 answer(signedIn);
                 finish();
             }
-        });
-        setContentView(view);
+        };
+        mFrame = new FrameLayout(this);
+        WebView view = newPage();
+        mFrame.addView(view);
+        setContentView(mFrame);
         view.loadUrl(intent.getStringExtra(EXTRA_URL));
+    }
+
+    /// The sign-in page, or a popup of it
+    @SuppressLint("SetJavaScriptEnabled") // the sign-in pages need it
+    private WebView newPage() {
+        WebView view = new WebView(this);
+        view.setLayoutParams(new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        view.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
+        WebSettings settings = view.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        // Google refuses its sign-in in an app's page ("; wv"): the page
+        // presents itself as the Chrome it is built on
+        settings.setUserAgentString(settings.getUserAgentString()
+                .replace("; wv)", ")")
+                .replace(" Version/4.0", ""));
+        // Passkeys of the device's password manager
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
+            WebSettingsCompat.setWebAuthenticationSupport(
+                settings, WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER);
+        }
+        CookieManager.getInstance().setAcceptThirdPartyCookies(view, true);
+        view.setWebViewClient(mClient);
+        view.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onCreateWindow(
+                WebView parent, boolean dialog, boolean userGesture, Message result) {
+                WebView popup = newPage();
+                mFrame.addView(popup);
+                ((WebView.WebViewTransport) result.obj).setWebView(popup);
+                result.sendToTarget();
+                return true;
+            }
+
+            @Override
+            public void onCloseWindow(WebView popup) {
+                mFrame.removeView(popup);
+                popup.destroy();
+            }
+        });
+        return view;
+    }
+
+    @Override
+    public void onBackPressed() {
+        // Back closes a popup first, then goes back in the page
+        int count = mFrame.getChildCount();
+        WebView top = (WebView) mFrame.getChildAt(count - 1);
+        if (top.canGoBack()) {
+            top.goBack();
+        } else if (count > 1) {
+            mFrame.removeView(top);
+            top.destroy();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void answer(String cookies) {

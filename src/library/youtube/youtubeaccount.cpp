@@ -315,10 +315,9 @@ void YouTubeAccount::fetchName() {
             return true;
         });
         if (name.isEmpty()) {
-            // Signed-out answer: the cookies no longer sign anyone in
-            kLogger.warning() << "YouTube knows no account for the stored sign-in";
-            signOut();
-            emit failed(tr("YouTube wants a new sign-in"));
+            // The menu's layout changes now and then: the lists still
+            // tell whether the sign-in works (refused: 401/403)
+            kLogger.info() << "No account name in the account menu";
             return;
         }
         m_name = name;
