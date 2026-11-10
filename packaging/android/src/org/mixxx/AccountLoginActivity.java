@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Message;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
@@ -128,8 +129,12 @@ public class AccountLoginActivity extends Activity {
     }
 
     @Override
-    public void onBackPressed() {
-        // Back closes a popup first, then goes back in the page
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode != KeyEvent.KEYCODE_BACK) {
+            return super.onKeyDown(keyCode, event);
+        }
+        // Back closes a popup first, then goes back in the page, then
+        // closes the sign-in
         int count = mFrame.getChildCount();
         WebView top = (WebView) mFrame.getChildAt(count - 1);
         if (top.canGoBack()) {
@@ -138,8 +143,9 @@ public class AccountLoginActivity extends Activity {
             mFrame.removeView(top);
             top.destroy();
         } else {
-            super.onBackPressed();
+            finish();
         }
+        return true;
     }
 
     private void answer(String cookies) {

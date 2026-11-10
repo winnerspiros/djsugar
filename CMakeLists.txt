@@ -3281,7 +3281,6 @@ if(FFMPEG)
     PRIVATE
       src/library/youtube/sponsorblockcontroller.cpp
       src/library/youtube/youtubeaudiocutter.cpp
-      src/library/youtube/youtubeaccount.cpp
       src/library/youtube/youtubefeature.cpp
       src/library/youtube/youtubegenrelookup.cpp
       src/library/youtube/youtubeservice.cpp
@@ -4636,6 +4635,9 @@ if(QML)
       src/qml/qmlappupdateproxy.cpp
       src/qml/qmlmobilesingletons.cpp
       src/qml/qmlyoutubeproxy.cpp
+      # The account behind QmlYouTubeProxy/QmlSpotifyProxy only (static
+      # link order: kept in the library that uses it)
+      src/library/youtube/youtubeaccount.cpp
       src/qml/qmlspotifyproxy.cpp
       src/qml/qmlstreamingproxy.cpp
       src/qml/qmlframeclock.cpp
