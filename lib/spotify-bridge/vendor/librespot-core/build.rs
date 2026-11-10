@@ -1,12 +1,12 @@
 use rand::Rng;
 use rand_distr::Alphanumeric;
-use vergen_gitcl::{BuildBuilder, Emitter, GitclBuilder};
+use vergen_gitcl::{BuildBuilder, Emitter};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let gitcl = GitclBuilder::default()
-        .sha(true) // outputs 'VERGEN_GIT_SHA', and sets the 'short' flag true
-        .commit_date(true) // outputs 'VERGEN_GIT_COMMIT_DATE'
-        .build()?;
+    // DJ Sugar: the release, not git: this copy lives in DJ Sugar's repo
+    // (git gave DJ Sugar's commit, or warned outside a checkout)
+    println!("cargo:rustc-env=VERGEN_GIT_SHA=v0.8.0");
+    println!("cargo:rustc-env=VERGEN_GIT_COMMIT_DATE=2025-11-10");
 
     let build = BuildBuilder::default()
         .build_date(true) // outputs 'VERGEN_BUILD_DATE'
@@ -14,7 +14,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Emitter::default()
         .add_instructions(&build)?
-        .add_instructions(&gitcl)?
         .emit()
         .expect("Unable to generate the cargo keys!");
     let build_id = match std::env::var("SOURCE_DATE_EPOCH") {

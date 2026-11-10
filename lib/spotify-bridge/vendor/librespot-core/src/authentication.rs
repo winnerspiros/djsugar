@@ -66,7 +66,7 @@ impl Credentials {
         }
     }
 
-    #[expect(deprecated)]
+    #[allow(deprecated)] // DJ Sugar: expect warned (nothing deprecated with the locked crates)
     pub fn with_blob(
         username: impl Into<String>,
         encrypted_blob: impl AsRef<[u8]>,
