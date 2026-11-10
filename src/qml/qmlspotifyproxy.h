@@ -23,9 +23,9 @@ namespace qml {
 /// Spotify for the QML skin, exposed as `Mixxx.Spotify`.
 ///
 /// Everything goes through lib/spotify-bridge (librespot), no Spotify
-/// developer app: login on Spotify's web login page. The account is stored, so this happens once. Browsing: search,
-/// Liked Songs, the user's playlists and top tracks through the Spotify Web
-/// API with tokens from the session.
+/// developer app: login on Spotify's web login page. The account is stored, so
+/// this happens once. Browsing: search, Liked Songs, the user's playlists and
+/// top tracks through the Spotify Web API with tokens from the session.
 ///
 /// Audio: Spotify's own files, downloaded and decrypted (Ogg Vorbis
 /// 320 kbit/s) into the cache; they load to the deck like local files, so
