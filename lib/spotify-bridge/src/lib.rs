@@ -12,6 +12,7 @@ mod keys;
 
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::fs::File;
+use std::future::Future;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
@@ -60,12 +61,16 @@ const OLD_WEB_TOKEN_FILE: &str = "web_token.json";
 
 type Progress = Box<dyn Fn(f64) + Send>;
 
+/// Stack of every thread running librespot (its futures are large)
+const WORK_STACK: usize = 16 * 1024 * 1024;
+
 fn runtime() -> &'static Runtime {
     static RUNTIME: OnceLock<Runtime> = OnceLock::new();
     RUNTIME.get_or_init(|| {
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("spotify")
+            .thread_stack_size(WORK_STACK)
             .enable_all()
             .build()
             .expect("tokio runtime")
@@ -545,9 +550,22 @@ fn c_string(value: String) -> *mut c_char {
         .into_raw()
 }
 
-/// A panic in librespot ends in an error message, not in a crashed app
-fn guarded<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+/// Runs `work` to the end on a thread of its own and waits for it. Never on
+/// the caller's thread: Qt's pool threads have small stacks (on Android)
+/// that librespot's large futures can overflow, a crash no handler can
+/// report. A panic in librespot ends in an error message, not in a crashed
+/// app
+fn guarded<T, Fut>(work: impl FnOnce() -> Fut + Send + 'static) -> Result<T, String>
+where
+    T: Send + 'static,
+    Fut: Future<Output = Result<T, String>>,
+{
+    std::thread::Builder::new()
+        .name("spotify-call".to_owned())
+        .stack_size(WORK_STACK)
+        .spawn(move || runtime().block_on(work()))
+        .map_err(|e| format!("Spotify: {e}"))?
+        .join()
         .unwrap_or_else(|_| Err("Spotify: internal error".to_owned()))
 }
 
@@ -584,7 +602,10 @@ pub unsafe extern "C" fn spotify_login_web(
             callback(user.0, url.as_ptr());
         }
     });
-    let result = guarded(|| runtime().block_on(login_web(PathBuf::from(arg(cache_dir)), open)));
+    let result = {
+        let dir = PathBuf::from(arg(cache_dir));
+        guarded(move || login_web(dir, open))
+    };
     finish(result, out_user)
 }
 
@@ -631,13 +652,11 @@ pub unsafe extern "C" fn spotify_browse(
 ) -> *mut c_char {
     let (dir, request) = (PathBuf::from(arg(cache_dir)), arg(request));
     let (offset, limit) = (offset.max(0) as usize, limit.clamp(1, 100) as usize);
-    let result = guarded(|| {
-        runtime().block_on(async {
-            let session = session(&dir).await?;
-            browse::browse(&session, &request, offset, limit)
-                .await
-                .map(|json| json.to_string())
-        })
+    let result = guarded(move || async move {
+        let session = session(&dir).await?;
+        browse::browse(&session, &request, offset, limit)
+            .await
+            .map(|json| json.to_string())
     });
     finish(result, out_json)
 }
@@ -659,14 +678,12 @@ pub unsafe extern "C" fn spotify_download(
             callback(user.0, fraction);
         }
     });
-    let result = guarded(|| {
-        runtime().block_on(download(
-            PathBuf::from(arg(cache_dir)),
-            arg(track_id),
-            PathBuf::from(arg(out_path)),
-            report,
-        ))
-    });
+    let (dir, track_id, out_path) = (
+        PathBuf::from(arg(cache_dir)),
+        arg(track_id),
+        PathBuf::from(arg(out_path)),
+    );
+    let result = guarded(move || download(dir, track_id, out_path, report));
     finish(result.map(|()| String::new()), std::ptr::null_mut())
 }
 
@@ -692,6 +709,18 @@ mod tests {
         assert_eq!(query_value("state=s1", "code"), None);
         assert_eq!(percent_decode("a%zz%4"), "a%zz%4");
         assert_eq!(percent_decode("a+b%20c"), "a b c");
+    }
+
+    #[test]
+    fn work_gets_a_large_stack_and_panics_become_errors() {
+        // 8 MiB on the stack: far over an Android pool thread's ~1 MiB
+        let sum = guarded(|| async {
+            let big = std::hint::black_box([1u8; 8 * 1024 * 1024]);
+            Ok(big.iter().map(|&b| b as usize).sum::<usize>())
+        });
+        assert_eq!(sum, Ok(8 * 1024 * 1024));
+        let panicked: Result<(), String> = guarded(|| async { panic!("boom") });
+        assert_eq!(panicked, Err("Spotify: internal error".to_owned()));
     }
 
     #[test]

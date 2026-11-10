@@ -159,34 +159,36 @@ async fn playlists(session: &Session) -> Result<Vec<Value>, String> {
     let contents = rootlist.contents.get_or_default();
     // Decorated with the attributes: name and length come with the list
     let aligned = contents.meta_items.len() == contents.items.len();
-    let entries = contents
+    // Owned up front: the futures below run on another thread
+    let known: Vec<(String, Option<(String, i32, String)>)> = contents
         .items
         .iter()
         .enumerate()
         .filter_map(|(i, item)| {
             let id = item.uri().strip_prefix("spotify:playlist:")?.to_owned();
-            let meta = aligned.then(|| &contents.meta_items[i]);
-            Some((id, meta))
-        })
-        .map(|(id, meta)| async move {
-            let known = meta
-                .map(|m| {
+            let known = aligned
+                .then(|| {
+                    let m = &contents.meta_items[i];
                     let a = m.attributes.get_or_default();
                     list_json(a.name(), m.length(), a.picture())
                 })
                 .filter(|(name, ..)| !name.is_empty());
-            let (name, count, artwork) = match known {
-                Some(known) => known,
-                None => {
-                    let pid = SpotifyId::from_base62(&id).ok()?;
-                    let bytes = session.spclient().get_playlist(&pid).await.ok()?;
-                    let list = SelectedListContent::parse_from_bytes(&bytes).ok()?;
-                    let a = list.attributes.get_or_default();
-                    list_json(a.name(), list.length(), a.picture())
-                }
-            };
-            Some(json!({ "id": id, "name": name, "count": count, "artwork": artwork }))
-        });
+            Some((id, known))
+        })
+        .collect();
+    let entries = known.into_iter().map(|(id, known)| async move {
+        let (name, count, artwork) = match known {
+            Some(known) => known,
+            None => {
+                let pid = SpotifyId::from_base62(&id).ok()?;
+                let bytes = session.spclient().get_playlist(&pid).await.ok()?;
+                let list = SelectedListContent::parse_from_bytes(&bytes).ok()?;
+                let a = list.attributes.get_or_default();
+                list_json(a.name(), list.length(), a.picture())
+            }
+        };
+        Some(json!({ "id": id, "name": name, "count": count, "artwork": artwork }))
+    });
     Ok(stream::iter(entries)
         .buffered(CONCURRENCY)
         .filter_map(|entry| async move { entry })
