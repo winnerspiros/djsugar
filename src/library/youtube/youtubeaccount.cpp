@@ -40,7 +40,8 @@ QString cookieFile() {
 }
 
 QString cookieValue(const QString& cookies, const QString& name) {
-    for (const QString& part : cookies.split(QLatin1Char(';'))) {
+    const QStringList parts = cookies.split(QLatin1Char(';'));
+    for (const QString& part : parts) {
         const QString pair = part.trimmed();
         if (pair.startsWith(name + QLatin1Char('='))) {
             return pair.mid(name.size() + 1);
@@ -62,7 +63,8 @@ QString text(const QJsonValue& value) {
         return object.value(QStringLiteral("simpleText")).toString();
     }
     QString out;
-    for (const QJsonValue& run : object.value(QStringLiteral("runs")).toArray()) {
+    const QJsonArray runs = object.value(QStringLiteral("runs")).toArray();
+    for (const QJsonValue& run : runs) {
         out += run.toObject().value(QStringLiteral("text")).toString();
     }
     return out;
@@ -71,7 +73,8 @@ QString text(const QJsonValue& value) {
 /// "3:45" or "1:02:03" in seconds
 int seconds(const QString& duration) {
     int total = 0;
-    for (const QString& part : duration.split(QLatin1Char(':'))) {
+    const QStringList parts = duration.split(QLatin1Char(':'));
+    for (const QString& part : parts) {
         bool ok = false;
         const int n = part.toInt(&ok);
         if (!ok) {

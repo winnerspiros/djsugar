@@ -697,7 +697,8 @@ void QmlYouTubeProxy::onSignedIn(const QString& service, const QString& cookies)
     }
     // SoundCloud: the oauth_token cookie is the account's token
     QString token;
-    for (const QString& part : cookies.split(QLatin1Char(';'))) {
+    const QStringList parts = cookies.split(QLatin1Char(';'));
+    for (const QString& part : parts) {
         if (part.trimmed().startsWith(QStringLiteral("oauth_token="))) {
             token = part.trimmed().mid(12);
         }
