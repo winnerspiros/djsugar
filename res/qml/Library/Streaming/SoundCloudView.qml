@@ -110,6 +110,17 @@ Item {
                 resultList.positionViewAtBeginning();
             root.statusMessage = resultsModel.count > 0 ? qsTr("%1 results").arg(resultsModel.count) : qsTr("No results");
         }
+        function onAccountsChanged() {
+            if (Mixxx.YouTube.soundCloudSignedIn && root.visible && resultsModel.count === 0) {
+                root.isBusy = true;
+                root.statusMessage = qsTr("Signed in. Loading your likes... (hold LIKES to sign out)");
+                Mixxx.YouTube.soundCloudLikes();
+            }
+        }
+        function onAccountFailed(error) {
+            root.isBusy = false;
+            root.statusMessage = error;
+        }
         function onSoundCloudFailed(error) {
             root.isBusy = false;
             root.isLoadingMore = false;
@@ -170,6 +181,33 @@ Item {
                 text: root.isBusy ? "..." : qsTr("SEARCH")
                 enabled: !root.isBusy
                 onClicked: root.doSearch()
+                    }
+            // The account: sign in (SoundCloud's page, saved passwords
+            // offered), then its likes; Go+ tracks play in full
+            Skin.Button {
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 70
+                activeColor: "#ff5500"
+                normalColor: Mixxx.YouTube.soundCloudSignedIn ? "#ff5500" : "#ffffff"
+                font.bold: true
+                font.pixelSize: 10
+                text: Mixxx.YouTube.soundCloudSignedIn ? qsTr("LIKES") : qsTr("SIGN IN")
+                enabled: !root.isBusy
+                onClicked: {
+                    if (!Mixxx.YouTube.soundCloudSignedIn) {
+                        Mixxx.YouTube.signIn("soundcloud");
+                        return;
+                    }
+                    root.isBusy = true;
+                    root.statusMessage = qsTr("Loading your likes...");
+                    Mixxx.YouTube.soundCloudLikes();
+                }
+                onPressAndHold: {
+                    if (Mixxx.YouTube.soundCloudSignedIn) {
+                        Mixxx.YouTube.signOut("soundcloud");
+                        root.statusMessage = qsTr("Signed out of SoundCloud");
+                    }
+                }
             }
         }
 

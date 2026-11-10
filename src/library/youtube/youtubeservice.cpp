@@ -51,6 +51,7 @@
 #endif
 #endif
 
+#include "library/youtube/soundcloudaccount.h"
 #include "library/youtube/youtubeaudiocutter.h"
 #include "util/logger.h"
 
@@ -3193,6 +3194,12 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
         }
         args.append(ytDlpZip);
     }
+    if (const QString token = soundcloud::token(); isSoundCloudId(videoId) && !token.isEmpty()) {
+        args.append({QStringLiteral("--username"),
+                QStringLiteral("oauth"),
+                QStringLiteral("--password"),
+                token});
+    }
     args.append({
             QStringLiteral("-f"),
             QStringLiteral("bestaudio"),
@@ -3867,6 +3874,19 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             request.callMethod<QJniObject>("addOption",
                     "(Ljava/lang/String;)Lcom/yausername/youtubedl_android/YoutubeDLRequest;",
                     QJniObject::fromString("--no-warnings").object());
+            // Signed in to SoundCloud: the account's tracks in full (Go+)
+            if (const QString token = soundcloud::token();
+                    isSoundCloudId(videoId) && !token.isEmpty()) {
+                for (const auto& [option, value] :
+                        {std::pair{QStringLiteral("--username"), QStringLiteral("oauth")},
+                                std::pair{QStringLiteral("--password"), token}}) {
+                    request.callMethod<QJniObject>("addOption",
+                            "(Ljava/lang/String;Ljava/lang/String;)Lcom/yausername/"
+                            "youtubedl_android/YoutubeDLRequest;",
+                            QJniObject::fromString(option).object(),
+                            QJniObject::fromString(value).object());
+                }
+            }
             // Keep yt-dlp's cache (player JS, signature functions) in the app
             // cache: with --no-cache-dir every fallback download fetched and
             // parsed the ~2.5 MB player script again.

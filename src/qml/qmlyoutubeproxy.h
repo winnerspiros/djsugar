@@ -36,6 +36,9 @@ class QmlYouTubeProxy : public QObject {
                     READ sponsorBlockAutoSkip
                             WRITE setSponsorBlockAutoSkip
                                     NOTIFY sponsorBlockAutoSkipChanged)
+    Q_PROPERTY(bool youTubeSignedIn READ youTubeSignedIn NOTIFY accountsChanged)
+    Q_PROPERTY(QString youTubeAccount READ youTubeAccount NOTIFY accountsChanged)
+    Q_PROPERTY(bool soundCloudSignedIn READ soundCloudSignedIn NOTIFY accountsChanged)
     QML_NAMED_ELEMENT(YouTube)
     QML_SINGLETON
 
@@ -77,6 +80,23 @@ class QmlYouTubeProxy : public QObject {
     }
     void prefetchCovers(const QList<mixxx::YouTubeVideoInfo>& results);
 
+    /// Sign-in with the service's own page in the app ("youtube" or
+    /// "soundcloud"; Android)
+    Q_INVOKABLE void signIn(const QString& service);
+    Q_INVOKABLE void signOut(const QString& service);
+    bool youTubeSignedIn() const;
+    QString youTubeAccount() const;
+    bool soundCloudSignedIn() const;
+    /// The account's lists; tracks arrive as searchFinished/searchMoreFinished
+    /// (loadMore() continues them)
+    Q_INVOKABLE void youTubeLiked();
+    Q_INVOKABLE void youTubePlaylists();
+    Q_INVOKABLE void youTubePlaylist(const QString& playlistId);
+    /// The SoundCloud account's likes, as soundCloudResults
+    Q_INVOKABLE void soundCloudLikes();
+    /// AccountLoginActivity's answer
+    static void onSignedIn(const QString& service, const QString& cookies);
+
     bool sponsorBlockAutoSkip() const;
     void setSponsorBlockAutoSkip(bool enabled);
 
@@ -92,6 +112,10 @@ class QmlYouTubeProxy : public QObject {
     void downloadFinished(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
     void sponsorBlockAutoSkipChanged();
+    void accountsChanged();
+    /// [{id, name, subtitle, artwork}]
+    void youTubePlaylistsLoaded(const QVariantList& playlists);
+    void accountFailed(const QString& error);
     /// Genre of a search result, found in the iTunes/Deezer catalogues.
     void genreResolved(const QString& videoId, const QString& genre);
 
@@ -118,6 +142,9 @@ class QmlYouTubeProxy : public QObject {
     void soundCloudRequest(const QUrl& url, bool append, bool clientIdRetried);
     void fetchSoundCloudClientId(std::function<void(bool)> done);
     QNetworkAccessManager* m_pScNetwork = nullptr;
+    // An account list (not a search) is open: loadMore() continues it
+    bool m_accountList = false;
+    static inline QmlYouTubeProxy* s_pInstance = nullptr;
     QString m_scClientId;
     QString m_scNextHref;
     quint64 m_scGeneration = 0; // drops the replies of superseded searches

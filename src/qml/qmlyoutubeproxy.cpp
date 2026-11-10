@@ -1,5 +1,6 @@
 #include "qml/qmlyoutubeproxy.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -12,7 +13,15 @@
 #include <QUrlQuery>
 #include <algorithm>
 
+#ifdef Q_OS_ANDROID
+#include <jni.h>
+
+#include <QJniObject>
+#endif
+
 #include "library/library.h"
+#include "library/youtube/soundcloudaccount.h"
+#include "library/youtube/youtubeaccount.h"
 #include "library/youtube/youtubefeature.h"
 #include "library/youtube/youtubeservice.h"
 #include "mixer/playermanager.h"
@@ -21,8 +30,42 @@
 namespace mixxx {
 namespace qml {
 
+using mixxx::YouTubeAccount;
+
 QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
         : QObject(pParent) {
+    s_pInstance = this;
+    YouTubeAccount& account = YouTubeAccount::instance();
+    connect(&account, &YouTubeAccount::accountChanged, this, &QmlYouTubeProxy::accountsChanged);
+    connect(&account, &YouTubeAccount::failed, this, &QmlYouTubeProxy::accountFailed);
+    connect(&account,
+            &YouTubeAccount::playlistsReady,
+            this,
+            &QmlYouTubeProxy::youTubePlaylistsLoaded);
+    connect(&account,
+            &YouTubeAccount::tracksReady,
+            this,
+            [this](const QList<mixxx::YouTubeVideoInfo>& tracks, bool append) {
+                if (!m_accountList) {
+                    return; // a search replaced the list
+                }
+                for (const auto& v : tracks) {
+                    m_videoTitles.insert(v.id, v.title);
+                }
+                if (s_pLibrary) {
+                    if (YouTubeFeature* pFeature = s_pLibrary->youtubeFeature()) {
+                        pFeature->rememberExternalResults(tracks);
+                    }
+                }
+                prefetchCovers(tracks);
+                if (append) {
+                    emit searchMoreFinished(toVariantList(tracks),
+                            YouTubeAccount::instance().hasMore());
+                } else {
+                    emit searchFinished(toVariantList(tracks));
+                }
+                queueGenreLookups(tracks);
+            });
     YouTubeFeature* pFeature = s_pLibrary
             ? s_pLibrary->youtubeFeature()
             : nullptr;
@@ -231,6 +274,7 @@ void QmlYouTubeProxy::warmUp() {
 }
 
 void QmlYouTubeProxy::search(const QString& query) {
+    m_accountList = false;
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         pFeature->searchAndActivate(query);
@@ -240,6 +284,10 @@ void QmlYouTubeProxy::search(const QString& query) {
 }
 
 void QmlYouTubeProxy::loadMore() {
+    if (m_accountList) {
+        YouTubeAccount::instance().more();
+        return;
+    }
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     if (pFeature) {
         pFeature->loadMoreResults();
@@ -249,6 +297,9 @@ void QmlYouTubeProxy::loadMore() {
 }
 
 bool QmlYouTubeProxy::hasMore() const {
+    if (m_accountList) {
+        return YouTubeAccount::instance().hasMore();
+    }
     YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
     return pFeature && pFeature->service()->hasMoreSearchResults();
 }
@@ -396,6 +447,10 @@ constexpr int kScPageSize = 30;
 QNetworkRequest scRequest(const QUrl& url) {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, kScUserAgent);
+    // Signed in: the account's view (its likes; Go+ tracks in full)
+    if (const QString token = mixxx::soundcloud::token(); !token.isEmpty()) {
+        request.setRawHeader("Authorization", "OAuth " + token.toUtf8());
+    }
     request.setTransferTimeout(15000);
     return request;
 }
@@ -456,6 +511,18 @@ void QmlYouTubeProxy::soundCloudSearch(const QString& query) {
     soundCloudRequest(url, false, false);
 }
 
+void QmlYouTubeProxy::soundCloudLikes() {
+    if (!m_pScNetwork) {
+        m_pScNetwork = new QNetworkAccessManager(this);
+        m_scClientId = QSettings().value(kScClientIdKey).toString();
+    }
+    m_scNextHref.clear();
+    ++m_scGeneration;
+    QUrl url(QStringLiteral("https://api-v2.soundcloud.com/me/track_likes"));
+    url.setQuery(QStringLiteral("limit=") + QString::number(kScPageSize));
+    soundCloudRequest(url, false, false);
+}
+
 void QmlYouTubeProxy::soundCloudMore() {
     if (m_scNextHref.isEmpty() || !m_pScNetwork) {
         return;
@@ -513,7 +580,10 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                 QHash<QString, QVariantMap> extra;
                 const QJsonArray tracks = root.value(QStringLiteral("collection")).toArray();
                 for (const QJsonValue& value : tracks) {
-                    const QJsonObject track = value.toObject();
+                    // Likes come as {"track": {...}}
+                    const QJsonObject track = value.toObject().contains(QStringLiteral("track"))
+                            ? value.toObject().value(QStringLiteral("track")).toObject()
+                            : value.toObject();
                     const qint64 id =
                             static_cast<qint64>(track.value(QStringLiteral("id")).toDouble());
                     const QString title = track.value(QStringLiteral("title")).toString();
@@ -547,6 +617,7 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                     more[QStringLiteral("plays")] =
                             track.value(QStringLiteral("playback_count")).toDouble();
                     // SNIP = Go+ only: a 30 s preview without the subscription
+                    // (signed in with Go+, SoundCloud says ALLOW for them)
                     more[QStringLiteral("preview")] =
                             track.value(QStringLiteral("policy")).toString() ==
                             QStringLiteral("SNIP");
@@ -591,5 +662,115 @@ void QmlYouTubeProxy::setSponsorBlockAutoSkip(bool enabled) {
     }
 }
 
+void QmlYouTubeProxy::signIn(const QString& service) {
+#ifdef Q_OS_ANDROID
+    const bool youTube = service == QStringLiteral("youtube");
+    // The sign-in ends back on the service, with its sign-in cookie set
+    const QString url = youTube
+            ? QStringLiteral(
+                      "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube"
+                      "&passive=true&continue=https%3A%2F%2Fmusic.youtube.com%2F")
+            : QStringLiteral("https://soundcloud.com/signin");
+    QJniObject::callStaticMethod<void>("org/mixxx/AccountLoginActivity",
+            "start",
+            "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/"
+            "String;Ljava/lang/String;)V",
+            QNativeInterface::QAndroidApplication::context(),
+            QJniObject::fromString(service).object<jstring>(),
+            QJniObject::fromString(url).object<jstring>(),
+            QJniObject::fromString(youTube ? QStringLiteral("music.youtube.com")
+                                           : QStringLiteral("soundcloud.com"))
+                    .object<jstring>(),
+            QJniObject::fromString(youTube ? QStringLiteral("SAPISID")
+                                           : QStringLiteral("oauth_token"))
+                    .object<jstring>());
+#else
+    Q_UNUSED(service);
+    emit accountFailed(tr("Signing in is in the Android app"));
+#endif
+}
+
+void QmlYouTubeProxy::onSignedIn(const QString& service, const QString& cookies) {
+    if (service == QStringLiteral("youtube")) {
+        YouTubeAccount::instance().setCookies(cookies);
+        return;
+    }
+    // SoundCloud: the oauth_token cookie is the account's token
+    QString token;
+    for (const QString& part : cookies.split(QLatin1Char(';'))) {
+        if (part.trimmed().startsWith(QStringLiteral("oauth_token="))) {
+            token = part.trimmed().mid(12);
+        }
+    }
+    if (token.isEmpty()) {
+        if (s_pInstance) {
+            emit s_pInstance->accountFailed(tr("Not signed in"));
+        }
+        return;
+    }
+    soundcloud::setToken(token);
+    if (s_pInstance) {
+        emit s_pInstance->accountsChanged();
+    }
+}
+
+void QmlYouTubeProxy::signOut(const QString& service) {
+    if (service == QStringLiteral("youtube")) {
+        m_accountList = false;
+        YouTubeAccount::instance().signOut();
+    } else {
+        soundcloud::setToken(QString());
+        emit accountsChanged();
+    }
+}
+
+bool QmlYouTubeProxy::youTubeSignedIn() const {
+    return YouTubeAccount::instance().signedIn();
+}
+
+QString QmlYouTubeProxy::youTubeAccount() const {
+    return YouTubeAccount::instance().name();
+}
+
+bool QmlYouTubeProxy::soundCloudSignedIn() const {
+    return !soundcloud::token().isEmpty();
+}
+
+void QmlYouTubeProxy::youTubeLiked() {
+    m_accountList = true;
+    YouTubeAccount::instance().openList(QStringLiteral("liked"));
+}
+
+void QmlYouTubeProxy::youTubePlaylists() {
+    YouTubeAccount::instance().fetchPlaylists();
+}
+
+void QmlYouTubeProxy::youTubePlaylist(const QString& playlistId) {
+    m_accountList = true;
+    YouTubeAccount::instance().openList(playlistId);
+}
+
 } // namespace qml
 } // namespace mixxx
+
+#ifdef Q_OS_ANDROID
+/// AccountLoginActivity: the service's cookies after a sign-in ("" when the
+/// page was closed)
+extern "C" JNIEXPORT void JNICALL Java_org_mixxx_AccountLoginActivity_nativeSignedIn(
+        JNIEnv* pEnv, jclass, jstring service, jstring cookies) {
+    auto string = [pEnv](jstring value) {
+        const char* pChars = pEnv->GetStringUTFChars(value, nullptr);
+        const QString out = QString::fromUtf8(pChars);
+        pEnv->ReleaseStringUTFChars(value, pChars);
+        return out;
+    };
+    const QString serviceName = string(service);
+    const QString cookieText = string(cookies);
+    QMetaObject::invokeMethod(
+            qApp,
+            [serviceName, cookieText]() {
+                mixxx::qml::QmlYouTubeProxy::onSignedIn(serviceName, cookieText);
+            },
+            Qt::QueuedConnection);
+}
+#endif
