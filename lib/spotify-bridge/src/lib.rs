@@ -27,7 +27,8 @@ use librespot_core::http_client::HttpClient;
 use librespot_core::session::Session;
 use librespot_core::spotify_id::SpotifyId;
 use librespot_core::spotify_uri::SpotifyUri;
-use librespot_metadata::audio::{AudioFileFormat, AudioFiles, AudioItem};
+use librespot_core::FileId;
+use librespot_metadata::audio::{AudioFileFormat, AudioItem};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -45,6 +46,14 @@ const FORMATS: [AudioFileFormat; 3] = [
     AudioFileFormat::OGG_VORBIS_320,
     AudioFileFormat::OGG_VORBIS_160,
     AudioFileFormat::OGG_VORBIS_96,
+];
+
+/// Pauses after each round of audio key requests that Spotify refused
+const KEY_PAUSES: [Duration; 4] = [
+    Duration::from_secs(1),
+    Duration::from_secs(3),
+    Duration::from_secs(6),
+    Duration::ZERO,
 ];
 
 /// The client id librespot logs in with on the web (Spotify's own; its
@@ -150,6 +159,14 @@ async fn connect(dir: &Path, credentials: Credentials) -> Result<Session, String
     // its last user
     *current().lock().unwrap() = Some(session.clone());
     Ok(session)
+}
+
+/// A new connection (another access point) from the stored credentials
+async fn reconnect(dir: &Path) -> Result<Session, String> {
+    let credentials = cache(dir)?
+        .credentials()
+        .ok_or_else(|| "Not logged in to Spotify".to_owned())?;
+    connect(dir, credentials).await
 }
 
 fn live_session() -> Option<Session> {
@@ -460,23 +477,45 @@ async fn download(
     progress: Progress,
 ) -> Result<(), String> {
     let id = SpotifyId::from_base62(&track_id).map_err(|e| format!("Track id: {e}"))?;
-    let session = session(&dir).await?;
+    let mut session = session(&dir).await?;
     let item = playable_item(&session, SpotifyUri::Track { id }).await?;
     let file_id_track = SpotifyId::try_from(&item.track_id).map_err(|e| e.to_string())?;
-    let (format, file_id) = FORMATS
+    let files: Vec<FileId> = FORMATS
         .iter()
-        .find_map(|f| item.files.get(f).map(|id| (*f, *id)))
-        .ok_or_else(|| "No Ogg Vorbis file for this track".to_owned())?;
-    debug_assert!(AudioFiles::is_ogg_vorbis(format));
+        .filter_map(|f| item.files.get(f).copied())
+        .collect();
+    if files.is_empty() {
+        return Err("No Ogg Vorbis file for this track".to_owned());
+    }
     progress(0.05);
 
     // Ahead of the file: the key comes from the access point, the file
-    // from the CDN. Without a key (no Premium) there is nothing to play.
-    let key = session
-        .audio_key()
-        .request(file_id_track, file_id)
-        .await
-        .map_err(|e| format!("No audio key (Spotify Premium needed): {e}"))?;
+    // from the CDN. Spotify refuses keys now and then (librespot#1649,
+    // the same request succeeds a moment later): each quality is asked a
+    // few times with a pause, the last round on a new connection
+    let mut last_error = String::new();
+    let mut found = None;
+    'rounds: for (round, pause) in KEY_PAUSES.iter().enumerate() {
+        if round == KEY_PAUSES.len() - 1 {
+            session = reconnect(&dir).await?;
+        }
+        for file_id in &files {
+            match session.audio_key().request(file_id_track, *file_id).await {
+                Ok(key) => {
+                    found = Some((*file_id, key));
+                    break 'rounds;
+                }
+                Err(e) => last_error = e.to_string(),
+            }
+        }
+        tokio::time::sleep(*pause).await;
+    }
+    let (file_id, key) = found.ok_or_else(|| {
+        format!(
+            "Spotify refused the audio key ({last_error}); this happens to some \
+             accounts with librespot, try again later"
+        )
+    })?;
     let encrypted = AudioFile::open(&session, file_id, 40 * 1024)
         .await
         .map_err(|e| format!("Audio file: {e}"))?;
