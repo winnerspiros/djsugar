@@ -96,6 +96,7 @@ Item {
         if (searchField.text.length === 0) {
             return;
         }
+        root.listKind = "search";
         root.isBusy = true;
         root.isLoadingMore = false;
         root.hasMore = false;
@@ -141,7 +142,13 @@ Item {
     // The account's playlists [{id, name}] and channels [{name, pageId, selected}]
     property var playlists: []
     property var channels: []
+    // "search", "liked", "playlists" (the account's playlists listed),
+    // "playlist" (one open)
+    property string listKind: "search"
+    property string playlistName: ""
     function openList(listId, name) {
+        root.listKind = listId === "liked" ? "liked" : "playlist";
+        root.playlistName = name;
         root.isBusy = true;
         root.hasMore = false;
         root.statusMessage = qsTr("Loading %1...").arg(name);
@@ -151,7 +158,14 @@ Item {
             Mixxx.YouTube.youTubePlaylist(listId);
     }
     function openAccount() {
-        root.openList("liked", qsTr("your liked songs"));
+        root.openList("liked", qsTr("Liked songs"));
+        Mixxx.YouTube.youTubePlaylists();
+    }
+    function showPlaylists() {
+        root.listKind = "playlists";
+        root.statusMessage = root.playlists.length > 0
+            ? qsTr("%1 playlists").arg(root.playlists.length)
+            : qsTr("Loading playlists...");
         Mixxx.YouTube.youTubePlaylists();
     }
     Component.onCompleted: {
@@ -226,11 +240,17 @@ Item {
             if (!signedIn) {
                 root.playlists = [];
                 root.channels = [];
+                if (root.listKind !== "search")
+                    root.listKind = "search";
             }
             root.wasSignedIn = signedIn;
         }
         function onYouTubePlaylistsLoaded(playlists) {
             root.playlists = playlists;
+            if (root.listKind === "playlists")
+                root.statusMessage = playlists.length > 0
+                    ? qsTr("%1 playlists").arg(playlists.length)
+                    : qsTr("No playlists");
         }
         function onYouTubeAccountsLoaded(accounts) {
             root.channels = accounts;
@@ -309,7 +329,8 @@ Item {
                 onClicked: root.doSearch()
             }
             // The account: sign in (Google's page, saved passwords offered);
-            // signed in, its liked songs and playlists (row below)
+            // signed in, its channels and sign out (liked songs and
+            // playlists: the row below)
             Skin.Button {
                 Layout.preferredHeight: 30
                 Layout.preferredWidth: 80
@@ -322,7 +343,6 @@ Item {
                     : qsTr("SIGN IN")
                 onClicked: {
                     if (Mixxx.YouTube.youTubeSignedIn) {
-                        Mixxx.YouTube.youTubePlaylists();
                         Mixxx.YouTube.youTubeAccounts();
                         accountMenu.popup(this, 0, height);
                     } else {
@@ -330,29 +350,10 @@ Item {
                     }
                 }
 
-                // Liked, the playlists, the account's channels, sign out:
-                // only on tap, no room taken
+                // The account's channels, sign out: only on tap
                 Menu {
                     id: accountMenu
 
-                    MenuItem {
-                        text: qsTr("Liked songs")
-                        onTriggered: root.openList("liked", text)
-                    }
-                    Instantiator {
-                        model: root.playlists
-                        delegate: MenuItem {
-                            required property var modelData
-                            text: modelData.name
-                            onTriggered: root.openList(modelData.id, modelData.name)
-                        }
-                        onObjectAdded: (index, object) => accountMenu.insertItem(1 + index, object)
-                        onObjectRemoved: (index, object) => accountMenu.removeItem(object)
-                    }
-                    MenuSeparator {
-                        visible: root.channels.length > 1
-                        height: visible ? implicitHeight : 0
-                    }
                     Instantiator {
                         model: root.channels.length > 1 ? root.channels : []
                         delegate: MenuItem {
@@ -420,12 +421,113 @@ Item {
                 }
             }
         }
-        Text {
+        // Signed in: the account's liked songs and playlists, as on Spotify
+        RowLayout {
             Layout.fillWidth: true
-            color: "#9a9ea6"
-            font.pixelSize: 10
-            text: root.statusMessage
-            elide: Text.ElideRight
+            spacing: 4
+
+            Repeater {
+                model: Mixxx.YouTube.youTubeSignedIn ? [
+                    {
+                        "kind": "liked",
+                        "label": qsTr("♥ LIKED SONGS")
+                    },
+                    {
+                        "kind": "playlists",
+                        "label": qsTr("PLAYLISTS")
+                    }
+                ] : []
+
+                delegate: Skin.Button {
+                    required property var modelData
+
+                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: 100
+                    activeColor: Theme.accentColor
+                    normalColor: root.listKind === modelData.kind || (modelData.kind === "playlists" && root.listKind === "playlist") ? Theme.accentColor : "#b3b3b3"
+                    font.bold: true
+                    font.pixelSize: 9
+                    text: modelData.label
+                    onClicked: {
+                        if (modelData.kind === "liked")
+                            root.openList("liked", qsTr("Liked songs"));
+                        else
+                            root.showPlaylists();
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                color: "#9a9ea6"
+                font.pixelSize: 10
+                text: (root.listKind === "playlist" ? root.playlistName + "  ·  " : "") + root.statusMessage
+                elide: Text.ElideRight
+            }
+        }
+
+        // The account's playlists; a tap opens one
+        ListView {
+            id: playlistList
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.listKind === "playlists"
+            clip: true
+            model: root.playlists
+            spacing: 2
+            delegate: Rectangle {
+                id: playlistRow
+
+                required property var modelData
+
+                width: ListView.view.width
+                height: 48
+                radius: 4
+                color: playlistTap.pressed ? "#2a2f38" : "#1e222a"
+
+                Image {
+                    id: playlistArt
+
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    height: 40
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectCrop
+                    source: playlistRow.modelData.artwork ?? ""
+                }
+                Column {
+                    anchors.left: playlistArt.right
+                    anchors.leftMargin: 8
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        color: "#ffffff"
+                        elide: Text.ElideRight
+                        font.bold: true
+                        font.pixelSize: 12
+                        text: playlistRow.modelData.name
+                    }
+                    Text {
+                        width: parent.width
+                        color: "#9a9ea6"
+                        elide: Text.ElideRight
+                        font.pixelSize: 10
+                        text: playlistRow.modelData.subtitle ?? ""
+                    }
+                }
+                MouseArea {
+                    id: playlistTap
+
+                    anchors.fill: parent
+                    onClicked: root.openList(playlistRow.modelData.id, playlistRow.modelData.name)
+                }
+            }
         }
 
         ListView {
@@ -433,6 +535,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: root.listKind !== "playlists"
             clip: true
             model: resultsModel
             spacing: 2

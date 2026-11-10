@@ -80,7 +80,8 @@ class YouTubeAccount : public QObject {
     QString m_name;
     QString m_pageId; // a brand channel, "" for the main one
     QString m_continuation;
-    quint64 m_generation = 0; // drops the replies of a superseded list
+    quint64 m_generation = 0;     // drops the replies of a signed-out account
+    quint64 m_listGeneration = 0; // drops the pages of a superseded list
 };
 
 } // namespace mixxx

@@ -367,7 +367,7 @@ void YouTubeAccount::post(const QString& endpoint,
                     return;
                 }
                 if (pReply->error() != QNetworkReply::NoError) {
-                    kLogger.warning() << endpoint << "failed:" << pReply->errorString();
+                    kLogger.warning() << endpoint << "failed:" << status << pReply->errorString();
                     emit failed(pReply->errorString());
                     return;
                 }
@@ -404,14 +404,22 @@ void YouTubeAccount::fetchName() {
 }
 
 void YouTubeAccount::openList(const QString& list) {
-    ++m_generation;
+    // Only the newest list's pages count (the playlists and channels
+    // asked for meanwhile still arrive)
+    const quint64 listGeneration = ++m_listGeneration;
     m_continuation.clear();
     const QString id = list == QStringLiteral("liked") ? QStringLiteral("VLLM") : list;
+    kLogger.info() << "Opening" << id;
     post(QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("browseId"), id}},
-            [this](const QJsonObject& page) {
+            [this, id, listGeneration](const QJsonObject& page) {
+                if (listGeneration != m_listGeneration) {
+                    return;
+                }
                 m_continuation = continuation(page);
                 const QList<YouTubeVideoInfo> list = tracks(page);
+                kLogger.info() << id << "answered" << list.size() << "tracks, signed in:"
+                               << signedInPage(page) << ", more:" << !m_continuation.isEmpty();
                 if (list.isEmpty() && !signedInPage(page)) {
                     kLogger.warning() << "YouTube answered the list as signed out";
                     emit failed(tr(
@@ -430,9 +438,13 @@ void YouTubeAccount::more() {
     }
     const QString token = m_continuation;
     m_continuation.clear();
+    const quint64 listGeneration = m_listGeneration;
     post(QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("continuation"), token}},
-            [this](const QJsonObject& page) {
+            [this, listGeneration](const QJsonObject& page) {
+                if (listGeneration != m_listGeneration) {
+                    return;
+                }
                 m_continuation = continuation(page);
                 emit tracksReady(tracks(page), true);
             });
@@ -480,6 +492,7 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
     });
     const QString token = continuation(page);
     if (token.isEmpty() || pages >= kMaxPlaylistPages) {
+        kLogger.info() << "Playlists:" << playlists.size();
         emit playlistsReady(playlists);
         return;
     }

@@ -6,12 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -31,11 +34,25 @@ public class AccountLoginActivity extends Activity {
     private static final String EXTRA_URL = "url";
     private static final String EXTRA_DONE_HOST = "doneHost";
     private static final String EXTRA_COOKIE = "cookie";
+    // How often the cookies are looked at: a page that signs in without
+    // loading a new page (SoundCloud's) gives no other sign
+    private static final long CHECK_MS = 1000;
 
     private String mService;
     private boolean mAnswered;
     private FrameLayout mFrame;
     private WebViewClient mClient;
+    private String mDoneHost;
+    private String mCookie;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private final Runnable mCheck = new Runnable() {
+        @Override
+        public void run() {
+            if (!checkSignedIn()) {
+                mHandler.postDelayed(this, CHECK_MS);
+            }
+        }
+    };
 
     /// The service's cookies after a sign-in, "" when the page was closed
     private static native void nativeSignedIn(String service, String cookies);
@@ -58,23 +75,38 @@ public class AccountLoginActivity extends Activity {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
         mService = intent.getStringExtra(EXTRA_SERVICE);
-        final String doneHost = intent.getStringExtra(EXTRA_DONE_HOST);
-        final String cookie = intent.getStringExtra(EXTRA_COOKIE) + "=";
-        CookieManager cookies = CookieManager.getInstance();
-        cookies.setAcceptCookie(true);
+        mDoneHost = intent.getStringExtra(EXTRA_DONE_HOST);
+        mCookie = intent.getStringExtra(EXTRA_COOKIE) + "=";
+        CookieManager.getInstance().setAcceptCookie(true);
         mClient = new WebViewClient() {
             @Override
             public void onPageFinished(WebView page, String url) {
-                if (mAnswered || !doneHost.equals(Uri.parse(url).getHost())) {
-                    return;
+                checkSignedIn();
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView page, WebResourceRequest request) {
+                // The sign-in stays here: links into the service's app
+                // (intent://, soundcloud://) open their web page instead
+                Uri url = request.getUrl();
+                String scheme = url.getScheme();
+                if ("http".equals(scheme) || "https".equals(scheme)) {
+                    return false;
                 }
-                String signedIn = cookies.getCookie("https://" + doneHost);
-                if (signedIn == null || !(signedIn.startsWith(cookie) || signedIn.contains("; " + cookie))) {
-                    return; // still signed out (the start page itself)
+                String fallback = null;
+                if ("intent".equals(scheme)) {
+                    String text = url.toString();
+                    int start = text.indexOf("S.browser_fallback_url=");
+                    if (start >= 0) {
+                        start += "S.browser_fallback_url=".length();
+                        int end = text.indexOf(';', start);
+                        fallback = Uri.decode(end < 0 ? text.substring(start) : text.substring(start, end));
+                    }
                 }
-                cookies.flush();
-                answer(signedIn);
-                finish();
+                if (fallback != null && fallback.startsWith("http")) {
+                    page.loadUrl(fallback);
+                }
+                return true;
             }
         };
         mFrame = new FrameLayout(this);
@@ -82,6 +114,24 @@ public class AccountLoginActivity extends Activity {
         mFrame.addView(view);
         setContentView(mFrame);
         view.loadUrl(intent.getStringExtra(EXTRA_URL));
+        mHandler.postDelayed(mCheck, CHECK_MS);
+    }
+
+    /// Answers and closes once the service's sign-in cookie is set
+    private boolean checkSignedIn() {
+        if (mAnswered) {
+            return true;
+        }
+        CookieManager cookies = CookieManager.getInstance();
+        String signedIn = cookies.getCookie("https://" + mDoneHost);
+        if (signedIn == null
+            || !(signedIn.startsWith(mCookie) || signedIn.contains("; " + mCookie))) {
+            return false; // still signed out
+        }
+        cookies.flush();
+        answer(signedIn);
+        finish();
+        return true;
     }
 
     /// The sign-in page, or a popup of it
@@ -98,9 +148,18 @@ public class AccountLoginActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         // Google refuses its sign-in in an app's page ("; wv"): the page
         // presents itself as the Chrome it is built on
-        settings.setUserAgentString(settings.getUserAgentString()
-                .replace("; wv)", ")")
-                .replace(" Version/4.0", ""));
+        String agent = settings.getUserAgentString()
+                           .replace("; wv)", ")")
+                           .replace(" Version/4.0", "");
+        if ("soundcloud".equals(mService)) {
+            // SoundCloud's phone site only offers its app: the desktop
+            // site has the sign-in
+            agent = agent.replaceAll("\\(Linux; Android[^)]*\\)", "(X11; Linux x86_64)")
+                        .replace(" Mobile", "");
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+        }
+        settings.setUserAgentString(agent);
         // Passkeys of the device's password manager
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
             WebSettingsCompat.setWebAuthenticationSupport(
@@ -157,6 +216,7 @@ public class AccountLoginActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        mHandler.removeCallbacks(mCheck);
         answer("");
         super.onDestroy();
     }
