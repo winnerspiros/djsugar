@@ -27,6 +27,12 @@
 #ifdef HAVE_SPOTIFY_BRIDGE
 #include "spotifybridge.h"
 #endif
+
+#ifdef Q_OS_ANDROID
+#include <jni.h>
+
+#include <QJniObject>
+#endif
 namespace {
 const mixxx::Logger kLogger("QmlSpotifyProxy");
 
@@ -114,10 +120,25 @@ void QmlSpotifyProxy::login() {
     const quint64 attempt = ++m_loginAttempt;
     QPointer<QmlSpotifyProxy> pThis(this);
     std::thread([pThis, dir, attempt]() {
+        // Android: inside the app (SpotifyLoginActivity), so it stays in
+        // front and keeps its network; elsewhere the browser
         auto openUrl = [](void*, const char* pUrl) {
-            const QUrl url(QString::fromUtf8(pUrl));
+            const QString url = QString::fromUtf8(pUrl);
             QMetaObject::invokeMethod(
-                    qApp, [url]() { QDesktopServices::openUrl(url); }, Qt::QueuedConnection);
+                    qApp,
+                    [url]() {
+#ifdef Q_OS_ANDROID
+                        QJniObject::callStaticMethod<void>(
+                                "org/mixxx/spotify/SpotifyLoginActivity",
+                                "start",
+                                "(Landroid/content/Context;Ljava/lang/String;)V",
+                                QNativeInterface::QAndroidApplication::context(),
+                                QJniObject::fromString(url).object<jstring>());
+#else
+                        QDesktopServices::openUrl(QUrl(url));
+#endif
+                    },
+                    Qt::QueuedConnection);
         };
         char* pUser = nullptr;
         const QString error = take(spotify_login_web(dir.constData(), openUrl, nullptr, &pUser));
@@ -562,3 +583,18 @@ void QmlSpotifyProxy::loadFile(
 
 } // namespace qml
 } // namespace mixxx
+
+#if defined(Q_OS_ANDROID) && defined(HAVE_SPOTIFY_BRIDGE)
+/// SpotifyLoginActivity: the in-app login page reached the redirect URL, or
+/// was closed ("")
+extern "C" JNIEXPORT void JNICALL
+Java_org_mixxx_spotify_SpotifyLoginActivity_nativeRedirect(JNIEnv* pEnv, jclass, jstring url) {
+    const char* pUrl = pEnv->GetStringUTFChars(url, nullptr);
+    if (pUrl[0] == '\0') {
+        spotify_cancel_login();
+    } else {
+        spotify_login_redirect(pUrl);
+    }
+    pEnv->ReleaseStringUTFChars(url, pUrl);
+}
+#endif

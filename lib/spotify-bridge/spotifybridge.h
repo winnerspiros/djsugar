@@ -14,12 +14,17 @@ extern "C" {
 // with spotify_free_string(), as every string handed out here.
 
 /// Login on Spotify's web page: `open_url` is called with the page to show
-/// (any thread); it comes back to http://127.0.0.1:5588/login. Waits until
+/// (any thread); it comes back to http://127.0.0.1:5588/login, or
+/// through spotify_login_redirect(). Waits until
 /// then or spotify_cancel_login().
 char* spotify_login_web(const char* cache_dir,
         void (*open_url)(void* user, const char* url),
         void* user,
         char** out_user);
+
+/// The login page shown in the app reached the redirect URI (`url`, with
+/// its query): finishes the running login like the loopback request would
+void spotify_login_redirect(const char* url);
 
 /// Ends the running login
 void spotify_cancel_login(void);

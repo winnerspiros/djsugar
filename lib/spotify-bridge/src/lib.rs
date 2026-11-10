@@ -81,6 +81,23 @@ fn cancel() -> &'static watch::Sender<u64> {
     CANCEL.get_or_init(|| watch::channel(0).0)
 }
 
+/// The redirect URL caught by the in-app login page (spotify_login_redirect)
+fn redirect() -> &'static watch::Sender<String> {
+    static REDIRECT: OnceLock<watch::Sender<String>> = OnceLock::new();
+    REDIRECT.get_or_init(|| watch::channel(String::new()).0)
+}
+
+/// What a redirect query means for the login with `state`: None when it is
+/// not this login's, else its code or error
+fn answer(query: &str, state: &str) -> Option<Result<String, String>> {
+    if query_value(query, "state").as_deref() != Some(state) {
+        return None;
+    }
+    Some(query_value(query, "code").ok_or_else(|| {
+        query_value(query, "error").unwrap_or_else(|| "refused".to_owned())
+    }))
+}
+
 async fn cancelled(mut rx: watch::Receiver<u64>) {
     let _ = rx.changed().await;
 }
@@ -250,10 +267,26 @@ where
     }
 }
 
-/// The code from the browser's redirect to http://127.0.0.1:5588/login
-async fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, String> {
+/// The code: from the in-app login page, or the browser's redirect to
+/// http://127.0.0.1:5588/login
+async fn wait_for_code(
+    listener: TcpListener,
+    mut redirects: watch::Receiver<String>,
+    state: &str,
+) -> Result<String, String> {
     loop {
-        let (mut stream, _) = listener.accept().await.map_err(|e| e.to_string())?;
+        let (mut stream, _) = tokio::select! {
+            accepted = listener.accept() => accepted.map_err(|e| e.to_string())?,
+            changed = redirects.changed() => {
+                changed.map_err(|e| e.to_string())?;
+                let url = redirects.borrow_and_update().clone();
+                let query = url.split_once('?').map_or("", |(_, q)| q);
+                match answer(query, state) {
+                    Some(result) => return result,
+                    None => continue,
+                }
+            }
+        };
         let mut request = vec![0u8; 8192];
         let n = match tokio::time::timeout(Duration::from_secs(10), stream.read(&mut request)).await
         {
@@ -271,9 +304,8 @@ async fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, Str
         };
         // Not from the login started here (another page, an old tab): answered,
         // but the login keeps waiting for its own
-        let ours = query_value(query, "state").as_deref() == Some(state);
-        let code = query_value(query, "code").filter(|_| ours);
-        let body = if code.is_some() {
+        let result = answer(query, state);
+        let body = if matches!(result, Some(Ok(_))) {
             html_page("Logged in to Spotify", "Go back to DJ Sugar.")
         } else {
             html_page("Spotify login failed", "Go back to DJ Sugar and try again.")
@@ -289,10 +321,9 @@ async fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, Str
             )
             .await;
         let _ = stream.shutdown().await;
-        if !ours {
-            continue;
+        if let Some(result) = result {
+            return result;
         }
-        return code.ok_or_else(|| query_value(query, "error").unwrap_or_else(|| "refused".to_owned()));
     }
 }
 
@@ -326,6 +357,8 @@ async fn login_web_steps(
     open_url: Box<dyn Fn(&str) + Send>,
 ) -> Result<String, String> {
     let redirect = format!("http://127.0.0.1:{WEB_PORT}/login");
+    let mut redirects = self::redirect().subscribe();
+    redirects.mark_unchanged(); // only redirects of this login
     let listener = bind_login_port().await?;
     let mut random = [0u8; 64];
     rand::rng().fill_bytes(&mut random);
@@ -344,7 +377,7 @@ async fn login_web_steps(
             ("state", &state),
         ])
     ));
-    let code = wait_for_code(listener, &state).await?;
+    let code = wait_for_code(listener, redirects, &state).await?;
     let json = token_request(&[
         ("grant_type", "authorization_code"),
         ("code", &code),
@@ -574,6 +607,13 @@ pub unsafe extern "C" fn spotify_login_web(
     });
     let result = guarded(|| runtime().block_on(login_web(PathBuf::from(arg(cache_dir)), open)));
     finish(result, out_user)
+}
+
+/// # Safety
+/// See spotifybridge.h
+#[no_mangle]
+pub unsafe extern "C" fn spotify_login_redirect(url: *const c_char) {
+    redirect().send_replace(arg(url));
 }
 
 #[no_mangle]

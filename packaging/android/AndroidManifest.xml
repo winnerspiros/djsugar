@@ -60,6 +60,12 @@
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
         android:fullBackupOnly="false">
+        <!-- Spotify's login page inside the app
+             (org.mixxx.spotify.SpotifyLoginActivity) -->
+        <activity
+            android:name="org.mixxx.spotify.SpotifyLoginActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
         <!-- djsugar://back: the Spotify login page's way back into the app
              (BackToAppActivity) -->
         <activity
