@@ -107,6 +107,8 @@ Item {
                 root.openList("liked");
         }
         function onLoginFailed(error) {
+            root.isBusy = false;
+            root.isLoadingMore = false;
             root.statusMessage = qsTr("Spotify login failed: %1").arg(error);
         }
         function onTracksLoaded(tracks, append) {

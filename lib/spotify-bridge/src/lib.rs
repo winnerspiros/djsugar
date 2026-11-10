@@ -127,6 +127,11 @@ fn device_id(dir: &Path) -> String {
 
 fn config(dir: &Path) -> SessionConfig {
     let mut config = SessionConfig::default();
+    // The login's client id: the stored credentials belong to it, and login5
+    // (tokens for spclient) sends the session's. librespot's default on
+    // Android is the Spotify app's id, which Spotify then answers with
+    // INVALID_CREDENTIALS
+    config.client_id = WEB_CLIENT_ID.to_owned();
     config.device_id = device_id(dir);
     config.tmp_dir = dir.join("tmp");
     let _ = std::fs::create_dir_all(&config.tmp_dir);

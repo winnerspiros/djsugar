@@ -226,6 +226,15 @@ void QmlSpotifyProxy::browse(const QString& request,
                     }
                     if (!error.isEmpty()) {
                         kLogger.warning() << "Spotify browsing:" << error;
+                        if (error.contains(QStringLiteral("INVALID_CREDENTIALS"))) {
+                            // The stored login is refused: log in again (once
+                            // for all the lists that were loading)
+                            if (pThis->m_loggedIn) {
+                                pThis->logout();
+                                emit pThis->loginFailed(tr("Spotify wants a new login"));
+                            }
+                            return;
+                        }
                         emit pThis->failed(error);
                         return;
                     }
