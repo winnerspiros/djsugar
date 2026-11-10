@@ -310,7 +310,7 @@ void YouTubeAccount::post(const QString& endpoint,
         // Signed as the web player signs: SHA-1 of "<time> <SAPISID>
         // <origin>", once per cookie it has
         const QString now = QString::number(QDateTime::currentSecsSinceEpoch());
-        auto sign = [&now](const QString& secret) {
+        auto sign = [&now](const QString& secret) -> QByteArray {
             return now.toUtf8() + '_' +
                     QCryptographicHash::hash(
                             (now + QLatin1Char(' ') + secret + QLatin1Char(' ') + kOrigin)
