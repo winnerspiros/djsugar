@@ -36,6 +36,9 @@ using mixxx::YouTubeAccount;
 QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
         : QObject(pParent) {
     s_pInstance = this;
+    if (!soundcloud::token().isEmpty()) {
+        QTimer::singleShot(0, this, [this]() { fetchSoundCloudMe({}); });
+    }
     YouTubeAccount& account = YouTubeAccount::instance();
     connect(&account, &YouTubeAccount::accountChanged, this, &QmlYouTubeProxy::accountsChanged);
     connect(&account, &YouTubeAccount::failed, this, &QmlYouTubeProxy::accountFailed);
@@ -504,11 +507,69 @@ void QmlYouTubeProxy::fetchSoundCloudClientId(std::function<void(bool)> done) {
     });
 }
 
-void QmlYouTubeProxy::soundCloudSearch(const QString& query) {
+void QmlYouTubeProxy::ensureSoundCloudNetwork() {
     if (!m_pScNetwork) {
         m_pScNetwork = new QNetworkAccessManager(this);
         m_scClientId = QSettings().value(kScClientIdKey).toString();
     }
+}
+
+void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done, bool clientIdRetried) {
+    ensureSoundCloudNetwork();
+    if (mixxx::soundcloud::token().isEmpty()) {
+        return;
+    }
+    if (m_scClientId.isEmpty()) {
+        fetchSoundCloudClientId([this, done, clientIdRetried](bool ok) {
+            if (!ok || clientIdRetried) {
+                emit soundCloudFailed(tr("SoundCloud is not reachable"));
+                return;
+            }
+            fetchSoundCloudMe(done, true);
+        });
+        return;
+    }
+    QUrl url(QStringLiteral("https://api-v2.soundcloud.com/me"));
+    url.setQuery(QStringLiteral("client_id=") + m_scClientId);
+    QNetworkReply* pReply = m_pScNetwork->get(scRequest(url));
+    connect(pReply, &QNetworkReply::finished, this, [this, pReply, done, clientIdRetried]() {
+        pReply->deleteLater();
+        const int status = pReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject me = QJsonDocument::fromJson(pReply->readAll()).object();
+        const qint64 id = static_cast<qint64>(me.value(QStringLiteral("id")).toDouble());
+        if (pReply->error() == QNetworkReply::NoError && id > 0) {
+            m_scUserId = QString::number(id);
+            m_scName = me.value(QStringLiteral("username")).toString();
+            m_scAvatar = me.value(QStringLiteral("avatar_url")).toString();
+            qInfo() << "SoundCloud: signed in as" << m_scName;
+            emit accountsChanged();
+            if (done) {
+                done();
+            }
+            return;
+        }
+        qWarning() << "SoundCloud /me failed:" << status << pReply->errorString();
+        if ((status == 401 || status == 403) && !clientIdRetried) {
+            m_scClientId.clear(); // maybe the rotated client id
+            fetchSoundCloudMe(done, true);
+            return;
+        }
+        if (status == 401 || status == 403 || pReply->error() == QNetworkReply::NoError) {
+            // The token is no account's
+            mixxx::soundcloud::setToken(QString());
+            m_scUserId.clear();
+            m_scName.clear();
+            m_scAvatar.clear();
+            emit accountsChanged();
+            emit accountFailed(tr("SoundCloud did not accept the sign-in. Sign in again"));
+            return;
+        }
+        emit soundCloudFailed(pReply->errorString());
+    });
+}
+
+void QmlYouTubeProxy::soundCloudSearch(const QString& query) {
+    ensureSoundCloudNetwork();
     m_scNextHref.clear();
     ++m_scGeneration;
     QUrl url(QStringLiteral("https://api-v2.soundcloud.com/search/tracks"));
@@ -520,13 +581,16 @@ void QmlYouTubeProxy::soundCloudSearch(const QString& query) {
 }
 
 void QmlYouTubeProxy::soundCloudLikes() {
-    if (!m_pScNetwork) {
-        m_pScNetwork = new QNetworkAccessManager(this);
-        m_scClientId = QSettings().value(kScClientIdKey).toString();
+    ensureSoundCloudNetwork();
+    if (m_scUserId.isEmpty()) {
+        // The likes are the user's: who that is first
+        fetchSoundCloudMe([this]() { soundCloudLikes(); });
+        return;
     }
     m_scNextHref.clear();
     ++m_scGeneration;
-    QUrl url(QStringLiteral("https://api-v2.soundcloud.com/me/track_likes"));
+    QUrl url(QStringLiteral("https://api-v2.soundcloud.com/users/") + m_scUserId +
+            QStringLiteral("/track_likes"));
     url.setQuery(QStringLiteral("limit=") + QString::number(kScPageSize));
     soundCloudRequest(url, false, false);
 }
@@ -586,6 +650,9 @@ void QmlYouTubeProxy::soundCloudRequest(const QUrl& baseUrl, bool append, bool c
                         // A fresh client id did not help: the sign-in is
                         // what SoundCloud refuses
                         mixxx::soundcloud::setToken(QString());
+                        m_scUserId.clear();
+                        m_scName.clear();
+                        m_scAvatar.clear();
                         emit accountsChanged();
                         emit accountFailed(tr("SoundCloud wants a new sign-in"));
                     }
@@ -734,7 +801,9 @@ void QmlYouTubeProxy::onSignedIn(const QString& service, const QString& cookies)
     qInfo() << "SoundCloud: signed in";
     soundcloud::setToken(token);
     if (s_pInstance) {
+        s_pInstance->m_scUserId.clear();
         emit s_pInstance->accountsChanged();
+        s_pInstance->fetchSoundCloudMe({});
     }
 }
 
@@ -744,6 +813,9 @@ void QmlYouTubeProxy::signOut(const QString& service) {
         YouTubeAccount::instance().signOut();
     } else {
         soundcloud::setToken(QString());
+        m_scUserId.clear();
+        m_scName.clear();
+        m_scAvatar.clear();
         emit accountsChanged();
     }
 }
