@@ -51,8 +51,10 @@ const FORMATS: [AudioFileFormat; 3] = [
 const WEB_CLIENT_ID: &str = "65b708073fc0480ea92a077233ca87bd";
 const WEB_PORT: u16 = 5588;
 /// What the browsing needs (Web API)
-const WEB_API_SCOPES: &str = "user-read-private,user-library-read,playlist-read-private,\
-playlist-read-collaborative,user-top-read,user-read-recently-played";
+const WEB_API_SCOPES: &str = "streaming user-read-private user-library-read \
+playlist-read-private playlist-read-collaborative user-top-read user-read-recently-played";
+/// The web login's refresh token (browsing tokens come from it)
+const WEB_TOKEN_FILE: &str = "web_token.json";
 
 type Progress = Box<dyn Fn(f64) + Send>;
 
@@ -306,7 +308,7 @@ async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<S
             ("client_id", WEB_CLIENT_ID),
             ("response_type", "code"),
             ("redirect_uri", &redirect),
-            ("scope", "streaming"),
+            ("scope", WEB_API_SCOPES),
             ("code_challenge_method", "S256"),
             ("code_challenge", &challenge),
             ("state", &state),
@@ -317,13 +319,23 @@ async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<S
         code = wait_for_code(listener, &state) => code?,
         () = cancelled(rx) => return Err("cancelled".to_owned()),
     };
-    let body = form_encode(&[
+    let json = token_request(&[
         ("grant_type", "authorization_code"),
         ("code", &code),
         ("redirect_uri", &redirect),
         ("client_id", WEB_CLIENT_ID),
         ("code_verifier", &verifier),
-    ]);
+    ])
+    .await?;
+    let token = save_web_token(&dir, &json)?;
+    retry(|| connect(&dir, Credentials::with_access_token(token.clone())))
+        .await
+        .map(|session| session.username())
+}
+
+/// accounts.spotify.com/api/token, retried while the network is away
+async fn token_request(form: &[(&str, &str)]) -> Result<serde_json::Value, String> {
+    let body = form_encode(form);
     let response = retry(|| async {
         let request = http::Request::post("https://accounts.spotify.com/api/token")
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -335,29 +347,47 @@ async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<S
             .map_err(|e| format!("Spotify login: {e:?}"))
     })
     .await?;
-    let json: serde_json::Value =
-        serde_json::from_slice(&response).map_err(|e| format!("Spotify login: {e}"))?;
-    let token = json["access_token"]
-        .as_str()
-        .ok_or_else(|| format!("Spotify login: {json}"))?
-        .to_owned();
-    retry(|| connect(&dir, Credentials::with_access_token(token.clone())))
-        .await
-        .map(|session| session.username())
+    serde_json::from_slice(&response).map_err(|e| format!("Spotify login: {e}"))
 }
 
-/// A Web API access token of the logged-in account and its seconds left
+/// Keeps the refresh token (Spotify may hand out a new one) and returns the
+/// access token
+fn save_web_token(dir: &Path, json: &serde_json::Value) -> Result<String, String> {
+    let token = json["access_token"]
+        .as_str()
+        .ok_or_else(|| format!("Spotify login: {json}"))?;
+    if let Some(refresh) = json["refresh_token"].as_str() {
+        let _ = std::fs::write(
+            dir.join(WEB_TOKEN_FILE),
+            serde_json::json!({ "refresh_token": refresh }).to_string(),
+        );
+    }
+    Ok(token.to_owned())
+}
+
+/// A Web API access token of the logged-in account and its seconds left:
+/// from the web login's refresh token, else from the session (login5)
 async fn web_token(dir: PathBuf) -> Result<(String, u64), String> {
+    let stored = std::fs::read(dir.join(WEB_TOKEN_FILE))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        .and_then(|j| j["refresh_token"].as_str().map(str::to_owned));
+    if let Some(refresh) = stored {
+        let json = token_request(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &refresh),
+            ("client_id", WEB_CLIENT_ID),
+        ])
+        .await?;
+        let token = save_web_token(&dir, &json)?;
+        return Ok((token, json["expires_in"].as_u64().unwrap_or(3600)));
+    }
     let session = session(&dir).await?;
-    let provider = session.token_provider();
-    let token = match provider.get_token(WEB_API_SCOPES).await {
-        Ok(token) => token,
-        // Not every client id gets every scope
-        Err(_) => provider
-            .get_token_with_client_id(WEB_API_SCOPES, WEB_CLIENT_ID)
-            .await
-            .map_err(|e| format!("Spotify token: {e}"))?,
-    };
+    let token = session
+        .login5()
+        .auth_token()
+        .await
+        .map_err(|e| format!("Spotify token: {e}"))?;
     Ok((token.access_token, token.expires_in.as_secs()))
 }
 
@@ -544,7 +574,9 @@ pub unsafe extern "C" fn spotify_logout(cache_dir: *const c_char) {
     if let Some(session) = current().lock().unwrap().take() {
         session.shutdown();
     }
-    let _ = std::fs::remove_file(Path::new(&arg(cache_dir)).join("credentials.json"));
+    let dir = PathBuf::from(arg(cache_dir));
+    let _ = std::fs::remove_file(dir.join("credentials.json"));
+    let _ = std::fs::remove_file(dir.join(WEB_TOKEN_FILE));
 }
 
 /// # Safety
