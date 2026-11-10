@@ -67,6 +67,7 @@ class YouTubeAccount : public QObject {
   private:
     YouTubeAccount();
     void fetchName();
+    void fetchClientVersion();
     void post(const QString& endpoint,
             const QJsonObject& body,
             const std::function<void(const QJsonObject&)>& done,
@@ -77,6 +78,7 @@ class YouTubeAccount : public QObject {
 
     QNetworkAccessManager* m_pNetwork;
     QString m_cookies;
+    QString m_clientVersion;
     QString m_name;
     QString m_pageId; // a brand channel, "" for the main one
     QString m_continuation;

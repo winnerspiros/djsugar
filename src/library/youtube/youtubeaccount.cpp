@@ -24,8 +24,9 @@ namespace {
 const Logger kLogger("YouTubeAccount");
 
 const QString kOrigin = QStringLiteral("https://music.youtube.com");
-// The YouTube Music web player, whose requests these are
-const QString kClientVersion = QStringLiteral("1.20251103.01.00");
+// The YouTube Music web player, whose requests these are; the live
+// version is read from music.youtube.com (an old one gets empty lists)
+const QString kClientVersion = QStringLiteral("1.20261104.00.00");
 const QByteArray kUserAgent =
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/142.0.0.0 Safari/537.36";
@@ -212,6 +213,36 @@ bool signedInPage(const QJsonObject& page) {
     return signedIn;
 }
 
+/// What a page holds, for the log when it holds no tracks: the renderers
+/// and any message YouTube put on it
+QString pageOutline(const QJsonObject& page) {
+    QSet<QString> kinds;
+    QStringList messages;
+    walk(page, [&](const QJsonObject& object) {
+        for (auto it = object.begin(); it != object.end(); ++it) {
+            if (it.key().endsWith(QStringLiteral("Renderer")) ||
+                    it.key().endsWith(QStringLiteral("ViewModel"))) {
+                kinds.insert(it.key());
+            }
+        }
+        for (const QString& key : {QStringLiteral("messageRenderer"),
+                     QStringLiteral("alertRenderer"),
+                     QStringLiteral("alertWithButtonRenderer")}) {
+            const QJsonObject message = object.value(key).toObject();
+            if (!message.isEmpty()) {
+                messages << text(message.value(QStringLiteral("text"))) +
+                                text(message.value(QStringLiteral("subtext")));
+            }
+        }
+        return false;
+    });
+    QStringList sorted(kinds.begin(), kinds.end());
+    sorted.sort();
+    return QStringLiteral("top: ") + page.keys().join(QLatin1Char(',')) +
+            QStringLiteral(" | renderers: ") + sorted.join(QLatin1Char(',')) +
+            QStringLiteral(" | messages: ") + messages.join(QStringLiteral(" / "));
+}
+
 /// The token of the page after this one ("" at the end)
 QString continuation(const QJsonObject& page) {
     QString token;
@@ -239,7 +270,8 @@ YouTubeAccount& YouTubeAccount::instance() {
 }
 
 YouTubeAccount::YouTubeAccount()
-        : m_pNetwork(new QNetworkAccessManager(this)) {
+        : m_pNetwork(new QNetworkAccessManager(this)),
+          m_clientVersion(kClientVersion) {
     QFile file(cookieFile());
     if (file.open(QIODevice::ReadOnly)) {
         // Cookies, then the chosen channel's page id and name
@@ -248,9 +280,29 @@ YouTubeAccount::YouTubeAccount()
         m_pageId = lines.value(1).trimmed();
         m_name = lines.value(2).trimmed();
     }
+    fetchClientVersion();
     if (signedIn()) {
         fetchName();
     }
+}
+
+void YouTubeAccount::fetchClientVersion() {
+    QNetworkRequest request(QUrl(kOrigin + QLatin1Char('/')));
+    request.setRawHeader("User-Agent", kUserAgent);
+    request.setRawHeader("Cookie", "SOCS=CAI");
+    request.setTransferTimeout(kTimeoutMs);
+    QNetworkReply* pReply = m_pNetwork->get(request);
+    connect(pReply, &QNetworkReply::finished, this, [this, pReply]() {
+        pReply->deleteLater();
+        static const QRegularExpression kVersion(
+                QStringLiteral(R"re("INNERTUBE_CLIENT_VERSION":"([0-9.]+)")re"));
+        const QRegularExpressionMatch match =
+                kVersion.match(QString::fromUtf8(pReply->readAll()));
+        if (match.hasMatch()) {
+            m_clientVersion = match.captured(1);
+        }
+        kLogger.info() << "Web player version" << m_clientVersion;
+    });
 }
 
 void YouTubeAccount::setCookies(const QString& cookies) {
@@ -299,11 +351,11 @@ void YouTubeAccount::post(const QString& endpoint,
     request.setRawHeader("X-Origin", kOrigin.toUtf8());
     request.setRawHeader("X-Goog-AuthUser", "0");
     request.setRawHeader("X-YouTube-Client-Name", "67");
-    request.setRawHeader("X-YouTube-Client-Version", kClientVersion.toUtf8());
+    request.setRawHeader("X-YouTube-Client-Version", m_clientVersion.toUtf8());
     request.setRawHeader("Referer", (kOrigin + QLatin1Char('/')).toUtf8());
     QJsonObject context{{QStringLiteral("client"),
             QJsonObject{{QStringLiteral("clientName"), QStringLiteral("WEB_REMIX")},
-                    {QStringLiteral("clientVersion"), kClientVersion},
+                    {QStringLiteral("clientVersion"), m_clientVersion},
                     {QStringLiteral("hl"), QStringLiteral("en")}}}};
     if (signedRequest) {
         request.setRawHeader("Cookie", m_cookies.toUtf8());
@@ -420,6 +472,9 @@ void YouTubeAccount::openList(const QString& list) {
                 const QList<YouTubeVideoInfo> list = tracks(page);
                 kLogger.info() << id << "answered" << list.size() << "tracks, signed in:"
                                << signedInPage(page) << ", more:" << !m_continuation.isEmpty();
+                if (list.isEmpty()) {
+                    kLogger.info() << id << pageOutline(page);
+                }
                 if (list.isEmpty() && id == QStringLiteral("VLLM") && signedInPage(page)) {
                     // YouTube Music's liked songs are empty when the likes
                     // were given on YouTube: its liked videos then
@@ -501,6 +556,9 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
     const QString token = continuation(page);
     if (token.isEmpty() || pages >= kMaxPlaylistPages) {
         kLogger.info() << "Playlists:" << playlists.size();
+        if (playlists.isEmpty() && pages == 1) {
+            kLogger.info() << "Library page" << pageOutline(page);
+        }
         emit playlistsReady(playlists);
         return;
     }

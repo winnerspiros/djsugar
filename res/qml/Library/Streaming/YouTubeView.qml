@@ -145,6 +145,7 @@ Item {
     // "search", "liked", "playlists" (the account's playlists listed),
     // "playlist" (one open)
     property string listKind: "search"
+    readonly property color ytRed: "#ff0033"
     property string playlistName: ""
     function openList(listId, name) {
         root.listKind = listId === "liked" ? "liked" : "playlist";
@@ -284,19 +285,37 @@ Item {
             Layout.fillWidth: true
             spacing: 6
 
+            // The YouTube mark
+            Rectangle {
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 40
+                radius: 8
+                color: root.ytRed
+
+                Skin.Triangle {
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: 1
+                    width: 11
+                    height: 13
+                    color: "#ffffff"
+                    pointsRight: true
+                }
+            }
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 30
                 color: "#000000"
-                border.color: searchField.activeFocus ? Theme.accentColor : Theme.midGray3
+                border.color: searchField.activeFocus ? root.ytRed : Theme.midGray3
                 border.width: 1
-                radius: 4
+                radius: 15
 
                 TextInput {
                     id: searchField
 
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    clip: true
                     color: "#ffffff"
                     font.pixelSize: 12
                     verticalAlignment: TextInput.AlignVCenter
@@ -309,10 +328,11 @@ Item {
                 }
                 Text {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
                     color: Theme.lightGray3
                     font.pixelSize: 12
-                    text: qsTr("SEARCH YOUTUBE")
+                    elide: Text.ElideRight
+                    text: qsTr("Search YouTube: songs, sets, remixes")
                     verticalAlignment: Text.AlignVCenter
                     visible: searchField.text.length === 0
                 }
@@ -331,16 +351,56 @@ Item {
             // The account: sign in (Google's page, saved passwords offered);
             // signed in, its channels and sign out (liked songs and
             // playlists: the row below)
-            Skin.Button {
+            AbstractButton {
+                id: ytAccountButton
+
                 Layout.preferredHeight: 30
-                Layout.preferredWidth: 80
-                activeColor: Theme.accentColor
-                normalColor: Mixxx.YouTube.youTubeSignedIn ? Theme.accentColor : "#ffffff"
-                font.bold: true
-                font.pixelSize: 10
-                text: Mixxx.YouTube.youTubeSignedIn
-                    ? (Mixxx.YouTube.youTubeAccount.length > 0 ? Mixxx.YouTube.youTubeAccount : qsTr("ACCOUNT"))
-                    : qsTr("SIGN IN")
+                Layout.preferredWidth: Math.min(170, ytAccountText.implicitWidth + 40)
+                background: Rectangle {
+                    radius: 15
+                    color: Mixxx.YouTube.youTubeSignedIn
+                        ? (ytAccountButton.pressed ? "#3a0d0d" : "#240a0a")
+                        : (ytAccountButton.pressed ? "#cc0000" : root.ytRed)
+                    border.color: root.ytRed
+                    border.width: 1
+                }
+                contentItem: Item {
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        // The account's initial
+                        Rectangle {
+                            visible: Mixxx.YouTube.youTubeSignedIn
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: root.ytRed
+
+                            Text {
+                                anchors.centerIn: parent
+                                color: "#ffffff"
+                                font.bold: true
+                                font.pixelSize: 11
+                                text: (Mixxx.YouTube.youTubeAccount || "Y").charAt(0).toUpperCase()
+                            }
+                        }
+                        Text {
+                            id: ytAccountText
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, 120)
+                            color: "#ffffff"
+                            elide: Text.ElideRight
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: Mixxx.YouTube.youTubeSignedIn
+                                ? (Mixxx.YouTube.youTubeAccount.length > 0 ? Mixxx.YouTube.youTubeAccount : qsTr("ACCOUNT"))
+                                : qsTr("SIGN IN")
+                        }
+                    }
+                }
                 onClicked: {
                     if (Mixxx.YouTube.youTubeSignedIn) {
                         Mixxx.YouTube.youTubeAccounts();
@@ -350,7 +410,6 @@ Item {
                     }
                 }
 
-                // The account's channels, sign out: only on tap
                 // The account's channels and sign out, in the view's style
                 Popup {
                     id: accountMenu
@@ -364,7 +423,7 @@ Item {
 
                     background: Rectangle {
                         color: "#14161b"
-                        border.color: Theme.accentColor
+                        border.color: root.ytRed
                         border.width: 1
                         radius: 6
                     }
@@ -484,8 +543,8 @@ Item {
 
                     Layout.preferredHeight: 24
                     Layout.preferredWidth: 100
-                    activeColor: Theme.accentColor
-                    normalColor: root.listKind === modelData.kind || (modelData.kind === "playlists" && root.listKind === "playlist") ? Theme.accentColor : "#b3b3b3"
+                    activeColor: root.ytRed
+                    normalColor: root.listKind === modelData.kind || (modelData.kind === "playlists" && root.listKind === "playlist") ? root.ytRed : "#b3b3b3"
                     font.bold: true
                     font.pixelSize: 9
                     text: modelData.label
@@ -571,12 +630,50 @@ Item {
             }
         }
 
+        // Nothing listed: what this view is for, and the way in
+        Column {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
+            spacing: 10
+            topPadding: 40
+
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 56
+                height: 40
+                radius: 10
+                color: root.ytRed
+
+                Skin.Triangle {
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: 2
+                    width: 16
+                    height: 18
+                    color: "#ffffff"
+                    pointsRight: true
+                }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width - 20, 380)
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                color: "#c8ccd4"
+                font.pixelSize: 12
+                text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
+                    : root.listKind === "playlist" ? qsTr("This playlist is empty")
+                    : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
+                    : qsTr("Search above. Sign in for your liked songs and playlists")
+            }
+        }
+
         ListView {
             id: resultList
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.listKind !== "playlists"
+            visible: root.listKind !== "playlists" && (resultsModel.count > 0 || root.isBusy)
             clip: true
             model: resultsModel
             spacing: 2
