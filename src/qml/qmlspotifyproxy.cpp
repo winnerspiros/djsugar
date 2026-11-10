@@ -15,6 +15,9 @@
 
 #include "library/library.h"
 #include "library/trackcollectionmanager.h"
+#include "library/youtube/youtubeaccount.h"
+#include "library/youtube/youtubefeature.h"
+#include "library/youtube/youtubeservice.h"
 #include "mixer/playermanager.h"
 #include "moc_qmlspotifyproxy.cpp"
 #include "track/track.h"
@@ -325,7 +328,11 @@ void QmlSpotifyProxy::loadToDeck(const QVariantMap& track, const QString& deckGr
     }
     pending.append(PendingLoad{track, deckGroup});
     if (pending.size() == 1) {
-        downloadTrack(spotifyId);
+        if (m_spotifyRefused) {
+            loadFromYouTube(spotifyId, m_pendingLoads.take(spotifyId));
+        } else {
+            downloadTrack(spotifyId);
+        }
     }
 }
 
@@ -390,13 +397,85 @@ void QmlSpotifyProxy::onDownloaded(
     emit downloadProgressChanged(spotifyId, -1.0);
     const QList<PendingLoad> pending = m_pendingLoads.take(spotifyId);
     if (path.isEmpty()) {
-        kLogger.warning() << "Spotify download of" << spotifyId << "failed:" << error;
-        emit downloadFailed(spotifyId, error);
+        kLogger.warning() << "Spotify download of" << spotifyId << "failed:" << error
+                          << "- loading it from YouTube Music";
+        m_spotifyRefused = true;
+        loadFromYouTube(spotifyId, pending);
         return;
     }
     for (const PendingLoad& load : pending) {
         loadFile(load.track, path, load.deckGroup);
     }
+}
+
+void QmlSpotifyProxy::loadFromYouTube(
+        const QString& spotifyId, const QList<PendingLoad>& pending) {
+    YouTubeFeature* pFeature = s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+    if (pending.isEmpty()) {
+        return;
+    }
+    if (!pFeature) {
+        emit downloadFailed(spotifyId, tr("This song could not be loaded"));
+        return;
+    }
+    if (!m_youTubeConnected) {
+        m_youTubeConnected = true;
+        // Its download shows as the Spotify row's
+        mixxx::YouTubeService* pService = pFeature->service();
+        connect(pService,
+                &mixxx::YouTubeService::downloadProgress,
+                this,
+                [this](const QString& videoId, double progress) {
+                    if (const QString id = m_fallbacks.value(videoId); !id.isEmpty()) {
+                        m_progress.insert(id, progress);
+                        emit downloadProgressChanged(id, progress);
+                    }
+                });
+        auto finish = [this](const QString& videoId) {
+            if (const QString id = m_fallbacks.take(videoId); !id.isEmpty()) {
+                m_progress.remove(id);
+                emit downloadProgressChanged(id, -1.0);
+            }
+        };
+        connect(pService, &mixxx::YouTubeService::downloadFinished, this, finish);
+        connect(pService,
+                &mixxx::YouTubeService::downloadFailed,
+                this,
+                [this, finish](const QString& videoId, const QString&) {
+                    if (const QString id = m_fallbacks.value(videoId); !id.isEmpty()) {
+                        finish(videoId);
+                        emit downloadFailed(id, tr("This song could not be loaded"));
+                    }
+                });
+    }
+    const QVariantMap& track = pending.first().track;
+    const QString title = track.value(QStringLiteral("title")).toString();
+    const QString artist = track.value(QStringLiteral("artist")).toString();
+    m_progress.insert(spotifyId, 0.02);
+    emit downloadProgressChanged(spotifyId, 0.02);
+    mixxx::YouTubeAccount::instance().findSong(artist + QLatin1Char(' ') + title,
+            track.value(QStringLiteral("durationSec")).toInt(),
+            this,
+            [this, spotifyId, pending, title, artist](const QString& videoId) {
+                YouTubeFeature* pFeature =
+                        s_pLibrary ? s_pLibrary->youtubeFeature() : nullptr;
+                if (videoId.isEmpty() || !pFeature) {
+                    m_progress.remove(spotifyId);
+                    emit downloadProgressChanged(spotifyId, -1.0);
+                    emit downloadFailed(spotifyId, tr("This song could not be found"));
+                    return;
+                }
+                // The library row gets Spotify's title and artist
+                mixxx::YouTubeVideoInfo info;
+                info.id = videoId;
+                info.title = title;
+                info.uploader = artist;
+                pFeature->rememberExternalResults({info});
+                m_fallbacks.insert(videoId, spotifyId);
+                for (const PendingLoad& load : pending) {
+                    pFeature->requestDownloadToPlayer(videoId, load.deckGroup, false);
+                }
+            });
 }
 
 void QmlSpotifyProxy::loadFile(

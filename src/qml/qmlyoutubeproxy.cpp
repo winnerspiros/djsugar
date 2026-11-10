@@ -43,6 +43,10 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
             this,
             &QmlYouTubeProxy::youTubePlaylistsLoaded);
     connect(&account,
+            &YouTubeAccount::accountsReady,
+            this,
+            &QmlYouTubeProxy::youTubeAccountsLoaded);
+    connect(&account,
             &YouTubeAccount::tracksReady,
             this,
             [this](const QList<mixxx::YouTubeVideoInfo>& tracks, bool append) {
@@ -106,6 +110,9 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
             &mixxx::YouTubeService::searchResultsReady,
             this,
             [this](const QString&, const QList<mixxx::YouTubeVideoInfo>& results) {
+                if (m_accountList) {
+                    return; // the account's list is open, not a search
+                }
                 for (const auto& v : results) {
                     if (!v.id.isEmpty() && !v.title.isEmpty()) {
                         m_videoTitles.insert(v.id, v.title);
@@ -740,6 +747,14 @@ bool QmlYouTubeProxy::soundCloudSignedIn() const {
 void QmlYouTubeProxy::youTubeLiked() {
     m_accountList = true;
     YouTubeAccount::instance().openList(QStringLiteral("liked"));
+}
+
+void QmlYouTubeProxy::youTubeAccounts() {
+    YouTubeAccount::instance().fetchAccounts();
+}
+
+void QmlYouTubeProxy::selectYouTubeAccount(const QString& pageId, const QString& name) {
+    YouTubeAccount::instance().selectAccount(pageId, name);
 }
 
 void QmlYouTubeProxy::youTubePlaylists() {

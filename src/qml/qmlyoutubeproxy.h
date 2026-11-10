@@ -92,6 +92,9 @@ class QmlYouTubeProxy : public QObject {
     Q_INVOKABLE void youTubeLiked();
     Q_INVOKABLE void youTubePlaylists();
     Q_INVOKABLE void youTubePlaylist(const QString& playlistId);
+    /// The account's channels, as youTubeAccountsLoaded
+    Q_INVOKABLE void youTubeAccounts();
+    Q_INVOKABLE void selectYouTubeAccount(const QString& pageId, const QString& name);
     /// The SoundCloud account's likes, as soundCloudResults
     Q_INVOKABLE void soundCloudLikes();
     /// AccountLoginActivity's answer
@@ -115,6 +118,8 @@ class QmlYouTubeProxy : public QObject {
     void accountsChanged();
     /// [{id, name, subtitle, artwork}]
     void youTubePlaylistsLoaded(const QVariantList& playlists);
+    /// [{name, handle, pageId, selected}]
+    void youTubeAccountsLoaded(const QVariantList& accounts);
     void accountFailed(const QString& error);
     /// Genre of a search result, found in the iTunes/Deezer catalogues.
     void genreResolved(const QString& videoId, const QString& genre);

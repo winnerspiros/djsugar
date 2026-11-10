@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QVariantList>
+#include <functional>
 
 #include "library/youtube/youtubeservice.h"
 
@@ -42,24 +43,42 @@ class YouTubeAccount : public QObject {
     }
     void fetchPlaylists();
 
+    /// The channels of the Google account (a main one and brand accounts):
+    /// accountsReady([{name, handle, pageId, selected}]); pageId "" is the
+    /// main channel
+    void fetchAccounts();
+    void selectAccount(const QString& pageId, const QString& name);
+
+    /// A song on YouTube Music by its name and length (no sign-in needed):
+    /// done(videoId, "" when none is close)
+    void findSong(const QString& query,
+            int durationSec,
+            QObject* pContext,
+            const std::function<void(const QString&)>& done);
+
   signals:
     void accountChanged();
     void tracksReady(const QList<mixxx::YouTubeVideoInfo>& tracks, bool append);
     /// [{id, name, subtitle, artwork}]
     void playlistsReady(const QVariantList& playlists);
     void failed(const QString& error);
+    void accountsReady(const QVariantList& accounts);
 
   private:
     YouTubeAccount();
     void fetchName();
     void post(const QString& endpoint,
             const QJsonObject& body,
-            const std::function<void(const QJsonObject&)>& done);
+            const std::function<void(const QJsonObject&)>& done,
+            bool signedRequest = true,
+            QObject* pContext = nullptr);
+    void save();
     void collectPlaylists(const QJsonObject& page, QVariantList playlists, int pages);
 
     QNetworkAccessManager* m_pNetwork;
     QString m_cookies;
     QString m_name;
+    QString m_pageId; // a brand channel, "" for the main one
     QString m_continuation;
     quint64 m_generation = 0; // drops the replies of a superseded list
 };

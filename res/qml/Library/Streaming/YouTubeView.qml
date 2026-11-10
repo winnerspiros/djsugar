@@ -137,25 +137,21 @@ Item {
         id: resultsModel
     }
 
-    property bool showAccount: true
     property bool wasSignedIn: false
-    // LIKED, the account's playlists, SIGN OUT
-    ListModel {
-        id: accountListsModel
-    }
-    function fillAccountLists(playlists) {
-        accountListsModel.clear();
-        accountListsModel.append({"listId": "liked", "name": qsTr("LIKED")});
-        for (const list of playlists)
-            accountListsModel.append({"listId": list.id, "name": list.name});
-        accountListsModel.append({"listId": "signout", "name": qsTr("SIGN OUT")});
-    }
-    function openAccount() {
-        root.fillAccountLists([]);
+    // The account's playlists [{id, name}] and channels [{name, pageId, selected}]
+    property var playlists: []
+    property var channels: []
+    function openList(listId, name) {
         root.isBusy = true;
         root.hasMore = false;
-        root.statusMessage = qsTr("Loading your liked songs...");
-        Mixxx.YouTube.youTubeLiked();
+        root.statusMessage = qsTr("Loading %1...").arg(name);
+        if (listId === "liked")
+            Mixxx.YouTube.youTubeLiked();
+        else
+            Mixxx.YouTube.youTubePlaylist(listId);
+    }
+    function openAccount() {
+        root.openList("liked", qsTr("your liked songs"));
         Mixxx.YouTube.youTubePlaylists();
     }
     Component.onCompleted: {
@@ -227,12 +223,17 @@ Item {
             const signedIn = Mixxx.YouTube.youTubeSignedIn;
             if (signedIn && !root.wasSignedIn)
                 root.openAccount();
-            if (!signedIn)
-                accountListsModel.clear();
+            if (!signedIn) {
+                root.playlists = [];
+                root.channels = [];
+            }
             root.wasSignedIn = signedIn;
         }
         function onYouTubePlaylistsLoaded(playlists) {
-            root.fillAccountLists(playlists);
+            root.playlists = playlists;
+        }
+        function onYouTubeAccountsLoaded(accounts) {
+            root.channels = accounts;
         }
         function onAccountFailed(error) {
             root.isBusy = false;
@@ -321,9 +322,57 @@ Item {
                     : qsTr("SIGN IN")
                 onClicked: {
                     if (Mixxx.YouTube.youTubeSignedIn) {
-                        root.showAccount = !root.showAccount;
+                        Mixxx.YouTube.youTubePlaylists();
+                        Mixxx.YouTube.youTubeAccounts();
+                        accountMenu.popup(this, 0, height);
                     } else {
                         Mixxx.YouTube.signIn("youtube");
+                    }
+                }
+
+                // Liked, the playlists, the account's channels, sign out:
+                // only on tap, no room taken
+                Menu {
+                    id: accountMenu
+
+                    MenuItem {
+                        text: qsTr("Liked songs")
+                        onTriggered: root.openList("liked", text)
+                    }
+                    Instantiator {
+                        model: root.playlists
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: modelData.name
+                            onTriggered: root.openList(modelData.id, modelData.name)
+                        }
+                        onObjectAdded: (index, object) => accountMenu.insertItem(1 + index, object)
+                        onObjectRemoved: (index, object) => accountMenu.removeItem(object)
+                    }
+                    MenuSeparator {
+                        visible: root.channels.length > 1
+                        height: visible ? implicitHeight : 0
+                    }
+                    Instantiator {
+                        model: root.channels.length > 1 ? root.channels : []
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: (modelData.selected ? "✓ " : "   ") + modelData.name
+                            onTriggered: {
+                                Mixxx.YouTube.selectYouTubeAccount(modelData.pageId, modelData.name);
+                                root.playlists = [];
+                                root.openList("liked", qsTr("Liked songs"));
+                            }
+                        }
+                        onObjectAdded: (index, object) => accountMenu.insertItem(accountMenu.count - 1, object)
+                        onObjectRemoved: (index, object) => accountMenu.removeItem(object)
+                    }
+                    MenuItem {
+                        text: qsTr("Sign out")
+                        onTriggered: {
+                            Mixxx.YouTube.signOut("youtube");
+                            root.statusMessage = qsTr("Signed out of YouTube");
+                        }
                     }
                 }
             }
@@ -368,42 +417,6 @@ Item {
                     font.pixelSize: 9
                     text: qsTr("AUTO SKIP SPONSORS")
                     elide: Text.ElideRight
-                }
-            }
-        }
-        // Signed in: LIKED, then the account's playlists
-        ListView {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 26
-            visible: Mixxx.YouTube.youTubeSignedIn && root.showAccount
-            orientation: ListView.Horizontal
-            spacing: 4
-            clip: true
-            model: accountListsModel
-            delegate: Skin.Button {
-                required property string listId
-                required property string name
-
-                height: 26
-                width: Math.min(180, Math.max(70, implicitWidth + 16))
-                activeColor: Theme.accentColor
-                normalColor: "#ffffff"
-                font.bold: true
-                font.pixelSize: 10
-                text: name
-                onClicked: {
-                    root.isBusy = true;
-                    root.hasMore = false;
-                    root.statusMessage = qsTr("Loading %1...").arg(name);
-                    if (listId === "signout") {
-                        Mixxx.YouTube.signOut("youtube");
-                        root.isBusy = false;
-                        root.statusMessage = qsTr("Signed out of YouTube");
-                    } else if (listId === "liked") {
-                        Mixxx.YouTube.youTubeLiked();
-                    } else {
-                        Mixxx.YouTube.youTubePlaylist(listId);
-                    }
                 }
             }
         }

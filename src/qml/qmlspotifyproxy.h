@@ -121,6 +121,13 @@ class QmlSpotifyProxy : public QObject {
     };
     QHash<QString, QList<PendingLoad>> m_pendingLoads; // spotify id -> decks
     QHash<QString, double> m_progress;
+    /// Spotify gave no audio: the same song from YouTube Music, loaded the
+    /// same way (video id -> spotify id while it downloads)
+    void loadFromYouTube(const QString& spotifyId, const QList<PendingLoad>& pending);
+    QHash<QString, QString> m_fallbacks;
+    bool m_youTubeConnected = false;
+    // Spotify refused audio once: the next songs go to YouTube at once
+    bool m_spotifyRefused = false;
 };
 
 } // namespace qml
