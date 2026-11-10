@@ -1,12 +1,10 @@
 #pragma once
 
-#include <QDateTime>
 #include <QHash>
 #include <QJsonObject>
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
-#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 #include <functional>
@@ -14,8 +12,6 @@
 
 class Library;
 class PlayerManager;
-class QNetworkAccessManager;
-class QNetworkReply;
 
 namespace mixxx {
 namespace qml {
@@ -65,13 +61,12 @@ class QmlSpotifyProxy : public QObject {
 
     Q_INVOKABLE void search(const QString& query);
     Q_INVOKABLE void likedSongs();
-    Q_INVOKABLE void topTracks();
     Q_INVOKABLE void playlists();
     Q_INVOKABLE void playlistTracks(const QString& playlistId);
     /// Next page of the current track list
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE bool hasMore() const {
-        return !m_nextUrl.isEmpty();
+        return m_nextOffset >= 0;
     }
 
     /// Downloads the track (once, then from the cache) and loads it to the deck
@@ -99,32 +94,27 @@ class QmlSpotifyProxy : public QObject {
 
     static QString accountDir();
     void onLoginResult(const QString& user, const QString& error);
-    void refreshAccessToken(std::function<void(bool)> done);
     void fetchProfile();
-    void apiGet(const QUrl& url,
-            std::function<void(const QJsonObject&)> onSuccess,
-            bool retried = false);
-    void fetchList(const QUrl& url, ListKind kind, bool append);
+    /// A list from the bridge (spotify_browse), on a worker thread
+    void browse(const QString& request,
+            int offset,
+            std::function<void(const QJsonObject&)> onSuccess);
+    void fetchList(const QString& request, ListKind kind, bool append);
     QString cacheDir() const;
     void downloadTrack(const QString& spotifyId);
     void onDownloaded(const QString& spotifyId, const QString& path, const QString& error);
     void loadFile(const QVariantMap& track, const QString& path, const QString& deckGroup);
 
-    static QVariantMap trackToVariant(const QJsonObject& track);
-
     static inline Library* s_pLibrary = nullptr;
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
 
-    QNetworkAccessManager* m_pNetwork;
     bool m_loggedIn = false;
-    QString m_accessToken;
-    QDateTime m_accessExpiry;
     QString m_userName;
     bool m_loggingIn = false;
     quint64 m_loginAttempt = 0; // drops the results of cancelled logins
-    QString m_nextUrl;
-    quint64 m_generation = 0; // drops the replies of superseded lists
-    QList<std::function<void(bool)>> m_refreshWaiters;
+    QString m_listRequest;      // what loadMore() continues
+    int m_nextOffset = -1;      // -1: no more pages
+    quint64 m_generation = 0;   // drops the replies of superseded lists
     struct PendingLoad {
         QVariantMap track;
         QString deckGroup;

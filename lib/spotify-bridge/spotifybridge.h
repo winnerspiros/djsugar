@@ -35,9 +35,15 @@ bool spotify_logged_in(const char* cache_dir);
 /// Forgets the stored account
 void spotify_logout(const char* cache_dir);
 
-/// A Spotify Web API access token of the account, valid `*out_expires_in`
-/// more seconds
-char* spotify_web_token(const char* cache_dir, char** out_token, int32_t* out_expires_in);
+/// A list of the account as JSON in `*out_json`: request "profile" ({"name"}),
+/// "playlists", "liked", "playlist:<id>" or "search:<query>"; lists are
+/// {"items": [...], "next": offset of the next page or -1}, tracks `limit`
+/// at a time from `offset`. Blocks until done
+char* spotify_browse(const char* cache_dir,
+        const char* request,
+        int32_t offset,
+        int32_t limit,
+        char** out_json);
 
 /// Called during a download with the fraction done (0..1)
 typedef void (*spotify_progress_cb)(void* user, double fraction);

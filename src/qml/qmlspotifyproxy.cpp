@@ -6,15 +6,11 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QPointer>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QThreadPool>
-#include <QUrlQuery>
-#include <cmath>
 #include <thread>
 
 #include "library/library.h"
@@ -36,16 +32,9 @@
 namespace {
 const mixxx::Logger kLogger("QmlSpotifyProxy");
 
-const QString kApi = QStringLiteral("https://api.spotify.com/v1");
 const QString kUserNameKey = QStringLiteral("Spotify/userName");
-constexpr int kSearchPage = 20;
-constexpr int kListPage = 50;
-
-QNetworkRequest jsonRequest(const QUrl& url) {
-    QNetworkRequest request(url);
-    request.setTransferTimeout(15000);
-    return request;
-}
+/// Tracks per page of a list
+constexpr int kPage = 50;
 
 #ifdef HAVE_SPOTIFY_BRIDGE
 /// Takes a string handed out by the bridge
@@ -65,8 +54,7 @@ namespace mixxx {
 namespace qml {
 
 QmlSpotifyProxy::QmlSpotifyProxy(QObject* pParent)
-        : QObject(pParent),
-          m_pNetwork(new QNetworkAccessManager(this)) {
+        : QObject(pParent) {
 #ifdef HAVE_SPOTIFY_BRIDGE
     m_loggedIn = spotify_logged_in(QFile::encodeName(accountDir()).constData());
 #endif
@@ -182,7 +170,6 @@ void QmlSpotifyProxy::onLoginResult(const QString& user, const QString& error) {
     }
     m_loggedIn = true;
     m_userName = user;
-    m_accessToken.clear();
     emit loginChanged();
     fetchProfile();
 }
@@ -191,9 +178,9 @@ void QmlSpotifyProxy::logout() {
     cancelLogin();
     ++m_generation;
     m_loggedIn = false;
-    m_accessToken.clear();
     m_userName.clear();
-    m_nextUrl.clear();
+    m_listRequest.clear();
+    m_nextOffset = -1;
 #ifdef HAVE_SPOTIFY_BRIDGE
     spotify_logout(QFile::encodeName(accountDir()).constData());
 #endif
@@ -201,52 +188,9 @@ void QmlSpotifyProxy::logout() {
     emit loginChanged();
 }
 
-void QmlSpotifyProxy::refreshAccessToken(std::function<void(bool)> done) {
-    m_refreshWaiters.append(std::move(done));
-    if (m_refreshWaiters.size() > 1) {
-        return; // a refresh is already running
-    }
-    auto finish = [this](const QString& token, int expiresIn, const QString& error) {
-        const bool ok = !token.isEmpty();
-        if (ok) {
-            m_accessToken = token;
-            // A minute early: a request never starts with a token about to expire
-            m_accessExpiry = QDateTime::currentDateTimeUtc().addSecs(std::max(60, expiresIn) - 60);
-        } else {
-            kLogger.warning() << "Spotify token:" << error;
-        }
-        const auto waiters = std::exchange(m_refreshWaiters, {});
-        for (const auto& waiter : waiters) {
-            waiter(ok);
-        }
-    };
-#ifdef HAVE_SPOTIFY_BRIDGE
-    const QByteArray dir = QFile::encodeName(accountDir());
-    QPointer<QmlSpotifyProxy> pThis(this);
-    QThreadPool::globalInstance()->start([pThis, dir, finish]() {
-        char* pToken = nullptr;
-        int32_t expiresIn = 0;
-        const QString error = take(spotify_web_token(dir.constData(), &pToken, &expiresIn));
-        const QString token = take(pToken);
-        if (pThis) {
-            QMetaObject::invokeMethod(
-                    pThis.data(),
-                    [pThis, finish, token, expiresIn, error]() {
-                        if (pThis) {
-                            finish(token, expiresIn, error);
-                        }
-                    },
-                    Qt::QueuedConnection);
-        }
-    });
-#else
-    finish(QString(), 0, QStringLiteral("not part of this build"));
-#endif
-}
-
 void QmlSpotifyProxy::fetchProfile() {
-    apiGet(QUrl(kApi + QStringLiteral("/me")), [this](const QJsonObject& me) {
-        const QString name = me.value(QStringLiteral("display_name")).toString();
+    browse(QStringLiteral("profile"), 0, [this](const QJsonObject& profile) {
+        const QString name = profile.value(QStringLiteral("name")).toString();
         if (!name.isEmpty()) {
             m_userName = name;
         }
@@ -255,146 +199,63 @@ void QmlSpotifyProxy::fetchProfile() {
     });
 }
 
-void QmlSpotifyProxy::apiGet(const QUrl& url,
-        std::function<void(const QJsonObject&)> onSuccess,
-        bool retried) {
+void QmlSpotifyProxy::browse(const QString& request,
+        int offset,
+        std::function<void(const QJsonObject&)> onSuccess) {
     if (!m_loggedIn) {
         emit failed(tr("Log in to Spotify first"));
         return;
     }
-    if (m_accessToken.isEmpty() || QDateTime::currentDateTimeUtc() >= m_accessExpiry) {
-        refreshAccessToken([this, url, onSuccess, retried](bool ok) {
-            if (!ok) {
-                emit failed(tr("Spotify did not answer, try again"));
-                return;
-            }
-            apiGet(url, onSuccess, retried); // the token is fresh now
-        });
-        return;
-    }
-    QNetworkRequest request = jsonRequest(url);
-    request.setRawHeader("Authorization", "Bearer " + m_accessToken.toUtf8());
-    QNetworkReply* pReply = m_pNetwork->get(request);
-    connect(pReply, &QNetworkReply::finished, this, [this, pReply, url, onSuccess, retried]() {
-        pReply->deleteLater();
-        const int status = pReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        if (status == 401 && !retried) {
-            m_accessToken.clear(); // revoked or expired early
-            apiGet(url, onSuccess, true);
+#ifdef HAVE_SPOTIFY_BRIDGE
+    const QByteArray dir = QFile::encodeName(accountDir());
+    const QByteArray requestUtf8 = request.toUtf8();
+    QPointer<QmlSpotifyProxy> pThis(this);
+    QThreadPool::globalInstance()->start([pThis, dir, requestUtf8, offset, onSuccess]() {
+        char* pJson = nullptr;
+        const QString error = take(spotify_browse(
+                dir.constData(), requestUtf8.constData(), offset, kPage, &pJson));
+        const QByteArray json = take(pJson).toUtf8();
+        if (!pThis) {
             return;
         }
-        const QJsonObject root = QJsonDocument::fromJson(pReply->readAll()).object();
-        if (status == 429) {
-            emit failed(tr("Spotify is busy, try again in a moment"));
-            return;
-        }
-        if (status == 403) {
-            emit failed(tr("Spotify refused the request: %1")
-                            .arg(root.value(QStringLiteral("error"))
-                                            .toObject()
-                                            .value(QStringLiteral("message"))
-                                            .toString()));
-            return;
-        }
-        if (pReply->error() != QNetworkReply::NoError) {
-            emit failed(pReply->errorString());
-            return;
-        }
-        onSuccess(root);
+        QMetaObject::invokeMethod(
+                pThis.data(),
+                [pThis, error, json, onSuccess]() {
+                    if (!pThis) {
+                        return;
+                    }
+                    if (!error.isEmpty()) {
+                        kLogger.warning() << "Spotify browsing:" << error;
+                        emit pThis->failed(error);
+                        return;
+                    }
+                    onSuccess(QJsonDocument::fromJson(json).object());
+                },
+                Qt::QueuedConnection);
     });
+#else
+    Q_UNUSED(offset);
+    Q_UNUSED(onSuccess);
+    emit failed(tr("Spotify is not part of this build"));
+#endif
 }
 
-// static
-QVariantMap QmlSpotifyProxy::trackToVariant(const QJsonObject& track) {
-    QVariantMap map;
-    const QString id = track.value(QStringLiteral("id")).toString();
-    if (id.isEmpty() || track.value(QStringLiteral("is_local")).toBool()) {
-        return map; // local files of the Spotify app have nothing to find
-    }
-    QStringList artists;
-    for (const QJsonValue& artist : track.value(QStringLiteral("artists")).toArray()) {
-        artists.append(artist.toObject().value(QStringLiteral("name")).toString());
-    }
-    const QJsonObject album = track.value(QStringLiteral("album")).toObject();
-    // Images come largest first; the smallest one of at least 64 px suits a row
-    QString artwork;
-    for (const QJsonValue& image : album.value(QStringLiteral("images")).toArray()) {
-        const QJsonObject img = image.toObject();
-        if (artwork.isEmpty() || img.value(QStringLiteral("width")).toInt() >= 64) {
-            artwork = img.value(QStringLiteral("url")).toString();
-        }
-    }
-    map[QStringLiteral("id")] = id;
-    map[QStringLiteral("title")] = track.value(QStringLiteral("name")).toString();
-    map[QStringLiteral("artist")] = artists.join(QStringLiteral(", "));
-    map[QStringLiteral("album")] = album.value(QStringLiteral("name")).toString();
-    map[QStringLiteral("durationSec")] = static_cast<int>(std::lround(
-            track.value(QStringLiteral("duration_ms")).toDouble() / 1000.0));
-    map[QStringLiteral("artwork")] = artwork;
-    map[QStringLiteral("explicit")] = track.value(QStringLiteral("explicit")).toBool();
-    map[QStringLiteral("uri")] = track.value(QStringLiteral("uri")).toString();
-    return map;
-}
-
-void QmlSpotifyProxy::fetchList(const QUrl& url, ListKind kind, bool append) {
+void QmlSpotifyProxy::fetchList(const QString& request, ListKind kind, bool append) {
     const quint64 generation = append ? m_generation : ++m_generation;
-    if (!append) {
-        m_nextUrl.clear();
-    }
-    apiGet(url, [this, kind, append, generation](const QJsonObject& response) {
+    const int offset = append ? m_nextOffset : 0;
+    m_listRequest = request;
+    m_nextOffset = -1;
+    browse(request, offset, [this, kind, append, generation](const QJsonObject& page) {
         if (generation != m_generation) {
             return; // the user opened another list meanwhile
         }
-        // Search wraps the page in "tracks"; the other lists are the page
-        QJsonObject page = response;
-        if (response.contains(QStringLiteral("tracks")) &&
-                response.value(QStringLiteral("tracks")).isObject()) {
-            page = response.value(QStringLiteral("tracks")).toObject();
-        }
-        m_nextUrl = page.value(QStringLiteral("next")).toString();
-        const QJsonArray items = page.value(QStringLiteral("items")).toArray();
-        QVariantList out;
+        m_nextOffset = page.value(QStringLiteral("next")).toInt(-1);
+        const QVariantList items = page.value(QStringLiteral("items")).toArray().toVariantList();
         if (kind == ListKind::Playlists) {
-            for (const QJsonValue& value : items) {
-                const QJsonObject playlist = value.toObject();
-                const QJsonArray images = playlist.value(QStringLiteral("images")).toArray();
-                // Track count: "tracks" until 2026, "items" since
-                QJsonObject count = playlist.value(QStringLiteral("items")).toObject();
-                if (count.isEmpty()) {
-                    count = playlist.value(QStringLiteral("tracks")).toObject();
-                }
-                QVariantMap map;
-                map[QStringLiteral("id")] = playlist.value(QStringLiteral("id")).toString();
-                map[QStringLiteral("name")] = playlist.value(QStringLiteral("name")).toString();
-                map[QStringLiteral("count")] = count.value(QStringLiteral("total")).toInt();
-                map[QStringLiteral("artwork")] = images.isEmpty()
-                        ? QString()
-                        : images.last().toObject().value(QStringLiteral("url")).toString();
-                out.append(map);
-            }
-            emit playlistsLoaded(out);
-            return;
+            emit playlistsLoaded(items);
+        } else {
+            emit tracksLoaded(items, append);
         }
-        for (const QJsonValue& value : items) {
-            QJsonObject track = value.toObject();
-            // Saved/playlist entries wrap the track ("item" in the playlist
-            // items, "track" in Liked Songs); search and top tracks are bare
-            for (const auto& key : {QStringLiteral("track"), QStringLiteral("item")}) {
-                if (track.value(key).isObject()) {
-                    track = track.value(key).toObject();
-                    break;
-                }
-            }
-            if (track.contains(QStringLiteral("type")) &&
-                    track.value(QStringLiteral("type")).toString() != QStringLiteral("track")) {
-                continue; // podcast episodes in playlists
-            }
-            const QVariantMap map = trackToVariant(track);
-            if (!map.isEmpty()) {
-                out.append(map);
-            }
-        }
-        emit tracksLoaded(out, append);
     });
 }
 
@@ -402,57 +263,30 @@ void QmlSpotifyProxy::search(const QString& query) {
     if (query.trimmed().isEmpty()) {
         return;
     }
-    QUrl url(kApi + QStringLiteral("/search"));
-    QUrlQuery urlQuery;
-    urlQuery.addQueryItem(QStringLiteral("q"), query.trimmed());
-    urlQuery.addQueryItem(QStringLiteral("type"), QStringLiteral("track"));
-    urlQuery.addQueryItem(QStringLiteral("limit"), QString::number(kSearchPage));
-    url.setQuery(urlQuery);
-    fetchList(url, ListKind::Tracks, false);
+    fetchList(QStringLiteral("search:") + query.trimmed(), ListKind::Tracks, false);
 }
 
 void QmlSpotifyProxy::likedSongs() {
-    fetchList(QUrl(kApi + QStringLiteral("/me/tracks?limit=%1").arg(kListPage)),
-            ListKind::Tracks,
-            false);
-}
-
-void QmlSpotifyProxy::topTracks() {
-    fetchList(QUrl(kApi +
-                      QStringLiteral("/me/top/tracks?limit=%1&time_range=short_term")
-                              .arg(kListPage)),
-            ListKind::Tracks,
-            false);
+    fetchList(QStringLiteral("liked"), ListKind::Tracks, false);
 }
 
 void QmlSpotifyProxy::playlists() {
-    fetchList(QUrl(kApi + QStringLiteral("/me/playlists?limit=%1").arg(kListPage)),
-            ListKind::Playlists,
-            false);
+    fetchList(QStringLiteral("playlists"), ListKind::Playlists, false);
 }
 
 void QmlSpotifyProxy::playlistTracks(const QString& playlistId) {
-    static const QRegularExpression kId(QStringLiteral("^[0-9A-Za-z]{1,64}$"));
+    static const QRegularExpression kId(QStringLiteral("^[0-9A-Za-z]{22}$"));
     if (!kId.match(playlistId).hasMatch()) {
         return;
     }
-    // Since 2026 only playlists the user owns or collaborates on list their
-    // items; others answer with 403
-    fetchList(QUrl(kApi +
-                      QStringLiteral("/playlists/%1/items?limit=%2")
-                              .arg(playlistId)
-                              .arg(kListPage)),
-            ListKind::Tracks,
-            false);
+    fetchList(QStringLiteral("playlist:") + playlistId, ListKind::Tracks, false);
 }
 
 void QmlSpotifyProxy::loadMore() {
-    if (m_nextUrl.isEmpty()) {
+    if (m_nextOffset < 0) {
         return;
     }
-    const QUrl next(m_nextUrl);
-    m_nextUrl.clear();
-    fetchList(next, ListKind::Tracks, true);
+    fetchList(m_listRequest, ListKind::Tracks, true);
 }
 
 QString QmlSpotifyProxy::cacheDir() const {

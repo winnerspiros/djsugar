@@ -5,8 +5,8 @@ import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
 
-// Spotify: log in once through the installed Spotify app, then search, Liked
-// Songs, top tracks and playlists. D1/D2 download the track's own Spotify
+// Spotify: log in once on Spotify's login page, then search, Liked Songs
+// and playlists. D1/D2 download the track's own Spotify
 // audio (Ogg Vorbis 320, needs Premium) and load it to the deck.
 Item {
     id: root
@@ -16,7 +16,7 @@ Item {
     property string statusMessage: ""
     property bool isBusy: false
     property bool isLoadingMore: false
-    // "search", "liked", "top", "playlists", "playlist"
+    // "search", "liked", "playlists", "playlist"
     property string listKind: "liked"
     property string playlistName: ""
     // What the rows in resultsModel are; listKind changes before they do
@@ -29,8 +29,6 @@ Item {
         root.statusMessage = qsTr("Loading...");
         if (kind === "liked")
             Mixxx.Spotify.likedSongs();
-        else if (kind === "top")
-            Mixxx.Spotify.topTracks();
         else if (kind === "playlists")
             Mixxx.Spotify.playlists();
     }
@@ -292,10 +290,6 @@ Item {
                     {
                         "kind": "liked",
                         "label": qsTr("♥ LIKED SONGS")
-                    },
-                    {
-                        "kind": "top",
-                        "label": qsTr("TOP TRACKS")
                     },
                     {
                         "kind": "playlists",

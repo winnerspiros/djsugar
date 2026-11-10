@@ -2,9 +2,12 @@
 //! protocol, no developer app or client id to register):
 //! - login on Spotify's web login page (Wi-Fi or mobile data)
 //! - the account is kept as reusable credentials in the cache directory
-//! - Web API tokens for browsing come from the logged-in session
+//! - browsing (Liked Songs, playlists, search) through Spotify's client
+//!   endpoints on the session (browse.rs), not the rate-limited Web API
 //! - tracks: the encrypted Ogg Vorbis file is fetched, decrypted and written
 //!   as a plain .ogg that Mixxx loads like any local file (Spotify Premium)
+
+mod browse;
 
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::fs::File;
@@ -48,11 +51,11 @@ const FORMATS: [AudioFileFormat; 3] = [
 /// login page takes a loopback redirect)
 const WEB_CLIENT_ID: &str = "65b708073fc0480ea92a077233ca87bd";
 const WEB_PORT: u16 = 5588;
-/// What the browsing needs (Web API)
+/// The login's scopes (the session itself only needs "streaming")
 const WEB_API_SCOPES: &str = "streaming user-read-private user-library-read \
-playlist-read-private playlist-read-collaborative user-top-read user-read-recently-played";
-/// The web login's refresh token (browsing tokens come from it)
-const WEB_TOKEN_FILE: &str = "web_token.json";
+playlist-read-private playlist-read-collaborative";
+/// Left by builds that browsed through the Web API; removed at logout
+const OLD_WEB_TOKEN_FILE: &str = "web_token.json";
 
 type Progress = Box<dyn Fn(f64) + Send>;
 
@@ -93,9 +96,10 @@ fn answer(query: &str, state: &str) -> Option<Result<String, String>> {
     if query_value(query, "state").as_deref() != Some(state) {
         return None;
     }
-    Some(query_value(query, "code").ok_or_else(|| {
-        query_value(query, "error").unwrap_or_else(|| "refused".to_owned())
-    }))
+    Some(
+        query_value(query, "code")
+            .ok_or_else(|| query_value(query, "error").unwrap_or_else(|| "refused".to_owned())),
+    )
 }
 
 async fn cancelled(mut rx: watch::Receiver<u64>) {
@@ -242,8 +246,8 @@ fn is_network_error(error: &str) -> bool {
         "network is unreachable",
         "timed out",
     ]
-        .iter()
-        .any(|marker| error.contains(marker))
+    .iter()
+    .any(|marker| error.contains(marker))
 }
 
 /// Android keeps the network from an app in the background for a moment:
@@ -298,7 +302,9 @@ async fn wait_for_code(
         let Some(query) = target.strip_prefix("/login?") else {
             // favicon and the like
             let _ = stream
-                .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                .write_all(
+                    b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
                 .await;
             continue;
         };
@@ -386,7 +392,10 @@ async fn login_web_steps(
         ("code_verifier", &verifier),
     ])
     .await?;
-    let token = save_web_token(&dir, &json)?;
+    let token = json["access_token"]
+        .as_str()
+        .ok_or_else(|| format!("Spotify login: {json}"))?
+        .to_owned();
     retry(|| connect(&dir, Credentials::with_access_token(token.clone())))
         .await
         .map(|session| session.username())
@@ -407,48 +416,6 @@ async fn token_request(form: &[(&str, &str)]) -> Result<serde_json::Value, Strin
     })
     .await?;
     serde_json::from_slice(&response).map_err(|e| format!("Spotify login: {e}"))
-}
-
-/// Keeps the refresh token (Spotify may hand out a new one) and returns the
-/// access token
-fn save_web_token(dir: &Path, json: &serde_json::Value) -> Result<String, String> {
-    let token = json["access_token"]
-        .as_str()
-        .ok_or_else(|| format!("Spotify login: {json}"))?;
-    if let Some(refresh) = json["refresh_token"].as_str() {
-        let _ = std::fs::write(
-            dir.join(WEB_TOKEN_FILE),
-            serde_json::json!({ "refresh_token": refresh }).to_string(),
-        );
-    }
-    Ok(token.to_owned())
-}
-
-/// A Web API access token of the logged-in account and its seconds left:
-/// from the web login's refresh token, else from the session (login5;
-/// accounts stored before the web login kept it)
-async fn web_token(dir: PathBuf) -> Result<(String, u64), String> {
-    let stored = std::fs::read(dir.join(WEB_TOKEN_FILE))
-        .ok()
-        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
-        .and_then(|j| j["refresh_token"].as_str().map(str::to_owned));
-    if let Some(refresh) = stored {
-        let json = token_request(&[
-            ("grant_type", "refresh_token"),
-            ("refresh_token", &refresh),
-            ("client_id", WEB_CLIENT_ID),
-        ])
-        .await?;
-        let token = save_web_token(&dir, &json)?;
-        return Ok((token, json["expires_in"].as_u64().unwrap_or(3600)));
-    }
-    let session = session(&dir).await?;
-    let token = session
-        .login5()
-        .auth_token()
-        .await
-        .map_err(|e| format!("Spotify token: {e}"))?;
-    Ok((token.access_token, token.expires_in.as_secs()))
 }
 
 /// The track, or a playable alternative of it (another release of the same
@@ -526,7 +493,9 @@ async fn download(
         let mut buffer = vec![0u8; 64 * 1024];
         let mut done = SPOTIFY_OGG_HEADER_END;
         loop {
-            let n = decrypted.read(&mut buffer).map_err(|e| format!("Download: {e}"))?;
+            let n = decrypted
+                .read(&mut buffer)
+                .map_err(|e| format!("Download: {e}"))?;
             if n == 0 {
                 break;
             }
@@ -637,25 +606,30 @@ pub unsafe extern "C" fn spotify_logout(cache_dir: *const c_char) {
     }
     let dir = PathBuf::from(arg(cache_dir));
     let _ = std::fs::remove_file(dir.join("credentials.json"));
-    let _ = std::fs::remove_file(dir.join(WEB_TOKEN_FILE));
+    let _ = std::fs::remove_file(dir.join(OLD_WEB_TOKEN_FILE));
 }
 
 /// # Safety
 /// See spotifybridge.h
 #[no_mangle]
-pub unsafe extern "C" fn spotify_web_token(
+pub unsafe extern "C" fn spotify_browse(
     cache_dir: *const c_char,
-    out_token: *mut *mut c_char,
-    out_expires_in: *mut i32,
+    request: *const c_char,
+    offset: i32,
+    limit: i32,
+    out_json: *mut *mut c_char,
 ) -> *mut c_char {
-    let result = guarded(|| runtime().block_on(web_token(PathBuf::from(arg(cache_dir)))))
-        .map(|(token, expires_in)| {
-            if !out_expires_in.is_null() {
-                *out_expires_in = i32::try_from(expires_in).unwrap_or(i32::MAX);
-            }
-            token
-        });
-    finish(result, out_token)
+    let (dir, request) = (PathBuf::from(arg(cache_dir)), arg(request));
+    let (offset, limit) = (offset.max(0) as usize, limit.clamp(1, 100) as usize);
+    let result = guarded(|| {
+        runtime().block_on(async {
+            let session = session(&dir).await?;
+            browse::browse(&session, &request, offset, limit)
+                .await
+                .map(|json| json.to_string())
+        })
+    });
+    finish(result, out_json)
 }
 
 /// # Safety
@@ -713,17 +687,28 @@ mod tests {
     #[test]
     fn tells_network_errors() {
         assert!(is_network_error("Spotify login: Unknown error {failed to lookup address information: No address associated with hostname}"));
-        assert!(is_network_error("Spotify login: Service unavailable { client error (Connect) }"));
-        assert!(!is_network_error("Error { kind: InvalidArgument, error: StatusCode(400) }"));
+        assert!(is_network_error(
+            "Spotify login: Service unavailable { client error (Connect) }"
+        ));
+        assert!(!is_network_error(
+            "Error { kind: InvalidArgument, error: StatusCode(400) }"
+        ));
         assert!(!is_network_error("Spotify login: Bad connection ID"));
-        assert!(!is_network_error("Spotify token: Service unavailable { MercuryResponse status_code: 403 }"));
-        assert!(!is_network_error("Spotify login: Permission denied { Login failed with reason: Bad credentials }"));
+        assert!(!is_network_error(
+            "Spotify token: Service unavailable { MercuryResponse status_code: 403 }"
+        ));
+        assert!(!is_network_error(
+            "Spotify login: Permission denied { Login failed with reason: Bad credentials }"
+        ));
     }
 
     #[test]
     fn encodes_forms() {
         assert_eq!(
-            form_encode(&[("redirect_uri", "http://127.0.0.1:5588/login"), ("s", "a b")]),
+            form_encode(&[
+                ("redirect_uri", "http://127.0.0.1:5588/login"),
+                ("s", "a b")
+            ]),
             "redirect_uri=http%3A%2F%2F127.0.0.1%3A5588%2Flogin&s=a%20b"
         );
     }

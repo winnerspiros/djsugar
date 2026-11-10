@@ -14,6 +14,9 @@ crate-type = ["staticlib"]
 librespot-core = { version = "0.8.0", default-features = false, features = ["rustls-tls-webpki-roots"] }
 librespot-audio = { version = "0.8.0", default-features = false }
 librespot-metadata = { version = "0.8.0", default-features = false }
+librespot-protocol = "0.8.0"
+protobuf = "3.7"
+protobuf-json-mapping = "3.7"
 tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
 futures-util = "0.3"
 sha2 = "0.10"
