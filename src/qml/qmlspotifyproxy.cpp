@@ -586,11 +586,12 @@ void QmlSpotifyProxy::loadFile(
 
 #if defined(Q_OS_ANDROID) && defined(HAVE_SPOTIFY_BRIDGE)
 /// SpotifyLoginActivity: the in-app login page reached the redirect URL, or
-/// was closed ("")
+/// was closed ("closed:<last page>")
 extern "C" JNIEXPORT void JNICALL
 Java_org_mixxx_spotify_SpotifyLoginActivity_nativeRedirect(JNIEnv* pEnv, jclass, jstring url) {
     const char* pUrl = pEnv->GetStringUTFChars(url, nullptr);
-    if (pUrl[0] == '\0') {
+    if (qstrncmp(pUrl, "closed:", 7) == 0) {
+        kLogger.info() << "Spotify login page closed at" << (pUrl + 7);
         spotify_cancel_login();
     } else {
         spotify_login_redirect(pUrl);
