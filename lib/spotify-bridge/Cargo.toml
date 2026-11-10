@@ -32,3 +32,8 @@ codegen-units = 1
 # unwind: a panic is caught at the C API (guarded) instead of ending the app
 panic = "unwind"
 strip = "debuginfo"
+
+# librespot-core 0.8.0 with one change (src/config.rs, OS): Android reports
+# as Linux, see the comment there
+[patch.crates-io]
+librespot-core = { path = "vendor/librespot-core" }

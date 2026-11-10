@@ -3651,6 +3651,12 @@ if(QML AND ANDROID)
     "${SPOTIFY_NDK_BIN}/${SPOTIFY_CLANG_TRIPLE}${CMAKE_SYSTEM_VERSION}-clang"
   )
   set(SPOTIFY_CARGO_DIR "${CMAKE_CURRENT_BINARY_DIR}/spotify-bridge")
+  file(
+    GLOB_RECURSE SPOTIFY_BRIDGE_SOURCES
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/src/*.rs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/vendor/*"
+  )
   set(
     SPOTIFY_BRIDGE_LIB
     "${SPOTIFY_CARGO_DIR}/${SPOTIFY_RUST_TARGET}/release/libspotify_bridge.a"
@@ -3668,7 +3674,7 @@ if(QML AND ANDROID)
     DEPENDS
       "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.toml"
       "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/Cargo.lock"
-      "${CMAKE_CURRENT_SOURCE_DIR}/lib/spotify-bridge/src/lib.rs"
+      ${SPOTIFY_BRIDGE_SOURCES}
     COMMENT "Building the Spotify bridge (librespot, ${SPOTIFY_RUST_TARGET})"
     USES_TERMINAL
     VERBATIM
