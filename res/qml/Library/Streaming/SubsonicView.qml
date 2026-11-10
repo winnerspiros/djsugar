@@ -26,8 +26,9 @@ Item {
         Mixxx.StreamingManager.searchSubsonic(query);
     }
     function openServer(url) {
+        // Only the field: Connect / editingFinished save it, a stray link
+        // never replaces a working server
         serverUrlField.text = url;
-        Mixxx.StreamingManager.subsonicUrl = url;
         root.showSettings = true;
         userField.forceActiveFocus();
     }

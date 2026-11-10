@@ -6,8 +6,6 @@
     android:versionName="1.5.5">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"  />
     <uses-permission android:name="android.permission.INTERNET"  />
-    <!-- Spotify login from the Spotify app: Spotify Connect discovery (mDNS) -->
-    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <!-- API 33+ (Android 13) replaced the broad READ/WRITE_EXTERNAL_STORAGE
          model with per-mediatype permissions; READ_MEDIA_AUDIO is what we
          actually need to scan a music library. The legacy permissions are
@@ -52,11 +50,6 @@
         android:smallScreens="true"
         android:xlargeScreens="true"
         android:resizeable="true" />
-    <!-- The Spotify tab opens the Spotify app for its login -->
-    <queries>
-        <package android:name="com.spotify.music" />
-    </queries>
-
     <application
         android:name="org.qtproject.qt.android.bindings.QtApplication"
         android:hardwareAccelerated="true"

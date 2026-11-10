@@ -13,11 +13,6 @@ extern "C" {
 // otherwise an error message ("cancelled" after spotify_cancel_login) to free
 // with spotify_free_string(), as every string handed out here.
 
-/// Login from the Spotify app: advertises `device_name` as a Spotify Connect
-/// device on the local network; picking it in the Spotify app's devices
-/// logs in with that account. Waits until then or spotify_cancel_login().
-char* spotify_login_app(const char* cache_dir, const char* device_name, char** out_user);
-
 /// Login on Spotify's web page: `open_url` is called with the page to show
 /// (any thread); it comes back to http://127.0.0.1:5588/login. Waits until
 /// then or spotify_cancel_login().

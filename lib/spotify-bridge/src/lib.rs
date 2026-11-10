@@ -1,7 +1,6 @@
 //! Spotify for the DJ Sugar decks, on librespot (Spotify's own client
 //! protocol, no developer app or client id to register):
-//! - login from the Spotify app (Spotify Connect: DJ Sugar shows up as a
-//!   device, picking it hands over the account) or on Spotify's web login
+//! - login on Spotify's web login page (Wi-Fi or mobile data)
 //! - the account is kept as reusable credentials in the cache directory
 //! - Web API tokens for browsing come from the logged-in session
 //! - tracks: the encrypted Ogg Vorbis file is fetched, decrypted and written
@@ -25,7 +24,6 @@ use librespot_core::http_client::HttpClient;
 use librespot_core::session::Session;
 use librespot_core::spotify_id::SpotifyId;
 use librespot_core::spotify_uri::SpotifyUri;
-use librespot_discovery::{DeviceType, Discovery};
 use librespot_metadata::audio::{AudioFileFormat, AudioFiles, AudioItem};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
@@ -122,42 +120,36 @@ async fn connect(dir: &Path, credentials: Credentials) -> Result<Session, String
         .connect(credentials, true)
         .await
         .map_err(|e| format!("Spotify login: {e}"))?;
-    if let Some(old) = current().lock().unwrap().replace(session.clone()) {
-        old.shutdown();
-    }
+    // Not shut down: a download may still use the old one; it ends with
+    // its last user
+    *current().lock().unwrap() = Some(session.clone());
     Ok(session)
 }
 
+fn live_session() -> Option<Session> {
+    current()
+        .lock()
+        .unwrap()
+        .as_ref()
+        .filter(|session| !session.is_invalid())
+        .cloned()
+}
+
+/// The logged-in session; one connect at a time, so downloads started
+/// together share it
 async fn session(dir: &Path) -> Result<Session, String> {
-    if let Some(session) = current().lock().unwrap().as_ref() {
-        if !session.is_invalid() {
-            return Ok(session.clone());
-        }
+    static CONNECTING: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+    if let Some(session) = live_session() {
+        return Ok(session);
+    }
+    let _connecting = CONNECTING.get_or_init(Default::default).lock().await;
+    if let Some(session) = live_session() {
+        return Ok(session); // made while this one waited
     }
     let credentials = cache(dir)?
         .credentials()
         .ok_or_else(|| "Not logged in to Spotify".to_owned())?;
     connect(dir, credentials).await
-}
-
-/// Spotify Connect: DJ Sugar is listed in the Spotify app's devices; picking
-/// it there sends the account over the local network
-async fn login_app(dir: PathBuf, name: String) -> Result<String, String> {
-    let mut discovery = Discovery::builder(device_id(&dir), SessionConfig::default().client_id)
-        .name(name)
-        .device_type(DeviceType::Speaker)
-        .launch()
-        .map_err(|e| format!("Spotify Connect: {e}"))?;
-    let rx = cancel().subscribe();
-    let credentials = tokio::select! {
-        credentials = discovery.next() => credentials,
-        () = cancelled(rx) => None,
-    };
-    discovery.shutdown().await;
-    match credentials {
-        Some(credentials) => Ok(connect(&dir, credentials).await?.username()),
-        None => Err("cancelled".to_owned()),
-    }
 }
 
 fn query_value(query: &str, key: &str) -> Option<String> {
@@ -224,7 +216,15 @@ fn html_page(title: &str, text: &str) -> String {
 /// No connection (DNS, connect), not an answer from Spotify
 fn is_network_error(error: &str) -> bool {
     let error = error.to_lowercase();
-    ["unavailable", "lookup address", "connect", "timed out", "dns"]
+    [
+        "lookup address",
+        "dns error",
+        "client error (connect)",
+        "connection refused",
+        "connection reset",
+        "network is unreachable",
+        "timed out",
+    ]
         .iter()
         .any(|marker| error.contains(marker))
 }
@@ -269,8 +269,10 @@ async fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, Str
                 .await;
             continue;
         };
-        let code = query_value(query, "code")
-            .filter(|_| query_value(query, "state").as_deref() == Some(state));
+        // Not from the login started here (another page, an old tab): answered,
+        // but the login keeps waiting for its own
+        let ours = query_value(query, "state").as_deref() == Some(state);
+        let code = query_value(query, "code").filter(|_| ours);
         let body = if code.is_some() {
             html_page("Logged in to Spotify", "Go back to DJ Sugar.")
         } else {
@@ -287,16 +289,44 @@ async fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, Str
             )
             .await;
         let _ = stream.shutdown().await;
+        if !ours {
+            continue;
+        }
         return code.ok_or_else(|| query_value(query, "error").unwrap_or_else(|| "refused".to_owned()));
     }
 }
 
 /// Spotify's login page in the browser (PKCE), back on a loopback port
 async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<String, String> {
+    // First: a cancel sent from now on is seen
+    let rx = cancel().subscribe();
+    tokio::select! {
+        user = login_web_steps(dir, open_url) => user,
+        () = cancelled(rx) => Err("cancelled".to_owned()),
+    }
+}
+
+/// The port of a login just cancelled can take a moment to be free
+async fn bind_login_port() -> Result<TcpListener, String> {
+    let mut attempt = 0;
+    loop {
+        match TcpListener::bind(("127.0.0.1", WEB_PORT)).await {
+            Ok(listener) => return Ok(listener),
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse && attempt < 20 => {
+                attempt += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => return Err(format!("Login port {WEB_PORT}: {e}")),
+        }
+    }
+}
+
+async fn login_web_steps(
+    dir: PathBuf,
+    open_url: Box<dyn Fn(&str) + Send>,
+) -> Result<String, String> {
     let redirect = format!("http://127.0.0.1:{WEB_PORT}/login");
-    let listener = TcpListener::bind(("127.0.0.1", WEB_PORT))
-        .await
-        .map_err(|e| format!("Login port {WEB_PORT}: {e}"))?;
+    let listener = bind_login_port().await?;
     let mut random = [0u8; 64];
     rand::rng().fill_bytes(&mut random);
     let verifier = URL_SAFE_NO_PAD.encode(random);
@@ -314,11 +344,7 @@ async fn login_web(dir: PathBuf, open_url: Box<dyn Fn(&str) + Send>) -> Result<S
             ("state", &state),
         ])
     ));
-    let rx = cancel().subscribe();
-    let code = tokio::select! {
-        code = wait_for_code(listener, &state) => code?,
-        () = cancelled(rx) => return Err("cancelled".to_owned()),
-    };
+    let code = wait_for_code(listener, &state).await?;
     let json = token_request(&[
         ("grant_type", "authorization_code"),
         ("code", &code),
@@ -366,7 +392,8 @@ fn save_web_token(dir: &Path, json: &serde_json::Value) -> Result<String, String
 }
 
 /// A Web API access token of the logged-in account and its seconds left:
-/// from the web login's refresh token, else from the session (login5)
+/// from the web login's refresh token, else from the session (login5;
+/// accounts stored before the web login kept it)
 async fn web_token(dir: PathBuf) -> Result<(String, u64), String> {
     let stored = std::fs::read(dir.join(WEB_TOKEN_FILE))
         .ok()
@@ -506,6 +533,12 @@ fn c_string(value: String) -> *mut c_char {
         .into_raw()
 }
 
+/// A panic in librespot ends in an error message, not in a crashed app
+fn guarded<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or_else(|_| Err("Spotify: internal error".to_owned()))
+}
+
 /// NULL (and `*out` set) on success, the error message otherwise
 unsafe fn finish(result: Result<String, String>, out: *mut *mut c_char) -> *mut c_char {
     match result {
@@ -526,18 +559,6 @@ unsafe impl Send for UserPtr {}
 /// # Safety
 /// See spotifybridge.h
 #[no_mangle]
-pub unsafe extern "C" fn spotify_login_app(
-    cache_dir: *const c_char,
-    device_name: *const c_char,
-    out_user: *mut *mut c_char,
-) -> *mut c_char {
-    let result = runtime().block_on(login_app(PathBuf::from(arg(cache_dir)), arg(device_name)));
-    finish(result, out_user)
-}
-
-/// # Safety
-/// See spotifybridge.h
-#[no_mangle]
 pub unsafe extern "C" fn spotify_login_web(
     cache_dir: *const c_char,
     open_url: Option<extern "C" fn(*mut c_void, *const c_char)>,
@@ -551,7 +572,7 @@ pub unsafe extern "C" fn spotify_login_web(
             callback(user.0, url.as_ptr());
         }
     });
-    let result = runtime().block_on(login_web(PathBuf::from(arg(cache_dir)), open));
+    let result = guarded(|| runtime().block_on(login_web(PathBuf::from(arg(cache_dir)), open)));
     finish(result, out_user)
 }
 
@@ -587,8 +608,7 @@ pub unsafe extern "C" fn spotify_web_token(
     out_token: *mut *mut c_char,
     out_expires_in: *mut i32,
 ) -> *mut c_char {
-    let result = runtime()
-        .block_on(web_token(PathBuf::from(arg(cache_dir))))
+    let result = guarded(|| runtime().block_on(web_token(PathBuf::from(arg(cache_dir)))))
         .map(|(token, expires_in)| {
             if !out_expires_in.is_null() {
                 *out_expires_in = i32::try_from(expires_in).unwrap_or(i32::MAX);
@@ -615,12 +635,14 @@ pub unsafe extern "C" fn spotify_download(
             callback(user.0, fraction);
         }
     });
-    let result = runtime().block_on(download(
-        PathBuf::from(arg(cache_dir)),
-        arg(track_id),
-        PathBuf::from(arg(out_path)),
-        report,
-    ));
+    let result = guarded(|| {
+        runtime().block_on(download(
+            PathBuf::from(arg(cache_dir)),
+            arg(track_id),
+            PathBuf::from(arg(out_path)),
+            report,
+        ))
+    });
     finish(result.map(|()| String::new()), std::ptr::null_mut())
 }
 
@@ -653,6 +675,8 @@ mod tests {
         assert!(is_network_error("Spotify login: Unknown error {failed to lookup address information: No address associated with hostname}"));
         assert!(is_network_error("Spotify login: Service unavailable { client error (Connect) }"));
         assert!(!is_network_error("Error { kind: InvalidArgument, error: StatusCode(400) }"));
+        assert!(!is_network_error("Spotify login: Bad connection ID"));
+        assert!(!is_network_error("Spotify token: Service unavailable { MercuryResponse status_code: 403 }"));
         assert!(!is_network_error("Spotify login: Permission denied { Login failed with reason: Bad credentials }"));
     }
 

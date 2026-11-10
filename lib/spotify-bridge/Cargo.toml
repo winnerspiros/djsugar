@@ -16,7 +16,6 @@ librespot-audio = { version = "0.8.0", default-features = false }
 librespot-metadata = { version = "0.8.0", default-features = false }
 tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
 futures-util = "0.3"
-librespot-discovery = { version = "0.8.0", default-features = false, features = ["with-libmdns", "rustls-tls-webpki-roots"] }
 sha2 = "0.10"
 base64 = "0.22"
 rand = "0.9"
@@ -27,5 +26,6 @@ serde_json = "1"
 [profile.release]
 lto = true
 codegen-units = 1
-panic = "abort"
+# unwind: a panic is caught at the C API (guarded) instead of ending the app
+panic = "unwind"
 strip = "debuginfo"

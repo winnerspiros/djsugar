@@ -19,6 +19,8 @@ Item {
     // "search", "liked", "top", "playlists", "playlist"
     property string listKind: "liked"
     property string playlistName: ""
+    // What the rows in resultsModel are; listKind changes before they do
+    property bool rowsArePlaylists: false
     property var progress: ({})
 
     function openList(kind) {
@@ -63,7 +65,7 @@ Item {
     }
     function loadRow(row, group) {
         const item = resultsModel.get(row);
-        if (root.listKind === "playlists") {
+        if (root.rowsArePlaylists) {
             root.openPlaylist(item.sid, item.title);
             return;
         }
@@ -113,6 +115,7 @@ Item {
             root.isBusy = false;
             root.isLoadingMore = false;
             if (!append) {
+                root.rowsArePlaylists = false;
                 resultsModel.clear();
                 resultList.currentIndex = -1;
             }
@@ -134,6 +137,7 @@ Item {
         }
         function onPlaylistsLoaded(playlists) {
             root.isBusy = false;
+            root.rowsArePlaylists = true;
             resultsModel.clear();
             resultList.currentIndex = -1;
             for (const playlist of playlists) {
@@ -191,9 +195,8 @@ Item {
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loginStep === "app" ? qsTr("In the Spotify app, tap the devices icon and pick \"DJ Sugar\".") : Mixxx.Spotify.loginStep === "web" ? qsTr("Log in on the Spotify page, then come back here.") : qsTr("Log in once with your Spotify account (Wi-Fi or mobile data). Playing tracks on the decks needs Spotify Premium.")
+            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loggingIn ? qsTr("Log in on the Spotify page, then come back here.") : qsTr("Log in once with your Spotify account. Playing tracks on the decks needs Spotify Premium.")
         }
-        // Spotify's login page: works on any connection
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: 40
@@ -202,21 +205,9 @@ Item {
             normalColor: root.spotifyGreen
             font.bold: true
             font.pixelSize: 12
-            visible: Mixxx.Spotify.available && Mixxx.Spotify.loginStep !== "app"
-            text: Mixxx.Spotify.loginStep === "web" ? qsTr("OPEN LOGIN PAGE AGAIN") : qsTr("LOG IN TO SPOTIFY")
-            onClicked: Mixxx.Spotify.login(true)
-        }
-        // Spotify Connect hand-over from the app: only on a shared Wi-Fi
-        Skin.Button {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredHeight: 32
-            Layout.preferredWidth: 240
-            activeColor: root.spotifyGreen
-            normalColor: "#b3b3b3"
-            font.pixelSize: 11
-            visible: Mixxx.Spotify.available && Mixxx.Spotify.appInstalled && Mixxx.Spotify.loginStep !== "web"
-            text: Mixxx.Spotify.loginStep === "app" ? qsTr("OPEN SPOTIFY") : qsTr("USE SPOTIFY APP (SAME WI-FI)")
-            onClicked: Mixxx.Spotify.loginStep === "app" ? Mixxx.Spotify.openSpotifyApp() : Mixxx.Spotify.login(false)
+            visible: Mixxx.Spotify.available
+            text: Mixxx.Spotify.loggingIn ? qsTr("OPEN LOGIN PAGE AGAIN") : qsTr("LOG IN TO SPOTIFY")
+            onClicked: Mixxx.Spotify.login()
         }
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter
@@ -395,7 +386,7 @@ Item {
                 required property int durationSec
                 required property string artwork
                 required property int count
-                readonly property bool isPlaylist: root.listKind === "playlists"
+                readonly property bool isPlaylist: root.rowsArePlaylists
                 readonly property double downloadProg: root.progress[sid] ?? -1
                 readonly property bool isDownloading: downloadProg >= 0
 

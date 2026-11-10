@@ -1,5 +1,6 @@
 #include "qml/qmlspotifyproxy.h"
 
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
@@ -26,19 +27,11 @@
 #ifdef HAVE_SPOTIFY_BRIDGE
 #include "spotifybridge.h"
 #endif
-
-#ifdef Q_OS_ANDROID
-#include <QJniObject>
-#endif
-
 namespace {
 const mixxx::Logger kLogger("QmlSpotifyProxy");
 
 const QString kApi = QStringLiteral("https://api.spotify.com/v1");
 const QString kUserNameKey = QStringLiteral("Spotify/userName");
-const QString kSpotifyPackage = QStringLiteral("com.spotify.music");
-// Shown in the Spotify app's device list for the login from the app
-const QString kDeviceName = QStringLiteral("DJ Sugar");
 constexpr int kSearchPage = 20;
 constexpr int kListPage = 50;
 
@@ -60,50 +53,6 @@ QString take(char* pString) {
 }
 #endif
 
-#ifdef Q_OS_ANDROID
-QJniObject androidContext() {
-    return QJniObject(QNativeInterface::QAndroidApplication::context());
-}
-
-QJniObject spotifyLaunchIntent() {
-    QJniObject packageManager = androidContext().callObjectMethod(
-            "getPackageManager", "()Landroid/content/pm/PackageManager;");
-    if (!packageManager.isValid()) {
-        return QJniObject();
-    }
-    return packageManager.callObjectMethod("getLaunchIntentForPackage",
-            "(Ljava/lang/String;)Landroid/content/Intent;",
-            QJniObject::fromString(kSpotifyPackage).object<jstring>());
-}
-
-/// Android drops multicast (the Spotify Connect discovery) unless an app
-/// holds this lock
-class MulticastLock {
-  public:
-    MulticastLock() {
-        QJniObject wifi = androidContext().callObjectMethod("getSystemService",
-                "(Ljava/lang/String;)Ljava/lang/Object;",
-                QJniObject::fromString(QStringLiteral("wifi")).object<jstring>());
-        if (!wifi.isValid()) {
-            return;
-        }
-        m_lock = wifi.callObjectMethod("createMulticastLock",
-                "(Ljava/lang/String;)Landroid/net/wifi/WifiManager$MulticastLock;",
-                QJniObject::fromString(QStringLiteral("djsugar-spotify")).object<jstring>());
-        if (m_lock.isValid()) {
-            m_lock.callMethod<void>("acquire");
-        }
-    }
-    ~MulticastLock() {
-        if (m_lock.isValid()) {
-            m_lock.callMethod<void>("release");
-        }
-    }
-
-  private:
-    QJniObject m_lock;
-};
-#endif
 } // namespace
 
 namespace mixxx {
@@ -147,14 +96,6 @@ bool QmlSpotifyProxy::available() const {
 #endif
 }
 
-bool QmlSpotifyProxy::appInstalled() const {
-#ifdef Q_OS_ANDROID
-    return spotifyLaunchIntent().isValid();
-#else
-    return false;
-#endif
-}
-
 QString QmlSpotifyProxy::accountDir() {
     const QString dir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))
                                 .filePath(QStringLiteral("spotify"));
@@ -162,41 +103,24 @@ QString QmlSpotifyProxy::accountDir() {
     return dir;
 }
 
-void QmlSpotifyProxy::login(bool browser) {
+void QmlSpotifyProxy::login() {
 #ifdef HAVE_SPOTIFY_BRIDGE
     if (m_loggingIn) {
-        cancelLogin(); // another way picked while one waits
+        cancelLogin(); // "open the login page again"
     }
     m_loggingIn = true;
-    m_loginStep = browser ? QStringLiteral("web") : QStringLiteral("app");
     emit loginChanged();
     const QByteArray dir = QFile::encodeName(accountDir());
-    const QByteArray name = kDeviceName.toUtf8();
     const quint64 attempt = ++m_loginAttempt;
     QPointer<QmlSpotifyProxy> pThis(this);
-    std::thread([pThis, dir, name, browser, attempt]() {
+    std::thread([pThis, dir, attempt]() {
+        auto openUrl = [](void*, const char* pUrl) {
+            const QUrl url(QString::fromUtf8(pUrl));
+            QMetaObject::invokeMethod(
+                    qApp, [url]() { QDesktopServices::openUrl(url); }, Qt::QueuedConnection);
+        };
         char* pUser = nullptr;
-        char* pError;
-        if (browser) {
-            auto openUrl = [](void* pUser, const char* pUrl) {
-                const QUrl url(QString::fromUtf8(pUrl));
-                auto* pProxy = static_cast<QPointer<QmlSpotifyProxy>*>(pUser);
-                if (*pProxy) {
-                    QMetaObject::invokeMethod(
-                            pProxy->data(),
-                            [url]() { QDesktopServices::openUrl(url); },
-                            Qt::QueuedConnection);
-                }
-            };
-            QPointer<QmlSpotifyProxy> pProxy = pThis;
-            pError = spotify_login_web(dir.constData(), openUrl, &pProxy, &pUser);
-        } else {
-#ifdef Q_OS_ANDROID
-            MulticastLock multicast;
-#endif
-            pError = spotify_login_app(dir.constData(), name.constData(), &pUser);
-        }
-        const QString error = take(pError);
+        const QString error = take(spotify_login_web(dir.constData(), openUrl, nullptr, &pUser));
         const QString user = take(pUser);
         if (pThis) {
             QMetaObject::invokeMethod(
@@ -209,23 +133,6 @@ void QmlSpotifyProxy::login(bool browser) {
                     Qt::QueuedConnection);
         }
     }).detach();
-    if (!browser) {
-        openSpotifyApp();
-    }
-#else
-    Q_UNUSED(browser);
-#endif
-}
-
-void QmlSpotifyProxy::openSpotifyApp() {
-#ifdef Q_OS_ANDROID
-    QJniObject intent = spotifyLaunchIntent();
-    if (!intent.isValid()) {
-        return;
-    }
-    intent.callObjectMethod("addFlags", "(I)Landroid/content/Intent;", jint(0x10000000));
-    androidContext().callMethod<void>(
-            "startActivity", "(Landroid/content/Intent;)V", intent.object());
 #endif
 }
 
@@ -238,14 +145,12 @@ void QmlSpotifyProxy::cancelLogin() {
     ++m_loginAttempt;
     if (m_loggingIn) {
         m_loggingIn = false;
-        m_loginStep.clear();
         emit loginChanged();
     }
 }
 
 void QmlSpotifyProxy::onLoginResult(const QString& user, const QString& error) {
     m_loggingIn = false;
-    m_loginStep.clear();
     if (!error.isEmpty()) {
         kLogger.warning() << "Spotify login failed:" << error;
         emit loginChanged();
@@ -342,9 +247,7 @@ void QmlSpotifyProxy::apiGet(const QUrl& url,
                 emit failed(tr("Spotify did not answer, try again"));
                 return;
             }
-            if (!retried) {
-                apiGet(url, onSuccess, true);
-            }
+            apiGet(url, onSuccess, retried); // the token is fresh now
         });
         return;
     }

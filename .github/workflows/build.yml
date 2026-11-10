@@ -563,9 +563,10 @@ jobs:
           rustup target add aarch64-linux-android
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: "[android] Cache Rust build of the Spotify bridge"
+      - name: "[android] Restore Rust build of the Spotify bridge"
+        id: spotify_cache
         if: startsWith(matrix.artifacts_slug, 'android')
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -654,6 +655,16 @@ jobs:
         run: |
           ${{ matrix.compiler_cache }} --show-stats
           ${{ matrix.compiler_cache }} --cleanup
+
+      - name: "[android] Save Rust build of the Spotify bridge"
+        # Branch pushes only, as ccache: pull request caches would evict them
+        if: startsWith(matrix.artifacts_slug, 'android') && steps.spotify_cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref_type == 'branch'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            build/spotify-bridge
+          key: ${{ steps.spotify_cache.outputs.cache-primary-key }}
 
       - name: "[Ubuntu/macOS] Save ccache cache"
         id: ccache_save
