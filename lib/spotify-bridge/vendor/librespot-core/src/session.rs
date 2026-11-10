@@ -3,7 +3,6 @@ use std::{
     future::Future,
     io,
     pin::Pin,
-    process::exit,
     sync::{Arc, OnceLock, RwLock, Weak},
     task::{Context, Poll},
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -11,7 +10,6 @@ use std::{
 
 use crate::dealer::manager::DealerManager;
 use crate::{
-    Error,
     apresolve::{ApResolver, SocketAddress},
     audio_key::AudioKeyManager,
     authentication::Credentials,
@@ -26,6 +24,7 @@ use crate::{
     protocol::keyexchange::ErrorCode,
     spclient::SpClient,
     token::TokenProvider,
+    Error,
 };
 use byteorder::{BigEndian, ByteOrder};
 use bytes::Bytes;
@@ -38,7 +37,7 @@ use quick_xml::events::Event;
 use thiserror::Error;
 use tokio::{
     sync::mpsc,
-    time::{Duration as TokioDuration, Instant as TokioInstant, Sleep, sleep},
+    time::{sleep, Duration as TokioDuration, Instant as TokioInstant, Sleep},
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
@@ -364,11 +363,11 @@ impl Session {
     fn check_catalogue(attributes: &UserAttributes) {
         if let Some(account_type) = attributes.get("type") {
             if account_type != "premium" {
-                error!("librespot does not support {account_type:?} accounts.");
-                info!("Please support Spotify and your artists and sign up for a premium account.");
-
-                // TODO: logout instead of exiting
-                exit(1);
+                // DJ Sugar: no exit(1) here, it ended the whole app (DJ Sugar
+                // closed right after logging in with a free account). The
+                // account type stays in the user attributes ("type"), the app
+                // tells the user when playing needs Premium
+                warn!("librespot does not support {account_type:?} accounts.");
             }
         }
     }

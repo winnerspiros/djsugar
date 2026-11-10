@@ -467,6 +467,15 @@ async fn download(
 ) -> Result<(), String> {
     let id = SpotifyId::from_base62(&track_id).map_err(|e| format!("Track id: {e}"))?;
     let session = session(&dir).await?;
+    if let Some(kind) = session
+        .get_user_attribute("type")
+        .filter(|kind| kind != "premium")
+    {
+        return Err(format!(
+            "This Spotify account is {kind}, not Premium: Spotify only lets \
+             Premium accounts load tracks"
+        ));
+    }
     let item = playable_item(&session, SpotifyUri::Track { id }).await?;
     let file_id_track = SpotifyId::try_from(&item.track_id).map_err(|e| e.to_string())?;
     let file_id = FORMATS

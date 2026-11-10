@@ -37,7 +37,8 @@ codegen-units = 1
 panic = "unwind"
 strip = "debuginfo"
 
-# librespot-core 0.8.0 with one change (src/config.rs, OS): Android reports
-# as Linux, see the comment there
+# librespot-core 0.8.0 with changes marked "DJ Sugar": Android reports as
+# Linux (src/config.rs), audio key refusal codes (src/audio_key.rs), no exit
+# of the app for non-Premium accounts (src/session.rs)
 [patch.crates-io]
 librespot-core = { path = "vendor/librespot-core" }

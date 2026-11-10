@@ -8,8 +8,11 @@
 #include <ucontext.h>
 #include <unistd.h>
 
+#include <QCoreApplication>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
+#include <QJniObject>
 #include <cstdint>
 #include <cstring>
 
@@ -180,6 +183,19 @@ void installCrashReporter() {
     sigemptyset(&action.sa_mask);
     for (int i = 0; i < kSignalCount; ++i) {
         sigaction(kSignals[i], &action, &s_previousActions[i]);
+    }
+}
+
+void logPreviousExit() {
+    const QString report =
+            QJniObject::callStaticMethod<jstring>("org/mixxx/ExitReport",
+                    "previousExit",
+                    "(Landroid/content/Context;)Ljava/lang/String;",
+                    QNativeInterface::QAndroidApplication::context())
+                    .toString();
+    if (!report.isEmpty()) {
+        qWarning().noquote() << "The previous run ended abnormally (Android's record):"
+                             << report;
     }
 }
 

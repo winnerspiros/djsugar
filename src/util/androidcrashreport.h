@@ -20,6 +20,9 @@ void installCrashReporter();
 /// Copies the log of the previous run (mixxx.log.1 after the rotation) to
 /// crashReportDirectory()/mixxx-previous.log
 void exportPreviousLog(const QString& logDirPath);
+/// Logs how the previous run ended when it crashed or was killed (Android
+/// 11+ keeps a record of that, also of crashes no handler could write down)
+void logPreviousExit();
 
 } // namespace android
 } // namespace mixxx
