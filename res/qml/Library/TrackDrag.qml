@@ -1,7 +1,5 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
-import QtQml.Models
-import QtQuick.Controls
 import "../Theme"
 
 // Touch drag of a track: hold, then move. A pill with its name follows the
@@ -24,14 +22,20 @@ Item {
     property Item ghost: null
     property Item list: null
 
-    // A hold without a move: the streaming rows' menu by default
+    // Local tracks: queues an analysis (a menu entry)
+    property var analyze: null
+
+    // A hold without a move opens the menu
     signal held
 
-    onHeld: {
-        if (fetch) {
-            menuComponent.createObject(root).popup();
-        }
+    function openMenu() {
+        Qt.createComponent("TrackMenu.qml").createObject(root.Window.contentItem, {
+            "track": root,
+            "analyze": root.analyze
+        }).open();
     }
+
+    onHeld: openMenu()
 
     function loadToGroup(group) {
         if (loadTo) {
@@ -144,44 +148,6 @@ Item {
             }
         }
         onCanceled: root.end(false)
-    }
-    Component {
-        id: menuComponent
-
-        Menu {
-            onClosed: destroy()
-
-            MenuItem {
-                text: qsTr("Load Deck 1")
-                onTriggered: root.loadToGroup("[Channel1]")
-            }
-            MenuItem {
-                text: qsTr("Load Deck 2")
-                onTriggered: root.loadToGroup("[Channel2]")
-            }
-            MenuItem {
-                text: qsTr("Download")
-                onTriggered: root.fetch()
-            }
-            Menu {
-                id: playlistMenu
-
-                title: qsTr("Add to playlist")
-
-                Instantiator {
-                    model: Mixxx.MobileLibrary.playlists().filter(p => !p.locked)
-
-                    MenuItem {
-                        required property var modelData
-
-                        text: modelData.name
-                        onTriggered: root.addToPlaylist(modelData.id)
-                    }
-                    onObjectAdded: (index, item) => playlistMenu.insertItem(index, item)
-                    onObjectRemoved: (index, item) => playlistMenu.removeItem(item)
-                }
-            }
-        }
     }
     Component {
         id: ghostComponent
