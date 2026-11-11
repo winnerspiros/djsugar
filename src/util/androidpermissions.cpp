@@ -139,7 +139,8 @@ QStringList sharedAudioDirectories() {
             "android/provider/MediaStore$Audio$Media",
             "EXTERNAL_CONTENT_URI",
             "Landroid/net/Uri;");
-    const QJniObject resolver = QNativeInterface::QAndroidApplication::context().callObjectMethod(
+    const QJniObject context = QNativeInterface::QAndroidApplication::context();
+    const QJniObject resolver = context.callObjectMethod(
             "getContentResolver", "()Landroid/content/ContentResolver;");
     QJniEnvironment env;
     jobjectArray columns = env->NewObjectArray(1,
