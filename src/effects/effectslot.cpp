@@ -358,7 +358,8 @@ void EffectSlot::loadEffectInner(const EffectManifestPointer pManifest,
             // Parameters the preset does not mention (saved by an older
             // version of the effect) are shown after the known ones, so a
             // stale preset never hides knobs.
-            for (const auto& pParameter : m_allParameters.value(parameterType)) {
+            const auto& allParametersOfType = m_allParameters.value(parameterType);
+            for (const auto& pParameter : allParametersOfType) {
                 const QString& id = pParameter->manifest()->id();
                 bool mentioned = false;
                 for (const auto& parameterPreset : pEffectPreset->getParameterPresets()) {
