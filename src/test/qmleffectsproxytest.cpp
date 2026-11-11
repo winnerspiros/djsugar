@@ -100,11 +100,11 @@ TEST_F(QmlEffectsProxyTest, UnitPresetStateAndLoading) {
 }
 
 TEST_F(QmlEffectsProxyTest, SlotEffectAndParameterVisibility) {
-    constexpr int kExpectedParameterCount = 6;
+    constexpr int kExpectedParameterCount = 8;
     constexpr int kParameter1Index = 0;
     constexpr int kParameter2Index = 1;
     constexpr int kParameter3Index = 2;
-    constexpr int kButtonParameter1Index = 4;
+    constexpr int kButtonParameter1Index = 6;
 
     std::unique_ptr<mixxx::qml::QmlEffectSlotProxy> pSlot(
             m_pProxy->getEffectSlot(1, 1));
@@ -133,7 +133,7 @@ TEST_F(QmlEffectsProxyTest, SlotEffectAndParameterVisibility) {
                     .value("controlKey")
                     .toString());
 
-    pSlot->setParameterVisible(QStringLiteral("feedback_amount"), false);
+    pSlot->setParameterVisible(QStringLiteral("send_amount"), false);
     EXPECT_GE(dataChangedSpy.count(), 1);
     EXPECT_FALSE(pModel->get(kParameter2Index).toMap().value("loaded").toBool());
     EXPECT_TRUE(pModel->get(kParameter2Index)
@@ -144,7 +144,7 @@ TEST_F(QmlEffectsProxyTest, SlotEffectAndParameterVisibility) {
     EXPECT_EQ(QStringLiteral("parameter2"),
             pModel->get(kParameter3Index).toMap().value("controlKey").toString());
 
-    pSlot->setParameterVisible(QStringLiteral("feedback_amount"), true);
+    pSlot->setParameterVisible(QStringLiteral("send_amount"), true);
     EXPECT_TRUE(pModel->get(kParameter2Index).toMap().value("loaded").toBool());
     pSlot->saveDefaultSnapshot();
 

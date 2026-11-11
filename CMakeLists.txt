@@ -1581,7 +1581,6 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/samples/bundledsamples.cpp
-  src/library/samples/samplerecorder.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -4615,6 +4614,7 @@ if(QML)
       src/qml/librarycoverloader.cpp
       src/qml/qmllanguageproxy.cpp
       src/library/androidscanorder.cpp
+      src/library/samples/samplerecorder.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
