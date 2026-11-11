@@ -616,15 +616,39 @@ void YouTubeAccount::fetchAccounts() {
             if (item.isEmpty()) {
                 return false;
             }
+            // The channel's page id: in a pageIdToken anywhere in the item
+            // (the switch endpoint moved over time), else the first half
+            // of its datasync id ("<pageId>||<user id>"); "" = main channel
             QString pageId;
-            walk(item.value(QStringLiteral("serviceEndpoint")),
-                    [&pageId](const QJsonObject& o) {
-                        pageId = o.value(QStringLiteral("pageIdToken"))
-                                         .toObject()
-                                         .value(QStringLiteral("pageId"))
-                                         .toString();
-                        return !pageId.isEmpty();
-                    });
+            QString datasyncId;
+            walk(item, [&pageId, &datasyncId](const QJsonObject& o) {
+                const QString id = o.value(QStringLiteral("pageIdToken"))
+                                           .toObject()
+                                           .value(QStringLiteral("pageId"))
+                                           .toString();
+                if (!id.isEmpty()) {
+                    pageId = id;
+                    return true;
+                }
+                const QString sync = o.value(QStringLiteral("datasyncIdToken"))
+                                             .toObject()
+                                             .value(QStringLiteral("datasyncIdToken"))
+                                             .toString();
+                if (!sync.isEmpty() && datasyncId.isEmpty()) {
+                    datasyncId = sync;
+                }
+                return false;
+            });
+            if (pageId.isEmpty() && datasyncId.contains(QStringLiteral("||"))) {
+                const QString first = datasyncId.section(QStringLiteral("||"), 0, 0);
+                const QString second = datasyncId.section(QStringLiteral("||"), 1);
+                // "<id>||" alone is the main channel
+                if (!second.isEmpty() && first != second) {
+                    pageId = first;
+                }
+            }
+            kLogger.info() << "Channel" << text(item.value(QStringLiteral("accountName")))
+                           << "page id" << (pageId.isEmpty() ? QStringLiteral("(main)") : pageId);
             accounts.append(QVariantMap{
                     {QStringLiteral("name"), text(item.value(QStringLiteral("accountName")))},
                     {QStringLiteral("handle"),

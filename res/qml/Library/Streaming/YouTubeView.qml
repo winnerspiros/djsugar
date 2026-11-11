@@ -255,7 +255,15 @@ Item {
                     : qsTr("No playlists");
         }
         function onYouTubeAccountsLoaded(accounts) {
-            root.channels = accounts;
+            // One highlight: the first selected only
+            let found = false;
+            root.channels = accounts.map(c => {
+                const on = c.selected && !found;
+                found = found || on;
+                return Object.assign({}, c, {
+                    "selected": on
+                });
+            });
         }
         function onAccountFailed(error) {
             root.isBusy = false;
@@ -446,6 +454,7 @@ Item {
                             delegate: Rectangle {
                                 id: channelRow
 
+                                required property int index
                                 required property var modelData
 
                                 width: parent.width
@@ -504,8 +513,9 @@ Item {
                                     anchors.fill: parent
                                     onClicked: {
                                         const picked = channelRow.modelData.pageId;
-                                        root.channels = root.channels.map(c => Object.assign({}, c, {
-                                            "selected": c.pageId === picked
+                                        const row = channelRow.index;
+                                        root.channels = root.channels.map((c, i) => Object.assign({}, c, {
+                                            "selected": i === row
                                         }));
                                         Mixxx.YouTube.selectYouTubeAccount(picked, channelRow.modelData.name);
                                         root.playlists = [];
