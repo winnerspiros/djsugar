@@ -112,9 +112,8 @@ Item {
     // Passive: buttons and taps on the row keep working
     TapHandler {
         gesturePolicy: TapHandler.DragThreshold
-        // Short enough to feel like picking it up, long enough that a swipe
-        // to scroll never starts a drag
-        longPressThreshold: 0.35
+        // The platform long press: 0.4-0.5 s on Android, 0.5 s on iOS
+        longPressThreshold: 0.5
 
         onLongPressed: root.begin(finger.point.position)
     }
