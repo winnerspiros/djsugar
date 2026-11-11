@@ -1,5 +1,6 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
+import QtQml.Models
 import QtQuick.Controls
 import "../Theme"
 
