@@ -4,6 +4,7 @@
 #include "library/rekordbox/rekordboxandroid.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
+#include "qml/qmlspotifyproxy.h"
 #include "qml/qmlstreamingproxy.h"
 #include "qml/qmlyoutubeproxy.h"
 #include "track/androidautocue.h"
@@ -16,6 +17,8 @@ void registerMobileQmlSingletons(CoreServices* pCoreServices) {
     QmlStreamingProxy::registerUserSettings(pCoreServices->getSettings());
     QmlYouTubeProxy::registerLibrary(pCoreServices->getLibrary().get());
     QmlYouTubeProxy::registerPlayerManager(pCoreServices->getPlayerManager());
+    QmlSpotifyProxy::registerLibrary(pCoreServices->getLibrary().get());
+    QmlSpotifyProxy::registerPlayerManager(pCoreServices->getPlayerManager());
 #ifdef Q_OS_ANDROID
     // Before the automatic cue, which has to see the beatgrid of Rekordbox
     android::applyRekordboxDataOnLoad(pCoreServices->getPlayerManager().get(),
@@ -29,6 +32,8 @@ void unregisterMobileQmlSingletons() {
     QmlStreamingProxy::registerUserSettings(nullptr);
     QmlYouTubeProxy::registerLibrary(nullptr);
     QmlYouTubeProxy::registerPlayerManager(nullptr);
+    QmlSpotifyProxy::registerLibrary(nullptr);
+    QmlSpotifyProxy::registerPlayerManager(nullptr);
 }
 
 } // namespace qml

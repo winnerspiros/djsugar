@@ -60,6 +60,34 @@
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
         android:fullBackupOnly="false">
+        <!-- Spotify's login page inside the app
+             (org.mixxx.spotify.SpotifyLoginActivity) -->
+        <activity
+            android:name="org.mixxx.spotify.SpotifyLoginActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
+        <!-- YouTube's and SoundCloud's sign-in pages inside the app
+             (org.mixxx.AccountLoginActivity) -->
+        <activity
+            android:name="org.mixxx.AccountLoginActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
+        <!-- djsugar://back: the Spotify login page's way back into the app
+             (BackToAppActivity) -->
+        <activity
+            android:name="org.mixxx.BackToAppActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="djsugar" android:host="back" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="org.mixxx.MainActivity"
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
@@ -101,6 +129,7 @@
                 android:name="android.app.arguments"
                 android:value="--log-level warning" />
         </activity>
+
 
           <!-- Separating tracks into stems in the background (from JaviLabarumDJ/mixxx-android android-stable) -->
         <service

@@ -9,9 +9,9 @@ Item {
     id: root
 
     property string targetDeck: "[Channel1]"
-    property int activePlatform: 0 // 0: Navidrome, 1: Audius, 2: URL, 3: YouTube, 4: SoundCloud
+    property int activePlatform: 0 // 0: Navidrome / URL / radio, 1: Audius, 2: YouTube, 3: SoundCloud, 4: Spotify
     property bool acceptsController: false
-    readonly property var platformViews: [subsonicView, onlineStreamView, null, youTubeView, soundCloudView]
+    readonly property var platformViews: [webView, onlineStreamView, youTubeView, soundCloudView, spotifyView]
 
     // BROWSE/LOAD on the controller act on the service that is shown
     StreamingControl {
@@ -55,48 +55,62 @@ Item {
                     Layout.fillHeight: true
                     spacing: 4
 
+                    // Navidrome / Subsonic and direct URL / radio in one
+                    // tab (WebView): it works out what the box is fed
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 132
+                        Layout.preferredWidth: 196
                         activeColor: "#00e5ff"
                         normalColor: root.activePlatform === 0 ? "#00e5ff" : "#80d8ff"
                         font.bold: true
                         font.pixelSize: 9
-                        text: "☁️ NAVIDROME / SUBSONIC"
+                        text: qsTr("NAVIDROME · URL · RADIO")
                         onClicked: root.activePlatform = 0
+
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_navidrome.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
                     }
 
+                    // Audius: triangle icon (ic_library_audius.svg)
                     Skin.Button {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 96
                         activeColor: "#ea80fc"
                         normalColor: root.activePlatform === 1 ? "#ea80fc" : "#e1bee7"
                         font.bold: true
                         font.pixelSize: 9
-                        text: qsTr("🔥 AUDIUS (free)")
+                        text: qsTr("AUDIUS")
                         onClicked: root.activePlatform = 1
-                    }
 
-                    Skin.Button {
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 122
-                        activeColor: "#ffb300"
-                        normalColor: root.activePlatform === 2 ? "#ffb300" : "#ffe082"
-                        font.bold: true
-                        font.pixelSize: 9
-                        text: qsTr("🔗 DIRECT URL / RADIO")
-                        onClicked: root.activePlatform = 2
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_audius.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
                     }
 
                     Skin.Button {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 96
                         activeColor: "#ff0000"
-                        normalColor: root.activePlatform === 3 ? "#ff5252" : "#ff8a80"
+                        normalColor: root.activePlatform === 2 ? "#ff5252" : "#ff8a80"
                         font.bold: true
                         font.pixelSize: 9
                         text: qsTr("YOUTUBE")
-                        onClicked: root.activePlatform = 3
+                        onClicked: root.activePlatform = 2
 
                         // YouTube logo: red rounded plate with a white play
                         // triangle. Drawn in QML (Triangle, not a ▶ glyph that
@@ -128,11 +142,11 @@ Item {
                         // of the 20 px cloud icon instead of under it
                         Layout.preferredWidth: 128
                         activeColor: "#ff5500"
-                        normalColor: root.activePlatform === 4 ? "#ff7733" : "#ffab80"
+                        normalColor: root.activePlatform === 3 ? "#ff7733" : "#ffab80"
                         font.bold: true
                         font.pixelSize: 9
                         text: qsTr("SOUNDCLOUD")
-                        onClicked: root.activePlatform = 4
+                        onClicked: root.activePlatform = 3
 
                         Image {
                             anchors.left: parent.left
@@ -141,6 +155,29 @@ Item {
                             width: 20
                             height: 20
                             source: "qrc:/images/library/ic_library_soundcloud.svg"
+                            sourceSize.width: 40
+                            sourceSize.height: 40
+                        }
+                    }
+
+                    // Spotify: green disc with three arcs (ic_library_spotify.svg)
+                    Skin.Button {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 104
+                        activeColor: "#1db954"
+                        normalColor: root.activePlatform === 4 ? "#1ed760" : "#a7e8bd"
+                        font.bold: true
+                        font.pixelSize: 9
+                        text: qsTr("SPOTIFY")
+                        onClicked: root.activePlatform = 4
+
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: "qrc:/images/library/ic_library_spotify.svg"
                             sourceSize.width: 40
                             sourceSize.height: 40
                         }
@@ -192,10 +229,11 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            SubsonicView {
-                id: subsonicView
+            WebView {
+                id: webView
 
                 anchors.fill: parent
+                targetDeck: root.targetDeck
                 visible: root.activePlatform === 0
             }
 
@@ -206,22 +244,24 @@ Item {
                 visible: root.activePlatform === 1
             }
 
-            CustomUrlView {
+            YouTubeView {
+                id: youTubeView
+
                 anchors.fill: parent
                 targetDeck: root.targetDeck
                 visible: root.activePlatform === 2
             }
 
-            YouTubeView {
-                id: youTubeView
+            SoundCloudView {
+                id: soundCloudView
 
                 anchors.fill: parent
                 targetDeck: root.targetDeck
                 visible: root.activePlatform === 3
             }
 
-            SoundCloudView {
-                id: soundCloudView
+            SpotifyView {
+                id: spotifyView
 
                 anchors.fill: parent
                 targetDeck: root.targetDeck

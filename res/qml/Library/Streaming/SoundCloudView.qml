@@ -17,14 +17,28 @@ Item {
     property string statusMessage: qsTr("Search SoundCloud: remixes, edits, DJ mixes")
     property bool isBusy: false
     property bool isLoadingMore: false
+    // "search" or "likes"
+    property string listKind: "search"
+    readonly property color scOrange: "#ff5500"
 
     function doSearch() {
         const query = searchField.text.trim();
         if (query.length === 0)
             return;
+        root.listKind = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
         Mixxx.YouTube.soundCloudSearch(query);
+    }
+    function openLikes() {
+        root.listKind = "likes";
+        root.isBusy = true;
+        root.statusMessage = qsTr("Loading your likes...");
+        Mixxx.YouTube.soundCloudLikes();
+    }
+    Component.onCompleted: {
+        if (Mixxx.YouTube.soundCloudSignedIn)
+            root.openLikes();
     }
     function maybeLoadMore() {
         if (root.isBusy || root.isLoadingMore || !Mixxx.YouTube.soundCloudHasMore())
@@ -108,7 +122,17 @@ Item {
             }
             if (!append)
                 resultList.positionViewAtBeginning();
-            root.statusMessage = resultsModel.count > 0 ? qsTr("%1 results").arg(resultsModel.count) : qsTr("No results");
+            root.statusMessage = root.listKind === "likes"
+                ? (resultsModel.count > 0 ? qsTr("%1 liked tracks").arg(resultsModel.count) : qsTr("No likes yet"))
+                : (resultsModel.count > 0 ? qsTr("%1 results").arg(resultsModel.count) : qsTr("No results"));
+        }
+        function onAccountsChanged() {
+            if (Mixxx.YouTube.soundCloudSignedIn && resultsModel.count === 0 && !root.isBusy)
+                root.openLikes();
+        }
+        function onAccountFailed(error) {
+            root.isBusy = false;
+            root.statusMessage = error;
         }
         function onSoundCloudFailed(error) {
             root.isBusy = false;
@@ -128,57 +152,233 @@ Item {
         anchors.margins: 6
         spacing: 4
 
+        // Header: the SoundCloud mark, search, the account
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
 
             Rectangle {
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 30
+                radius: 6
+                color: root.scOrange
+
+                Text {
+                    anchors.centerIn: parent
+                    color: "#ffffff"
+                    font.bold: true
+                    font.pixelSize: 15
+                    text: "☁"
+                }
+            }
+            Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 30
                 color: "#000000"
-                border.color: searchField.activeFocus ? "#ff5500" : Theme.midGray3
+                border.color: searchField.activeFocus ? root.scOrange : Theme.midGray3
                 border.width: 1
-                radius: 4
+                radius: 15
 
                 TextInput {
                     id: searchField
 
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
                     color: "#ffffff"
                     font.pixelSize: 12
                     verticalAlignment: TextInput.AlignVCenter
+                    clip: true
                     onAccepted: root.doSearch()
                 }
                 Text {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
                     color: Theme.lightGray3
                     font.pixelSize: 12
-                    text: qsTr("SEARCH SOUNDCLOUD")
+                    text: qsTr("Search SoundCloud: remixes, edits, DJ mixes")
                     verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
                     visible: searchField.text.length === 0
                 }
             }
             Skin.Button {
                 Layout.preferredHeight: 30
                 Layout.preferredWidth: 80
-                activeColor: "#ff5500"
+                activeColor: root.scOrange
                 normalColor: "#ffffff"
                 font.bold: true
                 font.pixelSize: 10
-                text: root.isBusy ? "..." : qsTr("SEARCH")
+                text: root.isBusy && root.listKind === "search" ? "..." : qsTr("SEARCH")
                 enabled: !root.isBusy
                 onClicked: root.doSearch()
             }
+            // The account: SIGN IN, or the user's avatar and name (tap:
+            // the account popup)
+            AbstractButton {
+                id: accountButton
+
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: Math.min(170, accountRow.implicitWidth + 16)
+                onClicked: {
+                    if (Mixxx.YouTube.soundCloudSignedIn)
+                        scAccountMenu.open();
+                    else
+                        Mixxx.YouTube.signIn("soundcloud");
+                }
+
+                background: Rectangle {
+                    radius: 15
+                    color: Mixxx.YouTube.soundCloudSignedIn
+                        ? (accountButton.pressed ? "#3a1a08" : "#24140b")
+                        : (accountButton.pressed ? "#cc4400" : root.scOrange)
+                    border.color: root.scOrange
+                    border.width: 1
+                }
+                contentItem: Item {
+                    Row {
+                        id: accountRow
+
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Rectangle {
+                            visible: Mixxx.YouTube.soundCloudSignedIn
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 22
+                            height: 22
+                            radius: 11
+                            clip: true
+                            color: "#3a3d44"
+
+                            Image {
+                                anchors.fill: parent
+                                asynchronous: true
+                                fillMode: Image.PreserveAspectCrop
+                                source: Mixxx.YouTube.soundCloudAvatar
+                                sourceSize.width: 44
+                                sourceSize.height: 44
+                            }
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, 120)
+                            color: "#ffffff"
+                            elide: Text.ElideRight
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: !Mixxx.YouTube.soundCloudSignedIn
+                                ? qsTr("SIGN IN")
+                                : (Mixxx.YouTube.soundCloudAccount.length > 0 ? Mixxx.YouTube.soundCloudAccount : qsTr("ACCOUNT"))
+                        }
+                    }
+                }
+
+                Popup {
+                    id: scAccountMenu
+
+                    y: parent.height + 2
+                    x: parent.width - width
+                    width: 220
+                    padding: 8
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                    background: Rectangle {
+                        color: "#14161b"
+                        border.color: root.scOrange
+                        border.width: 1
+                        radius: 6
+                    }
+                    contentItem: Column {
+                        spacing: 6
+
+                        Text {
+                            width: parent.width
+                            color: "#9a9ea6"
+                            font.pixelSize: 9
+                            font.bold: true
+                            text: qsTr("SIGNED IN AS")
+                        }
+                        Text {
+                            width: parent.width
+                            color: "#ffffff"
+                            elide: Text.ElideRight
+                            font.bold: true
+                            font.pixelSize: 13
+                            text: Mixxx.YouTube.soundCloudAccount
+                        }
+                        Skin.Button {
+                            width: parent.width
+                            height: 30
+                            activeColor: "#ff5252"
+                            normalColor: "#ff5252"
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: qsTr("SIGN OUT")
+                            onClicked: {
+                                scAccountMenu.close();
+                                Mixxx.YouTube.signOut("soundcloud");
+                                resultsModel.clear();
+                                root.listKind = "search";
+                                root.statusMessage = qsTr("Signed out of SoundCloud");
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        Text {
+        // Likes / search results, as on Spotify and YouTube
+        RowLayout {
             Layout.fillWidth: true
-            color: "#9a9ea6"
-            elide: Text.ElideRight
-            font.pixelSize: 11
-            text: root.statusMessage
+            spacing: 4
+
+            Skin.Button {
+                visible: Mixxx.YouTube.soundCloudSignedIn
+                Layout.preferredHeight: 24
+                Layout.preferredWidth: 90
+                activeColor: root.scOrange
+                normalColor: root.listKind === "likes" ? root.scOrange : "#b3b3b3"
+                font.bold: true
+                font.pixelSize: 9
+                text: qsTr("♥ LIKES")
+                enabled: !root.isBusy
+                onClicked: root.openLikes()
+            }
+            Text {
+                Layout.fillWidth: true
+                color: "#9a9ea6"
+                elide: Text.ElideRight
+                font.pixelSize: 11
+                text: root.statusMessage
+            }
+        }
+
+        // Nothing listed yet: what this view is for, and the way in
+        Column {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: resultsModel.count === 0 && !root.isBusy
+            spacing: 10
+            topPadding: 40
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                color: root.scOrange
+                font.pixelSize: 40
+                text: "☁"
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width - 20, 360)
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                color: "#c8ccd4"
+                font.pixelSize: 12
+                text: Mixxx.YouTube.soundCloudSignedIn
+                    ? qsTr("Search above, or open your likes")
+                    : qsTr("Search above. Sign in for your likes, and Go+ tracks in full")
+            }
         }
 
         ListView {
@@ -186,6 +386,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: resultsModel.count > 0 || root.isBusy
             clip: true
             model: resultsModel
             spacing: 2
@@ -243,6 +444,15 @@ Item {
                     anchors.fill: parent
                     onClicked: resultList.currentIndex = trackRow.index
                 }
+                // SoundCloud's orange on the left edge
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 3
+                    height: parent.height - 12
+                    radius: 1.5
+                    color: trackRow.preview ? "#5a5d63" : root.scOrange
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -250,17 +460,20 @@ Item {
                     spacing: 6
 
                     Rectangle {
+                        Layout.leftMargin: 4
                         Layout.preferredWidth: 40
                         Layout.preferredHeight: 40
                         color: "#1e222a"
-                        radius: 3
+                        radius: 4
+                        clip: true
 
                         Image {
                             anchors.fill: parent
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
-                            source: trackRow.artwork
+                            // "-large" is 100 px: the 200 px one is sharp
+                            source: trackRow.artwork.replace("-large.", "-t200x200.")
                             sourceSize.width: 80
                             sourceSize.height: 80
                         }

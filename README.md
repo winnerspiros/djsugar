@@ -29,12 +29,19 @@ in regularly.
 - D1 / D2 / save buttons, same as YouTube
 - Go+ tracks are marked; they are 30-second previews and can't be loaded
 
+### Spotify (Android)
+
+- Log in with the account of the installed Spotify app: one tap, nothing to type (without the app, Spotify's own login page opens in the app)
+- Search, Liked Songs, top tracks and your playlists
+- D1 / D2 load Spotify's own audio (Ogg Vorbis 320 kbit/s), downloaded once into the cache: waveform, beatgrid, loops and scratching work as with a local file
+- Playing tracks needs **Spotify Premium**; the audio comes through [librespot](https://github.com/librespot-org/librespot)
+
 ### Controllers
 
 - **Pioneer DDJ-FLX4** over USB and Bluetooth (BLE MIDI), picked up automatically when connected
 - Jog wheels with scratch (vinyl mode on by default), browse, load, back and stems mode
   (SHIFT + SAMPLER: pads 1–4 mute, pads 5–8 solo)
-- BROWSE and LOAD work on whichever screen is open: library, YouTube or SoundCloud
+- BROWSE and LOAD work on whichever screen is open: library, YouTube, SoundCloud or Spotify
 - All of Mixxx's controller mappings are included
 
 ### Android
@@ -57,10 +64,10 @@ Get the latest build from [Releases](https://github.com/winnerspiros/djsugar/rel
 
 | Platform | File |
 | --- | --- |
-|  Android (ARM64) | `.apk` |
-|  Windows (x64, ARM64) | `.msi` |
-|  macOS (Intel, Apple Silicon) | `.dmg` |
-|  Ubuntu / Debian (x86_64) | `.deb` |
+| Android (ARM64) | `.apk` |
+| Windows (x64, ARM64) | `.msi` |
+| macOS (Intel, Apple Silicon) | `.dmg` |
+| Ubuntu / Debian (x86_64) | `.deb` |
 
 ## Building
 
@@ -69,20 +76,23 @@ DJ Sugar uses the same CMake + vcpkg setup as Mixxx: follow the
 APK is built by the Android job in [`.github/workflows/build.yml`](.github/workflows/build.yml), the
 reference for the exact steps.
 
+Spotify needs Rust (`rustup target add aarch64-linux-android`); nothing to register: login, browsing
+and audio go through [librespot](https://github.com/librespot-org/librespot).
+
 ## Bug reports
 
 [Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`:
 
--  Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
--  Linux: `~/.local/share/mixxx/`
--  Windows: `%LOCALAPPDATA%\Mixxx\`
--  macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
+- Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
+- Linux: `~/.local/share/mixxx/`
+- Windows: `%LOCALAPPDATA%\Mixxx\`
+- macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
 
-##  Contributing
+## Contributing
 
 Fork, branch, open a pull request. Code style and guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-##  License and credits
+## License and credits
 
 GPLv2 — see [LICENSE](LICENSE).
 

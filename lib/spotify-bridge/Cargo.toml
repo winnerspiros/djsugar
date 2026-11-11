@@ -1,0 +1,44 @@
+[package]
+name = "spotify-bridge"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+description = "Downloads Spotify tracks (librespot) for the DJ Sugar decks"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# rustls + webpki roots: no OpenSSL to build or ship on Android
+librespot-core = { version = "0.8.0", default-features = false, features = ["rustls-tls-webpki-roots"] }
+librespot-audio = { version = "0.8.0", default-features = false }
+librespot-metadata = { version = "0.8.0", default-features = false }
+librespot-protocol = "0.8.0"
+protobuf = "3.7"
+protobuf-json-mapping = "3.7"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+futures-util = "0.3"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.9"
+bytes = "1"
+http = "1"
+serde_json = "1"
+
+[dev-dependencies]
+# Paused clock for the key pacing tests
+tokio = { version = "1", features = ["test-util"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+# unwind: a panic is caught at the C API (guarded) instead of ending the app
+panic = "unwind"
+strip = "debuginfo"
+
+# librespot-core 0.8.0 with changes marked "DJ Sugar": Android reports as
+# Linux (src/config.rs), audio key refusal codes (src/audio_key.rs), no exit
+# of the app for non-Premium accounts (src/session.rs)
+[patch.crates-io]
+librespot-core = { path = "vendor/librespot-core" }

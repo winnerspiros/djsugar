@@ -96,6 +96,7 @@ Item {
         if (searchField.text.length === 0) {
             return;
         }
+        root.listKind = "search";
         root.isBusy = true;
         root.isLoadingMore = false;
         root.hasMore = false;
@@ -135,6 +136,44 @@ Item {
 
     ListModel {
         id: resultsModel
+    }
+
+    property bool wasSignedIn: false
+    // The account's playlists [{id, name}] and channels [{name, pageId, selected}]
+    property var playlists: []
+    property var channels: []
+    // "search", "liked", "playlists" (the account's playlists listed),
+    // "playlist" (one open)
+    property string listKind: "search"
+    readonly property color ytRed: "#ff0033"
+    property string playlistName: ""
+    function openList(listId, name) {
+        root.listKind = listId === "liked" ? "liked" : "playlist";
+        root.playlistName = name;
+        root.isBusy = true;
+        root.hasMore = false;
+        root.statusMessage = qsTr("Loading %1...").arg(name);
+        if (listId === "liked")
+            Mixxx.YouTube.youTubeLiked();
+        else
+            Mixxx.YouTube.youTubePlaylist(listId);
+    }
+    function openAccount() {
+        Mixxx.YouTube.youTubeAccounts();
+        root.openList("liked", qsTr("Liked songs"));
+        Mixxx.YouTube.youTubePlaylists();
+    }
+    function showPlaylists() {
+        root.listKind = "playlists";
+        root.statusMessage = root.playlists.length > 0
+            ? qsTr("%1 playlists").arg(root.playlists.length)
+            : qsTr("Loading playlists...");
+        Mixxx.YouTube.youTubePlaylists();
+    }
+    Component.onCompleted: {
+        root.wasSignedIn = Mixxx.YouTube.youTubeSignedIn;
+        if (root.wasSignedIn)
+            root.openAccount();
     }
 
     // Tempo of the deck results load into, to flag tracks that mix with it.
@@ -195,6 +234,47 @@ Item {
                 }
             }
         }
+        function onAccountsChanged() {
+            // (a plain value: a binding would already be true here)
+            const signedIn = Mixxx.YouTube.youTubeSignedIn;
+            if (signedIn && !root.wasSignedIn)
+                root.openAccount();
+            if (!signedIn) {
+                root.playlists = [];
+                root.channels = [];
+                if (root.listKind !== "search") {
+                    root.listKind = "search";
+                    root.playlistName = "";
+                    root.allResults = [];
+                    root.hasMore = false;
+                    resultsModel.clear();
+                }
+            }
+            root.wasSignedIn = signedIn;
+        }
+        function onYouTubePlaylistsLoaded(playlists) {
+            root.playlists = playlists;
+            if (root.listKind === "playlists")
+                root.statusMessage = playlists.length > 0
+                    ? qsTr("%1 playlists").arg(playlists.length)
+                    : qsTr("No playlists");
+        }
+        function onYouTubeAccountsLoaded(accounts) {
+            // One highlight: the first selected only
+            let found = false;
+            root.channels = accounts.map(c => {
+                const on = c.selected && !found;
+                found = found || on;
+                return Object.assign({}, c, {
+                    "selected": on
+                });
+            });
+        }
+        function onAccountFailed(error) {
+            root.isBusy = false;
+            root.isLoadingMore = false;
+            root.statusMessage = qsTr("YouTube account: %1").arg(error);
+        }
         function onSearchFailed(error) {
             root.isBusy = false;
             root.isLoadingMore = false;
@@ -219,19 +299,37 @@ Item {
             Layout.fillWidth: true
             spacing: 6
 
+            // The YouTube mark
+            Rectangle {
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: 40
+                radius: 8
+                color: root.ytRed
+
+                Skin.Triangle {
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: 1
+                    width: 11
+                    height: 13
+                    color: "#ffffff"
+                    pointsRight: true
+                }
+            }
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 30
                 color: "#000000"
-                border.color: searchField.activeFocus ? Theme.accentColor : Theme.midGray3
+                border.color: searchField.activeFocus ? root.ytRed : Theme.midGray3
                 border.width: 1
-                radius: 4
+                radius: 15
 
                 TextInput {
                     id: searchField
 
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    clip: true
                     color: "#ffffff"
                     font.pixelSize: 12
                     verticalAlignment: TextInput.AlignVCenter
@@ -244,10 +342,11 @@ Item {
                 }
                 Text {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 12
                     color: Theme.lightGray3
                     font.pixelSize: 12
-                    text: qsTr("SEARCH YOUTUBE")
+                    elide: Text.ElideRight
+                    text: qsTr("Search YouTube: songs, sets, remixes")
                     verticalAlignment: Text.AlignVCenter
                     visible: searchField.text.length === 0
                 }
@@ -262,6 +361,193 @@ Item {
                 text: root.isBusy ? "..." : qsTr("SEARCH")
                 enabled: !root.isBusy
                 onClicked: root.doSearch()
+            }
+            // The account: sign in (Google's page, saved passwords offered);
+            // signed in, its channels and sign out (liked songs and
+            // playlists: the row below)
+            AbstractButton {
+                id: ytAccountButton
+
+                Layout.preferredHeight: 30
+                Layout.preferredWidth: Math.min(170, ytAccountText.implicitWidth + 40)
+                background: Rectangle {
+                    radius: 15
+                    color: Mixxx.YouTube.youTubeSignedIn
+                        ? (ytAccountButton.pressed ? "#3a0d0d" : "#240a0a")
+                        : (ytAccountButton.pressed ? "#cc0000" : root.ytRed)
+                    border.color: root.ytRed
+                    border.width: 1
+                }
+                contentItem: Item {
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        // The account's initial
+                        Rectangle {
+                            visible: Mixxx.YouTube.youTubeSignedIn
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: root.ytRed
+
+                            Text {
+                                anchors.centerIn: parent
+                                color: "#ffffff"
+                                font.bold: true
+                                font.pixelSize: 11
+                                text: (Mixxx.YouTube.youTubeAccount || "Y").charAt(0).toUpperCase()
+                            }
+                        }
+                        Text {
+                            id: ytAccountText
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, 120)
+                            color: "#ffffff"
+                            elide: Text.ElideRight
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: Mixxx.YouTube.youTubeSignedIn
+                                ? (Mixxx.YouTube.youTubeAccount.length > 0 ? Mixxx.YouTube.youTubeAccount : qsTr("ACCOUNT"))
+                                : qsTr("SIGN IN")
+                        }
+                    }
+                }
+                onClicked: {
+                    if (Mixxx.YouTube.youTubeSignedIn) {
+                        Mixxx.YouTube.youTubeAccounts();
+                        accountMenu.open();
+                    } else {
+                        Mixxx.YouTube.signIn("youtube");
+                    }
+                }
+
+                // The account's channels and sign out, in the view's style
+                Popup {
+                    id: accountMenu
+
+                    y: parent.height + 2
+                    x: parent.width - width
+                    width: 240
+                    padding: 8
+                    modal: false
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                    background: Rectangle {
+                        color: "#121419"
+                        border.color: "#2c3038"
+                        border.width: 1
+                        radius: 12
+                    }
+                    contentItem: Column {
+                        spacing: 6
+
+                        Text {
+                            width: parent.width
+                            leftPadding: 6
+                            visible: root.channels.length > 0
+                            color: "#9a9ea6"
+                            font.bold: true
+                            font.pixelSize: 9
+                            text: qsTr("SWITCH ACCOUNT")
+                        }
+                        Repeater {
+                            model: root.channels
+
+                            delegate: Rectangle {
+                                id: channelRow
+
+                                required property int index
+                                required property var modelData
+
+                                width: parent.width
+                                height: 40
+                                radius: 8
+                                color: modelData.selected ? "#3a1016" : (channelTap.pressed ? "#23262e" : "#1b1e24")
+                                border.color: modelData.selected ? root.ytRed : "#2c3038"
+                                border.width: 1
+
+                                Rectangle {
+                                    id: channelInitial
+
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 26
+                                    height: 26
+                                    radius: 13
+                                    color: channelRow.modelData.selected ? root.ytRed : "#3a3e48"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        color: "#ffffff"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        text: (channelRow.modelData.name || "?").charAt(0).toUpperCase()
+                                    }
+                                }
+                                Column {
+                                    anchors.left: channelInitial.right
+                                    anchors.leftMargin: 8
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        width: parent.width
+                                        color: "#ffffff"
+                                        elide: Text.ElideRight
+                                        font.bold: channelRow.modelData.selected
+                                        font.pixelSize: 12
+                                        text: channelRow.modelData.name
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        visible: text.length > 0
+                                        color: "#9a9ea6"
+                                        elide: Text.ElideRight
+                                        font.pixelSize: 9
+                                        text: channelRow.modelData.handle ?? ""
+                                    }
+                                }
+                                MouseArea {
+                                    id: channelTap
+
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        // Reassigning the channels destroys this
+                                        // row: everything else first
+                                        const view = root;
+                                        const row = channelRow.index;
+                                        accountMenu.close();
+                                        Mixxx.YouTube.selectYouTubeAccount(channelRow.modelData.pageId, channelRow.modelData.name);
+                                        view.playlists = [];
+                                        view.openList("liked", qsTr("Liked songs"));
+                                        view.channels = view.channels.map((c, i) => Object.assign({}, c, {
+                                            "selected": i === row
+                                        }));
+                                    }
+                                }
+                            }
+                        }
+                        Skin.Button {
+                            width: parent.width
+                            height: 30
+                            activeColor: "#ff5252"
+                            normalColor: "#ff5252"
+                            font.bold: true
+                            font.pixelSize: 10
+                            text: qsTr("SIGN OUT")
+                            onClicked: {
+                                accountMenu.close();
+                                Mixxx.YouTube.signOut("youtube");
+                                root.statusMessage = qsTr("Signed out of YouTube");
+                            }
+                        }
+                    }
+                }
             }
             Switch {
                 id: sponsorBlockSwitch
@@ -307,12 +593,151 @@ Item {
                 }
             }
         }
-        Text {
+        // Signed in: the account's liked songs and playlists, as on Spotify
+        RowLayout {
             Layout.fillWidth: true
-            color: "#9a9ea6"
-            font.pixelSize: 10
-            text: root.statusMessage
-            elide: Text.ElideRight
+            spacing: 4
+
+            Repeater {
+                model: Mixxx.YouTube.youTubeSignedIn ? [
+                    {
+                        "kind": "liked",
+                        "label": qsTr("♥ LIKED SONGS")
+                    },
+                    {
+                        "kind": "playlists",
+                        "label": qsTr("PLAYLISTS")
+                    }
+                ] : []
+
+                delegate: Skin.Button {
+                    required property var modelData
+
+                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: 100
+                    activeColor: root.ytRed
+                    normalColor: root.listKind === modelData.kind || (modelData.kind === "playlists" && root.listKind === "playlist") ? root.ytRed : "#b3b3b3"
+                    font.bold: true
+                    font.pixelSize: 9
+                    text: modelData.label
+                    onClicked: {
+                        if (modelData.kind === "liked")
+                            root.openList("liked", qsTr("Liked songs"));
+                        else
+                            root.showPlaylists();
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                color: "#9a9ea6"
+                font.pixelSize: 10
+                text: (root.listKind === "playlist" ? root.playlistName + "  ·  " : "") + root.statusMessage
+                elide: Text.ElideRight
+            }
+        }
+
+        // The account's playlists; a tap opens one
+        ListView {
+            id: playlistList
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.listKind === "playlists"
+            clip: true
+            model: root.playlists
+            spacing: 2
+            delegate: Rectangle {
+                id: playlistRow
+
+                required property var modelData
+
+                width: ListView.view.width
+                height: 48
+                radius: 4
+                color: playlistTap.pressed ? "#2a2f38" : "#1e222a"
+
+                Image {
+                    id: playlistArt
+
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    height: 40
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectCrop
+                    source: playlistRow.modelData.artwork ?? ""
+                }
+                Column {
+                    anchors.left: playlistArt.right
+                    anchors.leftMargin: 8
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        color: "#ffffff"
+                        elide: Text.ElideRight
+                        font.bold: true
+                        font.pixelSize: 12
+                        text: playlistRow.modelData.name
+                    }
+                    Text {
+                        width: parent.width
+                        color: "#9a9ea6"
+                        elide: Text.ElideRight
+                        font.pixelSize: 10
+                        text: playlistRow.modelData.subtitle ?? ""
+                    }
+                }
+                MouseArea {
+                    id: playlistTap
+
+                    anchors.fill: parent
+                    onClicked: root.openList(playlistRow.modelData.id, playlistRow.modelData.name)
+                }
+            }
+        }
+
+        // Nothing listed: what this view is for, and the way in
+        Column {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
+            spacing: 10
+            topPadding: 40
+
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 56
+                height: 40
+                radius: 10
+                color: root.ytRed
+
+                Skin.Triangle {
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: 2
+                    width: 16
+                    height: 18
+                    color: "#ffffff"
+                    pointsRight: true
+                }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width - 20, 380)
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                color: "#c8ccd4"
+                font.pixelSize: 12
+                text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
+                    : root.listKind === "playlist" ? qsTr("This playlist is empty")
+                    : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
+                    : qsTr("Search above. Sign in for your liked songs and playlists")
+            }
         }
 
         ListView {
@@ -320,6 +745,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: root.listKind !== "playlists" && (resultsModel.count > 0 || root.isBusy)
             clip: true
             model: resultsModel
             spacing: 2
