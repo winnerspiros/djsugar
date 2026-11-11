@@ -456,7 +456,9 @@ void YouTubeAccount::fetchName() {
             name = text(object.value(QStringLiteral("accountName")));
             return true;
         });
-        if (name.isEmpty() && !signedInPage(page)) {
+        // Not a YouTube page (captive portal, cut-off reply): no verdict
+        const bool innerTubePage = page.contains(QStringLiteral("responseContext"));
+        if (name.isEmpty() && innerTubePage && !signedInPage(page)) {
             kLogger.warning() << "YouTube no longer accepts the stored sign-in";
             signOut();
             emit failed(tr("YouTube wants a new sign-in"));

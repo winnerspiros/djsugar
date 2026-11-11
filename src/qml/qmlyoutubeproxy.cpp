@@ -459,7 +459,8 @@ QNetworkRequest scRequest(const QUrl& url) {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, kScUserAgent);
     // Signed in: the account's view (its likes; Go+ tracks in full)
-    if (const QString token = mixxx::soundcloud::token(); !token.isEmpty()) {
+    if (const QString token = mixxx::soundcloud::token();
+            !token.isEmpty() && url.host() == QStringLiteral("api-v2.soundcloud.com")) {
         request.setRawHeader("Authorization", "OAuth " + token.toUtf8());
     }
     request.setTransferTimeout(15000);
@@ -520,8 +521,8 @@ void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done, bool clientI
         return;
     }
     if (m_scClientId.isEmpty()) {
-        fetchSoundCloudClientId([this, done, clientIdRetried](bool ok) {
-            if (!ok || clientIdRetried) {
+        fetchSoundCloudClientId([this, done](bool ok) {
+            if (!ok) {
                 emit soundCloudFailed(tr("SoundCloud is not reachable"));
                 return;
             }
@@ -554,7 +555,9 @@ void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done, bool clientI
             fetchSoundCloudMe(done, true);
             return;
         }
-        if (status == 401 || status == 403 || pReply->error() == QNetworkReply::NoError) {
+        const bool parsedWithoutUser = pReply->error() == QNetworkReply::NoError &&
+                !me.isEmpty() && !me.contains(QStringLiteral("id"));
+        if (status == 401 || status == 403 || parsedWithoutUser) {
             // The token is no account's
             mixxx::soundcloud::setToken(QString());
             m_scUserId.clear();

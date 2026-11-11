@@ -98,7 +98,8 @@ class QmlSpotifyProxy : public QObject {
     /// A list from the bridge (spotify_browse), on a worker thread
     void browse(const QString& request,
             int offset,
-            std::function<void(const QJsonObject&)> onSuccess);
+            std::function<void(const QJsonObject&)> onSuccess,
+            std::function<void()> onFailure = {});
     void fetchList(const QString& request, ListKind kind, bool append);
     QString cacheDir() const;
     void downloadTrack(const QString& spotifyId);
@@ -113,7 +114,9 @@ class QmlSpotifyProxy : public QObject {
     bool m_loggingIn = false;
     quint64 m_loginAttempt = 0; // drops the results of cancelled logins
     QString m_listRequest;      // what loadMore() continues
-    int m_nextOffset = -1;      // -1: no more pages
+    int m_nextOffset = -1;
+    quint64 m_accountEpoch = 0; // drops the answers of a logged-out account //
+                                // -1: no more pages
     quint64 m_generation = 0;   // drops the replies of superseded lists
     struct PendingLoad {
         QVariantMap track;

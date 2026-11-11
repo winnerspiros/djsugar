@@ -78,7 +78,13 @@ public class AccountLoginActivity extends Activity {
         mDoneHost = intent.getStringExtra(EXTRA_DONE_HOST);
         mCookie = intent.getStringExtra(EXTRA_COOKIE) + "=";
         CookieManager.getInstance().setAcceptCookie(true);
-        if ("soundcloud".equals(mService)) {
+        if ("youtube".equals(mService)) {
+            // A Google session left from before signs in again at once, as
+            // the same account: the sign-in starts fresh, another account
+            // can be chosen
+            CookieManager.getInstance().removeAllCookies(null);
+            CookieManager.getInstance().flush();
+        } else if ("soundcloud".equals(mService)) {
             // A sign-in cookie left from before would close the page at
             // once, signed in as nobody: SoundCloud's form is shown fresh
             for (String domain : new String[] {".soundcloud.com", "soundcloud.com"}) {

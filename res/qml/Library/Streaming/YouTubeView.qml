@@ -242,8 +242,13 @@ Item {
             if (!signedIn) {
                 root.playlists = [];
                 root.channels = [];
-                if (root.listKind !== "search")
+                if (root.listKind !== "search") {
                     root.listKind = "search";
+                    root.playlistName = "";
+                    root.allResults = [];
+                    root.hasMore = false;
+                    resultsModel.clear();
+                }
             }
             root.wasSignedIn = signedIn;
         }
@@ -512,15 +517,17 @@ Item {
 
                                     anchors.fill: parent
                                     onClicked: {
-                                        const picked = channelRow.modelData.pageId;
+                                        // Reassigning the channels destroys this
+                                        // row: everything else first
+                                        const view = root;
                                         const row = channelRow.index;
-                                        root.channels = root.channels.map((c, i) => Object.assign({}, c, {
+                                        accountMenu.close();
+                                        Mixxx.YouTube.selectYouTubeAccount(channelRow.modelData.pageId, channelRow.modelData.name);
+                                        view.playlists = [];
+                                        view.openList("liked", qsTr("Liked songs"));
+                                        view.channels = view.channels.map((c, i) => Object.assign({}, c, {
                                             "selected": i === row
                                         }));
-                                        Mixxx.YouTube.selectYouTubeAccount(picked, channelRow.modelData.name);
-                                        root.playlists = [];
-                                        root.openList("liked", qsTr("Liked songs"));
-                                        accountMenu.close();
                                     }
                                 }
                             }

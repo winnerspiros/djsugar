@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use futures_util::stream::{self, StreamExt};
+use librespot_core::error::ErrorKind;
 use librespot_core::session::Session;
 use librespot_core::spotify_id::SpotifyId;
 use librespot_core::spotify_uri::SpotifyUri;
@@ -60,14 +61,37 @@ fn track_json(track: &Track) -> Option<Value> {
 }
 
 /// The tracks of `uris`, in their order; tracks Spotify has no data for are
-/// left out
-async fn tracks(session: &Session, uris: &[String]) -> Vec<Value> {
-    stream::iter(uris.iter().filter_map(|uri| SpotifyUri::from_uri(uri).ok()))
-        .map(|uri| async move { Track::get(session, &uri).await.ok() })
-        .buffered(CONCURRENCY)
-        .filter_map(|track| async move { track.as_ref().and_then(track_json) })
-        .collect()
-        .await
+/// left out. Any other failure (connection, login) fails the page, so it is
+/// not skipped for good
+async fn tracks(session: &Session, uris: &[String]) -> Result<Vec<Value>, String> {
+    let fetched: Vec<Option<Track>> =
+        stream::iter(uris.iter().filter_map(|uri| SpotifyUri::from_uri(uri).ok()))
+            .map(|uri| async move {
+                match Track::get(session, &uri).await {
+                    Ok(track) => Ok(Some(track)),
+                    Err(e)
+                        if matches!(
+                            e.kind,
+                            ErrorKind::NotFound
+                                | ErrorKind::InvalidArgument
+                                | ErrorKind::FailedPrecondition
+                        ) =>
+                    {
+                        Ok(None)
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
+            })
+            .buffered(CONCURRENCY)
+            .collect::<Vec<Result<Option<Track>, String>>>()
+            .await
+            .into_iter()
+            .collect::<Result<_, _>>()?;
+    Ok(fetched
+        .iter()
+        .flatten()
+        .filter_map(track_json)
+        .collect())
 }
 
 fn page_track_uris(page: &ContextPage, out: &mut Vec<String>) {
@@ -251,7 +275,7 @@ pub async fn browse(
     let end = uris.len().min(offset + limit);
     let page = uris.get(offset..end).unwrap_or_default();
     let next = if end < uris.len() { end as i64 } else { -1 };
-    Ok(json!({ "items": tracks(session, page).await, "next": next }))
+    Ok(json!({ "items": tracks(session, page).await?, "next": next }))
 }
 
 /// A search word inside a spotify:search: uri (no ':' or '+' of its own)

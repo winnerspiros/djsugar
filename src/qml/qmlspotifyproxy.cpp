@@ -180,6 +180,7 @@ void QmlSpotifyProxy::onLoginResult(const QString& user, const QString& error) {
 void QmlSpotifyProxy::logout() {
     cancelLogin();
     ++m_generation;
+    ++m_accountEpoch;
     m_loggedIn = false;
     m_userName.clear();
     m_listRequest.clear();
@@ -204,7 +205,8 @@ void QmlSpotifyProxy::fetchProfile() {
 
 void QmlSpotifyProxy::browse(const QString& request,
         int offset,
-        std::function<void(const QJsonObject&)> onSuccess) {
+        std::function<void(const QJsonObject&)> onSuccess,
+        std::function<void()> onFailure) {
     if (!m_loggedIn) {
         emit failed(tr("Log in to Spotify first"));
         return;
@@ -213,41 +215,47 @@ void QmlSpotifyProxy::browse(const QString& request,
     const QByteArray dir = QFile::encodeName(accountDir());
     const QByteArray requestUtf8 = request.toUtf8();
     QPointer<QmlSpotifyProxy> pThis(this);
-    QThreadPool::globalInstance()->start([pThis, dir, requestUtf8, offset, onSuccess]() {
-        char* pJson = nullptr;
-        const QString error = take(spotify_browse(
-                dir.constData(), requestUtf8.constData(), offset, kPage, &pJson));
-        const QByteArray json = take(pJson).toUtf8();
-        if (!pThis) {
-            return;
-        }
-        QMetaObject::invokeMethod(
-                pThis.data(),
-                [pThis, error, json, onSuccess]() {
-                    if (!pThis) {
-                        return;
-                    }
-                    if (!error.isEmpty()) {
-                        kLogger.warning() << "Spotify browsing:" << error;
-                        if (error.contains(QStringLiteral("INVALID_CREDENTIALS"))) {
-                            // The stored login is refused: log in again (once
-                            // for all the lists that were loading)
-                            if (pThis->m_loggedIn) {
-                                pThis->logout();
-                                emit pThis->loginFailed(tr("Spotify wants a new login"));
+    const quint64 epoch = m_accountEpoch;
+    QThreadPool::globalInstance()->start(
+            [pThis, dir, requestUtf8, offset, onSuccess, onFailure, epoch]() {
+                char* pJson = nullptr;
+                const QString error = take(spotify_browse(
+                        dir.constData(), requestUtf8.constData(), offset, kPage, &pJson));
+                const QByteArray json = take(pJson).toUtf8();
+                if (!pThis) {
+                    return;
+                }
+                QMetaObject::invokeMethod(
+                        pThis.data(),
+                        [pThis, error, json, onSuccess, onFailure, epoch]() {
+                            if (!pThis || epoch != pThis->m_accountEpoch) {
+                                return; // gone, or the answer of a logged-out account
                             }
-                            return;
-                        }
-                        emit pThis->failed(error);
-                        return;
-                    }
-                    onSuccess(QJsonDocument::fromJson(json).object());
-                },
-                Qt::QueuedConnection);
-    });
+                            if (!error.isEmpty()) {
+                                kLogger.warning() << "Spotify browsing:" << error;
+                                if (error.contains(QStringLiteral("INVALID_CREDENTIALS"))) {
+                                    // The stored login is refused: log in again (once
+                                    // for all the lists that were loading)
+                                    if (pThis->m_loggedIn) {
+                                        pThis->logout();
+                                        emit pThis->loginFailed(tr("Spotify wants a new login"));
+                                    }
+                                    return;
+                                }
+                                if (onFailure) {
+                                    onFailure();
+                                }
+                                emit pThis->failed(error);
+                                return;
+                            }
+                            onSuccess(QJsonDocument::fromJson(json).object());
+                        },
+                        Qt::QueuedConnection);
+            });
 #else
     Q_UNUSED(offset);
     Q_UNUSED(onSuccess);
+    Q_UNUSED(onFailure);
     emit failed(tr("Spotify is not part of this build"));
 #endif
 }
@@ -257,18 +265,29 @@ void QmlSpotifyProxy::fetchList(const QString& request, ListKind kind, bool appe
     const int offset = append ? m_nextOffset : 0;
     m_listRequest = request;
     m_nextOffset = -1;
-    browse(request, offset, [this, kind, append, generation](const QJsonObject& page) {
-        if (generation != m_generation) {
-            return; // the user opened another list meanwhile
-        }
-        m_nextOffset = page.value(QStringLiteral("next")).toInt(-1);
-        const QVariantList items = page.value(QStringLiteral("items")).toArray().toVariantList();
-        if (kind == ListKind::Playlists) {
-            emit playlistsLoaded(items);
-        } else {
-            emit tracksLoaded(items, append);
-        }
-    });
+    browse(
+            request,
+            offset,
+            [this, kind, append, generation](const QJsonObject& page) {
+                if (generation != m_generation) {
+                    return; // the user opened another list meanwhile
+                }
+                m_nextOffset = page.value(QStringLiteral("next")).toInt(-1);
+                const QVariantList items = page.value(QStringLiteral("items"))
+                                                   .toArray()
+                                                   .toVariantList();
+                if (kind == ListKind::Playlists) {
+                    emit playlistsLoaded(items);
+                } else {
+                    emit tracksLoaded(items, append);
+                }
+            },
+            [this, append, generation, offset]() {
+                // The page can be asked for again
+                if (append && generation == m_generation) {
+                    m_nextOffset = offset;
+                }
+            });
 }
 
 void QmlSpotifyProxy::search(const QString& query) {
