@@ -1,0 +1,8 @@
+Mapping: Numark NS6
+Author (in the mapping): maurojuniorr
+Submitted by: maurojuniorr in Mixxx pull request #17264
+https://github.com/mixxxdj/mixxx/pull/17264
+Last update of the pull request: 2026-10-30
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: common-controller-scripts.js, lodash.mixxx.js, midi-components-0.0.js

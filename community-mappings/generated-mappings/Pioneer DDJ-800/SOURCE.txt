@@ -1,0 +1,7 @@
+[AI-GENERATED DISCLAIMER START]
+Controller: Pioneer DDJ-800 (4-Deck Official Spec)
+Source Type: Generated Mixxx 2.5/2.6+ mapping from official manufacturer MIDI specification
+Official Reference PDF: https://www.pioneerdj.com/-/media/pioneerdj/downloads/manuals/other/ddj-800/ddj-800_midi_message_list_e1.pdf
+License: GPL-2.0-or-later (compatible with Mixxx upstream)
+Hardware Testing Status: NOT hardware-tested (built purely from verified MIDI message list; requires physical testing on DDJ-800 before any upstream Mixxx PR)
+[AI-GENERATED DISCLAIMER END]

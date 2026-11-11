@@ -1,0 +1,7 @@
+Mapping: Reloop Beatmix
+Author (in the mapping): Eugene Erokhin uncle.eugene@gmail.com
+Submitted by: uncleeugene in Mixxx pull request #12422
+https://github.com/mixxxdj/mixxx/pull/12422
+Last update of the pull request: 2026-02-13
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

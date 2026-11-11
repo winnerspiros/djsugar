@@ -1,0 +1,931 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<MixxxControllerPreset schemaVersion="1" mixxxVersion="1.11+">
+    <info>
+        <name>Native Instruments Traktor Z1 MK2</name>
+        <author>Infinifox</author>
+        <description>HID mapping for the Traktor Z1 MK2</description>
+        <devices>
+            <product protocol="hid" vendor_id="0x17CC" product_id="0x2400" />
+        </devices>
+    </info>
+    <controller id="TraktorZ1MK2">
+        <scriptfiles>
+            <file
+                filename="Traktor-Z1-MK2.script.js"
+                functionprefix="TraktorZ1MK2"
+            />
+        </scriptfiles>
+    </controller>
+    <settings>
+        <group label="Gain Mapping">
+            <option
+                variable="mapMainGain"
+                label="Map Main Gain (enable only if not using this controller as your Main audio device)"
+                description="This will map the value of the Main Volume knob to the
+                    Main Gain knob in Mixxx. Don't use this if you're using the
+                    onboard audio of the controller, as the controller processes gain
+                    internally and adjusting it in Mixxx too will only degrade your audio
+                    quality."
+                type="boolean"
+            />
+            <option
+                variable="mapHeadphoneGain"
+                label="Map Headphone Gain (enable only if not using this controller as your Headphone audio device)"
+                description="This will map the value of the Headphone Volume knob to the
+                    Headphone Gain knob in Mixxx. Don't use this if you're using the
+                    onboard audio of the controller, as the controller processes gain
+                    internally and adjusting it in Mixxx too will only degrade your audio
+                    quality."
+                type="boolean"
+            />
+        </group>
+        <group label="FX Select Buttons">
+            <option
+                variable="fxButton1Push"
+                label="FX Button 1 Push"
+                type="enum"
+            >
+                <value label="Select FX 1">fx1</value>
+                <value label="Select FX 5">fx5</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton1ShiftPush"
+                label="FX Button 1 SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select FX 1">fx1</value>
+                <value label="Select FX 5">fx5</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton2Push"
+                label="FX Button 2 Push"
+                type="enum"
+            >
+                <value label="Select FX 2">fx2</value>
+                <value label="Select FX 6">fx6</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton2ShiftPush"
+                label="FX Button 2 SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select FX 2">fx2</value>
+                <value label="Select FX 6">fx6</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton3Push"
+                label="FX Button 3 Push"
+                type="enum"
+            >
+                <value label="Select FX 3">fx3</value>
+                <value label="Select FX 7">fx7</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton3ShiftPush"
+                label="FX Button 3 SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select FX 3">fx3</value>
+                <value label="Select FX 7">fx7</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton4Push"
+                label="FX Button 4 Push"
+                type="enum"
+            >
+                <value label="Select FX 4">fx4</value>
+                <value label="Select FX 8">fx8</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="fxButton4ShiftPush"
+                label="FX Button 4 SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select FX 4">fx4</value>
+                <value label="Select FX 8">fx8</value>
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+            </option>
+            <option
+                variable="filterButtonPush"
+                label="Filter Button Push"
+                type="enum"
+            >
+                <value label="Select FX 5">fx5</value>
+                <value label="Shift">shift</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="EQ Mode Button">
+            <option
+                variable="eqModeButtonPush"
+                label="EQ Mode Push"
+                type="enum"
+            >
+                <value label="Select EQ Mode">selectEqMode</value>
+                <value label="Select Deck A/C">selectDeckAC</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+            <option
+                variable="eqModeButtonShiftPush"
+                label="EQ Mode SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select EQ Mode">selectEqMode</value>
+                <value label="Select Deck A/C">selectDeckAC</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="Stem Mode Button">
+            <option
+                variable="stemModeButtonPush"
+                label="Stem Mode Push"
+                type="enum"
+            >
+                <value label="Select Stem Mode">selectStemMode</value>
+                <value label="Select Deck B/D">selectDeckBD</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+            <option
+                variable="stemModeButtonShiftPush"
+                label="Stem Mode SHIFT+Push"
+                type="enum"
+            >
+                <value label="Select Stem Mode">selectStemMode</value>
+                <value label="Select Deck B/D">selectDeckBD</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="Top Button">
+            <option
+                variable="topButtonPush"
+                label="Top Button Push"
+                type="enum"
+            >
+                <value label="Toggle Decks AB/CD">toggleDecks</value>
+                <value label="Toggle Eq/Stem">toggleEqStem</value>
+                <value label="Toggle Recording">toggleRecording</value>
+                <value label="Toggle Live Streaming">toggleLive</value>
+                <value label="Select FX 6">fx6</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="Mixer FX On Buttons">
+            <option variable="fxTogglePush" label="FX Push" type="enum">
+                <value label="Toggle FX On/Off">toggleFx</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+            <option
+                variable="fxToggleShiftPush"
+                label="FX SHIFT+Push"
+                type="enum"
+            >
+                <value label="Toggle FX On/Off">toggleFx</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="Prelisten Buttons">
+            <option
+                variable="prelistenTogglePush"
+                label="Prelisten Push"
+                type="enum"
+            >
+                <value label="Toggle Prelisten">togglePrelisten</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+            <option
+                variable="prelistenToggleShiftPush"
+                label="Prelisten SHIFT+Push"
+                type="enum"
+            >
+                <value label="Toggle Prelisten">togglePrelisten</value>
+                <value label="Play">play</value>
+                <value label="Sync">sync</value>
+                <value label="Cue">cue</value>
+                <value label="Skip to Start">skipToStart</value>
+                <value label="← Nudge">nudgeLeft</value>
+                <value label="→ Nudge">nudgeRight</value>
+                <value label="Disabled">disabled</value>
+            </option>
+        </group>
+        <group label="Crossfader">
+            <option
+                variable="disableCrossfader"
+                label="Disable Crossfader"
+                type="boolean"
+            />
+        </group>
+        <group label="Bottom LEDs">
+            <option
+                variable="blinkBottomLeds"
+                label="Blink Bottom LEDs to Beat"
+                type="boolean"
+            />
+            <option
+                variable="endWarning"
+                label="End Warning"
+                type="boolean"
+                default="true"
+            />
+            <option
+                variable="activeLoop"
+                label="Active Loop"
+                type="boolean"
+                default="true"
+            />
+        </group>
+        <group label="Colors">
+            <group label="Device Setup">
+                <option
+                    variable="colorTheme"
+                    label="Global Color Scheme"
+                    type="enum"
+                >
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" default="true" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+            </group>
+            <group label="Mixer and Stem Mode Buttons">
+                <option
+                    variable="colorEqSwitch"
+                    label="EQ Mode Buttons"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option
+                    variable="colorStemsSwitch"
+                    label="Stem Mode Buttons"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+            </group>
+            <group label="Mixer FX Buttons">
+                <option variable="colorFx1" label="FX Button 1" type="enum">
+                    <value label="Red" color="red" default="true">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx2" label="FX Button 2" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value
+                        label="Green"
+                        color="green"
+                        default="true"
+                    >green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx3" label="FX Button 3" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue" default="true">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx4" label="FX Button 4" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value
+                        label="Yellow"
+                        color="yellow"
+                        default="true"
+                    >yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx5" label="FX Button 5" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                        default="true"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx6" label="FX Button 6" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value
+                        label="Magenta"
+                        color="magenta"
+                        default="true"
+                    >magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx7" label="FX Button 7" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan" default="true">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+                <option variable="colorFx8" label="FX Button 8" type="enum">
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value
+                        label="Purple"
+                        color="purple"
+                        default="true"
+                    >purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+            </group>
+            <group label="Prelisten Buttons">
+                <option
+                    variable="colorPrelistenToggle"
+                    label="Prelisten Buttons"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                </option>
+            </group>
+            <group label="Bottom LEDs">
+                <option
+                    variable="colorBottomLedsDefault"
+                    label="Bottom LEDs"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+            </group>
+            <group label="Bottom LED individual colors">
+                <option
+                    variable="colorBottomLeds1"
+                    label="Bottom LED 1 (frontmost)"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorBottomLeds2"
+                    label="Bottom LED 2"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorBottomLeds3"
+                    label="Bottom LED 3"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorBottomLeds4"
+                    label="Bottom LED 4"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorBottomLeds5"
+                    label="Bottom LED 5"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorBottomLeds6"
+                    label="Bottom LED 6 (backmost)"
+                    type="enum"
+                >
+                    <value label="Default" default="true">default</value>
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+            </group>
+            <group label="Bottom LED status colors">
+                <option
+                    variable="colorEndWarning"
+                    label="End Warning"
+                    type="enum"
+                >
+                    <value label="Red" color="red" default="true">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+                <option
+                    variable="colorActiveLoop"
+                    label="Active Loop"
+                    type="enum"
+                >
+                    <value label="Red" color="red">red</value>
+                    <value
+                        label="Dark Orange"
+                        color="darkOrange"
+                    >darkOrange</value>
+                    <value
+                        label="Light Orange"
+                        color="orange"
+                    >lightOrange</value>
+                    <value label="Warm Yellow" color="gold">warmYellow</value>
+                    <value label="Yellow" color="yellow">yellow</value>
+                    <value label="Lime" color="lime" default="true">lime</value>
+                    <value label="Green" color="green">green</value>
+                    <value label="Mint" color="aquamarine">mint</value>
+                    <value label="Cyan" color="cyan">cyan</value>
+                    <value label="Turquoise" color="turquoise">turquoise</value>
+                    <value label="Blue" color="blue">blue</value>
+                    <value label="Plum" color="plum">plum</value>
+                    <value label="Violet" color="violet">violet</value>
+                    <value label="Purple" color="purple">purple</value>
+                    <value label="Magenta" color="magenta">magenta</value>
+                    <value label="Fuschia" color="deepPink">fuschia</value>
+                    <value label="White" color="white">white</value>
+                    <value label="Black" color="black">black</value>
+                </option>
+            </group>
+        </group>
+    </settings>
+</MixxxControllerPreset>

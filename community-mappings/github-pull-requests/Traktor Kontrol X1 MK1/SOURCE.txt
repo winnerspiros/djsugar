@@ -1,0 +1,8 @@
+Mapping: Traktor Kontrol X1 MK1
+Author (in the mapping): Jan Claußen
+Submitted by: jclsn in Mixxx pull request #17361
+https://github.com/mixxxdj/mixxx/pull/17361
+Last update of the pull request: 2026-11-07
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: common-bulk-midi.js

@@ -1,0 +1,6 @@
+Mapping: Pioneer DDJ-FLX6
+Author: Robert904, fixxJ and the authors of the Mixxx DDJ-FLX4 mapping
+Source: https://github.com/jrasko/DDJ-FLX6-Mixxx-mapping
+License: GPL-2.0-or-later (derived from the DDJ-FLX4 mapping of Mixxx; the repository has no license file)
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Tested by its author on a DDJ-FLX6 (see its README).

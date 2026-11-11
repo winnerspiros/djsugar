@@ -1,0 +1,4062 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MixxxControllerPreset mixxxVersion="2.5.0" schemaVersion="1">
+    <info>
+        <name>Hercules DJControl Inpulse T7</name>
+        <author>Infinite-Grok</author>
+        <description>Mapping for the Hercules DJControl Inpulse T7: two decks with motorized platters, performance pads, effects and the mixer section.</description>
+        <wiki>https://github.com/Infinite-Grok/mixxx-hercules-t7</wiki>
+    </info>
+    <controller id="DJControl Inpulse T7">
+        <scriptfiles>
+            <file filename="midi-components-0.0.js"/>
+            <file filename="Hercules-DJControl-Inpulse-T7-platter.js" functionprefix="DJCiT7Platter"/>
+            <file filename="Hercules-DJControl-Inpulse-T7-script.js" functionprefix="DJCiT7"/>
+        </scriptfiles>
+        <controls>
+            <!-- Deck 1: platter and motor (handled by the platter script) -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7Platter.play</key>
+                <description>PLAY/PAUSE, deck 1: play or pause, and start or stop the motor</description>
+                <status>0x91</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7Platter.platter</key>
+                <description>Platter position, deck 1</description>
+                <status>0xB1</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7Platter.platter</key>
+                <description>Platter position, deck 1, SHIFT held</description>
+                <status>0xB4</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7Platter.platterTime</key>
+                <description>Platter timestamp, deck 1</description>
+                <status>0xE1</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7Platter.platterTime</key>
+                <description>Platter timestamp, deck 1, SHIFT held</description>
+                <status>0xE4</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 1: buttons -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.shiftButton.input</key>
+                <description>SHIFT, deck 1: remembers that SHIFT is held</description>
+                <status>0x91</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.syncButton.input</key>
+                <description>SYNC, deck 1: sync on or off</description>
+                <status>0x91</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.syncLeaderButton.input</key>
+                <description>SHIFT + SYNC, deck 1: make this deck the sync leader</description>
+                <status>0x94</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.cueButton.input</key>
+                <description>CUE, deck 1: cue; hold to preview</description>
+                <status>0x91</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.cueStopButton.input</key>
+                <description>SHIFT + CUE, deck 1: go to the cue point and stop</description>
+                <status>0x94</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.stutterButton.input</key>
+                <description>SHIFT + PLAY, deck 1: play from the cue point, stop on release</description>
+                <status>0x94</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopInButton.input</key>
+                <description>IN, deck 1: set the loop start</description>
+                <status>0x91</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopHalveButton.input</key>
+                <description>SHIFT + IN, deck 1: halve the loop</description>
+                <status>0x94</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopOutButton.input</key>
+                <description>OUT, deck 1: set the loop end</description>
+                <status>0x91</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopDoubleButton.input</key>
+                <description>SHIFT + OUT, deck 1: double the loop</description>
+                <status>0x94</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pflButton.input</key>
+                <description>Headphone button, deck 1: send this deck to the headphones</description>
+                <status>0x91</status>
+                <midino>0x0C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loadButton.input</key>
+                <description>Browser knob push, deck 1: load the selected track</description>
+                <status>0x91</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loadButton.input</key>
+                <description>SHIFT + browser knob push, deck 1: load the selected track</description>
+                <status>0x94</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopPushButton.input</key>
+                <description>AUTOLOOP knob push, deck 1: start a loop, or leave the running loop</description>
+                <status>0x91</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopRemoveButton.input</key>
+                <description>SHIFT + AUTOLOOP knob push, deck 1: delete the loop</description>
+                <status>0x94</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.assistButton.input</key>
+                <description>ASSIST/PREP, deck 1: open the selected library item</description>
+                <status>0x91</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.autoDjButton.input</key>
+                <description>SHIFT + ASSIST/PREP, deck 1: add the selected track to the Auto DJ list</description>
+                <status>0x94</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.backButton.input</key>
+                <description>BACK, deck 1: move the library cursor back to the left</description>
+                <status>0x91</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.maximizeLibraryButton.input</key>
+                <description>SHIFT + BACK, deck 1: show or hide the large library view</description>
+                <status>0x94</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.rangeButton.input</key>
+                <description>RANGE, deck 1: step the tempo fader range</description>
+                <status>0x91</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.keylockButton.input</key>
+                <description>SHIFT + RANGE, deck 1: key lock on or off</description>
+                <status>0x94</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.paramUpButton.input</key>
+                <description>PARAM right, deck 1: speed up while held</description>
+                <status>0x91</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.paramDownButton.input</key>
+                <description>PARAM left, deck 1: slow down while held</description>
+                <status>0x91</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.paramUpButton.input</key>
+                <description>SHIFT + PARAM right, deck 1: ends the speed-up if SHIFT was pressed while held</description>
+                <status>0x94</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.paramDownButton.input</key>
+                <description>SHIFT + PARAM left, deck 1: ends the slow-down if SHIFT was pressed while held</description>
+                <status>0x94</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.effectLever.input</key>
+                <description>FX lever, deck 1: effect unit on while held</description>
+                <status>0x91</status>
+                <midino>0x55</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.effectLever.input</key>
+                <description>FX lever, deck 1: effect unit on while held</description>
+                <status>0x91</status>
+                <midino>0x56</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.effectLever.input</key>
+                <description>FX lever, deck 1: effect unit on while held</description>
+                <status>0x91</status>
+                <midino>0x57</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.effectLever.input</key>
+                <description>FX lever, deck 1: effect unit on while held</description>
+                <status>0x91</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.effectLever.input</key>
+                <description>FX lever, deck 1, SHIFT held: effect unit on while held</description>
+                <status>0x94</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 1: pad page buttons -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 1, deck 1: HOT CUE 1</description>
+                <status>0x91</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 2, deck 1: LOOP 2</description>
+                <status>0x91</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 3, deck 1: STEMS 3</description>
+                <status>0x91</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 4, deck 1: SAMPLER 4</description>
+                <status>0x91</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 5, deck 1: mode 5 (SHIFT + HOT CUE)</description>
+                <status>0x91</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 6, deck 1: mode 6 (SHIFT + LOOP)</description>
+                <status>0x91</status>
+                <midino>0x14</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 7, deck 1: mode 7 (SHIFT + STEMS)</description>
+                <status>0x91</status>
+                <midino>0x15</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pageButton</key>
+                <description>Pad page 8, deck 1: mode 8 (SHIFT + SAMPLER)</description>
+                <status>0x91</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 1: encoders -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopEncoder.input</key>
+                <description>AUTOLOOP knob, deck 1: double or halve the loop, or set the next loop size</description>
+                <status>0xB1</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.loopMoveEncoder.input</key>
+                <description>SHIFT + AUTOLOOP knob, deck 1: move the loop, or set the beat jump size</description>
+                <status>0xB4</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.browseEncoder.input</key>
+                <description>Browser knob, deck 1: move through the track list</description>
+                <status>0xB1</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.browseFastEncoder.input</key>
+                <description>SHIFT + browser knob, deck 1: move ten rows at a time</description>
+                <status>0xB4</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 1: faders and knobs (14 bit: high seven bits, then low seven bits) -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.volumePot.inputMSB</key>
+                <description>Channel fader, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.volumePot.inputLSB</key>
+                <description>Channel fader, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.volumePot.inputMSB</key>
+                <description>Channel fader, deck 1, high bits, SHIFT held</description>
+                <status>0xB4</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.volumePot.inputLSB</key>
+                <description>Channel fader, deck 1, low bits, SHIFT held</description>
+                <status>0xB4</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.filterPot.inputMSB</key>
+                <description>Filter knob, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.filterPot.inputLSB</key>
+                <description>Filter knob, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqLowPot.inputMSB</key>
+                <description>Low EQ knob, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqLowPot.inputLSB</key>
+                <description>Low EQ knob, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqMidPot.inputMSB</key>
+                <description>Mid EQ knob, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqMidPot.inputLSB</key>
+                <description>Mid EQ knob, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqHighPot.inputMSB</key>
+                <description>High EQ knob, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.eqHighPot.inputLSB</key>
+                <description>High EQ knob, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.gainPot.inputMSB</key>
+                <description>Gain knob, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.gainPot.inputLSB</key>
+                <description>Gain knob, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.tempoPot.inputMSB</key>
+                <description>Tempo fader, deck 1, high bits</description>
+                <status>0xB1</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.tempoPot.inputLSB</key>
+                <description>Tempo fader, deck 1, low bits</description>
+                <status>0xB1</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.tempoPot.inputMSB</key>
+                <description>Tempo fader, deck 1, high bits, SHIFT held</description>
+                <status>0xB4</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.tempoPot.inputLSB</key>
+                <description>Tempo fader, deck 1, low bits, SHIFT held</description>
+                <status>0xB4</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 1: performance pads (note = page base + pad number; SHIFT adds 8) -->
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 1 (hot cue), deck 1</description>
+                <status>0x96</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x14</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x15</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 2 (loop), deck 1</description>
+                <status>0x96</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 3 (unused), deck 1</description>
+                <status>0x96</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x31</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x34</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x35</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x36</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x37</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 4 (sampler), deck 1</description>
+                <status>0x96</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x40</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x41</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x42</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x43</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x44</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x45</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x46</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x49</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 5 (beat jump), deck 1</description>
+                <status>0x96</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x55</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x56</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x57</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x59</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 6 (loop roll), deck 1</description>
+                <status>0x96</status>
+                <midino>0x5F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x60</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x61</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x62</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x63</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x65</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x66</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x67</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x68</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x69</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 7 (effect), deck 1</description>
+                <status>0x96</status>
+                <midino>0x6F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x70</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x71</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x72</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x73</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x74</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x75</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x76</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x77</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 1, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x78</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 2, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x79</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 3, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 4, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 5, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 6, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 7, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>DJCiT7.deck1.pad</key>
+                <description>Pad 8, SHIFT, page 8 (key), deck 1</description>
+                <status>0x96</status>
+                <midino>0x7F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: platter and motor (handled by the platter script) -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7Platter.play</key>
+                <description>PLAY/PAUSE, deck 2: play or pause, and start or stop the motor</description>
+                <status>0x92</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7Platter.platter</key>
+                <description>Platter position, deck 2</description>
+                <status>0xB2</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7Platter.platter</key>
+                <description>Platter position, deck 2, SHIFT held</description>
+                <status>0xB5</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7Platter.platterTime</key>
+                <description>Platter timestamp, deck 2</description>
+                <status>0xE2</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7Platter.platterTime</key>
+                <description>Platter timestamp, deck 2, SHIFT held</description>
+                <status>0xE5</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: buttons -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.shiftButton.input</key>
+                <description>SHIFT, deck 2: remembers that SHIFT is held</description>
+                <status>0x92</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.syncButton.input</key>
+                <description>SYNC, deck 2: sync on or off</description>
+                <status>0x92</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.syncLeaderButton.input</key>
+                <description>SHIFT + SYNC, deck 2: make this deck the sync leader</description>
+                <status>0x95</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.cueButton.input</key>
+                <description>CUE, deck 2: cue; hold to preview</description>
+                <status>0x92</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.cueStopButton.input</key>
+                <description>SHIFT + CUE, deck 2: go to the cue point and stop</description>
+                <status>0x95</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.stutterButton.input</key>
+                <description>SHIFT + PLAY, deck 2: play from the cue point, stop on release</description>
+                <status>0x95</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopInButton.input</key>
+                <description>IN, deck 2: set the loop start</description>
+                <status>0x92</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopHalveButton.input</key>
+                <description>SHIFT + IN, deck 2: halve the loop</description>
+                <status>0x95</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopOutButton.input</key>
+                <description>OUT, deck 2: set the loop end</description>
+                <status>0x92</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopDoubleButton.input</key>
+                <description>SHIFT + OUT, deck 2: double the loop</description>
+                <status>0x95</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pflButton.input</key>
+                <description>Headphone button, deck 2: send this deck to the headphones</description>
+                <status>0x92</status>
+                <midino>0x0C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loadButton.input</key>
+                <description>Browser knob push, deck 2: load the selected track</description>
+                <status>0x92</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loadButton.input</key>
+                <description>SHIFT + browser knob push, deck 2: load the selected track</description>
+                <status>0x95</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopPushButton.input</key>
+                <description>AUTOLOOP knob push, deck 2: start a loop, or leave the running loop</description>
+                <status>0x92</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopRemoveButton.input</key>
+                <description>SHIFT + AUTOLOOP knob push, deck 2: delete the loop</description>
+                <status>0x95</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.assistButton.input</key>
+                <description>ASSIST/PREP, deck 2: open the selected library item</description>
+                <status>0x92</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.autoDjButton.input</key>
+                <description>SHIFT + ASSIST/PREP, deck 2: add the selected track to the Auto DJ list</description>
+                <status>0x95</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.backButton.input</key>
+                <description>BACK, deck 2: move the library cursor back to the left</description>
+                <status>0x92</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.maximizeLibraryButton.input</key>
+                <description>SHIFT + BACK, deck 2: show or hide the large library view</description>
+                <status>0x95</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.rangeButton.input</key>
+                <description>RANGE, deck 2: step the tempo fader range</description>
+                <status>0x92</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.keylockButton.input</key>
+                <description>SHIFT + RANGE, deck 2: key lock on or off</description>
+                <status>0x95</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.paramUpButton.input</key>
+                <description>PARAM right, deck 2: speed up while held</description>
+                <status>0x92</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.paramDownButton.input</key>
+                <description>PARAM left, deck 2: slow down while held</description>
+                <status>0x92</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.paramUpButton.input</key>
+                <description>SHIFT + PARAM right, deck 2: ends the speed-up if SHIFT was pressed while held</description>
+                <status>0x95</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.paramDownButton.input</key>
+                <description>SHIFT + PARAM left, deck 2: ends the slow-down if SHIFT was pressed while held</description>
+                <status>0x95</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.effectLever.input</key>
+                <description>FX lever, deck 2: effect unit on while held</description>
+                <status>0x92</status>
+                <midino>0x55</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.effectLever.input</key>
+                <description>FX lever, deck 2: effect unit on while held</description>
+                <status>0x92</status>
+                <midino>0x56</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.effectLever.input</key>
+                <description>FX lever, deck 2: effect unit on while held</description>
+                <status>0x92</status>
+                <midino>0x57</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.effectLever.input</key>
+                <description>FX lever, deck 2: effect unit on while held</description>
+                <status>0x92</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.effectLever.input</key>
+                <description>FX lever, deck 2, SHIFT held: effect unit on while held</description>
+                <status>0x95</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: pad page buttons -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 1, deck 2: HOT CUE 1</description>
+                <status>0x92</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 2, deck 2: LOOP 2</description>
+                <status>0x92</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 3, deck 2: STEMS 3</description>
+                <status>0x92</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 4, deck 2: SAMPLER 4</description>
+                <status>0x92</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 5, deck 2: mode 5 (SHIFT + HOT CUE)</description>
+                <status>0x92</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 6, deck 2: mode 6 (SHIFT + LOOP)</description>
+                <status>0x92</status>
+                <midino>0x14</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 7, deck 2: mode 7 (SHIFT + STEMS)</description>
+                <status>0x92</status>
+                <midino>0x15</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pageButton</key>
+                <description>Pad page 8, deck 2: mode 8 (SHIFT + SAMPLER)</description>
+                <status>0x92</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: encoders -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopEncoder.input</key>
+                <description>AUTOLOOP knob, deck 2: double or halve the loop, or set the next loop size</description>
+                <status>0xB2</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.loopMoveEncoder.input</key>
+                <description>SHIFT + AUTOLOOP knob, deck 2: move the loop, or set the beat jump size</description>
+                <status>0xB5</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.browseEncoder.input</key>
+                <description>Browser knob, deck 2: move through the track list</description>
+                <status>0xB2</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.browseFastEncoder.input</key>
+                <description>SHIFT + browser knob, deck 2: move ten rows at a time</description>
+                <status>0xB5</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: faders and knobs (14 bit: high seven bits, then low seven bits) -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.volumePot.inputMSB</key>
+                <description>Channel fader, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.volumePot.inputLSB</key>
+                <description>Channel fader, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.volumePot.inputMSB</key>
+                <description>Channel fader, deck 2, high bits, SHIFT held</description>
+                <status>0xB5</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.volumePot.inputLSB</key>
+                <description>Channel fader, deck 2, low bits, SHIFT held</description>
+                <status>0xB5</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.filterPot.inputMSB</key>
+                <description>Filter knob, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.filterPot.inputLSB</key>
+                <description>Filter knob, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqLowPot.inputMSB</key>
+                <description>Low EQ knob, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqLowPot.inputLSB</key>
+                <description>Low EQ knob, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqMidPot.inputMSB</key>
+                <description>Mid EQ knob, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqMidPot.inputLSB</key>
+                <description>Mid EQ knob, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqHighPot.inputMSB</key>
+                <description>High EQ knob, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.eqHighPot.inputLSB</key>
+                <description>High EQ knob, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.gainPot.inputMSB</key>
+                <description>Gain knob, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.gainPot.inputLSB</key>
+                <description>Gain knob, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.tempoPot.inputMSB</key>
+                <description>Tempo fader, deck 2, high bits</description>
+                <status>0xB2</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.tempoPot.inputLSB</key>
+                <description>Tempo fader, deck 2, low bits</description>
+                <status>0xB2</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.tempoPot.inputMSB</key>
+                <description>Tempo fader, deck 2, high bits, SHIFT held</description>
+                <status>0xB5</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.tempoPot.inputLSB</key>
+                <description>Tempo fader, deck 2, low bits, SHIFT held</description>
+                <status>0xB5</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Deck 2: performance pads (note = page base + pad number; SHIFT adds 8) -->
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 1 (hot cue), deck 2</description>
+                <status>0x97</status>
+                <midino>0x0F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x14</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x15</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 2 (loop), deck 2</description>
+                <status>0x97</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 3 (unused), deck 2</description>
+                <status>0x97</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x31</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x34</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x35</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x36</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x37</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 4 (sampler), deck 2</description>
+                <status>0x97</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x40</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x41</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x42</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x43</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x44</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x45</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x46</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x49</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 5 (beat jump), deck 2</description>
+                <status>0x97</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x50</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x52</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x53</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x54</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x55</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x56</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x57</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x58</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x59</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 6 (loop roll), deck 2</description>
+                <status>0x97</status>
+                <midino>0x5F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x60</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x61</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x62</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x63</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x65</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x66</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x67</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x68</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x69</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 7 (effect), deck 2</description>
+                <status>0x97</status>
+                <midino>0x6F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x70</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x71</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x72</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x73</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x74</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x75</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x76</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x77</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 1, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x78</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 2, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x79</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 3, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 4, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 5, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 6, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 7, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>DJCiT7.deck2.pad</key>
+                <description>Pad 8, SHIFT, page 8 (key), deck 2</description>
+                <status>0x97</status>
+                <midino>0x7F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Mixer section -->
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.crossfader</key>
+                <description>Crossfader, high bits</description>
+                <status>0xB0</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.crossfader</key>
+                <description>Crossfader, low bits</description>
+                <status>0xB0</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.crossfaderCurve</key>
+                <description>Crossfader curve switch: mix curve or scratch curve</description>
+                <status>0xB0</status>
+                <midino>0x0B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.crossfaderEnable</key>
+                <description>Crossfader curve switch in the disabled position: fader off or on</description>
+                <status>0x90</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.mixer.headMixPot.inputMSB</key>
+                <description>Headphone cue/mix knob, high bits</description>
+                <status>0xB0</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.mixer.headMixPot.inputLSB</key>
+                <description>Headphone cue/mix knob, low bits</description>
+                <status>0xB0</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.mixer.headSplitButton.input</key>
+                <description>Master headphone button: split cue on or off</description>
+                <status>0x90</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <!-- Effects -->
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton1.input</key>
+                <description>FX button 1: arm effect slot 1 of unit 1; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton2.input</key>
+                <description>FX button 2: arm effect slot 2 of unit 1; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton3.input</key>
+                <description>FX button 3: arm effect slot 3 of unit 1; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton4.input</key>
+                <description>FX button 4: arm effect slot 1 of unit 2; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton5.input</key>
+                <description>FX button 5: arm effect slot 2 of unit 2; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.slotButton6.input</key>
+                <description>FX button 6: arm effect slot 3 of unit 2; with SHIFT load the next effect</description>
+                <status>0x90</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.metaDownButton.input</key>
+                <description>FX -: turn the effect knob of the armed slots down</description>
+                <status>0x90</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.metaUpButton.input</key>
+                <description>FX +: turn the effect knob of the armed slots up</description>
+                <status>0x90</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.depthPot.inputMSB</key>
+                <description>Effect depth knob, high bits</description>
+                <status>0xB0</status>
+                <midino>0x0C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>DJCiT7.fx.depthPot.inputLSB</key>
+                <description>Effect depth knob, low bits</description>
+                <status>0xB0</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+        </controls>
+    </controller>
+</MixxxControllerPreset>

@@ -1,0 +1,6 @@
+Mapping: Hercules DJControl Inpulse 300 MK2
+Author: Adrien Chinour (extending Mixxx Hercules-DJControl-Inpulse-300-script.js by DJ Phatso)
+Source: https://github.com/adrien-chinour/djing/tree/main/mixxx/controllers
+License: GPL-2.0-only
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Note: Requires Mixxx built-in Hercules-DJControl-Inpulse-300-script.js, lodash.mixxx.js, and midi-components-0.0.js in Mixxx controllers directory.

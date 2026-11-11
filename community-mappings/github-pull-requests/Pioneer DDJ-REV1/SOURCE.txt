@@ -1,0 +1,7 @@
+Mapping: Pioneer DDJ-REV1
+Author (in the mapping): AKOI, Alexandr, LauraRozier, Mjlyon, 0b1-twan
+Submitted by: AKOI-TTI in Mixxx pull request #16722
+https://github.com/mixxxdj/mixxx/pull/16722
+Last update of the pull request: 2026-10-24
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

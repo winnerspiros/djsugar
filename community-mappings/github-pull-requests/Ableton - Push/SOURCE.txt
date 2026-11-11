@@ -1,0 +1,8 @@
+Mapping: Ableton - Push
+Author (in the mapping): Replayman
+Submitted by: Replayman in Mixxx pull request #11101
+https://github.com/mixxxdj/mixxx/pull/11101
+Last update of the pull request: 2026-01-16
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

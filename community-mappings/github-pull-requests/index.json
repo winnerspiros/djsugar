@@ -1,0 +1,749 @@
+[
+ {
+  "folder": "Ableton Push 2 Display",
+  "name": "Ableton Push 2 Display",
+  "file": "Ableton Push 2 Display.bulk.xml",
+  "author": "OpenAI Codex",
+  "pr": 16782,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16782",
+  "submitter": "Zoadian",
+  "title": "Ableton Push 2 support",
+  "updated": "2026-11-02",
+  "files": [
+   "Ableton Push 2 Display.bulk.xml",
+   "Ableton-Push-2-Display.qml"
+  ],
+  "needs": [],
+  "desc": "Renders scrolling waveforms for decks 1 and 2 on the Ableton Push 2 display."
+ },
+ {
+  "folder": "Ableton Push 2",
+  "name": "Ableton Push 2",
+  "file": "Ableton Push 2.midi.xml",
+  "author": "OpenAI Codex",
+  "pr": 16782,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16782",
+  "submitter": "Zoadian",
+  "title": "Ableton Push 2 support",
+  "updated": "2026-11-02",
+  "files": [
+   "Ableton Push 2.midi.xml",
+   "Ableton-Push-2-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Two-deck Push 2 mapping designed to accompany the Push 2 dual-waveform display mapping."
+ },
+ {
+  "folder": "Ableton - Push",
+  "name": "Ableton - Push",
+  "file": "Ableton-Push.midi.xml",
+  "author": "Replayman",
+  "pr": 11101,
+  "url": "https://github.com/mixxxdj/mixxx/pull/11101",
+  "submitter": "Replayman",
+  "title": "Mapping for Ableton Push",
+  "updated": "2026-01-16",
+  "files": [
+   "Ableton-Push.midi.xml",
+   "Ableton-Push-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "MIDI mapping for Ableton Push"
+ },
+ {
+  "folder": "Akai APC Mini",
+  "name": "Akai APC Mini",
+  "file": "Akai-APC-MINI.midi.xml",
+  "author": "Valerio Vitali",
+  "pr": 3166,
+  "url": "https://github.com/mixxxdj/mixxx/pull/3166",
+  "submitter": "Valefungo",
+  "title": "Akai controllers",
+  "updated": "2025-06-20",
+  "files": [
+   "Akai-APC-MINI.midi.xml",
+   "Akai-APC-MINI-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Mobile USB controller with 64 pads and 9 faders."
+ },
+ {
+  "folder": "Akai MPK Mini mkII",
+  "name": "Akai MPK Mini mkII",
+  "file": "AKAI-MPKmini2.midi.xml",
+  "author": "Valerio Vitali",
+  "pr": 3166,
+  "url": "https://github.com/mixxxdj/mixxx/pull/3166",
+  "submitter": "Valefungo",
+  "title": "Akai controllers",
+  "updated": "2025-06-20",
+  "files": [
+   "AKAI-MPKmini2.midi.xml",
+   "AKAI-MPKmini2-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Effect Rack and Samplers Controller"
+ },
+ {
+  "folder": "Denon HC1000S mapping",
+  "name": "Denon HC1000S mapping",
+  "file": "Denon_DN_HC1000S.midi.xml",
+  "author": "le3d, based on many existing Denon other mappings, re-using bits and pieces",
+  "pr": 3799,
+  "url": "https://github.com/mixxxdj/mixxx/pull/3799",
+  "submitter": "le3dmtl",
+  "title": "add mapping for Denon DN-HC1000S",
+  "updated": "2026-09-28",
+  "files": [
+   "Denon_DN_HC1000S.midi.xml",
+   "Denon-HC1000S-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": ""
+ },
+ {
+  "folder": "Denon Prime 4 - Jog Wheel Displays",
+  "name": "Denon Prime 4 - Jog Wheel Displays",
+  "file": "Denon-Prime-4-Jog-Wheels.midi.xml",
+  "author": "Levi \"Whanake\" Williams",
+  "pr": 4027,
+  "url": "https://github.com/mixxxdj/mixxx/pull/4027",
+  "submitter": "ultra-vi-olet",
+  "title": "Denon Prime 4 - MIDI Mapping",
+  "updated": "2025-09-02",
+  "files": [
+   "Denon-Prime-4-Jog-Wheels.midi.xml",
+   "Denon-Prime-4-jog-wheel-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "This mapping is designed to show visual feedback on the Denon Prime 4's jog wheel screens when used with Mixxx."
+ },
+ {
+  "folder": "Denon Prime 4 - Mixxx Mapping",
+  "name": "Denon Prime 4 - Mixxx Mapping",
+  "file": "Denon-Prime-4.midi.xml",
+  "author": "Levi \"Whanake\" Williams",
+  "pr": 4027,
+  "url": "https://github.com/mixxxdj/mixxx/pull/4027",
+  "submitter": "ultra-vi-olet",
+  "title": "Denon Prime 4 - MIDI Mapping",
+  "updated": "2025-09-02",
+  "files": [
+   "Denon-Prime-4.midi.xml",
+   "Denon-Prime-4-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "This is a Work-In-Progress mapping to allow the Denon Prime 4 to be used with Mixxx, ideally with the same (if not more) functionality that the Prime 4 provides as a standalone device."
+ },
+ {
+  "folder": "Denon Prime GO - Mixxx Mapping",
+  "name": "Denon Prime GO - Mixxx Mapping",
+  "file": "Denon-Prime-GO.midi.xml",
+  "author": "Levi \"Whanake\" Williams",
+  "pr": 12047,
+  "url": "https://github.com/mixxxdj/mixxx/pull/12047",
+  "submitter": "ultra-vi-olet",
+  "title": "Denon Prime GO - Mixxx Mapping",
+  "updated": "2025-09-09",
+  "files": [
+   "Denon-Prime-GO.midi.xml",
+   "Denon-Prime-GO.scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "This is a Work-In-Progress mapping to allow the Denon Prime GO to be used with Mixxx, ideally with the same (if not more) functionality than the Prime GO provides as a standalone device."
+ },
+ {
+  "folder": "Denon SC Live 4",
+  "name": "Denon SC Live 4",
+  "file": "Denon-SC-Live-4.midi.xml",
+  "author": "Jammes Luckett (pka Sister Transistor) // Art Mechanix",
+  "pr": 17201,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17201",
+  "submitter": "artmechanix",
+  "title": "Denon SC Live 4: add controller mapping",
+  "updated": "2026-10-26",
+  "files": [
+   "Denon-SC-Live-4.midi.xml",
+   "Denon-SC-Live-4-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "Mapping for Denon SC Live 4 integration with Mixxx. Includes core functions such as decks and mixer channels 1-4, pad modes, Sweep and BPM FX, beatjumps, active loops, meters, and library navigation. Also includes additional features from the controller's screen and helpful enhancements. See the Mix"
+ },
+ {
+  "folder": "Hercules DJControl AirPlus",
+  "name": "DJControl Air+",
+  "file": "DJControl_AirPlus.midi.xml",
+  "author": "DJ Phatso for Hercules Technical Support",
+  "pr": 17363,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17363",
+  "submitter": "mirh",
+  "title": "Add Hercules DJControl AIR+/AIR+ S mappings",
+  "updated": "2026-10-30",
+  "files": [
+   "DJControl_AirPlus.midi.xml",
+   "DJControl_AirPlus.script.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "MIDI Preset for Hercules DJControl Air+"
+ },
+ {
+  "folder": "Gemini G4V",
+  "name": "Gemini G4V",
+  "file": "Gemini G4V.midi.xml",
+  "author": "Javier Vilarroig",
+  "pr": 4323,
+  "url": "https://github.com/mixxxdj/mixxx/pull/4323",
+  "submitter": "JaviVilarroig",
+  "title": "G4V controller",
+  "updated": "2025-09-02",
+  "files": [
+   "Gemini G4V.midi.xml",
+   "Gemini-G4V-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "Gemini G4V Controller"
+ },
+ {
+  "folder": "Hercules DJ Control Instinct P8",
+  "name": "Hercules DJ Control Instinct P8",
+  "file": "Hercules DJ Control Instinct P8.midi.xml",
+  "author": "Piff+Hubert+STi+Piega",
+  "pr": 1851,
+  "url": "https://github.com/mixxxdj/mixxx/pull/1851",
+  "submitter": "Piega",
+  "title": "Add basic function of controller Hercules DJ Control Instinct P8",
+  "updated": "2025-06-20",
+  "files": [
+   "Hercules DJ Control Instinct P8.midi.xml",
+   "Hercules-DJ-Control-Instinct-P8-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Hercules DJ Control Instinct P8 - 20180620\n\nBased on:\n- previous work by Piff and Hubert\n- User Manual http://ts.hercules.com/download/sound/manuals/DJC_Instinct_P8/DJControl_InstinctP8_User_Manual_EN.pdf\n- MIDI Mapping Version 1.1 http://ts.hercules.com/download/sound/MIDI_Mapping/DJ_InstinctP8/DJC"
+ },
+ {
+  "folder": "Hercules DJControl Mix Ultra",
+  "name": "Hercules DJControl Mix Ultra",
+  "file": "Hercules DJControl Mix Ultra.midi.xml",
+  "author": "Aayush Kapoor (xeoneux)",
+  "pr": 17400,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17400",
+  "submitter": "xeoneux",
+  "title": "Add Hercules DJControl Mix Ultra mapping with Stems support (Mixxx 2.6)",
+  "updated": "2026-11-06",
+  "files": [
+   "Hercules DJControl Mix Ultra.midi.xml",
+   "Hercules-DJControl-Mix-Ultra-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "MIDI Mapping for Hercules DJControl Mix Ultra (with Stems)"
+ },
+ {
+  "folder": "Kruger Matz DJ-001",
+  "name": "Krüger & Matz DJ-001",
+  "file": "KrugerMatz-DJ-001.midi.xml",
+  "author": "Jairo Master Zion",
+  "pr": 16933,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16933",
+  "submitter": "masterzion",
+  "title": "KrugerMatz DJ-001: Add controller mapping and scripts",
+  "updated": "2026-10-23",
+  "files": [
+   "KrugerMatz-DJ-001.midi.xml",
+   "KrugerMatz-DJ-001-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Mapping for Krüger & Matz DJ-001 controller"
+ },
+ {
+  "folder": "Novation Launchkey Mini MK4 25",
+  "name": "Novation Launchkey Mini MK4 25",
+  "file": "Novation-Launchkey-Mini-MK4-25.midi.xml",
+  "author": "theotacconi",
+  "pr": 16653,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16653",
+  "submitter": "theotacconi",
+  "title": "Controllers: Add Novation Launchkey Mini MK4 25 mapping",
+  "updated": "2026-11-10",
+  "files": [
+   "Novation-Launchkey-Mini-MK4-25.midi.xml",
+   "Novation-Launchkey-Mini-MK4-25.scripts.js"
+  ],
+  "needs": [],
+  "desc": "Custom DJ Mapping for Launchkey Mini 25 MK4"
+ },
+ {
+  "folder": "Numark NS6",
+  "name": "Numark NS6",
+  "file": "Numark NS6.midi.xml",
+  "author": "maurojuniorr",
+  "pr": 17264,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17264",
+  "submitter": "maurojuniorr",
+  "title": "Add mapping for the original Numark NS6",
+  "updated": "2026-10-30",
+  "files": [
+   "Numark NS6.midi.xml",
+   "Numark-NS6.scripts.js"
+  ],
+  "needs": [
+   "common-controller-scripts.js",
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "4 channel MIDI Mapping for Numark NS6"
+ },
+ {
+  "folder": "Numark Mixtrack Go",
+  "name": "Numark Mixtrack Go",
+  "file": "Numark-Mixtrack-Go.midi.xml",
+  "author": "mixo101",
+  "pr": 16813,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16813",
+  "submitter": "josefveiga",
+  "title": "Numark Mixtrack Go controller mapping: Add controller mapping",
+  "updated": "2026-10-24",
+  "files": [
+   "Numark-Mixtrack-Go.midi.xml",
+   "Numark-Mixtrack-Go.scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "Midi mapping for the Numark Mixtrack Go controller"
+ },
+ {
+  "folder": "Numark Party Mix MKII",
+  "name": "Numark Party Mix MKII",
+  "file": "Numark-Party-Mix-MKII.midi.xml",
+  "author": "",
+  "pr": 16155,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16155",
+  "submitter": "rrrapha",
+  "title": "Add controller mapping for Numark Party Mix II",
+  "updated": "2026-06-16",
+  "files": [
+   "Numark-Party-Mix-MKII.midi.xml",
+   "Numark-Party-Mix-MKII.scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "Mapping for Numark Party Mix MKII"
+ },
+ {
+  "folder": "Pioneer DDJ-REV1",
+  "name": "Pioneer DDJ-REV1",
+  "file": "Pioneer DDJ-REV1.midi.xml",
+  "author": "AKOI, Alexandr, LauraRozier, Mjlyon, 0b1-twan",
+  "pr": 16722,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16722",
+  "submitter": "AKOI-TTI",
+  "title": "Controllers: Pioneer DDJ-REV1 mapping update (2.5/2.6, stems, Mixxxed Mode)",
+  "updated": "2026-10-24",
+  "files": [
+   "Pioneer DDJ-REV1.midi.xml",
+   "Pioneer-DDJ-REV1-scripts.js"
+  ],
+  "needs": [],
+  "desc": "AKOI v2.4 mapping for the Pioneer DDJ-REV1"
+ },
+ {
+  "folder": "Pioneer DDJ-XP2",
+  "name": "Pioneer DDJ-XP2",
+  "file": "Pioneer DDJ-XP2.midi.xml",
+  "author": "Rene (mixxx at absorb.it)",
+  "pr": 15791,
+  "url": "https://github.com/mixxxdj/mixxx/pull/15791",
+  "submitter": "absorb-it",
+  "title": "Pioneer DDJ-XP2: initial implementation",
+  "updated": "2026-10-27",
+  "files": [
+   "Pioneer DDJ-XP2.midi.xml",
+   "Pioneer-DDJ-XP2-scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "USB MIDI controller."
+ },
+ {
+  "folder": "Pioneer XDJ-RX",
+  "name": "Pioneer XDJ-RX",
+  "file": "Pioneer XDJ-RX.midi.xml",
+  "author": "",
+  "pr": 3008,
+  "url": "https://github.com/mixxxdj/mixxx/pull/3008",
+  "submitter": "norayr",
+  "title": "Pioneer XDJ-RX midi mapping",
+  "updated": "2025-06-20",
+  "files": [
+   "Pioneer XDJ-RX.midi.xml",
+   "Pioneer-XDJ-RX-scripts.js"
+  ],
+  "needs": [],
+  "desc": ""
+ },
+ {
+  "folder": "Pioneer DDJ-1000",
+  "name": "Pioneer DDJ-1000",
+  "file": "Pioneer-DDJ-1000.midi.xml",
+  "author": "Serhii O. Pashchenko",
+  "pr": 17174,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17174",
+  "submitter": "SergioAlexo",
+  "title": "Add Pioneer DDJ-1000 controller mapping",
+  "updated": "2026-11-02",
+  "files": [
+   "Pioneer-DDJ-1000.midi.xml",
+   "Pioneer-DDJ-1000-scripts.js"
+  ],
+  "needs": [],
+  "desc": "4-deck mapping for the Pioneer DDJ-1000: all eight pad modes, jog displays, BEAT FX, SOUND COLOR FX, memory cues and loop adjust."
+ },
+ {
+  "folder": "PIONEER-DDJ-ERGO",
+  "name": "PIONEER-DDJ-ERGO",
+  "file": "Pioneer-DDJ-ERGO.midi.xml",
+  "author": "Jesús Soto",
+  "pr": 13003,
+  "url": "https://github.com/mixxxdj/mixxx/pull/13003",
+  "submitter": "jssotomdz",
+  "title": "Pioneer DDJ-ERGO: added mappings",
+  "updated": "2025-10-08",
+  "files": [
+   "Pioneer-DDJ-ERGO.midi.xml",
+   "Pioneer-DDJ-ERGO-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": ""
+ },
+ {
+  "folder": "Pioneer DDJ-FLX10",
+  "name": "Pioneer DDJ-FLX10",
+  "file": "Pioneer-DDJ-FLX10.midi.xml",
+  "author": "Marc Zischka & Victor Pineda (Veezuhz)",
+  "pr": 16539,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16539",
+  "submitter": "Veezuhz",
+  "title": "Adding the Pioneer DDJ-FLX10 controller mapping files, including scri…",
+  "updated": "2026-09-26",
+  "files": [
+   "Pioneer-DDJ-FLX10.midi.xml",
+   "Pioneer-DDJ-FLX10-scripts.js"
+  ],
+  "needs": [],
+  "desc": "Pioneer DDJ-FLX10 Mapping v1.1 (Mixxx 2.5 — MIDI controls only, no waveform)"
+ },
+ {
+  "folder": "Pioneer DDJ-FLX10 HID",
+  "name": "Pioneer DDJ-FLX10 HID",
+  "file": "Pioneer-DDJ-FLX10-screen.hid.xml",
+  "author": "Victor Pineda (Veezuhz)",
+  "pr": 16539,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16539",
+  "submitter": "Veezuhz",
+  "title": "Adding the Pioneer DDJ-FLX10 controller mapping files, including scri…",
+  "updated": "2026-09-26",
+  "files": [
+   "Pioneer-DDJ-FLX10-screen.hid.xml",
+   "Pioneer-DDJ-FLX10-screen.js"
+  ],
+  "needs": [],
+  "desc": "Jog wheel HID screen module for DDJ-FLX10. Enable alongside the main MIDI mapping."
+ },
+ {
+  "folder": "Pioneer DDJ-FLX2",
+  "name": "Pioneer DDJ-FLX2",
+  "file": "Pioneer-DDJ-FLX2.midi.xml",
+  "author": "CupoMeridio, RaduTek",
+  "pr": 16567,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16567",
+  "submitter": "CupoMeridio",
+  "title": "Pioneer ddj flx2 mapping",
+  "updated": "2026-10-25",
+  "files": [
+   "Pioneer-DDJ-FLX2.midi.xml",
+   "Pioneer-DDJ-FLX2-scripts.js"
+  ],
+  "needs": [],
+  "desc": "2-deck USB and Bluetooth MIDI controller. This mapping implements a custom 4-deck layer mode, manual soft takeover for faders, and asymmetric shift functions."
+ },
+ {
+  "folder": "Pioneer DDJ-GRV6",
+  "name": "Pioneer DDJ-GRV6",
+  "file": "Pioneer-DDJ-GRV6.midi.xml",
+  "author": "Jörg Beyer",
+  "pr": 15801,
+  "url": "https://github.com/mixxxdj/mixxx/pull/15801",
+  "submitter": "joergbeyer",
+  "title": "initial support for the Pioneer DDJ GRV6 DJ Controller",
+  "updated": "2026-05-05",
+  "files": [
+   "Pioneer-DDJ-GRV6.midi.xml",
+   "Pioneer-DDJ-GRV6-scripts.js"
+  ],
+  "needs": [
+   "common-controller-scripts.js"
+  ],
+  "desc": "Midi Mapping for the Pioneer DDJ-GRV6, 2025-12-28 18:52"
+ },
+ {
+  "folder": "Pioneer DDJ-SR2",
+  "name": "Pioneer DDJ-SR2",
+  "file": "Pioneer-DDJ-SR2.midi.xml",
+  "author": "Waylon Robertson",
+  "pr": 13429,
+  "url": "https://github.com/mixxxdj/mixxx/pull/13429",
+  "submitter": "WaylonR",
+  "title": "Pioneer DDJ-SR2: Initial controller mapping",
+  "updated": "2025-09-22",
+  "files": [
+   "Pioneer-DDJ-SR2.midi.xml",
+   "Pioneer-DDJ-SR2-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "4-deck mapping for Pioneer DDJ-SR2 controller"
+ },
+ {
+  "folder": "Pioneer DDJ-SX2",
+  "name": "Pioneer DDJ-SX2",
+  "file": "PIONEER-DDJ-SX2.midi.xml",
+  "author": "Krafting, hrudham, tildearrow, eXWoLL1",
+  "pr": 16372,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16372",
+  "submitter": "Krafting",
+  "title": "Add Pioneer DDJ SX2 Mapping",
+  "updated": "2026-10-14",
+  "files": [
+   "PIONEER-DDJ-SX2.midi.xml",
+   "PIONEER-DDJ-SX2.scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "Pioneer DDJ-SX2 mapping for Mixxx"
+ },
+ {
+  "folder": "Pioneer DDJ-WeGO",
+  "name": "Pioneer DDJ-WeGO",
+  "file": "Pioneer-DDJ-WeGO.midi.xml",
+  "author": "Samuel Nicholas, Dmytro Hakman",
+  "pr": 17338,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17338",
+  "submitter": "201dreamers",
+  "title": "Add Pioneer DDJ-WeGO mapping with 4-deck and Jog FX support",
+  "updated": "2026-10-28",
+  "files": [
+   "Pioneer-DDJ-WeGO.midi.xml",
+   "Pioneer-DDJ-WeGO-scripts.js"
+  ],
+  "needs": [],
+  "desc": "4-deck mapping for the Pioneer DDJ-WeGO with Jog FX and jog lighting."
+ },
+ {
+  "folder": "Reloop Mixtour",
+  "name": "Reloop Mixtour",
+  "file": "Reloop Mixtour.midi.xml",
+  "author": "Rene (mixxx at absorb.it), András (andras08 at gmail.com), zfhrp",
+  "pr": 15790,
+  "url": "https://github.com/mixxxdj/mixxx/pull/15790",
+  "submitter": "absorb-it",
+  "title": "Reloop Mixtour: initial implementation",
+  "updated": "2026-10-27",
+  "files": [
+   "Reloop Mixtour.midi.xml",
+   "Reloop-Mixtour-scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "Reloop Mixtour mapping (2-deck with support for 4-deck)"
+ },
+ {
+  "folder": "Reloop Ready",
+  "name": "Reloop Ready",
+  "file": "Reloop Ready.midi.xml",
+  "author": "Swiftb0y",
+  "pr": 4513,
+  "url": "https://github.com/mixxxdj/mixxx/pull/4513",
+  "submitter": "Swiftb0y",
+  "title": "Controllers: Add Mapping for Reloop Ready",
+  "updated": "2026-10-28",
+  "files": [
+   "Reloop Ready.midi.xml",
+   "Reloop-Ready-scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "feature-complete mapping of the Reloop Ready hardware. Development kindly sponsored by Samgarr"
+ },
+ {
+  "folder": "Reloop Beatmix",
+  "name": "Reloop Beatmix",
+  "file": "Reloop-Beatmix.midi.xml",
+  "author": "Eugene Erokhin uncle.eugene@gmail.com",
+  "pr": 12422,
+  "url": "https://github.com/mixxxdj/mixxx/pull/12422",
+  "submitter": "uncleeugene",
+  "title": "Reloop Beatmix (v1) mapping",
+  "updated": "2026-02-13",
+  "files": [
+   "Reloop-Beatmix.midi.xml",
+   "Reloop-Beatmix.scripts.js"
+  ],
+  "needs": [],
+  "desc": "1st gen. Reloop Beatmix"
+ },
+ {
+  "folder": "Reloop Digital Jockey 2 Master Edition",
+  "name": "Reloop Digital Jockey 2 Master Edition",
+  "file": "Reloop-Digital-Jockey-2-ME.midi.xml",
+  "author": "DJ aK (adapted for Master Edition)",
+  "pr": 16929,
+  "url": "https://github.com/mixxxdj/mixxx/pull/16929",
+  "submitter": "julled",
+  "title": "Add mapping for Reloop Digital Jockey 2 Master Edition",
+  "updated": "2026-10-30",
+  "files": [
+   "Reloop-Digital-Jockey-2-ME.midi.xml"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js",
+   "Reloop-Digital-Jockey-2-IE.scripts.js"
+  ],
+  "desc": "Controller mapping for Reloop Digital Jockey 2 Master Edition, ported from the Interface Edition mapping (identical MIDI CC/note layout, confirmed against the printed manual's MIDI Control Values table and live USB capture)"
+ },
+ {
+  "folder": "Roland DJ-202",
+  "name": "Roland DJ-202",
+  "file": "Roland_DJ-202.midi.xml",
+  "author": "Silvio Ankermann (Lykos153), Sebastian Reuße (eigengrau) and René Kraus (upCASE), Jhade Williamson (evoixmr), BSDguy389",
+  "pr": 1595,
+  "url": "https://github.com/mixxxdj/mixxx/pull/1595",
+  "submitter": "Lykos153",
+  "title": "[WIP] Mapping Roland DJ-202",
+  "updated": "2026-10-25",
+  "files": [
+   "Roland_DJ-202.midi.xml",
+   "Roland_DJ-202-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "4-deck mapping for Roland DJ-202 controller"
+ },
+ {
+  "folder": "Roland DJ-808",
+  "name": "Roland DJ-808",
+  "file": "Roland_DJ-808.midi.xml",
+  "author": "Jan Holthuis",
+  "pr": 15063,
+  "url": "https://github.com/mixxxdj/mixxx/pull/15063",
+  "submitter": "peter-vincze",
+  "title": "New mapping for Roland DJ 808 ",
+  "updated": "2025-10-10",
+  "files": [
+   "Roland_DJ-808.midi.xml",
+   "Roland_DJ-808-scripts.js"
+  ],
+  "needs": [
+   "lodash.mixxx.js",
+   "midi-components-0.0.js"
+  ],
+  "desc": "4-deck mapping for Roland DJ-808 controller"
+ },
+ {
+  "folder": "Traktor Kontrol X1 MK1",
+  "name": "Traktor Kontrol X1 MK1",
+  "file": "Traktor Kontrol X1 MK1.bulk.xml",
+  "author": "Jan Claußen",
+  "pr": 17361,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17361",
+  "submitter": "jclsn",
+  "title": "Traktor Kontrol X1 MK1 Support",
+  "updated": "2026-11-07",
+  "files": [
+   "Traktor Kontrol X1 MK1.bulk.xml",
+   "Traktor Kontrol X1 MK1 bulk scripts.js"
+  ],
+  "needs": [
+   "common-bulk-midi.js"
+  ],
+  "desc": "Traktor Kontrol X1 MK1 mapping"
+ },
+ {
+  "folder": "Native Instruments Traktor Kontrol Z2",
+  "name": "Native Instruments Traktor Kontrol Z2",
+  "file": "Traktor Kontrol Z2.hid.xml",
+  "author": "Jörg Wartenberg",
+  "pr": 3038,
+  "url": "https://github.com/mixxxdj/mixxx/pull/3038",
+  "submitter": "JoergAtGithub",
+  "title": "(WIP) Mapping for the Traktor Kontrol Z2",
+  "updated": "2026-10-01",
+  "files": [
+   "Traktor Kontrol Z2.hid.xml",
+   "Traktor-Kontrol-Z2-hid-scripts.js"
+  ],
+  "needs": [
+   "common-hid-packet-parser.js"
+  ],
+  "desc": "HID Mapping for Native Instruments Traktor Kontrol Z2"
+ },
+ {
+  "folder": "Vestax VCI-380",
+  "name": "Vestax VCI-380",
+  "file": "Vestax VCI-380.midi.xml",
+  "author": "JM Jacinto",
+  "pr": 17089,
+  "url": "https://github.com/mixxxdj/mixxx/pull/17089",
+  "submitter": "jaymanu79",
+  "title": "Add mapping for Vestax VCI-380 controller",
+  "updated": "2026-11-10",
+  "files": [
+   "Vestax VCI-380.midi.xml",
+   "Vestax-VCI-380-scripts.js"
+  ],
+  "needs": [
+   "midi-components-0.0.js"
+  ],
+  "desc": "Mapping for the Vestax VCI-380: 2 decks, hot cues, beat grid, loops, stems, sampler, quick effects, touch strip."
+ }
+]

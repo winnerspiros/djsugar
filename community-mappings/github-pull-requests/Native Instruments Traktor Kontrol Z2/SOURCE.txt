@@ -1,0 +1,8 @@
+Mapping: Native Instruments Traktor Kontrol Z2
+Author (in the mapping): Jörg Wartenberg
+Submitted by: JoergAtGithub in Mixxx pull request #3038
+https://github.com/mixxxdj/mixxx/pull/3038
+Last update of the pull request: 2026-10-01
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: common-hid-packet-parser.js

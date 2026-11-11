@@ -1,0 +1,8 @@
+Mapping: Reloop Ready
+Author (in the mapping): Swiftb0y
+Submitted by: Swiftb0y in Mixxx pull request #4513
+https://github.com/mixxxdj/mixxx/pull/4513
+Last update of the pull request: 2026-10-28
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: midi-components-0.0.js

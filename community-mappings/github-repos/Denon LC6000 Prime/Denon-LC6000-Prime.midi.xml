@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxControllerPreset schemaVersion="1" mixxxVersion="2.5">
+    <info>
+        <name>Denon LC6000 Prime</name>
+        <author>schmic</author>
+        <description>Mixxx mapping for the Denon LC6000 Prime with selectable deck assignment, selectable deck color, transport, browse, jog, pitch, LEDs, Hot Cue, Roll, and inferred Auto Loop pads.</description>
+    </info>
+    <settings>
+        <option variable="deckAssignment" type="enum" label="Deck assignment">
+            <value default="true">Deck 1</value>
+            <value>Deck 2</value>
+            <value>Deck 3</value>
+            <value>Deck 4</value>
+            <description>Select which Mixxx deck this LC6000 should control.</description>
+        </option>
+        <option variable="deckColor" type="enum" label="Deck color">
+            <value default="true">Deck Default</value>
+            <value>Green</value>
+            <value>Blue</value>
+            <value>Orange</value>
+            <value>Purple</value>
+            <description>Color accent for the outer platter ring, based on the official LC6000 MIDI color examples.</description>
+        </option>
+        <option variable="vinylJogSensitivity" type="integer" min="1" max="200" default="100" label="Jog sensitivity, Vinyl-Mode">
+            <description>Sensitivity factor for scratching with platter touch. 100 is the neutral midpoint, min is 1, max is 200.</description>
+        </option>
+        <option variable="nonVinylJogSensitivity" type="integer" min="1" max="100" default="33" label="Jog sensitivity, Non-Vinyl-Mode">
+            <description>Sensitivity factor for non-touch wheel movement. 33 is the neutral midpoint, min is 1, max is 100.</description>
+        </option>
+        <option variable="vinylModeOn" type="boolean" default="true" label="Start in vinyl mode">
+            <description>Whether the platter touch surface should enable scratching on startup.</description>
+        </option>
+    </settings>
+    <controller id="Denon DJ LC6000 PRIME">
+        <scriptfiles>
+            <file filename="Denon-LC6000-Prime-scripts.js" functionprefix="LC6000Prime"/>
+        </scriptfiles>
+        <controls>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.play</key>
+                <description>Play/Pause</description>
+                <status>0x90</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.play</key>
+                <description>Play/Pause release</description>
+                <status>0x80</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.cue</key>
+                <description>Cue</description>
+                <status>0x90</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.cue</key>
+                <description>Cue release</description>
+                <status>0x80</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.beatJumpBack</key>
+                <description>Beat Jump Back</description>
+                <status>0x90</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.beatJumpForward</key>
+                <description>Beat Jump Forward</description>
+                <status>0x90</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.trackSkipPrev</key>
+                <description>Track Skip Previous</description>
+                <status>0x90</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.trackSkipPrev</key>
+                <description>Track Skip Previous release</description>
+                <status>0x80</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.trackSkipNext</key>
+                <description>Track Skip Next</description>
+                <status>0x90</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.trackSkipNext</key>
+                <description>Track Skip Next release</description>
+                <status>0x80</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.censor</key>
+                <description>Censor/Reverse</description>
+                <status>0x90</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.censor</key>
+                <description>Censor/Reverse release</description>
+                <status>0x80</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.loopIn</key>
+                <description>Loop In</description>
+                <status>0x90</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.loopOut</key>
+                <description>Loop Out</description>
+                <status>0x90</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.autoLoopPress</key>
+                <description>Auto Loop encoder press</description>
+                <status>0x90</status>
+                <midino>0x0A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.back</key>
+                <description>Back</description>
+                <status>0x90</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.forward</key>
+                <description>Forward</description>
+                <status>0x90</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.selectPress</key>
+                <description>Select encoder press</description>
+                <status>0x90</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.selectPress</key>
+                <description>Select encoder release</description>
+                <status>0x80</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.vinyl</key>
+                <description>Vinyl</description>
+                <status>0x90</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.sync</key>
+                <description>Sync</description>
+                <status>0x90</status>
+                <midino>0x14</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.master</key>
+                <description>Master deck</description>
+                <status>0x90</status>
+                <midino>0x15</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.keyLock</key>
+                <description>Key Lock</description>
+                <status>0x90</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.slip</key>
+                <description>Slip</description>
+                <status>0x90</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchDown</key>
+                <description>Pitch Bend Down</description>
+                <status>0x90</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchDown</key>
+                <description>Pitch Bend Down release</description>
+                <status>0x80</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchUp</key>
+                <description>Pitch Bend Up</description>
+                <status>0x90</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchUp</key>
+                <description>Pitch Bend Up release</description>
+                <status>0x80</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.shift</key>
+                <description>Shift</description>
+                <status>0x90</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.shift</key>
+                <description>Shift release</description>
+                <status>0x80</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.hotCueMode</key>
+                <description>Hot Cue mode</description>
+                <status>0x90</status>
+                <midino>0x1B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.rollMode</key>
+                <description>Roll mode</description>
+                <status>0x90</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.slicerMode</key>
+                <description>Slicer mode</description>
+                <status>0x90</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.loopMode</key>
+                <description>Loop mode</description>
+                <status>0x90</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad1</key>
+                <description>Pad 1</description>
+                <status>0x90</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad1</key>
+                <description>Pad 1 release</description>
+                <status>0x80</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad2</key>
+                <description>Pad 2</description>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad2</key>
+                <description>Pad 2 release</description>
+                <status>0x80</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad3</key>
+                <description>Pad 3</description>
+                <status>0x90</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad3</key>
+                <description>Pad 3 release</description>
+                <status>0x80</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad4</key>
+                <description>Pad 4</description>
+                <status>0x90</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad4</key>
+                <description>Pad 4 release</description>
+                <status>0x80</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad5</key>
+                <description>Pad 5</description>
+                <status>0x90</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad5</key>
+                <description>Pad 5 release</description>
+                <status>0x80</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad6</key>
+                <description>Pad 6</description>
+                <status>0x90</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad6</key>
+                <description>Pad 6 release</description>
+                <status>0x80</status>
+                <midino>0x25</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad7</key>
+                <description>Pad 7</description>
+                <status>0x90</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad7</key>
+                <description>Pad 7 release</description>
+                <status>0x80</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad8</key>
+                <description>Pad 8</description>
+                <status>0x90</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pad8</key>
+                <description>Pad 8 release</description>
+                <status>0x80</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.platterTouch</key>
+                <description>Platter touch</description>
+                <status>0x90</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.platterTouch</key>
+                <description>Platter touch release</description>
+                <status>0x80</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.parameterBack</key>
+                <description>Parameter Back</description>
+                <status>0x90</status>
+                <midino>0x44</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.parameterForward</key>
+                <description>Parameter Forward</description>
+                <status>0x90</status>
+                <midino>0x45</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.needleTouch</key>
+                <description>Needle touch</description>
+                <status>0x90</status>
+                <midino>0x46</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.needleTouch</key>
+                <description>Needle touch release</description>
+                <status>0x80</status>
+                <midino>0x46</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.autoLoopTurn</key>
+                <description>Auto Loop encoder</description>
+                <status>0xB0</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.selectTurn</key>
+                <description>Select encoder</description>
+                <status>0xB0</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchMsb</key>
+                <description>Pitch slider MSB</description>
+                <status>0xB0</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.pitchLsb</key>
+                <description>Pitch slider LSB</description>
+                <status>0xB0</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogLsb</key>
+                <description>Jog wheel lower byte</description>
+                <status>0xB0</status>
+                <midino>0x31</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogMsb</key>
+                <description>Jog wheel upper byte</description>
+                <status>0xB0</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogDirection</key>
+                <description>Jog wheel direction</description>
+                <status>0xB0</status>
+                <midino>0x37</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogRotation</key>
+                <description>Jog wheel rotation</description>
+                <status>0xB0</status>
+                <midino>0x36</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.needleScrub</key>
+                <description>Needle drop scrub</description>
+                <status>0xB0</status>
+                <midino>0x40</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+        </controls>
+    </controller>
+</MixxxControllerPreset>

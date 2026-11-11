@@ -1,0 +1,7 @@
+Mapping: Ableton Push 2 Display
+Author (in the mapping): OpenAI Codex
+Submitted by: Zoadian in Mixxx pull request #16782
+https://github.com/mixxxdj/mixxx/pull/16782
+Last update of the pull request: 2026-11-02
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

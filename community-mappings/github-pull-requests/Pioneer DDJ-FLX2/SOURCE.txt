@@ -1,0 +1,7 @@
+Mapping: Pioneer DDJ-FLX2
+Author (in the mapping): CupoMeridio, RaduTek
+Submitted by: CupoMeridio in Mixxx pull request #16567
+https://github.com/mixxxdj/mixxx/pull/16567
+Last update of the pull request: 2026-10-25
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

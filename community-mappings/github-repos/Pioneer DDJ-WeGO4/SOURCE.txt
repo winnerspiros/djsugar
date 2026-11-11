@@ -1,0 +1,5 @@
+Mapping: Pioneer DDJ-WeGO4
+Author: Ryan Baxter (rbax)
+Source: https://github.com/rbax/mixxx-mappings
+License: MIT
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android

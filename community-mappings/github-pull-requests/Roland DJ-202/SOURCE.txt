@@ -1,0 +1,8 @@
+Mapping: Roland DJ-202
+Author (in the mapping): Silvio Ankermann (Lykos153), Sebastian Reuße (eigengrau) and René Kraus (upCASE), Jhade Williamson (evoixmr), BSDguy389
+Submitted by: Lykos153 in Mixxx pull request #1595
+https://github.com/mixxxdj/mixxx/pull/1595
+Last update of the pull request: 2026-10-25
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

@@ -1,0 +1,6 @@
+Mapping: Pioneer DDJ-800
+Author: RandomByte (randombyte-developer)
+Source: https://github.com/randombyte-developer/ddj-800/releases/tag/v1.5.0
+License: GPL-2.0-only
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Note: Core 2-deck transport/mixer/jog/browser mapping from release v1.5.0 (see generated-mappings/Pioneer DDJ-800 for a full-featured mapping built from the official MIDI spec).

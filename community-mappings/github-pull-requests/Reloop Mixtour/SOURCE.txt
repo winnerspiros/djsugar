@@ -1,0 +1,8 @@
+Mapping: Reloop Mixtour
+Author (in the mapping): Rene (mixxx at absorb.it), András (andras08 at gmail.com), zfhrp
+Submitted by: absorb-it in Mixxx pull request #15790
+https://github.com/mixxxdj/mixxx/pull/15790
+Last update of the pull request: 2026-10-27
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: midi-components-0.0.js

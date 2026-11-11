@@ -1,0 +1,8 @@
+Mapping: DJControl Air+
+Author (in the mapping): DJ Phatso for Hercules Technical Support
+Submitted by: mirh in Mixxx pull request #17363
+https://github.com/mixxxdj/mixxx/pull/17363
+Last update of the pull request: 2026-10-30
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

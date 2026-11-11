@@ -1,0 +1,7 @@
+Mapping: Pioneer DDJ-WeGO
+Author (in the mapping): Samuel Nicholas, Dmytro Hakman
+Submitted by: 201dreamers in Mixxx pull request #17338
+https://github.com/mixxxdj/mixxx/pull/17338
+Last update of the pull request: 2026-10-28
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

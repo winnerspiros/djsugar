@@ -1,0 +1,8 @@
+Mapping: Numark Party Mix MKII
+Author (in the mapping): -
+Submitted by: rrrapha in Mixxx pull request #16155
+https://github.com/mixxxdj/mixxx/pull/16155
+Last update of the pull request: 2026-06-16
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: midi-components-0.0.js

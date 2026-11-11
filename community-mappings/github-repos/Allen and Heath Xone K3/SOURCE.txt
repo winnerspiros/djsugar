@@ -1,0 +1,6 @@
+Mapping: Allen and Heath Xone K3
+Author: myCatnip
+Source: https://github.com/myCatnip/mixxx-k3-myCatnip
+License: GPL-2.0-only
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Note: Includes 5 presets (cat, kitten, colorlab, onek3, onek3-minifx) and shared xone-k3-lib-*.js scripts for Mixxx 2.5+.

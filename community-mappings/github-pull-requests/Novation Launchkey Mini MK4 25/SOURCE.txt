@@ -1,0 +1,7 @@
+Mapping: Novation Launchkey Mini MK4 25
+Author (in the mapping): theotacconi
+Submitted by: theotacconi in Mixxx pull request #16653
+https://github.com/mixxxdj/mixxx/pull/16653
+Last update of the pull request: 2026-11-10
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
