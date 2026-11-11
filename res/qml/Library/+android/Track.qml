@@ -25,7 +25,14 @@ Item {
         id: trackDrag
 
         analyze: () => root.library.analyze(root.currentTrack())
-        label: decodeURIComponent(file_url.toString().split("/").pop())
+        // Artist - Title as in the list; downloads are named by their id
+        labelProvider: () => {
+            const track = root.currentTrack();
+            if (track && track.title) {
+                return track.artist ? track.artist + " - " + track.title : track.title;
+            }
+            return decodeURIComponent(file_url.toString().split("/").pop());
+        }
         trackUrl: file_url
     }
     DragHandler {

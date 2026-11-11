@@ -9,7 +9,9 @@ import "../Theme"
 Item {
     id: root
 
-    required property string label
+    property string label
+    // Reads the label when the track is picked up (a library row's tags)
+    property var labelProvider: null
     // A file on disk; empty for a streaming track, which then needs:
     property url trackUrl
     // Loads the track to a deck or sampler, with the service's progress
@@ -29,6 +31,7 @@ Item {
     signal held
 
     function openMenu() {
+        readLabel();
         Qt.createComponent("TrackMenu.qml").createObject(root.Window.contentItem, {
             "track": root,
             "analyze": root.analyze
@@ -84,7 +87,13 @@ Item {
         waiter.target = fetchSource;
         fetch();
     }
+    function readLabel() {
+        if (labelProvider) {
+            label = labelProvider();
+        }
+    }
     function begin(position) {
+        readLabel();
         for (let p = parent; p; p = p.parent) {
             if (p.flickableDirection !== undefined) {
                 list = p;
