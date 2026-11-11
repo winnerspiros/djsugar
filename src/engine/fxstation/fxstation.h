@@ -33,7 +33,7 @@ namespace mixxx {
 class FxStation : public QObject {
     Q_OBJECT
   public:
-    FxStation();
+    explicit FxStation(UserSettingsPointer pConfig);
     ~FxStation() override;
 
     /// Processes the main mix in place (interleaved stereo), on the engine

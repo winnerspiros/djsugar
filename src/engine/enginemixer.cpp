@@ -183,7 +183,7 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
     // 1.11.0 and earlier. See issue #7413.
     m_pMainGain->addAlias(ConfigKey(group, QStringLiteral("volume")));
 
-    m_pFxStation = std::make_unique<mixxx::FxStation>();
+    m_pFxStation = std::make_unique<mixxx::FxStation>(pConfig);
 
     // Legacy: the headphone "headGain" control used to be named "headVolume" in
     // Mixxx 1.11.0 and earlier. See issue #7413.

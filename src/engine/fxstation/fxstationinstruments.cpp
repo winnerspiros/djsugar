@@ -3,9 +3,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <cmath>
 #include <random>
 
+#include "library/samples/bundledsamples.h"
 #include "moc_fxstationinstruments.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
@@ -155,8 +157,9 @@ Instrument decode(const QString& path) {
 
 } // namespace
 
-Instruments::Instruments(QObject* pParent)
-        : QObject(pParent) {
+Instruments::Instruments(UserSettingsPointer pConfig, QObject* pParent)
+        : QObject(pParent),
+          m_pConfig(std::move(pConfig)) {
     for (auto& bank : m_banks) {
         bank.store(nullptr);
     }
@@ -189,8 +192,8 @@ void Instruments::publish(int index, std::unique_ptr<Bank> pBank) {
 }
 
 // static
-std::unique_ptr<Bank> Instruments::loadBank(int index) {
-    const QDir dir(bankDirectory(index));
+std::unique_ptr<Bank> Instruments::loadBank(int index) const {
+    QDir dir(bankDirectory(index));
     // The sounds stay out of the music apps
     const QString noMedia = QFileInfo(dir.absolutePath()).path() + QStringLiteral("/.nomedia");
     if (!dir.exists()) {
@@ -201,6 +204,12 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) {
         QFile file(noMedia);
         if (!file.open(QIODevice::WriteOnly)) {
             qWarning() << "FxStation: cannot create" << noMedia;
+        }
+    }
+    if (index == 1 && dir.isEmpty()) {
+        const QString bundled = samples::bundledSamplesDir(m_pConfig);
+        if (!bundled.isEmpty()) {
+            dir.setPath(bundled + QStringLiteral("djsugar"));
         }
     }
     if (dir.isEmpty()) {
@@ -220,8 +229,14 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) {
     std::array<QString, kInstruments> chosen;
     for (int instrument = 0; instrument < kInstruments; ++instrument) {
         for (const QString& file : std::as_const(files)) {
-            if (QFileInfo(file).fileName().startsWith(
-                        QLatin1String(kNamePrefixes[instrument]), Qt::CaseInsensitive)) {
+            // "kick.wav" or "01_kick.wav"
+            static const QRegularExpression kNumberPrefix(QStringLiteral("^\\d+[_ -]"));
+            if (QFileInfo(file)
+                            .fileName()
+                            .remove(kNumberPrefix)
+                            .startsWith(
+                                    QLatin1String(kNamePrefixes[instrument]),
+                                    Qt::CaseInsensitive)) {
                 chosen[instrument] = file;
                 break;
             }

@@ -4,6 +4,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QMutex>
 #include <QStandardPaths>
 
 #include "sources/soundsourceproxy.h"
@@ -36,6 +37,29 @@ QString bundledSourceDir(const UserSettingsPointer& pConfig) {
     return QString();
 }
 
+/// Paths relative to sourceDir. Android cannot list assets:/ subdirectories,
+/// so the APK ships an index.txt written at build time.
+QStringList bundledRelativePaths(const QString& sourceDir) {
+    QStringList paths;
+    QFile index(sourceDir + QStringLiteral("index.txt"));
+    if (index.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const QStringList lines = QString::fromUtf8(index.readAll()).split(QLatin1Char('\n'));
+        for (const QString& line : lines) {
+            const QString path = line.trimmed();
+            if (!path.isEmpty()) {
+                paths.append(path);
+            }
+        }
+        return paths;
+    }
+    const QDir source(sourceDir);
+    QDirIterator it(sourceDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        paths.append(source.relativeFilePath(it.next()));
+    }
+    return paths;
+}
+
 } // namespace
 
 QString bundledSamplesCacheDir() {
@@ -55,11 +79,13 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     }
     // Cache location keeps the library scanner away from the samples
     const QString destDir = bundledSamplesCacheDir();
-    const QDir source(sourceDir);
-    QDirIterator it(sourceDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        const QString path = it.next();
-        const QString destPath = destDir + source.relativeFilePath(path);
+    // The pads UI and the FX Station may both sync the cache
+    static QMutex mutex;
+    const QMutexLocker lock(&mutex);
+    const QStringList relativePaths = bundledRelativePaths(sourceDir);
+    for (const QString& relativePath : relativePaths) {
+        const QString path = sourceDir + relativePath;
+        const QString destPath = destDir + relativePath;
         const QFileInfo dest(destPath);
         // Same size: already current. Otherwise an update reworked it.
         if (dest.exists() && dest.size() == QFileInfo(path).size()) {
@@ -75,7 +101,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     QDirIterator stale(destDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
     while (stale.hasNext()) {
         const QString path = stale.next();
-        if (!QFile::exists(sourceDir + QDir(destDir).relativeFilePath(path))) {
+        if (!relativePaths.contains(QDir(destDir).relativeFilePath(path))) {
             QFile::remove(path);
         }
     }
@@ -110,13 +136,11 @@ QString importSample(const QUrl& url) {
         qWarning() << "Cannot open sample" << source;
         return QString();
     }
-    // content:// URLs carry no usable name; Qt resolves the display name
+    // content:// URLs may carry an opaque id ("msf:1234") instead of a file
+    // name; take whichever candidate names a supported format
     QString name = QFileInfo(in.fileName()).fileName();
-    if (!url.isLocalFile()) {
-        const QString display = QFileInfo(url.fileName()).fileName();
-        if (!display.isEmpty()) {
-            name = display;
-        }
+    if (!isSupportedSample(name)) {
+        name = QFileInfo(url.fileName()).fileName();
     }
     if (!isSupportedSample(name)) {
         qWarning() << "Unsupported sample format" << name;

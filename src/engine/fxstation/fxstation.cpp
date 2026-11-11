@@ -90,7 +90,7 @@ float sampleAt(const Instrument& instrument, int channel, double position) {
 
 } // namespace
 
-FxStation::FxStation()
+FxStation::FxStation(UserSettingsPointer pConfig)
         : m_sampleRate(0.f),
           m_random(1234),
           m_beat(0.0),
@@ -180,7 +180,7 @@ FxStation::FxStation()
     }
     m_liveGain.reset(1.f);
 
-    m_pInstruments = std::make_unique<Instruments>();
+    m_pInstruments = std::make_unique<Instruments>(std::move(pConfig));
     connect(m_pInstruments.get(),
             &Instruments::bankLoaded,
             this,

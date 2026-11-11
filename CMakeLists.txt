@@ -2748,6 +2748,21 @@ if(ANDROID)
       # so it cannot break function-pointer comparisons.
       "LINKER:--icf=safe"
   )
+  file(
+    GLOB_RECURSE MIXXX_BUNDLED_SAMPLES
+    CONFIGURE_DEPENDS
+    RELATIVE "${CMAKE_SOURCE_DIR}/res/samples"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.wav"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.ogg"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.mp3"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.flac"
+  )
+  list(JOIN MIXXX_BUNDLED_SAMPLES "\n" MIXXX_BUNDLED_SAMPLES)
+  file(
+    WRITE
+    "${CMAKE_CURRENT_BINARY_DIR}/samples-index.txt"
+    "${MIXXX_BUNDLED_SAMPLES}\n"
+  )
   add_custom_target(
     copy-resource-android
     COMMENT "Copy filtered resources folder to Android build asset directory"
@@ -2825,10 +2840,14 @@ if(ANDROID)
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
-    # Samples: built-in DJ samples for sampler decks
+    # Samples: built-in DJ samples for sampler decks, plus an index because
+    # Qt cannot list assets:/ subdirectories
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samples
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples
+    COMMAND
+      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/samples-index.txt
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples/index.txt
     # Default sampler bank: pre-loaded Rekordbox-style sample slots
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samplers

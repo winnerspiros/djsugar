@@ -9,6 +9,8 @@
 #include <mutex>
 #include <vector>
 
+#include "preferences/usersettings.h"
+
 namespace mixxx {
 namespace fxstation {
 
@@ -32,14 +34,15 @@ struct Bank {
 
 /// The sounds of the X-Pad. Bank 1 is synthesized (no sample files, no
 /// rights to care about); banks 2 to 4 are loaded in the background from
-/// Mixxx/FxStation/Bank N on the storage (files whose names start with
-/// kick, snare, clap and hat, or else the first four audio files). The
+/// Mixxx/FxStation/Bank N on the storage (files named kick, snare, clap and
+/// hat, a number prefix like "01_" allowed, or else the first four audio
+/// files). An empty Bank 2 plays the bundled DJ Sugar kit. The
 /// engine reads a bank without locking; a bank replaced by a reload is
 /// kept until the app quits, since the engine may still be playing it.
 class Instruments : public QObject {
     Q_OBJECT
   public:
-    explicit Instruments(QObject* pParent = nullptr);
+    explicit Instruments(UserSettingsPointer pConfig, QObject* pParent = nullptr);
     ~Instruments() override;
 
     /// For the engine thread: the bank, or nullptr while not loaded
@@ -59,7 +62,9 @@ class Instruments : public QObject {
 
   private:
     void publish(int index, std::unique_ptr<Bank> pBank);
-    static std::unique_ptr<Bank> loadBank(int index);
+    std::unique_ptr<Bank> loadBank(int index) const;
+
+    const UserSettingsPointer m_pConfig;
 
     std::array<std::atomic<const Bank*>, kBanks> m_banks;
     std::mutex m_ownedMutex;

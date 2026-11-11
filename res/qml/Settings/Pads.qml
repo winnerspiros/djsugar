@@ -552,7 +552,9 @@ Category {
 
             title: qsTr("Import sample")
             fileMode: FileDialog.OpenFile
-            nameFilters: Mixxx.PlayerManager.supportedAudioFileNameFilters.concat([qsTr("All files (*)")])
+            // Android's picker maps filters to MIME types and greys out
+            // valid audio; importSample() checks the format instead
+            nameFilters: Qt.platform.os === "android" ? [] : Mixxx.PlayerManager.supportedAudioFileNameFilters.concat([qsTr("All files (*)")])
             onAccepted: picker.adopt(Mixxx.PlayerManager.importSample(importDialog.selectedFile))
         }
     }
