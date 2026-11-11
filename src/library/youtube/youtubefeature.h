@@ -104,6 +104,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// was abandoned. Fires for fresh downloads and for cache hits, which
     /// never reach the service's downloadFinished signal.
     void playerLoadsSettled(const QString& videoId);
+    /// The file of `videoId` is on disk: downloaded or from the cache
+    void fileReady(const QString& videoId, const QString& localPath);
     void sponsorBlockAutoSkipChanged(bool enabled);
 
   protected:

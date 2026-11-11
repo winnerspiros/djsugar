@@ -71,6 +71,10 @@ class QmlSpotifyProxy : public QObject {
 
     /// Downloads the track (once, then from the cache) and loads it to the deck
     Q_INVOKABLE void loadToDeck(const QVariantMap& track, const QString& deckGroup);
+    /// Downloads the track into the library only; fileReady tells the path
+    Q_INVOKABLE void download(const QVariantMap& track) {
+        loadToDeck(track, QString());
+    }
     /// 0..1 while the track downloads, -1 otherwise
     Q_INVOKABLE double downloadProgress(const QString& spotifyId) const {
         return m_progress.value(spotifyId, -1.0);
@@ -85,6 +89,7 @@ class QmlSpotifyProxy : public QObject {
     /// `progress` 0..1, -1 when the download ended (done or failed)
     void downloadProgressChanged(const QString& spotifyId, double progress);
     void downloadFailed(const QString& spotifyId, const QString& error);
+    void fileReady(const QString& spotifyId, const QString& localPath);
 
   private:
     enum class ListKind {

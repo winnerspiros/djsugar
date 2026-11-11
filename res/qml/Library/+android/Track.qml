@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls 2.15
 import "../Theme"
 import ".." as Skin
+import "." as LibraryComponent
 
 Item {
     id: root
@@ -28,99 +29,26 @@ Item {
         contextMenuLoader.item.popup();
     }
 
-    // Hold opens the menu; hold and move drags the track onto a deck, a
-    // sampler or a playlist. Before the hold, moves scroll the list.
-    MouseArea {
+    LibraryComponent.TrackDrag {
+        label: decodeURIComponent(file_url.toString().split("/").pop())
+        trackUrl: file_url
+
+        onHeld: root.openContextMenu()
+    }
+    DragHandler {
         id: dragHandler
 
-        property point holdAt
-        property Item ghost: null
-        readonly property bool active: ghost !== null
-
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        anchors.fill: parent
-
-        onClicked: mouse => tapHandler.tapped(mouse, mouse.button)
-        onDoubleClicked: tapHandler.doubleTapped()
-        onPressAndHold: mouse => {
-            if (mouse.button === Qt.RightButton) {
-                return;
-            }
-            preventStealing = true;
-            holdAt = Qt.point(mouse.x, mouse.y);
-            ghost = ghostComponent.createObject(root.Window.contentItem);
-            moveGhost(mouse);
-        }
-        onPositionChanged: mouse => {
-            if (!ghost) {
-                return;
-            }
-            moveGhost(mouse);
-            ghost.Drag.active = ghost.Drag.active || Math.hypot(mouse.x - holdAt.x, mouse.y - holdAt.y) > 12;
-        }
-        onReleased: finish(true)
-        onCanceled: finish(false)
-
-        function moveGhost(mouse) {
-            const p = mapToItem(ghost.parent, mouse.x, mouse.y);
-            ghost.x = p.x - ghost.width / 2;
-            ghost.y = p.y - ghost.height - 24; // above the finger
-        }
-        function finish(released) {
-            preventStealing = false;
-            if (!ghost) {
-                return;
-            }
-            const dragged = ghost.Drag.active;
-            if (dragged && released) {
-                ghost.Drag.drop();
-            }
-            ghost.destroy();
-            ghost = null;
-            if (!dragged && released) {
-                root.openContextMenu();
-            }
-        }
+        enabled: false // The TrackDrag above drags on touch screens
     }
-    QtObject {
+    TapHandler {
         id: tapHandler
 
-        signal doubleTapped
-        signal tapped(var eventPoint, int button)
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        gesturePolicy: TapHandler.DragThreshold
 
         onTapped: (eventPoint, button) => {
             if (button === Qt.RightButton) {
                 root.openContextMenu();
-            }
-        }
-    }
-    Component {
-        id: ghostComponent
-
-        // The dragged track: the drop targets read trackUrl
-        Rectangle {
-            readonly property url trackUrl: file_url
-
-            Drag.hotSpot.x: width / 2
-            Drag.hotSpot.y: height + 24
-            Drag.keys: ["mixxx/track"]
-            color: Theme.darkGray2
-            border.color: Theme.accentColor
-            border.width: 2
-            height: 40
-            radius: 20
-            width: Math.min(260, label.implicitWidth + 32)
-            z: 1000
-
-            Text {
-                id: label
-
-                anchors.centerIn: parent
-                width: Math.min(implicitWidth, 228)
-                color: Theme.white
-                elide: Text.ElideRight
-                font.pixelSize: 14
-                text: "♪ " + decodeURIComponent(file_url.toString().split("/").pop())
             }
         }
     }

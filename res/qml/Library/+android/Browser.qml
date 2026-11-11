@@ -227,7 +227,8 @@ Rectangle {
                                 keys: ["mixxx/track"]
 
                                 onDropped: drop => {
-                                    if (playlist && Mixxx.MobileLibrary.addTrackToPlaylist(playlist.id, drop.source.trackUrl)) {
+                                    if (playlist) {
+                                        drop.source.addTo(playlist.id);
                                         drop.accept();
                                     }
                                 }

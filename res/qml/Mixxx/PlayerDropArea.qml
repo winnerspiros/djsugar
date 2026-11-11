@@ -41,13 +41,13 @@ DropArea {
         border.color: "#00e5ff"
         border.width: 2
         radius: 6
-        visible: root.containsDrag && !!root.drag.source && root.drag.source.trackUrl !== undefined
+        visible: root.containsDrag && !!root.drag.source && root.drag.source.loadTo !== undefined
     }
 
     onDropped: (drop) => {
-        // Library tracks on touch screens: an internal drag (see TrackDrag)
+        // Library and streaming tracks on touch screens (see TrackDrag)
         if (drop.keys.includes("mixxx/track") && drop.source) {
-            root.player.loadTrackFromLocationUrl(drop.source.trackUrl, false);
+            drop.source.loadTo(root.group);
             drop.accepted = true;
             return;
         }

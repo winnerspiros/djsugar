@@ -97,6 +97,7 @@ QmlYouTubeProxy::QmlYouTubeProxy(QObject* pParent)
                                 : 0.04);
             });
 
+    connect(pFeature, &YouTubeFeature::fileReady, this, &QmlYouTubeProxy::fileReady);
     connect(pFeature,
             &YouTubeFeature::playerLoadsSettled,
             this,

@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
+import ".." as Library
 
 // Spotify: log in once on Spotify's login page, then search, Liked Songs
 // and playlists. D1/D2 download the track's own Spotify
@@ -389,6 +390,21 @@ Item {
                 width: ListView.view.width
                 height: 48
                 radius: 4
+
+                Library.TrackDrag {
+                    enabled: !trackRow.isPlaylist
+                    label: trackRow.title
+                    loadTo: group => root.loadRow(trackRow.index, group)
+                    fetch: () => Mixxx.Spotify.download({
+                            "id": trackRow.sid,
+                            "uri": resultsModel.get(trackRow.index).uri,
+                            "title": trackRow.title,
+                            "artist": trackRow.artist,
+                            "album": trackRow.album
+                        })
+                    fetchId: trackRow.sid
+                    fetchSource: Mixxx.Spotify
+                }
                 color: index % 2 === 0 ? "#0c0d0f" : "#16181b"
                 border.color: isDownloading ? root.spotifyGreen : "#2a2c30"
                 border.width: 1

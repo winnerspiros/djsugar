@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "../../Theme"
+import ".." as Library
 import "../.." as Skin
 
 Item {
@@ -280,6 +281,15 @@ Item {
                     readonly property var track: modelData
                     readonly property real downloadProg: root.downloadProgressMap[track.id] !== undefined ? root.downloadProgressMap[track.id] : -1
                     readonly property bool isDownloading: downloadProg >= 0
+
+
+                    Library.TrackDrag {
+                        label: trackDelegate.track.title
+                        loadTo: group => Mixxx.StreamingManager.downloadAndLoad(trackDelegate.track.streamUrl, "audius", trackDelegate.track.id, trackDelegate.track.title, trackDelegate.track.artist, group, false)
+                        fetch: () => Mixxx.StreamingManager.downloadAndLoad(trackDelegate.track.streamUrl, "audius", trackDelegate.track.id, trackDelegate.track.title, trackDelegate.track.artist, "", false)
+                        fetchId: trackDelegate.track.id
+                        fetchSource: Mixxx.StreamingManager
+                    }
 
                     RowLayout {
                         anchors.fill: parent
