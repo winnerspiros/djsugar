@@ -1,6 +1,7 @@
 #include "engine/bufferscalers/enginebufferscalelinear.h"
 
 #include <QtDebug>
+#include <cmath>
 
 #include "engine/readaheadmanager.h"
 #include "moc_enginebufferscalelinear.cpp"
@@ -56,6 +57,7 @@ void EngineBufferScaleLinear::clear() {
     // Clear out buffer and saved sample data
     m_bufferIntSize = 0;
     m_dNextFrame = 0;
+    m_smoothState = {};
     onSignalChanged();
 }
 
@@ -85,6 +87,7 @@ double EngineBufferScaleLinear::scaleBuffer(
     }
     double rate_add_old = m_dOldRate; // Smoothly interpolate to new playback rate
     double rate_add_new = m_dRate;
+    const double smoothRate = 0.5 * (std::fabs(rate_add_old) + std::fabs(rate_add_new));
     double frames_read = 0;
 
     if (rate_add_new * rate_add_old < 0) {
@@ -139,7 +142,51 @@ double EngineBufferScaleLinear::scaleBuffer(
     } else {
         frames_read += do_scale(pOutputBuffer, iOutputBufferSize);
     }
+    smoothSlowPlayback(pOutputBuffer, iOutputBufferSize, smoothRate);
     return frames_read;
+}
+
+void EngineBufferScaleLinear::smoothSlowPlayback(CSAMPLE* buf, SINT buf_size, double rate) {
+    // Full low pass from 0.75x down, none at 1x and faster, so normal
+    // playback stays untouched and pitch fader moves are inaudible
+    const float mix = static_cast<float>(std::clamp((1.0 - rate) / 0.25, 0.0, 1.0));
+    const float cutoff = static_cast<float>(
+            std::tan(M_PI * std::clamp(0.45 * rate, 0.002, 0.45)));
+    const int chCount = getOutputSignal().getChannelCount();
+    if ((mix == 0.f && m_smoothMix == 0.f) || chCount > kMaxSmoothChannels) {
+        m_smoothState = {};
+        m_smoothCutoff = cutoff;
+        m_smoothMix = 0.f;
+        return;
+    }
+    // Two 2-pole state variable stages (24 dB/oct, Butterworth); stable
+    // while the cutoff glides across the buffer
+    constexpr float kDamping = 1.41421356f;
+    const SINT frames = getOutputSignal().samples2frames(buf_size);
+    const float frameStep = 1.f / static_cast<float>(std::max<SINT>(1, frames));
+    for (SINT frame = 0; frame < frames; ++frame) {
+        const float t = static_cast<float>(frame + 1) * frameStep;
+        const float g = m_smoothCutoff + (cutoff - m_smoothCutoff) * t;
+        const float wet = m_smoothMix + (mix - m_smoothMix) * t;
+        const float a1 = 1.f / (1.f + g * (g + kDamping));
+        for (int ch = 0; ch < chCount; ++ch) {
+            CSAMPLE& sample = buf[frame * chCount + ch];
+            auto& state = m_smoothState[ch];
+            float x = sample;
+            for (int stage = 0; stage < 2; ++stage) {
+                float& s1 = state[2 * stage];
+                float& s2 = state[2 * stage + 1];
+                const float v1 = a1 * (s1 + g * (x - s2));
+                const float v2 = s2 + g * v1;
+                s1 = 2.f * v1 - s1;
+                s2 = 2.f * v2 - s2;
+                x = v2;
+            }
+            sample += wet * (x - sample);
+        }
+    }
+    m_smoothCutoff = cutoff;
+    m_smoothMix = mix;
 }
 
 SINT EngineBufferScaleLinear::do_copy(CSAMPLE* buf, SINT buf_size) {
