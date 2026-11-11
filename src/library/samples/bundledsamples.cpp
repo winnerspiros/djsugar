@@ -34,11 +34,10 @@ QString bundledSourceDir(const UserSettingsPointer& pConfig) {
         // The index marks the APK assets, which may not report as a folder
         if (QFile::exists(candidate + QStringLiteral("index.txt")) ||
                 QFileInfo(candidate).isDir()) {
-            // Callers append relative paths: keep the trailing slash, which
-            // absoluteFilePath() drops (and leave assets:/ paths alone)
+            // Callers append relative paths: one trailing slash
             return candidate.startsWith(QStringLiteral("assets:"))
                     ? candidate
-                    : QFileInfo(candidate).absoluteFilePath() + QLatin1Char('/');
+                    : QDir(candidate).absolutePath() + QLatin1Char('/');
         }
     }
     return QString();
