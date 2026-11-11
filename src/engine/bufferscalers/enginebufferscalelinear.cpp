@@ -50,6 +50,7 @@ void EngineBufferScaleLinear::setScaleParameters(double base_rate,
 
     m_dOldRate = m_dRate;
     m_dRate = base_rate * *pTempoRatio;
+    m_dBaseRate = base_rate;
 }
 
 void EngineBufferScaleLinear::clear() {
@@ -57,7 +58,7 @@ void EngineBufferScaleLinear::clear() {
     // Clear out buffer and saved sample data
     m_bufferIntSize = 0;
     m_dNextFrame = 0;
-    m_smoothState = {};
+    m_scratchFilter = {};
     onSignalChanged();
 }
 
@@ -87,7 +88,8 @@ double EngineBufferScaleLinear::scaleBuffer(
     }
     double rate_add_old = m_dOldRate; // Smoothly interpolate to new playback rate
     double rate_add_new = m_dRate;
-    const double smoothRate = 0.5 * (std::fabs(rate_add_old) + std::fabs(rate_add_new));
+    // End of buffer value: the shaping glides to it across the buffer
+    const double shapeRate = std::fabs(rate_add_new);
     double frames_read = 0;
 
     if (rate_add_new * rate_add_old < 0) {
@@ -142,21 +144,36 @@ double EngineBufferScaleLinear::scaleBuffer(
     } else {
         frames_read += do_scale(pOutputBuffer, iOutputBufferSize);
     }
-    smoothSlowPlayback(pOutputBuffer, iOutputBufferSize, smoothRate);
+    shapeScratch(pOutputBuffer,
+            iOutputBufferSize,
+            shapeRate,
+            shapeRate / std::max(m_dBaseRate, 1e-3));
     return frames_read;
 }
 
-void EngineBufferScaleLinear::smoothSlowPlayback(CSAMPLE* buf, SINT buf_size, double rate) {
-    // Full low pass from 0.75x down, none at 1x and faster, so normal
-    // playback stays untouched and pitch fader moves are inaudible
-    const float mix = static_cast<float>(std::clamp((1.0 - rate) / 0.25, 0.0, 1.0));
-    const float cutoff = static_cast<float>(
-            std::tan(M_PI * std::clamp(0.45 * rate, 0.002, 0.45)));
+// A record played by hand sounds the way it does for two reasons, both
+// missing from plain resampling (the approach of xwax and the SC1000):
+// - A cartridge puts out a voltage proportional to the stylus velocity, so
+//   a slow drag is quiet and a held record is silent.
+// - A slowed record has nothing above speed x Nyquist; interpolation
+//   leaves images up there that sound grainy and metallic.
+// Both apply only while scratching; normal playback, also pitched down
+// with the tempo fader, is untouched. Values glide over each buffer.
+void EngineBufferScaleLinear::shapeScratch(
+        CSAMPLE* buf, SINT buf_size, double rate, double speed) {
     const int chCount = getOutputSignal().getChannelCount();
-    if ((mix == 0.f && m_smoothMix == 0.f) || chCount > kMaxSmoothChannels) {
-        m_smoothState = {};
-        m_smoothCutoff = cutoff;
-        m_smoothMix = 0.f;
+    const float gain = m_scratching ? static_cast<float>(std::min(speed, 1.0)) : 1.f;
+    // Low pass in from 0.75x down
+    const float mix = m_scratching
+            ? static_cast<float>(std::clamp((1.0 - speed) / 0.25, 0.0, 1.0))
+            : 0.f;
+    const float cutoff = static_cast<float>(std::tan(M_PI * std::clamp(0.45 * rate, 0.002, 0.45)));
+    if ((mix == 0.f && m_scratchMix == 0.f && gain == 1.f && m_scratchGain == 1.f) ||
+            chCount > kMaxScratchChannels) {
+        m_scratchFilter = {};
+        m_scratchCutoff = cutoff;
+        m_scratchMix = 0.f;
+        m_scratchGain = 1.f;
         return;
     }
     // Two 2-pole state variable stages (24 dB/oct, Butterworth); stable
@@ -166,12 +183,13 @@ void EngineBufferScaleLinear::smoothSlowPlayback(CSAMPLE* buf, SINT buf_size, do
     const float frameStep = 1.f / static_cast<float>(std::max<SINT>(1, frames));
     for (SINT frame = 0; frame < frames; ++frame) {
         const float t = static_cast<float>(frame + 1) * frameStep;
-        const float g = m_smoothCutoff + (cutoff - m_smoothCutoff) * t;
-        const float wet = m_smoothMix + (mix - m_smoothMix) * t;
+        const float g = m_scratchCutoff + (cutoff - m_scratchCutoff) * t;
+        const float wet = m_scratchMix + (mix - m_scratchMix) * t;
+        const float level = m_scratchGain + (gain - m_scratchGain) * t;
         const float a1 = 1.f / (1.f + g * (g + kDamping));
         for (int ch = 0; ch < chCount; ++ch) {
             CSAMPLE& sample = buf[frame * chCount + ch];
-            auto& state = m_smoothState[ch];
+            auto& state = m_scratchFilter[ch];
             float x = sample;
             for (int stage = 0; stage < 2; ++stage) {
                 float& s1 = state[2 * stage];
@@ -182,11 +200,12 @@ void EngineBufferScaleLinear::smoothSlowPlayback(CSAMPLE* buf, SINT buf_size, do
                 s2 = 2.f * v2 - s2;
                 x = v2;
             }
-            sample += wet * (x - sample);
+            sample = level * (sample + wet * (x - sample));
         }
     }
-    m_smoothCutoff = cutoff;
-    m_smoothMix = mix;
+    m_scratchCutoff = cutoff;
+    m_scratchMix = mix;
+    m_scratchGain = gain;
 }
 
 SINT EngineBufferScaleLinear::do_copy(CSAMPLE* buf, SINT buf_size) {

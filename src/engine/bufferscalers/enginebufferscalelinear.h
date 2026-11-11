@@ -26,12 +26,18 @@ class EngineBufferScaleLinear : public EngineBufferScale  {
                             double* pTempoRatio,
                              double* pPitchRatio) override;
 
+    /// Scratching, spin backs and throws: shape the sound like a needle on
+    /// a moving record (see smoothSlowPlayback). Off: plain playback.
+    void setScratching(bool scratching) {
+        m_scratching = scratching;
+    }
+
   private:
     void onSignalChanged() override;
 
     double do_scale(CSAMPLE* buf, SINT buf_size);
     SINT do_copy(CSAMPLE* buf, SINT buf_size);
-    void smoothSlowPlayback(CSAMPLE* buf, SINT buf_size, double rate);
+    void shapeScratch(CSAMPLE* buf, SINT buf_size, double rate, double speed);
 
     // The read-ahead manager that we use to fetch samples
     ReadAheadManager* m_pReadAheadManager;
@@ -51,11 +57,13 @@ class EngineBufferScaleLinear : public EngineBufferScale  {
     double m_dCurrentFrame;
     double m_dNextFrame;
 
-    // Slow playback (scratching, spin downs) low pass: a played-slower
-    // record has nothing above rate * Nyquist, but interpolation leaves
-    // images up there that sound grainy and metallic
-    static constexpr int kMaxSmoothChannels = 8;
-    std::array<std::array<float, 4>, kMaxSmoothChannels> m_smoothState{};
-    float m_smoothCutoff = 0.f; // tan(pi * fc / fs) of the last buffer
-    float m_smoothMix = 0.f;
+    double m_dBaseRate = 1.0;
+    bool m_scratching = false;
+
+    // Scratch shaping state, see shapeScratch()
+    static constexpr int kMaxScratchChannels = 8;
+    std::array<std::array<float, 4>, kMaxScratchChannels> m_scratchFilter{};
+    float m_scratchCutoff = 0.f; // tan(pi * fc / fs) of the last buffer
+    float m_scratchMix = 0.f;    // low pass amount of the last buffer
+    float m_scratchGain = 1.f;   // needle velocity gain of the last buffer
 };

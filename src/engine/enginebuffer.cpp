@@ -1117,6 +1117,8 @@ void EngineBuffer::processTrackLocked(
     // If pitch ratio and tempo ratio are equal, a linear scaler is used,
     // otherwise tempo and pitch are processed individual
 
+    m_pScaleLinear->setScratching(is_scratching);
+
     double rate = 0;
     // If the base samplerate, speed, or pitch has changed, we need to update the
     // scaler. Also, if we have changed scalers then we need to update the
