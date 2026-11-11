@@ -59,8 +59,8 @@ QString describe(const MidiInputMappings& mappings) {
             break;
         }
         parts.append(QStringLiteral("%1, ch %2")
-                             .arg(kind)
-                             .arg(MidiUtils::channelFromStatus(mapping.key.status) + 1));
+                        .arg(kind)
+                        .arg(MidiUtils::channelFromStatus(mapping.key.status) + 1));
     }
     parts.removeDuplicates();
     return parts.join(QStringLiteral(" · "));
@@ -244,7 +244,7 @@ QString QmlControllerLearningProxy::save(const QString& name) {
     pMapping->setName(cleanName);
     pMapping->setAuthor(QStringLiteral("Mixxx Android (learned)"));
     pMapping->setDescription(QStringLiteral("Made with Learn controller on Android for %1")
-                                     .arg(m_pController->getName()));
+                    .arg(m_pController->getName()));
 
     const QString directory = QStringLiteral("/storage/emulated/0/Mixxx/controllers/");
     QDir().mkpath(directory);

@@ -115,8 +115,10 @@ void TapeStopEffect::processChannel(TapeStopGroupState* pState,
         const float frac = static_cast<float>(pState->readPos - index);
         const int next = std::min(index + 1, std::max(0, pState->written - 1));
         for (int c = 0; c < 2; ++c) {
-            const float a = history[2 * static_cast<std::size_t>(index) + static_cast<std::size_t>(c)];
-            const float b = history[2 * static_cast<std::size_t>(next) + static_cast<std::size_t>(c)];
+            const float a = history[2 * static_cast<std::size_t>(index) +
+                    static_cast<std::size_t>(c)];
+            const float b = history[2 * static_cast<std::size_t>(next) +
+                    static_cast<std::size_t>(c)];
             const float y = fxdsp::lerp(a, b, frac) * tail;
             pOutput[2 * i + c] = fxdsp::lerp(x[c], y, mix);
         }

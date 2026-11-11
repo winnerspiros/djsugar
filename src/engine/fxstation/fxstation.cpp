@@ -651,9 +651,11 @@ void FxStation::triggerInstrument(int instrument, float velocity) {
     }
     if (!pFree) {
         // The oldest voice
-        pFree = &*std::max_element(m_voices.begin(), m_voices.end(), [](const Voice& a, const Voice& b) {
-            return a.position < b.position;
-        });
+        pFree = &*std::max_element(m_voices.begin(),
+                m_voices.end(),
+                [](const Voice& a, const Voice& b) {
+                    return a.position < b.position;
+                });
     }
     const double semitones = 12.0 * m_pXPadPitch->get();
     pFree->pInstrument = pInstrument;
@@ -680,7 +682,8 @@ int FxStation::xpadDivision() const {
 
 void FxStation::processXPad(float* pLeft, float* pRight, double beat, double previousBeat) {
     const int division = xpadDivision();
-    const int instrument = std::clamp(static_cast<int>(m_pXPadInstrument->get()), 0, kInstruments - 1);
+    const int instrument = std::clamp(
+            static_cast<int>(m_pXPadInstrument->get()), 0, kInstruments - 1);
     const bool quantize = m_pQuantize->get() > 0;
     const float volume = static_cast<float>(m_pXPadVolume->get());
 
@@ -845,7 +848,8 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
     const float dial = static_cast<float>(m_pSceneDial->get());
     const float param1 = static_cast<float>(m_pSceneParam1->get());
     const float param2 = static_cast<float>(m_pSceneParam2->get());
-    const float bufferCoefficient = 1.f - std::exp(-static_cast<float>(frames) / (0.03f * m_sampleRate));
+    const float bufferCoefficient = 1.f -
+            std::exp(-static_cast<float>(frames) / (0.03f * m_sampleRate));
     m_sceneAmount.step(sceneOn ? dial : 0.f, bufferCoefficient);
     if (sceneOn) {
         m_wetLevel = m_sceneAmount.value;
@@ -868,7 +872,8 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
         m_sceneFilter.set(20000.f * std::pow(2.f, -6.f * amount), 0.9f, m_sampleRate);
         break;
     case Scene::Noise:
-        m_sceneFilter.set(200.f * std::pow(2.f, 5.5f * amount) * std::pow(2.f, 3.f * (param1 - 0.5f)),
+        m_sceneFilter.set(200.f * std::pow(2.f, 5.5f * amount) *
+                        std::pow(2.f, 3.f * (param1 - 0.5f)),
                 0.7f + 6.f * param2,
                 m_sampleRate);
         break;
@@ -884,7 +889,8 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
         break;
     }
     // The echo time of the first sub parameter, in beats
-    const int echoIndex = std::clamp(static_cast<int>(param1 * kEchoBeatCount), 0, kEchoBeatCount - 1);
+    const int echoIndex = std::clamp(
+            static_cast<int>(param1 * kEchoBeatCount), 0, kEchoBeatCount - 1);
     const float echoTarget = static_cast<float>(std::min(kEchoBeats[echoIndex] * beatFrames(),
             static_cast<double>(m_echo.maxFrames() - 4)));
     if (m_echoDelay.value <= 0.f) {

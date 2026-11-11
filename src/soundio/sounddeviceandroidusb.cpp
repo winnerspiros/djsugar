@@ -172,8 +172,9 @@ SoundDeviceStatus SoundDeviceAndroidUsb::open(bool isClkRefDevice, int syncBuffe
         qWarning() << m_lastError;
         return SoundDeviceStatus::Error;
     }
-    qInfo() << "Opened direct USB audio device" << m_strDisplayName << m_deviceRate
-            << "Hz (engine" << sampleRate << "Hz), buffer" << m_framesPerBuffer << "frames, clock reference:" << m_isClkRef;
+    qInfo() << "Opened direct USB audio device" << m_strDisplayName
+            << m_deviceRate << "Hz (engine" << sampleRate << "Hz), buffer"
+            << m_framesPerBuffer << "frames, clock reference:" << m_isClkRef;
     return SoundDeviceStatus::Ok;
 }
 

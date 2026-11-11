@@ -219,13 +219,13 @@ class DjFxEffect : public EffectProcessorImpl<State> {
 };
 
 // Declares the members every DjFxEffect subclass implements.
-#define DJFX_EFFECT_INTERFACE(StateClass)                     \
-  public:                                                     \
-    static QString getId();                                   \
-    static EffectManifestPointer getManifest();               \
-    void processChannel(StateClass* pState,                   \
-            const CSAMPLE* pInput,                            \
-            CSAMPLE* pOutput,                                 \
-            const mixxx::EngineParameters& engineParameters,  \
-            const EffectEnableState enableState,              \
+#define DJFX_EFFECT_INTERFACE(StateClass)                    \
+  public:                                                    \
+    static QString getId();                                  \
+    static EffectManifestPointer getManifest();              \
+    void processChannel(StateClass* pState,                  \
+            const CSAMPLE* pInput,                           \
+            CSAMPLE* pOutput,                                \
+            const mixxx::EngineParameters& engineParameters, \
+            const EffectEnableState enableState,             \
             const GroupFeatureState& groupFeatures) override;

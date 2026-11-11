@@ -22,7 +22,7 @@ class GlitchGroupState : public DjFxState {
 
     struct Voice {
         Action action = Action::Pass;
-        int64_t start = 0; // absolute frame where the replayed step began
+        int64_t start = 0;     // absolute frame where the replayed step began
         double position = 0.0; // frames played into the step
     };
 

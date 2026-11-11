@@ -10,7 +10,7 @@ class CompressorGroupState : public DjFxState {
     explicit CompressorGroupState(const mixxx::EngineParameters& engineParameters);
 
     float envelopeDb = -120.0f; // smoothed detector level
-    float slowRelease = 0.0f; // second, slower release stage
+    float slowRelease = 0.0f;   // second, slower release stage
     fxdsp::Smoother amount;
     fxdsp::Smoother mix;
 };

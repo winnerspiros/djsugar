@@ -152,7 +152,9 @@ void GlitchEffect::processChannel(GlitchGroupState* pState,
             pState->previousStepStart = pState->stepStart;
             pState->stepStart = pState->written - 1;
             GlitchGroupState::Voice next;
-            const bool havePrevious = pState->stepStart - pState->previousStepStart >= stepFrames / 2;
+            const bool havePrevious =
+                    pState->stepStart - pState->previousStepStart >=
+                    stepFrames / 2;
             if (havePrevious && pState->random.unipolar() < chance) {
                 const float pick = pState->random.unipolar();
                 if (pick < reverse) {
@@ -182,7 +184,8 @@ void GlitchEffect::processChannel(GlitchGroupState* pState,
         for (int c = 0; c < 2; ++c) {
             float y = readVoice(*pState, pState->current, c, x[c], stepFrames);
             if (pState->fadeLeft > 0) {
-                const float t = static_cast<float>(pState->fadeLeft) / static_cast<float>(fadeFrames);
+                const float t = static_cast<float>(pState->fadeLeft) /
+                        static_cast<float>(fadeFrames);
                 float a;
                 float b;
                 fxdsp::equalPower(t, &b, &a); // t = 1: all old voice
@@ -191,7 +194,10 @@ void GlitchEffect::processChannel(GlitchGroupState* pState,
             }
             pOutput[2 * i + c] = fxdsp::lerp(x[c], y, mix);
         }
-        const double speed = pState->current.action == GlitchGroupState::Action::HalfSpeed ? 0.5 : 1.0;
+        const double speed =
+                pState->current.action == GlitchGroupState::Action::HalfSpeed
+                ? 0.5
+                : 1.0;
         // Grid steps are fractional, so a voice may run a frame past its
         // source; readVoice() holds the last frame until the next step's
         // crossfade instead of wrapping (which would click).
