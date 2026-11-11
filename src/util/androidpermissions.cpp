@@ -52,6 +52,10 @@ bool requestMusicLibraryPermissions() {
     return granted;
 }
 
+bool requestMicrophonePermission() {
+    return requestPermission(QStringLiteral("android.permission.RECORD_AUDIO"));
+}
+
 bool hasFullExternalStorageAccess() {
     if (android_get_device_api_level() >= 30) {
         return QJniObject::callStaticMethod<jboolean>(

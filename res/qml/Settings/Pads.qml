@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "../Theme"
@@ -339,6 +340,23 @@ Category {
             return !!track && track.title !== "" && track.title === item.name;
         }
 
+        // Put a sample on the pad and remember it as the pad's choice
+        function assign(path) {
+            Mixxx.PlayerManager.loadLocationToPlayer(path, "[Sampler" + picker.pad + "]", false);
+            const paths = picker.pickedPaths;
+            paths[picker.pad] = path;
+            picker.pickedPaths = paths;
+            root.revision++;
+        }
+        // A new import or recording: list it and put it on the pad
+        function adopt(path) {
+            if (path === "") {
+                return;
+            }
+            root.refresh();
+            picker.assign(path);
+        }
+
         function openFor(newPad, newMode) {
             picker.pad = newPad;
             picker.mode = newMode;
@@ -400,13 +418,33 @@ Category {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
                         anchors.leftMargin: 14
-                        anchors.right: checkMark.left
+                        anchors.right: deleteMark.visible ? deleteMark.left : checkMark.left
                         anchors.rightMargin: 8
                         elide: Text.ElideRight
-                        text: row.modelData.name
+                        text: (row.modelData.user ? "★ " : "") + row.modelData.name
                         color: row.current ? picker.accent : Theme.white
                         font.pixelSize: 14
                         font.bold: row.current
+                    }
+                    Text {
+                        id: deleteMark
+
+                        visible: !!row.modelData.user
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: checkMark.left
+                        anchors.rightMargin: 12
+                        text: "🗑"
+                        font.pixelSize: 16
+                        z: 1
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -10
+                            onClicked: {
+                                Mixxx.PlayerManager.deleteSample(row.modelData.path);
+                                root.refresh();
+                            }
+                        }
                     }
                     Text {
                         id: checkMark
@@ -432,10 +470,7 @@ Category {
                         anchors.fill: parent
                         onClicked: {
                             if (picker.sampler) {
-                                Mixxx.PlayerManager.loadLocationToPlayer(row.modelData.path, "[Sampler" + picker.pad + "]", false);
-                                const paths = picker.pickedPaths;
-                                paths[picker.pad] = row.modelData.path;
-                                picker.pickedPaths = paths;
+                                picker.assign(row.modelData.path);
                             } else if (picker.mode === 2) {
                                 Mixxx.EffectsManager.setBeatFxSlot(picker.pad, row.modelData.key);
                                 picker.close();
@@ -460,6 +495,23 @@ Category {
                     playIcon: true
                     onClicked: previewPlay.value = 1
                 }
+                PillButton {
+                    visible: picker.sampler
+                    label: qsTr("Import")
+                    onClicked: importDialog.open()
+                }
+                PillButton {
+                    visible: picker.sampler
+                    filled: Mixxx.PlayerManager.sampleRecording
+                    label: Mixxx.PlayerManager.sampleRecording ? qsTr("■ Stop %1 s").arg(Mixxx.PlayerManager.sampleRecordSeconds.toFixed(1)) : qsTr("● Rec")
+                    onClicked: {
+                        if (Mixxx.PlayerManager.sampleRecording) {
+                            picker.adopt(Mixxx.PlayerManager.stopSampleRecording());
+                        } else {
+                            Mixxx.PlayerManager.startSampleRecording();
+                        }
+                    }
+                }
                 Item {
                     Layout.fillWidth: true
                 }
@@ -469,6 +521,39 @@ Category {
                     onClicked: picker.close()
                 }
             }
+            Text {
+                id: errorText
+
+                Layout.fillWidth: true
+                visible: text !== ""
+                wrapMode: Text.WordWrap
+                color: "#ff5252"
+                font.pixelSize: 12
+            }
+        }
+
+        // A take still running when the picker closes is saved, not lost
+        onClosed: {
+            errorText.text = "";
+            if (Mixxx.PlayerManager.sampleRecording) {
+                picker.adopt(Mixxx.PlayerManager.stopSampleRecording());
+            }
+        }
+
+        Connections {
+            target: Mixxx.PlayerManager
+            function onSampleError(reason) {
+                errorText.text = reason;
+            }
+        }
+
+        FileDialog {
+            id: importDialog
+
+            title: qsTr("Import sample")
+            fileMode: FileDialog.OpenFile
+            nameFilters: Mixxx.PlayerManager.supportedAudioFileNameFilters.concat([qsTr("All files (*)")])
+            onAccepted: picker.adopt(Mixxx.PlayerManager.importSample(importDialog.selectedFile))
         }
     }
 }

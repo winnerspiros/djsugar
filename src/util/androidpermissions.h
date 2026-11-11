@@ -21,6 +21,10 @@ namespace android {
 /// Mixxx' main thread is fine).
 bool requestMusicLibraryPermissions();
 
+/// Requests RECORD_AUDIO, for recording pad samples. Blocks like
+/// requestMusicLibraryPermissions().
+bool requestMicrophonePermission();
+
 /// Returns true if the app is allowed to read/write arbitrary paths in shared
 /// storage. This is MANAGE_EXTERNAL_STORAGE ("All files access") on API >= 30
 /// and WRITE_EXTERNAL_STORAGE below that.

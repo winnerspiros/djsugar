@@ -1,5 +1,6 @@
 #include "qml/qmlplayermanagerproxy.h"
 
+#include <QFile>
 #include <QFileInfo>
 #include <QQmlEngine>
 #include <QRegularExpression>
@@ -27,6 +28,18 @@ QmlPlayerManagerProxy::QmlPlayerManagerProxy(
         std::shared_ptr<PlayerManager> pPlayerManager, QObject* parent)
         : QObject(parent),
           m_pPlayerManager(pPlayerManager) {
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::recordingChanged,
+            this,
+            &QmlPlayerManagerProxy::sampleRecordingChanged);
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::secondsChanged,
+            this,
+            &QmlPlayerManagerProxy::sampleRecordSecondsChanged);
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::failed,
+            this,
+            &QmlPlayerManagerProxy::sampleError);
 }
 
 QmlPlayerProxy* QmlPlayerManagerProxy::getPlayer(const QString& group) {
@@ -128,8 +141,7 @@ void QmlPlayerManagerProxy::loadLocationUrlToDeck(
 
 QVariantList QmlPlayerManagerProxy::bundledSamples() const {
     QVariantList list;
-    const QStringList files = mixxx::samples::bundledSampleFiles(m_pPlayerManager->config());
-    for (const QString& path : files) {
+    const auto add = [&list](const QString& path, bool user) {
         QString name = QFileInfo(path).completeBaseName();
         // "01_kick" -> "kick", "dj-scratch" -> "dj scratch"
         static const QRegularExpression kNumberPrefix(QStringLiteral("^\\d+_"));
@@ -137,9 +149,38 @@ QVariantList QmlPlayerManagerProxy::bundledSamples() const {
         name.replace(QLatin1Char('_'), QLatin1Char(' '));
         name.replace(QLatin1Char('-'), QLatin1Char(' '));
         list.append(QVariantMap{{QStringLiteral("name"), name},
-                {QStringLiteral("path"), path}});
+                {QStringLiteral("path"), path},
+                {QStringLiteral("user"), user}});
+    };
+    for (const QString& path : samples::userSampleFiles()) {
+        add(path, true);
+    }
+    for (const QString& path : samples::bundledSampleFiles(m_pPlayerManager->config())) {
+        add(path, false);
     }
     return list;
+}
+
+QString QmlPlayerManagerProxy::importSample(const QUrl& url) {
+    const QString path = samples::importSample(url);
+    if (path.isEmpty()) {
+        emit sampleError(tr("This file can't be used as a sample"));
+    }
+    return path;
+}
+
+void QmlPlayerManagerProxy::deleteSample(const QString& path) {
+    if (path.startsWith(samples::userSamplesDir())) {
+        QFile::remove(path);
+    }
+}
+
+bool QmlPlayerManagerProxy::startSampleRecording() {
+    return m_sampleRecorder.start();
+}
+
+QString QmlPlayerManagerProxy::stopSampleRecording() {
+    return m_sampleRecorder.stop();
 }
 
 void QmlPlayerManagerProxy::loadLocationToPlayer(

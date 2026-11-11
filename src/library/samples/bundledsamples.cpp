@@ -6,6 +6,8 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 
+#include "sources/soundsourceproxy.h"
+
 namespace mixxx {
 namespace samples {
 
@@ -58,15 +60,82 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     while (it.hasNext()) {
         const QString path = it.next();
         const QString destPath = destDir + source.relativeFilePath(path);
-        if (QFile::exists(destPath)) {
+        const QFileInfo dest(destPath);
+        // Same size: already current. Otherwise an update reworked it.
+        if (dest.exists() && dest.size() == QFileInfo(path).size()) {
             continue;
         }
-        QDir().mkpath(QFileInfo(destPath).absolutePath());
+        QFile::remove(destPath);
+        QDir().mkpath(dest.absolutePath());
         if (!QFile::copy(path, destPath)) {
             qWarning() << "Failed to copy sample" << path << "to" << destPath;
         }
     }
+    // Drop samples that a later version no longer ships
+    QDirIterator stale(destDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
+    while (stale.hasNext()) {
+        const QString path = stale.next();
+        if (!QFile::exists(sourceDir + QDir(destDir).relativeFilePath(path))) {
+            QFile::remove(path);
+        }
+    }
     return destDir;
+}
+
+QString userSamplesDir() {
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+            QStringLiteral("/samples/");
+}
+
+bool isSupportedSample(const QString& fileName) {
+    return SoundSourceProxy::isFileNameSupported(fileName);
+}
+
+QStringList userSampleFiles() {
+    QStringList files;
+    const QFileInfoList entries = QDir(userSamplesDir())
+                                          .entryInfoList(QDir::Files, QDir::Time);
+    for (const QFileInfo& fi : entries) {
+        if (isSupportedSample(fi.fileName())) {
+            files.append(fi.absoluteFilePath());
+        }
+    }
+    return files;
+}
+
+QString importSample(const QUrl& url) {
+    const QString source = url.isLocalFile() ? url.toLocalFile() : url.toString();
+    QFile in(source);
+    if (!in.open(QIODevice::ReadOnly)) {
+        qWarning() << "Cannot open sample" << source;
+        return QString();
+    }
+    // content:// URLs carry no usable name; Qt resolves the display name
+    QString name = QFileInfo(in.fileName()).fileName();
+    if (!url.isLocalFile()) {
+        const QString display = QFileInfo(url.fileName()).fileName();
+        if (!display.isEmpty()) {
+            name = display;
+        }
+    }
+    if (!isSupportedSample(name)) {
+        qWarning() << "Unsupported sample format" << name;
+        return QString();
+    }
+    const QString dir = userSamplesDir();
+    QDir().mkpath(dir);
+    const QFileInfo fi(name);
+    QString dest = dir + name;
+    for (int n = 2; QFile::exists(dest); ++n) {
+        dest = dir + QStringLiteral("%1-%2.%3").arg(fi.completeBaseName()).arg(n).arg(fi.suffix());
+    }
+    QFile out(dest);
+    if (!out.open(QIODevice::WriteOnly) || out.write(in.readAll()) < 0) {
+        qWarning() << "Cannot write sample" << dest;
+        out.remove();
+        return QString();
+    }
+    return dest;
 }
 
 QStringList bundledSampleFiles(const UserSettingsPointer& pConfig) {
