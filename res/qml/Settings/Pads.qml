@@ -590,6 +590,16 @@ Category {
         group: "[PreviewDeck1]"
         key: "play"
     }
+    // The preview deck only plays to headphones; phones often have just
+    // the main output, so the trim preview goes to the main mix
+    Mixxx.ControlProxy {
+        id: trimMainMix
+
+        property real saved: 0
+
+        group: "[PreviewDeck1]"
+        key: "main_mix"
+    }
     Mixxx.ControlProxy {
         id: trimPosition
 
@@ -628,6 +638,8 @@ Category {
             nameField.text = name;
             loading = false;
             Mixxx.PlayerManager.loadLocationToPlayer(path, "[PreviewDeck1]", false);
+            trimMainMix.saved = trimMainMix.value;
+            trimMainMix.value = 1;
             wave.requestPaint();
         }
         function play() {
@@ -646,6 +658,9 @@ Category {
         padding: 14
         onClosed: {
             trimPlay.value = 0;
+            if (path !== "") {
+                trimMainMix.value = trimMainMix.saved;
+            }
             loading = false;
             path = "";
         }

@@ -27,12 +27,18 @@ const QStringList kSampleFilters = {
 QString bundledSourceDir(const UserSettingsPointer& pConfig) {
     const QStringList candidates = {
             pConfig->getResourcePath() + QStringLiteral("samples/"),
+            QStringLiteral("assets:/samples/"),
             QStringLiteral("res/samples/"),
     };
     for (const auto& candidate : candidates) {
-        const QFileInfo fi(candidate);
-        if (fi.isDir()) {
-            return fi.absoluteFilePath();
+        // The index marks the APK assets, which may not report as a folder
+        if (QFile::exists(candidate + QStringLiteral("index.txt")) ||
+                QFileInfo(candidate).isDir()) {
+            // Callers append relative paths: keep the trailing slash, which
+            // absoluteFilePath() drops (and leave assets:/ paths alone)
+            return candidate.startsWith(QStringLiteral("assets:"))
+                    ? candidate
+                    : QFileInfo(candidate).absoluteFilePath() + QLatin1Char('/');
         }
     }
     return QString();

@@ -196,7 +196,8 @@ QString SampleEditor::save(double startSeconds, double endSeconds, const QString
     }
 
     QString base = name.trimmed();
-    base.replace(QRegularExpression(QStringLiteral("[\\\\/:*?\"<>|]")), QStringLiteral("_"));
+    static const QRegularExpression kUnsafe(QStringLiteral("[\\\\/:*?\"<>|]"));
+    base.replace(kUnsafe, QStringLiteral("_"));
     if (base.isEmpty()) {
         base = QStringLiteral("sample");
     }
