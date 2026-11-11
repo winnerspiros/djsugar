@@ -578,6 +578,11 @@ Item {
                 width: Math.max(root.width < 760 ? 44 : (root.compact ? 64 : 80), implicitWidth)
             }
             Tab {
+                active: fxStationLoader.active
+                label: "FX ST"
+                onClicked: fxStationLoader.active = !fxStationLoader.active
+            }
+            Tab {
                 active: root.xyView
                 label: "XY"
                 visible: root.itemShown("xy")
@@ -608,6 +613,9 @@ Item {
         Row {
             id: deckPanels
 
+            // Not drawn under the FX Station when it covers it
+            visible: !fxStationLoader.covering
+
             anchors.bottom: root.djView ? djView.top : parent.bottom
             anchors.bottomMargin: content.gap
             anchors.left: parent.left
@@ -637,6 +645,7 @@ Item {
         BoothDjView {
             id: djView
 
+
             anchors.bottom: parent.bottom
             anchors.bottomMargin: content.gap
             anchors.left: parent.left
@@ -645,12 +654,16 @@ Item {
             anchors.rightMargin: djViewInset.right + content.gap
             compact: root.compact
             height: Math.round(root.height * (root.compact ? 0.5 : 0.46))
-            visible: root.djView
+            // Not drawn under the FX Station, which covers it
+            visible: root.djView && !fxStationLoader.covering
         }
 
         // ---- Waveforms, the library while browsing, or the XY pad ----
         Item {
             id: middle
+
+            // The FX Station takes its place, or covers it
+            visible: !fxStationLoader.active
 
             anchors.bottom: deckPanels.top
             anchors.bottomMargin: content.gap
@@ -781,6 +794,27 @@ Item {
                 width: 190
                 z: 10
             }
+        }
+    }
+
+    // The FX Station, created only while open. In place of the waveforms
+    // when there is room, so the decks and the touch controls stay in view;
+    // otherwise over everything under the top bar.
+    Loader {
+        id: fxStationLoader
+
+        readonly property bool docked: middle.height >= 240
+        readonly property bool covering: active && !docked
+        readonly property int topMargin: root.compact ? 32 : 40
+
+        active: false
+        height: docked ? middle.height : parent.height - topMargin
+        width: parent.width
+        x: 0
+        y: docked ? middle.mapToItem(root, 0, 0).y + 0 * (middle.y + deckPanels.height + djView.height) : topMargin
+        z: 90
+        sourceComponent: Skin.FxStation {
+            onCloseRequested: fxStationLoader.active = false
         }
     }
 

@@ -442,6 +442,16 @@ Item {
             }
         }
 
+        // The beat of the bar, under the deck badge
+        Skin.BeatCounter {
+            anchors.left: deckBadge.left
+            anchors.leftMargin: 2
+            anchors.top: deckBadge.bottom
+            anchors.topMargin: 4
+            color: root.deckColor
+            group: root.group
+        }
+
         // Musical Key pill (Pioneer RX3 style)
         Rectangle {
             id: keyPill

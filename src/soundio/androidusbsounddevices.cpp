@@ -23,6 +23,18 @@ bool AndroidUsbSoundDevices::refresh(const UserSettingsPointer& pConfig,
 
     bool changed = false;
     std::vector<SoundDevicePointer> devices;
+    // The number of each sound card among the identical ones, in the order
+    // of their USB device names (stable while they stay plugged in)
+    const auto instanceOf = [&usbDevices](const auto& pUsbDevice) {
+        int instance = 1;
+        for (const auto& pOther : usbDevices) {
+            if (pOther != pUsbDevice && pOther->productName() == pUsbDevice->productName() &&
+                    pOther->usbDeviceName() < pUsbDevice->usbDeviceName()) {
+                ++instance;
+            }
+        }
+        return instance;
+    };
     for (const auto& pUsbDevice : usbDevices) {
         auto existing = std::find_if(m_devices.begin(),
                 m_devices.end(),
@@ -44,8 +56,8 @@ bool AndroidUsbSoundDevices::refresh(const UserSettingsPointer& pConfig,
                                                      name.contains(productName);
                                          }),
                 pPortAudioDevices->end());
-        devices.push_back(SoundDevicePointer(
-                new SoundDeviceAndroidUsb(pConfig, pSoundManager, pUsbDevice)));
+        devices.push_back(SoundDevicePointer(new SoundDeviceAndroidUsb(
+                pConfig, pSoundManager, pUsbDevice, instanceOf(pUsbDevice))));
     }
     for (const auto& pDevice : m_devices) {
         if (std::find(devices.begin(), devices.end(), pDevice) == devices.end()) {

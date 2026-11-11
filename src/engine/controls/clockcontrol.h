@@ -28,6 +28,9 @@ class ClockControl: public EngineControl {
 
   private:
     std::unique_ptr<ControlObject> m_pCOBeatActive;
+    // The beat of the bar, 1 to 4, counted from the first downbeat of the
+    // beatgrid (0: no beatgrid, or before the first beat)
+    std::unique_ptr<ControlObject> m_pCOBeatInBar;
 
     // ControlObjects that come from LoopingControl
     std::unique_ptr<ControlProxy> m_pLoopEnabled;

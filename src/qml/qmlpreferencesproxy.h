@@ -287,8 +287,13 @@ class QmlControllerManagerProxy : public QObject {
     std::shared_ptr<ControllerManager> internal() const;
 
     static QmlControllerManagerProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
-    static inline void registerManager(std::shared_ptr<ControllerManager> pControllerManager, bool controllerPreviewScreens = false) {
-        s_pControllerManager = std::move(pControllerManager);
+    /// The controller manager, for other Android proxies (e.g. learning)
+    static std::shared_ptr<ControllerManager> manager() {
+        return s_pControllerManager;
+    }
+    static void registerManager(std::shared_ptr<ControllerManager> pManager,
+            bool controllerPreviewScreens = false) {
+        s_pControllerManager = std::move(pManager);
         s_controllerPreviewScreens = controllerPreviewScreens;
     }
 

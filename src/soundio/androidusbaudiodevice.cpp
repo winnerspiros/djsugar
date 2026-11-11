@@ -181,12 +181,24 @@ std::vector<std::shared_ptr<AndroidUsbAudioDevice>> AndroidUsbAudioDevice::scan(
     QJniEnvironment env;
     const jsize count = array.isValid() ? env->GetArrayLength(array.object<jobjectArray>()) : 0;
 
+    std::vector<QJniObject> audioDevices;
     for (jsize i = 0; i < count; ++i) {
         QJniObject usbDevice = QJniObject::fromLocalRef(
                 env->GetObjectArrayElement(array.object<jobjectArray>(), i));
-        if (!usbDevice.isValid() || !hasAudioStreamingInterface(usbDevice)) {
-            continue;
+        if (usbDevice.isValid() && hasAudioStreamingInterface(usbDevice)) {
+            audioDevices.push_back(usbDevice);
         }
+    }
+    // Android plays to one USB sound card at a time: with two or more, Mixxx
+    // drives all of them, stereo ones too (e.g. two players with their own
+    // sound card)
+    const DirectMode effectiveMode =
+            mode == DirectMode::Auto && audioDevices.size() >= 2 ? DirectMode::Always : mode;
+    if (effectiveMode != mode) {
+        qInfo() << audioDevices.size() << "USB sound cards: Mixxx drives all of them";
+    }
+
+    for (const QJniObject& usbDevice : audioDevices) {
         const QString deviceName = usbDevice.callMethod<jstring>("getDeviceName").toString();
         auto it = std::find_if(previous.begin(), previous.end(), [&](const auto& pDevice) {
             return pDevice->usbDeviceName() == deviceName && pDevice->isConnected();
@@ -196,7 +208,7 @@ std::vector<std::shared_ptr<AndroidUsbAudioDevice>> AndroidUsbAudioDevice::scan(
             continue;
         }
         std::shared_ptr<AndroidUsbAudioDevice> pDevice(new AndroidUsbAudioDevice(usbDevice));
-        if (pDevice->open(mode, waitForPermission)) {
+        if (pDevice->open(effectiveMode, waitForPermission)) {
             found.push_back(pDevice);
         }
     }

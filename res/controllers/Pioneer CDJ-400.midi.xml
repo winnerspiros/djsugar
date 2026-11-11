@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxMIDIPreset schemaVersion="1" mixxxVersion="2.5">
+    <info>
+        <name>Pioneer CDJ-400</name>
+        <author>Mixxx Android</author>
+        <description>Pioneer CDJ-400 in USB MIDI mode (SOURCE SELECT: PC). One or two units: each plays the deck of its MIDI channel, or the deck chosen in the settings. Messages from the manual of the CDJ-400.</description>
+    </info>
+    <settings>
+        <group label="Deck">
+            <option variable="deck" type="enum" label="Deck of this unit">
+                <value label="By its MIDI channel (1 = deck 1, 2 = deck 2...)" default="true">auto</value>
+                <value label="Deck 1">1</value>
+                <value label="Deck 2">2</value>
+                <value label="Deck 3">3</value>
+                <value label="Deck 4">4</value>
+                <description>
+                    With two units: set MIDI channel 2 on the second one (UTILITY), or choose Deck 1 here for one unit and Deck 2 for the other.
+                </description>
+            </option>
+            <option variable="jogMode" type="enum" label="Jog mode at start">
+                <value label="Vinyl: touching the platter scratches" default="true">vinyl</value>
+                <value label="CDJ: the platter bends the tempo">cdj</value>
+            </option>
+        </group>
+    </settings>
+    <controller id="PIONEER CDJ-400">
+        <scriptfiles>
+            <file filename="Pioneer-Player-MIDI-scripts.js" functionprefix=""/>
+            <file filename="Pioneer-CDJ-400-scripts.js" functionprefix="PioneerCDJ400"/>
+        </scriptfiles>
+        <controls>
+            <control>
+                <!-- PLAY/PAUSE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE +, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE -, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRANS/ROLL, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x90</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB0</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB0</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.tempo</key>
+                <status>0xB0</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.browse</key>
+                <status>0xB0</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE +, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE -, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRANS/ROLL, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x91</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB1</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB1</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.tempo</key>
+                <status>0xB1</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.browse</key>
+                <status>0xB1</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE +, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE -, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRANS/ROLL, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x92</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB2</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB2</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.tempo</key>
+                <status>0xB2</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.browse</key>
+                <status>0xB2</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE +, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x16</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP DIVIDE -, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x17</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRANS/ROLL, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.button</key>
+                <status>0x93</status>
+                <midino>0x24</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB3</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.jog</key>
+                <status>0xB3</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.tempo</key>
+                <status>0xB3</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerCDJ400.browse</key>
+                <status>0xB3</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+        </controls>
+        <outputs/>
+    </controller>
+</MixxxMIDIPreset>

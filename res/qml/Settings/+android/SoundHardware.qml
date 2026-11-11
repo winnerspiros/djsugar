@@ -19,6 +19,10 @@ Category {
     property bool presetError: false
     property bool loading: false
     property bool showAdvancedRouter: false
+    // "Two players" preset: the second USB sound card plays deck 1
+    property bool decksSwapped: false
+    // USB sound cards available now, for the "two players" preset
+    property int usbCardCount: 0
 
     // The Android enumerator suffixes device names with their type, e.g.
     // "TB331FC: Speaker", "DDJ-400: USB" or "Buds: Bluetooth".
@@ -28,12 +32,15 @@ Category {
             wired: null,
             bluetooth: null,
             usb: null,
+            // All USB sound cards, by name (identical ones are numbered)
+            usbList: [],
             other: null
         };
         let devices = Mixxx.SoundManager.availableOutputDevices(soundApi.selected) || [];
         for (let d of devices) {
             let n = d.displayName || "";
             if (n.endsWith(": USB")) {
+                kinds.usbList.push(d);
                 // Prefer the device exposing the most channels (a DJ
                 // controller rather than e.g. a USB headset)
                 if (!kinds.usb || d.channelCount > kinds.usb.channelCount)
@@ -50,6 +57,7 @@ Category {
                 kinds.other = kinds.other || d;
             }
         }
+        kinds.usbList.sort((a, b) => a.displayName.localeCompare(b.displayName));
         return kinds;
     }
 
@@ -59,7 +67,7 @@ Category {
 
     // Returns the outputs a preset needs, without touching anything:
     // {outputs: [{device, type, channel}], headSplit, syncBuffers, sampleRate, message, error}
-    // Output types: 0 = Main, 1 = Headphones
+    // Output types: 0 = Main, 1 = Headphones, 4 = Deck (index = deck - 1)
     function presetPlan(presetType) {
         let k = outputDeviceKinds();
         let plan = {
@@ -123,6 +131,21 @@ Category {
             // Two sound cards with independent clocks need drift compensation
             plan.syncBuffers = 2;
             plan.message = qsTr("Main output through %1 and CUE through the headphones of %2. Using two sound cards may cause slight clicks on the CUE.").arg(mainDev.displayName).arg(k.usb.displayName);
+        } else if (presetType === "decks") {
+            // Two players (e.g. two CDJs) into an external mixer: each USB
+            // sound card plays its own deck, the mixer does the rest
+            if (k.usbList.length < 2) {
+                plan.error = true;
+                plan.message = qsTr("Two USB sound cards are needed and %1 was found. Connect both players, wait a few seconds and open the settings again.").arg(k.usbList.length);
+                return plan;
+            }
+            const first = k.usbList[root.decksSwapped ? 1 : 0];
+            const second = k.usbList[root.decksSwapped ? 0 : 1];
+            plan.outputs.push({ device: first, type: 4, channel: 0, index: 0 });
+            plan.outputs.push({ device: second, type: 4, channel: 0, index: 1 });
+            plan.sampleRate = 44100;
+            plan.syncBuffers = 2;
+            plan.message = qsTr("Deck 1 → %1 and Deck 2 → %2. Mix and pre-listen with your mixer.").arg(first.displayName).arg(second.displayName);
         }
         return plan;
     }
@@ -181,6 +204,9 @@ Category {
             let headDev = null;
             let headChannel = 0;
             let otherOutputs = false;
+            // Deck outputs: the device of each deck
+            let deckDevs = [];
+            let deckOutputs = 0;
 
             for (let d of devices) {
                 let conns = d.connections(manager);
@@ -191,6 +217,10 @@ Category {
                     } else if (c.type === 1) { // Headphones (PFL / Preescucha)
                         headDev = d;
                         headChannel = c.channelGroup;
+                    } else if (c.type === 4 && c.index < 2) { // Deck 1 or 2
+                        deckDevs[c.index] = d;
+                        deckOutputs++;
+                        otherOutputs = true;
                     } else {
                         otherOutputs = true;
                     }
@@ -198,7 +228,13 @@ Category {
             }
 
             let mainDev = mainDevs.length === 1 ? mainDevs[0] : null;
-            if (otherOutputs || mainDevs.length > 1) {
+            const k = outputDeviceKinds();
+            if (deckOutputs === 2 && deckDevs[0] && deckDevs[1] && deckDevs[0].displayName !== deckDevs[1].displayName &&
+                    !mainDev && !headDev && isUsbDevice(deckDevs[0]) && isUsbDevice(deckDevs[1])) {
+                detected = "decks";
+                root.decksSwapped = k.usbList.length >= 2 &&
+                        k.usbList[1].displayName === deckDevs[0].displayName;
+            } else if (otherOutputs || mainDevs.length > 1) {
                 detected = "custom";
             } else if (!mainDev && headDev && headSplit.value > 0) {
                 detected = "splitter";
@@ -213,6 +249,7 @@ Category {
             console.error("Error detecting active audio preset:", e);
         }
         root.activePreset = detected;
+        root.usbCardCount = outputDeviceKinds().usbList.length;
 
         // Router
         router.multiSoundcard.selected = router.multiSoundcard.options[manager.getSyncBuffers()];
@@ -338,7 +375,7 @@ Category {
             if (!plan.error) {
                 manager.clearOutputs();
                 for (let output of plan.outputs) {
-                    manager.addOutput(output.device, output.type, output.channel, 0);
+                    manager.addOutput(output.device, output.type, output.channel, output.index || 0);
                 }
                 headSplit.value = plan.headSplit;
                 monoMix.value = 0;
@@ -690,6 +727,73 @@ Category {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.applyPreset("hybrid")
+                                }
+                            }
+
+                            // Preset 5: two players (e.g. two CDJs), each with its own deck
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.columnSpan: 2
+                                Layout.preferredHeight: Math.max(96, presetCol5.implicitHeight + 20)
+                                visible: root.usbCardCount >= 2 || root.activePreset === "decks"
+                                radius: 10
+                                color: root.activePreset === "decks" ? "#004d40" : (p5Mouse.containsMouse ? "#12302c" : "#112421")
+                                border.color: root.activePreset === "decks" ? "#1de9b6" : "#00695c"
+                                border.width: root.activePreset === "decks" ? 2 : 1
+
+                                MouseArea {
+                                    id: p5Mouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.applyPreset("decks")
+                                }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 8
+
+                                    ColumnLayout {
+                                        id: presetCol5
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Text { text: "💿"; font.pixelSize: 16 }
+                                            Text {
+                                                Layout.fillWidth: true
+                                                elide: Text.ElideRight
+                                                text: qsTr("Two players, one deck each")
+                                                font.pixelSize: 13
+                                                font.bold: true
+                                                color: root.activePreset === "decks" ? "#ffffff" : "#cfd8dc"
+                                            }
+                                            Text {
+                                                text: root.activePreset === "decks" ? qsTr("✓ ACTIVE") : ""
+                                                font.pixelSize: 10
+                                                font.bold: true
+                                                color: "#64ffda"
+                                            }
+                                        }
+                                        Text {
+                                            text: qsTr("Two USB sound cards (e.g. two CDJs) into an external mixer: deck 1 plays through the first one and deck 2 through the second one. Set the deck of each player in its mapping settings.")
+                                            font.pixelSize: 11
+                                            color: "#b2dfdb"
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                    // Which sound card is deck 1, when both have the same name
+                                    Button {
+                                        visible: root.activePreset === "decks"
+                                        text: qsTr("⇄ Swap")
+                                        onClicked: {
+                                            root.decksSwapped = !root.decksSwapped;
+                                            root.applyPreset("decks");
+                                        }
+                                    }
                                 }
                             }
                         }

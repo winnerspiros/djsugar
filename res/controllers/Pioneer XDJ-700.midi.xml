@@ -1,0 +1,1715 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxMIDIPreset schemaVersion="1" mixxxVersion="2.5">
+    <info>
+        <name>Pioneer XDJ-700 / XDJ-1000</name>
+        <author>Mixxx Android</author>
+        <description>Pioneer XDJ-700 and XDJ-1000 in USB MIDI mode (LINK: CONTROL MODE, USB MIDI). One or two units: each plays the deck of its MIDI channel, or the deck chosen in the settings. Messages from the manuals of the XDJ-700 and XDJ-1000.</description>
+    </info>
+    <settings>
+        <group label="Deck">
+            <option variable="deck" type="enum" label="Deck of this unit">
+                <value label="By its MIDI channel (1 = deck 1, 2 = deck 2...)" default="true">auto</value>
+                <value label="Deck 1">1</value>
+                <value label="Deck 2">2</value>
+                <value label="Deck 3">3</value>
+                <value label="Deck 4">4</value>
+                <description>
+                    With two units: set MIDI channel 2 on the second one (UTILITY), or choose Deck 1 here for one unit and Deck 2 for the other.
+                </description>
+            </option>
+            <option variable="jogMode" type="enum" label="Jog mode at start">
+                <value label="Vinyl: touching the platter scratches" default="true">vinyl</value>
+                <value label="CDJ: the platter bends the tempo">cdj</value>
+            </option>
+        </group>
+    </settings>
+    <controller id="PIONEER XDJ-700">
+        <scriptfiles>
+            <file filename="Pioneer-Player-MIDI-scripts.js" functionprefix=""/>
+            <file filename="Pioneer-XDJ-700-scripts.js" functionprefix="PioneerXDJ"/>
+        </scriptfiles>
+        <controls>
+            <control>
+                <!-- PLAY/PAUSE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- QUANTIZE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE A, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE B, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE C, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SYNC, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- VINYL BRAKE, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1/2, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 2, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 4, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 8, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 16, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SLIP, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 forward, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 forward, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 forward, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 back, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 back, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 back, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x90</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB0</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB0</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.tempo</key>
+                <status>0xB0</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.browse</key>
+                <status>0xB0</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- needle search, channel 1 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.needle</key>
+                <status>0xB0</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- QUANTIZE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE A, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE B, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE C, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SYNC, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- VINYL BRAKE, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1/2, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 2, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 4, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 8, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 16, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SLIP, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 forward, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 forward, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 forward, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 back, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 back, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 back, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x91</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB1</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB1</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.tempo</key>
+                <status>0xB1</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.browse</key>
+                <status>0xB1</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- needle search, channel 2 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.needle</key>
+                <status>0xB1</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- QUANTIZE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE A, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE B, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE C, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SYNC, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- VINYL BRAKE, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1/2, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 2, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 4, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 8, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 16, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SLIP, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 forward, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 forward, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 forward, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 back, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 back, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 back, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x92</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB2</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB2</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.tempo</key>
+                <status>0xB2</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.browse</key>
+                <status>0xB2</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- needle search, channel 3 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.needle</key>
+                <status>0xB2</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY/PAUSE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH forward, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH back, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH next, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TRACK SEARCH previous, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP IN, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP/EXIT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- TEMPO RANGE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER TEMPO, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JOG MODE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog touch, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- REVERSE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- EJECT, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x2F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BACK, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse push (load), channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- QUANTIZE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE A, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x18</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE B, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x19</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- HOT CUE C, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x1A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- MASTER, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SYNC, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- VINYL BRAKE, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1/2, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x27</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 1, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 2, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 4, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 8, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- BEAT LOOP 16, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x2C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SLIP, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 forward, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 forward, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 forward, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 1 back, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 2 back, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- JUMP 4 back, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.button</key>
+                <status>0x93</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog platter, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB3</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog ring, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.jog</key>
+                <status>0xB3</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- tempo slider, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.tempo</key>
+                <status>0xB3</status>
+                <midino>0x1D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- browse encoder, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.browse</key>
+                <status>0xB3</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- needle search, channel 4 -->
+                <group>[Master]</group>
+                <key>PioneerXDJ.needle</key>
+                <status>0xB3</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+        </controls>
+        <outputs/>
+    </controller>
+</MixxxMIDIPreset>

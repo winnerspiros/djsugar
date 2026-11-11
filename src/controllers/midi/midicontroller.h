@@ -30,6 +30,12 @@ class MidiInputHandleJSProxy final : public QObject {
 /// It must be inherited by a class that implements it on some API.
 ///
 /// Note that the subclass' destructor should call close() at a minimum.
+namespace mixxx {
+namespace qml {
+class QmlControllerLearningProxy;
+} // namespace qml
+} // namespace mixxx
+
 class MidiController : public Controller {
     Q_OBJECT
   public:
@@ -133,6 +139,8 @@ class MidiController : public Controller {
 
     // MIDI learning assistant
     friend class DlgControllerLearning;
+    // Learning on Android
+    friend class mixxx::qml::QmlControllerLearningProxy;
 };
 
 class MidiControllerJSProxy : public ControllerJSProxy {

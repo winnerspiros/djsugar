@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxMIDIPreset schemaVersion="1" mixxxVersion="2.5">
+    <info>
+        <name>Numark NDX900 (experimental)</name>
+        <author>Mixxx Android</author>
+        <description>Numark NDX900 / NDX800 in USB MIDI mode (SOURCE: USB-MIDI). Experimental: Numark publishes no MIDI table, the messages are those of its Traktor mapping. The unit always sends on channel 1: with two units, choose Deck 1 for one and Deck 2 for the other in the settings.</description>
+    </info>
+    <settings>
+        <group label="Deck">
+            <option variable="deck" type="enum" label="Deck of this unit">
+                <value label="Deck 1" default="true">1</value>
+                <value label="Deck 2">2</value>
+                <value label="Deck 3">3</value>
+                <value label="Deck 4">4</value>
+            </option>
+        </group>
+    </settings>
+    <controller id="NUMARK NDX900">
+        <scriptfiles>
+            <file filename="Numark-NDX900-scripts.js" functionprefix="NumarkNDX900"/>
+        </scriptfiles>
+        <controls>
+            <control>
+                <!-- LOOP IN -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x30</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOOP OUT -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x31</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- RELOOP -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- auto loop 1 -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- auto loop 4 -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x34</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- auto loop 8 -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x35</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- CUE -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x38</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PLAY -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x39</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PAUSE -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3A</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- PITCH/KEYLOCK -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3B</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- pitch bend - -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3C</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- pitch bend + -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3D</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- loop size - -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3E</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- loop size + -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jump to start -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x40</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SEARCH -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x41</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SCRATCH -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x42</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- LOAD -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x46</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- SYNC -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x51</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- platter touch -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.button</key>
+                <status>0x90</status>
+                <midino>0x59</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- jog wheel -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.jog</key>
+                <status>0xB0</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- track knob -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.browse</key>
+                <status>0xB0</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <!-- pitch fader -->
+                <group>[Master]</group>
+                <key>NumarkNDX900.pitch</key>
+                <status>0xE0</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+        </controls>
+        <outputs/>
+    </controller>
+</MixxxMIDIPreset>

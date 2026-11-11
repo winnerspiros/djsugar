@@ -76,6 +76,12 @@ QmlWaveformDisplay::QmlWaveformDisplay(QQuickItem* parent)
             this,
             &QmlWaveformDisplay::slotWindowChanged,
             Qt::DirectConnection);
+    // Shown again: moving again
+    connect(this, &QQuickItem::visibleChanged, this, [this]() {
+        if (isVisible()) {
+            update();
+        }
+    });
     slotWindowChanged(window());
 }
 
@@ -359,7 +365,11 @@ void QmlWaveformDisplay::requestUpdateAtFrameRate() {
         return;
     }
 
-    if (!getTrackInfo()) {
+    // Redraw at the frame rate only while the waveform moves. Each redraw
+    // repaints the whole window, so redrawing still or empty waveforms kept
+    // the UI thread busy and made the app stutter on Android. Hidden ones
+    // (e.g. under the FX Station) neither.
+    if (!getTrackInfo() || !isVisible()) {
         m_frameRateTimer.stop();
         return;
     }

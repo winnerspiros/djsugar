@@ -21,9 +21,11 @@ class AndroidUsbAudioDevice;
 /// processed on the USB event thread whenever the USB transfers need data.
 class SoundDeviceAndroidUsb : public SoundDevice {
   public:
+    /// instance tells identical sound cards apart (1 for the first)
     SoundDeviceAndroidUsb(UserSettingsPointer config,
             SoundManager* sm,
-            std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice> pDevice);
+            std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice> pDevice,
+            int instance = 1);
     ~SoundDeviceAndroidUsb() override;
 
     SoundDeviceStatus open(bool isClkRefDevice, int syncBuffers) override;
@@ -40,6 +42,10 @@ class SoundDeviceAndroidUsb : public SoundDevice {
 
   private:
     void render(uint8_t* pDestination, int frames);
+    /// For a sound card that isn't the clock reference: reads the frames
+    /// from the FIFO at a rate that follows the card's own clock, so that
+    /// the two clocks drifting apart causes no clicks
+    void resampleFromFifo(int frames);
     void processEngine();
     void updateAudioLatencyUsage(SINT framesPerBuffer);
 
@@ -56,4 +62,22 @@ class SoundDeviceAndroidUsb : public SoundDevice {
     PerformanceTimer m_clkRefTimer;
     mixxx::Duration m_timeInAudioCallback;
     SINT m_framesSinceAudioLatencyUsageUpdate;
+
+    // Adaptive resampling (see resampleFromFifo())
+    std::vector<CSAMPLE> m_resampleInput;
+    double m_resamplePosition;
+    double m_resampleRatio;
+    // Engine frames per frame of the sound card: 1, or the conversion when
+    // the card doesn't support the rate of the engine
+    double m_nominalRatio;
+    // The rate the sound card plays at
+    int m_deviceRate;
+    double m_driftIntegral;
+    double m_smoothedFill;
+    int m_targetFill;
+    bool m_primed;
+    // For the log: underflows of the resampling (USB thread) and the engine
+    // frames since the last report (engine thread)
+    std::atomic<int> m_resampleUnderflows;
+    SINT m_framesSinceReport;
 };
