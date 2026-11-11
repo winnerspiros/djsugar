@@ -13,7 +13,8 @@ One-shots for the sampler pads. Every clip starts on the hit, with no dead air b
 | 🔫 | **Guns** | gun-dancehall, gun-finger-triple, gun-pistol-tight, gun-cannon-boom, gun-pew, gun-pew-triple, gun-reload, gun-rifle-real, gun-shots-real, gun-burst-war, gun-ak47, gun-machine-burst, gun-heavy-mg, gun-m16-burst, gun-pistol-real, gun-revolver, gun-sniper, gun-shotgun-pump, gun-shotgun-blast, gun-reload-real, gun-load-and-shot, gun-bomb-bang, hitmarker, gunshot, pistol, pistol-shot, 9mm, rifle, ak47, uzi, machine-gun, shotgun, shotgun-blast |
 | 🎤 | **Vocals** | lets-go, yeah, oh-yeah, woo-hoo, drop-it, everybody, turn-it-up, yeah-boy, dj-drop, welcome, voice, yell, wow, anime-wow, hello-there, uah, another-one, put-your-hands-up, make-some-noise, bombaclat |
 | 📯 | **Horns** | air-horn, airhorn, dj-airhorn, mlg-airhorn, horn, horn-honk, car-horn, train-horn, foghorn, trumpet, trumpet-fanfare, saxophone |
-| 😂 | **Meme** | bruh, bruh-sound, oof, oof-sound, vine-boom, ba-dum-tss, metal-pipe, among-us, roblox-death, mario-coin, mario-jump, womp-womp, sad-trombone, fart, fart-reverb, evil-laugh, laugh, meme, oh-no |
+| 😂 | **Meme** | bruh, bruh-sound, oof, oof-sound, vine-boom, ba-dum-tss, metal-pipe, among-us, roblox-death, mario-coin, mario-jump, womp-womp, sad-trombone, fart, fart-reverb, evil-laugh, laugh, meme, oh-no, hub-intro, fatality, teams-call |
+| 🎮 | **Gaming** | lol-double-kill, lol-triple-kill, lol-quadra-kill, lol-penta-kill |
 | 🇬🇷 | **Greek** (`gr/`) | fahhhhhhhhhhhhhh, faaah, applepay, m-e-o-w, greek, greece, re, malaka, opa, ti, oxi, ela, bravo, file, ne |
 | 🔔 | **Misc** | applause, crowd-cheer, crowd-cheer-applause, chime, heartbeat, thunder, rain-thunder, fire, phone-ring, ringtone, glass-shatter, scream, sneeze, suspense, notification, ping, tada, coin, connect, button-click, error, correct-answer, wrong-answer, wrong-buzzer, countdown, door-knock, knock, xylophone, whistle, chicken, jungle, jbl-connect-soundfishing |
 
