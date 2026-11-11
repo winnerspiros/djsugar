@@ -174,7 +174,9 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     m_releaseEcho.allocate(static_cast<int>(kMaxEchoSeconds * maxRate));
     m_history.allocate(static_cast<int>(kHistorySeconds * maxRate));
     m_spiral.allocate(kPitchWindowFrames);
-    m_reverb.allocate(kMaxSampleRate);
+    // At the highest rate first, so that prepare() never allocates
+    m_reverb.setup(kMaxSampleRate);
+    m_reverb.setModulation(0.9f);
     for (auto& buffer : m_rollBuffers) {
         buffer.allocate(static_cast<int>(kMaxRollSeconds * maxRate));
     }
@@ -227,9 +229,17 @@ void FxStation::slotFindDecks() {
     }
 }
 
+void FxStation::setReverb(float size, float tone) {
+    // SIZE: room to hall and a longer tail; TONE: darker to the right
+    m_reverb.setSize(size);
+    m_reverb.setDecay(1.f + 7.f * size);
+    m_reverb.setDamping(16000.f * std::pow(2.f, -4.f * tone));
+}
+
 void FxStation::prepare(float sampleRate) {
     m_sampleRate = sampleRate;
-    m_reverb.setSampleRate(std::min(sampleRate, kMaxSampleRate));
+    m_reverb.setup(std::min(sampleRate, kMaxSampleRate));
+    m_reverb.setModulation(0.9f);
     m_lowMid.set(kLowMidFrequency, sampleRate);
     m_midHigh.set(kMidHighFrequency, sampleRate);
     m_lowAllPass.set(kMidHighFrequency, sampleRate);
@@ -879,11 +889,11 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
         break;
     case Scene::ReverbUp:
         m_wetFilter.set(100.f * std::pow(2.f, 5.f * amount), 0.7f, m_sampleRate);
-        m_reverb.set(0.5f + 0.5f * param1, param2);
+        setReverb(param1, param2);
         break;
     case Scene::ReverbDown:
         m_sceneFilter.set(20000.f * std::pow(2.f, -4.3f * amount), 0.7f, m_sampleRate);
-        m_reverb.set(0.5f + 0.5f * param1, param2);
+        setReverb(param1, param2);
         break;
     default:
         break;

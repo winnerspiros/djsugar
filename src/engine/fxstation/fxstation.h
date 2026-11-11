@@ -7,6 +7,7 @@
 #include <memory>
 #include <random>
 
+#include "effects/backends/builtin/dsp/fdnreverb.h"
 #include "engine/fxstation/fxstationdsp.h"
 #include "engine/fxstation/fxstationinstruments.h"
 #include "util/types.h"
@@ -104,6 +105,7 @@ class FxStation : public QObject {
     };
 
     void prepare(float sampleRate);
+    void setReverb(float size, float tone);
     void updateClock(int frames);
     void handleButtons();
     void startRelease();
@@ -177,7 +179,7 @@ class FxStation : public QObject {
     // Scene
     fxstation::DelayLine m_echo;
     fxstation::PitchShifter m_spiral;
-    fxstation::Reverb m_reverb;
+    fxdsp::FdnReverb m_reverb;
     fxstation::Svf m_sceneFilter;
     fxstation::Svf m_wetFilter;
     fxstation::Smoother m_sceneSend;

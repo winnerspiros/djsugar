@@ -1,7 +1,8 @@
 #pragma once
 
 // Mono circular delay line with fractional reads. Power-of-two length so
-// wrapping is a mask. allocate() must run outside the audio callback.
+// wrapping is a mask. allocate() must run outside the audio callback, except
+// when a larger allocate() came first: assign() then reuses the storage.
 
 #include <vector>
 
