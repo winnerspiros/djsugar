@@ -6,7 +6,9 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QJniEnvironment>
 #include <QJniObject>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 #include "util/assert.h"
@@ -130,6 +132,44 @@ QStringList sharedAudioDirectories() {
             dirs.append(QDir::cleanPath(path));
         }
     }
+    // Songs elsewhere (an app's folder, a card, a USB stick): the media
+    // store knows every audio file; each top folder of a volume holding one
+    // is added, e.g. /storage/emulated/0/WhatsApp or /storage/1A2B-3C4D/DJ
+    const QJniObject uri = QJniObject::getStaticObjectField(
+            "android/provider/MediaStore$Audio$Media",
+            "EXTERNAL_CONTENT_URI",
+            "Landroid/net/Uri;");
+    const QJniObject resolver = QNativeInterface::QAndroidApplication::context().callObjectMethod(
+            "getContentResolver", "()Landroid/content/ContentResolver;");
+    QJniEnvironment env;
+    jobjectArray columns = env->NewObjectArray(1,
+            env->FindClass("java/lang/String"),
+            QJniObject::fromString(QStringLiteral("_data")).object<jstring>());
+    QJniObject cursor = resolver.callObjectMethod("query",
+            "(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;"
+            "Ljava/lang/String;)Landroid/database/Cursor;",
+            uri.object(),
+            columns,
+            nullptr,
+            nullptr,
+            nullptr);
+    env->DeleteLocalRef(columns);
+    if (env.checkAndClearExceptions() || !cursor.isValid()) {
+        return dirs;
+    }
+    // /storage/<volume>/<top folder>/…, the primary volume being emulated/0
+    static const QRegularExpression kTopFolder(
+            QStringLiteral("^(/storage/(?:emulated/\\d+|(?!emulated/)[^/]+)/[^/]+)/"));
+    while (cursor.callMethod<jboolean>("moveToNext")) {
+        const QString path = cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0)
+                                     .toString();
+        const auto match = kTopFolder.match(path);
+        if (match.hasMatch() && !match.captured(1).endsWith(QStringLiteral("/Android")) &&
+                !dirs.contains(match.captured(1))) {
+            dirs.append(match.captured(1));
+        }
+    }
+    cursor.callMethod<void>("close");
     return dirs;
 }
 

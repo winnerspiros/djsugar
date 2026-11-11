@@ -98,6 +98,10 @@ class QmlMobileLibraryProxy : public QObject {
     /// Creates a playlist without asking for the name. Returns its id, or -1
     /// if the name is empty or already used.
     Q_INVOKABLE int createNamedPlaylist(const QString& name);
+    /// False if the name is empty or already used
+    Q_INVOKABLE bool renamePlaylist(int playlistId, const QString& name);
+    Q_INVOKABLE void deletePlaylist(int playlistId);
+    Q_INVOKABLE void setPlaylistLocked(int playlistId, bool locked);
     /// Appends the track, adding it to the library if needed
     Q_INVOKABLE bool addTrackToPlaylist(int playlistId, const QUrl& trackUrl);
     /// Appends all tracks of a track list, in its current order, adding them

@@ -322,6 +322,35 @@ int QmlMobileLibraryProxy::createNamedPlaylist(const QString& name) {
     return playlistDao.createPlaylist(trimmedName);
 }
 
+bool QmlMobileLibraryProxy::renamePlaylist(int playlistId, const QString& name) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return false;
+    }
+    PlaylistDAO& playlistDao =
+            trackCollectionManager()->internalCollection()->getPlaylistDAO();
+    const QString trimmedName = name.trimmed();
+    if (trimmedName.isEmpty() || playlistDao.getPlaylistIdFromName(trimmedName) != -1) {
+        return false;
+    }
+    playlistDao.renamePlaylist(playlistId, trimmedName);
+    return true;
+}
+
+void QmlMobileLibraryProxy::deletePlaylist(int playlistId) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return;
+    }
+    trackCollectionManager()->internalCollection()->getPlaylistDAO().deletePlaylist(playlistId);
+}
+
+void QmlMobileLibraryProxy::setPlaylistLocked(int playlistId, bool locked) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return;
+    }
+    trackCollectionManager()->internalCollection()->getPlaylistDAO().setPlaylistLocked(
+            playlistId, locked);
+}
+
 bool QmlMobileLibraryProxy::addTrackToPlaylist(int playlistId, const QUrl& trackUrl) {
     VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
         return false;
