@@ -35,6 +35,7 @@ Rectangle {
         property color activeColor: "#00e5ff"
         property bool enabledLook: true
         signal clicked
+        signal held
         signal pressed
         signal released
 
@@ -63,6 +64,7 @@ Rectangle {
             anchors.fill: parent
             enabled: button.enabledLook
             onClicked: button.clicked()
+            onPressAndHold: button.held()
             onPressed: button.pressed()
             onReleased: button.released()
             onCanceled: button.released()
@@ -534,6 +536,12 @@ Rectangle {
                         activeColor: "#ff4081"
                         text: muteControl.value > 0 ? modelData + " ✕" : modelData
                         onClicked: instrumentControl.value = index
+                        // Banks 2 to 4: pick the sound of this pad
+                        onHeld: {
+                            if (bankControl.value > 0) {
+                                soundPicker.open(bankControl.value, index, modelData);
+                            }
+                        }
 
                         Mixxx.ControlProxy {
                             id: muteControl
@@ -1026,6 +1034,92 @@ Rectangle {
                 ClockSection {
                     Layout.fillHeight: true
                     Layout.fillWidth: true
+                }
+            }
+        }
+    }
+
+    // The sound of an X-Pad pad in a user bank: any sample of the pads
+    // (bundled, imported or recorded), or back to the bank folder
+    Rectangle {
+        id: soundPicker
+
+        property int bank: 1
+        property int instrument: 0
+        property string current: ""
+        property var samples: []
+
+        function open(bankIndex, instrumentIndex, name) {
+            bank = bankIndex;
+            instrument = instrumentIndex;
+            title.text = "BANK " + (bankIndex + 1) + " · " + name;
+            current = Mixxx.PlayerManager.fxStationSound(bankIndex, instrumentIndex);
+            samples = Mixxx.PlayerManager.bundledSamples();
+            visible = true;
+        }
+        function pick(path) {
+            Mixxx.PlayerManager.setFxStationSound(bank, instrument, path);
+            visible = false;
+        }
+
+        anchors.fill: parent
+        color: "#e60b0e14"
+        visible: false
+        z: 100
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: soundPicker.visible = false
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            border.color: "#ff4081"
+            color: "#161b24"
+            height: Math.min(parent.height - 24, 420)
+            radius: 6
+            width: Math.min(parent.width - 24, 360)
+
+            MouseArea {
+                anchors.fill: parent
+            }
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 6
+
+                Text {
+                    id: title
+
+                    Layout.fillWidth: true
+                    color: "#ff4081"
+                    font.bold: true
+                    font.pixelSize: 14
+                }
+                FxButton {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 34
+                    active: soundPicker.current === ""
+                    activeColor: "#ff4081"
+                    text: "FROM BANK FOLDER"
+                    onClicked: soundPicker.pick("")
+                }
+                ListView {
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    clip: true
+                    model: soundPicker.samples
+                    spacing: 3
+
+                    delegate: FxButton {
+                        required property var modelData
+
+                        active: soundPicker.current === modelData.path
+                        activeColor: "#ff4081"
+                        height: 34
+                        text: modelData.user ? "● " + modelData.name : modelData.name
+                        width: ListView.view.width
+                        onClicked: soundPicker.pick(modelData.path)
+                    }
                 }
             }
         }

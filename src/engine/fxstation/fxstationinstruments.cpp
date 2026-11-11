@@ -192,6 +192,11 @@ void Instruments::publish(int index, std::unique_ptr<Bank> pBank) {
 }
 
 // static
+ConfigKey Instruments::soundKey(int index, int instrument) {
+    return ConfigKey(QStringLiteral("[FxStation]"),
+            QStringLiteral("bank%1_sound%2").arg(index + 1).arg(instrument + 1));
+}
+
 std::unique_ptr<Bank> Instruments::loadBank(int index) const {
     QDir dir(bankDirectory(index));
     // The sounds stay out of the music apps
@@ -212,18 +217,12 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) const {
             dir.setPath(bundled + QStringLiteral("djsugar"));
         }
     }
-    if (dir.isEmpty()) {
-        return nullptr;
-    }
     QStringList files;
     const auto entries = dir.entryInfoList(QDir::Files, QDir::Name);
     for (const QFileInfo& entry : entries) {
         if (SoundSourceProxy::isFileNameSupported(entry.fileName())) {
             files.append(entry.absoluteFilePath());
         }
-    }
-    if (files.isEmpty()) {
-        return nullptr;
     }
     // By name, or else in order
     std::array<QString, kInstruments> chosen;
@@ -250,6 +249,17 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) const {
             }
             ++next;
         }
+    }
+    bool any = false;
+    for (int instrument = 0; instrument < kInstruments; ++instrument) {
+        const QString picked = m_pConfig->getValueString(soundKey(index, instrument));
+        if (!picked.isEmpty() && QFile::exists(picked)) {
+            chosen[instrument] = picked;
+        }
+        any = any || !chosen[instrument].isEmpty();
+    }
+    if (!any) {
+        return nullptr;
     }
     auto pBank = std::make_unique<Bank>();
     for (int instrument = 0; instrument < kInstruments; ++instrument) {

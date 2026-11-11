@@ -5,6 +5,8 @@
 #include <QQmlEngine>
 #include <QRegularExpression>
 
+#include "control/controlobject.h"
+#include "engine/fxstation/fxstationinstruments.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
 #include "library/samples/bundledsamples.h"
@@ -167,6 +169,20 @@ QString QmlPlayerManagerProxy::importSample(const QUrl& url) {
         emit sampleError(tr("This file can't be used as a sample"));
     }
     return path;
+}
+
+QString QmlPlayerManagerProxy::fxStationSound(int bank, int instrument) const {
+    return m_pPlayerManager->config()->getValueString(
+            fxstation::Instruments::soundKey(bank, instrument));
+}
+
+void QmlPlayerManagerProxy::setFxStationSound(int bank, int instrument, const QString& path) {
+    const UserSettingsPointer pConfig = m_pPlayerManager->config();
+    pConfig->setValue(fxstation::Instruments::soundKey(bank, instrument), path);
+    // Android may close the app without the usual shutdown
+    pConfig->save();
+    ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 1);
+    ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 0);
 }
 
 void QmlPlayerManagerProxy::deleteSample(const QString& path) {

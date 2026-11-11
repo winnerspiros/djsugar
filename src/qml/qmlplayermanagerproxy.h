@@ -48,6 +48,10 @@ class QmlPlayerManagerProxy : public QObject {
     Q_INVOKABLE QString importSample(const QUrl& url);
     /// Deletes one of the user's own samples.
     Q_INVOKABLE void deleteSample(const QString& path);
+    /// The sound picked for an X-Pad instrument of a user bank (1 to 3)
+    Q_INVOKABLE QString fxStationSound(int bank, int instrument) const;
+    /// An empty path goes back to the bank folder
+    Q_INVOKABLE void setFxStationSound(int bank, int instrument, const QString& path);
     Q_INVOKABLE bool startSampleRecording();
     /// Saves the take (silence trimmed, normalized); returns its path or "".
     Q_INVOKABLE QString stopSampleRecording();

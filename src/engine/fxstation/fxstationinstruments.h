@@ -36,7 +36,8 @@ struct Bank {
 /// rights to care about); banks 2 to 4 are loaded in the background from
 /// Mixxx/FxStation/Bank N on the storage (files named kick, snare, clap and
 /// hat, a number prefix like "01_" allowed, or else the first four audio
-/// files). An empty Bank 2 plays the bundled DJ Sugar kit. The
+/// files). An empty Bank 2 plays the bundled DJ Sugar kit. A sound picked
+/// in the app for a pad (soundKey) replaces the one from the folder. The
 /// engine reads a bank without locking; a bank replaced by a reload is
 /// kept until the app quits, since the engine may still be playing it.
 class Instruments : public QObject {
@@ -55,6 +56,9 @@ class Instruments : public QObject {
 
     /// The folder of a user bank (1 to 3: Bank 2 to Bank 4)
     static QString bankDirectory(int index);
+
+    /// The sound picked for an instrument of a user bank, a file path
+    static ConfigKey soundKey(int index, int instrument);
 
   signals:
     /// A user bank was loaded, with that many sounds
