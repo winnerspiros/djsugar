@@ -35,6 +35,10 @@ bool hasFullExternalStorageAccess();
 /// asynchronous, the result is only visible after the user returns to Mixxx.
 void requestFullExternalStorageAccess();
 
+/// The shared Music, Download, Podcasts and Recordings folders that exist:
+/// where the phone keeps its songs. Scanned into the library on start.
+QStringList sharedAudioDirectories();
+
 /// Returns the directory Mixxx should offer as the default music directory,
 /// creating it if necessary. Falls back to the app-private music directory if
 /// shared storage is not accessible.

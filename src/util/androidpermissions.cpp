@@ -5,6 +5,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QJniObject>
 #include <QStandardPaths>
 
@@ -97,12 +98,43 @@ void requestFullExternalStorageAccess() {
     QtAndroidPrivate::startActivity(intent, 0);
 }
 
+namespace {
+
+// Environment.getExternalStoragePublicDirectory(): the shared folder the
+// phone's own apps use. Qt's MusicLocation/DownloadLocation are the
+// app-private folders under Android/data, where no user songs live.
+QString publicDirectory(const char* type) {
+    const QJniObject jniType = QJniObject::getStaticObjectField(
+            "android/os/Environment", type, "Ljava/lang/String;");
+    const QJniObject dir = QJniObject::callStaticObjectMethod(
+            "android/os/Environment",
+            "getExternalStoragePublicDirectory",
+            "(Ljava/lang/String;)Ljava/io/File;",
+            jniType.object<jstring>());
+    return dir.isValid()
+            ? dir.callObjectMethod("getAbsolutePath", "()Ljava/lang/String;").toString()
+            : QString();
+}
+
+} // namespace
+
+QStringList sharedAudioDirectories() {
+    QStringList dirs;
+    for (const char* type : {"DIRECTORY_MUSIC",
+                 "DIRECTORY_DOWNLOADS",
+                 "DIRECTORY_PODCASTS",
+                 "DIRECTORY_RECORDINGS"}) {
+        // DIRECTORY_RECORDINGS is API 31+: the field lookup fails before
+        const QString path = publicDirectory(type);
+        if (!path.isEmpty() && QFileInfo::exists(path)) {
+            dirs.append(QDir::cleanPath(path));
+        }
+    }
+    return dirs;
+}
+
 QString defaultMusicDirectory() {
-    // QStandardPaths::MusicLocation resolves to the shared music directory
-    // (usually /storage/emulated/0/Music) when the app may access it and to
-    // the app-private one otherwise, so it works on every API level and on
-    // devices that mount the primary volume elsewhere.
-    QString path = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+    QString path = publicDirectory("DIRECTORY_MUSIC");
     if (path.isEmpty()) {
         path = QStringLiteral("/storage/emulated/0/Music");
     }

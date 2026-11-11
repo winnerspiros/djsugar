@@ -632,7 +632,7 @@ Item {
             candidate = null;
         }
         onPositionChanged: drag => {
-            if (drag.formats.includes("mixxx/player")) {
+            if (drag.formats.includes("mixxx/player") || drag.keys.includes("mixxx/track")) {
                 return;
             }
 

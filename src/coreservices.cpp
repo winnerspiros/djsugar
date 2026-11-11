@@ -666,11 +666,8 @@ void CoreServices::initialize() {
             dir.mkpath(".");
         }
 #elif defined(Q_OS_ANDROID)
-        // "All files access" (browsing outside the media store) is optional
-        // and asked for from the library ("Allow full storage access"), not
-        // here: on the first start this opened the system settings screen
-        // while the UI was still loading, and the UI didn't show on return.
-        QString fd = mixxx::android::defaultMusicDirectory();
+        // The shared audio folders are added below, on every start
+        QString fd;
 #else
         // TODO(XXX) this needs to be smarter, we can't distinguish between an empty
         // path return value (not sure if this is normally possible, but it is
@@ -686,22 +683,9 @@ void CoreServices::initialize() {
                 QFileDialog::ShowDirsOnly);
 #endif
         // request to add directory to database.
-#if defined(Q_OS_ANDROID)
-        if (!fd.isEmpty() && m_pLibrary->requestAddDir(fd, /*silent=*/true)) {
-            musicDirAdded = true;
-        }
-        const QString downloadDir = QStandardPaths::writableLocation(
-                QStandardPaths::DownloadLocation);
-        if (!downloadDir.isEmpty() && downloadDir != fd &&
-                QFileInfo::exists(downloadDir) &&
-                m_pLibrary->requestAddDir(downloadDir, /*silent=*/true)) {
-            musicDirAdded = true;
-        }
-#else
         if (!fd.isEmpty() && m_pLibrary->requestAddDir(fd)) {
             musicDirAdded = true;
         }
-#endif
     }
 
     emit initializationProgressUpdate(60, tr("controllers"));
@@ -738,21 +722,13 @@ void CoreServices::initialize() {
             supportedFileSuffixes.join(","));
 
 #if defined(Q_OS_ANDROID)
-    // Ensure default Android Music and Download directories are registered
-    // even if a previous run started before storage permissions were granted.
+    // Register the shared audio folders, also when a previous run started
+    // before storage permissions were granted or knew fewer folders.
     {
         const QStringList rootDirs =
                 m_pTrackCollectionManager->internalCollection()
                         ->getRootDirStrings();
-        const QStringList defaultDirs = {
-                mixxx::android::defaultMusicDirectory(),
-                QStandardPaths::writableLocation(QStandardPaths::DownloadLocation),
-        };
-        for (const QString& candidate : defaultDirs) {
-            if (candidate.isEmpty() || !QFileInfo::exists(candidate)) {
-                continue;
-            }
-            const QString cleanCandidate = QDir::cleanPath(candidate);
+        for (const QString& cleanCandidate : mixxx::android::sharedAudioDirectories()) {
             bool alreadyPresent = false;
             for (const QString& existing : rootDirs) {
                 if (QDir::cleanPath(existing) == cleanCandidate) {

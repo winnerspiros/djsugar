@@ -205,6 +205,40 @@ Rectangle {
                                     event.accepted = true;
                                 }
                             }
+                            // A dragged track lands in this playlist
+                            DropArea {
+                                id: playlistDrop
+
+                                // The label carries the count and duration
+                                readonly property var playlist: {
+                                    if (!containsDrag || depth !== 1 || root.model.data(index.parent, Qt.UserRole + 1) !== "playlist") {
+                                        return null;
+                                    }
+                                    let best = null;
+                                    for (const p of Mixxx.MobileLibrary.playlists()) {
+                                        if (!p.locked && label.startsWith(p.name) && (!best || p.name.length > best.name.length)) {
+                                            best = p;
+                                        }
+                                    }
+                                    return best;
+                                }
+
+                                anchors.fill: parent
+                                keys: ["mixxx/track"]
+
+                                onDropped: drop => {
+                                    if (playlist && Mixxx.MobileLibrary.addTrackToPlaylist(playlist.id, drop.source.trackUrl)) {
+                                        drop.accept();
+                                    }
+                                }
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "#3300e5ff"
+                                border.color: "#00e5ff"
+                                border.width: 2
+                                visible: playlistDrop.playlist !== null
+                            }
                             Rectangle {
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
