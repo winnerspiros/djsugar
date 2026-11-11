@@ -1,53 +1,30 @@
 #pragma once
 
-#include <QMap>
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/filters.h"
 
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/types.h"
+// Crush: sample-rate and bit-depth reduction in one musical knob, with a
+// tone filter after it and a little dither so quiet passages buzz instead
+// of chopping to silence.
+class BitCrusherGroupState : public DjFxState {
+  public:
+    explicit BitCrusherGroupState(const mixxx::EngineParameters& engineParameters);
 
-struct BitCrusherGroupState : public EffectState {
-    // Default accumulator to 1 so we immediately pick an input value.
-    BitCrusherGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters),
-              hold_l(0),
-              hold_r(0),
-              accumulator(1) {
-    }
-    ~BitCrusherGroupState() override = default;
-
-    CSAMPLE hold_l;
-    CSAMPLE hold_r;
-    // Accumulated fractions of a samplerate period.
-    CSAMPLE accumulator;
+    fxdsp::Svf tone[2];
+    fxdsp::Random random;
+    fxdsp::Smoother amount;
+    float hold[2] = {0.0f, 0.0f};
+    float counter = 0.0f;
 };
 
-class BitCrusherEffect : public EffectProcessorImpl<BitCrusherGroupState> {
-  public:
-    BitCrusherEffect() = default;
-    ~BitCrusherEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            BitCrusherGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatureState) override;
+class BitCrusherEffect : public DjFxEffect<BitCrusherGroupState, BitCrusherEffect> {
+    DJFX_EFFECT_INTERFACE(BitCrusherGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pBitDepthParameter;
-    EngineEffectParameterPointer m_pDownsampleParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(BitCrusherEffect);
+    enum Param {
+        kAmount,
+        kBits,
+        kTone,
+        kMix,
+    };
 };

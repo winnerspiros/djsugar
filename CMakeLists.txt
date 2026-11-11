@@ -1390,6 +1390,7 @@ add_library(
   src/effects/backends/builtin/autogaincontroleffect.cpp
   src/effects/backends/builtin/parametriceqeffect.cpp
   src/effects/backends/builtin/phasereffect.cpp
+  src/effects/backends/builtin/pitchshifteffect.cpp
   src/effects/backends/builtin/reverbeffect.cpp
   src/effects/backends/builtin/threebandbiquadeqeffect.cpp
   src/effects/backends/builtin/spiraleffect.cpp
@@ -3474,6 +3475,7 @@ if(BUILD_TESTING)
       src/test/engineeffectsdelay_test.cpp
       src/test/movinginterquartilemean_test.cpp
       src/test/nativeeffects_test.cpp
+      src/test/fxdsp_test.cpp
       src/test/ringdelaybuffer_test.cpp
       src/test/sampleutiltest.cpp
       src/test/waveform_upgrade_test.cpp
@@ -5418,7 +5420,6 @@ if(RUBBERBAND)
   target_sources(
     mixxx-lib
     PRIVATE
-      src/effects/backends/builtin/pitchshifteffect.cpp
       src/engine/bufferscalers/enginebufferscalerubberband.cpp
       src/engine/bufferscalers/rubberbandwrapper.cpp
       src/engine/bufferscalers/rubberbandtask.cpp

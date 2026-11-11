@@ -1,171 +1,133 @@
 #include "effects/backends/builtin/proflangereffect.h"
 
-#include <algorithm>
-#include <cmath>
+namespace {
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
+constexpr float kBaseMs = 12.0f;
+constexpr float kMaxDepthMs = 6.0f;
+constexpr float kBassCrossoverHz = 180.0f;
+// Each voice runs at a slightly different rate so they never line up.
+constexpr float kVoiceRate[ProFlangerGroupState::kVoices] = {1.0f, 1.13f, 0.87f};
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846f
-#endif
+} // namespace
 
 QString ProFlangerEffect::getId() {
     return QStringLiteral("org.mixxx.effects.proflanger");
 }
 
 EffectManifestPointer ProFlangerEffect::getManifest() {
-    auto pManifest = EffectManifestPointer::create();
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Pro Flanger"));
-    pManifest->setAuthor("DJ Sugar");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(
-            QObject::tr("Professional DJ flanger with LFO-modulated delay. "
-                        "Creates the classic 'sweeping jet' effect. "
-                        "Comparable to Rekordbox's Flanger effect."));
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Chorus"),
+            QObject::tr("Chorus"),
+            QObject::tr("Lush three-voice ensemble chorus. Bass stays mono and "
+                        "dry so the low end stays tight."));
 
-    auto pRate = pManifest->addParameter();
-    pRate->setId("rate");
-    pRate->setName(QObject::tr("Rate"));
-    pRate->setShortName(QObject::tr("Rate"));
-    pRate->setDescription(
-            QObject::tr("Speed of the LFO modulation.\n"
-                        "Slow = gentle sweep, Fast = intense flutter."));
-    pRate->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    pRate->setUnitsHint(EffectManifestParameter::UnitsHint::Hertz);
-    pRate->setRange(0.1, 1.0, 10.0);
-
-    auto pDepth = pManifest->addParameter();
-    pDepth->setId("depth");
-    pDepth->setName(QObject::tr("Depth"));
-    pDepth->setShortName(QObject::tr("Depth"));
-    pDepth->setDescription(
-            QObject::tr("Amount of delay modulation.\n"
-                        "Higher = more pronounced sweeping effect."));
-    pDepth->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pDepth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pDepth->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    pDepth->setRange(0.0, 0.5, 1.0);
-
-    auto pFeedback = pManifest->addParameter();
-    pFeedback->setId("feedback");
-    pFeedback->setName(QObject::tr("Feedback"));
-    pFeedback->setShortName(QObject::tr("Fdbk"));
-    pFeedback->setDescription(
-            QObject::tr("Amount of output fed back into input.\n"
-                        "Higher = more intense/resonant effect."));
-    pFeedback->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pFeedback->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pFeedback->setRange(0.0, 0.3, 0.9);
-
-    auto pStereo = pManifest->addParameter();
-    pStereo->setId("stereo");
-    pStereo->setName(QObject::tr("Stereo"));
-    pStereo->setShortName(QObject::tr("Stereo"));
-    pStereo->setDescription(
-            QObject::tr("Stereo mode: on = inverted LFO on right channel for "
-                        "wide stereo effect."));
-    pStereo->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    pStereo->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pStereo->setRange(0.0, 1.0, 1.0);
-
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Level of the chorus voices."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Speed of the modulation."),
+            0.05,
+            0.6,
+            6.0,
+            djfx::Scaler::Logarithmic,
+            djfx::Units::Hertz);
+    djfx::knob(pManifest,
+            QStringLiteral("depth"),
+            QObject::tr("Depth"),
+            QObject::tr("Depth"),
+            QObject::tr("Amount of pitch wobble."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("width"),
+            QObject::tr("Width"),
+            QObject::tr("Width"),
+            QObject::tr("Stereo spread of the voices."),
+            0.0,
+            1.0,
+            1.0);
     return pManifest;
 }
 
-void ProFlangerEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pRateParameter = parameters.value("rate");
-    m_pDepthParameter = parameters.value("depth");
-    m_pFeedbackParameter = parameters.value("feedback");
-    m_pStereoParameter = parameters.value("stereo");
+ProFlangerGroupState::ProFlangerGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    const int length = static_cast<int>(m_sampleRate * (kBaseMs + kMaxDepthMs) * 0.001f) + 16;
+    for (int c = 0; c < 2; ++c) {
+        line[c].allocate(length);
+        crossover[c].setCutoff(kBassCrossoverHz, m_sampleRate);
+    }
+    amount.setTime(0.02f, m_sampleRate);
+    depth.setTime(0.05f, m_sampleRate);
 }
 
 void ProFlangerEffect::processChannel(ProFlangerGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        [[maybe_unused]] const EffectEnableState enableState,
+        const EffectEnableState enableState,
         [[maybe_unused]] const GroupFeatureState& groupFeatures) {
-    const SINT numSamples = engineParameters.samplesPerBuffer();
-    const int chCount = engineParameters.channelCount();
-    const float sampleRate = static_cast<float>(engineParameters.sampleRate());
-
-    float rate = static_cast<float>(m_pRateParameter->value());
-    float depth = static_cast<float>(m_pDepthParameter->value());
-    float feedback = static_cast<float>(m_pFeedbackParameter->value());
-    bool stereo = m_pStereoParameter->value() > 0.5f;
-
-    // Smooth parameters
-    float smoothRate = pState->prev_rate + 0.01f * (rate - pState->prev_rate);
-    float smoothDepth =
-            pState->prev_depth + 0.01f * (depth - pState->prev_depth);
-    float smoothFeedback =
-            pState->prev_feedback + 0.01f * (feedback - pState->prev_feedback);
-    pState->prev_rate = smoothRate;
-    pState->prev_depth = smoothDepth;
-    pState->prev_feedback = smoothFeedback;
-
-    // LFO phase increment
-    float phaseInc = (2.0f * 3.14159265f * smoothRate) / sampleRate;
-
-    // Base delay in samples (0.5ms to 5ms range for flanger)
-    float baseDelayMs = 1.0f;
-    float modDepthMs = 4.0f * smoothDepth;
-    float baseDelaySamples = baseDelayMs * sampleRate * 0.001f;
-
-    for (SINT i = 0; i < numSamples; ++i) {
-        int ch = i % chCount;
-
-        // Write to delay buffer
-        pState->delay_buf[pState->write_position] = pInput[i];
-
-        // Compute LFO value (sine wave)
-        float lfo;
-        if (stereo && ch == 1) {
-            // Inverted LFO for stereo channel
-            lfo = -std::sin(pState->lfo_phase);
-        } else {
-            lfo = std::sin(pState->lfo_phase);
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    if (enableState == EffectEnableState::Enabling) {
+        for (int c = 0; c < 2; ++c) {
+            pState->line[c].clear();
+            pState->crossover[c].reset();
         }
+        pState->amount.reset(param(kAmount));
+        pState->depth.reset(param(kDepth));
+    }
+    pState->amount.setTarget(param(kAmount));
+    pState->depth.setTarget(param(kDepth));
+    const float rate = pState->sampleRate();
+    const float lfoHz = param(kRate);
+    const float width = param(kWidth);
+    const float msToSamples = rate * 0.001f;
+    // Voice pan positions, scaled by width: left, center, right.
+    const float pan[ProFlangerGroupState::kVoices] = {-width, 0.0f, width};
 
-        // Compute modulated delay
-        float delaySamples = baseDelaySamples +
-                modDepthMs * sampleRate * 0.001f * (lfo * 0.5f + 0.5f);
+    for (int i = 0; i < frames; ++i) {
+        const float amount = pState->amount.next();
+        const float depth = pState->depth.next() * kMaxDepthMs * msToSamples;
+        pState->jitterPhase += 0.071f / rate;
+        pState->jitterPhase -= std::floor(pState->jitterPhase);
+        const float jitter = 1.0f + 0.15f * std::sin(fxdsp::kTwoPi * pState->jitterPhase);
 
-        // Read from delay buffer with linear interpolation
-        float readPos = pState->write_position - delaySamples;
-        while (readPos < 0) {
-            readPos += ProFlangerGroupState::kMaxDelaySamples;
+        float bass[2];
+        float high[2];
+        for (int c = 0; c < 2; ++c) {
+            const float x = pInput[2 * i + c];
+            bass[c] = pState->crossover[c].lowpass(x);
+            high[c] = x - bass[c];
+            pState->line[c].write(high[c]);
         }
-
-        int readPosInt = static_cast<int>(readPos);
-        float frac = readPos - readPosInt;
-        int readPos2 =
-                (readPosInt + 1) % ProFlangerGroupState::kMaxDelaySamples;
-
-        CSAMPLE delayed = pState->delay_buf[readPosInt] * (1.0f - frac) +
-                pState->delay_buf[readPos2] * frac;
-
-        // Mix with feedback
-        float output = pInput[i] + delayed * smoothFeedback;
-
-        // Write back to delay buffer with feedback
-        pState->delay_buf[pState->write_position] =
-                pInput[i] + delayed * smoothFeedback;
-
-        // Advance write position
-        pState->write_position = (pState->write_position + 1) %
-                ProFlangerGroupState::kMaxDelaySamples;
-
-        // Advance LFO phase
-        pState->lfo_phase += phaseInc;
-        while (pState->lfo_phase > 2.0f * 3.14159265f) {
-            pState->lfo_phase -= 2.0f * 3.14159265f;
+        float wet[2] = {0.0f, 0.0f};
+        for (int v = 0; v < ProFlangerGroupState::kVoices; ++v) {
+            pState->phase[v] += lfoHz * kVoiceRate[v] * jitter / rate;
+            pState->phase[v] -= std::floor(pState->phase[v]);
+            const float mod = fxdsp::lfo(fxdsp::LfoShape::Sine, pState->phase[v]);
+            const float d = kBaseMs * msToSamples + depth * mod;
+            // Each voice reads both channels, panned by its position.
+            const float l = pState->line[0].readHermite(d);
+            const float r = pState->line[1].readHermite(d + 0.37f * msToSamples);
+            const float voice = 0.5f * (l + r);
+            const float gl = std::sqrt(0.5f * (1.0f - pan[v]));
+            const float gr = std::sqrt(0.5f * (1.0f + pan[v]));
+            wet[0] += voice * gl;
+            wet[1] += voice * gr;
         }
-
-        // Output with dry/wet mix controlled by depth
-        pOutput[i] = pInput[i] * (1.0f - smoothDepth * 0.5f) +
-                output * (smoothDepth * 0.5f);
+        for (int c = 0; c < 2; ++c) {
+            const float voices = wet[c] * 0.55f;
+            // Dry highs plus the chorus voices; bass passes untouched.
+            pOutput[2 * i + c] = bass[c] + high[c] * (1.0f - 0.3f * amount) + voices * amount;
+        }
     }
 }

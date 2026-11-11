@@ -1,170 +1,161 @@
 #include "effects/backends/builtin/moogladder4filtereffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "engine/filters/enginefiltermoogladder4.h"
+namespace {
 
-static constexpr double kMinCorner = 0.0003; // 13 Hz @ 44100
-static constexpr double kMaxCorner = 0.5;    // 22050 Hz @ 44100
+enum Mode {
+    kSine,
+    kTriangle,
+    kRampUp,
+    kRampDown,
+    kSquare,
+    kEnvelope,
+};
 
-// static
+} // namespace
+
 QString MoogLadder4FilterEffect::getId() {
-    return "org.mixxx.effects.moogladder4filter";
+    return QStringLiteral("org.mixxx.effects.moogladder4filter");
 }
 
-// static
 EffectManifestPointer MoogLadder4FilterEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Moog Ladder 4 Filter"));
-    pManifest->setShortName(QObject::tr("Moog Filter"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(
-            QObject::tr("A 4-pole Moog ladder filter, based on Antti "
-                        "Houvilainen's non linear digital implementation"));
-    pManifest->setEffectRampsFromDry(true);
-    pManifest->setMetaknobDefault(0.5);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Auto Filter"),
+            QObject::tr("AutoFlt"),
+            QObject::tr("Analog ladder low-pass that sweeps by itself in time with "
+                        "the beat, or opens with the dynamics of the track like "
+                        "an auto-wah."));
 
-    EffectManifestParameterPointer lpf = pManifest->addParameter();
-    lpf->setId("lpf");
-    lpf->setName(QObject::tr("LPF"));
-    lpf->setDescription(QObject::tr("Corner frequency ratio of the low pass filter"));
-    lpf->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    lpf->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    lpf->setDefaultLinkType(EffectManifestParameter::LinkType::LinkedLeft);
-    lpf->setNeutralPointOnScale(1);
-    lpf->setRange(kMinCorner, kMaxCorner, kMaxCorner);
-
-    EffectManifestParameterPointer q = pManifest->addParameter();
-    q->setId("resonance");
-    q->setName(QObject::tr("Resonance"));
-    q->setShortName(QObject::tr("Res"));
-    q->setDescription(QObject::tr("Resonance of the filters. 4 = self oscillating"));
-    q->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    q->setUnitsHint(EffectManifestParameter::UnitsHint::SampleRate);
-    q->setRange(0.0, 1.0, 4.0);
-
-    EffectManifestParameterPointer hpf = pManifest->addParameter();
-    hpf->setId("hpf");
-    hpf->setName(QObject::tr("HPF"));
-    hpf->setDescription(QObject::tr("Corner frequency ratio of the high pass filter"));
-    hpf->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    hpf->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    hpf->setDefaultLinkType(EffectManifestParameter::LinkType::LinkedRight);
-    hpf->setNeutralPointOnScale(0.0);
-    hpf->setRange(kMinCorner, kMinCorner, kMaxCorner);
-
+    djfx::division(pManifest,
+            QStringLiteral("period"),
+            QObject::tr("Rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Length of one sweep in beats."),
+            4.0);
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Depth of the sweep."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("cutoff"),
+            QObject::tr("Cutoff"),
+            QObject::tr("Cutoff"),
+            QObject::tr("Lowest point of the sweep."),
+            0.0,
+            0.25,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("resonance"),
+            QObject::tr("Resonance"),
+            QObject::tr("Res"),
+            QObject::tr("Emphasis at the cutoff; near full it starts to sing."),
+            0.0,
+            0.55,
+            1.0);
+    djfx::choice(pManifest,
+            QStringLiteral("mode"),
+            QObject::tr("Shape"),
+            QObject::tr("Shape"),
+            QObject::tr("Sweep shape, or Envelope to follow the track dynamics."),
+            {QObject::tr("Sine"),
+                    QObject::tr("Triangle"),
+                    QObject::tr("Ramp Up"),
+                    QObject::tr("Ramp Down"),
+                    QObject::tr("Square"),
+                    QObject::tr("Envelope")});
+    djfx::knob(pManifest,
+            QStringLiteral("drive"),
+            QObject::tr("Drive"),
+            QObject::tr("Drive"),
+            QObject::tr("Pushes the ladder into saturation."),
+            0.0,
+            0.3,
+            1.0);
     return pManifest;
 }
 
 MoogLadder4FilterGroupState::MoogLadder4FilterGroupState(
         const mixxx::EngineParameters& engineParameters)
-        : EffectState(engineParameters),
-          m_loFreq(kMaxCorner),
-          m_resonance(0),
-          m_hiFreq(kMinCorner),
-          m_samplerate(engineParameters.sampleRate()) {
-    m_pBuf = SampleUtil::alloc(engineParameters.samplesPerBuffer());
-    m_pLowFilter = new EngineFilterMoogLadder4Low(
-            engineParameters.sampleRate(),
-            m_loFreq * engineParameters.sampleRate(),
-            m_resonance);
-    m_pHighFilter = new EngineFilterMoogLadder4High(
-            engineParameters.sampleRate(),
-            m_hiFreq * engineParameters.sampleRate(),
-            m_resonance);
+        : DjFxState(engineParameters) {
+    envelope.setup(0.004f, 0.15f, m_sampleRate);
+    amount.setTime(0.02f, m_sampleRate);
+    // Smooths the cutoff path: rounds square steps and ramp resets.
+    cutoff.setTime(0.004f, m_sampleRate);
 }
 
-MoogLadder4FilterGroupState::~MoogLadder4FilterGroupState() {
-    SampleUtil::free(m_pBuf);
-    delete m_pLowFilter;
-    delete m_pHighFilter;
-}
-
-void MoogLadder4FilterEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pLPF = parameters.value("lpf");
-    m_pResonance = parameters.value("resonance");
-    m_pHPF = parameters.value("hpf");
-}
-
-void MoogLadder4FilterEffect::processChannel(
-        MoogLadder4FilterGroupState* pState,
+void MoogLadder4FilterEffect::processChannel(MoogLadder4FilterGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
-    Q_UNUSED(groupFeatures);
-
-    double resonance = m_pResonance->value();
-    double hpf;
-    double lpf;
-    if (enableState == EffectEnableState::Disabling) {
-        // Ramp to dry, when disabling, this will ramp from dry when enabling as well
-        hpf = kMinCorner;
-        lpf = kMaxCorner;
-    } else {
-        hpf = m_pHPF->value();
-        lpf = m_pLPF->value();
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    const float base = param(kCutoff);
+    if (enableState == EffectEnableState::Enabling) {
+        pState->ladder[0].reset();
+        pState->ladder[1].reset();
+        pState->envelope.reset();
+        pState->amount.reset(param(kAmount));
+        pState->cutoff.reset(base);
     }
+    pState->amount.setTarget(param(kAmount));
+    const double period = paramBeats(kRate);
+    const float resonance = param(kResonance);
+    const int mode = paramInt(kMode);
+    const float driveKnob = param(kDrive);
+    const float rate = pState->sampleRate();
 
-    if (pState->m_loFreq != lpf ||
-            pState->m_resonance != resonance ||
-            pState->m_samplerate != engineParameters.sampleRate()) {
-        pState->m_pLowFilter->setParameter(engineParameters.sampleRate(),
-                static_cast<float>(lpf * engineParameters.sampleRate()),
-                static_cast<float>(resonance));
-    }
-
-    if (pState->m_hiFreq != hpf ||
-            pState->m_resonance != resonance ||
-            pState->m_samplerate != engineParameters.sampleRate()) {
-        pState->m_pHighFilter->setParameter(engineParameters.sampleRate(),
-                static_cast<float>(hpf * engineParameters.sampleRate()),
-                static_cast<float>(resonance));
-    }
-
-    const CSAMPLE* pLpfInput = pState->m_pBuf;
-    CSAMPLE* pHpfOutput = pState->m_pBuf;
-    if (lpf >= kMaxCorner && pState->m_loFreq >= kMaxCorner) {
-        // Lpf disabled Hpf can write directly to output
-        pHpfOutput = pOutput;
-        pLpfInput = pHpfOutput;
-    }
-
-    if (hpf > kMinCorner) {
-        // hpf enabled, fade-in is handled in the filter when starting from pause
-        pState->m_pHighFilter->process(pInput, pHpfOutput, engineParameters.samplesPerBuffer());
-    } else if (pState->m_hiFreq > kMinCorner) {
-        // hpf disabling
-        pState->m_pHighFilter->processAndPauseFilter(pInput,
-                pHpfOutput,
-                engineParameters.samplesPerBuffer());
-    } else {
-        // paused LP uses input directly
-        pLpfInput = pInput;
-    }
-
-    if (lpf < kMaxCorner) {
-        // lpf enabled, fade-in is handled in the filter when starting from pause
-        pState->m_pLowFilter->process(pLpfInput, pOutput, engineParameters.samplesPerBuffer());
-    } else if (pState->m_loFreq < kMaxCorner) {
-        // hpf disabling
-        pState->m_pLowFilter->processAndPauseFilter(pLpfInput,
-                pOutput,
-                engineParameters.samplesPerBuffer());
-    } else if (pLpfInput == pInput) {
-        // Both disabled
-        if (pOutput != pInput) {
-            // We need to copy pInput pOutput
-            SampleUtil::copy(pOutput, pInput, engineParameters.samplesPerBuffer());
+    for (int i = 0; i < frames; ++i) {
+        const float inL = pInput[2 * i];
+        const float inR = pInput[2 * i + 1];
+        const float phase = pState->clock.tick(period);
+        const float env = pState->envelope.process(0.5f * (inL + inR));
+        float mod;
+        switch (mode) {
+        case kTriangle:
+            mod = fxdsp::lfo(fxdsp::LfoShape::Triangle, phase);
+            break;
+        case kRampUp:
+            mod = fxdsp::lfo(fxdsp::LfoShape::RampUp, phase);
+            break;
+        case kRampDown:
+            mod = fxdsp::lfo(fxdsp::LfoShape::RampDown, phase);
+            break;
+        case kSquare:
+            mod = fxdsp::lfo(fxdsp::LfoShape::SmoothSquare, phase, 0.02f);
+            break;
+        case kEnvelope:
+            mod = fxdsp::clampf(env * 3.0f, 0.0f, 1.0f);
+            break;
+        case kSine:
+        default:
+            mod = fxdsp::lfo(fxdsp::LfoShape::Sine, phase);
+            break;
         }
+        const float amount = pState->amount.next();
+        // At zero amount the filter rests fully open; amount pulls the
+        // resting point down to the cutoff knob and adds the sweep.
+        const float position = fxdsp::lerp(1.0f, base + (1.0f - base) * mod, amount);
+        pState->cutoff.setTarget(position);
+        const float hz = fxdsp::knobToHz(pState->cutoff.next(), 60.0f, 0.47f * rate);
+        const float res = resonance * std::min(1.0f, amount * 3.0f);
+        // Ladder input gain: 0.3 is nearly linear (no coloring at rest),
+        // up to 3.3 saturates hard. It follows amount so a closed effect
+        // is clean.
+        const float drive = 0.3f + 3.0f * driveKnob * amount;
+        pState->ladder[0].setCoeffs(hz, res, rate);
+        pState->ladder[1].setCoeffs(hz, res, rate);
+        const float yL = pState->ladder[0].process(inL, drive);
+        const float yR = pState->ladder[1].process(inR, drive);
+        // A four-pole low-pass even fully open dulls the top octave, so
+        // the first stretch of the amount knob fades in from dry.
+        const float wet = std::min(1.0f, amount * 5.0f);
+        pOutput[2 * i] = fxdsp::lerp(inL, yL, wet);
+        pOutput[2 * i + 1] = fxdsp::lerp(inR, yR, wet);
     }
-
-    pState->m_loFreq = lpf;
-    pState->m_resonance = resonance;
-    pState->m_hiFreq = hpf;
-    pState->m_samplerate = engineParameters.sampleRate();
 }

@@ -1,83 +1,29 @@
 #pragma once
 
-#include <QMap>
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/filters.h"
 
-#include "effects/backends/effectprocessor.h"
-#include "engine/engine.h"
-#include "util/class.h"
-#include "util/samplebuffer.h"
-
-// Professional DJ Compressor
-// Smooth compression for DJ mixing, based on Calf DSP compressor algorithms
-
-class ProCompressorGroupState : public EffectState {
+// Pump: the sidechain-compression "breathing" of dance music, locked to
+// the beat grid. Ducks on every beat and swells back, with a curve shaped
+// like a real compressor release. Can leave the bass alone, or duck only
+// the bass to make room for a new kick in a blend.
+class ProCompressorGroupState : public DjFxState {
   public:
-    ProCompressorGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters) {
-        audioParametersChanged(engineParameters);
-        clear();
-    }
-    ~ProCompressorGroupState() override = default;
+    explicit ProCompressorGroupState(const mixxx::EngineParameters& engineParameters);
 
-    void audioParametersChanged(
-            const mixxx::EngineParameters& engineParameters) {
-        m_sampleRate = engineParameters.sampleRate();
-    };
-
-    void clear() {
-        prev_threshold = 0.0f;
-        prev_ratio = 1.0f;
-        prev_attack = 0.0f;
-        prev_release = 0.0f;
-        prev_makeup = 0.0f;
-        prev_gain = 1.0f;
-        envelope = 0.0f;
-        prev_env[0] = 0.0f;
-        prev_env[1] = 0.0f;
-    };
-
-    float m_sampleRate;
-    float prev_threshold;
-    float prev_ratio;
-    float prev_attack;
-    float prev_release;
-    float prev_makeup;
-    float prev_gain;
-    float envelope;
-    float prev_env[2];
+    fxdsp::OnePole crossover[2];
+    fxdsp::Smoother depth;
+    fxdsp::Smoother gain;
 };
 
-class ProCompressorEffect
-        : public EffectProcessorImpl<ProCompressorGroupState> {
-  public:
-    ProCompressorEffect() = default;
-    ~ProCompressorEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters)
-            override;
-
-    void processChannel(ProCompressorGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class ProCompressorEffect : public DjFxEffect<ProCompressorGroupState, ProCompressorEffect> {
+    DJFX_EFFECT_INTERFACE(ProCompressorGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pThresholdParameter;
-    EngineEffectParameterPointer m_pRatioParameter;
-    EngineEffectParameterPointer m_pAttackParameter;
-    EngineEffectParameterPointer m_pReleaseParameter;
-    EngineEffectParameterPointer m_pMakeupParameter;
-    EngineEffectParameterPointer m_pDryWetParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(ProCompressorEffect);
+    enum Param {
+        kRate,
+        kDepth,
+        kRelease,
+        kBand,
+    };
 };

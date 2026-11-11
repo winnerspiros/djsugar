@@ -1,75 +1,110 @@
 #include "effects/backends/builtin/whitenoiseeffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/rampingvalue.h"
-
-namespace {
-const QString dryWetParameterId = QStringLiteral("dry_wet");
-} // anonymous namespace
-
-// static
 QString WhiteNoiseEffect::getId() {
     return QStringLiteral("org.mixxx.effects.whitenoise");
 }
 
-// static
 EffectManifestPointer WhiteNoiseEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("White Noise"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr("Mix white noise with the input signal"));
-    pManifest->setEffectRampsFromDry(true);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Noise"),
+            QObject::tr("Noise"),
+            QObject::tr("Filtered stereo noise for risers and transitions. Can "
+                        "breathe with the groove of the track."));
 
-    // This is dry/wet parameter
-    EffectManifestParameterPointer drywet = pManifest->addParameter();
-    drywet->setId(dryWetParameterId);
-    drywet->setName(QObject::tr("Dry/Wet"));
-    drywet->setDescription(QObject::tr("Crossfade the noise with the dry signal"));
-    drywet->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    drywet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    drywet->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    drywet->setRange(0, 1, 1);
-
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Noise level."),
+            0.0,
+            0.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("color"),
+            QObject::tr("Color"),
+            QObject::tr("Color"),
+            QObject::tr("Left: low-pass from rumble up. Right: high-pass to a thin "
+                        "hiss. Sweep it for risers."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("resonance"),
+            QObject::tr("Resonance"),
+            QObject::tr("Res"),
+            QObject::tr("Whistle at the filter frequency, a wind-like sweep."),
+            0.0,
+            0.3,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("follow"),
+            QObject::tr("Follow"),
+            QObject::tr("Follow"),
+            QObject::tr("How much the noise follows the loudness of the track."),
+            0.0,
+            0.5,
+            1.0);
     return pManifest;
 }
 
-void WhiteNoiseEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pDryWetParameter = parameters.value(dryWetParameterId);
+WhiteNoiseGroupState::WhiteNoiseGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters),
+          random{fxdsp::Random(0x1234567u), fxdsp::Random(0x7654321u)} {
+    envelope.setup(0.002f, 0.12f, m_sampleRate);
+    amount.setTime(0.02f, m_sampleRate);
+    color.setTime(0.03f, m_sampleRate);
 }
 
-void WhiteNoiseEffect::processChannel(
-        WhiteNoiseGroupState* pState,
+void WhiteNoiseEffect::processChannel(WhiteNoiseGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
-    Q_UNUSED(groupFeatures);
-
-    WhiteNoiseGroupState& gs = *pState;
-
-    CSAMPLE drywet = static_cast<CSAMPLE>(m_pDryWetParameter->value());
-    RampingValue<CSAMPLE_GAIN> drywet_ramping_value(
-            gs.previous_drywet, drywet, engineParameters.samplesPerBuffer());
-
-    std::uniform_real_distribution<> r_distributor(-1.0, 1.0);
-
-    for (SINT i = 0; i < engineParameters.samplesPerBuffer(); i++) {
-        CSAMPLE_GAIN drywet_ramped = drywet_ramping_value.getNth(i);
-
-        float noise = static_cast<float>(
-                r_distributor(gs.gen));
-
-        pOutput[i] = pInput[i] * (1 - drywet_ramped) + noise * drywet_ramped;
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    if (enableState == EffectEnableState::Enabling) {
+        for (int c = 0; c < 2; ++c) {
+            pState->filter[c].reset();
+            for (float& p : pState->pink[c]) {
+                p = 0.0f;
+            }
+        }
+        pState->envelope.reset();
+        pState->amount.reset(param(kAmount));
+        pState->color.reset(param(kColor));
     }
+    pState->amount.setTarget(param(kAmount));
+    pState->color.setTarget(param(kColor));
+    const float q = 0.707f + 8.0f * param(kResonance) * param(kResonance);
+    const float follow = param(kFollow);
+    const float rate = pState->sampleRate();
 
-    if (enableState == EffectEnableState::Disabling) {
-        gs.previous_drywet = 0;
-    } else {
-        gs.previous_drywet = drywet;
+    for (int i = 0; i < frames; ++i) {
+        const float amount = pState->amount.next();
+        const float color = pState->color.next();
+        const float env = pState->envelope.process(0.5f * (pInput[2 * i] + pInput[2 * i + 1]));
+        // Follow: noise level tracks the track envelope (scaled so a loud
+        // track gives about full level).
+        const float level = amount * amount * 0.5f *
+                fxdsp::lerp(1.0f, fxdsp::clampf(env * 2.0f, 0.0f, 1.0f), follow);
+        const bool lowPass = color < 0.5f;
+        const float hz = lowPass ? fxdsp::knobToHz(color * 2.0f, 80.0f, 20000.0f)
+                                 : fxdsp::knobToHz((color - 0.5f) * 2.0f, 20.0f, 12000.0f);
+        for (int c = 0; c < 2; ++c) {
+            // Pink-ish noise (three one-pole stages, Paul Kellet's economy
+            // filter) sounds fuller than white for risers.
+            const float white = pState->random[c].bipolar();
+            float* p = pState->pink[c];
+            p[0] = 0.99765f * p[0] + white * 0.0990460f;
+            p[1] = 0.96300f * p[1] + white * 0.2965164f;
+            p[2] = 0.57000f * p[2] + white * 1.0526913f;
+            const float noise = 0.25f * (p[0] + p[1] + p[2] + white * 0.1848f);
+            pState->filter[c].setCoeffs(hz, q, rate);
+            const auto out = pState->filter[c].process(noise);
+            // Resonance raises the peak; normalize so level stays usable.
+            const float shaped = (lowPass ? out.lp : out.hp) / std::sqrt(q / 0.707f);
+            pOutput[2 * i + c] = pInput[2 * i + c] + shaped * level;
+        }
     }
 }

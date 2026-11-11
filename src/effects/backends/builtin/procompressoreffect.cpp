@@ -1,24 +1,12 @@
 #include "effects/backends/builtin/procompressoreffect.h"
 
-#include <algorithm>
-#include <cmath>
-
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846f
-#endif
-
 namespace {
 
-float db2ratio(float db) {
-    return std::pow(10.0f, db / 20.0f);
-}
-
-float ratio2db(float ratio) {
-    return 20.0f * std::log10(ratio);
-}
+enum Band {
+    kFull,
+    kAboveBass,
+    kBassOnly,
+};
 
 } // namespace
 
@@ -27,157 +15,103 @@ QString ProCompressorEffect::getId() {
 }
 
 EffectManifestPointer ProCompressorEffect::getManifest() {
-    auto pManifest = EffectManifestPointer::create();
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Pro Compressor"));
-    pManifest->setAuthor("DJ Sugar");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Professional DJ compressor for smooth mixing. "
-            "Reduces dynamic range by compressing signals above a threshold. "
-            "Comparable to Rekordbox's Compressor effect."));
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Pump"),
+            QObject::tr("Pump"),
+            QObject::tr("Beat-locked sidechain pumping. Ducks on every beat and "
+                        "swells back like a compressor keyed by a kick."));
 
-    auto pThreshold = pManifest->addParameter();
-    pThreshold->setId("threshold");
-    pThreshold->setName(QObject::tr("Threshold"));
-    pThreshold->setShortName(QObject::tr("Thresh"));
-    pThreshold->setDescription(
-            QObject::tr("Level above which compression begins.\n"
-                        "Lower values = more compression."));
-    pThreshold->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pThreshold->setUnitsHint(EffectManifestParameter::UnitsHint::Decibel);
-    pThreshold->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    pThreshold->setRange(-30.0, -12.0, 0.0);
-
-    auto pRatio = pManifest->addParameter();
-    pRatio->setId("ratio");
-    pRatio->setName(QObject::tr("Ratio"));
-    pRatio->setShortName(QObject::tr("Ratio"));
-    pRatio->setDescription(
-            QObject::tr("Amount of compression applied.\n"
-                        "1:1 = no compression, 20:1 = extreme limiting."));
-    pRatio->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pRatio->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pRatio->setRange(1.0, 4.0, 20.0);
-
-    auto pAttack = pManifest->addParameter();
-    pAttack->setId("attack");
-    pAttack->setName(QObject::tr("Attack"));
-    pAttack->setShortName(QObject::tr("Attack"));
-    pAttack->setDescription(
-            QObject::tr("How quickly the compressor engages.\n"
-                        "Fast = punchy, Slow = smooth."));
-    pAttack->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    pAttack->setUnitsHint(EffectManifestParameter::UnitsHint::Millisecond);
-    pAttack->setRange(1.0, 10.0, 100.0);
-
-    auto pRelease = pManifest->addParameter();
-    pRelease->setId("release");
-    pRelease->setName(QObject::tr("Release"));
-    pRelease->setShortName(QObject::tr("Release"));
-    pRelease->setDescription(
-            QObject::tr("How quickly the compressor releases.\n"
-                        "Fast = pumping, Slow = smooth."));
-    pRelease->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    pRelease->setUnitsHint(EffectManifestParameter::UnitsHint::Millisecond);
-    pRelease->setRange(10.0, 100.0, 1000.0);
-
-    auto pMakeup = pManifest->addParameter();
-    pMakeup->setId("makeup");
-    pMakeup->setName(QObject::tr("Makeup"));
-    pMakeup->setShortName(QObject::tr("Makeup"));
-    pMakeup->setDescription(QObject::tr(
-            "Gain added after compression to compensate for level reduction."));
-    pMakeup->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pMakeup->setUnitsHint(EffectManifestParameter::UnitsHint::Decibel);
-    pMakeup->setRange(0.0, 6.0, 24.0);
-
-    auto pDryWet = pManifest->addParameter();
-    pDryWet->setId("drywet");
-    pDryWet->setName(QObject::tr("Dry/Wet"));
-    pDryWet->setShortName(QObject::tr("D/W"));
-    pDryWet->setDescription(QObject::tr(
-            "Mix between dry (uncompressed) and wet (compressed) signal."));
-    pDryWet->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pDryWet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pDryWet->setRange(0.0, 1.0, 1.0);
-
+    djfx::division(pManifest,
+            QStringLiteral("period"),
+            QObject::tr("Rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Pump every this many beats."),
+            1.0);
+    auto pDepth = djfx::knob(pManifest,
+            QStringLiteral("depth"),
+            QObject::tr("Depth"),
+            QObject::tr("Depth"),
+            QObject::tr("How far the track ducks."),
+            0.0,
+            0.6,
+            1.0);
+    djfx::linkToMetaknob(pDepth);
+    djfx::knob(pManifest,
+            QStringLiteral("release"),
+            QObject::tr("Release"),
+            QObject::tr("Release"),
+            QObject::tr("How much of the beat the swell back takes."),
+            0.1,
+            0.6,
+            1.0);
+    djfx::choice(pManifest,
+            QStringLiteral("band"),
+            QObject::tr("Band"),
+            QObject::tr("Band"),
+            QObject::tr("Full track, everything above the bass, or only the bass "
+                        "(clears room for the other deck's kick)."),
+            {QObject::tr("Full"), QObject::tr("Above Bass"), QObject::tr("Bass Only")});
     return pManifest;
 }
 
-void ProCompressorEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pThresholdParameter = parameters.value("threshold");
-    m_pRatioParameter = parameters.value("ratio");
-    m_pAttackParameter = parameters.value("attack");
-    m_pReleaseParameter = parameters.value("release");
-    m_pMakeupParameter = parameters.value("makeup");
-    m_pDryWetParameter = parameters.value("drywet");
+ProCompressorGroupState::ProCompressorGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    for (auto& f : crossover) {
+        f.setCutoff(160.0f, m_sampleRate);
+    }
+    depth.setTime(0.02f, m_sampleRate);
+    // Attack of the duck: fast but not a click.
+    gain.setTime(0.003f, m_sampleRate);
 }
 
 void ProCompressorEffect::processChannel(ProCompressorGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        [[maybe_unused]] const EffectEnableState enableState,
-        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
-    const SINT numSamples = engineParameters.samplesPerBuffer();
-    const float sampleRate = static_cast<float>(engineParameters.sampleRate());
+        const EffectEnableState enableState,
+        const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    if (enableState == EffectEnableState::Enabling) {
+        pState->crossover[0].reset();
+        pState->crossover[1].reset();
+        pState->depth.reset(param(kDepth));
+        pState->gain.reset(1.0f);
+    }
+    pState->depth.setTarget(param(kDepth));
+    const double period = paramBeats(kRate);
+    const float release = param(kRelease);
+    const int band = std::clamp(paramInt(kBand), 0, 2);
 
-    float threshold = static_cast<float>(m_pThresholdParameter->value());
-    float ratio = static_cast<float>(m_pRatioParameter->value());
-    float attack = static_cast<float>(m_pAttackParameter->value());
-    float release = static_cast<float>(m_pReleaseParameter->value());
-    float makeup = static_cast<float>(m_pMakeupParameter->value());
-    float dryWet = static_cast<float>(m_pDryWetParameter->value());
-
-    // Attack/release coefficients
-    float attackCoeff = std::exp(-1.0f / (attack * 0.001f * sampleRate));
-    float releaseCoeff = std::exp(-1.0f / (release * 0.001f * sampleRate));
-
-    // Makeup gain linear
-    float makeupLin = db2ratio(makeup);
-
-    // Smooth parameter changes
-    float smoothThreshold = pState->prev_threshold +
-            0.001f * (threshold - pState->prev_threshold);
-    float smoothRatio =
-            pState->prev_ratio + 0.001f * (ratio - pState->prev_ratio);
-    pState->prev_threshold = smoothThreshold;
-    pState->prev_ratio = smoothRatio;
-
-    float thresholdSmoothLin = db2ratio(smoothThreshold);
-
-    for (SINT i = 0; i < numSamples; ++i) {
-        // Compute input level (peak detection)
-        float inputAbs = std::abs(pInput[i]);
-
-        // Envelope follower
-        float targetEnv = inputAbs;
-        if (targetEnv > pState->envelope) {
-            pState->envelope = attackCoeff * pState->envelope +
-                    (1.0f - attackCoeff) * targetEnv;
-        } else {
-            pState->envelope = releaseCoeff * pState->envelope +
-                    (1.0f - releaseCoeff) * targetEnv;
+    for (int i = 0; i < frames; ++i) {
+        const float phase = pState->clock.tick(period);
+        // Duck curve: held down briefly after the beat, then an
+        // exponential-feeling recovery (smoothstep of a power curve) that
+        // completes at `release` of the period.
+        const float t = fxdsp::clampf((phase - 0.02f) / release, 0.0f, 1.0f);
+        const float shaped = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+        const float depth = pState->depth.next();
+        // Depth to -30 dB at full, in dB so it feels even.
+        pState->gain.setTarget(fxdsp::dbToGain(-30.0f * depth * (1.0f - shaped)));
+        const float g = pState->gain.next();
+        for (int c = 0; c < 2; ++c) {
+            const float x = pInput[2 * i + c];
+            const float low = pState->crossover[c].lowpass(x);
+            const float high = x - low;
+            float y;
+            switch (band) {
+            case kAboveBass:
+                y = low + high * g;
+                break;
+            case kBassOnly:
+                y = low * g + high;
+                break;
+            case kFull:
+            default:
+                y = x * g;
+                break;
+            }
+            pOutput[2 * i + c] = y;
         }
-
-        // Gain computer
-        float gain = 1.0f;
-        if (pState->envelope > thresholdSmoothLin) {
-            float envDB = ratio2db(pState->envelope);
-            float compressedDB =
-                    smoothThreshold + (envDB - smoothThreshold) / smoothRatio;
-            gain = db2ratio(compressedDB - envDB);
-        }
-
-        // Smooth gain
-        pState->prev_gain =
-                pState->prev_gain + 0.0001f * (gain - pState->prev_gain);
-
-        // Apply compression with makeup gain and dry/wet mix
-        float wet = pInput[i] * pState->prev_gain * makeupLin;
-        float dry = pInput[i];
-        pOutput[i] = dry * (1.0f - dryWet) + wet * dryWet;
     }
 }

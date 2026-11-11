@@ -1,132 +1,154 @@
 #include "effects/backends/builtin/distortioneffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-
 namespace {
-inline CSAMPLE tanh_approx(CSAMPLE input) {
-    return input / (1 + input * input / (3 + input * input / 5));
-}
+
+enum Mode {
+    kTube,
+    kTape,
+    kClip,
+    kFold,
+};
+
 } // namespace
 
-// static
 QString DistortionEffect::getId() {
-    return "org.mixxx.effects.distortion";
+    return QStringLiteral("org.mixxx.effects.distortion");
 }
 
-//static
 EffectManifestPointer DistortionEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest);
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Distortion"));
-    pManifest->setShortName(QObject::tr("Distortion"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(
-            "A Distortion effect with several modes ranging from soft to hard "
-            "clipping.");
-    pManifest->setEffectRampsFromDry(true);
-    pManifest->setMetaknobDefault(0.0);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Saturator"),
+            QObject::tr("Saturate"),
+            QObject::tr("Anti-aliased saturation: warm tube, tape, hard clip or "
+                        "wavefolder. Level stays matched while the drive adds "
+                        "grit."));
 
-    EffectManifestParameterPointer mode = pManifest->addParameter();
-    mode->setId("mode");
-    mode->setName(QObject::tr("Hard Clip"));
-    mode->setShortName(QObject::tr("Hard"));
-    mode->setDescription(QObject::tr(
-            "Switches between soft saturation and hard clipping."));
-    mode->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    mode->setRange(0, 0, 2);
-    mode->appendStep(qMakePair(QObject::tr("Soft Clipping"), Mode::SoftClipping));
-    mode->appendStep(qMakePair(QObject::tr("Hard Clipping"), Mode::HardClipping));
-
-    EffectManifestParameterPointer drive = pManifest->addParameter();
-    drive->setId("drive");
-    drive->setName(QObject::tr("Drive"));
-    drive->setShortName(QObject::tr("Drive"));
-    drive->setDescription(QObject::tr(
-            "The amount of amplification "
-            "applied to the audio signal. At higher levels the audio will be more distored."));
-    drive->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    drive->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    drive->setNeutralPointOnScale(0);
-    drive->setRange(0, 0, 1);
-
+    djfx::choice(pManifest,
+            QStringLiteral("mode"),
+            QObject::tr("Mode"),
+            QObject::tr("Mode"),
+            QObject::tr("Tube is warm and asymmetric, Tape is soft and "
+                        "compressing, Clip is hard and loud, Fold is metallic."),
+            {QObject::tr("Tube"), QObject::tr("Tape"), QObject::tr("Clip"), QObject::tr("Fold")});
+    auto pDrive = djfx::knob(pManifest,
+            QStringLiteral("drive"),
+            QObject::tr("Drive"),
+            QObject::tr("Drive"),
+            QObject::tr("Amount of saturation."),
+            0.0,
+            0.0,
+            1.0);
+    djfx::linkToMetaknob(pDrive);
+    djfx::knob(pManifest,
+            QStringLiteral("tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Brightness after the saturator."),
+            0.0,
+            0.7,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Blend with the clean track, for parallel saturation."),
+            0.0,
+            1.0,
+            1.0);
     return pManifest;
 }
 
-DistortionGroupState::DistortionGroupState(
-        const mixxx::EngineParameters& engineParameters)
-        : EffectState(engineParameters),
-          m_driveGain(1),
-          m_crossfadeParameter(0),
-          m_samplerate(engineParameters.sampleRate()),
-          m_previousMakeUpGain(1),
-          m_previousNormalizationGain(1) {
-}
-struct DistortionEffect::SoftClippingParameters {
-    static constexpr const CSAMPLE normalizationLevel = 0.2f;
-    static constexpr const CSAMPLE crossfadeEndParam = 0.2f;
-    static constexpr const CSAMPLE_GAIN maxDriveGain = 25.f;
-
-    static CSAMPLE process(CSAMPLE sample) {
-        return tanh_approx(sample);
+DistortionGroupState::DistortionGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    for (int c = 0; c < 2; ++c) {
+        dc[c].setup(m_sampleRate);
+        preEmphasis[c].setCutoff(700.0f, m_sampleRate);
     }
-};
-
-struct DistortionEffect::HardClippingParameters {
-    static constexpr const CSAMPLE normalizationLevel = 0.6f;
-    static constexpr const CSAMPLE crossfadeEndParam = 0.5f;
-    static constexpr const CSAMPLE_GAIN maxDriveGain = 30.f;
-
-    static CSAMPLE process(CSAMPLE sample) {
-        return CSAMPLE_clamp(sample);
-    }
-};
-
-void DistortionEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pMode = parameters.value("mode");
-    m_pDrive = parameters.value("drive");
+    drive.setTime(0.03f, m_sampleRate);
+    mix.setTime(0.03f, m_sampleRate);
+    powerCoeff = fxdsp::onePoleCoeff(0.3f, m_sampleRate);
+    makeup.setTime(0.05f, m_sampleRate);
 }
 
-void DistortionEffect::processChannel(
-        DistortionGroupState* pState,
+void DistortionEffect::processChannel(DistortionGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
-    Q_UNUSED(groupFeatures);
-    Q_UNUSED(enableState);
-
-    // TODO: anti-aliasing
-
-    SINT numSamples = engineParameters.samplesPerBuffer();
-    CSAMPLE driveParam = static_cast<CSAMPLE>(m_pDrive->value());
-
-    if (driveParam < 0.01) {
-        if (pOutput != pInput) {
-            SampleUtil::copy(pOutput, pInput, numSamples);
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    if (enableState == EffectEnableState::Enabling) {
+        for (int c = 0; c < 2; ++c) {
+            pState->tanh[c].reset();
+            pState->clip[c].reset();
+            pState->fold[c].reset();
+            pState->dc[c].reset();
+            pState->tone[c].reset();
+            pState->preEmphasis[c].reset();
         }
-        return;
+        pState->drive.reset(param(kDrive));
+        pState->mix.reset(param(kMix));
+        pState->inputPower = 0.0f;
+        pState->outputPower = 0.0f;
+        pState->makeup.reset(1.0f);
+    }
+    pState->drive.setTarget(param(kDrive));
+    pState->mix.setTarget(param(kMix));
+    const int mode = std::clamp(paramInt(kMode), 0, 3);
+    const float toneHz = fxdsp::knobToHz(param(kTone), 1500.0f, 20000.0f);
+    for (auto& f : pState->tone) {
+        f.setCoeffs(toneHz, 0.6f, pState->sampleRate());
     }
 
-    switch (m_pMode->toInt()) {
-    case SoftClipping:
-        processDistortion<SoftClippingParameters>(
-                driveParam, pState, pOutput, pInput, engineParameters);
-        break;
-
-    case HardClipping:
-        processDistortion<HardClippingParameters>(
-                driveParam, pState, pOutput, pInput, engineParameters);
-        break;
-
-    default:
-        // We should never enter here, but we act as a noop effect just in case.
-        if (pOutput != pInput) {
-            SampleUtil::copy(pOutput, pInput, numSamples);
+    for (int i = 0; i < frames; ++i) {
+        const float drive = pState->drive.next();
+        const float mix = pState->mix.next() * std::min(1.0f, drive * 20.0f);
+        // 0 dB to +36 dB of drive, exponential feel.
+        const float gain = fxdsp::dbToGain(36.0f * drive);
+        const float makeup = pState->makeup.next();
+        float shaped[2];
+        for (int c = 0; c < 2; ++c) {
+            const float x = pInput[2 * i + c];
+            float y;
+            switch (mode) {
+            case kTape: {
+                // Tape: saturation is mostly in the mids and highs; bass
+                // passes a bit cleaner.
+                const float low = pState->preEmphasis[c].lowpass(x);
+                y = low * 0.6f + pState->tanh[c].process((x - 0.6f * low) * gain);
+                break;
+            }
+            case kClip:
+                y = pState->clip[c].process(x * gain);
+                break;
+            case kFold:
+                y = pState->fold[c].process(x * gain * 1.57f);
+                break;
+            case kTube:
+            default:
+                // A DC bias before tanh makes even harmonics; the DC
+                // blocker removes the offset afterwards.
+                y = pState->tanh[c].process(x * gain + 0.2f * drive) - 0.2f * drive;
+                break;
+            }
+            y = pState->dc[c].process(y);
+            shaped[c] = pState->tone[c].process(y).lp;
         }
-        return;
+        // Level match: the saturated signal follows the loudness of the
+        // input, so the knob changes the character, not the volume.
+        const float k = pState->powerCoeff;
+        const float xl = pInput[2 * i];
+        const float xr = pInput[2 * i + 1];
+        pState->inputPower = fxdsp::flush(
+                k * pState->inputPower + (1.0f - k) * 0.5f * (xl * xl + xr * xr));
+        pState->outputPower = fxdsp::flush(k * pState->outputPower +
+                (1.0f - k) * 0.5f * (shaped[0] * shaped[0] + shaped[1] * shaped[1]));
+        if (pState->outputPower > 1e-8f) {
+            pState->makeup.setTarget(fxdsp::clampf(
+                    std::sqrt(pState->inputPower / pState->outputPower), 0.05f, 2.0f));
+        }
+        for (int c = 0; c < 2; ++c) {
+            pOutput[2 * i + c] = fxdsp::lerp(pInput[2 * i + c], shaped[c] * makeup, mix);
+        }
     }
 }

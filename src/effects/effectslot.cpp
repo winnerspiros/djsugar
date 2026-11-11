@@ -264,6 +264,12 @@ void EffectSlot::loadEffectFromPreset(const EffectPresetPointer pPreset) {
         loadEffectInner(nullptr, nullptr, true);
         return;
     }
+    if (!pPreset->matchesVersionOf(pManifest)) {
+        // Saved by an older version of the effect: its values may mean
+        // something else now, so start from the current defaults.
+        loadEffectWithDefaults(pManifest);
+        return;
+    }
     loadEffectInner(pManifest, pPreset, true);
 }
 
@@ -347,6 +353,22 @@ void EffectSlot::loadEffectInner(const EffectManifestPointer pManifest,
                         m_loadedParameters[parameterType].append(pParameter);
                         break;
                     }
+                }
+            }
+            // Parameters the preset does not mention (saved by an older
+            // version of the effect) are shown after the known ones, so a
+            // stale preset never hides knobs.
+            for (const auto& pParameter : m_allParameters.value(parameterType)) {
+                const QString& id = pParameter->manifest()->id();
+                bool mentioned = false;
+                for (const auto& parameterPreset : pEffectPreset->getParameterPresets()) {
+                    if (parameterPreset.id() == id) {
+                        mentioned = true;
+                        break;
+                    }
+                }
+                if (!mentioned) {
+                    m_loadedParameters[parameterType].append(pParameter);
                 }
             }
         }

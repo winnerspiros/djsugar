@@ -1,232 +1,145 @@
 #include "effects/backends/builtin/flangereffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/math.h"
-
 namespace {
 
-// Gain correction was verified with replay gain and default parameters
-constexpr CSAMPLE kGainCorrection = 1.41253754f; // 3 dB
+// Center of the sweep: the dry path is delayed by this much, so the wet
+// delay sweeping 0..2x passes through zero relative delay.
+constexpr float kCenterMs = 4.0f;
 
-inline CSAMPLE tanh_approx(CSAMPLE input) {
-    // return tanhf(input); // 142ns for process;
-    return input / (1 + input * input / (3 + input * input / 5)); // 119ns for process
-}
 } // namespace
 
-// static
 QString FlangerEffect::getId() {
-    return "org.mixxx.effects.flanger";
+    return QStringLiteral("org.mixxx.effects.flanger");
 }
 
-// static
 EffectManifestPointer FlangerEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Flanger"));
-    pManifest->setShortName(QObject::tr("Flanger"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(
-            QObject::tr("Mixes the input with a delayed, pitch modulated copy "
-                        "of itself to create comb filtering"));
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Flanger"),
+            QObject::tr("Flanger"),
+            QObject::tr("Beat-synced through-zero flanger with the deep jet sweep "
+                        "of tape flanging. Feedback left of center sounds "
+                        "hollow, right of center metallic."));
 
-    EffectManifestParameterPointer speed = pManifest->addParameter();
-    speed->setId("speed");
-    speed->setName(QObject::tr("Speed"));
-    speed->setShortName(QObject::tr("Speed"));
-    speed->setDescription(QObject::tr(
-            "Speed of the LFO (low frequency oscillator)\n"
-            "32 - 1/4 beats rounded to 1/2 beat per LFO cycle if tempo is detected\n"
-            "1/32 - 4 Hz if no tempo is detected"));
-    speed->setValueScaler(EffectManifestParameter::ValueScaler::LogarithmicInverse);
-    speed->setRange(kMinLfoBeats, 8, kMaxLfoBeats);
-
-    EffectManifestParameterPointer width = pManifest->addParameter();
-    width->setId("width");
-    width->setName(QObject::tr("Width"));
-    width->setShortName(QObject::tr("Width"));
-    width->setDescription(QObject::tr(
-            "Delay amplitude of the LFO (low frequency oscillator)"));
-    width->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    width->setUnitsHint(EffectManifestParameter::UnitsHint::Millisecond);
-    width->setRange(0.0, kMaxLfoWidthMs / 2, kMaxLfoWidthMs);
-
-    EffectManifestParameterPointer manual = pManifest->addParameter();
-    manual->setId("manual");
-    manual->setName(QObject::tr("Manual"));
-    manual->setShortName(QObject::tr("Manual"));
-    manual->setDescription(QObject::tr(
-            "Delay offset of the LFO (low frequency oscillator).\n"
-            "With width at zero, this allows for manually sweeping over the entire delay range."));
-    manual->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    manual->setUnitsHint(EffectManifestParameter::UnitsHint::Millisecond);
-    manual->setRange(kMinDelayMs, kCenterDelayMs, kMaxDelayMs);
-
-    EffectManifestParameterPointer regen = pManifest->addParameter();
-    regen->setId("regen");
-    regen->setName(QObject::tr("Regeneration"));
-    regen->setShortName(QObject::tr("Regen"));
-    regen->setDescription(QObject::tr(
-            "How much of the delay output is feed back into the input"));
-    regen->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    regen->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    regen->setRange(0.0, 0.25, 1.0);
-
-    EffectManifestParameterPointer mix = pManifest->addParameter();
-    mix->setId("mix");
-    mix->setName(QObject::tr("Mix"));
-    mix->setShortName(QObject::tr("Mix"));
-    mix->setDescription(QObject::tr(
-            "Intensity of the effect"));
-    mix->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    mix->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    mix->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    mix->setRange(0.0, 1.0, 1.0);
-
-    EffectManifestParameterPointer triplet = pManifest->addParameter();
-    triplet->setId("triplet");
-    triplet->setName(QObject::tr("Triplets"));
-    triplet->setShortName(QObject::tr("Triplets"));
-    triplet->setDescription(QObject::tr(
-            "Divide rounded 1/2 beats of the Period parameter by 3."));
-    triplet->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    triplet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    triplet->setRange(0, 0, 1);
-
+    djfx::division(pManifest,
+            QStringLiteral("period"),
+            QObject::tr("Rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Length of one sweep in beats."),
+            16.0);
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Depth of the flanging."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("feedback"),
+            QObject::tr("Feedback"),
+            QObject::tr("Feedback"),
+            QObject::tr("Left: hollow. Right: metallic. Center: plain sweep."),
+            -1.0,
+            0.6,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("depth"),
+            QObject::tr("Sweep"),
+            QObject::tr("Sweep"),
+            QObject::tr("Range of the sweep."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("manual"),
+            QObject::tr("Manual"),
+            QObject::tr("Manual"),
+            QObject::tr("Shifts the sweep. With Sweep at zero, plays the flanger "
+                        "by hand."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("stereo"),
+            QObject::tr("Stereo"),
+            QObject::tr("Stereo"),
+            QObject::tr("Offsets the right channel sweep for width."),
+            0.0,
+            0.25,
+            0.5);
     return pManifest;
 }
 
-void FlangerEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pSpeedParameter = parameters.value("speed");
-    m_pWidthParameter = parameters.value("width");
-    m_pManualParameter = parameters.value("manual");
-    m_pRegenParameter = parameters.value("regen");
-    m_pMixParameter = parameters.value("mix");
-    m_pTripletParameter = parameters.value("triplet");
+FlangerGroupState::FlangerGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    const int length = static_cast<int>(m_sampleRate * kCenterMs * 0.001f * 2.5f) + 8;
+    for (int c = 0; c < 2; ++c) {
+        wet[c].allocate(length);
+        dry[c].allocate(length);
+        dc[c].setup(m_sampleRate);
+    }
+    amount.setTime(0.02f, m_sampleRate);
+    feedback.setTime(0.05f, m_sampleRate);
+    depth.setTime(0.05f, m_sampleRate);
+    manual.setTime(0.03f, m_sampleRate);
 }
 
-void FlangerEffect::processChannel(
-        FlangerGroupState* pState,
+void FlangerEffect::processChannel(FlangerGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
-    double lfoPeriodParameter = m_pSpeedParameter->value();
-    double lfoPeriodFrames;
-    if (groupFeatures.beat_length.has_value()) {
-        // lfoPeriodParameter is a number of beats
-        lfoPeriodParameter = std::max(roundToFraction(lfoPeriodParameter, 2.0), kMinLfoBeats);
-        if (m_pTripletParameter->toBool()) {
-            lfoPeriodParameter /= 3.0;
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    if (enableState == EffectEnableState::Enabling) {
+        for (int c = 0; c < 2; ++c) {
+            pState->wet[c].clear();
+            pState->dry[c].clear();
+            pState->dc[c].reset();
+            pState->last[c] = 0.0f;
         }
-        lfoPeriodFrames = lfoPeriodParameter *
-                groupFeatures.beat_length->seconds *
-                engineParameters.sampleRate();
-    } else {
-        // lfoPeriodParameter is a number of seconds
-        lfoPeriodFrames = std::max(lfoPeriodParameter, kMinLfoBeats) *
-                engineParameters.sampleRate();
+        pState->amount.reset(param(kAmount));
+        pState->feedback.reset(param(kFeedback));
+        pState->depth.reset(param(kDepth));
+        pState->manual.reset(param(kManual));
     }
+    pState->amount.setTarget(param(kAmount));
+    pState->feedback.setTarget(param(kFeedback));
+    pState->depth.setTarget(param(kDepth));
+    pState->manual.setTarget(param(kManual));
+    const double period = paramBeats(kRate);
+    const float stereo = param(kStereo);
+    const float center = kCenterMs * 0.001f * pState->sampleRate();
 
-    // When the period is changed, the position of the sound shouldn't
-    // so time need to be recalculated
-    if (pState->previousPeriodFrames != -1.0) {
-        pState->lfoFrames = static_cast<unsigned int>(
-                lfoPeriodFrames / pState->previousPeriodFrames * pState->lfoFrames);
-    }
-    pState->previousPeriodFrames = lfoPeriodFrames;
-
-    // lfoPeriodSamples is used to calculate the delay for each channel
-    // independently in the loop below, so do not multiply lfoPeriodSamples by
-    // the number of channels.
-
-    const auto mix = static_cast<CSAMPLE_GAIN>(m_pMixParameter->value());
-    RampingValue<CSAMPLE_GAIN> mixRamped(
-            pState->prev_mix, mix, engineParameters.framesPerBuffer());
-    pState->prev_mix = mix;
-
-    const auto regen = static_cast<CSAMPLE_GAIN>(m_pRegenParameter->value());
-    RampingValue<CSAMPLE_GAIN> regenRamped(
-            pState->prev_regen, regen, engineParameters.framesPerBuffer());
-    pState->prev_regen = regen;
-
-    // With and Manual is limited by amount of amplitude that remains from width
-    // to kMaxDelayMs
-    double width = m_pWidthParameter->value();
-    double manual = m_pManualParameter->value();
-    double maxManual = kCenterDelayMs + (kMaxLfoWidthMs - width) / 2;
-    double minManual = kCenterDelayMs - (kMaxLfoWidthMs - width) / 2;
-    manual = math_clamp(manual, minManual, maxManual);
-
-    RampingValue<double> widthRamped(
-            pState->prev_width, width, engineParameters.framesPerBuffer());
-    pState->prev_width = static_cast<CSAMPLE_GAIN>(width);
-
-    RampingValue<double> manualRamped(
-            pState->prev_manual, manual, engineParameters.framesPerBuffer());
-    pState->prev_manual = static_cast<CSAMPLE_GAIN>(manual);
-
-    CSAMPLE* delayLeft = pState->delayLeft;
-    CSAMPLE* delayRight = pState->delayRight;
-
-    int rampIndex = 0;
-    for (SINT i = 0;
-            i < engineParameters.samplesPerBuffer();
-            i += engineParameters.channelCount()) {
-        CSAMPLE_GAIN mix_ramped = mixRamped.getNth(rampIndex);
-        CSAMPLE_GAIN regen_ramped = regenRamped.getNth(rampIndex);
-        double width_ramped = widthRamped.getNth(rampIndex);
-        double manual_ramped = manualRamped.getNth(rampIndex);
-        ++rampIndex;
-
-        pState->lfoFrames++;
-        if (pState->lfoFrames >= lfoPeriodFrames) {
-            pState->lfoFrames = 0;
+    for (int i = 0; i < frames; ++i) {
+        const float phase = pState->clock.tick(period);
+        const float amount = pState->amount.next();
+        const float feedback = 0.9f * pState->feedback.next();
+        const float depth = pState->depth.next();
+        const float manual = pState->manual.next();
+        for (int c = 0; c < 2; ++c) {
+            float p = phase + (c == 1 ? stereo : 0.0f);
+            p -= std::floor(p);
+            // Sweep position in [0, 1]; triangle sounds most even for
+            // flanging. Manual offsets it, depth scales it.
+            const float sweep = fxdsp::clampf(
+                    manual + depth * (fxdsp::lfo(fxdsp::LfoShape::Triangle, p) - 0.5f),
+                    0.0f,
+                    1.0f);
+            // Squared so equal knob travel gives equal pitch of the comb.
+            const float d = 1.0f + 2.0f * center * sweep * sweep;
+            const float x = pInput[2 * i + c];
+            pState->dry[c].write(x);
+            const float delayedDry = pState->dry[c].tap(static_cast<int>(center));
+            pState->wet[c].write(fxdsp::flush(
+                    fxdsp::softClip(x + feedback * pState->last[c])));
+            const float w = pState->dc[c].process(pState->wet[c].readHermite(d));
+            pState->last[c] = fxdsp::sanitize(w);
+            // Feedback raises the level, scale back to match the dry.
+            const float y = 0.5f * (delayedDry + w) * (1.0f - 0.35f * std::fabs(feedback));
+            pOutput[2 * i + c] = fxdsp::lerp(x, y * 1.35f, amount);
         }
-
-        auto periodFraction = pState->lfoFrames / static_cast<float>(lfoPeriodFrames);
-        double delayMs = manual_ramped + width_ramped / 2 * sin(M_PI * 2.0f * periodFraction);
-        double delayFrames = delayMs * engineParameters.sampleRate() / 1000;
-
-        SINT framePrev =
-                (pState->delayPos - static_cast<SINT>(floor(delayFrames)) +
-                        kBufferLenth) %
-                kBufferLenth;
-        SINT frameNext =
-                (pState->delayPos - static_cast<SINT>(ceil(delayFrames)) +
-                        kBufferLenth) %
-                kBufferLenth;
-        CSAMPLE prevLeft = delayLeft[framePrev];
-        CSAMPLE nextLeft = delayLeft[frameNext];
-
-        CSAMPLE prevRight = delayRight[framePrev];
-        CSAMPLE nextRight = delayRight[frameNext];
-
-        const CSAMPLE_GAIN frac = static_cast<CSAMPLE_GAIN>(
-                delayFrames - floorf(static_cast<float>(delayFrames)));
-        CSAMPLE delayedSampleLeft = prevLeft + frac * (nextLeft - prevLeft);
-        CSAMPLE delayedSampleRight = prevRight + frac * (nextRight - prevRight);
-
-        delayLeft[pState->delayPos] = tanh_approx(pInput[i] + regen_ramped * delayedSampleLeft);
-        delayRight[pState->delayPos] =
-                tanh_approx(pInput[i + 1] + regen_ramped * delayedSampleRight);
-
-        pState->delayPos = (pState->delayPos + 1) % kBufferLenth;
-
-        CSAMPLE_GAIN gain = (1 - mix_ramped + kGainCorrection * mix_ramped);
-        pOutput[i] = (pInput[i] + mix_ramped * delayedSampleLeft) / gain;
-        pOutput[i + 1] = (pInput[i + 1] + mix_ramped * delayedSampleRight) / gain;
-    }
-
-    if (enableState == EffectEnableState::Disabling) {
-        SampleUtil::clear(delayLeft, kBufferLenth);
-        SampleUtil::clear(delayRight, kBufferLenth);
-        pState->previousPeriodFrames = -1;
-        pState->prev_regen = 0;
-        pState->prev_mix = 0;
     }
 }

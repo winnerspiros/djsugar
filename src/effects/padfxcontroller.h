@@ -68,7 +68,6 @@ class PadFxController : public QObject {
         QString name;
         QString effectId;
         QString beatParam;
-        bool beatInverse = false;
         QList<QPair<QString, double>> parameters;
     };
 

@@ -1,83 +1,28 @@
 #pragma once
 
-#include "effects/backends/effectprocessor.h"
-#include "engine/effects/engineeffect.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/class.h"
-#include "util/defs.h"
-#include "util/sample.h"
-#include "util/types.h"
+#include "effects/backends/builtin/djfxbase.h"
 
-class CompressorGroupState : public EffectState {
+// Glue compressor: stereo-linked, soft knee, program dependent release
+// and automatic makeup gain. One knob from gentle glue to squashed and
+// pumping.
+class CompressorGroupState : public DjFxState {
   public:
-    CompressorGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters) {
-        clear(engineParameters);
-    }
+    explicit CompressorGroupState(const mixxx::EngineParameters& engineParameters);
 
-    void clear(const mixxx::EngineParameters& engineParameters);
-
-    void calculateCoeffsIfChanged(
-            const mixxx::EngineParameters& engineParameters,
-            double attackParamMs,
-            double releaseParamMs);
-
-    double stateDB;
-    double attackCoeff;
-    double releaseCoeff;
-    CSAMPLE_GAIN makeUpGainState;
-    CSAMPLE_GAIN makeUpCoeff;
-
-    double previousAttackParamMs;
-    double previousReleaseParamMs;
-    SINT previousFramesPerBuffer;
-    mixxx::audio::SampleRate previousSampleRate;
+    float envelopeDb = -120.0f; // smoothed detector level
+    float slowRelease = 0.0f; // second, slower release stage
+    fxdsp::Smoother amount;
+    fxdsp::Smoother mix;
 };
 
-class CompressorEffect : public EffectProcessorImpl<CompressorGroupState> {
-  public:
-    CompressorEffect() = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            CompressorGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class CompressorEffect : public DjFxEffect<CompressorGroupState, CompressorEffect> {
+    DJFX_EFFECT_INTERFACE(CompressorGroupState)
 
   private:
-    enum class AutoMakeUp {
-        AutoMakeUpOff = 0,
-        AutoMakeUpOn = 1,
+    enum Param {
+        kAmount,
+        kAttack,
+        kRelease,
+        kMix,
     };
-
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pAutoMakeUp;
-    EngineEffectParameterPointer m_pThreshold;
-    EngineEffectParameterPointer m_pRatio;
-    EngineEffectParameterPointer m_pKnee;
-    EngineEffectParameterPointer m_pAttack;
-    EngineEffectParameterPointer m_pRelease;
-    EngineEffectParameterPointer m_pLevel;
-
-    DISALLOW_COPY_AND_ASSIGN(CompressorEffect);
-
-    CSAMPLE* applyCompression(CompressorGroupState* pState,
-            const mixxx::EngineParameters& engineParameters,
-            const CSAMPLE* pInput,
-            CSAMPLE* pGainBuffer);
-
-    void applyAutoMakeUp(CompressorGroupState* pState,
-            SINT numSamples,
-            CSAMPLE* pGainBuffer);
 };

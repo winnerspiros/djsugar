@@ -1,67 +1,53 @@
 #pragma once
 
-#include <QMap>
+#include <vector>
 
-#include "effects/backends/effectprocessor.h"
-#include "engine/effects/engineeffect.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "engine/engine.h"
-#include "util/class.h"
-#include "util/defs.h"
-#include "util/sample.h"
-#include "util/samplebuffer.h"
+#include "effects/backends/builtin/djfxbase.h"
 
-namespace {
-constexpr double kMaxDelay = 2.0;
-}
-
-class GlitchGroupState : public EffectState {
+// Stutter: on every grid step it rolls the dice and either lets the track
+// through or replays the previous step forward, reversed or at half
+// speed. Beat-locked glitch edits like a remixer would cut by hand, with
+// short crossfades at every switch so it never clicks.
+class GlitchGroupState : public DjFxState {
   public:
-    GlitchGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters) {
-        audioParametersChanged(engineParameters);
-        clear();
-    }
+    explicit GlitchGroupState(const mixxx::EngineParameters& engineParameters);
+    void restart();
 
-    void audioParametersChanged(const mixxx::EngineParameters& engineParameters) {
-        repeat_buf = mixxx::SampleBuffer(engineParameters.samplesPerBuffer());
+    enum class Action {
+        Pass,
+        Repeat,
+        Reverse,
+        HalfSpeed,
     };
 
-    void clear() {
-        repeat_buf.clear();
-        sample_count = 0;
+    struct Voice {
+        Action action = Action::Pass;
+        int64_t start = 0; // absolute frame where the replayed step began
+        double position = 0.0; // frames played into the step
     };
 
-    mixxx::SampleBuffer repeat_buf;
-    long long sample_count;
+    std::vector<float> history; // interleaved stereo ring
+    int capacityFrames = 0;
+    int64_t written = 0;
+    int64_t stepStart = 0;
+    int64_t previousStepStart = 0;
+    Voice current;
+    Voice fading;
+    int fadeLeft = 0;
+    float lastPhase = 0.0f;
+    fxdsp::Random random;
+    fxdsp::Smoother mix;
 };
 
-class GlitchEffect : public EffectProcessorImpl<GlitchGroupState> {
-  public:
-    GlitchEffect() = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            GlitchGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class GlitchEffect : public DjFxEffect<GlitchGroupState, GlitchEffect> {
+    DJFX_EFFECT_INTERFACE(GlitchGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pDelayParameter;
-    EngineEffectParameterPointer m_pQuantizeParameter;
-    EngineEffectParameterPointer m_pTripletParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(GlitchEffect);
+    enum Param {
+        kStep,
+        kChance,
+        kReverse,
+        kHalfSpeed,
+        kMix,
+    };
 };

@@ -29,6 +29,16 @@ class EffectPreset {
         return m_backendType;
     }
 
+    /// Manifest version the preset was saved from; empty for old presets.
+    const QString& version() const {
+        return m_version;
+    }
+
+    /// False when the preset was saved by a different version of a
+    /// built-in effect, whose parameter values may mean something else
+    /// now.
+    bool matchesVersionOf(const EffectManifestPointer& pManifest) const;
+
     double metaParameter() const {
         return m_dMetaParameter;
     }
@@ -49,6 +59,7 @@ class EffectPreset {
   private:
     QString m_id;
     EffectBackendType m_backendType;
+    QString m_version;
     double m_dMetaParameter;
 
     QList<EffectParameterPreset> m_effectParameterPresets;

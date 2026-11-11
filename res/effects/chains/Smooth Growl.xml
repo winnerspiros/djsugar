@@ -8,19 +8,27 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.bitcrusher</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
-     <Id>bit_depth</Id>
-     <Value>16</Value>
+     <Id>amount</Id>
+     <Value>0</Value>
      <LinkType>LINKED</LinkType>
-     <LinkInversion>1</LinkInversion>
+     <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>downsample</Id>
-     <Value>1</Value>
-     <LinkType>LINKED</LinkType>
-     <LinkInversion>1</LinkInversion>
+     <Id>bit_depth</Id>
+     <Value>0.2</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+    <Parameter>
+     <Id>tone</Id>
+     <Value>0.6</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
    </Parameters>
@@ -29,24 +37,39 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.moogladder4filter</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
-     <Id>lpf</Id>
-     <Value>0.5</Value>
+     <Id>amount</Id>
+     <Value>0</Value>
      <LinkType>LINKED</LinkType>
-     <LinkInversion>1</LinkInversion>
+     <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>resonance</Id>
-     <Value>1.54534</Value>
+     <Id>cutoff</Id>
+     <Value>0.3</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>hpf</Id>
-     <Value>0.0003</Value>
+     <Id>resonance</Id>
+     <Value>0.75</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+    <Parameter>
+     <Id>mode</Id>
+     <Value>5</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+    <Parameter>
+     <Id>drive</Id>
+     <Value>0.5</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
@@ -57,24 +80,11 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.echo</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
      <Id>delay_time</Id>
-     <Value>0.996914</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>feedback_amount</Id>
-     <Value>0.707946</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>pingpong_amount</Id>
-     <Value>0.169252</Value>
+     <Value>6</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
@@ -87,15 +97,15 @@
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>quantize</Id>
-     <Value>1</Value>
+     <Id>feedback_amount</Id>
+     <Value>0.5</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>triplet</Id>
-     <Value>0</Value>
+     <Id>tone</Id>
+     <Value>0.4</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>

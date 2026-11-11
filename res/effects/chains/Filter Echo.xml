@@ -8,25 +8,19 @@
    <MetaParameterValue>0.5</MetaParameterValue>
    <Id>org.mixxx.effects.filter</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
-     <Id>lpf</Id>
-     <Value>22050</Value>
-     <LinkType>LINKED_LEFT</LinkType>
+     <Id>filter</Id>
+     <Value>0.5</Value>
+     <LinkType>LINKED_LEFT_RIGHT</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
      <Id>q</Id>
-     <Value>0.707107</Value>
+     <Value>0.35</Value>
      <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>hpf</Id>
-     <Value>13</Value>
-     <LinkType>LINKED_RIGHT</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
@@ -36,24 +30,11 @@
    <MetaParameterValue>0.5</MetaParameterValue>
    <Id>org.mixxx.effects.echo</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
      <Id>delay_time</Id>
-     <Value>1.0</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>feedback_amount</Id>
-     <Value>0.707946</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>pingpong_amount</Id>
-     <Value>0</Value>
+     <Value>6</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
@@ -66,15 +47,15 @@
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>quantize</Id>
-     <Value>1</Value>
+     <Id>feedback_amount</Id>
+     <Value>0.55</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>triplet</Id>
-     <Value>0</Value>
+     <Id>tone</Id>
+     <Value>0.55</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>

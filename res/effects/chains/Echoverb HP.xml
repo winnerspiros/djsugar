@@ -57,24 +57,11 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.echo</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
      <Id>delay_time</Id>
-     <Value>0.5</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>feedback_amount</Id>
-     <Value>0.707946</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>pingpong_amount</Id>
-     <Value>0</Value>
+     <Value>3</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
@@ -87,15 +74,15 @@
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>quantize</Id>
-     <Value>1</Value>
+     <Id>feedback_amount</Id>
+     <Value>0.55</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>triplet</Id>
-     <Value>0</Value>
+     <Id>tone</Id>
+     <Value>0.65</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
@@ -106,31 +93,32 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.reverb</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
-     <Id>decay</Id>
-     <Value>0.5</Value>
+     <Id>send_amount</Id>
+     <Value>1</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+    <Parameter>
+     <Id>size</Id>
+     <Value>0.6</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>bandwidth</Id>
-     <Value>1</Value>
+     <Id>decay</Id>
+     <Value>3</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
      <Id>damping</Id>
-     <Value>0.277905</Value>
-     <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>send_amount</Id>
-     <Value>1</Value>
+     <Value>0.4</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>

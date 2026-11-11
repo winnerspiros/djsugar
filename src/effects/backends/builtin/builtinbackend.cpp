@@ -35,9 +35,7 @@
 #include "effects/backends/builtin/proreverbeffect.h"
 #include "effects/backends/builtin/tapestopeffect.h"
 #include "effects/backends/builtin/vintagedelayeffect.h"
-#ifdef __RUBBERBAND__
 #include "effects/backends/builtin/pitchshifteffect.h"
-#endif
 #include "effects/backends/builtin/gaineffect.h"
 #include "effects/backends/builtin/spiraleffect.h"
 #include "effects/backends/builtin/tremoloeffect.h"
@@ -82,9 +80,7 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<KeyComparisonEffect>();
     registerEffect<SpiralEffect>();
     registerEffect<TremoloEffect>();
-#ifdef __RUBBERBAND__
     registerEffect<PitchShiftEffect>();
-#endif
     registerEffect<DistortionEffect>();
     registerEffect<GlitchEffect>();
     registerEffect<CompressorEffect>();

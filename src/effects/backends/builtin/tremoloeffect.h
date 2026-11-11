@@ -1,58 +1,27 @@
 #pragma once
 
-#include "effects/backends/effectmanifest.h"
-#include "effects/backends/effectprocessor.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/class.h"
-#include "util/types.h"
+#include "effects/backends/builtin/djfxbase.h"
 
-class TremoloState : public EffectState {
+// Trans / gate: beat-locked volume chopping. Square edges are rounded
+// over a couple of milliseconds so it is punchy without clicks, and a
+// sidechain style "pump" shape ducks after every beat.
+class TremoloGroupState : public DjFxState {
   public:
-    TremoloState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters),
-              gain(0),
-              currentFrame(0),
-              quantizeEnabled(false),
-              tripletEnabled(false){};
-    ~TremoloState() override = default;
+    explicit TremoloGroupState(const mixxx::EngineParameters& engineParameters);
 
-    double gain;
-    unsigned int currentFrame;
-    bool quantizeEnabled;
-    bool tripletEnabled;
+    fxdsp::Smoother amount;
+    fxdsp::Smoother gain;
 };
 
-class TremoloEffect : public EffectProcessorImpl<TremoloState> {
-  public:
-    TremoloEffect() = default;
-    ~TremoloEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            TremoloState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class TremoloEffect : public DjFxEffect<TremoloGroupState, TremoloEffect> {
+    DJFX_EFFECT_INTERFACE(TremoloGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pDepthParameter;
-    EngineEffectParameterPointer m_pRateParameter;
-    EngineEffectParameterPointer m_pWidthParameter;
-    EngineEffectParameterPointer m_pWaveformParameter;
-    EngineEffectParameterPointer m_pPhaseParameter;
-    EngineEffectParameterPointer m_pQuantizeParameter;
-    EngineEffectParameterPointer m_pTripletParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(TremoloEffect);
+    enum Param {
+        kRate,
+        kAmount,
+        kShape,
+        kDuty,
+        kOffset,
+    };
 };
