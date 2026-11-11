@@ -102,6 +102,8 @@ PositionScratchController::PositionScratchController(const QString& group)
           m_scratchStartPos(0),
           m_rate(0),
           m_moveDelay(0),
+          m_handVelocity(0),
+          m_intervalsSinceMove(1),
           m_scratchPosSampleTime(0),
           m_bufferSize(-1),
           m_dt(1),
@@ -232,6 +234,7 @@ void PositionScratchController::process(double currentSamplePos,
                         (bufferSize * baseSampleRate);
 
                 bool calcRate = true;
+                ++m_intervalsSinceMove;
 
                 if (m_scratchTargetDelta == scratchTargetDelta) {
                     // We get here if the next mouse position is delayed, the
@@ -245,6 +248,7 @@ void PositionScratchController::process(double currentSamplePos,
                     } else {
                         // Mouse has stopped
                         m_pVelocityController->setPD(m_p, 0);
+                        m_handVelocity = 0;
                         if (scratchTargetDelta == 0) {
                             // Mouse was not moved at all
                             // Stop immediately by restarting the controller
@@ -255,6 +259,13 @@ void PositionScratchController::process(double currentSamplePos,
                         }
                     }
                 } else {
+                    // The hand velocity, over the time since the previous
+                    // touch/wheel update, so 60-120 Hz touch events don't
+                    // alternate between 0 and double speed. Smoothing it
+                    // only added lag (simulated).
+                    m_handVelocity = (scratchTargetDelta - m_scratchTargetDelta) /
+                            (m_intervalsSinceMove * m_callsPerDt);
+                    m_intervalsSinceMove = 0;
                     m_moveDelay = 0;
                     m_scratchTargetDelta = scratchTargetDelta;
                 }
@@ -268,6 +279,12 @@ void PositionScratchController::process(double currentSamplePos,
                             scratchTargetDelta - m_samplePosDeltaSum);
                     m_rate = m_pVelocityController->observation(ctrlError);
                     m_rate /= m_callsPerDt;
+                    // Feed-forward (as in the SC1000 fork ScratchTJ): the
+                    // record moves with the hand right away, the position
+                    // loop only removes the remaining error. Without it a
+                    // P loop needs an error of velocity / p to move, so the
+                    // sound trailed the hand by about three intervals (50 ms).
+                    m_rate += m_handVelocity;
                     if (fabs(m_rate) < MIN_SEEK_SPEED) {
                         // we cannot get closer
                         m_rate = 0;
@@ -293,10 +310,13 @@ void PositionScratchController::process(double currentSamplePos,
         m_isScratching = true;
         m_inertiaEnabled = false;
         m_moveDelay = 0;
-        // Set up initial values, in a way that the system is settled
+        // Settled: the record keeps its speed until the first hand update
+        // (feed-forward), with no position error
+        m_handVelocity = releaseRate;
+        m_intervalsSinceMove = 1;
+        m_scratchTargetDelta = 0;
         m_rate = releaseRate;
-        // Set to the remaining error of a p controller
-        m_samplePosDeltaSum = -(releaseRate / m_p) * m_callsPerDt;
+        m_samplePosDeltaSum = 0;
         m_pVelocityController->reset(-m_samplePosDeltaSum);
         m_pRateIIFilter->reset(-m_samplePosDeltaSum);
         // The "scratch_position" CO contains the distance traveled. We use this

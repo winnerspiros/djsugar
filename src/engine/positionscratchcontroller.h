@@ -54,6 +54,9 @@ class PositionScratchController : public QObject {
     double m_scratchStartPos;
     double m_rate;
     double m_moveDelay;
+    // Hand velocity feed-forward, in buffers per process() call
+    double m_handVelocity;
+    int m_intervalsSinceMove;
     double m_scratchPosSampleTime;
 
     std::size_t m_bufferSize;
