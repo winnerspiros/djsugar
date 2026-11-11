@@ -82,6 +82,16 @@ Category {
                 first: 9
                 sampler: true
             }
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#00e5ff"
+                label: qsTr("↺ Reset SAMPLER")
+                onClicked: {
+                    Mixxx.PlayerManager.resetSamplers();
+                    picker.pickedPaths = {};
+                    root.revision++;
+                }
+            }
 
             // ================= PAD FX =================
             Text {
@@ -100,8 +110,10 @@ Category {
                 first: 9
                 sampler: false
             }
-            Button {
-                text: qsTr("Reset PAD FX to defaults")
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#ff4081"
+                label: qsTr("↺ Reset PAD FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetPadFx();
                     root.revision++;
@@ -138,8 +150,10 @@ Category {
                     }
                 }
             }
-            Button {
-                text: qsTr("Reset BEAT FX to defaults")
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#ffab00"
+                label: qsTr("↺ Reset BEAT FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetBeatFx();
                     root.revision++;
@@ -247,14 +261,15 @@ Category {
         property string label
         property bool filled: false
         property bool playIcon: false
+        property color accent: picker.accent
 
         signal clicked
 
         implicitWidth: pillRow.implicitWidth + 32
         implicitHeight: 40
         radius: height / 2
-        color: filled ? picker.accent : pillArea.pressed ? Qt.rgba(picker.accent.r, picker.accent.g, picker.accent.b, 0.2) : "transparent"
-        border.color: picker.accent
+        color: filled ? pill.accent : pillArea.pressed ? Qt.rgba(pill.accent.r, pill.accent.g, pill.accent.b, 0.2) : "transparent"
+        border.color: pill.accent
         border.width: filled ? 0 : 1.5
         opacity: pillArea.pressed && filled ? 0.8 : 1
 
@@ -274,7 +289,7 @@ Category {
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.reset();
-                    ctx.fillStyle = pill.filled ? "#000000" : picker.accent;
+                    ctx.fillStyle = pill.filled ? "#000000" : pill.accent;
                     ctx.beginPath();
                     ctx.moveTo(1, 1);
                     ctx.lineTo(width - 1, height / 2);
@@ -292,7 +307,7 @@ Category {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: pill.label
-                color: pill.filled ? "#000000" : picker.accent
+                color: pill.filled ? "#000000" : pill.accent
                 font.pixelSize: 14
                 font.bold: true
             }
@@ -544,6 +559,10 @@ Category {
             target: Mixxx.PlayerManager
             function onSampleError(reason) {
                 errorText.text = reason;
+                trim.close();
+            }
+            function onSampleOpened(sound) {
+                trim.load(sound);
             }
         }
 
@@ -553,9 +572,299 @@ Category {
             title: qsTr("Import sample")
             fileMode: FileDialog.OpenFile
             // Android's picker maps filters to MIME types and greys out
-            // valid audio; importSample() checks the format instead
+            // valid audio; the trim popup checks the format instead
             nameFilters: Qt.platform.os === "android" ? [] : Mixxx.PlayerManager.supportedAudioFileNameFilters.concat([qsTr("All files (*)")])
-            onAccepted: picker.adopt(Mixxx.PlayerManager.importSample(importDialog.selectedFile))
+            onAccepted: {
+                trim.loading = true;
+                trim.open();
+                Mixxx.PlayerManager.openSampleForTrim(importDialog.selectedFile);
+            }
+        }
+    }
+
+    // Trim an imported sound before it becomes a pad sample: drag the two
+    // handles (or the selection) over the waveform, preview, then save
+    Mixxx.ControlProxy {
+        id: trimPlay
+
+        group: "[PreviewDeck1]"
+        key: "play"
+    }
+    Mixxx.ControlProxy {
+        id: trimPosition
+
+        group: "[PreviewDeck1]"
+        key: "playposition"
+        onValueChanged: {
+            // Stop at the end of the selection
+            if (trimPlay.value > 0 && trim.duration > 0 && value * trim.duration >= trim.end) {
+                trimPlay.value = 0;
+            }
+        }
+    }
+
+    Popup {
+        id: trim
+
+        property bool loading: false
+        property string path: ""
+        property string name: ""
+        property real duration: 0
+        property var peaks: []
+        property real start: 0
+        property real end: 0
+        readonly property color accent: "#00e5ff"
+        readonly property real minLength: Math.min(0.05, duration)
+        // Pads are for short sounds: a long file opens on its first 10 s
+        readonly property real defaultLength: 10
+
+        function load(sound) {
+            path = sound.path;
+            name = sound.name;
+            duration = sound.duration;
+            peaks = sound.peaks;
+            start = 0;
+            end = Math.min(duration, defaultLength);
+            nameField.text = name;
+            loading = false;
+            Mixxx.PlayerManager.loadLocationToPlayer(path, "[PreviewDeck1]", false);
+            wave.requestPaint();
+        }
+        function play() {
+            trimPosition.value = start / duration;
+            trimPlay.value = 1;
+        }
+        function format(seconds) {
+            return seconds < 60 ? seconds.toFixed(1) + " s" : Math.floor(seconds / 60) + ":" + ("0" + (seconds % 60).toFixed(1)).slice(-4);
+        }
+
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(parent.width - 24, 560)
+        modal: true
+        closePolicy: Popup.CloseOnEscape
+        padding: 14
+        onClosed: {
+            trimPlay.value = 0;
+            loading = false;
+            path = "";
+        }
+
+        background: Rectangle {
+            color: "#0d0d0d"
+            radius: 8
+            border.color: trim.accent
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 10
+
+            Text {
+                text: trim.loading ? qsTr("Opening…") : qsTr("Trim sample")
+                color: Theme.white
+                font.bold: true
+                font.pixelSize: 14
+            }
+
+            // The waveform with the selection
+            Item {
+                id: waveArea
+
+                readonly property real secondsPerPixel: trim.duration / Math.max(1, width)
+                readonly property real startX: trim.duration > 0 ? trim.start / trim.duration * width : 0
+                readonly property real endX: trim.duration > 0 ? trim.end / trim.duration * width : width
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 110
+                opacity: trim.loading ? 0.3 : 1
+
+                Canvas {
+                    id: wave
+
+                    anchors.fill: parent
+                    onPaint: {
+                        const ctx = getContext("2d");
+                        ctx.reset();
+                        const peaks = trim.peaks;
+                        const n = peaks.length;
+                        if (n === 0) {
+                            return;
+                        }
+                        const bar = width / n;
+                        const mid = height / 2;
+                        for (let i = 0; i < n; i++) {
+                            const x = i * bar;
+                            const inside = x + bar >= waveArea.startX && x <= waveArea.endX;
+                            ctx.fillStyle = inside ? trim.accent : "#37474f";
+                            const h = Math.max(1, peaks[i] * (mid - 2));
+                            ctx.fillRect(x, mid - h, Math.max(1, bar - 0.5), 2 * h);
+                        }
+                    }
+                }
+                // Dim outside the selection
+                Rectangle {
+                    x: 0
+                    width: waveArea.startX
+                    height: parent.height
+                    color: "#a0000000"
+                }
+                Rectangle {
+                    x: waveArea.endX
+                    width: parent.width - waveArea.endX
+                    height: parent.height
+                    color: "#a0000000"
+                }
+                // Selection frame: drag it to move the whole part
+                Rectangle {
+                    x: waveArea.startX
+                    width: waveArea.endX - waveArea.startX
+                    height: parent.height
+                    color: "transparent"
+                    border.color: trim.accent
+                    border.width: 2
+                    radius: 4
+
+                    MouseArea {
+                        property real grabX: 0
+
+                        anchors.fill: parent
+                        anchors.leftMargin: 20
+                        anchors.rightMargin: 20
+                        onPressed: mouse => grabX = mouse.x
+                        onPositionChanged: mouse => {
+                            const length = trim.end - trim.start;
+                            const shift = (mouse.x - grabX) * waveArea.secondsPerPixel;
+                            const start = Math.max(0, Math.min(trim.duration - length, trim.start + shift));
+                            trim.start = start;
+                            trim.end = start + length;
+                            wave.requestPaint();
+                        }
+                        onReleased: trim.play()
+                    }
+                }
+                // Playhead
+                Rectangle {
+                    visible: trimPlay.value > 0
+                    x: trimPosition.value * waveArea.width
+                    width: 2
+                    height: parent.height
+                    color: Theme.white
+                }
+                Repeater {
+                    model: 2
+
+                    delegate: Rectangle {
+                        id: handle
+
+                        required property int index
+                        readonly property bool isStart: index === 0
+
+                        x: (isStart ? waveArea.startX : waveArea.endX) - width / 2
+                        y: -6
+                        width: 18
+                        height: waveArea.height + 12
+                        radius: 9
+                        color: trim.accent
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 2
+                            height: 24
+                            radius: 1
+                            color: "#0d0d0d"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -12
+                            onPositionChanged: mouse => {
+                                const seconds = (handle.x + handle.width / 2 + mouse.x - width / 2) * waveArea.secondsPerPixel;
+                                if (handle.isStart) {
+                                    trim.start = Math.max(0, Math.min(trim.end - trim.minLength, seconds));
+                                } else {
+                                    trim.end = Math.min(trim.duration, Math.max(trim.start + trim.minLength, seconds));
+                                }
+                                wave.requestPaint();
+                            }
+                            onReleased: trim.play()
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: trim.format(trim.start)
+                    color: "#78909c"
+                    font.pixelSize: 12
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: trim.format(trim.end - trim.start)
+                    color: trim.accent
+                    font.bold: true
+                    font.pixelSize: 14
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: trim.format(trim.end)
+                    color: "#78909c"
+                    font.pixelSize: 12
+                }
+            }
+
+            TextField {
+                id: nameField
+
+                Layout.fillWidth: true
+                placeholderText: qsTr("Name")
+                color: Theme.white
+                background: Rectangle {
+                    color: "#000000"
+                    radius: 6
+                    border.color: nameField.activeFocus ? trim.accent : "#37474f"
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                PillButton {
+                    accent: trim.accent
+                    playIcon: trimPlay.value === 0
+                    label: trimPlay.value > 0 ? qsTr("■ Stop") : qsTr("Play")
+                    onClicked: trimPlay.value > 0 ? trimPlay.value = 0 : trim.play()
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                PillButton {
+                    accent: trim.accent
+                    label: qsTr("Cancel")
+                    onClicked: trim.close()
+                }
+                PillButton {
+                    accent: trim.accent
+                    filled: true
+                    label: qsTr("Save")
+                    onClicked: {
+                        if (trim.loading || trim.path === "") {
+                            return;
+                        }
+                        trimPlay.value = 0;
+                        const saved = Mixxx.PlayerManager.saveTrimmedSample(trim.start, trim.end, nameField.text);
+                        trim.close();
+                        picker.adopt(saved);
+                    }
+                }
+            }
         }
     }
 }

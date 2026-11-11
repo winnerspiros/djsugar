@@ -42,6 +42,14 @@ QmlPlayerManagerProxy::QmlPlayerManagerProxy(
             &samples::SampleRecorder::failed,
             this,
             &QmlPlayerManagerProxy::sampleError);
+    connect(&m_sampleEditor,
+            &samples::SampleEditor::opened,
+            this,
+            &QmlPlayerManagerProxy::sampleOpened);
+    connect(&m_sampleEditor,
+            &samples::SampleEditor::failed,
+            this,
+            &QmlPlayerManagerProxy::sampleError);
 }
 
 QmlPlayerProxy* QmlPlayerManagerProxy::getPlayer(const QString& group) {
@@ -163,14 +171,6 @@ QVariantList QmlPlayerManagerProxy::bundledSamples() const {
     return list;
 }
 
-QString QmlPlayerManagerProxy::importSample(const QUrl& url) {
-    const QString path = samples::importSample(url);
-    if (path.isEmpty()) {
-        emit sampleError(tr("This file can't be used as a sample"));
-    }
-    return path;
-}
-
 QString QmlPlayerManagerProxy::fxStationSound(int bank, int instrument) const {
     return m_pPlayerManager->config()->getValueString(
             fxstation::Instruments::soundKey(bank, instrument));
@@ -183,6 +183,32 @@ void QmlPlayerManagerProxy::setFxStationSound(int bank, int instrument, const QS
     pConfig->save();
     ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 1);
     ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 0);
+}
+
+void QmlPlayerManagerProxy::resetSamplers() {
+    const QStringList kit = samples::defaultSamplerKit(m_pPlayerManager->config());
+    const int count = m_pPlayerManager->numberOfSamplers();
+    for (int i = 0; i < count; ++i) {
+        const QString group = PlayerManager::groupForSampler(i);
+        if (i < kit.size() && !kit.at(i).isEmpty()) {
+            m_pPlayerManager->slotLoadLocationToPlayer(kit.at(i), group, false);
+        } else if (BaseTrackPlayer* pPlayer = m_pPlayerManager->getPlayer(group)) {
+            pPlayer->slotEjectTrack(1.0);
+        }
+    }
+}
+
+void QmlPlayerManagerProxy::openSampleForTrim(const QUrl& url) {
+    m_sampleEditor.open(url);
+}
+
+QString QmlPlayerManagerProxy::saveTrimmedSample(
+        double start, double end, const QString& name) {
+    const QString path = m_sampleEditor.save(start, end, name);
+    if (path.isEmpty()) {
+        emit sampleError(tr("This part can't be saved as a sample"));
+    }
+    return path;
 }
 
 void QmlPlayerManagerProxy::deleteSample(const QString& path) {

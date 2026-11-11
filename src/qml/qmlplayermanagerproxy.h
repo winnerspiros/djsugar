@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QVariantList>
 
+#include "library/samples/sampleeditor.h"
 #include "library/samples/samplerecorder.h"
 #include "mixer/playermanager.h"
 #include "qml/qmlplayerproxy.h"
@@ -43,11 +44,15 @@ class QmlPlayerManagerProxy : public QObject {
     /// Pad samples as {name, path, user}: the user's own (newest first),
     /// then the ones shipped with the app.
     Q_INVOKABLE QVariantList bundledSamples() const;
-    /// Copies any decodable audio file into the user's samples. Returns the
-    /// new path, or "" (and emits sampleError) on failure.
-    Q_INVOKABLE QString importSample(const QUrl& url);
     /// Deletes one of the user's own samples.
     Q_INVOKABLE void deleteSample(const QString& path);
+    /// Opens a sound for the trim popup: sampleOpened() or sampleError()
+    /// Puts the bundled DJ Sugar kit back on the sampler pads
+    Q_INVOKABLE void resetSamplers();
+    Q_INVOKABLE void openSampleForTrim(const QUrl& url);
+    /// Saves the part [start, end] (seconds) of the sound opened for the
+    /// trim popup as a pad sample. Returns its path, or an empty string.
+    Q_INVOKABLE QString saveTrimmedSample(double start, double end, const QString& name);
     /// The sound picked for an X-Pad instrument of a user bank (1 to 3)
     Q_INVOKABLE QString fxStationSound(int bank, int instrument) const;
     /// An empty path goes back to the bank folder
@@ -82,12 +87,15 @@ class QmlPlayerManagerProxy : public QObject {
     void sampleRecordingChanged();
     void sampleRecordSecondsChanged();
     void sampleError(const QString& reason);
+    /// {path, name, duration, peaks}
+    void sampleOpened(const QVariantMap& sound);
 
   private:
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
 
     const std::shared_ptr<PlayerManager> m_pPlayerManager;
     mixxx::samples::SampleRecorder m_sampleRecorder;
+    mixxx::samples::SampleEditor m_sampleEditor;
 };
 
 } // namespace qml

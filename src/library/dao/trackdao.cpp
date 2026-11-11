@@ -131,11 +131,13 @@ void TrackDAO::initialize(const QSqlDatabase& database) {
             "UPDATE library SET mixxx_deleted=1 WHERE mixxx_deleted=0 AND "
             "location IN (SELECT id FROM track_locations "
             "WHERE substr(location, 1, :len) = :dir)");
-    const QString dir = mixxx::samples::bundledSamplesCacheDir();
-    query.bindValue(":len", static_cast<int>(dir.size()));
-    query.bindValue(":dir", dir);
-    if (!query.exec()) {
-        LOG_FAILED_QUERY(query) << "Failed to hide bundled samples";
+    for (const QString& dir : {mixxx::samples::bundledSamplesCacheDir(),
+                 mixxx::samples::userSamplesDir()}) {
+        query.bindValue(":len", static_cast<int>(dir.size()));
+        query.bindValue(":dir", dir);
+        if (!query.exec()) {
+            LOG_FAILED_QUERY(query) << "Failed to hide pad samples";
+        }
     }
 }
 

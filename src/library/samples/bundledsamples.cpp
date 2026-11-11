@@ -7,6 +7,7 @@
 #include <QMutex>
 #include <QStandardPaths>
 
+#include "library/samples/sampleeditor.h"
 #include "sources/soundsourceproxy.h"
 
 namespace mixxx {
@@ -68,8 +69,10 @@ QString bundledSamplesCacheDir() {
 }
 
 bool isBundledSample(const QString& path) {
-    static const QString dir = bundledSamplesCacheDir();
-    return path.startsWith(dir);
+    static const QString bundled = bundledSamplesCacheDir();
+    static const QString user = userSamplesDir();
+    static const QString work = SampleEditor::workDir();
+    return path.startsWith(bundled) || path.startsWith(user) || path.startsWith(work);
 }
 
 QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
@@ -127,39 +130,6 @@ QStringList userSampleFiles() {
         }
     }
     return files;
-}
-
-QString importSample(const QUrl& url) {
-    const QString source = url.isLocalFile() ? url.toLocalFile() : url.toString();
-    QFile in(source);
-    if (!in.open(QIODevice::ReadOnly)) {
-        qWarning() << "Cannot open sample" << source;
-        return QString();
-    }
-    // content:// URLs may carry an opaque id ("msf:1234") instead of a file
-    // name; take whichever candidate names a supported format
-    QString name = QFileInfo(in.fileName()).fileName();
-    if (!isSupportedSample(name)) {
-        name = QFileInfo(url.fileName()).fileName();
-    }
-    if (!isSupportedSample(name)) {
-        qWarning() << "Unsupported sample format" << name;
-        return QString();
-    }
-    const QString dir = userSamplesDir();
-    QDir().mkpath(dir);
-    const QFileInfo fi(name);
-    QString dest = dir + name;
-    for (int n = 2; QFile::exists(dest); ++n) {
-        dest = dir + QStringLiteral("%1-%2.%3").arg(fi.completeBaseName()).arg(n).arg(fi.suffix());
-    }
-    QFile out(dest);
-    if (!out.open(QIODevice::WriteOnly) || out.write(in.readAll()) < 0) {
-        qWarning() << "Cannot write sample" << dest;
-        out.remove();
-        return QString();
-    }
-    return dest;
 }
 
 QStringList bundledSampleFiles(const UserSettingsPointer& pConfig) {
