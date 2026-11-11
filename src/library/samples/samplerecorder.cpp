@@ -195,8 +195,7 @@ QString SampleRecorder::stop() {
     const QString dir = userSamplesDir();
     QDir().mkpath(dir);
     const QString path = dir +
-            QStringLiteral("rec-%1.wav").arg(QDateTime::currentDateTime().toString(
-                    QStringLiteral("yyyyMMdd-HHmmss")));
+            QStringLiteral("rec-%1.wav").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss")));
     if (!writeWav(path, m_take, m_sampleRate)) {
         emit failed(tr("Could not save the recording"));
         return QString();
