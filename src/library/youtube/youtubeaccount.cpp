@@ -291,9 +291,13 @@ void YouTubeAccount::fetchClientVersion() {
     request.setRawHeader("User-Agent", kUserAgent);
     request.setRawHeader("Cookie", "SOCS=CAI");
     request.setTransferTimeout(kTimeoutMs);
-    QNetworkReply* pReply = m_pNetwork->get(request);
-    connect(pReply, &QNetworkReply::finished, this, [this, pReply]() {
+    // Its own connection: the page's visitor cookies must not join the
+    // account's requests (they made YouTube answer them as signed out)
+    auto* pPageNetwork = new QNetworkAccessManager(this);
+    QNetworkReply* pReply = pPageNetwork->get(request);
+    connect(pReply, &QNetworkReply::finished, this, [this, pReply, pPageNetwork]() {
         pReply->deleteLater();
+        pPageNetwork->deleteLater();
         static const QRegularExpression kVersion(
                 QStringLiteral(R"re("INNERTUBE_CLIENT_VERSION":"([0-9.]+)")re"));
         const QRegularExpressionMatch match =
@@ -428,6 +432,8 @@ void YouTubeAccount::post(const QString& endpoint,
 }
 
 void YouTubeAccount::fetchName() {
+    // The channels too: their names stand in when the menu has none
+    fetchAccounts();
     post(QStringLiteral("account/account_menu"), {}, [this](const QJsonObject& page) {
         QString name;
         walk(page, [&name](const QJsonObject& object) {
@@ -479,6 +485,13 @@ void YouTubeAccount::openList(const QString& list) {
                     // YouTube Music's liked songs are empty when the likes
                     // were given on YouTube: its liked videos then
                     openList(QStringLiteral("VLLL"));
+                    return;
+                }
+                if (list.isEmpty() && !signedInPage(page) && m_clientVersion != kClientVersion) {
+                    kLogger.info() << "Signed out with version" << m_clientVersion
+                                   << ": again with" << kClientVersion;
+                    m_clientVersion = kClientVersion;
+                    openList(id == QStringLiteral("VLLM") ? QStringLiteral("liked") : id);
                     return;
                 }
                 if (list.isEmpty() && !signedInPage(page)) {
@@ -595,6 +608,20 @@ void YouTubeAccount::fetchAccounts() {
             });
             return true;
         });
+        kLogger.info() << "Channels:" << accounts.size();
+        if (m_name.isEmpty()) {
+            // The account menu gave no name: the chosen channel's
+            for (const QVariant& account : std::as_const(accounts)) {
+                const QVariantMap map = account.toMap();
+                if (map.value(QStringLiteral("pageId")).toString() == m_pageId ||
+                        accounts.size() == 1) {
+                    m_name = map.value(QStringLiteral("name")).toString();
+                    save();
+                    emit accountChanged();
+                    break;
+                }
+            }
+        }
         emit accountsReady(accounts);
     });
 }

@@ -159,6 +159,7 @@ Item {
             Mixxx.YouTube.youTubePlaylist(listId);
     }
     function openAccount() {
+        Mixxx.YouTube.youTubeAccounts();
         root.openList("liked", qsTr("Liked songs"));
         Mixxx.YouTube.youTubePlaylists();
     }
@@ -433,14 +434,14 @@ Item {
                         Text {
                             width: parent.width
                             leftPadding: 6
-                            visible: root.channels.length > 1
+                            visible: root.channels.length > 0
                             color: "#9a9ea6"
                             font.bold: true
                             font.pixelSize: 9
                             text: qsTr("CHANNEL")
                         }
                         Repeater {
-                            model: root.channels.length > 1 ? root.channels : []
+                            model: root.channels
 
                             delegate: Skin.Button {
                                 required property var modelData
