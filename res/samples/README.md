@@ -1,30 +1,33 @@
-# Mixxx Built-in Samples
+# 🎛️ DJ Sugar Built-in Samples
 
-Professional DJ sample collection for Mixxx sampler pads.
+One-shots for the sampler pads. Every clip starts on the hit, with no dead air before it. Long tails are cut at a natural quiet point.
 
-## 🎵 180+ Samples
+## 🎵 Samples
 
 | | Category | Samples |
 | --- | --- | --- |
-| | **Drums** | kick, snare, hi-hat, clap, rimshot, crash, bongo, kick-hard, snare-tight, hi-hat-open, clap-fat, rimshot-accent, drum-roll, hardstyle-kick, drum-machine-beat, cowbell, tambourine, shaker, bongo-hit, triangle, wood-block, snap |
-| | **FX** | riser-classic, riser-electronic, bass-drop, sub-drop, impact-cinematic, transition-sweep, transition-impact, transition-whoosh, transition-swoosh, fx-whoosh, record-scratch, dub-siren, laser, explosion, alarm, siren-police |
-| | **Vocals** | lets-go, yeah, oh-yeah, woo-hoo, drop-it, dj-drop-it, dj-intro, everybody, turn-it-up, make-some-noise, put-your-hands-up, party-rock, work-it, yeah-boy, bruh-sound, oof-sound, vine-boom, ba-dum-tss |
-| | **Percussion** | snare, hi-hat, clap, rimshot, bongo, amen-break, shaker, tambourine, wood-block, triangle |
-| | **Transitions** | dj-airhorn, record-scratch, riser-classic, riser-electronic, bass-drop, fx-whoosh, transition-sweep, transition-impact, transition-whoosh, transition-swoosh, siren, train-horn, car-horn, horn-honk, airhorn |
-| | **Guns** | gunshot, machine-gun, shotgun, shotgun-blast, pistol-shot, pistol, 9mm, ak47, rifle, uzi |
-| | **JBL** | jbl-connect-soundfishing |
-| | **Greek (GR)** | fahhhhhhhhhhhhhh, faaah, applepay, m-e-o-w, greek, greece, re, malaka, opa, ti, oxi, ela, bravo, file, ne |
-| | **Misc** | applause, crowd-cheer, chime, heartbeat, thunder, rain-thunder, fire-alarm, phone-ring, glass-shatter, metal-pipe, sad-trombone, suspense, synth-pad, trumpet-fanfare, womp-womp, wrong-answer, cartoon-boing, door-knock, fart-reverb, scream, notification, ping, tada, connect |
+| 🥁 | **DJ Sugar kit** (`djsugar/`) | 01–24: kick, snare, clap, hats, rim, tom, crash, riser, downlifter, sub drop, 808, stabs, airhorn, vinyl stop, noise sweep, siren, laser, rewind, horn stab, reverse cymbal, impact, snare build |
+| 🥁 | **Drums** | kick, snare, snare-drum, hi-hat, clap, clap-ensemble, rimshot, crash, cymbal, cymbal-crash, bongo, bongo-hit, drum, drum-roll, hardstyle-kick, drum-machine-beat, amen-break, beat, shaker, snap |
+| 💥 | **FX** | riser, bass-drop, sub-drop, deep-bass, drop, boom, impact, fx-impact-cinematic, whoosh, swish, dj-scratch, dub-siren, siren, siren-police, laser, explosion, explosion-sound, alarm, electric, magic, splash, spring, cartoon-boing, slam, drama |
+| 🔫 | **Guns** | gun-dancehall, gun-finger-triple, gun-pistol-tight, gun-cannon-boom, gun-pew, gun-pew-triple, gun-reload, gun-rifle-real, gun-shots-real, gun-burst-war, gunshot, pistol, pistol-shot, 9mm, rifle, ak47, uzi, machine-gun, shotgun, shotgun-blast |
+| 🎤 | **Vocals** | lets-go, yeah, oh-yeah, woo-hoo, drop-it, everybody, turn-it-up, yeah-boy, dj-drop, welcome, voice, yell, wow, anime-wow, hello-there, uah |
+| 📯 | **Horns** | air-horn, airhorn, dj-airhorn, mlg-airhorn, horn, horn-honk, car-horn, train-horn, foghorn, trumpet, trumpet-fanfare, saxophone |
+| 😂 | **Meme** | bruh, bruh-sound, oof, oof-sound, vine-boom, ba-dum-tss, metal-pipe, among-us, roblox-death, mario-coin, mario-jump, womp-womp, sad-trombone, fart, fart-reverb, evil-laugh, laugh, meme, oh-no |
+| 🇬🇷 | **Greek** (`gr/`) | fahhhhhhhhhhhhhh, faaah, applepay, m-e-o-w, greek, greece, re, malaka, opa, ti, oxi, ela, bravo, file, ne |
+| 🔔 | **Misc** | applause, crowd-cheer, chime, heartbeat, thunder, rain-thunder, fire, phone-ring, ringtone, glass-shatter, scream, sneeze, suspense, notification, ping, tada, coin, connect, button-click, error, correct-answer, wrong-answer, wrong-buzzer, countdown, door-knock, knock, xylophone, whistle, chicken, jungle, jbl-connect-soundfishing |
+
+## 🔫 Where the gun sounds come from
+
+| File | Source | License |
+| --- | --- | --- |
+| gun-dancehall, gun-finger-triple, gun-pistol-tight, gun-cannon-boom, gun-pew, gun-pew-triple, gun-reload | Synthesized for DJ Sugar | CC0 |
+| gun-rifle-real, gun-shots-real | [Gunshots 8.ogg](https://commons.wikimedia.org/wiki/File:Gunshots_8.ogg), Wikimedia Commons | Public domain |
+| gun-burst-war | [Dragout – War sounds](https://commons.wikimedia.org/wiki/File:Dragout_-_War_sounds_(cc0)_(freesound).ogg), Wikimedia Commons | CC0 |
 
 ## Usage
 
-Open Mixxx → Sampler section → Drag any .mp3 file onto a sampler pad.
-Samples auto-save in your Mixxx config when you exit.
+Drag any file onto a sampler pad. Bank A and Bank B load the DJ Sugar kit by default.
 
 ## Sources
 
-All samples sourced from:
-
-- myinstants.com - popular DJ sound effects collection
-- Community-contributed DJ sound effects
-- Short audio clips suitable for pad triggering
+The other samples come from myinstants.com and community contributions.
