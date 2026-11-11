@@ -79,6 +79,7 @@ class YouTubeAccount : public QObject {
     QNetworkAccessManager* m_pNetwork;
     QString m_cookies;
     QString m_clientVersion;
+    QString m_visitorData;
     QString m_name;
     QString m_pageId; // a brand channel, "" for the main one
     QString m_continuation;

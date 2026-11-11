@@ -7,7 +7,7 @@ import "../../Theme"
 
 // Spotify: log in once on Spotify's login page, then search, Liked Songs
 // and playlists. D1/D2 download the track's own Spotify
-// audio (Ogg Vorbis 320, needs Premium) and load it to the deck.
+// audio (Ogg Vorbis 320 with Premium, else from YouTube Music) and load it to the deck.
 Item {
     id: root
 
@@ -195,7 +195,7 @@ Item {
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loggingIn ? qsTr("Log in on the Spotify page, then come back here.") : qsTr("Log in once with your Spotify account. Playing tracks on the decks needs Spotify Premium.")
+            text: !Mixxx.Spotify.available ? qsTr("Spotify is not part of this build.") : Mixxx.Spotify.loggingIn ? qsTr("Log in on the Spotify page, then come back here.") : qsTr("Log in once with your Spotify account.")
         }
         Skin.Button {
             Layout.alignment: Qt.AlignHCenter

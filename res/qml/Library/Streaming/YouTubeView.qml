@@ -417,19 +417,19 @@ Item {
 
                     y: parent.height + 2
                     x: parent.width - width
-                    width: 220
-                    padding: 4
+                    width: 240
+                    padding: 8
                     modal: false
                     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
                     background: Rectangle {
-                        color: "#14161b"
-                        border.color: root.ytRed
+                        color: "#121419"
+                        border.color: "#2c3038"
                         border.width: 1
-                        radius: 6
+                        radius: 12
                     }
                     contentItem: Column {
-                        spacing: 2
+                        spacing: 6
 
                         Text {
                             width: parent.width
@@ -438,26 +438,80 @@ Item {
                             color: "#9a9ea6"
                             font.bold: true
                             font.pixelSize: 9
-                            text: qsTr("CHANNEL")
+                            text: qsTr("SWITCH ACCOUNT")
                         }
                         Repeater {
                             model: root.channels
 
-                            delegate: Skin.Button {
+                            delegate: Rectangle {
+                                id: channelRow
+
                                 required property var modelData
 
                                 width: parent.width
-                                height: 30
-                                activeColor: Theme.accentColor
-                                normalColor: modelData.selected ? Theme.accentColor : "#ffffff"
-                                font.bold: modelData.selected
-                                font.pixelSize: 10
-                                text: (modelData.selected ? "✓  " : "") + modelData.name
-                                onClicked: {
-                                    accountMenu.close();
-                                    Mixxx.YouTube.selectYouTubeAccount(modelData.pageId, modelData.name);
-                                    root.playlists = [];
-                                    root.openList("liked", qsTr("Liked songs"));
+                                height: 40
+                                radius: 8
+                                color: modelData.selected ? "#3a1016" : (channelTap.pressed ? "#23262e" : "#1b1e24")
+                                border.color: modelData.selected ? root.ytRed : "#2c3038"
+                                border.width: 1
+
+                                Rectangle {
+                                    id: channelInitial
+
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 26
+                                    height: 26
+                                    radius: 13
+                                    color: channelRow.modelData.selected ? root.ytRed : "#3a3e48"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        color: "#ffffff"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        text: (channelRow.modelData.name || "?").charAt(0).toUpperCase()
+                                    }
+                                }
+                                Column {
+                                    anchors.left: channelInitial.right
+                                    anchors.leftMargin: 8
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        width: parent.width
+                                        color: "#ffffff"
+                                        elide: Text.ElideRight
+                                        font.bold: channelRow.modelData.selected
+                                        font.pixelSize: 12
+                                        text: channelRow.modelData.name
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        visible: text.length > 0
+                                        color: "#9a9ea6"
+                                        elide: Text.ElideRight
+                                        font.pixelSize: 9
+                                        text: channelRow.modelData.handle ?? ""
+                                    }
+                                }
+                                MouseArea {
+                                    id: channelTap
+
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        const picked = channelRow.modelData.pageId;
+                                        root.channels = root.channels.map(c => Object.assign({}, c, {
+                                            "selected": c.pageId === picked
+                                        }));
+                                        Mixxx.YouTube.selectYouTubeAccount(picked, channelRow.modelData.name);
+                                        root.playlists = [];
+                                        root.openList("liked", qsTr("Liked songs"));
+                                        accountMenu.close();
+                                    }
                                 }
                             }
                         }

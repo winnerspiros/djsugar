@@ -300,8 +300,17 @@ void YouTubeAccount::fetchClientVersion() {
         pPageNetwork->deleteLater();
         static const QRegularExpression kVersion(
                 QStringLiteral(R"re("INNERTUBE_CLIENT_VERSION":"([0-9.]+)")re"));
-        const QRegularExpressionMatch match =
-                kVersion.match(QString::fromUtf8(pReply->readAll()));
+        const QString html = QString::fromUtf8(pReply->readAll());
+        const QRegularExpressionMatch match = kVersion.match(html);
+        // The visitor id the web player sends with every request: without
+        // it YouTube answers the account's lists with empty shelves
+        static const QRegularExpression kVisitor(
+                QStringLiteral(R"re("VISITOR_DATA":"([^"]+)")re"));
+        const QRegularExpressionMatch visitor = kVisitor.match(html);
+        if (visitor.hasMatch()) {
+            m_visitorData = visitor.captured(1);
+        }
+        kLogger.info() << "Visitor id" << (m_visitorData.isEmpty() ? "missing" : "found");
         if (match.hasMatch()) {
             m_clientVersion = match.captured(1);
         }
@@ -357,10 +366,14 @@ void YouTubeAccount::post(const QString& endpoint,
     request.setRawHeader("X-YouTube-Client-Name", "67");
     request.setRawHeader("X-YouTube-Client-Version", m_clientVersion.toUtf8());
     request.setRawHeader("Referer", (kOrigin + QLatin1Char('/')).toUtf8());
-    QJsonObject context{{QStringLiteral("client"),
-            QJsonObject{{QStringLiteral("clientName"), QStringLiteral("WEB_REMIX")},
-                    {QStringLiteral("clientVersion"), m_clientVersion},
-                    {QStringLiteral("hl"), QStringLiteral("en")}}}};
+    QJsonObject client{{QStringLiteral("clientName"), QStringLiteral("WEB_REMIX")},
+            {QStringLiteral("clientVersion"), m_clientVersion},
+            {QStringLiteral("hl"), QStringLiteral("en")}};
+    if (!m_visitorData.isEmpty()) {
+        request.setRawHeader("X-Goog-Visitor-Id", m_visitorData.toUtf8());
+        client.insert(QStringLiteral("visitorData"), m_visitorData);
+    }
+    QJsonObject context{{QStringLiteral("client"), client}};
     if (signedRequest) {
         request.setRawHeader("Cookie", m_cookies.toUtf8());
         // Signed as the web player signs: SHA-1 of "<time> <SAPISID>
@@ -480,6 +493,18 @@ void YouTubeAccount::openList(const QString& list) {
                                << signedInPage(page) << ", more:" << !m_continuation.isEmpty();
                 if (list.isEmpty()) {
                     kLogger.info() << id << pageOutline(page);
+                    walk(page, [&id](const QJsonObject& object) {
+                        const QJsonValue shelf =
+                                object.value(QStringLiteral("musicPlaylistShelfRenderer"));
+                        if (shelf.isUndefined()) {
+                            return false;
+                        }
+                        kLogger.info() << id << "shelf:"
+                                       << QJsonDocument(shelf.toObject())
+                                                  .toJson(QJsonDocument::Compact)
+                                                  .left(1500);
+                        return true;
+                    });
                 }
                 if (list.isEmpty() && id == QStringLiteral("VLLM") && signedInPage(page)) {
                     // YouTube Music's liked songs are empty when the likes
@@ -541,6 +566,7 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
                 continue;
             }
             const QString id = browseId(item);
+            kLogger.debug() << "Library item" << id;
             // Playlists only ("VL<playlist id>"), not "New playlist" and
             // the like, nor the liked songs (their own button) and
             // "Episodes for later"
