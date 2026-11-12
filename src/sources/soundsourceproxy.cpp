@@ -844,7 +844,7 @@ SoundSourceProxy::UpdateTrackFromSourceResult SoundSourceProxy::updateTrackFromS
         const bool splitArtistTitle =
                 trackMetadata.getTrackInfo().getArtist().trimmed().isEmpty();
         const auto fileInfo = m_pTrack->getFileInfo();
-        kLogger.info()
+        kLogger.debug()
                 << "Parsing missing"
                 << (splitArtistTitle ? "artist/title" : "title")
                 << "from file name:"

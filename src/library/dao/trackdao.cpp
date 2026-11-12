@@ -20,6 +20,7 @@
 #include "library/library_prefs.h"
 #include "library/queryutil.h"
 #include "library/samples/bundledsamples.h"
+#include "library/scanner/scannerutil.h"
 #include "moc_trackdao.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/beats.h"
@@ -138,6 +139,25 @@ void TrackDAO::initialize(const QSqlDatabase& database) {
         if (!query.exec()) {
             LOG_FAILED_QUERY(query) << "Failed to hide pad samples";
         }
+    }
+    // Videos and files without audio found by older scans: the scanner skips
+    // them now. The ones in a playlist or crate were picked by hand and stay.
+    QStringList videoLocations;
+    for (const QString& videoType : ScannerUtil::videoFileTypes()) {
+        videoLocations.append(QStringLiteral("lower(location) LIKE '%.") + videoType + "'");
+    }
+    QSqlQuery hideVideos(m_database);
+    if (!hideVideos.exec(QStringLiteral(
+                "UPDATE library SET mixxx_deleted=1 WHERE mixxx_deleted=0 AND "
+                "(location IN (SELECT id FROM track_locations WHERE %1) OR "
+                "(IFNULL(duration, 0) <= 0 AND location IN (SELECT id FROM "
+                "track_locations WHERE %2))) AND "
+                "id NOT IN (SELECT track_id FROM PlaylistTracks) AND "
+                "id NOT IN (SELECT track_id FROM crate_tracks)")
+                        .arg(videoLocations.join(QStringLiteral(" OR ")),
+                                QStringLiteral("lower(location) LIKE '%.ogg' OR "
+                                               "lower(location) LIKE '%.mp3'")))) {
+        LOG_FAILED_QUERY(hideVideos) << "Failed to hide videos";
     }
 }
 
@@ -1010,6 +1030,19 @@ TrackPointer TrackDAO::addTracksAddFile(
                           << pTrack->getLocation();
         // Continue with adding the track to the library, no matter
         // if parsing the metadata from file succeeded or failed.
+    }
+    // Files that TagLib reads natively but finds no audio in (e.g. the
+    // encrypted .ogg of games) cannot play: they stay out of the library
+    static const QStringList kTagLibAudioTypes = {QStringLiteral("mp3"),
+            QStringLiteral("ogg"),
+            QStringLiteral("opus"),
+            QStringLiteral("flac"),
+            QStringLiteral("wav"),
+            QStringLiteral("aiff")};
+    if (pTrack->getDuration() <= 0 &&
+            kTagLibAudioTypes.contains(fileAccess.info().suffix().toLower())) {
+        kLogger.info() << "Skipping a file without audio" << pTrack->getLocation();
+        return {};
     }
 
     const TrackId newTrackId = addTracksAddTrack(pTrack, unremove);

@@ -19,6 +19,7 @@
 #include "util/db/fwdsqlquery.h"
 #include "util/logger.h"
 #include "util/performancetimer.h"
+#include "util/regex.h"
 #include "util/timer.h"
 #include "util/trace.h"
 
@@ -212,6 +213,15 @@ void LibraryScanner::run() {
         // A scan stopped by the exit leaves its batch open: what it found is
         // kept, and no query outlives the connection
         m_trackDao.addTracksFinish(false);
+        // The DAOs outlive the thread's connection: without their copies it
+        // is removed cleanly, not "still in use"
+        m_libraryHashDao.release();
+        m_cueDao.release();
+        m_trackDao.release();
+        m_playlistDao.release();
+        m_analysisDao.release();
+        m_directoryDao.release();
+        dbConnection = QSqlDatabase();
     }
     kLogger.debug() << "Exiting thread";
 }
@@ -287,7 +297,14 @@ void LibraryScanner::slotStartScan() {
     // of missing tracks in slotFinishUnhashedScan().
     m_previouslyMissingTracks = m_trackDao.getAllMissingTrackLocations();
     QHash<QString, mixxx::cache_key_t> directoryHashes = m_libraryHashDao.getDirectoryHashes();
-    QRegularExpression extensionFilter(SoundSourceProxy::getSupportedFileNamesRegex());
+    // Video files are not scanned: their sound plays, but on a phone they are
+    // clips and memes, not music
+    QStringList audioTypes = SoundSourceProxy::getSupportedFileTypes();
+    for (const QString& videoType : ScannerUtil::videoFileTypes()) {
+        audioTypes.removeAll(videoType);
+    }
+    QRegularExpression extensionFilter(RegexUtils::fileExtensionsRegex(audioTypes),
+            QRegularExpression::CaseInsensitiveOption);
     QRegularExpression coverExtensionFilter =
             QRegularExpression(CoverArtUtils::supportedCoverArtExtensionsRegex(),
                     QRegularExpression::CaseInsensitiveOption);

@@ -79,7 +79,7 @@ QString SoundSource::getTypeFromFile(const QFileInfo& fileInfo) {
     // This might also occur for missing files as seen on Qt 5.12.
     if (!mimeType.isValid() || mimeType.isDefault()) {
         if (fileInfo.exists()) {
-            qInfo() << "Unable to detect MIME type from file" << fileInfo.filePath();
+            qDebug() << "Unable to detect MIME type from file" << fileInfo.filePath();
         } else {
             qInfo() << "Unable to detect MIME type from not existing file" << fileInfo.filePath();
         }

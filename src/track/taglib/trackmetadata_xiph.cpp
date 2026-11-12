@@ -142,7 +142,7 @@ QImage importCoverImageFromPictureList(
             if (pPicture->type() == coverArtType) {
                 const QImage image(loadImageFromPicture(*pPicture));
                 if (image.isNull()) {
-                    kLogger.warning()
+                    kLogger.debug()
                             << "Failed to load image from VorbisComment picture of type"
                             << pPicture->type();
                     continue;
@@ -158,7 +158,7 @@ QImage importCoverImageFromPictureList(
         DEBUG_ASSERT(pPicture); // trust TagLib
         const QImage image(loadImageFromPicture(*pPicture));
         if (image.isNull()) {
-            kLogger.warning()
+            kLogger.debug()
                     << "Failed to load image from VorbisComment picture of type"
                     << pPicture->type();
             continue;
@@ -208,7 +208,7 @@ bool importCoverImageFromTag(
             if (parseBase64EncodedPicture(&picture, base64Encoded)) {
                 const QImage image(loadImageFromPicture(picture));
                 if (image.isNull()) {
-                    kLogger.warning()
+                    kLogger.debug()
                             << "Failed to load image from VorbisComment picture of type"
                             << picture.type();
                     continue;

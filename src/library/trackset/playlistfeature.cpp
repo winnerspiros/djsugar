@@ -1,8 +1,10 @@
 #include "library/trackset/playlistfeature.h"
 
 #include <QMenu>
+#include <QSet>
 #include <QSqlTableModel>
 #include <QtDebug>
+#include <functional>
 
 #include "library/dao/trackschema.h"
 #include "library/library.h"
@@ -34,6 +36,9 @@ PlaylistFeature::PlaylistFeature(Library* pLibrary, UserSettingsPointer pConfig)
     std::unique_ptr<TreeItem> pRootItem = TreeItem::newRoot(this);
     m_pSidebarModel->setRootItem(std::move(pRootItem));
     constructChildModel(kInvalidPlaylistId);
+    connect(&m_playlistDao, &PlaylistDAO::foldersChanged, this, [this]() {
+        slotPlaylistTableChanged(kInvalidPlaylistId);
+    });
 
     m_pShufflePlaylistAction = make_parented<QAction>(tr("Shuffle Playlist"), this);
     connect(m_pShufflePlaylistAction,
@@ -176,11 +181,14 @@ QList<BasePlaylistFeature::IdAndLabel> PlaylistFeature::createPlaylistLabels() {
             "  %6.%7 AS id, "
             "  %6.%8 AS name, "
             "  LOWER(%6.%8) AS sort_name, "
+            "  %6.folder_id AS folder_id, "
             "  COUNT(CASE %2.%5 WHEN 0 THEN 1 ELSE NULL END) AS count, "
-            "  SUM(CASE %2.%5 WHEN 0 THEN %2.%4 ELSE 0 END) AS durationSeconds "
-            "FROM %2 "
-            "LEFT JOIN %10 ON %2.%3 = %10.%11 "
-            "LEFT JOIN %6 ON %10.%12 = %6.%7 "
+            "  IFNULL(SUM(CASE %2.%5 WHEN 0 THEN %2.%4 ELSE 0 END), 0) AS durationSeconds "
+            // From the playlists: empty ones too (a new playlist showed up
+            // only after a track was in it and the app restarted)
+            "FROM %6 "
+            "LEFT JOIN %10 ON %10.%12 = %6.%7 "
+            "LEFT JOIN %2 ON %2.%3 = %10.%11 "
             "WHERE %6.%9 = %13 "
             "GROUP BY %6.%7")
                                   .arg(m_countsDurationTableName, // 1
@@ -218,6 +226,7 @@ QList<BasePlaylistFeature::IdAndLabel> PlaylistFeature::createPlaylistLabels() {
     int idColumn = record.indexOf("id");
     int countColumn = record.indexOf("count");
     int durationColumn = record.indexOf("durationSeconds");
+    int folderColumn = record.indexOf("folder_id");
 
     for (int row = 0; row < playlistTableModel.rowCount(); ++row) {
         int id =
@@ -239,6 +248,9 @@ QList<BasePlaylistFeature::IdAndLabel> PlaylistFeature::createPlaylistLabels() {
         BasePlaylistFeature::IdAndLabel idAndLabel;
         idAndLabel.id = id;
         idAndLabel.label = createPlaylistLabel(name, count, duration);
+        const QVariant folder =
+                playlistTableModel.data(playlistTableModel.index(row, folderColumn));
+        idAndLabel.folderId = folder.isNull() ? PlaylistDAO::kNoFolder : folder.toInt();
         playlistLabels.append(idAndLabel);
     }
     return playlistLabels;
@@ -352,36 +364,63 @@ void PlaylistFeature::slotDeleteAllUnlockedPlaylists() {
 /// @param selectedId entry which should be selected
 QModelIndex PlaylistFeature::constructChildModel(int selectedId) {
     // qDebug() << "PlaylistFeature::constructChildModel() id:" << selectedId;
-    std::vector<std::unique_ptr<TreeItem>> childrenToAdd;
-    int selectedRow = -1;
-
-    int row = 0;
+    // Folders first, then the playlists, both by name. A folder's data is
+    // "folder:<id>", which is no playlist id.
+    const QList<PlaylistDAO::Folder> folders = m_playlistDao.getFolders();
+    QSet<int> folderIds;
+    for (const auto& folder : folders) {
+        folderIds.insert(folder.id);
+    }
     const QList<IdAndLabel> playlistLabels = createPlaylistLabels();
-    for (const auto& idAndLabel : playlistLabels) {
-        int playlistId = idAndLabel.id;
-        QString playlistLabel = idAndLabel.label;
-
-        if (selectedId == playlistId) {
-            // save index for selection
-            selectedRow = row;
+    // A folder of a playlist or folder that is gone counts as the top level
+    const auto parentOf = [&folderIds](int folderId) {
+        return folderIds.contains(folderId) ? folderId : PlaylistDAO::kNoFolder;
+    };
+    std::function<void(TreeItem*, int)> fill = [&](TreeItem* pParent, int folderId) {
+        for (const auto& folder : folders) {
+            if (parentOf(folder.parentId) == folderId) {
+                TreeItem* pFolder = pParent->appendChild(
+                        folder.name, QStringLiteral("folder:%1").arg(folder.id));
+                pFolder->setIcon(QIcon(QStringLiteral(":/images/library/ic_library_crates.svg")));
+                fill(pFolder, folder.id);
+            }
         }
-
-        // Create the TreeItem whose parent is the invisible root item
-        auto pItem = std::make_unique<TreeItem>(playlistLabel, playlistId);
-        pItem->setBold(m_playlistIdsOfSelectedTrack.contains(playlistId));
-
-        decorateChild(pItem.get(), playlistId);
-        childrenToAdd.push_back(std::move(pItem));
-
-        ++row;
+        for (const auto& idAndLabel : playlistLabels) {
+            if (parentOf(idAndLabel.folderId) == folderId) {
+                TreeItem* pItem = pParent->appendChild(idAndLabel.label, idAndLabel.id);
+                decorateChild(pItem, idAndLabel.id);
+            }
+        }
+    };
+    std::vector<std::unique_ptr<TreeItem>> childrenToAdd;
+    // The top level is inserted at once, its children are filled in before
+    for (const auto& folder : folders) {
+        if (parentOf(folder.parentId) == PlaylistDAO::kNoFolder) {
+            auto pFolder = std::make_unique<TreeItem>(
+                    folder.name, QStringLiteral("folder:%1").arg(folder.id));
+            pFolder->setIcon(QIcon(QStringLiteral(":/images/library/ic_library_crates.svg")));
+            fill(pFolder.get(), folder.id);
+            childrenToAdd.push_back(std::move(pFolder));
+        }
+    }
+    for (const auto& idAndLabel : playlistLabels) {
+        if (parentOf(idAndLabel.folderId) == PlaylistDAO::kNoFolder) {
+            auto pItem = std::make_unique<TreeItem>(idAndLabel.label, idAndLabel.id);
+            decorateChild(pItem.get(), idAndLabel.id);
+            childrenToAdd.push_back(std::move(pItem));
+        }
     }
 
     // Append all the newly created TreeItems in a dynamic way to the childmodel
     m_pSidebarModel->insertTreeItemRows(std::move(childrenToAdd), 0);
-    if (selectedRow == -1) {
+    // Bold for the playlists of the selected track, and their folders
+    for (TreeItem* pChild : m_pSidebarModel->getRootItem()->children()) {
+        markTreeItem(pChild);
+    }
+    if (selectedId == kInvalidPlaylistId) {
         return QModelIndex();
     }
-    return m_pSidebarModel->index(selectedRow, 0);
+    return indexFromPlaylistId(selectedId);
 }
 
 void PlaylistFeature::decorateChild(TreeItem* item, int playlistId) {

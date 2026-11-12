@@ -127,6 +127,24 @@ class PlaylistDAO : public QObject, public virtual DAO {
 
     void getPlaylistsTrackIsIn(TrackId trackId, QSet<int>* playlistSet) const;
 
+    // Folders of playlists, see the playlist_folders table. Ids are > 0, a
+    // parent or folder of kNoFolder is the top level.
+    static constexpr int kNoFolder = -1;
+    struct Folder {
+        int id;
+        QString name;
+        int parentId;
+    };
+    QList<Folder> getFolders() const;
+    int createFolder(const QString& name, int parentId);
+    bool renameFolder(int folderId, const QString& name);
+    /// Its playlists and folders move up into its parent
+    void deleteFolder(int folderId);
+    /// False if the folder would end up inside itself
+    bool moveFolder(int folderId, int parentId);
+    int getPlaylistFolder(int playlistId) const;
+    void setPlaylistFolder(int playlistId, int folderId);
+
     void setCurrentHistoryPlaylistId(int id) {
         m_currentHistoryPlaylist = id;
     }
@@ -138,6 +156,8 @@ class PlaylistDAO : public QObject, public virtual DAO {
     void deleted(int playlistId);
     void renamed(int playlistId, const QString& newName);
     void lockChanged(const QSet<int>& playlistIds);
+    /// A folder was added, renamed, moved or deleted, or a playlist moved
+    void foldersChanged();
     void trackAdded(int playlistId, TrackId trackId, int position);
     void trackRemoved(int playlistId, TrackId trackId, int position);
     // added / removed / un/locked. Triggers playlist features to update the sidebar

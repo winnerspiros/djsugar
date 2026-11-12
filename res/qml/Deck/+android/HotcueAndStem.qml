@@ -139,7 +139,7 @@ Item {
                                 color: hotcue.isSet ? "#ffffff" : "#7c8d9e"
                                 font.pixelSize: 10
                                 text: hotcue.label ?? ""
-                                visible: hotcue.label
+                                visible: !!hotcue.label
                             }
                         }
                     }

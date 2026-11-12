@@ -114,7 +114,7 @@ bool importCoverImageFromTag(
         for (const auto& coverArt : coverArtList) {
             const QImage image(loadImageFromByteVector(coverArt.data()));
             if (image.isNull()) {
-                kLogger.warning()
+                kLogger.debug()
                         << "Failed to load image from MP4 atom covr";
                 continue;
             } else {

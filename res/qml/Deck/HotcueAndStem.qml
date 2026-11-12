@@ -191,7 +191,7 @@ Item {
                                 color: "#626262"
                                 font.pixelSize: 12
                                 text: hotcue.label ?? ""
-                                visible: hotcue.label
+                                visible: !!hotcue.label
                             }
                         }
                     }

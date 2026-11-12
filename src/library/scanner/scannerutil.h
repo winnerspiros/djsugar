@@ -33,6 +33,20 @@ class ScannerUtil {
         return blacklist;
     }
 
+    /// Containers of video, which the scanner skips
+    static QStringList videoFileTypes() {
+        return {QStringLiteral("mp4"),
+                QStringLiteral("m4v"),
+                QStringLiteral("mov"),
+                QStringLiteral("webm"),
+                QStringLiteral("mkv"),
+                QStringLiteral("avi"),
+                QStringLiteral("wmv"),
+                QStringLiteral("flv"),
+                QStringLiteral("3gp"),
+                QStringLiteral("3g2")};
+    }
+
   private:
     ScannerUtil() {
     }

@@ -313,7 +313,7 @@ MetadataSourceTagLib::importTrackMetadataAndCoverImage(
         return afterImport(ImportResult::Failed);
     }
 
-    kLogger.info()
+    kLogger.debug()
             << "No track metadata or cover art found"
             << "in file" << m_fileName
             << "of type" << fileTypeToString(m_fileType);

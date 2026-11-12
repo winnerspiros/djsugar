@@ -9,6 +9,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Shapes 1.12
 import Qt5Compat.GraphicalEffects
 import "../Theme"
+import "." as LibraryComponent
 
 Rectangle {
     id: root
@@ -53,19 +54,35 @@ Rectangle {
         Mixxx.MobileLibrary.allowUsbPermissionRequests();
     }
 
-    // The playlist of a sidebar label, which carries the count and duration
-    function playlistFor(label, revision) {
-        let best = null;
-        for (const p of Mixxx.MobileLibrary.playlists()) {
-            if (label.startsWith(p.name) && (!best || p.name.length > best.name.length)) {
-                best = p;
-            }
+    // The icon name of the top level section of a sidebar row
+    function sectionIconOf(index) {
+        let top = index;
+        while (top.parent.valid) {
+            top = top.parent;
         }
-        return best;
+        return root.model.data(top, Qt.UserRole + 1);
     }
-    function openMenu(playlist, isSection) {
-        if (playlist) {
-            playlistMenu.playlist = playlist;
+    // The playlist ({id, name, locked, folderId}) or the folder ({id, name,
+    // parentId, isFolder}) of a row in Playlists, else null.
+    // SidebarModel::DataRole holds the playlist id or "folder:<id>".
+    function entryFor(index, revision) {
+        if (!index.parent.valid || root.sectionIconOf(index) !== "playlist") {
+            return null;
+        }
+        const data = root.model.data(index, Qt.UserRole + 2);
+        if (typeof data === "string" && data.startsWith("folder:")) {
+            const id = parseInt(data.substring(7));
+            const folder = Mixxx.MobileLibrary.playlistFolders().find(f => f.id === id);
+            return folder ? Object.assign({
+                isFolder: true
+            }, folder) : null;
+        }
+        const id = Number(data);
+        return Mixxx.MobileLibrary.playlists().find(p => p.id === id) ?? null;
+    }
+    function openMenu(entry, isSection) {
+        if (entry) {
+            playlistMenu.playlist = entry;
             playlistMenu.open();
         } else if (isSection) {
             playlistEditor.openFor(null, null);
@@ -210,8 +227,9 @@ Rectangle {
                             indicatorAnimation.start()
                         onExpandedChanged: indicator.rotation = expanded ? 90 : 0
 
-                        // A playlist row: {id, name, locked}, else null
-                        readonly property var playlist: depth === 1 && root.model.data(index.parent, Qt.UserRole + 1) === "playlist" ? root.playlistFor(label, root.playlistsRevision) : null
+                        // A playlist or playlist folder row, see entryFor()
+                        readonly property var entry: depth >= 1 ? root.entryFor(index, root.playlistsRevision) : null
+                        readonly property var playlist: entry && !entry.isFolder ? entry : null
                         readonly property bool isPlaylistSection: depth === 0 && icon === "playlist"
 
                         Rectangle {
@@ -252,7 +270,7 @@ Rectangle {
 
                                 onClicked: event => {
                                     if (event.button === Qt.RightButton) {
-                                        root.openMenu(playlist, isPlaylistSection);
+                                        root.openMenu(entry, isPlaylistSection);
                                         return;
                                     }
                                     treeView.selectionModel.setCurrentIndex(treeView.index(row, 0), ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Rows);
@@ -262,7 +280,7 @@ Rectangle {
                                         treeView.toggleExpanded(row);
                                     }
                                 }
-                                onPressAndHold: root.openMenu(playlist, isPlaylistSection)
+                                onPressAndHold: root.openMenu(entry, isPlaylistSection)
                             }
                             // A dragged track lands in this playlist, or in a
                             // new one on the Playlists section
@@ -270,14 +288,15 @@ Rectangle {
                                 id: rowDrop
 
                                 anchors.fill: parent
-                                enabled: (playlist && !playlist.locked) || isPlaylistSection
+                                enabled: (playlist && !playlist.locked) || isPlaylistSection || (entry && entry.isFolder)
                                 keys: ["mixxx/track"]
 
                                 onDropped: drop => {
                                     if (playlist) {
                                         drop.source.addTo(playlist.id);
                                     } else {
-                                        playlistEditor.openFor(null, drop.source);
+                                        // A new playlist, in the folder it landed on
+                                        playlistEditor.openFor(null, drop.source, entry ? entry.id : -1);
                                     }
                                     drop.accept();
                                 }
@@ -289,7 +308,7 @@ Rectangle {
                                 anchors.leftMargin: 12
                                 anchors.verticalCenter: parent.verticalCenter
                                 height: 20
-                                source: depth == 0 && icon ? "qrc:/images/library/ic_library_" + icon + ".svg" : ""
+                                source: depth == 0 && icon ? "qrc:/images/library/ic_library_" + icon + ".svg" : entry && entry.isFolder ? "qrc:/images/library/ic_library_crates.svg" : ""
                                 sourceSize: Qt.size(20, 20)
                                 visible: false
                                 width: 20
@@ -299,20 +318,20 @@ Rectangle {
                                 anchors.fill: lineIcon
                                 color: current ? Theme.accentColor : Theme.textColor
                                 source: lineIcon
-                                visible: depth == 0 && !!icon
+                                visible: (depth == 0 && !!icon) || (entry !== null && entry.isFolder)
                             }
                             Label {
                                 id: labelItem
 
                                 anchors.left: parent.left
-                                anchors.leftMargin: depth == 0 && icon ? 42 : 14
+                                anchors.leftMargin: (depth == 0 && icon) || (entry && entry.isFolder) ? 42 : 14
                                 anchors.right: addButton.visible ? addButton.left : indicator.left
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 color: current ? Theme.white : Theme.textColor
                                 elide: Text.ElideRight
                                 font.pixelSize: depth == 0 ? 14 : 13
-                                font.weight: depth == 0 ? Font.DemiBold : Font.Normal
+                                font.weight: depth == 0 || (entry && entry.isFolder) ? Font.DemiBold : Font.Normal
                                 text: (playlist && playlist.locked ? "🔒 " : "") + label
                             }
                             // New playlist, always at hand
@@ -351,16 +370,18 @@ Rectangle {
         }
     }
 
-    // Rename, lock or delete a playlist
+    // Rename, move, lock or delete a playlist; a folder also gets new
+    // playlists and folders inside
     Popup {
         id: playlistMenu
 
         property var playlist: ({})
+        readonly property bool isFolder: playlist.isFolder === true
 
         anchors.centerIn: Overlay.overlay
         modal: true
-        padding: 12
-        width: Math.min(320, Overlay.overlay ? Overlay.overlay.width - 24 : 320)
+        padding: 16
+        width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
 
         Overlay.modal: Rectangle {
             color: "#99000000"
@@ -368,67 +389,197 @@ Rectangle {
         background: Rectangle {
             border.color: Theme.darkGray3
             color: Theme.darkGray2
-            radius: 12
+            radius: 16
         }
         contentItem: ColumnLayout {
             spacing: 8
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Image {
+                    id: menuIcon
+
+                    Layout.preferredHeight: 20
+                    Layout.preferredWidth: 20
+                    source: playlistMenu.isFolder ? "qrc:/images/library/ic_library_crates.svg" : "qrc:/images/library/ic_library_playlist.svg"
+                    sourceSize: Qt.size(20, 20)
+                    visible: false
+                }
+                ColorOverlay {
+                    Layout.preferredHeight: 20
+                    Layout.preferredWidth: 20
+                    color: Theme.accentColor
+                    source: menuIcon
+                }
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    elide: Text.ElideRight
+                    font.bold: true
+                    font.pixelSize: 16
+                    text: playlistMenu.playlist.name ?? ""
+                }
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                color: Theme.darkGray3
+                implicitHeight: 1
+            }
+            GridLayout {
+                Layout.fillWidth: true
+                columnSpacing: 8
+                columns: 2
+                rowSpacing: 8
+
+                Skin.Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.accentColor
+                    text: qsTr("NEW PLAYLIST")
+                    visible: playlistMenu.isFolder
+
+                    onClicked: {
+                        playlistMenu.close();
+                        playlistEditor.openFor(null, null, playlistMenu.playlist.id);
+                    }
+                }
+                Skin.Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.accentColor
+                    text: qsTr("NEW FOLDER")
+                    visible: playlistMenu.isFolder
+
+                    onClicked: {
+                        playlistMenu.close();
+                        playlistEditor.openFor(null, null, playlistMenu.playlist.id, true);
+                    }
+                }
+                Skin.Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.accentColor
+                    text: qsTr("RENAME")
+
+                    onClicked: {
+                        playlistMenu.close();
+                        playlistEditor.openFor(playlistMenu.playlist, null);
+                    }
+                }
+                Skin.Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.accentColor
+                    text: qsTr("MOVE")
+
+                    onClicked: {
+                        playlistMenu.close();
+                        moveDialog.openFor(playlistMenu.playlist);
+                    }
+                }
+                Skin.Button {
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.accentColor
+                    text: playlistMenu.playlist.locked ? qsTr("UNLOCK") : qsTr("LOCK")
+                    visible: !playlistMenu.isFolder
+
+                    onClicked: {
+                        Mixxx.MobileLibrary.setPlaylistLocked(playlistMenu.playlist.id, !playlistMenu.playlist.locked);
+                        root.playlistsRevision++;
+                        playlistMenu.close();
+                    }
+                }
+                Skin.Button {
+                    id: deleteButton
+
+                    property bool armed: false
+
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 42
+                    activeColor: Theme.red
+                    enabled: !playlistMenu.playlist.locked
+                    normalColor: Theme.red
+                    text: armed ? (playlistMenu.isFolder ? qsTr("TAP AGAIN: ITS PLAYLISTS MOVE UP") : qsTr("TAP AGAIN TO DELETE")) : qsTr("DELETE")
+
+                    onClicked: {
+                        if (!armed) {
+                            armed = true;
+                            return;
+                        }
+                        if (playlistMenu.isFolder) {
+                            Mixxx.MobileLibrary.deletePlaylistFolder(playlistMenu.playlist.id);
+                        } else {
+                            Mixxx.MobileLibrary.deletePlaylist(playlistMenu.playlist.id);
+                        }
+                        root.playlistsRevision++;
+                        playlistMenu.close();
+                    }
+                }
+            }
+        }
+
+        onClosed: deleteButton.armed = false
+    }
+    // Moves a playlist or folder into a folder
+    Popup {
+        id: moveDialog
+
+        property var entry: ({})
+
+        function openFor(entry) {
+            moveDialog.entry = entry;
+            moveBrowser.folderId = entry.isFolder ? entry.parentId : entry.folderId;
+            moveBrowser.reload();
+            open();
+        }
+
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        padding: 16
+        width: Math.min(360, Overlay.overlay ? Overlay.overlay.width - 24 : 360)
+
+        Overlay.modal: Rectangle {
+            color: "#99000000"
+        }
+        background: Rectangle {
+            border.color: Theme.darkGray3
+            color: Theme.darkGray2
+            radius: 16
+        }
+        contentItem: ColumnLayout {
+            spacing: 10
 
             Text {
                 Layout.fillWidth: true
                 color: Theme.white
                 elide: Text.ElideRight
                 font.bold: true
-                font.pixelSize: 15
-                text: playlistMenu.playlist.name ?? ""
+                font.pixelSize: 16
+                text: qsTr("Move %1").arg(moveDialog.entry.name ?? "")
             }
-            Skin.Button {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 42
-                activeColor: Theme.accentColor
-                text: qsTr("RENAME")
-
-                onClicked: {
-                    playlistMenu.close();
-                    playlistEditor.openFor(playlistMenu.playlist, null);
-                }
-            }
-            Skin.Button {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 42
-                activeColor: Theme.accentColor
-                text: playlistMenu.playlist.locked ? qsTr("UNLOCK") : qsTr("LOCK")
-
-                onClicked: {
-                    Mixxx.MobileLibrary.setPlaylistLocked(playlistMenu.playlist.id, !playlistMenu.playlist.locked);
-                    root.playlistsRevision++;
-                    playlistMenu.close();
-                }
-            }
-            Skin.Button {
-                id: deleteButton
-
-                property bool armed: false
+            LibraryComponent.PlaylistBrowser {
+                id: moveBrowser
 
                 Layout.fillWidth: true
-                Layout.preferredHeight: 42
-                activeColor: Theme.red
-                enabled: !playlistMenu.playlist.locked
-                normalColor: Theme.red
-                text: armed ? qsTr("TAP AGAIN TO DELETE") : qsTr("DELETE")
+                movingFolder: moveDialog.entry.isFolder ? moveDialog.entry.id : -1
+                pickFolder: true
 
-                onClicked: {
-                    if (!armed) {
-                        armed = true;
-                        return;
+                onFolderPicked: folderId => {
+                    if (moveDialog.entry.isFolder) {
+                        Mixxx.MobileLibrary.movePlaylistFolder(moveDialog.entry.id, folderId);
+                    } else {
+                        Mixxx.MobileLibrary.movePlaylistToFolder(moveDialog.entry.id, folderId);
                     }
-                    Mixxx.MobileLibrary.deletePlaylist(playlistMenu.playlist.id);
                     root.playlistsRevision++;
-                    playlistMenu.close();
+                    moveDialog.close();
                 }
             }
         }
-
-        onClosed: deleteButton.armed = false
     }
     // New playlist (optionally with a dropped track) or rename
     Popup {
@@ -436,10 +587,16 @@ Rectangle {
 
         property var playlist: null
         property Item track: null
+        // Where a new playlist or folder goes, -1 for the top level
+        property int folderId: -1
+        property bool makeFolder: false
+        readonly property bool isFolder: playlist ? playlist.isFolder === true : makeFolder
 
-        function openFor(playlist, track) {
+        function openFor(playlist, track, folderId, makeFolder) {
             playlistEditor.playlist = playlist;
             playlistEditor.track = track;
+            playlistEditor.folderId = folderId ?? -1;
+            playlistEditor.makeFolder = makeFolder === true;
             nameField.text = playlist ? playlist.name : (track ? track.label : "");
             error.visible = false;
             open();
@@ -449,10 +606,14 @@ Rectangle {
         function save() {
             const name = nameField.text.trim();
             let ok;
-            if (playlist) {
+            if (playlist && playlist.isFolder) {
+                ok = Mixxx.MobileLibrary.renamePlaylistFolder(playlist.id, name);
+            } else if (playlist) {
                 ok = Mixxx.MobileLibrary.renamePlaylist(playlist.id, name);
+            } else if (makeFolder) {
+                ok = Mixxx.MobileLibrary.createPlaylistFolder(name, folderId) > 0;
             } else {
-                const id = Mixxx.MobileLibrary.createNamedPlaylist(name);
+                const id = Mixxx.MobileLibrary.createNamedPlaylist(name, folderId);
                 ok = id >= 0;
                 if (ok && track) {
                     track.addToPlaylist(id);
@@ -468,7 +629,7 @@ Rectangle {
         anchors.centerIn: Overlay.overlay
         focus: true
         modal: true
-        padding: 12
+        padding: 16
         width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
 
         Overlay.modal: Rectangle {
@@ -477,7 +638,7 @@ Rectangle {
         background: Rectangle {
             border.color: Theme.darkGray3
             color: Theme.darkGray2
-            radius: 12
+            radius: 16
         }
         contentItem: ColumnLayout {
             spacing: 8
@@ -486,7 +647,7 @@ Rectangle {
                 color: Theme.white
                 font.bold: true
                 font.pixelSize: 15
-                text: playlistEditor.playlist ? qsTr("Rename playlist") : qsTr("New playlist")
+                text: playlistEditor.playlist ? (playlistEditor.isFolder ? qsTr("Rename folder") : qsTr("Rename playlist")) : (playlistEditor.isFolder ? qsTr("New folder") : qsTr("New playlist"))
             }
             Skin.TextField {
                 id: nameField
@@ -494,7 +655,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 42
                 font.pixelSize: 14
-                placeholderText: qsTr("Playlist name")
+                placeholderText: playlistEditor.isFolder ? qsTr("Folder name") : qsTr("Playlist name")
 
                 onAccepted: playlistEditor.save()
             }

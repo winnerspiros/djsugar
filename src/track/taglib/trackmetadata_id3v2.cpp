@@ -37,7 +37,7 @@ constexpr unsigned int kMinVersion = 3;
 bool checkHeaderVersionSupported(
         const TagLib::ID3v2::Header& header) {
     if (header.majorVersion() < kMinVersion) {
-        kLogger.warning().noquote()
+        kLogger.debug().noquote()
                 << QString(QStringLiteral("ID3v2.%1 is only partially supported - please convert your file tags to at least ID3v2.%2"))
                            .arg(QString::number(header.majorVersion()), QString::number(kMinVersion));
         return false;
@@ -628,7 +628,7 @@ bool importCoverImageFromTag(
             }
             QImage image = loadImageFromPictureFrame(*pNextFrame);
             if (image.isNull()) {
-                kLogger.warning()
+                kLogger.debug()
                         << "Failed to load image from ID3v2 APIC frame of type"
                         << pNextFrame->type();
                 continue;
@@ -648,7 +648,7 @@ bool importCoverImageFromTag(
         }
         QImage image = loadImageFromPictureFrame(*pNextFrame);
         if (image.isNull()) {
-            kLogger.warning()
+            kLogger.debug()
                     << "Failed to load image from ID3v2 APIC frame of type"
                     << pNextFrame->type();
             continue;
@@ -675,7 +675,7 @@ void importTrackMetadataFromTag(
     const TagLib::ID3v2::Header* pHeader = tag.header();
     DEBUG_ASSERT(pHeader);
     if (!checkHeaderVersionSupported(*pHeader)) {
-        kLogger.warning() << "Legacy ID3v2 version - importing only basic tags";
+        kLogger.debug() << "Legacy ID3v2 version - importing only basic tags";
         taglib::importTrackMetadataFromTag(pTrackMetadata, tag);
         return; // done
     }

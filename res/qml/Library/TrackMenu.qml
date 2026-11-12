@@ -13,26 +13,6 @@ Popup {
     required property Item track
     // Local tracks: queue an analysis
     property var analyze: null
-    property var playlists: []
-
-    function loadPlaylists() {
-        playlists = Mixxx.MobileLibrary.playlists().filter(p => !p.locked);
-    }
-    function createPlaylist() {
-        // The keyboard's word in progress counts too
-        Qt.inputMethod.commit();
-        const name = newName.text.trim();
-        if (name.length === 0) {
-            return;
-        }
-        const id = Mixxx.MobileLibrary.createNamedPlaylist(name);
-        if (id >= 0) {
-            root.act(() => root.track.addToPlaylist(id));
-        } else {
-            newName.placeholderText = qsTr("%1 exists: pick it above").arg(name);
-            newName.text = "";
-        }
-    }
 
     function act(action) {
         action();
@@ -42,8 +22,8 @@ Popup {
     anchors.centerIn: Overlay.overlay
     focus: true
     modal: true
-    padding: 12
-    width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
+    padding: 16
+    width: Math.min(360, Overlay.overlay ? Overlay.overlay.width - 24 : 360)
 
     Overlay.modal: Rectangle {
         color: "#99000000"
@@ -51,7 +31,7 @@ Popup {
     background: Rectangle {
         border.color: Theme.darkGray3
         color: Theme.darkGray2
-        radius: 12
+        radius: 16
     }
     contentItem: ColumnLayout {
         spacing: 10
@@ -101,63 +81,23 @@ Popup {
 
             onClicked: root.act(root.analyze ?? root.track.fetch)
         }
+        Rectangle {
+            Layout.fillWidth: true
+            color: Theme.darkGray3
+            implicitHeight: 1
+        }
         Text {
             color: Theme.lightGray2
             font.pixelSize: 12
-            text: qsTr("Add to playlist")
+            font.weight: Font.DemiBold
+            text: qsTr("ADD TO PLAYLIST")
         }
-        ListView {
+        PlaylistBrowser {
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, 4 * 44)
-            clip: true
-            model: root.playlists
-            spacing: 4
 
-            delegate: Skin.Button {
-                required property var modelData
-
-                activeColor: Theme.accentColor
-                backgroundColor: Theme.libraryActionDisabledBackground
-                font.pixelSize: 14
-                height: 40
-                normalColor: Theme.white
-                text: modelData.name
-                width: ListView.view.width
-
-                onClicked: root.act(() => root.track.addToPlaylist(modelData.id))
-            }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 6
-
-            Skin.TextField {
-                id: newName
-
-                Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                font.pixelSize: 14
-                placeholderText: qsTr("New playlist")
-                onAccepted: root.createPlaylist()
-            }
-            Skin.Button {
-                Layout.preferredHeight: 40
-                activeColor: Theme.accentColor
-                enabled: newName.displayText.trim().length > 0
-                text: qsTr("ADD")
-
-                onClicked: root.createPlaylist()
-            }
+            onPlaylistPicked: id => root.act(() => root.track.addToPlaylist(id))
         }
     }
 
-    Component.onCompleted: loadPlaylists()
     onClosed: destroy()
-
-    Connections {
-        target: Mixxx.MobileLibrary
-        function onPlaylistsChanged() {
-            root.loadPlaylists();
-        }
-    }
 }

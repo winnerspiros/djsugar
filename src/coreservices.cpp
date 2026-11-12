@@ -463,7 +463,9 @@ void CoreServices::initializeLogging() {
             // flushing every line (e.g. warnings of the audio thread) made the audio
             // and the UI stutter.
             // (from JaviLabarumDJ/mixxx-android)
-            std::max(m_cmdlineArgs.getLogLevel(), mixxx::LogLevel::Info),
+            // Info at most: debug messages for each scanned file made logs
+            // of megabytes (the default level of release builds is Debug)
+            mixxx::LogLevel::Info,
 #else
             m_cmdlineArgs.getLogLevel(),
 #endif
