@@ -22,7 +22,7 @@ void installCrashReporter();
 void exportPreviousLog(const QString& logDirPath);
 /// Logs how the previous run ended when it crashed or was killed (Android
 /// 11+ keeps a record of that, also of crashes no handler could write down)
-void logPreviousExit();
+void logPreviousExit(const QString& logDirPath);
 
 } // namespace android
 } // namespace mixxx

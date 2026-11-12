@@ -471,7 +471,7 @@ void CoreServices::initializeLogging() {
             logFlags);
 #ifdef Q_OS_ANDROID
     mixxx::android::installCrashReporter();
-    mixxx::android::logPreviousExit();
+    mixxx::android::logPreviousExit(m_pSettingsManager->settings()->getSettingsPath());
     mixxx::android::exportPreviousLog(m_pSettingsManager->settings()->getSettingsPath());
 #endif
 }

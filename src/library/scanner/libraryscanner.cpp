@@ -209,6 +209,9 @@ void LibraryScanner::run() {
         kLogger.debug() << "Event loop starting";
         exec();
         kLogger.debug() << "Event loop stopped";
+        // A scan stopped by the exit leaves its batch open: what it found is
+        // kept, and no query outlives the connection
+        m_trackDao.addTracksFinish(false);
     }
     kLogger.debug() << "Exiting thread";
 }
@@ -337,6 +340,16 @@ void LibraryScanner::slotStartScan() {
             &TaskWatcher::allTasksDone,
             this,
             &LibraryScanner::slotFinishHashedScan);
+#ifdef Q_OS_ANDROID
+    // New folders are imported as they are found, not after a walk of the
+    // whole tree: that took minutes on Android storage before a single song
+    // showed up (the start-up cleanup drops the hashes of folders without
+    // songs, so most folders are new on every scan). The second stage only
+    // keeps symlinked duplicates in order, which Android storage has none of.
+    constexpr bool firstScan = true;
+#else
+    const bool firstScan = m_scannerGlobal->hasNoDirectoryHashes();
+#endif
 
     for (const mixxx::FileInfo& rootDir : std::as_const(m_libraryRootDirs)) {
         // Acquire a security bookmark for this directory if we are in a
@@ -350,7 +363,7 @@ void LibraryScanner::slotStartScan() {
         auto dirAccess = mixxx::FileAccess(rootDir);
         if (!m_scannerGlobal->testAndMarkDirectoryScanned(rootDir.toQDir())) {
             queueTask(new RecursiveScanDirectoryTask(
-                    this, m_scannerGlobal, std::move(dirAccess), false));
+                    this, m_scannerGlobal, std::move(dirAccess), firstScan));
         }
     }
     pWatcher->taskDone();

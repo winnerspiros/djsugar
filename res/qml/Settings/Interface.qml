@@ -777,7 +777,7 @@ Category {
                                             Layout.alignment: Qt.AlignHCenter
                                             Layout.preferredWidth: colorPane.defaultPalette.length * 20
                                             currentIndex: colorPane.hotcuePaletteColorIndex
-                                            palette: colorPane.defaultPalette
+                                            colors: colorPane.defaultPalette
 
                                             onCurrentIndexChanged: themeColorTab.dirty = true
                                         }
@@ -858,7 +858,7 @@ Category {
                                             Layout.alignment: Qt.AlignHCenter
                                             Layout.preferredWidth: colorPane.defaultPalette.length * 20
                                             currentIndex: colorPane.loopPaletteColorIndex
-                                            palette: colorPane.defaultPalette
+                                            colors: colorPane.defaultPalette
 
                                             onCurrentIndexChanged: themeColorTab.dirty = true
                                         }
@@ -923,7 +923,7 @@ Category {
                                             Layout.alignment: Qt.AlignHCenter
                                             Layout.preferredWidth: colorPane.defaultPalette.length * 20
                                             currentIndex: colorPane.jumpPaletteColorIndex
-                                            palette: colorPane.defaultPalette
+                                            colors: colorPane.defaultPalette
 
                                             onCurrentIndexChanged: themeColorTab.dirty = true
                                         }
