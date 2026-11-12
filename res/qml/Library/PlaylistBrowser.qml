@@ -6,7 +6,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../Theme"
 
-// The playlists, with a search and a field for a new one. Picking a
+// The playlists, with a search. Picking a
 // playlist emits playlistPicked; with `checkable` each row has a check box,
 // checked when in `checkedIds`.
 ColumnLayout {
@@ -22,23 +22,6 @@ ColumnLayout {
     function reload() {
         playlists = Mixxx.MobileLibrary.playlists();
     }
-    function create() {
-        // The keyboard's word in progress counts too
-        Qt.inputMethod.commit();
-        const name = newName.text.trim();
-        if (name.length === 0) {
-            return;
-        }
-        const id = Mixxx.MobileLibrary.createNamedPlaylist(name);
-        newName.text = "";
-        if (id >= 0) {
-            reload();
-            root.playlistPicked(id);
-        } else {
-            newName.placeholderText = qsTr("%1 exists").arg(name);
-        }
-    }
-
     readonly property var entries: {
         const query = filter.trim().toLowerCase();
         return query ? playlists.filter(p => p.name.toLowerCase().includes(query)) : playlists;
@@ -225,55 +208,6 @@ ColumnLayout {
                 text: root.filter.length > 0 ? qsTr("Nothing found") : qsTr("No playlists yet")
                 visible: list.count === 0
             }
-        }
-    }
-    // A new playlist, which gets the track at once
-    Rectangle {
-        Layout.fillWidth: true
-        Layout.preferredHeight: 44
-        border.color: newName.activeFocus ? Theme.accentColor : "transparent"
-        border.width: 1
-        color: Theme.embeddedBackgroundColor
-        radius: 8
-
-        Text {
-            anchors.left: parent.left
-            anchors.leftMargin: 14
-            anchors.verticalCenter: parent.verticalCenter
-            color: Theme.accentColor
-            font.pixelSize: 20
-            text: "+"
-        }
-        TextField {
-            id: newName
-
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.leftMargin: 34
-            anchors.right: addButton.left
-            anchors.top: parent.top
-            background: null
-            color: Theme.textColor
-            font.pixelSize: 14
-            inputMethodHints: Qt.ImhNoPredictiveText
-            placeholderText: qsTr("New playlist")
-            placeholderTextColor: Theme.lightGray
-
-            onAccepted: root.create()
-        }
-        Skin.Button {
-            id: addButton
-
-            activeColor: Theme.accentColor
-            anchors.right: parent.right
-            anchors.rightMargin: 4
-            anchors.verticalCenter: parent.verticalCenter
-            enabled: newName.displayText.trim().length > 0
-            height: 36
-            text: qsTr("CREATE")
-            visible: newName.displayText.trim().length > 0
-
-            onClicked: root.create()
         }
     }
 }
