@@ -144,8 +144,6 @@ jobs:
       - version
       - build
     runs-on: ubuntu-24.04
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     # Run even if some builds fail so we still get a release with partial assets.
     if: always() && needs.version.result == 'success'
     steps:
@@ -178,7 +176,7 @@ jobs:
           git push --delete origin latest 2>/dev/null || true
 
       - name: Create or update GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.version.outputs.tag_name }}
           name: ${{ needs.version.outputs.release_name }}

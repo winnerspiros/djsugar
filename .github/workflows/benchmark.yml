@@ -140,9 +140,7 @@ jobs:
 
       - name: "[Windows] Set up MSVC Developer Command Prompt"
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+        uses: ./.github/actions/msvc-env
         with:
           arch: ${{ matrix.arch }}
 
@@ -238,12 +236,6 @@ jobs:
       - name: "[Ubuntu/macOS] Set up gcc/clang problem matcher"
         if: runner.os != 'Windows'
         run: echo "::add-matcher::.github/gcc-matcher.json"
-
-      - name: "[Windows] Set up MSVC problem matcher"
-        if: runner.os == 'Windows'
-        uses: ammaraskar/msvc-problem-matcher@0.3.0
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
       - name: Benchmark
         run: cmake --build . --target mixxx-benchmark --config RelWithDebInfo

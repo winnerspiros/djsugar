@@ -34,7 +34,7 @@ jobs:
       #
       # - name: Generate App Token
       #   id: generate-token-key-pair
-      #   uses: actions/create-github-app-token@v1
+      #   uses: actions/create-github-app-token@v3
       #   with:
       #     private-key: ${{ secrets.MIXXX_BOT_APP_PRIVATE_KEY }}
       #     app-id: ${{ vars.MIXXX_BOT_APP_ID }}
