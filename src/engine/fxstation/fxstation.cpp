@@ -24,6 +24,16 @@ constexpr float kMaxEchoSeconds = 2.2f;
 constexpr float kHistorySeconds = 4.f;
 // The longest roll of a band (a quarter of a beat at 40 BPM, and some)
 constexpr float kMaxRollSeconds = 0.5f;
+// The longest slice of the Roll scene: a beat at 30 BPM
+constexpr float kMaxSceneRollSeconds = 2.f;
+// The sweep of Flanger and Phaser, in beats, and the slices of Roll and
+// steps of Gater, by the first sub parameter
+constexpr double kSweepBeats[] = {1.0, 2.0, 4.0, 8.0, 16.0, 32.0};
+constexpr double kSliceBeats[] = {1.0 / 16.0, 1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0};
+template<typename T, size_t N>
+T pick(const T (&values)[N], float knob) {
+    return values[std::clamp(static_cast<int>(knob * N), 0, static_cast<int>(N) - 1)];
+}
 constexpr int kPitchWindowFrames = 2048;
 
 // The choices of the multi-state buttons
@@ -108,6 +118,9 @@ FxStation::FxStation(UserSettingsPointer pConfig)
           m_sceneSilentFrames(0),
           m_sceneActive(false),
           m_lastSceneType(-1),
+          m_sceneMixTarget(0.f),
+          m_sceneDialTarget(0.5f),
+          m_sceneCoefficient(1.f),
           m_bandEnvelope{},
           m_isolateActive(false),
           m_loop{},
@@ -174,6 +187,9 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     m_releaseEcho.allocate(static_cast<int>(kMaxEchoSeconds * maxRate));
     m_history.allocate(static_cast<int>(kHistorySeconds * maxRate));
     m_spiral.allocate(kPitchWindowFrames);
+    m_flanger.allocate(kMaxSampleRate);
+    m_roll.allocate(kMaxSampleRate, kMaxSceneRollSeconds);
+    m_grainPitch.allocate(kMaxSampleRate);
     // At the highest rate first, so that prepare() never allocates
     m_reverb.setup(kMaxSampleRate);
     m_reverb.setModulation(0.9f);
@@ -240,6 +256,7 @@ void FxStation::prepare(float sampleRate) {
     m_sampleRate = sampleRate;
     m_reverb.setup(std::min(sampleRate, kMaxSampleRate));
     m_reverb.setModulation(0.9f);
+    m_grainPitch.setSampleRate(std::min(sampleRate, kMaxSampleRate));
     m_lowMid.set(kLowMidFrequency, sampleRate);
     m_midHigh.set(kMidHighFrequency, sampleRate);
     m_lowAllPass.set(kMidHighFrequency, sampleRate);
@@ -520,11 +537,84 @@ bool FxStation::processScene(float* pLeft, float* pRight) {
         break;
     }
     default:
-        break;
+        return processAddedScene(pLeft, pRight);
     }
     *pLeft = left;
     *pRight = right;
     return std::fabs(wetLeft) + std::fabs(wetRight) > kSilentLevel;
+}
+
+bool FxStation::processAddedScene(float* pLeft, float* pRight) {
+    const auto type = static_cast<Scene>(m_lastSceneType);
+    const float mix = m_sceneMix.step(m_sceneMixTarget, m_sceneCoefficient);
+    const float dial = m_sceneDialValue.step(m_sceneDialTarget, m_sceneCoefficient);
+    if (mix < 1e-4f && m_sceneMixTarget <= 0.f) {
+        m_roll.stop();
+        return false;
+    }
+    const float param1 = static_cast<float>(m_pSceneParam1->get());
+    const float param2 = static_cast<float>(m_pSceneParam2->get());
+    const float dryLeft = *pLeft;
+    const float dryRight = *pRight;
+    float left = dryLeft;
+    float right = dryRight;
+    // How much of the effect: the dial for most, all of it for the ones
+    // the dial drives (it sweeps them from its center)
+    float amount = dial;
+    switch (type) {
+    case Scene::Flanger:
+        m_flanger.process(&left,
+                &right,
+                static_cast<float>(m_beat / pick(kSweepBeats, param1)),
+                0.95f * param2,
+                m_sampleRate);
+        break;
+    case Scene::Phaser:
+        m_phaser.process(&left,
+                &right,
+                static_cast<float>(m_beat / pick(kSweepBeats, param1)),
+                0.9f * param2,
+                m_sampleRate);
+        break;
+    case Scene::Filter:
+        m_sweepFilter.process(&left, &right, 2.f * dial - 1.f, param2, m_sampleRate);
+        amount = 1.f;
+        break;
+    case Scene::Roll:
+        m_roll.process(&left,
+                &right,
+                static_cast<int>(pick(kSliceBeats, param1) * beatFrames()),
+                param2,
+                m_sampleRate);
+        // The roll alone from the center of the dial up
+        amount = std::min(1.f, 2.f * dial);
+        break;
+    case Scene::Gater: {
+        const float gain = fxstation::scenes::gateGain(
+                m_beat, pick(kSliceBeats, param1), 0.5f, param2);
+        left *= gain;
+        right *= gain;
+        break;
+    }
+    case Scene::Pitch: {
+        // Down to the left of the center, up to the right, by up to an
+        // octave (two with the range knob up)
+        const float semitones = (2.f * dial - 1.f) * (1.f + 23.f * param1);
+        m_grainPitch.process(&left, &right, std::pow(2.f, semitones / 12.f));
+        amount = 0.5f + 0.5f * param2;
+        break;
+    }
+    case Scene::Drive:
+        m_drive.process(&left, &right, dial, param1, param2, m_sampleRate);
+        amount = 1.f;
+        break;
+    default:
+        return false;
+    }
+    const float wet = mix * amount;
+    *pLeft = dryLeft + (left - dryLeft) * wet;
+    *pRight = dryRight + (right - dryRight) * wet;
+    return true;
 }
 
 void FxStation::processIsolate(float* pLeft, float* pRight, double beat) {
@@ -855,10 +945,25 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
         m_reverb.clear();
         m_sceneFilter.reset();
         m_wetFilter.reset();
+        m_flanger.clear();
+        m_phaser.clear();
+        m_sweepFilter.clear();
+        m_roll.stop();
+        m_grainPitch.clear();
+        m_drive.clear();
+        m_sceneMix.reset(0.f);
         m_lastSceneType = sceneType;
     }
     const bool sceneOn = m_pSceneOn->get() > 0;
     const float dial = static_cast<float>(m_pSceneDial->get());
+    m_sceneMixTarget = sceneOn ? 1.f : 0.f;
+    m_sceneDialTarget = dial;
+    m_sceneCoefficient = 1.f - std::exp(-1.f / (0.01f * m_sampleRate));
+    if (sceneType == static_cast<int>(Scene::Roll) && sceneOn && !m_roll.active()) {
+        // The slice starts at the press
+        m_roll.start();
+        m_sceneMix.reset(1.f);
+    }
     const float param1 = static_cast<float>(m_pSceneParam1->get());
     const float param2 = static_cast<float>(m_pSceneParam2->get());
     const float bufferCoefficient = 1.f -

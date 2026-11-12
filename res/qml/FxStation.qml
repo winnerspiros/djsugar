@@ -21,7 +21,7 @@ Rectangle {
     property int tab: 0
     // The effects of the FX Station, in the order of scene_type and
     // release_type
-    readonly property var sceneNames: ["BPF ECHO", "ECHO", "NOISE", "SPIRAL UP", "REVERB UP", "HPF ECHO", "LPF ECHO", "CRUSH ECHO", "SPIRAL DOWN", "REVERB DOWN"]
+    readonly property var sceneNames: ["BPF ECHO", "ECHO", "NOISE", "SPIRAL UP", "REVERB UP", "HPF ECHO", "LPF ECHO", "CRUSH ECHO", "SPIRAL DOWN", "REVERB DOWN", "FLANGER", "PHASER", "FILTER", "ROLL", "GATER", "PITCH", "DRIVE"]
     readonly property var releaseNames: ["VINYL BRAKE", "ECHO", "BACK SPIN"]
     // The effect on each Scene and Release button, swapped with the edit
     // icon; a button plays its own unless swapped
@@ -301,6 +301,26 @@ Rectangle {
         readonly property bool isNoise: type === 2
         readonly property bool isReverb: type === 4 || type === 9
         readonly property bool isSpiral: type === 3 || type === 8
+        // The sub parameters of each effect: names and value texts
+        readonly property var param1Labels: ["TIME", "TIME", "TONE", "TIME", "SIZE", "TIME", "TIME", "TIME", "TIME", "SIZE", "RATE", "RATE", "DRIVE", "SLICE", "STEP", "RANGE", "TONE"]
+        readonly property var param2Labels: ["FEEDBACK", "FEEDBACK", "RESO", "STEP", "TONE", "FEEDBACK", "FEEDBACK", "FEEDBACK", "STEP", "TONE", "FEEDBACK", "RESO", "RESO", "DECAY", "SHAPE", "MIX", "BIAS"]
+        function param1Text(value) {
+            const sweeps = ["1", "2", "4", "8", "16", "32"];
+            const slices = ["1/16", "1/8", "1/4", "1/2", "1"];
+            if (type === 10 || type === 11) {
+                return sweeps[Math.min(5, Math.floor(value * 6))] + " BT";
+            }
+            if (type === 13 || type === 14) {
+                return slices[Math.min(4, Math.floor(value * 5))];
+            }
+            if (type === 15) {
+                return "±" + Math.round(1 + 23 * value) + " st";
+            }
+            if (type === 12 || type === 16 || isNoise || isReverb) {
+                return "";
+            }
+            return ["1/8", "1/4", "3/8", "1/2", "3/4", "1"][Math.min(5, Math.floor(value * 6))];
+        }
 
         // Plays the effect on a Scene button, or stops it
         function select(button) {
@@ -433,14 +453,14 @@ Rectangle {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
                         key: "scene_param1"
-                        label: sceneSection.isNoise ? "TONE" : (sceneSection.isReverb ? "SIZE" : "TIME")
-                        valueText: sceneSection.isNoise || sceneSection.isReverb ? "" : ["1/8", "1/4", "3/8", "1/2", "3/4", "1"][Math.min(5, Math.floor(value * 6))]
+                        label: sceneSection.param1Labels[sceneSection.type] ?? "TIME"
+                        valueText: sceneSection.param1Text(value)
                     }
                     Skin.FxStationKnob {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
                         key: "scene_param2"
-                        label: sceneSection.isNoise ? "RESO" : (sceneSection.isReverb ? "TONE" : (sceneSection.isSpiral ? "STEP" : "FEEDBACK"))
+                        label: sceneSection.param2Labels[sceneSection.type] ?? "FEEDBACK"
                         valueText: sceneSection.isSpiral ? Math.round(1 + 6 * value) + " st" : ""
                     }
                 }

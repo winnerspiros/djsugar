@@ -11,6 +11,7 @@
 #include "effects/backends/builtin/dsp/vinylmotion.h"
 #include "engine/fxstation/fxstationdsp.h"
 #include "engine/fxstation/fxstationinstruments.h"
+#include "engine/fxstation/fxstationscenes.h"
 #include "util/types.h"
 
 class ControlObject;
@@ -54,6 +55,13 @@ class FxStation : public QObject {
         CrushEcho,
         SpiralDown,
         ReverbDown,
+        Flanger,
+        Phaser,
+        Filter,
+        Roll,
+        Gater,
+        Pitch,
+        Drive,
         Count,
     };
     enum class IsolateMode {
@@ -112,6 +120,7 @@ class FxStation : public QObject {
     void startRelease();
 
     bool processScene(float* pLeft, float* pRight);
+    bool processAddedScene(float* pLeft, float* pRight);
     void processIsolate(float* pLeft, float* pRight, double beat);
     void triggerInstrument(int instrument, float velocity);
     /// The division of the ribbon, or of the finest roll button held
@@ -194,6 +203,19 @@ class FxStation : public QObject {
     int m_sceneSilentFrames;
     bool m_sceneActive;
     int m_lastSceneType;
+    // The added scenes: their own wet mix (they have no send or tail) and
+    // the dial, smoothed per sample, for the ones it sweeps from the center
+    fxstation::Smoother m_sceneMix;
+    fxstation::Smoother m_sceneDialValue;
+    float m_sceneMixTarget;
+    float m_sceneDialTarget;
+    float m_sceneCoefficient;
+    fxstation::scenes::Flanger m_flanger;
+    fxstation::scenes::Phaser m_phaser;
+    fxstation::scenes::SweepFilter m_sweepFilter;
+    fxstation::scenes::Roll m_roll;
+    fxstation::scenes::GrainPitch m_grainPitch;
+    fxstation::scenes::Drive m_drive;
 
     // Isolate
     fxstation::Crossover m_lowMid;
