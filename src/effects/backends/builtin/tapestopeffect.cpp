@@ -1,143 +1,129 @@
 #include "effects/backends/builtin/tapestopeffect.h"
 
-#include <algorithm>
-#include <cmath>
-
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/sample.h"
-
 namespace {
-constexpr double kMinSpeed = 0.01;
-} // anonymous namespace
+
+// The read head never gets ahead of real time, so a brake needs at most
+// its own length of audio. Longer brakes are clamped to this.
+constexpr float kMaxSeconds = 8.0f;
+
+} // namespace
 
 QString TapeStopEffect::getId() {
     return QStringLiteral("org.mixxx.effects.tapestop");
 }
 
 EffectManifestPointer TapeStopEffect::getManifest() {
-    auto pManifest = EffectManifestPointer::create();
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Tape Stop"));
-    pManifest->setAuthor("DJ Sugar");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Simulates a tape machine slowing down to a stop. "
-            "Creates a dramatic pitch-down effect. Popular in DJ transitions."));
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Brake"),
+            QObject::tr("Brake"),
+            QObject::tr("Winds the deck down to a stop like a turntable with the "
+                        "motor off or a tape losing power, synced to the beat."));
 
-    auto pEnable = pManifest->addParameter();
-    pEnable->setId("enable");
-    pEnable->setName(QObject::tr("Enable"));
-    pEnable->setDescription(QObject::tr("Toggle tape stop on/off"));
-    pEnable->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    pEnable->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pEnable->setRange(0.0, 0.0, 1.0);
-
-    auto pSpeed = pManifest->addParameter();
-    pSpeed->setId("speed");
-    pSpeed->setName(QObject::tr("Speed"));
-    pSpeed->setDescription(QObject::tr("Initial playback speed"));
-    pSpeed->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    pSpeed->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pSpeed->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    pSpeed->setRange(0.1, 1.0, 2.0);
-
-    auto pDuration = pManifest->addParameter();
-    pDuration->setId("duration");
-    pDuration->setName(QObject::tr("Duration"));
-    pDuration->setDescription(QObject::tr("Stop duration in seconds"));
-    pDuration->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pDuration->setUnitsHint(EffectManifestParameter::UnitsHint::Seconds);
-    pDuration->setRange(0.1, 1.0, 4.0);
-
+    djfx::division(pManifest,
+            QStringLiteral("time"),
+            QObject::tr("Time"),
+            QObject::tr("Time"),
+            QObject::tr("How long the stop takes, in beats."),
+            2.0);
+    auto pMix = djfx::knob(pManifest,
+            QStringLiteral("mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Brake level against the live track."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pMix);
+    djfx::knob(pManifest,
+            QStringLiteral("curve"),
+            QObject::tr("Curve"),
+            QObject::tr("Curve"),
+            QObject::tr("Left: tape, slows evenly. Right: turntable, holds speed "
+                        "then drops off."),
+            0.0,
+            0.6,
+            1.0);
+    djfx::toggle(pManifest,
+            QStringLiteral("quantize"),
+            QObject::tr("Quantize"),
+            QObject::tr("Quant"),
+            QObject::tr("Starts the brake on the next beat."),
+            true);
     return pManifest;
 }
 
-void TapeStopEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pEnableParameter = parameters.value("enable");
-    m_pSpeedParameter = parameters.value("speed");
-    m_pDurationParameter = parameters.value("duration");
+TapeStopGroupState::TapeStopGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    capacityFrames = static_cast<int>(m_sampleRate * kMaxSeconds);
+    history.assign(2 * static_cast<std::size_t>(capacityFrames), 0.0f);
 }
 
-void TapeStopEffect::processChannel(
-        TapeStopGroupState* pState,
+void TapeStopGroupState::restart() {
+    written = 0;
+    readPos = 0.0;
+    elapsed = 0.0;
+    started = false;
+    lastPhase = 0.0f;
+}
+
+void TapeStopEffect::processChannel(TapeStopGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        [[maybe_unused]] const EffectEnableState enableState,
-        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
-    const int sampleRate = engineParameters.sampleRate();
-    const SINT numSamples = engineParameters.samplesPerBuffer();
-    const int chCount = engineParameters.channelCount();
+        const EffectEnableState enableState,
+        const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    if (enableState == EffectEnableState::Enabling) {
+        pState->restart();
+        pState->started = !paramBool(kQuantize);
+    }
+    const double stopFrames = std::clamp(paramBeats(kTime) * pState->clock.samplesPerBeat(),
+            256.0,
+            static_cast<double>(pState->capacityFrames));
+    const float mix = param(kMix);
+    const float curve = param(kCurve);
+    const float* history = pState->history.data();
 
-    const CSAMPLE_GAIN enable = static_cast<CSAMPLE_GAIN>(m_pEnableParameter->value());
-    const CSAMPLE_GAIN speed = static_cast<CSAMPLE_GAIN>(m_pSpeedParameter->value());
-    const CSAMPLE_GAIN duration = static_cast<CSAMPLE_GAIN>(m_pDurationParameter->value());
-
-    const double smoothEnable = pState->prev_enable + 0.02 * (enable - pState->prev_enable);
-    const double smoothSpeed = pState->prev_speed + 0.02 * (speed - pState->prev_speed);
-
-    pState->prev_enable = static_cast<CSAMPLE_GAIN>(smoothEnable);
-    pState->prev_speed = static_cast<CSAMPLE_GAIN>(smoothSpeed);
-
-    if (enable > 0.5) {
-        if (!pState->is_stopping) {
-            // Start the tape stop
-            pState->is_stopping = true;
-            pState->speed = smoothSpeed;
-            pState->stop_start_pos = pState->write_position;
+    for (int i = 0; i < frames; ++i) {
+        const float x[2] = {pInput[2 * i], pInput[2 * i + 1]};
+        const float phase = pState->clock.tick(1.0);
+        if (!pState->started) {
+            if (phase < pState->lastPhase) {
+                pState->started = true;
+            }
+            pState->lastPhase = phase;
+            pOutput[2 * i] = x[0];
+            pOutput[2 * i + 1] = x[1];
+            continue;
         }
-
-        // Calculate deceleration rate per sample (total samples = duration * sampleRate * chCount)
-        const double totalSamples = duration * sampleRate * chCount;
-        const double decelRate = totalSamples > 0.0
-                ? (pState->speed - kMinSpeed) / totalSamples
-                : 0.0;
-
-        for (SINT i = 0; i < numSamples; ++i) {
-            // Decelerate
-            pState->speed -= decelRate;
-            if (pState->speed < kMinSpeed) {
-                pState->speed = kMinSpeed;
-            }
-
-            // Read from buffer at current speed
-            int readPos = static_cast<int>(pState->read_position);
-            if (readPos >= pState->delay_buf.size()) {
-                readPos = readPos % pState->delay_buf.size();
-            }
-            if (readPos < 0) {
-                readPos = 0;
-            }
-
-            // Linear interpolation for smooth pitch shifting
-            CSAMPLE sample1 = pState->delay_buf[readPos];
-            CSAMPLE sample2 = pState->delay_buf[(readPos + 1) % pState->delay_buf.size()];
-            double frac = pState->read_position - readPos;
-            CSAMPLE interpolated = static_cast<CSAMPLE>(sample1 + (sample2 - sample1) * frac);
-
-            pOutput[i] = interpolated;
-
-            // Advance read position
-            pState->read_position += pState->speed;
-            if (pState->read_position >= pState->delay_buf.size()) {
-                pState->read_position -= pState->delay_buf.size();
-            }
-
-            // Write current input to buffer (for when we loop)
-            pState->delay_buf[pState->write_position] = pInput[i];
-            pState->write_position = (pState->write_position + 1) % pState->delay_buf.size();
+        if (pState->written < pState->capacityFrames) {
+            const std::size_t at = 2 * static_cast<std::size_t>(pState->written);
+            pState->history[at] = x[0];
+            pState->history[at + 1] = x[1];
+            ++pState->written;
         }
-    } else {
-        // Disabled: pass through
-        for (SINT i = 0; i < numSamples; ++i) {
-            pOutput[i] = pInput[i];
-            pState->delay_buf[pState->write_position] = pInput[i];
-            pState->write_position = (pState->write_position + 1) % pState->delay_buf.size();
+        const double t = std::min(1.0, pState->elapsed / stopFrames);
+        // Speed curve: tape slows linearly; a turntable keeps its inertia
+        // and then drops off (1 - t^p with p growing with the curve).
+        const double power = 1.0 + 3.0 * curve;
+        const double speed = std::max(0.0, 1.0 - std::pow(t, power));
+        // Fade the last stretch so the stop lands on silence, not a
+        // frozen DC value.
+        const float tail = static_cast<float>(std::min(1.0, (1.0 - t) * 12.0));
+        const int index = static_cast<int>(pState->readPos);
+        const float frac = static_cast<float>(pState->readPos - index);
+        const int next = std::min(index + 1, std::max(0, pState->written - 1));
+        for (int c = 0; c < 2; ++c) {
+            const float a = history[2 * static_cast<std::size_t>(index) +
+                    static_cast<std::size_t>(c)];
+            const float b = history[2 * static_cast<std::size_t>(next) +
+                    static_cast<std::size_t>(c)];
+            const float y = fxdsp::lerp(a, b, frac) * tail;
+            pOutput[2 * i + c] = fxdsp::lerp(x[c], y, mix);
         }
-        pState->is_stopping = false;
-        pState->speed = 1.0;
-        pState->read_position = pState->write_position;
+        pState->readPos = std::min(pState->readPos + speed,
+                static_cast<double>(std::max(0, pState->written - 1)));
+        pState->elapsed += 1.0;
     }
 }

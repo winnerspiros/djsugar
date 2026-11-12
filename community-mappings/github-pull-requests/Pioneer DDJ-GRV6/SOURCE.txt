@@ -1,0 +1,8 @@
+Mapping: Pioneer DDJ-GRV6
+Author (in the mapping): Jörg Beyer
+Submitted by: joergbeyer in Mixxx pull request #15801
+https://github.com/mixxxdj/mixxx/pull/15801
+Last update of the pull request: 2026-05-05
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: common-controller-scripts.js

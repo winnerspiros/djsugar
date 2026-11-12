@@ -1,59 +1,35 @@
-// Ported from CAPS Reverb.
-// This effect is GPL code.
-
 #pragma once
 
-#include <Reverb.h>
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/fdnreverb.h"
 
-#include <QMap>
-
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/types.h"
-
-class ReverbGroupState : public EffectState {
+// Dense, modulated feedback delay network reverb with pre-delay, tone
+// controls and freeze. The tail keeps ringing when the deck is taken off
+// the effect unit.
+class ReverbGroupState : public DjFxState {
   public:
-    ReverbGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters),
-              sampleRate(engineParameters.sampleRate()),
-              sendPrevious(0) {
-        reverb.init(sampleRate);
-    }
-    ~ReverbGroupState() override = default;
+    explicit ReverbGroupState(const mixxx::EngineParameters& engineParameters);
 
-    float sampleRate;
-    float sendPrevious;
-    MixxxPlateX2 reverb;
+    fxdsp::FdnReverb reverb;
+    fxdsp::Smoother amount;
+    float lastSize = -1.0f;
+    float lastDecay = -1.0f;
+    float lastDamping = -1.0f;
+    float lastLowCut = -1.0f;
+    float lastPreDelay = -1.0f;
 };
 
-class ReverbEffect : public EffectProcessorImpl<ReverbGroupState> {
-  public:
-    ReverbEffect() = default;
-    ~ReverbEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            ReverbGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class ReverbEffect : public DjFxEffect<ReverbGroupState, ReverbEffect> {
+    DJFX_EFFECT_INTERFACE(ReverbGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pDecayParameter;
-    EngineEffectParameterPointer m_pBandWidthParameter;
-    EngineEffectParameterPointer m_pDampingParameter;
-    EngineEffectParameterPointer m_pSendParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(ReverbEffect);
+    enum Param {
+        kAmount,
+        kSize,
+        kDecay,
+        kDamping,
+        kLowCut,
+        kPreDelay,
+        kFreeze,
+    };
 };

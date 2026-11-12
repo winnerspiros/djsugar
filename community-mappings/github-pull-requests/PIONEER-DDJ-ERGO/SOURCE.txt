@@ -1,0 +1,8 @@
+Mapping: PIONEER-DDJ-ERGO
+Author (in the mapping): Jesús Soto
+Submitted by: jssotomdz in Mixxx pull request #13003
+https://github.com/mixxxdj/mixxx/pull/13003
+Last update of the pull request: 2025-10-08
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

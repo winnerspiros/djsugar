@@ -674,6 +674,14 @@ Rectangle {
             playlists = Mixxx.MobileLibrary.playlists();
         }
 
+        Connections {
+            target: Mixxx.MobileLibrary
+            enabled: playlistPopup.opened
+            function onPlaylistsChanged() {
+                playlistPopup.playlists = Mixxx.MobileLibrary.playlists();
+            }
+        }
+
         anchors.centerIn: parent
         width: Math.min(380, root.width - 20)
         height: Math.min(440, root.height - 20)
@@ -776,7 +784,7 @@ Rectangle {
 
                     Layout.preferredHeight: 44
                     Layout.preferredWidth: 90
-                    enabled: newPlaylistName.text.trim().length > 0
+                    enabled: newPlaylistName.displayText.trim().length > 0
                     activeColor: Theme.accentColor
                     backgroundColor: Theme.libraryConfirmBackground
                     normalColor: Theme.libraryActionText
@@ -784,6 +792,8 @@ Rectangle {
                     text: qsTr("CREATE")
 
                     onClicked: {
+                        // The keyboard's word in progress counts too
+                        Qt.inputMethod.commit();
                         const name = newPlaylistName.text.trim();
                         if (name.length === 0) {
                             return;

@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFile>
 #include <QJniObject>
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
@@ -186,7 +187,17 @@ void installCrashReporter() {
     }
 }
 
-void logPreviousExit() {
+void logPreviousExit(const QString& logDirPath) {
+    // A run whose shutdown completed is not abnormal, even though Android
+    // records a kill: it reaps the process after the exit, with a thread
+    // still in storage I/O (e.g. the library scanner)
+    QFile previousLog(QDir(logDirPath).filePath(QStringLiteral("mixxx.log.1")));
+    if (previousLog.open(QIODevice::ReadOnly)) {
+        previousLog.seek(std::max<qint64>(0, previousLog.size() - 4096));
+        if (previousLog.readAll().contains("shutdown complete")) {
+            return;
+        }
+    }
     const QString report =
             QJniObject::callStaticMethod<jstring>("org/mixxx/ExitReport",
                     "previousExit",

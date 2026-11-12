@@ -1,112 +1,103 @@
 #include "effects/backends/builtin/bitcrushereffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/sample.h"
-
-// static
 QString BitCrusherEffect::getId() {
-    return "org.mixxx.effects.bitcrusher";
+    return QStringLiteral("org.mixxx.effects.bitcrusher");
 }
 
-// static
 EffectManifestPointer BitCrusherEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Bitcrusher"));
-    pManifest->setShortName(QObject::tr("Bitcrusher"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Adds noise by the reducing the bit depth and sample rate"));
-    pManifest->setEffectRampsFromDry(true);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Crush"),
+            QObject::tr("Crush"),
+            QObject::tr("Lo-fi crusher: one knob takes the track from vintage "
+                        "sampler to broken video game."));
 
-    EffectManifestParameterPointer depth = pManifest->addParameter();
-    depth->setId("bit_depth");
-    depth->setName(QObject::tr("Bit Depth"));
-    depth->setShortName(QObject::tr("Bit Depth"));
-    depth->setDescription(QObject::tr(
-            "The bit depth of the samples"));
-    depth->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    depth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    depth->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    depth->setDefaultLinkInversion(EffectManifestParameter::LinkInversion::Inverted);
-    depth->setNeutralPointOnScale(1.0);
-    // for values -1 0 +1
-    // we do not allow a 1 bit version because this causes a distortion because of the missing sign bit
-    depth->setRange(2, 16, 16);
-
-    EffectManifestParameterPointer frequency = pManifest->addParameter();
-    frequency->setId("downsample");
-    frequency->setName(QObject::tr("Downsampling"));
-    frequency->setShortName(QObject::tr("Down"));
-    frequency->setDescription(QObject::tr(
-            "The sample rate to which the signal is downsampled"));
-    frequency->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    frequency->setUnitsHint(EffectManifestParameter::UnitsHint::SampleRate);
-    frequency->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    frequency->setDefaultLinkInversion(EffectManifestParameter::LinkInversion::Inverted);
-    frequency->setNeutralPointOnScale(1.0);
-    frequency->setRange(0.02, 1.0, 1.0);
-
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Crush"),
+            QObject::tr("Crush"),
+            QObject::tr("Lowers the sample rate and the bit depth together."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("bit_depth"),
+            QObject::tr("Bits"),
+            QObject::tr("Bits"),
+            QObject::tr("Extra bit depth reduction on top of Crush."),
+            0.0,
+            0.3,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Low-pass after the crusher: tames the fizz."),
+            0.0,
+            0.75,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Mix"),
+            QObject::tr("Blend with the clean track."),
+            0.0,
+            1.0,
+            1.0);
     return pManifest;
 }
 
-void BitCrusherEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pBitDepthParameter = parameters.value("bit_depth");
-    m_pDownsampleParameter = parameters.value("downsample");
+BitCrusherGroupState::BitCrusherGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters),
+          random(0xC0FFEEu) {
+    amount.setTime(0.03f, m_sampleRate);
 }
 
-void BitCrusherEffect::processChannel(
-        BitCrusherGroupState* pState,
+void BitCrusherEffect::processChannel(BitCrusherGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
-    Q_UNUSED(groupFeatures);
-    Q_UNUSED(enableState); // no need to ramp, it is just a bitcrusher ;-)
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    if (enableState == EffectEnableState::Enabling) {
+        pState->tone[0].reset();
+        pState->tone[1].reset();
+        pState->hold[0] = pInput[0];
+        pState->hold[1] = pInput[1];
+        pState->counter = 0.0f;
+        pState->amount.reset(param(kAmount));
+    }
+    pState->amount.setTarget(param(kAmount));
+    const float extraBits = param(kBits);
+    const float rate = pState->sampleRate();
+    const float toneHz = fxdsp::knobToHz(param(kTone), 800.0f, 20000.0f);
+    pState->tone[0].setCoeffs(toneHz, 0.6f, rate);
+    pState->tone[1].setCoeffs(toneHz, 0.6f, rate);
+    const float mix = param(kMix);
 
-    const auto downsample = static_cast<CSAMPLE>(
-            m_pDownsampleParameter ? m_pDownsampleParameter->value() : 0.0);
-
-    auto bit_depth = static_cast<CSAMPLE>(
-            m_pBitDepthParameter ? m_pBitDepthParameter->value() : 16);
-
-    // divided by two because we use float math which includes the sing bit anyway
-    const CSAMPLE scale = std::pow(2.0f, bit_depth) / 2;
-    // Gain correction is required, because MSB (values above 0.5) is usually
-    // rarely used, to achieve equal loudness and maximum dynamic
-    const CSAMPLE gainCorrection = (17 - bit_depth) / 8;
-
-    for (SINT i = 0;
-            i < engineParameters.samplesPerBuffer();
-            i += engineParameters.channelCount()) {
-        pState->accumulator += downsample;
-
-        if (pState->accumulator >= 1.0) {
-            pState->accumulator -= 1.0f;
-            if (bit_depth < 16) {
-                pState->hold_l = floorf(SampleUtil::clampSample(
-                                                pInput[i] * gainCorrection) *
-                                                 scale +
-                                         0.5f) /
-                        scale / gainCorrection;
-                pState->hold_r = floorf(SampleUtil::clampSample(pInput[i + 1] *
-                                                gainCorrection) *
-                                                 scale +
-                                         0.5f) /
-                        scale / gainCorrection;
-            } else {
-                // Mixxx float has 24 bit depth, Audio CDs are 16 bit
-                // here we do not change the depth
-                pState->hold_l = pInput[i];
-                pState->hold_r = pInput[i + 1];
-            }
+    for (int i = 0; i < frames; ++i) {
+        const float amount = pState->amount.next();
+        // Target sample rate from full rate down to 1.5 kHz, exponential.
+        const float targetRate = fxdsp::knobToHz(1.0f - amount, 1500.0f, rate);
+        // Bits from 16 down to 4 (3 with extra bits).
+        const float bits = 16.0f - 12.0f * amount - 2.0f * extraBits;
+        const float steps = std::exp2(bits - 1.0f);
+        pState->counter += targetRate / rate;
+        const bool sample = pState->counter >= 1.0f;
+        if (sample) {
+            pState->counter -= std::floor(pState->counter);
         }
-
-        pOutput[i] = pState->hold_l;
-        pOutput[i + 1] = pState->hold_r;
+        for (int c = 0; c < 2; ++c) {
+            const float x = pInput[2 * i + c];
+            if (sample) {
+                // Triangular dither of one step keeps the noise floor even.
+                const float dither =
+                        (pState->random.unipolar() - pState->random.unipolar()) / steps;
+                pState->hold[c] = std::round((x + dither) * steps) / steps;
+            }
+            const float y = pState->tone[c].process(pState->hold[c]).lp;
+            pOutput[2 * i + c] = fxdsp::lerp(x, y, mix * std::min(1.0f, amount * 8.0f));
+        }
     }
 }

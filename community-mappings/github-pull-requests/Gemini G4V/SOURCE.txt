@@ -1,0 +1,8 @@
+Mapping: Gemini G4V
+Author (in the mapping): Javier Vilarroig
+Submitted by: JaviVilarroig in Mixxx pull request #4323
+https://github.com/mixxxdj/mixxx/pull/4323
+Last update of the pull request: 2025-09-02
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

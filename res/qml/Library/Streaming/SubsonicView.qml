@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "../../Theme"
+import ".." as Library
 import "../.." as Skin
 
 Item {
@@ -454,6 +455,14 @@ Item {
                         spacing: 8
 
                         // Cover Art Thumbnail or Icon
+
+                    Library.TrackDrag {
+                        label: trackDelegate.song.title
+                        loadTo: group => Mixxx.StreamingManager.downloadAndLoad(trackDelegate.song.streamUrl, "subsonic", trackDelegate.song.id, trackDelegate.song.title, trackDelegate.song.artist, group, false)
+                        fetch: () => Mixxx.StreamingManager.downloadAndLoad(trackDelegate.song.streamUrl, "subsonic", trackDelegate.song.id, trackDelegate.song.title, trackDelegate.song.artist, "", false)
+                        fetchId: trackDelegate.song.id
+                        fetchSource: Mixxx.StreamingManager
+                    }
                         Rectangle {
                             Layout.preferredWidth: 40
                             Layout.preferredHeight: 29

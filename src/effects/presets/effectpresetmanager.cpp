@@ -44,7 +44,9 @@ void EffectPresetManager::loadDefaultEffectPresets() {
         if (!presetFromFile.isEmpty()) {
             EffectManifestPointer pManifest = m_pBackendManager->getManifest(
                     presetFromFile.id(), presetFromFile.backendType());
-            if (pManifest) {
+            // Defaults saved by an older version of a built-in effect are
+            // dropped; the new version's defaults apply.
+            if (pManifest && presetFromFile.matchesVersionOf(pManifest)) {
                 auto pEffectPreset = EffectPresetPointer(new EffectPreset(pManifest));
                 pEffectPreset->updateParametersFrom(presetFromFile);
                 m_defaultPresets.insert(pManifest, pEffectPreset);

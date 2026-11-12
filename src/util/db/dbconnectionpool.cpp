@@ -38,7 +38,7 @@ bool DbConnectionPool::createThreadLocalConnection() {
 
     DEBUG_ASSERT(m_threadLocalConnections.hasLocalData());
     DEBUG_ASSERT(m_threadLocalConnections.localData());
-    kLogger.info()
+    kLogger.debug()
             << "Cloned thread-local database connection"
             << *m_threadLocalConnections.localData();
     return true;

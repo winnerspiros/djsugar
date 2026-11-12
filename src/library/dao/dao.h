@@ -13,6 +13,11 @@ class DAO {
         m_database = database;
     }
 
+    /// Drops the connection before its pool removes it
+    void release() {
+        m_database = QSqlDatabase();
+    }
+
     const QSqlDatabase& database() const {
         return m_database;
     }

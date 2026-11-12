@@ -1,123 +1,140 @@
 #include "effects/backends/builtin/reverbeffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/sample.h"
-
-// static
 QString ReverbEffect::getId() {
-    return "org.mixxx.effects.reverb";
+    return QStringLiteral("org.mixxx.effects.reverb");
 }
 
-// static
 EffectManifestPointer ReverbEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setAddDryToWet(true);
-    pManifest->setEffectRampsFromDry(true);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Reverb"),
+            QObject::tr("Reverb"),
+            QObject::tr("Dense, smooth reverb from small room to endless hall, "
+                        "with pre-delay, tone controls and freeze. Low cut keeps "
+                        "the kick and bass dry."));
 
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Reverb"));
-    pManifest->setAuthor("The Mixxx Team, CAPS Plugins");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Emulates the sound of the signal bouncing off the walls of a room"));
-
-    EffectManifestParameterPointer decay = pManifest->addParameter();
-    decay->setId("decay");
-    decay->setName(QObject::tr("Decay"));
-    decay->setShortName(QObject::tr("Decay"));
-    decay->setDescription(QObject::tr(
-            "Lower decay values cause reverberations to fade out more quickly."));
-    decay->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    decay->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    decay->setRange(0, 0.5, 1);
-
-    EffectManifestParameterPointer bandwidth = pManifest->addParameter();
-    bandwidth->setId("bandwidth");
-    bandwidth->setName(QObject::tr("Bandwidth"));
-    bandwidth->setShortName(QObject::tr("BW"));
-    bandwidth->setDescription(QObject::tr(
-            "Bandwidth of the low pass filter at the input.\n"
-            "Higher values result in less attenuation of high frequencies."));
-    bandwidth->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    bandwidth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    bandwidth->setRange(0, 1, 1);
-
-    EffectManifestParameterPointer damping = pManifest->addParameter();
-    damping->setId("damping");
-    damping->setName(QObject::tr("Damping"));
-    damping->setShortName(QObject::tr("Damping"));
-    damping->setDescription(
-            QObject::tr("Higher damping values cause high frequencies to decay "
-                        "more quickly than low frequencies."));
-    damping->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    damping->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    damping->setRange(0, 0, 1);
-
-    EffectManifestParameterPointer send = pManifest->addParameter();
-    send->setId("send_amount");
-    send->setName(QObject::tr("Send"));
-    send->setShortName(QObject::tr("Send"));
-    send->setDescription(QObject::tr(
-            "How much of the signal to send in to the effect"));
-    send->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    send->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    send->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    send->setDefaultLinkInversion(EffectManifestParameter::LinkInversion::NotInverted);
-    send->setRange(0, 0, 1);
-
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("send_amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Level of the reverb."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("size"),
+            QObject::tr("Size"),
+            QObject::tr("Size"),
+            QObject::tr("From small room to large hall."),
+            0.0,
+            0.6,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("decay"),
+            QObject::tr("Decay"),
+            QObject::tr("Decay"),
+            QObject::tr("Reverb time (RT60)."),
+            0.3,
+            3.0,
+            20.0,
+            djfx::Scaler::Logarithmic,
+            djfx::Units::Seconds);
+    djfx::knob(pManifest,
+            QStringLiteral("damping"),
+            QObject::tr("Damping"),
+            QObject::tr("Damp"),
+            QObject::tr("How quickly the high frequencies die away. More is "
+                        "darker."),
+            0.0,
+            0.4,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("low_cut"),
+            QObject::tr("Low Cut"),
+            QObject::tr("LowCut"),
+            QObject::tr("Removes low end from the reverb so the kick stays "
+                        "tight."),
+            20.0,
+            200.0,
+            1000.0,
+            djfx::Scaler::Logarithmic,
+            djfx::Units::Hertz);
+    djfx::knob(pManifest,
+            QStringLiteral("predelay"),
+            QObject::tr("Pre-Delay"),
+            QObject::tr("PreDly"),
+            QObject::tr("Gap between the sound and the reverb, keeps the attack "
+                        "clear."),
+            0.0,
+            0.02,
+            0.2,
+            djfx::Scaler::Linear,
+            djfx::Units::Seconds);
+    djfx::toggle(pManifest,
+            QStringLiteral("freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Holds the current reverb forever and closes the input."));
     return pManifest;
 }
 
-void ReverbEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pDecayParameter = parameters.value("decay");
-    m_pBandWidthParameter = parameters.value("bandwidth");
-    m_pDampingParameter = parameters.value("damping");
-    m_pSendParameter = parameters.value("send_amount");
+ReverbGroupState::ReverbGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    reverb.setup(m_sampleRate);
+    reverb.setModulation(0.9f);
+    amount.setTime(0.02f, m_sampleRate);
 }
 
-void ReverbEffect::processChannel(
-        ReverbGroupState* pState,
+void ReverbEffect::processChannel(ReverbGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
-        const GroupFeatureState& groupFeatures) {
-    Q_UNUSED(groupFeatures);
-
-    const auto decay = static_cast<sample_t>(m_pDecayParameter->value());
-    const auto bandwidth = static_cast<sample_t>(m_pBandWidthParameter->value());
-    const auto damping = static_cast<sample_t>(m_pDampingParameter->value());
-    const auto sendCurrent = static_cast<sample_t>(m_pSendParameter->value());
-
-    if (pState->sampleRate != engineParameters.sampleRate()) {
-        pState->reverb.setSamplerate(engineParameters.sampleRate());
-        pState->sampleRate = engineParameters.sampleRate();
-    }
-
-    // Reinitialize the effect when turning it on to prevent replaying the old buffer
-    // from the last time the effect was enabled..
+        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    auto& reverb = pState->reverb;
     if (enableState == EffectEnableState::Enabling) {
-        pState->reverb.activate();
+        reverb.clear();
+        pState->amount.reset(param(kAmount));
+        pState->lastSize = -1.0f;
     }
+    const float size = param(kSize);
+    if (size != pState->lastSize) {
+        reverb.setSize(size, pState->lastSize < 0.0f);
+        pState->lastSize = size;
+        pState->lastDecay = -1.0f; // gains depend on the line lengths
+    }
+    const float decay = param(kDecay);
+    if (decay != pState->lastDecay) {
+        reverb.setDecay(decay);
+        pState->lastDecay = decay;
+    }
+    const float damping = param(kDamping);
+    if (damping != pState->lastDamping) {
+        reverb.setDamping(fxdsp::knobToHz(1.0f - damping, 1500.0f, 18000.0f));
+        pState->lastDamping = damping;
+    }
+    const float lowCut = param(kLowCut);
+    if (lowCut != pState->lastLowCut) {
+        reverb.setLowCut(lowCut);
+        pState->lastLowCut = lowCut;
+    }
+    const float preDelay = param(kPreDelay);
+    if (preDelay != pState->lastPreDelay) {
+        reverb.setPreDelay(preDelay);
+        pState->lastPreDelay = preDelay;
+    }
+    reverb.setFreeze(paramBool(kFreeze));
+    pState->amount.setTarget(param(kAmount));
 
-    pState->reverb.processBuffer(pInput,
-            pOutput,
-            engineParameters.samplesPerBuffer(),
-            bandwidth,
-            decay,
-            damping,
-            sendCurrent,
-            pState->sendPrevious);
-
-    // The ramping of the send parameter handles ramping when enabling, so
-    // this effect must handle ramping to dry when disabling itself (instead
-    // of being handled by EngineEffect::process).
-    if (enableState == EffectEnableState::Disabling) {
-        SampleUtil::applyRampingGain(pOutput, 1.0, 0.0, engineParameters.samplesPerBuffer());
-        pState->sendPrevious = 0;
-    } else {
-        pState->sendPrevious = sendCurrent;
+    for (int i = 0; i < frames; ++i) {
+        const float inL = pInput[2 * i];
+        const float inR = pInput[2 * i + 1];
+        float wetL;
+        float wetR;
+        reverb.process(inL, inR, &wetL, &wetR);
+        const float gain = pState->amount.next();
+        pOutput[2 * i] = inL + wetL * gain;
+        pOutput[2 * i + 1] = inR + wetR * gain;
     }
 }

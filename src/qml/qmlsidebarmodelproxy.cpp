@@ -84,6 +84,21 @@ void QmlSidebarModelProxy::update(const QList<QmlLibraryAbstractSource*>& source
                 &QmlSidebarModelProxy::slotShowTrackModel,
                 Qt::UniqueConnection);
         addLibraryFeature(pLibrarySource);
+        // The TreeView of QML missed rows inserted below an expanded item
+        // (e.g. a new playlist, shown only after a restart): it lays the
+        // tree out again once the feature's model is done
+        QAbstractItemModel* pModel = pLibrarySource->sidebarModel();
+        for (auto signal : {&QAbstractItemModel::rowsInserted, &QAbstractItemModel::rowsRemoved}) {
+            connect(
+                    pModel,
+                    signal,
+                    this,
+                    [this]() {
+                        emit layoutAboutToBeChanged();
+                        emit layoutChanged();
+                    },
+                    Qt::QueuedConnection);
+        }
     }
     endResetModel();
 }

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxControllerPreset schemaVersion="1" mixxxVersion="2.5">
+    <info>
+        <name>Denon LC6000 Prime Display</name>
+        <author>schmic</author>
+        <description>Display-only Mixxx mapping for the Denon LC6000 Prime WD port. Mirrors deck state to the center display using a second preset alongside the PR control mapping.</description>
+    </info>
+    <settings>
+        <option variable="deckAssignment" type="enum" label="Deck assignment">
+            <value default="true">Deck 1</value>
+            <value>Deck 2</value>
+            <value>Deck 3</value>
+            <value>Deck 4</value>
+            <description>Select which Mixxx deck this LC6000 display should follow. Use the same value as on the PR control mapping.</description>
+        </option>
+        <option variable="deckColor" type="enum" label="Deck color">
+            <value default="true">Deck Default</value>
+            <value>Green</value>
+            <value>Blue</value>
+            <value>Orange</value>
+            <value>Purple</value>
+            <description>Color accent for the display overlays. Use the same value as on the PR control mapping unless you are testing alternate themes.</description>
+        </option>
+        <option variable="screenBrightness" type="enum" label="Screen brightness">
+            <value>Low</value>
+            <value>Mid</value>
+            <value default="true">High</value>
+            <value>Max</value>
+            <description>Brightness for the LC6000 center display on the WD port.</description>
+        </option>
+    </settings>
+    <controller id="Denon DJ LC6000 PRIME WD">
+        <scriptfiles>
+            <file filename="Denon-LC6000-Prime-Display-scripts.js" functionprefix="LC6000PrimeDisplay"/>
+        </scriptfiles>
+        <controls/>
+    </controller>
+</MixxxControllerPreset>

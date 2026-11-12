@@ -46,6 +46,9 @@ class ScannerGlobal {
     mixxx::cache_key_t directoryHashInDatabase(const QString& directoryPath) const {
         return m_directoryHashes.value(directoryPath, mixxx::invalidCacheKey());
     }
+    bool hasNoDirectoryHashes() const {
+        return m_directoryHashes.isEmpty();
+    }
 
     bool directoryBlacklisted(const QString& directoryPath) const {
         return m_directoriesBlacklist.contains(directoryPath);

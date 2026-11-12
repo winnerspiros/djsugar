@@ -1,5 +1,8 @@
 #include "engine/effects/engineeffectsmanager.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "audio/types.h"
 #include "engine/effects/engineeffect.h"
 #include "engine/effects/engineeffectchain.h"
@@ -157,6 +160,47 @@ void EngineEffectsManager::processPostFaderAndMix(
             fadeout);
 }
 
+namespace {
+
+// A gain jump is a cut (crossfader or line fader flicked for a scratch):
+// done over 1 ms instead of the whole buffer, which smeared transformer
+// and flare clicks over 10-20 ms. Smaller steps are fader moves and keep
+// the whole-buffer ramp, which avoids zipper noise.
+constexpr CSAMPLE_GAIN kCutGainStep = 0.25f;
+constexpr double kCutRampSeconds = 0.001;
+
+void applyGainChange(CSAMPLE* pDest,
+        const CSAMPLE* pSrc,
+        CSAMPLE_GAIN oldGain,
+        CSAMPLE_GAIN newGain,
+        std::size_t numSamples,
+        mixxx::audio::SampleRate sampleRate) {
+    const auto samples = static_cast<SINT>(numSamples);
+    SINT ramp = samples;
+    if (std::fabs(newGain - oldGain) >= kCutGainStep) {
+        // Whole stereo frames
+        ramp = std::min(samples,
+                2 *
+                        std::max<SINT>(1,
+                                static_cast<SINT>(kCutRampSeconds *
+                                        static_cast<double>(
+                                                sampleRate.value()))));
+    }
+    if (pDest == pSrc) {
+        SampleUtil::applyRampingGain(pDest, oldGain, newGain, ramp);
+        if (ramp < samples) {
+            SampleUtil::applyGain(pDest + ramp, newGain, samples - ramp);
+        }
+    } else {
+        SampleUtil::copyWithRampingGain(pDest, pSrc, oldGain, newGain, ramp);
+        if (ramp < samples) {
+            SampleUtil::copyWithGain(pDest + ramp, pSrc + ramp, newGain, samples - ramp);
+        }
+    }
+}
+
+} // namespace
+
 void EngineEffectsManager::processInner(
         const SignalProcessingStage stage,
         const ChannelHandle& inputHandle,
@@ -174,7 +218,7 @@ void EngineEffectsManager::processInner(
     if (pIn == pOut) {
         // Gain and effects are applied to the buffer in place,
         // modifying the original input buffer
-        SampleUtil::applyRampingGain(pIn, oldGain, newGain, numSamples);
+        applyGainChange(pIn, pIn, oldGain, newGain, numSamples, sampleRate);
         for (EngineEffectChain* pChain : chains) {
             if (pChain) {
                 if (pChain->process(inputHandle,
@@ -202,7 +246,7 @@ void EngineEffectsManager::processInner(
             // input buffer when its input & output buffers are different, so this is okay.
             pIntermediateInput = pIn;
         } else {
-            SampleUtil::copyWithRampingGain(pIntermediateInput, pIn, oldGain, newGain, numSamples);
+            applyGainChange(pIntermediateInput, pIn, oldGain, newGain, numSamples, sampleRate);
         }
 
         CSAMPLE* pIntermediateOutput;

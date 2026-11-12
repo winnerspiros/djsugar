@@ -1,0 +1,7 @@
+Mapping: Pioneer XDJ-RX
+Author (in the mapping): -
+Submitted by: norayr in Mixxx pull request #3008
+https://github.com/mixxxdj/mixxx/pull/3008
+Last update of the pull request: 2025-06-20
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

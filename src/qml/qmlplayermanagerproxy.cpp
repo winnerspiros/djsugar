@@ -1,9 +1,12 @@
 #include "qml/qmlplayermanagerproxy.h"
 
+#include <QFile>
 #include <QFileInfo>
 #include <QQmlEngine>
 #include <QRegularExpression>
 
+#include "control/controlobject.h"
+#include "engine/fxstation/fxstationinstruments.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
 #include "library/samples/bundledsamples.h"
@@ -27,6 +30,26 @@ QmlPlayerManagerProxy::QmlPlayerManagerProxy(
         std::shared_ptr<PlayerManager> pPlayerManager, QObject* parent)
         : QObject(parent),
           m_pPlayerManager(pPlayerManager) {
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::recordingChanged,
+            this,
+            &QmlPlayerManagerProxy::sampleRecordingChanged);
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::secondsChanged,
+            this,
+            &QmlPlayerManagerProxy::sampleRecordSecondsChanged);
+    connect(&m_sampleRecorder,
+            &samples::SampleRecorder::failed,
+            this,
+            &QmlPlayerManagerProxy::sampleError);
+    connect(&m_sampleEditor,
+            &samples::SampleEditor::opened,
+            this,
+            &QmlPlayerManagerProxy::sampleOpened);
+    connect(&m_sampleEditor,
+            &samples::SampleEditor::failed,
+            this,
+            &QmlPlayerManagerProxy::sampleError);
 }
 
 QmlPlayerProxy* QmlPlayerManagerProxy::getPlayer(const QString& group) {
@@ -128,8 +151,7 @@ void QmlPlayerManagerProxy::loadLocationUrlToDeck(
 
 QVariantList QmlPlayerManagerProxy::bundledSamples() const {
     QVariantList list;
-    const QStringList files = mixxx::samples::bundledSampleFiles(m_pPlayerManager->config());
-    for (const QString& path : files) {
+    const auto add = [&list](const QString& path, bool user) {
         QString name = QFileInfo(path).completeBaseName();
         // "01_kick" -> "kick", "dj-scratch" -> "dj scratch"
         static const QRegularExpression kNumberPrefix(QStringLiteral("^\\d+_"));
@@ -137,9 +159,95 @@ QVariantList QmlPlayerManagerProxy::bundledSamples() const {
         name.replace(QLatin1Char('_'), QLatin1Char(' '));
         name.replace(QLatin1Char('-'), QLatin1Char(' '));
         list.append(QVariantMap{{QStringLiteral("name"), name},
-                {QStringLiteral("path"), path}});
+                {QStringLiteral("path"), path},
+                {QStringLiteral("user"), user}});
+    };
+    for (const QString& path : samples::userSampleFiles()) {
+        add(path, true);
+    }
+    for (const QString& path : samples::bundledSampleFiles(m_pPlayerManager->config())) {
+        add(path, false);
     }
     return list;
+}
+
+QString QmlPlayerManagerProxy::fxStationSound(int bank, int instrument) const {
+    return m_pPlayerManager->config()->getValueString(
+            fxstation::Instruments::soundKey(bank, instrument));
+}
+
+void QmlPlayerManagerProxy::setFxStationSound(int bank, int instrument, const QString& path) {
+    const UserSettingsPointer pConfig = m_pPlayerManager->config();
+    pConfig->setValue(fxstation::Instruments::soundKey(bank, instrument), path);
+    // Android may close the app without the usual shutdown
+    pConfig->save();
+    ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 1);
+    ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 0);
+}
+
+namespace {
+
+ConfigKey fxStationButtonKey(const QString& kind, int button) {
+    return ConfigKey(QStringLiteral("[FxStation]"),
+            QStringLiteral("%1%2_effect").arg(kind).arg(button + 1));
+}
+
+} // namespace
+
+int QmlPlayerManagerProxy::fxStationButtonEffect(const QString& kind, int button) const {
+    return m_pPlayerManager->config()->getValue(fxStationButtonKey(kind, button), -1);
+}
+
+void QmlPlayerManagerProxy::setFxStationButtonEffect(
+        const QString& kind, int button, int effect) {
+    const UserSettingsPointer pConfig = m_pPlayerManager->config();
+    if (effect < 0) {
+        pConfig->remove(fxStationButtonKey(kind, button));
+    } else {
+        pConfig->setValue(fxStationButtonKey(kind, button), effect);
+    }
+    // Android may close the app without the usual shutdown
+    pConfig->save();
+}
+
+void QmlPlayerManagerProxy::resetSamplers() {
+    const QStringList kit = samples::defaultSamplerKit(m_pPlayerManager->config());
+    const int count = m_pPlayerManager->numberOfSamplers();
+    for (int i = 0; i < count; ++i) {
+        const QString group = PlayerManager::groupForSampler(i);
+        if (i < kit.size() && !kit.at(i).isEmpty()) {
+            m_pPlayerManager->slotLoadLocationToPlayer(kit.at(i), group, false);
+        } else if (BaseTrackPlayer* pPlayer = m_pPlayerManager->getPlayer(group)) {
+            pPlayer->slotEjectTrack(1.0);
+        }
+    }
+}
+
+void QmlPlayerManagerProxy::openSampleForTrim(const QUrl& url) {
+    m_sampleEditor.open(url);
+}
+
+QString QmlPlayerManagerProxy::saveTrimmedSample(
+        double start, double end, const QString& name) {
+    const QString path = m_sampleEditor.save(start, end, name);
+    if (path.isEmpty()) {
+        emit sampleError(tr("This part can't be saved as a sample"));
+    }
+    return path;
+}
+
+void QmlPlayerManagerProxy::deleteSample(const QString& path) {
+    if (path.startsWith(samples::userSamplesDir())) {
+        QFile::remove(path);
+    }
+}
+
+bool QmlPlayerManagerProxy::startSampleRecording() {
+    return m_sampleRecorder.start();
+}
+
+QString QmlPlayerManagerProxy::stopSampleRecording() {
+    return m_sampleRecorder.stop();
 }
 
 void QmlPlayerManagerProxy::loadLocationToPlayer(

@@ -113,7 +113,7 @@ Item {
             required property int index
 
             group: "[Channel" + (index + 1) + "]"
-            enabled: root.enabled
+            active: root.enabled
             onLoadTrackRequested: (play) => root.loadResult(this.group, play)
         }
     }

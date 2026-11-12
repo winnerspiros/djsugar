@@ -1,46 +1,32 @@
 #pragma once
 
-#include <random>
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/filters.h"
 
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/types.h"
-
-class WhiteNoiseGroupState final : public EffectState {
+// Noise: stereo noise for risers and transitions. A resonant filter
+// shapes it (left: low-pass rumble, right: high-pass hiss), and the
+// noise can follow the loudness of the track so it breathes with the
+// groove instead of sitting on top as a flat hiss.
+class WhiteNoiseGroupState : public DjFxState {
   public:
-    WhiteNoiseGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters),
-              previous_drywet(0.0),
-              gen(rs()) {
-    }
-    ~WhiteNoiseGroupState() override = default;
+    explicit WhiteNoiseGroupState(const mixxx::EngineParameters& engineParameters);
 
-    CSAMPLE_GAIN previous_drywet;
-    std::random_device rs;
-    std::mt19937 gen;
+    fxdsp::Random random[2];
+    fxdsp::Svf filter[2];
+    fxdsp::EnvelopeFollower envelope;
+    fxdsp::Smoother amount;
+    fxdsp::Smoother color;
+    float pink[2][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 };
 
-class WhiteNoiseEffect : public EffectProcessorImpl<WhiteNoiseGroupState> {
-  public:
-    WhiteNoiseEffect() = default;
-    ~WhiteNoiseEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void processChannel(
-            WhiteNoiseGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
+class WhiteNoiseEffect : public DjFxEffect<WhiteNoiseGroupState, WhiteNoiseEffect> {
+    DJFX_EFFECT_INTERFACE(WhiteNoiseGroupState)
 
   private:
-    EngineEffectParameterPointer m_pDryWetParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(WhiteNoiseEffect);
+    enum Param {
+        kAmount,
+        kColor,
+        kResonance,
+        kFollow,
+    };
 };

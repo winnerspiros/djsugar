@@ -497,6 +497,45 @@ Category {
                 }
             }
 
+            // Learn controller: a mapping made by pressing each control
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 52
+                border.color: learnMouse.containsMouse ? "#00e5ff" : "#273a4b"
+                border.width: 1
+                color: learnMouse.pressed ? "#1d2a36" : "#181f26"
+                radius: 12
+                visible: root.selectedController == null
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 14
+                    spacing: 10
+
+                    Text {
+                        color: "#00e5ff"
+                        font.bold: true
+                        font.pixelSize: 14
+                        text: qsTr("🎛 Learn controller")
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        color: "#90a4ae"
+                        elide: Text.ElideRight
+                        font.pixelSize: 12
+                        text: qsTr("Make your own mapping by pressing each control (players like CDJs, controllers without a mapping)")
+                    }
+                }
+                MouseArea {
+                    id: learnMouse
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: learnPopup.open()
+                }
+            }
+
             // ================= GUÍA PASO A PASO DE CONEXIÓN =================
             Rectangle {
                 Layout.fillWidth: true
@@ -1294,6 +1333,25 @@ Category {
                         root.save();
                     }
                 }
+            }
+        }
+    }
+
+    Popup {
+        id: learnPopup
+
+        anchors.centerIn: Overlay.overlay
+        height: Overlay.overlay ? Overlay.overlay.height - 20 : 600
+        modal: true
+        padding: 0
+        parent: Overlay.overlay
+        width: Overlay.overlay ? Math.min(900, Overlay.overlay.width - 20) : 800
+
+        Loader {
+            anchors.fill: parent
+            active: learnPopup.opened
+            sourceComponent: Skin.LearnController {
+                onCloseRequested: learnPopup.close()
             }
         }
     }

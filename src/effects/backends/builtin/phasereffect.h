@@ -1,84 +1,34 @@
 #pragma once
 
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/sample.h"
-#include "util/types.h"
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/filters.h"
 
-#define MAXSTAGES 12
-
-class PhaserGroupState final : public EffectState {
+// Beat-synced phaser with 4 to 12 zero-delay-feedback allpass stages,
+// resonance and a stereo offset. Stages are spread across the spectrum
+// like an analog phaser's mismatched capacitors, which gives the sweep
+// its vocal, swirling character.
+class PhaserGroupState : public DjFxState {
   public:
-    PhaserGroupState(const mixxx::EngineParameters& engineParameters)
-            : EffectState(engineParameters) {
-        clear();
-    }
-    ~PhaserGroupState() override = default;
+    static constexpr int kMaxStages = 12;
 
-    void clear() {
-        leftPhase = 0;
-        rightPhase = 0;
-        oldDepth = 0;
-        SampleUtil::clear(oldInLeft, MAXSTAGES);
-        SampleUtil::clear(oldOutLeft, MAXSTAGES);
-        SampleUtil::clear(oldInRight, MAXSTAGES);
-        SampleUtil::clear(oldOutRight, MAXSTAGES);
-    }
+    explicit PhaserGroupState(const mixxx::EngineParameters& engineParameters);
 
-    CSAMPLE oldInLeft[MAXSTAGES];
-    CSAMPLE oldInRight[MAXSTAGES];
-    CSAMPLE oldOutLeft[MAXSTAGES];
-    CSAMPLE oldOutRight[MAXSTAGES];
-    CSAMPLE leftPhase;
-    CSAMPLE rightPhase;
-    CSAMPLE_GAIN oldDepth;
+    fxdsp::OnePole stages[2][kMaxStages];
+    fxdsp::Smoother amount;
+    fxdsp::Smoother feedback;
+    float last[2] = {0.0f, 0.0f};
 };
 
-class PhaserEffect : public EffectProcessorImpl<PhaserGroupState> {
-  public:
-    PhaserEffect() = default;
-    ~PhaserEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            PhaserGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class PhaserEffect : public DjFxEffect<PhaserGroupState, PhaserEffect> {
+    DJFX_EFFECT_INTERFACE(PhaserGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pStagesParameter;
-    EngineEffectParameterPointer m_pLFOPeriodParameter;
-    EngineEffectParameterPointer m_pDepthParameter;
-    EngineEffectParameterPointer m_pFeedbackParameter;
-    EngineEffectParameterPointer m_pRangeParameter;
-    EngineEffectParameterPointer m_pTripletParameter;
-    EngineEffectParameterPointer m_pStereoParameter;
-
-    //Passing the sample through a series of allpass filters
-    inline CSAMPLE processSample(CSAMPLE input,
-            CSAMPLE* oldIn,
-            CSAMPLE* oldOut,
-            CSAMPLE mainCoef,
-            int stages) {
-        for (int j = 0; j < stages; j++) {
-            oldOut[j] = (mainCoef * input) + (mainCoef * oldOut[j]) - oldIn[j];
-            oldIn[j] = input;
-            input = oldOut[j];
-        }
-        return input;
-    }
-
-    DISALLOW_COPY_AND_ASSIGN(PhaserEffect);
+    enum Param {
+        kRate,
+        kAmount,
+        kFeedback,
+        kStages,
+        kRange,
+        kStereo,
+    };
 };

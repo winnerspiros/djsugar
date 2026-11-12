@@ -9,7 +9,7 @@ Item {
     id: root
 
     required property string group
-    property bool enabled: true
+    property bool active: true
     // Instantiator delegates see index -1 for a moment while being created,
     // which made "[Channel0]": the controls are only looked up for a real deck
     readonly property bool validGroup: /^\[Channel[1-9][0-9]*\]$/.test(group)
@@ -20,7 +20,7 @@ Item {
         group: root.group
         key: root.validGroup ? "LoadSelectedTrack" : ""
         onValueChanged: (value) => {
-            if (value == 0 || !root.enabled)
+            if (value == 0 || !root.active)
                 return ;
 
             root.loadTrackRequested(false);
@@ -31,7 +31,7 @@ Item {
         group: root.group
         key: root.validGroup ? "LoadSelectedTrackAndPlay" : ""
         onValueChanged: (value) => {
-            if (value == 0 || !root.enabled)
+            if (value == 0 || !root.active)
                 return ;
 
             root.loadTrackRequested(true);

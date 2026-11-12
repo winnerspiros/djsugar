@@ -110,7 +110,7 @@ Item {
             required property int index
 
             group: "[Channel" + (index + 1) + "]"
-            enabled: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
+            active: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
             onLoadTrackRequested: (play) => {
                 root.loadSelectedTrack(this.group, play);
             }
@@ -131,7 +131,7 @@ Item {
             required property int index
 
             group: "[PreviewDeck" + (index + 1) + "]"
-            enabled: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
+            active: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
             onLoadTrackRequested: (play) => {
                 root.loadSelectedTrack(this.group, play);
             }
@@ -152,7 +152,7 @@ Item {
             required property int index
 
             group: "[Sampler" + (index + 1) + "]"
-            enabled: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
+            active: root.focusWidget == Skin.FocusedWidgetControl.WidgetKind.LibraryView
             onLoadTrackRequested: (play) => {
                 root.loadSelectedTrack(this.group, play);
             }

@@ -8,14 +8,14 @@ Item {
     property double cellSize: 15
     property int currentIndex: 0
     property double padding: 10
-    required property var palette
+    required property var colors
     property double selectFactor: 1.3 + ((root.cellSize - 8) / 15) * 0.7
 
     height: 20
 
     Component.onCompleted: {
         root.cellSize = Qt.binding(function () {
-            return Math.min(15, Math.max(8, (root.width - root.padding * 2) / root.palette.length));
+            return Math.min(15, Math.max(8, (root.width - root.padding * 2) / root.colors.length));
         });
     }
 
@@ -25,7 +25,7 @@ Item {
         spacing: 0
 
         Repeater {
-            model: root.palette
+            model: root.colors
 
             Item {
                 required property int index

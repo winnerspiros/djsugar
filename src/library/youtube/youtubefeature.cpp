@@ -1013,7 +1013,7 @@ QString YouTubeFeature::resolvedTrendingRegion() const {
 }
 
 bool YouTubeFeature::sponsorBlockAutoSkip() const {
-    return m_pConfig->getValue<bool>(kCfgSponsorBlockAutoSkip, true);
+    return m_pConfig->getValue<bool>(kCfgSponsorBlockAutoSkip, false);
 }
 
 void YouTubeFeature::setSponsorBlockAutoSkip(bool enabled) {
@@ -1559,6 +1559,7 @@ void YouTubeFeature::onDownloadFinished(
         abandonPendingLoads(videoId);
         return;
     }
+    emit fileReady(videoId, localPath);
     // SponsorBlock cuts have already been physically applied to the file by
     // YouTubeService at this point (or, on cut failure, a .sponsorblock.json
     // sidecar has been written so SponsorBlockController can fall back to

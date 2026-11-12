@@ -197,8 +197,13 @@ Item {
                 console.error(`Could not find a valid sample rate on group ${root.group}, got ${sampleRateControl.value}`);
                 return;
             }
-            const currentAngle = scratchHandler.getAngle(scratchHandler.point.position);
+            const position = scratchHandler.point.position;
+            const currentAngle = scratchHandler.getAngle(position);
             let delta = currentAngle - scratchHandler.lastAngle;
+            // Near the spindle a tiny finger wobble is a big angle: fade the
+            // motion in over the inner third so the record never jumps
+            const radius = Math.hypot(position.x - root.width / 2, position.y - root.height / 2);
+            const grip = Math.min(1, radius / (Math.min(root.width, root.height) / 6));
 
             // Normalize to [-π, π] to handle atan2 boundary crossing
             while (delta > Math.PI) delta -= 2 * Math.PI;
@@ -209,7 +214,7 @@ Item {
             // Convert angular delta (radians) to samples:
             // samples = radians * (frameRate * 2) / (2π * rps)
             //         = radians * frameRate / (π * rps)
-            scratchPositionControl.value += delta * root.frameRate / root.rps;
+            scratchPositionControl.value += grip * delta * root.frameRate / root.rps;
         }
     }
 }

@@ -22,6 +22,9 @@
 #include "util/samplebuffer.h"
 #include "util/types.h"
 
+namespace mixxx {
+class FxStation;
+} // namespace mixxx
 class EngineWorkerScheduler;
 class EngineVuMeter;
 class ControlPotmeter;
@@ -294,6 +297,8 @@ class EngineMixer : public QObject, public AudioSource {
     mixxx::SampleBuffer m_sidechainMix;
 
     parented_ptr<EngineWorkerScheduler> m_pWorkerScheduler;
+    /// The remix effector on the main mix, after the effect units
+    std::unique_ptr<mixxx::FxStation> m_pFxStation;
     std::unique_ptr<EngineSync> m_pEngineSync;
 
     // List of channels added to the engine. (depends on m_pEngineSync)

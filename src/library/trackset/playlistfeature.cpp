@@ -177,10 +177,12 @@ QList<BasePlaylistFeature::IdAndLabel> PlaylistFeature::createPlaylistLabels() {
             "  %6.%8 AS name, "
             "  LOWER(%6.%8) AS sort_name, "
             "  COUNT(CASE %2.%5 WHEN 0 THEN 1 ELSE NULL END) AS count, "
-            "  SUM(CASE %2.%5 WHEN 0 THEN %2.%4 ELSE 0 END) AS durationSeconds "
-            "FROM %2 "
-            "LEFT JOIN %10 ON %2.%3 = %10.%11 "
-            "LEFT JOIN %6 ON %10.%12 = %6.%7 "
+            "  IFNULL(SUM(CASE %2.%5 WHEN 0 THEN %2.%4 ELSE 0 END), 0) AS durationSeconds "
+            // From the playlists: empty ones too (a new playlist showed up
+            // only after a track was in it and the app restarted)
+            "FROM %6 "
+            "LEFT JOIN %10 ON %10.%12 = %6.%7 "
+            "LEFT JOIN %2 ON %2.%3 = %10.%11 "
             "WHERE %6.%9 = %13 "
             "GROUP BY %6.%7")
                                   .arg(m_countsDurationTableName, // 1

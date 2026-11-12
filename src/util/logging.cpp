@@ -293,7 +293,7 @@ namespace mixxx {
 
 namespace {
 
-bool isControllerLoggingCategory(const QString& categoryName) {
+[[maybe_unused]] bool isControllerLoggingCategory(const QString& categoryName) {
     return categoryName.startsWith("controller.");
 }
 
@@ -312,6 +312,8 @@ bool isHarmlessQtWarning(const QString& message) {
             QLatin1String("no EGLSurface, likely Surface destroyed by Android"),
             QLatin1String("QRhiGles2: Failed to make context current"),
             QLatin1String("Failed to start frame"),
+            // A permission result for a request made from Java, not by Qt
+            QLatin1String("Found no valid pending permission request"),
 #endif
     };
     for (const auto& harmless : kHarmless) {
@@ -351,9 +353,11 @@ void handleMessage(
         // write debug messages into the log file, but skip controller I/O
         // to avoid flooding the log file.
         // Skip expensive string comparisons if WriteFlag::File is already set.
+#ifndef Q_OS_ANDROID
         if (!writeFlags.testFlag(WriteFlag::File) && !isControllerLoggingCategory(categoryName)) {
             writeFlags |= WriteFlag::File;
         }
+#endif
         break;
     case QtInfoMsg:
         levelName = "Info";

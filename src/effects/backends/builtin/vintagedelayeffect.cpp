@@ -1,145 +1,130 @@
 #include "effects/backends/builtin/vintagedelayeffect.h"
 
-#include <algorithm>
-#include <cmath>
-
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-
 QString VintageDelayEffect::getId() {
     return QStringLiteral("org.mixxx.effects.vintagedelay");
 }
 
 EffectManifestPointer VintageDelayEffect::getManifest() {
-    auto pManifest = EffectManifestPointer::create();
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Vintage Delay"));
-    pManifest->setAuthor("DJ Sugar");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(
-            QObject::tr("Tape-style delay with warm, dark character. "
-                        "Low-pass filtering in the feedback loop simulates "
-                        "analog tape echo. "
-                        "Comparable to classic Roland RE-201 Space Echo."));
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Tape Echo"),
+            QObject::tr("TapeEcho"),
+            QObject::tr("Tape machine echo: gliding head, wow and flutter, warm "
+                        "saturation and repeats that lose their top end."));
 
-    auto pTime = pManifest->addParameter();
-    pTime->setId("time");
-    pTime->setName(QObject::tr("Time"));
-    pTime->setShortName(QObject::tr("Time"));
-    pTime->setDescription(QObject::tr("Delay time in milliseconds."));
-    pTime->setValueScaler(EffectManifestParameter::ValueScaler::Logarithmic);
-    pTime->setUnitsHint(EffectManifestParameter::UnitsHint::Millisecond);
-    pTime->setRange(50.0, 400.0, 2000.0);
-
-    auto pFeedback = pManifest->addParameter();
-    pFeedback->setId("feedback");
-    pFeedback->setName(QObject::tr("Feedback"));
-    pFeedback->setShortName(QObject::tr("Fdbk"));
-    pFeedback->setDescription(
-            QObject::tr("Amount of output fed back into input.\n"
-                        "Higher = more repeats."));
-    pFeedback->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pFeedback->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pFeedback->setRange(0.0, 0.4, 0.9);
-
-    auto pTone = pManifest->addParameter();
-    pTone->setId("tone");
-    pTone->setName(QObject::tr("Tone"));
-    pTone->setShortName(QObject::tr("Tone"));
-    pTone->setDescription(
-            QObject::tr("Brightness of the delay repeats.\n"
-                        "0 = dark/warm, 1 = bright/clear."));
-    pTone->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pTone->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pTone->setRange(0.0, 0.5, 1.0);
-
-    auto pMix = pManifest->addParameter();
-    pMix->setId("mix");
-    pMix->setName(QObject::tr("Mix"));
-    pMix->setShortName(QObject::tr("Mix"));
-    pMix->setDescription(
-            QObject::tr("Dry/wet mix.\n"
-                        "0 = dry only, 1 = wet only."));
-    pMix->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pMix->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pMix->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    pMix->setRange(0.0, 0.3, 1.0);
-
+    djfx::division(pManifest,
+            QStringLiteral("delay_time"),
+            QObject::tr("Time"),
+            QObject::tr("Time"),
+            QObject::tr("Echo time in beats. Changing it glides the tape head."),
+            0.75);
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Level of the echoes."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("feedback"),
+            QObject::tr("Intensity"),
+            QObject::tr("Intens"),
+            QObject::tr("Number of repeats. Above three quarters the tape starts "
+                        "to run away."),
+            0.0,
+            0.55,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("age"),
+            QObject::tr("Age"),
+            QObject::tr("Age"),
+            QObject::tr("Wow, flutter and high-frequency loss of a worn tape."),
+            0.0,
+            0.35,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("saturation"),
+            QObject::tr("Saturation"),
+            QObject::tr("Sat"),
+            QObject::tr("Tape saturation in the loop."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::toggle(pManifest,
+            QStringLiteral("freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Closes the input and loops the current echoes forever."));
     return pManifest;
 }
 
-void VintageDelayEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pTimeParameter = parameters.value("time");
-    m_pFeedbackParameter = parameters.value("feedback");
-    m_pToneParameter = parameters.value("tone");
-    m_pMixParameter = parameters.value("mix");
+VintageDelayGroupState::VintageDelayGroupState(
+        const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters),
+          random(0xA11CEu) {
+    delay.setup(m_sampleRate, 4.0f);
+    flutterNoise.setCutoff(12.0f, m_sampleRate);
+    amount.setTime(0.02f, m_sampleRate);
+    feedback.setTime(0.08f, m_sampleRate);
+    age.setTime(0.1f, m_sampleRate);
 }
 
 void VintageDelayEffect::processChannel(VintageDelayGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
-        [[maybe_unused]] const EffectEnableState enableState,
-        [[maybe_unused]] const GroupFeatureState& groupFeatures) {
-    const SINT numSamples = engineParameters.samplesPerBuffer();
-    const int chCount = engineParameters.channelCount();
-    const int sampleRate = engineParameters.sampleRate();
+        const EffectEnableState enableState,
+        const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    if (enableState == EffectEnableState::Enabling) {
+        pState->delay.clear();
+        pState->flutterNoise.reset();
+        pState->amount.reset(param(kAmount));
+        pState->feedback.reset(param(kFeedback));
+        pState->age.reset(param(kAge));
+    }
+    pState->amount.setTarget(param(kAmount));
+    pState->feedback.setTarget(param(kFeedback));
+    pState->age.setTarget(param(kAge));
 
-    float time = static_cast<float>(m_pTimeParameter->value());
-    float feedback = static_cast<float>(m_pFeedbackParameter->value());
-    float tone = static_cast<float>(m_pToneParameter->value());
-    float mix = static_cast<float>(m_pMixParameter->value());
+    fxdsp::TempoDelay::Settings settings;
+    double delaySamples = paramBeats(kTime) * pState->clock.samplesPerBeat();
+    while (delaySamples > pState->delay.maxDelaySamples() - 64.0) {
+        delaySamples *= 0.5;
+    }
+    settings.delaySamples = static_cast<float>(delaySamples);
+    settings.glide = true;
+    settings.freeze = paramBool(kFreeze);
+    settings.drive = 0.15f + 0.85f * param(kSaturation);
+    settings.lowCutHz = 90.0f;
 
-    // Compute delay in samples
-    int delaySamples = static_cast<int>(time * sampleRate * 0.001f);
+    const float rate = pState->sampleRate();
+    const float msToSamples = rate * 0.001f;
+    for (int i = 0; i < frames; ++i) {
+        const float inL = pInput[2 * i];
+        const float inR = pInput[2 * i + 1];
+        const float amount = pState->amount.next();
+        settings.feedback = 1.08f * pState->feedback.next();
+        const float age = pState->age.next();
 
-    // Smooth parameters
-    float smoothFeedback =
-            pState->prev_feedback + 0.001f * (feedback - pState->prev_feedback);
-    float smoothTone = pState->prev_tone + 0.001f * (tone - pState->prev_tone);
-    float smoothMix = pState->prev_mix + 0.001f * (mix - pState->prev_mix);
-    pState->prev_feedback = smoothFeedback;
-    pState->prev_tone = smoothTone;
-    pState->prev_mix = smoothMix;
+        // Wow: slow capstan wobble. Flutter: faster, partly random.
+        pState->wowPhase += 0.55f / rate;
+        pState->wowPhase -= std::floor(pState->wowPhase);
+        pState->flutterPhase += 6.8f / rate;
+        pState->flutterPhase -= std::floor(pState->flutterPhase);
+        const float wow = std::sin(fxdsp::kTwoPi * pState->wowPhase);
+        const float flutter = std::sin(fxdsp::kTwoPi * pState->flutterPhase) +
+                2.0f * pState->flutterNoise.lowpass(pState->random.bipolar());
+        settings.modulationSamples = age * msToSamples * (2.2f * (1.0f + wow) + 0.25f * flutter);
+        settings.highCutHz = fxdsp::knobToHz(1.0f - age, 2500.0f, 14000.0f);
 
-    // Recompute alpha based on smooth tone
-    float smoothCutoff = 800.0f + smoothTone * 12000.0f;
-    float smoothRc = 1.0f / (2.0f * 3.14159265f * smoothCutoff);
-    float dt = 1.0f / sampleRate;
-    float smoothAlpha = dt / (smoothRc + dt);
-
-    for (SINT i = 0; i < numSamples; ++i) {
-        int ch = i % chCount;
-
-        // Read from delay buffer with linear interpolation
-        float readPos =
-                static_cast<float>(pState->write_position) - delaySamples;
-        while (readPos < 0.0f) {
-            readPos += pState->delay_buf.size();
-        }
-
-        int readPosInt = static_cast<int>(readPos);
-        float frac = readPos - readPosInt;
-        int readPos2 = (readPosInt + 1) % pState->delay_buf.size();
-
-        CSAMPLE delayed = pState->delay_buf[readPosInt] * (1.0f - frac) +
-                pState->delay_buf[readPos2] * frac;
-
-        // Apply low-pass filter (tape character)
-        pState->lp_state[ch] = pState->lp_state[ch] +
-                smoothAlpha * (delayed - pState->lp_state[ch]);
-        CSAMPLE filtered = pState->lp_state[ch];
-
-        // Write to delay buffer with feedback
-        pState->delay_buf[pState->write_position] =
-                pInput[i] + filtered * smoothFeedback;
-
-        // Advance write position
-        pState->write_position =
-                (pState->write_position + 1) % pState->delay_buf.size();
-
-        // Output with dry/wet mix
-        pOutput[i] = pInput[i] * (1.0f - smoothMix) + filtered * smoothMix;
+        float wetL;
+        float wetR;
+        pState->delay.process(settings, inL, inR, &wetL, &wetR);
+        const float gain = 0.75f * amount;
+        pOutput[2 * i] = inL + wetL * gain;
+        pOutput[2 * i + 1] = inR + wetR * gain;
     }
 }

@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
+import ".." as Library
 
 // SoundCloud search. Results download through the same yt-dlp path as
 // YouTube (ids "sc-<track id>"), so deck loads, the download cache, the
@@ -438,6 +439,14 @@ Item {
                 color: index % 2 === 0 ? "#0c0d0f" : "#16181b"
                 border.color: isDownloading ? "#ff5500" : "#2a2c30"
                 border.width: 1
+
+                Library.TrackDrag {
+                    label: trackRow.title
+                    loadTo: group => Mixxx.YouTube.downloadToDeck(trackRow.vid, group)
+                    fetch: () => Mixxx.YouTube.download(trackRow.vid)
+                    fetchId: trackRow.vid
+                    fetchSource: Mixxx.YouTube
+                }
                 opacity: preview ? 0.55 : 1.0
 
                 MouseArea {

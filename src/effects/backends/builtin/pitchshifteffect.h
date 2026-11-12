@@ -1,57 +1,29 @@
 #pragma once
 
-#include <QMap>
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/modulation.h"
 
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/samplebuffer.h"
-#include "util/types.h"
-
-namespace RubberBand {
-class RubberBandStretcher;
-} // namespace RubberBand
-
-class PitchShiftGroupState : public EffectState {
+// Pitch: shifts the deck up or down by up to an octave without changing
+// tempo, with smooth glides when the knob moves. A two-head granular
+// shifter: its delay is half a grain (12 to 50 ms), cheap on phones.
+class PitchShiftGroupState : public DjFxState {
   public:
-    PitchShiftGroupState(const mixxx::EngineParameters& engineParameters);
-    ~PitchShiftGroupState() override;
+    explicit PitchShiftGroupState(const mixxx::EngineParameters& engineParameters);
 
-    void initializeBuffer(const mixxx::EngineParameters& engineParameters);
-    void audioParametersChanged(const mixxx::EngineParameters& engineParameters);
-
-    std::unique_ptr<RubberBand::RubberBandStretcher> m_pRubberBand;
-    mixxx::SampleBuffer m_retrieveBuffer[2];
+    fxdsp::PitchShifter shifter[2];
+    fxdsp::Smoother semitones;
+    fxdsp::Smoother mix;
+    float lastWindow = -1.0f;
 };
 
-class PitchShiftEffect final : public EffectProcessorImpl<PitchShiftGroupState> {
-  public:
-    PitchShiftEffect();
-    ~PitchShiftEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            PitchShiftGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class PitchShiftEffect : public DjFxEffect<PitchShiftGroupState, PitchShiftEffect> {
+    DJFX_EFFECT_INTERFACE(PitchShiftGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    bool m_currentFormant;
-    EngineEffectParameterPointer m_pPitchParameter;
-    EngineEffectParameterPointer m_pRangeParameter;
-    EngineEffectParameterPointer m_pSemitonesModeParameter;
-    EngineEffectParameterPointer m_pFormantPreservingParameter;
-
-    DISALLOW_COPY_AND_ASSIGN(PitchShiftEffect);
+    enum Param {
+        kPitch,
+        kRange,
+        kMix,
+        kGrain,
+    };
 };

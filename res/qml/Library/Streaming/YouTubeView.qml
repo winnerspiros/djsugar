@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../.." as Skin
 import "../../Theme"
+import ".." as Library
 
 // YouTube search tab of the Booth streaming hub: searches the built-in
 // YouTube service and loads results straight into a deck. Downloads are
@@ -792,6 +793,14 @@ Item {
                 border.width: 1
                 radius: 6
                 clip: true
+
+                Library.TrackDrag {
+                    label: videoCard.title
+                    loadTo: group => Mixxx.YouTube.downloadToDeck(videoCard.vid, group)
+                    fetch: () => Mixxx.YouTube.download(videoCard.vid)
+                    fetchId: videoCard.vid
+                    fetchSource: Mixxx.YouTube
+                }
 
                 readonly property var video: ({
                     "id": vid,

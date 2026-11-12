@@ -1,0 +1,7 @@
+Mapping: Akai MPK Mini mkII
+Author (in the mapping): Valerio Vitali
+Submitted by: Valefungo in Mixxx pull request #3166
+https://github.com/mixxxdj/mixxx/pull/3166
+Last update of the pull request: 2025-06-20
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

@@ -185,7 +185,10 @@ Item {
         id: dragArea
 
         anchors.fill: root
-        drag.target: root
+        // Moving the deck is a layout edit: in normal use a drag that
+        // misses a control used to carry the whole deck away
+        drag.target: root.editMode ? root : null
+        enabled: root.editMode
     }
     Skin.SectionBackground {
         anchors.fill: parent
@@ -629,7 +632,7 @@ Item {
             candidate = null;
         }
         onPositionChanged: drag => {
-            if (drag.formats.includes("mixxx/player")) {
+            if (drag.formats.includes("mixxx/player") || drag.keys.includes("mixxx/track")) {
                 return;
             }
 

@@ -450,10 +450,13 @@ void QmlSpotifyProxy::loadFromYouTube(
                         emit downloadProgressChanged(id, progress);
                     }
                 });
-        auto finish = [this](const QString& videoId) {
+        auto finish = [this](const QString& videoId, const QString& path = QString()) {
             if (const QString id = m_fallbacks.take(videoId); !id.isEmpty()) {
                 m_progress.remove(id);
                 emit downloadProgressChanged(id, -1.0);
+                if (!path.isEmpty()) {
+                    emit fileReady(id, path);
+                }
             }
         };
         connect(pService, &mixxx::YouTubeService::downloadFinished, this, finish);
@@ -492,7 +495,11 @@ void QmlSpotifyProxy::loadFromYouTube(
                 pFeature->rememberExternalResults({info});
                 m_fallbacks.insert(videoId, spotifyId);
                 for (const PendingLoad& load : pending) {
-                    pFeature->requestDownloadToPlayer(videoId, load.deckGroup, false);
+                    if (load.deckGroup.isEmpty()) {
+                        pFeature->requestDownload(videoId);
+                    } else {
+                        pFeature->requestDownloadToPlayer(videoId, load.deckGroup, false);
+                    }
                 }
             });
 }
@@ -514,6 +521,10 @@ void QmlSpotifyProxy::loadFile(
     pTrack->setArtist(track.value(QStringLiteral("artist")).toString());
     pTrack->setAlbum(track.value(QStringLiteral("album")).toString());
     pTrack->setComment(track.value(QStringLiteral("uri")).toString());
+    emit fileReady(track.value(QStringLiteral("id")).toString(), path);
+    if (deckGroup.isEmpty()) {
+        return;
+    }
 #ifdef __STEM__
     s_pPlayerManager->slotLoadTrackToPlayer(
             pTrack, deckGroup, mixxx::StemChannelSelection(), false);

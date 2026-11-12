@@ -1,0 +1,8 @@
+Mapping: Vestax VCI-380
+Author (in the mapping): JM Jacinto
+Submitted by: jaymanu79 in Mixxx pull request #17089
+https://github.com/mixxxdj/mixxx/pull/17089
+Last update of the pull request: 2026-11-10
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: midi-components-0.0.js

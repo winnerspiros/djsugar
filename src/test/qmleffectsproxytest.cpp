@@ -100,11 +100,9 @@ TEST_F(QmlEffectsProxyTest, UnitPresetStateAndLoading) {
 }
 
 TEST_F(QmlEffectsProxyTest, SlotEffectAndParameterVisibility) {
-    constexpr int kExpectedParameterCount = 6;
-    constexpr int kParameter1Index = 0;
-    constexpr int kParameter2Index = 1;
-    constexpr int kParameter3Index = 2;
-    constexpr int kButtonParameter1Index = 4;
+    // Echo: 6 knobs + 2 toggles. Rows are looked up by parameter id so the
+    // test does not depend on the row order of the model.
+    constexpr int kExpectedParameterCount = 8;
 
     std::unique_ptr<mixxx::qml::QmlEffectSlotProxy> pSlot(
             m_pProxy->getEffectSlot(1, 1));
@@ -123,34 +121,41 @@ TEST_F(QmlEffectsProxyTest, SlotEffectAndParameterVisibility) {
 
     ASSERT_EQ(kExpectedParameterCount, pModel->rowCount({}));
     EXPECT_TRUE(pModel->roleNames().values().contains("unitString"));
-    EXPECT_EQ(QStringLiteral("parameter1"),
-            pModel->get(kParameter1Index).toMap().value("controlKey").toString());
-    EXPECT_EQ(QStringLiteral("parameter2"),
-            pModel->get(kParameter2Index).toMap().value("controlKey").toString());
-    EXPECT_EQ(QStringLiteral("button_parameter1"),
-            pModel->get(kButtonParameter1Index)
-                    .toMap()
+    const auto row = [pModel](const QString& id) {
+        for (int i = 0; i < pModel->rowCount({}); ++i) {
+            const QVariantMap map = pModel->get(i).toMap();
+            if (map.value("parameterId").toString() == id) {
+                return map;
+            }
+        }
+        return QVariantMap();
+    };
+    const QString sendKey = row(QStringLiteral("send_amount"))
+                                    .value("controlKey")
+                                    .toString();
+    EXPECT_TRUE(sendKey.startsWith(QStringLiteral("parameter")));
+    EXPECT_TRUE(row(QStringLiteral("freeze"))
                     .value("controlKey")
-                    .toString());
+                    .toString()
+                    .startsWith(QStringLiteral("button_parameter")));
 
-    pSlot->setParameterVisible(QStringLiteral("feedback_amount"), false);
+    pSlot->setParameterVisible(QStringLiteral("send_amount"), false);
     EXPECT_GE(dataChangedSpy.count(), 1);
-    EXPECT_FALSE(pModel->get(kParameter2Index).toMap().value("loaded").toBool());
-    EXPECT_TRUE(pModel->get(kParameter2Index)
-                    .toMap()
+    EXPECT_FALSE(row(QStringLiteral("send_amount")).value("loaded").toBool());
+    EXPECT_TRUE(row(QStringLiteral("send_amount"))
                     .value("controlKey")
                     .toString()
                     .isEmpty());
-    EXPECT_EQ(QStringLiteral("parameter2"),
-            pModel->get(kParameter3Index).toMap().value("controlKey").toString());
+    // The next knob moves up into the freed control slot.
+    EXPECT_EQ(sendKey,
+            row(QStringLiteral("feedback_amount")).value("controlKey").toString());
 
-    pSlot->setParameterVisible(QStringLiteral("feedback_amount"), true);
-    EXPECT_TRUE(pModel->get(kParameter2Index).toMap().value("loaded").toBool());
+    pSlot->setParameterVisible(QStringLiteral("send_amount"), true);
+    EXPECT_TRUE(row(QStringLiteral("send_amount")).value("loaded").toBool());
     pSlot->saveDefaultSnapshot();
 
     pSlot->setEffectId(ParametricEQEffect::getId());
-    EXPECT_EQ(QStringLiteral("dB"),
-            pModel->get(kParameter1Index).toMap().value("unitString").toString());
+    EXPECT_EQ(QStringLiteral("dB"), pModel->get(0).toMap().value("unitString").toString());
 }
 
 } // namespace

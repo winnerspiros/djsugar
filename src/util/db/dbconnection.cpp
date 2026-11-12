@@ -190,6 +190,125 @@ int sqliteStringCompareUTF16(void* pArg,
 
 const char kLexicographicalCollationFunc[] = "mixxxLexicographicalCollationFunc";
 
+bool hasGreek(const QString& string) {
+    for (const QChar c : string) {
+        if (c.unicode() >= 0x0370 && c.unicode() <= 0x03FF) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// A key that Greek and Greeklish spellings of a word share, e.g. both
+/// "Λιόλιου" and "lioliou" give "lioliu": the Greek letters as Latin ones
+/// (accents dropped), then the sounds Greeklish writes in different ways the
+/// same way (ou/u, ei/oi/i/y/h/η, ai/e, w/o, 8/th, ks/x, ch/x, b/v), and no
+/// double letters. The wildcards and escaped characters stay as they are.
+QString greeklishKey(const QString& text, QChar esc) {
+    static const QHash<QChar, QString> kGreek = [] {
+        QHash<QChar, QString> map;
+        const QString greek = QStringLiteral(
+                "αάβγδεέζηήθιίϊΐκλμνξοόπρσςτυύϋΰφχψωώ");
+        const QStringList latin = {"a",
+                "a",
+                "v",
+                "g",
+                "d",
+                "e",
+                "e",
+                "z",
+                "i",
+                "i",
+                "8",
+                "i",
+                "i",
+                "i",
+                "i",
+                "k",
+                "l",
+                "m",
+                "n",
+                "x",
+                "o",
+                "o",
+                "p",
+                "r",
+                "s",
+                "s",
+                "t",
+                "i",
+                "i",
+                "i",
+                "i",
+                "f",
+                "x",
+                "ps",
+                "o",
+                "o"};
+        for (int i = 0; i < greek.size(); ++i) {
+            map.insert(greek[i], latin[i]);
+        }
+        return map;
+    }();
+    // Greek digraphs first, as they are written in Greeklish
+    QString lower = text.toLower();
+    lower.replace(QStringLiteral("ου"), QStringLiteral("u"))
+            .replace(QStringLiteral("ού"), QStringLiteral("u"))
+            .replace(QStringLiteral("ευ"), QStringLiteral("ev"))
+            .replace(QStringLiteral("εύ"), QStringLiteral("ev"))
+            .replace(QStringLiteral("αυ"), QStringLiteral("av"))
+            .replace(QStringLiteral("αύ"), QStringLiteral("av"))
+            .replace(QStringLiteral("μπ"), QStringLiteral("b"))
+            .replace(QStringLiteral("ντ"), QStringLiteral("d"))
+            .replace(QStringLiteral("γκ"), QStringLiteral("g"))
+            .replace(QStringLiteral("γγ"), QStringLiteral("g"));
+    QString latin;
+    latin.reserve(lower.size() + 8);
+    for (int i = 0; i < lower.size(); ++i) {
+        const QChar c = lower[i];
+        if (!esc.isNull() && c == esc && i + 1 < lower.size()) {
+            latin.append(c);
+            latin.append(lower[++i]);
+            continue;
+        }
+        const auto it = kGreek.constFind(c);
+        latin.append(it != kGreek.constEnd() ? *it : QString(c));
+    }
+    makeLatinLow(latin.data(), static_cast<int>(latin.length()));
+    static const std::pair<const char*, const char*> kSounds[] = {
+            {"mp", "b"},
+            {"nt", "d"},
+            {"gk", "g"},
+            {"eu", "ev"},
+            {"ef", "ev"},
+            {"au", "av"},
+            {"af", "av"},
+            {"ou", "u"},
+            {"ai", "e"},
+            {"ei", "i"},
+            {"oi", "i"},
+            {"th", "8"},
+            {"ch", "x"},
+            {"ph", "f"},
+            {"ks", "x"},
+            {"y", "i"},
+            {"h", "i"},
+            {"w", "o"},
+            {"b", "v"},
+    };
+    for (const auto& [from, to] : kSounds) {
+        latin.replace(QLatin1String(from), QLatin1String(to));
+    }
+    QString key;
+    key.reserve(latin.size());
+    for (const QChar c : std::as_const(latin)) {
+        if (key.isEmpty() || key.back() != c || c == QLatin1Char('%')) {
+            key.append(c);
+        }
+    }
+    return key;
+}
+
 // This implements the like() SQL function. This is used by the LIKE operator.
 // The SQL statement 'A LIKE B' is implemented as 'like(B, A)', and if there is
 // an escape character, say E, it is implemented as 'like(B, A, E)'
@@ -226,6 +345,16 @@ void sqliteLikeUtf8(sqlite3_context* context,
     }
 
     int ret = DbConnection::likeCompareLatinLow(&stringB, &stringA, esc);
+    if (!ret && (hasGreek(stringA) || hasGreek(stringB))) {
+        // Greek titles found by Greeklish and the other way round
+        QString pattern = greeklishKey(stringB, esc);
+        QString string = greeklishKey(stringA, QChar());
+        ret = likeCompareInner(pattern.data(),
+                pattern.length(),
+                string.data(),
+                string.length(),
+                esc);
+    }
     sqlite3_result_int64(context, ret);
     return;
 }

@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QJniObject>
 #include <QTimer>
+#include <algorithm>
 
 #include "control/controlobject.h"
 #include "controllers/android.h"
@@ -221,16 +222,34 @@ void SoundManagerAndroid::prepareSetup() {
 #ifdef __ANDROID_USB_AUDIO__
     // A USB sound card driven directly by Mixxx only plays at the rates it
     // supports (e.g. 44.1 kHz for the DDJ-400), there is no resampling
+    // Only the sound card that drives the engine (the one with the main
+    // output, or else the first one): the others resample, and with two of
+    // them, each one used to set its own rate in turn
+    SoundDevicePointer pClockDevice;
     for (const auto& pDevice : m_pSoundManager->m_pEnumerator->queryDevices()) {
-        const auto* pUsbDevice = dynamic_cast<const SoundDeviceAndroidUsb*>(pDevice.data());
-        if (!pUsbDevice || !isConfiguredOutput(config, pDevice)) {
+        if (!dynamic_cast<const SoundDeviceAndroidUsb*>(pDevice.data()) ||
+                !isConfiguredOutput(config, pDevice)) {
             continue;
         }
+        const auto outputs = config.getOutputs().values(pDevice->getDeviceId());
+        const bool hasMain = std::any_of(outputs.begin(), outputs.end(), [](const auto& output) {
+            return output.getType() == AudioPathType::Main;
+        });
+        if (hasMain) {
+            pClockDevice = pDevice;
+            break;
+        }
+        if (!pClockDevice) {
+            pClockDevice = pDevice;
+        }
+    }
+    if (pClockDevice) {
+        const auto* pUsbDevice = static_cast<const SoundDeviceAndroidUsb*>(pClockDevice.data());
         const int sampleRate = static_cast<int>(config.getSampleRate().value());
         if (!pUsbDevice->usbDevice()->sampleRates().contains(sampleRate)) {
-            qInfo() << pDevice->getDisplayName() << "doesn't support" << sampleRate
-                    << "Hz, using" << pDevice->getDefaultSampleRate();
-            config.setSampleRate(pDevice->getDefaultSampleRate());
+            qInfo() << pClockDevice->getDisplayName() << "doesn't support" << sampleRate
+                    << "Hz, using" << pClockDevice->getDefaultSampleRate();
+            config.setSampleRate(pClockDevice->getDefaultSampleRate());
         }
     }
 #endif

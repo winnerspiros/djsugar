@@ -57,32 +57,33 @@
    <MetaParameterValue>0</MetaParameterValue>
    <Id>org.mixxx.effects.reverb</Id>
    <BackendType>Built-In</BackendType>
+   <Version>3.0</Version>
    <Parameters>
     <Parameter>
-     <Id>decay</Id>
-     <Value>0.690476</Value>
+     <Id>send_amount</Id>
+     <Value>0</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+    <Parameter>
+     <Id>size</Id>
+     <Value>0.75</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
-     <Id>bandwidth</Id>
-     <Value>1</Value>
+     <Id>decay</Id>
+     <Value>4</Value>
      <LinkType>NONE</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>
     <Parameter>
      <Id>damping</Id>
-     <Value>0.15625</Value>
+     <Value>0.2</Value>
      <LinkType>NONE</LinkType>
-     <LinkInversion>0</LinkInversion>
-     <Hidden>0</Hidden>
-    </Parameter>
-    <Parameter>
-     <Id>send_amount</Id>
-     <Value>0</Value>
-     <LinkType>LINKED</LinkType>
      <LinkInversion>0</LinkInversion>
      <Hidden>0</Hidden>
     </Parameter>

@@ -1,0 +1,7 @@
+Mapping: Pioneer DDJ-FLX10
+Author (in the mapping): Marc Zischka & Victor Pineda (Veezuhz)
+Submitted by: Veezuhz in Mixxx pull request #16539
+https://github.com/mixxxdj/mixxx/pull/16539
+Last update of the pull request: 2026-09-26
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

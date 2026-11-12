@@ -401,9 +401,7 @@ jobs:
 
       - name: "[Windows] Set up MSVC Developer Command Prompt"
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+        uses: ./.github/actions/msvc-env
         with:
           arch: ${{ matrix.arch }}
 
@@ -482,9 +480,14 @@ jobs:
         # us a free retry: if the upstream download flakes, the next push
         # uses the cached copy). Key includes the buildenv name (which
         # already encodes the dependency revision SHA) so a deps bump
-        # automatically invalidates the cache.
+        # automatically invalidates the cache. A stalled segment of the
+        # ~2.4 GB macOS archive used to hold the job for the default 10 min
+        # before "Failed to restore: The operation was aborted"; the direct
+        # download is faster than that wait.
         if: matrix.buildenv_script != null && runner.os != 'Linux'
         uses: actions/cache@v6
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 3
         with:
           path: ${{ matrix.buildenv_basepath }}
           key: buildenv-${{ matrix.os }}-${{ matrix.compiler_cache_id || matrix.arch }}-${{ env.BUILDENV_NAME }}
@@ -635,12 +638,6 @@ jobs:
       - name: "[Ubuntu/macOS] Set up gcc/clang problem matcher"
         if: runner.os != 'Windows'
         run: echo "::add-matcher::.github/gcc-matcher.json"
-
-      - name: "[Windows] Set up MSVC problem matcher"
-        if: runner.os == 'Windows'
-        uses: ammaraskar/msvc-problem-matcher@0.3.0
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
       - name: "Build"
         # Ninja (macOS/Windows) uses all cores by default, make (Linux) only one
@@ -1010,8 +1007,6 @@ jobs:
     name: "Flatpak"
     if: inputs.publish == true
     continue-on-error: true
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
       options: --privileged

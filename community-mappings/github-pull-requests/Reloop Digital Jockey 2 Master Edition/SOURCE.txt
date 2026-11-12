@@ -1,0 +1,8 @@
+Mapping: Reloop Digital Jockey 2 Master Edition
+Author (in the mapping): DJ aK (adapted for Master Edition)
+Submitted by: julled in Mixxx pull request #16929
+https://github.com/mixxxdj/mixxx/pull/16929
+Last update of the pull request: 2026-10-30
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js, Reloop-Digital-Jockey-2-IE.scripts.js

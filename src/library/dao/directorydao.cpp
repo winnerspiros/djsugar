@@ -86,8 +86,8 @@ QList<mixxx::FileInfo> DirectoryDAO::loadAllDirectories(
         bool skipInvalidOrMissing) const {
     DEBUG_ASSERT(m_database.isOpen());
 #if defined(Q_OS_ANDROID)
-    kLogger.info() << "[Android] loadAllDirectories:"
-                   << "skipInvalidOrMissing=" << skipInvalidOrMissing;
+    kLogger.debug() << "[Android] loadAllDirectories:"
+                    << "skipInvalidOrMissing=" << skipInvalidOrMissing;
 #endif
     const auto statement =
             QStringLiteral("SELECT %1 FROM %2")
@@ -118,8 +118,8 @@ QList<mixxx::FileInfo> DirectoryDAO::loadAllDirectories(
         allDirs.append(std::move(fileInfo));
     }
 #if defined(Q_OS_ANDROID)
-    kLogger.info() << "[Android] loadAllDirectories: found"
-                   << allDirs.size() << "directories";
+    kLogger.debug() << "[Android] loadAllDirectories: found"
+                    << allDirs.size() << "directories";
 #endif
     return allDirs;
 }

@@ -1,0 +1,24 @@
+name: MSVC environment
+description: >-
+  The Developer Command Prompt's variables (vcvarsall) for the next steps,
+  and the MSVC problem matcher. Replaces ilammy/msvc-dev-cmd and
+  ammaraskar/msvc-problem-matcher, which still run on Node.js 20.
+inputs:
+  arch:
+    description: vcvarsall target, e.g. x64 or arm64
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      run: |
+        $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+        $before = @{}
+        Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+        cmd /c "`"$vs\VC\Auxiliary\Build\vcvarsall.bat`" ${{ inputs.arch }} >nul && set" | ForEach-Object {
+          if ($_ -match '^([^=]+)=(.*)$' -and $before[$Matches[1]] -ne $Matches[2]) {
+            "$($Matches[1])=$($Matches[2])" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          }
+        }
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        Write-Output "::add-matcher::${{ github.action_path }}/msvc-matcher.json"

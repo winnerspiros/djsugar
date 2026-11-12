@@ -36,6 +36,8 @@ const QString kEffect(QStringLiteral("Effect"));
 const QString kEffectMetaParameter(QStringLiteral("MetaParameterValue"));
 const QString kEffectId(QStringLiteral("Id"));
 const QString kEffectBackendType(QStringLiteral("BackendType"));
+// Manifest version of the effect the preset was saved from.
+const QString kEffectVersion(QStringLiteral("Version"));
 
 const QString kParametersRoot(QStringLiteral("Parameters"));
 const QString kParameter(QStringLiteral("Parameter"));

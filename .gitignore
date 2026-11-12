@@ -75,3 +75,10 @@ res/qrc_mixxx.cc
 
 # Generated Android USB device filter (build-time, from res/controllers/*.hid.xml)
 packaging/android/res/xml/usb_device_filter.xml
+# Android build & release artifacts
+*.keystore
+*.apk
+*.idsig
+
+/.release/
+.gradle/

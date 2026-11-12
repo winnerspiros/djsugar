@@ -1,55 +1,33 @@
 #pragma once
-#include "effects/backends/effectprocessor.h"
-#include "util/class.h"
-#include "util/types.h"
 
-class EngineFilterMoogLadder4Low;
-class EngineFilterMoogLadder4High;
+#include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/filters.h"
 
-class MoogLadder4FilterGroupState : public EffectState {
+// Auto Filter: a 24 dB/oct transistor ladder low-pass that sweeps by
+// itself, locked to the beat grid, or opens with the dynamics of the
+// track like an envelope filter (auto-wah). Fat analog resonance that
+// bites without whistling.
+class MoogLadder4FilterGroupState : public DjFxState {
   public:
-    MoogLadder4FilterGroupState(const mixxx::EngineParameters& engineParameters);
-    ~MoogLadder4FilterGroupState() override;
+    explicit MoogLadder4FilterGroupState(const mixxx::EngineParameters& engineParameters);
 
-    void setFilters(mixxx::audio::SampleRate sampleRate, double lowFreq, double highFreq);
-
-    CSAMPLE* m_pBuf;
-    EngineFilterMoogLadder4Low* m_pLowFilter;
-    EngineFilterMoogLadder4High* m_pHighFilter;
-
-    double m_loFreq;
-    double m_resonance;
-    double m_hiFreq;
-    double m_samplerate;
+    fxdsp::Ladder ladder[2];
+    fxdsp::EnvelopeFollower envelope;
+    fxdsp::Smoother amount;
+    fxdsp::Smoother cutoff;
 };
 
-class MoogLadder4FilterEffect : public EffectProcessorImpl<MoogLadder4FilterGroupState> {
-  public:
-    MoogLadder4FilterEffect() = default;
-    ~MoogLadder4FilterEffect() override = default;
-
-    static QString getId();
-    static EffectManifestPointer getManifest();
-
-    void loadEngineEffectParameters(
-            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
-
-    void processChannel(
-            MoogLadder4FilterGroupState* pState,
-            const CSAMPLE* pInput,
-            CSAMPLE* pOutput,
-            const mixxx::EngineParameters& engineParameters,
-            const EffectEnableState enableState,
-            const GroupFeatureState& groupFeatures) override;
+class MoogLadder4FilterEffect
+        : public DjFxEffect<MoogLadder4FilterGroupState, MoogLadder4FilterEffect> {
+    DJFX_EFFECT_INTERFACE(MoogLadder4FilterGroupState)
 
   private:
-    QString debugString() const {
-        return getId();
-    }
-
-    EngineEffectParameterPointer m_pLPF;
-    EngineEffectParameterPointer m_pResonance;
-    EngineEffectParameterPointer m_pHPF;
-
-    DISALLOW_COPY_AND_ASSIGN(MoogLadder4FilterEffect);
+    enum Param {
+        kRate,
+        kAmount,
+        kCutoff,
+        kResonance,
+        kMode,
+        kDrive,
+    };
 };

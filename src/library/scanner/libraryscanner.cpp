@@ -11,11 +11,15 @@
 #include "moc_libraryscanner.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
+#ifdef Q_OS_ANDROID
+#include "util/androidpermissions.h"
+#endif
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
 #include "util/db/fwdsqlquery.h"
 #include "util/logger.h"
 #include "util/performancetimer.h"
+#include "util/regex.h"
 #include "util/timer.h"
 #include "util/trace.h"
 
@@ -39,6 +43,7 @@ int execRowCountQuery(FwdSqlQuery& query) {
     return query.numRowsAffected();
 }
 
+#ifndef Q_OS_ANDROID
 /// Clean up the database and fix inconsistencies from previous runs.
 /// See also: https://github.com/mixxxdj/mixxx/issues/9771
 void cleanUpDatabase(const QSqlDatabase& database) {
@@ -72,6 +77,7 @@ void cleanUpDatabase(const QSqlDatabase& database) {
             << "Finished database cleanup:"
             << timer.elapsed().debugMillisWithUnit();
 }
+#endif
 
 /// Update statistics for the query planner
 /// See also: https://www.sqlite.org/lang_analyze.html
@@ -206,6 +212,18 @@ void LibraryScanner::run() {
         kLogger.debug() << "Event loop starting";
         exec();
         kLogger.debug() << "Event loop stopped";
+        // A scan stopped by the exit leaves its batch open: what it found is
+        // kept, and no query outlives the connection
+        m_trackDao.addTracksFinish(false);
+        // The DAOs outlive the thread's connection: without their copies it
+        // is removed cleanly, not "still in use"
+        m_libraryHashDao.release();
+        m_cueDao.release();
+        m_trackDao.release();
+        m_playlistDao.release();
+        m_analysisDao.release();
+        m_directoryDao.release();
+        dbConnection = QSqlDatabase();
     }
     kLogger.debug() << "Exiting thread";
 }
@@ -215,7 +233,13 @@ void LibraryScanner::slotStartScan() {
     DEBUG_ASSERT(m_state == STARTING);
 
     m_canceled = false;
+#ifndef Q_OS_ANDROID
+    // Deletes the hashes of all folders without tracks, so they are scanned
+    // again at every start: on a phone that is most of its folders (12000
+    // folders, a minute of scanning at each start). Purging tracks invalidates
+    // the hashes of their folders already (TrackDAO).
     cleanUpDatabase(m_libraryHashDao.database());
+#endif
 
     // Recursively scan each directory in the directories table.
     m_libraryRootDirs = m_directoryDao.loadAllDirectories();
@@ -240,6 +264,10 @@ void LibraryScanner::slotStartScan() {
         };
         for (const auto& fi : std::as_const(m_libraryRootDirs)) {
             const QString clean = QDir::cleanPath(fi.location());
+            // Registered by older builds
+            if (mixxx::android::isSystemSoundDirectory(clean)) {
+                continue;
+            }
             if (clean == QStringLiteral("/storage/emulated/0")) {
                 appendUnique(QStringLiteral("/storage/emulated/0/Music"));
                 appendUnique(QStringLiteral("/storage/emulated/0/Download"));
@@ -277,7 +305,15 @@ void LibraryScanner::slotStartScan() {
     // of missing tracks in slotFinishUnhashedScan().
     m_previouslyMissingTracks = m_trackDao.getAllMissingTrackLocations();
     QHash<QString, mixxx::cache_key_t> directoryHashes = m_libraryHashDao.getDirectoryHashes();
-    QRegularExpression extensionFilter(SoundSourceProxy::getSupportedFileNamesRegex());
+    // Video files are not scanned: their sound plays, but on a phone they are
+    // clips and memes, not music
+    QStringList audioTypes = SoundSourceProxy::getSupportedFileTypes();
+    const QStringList videoTypes = ScannerUtil::videoFileTypes();
+    for (const QString& videoType : videoTypes) {
+        audioTypes.removeAll(videoType);
+    }
+    QRegularExpression extensionFilter(RegexUtils::fileExtensionsRegex(audioTypes),
+            QRegularExpression::CaseInsensitiveOption);
     QRegularExpression coverExtensionFilter =
             QRegularExpression(CoverArtUtils::supportedCoverArtExtensionsRegex(),
                     QRegularExpression::CaseInsensitiveOption);
@@ -330,6 +366,16 @@ void LibraryScanner::slotStartScan() {
             &TaskWatcher::allTasksDone,
             this,
             &LibraryScanner::slotFinishHashedScan);
+#ifdef Q_OS_ANDROID
+    // New folders are imported as they are found, not after a walk of the
+    // whole tree: that took minutes on Android storage before a single song
+    // showed up (the start-up cleanup drops the hashes of folders without
+    // songs, so most folders are new on every scan). The second stage only
+    // keeps symlinked duplicates in order, which Android storage has none of.
+    constexpr bool firstScan = true;
+#else
+    const bool firstScan = m_scannerGlobal->hasNoDirectoryHashes();
+#endif
 
     for (const mixxx::FileInfo& rootDir : std::as_const(m_libraryRootDirs)) {
         // Acquire a security bookmark for this directory if we are in a
@@ -343,7 +389,7 @@ void LibraryScanner::slotStartScan() {
         auto dirAccess = mixxx::FileAccess(rootDir);
         if (!m_scannerGlobal->testAndMarkDirectoryScanned(rootDir.toQDir())) {
             queueTask(new RecursiveScanDirectoryTask(
-                    this, m_scannerGlobal, std::move(dirAccess), false));
+                    this, m_scannerGlobal, std::move(dirAccess), firstScan));
         }
     }
     pWatcher->taskDone();
@@ -607,6 +653,15 @@ void LibraryScanner::cancelAndQuit() {
     changeScannerState(IDLE);
 }
 
+void LibraryScanner::requestCancel() {
+    m_canceled = true;
+    ScannerGlobalPointer scanner = m_scannerGlobal;
+    if (scanner) {
+        scanner->cancel();
+    }
+    m_pool.clear();
+}
+
 // be sure we hold the m_stateSema and we are in CANCELING state
 void LibraryScanner::cancel() {
     DEBUG_ASSERT(m_state == CANCELING);
@@ -694,7 +749,7 @@ void LibraryScanner::slotDirectoryHashedAndScanned(const QString& directoryPath,
     // from undoing this (what we'd do in this slot by saving a valid hash).
 
     if (!m_scannerGlobal || m_scannerGlobal->shouldCancel()) {
-        kLogger.warning() << "--> should cancel --> clear hash for" << directoryPath;
+        // Not logged: a scan canceled on exit gets this for every folder left
         // Clearing the hash is not strictly required but let's keep it as
         // safety net in case signals get mixed up?
         m_libraryHashDao.clearDirectoryHash(directoryPath);
@@ -713,12 +768,13 @@ void LibraryScanner::slotDirectoryHashedAndScanned(const QString& directoryPath,
         m_libraryHashDao.updateDirectoryHash(directoryPath, hash, 0);
     }
 
-    // Commit the add-tracks transaction at directory boundaries. This
-    // bounds the lifetime of the open transaction when no tracks are
-    // added for a while (e.g. a phase with only unchanged directories),
-    // so that the write lock is never held unnecessarily. During active
-    // track imports, slotAddNewTrack already commits after every track.
-    m_trackDao.addTracksCommitAndRestart();
+    // Folder hashes are committed together, at least every half second so
+    // that the write lock is never held for long (no track cache mutex is
+    // taken here, so batching them cannot deadlock)
+    m_uncommittedHashes = true;
+    if (!m_sinceCommit.isValid() || m_sinceCommit.hasExpired(500)) {
+        commitAndRestart();
+    }
 
     emit progressHashing(directoryPath);
 }
@@ -765,6 +821,10 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         return;
     }
     ScopedTimer timer(QStringLiteral("LibraryScanner::addNewTrack"));
+    // The track cache mutex is taken below: no write may be pending then
+    if (m_uncommittedHashes) {
+        commitAndRestart();
+    }
     // For statistics tracking and to detect moved tracks
     TrackPointer pTrack = m_trackDao.addTracksAddFile(
             trackPath,
@@ -776,7 +836,7 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         // is released before the next addTracksAddFile() call acquires the
         // GlobalTrackCache mutex (see the comment on
         // commit-after-every-track above).
-        m_trackDao.addTracksCommitAndRestart();
+        commitAndRestart();
         return;
     }
 
@@ -799,7 +859,13 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
     // the next addTracksAddFile() call will acquire the GlobalTrackCache
     // mutex, and the scanner must not hold the write lock while waiting
     // for that mutex (see the comment on commit-after-every-track above).
+    commitAndRestart();
+}
+
+void LibraryScanner::commitAndRestart() {
     m_trackDao.addTracksCommitAndRestart();
+    m_uncommittedHashes = false;
+    m_sinceCommit.start();
 }
 
 bool LibraryScanner::changeScannerState(ScannerState newState) {

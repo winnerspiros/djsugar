@@ -21,6 +21,10 @@ namespace android {
 /// Mixxx' main thread is fine).
 bool requestMusicLibraryPermissions();
 
+/// Requests RECORD_AUDIO, for recording pad samples. Blocks like
+/// requestMusicLibraryPermissions().
+bool requestMicrophonePermission();
+
 /// Returns true if the app is allowed to read/write arbitrary paths in shared
 /// storage. This is MANAGE_EXTERNAL_STORAGE ("All files access") on API >= 30
 /// and WRITE_EXTERNAL_STORAGE below that.
@@ -30,6 +34,13 @@ bool hasFullExternalStorageAccess();
 /// access". Does nothing if the permission is already granted. This is
 /// asynchronous, the result is only visible after the user returns to Mixxx.
 void requestFullExternalStorageAccess();
+
+/// The shared Music, Download, Podcasts and Recordings folders that exist:
+/// where the phone keeps its songs. Scanned into the library on start.
+QStringList sharedAudioDirectories();
+/// Folders of phone and app sounds (notification tones, ringtones,
+/// alarms, other apps' media), never scanned as music
+bool isSystemSoundDirectory(const QString& path);
 
 /// Returns the directory Mixxx should offer as the default music directory,
 /// creating it if necessary. Falls back to the app-private music directory if

@@ -1,0 +1,7 @@
+Mapping: Pioneer DDJ-1000
+Author (in the mapping): Serhii O. Pashchenko
+Submitted by: SergioAlexo in Mixxx pull request #17174
+https://github.com/mixxxdj/mixxx/pull/17174
+Last update of the pull request: 2026-11-02
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

@@ -458,7 +458,7 @@ class YouTubeService : public QObject {
     bool applyRemoteConfig(const QJsonObject& config, int remoteVersion);
 
     /// Cut non-music segments out of downloads (see setSponsorBlockEnabled()).
-    bool m_sponsorBlockEnabled = true;
+    bool m_sponsorBlockEnabled = false;
 
     QNetworkAccessManager* m_pNam;
     QString m_ytDlpPath;

@@ -34,7 +34,23 @@ DropArea {
         return null;
     }
 
+    // A library track dragged over: light up the target
+    Rectangle {
+        anchors.fill: parent
+        color: "#3300e5ff"
+        border.color: "#00e5ff"
+        border.width: 2
+        radius: 6
+        visible: root.containsDrag && !!root.drag.source && root.drag.source.loadTo !== undefined
+    }
+
     onDropped: (drop) => {
+        // Library and streaming tracks on touch screens (see TrackDrag)
+        if (drop.keys.includes("mixxx/track") && drop.source) {
+            drop.source.loadTo(root.group);
+            drop.accepted = true;
+            return;
+        }
         const formats = drop.formats || [];
         if (formats.includes("mixxx/player")) {
             const sourceGroup = drop.getDataAsString("mixxx/player");

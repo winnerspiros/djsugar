@@ -3,6 +3,7 @@
 #include <QHash>
 #include <functional>
 
+#include "effects/backends/effectmanifest.h"
 #include "effects/backends/effectsbackend.h"
 #include "effects/effectslot.h"
 #include "effects/presets/effectxmlelements.h"
@@ -27,6 +28,7 @@ EffectPreset::EffectPreset(const QDomElement& effectElement)
     m_backendType = EffectsBackend::backendTypeFromString(
             XmlParse::selectNodeQString(effectElement,
                     EffectXml::kEffectBackendType));
+    m_version = XmlParse::selectNodeQString(effectElement, EffectXml::kEffectVersion);
     m_dMetaParameter = XmlParse::selectNodeDouble(effectElement, EffectXml::kEffectMetaParameter);
 
     QDomElement parametersElement =
@@ -46,6 +48,7 @@ EffectPreset::EffectPreset(const QDomElement& effectElement)
 EffectPreset::EffectPreset(const EffectSlotPointer pEffectSlot)
         : m_id(pEffectSlot->id()),
           m_backendType(pEffectSlot->backendType()),
+          m_version(pEffectSlot->getManifest() ? pEffectSlot->getManifest()->version() : QString()),
           m_dMetaParameter(pEffectSlot->getMetaParameter()) {
     // Parameters are reloaded in the order they are saved, so the order of
     // loaded effects must be preserved.
@@ -67,6 +70,7 @@ EffectPreset::EffectPreset(const EffectSlotPointer pEffectSlot)
 EffectPreset::EffectPreset(const EffectManifestPointer pManifest)
         : m_id(pManifest->id()),
           m_backendType(pManifest->backendType()),
+          m_version(pManifest->version()),
           m_dMetaParameter(pManifest->metaknobDefault()) {
     for (const auto& pParameterManifest : pManifest->parameters()) {
         m_effectParameterPresets.append(EffectParameterPreset(pParameterManifest));
@@ -94,6 +98,9 @@ const QDomElement EffectPreset::toXml(QDomDocument* doc) const {
             effectElement,
             EffectXml::kEffectBackendType,
             EffectsBackend::backendTypeToString(m_backendType));
+    if (!m_version.isEmpty()) {
+        XmlParse::addElement(*doc, effectElement, EffectXml::kEffectVersion, m_version);
+    }
 
     QDomElement parametersElement = doc->createElement(EffectXml::kParametersRoot);
     for (const auto& pParameter : std::as_const(m_effectParameterPresets)) {
@@ -102,6 +109,18 @@ const QDomElement EffectPreset::toXml(QDomDocument* doc) const {
     effectElement.appendChild(parametersElement);
 
     return effectElement;
+}
+
+bool EffectPreset::matchesVersionOf(const EffectManifestPointer& pManifest) const {
+    // Only built-in effects are versioned by us; external plugins keep
+    // their parameter meaning across versions.
+    if (!pManifest || m_backendType != EffectBackendType::BuiltIn) {
+        return true;
+    }
+    // Presets written before versions were saved are "1.0", the version
+    // every built-in effect had then.
+    const QString saved = m_version.isEmpty() ? QStringLiteral("1.0") : m_version;
+    return saved == pManifest->version();
 }
 
 void EffectPreset::updateParametersFrom(const EffectPreset& other) {

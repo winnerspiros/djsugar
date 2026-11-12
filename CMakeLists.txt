@@ -1357,6 +1357,7 @@ add_library(
   src/dialog/dlgreplacecuecolor.cpp
   src/dialog/dlgreplacecuecolordlg.ui
   src/effects/backends/builtin/autopaneffect.cpp
+  src/effects/backends/builtin/backspineffect.cpp
   src/effects/backends/builtin/balanceeffect.cpp
   src/effects/backends/builtin/bessel4lvmixeqeffect.cpp
   src/effects/backends/builtin/bessel8lvmixeqeffect.cpp
@@ -1390,6 +1391,7 @@ add_library(
   src/effects/backends/builtin/autogaincontroleffect.cpp
   src/effects/backends/builtin/parametriceqeffect.cpp
   src/effects/backends/builtin/phasereffect.cpp
+  src/effects/backends/builtin/pitchshifteffect.cpp
   src/effects/backends/builtin/reverbeffect.cpp
   src/effects/backends/builtin/threebandbiquadeqeffect.cpp
   src/effects/backends/builtin/spiraleffect.cpp
@@ -1457,6 +1459,8 @@ add_library(
   src/engine/enginebuffer.cpp
   src/engine/enginedelay.cpp
   src/engine/enginemixer.cpp
+  src/engine/fxstation/fxstation.cpp
+  src/engine/fxstation/fxstationinstruments.cpp
   src/engine/engineobject.cpp
   src/engine/enginepregain.cpp
   src/engine/enginesidechaincompressor.cpp
@@ -1578,6 +1582,7 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/samples/bundledsamples.cpp
+  src/library/samples/sampleeditor.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
@@ -2745,6 +2750,21 @@ if(ANDROID)
       # so it cannot break function-pointer comparisons.
       "LINKER:--icf=safe"
   )
+  file(
+    GLOB_RECURSE MIXXX_BUNDLED_SAMPLES
+    CONFIGURE_DEPENDS
+    RELATIVE "${CMAKE_SOURCE_DIR}/res/samples"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.wav"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.ogg"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.mp3"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.flac"
+  )
+  list(JOIN MIXXX_BUNDLED_SAMPLES "\n" MIXXX_BUNDLED_SAMPLES)
+  file(
+    WRITE
+    "${CMAKE_CURRENT_BINARY_DIR}/samples-index.txt"
+    "${MIXXX_BUNDLED_SAMPLES}\n"
+  )
   add_custom_target(
     copy-resource-android
     COMMENT "Copy filtered resources folder to Android build asset directory"
@@ -2822,10 +2842,14 @@ if(ANDROID)
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/shaders
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/shaders
-    # Samples: built-in DJ samples for sampler decks
+    # Samples: built-in DJ samples for sampler decks, plus an index because
+    # Qt cannot list assets:/ subdirectories
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samples
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples
+    COMMAND
+      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/samples-index.txt
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/samples/index.txt
     # Default sampler bank: pre-loaded Rekordbox-style sample slots
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/samplers
@@ -3474,6 +3498,7 @@ if(BUILD_TESTING)
       src/test/engineeffectsdelay_test.cpp
       src/test/movinginterquartilemean_test.cpp
       src/test/nativeeffects_test.cpp
+      src/test/fxdsp_test.cpp
       src/test/ringdelaybuffer_test.cpp
       src/test/sampleutiltest.cpp
       src/test/waveform_upgrade_test.cpp
@@ -4610,6 +4635,7 @@ if(QML)
       src/qml/librarycoverloader.cpp
       src/qml/qmllanguageproxy.cpp
       src/library/androidscanorder.cpp
+      src/library/samples/samplerecorder.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
@@ -5418,7 +5444,6 @@ if(RUBBERBAND)
   target_sources(
     mixxx-lib
     PRIVATE
-      src/effects/backends/builtin/pitchshifteffect.cpp
       src/engine/bufferscalers/enginebufferscalerubberband.cpp
       src/engine/bufferscalers/rubberbandwrapper.cpp
       src/engine/bufferscalers/rubberbandtask.cpp

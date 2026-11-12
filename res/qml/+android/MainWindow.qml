@@ -390,6 +390,21 @@ Item {
                         onClicked: xyPadOverlay.visible = !xyPadOverlay.visible
                     }
 
+                    // The FX Station panel
+                    Skin.Button {
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 64
+                        activeColor: "#ff4081"
+                        backgroundColor: fxStationLoader.active ? "#5c1030" : "#222733"
+                        normalColor: fxStationLoader.active ? "#ff80ab" : "#b0bec5"
+                        checkable: true
+                        checked: fxStationLoader.active
+                        text: "FX ST"
+                        font.bold: true
+                        font.pixelSize: 10
+                        onClicked: fxStationLoader.active = !fxStationLoader.active
+                    }
+
                     Skin.Button {
                         id: splitCueButton
                         visible: root.topBarItemShown("split")
@@ -441,7 +456,7 @@ Item {
 
         Skin.EffectRow {
             id: effects
-            visible: root.showEffects
+            visible: root.showEffects && !fxStationLoader.covering
             width: parent.width
         }
 
@@ -455,6 +470,8 @@ Item {
         SplitView {
             id: splitView
 
+            // Not drawn under the FX Station when it covers it
+            visible: !fxStationLoader.covering
             height: parent.height - y
             orientation: Qt.Vertical
             width: parent.width
@@ -1057,6 +1074,29 @@ Item {
         width: root.applicationWindow.isMobile ? parent.width : Math.min(1400, parent.width)
         x: root.applicationWindow.isMobile ? 0 : Math.round((parent.width - width) / 2)
         y: root.applicationWindow.isMobile ? 0 : Math.round((parent.height - height) / 2)
+    }
+
+    // The FX Station, created only while open. In place of the library when
+    // the library is shown, so the decks, the mixer and the waveforms stay
+    // in view; otherwise over everything under the top bar.
+    Loader {
+        id: fxStationLoader
+
+        // The same condition as the visibility of the library
+        readonly property bool docked: root.viewMode === 0 || root.viewMode === 2 || root.maximizeLibrary || (root.viewMode === 1 && root.height - mixer.height >= 400)
+        readonly property bool covering: active && !docked
+
+        active: false
+        height: docked ? library.height : parent.height - 44
+        width: parent.width
+        x: 0
+        // The position of the library in the window, also after the split
+        // handle or the effects row moved it
+        y: docked ? library.mapToItem(root, 0, 0).y + 0 * (library.y + lowerSection.y + splitView.y + effects.height) : 44
+        z: 92
+        sourceComponent: Skin.FxStation {
+            onCloseRequested: fxStationLoader.active = false
+        }
     }
 
     Skin.XYPad {

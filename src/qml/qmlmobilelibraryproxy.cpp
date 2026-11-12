@@ -60,6 +60,24 @@ QString cleanLocalPath(const QString& rawPath) {
 
 QmlMobileLibraryProxy::QmlMobileLibraryProxy(QObject* pParent)
         : QObject(pParent) {
+    // Every view listing playlists (track menus, the sidebar's playlist
+    // menus) refreshes when they change, wherever the change came from
+    TrackCollectionManager* pCollections = trackCollectionManager();
+    if (!pCollections) {
+        return;
+    }
+    const PlaylistDAO* pPlaylistDao = &pCollections->internalCollection()->getPlaylistDAO();
+    connect(pPlaylistDao, &PlaylistDAO::added, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao, &PlaylistDAO::deleted, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao, &PlaylistDAO::renamed, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao,
+            &PlaylistDAO::lockChanged,
+            this,
+            &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao,
+            &PlaylistDAO::playlistContentChanged,
+            this,
+            &QmlMobileLibraryProxy::playlistsChanged);
 }
 
 // static
@@ -301,6 +319,7 @@ QVariantList QmlMobileLibraryProxy::playlists() const {
                 {QStringLiteral("id"), id},
                 {QStringLiteral("name"), name},
                 {QStringLiteral("locked"), playlistDao.isPlaylistLocked(id)},
+                {QStringLiteral("count"), playlistDao.tracksInPlaylist(id)},
         });
     }
     return result;
@@ -320,6 +339,35 @@ int QmlMobileLibraryProxy::createNamedPlaylist(const QString& name) {
         return -1;
     }
     return playlistDao.createPlaylist(trimmedName);
+}
+
+bool QmlMobileLibraryProxy::renamePlaylist(int playlistId, const QString& name) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return false;
+    }
+    PlaylistDAO& playlistDao =
+            trackCollectionManager()->internalCollection()->getPlaylistDAO();
+    const QString trimmedName = name.trimmed();
+    if (trimmedName.isEmpty() || playlistDao.getPlaylistIdFromName(trimmedName) != -1) {
+        return false;
+    }
+    playlistDao.renamePlaylist(playlistId, trimmedName);
+    return true;
+}
+
+void QmlMobileLibraryProxy::deletePlaylist(int playlistId) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return;
+    }
+    trackCollectionManager()->internalCollection()->getPlaylistDAO().deletePlaylist(playlistId);
+}
+
+void QmlMobileLibraryProxy::setPlaylistLocked(int playlistId, bool locked) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return;
+    }
+    trackCollectionManager()->internalCollection()->getPlaylistDAO().setPlaylistLocked(
+            playlistId, locked);
 }
 
 bool QmlMobileLibraryProxy::addTrackToPlaylist(int playlistId, const QUrl& trackUrl) {
@@ -348,6 +396,42 @@ bool QmlMobileLibraryProxy::addTrackToPlaylist(int playlistId, const QUrl& track
     }
 #endif
     return playlistDao.appendTrackToPlaylist(pTrack->getId(), playlistId);
+}
+
+QVariantList QmlMobileLibraryProxy::playlistsOfTrack(const QUrl& trackUrl) {
+    QVariantList result;
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return result;
+    }
+    TrackCollection* pCollection = trackCollectionManager()->internalCollection();
+    const QList<TrackId> trackIds = trackCollectionManager()->resolveTrackIdsFromUrls(
+            QList<QUrl>{trackUrl}, /*addMissing*/ false);
+    const TrackId trackId = trackIds.isEmpty() ? TrackId() : trackIds.first();
+    if (!trackId.isValid()) {
+        return result;
+    }
+    QSet<int> playlistIds;
+    pCollection->getPlaylistDAO().getPlaylistsTrackIsIn(trackId, &playlistIds);
+    for (const int playlistId : std::as_const(playlistIds)) {
+        result.append(playlistId);
+    }
+    return result;
+}
+
+bool QmlMobileLibraryProxy::removeTrackFromPlaylist(int playlistId, const QUrl& trackUrl) {
+    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
+        return false;
+    }
+    TrackCollection* pCollection = trackCollectionManager()->internalCollection();
+    PlaylistDAO& playlistDao = pCollection->getPlaylistDAO();
+    const QList<TrackId> trackIds = trackCollectionManager()->resolveTrackIdsFromUrls(
+            QList<QUrl>{trackUrl}, /*addMissing*/ false);
+    const TrackId trackId = trackIds.isEmpty() ? TrackId() : trackIds.first();
+    if (!trackId.isValid() || playlistDao.isPlaylistLocked(playlistId)) {
+        return false;
+    }
+    playlistDao.removeTracksFromPlaylistById(playlistId, trackId);
+    return true;
 }
 
 int QmlMobileLibraryProxy::addAllTracksToPlaylist(int playlistId, QAbstractItemModel* pTrackList) {

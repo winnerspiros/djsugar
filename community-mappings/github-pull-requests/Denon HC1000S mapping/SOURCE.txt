@@ -1,0 +1,8 @@
+Mapping: Denon HC1000S mapping
+Author (in the mapping): le3d, based on many existing Denon other mappings, re-using bits and pieces
+Submitted by: le3dmtl in Mixxx pull request #3799
+https://github.com/mixxxdj/mixxx/pull/3799
+Last update of the pull request: 2026-09-28
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
+Also needs these Mixxx scripts, included with Mixxx: lodash.mixxx.js, midi-components-0.0.js

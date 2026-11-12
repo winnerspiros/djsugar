@@ -1,0 +1,7 @@
+[AI-GENERATED DISCLAIMER START]
+Controller: Pioneer DDJ-RR
+Source Type: Generated Mixxx 2.5/2.6+ mapping from official manufacturer MIDI specification
+Official Reference PDF: https://www.pioneerdj.com/-/media/pioneerdj/downloads/manuals/other/ddj-rr/ddj-rr_list_of_midi_message_e.pdf
+License: GPL-2.0-or-later (compatible with Mixxx upstream)
+Hardware Testing Status: NOT hardware-tested (built purely from verified MIDI message list; requires physical testing on DDJ-RR before any upstream Mixxx PR)
+[AI-GENERATED DISCLAIMER END]

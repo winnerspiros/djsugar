@@ -1,215 +1,132 @@
 #include "effects/backends/builtin/phasereffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/math.h"
-
 namespace {
-constexpr unsigned int updateCoef = 32;
-constexpr auto kDoublePi = static_cast<CSAMPLE>(2.0 * M_PI);
+
+// Relative spread of the stage frequencies, like component tolerance in
+// an analog phaser.
+constexpr float kStageSpread[PhaserGroupState::kMaxStages] = {
+        1.0f, 1.11f, 0.93f, 1.21f, 0.87f, 1.05f, 1.33f, 0.97f, 1.17f, 0.9f, 1.26f, 1.02f};
+
 } // namespace
 
-// static
 QString PhaserEffect::getId() {
-    return "org.mixxx.effects.phaser";
+    return QStringLiteral("org.mixxx.effects.phaser");
 }
 
-// static
 EffectManifestPointer PhaserEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Phaser"));
-    pManifest->setShortName(QObject::tr("Phaser"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Mixes the input signal with a copy passed through a series of "
-            "all-pass filters to create comb filtering"));
-    pManifest->setEffectRampsFromDry(true);
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Phaser"),
+            QObject::tr("Phaser"),
+            QObject::tr("Beat-synced analog style phaser with 4 to 12 stages, "
+                        "resonance and stereo spread."));
 
-    EffectManifestParameterPointer period = pManifest->addParameter();
-    period->setId("lfo_period");
-    period->setName(QObject::tr("Period"));
-    period->setShortName(QObject::tr("Period"));
-    period->setDescription(QObject::tr(
-            "Period of the LFO (low frequency oscillator)\n"
-            "1/4 - 4 beats rounded to 1/2 beat if tempo is detected\n"
-            "1/4 - 4 seconds if no tempo is detected"));
-    period->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    period->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    period->setRange(0.0, 1.0, 4.0);
-
-    EffectManifestParameterPointer fb = pManifest->addParameter();
-    fb->setId("feedback");
-    fb->setName(QObject::tr("Feedback"));
-    fb->setShortName(QObject::tr("Feedback"));
-    fb->setDescription(QObject::tr(
-            "Controls how much of the output signal is looped"));
-    fb->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    fb->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    fb->setRange(-1.0, 0.0, 1.0);
-
-    EffectManifestParameterPointer range = pManifest->addParameter();
-    range->setId("range");
-    range->setName(QObject::tr("Range"));
-    range->setShortName(QObject::tr("Range"));
-    range->setDescription(QObject::tr(
-            "Controls the frequency range across which the notches sweep."));
-    range->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    range->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    range->setRange(0.05, 1.0, 1.0);
-
-    EffectManifestParameterPointer stages = pManifest->addParameter();
-    stages->setId("stages");
-    stages->setName(QObject::tr("Stages"));
-    stages->setShortName(QObject::tr("Stages"));
-    stages->setDescription(QObject::tr(
-            "Number of stages")); // stages of what?
-    stages->setValueScaler(EffectManifestParameter::ValueScaler::Integral);
-    stages->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    stages->setRange(1.0, 7.0, 12.0);
-
-    EffectManifestParameterPointer depth = pManifest->addParameter();
-    depth->setId("depth");
-    depth->setName(QObject::tr("Depth"));
-    depth->setShortName(QObject::tr("Depth"));
-    depth->setDescription(QObject::tr(
-            "Intensity of the effect"));
-    depth->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    depth->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    depth->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    depth->setRange(0.5, 0.5, 1.0);
-
-    EffectManifestParameterPointer triplet = pManifest->addParameter();
-    triplet->setId("triplet");
-    triplet->setName(QObject::tr("Triplets"));
-    triplet->setShortName(QObject::tr("Triplets"));
-    triplet->setDescription(QObject::tr(
-            "Divide rounded 1/2 beats of the Period parameter by 3."));
-    triplet->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    triplet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    triplet->setRange(0, 0, 1);
-
-    EffectManifestParameterPointer stereo = pManifest->addParameter();
-    stereo->setId("stereo");
-    stereo->setName(QObject::tr("Stereo"));
-    stereo->setShortName(QObject::tr("Stereo"));
-    stereo->setDescription(QObject::tr(
-            "Sets the LFOs (low frequency oscillators) for the left and right "
-            "channels out of phase with each others"));
-    stereo->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    stereo->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    stereo->setRange(0, 0, 1);
-
+    djfx::division(pManifest,
+            QStringLiteral("period"),
+            QObject::tr("Rate"),
+            QObject::tr("Rate"),
+            QObject::tr("Length of one sweep in beats."),
+            8.0);
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Depth of the phasing."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("feedback"),
+            QObject::tr("Resonance"),
+            QObject::tr("Res"),
+            QObject::tr("Sharpens the notches into whistling peaks."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::choice(pManifest,
+            QStringLiteral("stages"),
+            QObject::tr("Stages"),
+            QObject::tr("Stages"),
+            QObject::tr("More stages give more notches and a denser sweep."),
+            {QStringLiteral("4"), QStringLiteral("6"), QStringLiteral("8"), QStringLiteral("12")},
+            2);
+    djfx::knob(pManifest,
+            QStringLiteral("range"),
+            QObject::tr("Range"),
+            QObject::tr("Range"),
+            QObject::tr("Width of the sweep."),
+            0.0,
+            0.8,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("stereo"),
+            QObject::tr("Stereo"),
+            QObject::tr("Stereo"),
+            QObject::tr("Offsets the right channel sweep for width."),
+            0.0,
+            0.25,
+            0.5);
     return pManifest;
 }
 
-void PhaserEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pStagesParameter = parameters.value("stages");
-    m_pLFOPeriodParameter = parameters.value("lfo_period");
-    m_pDepthParameter = parameters.value("depth");
-    m_pFeedbackParameter = parameters.value("feedback");
-    m_pRangeParameter = parameters.value("range");
-    m_pTripletParameter = parameters.value("triplet");
-    m_pStereoParameter = parameters.value("stereo");
+PhaserGroupState::PhaserGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    amount.setTime(0.02f, m_sampleRate);
+    feedback.setTime(0.05f, m_sampleRate);
 }
 
-void PhaserEffect::processChannel(
-        PhaserGroupState* pState,
+void PhaserEffect::processChannel(PhaserGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
     if (enableState == EffectEnableState::Enabling) {
-        pState->clear();
-    }
-
-    CSAMPLE depth = 0;
-    if (enableState != EffectEnableState::Disabling) {
-        depth = static_cast<CSAMPLE>(m_pDepthParameter->value());
-    }
-
-    double periodParameter = m_pLFOPeriodParameter->value();
-    double periodSamples;
-    if (groupFeatures.beat_length.has_value()) {
-        // periodParameter is a number of beats
-        periodParameter = std::max(roundToFraction(periodParameter, 2.0), 1 / 4.0);
-        if (m_pTripletParameter->toBool()) {
-            periodParameter /= 3.0;
+        for (auto& channel : pState->stages) {
+            for (auto& stage : channel) {
+                stage.reset();
+            }
         }
-        periodSamples = periodParameter * groupFeatures.beat_length->seconds *
-                engineParameters.sampleRate();
-    } else {
-        // periodParameter is a number of seconds
-        periodSamples = std::max(periodParameter, 1 / 4.0) * engineParameters.sampleRate();
+        pState->last[0] = 0.0f;
+        pState->last[1] = 0.0f;
+        pState->amount.reset(param(kAmount));
+        pState->feedback.reset(param(kFeedback));
     }
-    // freqSkip is used to calculate the phase independently for each channel,
-    // so do not multiply periodSamples by the number of channels.
-    const auto freqSkip = static_cast<CSAMPLE>(1.0f / periodSamples * kDoublePi);
+    pState->amount.setTarget(param(kAmount));
+    pState->feedback.setTarget(param(kFeedback));
+    const double period = paramBeats(kRate);
+    constexpr int kStageCounts[] = {4, 6, 8, 12};
+    const int stageCount = kStageCounts[std::clamp(paramInt(kStages), 0, 3)];
+    const float range = param(kRange);
+    const float stereo = param(kStereo);
+    const float rate = pState->sampleRate();
+    // Sweep between 200 Hz and up to 200 Hz * 2^(6 * range).
+    const float lowHz = 200.0f;
+    const float octaves = 1.0f + 6.0f * range;
 
-    const auto feedback = static_cast<CSAMPLE>(m_pFeedbackParameter->value());
-    const auto range = static_cast<CSAMPLE>(m_pRangeParameter->value());
-    const auto stages = static_cast<int>(m_pStagesParameter->value());
-
-    CSAMPLE* oldInLeft = pState->oldInLeft;
-    CSAMPLE* oldOutLeft = pState->oldOutLeft;
-    CSAMPLE* oldInRight = pState->oldInRight;
-    CSAMPLE* oldOutRight = pState->oldOutRight;
-
-    // Using two sets of coefficients for left and right channel
-    CSAMPLE filterCoefLeft = 0;
-    CSAMPLE filterCoefRight = 0;
-
-    CSAMPLE left = 0, right = 0;
-
-    CSAMPLE_GAIN oldDepth = pState->oldDepth;
-    const CSAMPLE_GAIN depthDelta = (depth - oldDepth) / engineParameters.framesPerBuffer();
-    const CSAMPLE_GAIN depthStart = oldDepth + depthDelta;
-
-    const auto stereoCheck = static_cast<int>(m_pStereoParameter->value());
-    int counter = 0;
-
-    for (SINT i = 0;
-            i < engineParameters.samplesPerBuffer();
-            i += engineParameters.channelCount()) {
-        left = pInput[i] + std::tanh(left * feedback);
-        right = pInput[i + 1] + std::tanh(right * feedback);
-
-        // For stereo enabled, the channels are out of phase
-        pState->leftPhase = fmodf(pState->leftPhase + freqSkip, kDoublePi);
-        pState->rightPhase = fmodf(
-                pState->rightPhase + freqSkip + static_cast<float>(M_PI) * stereoCheck,
-                kDoublePi);
-
-        // Updating filter coefficients once every 'updateCoef' samples to avoid
-        // extra computing
-        if ((counter++) % updateCoef == 0) {
-            const auto delayLeft = static_cast<CSAMPLE>(0.5 + 0.5 * sin(pState->leftPhase));
-            const auto delayRight = static_cast<CSAMPLE>(0.5 + 0.5 * sin(pState->rightPhase));
-
-            // Coefficient computing based on the following:
-            // https://ccrma.stanford.edu/~jos/pasp/Classic_Virtual_Analog_Phase.html
-            CSAMPLE wLeft = range * delayLeft;
-            CSAMPLE wRight = range * delayRight;
-
-            CSAMPLE tanwLeft = std::tanh(wLeft / 2);
-            CSAMPLE tanwRight = std::tanh(wRight / 2);
-
-            filterCoefLeft = (1.0f - tanwLeft) / (1.0f + tanwLeft);
-            filterCoefRight = (1.0f - tanwRight) / (1.0f + tanwRight);
+    for (int i = 0; i < frames; ++i) {
+        const float phase = pState->clock.tick(period);
+        const float amount = pState->amount.next();
+        const float feedback = 0.85f * pState->feedback.next();
+        for (int c = 0; c < 2; ++c) {
+            float p = phase + (c == 1 ? stereo : 0.0f);
+            p -= std::floor(p);
+            const float hz = lowHz * std::exp2(octaves * fxdsp::lfo(fxdsp::LfoShape::Sine, p));
+            const float x = pInput[2 * i + c];
+            float y = x + feedback * pState->last[c];
+            for (int s = 0; s < stageCount; ++s) {
+                // Cutoff updates are cheap for a one-pole; doing it every
+                // sample keeps fast sweeps smooth.
+                pState->stages[c][s].setCutoff(
+                        std::min(hz * kStageSpread[s], 0.45f * rate), rate);
+                y = pState->stages[c][s].allpass(y);
+            }
+            pState->last[c] = fxdsp::sanitize(fxdsp::softClip(y));
+            // Equal dry and wet gives the deepest notches.
+            const float out = 0.5f * (x + y) * (1.0f - 0.35f * feedback);
+            pOutput[2 * i + c] = fxdsp::lerp(x, out, amount);
         }
-
-        left = processSample(left, oldInLeft, oldOutLeft, filterCoefLeft, stages);
-        right = processSample(right, oldInRight, oldOutRight, filterCoefRight, stages);
-
-        const CSAMPLE_GAIN depth = depthStart + depthDelta * (i / engineParameters.channelCount());
-
-        // Computing output combining the original and processed sample
-        pOutput[i] = pInput[i] * (1.0f - 0.5f * depth) + left * depth * 0.5f;
-        pOutput[i + 1] = pInput[i + 1] * (1.0f - 0.5f * depth) + right * depth * 0.5f;
     }
-
-    pState->oldDepth = depth;
 }

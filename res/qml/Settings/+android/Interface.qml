@@ -645,7 +645,7 @@ Category {
                                     id: hotcuePaletteInput
                                     Layout.preferredWidth: colorPane.defaultPalette.length * 18
                                     currentIndex: colorPane.hotcuePaletteColorIndex
-                                    palette: colorPane.defaultPalette
+                                    colors: colorPane.defaultPalette
                                     onCurrentIndexChanged: themeColorTab.dirty = true
                                 }
                             }
@@ -657,7 +657,7 @@ Category {
                                     id: loopPaletteInput
                                     Layout.preferredWidth: colorPane.defaultPalette.length * 18
                                     currentIndex: colorPane.loopPaletteColorIndex
-                                    palette: colorPane.defaultPalette
+                                    colors: colorPane.defaultPalette
                                     onCurrentIndexChanged: themeColorTab.dirty = true
                                 }
                             }
@@ -671,7 +671,7 @@ Category {
                                     id: jumpPaletteInput
                                     Layout.preferredWidth: colorPane.defaultPalette.length * 18
                                     currentIndex: colorPane.jumpPaletteColorIndex
-                                    palette: colorPane.defaultPalette
+                                    colors: colorPane.defaultPalette
                                     onCurrentIndexChanged: themeColorTab.dirty = true
                                 }
                             }

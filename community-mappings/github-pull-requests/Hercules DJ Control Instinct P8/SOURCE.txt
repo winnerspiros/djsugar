@@ -1,0 +1,7 @@
+Mapping: Hercules DJ Control Instinct P8
+Author (in the mapping): Piff+Hubert+STi+Piega
+Submitted by: Piega in Mixxx pull request #1851
+https://github.com/mixxxdj/mixxx/pull/1851
+Last update of the pull request: 2025-06-20
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)

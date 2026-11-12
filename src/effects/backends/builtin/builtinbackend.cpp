@@ -18,29 +18,28 @@
 #endif
 #include "effects/backends/builtin/autogaincontroleffect.h"
 #include "effects/backends/builtin/autopaneffect.h"
+#include "effects/backends/builtin/backspineffect.h"
 #include "effects/backends/builtin/beatrepeateffect.h"
 #include "effects/backends/builtin/compressoreffect.h"
 #include "effects/backends/builtin/distortioneffect.h"
 #include "effects/backends/builtin/djechoeffect.h"
 #include "effects/backends/builtin/echoeffect.h"
+#include "effects/backends/builtin/gaineffect.h"
 #include "effects/backends/builtin/glitcheffect.h"
 #include "effects/backends/builtin/keycomparisoneffect.h"
 #include "effects/backends/builtin/loudnesscontoureffect.h"
 #include "effects/backends/builtin/metronomeeffect.h"
 #include "effects/backends/builtin/phasereffect.h"
+#include "effects/backends/builtin/pitchshifteffect.h"
 #include "effects/backends/builtin/procompressoreffect.h"
 #include "effects/backends/builtin/profiltereffect.h"
 #include "effects/backends/builtin/proflangereffect.h"
 #include "effects/backends/builtin/pronoiseeffect.h"
 #include "effects/backends/builtin/proreverbeffect.h"
-#include "effects/backends/builtin/tapestopeffect.h"
-#include "effects/backends/builtin/vintagedelayeffect.h"
-#ifdef __RUBBERBAND__
-#include "effects/backends/builtin/pitchshifteffect.h"
-#endif
-#include "effects/backends/builtin/gaineffect.h"
 #include "effects/backends/builtin/spiraleffect.h"
+#include "effects/backends/builtin/tapestopeffect.h"
 #include "effects/backends/builtin/tremoloeffect.h"
+#include "effects/backends/builtin/vintagedelayeffect.h"
 #include "effects/backends/builtin/whitenoiseeffect.h"
 
 BuiltInBackend::BuiltInBackend() {
@@ -74,6 +73,7 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<ProNoiseEffect>();
     registerEffect<BeatRepeatEffect>();
     registerEffect<TapeStopEffect>();
+    registerEffect<BackSpinEffect>();
 #ifndef __MACAPPSTORE__
     registerEffect<ReverbEffect>();
 #endif
@@ -82,9 +82,7 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<KeyComparisonEffect>();
     registerEffect<SpiralEffect>();
     registerEffect<TremoloEffect>();
-#ifdef __RUBBERBAND__
     registerEffect<PitchShiftEffect>();
-#endif
     registerEffect<DistortionEffect>();
     registerEffect<GlitchEffect>();
     registerEffect<CompressorEffect>();

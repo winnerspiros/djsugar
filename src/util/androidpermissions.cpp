@@ -5,8 +5,12 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileInfo>
+#include <QJniEnvironment>
 #include <QJniObject>
+#include <QRegularExpression>
 #include <QStandardPaths>
+#include <algorithm>
 
 #include "util/assert.h"
 
@@ -52,6 +56,10 @@ bool requestMusicLibraryPermissions() {
     return granted;
 }
 
+bool requestMicrophonePermission() {
+    return requestPermission(QStringLiteral("android.permission.RECORD_AUDIO"));
+}
+
 bool hasFullExternalStorageAccess() {
     if (android_get_device_api_level() >= 30) {
         return QJniObject::callStaticMethod<jboolean>(
@@ -93,12 +101,105 @@ void requestFullExternalStorageAccess() {
     QtAndroidPrivate::startActivity(intent, 0);
 }
 
+namespace {
+
+// Environment.getExternalStoragePublicDirectory(): the shared folder the
+// phone's own apps use. Qt's MusicLocation/DownloadLocation are the
+// app-private folders under Android/data, where no user songs live.
+QString publicDirectory(const char* type) {
+    const QJniObject jniType = QJniObject::getStaticObjectField(
+            "android/os/Environment", type, "Ljava/lang/String;");
+    const QJniObject dir = QJniObject::callStaticObjectMethod(
+            "android/os/Environment",
+            "getExternalStoragePublicDirectory",
+            "(Ljava/lang/String;)Ljava/io/File;",
+            jniType.object<jstring>());
+    return dir.isValid()
+            ? dir.callObjectMethod("getAbsolutePath", "()Ljava/lang/String;").toString()
+            : QString();
+}
+
+} // namespace
+
+bool isSystemSoundDirectory(const QString& path) {
+    // Phone and app sounds: notification tones, ringtones, alarms and
+    // the media folders of other apps (e.g. Gmail's notification sounds)
+    static const QRegularExpression kSystemSounds(QStringLiteral(
+            "/(Notifications|Ringtones|Alarms|Android/media)(/|$)"));
+    return kSystemSounds.match(path).hasMatch();
+}
+
+QStringList sharedAudioDirectories() {
+    QStringList dirs;
+    for (const char* type : {"DIRECTORY_MUSIC",
+                 "DIRECTORY_DOWNLOADS",
+                 "DIRECTORY_PODCASTS",
+                 "DIRECTORY_RECORDINGS"}) {
+        // DIRECTORY_RECORDINGS is API 31+: the field lookup fails before
+        const QString path = publicDirectory(type);
+        if (!path.isEmpty() && QFileInfo::exists(path)) {
+            dirs.append(QDir::cleanPath(path));
+        }
+    }
+    // Songs elsewhere (an app's folder such as Android/media/com.whatsapp,
+    // a card, a USB stick): the media store knows every audio file. The
+    // folders holding them are added, a folder inside another one once.
+    const QJniObject uri = QJniObject::getStaticObjectField(
+            "android/provider/MediaStore$Audio$Media",
+            "EXTERNAL_CONTENT_URI",
+            "Landroid/net/Uri;");
+    const QJniObject context = QNativeInterface::QAndroidApplication::context();
+    const QJniObject resolver = context.callObjectMethod(
+            "getContentResolver", "()Landroid/content/ContentResolver;");
+    QJniEnvironment env;
+    jobjectArray columns = env->NewObjectArray(1,
+            env->FindClass("java/lang/String"),
+            QJniObject::fromString(QStringLiteral("_data")).object<jstring>());
+    QJniObject cursor = resolver.callObjectMethod("query",
+            "(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;"
+            "Ljava/lang/String;)Landroid/database/Cursor;",
+            uri.object(),
+            columns,
+            nullptr,
+            nullptr,
+            nullptr);
+    env->DeleteLocalRef(columns);
+    if (env.checkAndClearExceptions() || !cursor.isValid()) {
+        return dirs;
+    }
+    // A volume root (/storage/emulated/0, /storage/1A2B-3C4D) would watch
+    // the whole volume: its loose files are left out
+    static const QRegularExpression kVolumeRoot(
+            QStringLiteral("^/storage/(emulated/\\d+|[^/]+)$"));
+    QStringList folders;
+    while (cursor.callMethod<jboolean>("moveToNext")) {
+        const QString folder = QFileInfo(
+                cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0).toString())
+                                       .path();
+        if (folder.startsWith(QStringLiteral("/storage/")) &&
+                !kVolumeRoot.match(folder).hasMatch() &&
+                !isSystemSoundDirectory(folder) && !folders.contains(folder)) {
+            folders.append(folder);
+        }
+    }
+    cursor.callMethod<void>("close");
+    // Shortest first: a folder inside an added one is already covered
+    std::sort(folders.begin(), folders.end(), [](const QString& a, const QString& b) {
+        return a.size() < b.size();
+    });
+    for (const QString& folder : std::as_const(folders)) {
+        const bool covered = std::any_of(dirs.cbegin(), dirs.cend(), [&](const QString& dir) {
+            return folder == dir || folder.startsWith(dir + QLatin1Char('/'));
+        });
+        if (!covered) {
+            dirs.append(folder);
+        }
+    }
+    return dirs;
+}
+
 QString defaultMusicDirectory() {
-    // QStandardPaths::MusicLocation resolves to the shared music directory
-    // (usually /storage/emulated/0/Music) when the app may access it and to
-    // the app-private one otherwise, so it works on every API level and on
-    // devices that mount the primary volume elsewhere.
-    QString path = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+    QString path = publicDirectory("DIRECTORY_MUSIC");
     if (path.isEmpty()) {
         path = QStringLiteral("/storage/emulated/0/Music");
     }

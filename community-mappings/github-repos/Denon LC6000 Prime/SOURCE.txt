@@ -1,0 +1,6 @@
+Mapping: Denon LC6000 Prime
+Author: schmic
+Source: https://github.com/schmic/mixxx-denon-lc6000
+License: GPL-2.0-only
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Note: Includes main MIDI mapping and jog wheel display mapping for Mixxx 2.5+.

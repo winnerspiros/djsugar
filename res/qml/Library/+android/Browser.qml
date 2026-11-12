@@ -24,6 +24,15 @@ Rectangle {
     // Whether the tracks shown are a whole USB drive (Rekordbox or Engine
     // DJ) rather than one of its playlists
     property bool activeIsDrive: false
+    // Bumped when a playlist changes here, to re-read lock states
+    property int playlistsRevision: 0
+
+    Connections {
+        target: Mixxx.MobileLibrary
+        function onPlaylistsChanged() {
+            root.playlistsRevision++;
+        }
+    }
 
     // Reading the databases on USB drives, and browsing folders (FOLDER, e.g.
     // on SD cards), needs more than the music permission
@@ -42,6 +51,25 @@ Rectangle {
         // Opened on purpose: asks again for the USB permission of sticks
         // whose earlier request was dismissed
         Mixxx.MobileLibrary.allowUsbPermissionRequests();
+    }
+
+    // The playlist of a sidebar label, which carries the count and duration
+    function playlistFor(label, revision) {
+        let best = null;
+        for (const p of Mixxx.MobileLibrary.playlists()) {
+            if (label.startsWith(p.name) && (!best || p.name.length > best.name.length)) {
+                best = p;
+            }
+        }
+        return best;
+    }
+    function openMenu(playlist, isSection) {
+        if (playlist) {
+            playlistMenu.playlist = playlist;
+            playlistMenu.open();
+        } else if (isSection) {
+            playlistEditor.openFor(null, null);
+        }
     }
 
     function currentRow() {
@@ -182,165 +210,309 @@ Rectangle {
                             indicatorAnimation.start()
                         onExpandedChanged: indicator.rotation = expanded ? 90 : 0
 
+                        // A playlist row: {id, name, locked}, else null
+                        readonly property var playlist: depth === 1 && root.model.data(index.parent, Qt.UserRole + 1) === "playlist" ? root.playlistFor(label, root.playlistsRevision) : null
+                        readonly property bool isPlaylistSection: depth === 0 && icon === "playlist"
+
                         Rectangle {
                             id: background
 
                             anchors.fill: parent
-                            color: Theme.backgroundColor
+                            anchors.leftMargin: 6 + 14 * depth
+                            anchors.rightMargin: 6
+                            anchors.topMargin: 2
+                            anchors.bottomMargin: 2
+                            color: rowDrop.containsDrag ? Qt.alpha(Theme.accentColor, 0.25) : current ? Theme.darkGray3 : rowMouseArea.pressed ? Theme.darkGray2 : "transparent"
+                            border.color: rowDrop.containsDrag ? Theme.accentColor : "transparent"
+                            border.width: 2
+                            radius: 8
 
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 120
+                                }
+                            }
+
+                            // The selected source: an accent bar
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.accentColor
+                                height: parent.height - 14
+                                radius: 2
+                                visible: current
+                                width: 3
+                            }
                             MouseArea {
                                 id: rowMouseArea
 
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 anchors.fill: parent
-                                hoverEnabled: true
+                                pressAndHoldInterval: 500
 
                                 onClicked: event => {
+                                    if (event.button === Qt.RightButton) {
+                                        root.openMenu(playlist, isPlaylistSection);
+                                        return;
+                                    }
                                     treeView.selectionModel.setCurrentIndex(treeView.index(row, 0), ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Rows);
                                     root.checkStorageAccess(index);
                                     root.activate(index);
                                     if (isTreeNode && hasChildren) {
                                         treeView.toggleExpanded(row);
                                     }
-                                    event.accepted = true;
+                                }
+                                onPressAndHold: root.openMenu(playlist, isPlaylistSection)
+                            }
+                            // A dragged track lands in this playlist, or in a
+                            // new one on the Playlists section
+                            DropArea {
+                                id: rowDrop
+
+                                anchors.fill: parent
+                                enabled: !!(playlist && !playlist.locked) || isPlaylistSection
+                                keys: ["mixxx/track"]
+
+                                onDropped: drop => {
+                                    if (playlist) {
+                                        drop.source.addTo(playlist.id);
+                                    } else {
+                                        playlistEditor.openFor(null, drop.source);
+                                    }
+                                    drop.accept();
                                 }
                             }
-                            Rectangle {
-                                anchors.bottom: parent.bottom
+                            Image {
+                                id: lineIcon
+
                                 anchors.left: parent.left
-                                anchors.leftMargin: 10 + 15 * depth
+                                anchors.leftMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: 20
+                                source: depth == 0 && icon ? "qrc:/images/library/ic_library_" + icon + ".svg" : ""
+                                sourceSize: Qt.size(20, 20)
+                                visible: false
+                                width: 20
+                            }
+                            // Icons in one colour: the accent when selected
+                            ColorOverlay {
+                                anchors.fill: lineIcon
+                                color: current ? Theme.accentColor : Theme.textColor
+                                source: lineIcon
+                                visible: depth == 0 && !!icon
+                            }
+                            Label {
+                                id: labelItem
+
+                                anchors.left: parent.left
+                                anchors.leftMargin: depth == 0 && icon ? 42 : 14
+                                anchors.right: addButton.visible ? addButton.left : indicator.left
+                                anchors.rightMargin: 6
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: current ? Theme.white : Theme.textColor
+                                elide: Text.ElideRight
+                                font.pixelSize: depth == 0 ? 14 : 13
+                                font.weight: depth == 0 ? Font.DemiBold : Font.Normal
+                                text: (playlist && playlist.locked ? "🔒 " : "") + label
+                            }
+                            // New playlist, always at hand
+                            Skin.Button {
+                                id: addButton
+
+                                anchors.right: indicator.left
+                                anchors.rightMargin: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                activeColor: Theme.accentColor
+                                font.pixelSize: 18
+                                height: 28
+                                text: "+"
+                                visible: isPlaylistSection
+                                width: 28
+
+                                onClicked: playlistEditor.openFor(null, null)
+                            }
+                            Label {
+                                id: indicator
+
                                 anchors.right: parent.right
-                                anchors.top: parent.top
-                                color: current ? Theme.darkGray3 : 'transparent'
-                                width: 25
-
-                                // The features give the name of their icon
-                                Image {
-                                    id: lineIcon
-
-                                    anchors.left: parent.left
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    height: 22
-                                    source: depth == 0 && icon ? "qrc:/images/library/ic_library_" + icon + ".svg" : ""
-                                    sourceSize.height: 22
-                                    sourceSize.width: 22
-                                    visible: depth == 0 && !!icon
-                                    width: 22
-                                }
-                                Label {
-                                    id: indicator
-
-                                    color: Theme.textColor
-                                    // "▶" is drawn as an emoji on Android
-                                    font.bold: true
-                                    font.pixelSize: 22
-                                    text: "›"
-                                    visible: isTreeNode && hasChildren
-
-                                    anchors {
-                                        right: parent.right
-                                        rightMargin: 12
-                                        verticalCenter: parent.verticalCenter
-                                    }
-                                }
-                                Label {
-                                    id: labelItem
-
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: lineIcon.visible ? 32 : 8
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 30
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    clip: true
-                                    elide: Text.ElideRight
-                                    color: Theme.textColor
-                                    font.pixelSize: 14
-                                    font.weight: depth == 0 ? Font.Bold : Font.Medium
-                                    text: label
-                                }
-                                Item {
-                                    id: newItem
-
-                                    height: parent.height
-                                    visible: rowMouseArea.containsMouse && isTreeNode && hasChildren
-
-                                    anchors {
-                                        right: parent.right
-                                        rightMargin: 10
-                                        verticalCenter: parent.verticalCenter
-                                    }
-                                    Rectangle {
-                                        anchors.centerIn: parent
-                                        height: parent.height
-                                        width: 30
-
-                                        gradient: Gradient {
-                                            orientation: Gradient.Horizontal
-
-                                            GradientStop {
-                                                color: Theme.sunkenBackgroundColor
-                                                position: 1
-                                            }
-                                            GradientStop {
-                                                color: 'transparent'
-                                                position: 0
-                                            }
-                                        }
-                                    }
-                                    Rectangle {
-                                        anchors.right: parent.right
-                                        anchors.rightMargin: 5
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        border.color: Theme.white
-                                        border.width: 2
-                                        color: 'transparent'
-                                        height: 20
-                                        radius: 20
-                                        width: 20
-
-                                        Shape {
-                                            anchors.fill: parent
-                                            anchors.margins: 4
-
-                                            ShapePath {
-                                                capStyle: ShapePath.RoundCap
-                                                fillColor: Theme.white
-                                                startX: 6
-                                                startY: 0
-                                                strokeWidth: 2
-
-                                                PathLine {
-                                                    x: 6
-                                                    y: 12
-                                                }
-                                                PathLine {
-                                                    x: 6
-                                                    y: 8
-                                                }
-                                            }
-                                            ShapePath {
-                                                capStyle: ShapePath.RoundCap
-                                                fillColor: Theme.white
-                                                startX: 0
-                                                startY: 6
-                                                strokeWidth: 2
-
-                                                PathLine {
-                                                    x: 12
-                                                    y: 6
-                                                }
-                                                PathLine {
-                                                    x: 8
-                                                    y: 6
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.lightGray2
+                                // "▶" is drawn as an emoji on Android
+                                font.pixelSize: 20
+                                opacity: isTreeNode && hasChildren ? 1 : 0
+                                text: "›"
+                                width: 12
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Rename, lock or delete a playlist
+    Popup {
+        id: playlistMenu
+
+        property var playlist: ({})
+
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        padding: 12
+        width: Math.min(320, Overlay.overlay ? Overlay.overlay.width - 24 : 320)
+
+        Overlay.modal: Rectangle {
+            color: "#99000000"
+        }
+        background: Rectangle {
+            border.color: Theme.darkGray3
+            color: Theme.darkGray2
+            radius: 12
+        }
+        contentItem: ColumnLayout {
+            spacing: 8
+
+            Text {
+                Layout.fillWidth: true
+                color: Theme.white
+                elide: Text.ElideRight
+                font.bold: true
+                font.pixelSize: 15
+                text: playlistMenu.playlist.name ?? ""
+            }
+            Skin.Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 42
+                activeColor: Theme.accentColor
+                text: qsTr("RENAME")
+
+                onClicked: {
+                    playlistMenu.close();
+                    playlistEditor.openFor(playlistMenu.playlist, null);
+                }
+            }
+            Skin.Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 42
+                activeColor: Theme.accentColor
+                text: playlistMenu.playlist.locked ? qsTr("UNLOCK") : qsTr("LOCK")
+
+                onClicked: {
+                    Mixxx.MobileLibrary.setPlaylistLocked(playlistMenu.playlist.id, !playlistMenu.playlist.locked);
+                    root.playlistsRevision++;
+                    playlistMenu.close();
+                }
+            }
+            Skin.Button {
+                id: deleteButton
+
+                property bool armed: false
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 42
+                activeColor: Theme.red
+                enabled: !playlistMenu.playlist.locked
+                normalColor: Theme.red
+                text: armed ? qsTr("TAP AGAIN TO DELETE") : qsTr("DELETE")
+
+                onClicked: {
+                    if (!armed) {
+                        armed = true;
+                        return;
+                    }
+                    Mixxx.MobileLibrary.deletePlaylist(playlistMenu.playlist.id);
+                    root.playlistsRevision++;
+                    playlistMenu.close();
+                }
+            }
+        }
+
+        onClosed: deleteButton.armed = false
+    }
+    // New playlist (optionally with a dropped track) or rename
+    Popup {
+        id: playlistEditor
+
+        property var playlist: null
+        property Item track: null
+
+        function openFor(playlist, track) {
+            playlistEditor.playlist = playlist;
+            playlistEditor.track = track;
+            nameField.text = playlist ? playlist.name : (track ? track.label : "");
+            error.visible = false;
+            open();
+            nameField.forceActiveFocus();
+            nameField.selectAll();
+        }
+        function save() {
+            const name = nameField.text.trim();
+            let ok;
+            if (playlist) {
+                ok = Mixxx.MobileLibrary.renamePlaylist(playlist.id, name);
+            } else {
+                const id = Mixxx.MobileLibrary.createNamedPlaylist(name);
+                ok = id >= 0;
+                if (ok && track) {
+                    track.addToPlaylist(id);
+                }
+            }
+            error.visible = !ok;
+            if (ok) {
+                root.playlistsRevision++;
+                close();
+            }
+        }
+
+        anchors.centerIn: Overlay.overlay
+        focus: true
+        modal: true
+        padding: 12
+        width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
+
+        Overlay.modal: Rectangle {
+            color: "#99000000"
+        }
+        background: Rectangle {
+            border.color: Theme.darkGray3
+            color: Theme.darkGray2
+            radius: 12
+        }
+        contentItem: ColumnLayout {
+            spacing: 8
+
+            Text {
+                color: Theme.white
+                font.bold: true
+                font.pixelSize: 15
+                text: playlistEditor.playlist ? qsTr("Rename playlist") : qsTr("New playlist")
+            }
+            Skin.TextField {
+                id: nameField
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 42
+                font.pixelSize: 14
+                placeholderText: qsTr("Playlist name")
+
+                onAccepted: playlistEditor.save()
+            }
+            Text {
+                id: error
+
+                color: Theme.red
+                font.pixelSize: 12
+                text: qsTr("That name is empty or already used")
+            }
+            Skin.Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 42
+                activeColor: Theme.accentColor
+                enabled: nameField.text.trim().length > 0
+                text: playlistEditor.playlist ? qsTr("RENAME") : qsTr("CREATE")
+
+                onClicked: playlistEditor.save()
             }
         }
     }

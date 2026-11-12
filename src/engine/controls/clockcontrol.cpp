@@ -18,6 +18,7 @@ constexpr double kSignificiantRateThreshold =
 ClockControl::ClockControl(const QString& group, UserSettingsPointer pConfig)
         : EngineControl(group, pConfig),
           m_pCOBeatActive(std::make_unique<ControlObject>(ConfigKey(group, "beat_active"))),
+          m_pCOBeatInBar(std::make_unique<ControlObject>(ConfigKey(group, "beat_in_bar"))),
           m_pLoopEnabled(std::make_unique<ControlProxy>(group, "loop_enabled", this)),
           m_pLoopStartPosition(std::make_unique<ControlProxy>(group, "loop_start_position", this)),
           m_pLoopEndPosition(std::make_unique<ControlProxy>(group, "loop_end_position", this)),
@@ -29,6 +30,8 @@ ClockControl::ClockControl(const QString& group, UserSettingsPointer pConfig)
           m_internalState(StateMachine::outsideIndicationArea) {
     m_pCOBeatActive->setReadOnly();
     m_pCOBeatActive->forceSet(0.0);
+    m_pCOBeatInBar->setReadOnly();
+    m_pCOBeatInBar->forceSet(0.0);
 }
 
 ClockControl::~ClockControl() = default;
@@ -45,7 +48,11 @@ void ClockControl::trackLoaded(TrackPointer pNewTrack) {
 void ClockControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
     // Clear on-beat control
     m_pCOBeatActive->forceSet(0.0);
+    m_pCOBeatInBar->forceSet(0.0);
     m_pBeats = pBeats;
+    // Counted again with the new beats
+    m_prevBeatPosition = mixxx::audio::kInvalidFramePos;
+    m_nextBeatPosition = mixxx::audio::kInvalidFramePos;
 }
 
 void ClockControl::updateIndicators(const double dRate,
@@ -84,6 +91,14 @@ void ClockControl::updateIndicators(const double dRate,
                     &m_prevBeatPosition,
                     &m_nextBeatPosition,
                     false); // Precise compare without tolerance needed
+            // Once per beat: which beat of the bar it is, from the first
+            // marker of the beatgrid, which is on a downbeat
+            double beatInBar = 0.0;
+            if (m_prevBeatPosition.isValid() && m_prevBeatPosition >= pBeats->firstBeat()) {
+                const int index = pBeats->iteratorFrom(m_prevBeatPosition) - pBeats->cfirstmarker();
+                beatInBar = static_cast<double>(((index % 4) + 4) % 4 + 1);
+            }
+            m_pCOBeatInBar->forceSet(beatInBar);
         }
     } else {
         m_prevBeatPosition = mixxx::audio::kInvalidFramePos;

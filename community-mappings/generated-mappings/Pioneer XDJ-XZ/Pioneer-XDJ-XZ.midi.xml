@@ -1,0 +1,5094 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+[AI-GENERATED DISCLAIMER START]
+This Mixxx 2.5+ mapping for Pioneer XDJ-XZ was generated autonomously by an AI agent
+from the official manufacturer MIDI Message List PDF. It has NOT been tested on
+physical hardware.
+[AI-GENERATED DISCLAIMER END]
+-->
+<MixxxControllerPreset schemaVersion="1" mixxxVersion="2.5+">
+    <info>
+        <name>Pioneer XDJ-XZ</name>
+        <author>AI-generated (derived from official Pioneer DJ / AlphaTheta MIDI Message List PDF)</author>
+        <description>Mixxx 2.5+ controller mapping for Pioneer XDJ-XZ (4-deck PC/MIDI Control Mode), generated strictly from official manufacturer MIDI specifications.</description>
+    </info>
+    <controller id="Pioneer XDJ-XZ">
+        <scriptfiles>
+            <file functionprefix="XdjXz" filename="Pioneer-XDJ-XZ-scripts.js" />
+        </scriptfiles>
+        <controls>
+            <control>
+                <group>[Library]</group>
+                <key>XdjXz.browserScroll</key>
+                <description>Browser rotary</description>
+                <status>0xB0</status>
+                <midino>0x4F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Library]</group>
+                <key>XdjXz.browserScrollFast</key>
+                <description>Browser rotary +SHIFT</description>
+                <status>0xB0</status>
+                <midino>0x60</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Library]</group>
+                <key>XdjXz.browserPress</key>
+                <description>Browser push</description>
+                <status>0x90</status>
+                <midino>0x33</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Skin]</group>
+                <key>show_maximized_library</key>
+                <description>Browser +SHIFT push</description>
+                <status>0x90</status>
+                <midino>0x61</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Library]</group>
+                <key>XdjXz.browserBack</key>
+                <description>Browser BACK</description>
+                <status>0x90</status>
+                <midino>0x32</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Library]</group>
+                <key>MoveFocusBackward</key>
+                <description>Browser BACK +SHIFT</description>
+                <status>0x90</status>
+                <midino>0x5F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.globalQuantize</key>
+                <description>Global Quantize button</description>
+                <status>0x90</status>
+                <midino>0x09</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.playButton</key>
+                <description>Deck 1 Play/Pause</description>
+                <status>0x90</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.cueButton</key>
+                <description>Deck 1 Cue</description>
+                <status>0x90</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.searchFwd</key>
+                <description>Deck 1 Search Fwd / KeySync</description>
+                <status>0x90</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.trackSearchFwd</key>
+                <description>Deck 1 Track Search Fwd</description>
+                <status>0x90</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.searchRev</key>
+                <description>Deck 1 Search Rev</description>
+                <status>0x90</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.trackSearchRev</key>
+                <description>Deck 1 Track Search Rev</description>
+                <status>0x90</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.loopIn</key>
+                <description>Deck 1 Loop In</description>
+                <status>0x90</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.loopOut</key>
+                <description>Deck 1 Loop Out</description>
+                <status>0x90</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.reloopExit</key>
+                <description>Deck 1 Reloop/Exit</description>
+                <status>0x90</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 1 Loop In Long (4 beat)</description>
+                <status>0x90</status>
+                <midino>0x45</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 1 4-Beat Auto Loop</description>
+                <status>0x90</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 1 8-Beat / +SHIFT Auto Loop</description>
+                <status>0x90</status>
+                <midino>0x44</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>rate</key>
+                <description>Deck 1 Tempo MSB</description>
+                <status>0xB0</status>
+                <midino>0x00</midino>
+                <options>
+                    <fourteen-bit-msb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>rate</key>
+                <description>Deck 1 Tempo LSB</description>
+                <status>0xB0</status>
+                <midino>0x20</midino>
+                <options>
+                    <fourteen-bit-lsb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogTop</key>
+                <description>Deck 1 Jog Platter</description>
+                <status>0xB0</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogTopShift</key>
+                <description>Deck 1 Jog Platter +SHIFT</description>
+                <status>0xB0</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogSide</key>
+                <description>Deck 1 Jog Side</description>
+                <status>0xB0</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogSideShift</key>
+                <description>Deck 1 Jog Side +SHIFT</description>
+                <status>0xB0</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 1 Jog Touch</description>
+                <status>0x90</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 1 Jog Touch +SHIFT</description>
+                <status>0x90</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.needlePosition</key>
+                <description>Deck 1 Needle / Waveform touch</description>
+                <status>0xB0</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.vinylSpeedAdjust</key>
+                <description>Deck 1 Vinyl Speed Adjust</description>
+                <status>0xB0</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>keylock</key>
+                <description>Deck 1 Master Tempo / Keylock</description>
+                <status>0x90</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.jogModeToggle</key>
+                <description>Deck 1 Jog Mode Vinyl/CDJ</description>
+                <status>0x90</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.tempoReset</key>
+                <description>Deck 1 Tempo Reset</description>
+                <status>0x90</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.tempoRangeToggle</key>
+                <description>Deck 1 Tempo Range Cycle</description>
+                <status>0x90</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.syncButton</key>
+                <description>Deck 1 Sync</description>
+                <status>0x90</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.syncLong</key>
+                <description>Deck 1 Sync Long</description>
+                <status>0x90</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>sync_leader</key>
+                <description>Deck 1 Sync Master</description>
+                <status>0x90</status>
+                <midino>0x1E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.shiftButton</key>
+                <description>Deck 1 SHIFT</description>
+                <status>0x90</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LoadSelectedTrack</key>
+                <description>Deck 1 LOAD</description>
+                <status>0x90</status>
+                <midino>0x51</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.pcControlMode</key>
+                <description>Deck 1 PC Control Mode state</description>
+                <status>0xB0</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>slip_enabled</key>
+                <description>Deck 1 Slip</description>
+                <status>0x90</status>
+                <midino>0x2C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>reverseroll</key>
+                <description>Deck 1 Reverse</description>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_forward</key>
+                <description>Deck 1 Cue/Loop Call Next</description>
+                <status>0x90</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_backward</key>
+                <description>Deck 1 Cue/Loop Call Prev</description>
+                <status>0x90</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>cue_set</key>
+                <description>Deck 1 Memory Cue</description>
+                <status>0x90</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>cue_clear</key>
+                <description>Deck 1 Delete Cue</description>
+                <status>0x90</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_1_activate</key>
+                <description>Deck 1 Pad 1 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x00</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_1_clear</key>
+                <description>Deck 1 Pad 1 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x08</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_0.5_toggle</key>
+                <description>Deck 1 Pad 1 Beat Loop 0.5</description>
+                <status>0x95</status>
+                <midino>0x10</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem1]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 1 Pad 1 Stem 1 Mute</description>
+                <status>0x95</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem1]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 1 Pad 1 Stem 1 Reset</description>
+                <status>0x95</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_16_backward</key>
+                <description>Deck 1 Pad 1 Beat Jump -16</description>
+                <status>0x95</status>
+                <midino>0x30</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1_Effect1]</group>
+                <key>enabled</key>
+                <description>Deck 1 Pad FX Slot 1</description>
+                <status>0x95</status>
+                <midino>0x40</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler1]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 1 Sampler 1</description>
+                <status>0x95</status>
+                <midino>0x60</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler1]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 1 Sampler 1 Stop</description>
+                <status>0x95</status>
+                <midino>0x68</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_2_activate</key>
+                <description>Deck 1 Pad 2 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x01</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_2_clear</key>
+                <description>Deck 1 Pad 2 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x09</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_1_toggle</key>
+                <description>Deck 1 Pad 2 Beat Loop 1</description>
+                <status>0x95</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem2]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 1 Pad 2 Stem 2 Mute</description>
+                <status>0x95</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem2]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 1 Pad 2 Stem 2 Reset</description>
+                <status>0x95</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_16_forward</key>
+                <description>Deck 1 Pad 2 Beat Jump +16</description>
+                <status>0x95</status>
+                <midino>0x31</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1_Effect2]</group>
+                <key>enabled</key>
+                <description>Deck 1 Pad FX Slot 2</description>
+                <status>0x95</status>
+                <midino>0x41</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler2]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 2 Sampler 2</description>
+                <status>0x95</status>
+                <midino>0x61</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler2]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 2 Sampler 2 Stop</description>
+                <status>0x95</status>
+                <midino>0x69</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_3_activate</key>
+                <description>Deck 1 Pad 3 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x02</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_3_clear</key>
+                <description>Deck 1 Pad 3 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_2_toggle</key>
+                <description>Deck 1 Pad 3 Beat Loop 2</description>
+                <status>0x95</status>
+                <midino>0x12</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem3]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 1 Pad 3 Stem 3 Mute</description>
+                <status>0x95</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem3]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 1 Pad 3 Stem 3 Reset</description>
+                <status>0x95</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_8_backward</key>
+                <description>Deck 1 Pad 3 Beat Jump -8</description>
+                <status>0x95</status>
+                <midino>0x32</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1_Effect3]</group>
+                <key>enabled</key>
+                <description>Deck 1 Pad FX Slot 3</description>
+                <status>0x95</status>
+                <midino>0x42</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler3]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 3 Sampler 3</description>
+                <status>0x95</status>
+                <midino>0x62</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler3]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 3 Sampler 3 Stop</description>
+                <status>0x95</status>
+                <midino>0x6A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_4_activate</key>
+                <description>Deck 1 Pad 4 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x03</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_4_clear</key>
+                <description>Deck 1 Pad 4 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 1 Pad 4 Beat Loop 4</description>
+                <status>0x95</status>
+                <midino>0x13</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem4]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 1 Pad 4 Stem 4 Mute</description>
+                <status>0x95</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1_Stem4]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 1 Pad 4 Stem 4 Reset</description>
+                <status>0x95</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_8_forward</key>
+                <description>Deck 1 Pad 4 Beat Jump +8</description>
+                <status>0x95</status>
+                <midino>0x33</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1]</group>
+                <key>group_[Channel1]_enable</key>
+                <description>Deck 1 Pad FX Unit Enable</description>
+                <status>0x95</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler4]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 4 Sampler 4</description>
+                <status>0x95</status>
+                <midino>0x63</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler4]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 4 Sampler 4 Stop</description>
+                <status>0x95</status>
+                <midino>0x6B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_5_activate</key>
+                <description>Deck 1 Pad 5 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x04</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_5_clear</key>
+                <description>Deck 1 Pad 5 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 1 Pad 5 Beat Loop 8</description>
+                <status>0x95</status>
+                <midino>0x14</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatlooproll_0.5_activate</key>
+                <description>Deck 1 Pad 5 Slip Roll</description>
+                <status>0x95</status>
+                <midino>0x24</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_4_backward</key>
+                <description>Deck 1 Pad 5 Beat Jump -4</description>
+                <status>0x95</status>
+                <midino>0x34</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler5]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 5 Sampler 5</description>
+                <status>0x95</status>
+                <midino>0x64</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler5]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 5 Sampler 5 Stop</description>
+                <status>0x95</status>
+                <midino>0x6C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_6_activate</key>
+                <description>Deck 1 Pad 6 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x05</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_6_clear</key>
+                <description>Deck 1 Pad 6 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_16_toggle</key>
+                <description>Deck 1 Pad 6 Beat Loop 16</description>
+                <status>0x95</status>
+                <midino>0x15</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatlooproll_1_activate</key>
+                <description>Deck 1 Pad 6 Slip Roll</description>
+                <status>0x95</status>
+                <midino>0x25</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_4_forward</key>
+                <description>Deck 1 Pad 6 Beat Jump +4</description>
+                <status>0x95</status>
+                <midino>0x35</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler6]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 6 Sampler 6</description>
+                <status>0x95</status>
+                <midino>0x65</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler6]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 6 Sampler 6 Stop</description>
+                <status>0x95</status>
+                <midino>0x6D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_7_activate</key>
+                <description>Deck 1 Pad 7 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x06</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_7_clear</key>
+                <description>Deck 1 Pad 7 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_32_toggle</key>
+                <description>Deck 1 Pad 7 Beat Loop 32</description>
+                <status>0x95</status>
+                <midino>0x16</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatlooproll_2_activate</key>
+                <description>Deck 1 Pad 7 Slip Roll</description>
+                <status>0x95</status>
+                <midino>0x26</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_1_backward</key>
+                <description>Deck 1 Pad 7 Beat Jump -1</description>
+                <status>0x95</status>
+                <midino>0x36</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler7]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 7 Sampler 7</description>
+                <status>0x95</status>
+                <midino>0x66</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler7]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 7 Sampler 7 Stop</description>
+                <status>0x95</status>
+                <midino>0x6E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_8_activate</key>
+                <description>Deck 1 Pad 8 Hot Cue</description>
+                <status>0x95</status>
+                <midino>0x07</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>hotcue_8_clear</key>
+                <description>Deck 1 Pad 8 Hot Cue +SHIFT Clear</description>
+                <status>0x95</status>
+                <midino>0x0F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatloop_64_toggle</key>
+                <description>Deck 1 Pad 8 Beat Loop 64</description>
+                <status>0x95</status>
+                <midino>0x17</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatlooproll_4_activate</key>
+                <description>Deck 1 Pad 8 Slip Roll</description>
+                <status>0x95</status>
+                <midino>0x27</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beatjump_1_forward</key>
+                <description>Deck 1 Pad 8 Beat Jump +1</description>
+                <status>0x95</status>
+                <midino>0x37</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler8]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 1 Pad 8 Sampler 8</description>
+                <status>0x95</status>
+                <midino>0x67</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler8]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 1 Pad 8 Sampler 8 Stop</description>
+                <status>0x95</status>
+                <midino>0x6F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.playButton</key>
+                <description>Deck 2 Play/Pause</description>
+                <status>0x91</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.cueButton</key>
+                <description>Deck 2 Cue</description>
+                <status>0x91</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.searchFwd</key>
+                <description>Deck 2 Search Fwd / KeySync</description>
+                <status>0x91</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.trackSearchFwd</key>
+                <description>Deck 2 Track Search Fwd</description>
+                <status>0x91</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.searchRev</key>
+                <description>Deck 2 Search Rev</description>
+                <status>0x91</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.trackSearchRev</key>
+                <description>Deck 2 Track Search Rev</description>
+                <status>0x91</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.loopIn</key>
+                <description>Deck 2 Loop In</description>
+                <status>0x91</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.loopOut</key>
+                <description>Deck 2 Loop Out</description>
+                <status>0x91</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.reloopExit</key>
+                <description>Deck 2 Reloop/Exit</description>
+                <status>0x91</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 2 Loop In Long (4 beat)</description>
+                <status>0x91</status>
+                <midino>0x45</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 2 4-Beat Auto Loop</description>
+                <status>0x91</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 2 8-Beat / +SHIFT Auto Loop</description>
+                <status>0x91</status>
+                <midino>0x44</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>rate</key>
+                <description>Deck 2 Tempo MSB</description>
+                <status>0xB1</status>
+                <midino>0x00</midino>
+                <options>
+                    <fourteen-bit-msb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>rate</key>
+                <description>Deck 2 Tempo LSB</description>
+                <status>0xB1</status>
+                <midino>0x20</midino>
+                <options>
+                    <fourteen-bit-lsb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogTop</key>
+                <description>Deck 2 Jog Platter</description>
+                <status>0xB1</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogTopShift</key>
+                <description>Deck 2 Jog Platter +SHIFT</description>
+                <status>0xB1</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogSide</key>
+                <description>Deck 2 Jog Side</description>
+                <status>0xB1</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogSideShift</key>
+                <description>Deck 2 Jog Side +SHIFT</description>
+                <status>0xB1</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 2 Jog Touch</description>
+                <status>0x91</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 2 Jog Touch +SHIFT</description>
+                <status>0x91</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.needlePosition</key>
+                <description>Deck 2 Needle / Waveform touch</description>
+                <status>0xB1</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.vinylSpeedAdjust</key>
+                <description>Deck 2 Vinyl Speed Adjust</description>
+                <status>0xB1</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>keylock</key>
+                <description>Deck 2 Master Tempo / Keylock</description>
+                <status>0x91</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.jogModeToggle</key>
+                <description>Deck 2 Jog Mode Vinyl/CDJ</description>
+                <status>0x91</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.tempoReset</key>
+                <description>Deck 2 Tempo Reset</description>
+                <status>0x91</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.tempoRangeToggle</key>
+                <description>Deck 2 Tempo Range Cycle</description>
+                <status>0x91</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.syncButton</key>
+                <description>Deck 2 Sync</description>
+                <status>0x91</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.syncLong</key>
+                <description>Deck 2 Sync Long</description>
+                <status>0x91</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>sync_leader</key>
+                <description>Deck 2 Sync Master</description>
+                <status>0x91</status>
+                <midino>0x1E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.shiftButton</key>
+                <description>Deck 2 SHIFT</description>
+                <status>0x91</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>LoadSelectedTrack</key>
+                <description>Deck 2 LOAD</description>
+                <status>0x91</status>
+                <midino>0x51</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>XdjXz.pcControlMode</key>
+                <description>Deck 2 PC Control Mode state</description>
+                <status>0xB1</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>slip_enabled</key>
+                <description>Deck 2 Slip</description>
+                <status>0x91</status>
+                <midino>0x2C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>reverseroll</key>
+                <description>Deck 2 Reverse</description>
+                <status>0x91</status>
+                <midino>0x21</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_forward</key>
+                <description>Deck 2 Cue/Loop Call Next</description>
+                <status>0x91</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_backward</key>
+                <description>Deck 2 Cue/Loop Call Prev</description>
+                <status>0x91</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>cue_set</key>
+                <description>Deck 2 Memory Cue</description>
+                <status>0x91</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>cue_clear</key>
+                <description>Deck 2 Delete Cue</description>
+                <status>0x91</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_1_activate</key>
+                <description>Deck 2 Pad 1 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x00</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_1_clear</key>
+                <description>Deck 2 Pad 1 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x08</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_0.5_toggle</key>
+                <description>Deck 2 Pad 1 Beat Loop 0.5</description>
+                <status>0x96</status>
+                <midino>0x10</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem1]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 2 Pad 1 Stem 1 Mute</description>
+                <status>0x96</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem1]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 2 Pad 1 Stem 1 Reset</description>
+                <status>0x96</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_16_backward</key>
+                <description>Deck 2 Pad 1 Beat Jump -16</description>
+                <status>0x96</status>
+                <midino>0x30</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit2_Effect1]</group>
+                <key>enabled</key>
+                <description>Deck 2 Pad FX Slot 1</description>
+                <status>0x96</status>
+                <midino>0x40</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler9]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 1 Sampler 9</description>
+                <status>0x96</status>
+                <midino>0x60</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler9]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 1 Sampler 9 Stop</description>
+                <status>0x96</status>
+                <midino>0x68</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_2_activate</key>
+                <description>Deck 2 Pad 2 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x01</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_2_clear</key>
+                <description>Deck 2 Pad 2 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x09</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_1_toggle</key>
+                <description>Deck 2 Pad 2 Beat Loop 1</description>
+                <status>0x96</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem2]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 2 Pad 2 Stem 2 Mute</description>
+                <status>0x96</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem2]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 2 Pad 2 Stem 2 Reset</description>
+                <status>0x96</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_16_forward</key>
+                <description>Deck 2 Pad 2 Beat Jump +16</description>
+                <status>0x96</status>
+                <midino>0x31</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit2_Effect2]</group>
+                <key>enabled</key>
+                <description>Deck 2 Pad FX Slot 2</description>
+                <status>0x96</status>
+                <midino>0x41</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler10]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 2 Sampler 10</description>
+                <status>0x96</status>
+                <midino>0x61</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler10]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 2 Sampler 10 Stop</description>
+                <status>0x96</status>
+                <midino>0x69</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_3_activate</key>
+                <description>Deck 2 Pad 3 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x02</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_3_clear</key>
+                <description>Deck 2 Pad 3 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_2_toggle</key>
+                <description>Deck 2 Pad 3 Beat Loop 2</description>
+                <status>0x96</status>
+                <midino>0x12</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem3]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 2 Pad 3 Stem 3 Mute</description>
+                <status>0x96</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem3]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 2 Pad 3 Stem 3 Reset</description>
+                <status>0x96</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_8_backward</key>
+                <description>Deck 2 Pad 3 Beat Jump -8</description>
+                <status>0x96</status>
+                <midino>0x32</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit2_Effect3]</group>
+                <key>enabled</key>
+                <description>Deck 2 Pad FX Slot 3</description>
+                <status>0x96</status>
+                <midino>0x42</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler11]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 3 Sampler 11</description>
+                <status>0x96</status>
+                <midino>0x62</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler11]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 3 Sampler 11 Stop</description>
+                <status>0x96</status>
+                <midino>0x6A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_4_activate</key>
+                <description>Deck 2 Pad 4 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x03</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_4_clear</key>
+                <description>Deck 2 Pad 4 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 2 Pad 4 Beat Loop 4</description>
+                <status>0x96</status>
+                <midino>0x13</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem4]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 2 Pad 4 Stem 4 Mute</description>
+                <status>0x96</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2_Stem4]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 2 Pad 4 Stem 4 Reset</description>
+                <status>0x96</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_8_forward</key>
+                <description>Deck 2 Pad 4 Beat Jump +8</description>
+                <status>0x96</status>
+                <midino>0x33</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit2]</group>
+                <key>group_[Channel2]_enable</key>
+                <description>Deck 2 Pad FX Unit Enable</description>
+                <status>0x96</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler12]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 4 Sampler 12</description>
+                <status>0x96</status>
+                <midino>0x63</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler12]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 4 Sampler 12 Stop</description>
+                <status>0x96</status>
+                <midino>0x6B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_5_activate</key>
+                <description>Deck 2 Pad 5 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x04</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_5_clear</key>
+                <description>Deck 2 Pad 5 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 2 Pad 5 Beat Loop 8</description>
+                <status>0x96</status>
+                <midino>0x14</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatlooproll_0.5_activate</key>
+                <description>Deck 2 Pad 5 Slip Roll</description>
+                <status>0x96</status>
+                <midino>0x24</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_4_backward</key>
+                <description>Deck 2 Pad 5 Beat Jump -4</description>
+                <status>0x96</status>
+                <midino>0x34</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler13]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 5 Sampler 13</description>
+                <status>0x96</status>
+                <midino>0x64</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler13]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 5 Sampler 13 Stop</description>
+                <status>0x96</status>
+                <midino>0x6C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_6_activate</key>
+                <description>Deck 2 Pad 6 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x05</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_6_clear</key>
+                <description>Deck 2 Pad 6 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_16_toggle</key>
+                <description>Deck 2 Pad 6 Beat Loop 16</description>
+                <status>0x96</status>
+                <midino>0x15</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatlooproll_1_activate</key>
+                <description>Deck 2 Pad 6 Slip Roll</description>
+                <status>0x96</status>
+                <midino>0x25</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_4_forward</key>
+                <description>Deck 2 Pad 6 Beat Jump +4</description>
+                <status>0x96</status>
+                <midino>0x35</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler14]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 6 Sampler 14</description>
+                <status>0x96</status>
+                <midino>0x65</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler14]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 6 Sampler 14 Stop</description>
+                <status>0x96</status>
+                <midino>0x6D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_7_activate</key>
+                <description>Deck 2 Pad 7 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x06</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_7_clear</key>
+                <description>Deck 2 Pad 7 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_32_toggle</key>
+                <description>Deck 2 Pad 7 Beat Loop 32</description>
+                <status>0x96</status>
+                <midino>0x16</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatlooproll_2_activate</key>
+                <description>Deck 2 Pad 7 Slip Roll</description>
+                <status>0x96</status>
+                <midino>0x26</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_1_backward</key>
+                <description>Deck 2 Pad 7 Beat Jump -1</description>
+                <status>0x96</status>
+                <midino>0x36</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler15]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 7 Sampler 15</description>
+                <status>0x96</status>
+                <midino>0x66</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler15]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 7 Sampler 15 Stop</description>
+                <status>0x96</status>
+                <midino>0x6E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_8_activate</key>
+                <description>Deck 2 Pad 8 Hot Cue</description>
+                <status>0x96</status>
+                <midino>0x07</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>hotcue_8_clear</key>
+                <description>Deck 2 Pad 8 Hot Cue +SHIFT Clear</description>
+                <status>0x96</status>
+                <midino>0x0F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatloop_64_toggle</key>
+                <description>Deck 2 Pad 8 Beat Loop 64</description>
+                <status>0x96</status>
+                <midino>0x17</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatlooproll_4_activate</key>
+                <description>Deck 2 Pad 8 Slip Roll</description>
+                <status>0x96</status>
+                <midino>0x27</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beatjump_1_forward</key>
+                <description>Deck 2 Pad 8 Beat Jump +1</description>
+                <status>0x96</status>
+                <midino>0x37</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler16]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 2 Pad 8 Sampler 16</description>
+                <status>0x96</status>
+                <midino>0x67</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler16]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 2 Pad 8 Sampler 16 Stop</description>
+                <status>0x96</status>
+                <midino>0x6F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.playButton</key>
+                <description>Deck 3 Play/Pause</description>
+                <status>0x92</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.cueButton</key>
+                <description>Deck 3 Cue</description>
+                <status>0x92</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.searchFwd</key>
+                <description>Deck 3 Search Fwd / KeySync</description>
+                <status>0x92</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.trackSearchFwd</key>
+                <description>Deck 3 Track Search Fwd</description>
+                <status>0x92</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.searchRev</key>
+                <description>Deck 3 Search Rev</description>
+                <status>0x92</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.trackSearchRev</key>
+                <description>Deck 3 Track Search Rev</description>
+                <status>0x92</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.loopIn</key>
+                <description>Deck 3 Loop In</description>
+                <status>0x92</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.loopOut</key>
+                <description>Deck 3 Loop Out</description>
+                <status>0x92</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.reloopExit</key>
+                <description>Deck 3 Reloop/Exit</description>
+                <status>0x92</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 3 Loop In Long (4 beat)</description>
+                <status>0x92</status>
+                <midino>0x45</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 3 4-Beat Auto Loop</description>
+                <status>0x92</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 3 8-Beat / +SHIFT Auto Loop</description>
+                <status>0x92</status>
+                <midino>0x44</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>rate</key>
+                <description>Deck 3 Tempo MSB</description>
+                <status>0xB2</status>
+                <midino>0x00</midino>
+                <options>
+                    <fourteen-bit-msb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>rate</key>
+                <description>Deck 3 Tempo LSB</description>
+                <status>0xB2</status>
+                <midino>0x20</midino>
+                <options>
+                    <fourteen-bit-lsb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogTop</key>
+                <description>Deck 3 Jog Platter</description>
+                <status>0xB2</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogTopShift</key>
+                <description>Deck 3 Jog Platter +SHIFT</description>
+                <status>0xB2</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogSide</key>
+                <description>Deck 3 Jog Side</description>
+                <status>0xB2</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogSideShift</key>
+                <description>Deck 3 Jog Side +SHIFT</description>
+                <status>0xB2</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 3 Jog Touch</description>
+                <status>0x92</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 3 Jog Touch +SHIFT</description>
+                <status>0x92</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.needlePosition</key>
+                <description>Deck 3 Needle / Waveform touch</description>
+                <status>0xB2</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.vinylSpeedAdjust</key>
+                <description>Deck 3 Vinyl Speed Adjust</description>
+                <status>0xB2</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>keylock</key>
+                <description>Deck 3 Master Tempo / Keylock</description>
+                <status>0x92</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.jogModeToggle</key>
+                <description>Deck 3 Jog Mode Vinyl/CDJ</description>
+                <status>0x92</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.tempoReset</key>
+                <description>Deck 3 Tempo Reset</description>
+                <status>0x92</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.tempoRangeToggle</key>
+                <description>Deck 3 Tempo Range Cycle</description>
+                <status>0x92</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.syncButton</key>
+                <description>Deck 3 Sync</description>
+                <status>0x92</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.syncLong</key>
+                <description>Deck 3 Sync Long</description>
+                <status>0x92</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>sync_leader</key>
+                <description>Deck 3 Sync Master</description>
+                <status>0x92</status>
+                <midino>0x1E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.shiftButton</key>
+                <description>Deck 3 SHIFT</description>
+                <status>0x92</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>LoadSelectedTrack</key>
+                <description>Deck 3 LOAD</description>
+                <status>0x92</status>
+                <midino>0x51</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>XdjXz.pcControlMode</key>
+                <description>Deck 3 PC Control Mode state</description>
+                <status>0xB2</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>slip_enabled</key>
+                <description>Deck 3 Slip</description>
+                <status>0x92</status>
+                <midino>0x2C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>reverseroll</key>
+                <description>Deck 3 Reverse</description>
+                <status>0x92</status>
+                <midino>0x21</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_forward</key>
+                <description>Deck 3 Cue/Loop Call Next</description>
+                <status>0x92</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_backward</key>
+                <description>Deck 3 Cue/Loop Call Prev</description>
+                <status>0x92</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>cue_set</key>
+                <description>Deck 3 Memory Cue</description>
+                <status>0x92</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>cue_clear</key>
+                <description>Deck 3 Delete Cue</description>
+                <status>0x92</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_1_activate</key>
+                <description>Deck 3 Pad 1 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x00</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_1_clear</key>
+                <description>Deck 3 Pad 1 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x08</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_0.5_toggle</key>
+                <description>Deck 3 Pad 1 Beat Loop 0.5</description>
+                <status>0x97</status>
+                <midino>0x10</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem1]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 3 Pad 1 Stem 1 Mute</description>
+                <status>0x97</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem1]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 3 Pad 1 Stem 1 Reset</description>
+                <status>0x97</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_16_backward</key>
+                <description>Deck 3 Pad 1 Beat Jump -16</description>
+                <status>0x97</status>
+                <midino>0x30</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit3_Effect1]</group>
+                <key>enabled</key>
+                <description>Deck 3 Pad FX Slot 1</description>
+                <status>0x97</status>
+                <midino>0x40</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler1]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 1 Sampler 1</description>
+                <status>0x97</status>
+                <midino>0x60</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler1]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 1 Sampler 1 Stop</description>
+                <status>0x97</status>
+                <midino>0x68</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_2_activate</key>
+                <description>Deck 3 Pad 2 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x01</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_2_clear</key>
+                <description>Deck 3 Pad 2 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x09</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_1_toggle</key>
+                <description>Deck 3 Pad 2 Beat Loop 1</description>
+                <status>0x97</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem2]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 3 Pad 2 Stem 2 Mute</description>
+                <status>0x97</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem2]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 3 Pad 2 Stem 2 Reset</description>
+                <status>0x97</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_16_forward</key>
+                <description>Deck 3 Pad 2 Beat Jump +16</description>
+                <status>0x97</status>
+                <midino>0x31</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit3_Effect2]</group>
+                <key>enabled</key>
+                <description>Deck 3 Pad FX Slot 2</description>
+                <status>0x97</status>
+                <midino>0x41</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler2]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 2 Sampler 2</description>
+                <status>0x97</status>
+                <midino>0x61</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler2]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 2 Sampler 2 Stop</description>
+                <status>0x97</status>
+                <midino>0x69</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_3_activate</key>
+                <description>Deck 3 Pad 3 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x02</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_3_clear</key>
+                <description>Deck 3 Pad 3 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_2_toggle</key>
+                <description>Deck 3 Pad 3 Beat Loop 2</description>
+                <status>0x97</status>
+                <midino>0x12</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem3]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 3 Pad 3 Stem 3 Mute</description>
+                <status>0x97</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem3]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 3 Pad 3 Stem 3 Reset</description>
+                <status>0x97</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_8_backward</key>
+                <description>Deck 3 Pad 3 Beat Jump -8</description>
+                <status>0x97</status>
+                <midino>0x32</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit3_Effect3]</group>
+                <key>enabled</key>
+                <description>Deck 3 Pad FX Slot 3</description>
+                <status>0x97</status>
+                <midino>0x42</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler3]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 3 Sampler 3</description>
+                <status>0x97</status>
+                <midino>0x62</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler3]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 3 Sampler 3 Stop</description>
+                <status>0x97</status>
+                <midino>0x6A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_4_activate</key>
+                <description>Deck 3 Pad 4 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x03</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_4_clear</key>
+                <description>Deck 3 Pad 4 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 3 Pad 4 Beat Loop 4</description>
+                <status>0x97</status>
+                <midino>0x13</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem4]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 3 Pad 4 Stem 4 Mute</description>
+                <status>0x97</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3_Stem4]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 3 Pad 4 Stem 4 Reset</description>
+                <status>0x97</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_8_forward</key>
+                <description>Deck 3 Pad 4 Beat Jump +8</description>
+                <status>0x97</status>
+                <midino>0x33</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit3]</group>
+                <key>group_[Channel3]_enable</key>
+                <description>Deck 3 Pad FX Unit Enable</description>
+                <status>0x97</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler4]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 4 Sampler 4</description>
+                <status>0x97</status>
+                <midino>0x63</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler4]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 4 Sampler 4 Stop</description>
+                <status>0x97</status>
+                <midino>0x6B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_5_activate</key>
+                <description>Deck 3 Pad 5 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x04</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_5_clear</key>
+                <description>Deck 3 Pad 5 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 3 Pad 5 Beat Loop 8</description>
+                <status>0x97</status>
+                <midino>0x14</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatlooproll_0.5_activate</key>
+                <description>Deck 3 Pad 5 Slip Roll</description>
+                <status>0x97</status>
+                <midino>0x24</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_4_backward</key>
+                <description>Deck 3 Pad 5 Beat Jump -4</description>
+                <status>0x97</status>
+                <midino>0x34</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler5]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 5 Sampler 5</description>
+                <status>0x97</status>
+                <midino>0x64</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler5]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 5 Sampler 5 Stop</description>
+                <status>0x97</status>
+                <midino>0x6C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_6_activate</key>
+                <description>Deck 3 Pad 6 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x05</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_6_clear</key>
+                <description>Deck 3 Pad 6 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_16_toggle</key>
+                <description>Deck 3 Pad 6 Beat Loop 16</description>
+                <status>0x97</status>
+                <midino>0x15</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatlooproll_1_activate</key>
+                <description>Deck 3 Pad 6 Slip Roll</description>
+                <status>0x97</status>
+                <midino>0x25</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_4_forward</key>
+                <description>Deck 3 Pad 6 Beat Jump +4</description>
+                <status>0x97</status>
+                <midino>0x35</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler6]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 6 Sampler 6</description>
+                <status>0x97</status>
+                <midino>0x65</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler6]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 6 Sampler 6 Stop</description>
+                <status>0x97</status>
+                <midino>0x6D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_7_activate</key>
+                <description>Deck 3 Pad 7 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x06</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_7_clear</key>
+                <description>Deck 3 Pad 7 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_32_toggle</key>
+                <description>Deck 3 Pad 7 Beat Loop 32</description>
+                <status>0x97</status>
+                <midino>0x16</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatlooproll_2_activate</key>
+                <description>Deck 3 Pad 7 Slip Roll</description>
+                <status>0x97</status>
+                <midino>0x26</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_1_backward</key>
+                <description>Deck 3 Pad 7 Beat Jump -1</description>
+                <status>0x97</status>
+                <midino>0x36</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler7]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 7 Sampler 7</description>
+                <status>0x97</status>
+                <midino>0x66</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler7]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 7 Sampler 7 Stop</description>
+                <status>0x97</status>
+                <midino>0x6E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_8_activate</key>
+                <description>Deck 3 Pad 8 Hot Cue</description>
+                <status>0x97</status>
+                <midino>0x07</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>hotcue_8_clear</key>
+                <description>Deck 3 Pad 8 Hot Cue +SHIFT Clear</description>
+                <status>0x97</status>
+                <midino>0x0F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatloop_64_toggle</key>
+                <description>Deck 3 Pad 8 Beat Loop 64</description>
+                <status>0x97</status>
+                <midino>0x17</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatlooproll_4_activate</key>
+                <description>Deck 3 Pad 8 Slip Roll</description>
+                <status>0x97</status>
+                <midino>0x27</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>beatjump_1_forward</key>
+                <description>Deck 3 Pad 8 Beat Jump +1</description>
+                <status>0x97</status>
+                <midino>0x37</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler8]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 3 Pad 8 Sampler 8</description>
+                <status>0x97</status>
+                <midino>0x67</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler8]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 3 Pad 8 Sampler 8 Stop</description>
+                <status>0x97</status>
+                <midino>0x6F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.playButton</key>
+                <description>Deck 4 Play/Pause</description>
+                <status>0x93</status>
+                <midino>0x00</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.cueButton</key>
+                <description>Deck 4 Cue</description>
+                <status>0x93</status>
+                <midino>0x01</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.searchFwd</key>
+                <description>Deck 4 Search Fwd / KeySync</description>
+                <status>0x93</status>
+                <midino>0x02</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.trackSearchFwd</key>
+                <description>Deck 4 Track Search Fwd</description>
+                <status>0x93</status>
+                <midino>0x04</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.searchRev</key>
+                <description>Deck 4 Search Rev</description>
+                <status>0x93</status>
+                <midino>0x03</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.trackSearchRev</key>
+                <description>Deck 4 Track Search Rev</description>
+                <status>0x93</status>
+                <midino>0x05</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.loopIn</key>
+                <description>Deck 4 Loop In</description>
+                <status>0x93</status>
+                <midino>0x06</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.loopOut</key>
+                <description>Deck 4 Loop Out</description>
+                <status>0x93</status>
+                <midino>0x07</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.reloopExit</key>
+                <description>Deck 4 Reloop/Exit</description>
+                <status>0x93</status>
+                <midino>0x08</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 4 Loop In Long (4 beat)</description>
+                <status>0x93</status>
+                <midino>0x45</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 4 4-Beat Auto Loop</description>
+                <status>0x93</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 4 8-Beat / +SHIFT Auto Loop</description>
+                <status>0x93</status>
+                <midino>0x44</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>rate</key>
+                <description>Deck 4 Tempo MSB</description>
+                <status>0xB3</status>
+                <midino>0x00</midino>
+                <options>
+                    <fourteen-bit-msb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>rate</key>
+                <description>Deck 4 Tempo LSB</description>
+                <status>0xB3</status>
+                <midino>0x20</midino>
+                <options>
+                    <fourteen-bit-lsb />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogTop</key>
+                <description>Deck 4 Jog Platter</description>
+                <status>0xB3</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogTopShift</key>
+                <description>Deck 4 Jog Platter +SHIFT</description>
+                <status>0xB3</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogSide</key>
+                <description>Deck 4 Jog Side</description>
+                <status>0xB3</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogSideShift</key>
+                <description>Deck 4 Jog Side +SHIFT</description>
+                <status>0xB3</status>
+                <midino>0x26</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 4 Jog Touch</description>
+                <status>0x93</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogTouch</key>
+                <description>Deck 4 Jog Touch +SHIFT</description>
+                <status>0x93</status>
+                <midino>0x48</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.needlePosition</key>
+                <description>Deck 4 Needle / Waveform touch</description>
+                <status>0xB3</status>
+                <midino>0x1C</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.vinylSpeedAdjust</key>
+                <description>Deck 4 Vinyl Speed Adjust</description>
+                <status>0xB3</status>
+                <midino>0x1E</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>keylock</key>
+                <description>Deck 4 Master Tempo / Keylock</description>
+                <status>0x93</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.jogModeToggle</key>
+                <description>Deck 4 Jog Mode Vinyl/CDJ</description>
+                <status>0x93</status>
+                <midino>0x12</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.tempoReset</key>
+                <description>Deck 4 Tempo Reset</description>
+                <status>0x93</status>
+                <midino>0x13</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.tempoRangeToggle</key>
+                <description>Deck 4 Tempo Range Cycle</description>
+                <status>0x93</status>
+                <midino>0x10</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.syncButton</key>
+                <description>Deck 4 Sync</description>
+                <status>0x93</status>
+                <midino>0x1F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.syncLong</key>
+                <description>Deck 4 Sync Long</description>
+                <status>0x93</status>
+                <midino>0x47</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>sync_leader</key>
+                <description>Deck 4 Sync Master</description>
+                <status>0x93</status>
+                <midino>0x1E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.shiftButton</key>
+                <description>Deck 4 SHIFT</description>
+                <status>0x93</status>
+                <midino>0x3F</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>LoadSelectedTrack</key>
+                <description>Deck 4 LOAD</description>
+                <status>0x93</status>
+                <midino>0x51</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>XdjXz.pcControlMode</key>
+                <description>Deck 4 PC Control Mode state</description>
+                <status>0xB3</status>
+                <midino>0x64</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>slip_enabled</key>
+                <description>Deck 4 Slip</description>
+                <status>0x93</status>
+                <midino>0x2C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>reverseroll</key>
+                <description>Deck 4 Reverse</description>
+                <status>0x93</status>
+                <midino>0x21</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_forward</key>
+                <description>Deck 4 Cue/Loop Call Next</description>
+                <status>0x93</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_backward</key>
+                <description>Deck 4 Cue/Loop Call Prev</description>
+                <status>0x93</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>cue_set</key>
+                <description>Deck 4 Memory Cue</description>
+                <status>0x93</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>cue_clear</key>
+                <description>Deck 4 Delete Cue</description>
+                <status>0x93</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_1_activate</key>
+                <description>Deck 4 Pad 1 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x00</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_1_clear</key>
+                <description>Deck 4 Pad 1 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x08</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_0.5_toggle</key>
+                <description>Deck 4 Pad 1 Beat Loop 0.5</description>
+                <status>0x98</status>
+                <midino>0x10</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem1]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 4 Pad 1 Stem 1 Mute</description>
+                <status>0x98</status>
+                <midino>0x20</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem1]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 4 Pad 1 Stem 1 Reset</description>
+                <status>0x98</status>
+                <midino>0x28</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_16_backward</key>
+                <description>Deck 4 Pad 1 Beat Jump -16</description>
+                <status>0x98</status>
+                <midino>0x30</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit4_Effect1]</group>
+                <key>enabled</key>
+                <description>Deck 4 Pad FX Slot 1</description>
+                <status>0x98</status>
+                <midino>0x40</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler9]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 1 Sampler 9</description>
+                <status>0x98</status>
+                <midino>0x60</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler9]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 1 Sampler 9 Stop</description>
+                <status>0x98</status>
+                <midino>0x68</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_2_activate</key>
+                <description>Deck 4 Pad 2 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x01</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_2_clear</key>
+                <description>Deck 4 Pad 2 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x09</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_1_toggle</key>
+                <description>Deck 4 Pad 2 Beat Loop 1</description>
+                <status>0x98</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem2]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 4 Pad 2 Stem 2 Mute</description>
+                <status>0x98</status>
+                <midino>0x21</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem2]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 4 Pad 2 Stem 2 Reset</description>
+                <status>0x98</status>
+                <midino>0x29</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_16_forward</key>
+                <description>Deck 4 Pad 2 Beat Jump +16</description>
+                <status>0x98</status>
+                <midino>0x31</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit4_Effect2]</group>
+                <key>enabled</key>
+                <description>Deck 4 Pad FX Slot 2</description>
+                <status>0x98</status>
+                <midino>0x41</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler10]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 2 Sampler 10</description>
+                <status>0x98</status>
+                <midino>0x61</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler10]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 2 Sampler 10 Stop</description>
+                <status>0x98</status>
+                <midino>0x69</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_3_activate</key>
+                <description>Deck 4 Pad 3 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x02</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_3_clear</key>
+                <description>Deck 4 Pad 3 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_2_toggle</key>
+                <description>Deck 4 Pad 3 Beat Loop 2</description>
+                <status>0x98</status>
+                <midino>0x12</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem3]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 4 Pad 3 Stem 3 Mute</description>
+                <status>0x98</status>
+                <midino>0x22</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem3]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 4 Pad 3 Stem 3 Reset</description>
+                <status>0x98</status>
+                <midino>0x2A</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_8_backward</key>
+                <description>Deck 4 Pad 3 Beat Jump -8</description>
+                <status>0x98</status>
+                <midino>0x32</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit4_Effect3]</group>
+                <key>enabled</key>
+                <description>Deck 4 Pad FX Slot 3</description>
+                <status>0x98</status>
+                <midino>0x42</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler11]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 3 Sampler 11</description>
+                <status>0x98</status>
+                <midino>0x62</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler11]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 3 Sampler 11 Stop</description>
+                <status>0x98</status>
+                <midino>0x6A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_4_activate</key>
+                <description>Deck 4 Pad 4 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x03</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_4_clear</key>
+                <description>Deck 4 Pad 4 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_4_toggle</key>
+                <description>Deck 4 Pad 4 Beat Loop 4</description>
+                <status>0x98</status>
+                <midino>0x13</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem4]</group>
+                <key>XdjXz.stemMuteToggle</key>
+                <description>Deck 4 Pad 4 Stem 4 Mute</description>
+                <status>0x98</status>
+                <midino>0x23</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4_Stem4]</group>
+                <key>XdjXz.stemMuteReset</key>
+                <description>Deck 4 Pad 4 Stem 4 Reset</description>
+                <status>0x98</status>
+                <midino>0x2B</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_8_forward</key>
+                <description>Deck 4 Pad 4 Beat Jump +8</description>
+                <status>0x98</status>
+                <midino>0x33</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit4]</group>
+                <key>group_[Channel4]_enable</key>
+                <description>Deck 4 Pad FX Unit Enable</description>
+                <status>0x98</status>
+                <midino>0x43</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler12]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 4 Sampler 12</description>
+                <status>0x98</status>
+                <midino>0x63</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler12]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 4 Sampler 12 Stop</description>
+                <status>0x98</status>
+                <midino>0x6B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_5_activate</key>
+                <description>Deck 4 Pad 5 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x04</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_5_clear</key>
+                <description>Deck 4 Pad 5 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_8_toggle</key>
+                <description>Deck 4 Pad 5 Beat Loop 8</description>
+                <status>0x98</status>
+                <midino>0x14</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatlooproll_0.5_activate</key>
+                <description>Deck 4 Pad 5 Slip Roll</description>
+                <status>0x98</status>
+                <midino>0x24</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_4_backward</key>
+                <description>Deck 4 Pad 5 Beat Jump -4</description>
+                <status>0x98</status>
+                <midino>0x34</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler13]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 5 Sampler 13</description>
+                <status>0x98</status>
+                <midino>0x64</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler13]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 5 Sampler 13 Stop</description>
+                <status>0x98</status>
+                <midino>0x6C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_6_activate</key>
+                <description>Deck 4 Pad 6 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x05</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_6_clear</key>
+                <description>Deck 4 Pad 6 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_16_toggle</key>
+                <description>Deck 4 Pad 6 Beat Loop 16</description>
+                <status>0x98</status>
+                <midino>0x15</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatlooproll_1_activate</key>
+                <description>Deck 4 Pad 6 Slip Roll</description>
+                <status>0x98</status>
+                <midino>0x25</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_4_forward</key>
+                <description>Deck 4 Pad 6 Beat Jump +4</description>
+                <status>0x98</status>
+                <midino>0x35</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler14]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 6 Sampler 14</description>
+                <status>0x98</status>
+                <midino>0x65</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler14]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 6 Sampler 14 Stop</description>
+                <status>0x98</status>
+                <midino>0x6D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_7_activate</key>
+                <description>Deck 4 Pad 7 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x06</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_7_clear</key>
+                <description>Deck 4 Pad 7 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_32_toggle</key>
+                <description>Deck 4 Pad 7 Beat Loop 32</description>
+                <status>0x98</status>
+                <midino>0x16</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatlooproll_2_activate</key>
+                <description>Deck 4 Pad 7 Slip Roll</description>
+                <status>0x98</status>
+                <midino>0x26</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_1_backward</key>
+                <description>Deck 4 Pad 7 Beat Jump -1</description>
+                <status>0x98</status>
+                <midino>0x36</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler15]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 7 Sampler 15</description>
+                <status>0x98</status>
+                <midino>0x66</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler15]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 7 Sampler 15 Stop</description>
+                <status>0x98</status>
+                <midino>0x6E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_8_activate</key>
+                <description>Deck 4 Pad 8 Hot Cue</description>
+                <status>0x98</status>
+                <midino>0x07</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>hotcue_8_clear</key>
+                <description>Deck 4 Pad 8 Hot Cue +SHIFT Clear</description>
+                <status>0x98</status>
+                <midino>0x0F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatloop_64_toggle</key>
+                <description>Deck 4 Pad 8 Beat Loop 64</description>
+                <status>0x98</status>
+                <midino>0x17</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatlooproll_4_activate</key>
+                <description>Deck 4 Pad 8 Slip Roll</description>
+                <status>0x98</status>
+                <midino>0x27</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beatjump_1_forward</key>
+                <description>Deck 4 Pad 8 Beat Jump +1</description>
+                <status>0x98</status>
+                <midino>0x37</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler16]</group>
+                <key>cue_gotoandplay</key>
+                <description>Deck 4 Pad 8 Sampler 16</description>
+                <status>0x98</status>
+                <midino>0x67</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Sampler16]</group>
+                <key>cue_gotoandstop</key>
+                <description>Deck 4 Pad 8 Sampler 16 Stop</description>
+                <status>0x98</status>
+                <midino>0x6F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>crossfader</key>
+                <description>Crossfader</description>
+                <status>0xB4</status>
+                <midino>0x0B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>gain</key>
+                <description>Master Level</description>
+                <status>0xB4</status>
+                <midino>0x18</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>booth_gain</key>
+                <description>Booth Level</description>
+                <status>0xB4</status>
+                <midino>0x19</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>headGain</key>
+                <description>Headphones Level</description>
+                <status>0xB4</status>
+                <midino>0x1A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>headMix</key>
+                <description>Headphones Cue/Master Mix</description>
+                <status>0xB4</status>
+                <midino>0x1B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>headSplit</key>
+                <description>Master CUE</description>
+                <status>0xB4</status>
+                <midino>0x4A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>XdjXz.mixerModeState</key>
+                <description>Mixer MIDI mode state</description>
+                <status>0xB4</status>
+                <midino>0x65</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>volume</key>
+                <description>CH 1 Fader</description>
+                <status>0xB4</status>
+                <midino>0x11</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>pregain</key>
+                <description>CH 1 Trim</description>
+                <status>0xB4</status>
+                <midino>0x01</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel1]_Effect1]</group>
+                <key>parameter3</key>
+                <description>CH 1 EQ High</description>
+                <status>0xB4</status>
+                <midino>0x02</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel1]_Effect1]</group>
+                <key>parameter2</key>
+                <description>CH 1 EQ Mid</description>
+                <status>0xB4</status>
+                <midino>0x03</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel1]_Effect1]</group>
+                <key>parameter1</key>
+                <description>CH 1 EQ Low</description>
+                <status>0xB4</status>
+                <midino>0x04</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>pfl</key>
+                <description>CH 1 Headphone CUE</description>
+                <status>0xB4</status>
+                <midino>0x46</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>super1</key>
+                <description>CH 1 Sound Color FX</description>
+                <status>0xB4</status>
+                <midino>0x05</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>volume</key>
+                <description>CH 2 Fader</description>
+                <status>0xB4</status>
+                <midino>0x12</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>pregain</key>
+                <description>CH 2 Trim</description>
+                <status>0xB4</status>
+                <midino>0x06</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel2]_Effect1]</group>
+                <key>parameter3</key>
+                <description>CH 2 EQ High</description>
+                <status>0xB4</status>
+                <midino>0x07</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel2]_Effect1]</group>
+                <key>parameter2</key>
+                <description>CH 2 EQ Mid</description>
+                <status>0xB4</status>
+                <midino>0x08</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel2]_Effect1]</group>
+                <key>parameter1</key>
+                <description>CH 2 EQ Low</description>
+                <status>0xB4</status>
+                <midino>0x09</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>pfl</key>
+                <description>CH 2 Headphone CUE</description>
+                <status>0xB4</status>
+                <midino>0x47</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel2]]</group>
+                <key>super1</key>
+                <description>CH 2 Sound Color FX</description>
+                <status>0xB4</status>
+                <midino>0x0A</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>volume</key>
+                <description>CH 3 Fader</description>
+                <status>0xB4</status>
+                <midino>0x13</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>pregain</key>
+                <description>CH 3 Trim</description>
+                <status>0xB4</status>
+                <midino>0x0C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel3]_Effect1]</group>
+                <key>parameter3</key>
+                <description>CH 3 EQ High</description>
+                <status>0xB4</status>
+                <midino>0x0E</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel3]_Effect1]</group>
+                <key>parameter2</key>
+                <description>CH 3 EQ Mid</description>
+                <status>0xB4</status>
+                <midino>0x0F</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel3]_Effect1]</group>
+                <key>parameter1</key>
+                <description>CH 3 EQ Low</description>
+                <status>0xB4</status>
+                <midino>0x15</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>pfl</key>
+                <description>CH 3 Headphone CUE</description>
+                <status>0xB4</status>
+                <midino>0x48</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel3]]</group>
+                <key>super1</key>
+                <description>CH 3 Sound Color FX</description>
+                <status>0xB4</status>
+                <midino>0x16</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>volume</key>
+                <description>CH 4 Fader</description>
+                <status>0xB4</status>
+                <midino>0x14</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>pregain</key>
+                <description>CH 4 Trim</description>
+                <status>0xB4</status>
+                <midino>0x50</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel4]_Effect1]</group>
+                <key>parameter3</key>
+                <description>CH 4 EQ High</description>
+                <status>0xB4</status>
+                <midino>0x51</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel4]_Effect1]</group>
+                <key>parameter2</key>
+                <description>CH 4 EQ Mid</description>
+                <status>0xB4</status>
+                <midino>0x5C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EqualizerRack1_[Channel4]_Effect1]</group>
+                <key>parameter1</key>
+                <description>CH 4 EQ Low</description>
+                <status>0xB4</status>
+                <midino>0x52</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>pfl</key>
+                <description>CH 4 Headphone CUE</description>
+                <status>0xB4</status>
+                <midino>0x49</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel4]]</group>
+                <key>super1</key>
+                <description>CH 4 Sound Color FX</description>
+                <status>0xB4</status>
+                <midino>0x53</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Space</description>
+                <status>0xB4</status>
+                <midino>0x69</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Dub Echo</description>
+                <status>0xB4</status>
+                <midino>0x6B</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Sweep</description>
+                <status>0xB4</status>
+                <midino>0x6A</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Noise</description>
+                <status>0xB4</status>
+                <midino>0x55</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Crush</description>
+                <status>0xB4</status>
+                <midino>0x56</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxSelect</key>
+                <description>Sound Color FX Filter</description>
+                <status>0xB4</status>
+                <midino>0x57</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[QuickEffectRack1_[Channel1]]</group>
+                <key>XdjXz.colorFxParameter</key>
+                <description>Sound Color FX Parameter</description>
+                <status>0xB4</status>
+                <midino>0x6C</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1]</group>
+                <key>enabled</key>
+                <description>Beat FX On/Off</description>
+                <status>0xB4</status>
+                <midino>0x72</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1]</group>
+                <key>mix</key>
+                <description>Beat FX Level/Depth</description>
+                <status>0xB4</status>
+                <midino>0x5B</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1_Effect1]</group>
+                <key>prev_effect</key>
+                <description>Beat Left / Prev Effect</description>
+                <status>0xB4</status>
+                <midino>0x4C</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1_Effect1]</group>
+                <key>next_effect</key>
+                <description>Beat Right / Next Effect</description>
+                <status>0xB4</status>
+                <midino>0x4D</midino>
+                <options>
+                    <normal />
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>XdjXz.beatFxTap</key>
+                <description>Beat FX TAP</description>
+                <status>0xB4</status>
+                <midino>0x4E</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+            <control>
+                <group>[EffectRack1_EffectUnit1]</group>
+                <key>XdjXz.beatFxTime</key>
+                <description>Beat FX Time Rotary</description>
+                <status>0xB4</status>
+                <midino>0x2D</midino>
+                <options>
+                    <script-binding />
+                </options>
+            </control>
+        </controls>
+        <outputs>
+            <output>
+                <group>[Channel1]</group>
+                <key>slip_enabled</key>
+                <description>Deck 1 Slip LED</description>
+                <minimum>0.5</minimum>
+                <status>0x90</status>
+                <midino>0x2C</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>reverseroll</key>
+                <description>Deck 1 Reverse LED</description>
+                <minimum>0.5</minimum>
+                <status>0x90</status>
+                <midino>0x21</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>loop_enabled</key>
+                <description>Deck 1 Loop LED</description>
+                <minimum>0.5</minimum>
+                <status>0x90</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_1_enabled</key>
+                <description>Deck 1 Pad 1 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x00</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_2_enabled</key>
+                <description>Deck 1 Pad 2 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x01</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_3_enabled</key>
+                <description>Deck 1 Pad 3 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x02</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_4_enabled</key>
+                <description>Deck 1 Pad 4 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x03</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_5_enabled</key>
+                <description>Deck 1 Pad 5 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x04</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_6_enabled</key>
+                <description>Deck 1 Pad 6 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x05</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_7_enabled</key>
+                <description>Deck 1 Pad 7 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel1]</group>
+                <key>hotcue_8_enabled</key>
+                <description>Deck 1 Pad 8 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x95</status>
+                <midino>0x07</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>slip_enabled</key>
+                <description>Deck 2 Slip LED</description>
+                <minimum>0.5</minimum>
+                <status>0x91</status>
+                <midino>0x2C</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>reverseroll</key>
+                <description>Deck 2 Reverse LED</description>
+                <minimum>0.5</minimum>
+                <status>0x91</status>
+                <midino>0x21</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>loop_enabled</key>
+                <description>Deck 2 Loop LED</description>
+                <minimum>0.5</minimum>
+                <status>0x91</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_1_enabled</key>
+                <description>Deck 2 Pad 1 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x00</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_2_enabled</key>
+                <description>Deck 2 Pad 2 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x01</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_3_enabled</key>
+                <description>Deck 2 Pad 3 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x02</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_4_enabled</key>
+                <description>Deck 2 Pad 4 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x03</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_5_enabled</key>
+                <description>Deck 2 Pad 5 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x04</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_6_enabled</key>
+                <description>Deck 2 Pad 6 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x05</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_7_enabled</key>
+                <description>Deck 2 Pad 7 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel2]</group>
+                <key>hotcue_8_enabled</key>
+                <description>Deck 2 Pad 8 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x96</status>
+                <midino>0x07</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>slip_enabled</key>
+                <description>Deck 3 Slip LED</description>
+                <minimum>0.5</minimum>
+                <status>0x92</status>
+                <midino>0x2C</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>reverseroll</key>
+                <description>Deck 3 Reverse LED</description>
+                <minimum>0.5</minimum>
+                <status>0x92</status>
+                <midino>0x21</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>loop_enabled</key>
+                <description>Deck 3 Loop LED</description>
+                <minimum>0.5</minimum>
+                <status>0x92</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_1_enabled</key>
+                <description>Deck 3 Pad 1 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x00</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_2_enabled</key>
+                <description>Deck 3 Pad 2 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x01</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_3_enabled</key>
+                <description>Deck 3 Pad 3 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x02</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_4_enabled</key>
+                <description>Deck 3 Pad 4 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x03</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_5_enabled</key>
+                <description>Deck 3 Pad 5 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x04</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_6_enabled</key>
+                <description>Deck 3 Pad 6 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x05</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_7_enabled</key>
+                <description>Deck 3 Pad 7 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel3]</group>
+                <key>hotcue_8_enabled</key>
+                <description>Deck 3 Pad 8 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x97</status>
+                <midino>0x07</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>slip_enabled</key>
+                <description>Deck 4 Slip LED</description>
+                <minimum>0.5</minimum>
+                <status>0x93</status>
+                <midino>0x2C</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>reverseroll</key>
+                <description>Deck 4 Reverse LED</description>
+                <minimum>0.5</minimum>
+                <status>0x93</status>
+                <midino>0x21</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>loop_enabled</key>
+                <description>Deck 4 Loop LED</description>
+                <minimum>0.5</minimum>
+                <status>0x93</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_1_enabled</key>
+                <description>Deck 4 Pad 1 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x00</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_2_enabled</key>
+                <description>Deck 4 Pad 2 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x01</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_3_enabled</key>
+                <description>Deck 4 Pad 3 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x02</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_4_enabled</key>
+                <description>Deck 4 Pad 4 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x03</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_5_enabled</key>
+                <description>Deck 4 Pad 5 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x04</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_6_enabled</key>
+                <description>Deck 4 Pad 6 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x05</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_7_enabled</key>
+                <description>Deck 4 Pad 7 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x06</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+            <output>
+                <group>[Channel4]</group>
+                <key>hotcue_8_enabled</key>
+                <description>Deck 4 Pad 8 Hot Cue LED</description>
+                <minimum>0.5</minimum>
+                <status>0x98</status>
+                <midino>0x07</midino>
+                <on>0x7F</on>
+                <off>0x00</off>
+            </output>
+        </outputs>
+    </controller>
+</MixxxControllerPreset>

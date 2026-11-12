@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<MixxxControllerPreset mixxxVersion="2.5" schemaVersion="1">
+    <info>
+        <name>Allen&amp;Heath Xone K3 Cat</name>
+        <author>myCatnip</author>
+        <description>Xone K3 "Cat" (ch 0x0E).</description>
+    </info>
+    <controller id="XONE:K3 Cat MIDI 1">
+        <scriptfiles>
+            <file filename="xone-k3-lib-core.js"/>
+            <file filename="xone-k3-lib-schemes.js"/>
+            <file filename="xone-k3-lib-binding.js"/>
+            <file filename="xone-k3-lib-controller.js"/>
+            <file filename="xone-k3-lib-controller-colour.js"/>
+            <file filename="xone-k3-lib-controller-beat.js"/>
+            <file filename="xone-k3-lib-controller-render.js"/>
+            <file filename="xone-k3-lib-controller-boot.js"/>
+            <file filename="xone-k3-lib-funcs.js"/>
+            <file filename="xone-k3-lib-inspect.js"/>
+            <file filename="xone-k3-cat-schemes.js"/>
+            <file filename="xone-k3-cat-fx.js"/>
+            <file filename="xone-k3-cat-top.js"/>
+            <file filename="xone-k3-cat-bottom.js"/>
+            <file filename="xone-k3-cat-overlays.js"/>
+            <file filename="xone-k3-cat.js" functionprefix="XoneK3"/>
+            <file filename="xone-k3-snake.js"/>
+        </scriptfiles>
+        <controls>
+            <control><key>XoneK3.init</key></control>
+            <control><key>XoneK3.shutdown</key></control>
+        </controls>
+    </controller>
+</MixxxControllerPreset>

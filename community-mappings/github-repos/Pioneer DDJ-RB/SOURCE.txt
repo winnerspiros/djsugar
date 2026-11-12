@@ -1,0 +1,6 @@
+Mapping: Pioneer DDJ-RB
+Author: Trinity Atom, Luis Mita, Be and contributors
+Source: https://github.com/Trinity-Atom/Mixxx-Mapping-for-DDJ-RB
+License: GPL-2.0-or-later / MIT (see the header of the script)
+Status: community mapping, not part of Mixxx; not tested by Mixxx Android
+Also needs lodash.mixxx.js and midi-components-0.0.js, included with Mixxx.

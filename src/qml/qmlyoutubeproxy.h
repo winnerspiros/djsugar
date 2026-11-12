@@ -121,6 +121,8 @@ class QmlYouTubeProxy : public QObject {
     void soundCloudFailed(const QString& error);
     void downloadProgressChanged(const QString& videoId, double progress);
     void downloadFinished(const QString& videoId, const QString& localPath);
+    /// The file is on disk, also for a cache hit (unlike downloadFinished)
+    void fileReady(const QString& videoId, const QString& localPath);
     void downloadFailed(const QString& videoId, const QString& error);
     void sponsorBlockAutoSkipChanged();
     void accountsChanged();

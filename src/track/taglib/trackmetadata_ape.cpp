@@ -65,7 +65,7 @@ bool importCoverImageFromTag(QImage* pCoverArt, const TagLib::APE::Tag& tag) {
             const TagLib::ByteVector data(item.mid(pos));
             const QImage image(loadImageFromByteVector(data));
             if (image.isNull()) {
-                kLogger.warning()
+                kLogger.debug()
                         << "Failed to load image from APE tag";
             } else {
                 *pCoverArt = image; // success

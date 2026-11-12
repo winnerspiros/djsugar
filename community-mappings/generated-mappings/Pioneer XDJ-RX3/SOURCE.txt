@@ -1,0 +1,8 @@
+[AI-GENERATED DISCLAIMER START]
+Mapping: Pioneer XDJ-RX3
+Author: openDJ authors (GPL-2.0); adapted for standard Mixxx 2.6+ with AI assistance
+Source: https://github.com/openwave-studio/opendj (res/controllers/Pioneer-XDJ-RX3.*)
+License: GPL-2.0-only
+Status: adapted from openDJ's AlphaTheta XDJ-RX3 MIDI spec mapping for vanilla Mixxx 2.6+; untested on physical hardware
+Note: AI-generated adaptation framing — replaced openDJ-only EffectUnit5..9, pad_tab/pad_panel/pad_slot, midi.routeNote, sampler_page, Stem5, jog_bend, and EffectSlot.beats with standard Mixxx 2.6 EffectUnit1..4, Stem1..4, Sampler1..16, and jog ControlObjects.
+[AI-GENERATED DISCLAIMER END]

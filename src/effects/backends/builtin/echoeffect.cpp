@@ -1,256 +1,157 @@
 #include "effects/backends/builtin/echoeffect.h"
 
-#include "effects/backends/effectmanifest.h"
-#include "engine/effects/engineeffectparameter.h"
-#include "util/math.h"
-#include "util/rampingvalue.h"
-#include "util/sample.h"
-
-constexpr int EchoGroupState::kMaxDelaySeconds;
-
 namespace {
 
-void incrementRing(int* pIndex, int increment, int length) {
-    *pIndex = (*pIndex + increment) % length;
+constexpr float kMaxSeconds = 4.0f;
+
+// Maps the bipolar tone knob to the loop filters: left darkens each
+// repeat (low-pass), right thins it (high-pass), center is open.
+void toneToCutoffs(float tone, float* pLowCut, float* pHighCut) {
+    const float t = tone - 0.5f;
+    *pLowCut = t > 0.0f ? fxdsp::knobToHz(2.0f * t, 30.0f, 3000.0f) : 30.0f;
+    *pHighCut = t < 0.0f ? fxdsp::knobToHz(1.0f + 2.0f * t, 600.0f, 18000.0f) : 18000.0f;
 }
 
-void decrementRing(int* pIndex, int decrement, int length) {
-    *pIndex = (*pIndex + length - decrement) % length;
-}
+} // namespace
 
-} // anonymous namespace
-
-// static
 QString EchoEffect::getId() {
-    return "org.mixxx.effects.echo";
+    return QStringLiteral("org.mixxx.effects.echo");
 }
 
-// static
 EffectManifestPointer EchoEffect::getManifest() {
-    EffectManifestPointer pManifest(new EffectManifest());
+    auto pManifest = djfx::manifest(getId(),
+            QObject::tr("Echo"),
+            QObject::tr("Echo"),
+            QObject::tr("Beat-synced stereo echo with tone shaping, ping-pong, "
+                        "ducking and freeze. Repeats ring out when the deck is "
+                        "taken off the effect unit."));
 
-    pManifest->setAddDryToWet(true);
-    pManifest->setEffectRampsFromDry(true);
-
-    pManifest->setId(getId());
-    pManifest->setName(QObject::tr("Echo"));
-    pManifest->setShortName(QObject::tr("Echo"));
-    pManifest->setAuthor("The Mixxx Team");
-    pManifest->setVersion("1.0");
-    pManifest->setDescription(QObject::tr(
-            "Stores the input signal in a temporary buffer and outputs it after a short time"));
-
-    EffectManifestParameterPointer delay = pManifest->addParameter();
-    delay->setId("delay_time");
-    delay->setName(QObject::tr("Time"));
-    delay->setShortName(QObject::tr("Time"));
-    delay->setDescription(QObject::tr(
-            "Delay time\n"
-            "1/8 - 2 beats if tempo is detected\n"
-            "1/8 - 2 seconds if no tempo is detected"));
-    delay->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    delay->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    delay->setRange(0.0, 0.5, 2.0);
-
-    EffectManifestParameterPointer feedback = pManifest->addParameter();
-    feedback->setId("feedback_amount");
-    feedback->setName(QObject::tr("Feedback"));
-    feedback->setShortName(QObject::tr("Feedback"));
-    feedback->setDescription(QObject::tr(
-            "Amount the echo fades each time it loops"));
-    feedback->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    feedback->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    feedback->setRange(0.00, db2ratio(-3.0), 1.00);
-
-    EffectManifestParameterPointer pingpong = pManifest->addParameter();
-    pingpong->setId("pingpong_amount");
-    pingpong->setName(QObject::tr("Ping Pong"));
-    pingpong->setShortName(QObject::tr("Ping Pong"));
-    pingpong->setDescription(
-            QObject::tr("How much the echoed sound bounces between the left "
-                        "and right sides of the stereo field"));
-    pingpong->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    pingpong->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    pingpong->setRange(0.0, 0.0, 1.0);
-
-    EffectManifestParameterPointer send = pManifest->addParameter();
-    send->setId("send_amount");
-    send->setName(QObject::tr("Send"));
-    send->setShortName(QObject::tr("Send"));
-    send->setDescription(QObject::tr(
-            "How much of the signal to send into the delay buffer"));
-    send->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
-    send->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    send->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
-    send->setRange(0.0, db2ratio(-3.0), 1.0);
-
-    EffectManifestParameterPointer quantize = pManifest->addParameter();
-    quantize->setId("quantize");
-    quantize->setName(QObject::tr("Quantize"));
-    quantize->setShortName(QObject::tr("Quantize"));
-    quantize->setDescription(QObject::tr(
-            "Round the Time parameter to the nearest 1/4 beat."));
-    quantize->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    quantize->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    quantize->setRange(0, 1, 1);
-
-    EffectManifestParameterPointer triplet = pManifest->addParameter();
-    triplet->setId("triplet");
-    triplet->setName(QObject::tr("Triplets"));
-    triplet->setShortName(QObject::tr("Triplets"));
-    triplet->setDescription(
-            QObject::tr("When the Quantize parameter is enabled, divide "
-                        "rounded 1/4 beats of Time parameter by 3."));
-    triplet->setValueScaler(EffectManifestParameter::ValueScaler::Toggle);
-    triplet->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
-    triplet->setRange(0, 0, 1);
-
+    djfx::division(pManifest,
+            QStringLiteral("delay_time"),
+            QObject::tr("Time"),
+            QObject::tr("Time"),
+            QObject::tr("Echo time in beats."),
+            0.75);
+    auto pAmount = djfx::knob(pManifest,
+            QStringLiteral("send_amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Amount"),
+            QObject::tr("Level of the echoes."),
+            0.0,
+            1.0,
+            1.0);
+    djfx::linkToMetaknob(pAmount);
+    djfx::knob(pManifest,
+            QStringLiteral("feedback_amount"),
+            QObject::tr("Feedback"),
+            QObject::tr("Feedback"),
+            QObject::tr("How long the echoes repeat. Full is near endless."),
+            0.0,
+            0.55,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Tone"),
+            QObject::tr("Left: every repeat gets darker. Right: every repeat gets "
+                        "thinner. Center: unchanged."),
+            0.0,
+            0.5,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("pingpong_amount"),
+            QObject::tr("Ping Pong"),
+            QObject::tr("PingPong"),
+            QObject::tr("Bounces the repeats between left and right."),
+            0.0,
+            0.0,
+            1.0);
+    djfx::knob(pManifest,
+            QStringLiteral("ducking"),
+            QObject::tr("Ducking"),
+            QObject::tr("Duck"),
+            QObject::tr("Pushes the echoes down while the track is loud so they "
+                        "bloom in the gaps."),
+            0.0,
+            0.0,
+            1.0);
+    djfx::toggle(pManifest,
+            QStringLiteral("tape"),
+            QObject::tr("Tape"),
+            QObject::tr("Tape"),
+            QObject::tr("Time changes glide and bend the pitch like a tape "
+                        "machine instead of crossfading."));
+    djfx::toggle(pManifest,
+            QStringLiteral("freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Freeze"),
+            QObject::tr("Closes the input and loops the current echoes forever."));
     return pManifest;
 }
 
-void EchoEffect::loadEngineEffectParameters(
-        const QMap<QString, EngineEffectParameterPointer>& parameters) {
-    m_pDelayParameter = parameters.value("delay_time");
-    m_pSendParameter = parameters.value("send_amount");
-    m_pFeedbackParameter = parameters.value("feedback_amount");
-    m_pPingPongParameter = parameters.value("pingpong_amount");
-    m_pQuantizeParameter = parameters.value("quantize");
-    m_pTripletParameter = parameters.value("triplet");
+EchoGroupState::EchoGroupState(const mixxx::EngineParameters& engineParameters)
+        : DjFxState(engineParameters) {
+    delay.setup(m_sampleRate, kMaxSeconds);
+    envelope.setup(0.005f, 0.25f, m_sampleRate);
+    amount.setTime(0.02f, m_sampleRate);
+    feedback.setTime(0.05f, m_sampleRate);
+    tone.setTime(0.05f, m_sampleRate);
+    spread.setTime(0.05f, m_sampleRate);
 }
 
-void EchoEffect::processChannel(
-        EchoGroupState* pGroupState,
+void EchoEffect::processChannel(EchoGroupState* pState,
         const CSAMPLE* pInput,
         CSAMPLE* pOutput,
         const mixxx::EngineParameters& engineParameters,
         const EffectEnableState enableState,
         const GroupFeatureState& groupFeatures) {
-    // The minimum of the parameter is zero so the exact center of the knob is 1 beat.
-    double period = m_pDelayParameter->value();
-    const auto send_current = static_cast<CSAMPLE_GAIN>(m_pSendParameter->value());
-    const auto feedback_current = static_cast<CSAMPLE_GAIN>(m_pFeedbackParameter->value());
-    const auto pingpong_frac = static_cast<CSAMPLE_GAIN>(m_pPingPongParameter->value());
-
-    double delay_seconds;
-    if (groupFeatures.beat_length.has_value()) {
-        // period is a number of beats
-        if (m_pQuantizeParameter->toBool()) {
-            period = std::max(roundToFraction(period, 4), 1 / 8.0);
-            if (m_pTripletParameter->toBool()) {
-                period /= 3.0;
-            }
-        } else if (period < 1 / 8.0) {
-            period = 1 / 8.0;
-        }
-        delay_seconds = period * groupFeatures.beat_length->seconds;
-    } else {
-        // period is a number of seconds
-        period = std::max(period, 1 / 8.0);
-        delay_seconds = period;
+    const int frames = static_cast<int>(engineParameters.framesPerBuffer());
+    pState->updateClock(groupFeatures, frames);
+    if (enableState == EffectEnableState::Enabling) {
+        pState->delay.clear();
+        pState->envelope.reset();
+        pState->amount.reset(param(kAmount));
+        pState->feedback.reset(param(kFeedback));
+        pState->tone.reset(param(kTone));
+        pState->spread.reset(param(kSpread));
     }
-    VERIFY_OR_DEBUG_ASSERT(delay_seconds > 0) {
-        delay_seconds = 1 / engineParameters.sampleRate();
+    pState->amount.setTarget(param(kAmount));
+    pState->feedback.setTarget(param(kFeedback));
+    pState->tone.setTarget(param(kTone));
+    pState->spread.setTarget(param(kSpread));
+    const float ducking = param(kDucking);
+
+    fxdsp::TempoDelay::Settings settings;
+    // Long divisions halve until they fit the buffer at slow tempos.
+    double delaySamples = paramBeats(kTime) * pState->clock.samplesPerBeat();
+    while (delaySamples > pState->delay.maxDelaySamples() - 16.0) {
+        delaySamples *= 0.5;
     }
+    settings.delaySamples = static_cast<float>(delaySamples);
+    settings.glide = paramBool(kTape);
+    settings.freeze = paramBool(kFreeze);
+    settings.drive = 0.25f;
 
-    int delay_frames = static_cast<int>(delay_seconds *
-            engineParameters.sampleRate());
+    for (int i = 0; i < frames; ++i) {
+        const float inL = pInput[2 * i];
+        const float inR = pInput[2 * i + 1];
+        const float amount = pState->amount.next();
+        // Feedback curve: most of the travel is in the useful 0.3..0.9 range.
+        const float fb = pState->feedback.next();
+        settings.feedback = 1.02f * (1.0f - (1.0f - fb) * (1.0f - fb));
+        settings.spread = pState->spread.next();
+        toneToCutoffs(pState->tone.next(), &settings.lowCutHz, &settings.highCutHz);
 
-    int delay_samples = delay_frames * engineParameters.channelCount();
-    VERIFY_OR_DEBUG_ASSERT(delay_samples <= pGroupState->delay_buf.size()) {
-        delay_samples = pGroupState->delay_buf.size();
+        float wetL;
+        float wetR;
+        pState->delay.process(settings, inL, inR, &wetL, &wetR);
+
+        const float env = pState->envelope.process(0.5f * (inL + inR));
+        const float duck = 1.0f - ducking * fxdsp::clampf(env * 2.5f, 0.0f, 0.85f);
+        // 0.7 keeps repeats on top of a full-scale track out of the
+        // master limiter.
+        const float gain = 0.7f * amount * duck;
+        pOutput[2 * i] = inL + wetL * gain;
+        pOutput[2 * i + 1] = inR + wetR * gain;
     }
-
-    int prev_read_position = pGroupState->write_position;
-    decrementRing(&prev_read_position,
-            pGroupState->prev_delay_samples,
-            pGroupState->delay_buf.size());
-    int read_position = pGroupState->write_position;
-    decrementRing(&read_position, delay_samples, pGroupState->delay_buf.size());
-
-    RampingValue<CSAMPLE_GAIN> send(pGroupState->prev_send,
-            send_current,
-            engineParameters.framesPerBuffer());
-    // Feedback the delay buffer and then add the new input.
-
-    RampingValue<CSAMPLE_GAIN> feedback(pGroupState->prev_feedback,
-            feedback_current,
-            engineParameters.framesPerBuffer());
-
-    int rampIndex = 0;
-    //TODO: rewrite to remove assumption of stereo buffer
-    for (SINT i = 0;
-            i < engineParameters.samplesPerBuffer();
-            i += engineParameters.channelCount()) {
-        CSAMPLE_GAIN send_ramped = send.getNth(rampIndex);
-        CSAMPLE_GAIN feedback_ramped = feedback.getNth(rampIndex);
-        ++rampIndex;
-
-        CSAMPLE bufferedSampleLeft = pGroupState->delay_buf[read_position];
-        CSAMPLE bufferedSampleRight = pGroupState->delay_buf[read_position + 1];
-        if (read_position != prev_read_position) {
-            const CSAMPLE_GAIN frac = static_cast<CSAMPLE_GAIN>(i) /
-                    engineParameters.samplesPerBuffer();
-            bufferedSampleLeft *= frac;
-            bufferedSampleRight *= frac;
-            bufferedSampleLeft += pGroupState->delay_buf[prev_read_position] * (1 - frac);
-            bufferedSampleRight += pGroupState->delay_buf[prev_read_position + 1] * (1 - frac);
-            incrementRing(&prev_read_position,
-                    engineParameters.channelCount(),
-                    pGroupState->delay_buf.size());
-        }
-        incrementRing(&read_position,
-                engineParameters.channelCount(),
-                pGroupState->delay_buf.size());
-
-        // Actual delays distort and saturate, so clamp the buffer here.
-        pGroupState->delay_buf[pGroupState->write_position] = SampleUtil::clampSample(
-                pInput[i] * send_ramped +
-                bufferedSampleLeft * feedback_ramped);
-        pGroupState->delay_buf[pGroupState->write_position + 1] = SampleUtil::clampSample(
-                pInput[i + 1] * send_ramped +
-                bufferedSampleRight * feedback_ramped);
-
-        // Pingpong the output.  If the pingpong value is zero, all of the
-        // math below should result in a simple copy of delay buf to pOutput.
-        if (pGroupState->ping_pong < delay_samples / 2) {
-            // Left sample plus a fraction of the right sample, normalized
-            // by 1 + fraction.
-            pOutput[i] =
-                    (bufferedSampleLeft + bufferedSampleRight * pingpong_frac) /
-                    (1 + pingpong_frac);
-            // Right sample reduced by (1 - fraction)
-            pOutput[i + 1] = bufferedSampleRight * (1 - pingpong_frac);
-        } else {
-            // Left sample reduced by (1 - fraction)
-            pOutput[i] = bufferedSampleLeft * (1 - pingpong_frac);
-            // Right sample plus fraction of left sample, normalized by
-            // 1 + fraction
-            pOutput[i + 1] =
-                    (bufferedSampleRight + bufferedSampleLeft * pingpong_frac) /
-                    (1 + pingpong_frac);
-        }
-
-        incrementRing(&pGroupState->write_position,
-                engineParameters.channelCount(),
-                pGroupState->delay_buf.size());
-
-        ++(pGroupState->ping_pong);
-        if (pGroupState->ping_pong >= delay_samples) {
-            pGroupState->ping_pong = 0;
-        }
-    }
-
-    // The ramping of the send parameter handles ramping when enabling, so
-    // this effect must handle ramping to dry when disabling itself (instead
-    // of being handled by EngineEffect::process).
-    if (enableState == EffectEnableState::Disabling) {
-        SampleUtil::applyRampingGain(pOutput, 1.0, 0.0, engineParameters.samplesPerBuffer());
-        pGroupState->delay_buf.clear();
-        pGroupState->prev_send = 0;
-    } else {
-        pGroupState->prev_send = send_current;
-    }
-
-    pGroupState->prev_feedback = feedback_current;
-    pGroupState->prev_delay_samples = delay_samples;
 }

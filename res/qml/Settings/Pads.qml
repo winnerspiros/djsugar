@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "../Theme"
+import ".." as Skin
 
 // Pick what each performance pad plays, the way rekordbox does it: the pads
 // are drawn like the controller (2 rows of 4), tap one and choose a sample
@@ -81,6 +82,16 @@ Category {
                 first: 9
                 sampler: true
             }
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#00e5ff"
+                label: qsTr("Reset SAMPLER")
+                onClicked: {
+                    Mixxx.PlayerManager.resetSamplers();
+                    picker.pickedPaths = {};
+                    root.revision++;
+                }
+            }
 
             // ================= PAD FX =================
             Text {
@@ -99,8 +110,10 @@ Category {
                 first: 9
                 sampler: false
             }
-            Button {
-                text: qsTr("Reset PAD FX to defaults")
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#ff4081"
+                label: qsTr("Reset PAD FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetPadFx();
                     root.revision++;
@@ -137,8 +150,10 @@ Category {
                     }
                 }
             }
-            Button {
-                text: qsTr("Reset BEAT FX to defaults")
+            PillButton {
+                Layout.alignment: Qt.AlignRight
+                accent: "#ffab00"
+                label: qsTr("Reset BEAT FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetBeatFx();
                     root.revision++;
@@ -246,14 +261,15 @@ Category {
         property string label
         property bool filled: false
         property bool playIcon: false
+        property color accent: picker.accent
 
         signal clicked
 
         implicitWidth: pillRow.implicitWidth + 32
         implicitHeight: 40
         radius: height / 2
-        color: filled ? picker.accent : pillArea.pressed ? Qt.rgba(picker.accent.r, picker.accent.g, picker.accent.b, 0.2) : "transparent"
-        border.color: picker.accent
+        color: filled ? pill.accent : pillArea.pressed ? Qt.rgba(pill.accent.r, pill.accent.g, pill.accent.b, 0.2) : "transparent"
+        border.color: pill.accent
         border.width: filled ? 0 : 1.5
         opacity: pillArea.pressed && filled ? 0.8 : 1
 
@@ -273,7 +289,7 @@ Category {
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.reset();
-                    ctx.fillStyle = pill.filled ? "#000000" : picker.accent;
+                    ctx.fillStyle = pill.filled ? "#000000" : pill.accent;
                     ctx.beginPath();
                     ctx.moveTo(1, 1);
                     ctx.lineTo(width - 1, height / 2);
@@ -291,7 +307,7 @@ Category {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: pill.label
-                color: pill.filled ? "#000000" : picker.accent
+                color: pill.filled ? "#000000" : pill.accent
                 font.pixelSize: 14
                 font.bold: true
             }
@@ -302,13 +318,6 @@ Category {
             anchors.fill: parent
             onClicked: pill.clicked()
         }
-    }
-
-    Mixxx.ControlProxy {
-        id: previewPlay
-
-        group: picker.sampler ? "[Sampler" + picker.pad + "]" : "[Sampler1]"
-        key: "cue_gotoandplay"
     }
 
     Popup {
@@ -331,17 +340,45 @@ Category {
             if (mode === 1) {
                 return item.key === Mixxx.EffectsManager.padFxEffect(pad);
             }
-            if (pickedPaths[pad] !== undefined) {
-                return pickedPaths[pad] === item.path;
+            return false;
+        }
+        // The sample on a sampler pad, as a path
+        function samplePath(samplerPad) {
+            if (pickedPaths[samplerPad] !== undefined) {
+                return pickedPaths[samplerPad];
             }
-            const player = Mixxx.PlayerManager.getPlayer("[Sampler" + pad + "]");
+            const player = Mixxx.PlayerManager.getPlayer("[Sampler" + samplerPad + "]");
             const track = player ? player.currentTrack : null;
-            return !!track && track.title !== "" && track.title === item.name;
+            if (!track || track.title === "") {
+                return "";
+            }
+            for (let i = 0; i < root.samples.length; i++) {
+                if (root.samples[i].name === track.title) {
+                    return root.samples[i].path;
+                }
+            }
+            return "";
+        }
+
+        // Put a sample on the pad and remember it as the pad's choice
+        function assign(path) {
+            Mixxx.PlayerManager.loadLocationToPlayer(path, "[Sampler" + picker.pad + "]", false);
+            const paths = picker.pickedPaths;
+            paths[picker.pad] = path;
+            picker.pickedPaths = paths;
+            root.revision++;
         }
 
         function openFor(newPad, newMode) {
             picker.pad = newPad;
             picker.mode = newMode;
+            if (newMode === 0) {
+                samplePicker.title = qsTr("Sample for pad %1").arg(newPad);
+                samplePicker.previewGroup = "[Sampler" + newPad + "]";
+                samplePicker.current = picker.samplePath(newPad);
+                samplePicker.open();
+                return;
+            }
             picker.open();
         }
 
@@ -363,7 +400,7 @@ Category {
             spacing: 6
 
             Text {
-                text: (picker.mode === 0 ? qsTr("Sample for pad %1") : picker.mode === 1 ? qsTr("Effect for pad %1") : qsTr("BEAT FX %1")).arg(picker.pad)
+                text: (picker.mode === 1 ? qsTr("Effect for pad %1") : qsTr("BEAT FX %1")).arg(picker.pad)
                 color: Theme.white
                 font.bold: true
                 font.pixelSize: 14
@@ -373,7 +410,7 @@ Category {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: picker.mode === 0 ? root.samples : picker.mode === 1 ? root.effects : root.beatEffects
+                model: picker.mode === 1 ? root.effects : root.beatEffects
                 delegate: Rectangle {
                     id: row
 
@@ -431,12 +468,7 @@ Category {
 
                         anchors.fill: parent
                         onClicked: {
-                            if (picker.sampler) {
-                                Mixxx.PlayerManager.loadLocationToPlayer(row.modelData.path, "[Sampler" + picker.pad + "]", false);
-                                const paths = picker.pickedPaths;
-                                paths[picker.pad] = row.modelData.path;
-                                picker.pickedPaths = paths;
-                            } else if (picker.mode === 2) {
+                            if (picker.mode === 2) {
                                 Mixxx.EffectsManager.setBeatFxSlot(picker.pad, row.modelData.key);
                                 picker.close();
                             } else {
@@ -454,12 +486,6 @@ Category {
                 Layout.topMargin: 4
                 spacing: 8
 
-                PillButton {
-                    visible: picker.sampler
-                    label: qsTr("Preview")
-                    playIcon: true
-                    onClicked: previewPlay.value = 1
-                }
                 Item {
                     Layout.fillWidth: true
                 }
@@ -470,5 +496,12 @@ Category {
                 }
             }
         }
+    }
+
+    Skin.SamplePicker {
+        id: samplePicker
+
+        accent: "#00e5ff"
+        onPicked: path => picker.assign(path)
     }
 }

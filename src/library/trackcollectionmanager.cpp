@@ -174,15 +174,29 @@ TrackCollectionManager::TrackCollectionManager(QObject* parent,
 
 TrackCollectionManager::~TrackCollectionManager() {
     if (m_pScanner) {
-        while (m_pScanner->isRunning()) {
-            kLogger.info() << "Stopping library scanner thread";
-            m_pScanner->quit();
-            if (m_pScanner->wait()) {
-                kLogger.info() << "Stopped library scanner thread";
-            }
+        kLogger.info() << "Stopping library scanner thread";
+        // A running scan is canceled first: quitting alone let the scanner
+        // work through its whole queue (thousands of folders) before it
+        // could stop
+        m_pScanner->requestCancel();
+        m_pScanner->quit();
+#ifdef Q_OS_ANDROID
+        // Android gives no second chance to a hung exit: the user has to
+        // kill the app. A scanner thread stuck in storage or database I/O is
+        // left to the process exit instead; deleting a running thread would
+        // crash.
+        constexpr int kScannerStopTimeoutMs = 3000;
+        if (!m_pScanner->wait(kScannerStopTimeoutMs)) {
+            kLogger.warning() << "Library scanner thread did not stop, leaving "
+                                 "it to the process exit";
+            static_cast<void>(m_pScanner.release());
+        } else
+#endif
+        {
+            m_pScanner->wait();
+            kLogger.info() << "Stopped library scanner thread";
+            m_pScanner.reset();
         }
-        DEBUG_ASSERT(m_pScanner->isFinished());
-        m_pScanner.reset();
     }
 
     const auto pWeakTrackSource = m_pInternalCollection->disconnectTrackSource();

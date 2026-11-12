@@ -1,0 +1,7 @@
+Mapping: Krüger & Matz DJ-001
+Author (in the mapping): Jairo Master Zion
+Submitted by: masterzion in Mixxx pull request #16933
+https://github.com/mixxxdj/mixxx/pull/16933
+Last update of the pull request: 2026-10-23
+Status: proposed to Mixxx, not merged yet; not tested by Mixxx Android
+License: GPL-2.0-or-later, like Mixxx (https://github.com/mixxxdj/mixxx/blob/main/LICENSE)
