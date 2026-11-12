@@ -293,7 +293,7 @@ namespace mixxx {
 
 namespace {
 
-bool isControllerLoggingCategory(const QString& categoryName) {
+[[maybe_unused]] bool isControllerLoggingCategory(const QString& categoryName) {
     return categoryName.startsWith("controller.");
 }
 
