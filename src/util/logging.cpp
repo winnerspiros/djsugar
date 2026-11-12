@@ -351,9 +351,11 @@ void handleMessage(
         // write debug messages into the log file, but skip controller I/O
         // to avoid flooding the log file.
         // Skip expensive string comparisons if WriteFlag::File is already set.
+#ifndef Q_OS_ANDROID
         if (!writeFlags.testFlag(WriteFlag::File) && !isControllerLoggingCategory(categoryName)) {
             writeFlags |= WriteFlag::File;
         }
+#endif
         break;
     case QtInfoMsg:
         levelName = "Info";

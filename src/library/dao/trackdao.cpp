@@ -1042,7 +1042,7 @@ TrackPointer TrackDAO::addTracksAddFile(
             QStringLiteral("aiff")};
     if (pTrack->getDuration() <= 0 &&
             kTagLibAudioTypes.contains(fileAccess.info().suffix().toLower())) {
-        kLogger.info() << "Skipping a file without audio" << pTrack->getLocation();
+        kLogger.debug() << "Skipping a file without audio" << pTrack->getLocation();
         return {};
     }
 

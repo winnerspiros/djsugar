@@ -1857,8 +1857,8 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
     }
     recordRequest();
 
-    kLogger.info() << "Auto-fetching continuation page: have"
-                   << accumulated.size() << "need" << minResults;
+    kLogger.debug() << "Auto-fetching continuation page: have"
+                    << accumulated.size() << "need" << minResults;
     QNetworkReply* reply = m_pNam->post(
             req, QJsonDocument(body).toJson(QJsonDocument::Compact));
     QPointer<YouTubeService> guard(this);
@@ -1923,7 +1923,7 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                                     seen.insert(v.id);
                                 }
                             }
-                            kLogger.info()
+                            kLogger.debug()
                                     << "Auto-fetch page returned" << pageResults.size()
                                     << "results, total now" << accumulated.size();
                             m_searchContinuationToken = page.continuationToken;
@@ -3694,9 +3694,9 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
                 const qint64 startMs = QDateTime::currentMSecsSinceEpoch();
                 StreamLink link;
                 const bool ok = extractStreamLink(ytdl, id, &link);
-                kLogger.info() << "[Android] prefetched stream link for" << id << ":"
-                               << (ok ? "ok" : "failed") << "in"
-                               << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
+                kLogger.debug() << "[Android] prefetched stream link for" << id << ":"
+                                << (ok ? "ok" : "failed") << "in"
+                                << QDateTime::currentMSecsSinceEpoch() - startMs << "ms";
             }
         });
         thread->setObjectName(QStringLiteral("YtLinkPrefetch"));

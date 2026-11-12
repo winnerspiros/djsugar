@@ -288,7 +288,7 @@ Rectangle {
                                 id: rowDrop
 
                                 anchors.fill: parent
-                                enabled: (playlist && !playlist.locked) || isPlaylistSection || (entry && entry.isFolder)
+                                enabled: !!(playlist && !playlist.locked) || isPlaylistSection || !!(entry && entry.isFolder)
                                 keys: ["mixxx/track"]
 
                                 onDropped: drop => {
@@ -318,7 +318,7 @@ Rectangle {
                                 anchors.fill: lineIcon
                                 color: current ? Theme.accentColor : Theme.textColor
                                 source: lineIcon
-                                visible: (depth == 0 && !!icon) || (entry !== null && entry.isFolder)
+                                visible: (depth == 0 && !!icon) || !!(entry && entry.isFolder)
                             }
                             Label {
                                 id: labelItem

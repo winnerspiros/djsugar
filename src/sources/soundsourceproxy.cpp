@@ -273,13 +273,13 @@ bool SoundSourceProxy::registerProviders() {
                 s_fileTypeByMimeType.insert(mimeType, supportedFileType);
             }
         }
-        if (kLogger.infoEnabled()) {
-            kLogger.info() << "SoundSource providers for file type" << supportedFileType;
+        if (kLogger.debugEnabled()) {
+            kLogger.debug() << "SoundSource providers for file type" << supportedFileType;
             const QList<mixxx::SoundSourceProviderRegistration> registrationsForFileType(
                     s_soundSourceProviders.getRegistrationsForFileType(
                             supportedFileType));
             for (const auto& registration : registrationsForFileType) {
-                kLogger.info()
+                kLogger.debug()
                         << registration.getProviderPriority()
                         << ":"
                         << registration.getProvider()->getDisplayName();

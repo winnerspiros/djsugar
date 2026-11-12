@@ -43,6 +43,7 @@ int execRowCountQuery(FwdSqlQuery& query) {
     return query.numRowsAffected();
 }
 
+#ifndef Q_OS_ANDROID
 /// Clean up the database and fix inconsistencies from previous runs.
 /// See also: https://github.com/mixxxdj/mixxx/issues/9771
 void cleanUpDatabase(const QSqlDatabase& database) {
@@ -76,6 +77,7 @@ void cleanUpDatabase(const QSqlDatabase& database) {
             << "Finished database cleanup:"
             << timer.elapsed().debugMillisWithUnit();
 }
+#endif
 
 /// Update statistics for the query planner
 /// See also: https://www.sqlite.org/lang_analyze.html
@@ -231,7 +233,13 @@ void LibraryScanner::slotStartScan() {
     DEBUG_ASSERT(m_state == STARTING);
 
     m_canceled = false;
+#ifndef Q_OS_ANDROID
+    // Deletes the hashes of all folders without tracks, so they are scanned
+    // again at every start: on a phone that is most of its folders (12000
+    // folders, a minute of scanning at each start). Purging tracks invalidates
+    // the hashes of their folders already (TrackDAO).
     cleanUpDatabase(m_libraryHashDao.database());
+#endif
 
     // Recursively scan each directory in the directories table.
     m_libraryRootDirs = m_directoryDao.loadAllDirectories();
