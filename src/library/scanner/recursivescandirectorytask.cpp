@@ -28,10 +28,6 @@ void RecursiveScanDirectoryTask::run() {
         return;
     }
 
-    // For making the scanner slow
-    //qDebug() << "Burn CPU";
-    //for (int i = 0;i < 1000000000; i++) asm("nop");
-
     // Note, we save on filesystem operations (and random work) by initializing
     // a QDirIterator with a QDir instead of a QString -- but it inherits its
     // Filter from the QDir so we have to set it first. If the QDir has not done
@@ -57,6 +53,14 @@ void RecursiveScanDirectoryTask::run() {
             m_scannerGlobal->supportedCoverExtensionsRegex();
 
     for (const auto& currentFileInfo : children) {
+        // Check for cancellation periodically during directory iteration.
+        // This is critical on Android where FUSE filesystem calls can block
+        // indefinitely, preventing the scanner thread from responding to shutdown.
+        if (m_scannerGlobal->shouldCancel()) {
+            setSuccess(false);
+            return;
+        }
+
         QString currentFile = currentFileInfo.filePath();
 
         if (currentFileInfo.isFile()) {
@@ -130,6 +134,12 @@ void RecursiveScanDirectoryTask::run() {
 
     // Process all of the sub-directories.
     for (const mixxx::FileInfo& dirInfo : dirsToScan) {
+        // Check for cancellation before queuing each sub-directory task.
+        if (m_scannerGlobal->shouldCancel()) {
+            setSuccess(false);
+            return;
+        }
+
         // Atomically test and mark the directory as scanned to avoid
         // that the same directory is scanned multiple times by different
         // tasks.
