@@ -2486,12 +2486,26 @@ void YouTubeService::downloadAudioStreamChunked(
     const qint64 chunkSize =
             (contentLength + kParallelDownloadChunks - 1) / kParallelDownloadChunks;
 
-    for (int i = 0; i < kParallelDownloadChunks; i++) {
-        const qint64 start = i * chunkSize;
-        const qint64 end = qMin(start + chunkSize - 1, contentLength - 1);
-
+    // A chunk whose connection drops (YouTube closes some of many parallel
+    // ones) resumes from where it stopped, up to kChunkRetries times, instead
+    // of the whole file failing over to yt-dlp
+    constexpr int kChunkRetries = 4;
+    auto fetchChunk = std::make_shared<std::function<void(qint64, qint64, int)>>();
+    // Weak: the requests hold the function, it must not hold itself
+    std::weak_ptr<std::function<void(qint64, qint64, int)>> weakFetch = fetchChunk;
+    *fetchChunk = [this,
+                          weakFetch,
+                          outFile,
+                          state,
+                          ua,
+                          streamUrl,
+                          outPath,
+                          videoId,
+                          contentLength,
+                          chunkedStartMs,
+                          onFailure](qint64 start, qint64 end, int attempt) {
         // Per-chunk write cursor — starts at `start` and advances as data
-        // arrives. Heap-allocated so the lambda can capture a stable pointer.
+        // arrives. Heap-allocated so the lambdas can capture a stable pointer.
         auto* writePos = new qint64(start);
 
         QNetworkRequest req((QUrl(streamUrl)));
@@ -2503,6 +2517,7 @@ void YouTubeService::downloadAudioStreamChunked(
         applyYouTubeRequestAttributes(&req);
 
         QNetworkReply* reply = m_pNam->get(req);
+        const auto self = weakFetch.lock();
 
         // Write each batch of incoming bytes at the correct file offset.
         // seek() is O(1) and safe to call interleaved with other chunks
@@ -2536,10 +2551,13 @@ void YouTubeService::downloadAudioStreamChunked(
                 &QNetworkReply::finished,
                 this,
                 [this,
+                        self,
                         reply,
                         outFile,
                         writePos,
                         state,
+                        end,
+                        attempt,
                         outPath,
                         videoId,
                         contentLength,
@@ -2554,12 +2572,25 @@ void YouTubeService::downloadAudioStreamChunked(
                             outFile->seek(*writePos);
                             outFile->write(tail);
                             *writePos += tail.size();
+                            state->downloadedBytes += tail.size();
                         }
                     }
+                    const qint64 resumeAt = *writePos;
                     delete writePos;
 
-                    if (reply->error() != QNetworkReply::NoError &&
-                            !state->failed) {
+                    if (reply->error() != QNetworkReply::NoError && !state->failed) {
+                        const int status = reply->attribute(
+                                                        QNetworkRequest::HttpStatusCodeAttribute)
+                                                   .toInt();
+                        // Dropped or timed out, not refused (403/404...)
+                        if (status < 400 && attempt < kChunkRetries && self &&
+                                resumeAt <= end) {
+                            kLogger.debug() << "Chunk of" << videoId << "dropped ("
+                                            << reply->errorString() << "), resuming at"
+                                            << resumeAt;
+                            (*self)(resumeAt, end, attempt + 1);
+                            return;
+                        }
                         state->failed = true;
                         state->error = reply->errorString();
                     }
@@ -2599,6 +2630,12 @@ void YouTubeService::downloadAudioStreamChunked(
                         finalizeDownload(videoId, outPath);
                     }
                 });
+    };
+
+    for (int i = 0; i < kParallelDownloadChunks; i++) {
+        const qint64 start = i * chunkSize;
+        const qint64 end = qMin(start + chunkSize - 1, contentLength - 1);
+        (*fetchChunk)(start, end, 0);
     }
 }
 
