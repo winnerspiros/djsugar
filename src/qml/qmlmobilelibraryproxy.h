@@ -157,6 +157,8 @@ class QmlMobileLibraryProxy : public QObject {
 
   signals:
     void sourcesChanged();
+    /// A playlist was added, deleted, renamed, (un)locked or changed tracks
+    void playlistsChanged();
     void sidebarVisibleChanged();
     void playlistCopyProgressChanged();
     void playlistCopyFinished(const QString& message, bool error);

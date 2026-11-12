@@ -82,22 +82,17 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.WordWrap
         }
-        Text {
+        Skin.EditIcon {
             visible: button.editable
             anchors.right: parent.right
             anchors.rightMargin: 3
             anchors.top: parent.top
-            anchors.topMargin: 1
+            anchors.topMargin: 3
+            width: Math.max(10, Math.min(16, button.height * 0.3))
+            height: width
             color: button.activeColor
-            font.pixelSize: Math.max(9, Math.min(14, button.height * 0.3))
-            text: "✎"
             z: 1
-
-            MouseArea {
-                anchors.fill: parent
-                anchors.margins: -8
-                onClicked: button.edit()
-            }
+            onClicked: button.edit()
         }
         MouseArea {
             id: buttonArea
@@ -582,27 +577,22 @@ Rectangle {
                         active: instrumentControl.value === index
                         activeColor: "#ff4081"
                         text: muteControl.value > 0 ? modelData + " ✕" : modelData
-                        onClicked: instrumentControl.value = index
-                        onHeld: soundPicker.openFor(bankControl.value, index, modelData)
-
-                        // Swap the sound of this pad
-                        Text {
-                            anchors.right: parent.right
-                            anchors.rightMargin: 4
-                            anchors.top: parent.top
-                            anchors.topMargin: 2
-                            color: "#ff4081"
-                            font.pixelSize: Math.max(10, Math.min(16, instrumentButton.height * 0.28))
-                            text: "✎"
-                            z: 1
-
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -8
-                                onClicked: soundPicker.openFor(bankControl.value, instrumentButton.index, instrumentButton.modelData)
-                            }
+                        editable: true
+                        // Plays the sound and makes it the one the rolls play
+                        onPressed: {
+                            instrumentControl.value = index;
+                            hitControl.value = 1;
                         }
+                        onReleased: hitControl.value = 0
+                        onHeld: soundPicker.openFor(bankControl.value, index, modelData)
+                        onEdit: soundPicker.openFor(bankControl.value, index, modelData)
 
+                        Mixxx.ControlProxy {
+                            id: hitControl
+
+                            group: "[FxStation]"
+                            key: "xpad_hit_" + (instrumentButton.index + 1)
+                        }
                         Mixxx.ControlProxy {
                             id: muteControl
 
@@ -1135,6 +1125,9 @@ Rectangle {
         readonly property int current: (kind === "scene" ? root.sceneEffects : root.releaseEffects)[button]
 
         function openFor(newKind, newButton, color) {
+            // The FX Station is loaded outside the window, so the overlay
+            // is looked up when opening
+            parent = root.Overlay.overlay;
             kind = newKind;
             button = newButton;
             accent = color;
@@ -1145,7 +1138,6 @@ Rectangle {
             root.loadButtonEffects();
         }
 
-        parent: Overlay.overlay
         anchors.centerIn: parent
         width: Math.min(parent ? parent.width - 40 : 400, 380)
         height: Math.min(parent ? parent.height - 40 : 500, 56 * names.length + 110)

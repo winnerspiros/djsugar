@@ -60,6 +60,24 @@ QString cleanLocalPath(const QString& rawPath) {
 
 QmlMobileLibraryProxy::QmlMobileLibraryProxy(QObject* pParent)
         : QObject(pParent) {
+    // Every view listing playlists (track menus, the sidebar's playlist
+    // menus) refreshes when they change, wherever the change came from
+    TrackCollectionManager* pCollections = trackCollectionManager();
+    if (!pCollections) {
+        return;
+    }
+    const PlaylistDAO* pPlaylistDao = &pCollections->internalCollection()->getPlaylistDAO();
+    connect(pPlaylistDao, &PlaylistDAO::added, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao, &PlaylistDAO::deleted, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao, &PlaylistDAO::renamed, this, &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao,
+            &PlaylistDAO::lockChanged,
+            this,
+            &QmlMobileLibraryProxy::playlistsChanged);
+    connect(pPlaylistDao,
+            &PlaylistDAO::playlistContentChanged,
+            this,
+            &QmlMobileLibraryProxy::playlistsChanged);
 }
 
 // static

@@ -29,6 +29,10 @@ Item {
     }
     function open() {
         root.refresh();
+        // Looked up when opening: a picker in a Loader (the FX Station) is
+        // created outside the window, where there is no overlay yet
+        picker.parent = root.Overlay.overlay;
+        trim.parent = root.Overlay.overlay;
         picker.open();
     }
     function close() {
@@ -144,7 +148,6 @@ Item {
     Popup {
         id: picker
 
-        parent: Overlay.overlay
         anchors.centerIn: parent
         width: Math.min(parent ? parent.width - 40 : 400, 420)
         height: Math.min(parent ? parent.height - 40 : 500, 520)
@@ -413,7 +416,6 @@ Item {
             return seconds < 60 ? seconds.toFixed(1) + " s" : Math.floor(seconds / 60) + ":" + ("0" + (seconds % 60).toFixed(1)).slice(-4);
         }
 
-        parent: Overlay.overlay
         anchors.centerIn: parent
         width: Math.min(parent.width - 24, 560)
         modal: true

@@ -27,6 +27,13 @@ Rectangle {
     // Bumped when a playlist changes here, to re-read lock states
     property int playlistsRevision: 0
 
+    Connections {
+        target: Mixxx.MobileLibrary
+        function onPlaylistsChanged() {
+            root.playlistsRevision++;
+        }
+    }
+
     // Reading the databases on USB drives, and browsing folders (FOLDER, e.g.
     // on SD cards), needs more than the music permission
     // (from JaviLabarumDJ/mixxx-android android-stable)

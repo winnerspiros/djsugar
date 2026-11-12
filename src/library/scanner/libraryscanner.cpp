@@ -701,7 +701,7 @@ void LibraryScanner::slotDirectoryHashedAndScanned(const QString& directoryPath,
     // from undoing this (what we'd do in this slot by saving a valid hash).
 
     if (!m_scannerGlobal || m_scannerGlobal->shouldCancel()) {
-        kLogger.warning() << "--> should cancel --> clear hash for" << directoryPath;
+        // Not logged: a scan canceled on exit gets this for every folder left
         // Clearing the hash is not strictly required but let's keep it as
         // safety net in case signals get mixed up?
         m_libraryHashDao.clearDirectoryHash(directoryPath);

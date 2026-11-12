@@ -13,7 +13,26 @@ Popup {
     required property Item track
     // Local tracks: queue an analysis
     property var analyze: null
-    readonly property var playlists: Mixxx.MobileLibrary.playlists().filter(p => !p.locked)
+    property var playlists: []
+
+    function loadPlaylists() {
+        playlists = Mixxx.MobileLibrary.playlists().filter(p => !p.locked);
+    }
+    function createPlaylist() {
+        // The keyboard's word in progress counts too
+        Qt.inputMethod.commit();
+        const name = newName.text.trim();
+        if (name.length === 0) {
+            return;
+        }
+        const id = Mixxx.MobileLibrary.createNamedPlaylist(name);
+        if (id >= 0) {
+            root.act(() => root.track.addToPlaylist(id));
+        } else {
+            newName.placeholderText = qsTr("%1 exists: pick it above").arg(name);
+            newName.text = "";
+        }
+    }
 
     function act(action) {
         action();
@@ -119,22 +138,26 @@ Popup {
                 Layout.preferredHeight: 40
                 font.pixelSize: 14
                 placeholderText: qsTr("New playlist")
+                onAccepted: root.createPlaylist()
             }
             Skin.Button {
                 Layout.preferredHeight: 40
                 activeColor: Theme.accentColor
-                enabled: newName.text.trim().length > 0
+                enabled: newName.displayText.trim().length > 0
                 text: qsTr("ADD")
 
-                onClicked: {
-                    const id = Mixxx.MobileLibrary.createNamedPlaylist(newName.text.trim());
-                    if (id >= 0) {
-                        root.act(() => root.track.addToPlaylist(id));
-                    }
-                }
+                onClicked: root.createPlaylist()
             }
         }
     }
 
+    Component.onCompleted: loadPlaylists()
     onClosed: destroy()
+
+    Connections {
+        target: Mixxx.MobileLibrary
+        function onPlaylistsChanged() {
+            root.loadPlaylists();
+        }
+    }
 }
