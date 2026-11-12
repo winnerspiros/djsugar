@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "../Theme"
+import ".." as Skin
 
 // Pick what each performance pad plays, the way rekordbox does it: the pads
 // are drawn like the controller (2 rows of 4), tap one and choose a sample
@@ -320,13 +320,6 @@ Category {
         }
     }
 
-    Mixxx.ControlProxy {
-        id: previewPlay
-
-        group: picker.sampler ? "[Sampler" + picker.pad + "]" : "[Sampler1]"
-        key: "cue_gotoandplay"
-    }
-
     Popup {
         id: picker
 
@@ -347,12 +340,24 @@ Category {
             if (mode === 1) {
                 return item.key === Mixxx.EffectsManager.padFxEffect(pad);
             }
-            if (pickedPaths[pad] !== undefined) {
-                return pickedPaths[pad] === item.path;
+            return false;
+        }
+        // The sample on a sampler pad, as a path
+        function samplePath(samplerPad) {
+            if (pickedPaths[samplerPad] !== undefined) {
+                return pickedPaths[samplerPad];
             }
-            const player = Mixxx.PlayerManager.getPlayer("[Sampler" + pad + "]");
+            const player = Mixxx.PlayerManager.getPlayer("[Sampler" + samplerPad + "]");
             const track = player ? player.currentTrack : null;
-            return !!track && track.title !== "" && track.title === item.name;
+            if (!track || track.title === "") {
+                return "";
+            }
+            for (let i = 0; i < root.samples.length; i++) {
+                if (root.samples[i].name === track.title) {
+                    return root.samples[i].path;
+                }
+            }
+            return "";
         }
 
         // Put a sample on the pad and remember it as the pad's choice
@@ -363,18 +368,17 @@ Category {
             picker.pickedPaths = paths;
             root.revision++;
         }
-        // A new import or recording: list it and put it on the pad
-        function adopt(path) {
-            if (path === "") {
-                return;
-            }
-            root.refresh();
-            picker.assign(path);
-        }
 
         function openFor(newPad, newMode) {
             picker.pad = newPad;
             picker.mode = newMode;
+            if (newMode === 0) {
+                samplePicker.title = qsTr("Sample for pad %1").arg(newPad);
+                samplePicker.previewGroup = "[Sampler" + newPad + "]";
+                samplePicker.current = picker.samplePath(newPad);
+                samplePicker.open();
+                return;
+            }
             picker.open();
         }
 
@@ -396,7 +400,7 @@ Category {
             spacing: 6
 
             Text {
-                text: (picker.mode === 0 ? qsTr("Sample for pad %1") : picker.mode === 1 ? qsTr("Effect for pad %1") : qsTr("BEAT FX %1")).arg(picker.pad)
+                text: (picker.mode === 1 ? qsTr("Effect for pad %1") : qsTr("BEAT FX %1")).arg(picker.pad)
                 color: Theme.white
                 font.bold: true
                 font.pixelSize: 14
@@ -406,7 +410,7 @@ Category {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: picker.mode === 0 ? root.samples : picker.mode === 1 ? root.effects : root.beatEffects
+                model: picker.mode === 1 ? root.effects : root.beatEffects
                 delegate: Rectangle {
                     id: row
 
@@ -433,33 +437,13 @@ Category {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
                         anchors.leftMargin: 14
-                        anchors.right: deleteMark.visible ? deleteMark.left : checkMark.left
+                        anchors.right: checkMark.left
                         anchors.rightMargin: 8
                         elide: Text.ElideRight
-                        text: (row.modelData.user ? "★ " : "") + row.modelData.name
+                        text: row.modelData.name
                         color: row.current ? picker.accent : Theme.white
                         font.pixelSize: 14
                         font.bold: row.current
-                    }
-                    Text {
-                        id: deleteMark
-
-                        visible: !!row.modelData.user
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: checkMark.left
-                        anchors.rightMargin: 12
-                        text: "🗑"
-                        font.pixelSize: 16
-                        z: 1
-
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -10
-                            onClicked: {
-                                Mixxx.PlayerManager.deleteSample(row.modelData.path);
-                                root.refresh();
-                            }
-                        }
                     }
                     Text {
                         id: checkMark
@@ -484,9 +468,7 @@ Category {
 
                         anchors.fill: parent
                         onClicked: {
-                            if (picker.sampler) {
-                                picker.assign(row.modelData.path);
-                            } else if (picker.mode === 2) {
+                            if (picker.mode === 2) {
                                 Mixxx.EffectsManager.setBeatFxSlot(picker.pad, row.modelData.key);
                                 picker.close();
                             } else {
@@ -504,29 +486,6 @@ Category {
                 Layout.topMargin: 4
                 spacing: 8
 
-                PillButton {
-                    visible: picker.sampler
-                    label: qsTr("Preview")
-                    playIcon: true
-                    onClicked: previewPlay.value = 1
-                }
-                PillButton {
-                    visible: picker.sampler
-                    label: qsTr("Import")
-                    onClicked: importDialog.open()
-                }
-                PillButton {
-                    visible: picker.sampler
-                    filled: Mixxx.PlayerManager.sampleRecording
-                    label: Mixxx.PlayerManager.sampleRecording ? qsTr("■ Stop %1 s").arg(Mixxx.PlayerManager.sampleRecordSeconds.toFixed(1)) : qsTr("● Rec")
-                    onClicked: {
-                        if (Mixxx.PlayerManager.sampleRecording) {
-                            picker.adopt(Mixxx.PlayerManager.stopSampleRecording());
-                        } else {
-                            Mixxx.PlayerManager.startSampleRecording();
-                        }
-                    }
-                }
                 Item {
                     Layout.fillWidth: true
                 }
@@ -536,350 +495,13 @@ Category {
                     onClicked: picker.close()
                 }
             }
-            Text {
-                id: errorText
-
-                Layout.fillWidth: true
-                visible: text !== ""
-                wrapMode: Text.WordWrap
-                color: "#ff5252"
-                font.pixelSize: 12
-            }
-        }
-
-        // A take still running when the picker closes is saved, not lost
-        onClosed: {
-            errorText.text = "";
-            if (Mixxx.PlayerManager.sampleRecording) {
-                picker.adopt(Mixxx.PlayerManager.stopSampleRecording());
-            }
-        }
-
-        Connections {
-            target: Mixxx.PlayerManager
-            function onSampleError(reason) {
-                errorText.text = reason;
-                trim.close();
-            }
-            function onSampleOpened(sound) {
-                trim.load(sound);
-            }
-        }
-
-        FileDialog {
-            id: importDialog
-
-            title: qsTr("Import sample")
-            fileMode: FileDialog.OpenFile
-            // Android's picker maps filters to MIME types and greys out
-            // valid audio; the trim popup checks the format instead
-            nameFilters: Qt.platform.os === "android" ? [] : Mixxx.PlayerManager.supportedAudioFileNameFilters.concat([qsTr("All files (*)")])
-            onAccepted: {
-                trim.loading = true;
-                trim.open();
-                Mixxx.PlayerManager.openSampleForTrim(importDialog.selectedFile);
-            }
         }
     }
 
-    // Trim an imported sound before it becomes a pad sample: drag the two
-    // handles (or the selection) over the waveform, preview, then save
-    Mixxx.ControlProxy {
-        id: trimPlay
+    Skin.SamplePicker {
+        id: samplePicker
 
-        group: "[PreviewDeck1]"
-        key: "play"
-    }
-    // The preview deck only plays to headphones; phones often have just
-    // the main output, so the trim preview goes to the main mix
-    Mixxx.ControlProxy {
-        id: trimMainMix
-
-        property real saved: 0
-
-        group: "[PreviewDeck1]"
-        key: "main_mix"
-    }
-    Mixxx.ControlProxy {
-        id: trimPosition
-
-        group: "[PreviewDeck1]"
-        key: "playposition"
-        onValueChanged: {
-            // Stop at the end of the selection
-            if (trimPlay.value > 0 && trim.duration > 0 && value * trim.duration >= trim.end) {
-                trimPlay.value = 0;
-            }
-        }
-    }
-
-    Popup {
-        id: trim
-
-        property bool loading: false
-        property string path: ""
-        property string name: ""
-        property real duration: 0
-        property var peaks: []
-        property real start: 0
-        property real end: 0
-        readonly property color accent: "#00e5ff"
-        readonly property real minLength: Math.min(0.05, duration)
-        // Pads are for short sounds: a long file opens on its first 10 s
-        readonly property real defaultLength: 10
-
-        function load(sound) {
-            path = sound.path;
-            name = sound.name;
-            duration = sound.duration;
-            peaks = sound.peaks;
-            start = 0;
-            end = Math.min(duration, defaultLength);
-            nameField.text = name;
-            loading = false;
-            Mixxx.PlayerManager.loadLocationToPlayer(path, "[PreviewDeck1]", false);
-            trimMainMix.saved = trimMainMix.value;
-            trimMainMix.value = 1;
-            wave.requestPaint();
-        }
-        function play() {
-            trimPosition.value = start / duration;
-            trimPlay.value = 1;
-        }
-        function format(seconds) {
-            return seconds < 60 ? seconds.toFixed(1) + " s" : Math.floor(seconds / 60) + ":" + ("0" + (seconds % 60).toFixed(1)).slice(-4);
-        }
-
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 24, 560)
-        modal: true
-        closePolicy: Popup.CloseOnEscape
-        padding: 14
-        onClosed: {
-            trimPlay.value = 0;
-            if (path !== "") {
-                trimMainMix.value = trimMainMix.saved;
-            }
-            loading = false;
-            path = "";
-        }
-
-        background: Rectangle {
-            color: "#0d0d0d"
-            radius: 8
-            border.color: trim.accent
-            border.width: 1
-        }
-
-        contentItem: ColumnLayout {
-            spacing: 10
-
-            Text {
-                text: trim.loading ? qsTr("Opening…") : qsTr("Trim sample")
-                color: Theme.white
-                font.bold: true
-                font.pixelSize: 14
-            }
-
-            // The waveform with the selection
-            Item {
-                id: waveArea
-
-                readonly property real secondsPerPixel: trim.duration / Math.max(1, width)
-                readonly property real startX: trim.duration > 0 ? trim.start / trim.duration * width : 0
-                readonly property real endX: trim.duration > 0 ? trim.end / trim.duration * width : width
-
-                Layout.fillWidth: true
-                Layout.preferredHeight: 110
-                opacity: trim.loading ? 0.3 : 1
-
-                Canvas {
-                    id: wave
-
-                    anchors.fill: parent
-                    onPaint: {
-                        const ctx = getContext("2d");
-                        ctx.reset();
-                        const peaks = trim.peaks;
-                        const n = peaks.length;
-                        if (n === 0) {
-                            return;
-                        }
-                        const bar = width / n;
-                        const mid = height / 2;
-                        for (let i = 0; i < n; i++) {
-                            const x = i * bar;
-                            const inside = x + bar >= waveArea.startX && x <= waveArea.endX;
-                            ctx.fillStyle = inside ? trim.accent : "#37474f";
-                            const h = Math.max(1, peaks[i] * (mid - 2));
-                            ctx.fillRect(x, mid - h, Math.max(1, bar - 0.5), 2 * h);
-                        }
-                    }
-                }
-                // Dim outside the selection
-                Rectangle {
-                    x: 0
-                    width: waveArea.startX
-                    height: parent.height
-                    color: "#a0000000"
-                }
-                Rectangle {
-                    x: waveArea.endX
-                    width: parent.width - waveArea.endX
-                    height: parent.height
-                    color: "#a0000000"
-                }
-                // Selection frame: drag it to move the whole part
-                Rectangle {
-                    x: waveArea.startX
-                    width: waveArea.endX - waveArea.startX
-                    height: parent.height
-                    color: "transparent"
-                    border.color: trim.accent
-                    border.width: 2
-                    radius: 4
-
-                    MouseArea {
-                        property real grabX: 0
-
-                        anchors.fill: parent
-                        anchors.leftMargin: 20
-                        anchors.rightMargin: 20
-                        onPressed: mouse => grabX = mouse.x
-                        onPositionChanged: mouse => {
-                            const length = trim.end - trim.start;
-                            const shift = (mouse.x - grabX) * waveArea.secondsPerPixel;
-                            const start = Math.max(0, Math.min(trim.duration - length, trim.start + shift));
-                            trim.start = start;
-                            trim.end = start + length;
-                            wave.requestPaint();
-                        }
-                        onReleased: trim.play()
-                    }
-                }
-                // Playhead
-                Rectangle {
-                    visible: trimPlay.value > 0
-                    x: trimPosition.value * waveArea.width
-                    width: 2
-                    height: parent.height
-                    color: Theme.white
-                }
-                Repeater {
-                    model: 2
-
-                    delegate: Rectangle {
-                        id: handle
-
-                        required property int index
-                        readonly property bool isStart: index === 0
-
-                        x: (isStart ? waveArea.startX : waveArea.endX) - width / 2
-                        y: -6
-                        width: 18
-                        height: waveArea.height + 12
-                        radius: 9
-                        color: trim.accent
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 2
-                            height: 24
-                            radius: 1
-                            color: "#0d0d0d"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -12
-                            onPositionChanged: mouse => {
-                                const seconds = (handle.x + handle.width / 2 + mouse.x - width / 2) * waveArea.secondsPerPixel;
-                                if (handle.isStart) {
-                                    trim.start = Math.max(0, Math.min(trim.end - trim.minLength, seconds));
-                                } else {
-                                    trim.end = Math.min(trim.duration, Math.max(trim.start + trim.minLength, seconds));
-                                }
-                                wave.requestPaint();
-                            }
-                            onReleased: trim.play()
-                        }
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                Text {
-                    text: trim.format(trim.start)
-                    color: "#78909c"
-                    font.pixelSize: 12
-                }
-                Item {
-                    Layout.fillWidth: true
-                }
-                Text {
-                    text: trim.format(trim.end - trim.start)
-                    color: trim.accent
-                    font.bold: true
-                    font.pixelSize: 14
-                }
-                Item {
-                    Layout.fillWidth: true
-                }
-                Text {
-                    text: trim.format(trim.end)
-                    color: "#78909c"
-                    font.pixelSize: 12
-                }
-            }
-
-            TextField {
-                id: nameField
-
-                Layout.fillWidth: true
-                placeholderText: qsTr("Name")
-                color: Theme.white
-                background: Rectangle {
-                    color: "#000000"
-                    radius: 6
-                    border.color: nameField.activeFocus ? trim.accent : "#37474f"
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                PillButton {
-                    accent: trim.accent
-                    playIcon: trimPlay.value === 0
-                    label: trimPlay.value > 0 ? qsTr("■ Stop") : qsTr("Play")
-                    onClicked: trimPlay.value > 0 ? trimPlay.value = 0 : trim.play()
-                }
-                Item {
-                    Layout.fillWidth: true
-                }
-                PillButton {
-                    accent: trim.accent
-                    label: qsTr("Cancel")
-                    onClicked: trim.close()
-                }
-                PillButton {
-                    accent: trim.accent
-                    filled: true
-                    label: qsTr("Save")
-                    onClicked: {
-                        if (trim.loading || trim.path === "") {
-                            return;
-                        }
-                        trimPlay.value = 0;
-                        const saved = Mixxx.PlayerManager.saveTrimmedSample(trim.start, trim.end, nameField.text);
-                        trim.close();
-                        picker.adopt(saved);
-                    }
-                }
-            }
-        }
+        accent: "#00e5ff"
+        onPicked: path => picker.assign(path)
     }
 }

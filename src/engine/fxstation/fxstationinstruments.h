@@ -32,12 +32,12 @@ struct Bank {
     std::array<Instrument, kInstruments> instruments;
 };
 
-/// The sounds of the X-Pad. Bank 1 is synthesized (no sample files, no
-/// rights to care about); banks 2 to 4 are loaded in the background from
+/// The sounds of the X-Pad, all loaded in the background. Bank 1 plays the
+/// app's kick, snare, clap and hi-hat samples; banks 2 to 4 come from
 /// Mixxx/FxStation/Bank N on the storage (files named kick, snare, clap and
 /// hat, a number prefix like "01_" allowed, or else the first four audio
 /// files). An empty Bank 2 plays the bundled DJ Sugar kit. A sound picked
-/// in the app for a pad (soundKey) replaces the one from the folder. The
+/// in the app for a pad (soundKey) replaces the default of any bank. The
 /// engine reads a bank without locking; a bank replaced by a reload is
 /// kept until the app quits, since the engine may still be playing it.
 class Instruments : public QObject {
@@ -51,13 +51,13 @@ class Instruments : public QObject {
         return m_banks[index].load(std::memory_order_acquire);
     }
 
-    /// Loads the user banks again, in the background
-    void reloadUserBanks();
+    /// Loads the banks again, in the background
+    void reloadBanks();
 
     /// The folder of a user bank (1 to 3: Bank 2 to Bank 4)
     static QString bankDirectory(int index);
 
-    /// The sound picked for an instrument of a user bank, a file path
+    /// The sound picked for an instrument of a bank, a file path
     static ConfigKey soundKey(int index, int instrument);
 
   signals:
@@ -67,6 +67,8 @@ class Instruments : public QObject {
   private:
     void publish(int index, std::unique_ptr<Bank> pBank);
     std::unique_ptr<Bank> loadBank(int index) const;
+    /// The sounds of a user bank folder, by name or else in order
+    std::array<QString, kInstruments> folderSounds(int index) const;
 
     const UserSettingsPointer m_pConfig;
 

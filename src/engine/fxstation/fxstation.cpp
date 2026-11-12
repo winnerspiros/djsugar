@@ -154,7 +154,7 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     for (int i = 0; i < kBanks; ++i) {
         m_pXPadBankSounds[i] = makeControl(
                 QStringLiteral("xpad_bank_sounds_%1").arg(i + 1).toLatin1().constData(),
-                i == 0 ? kInstruments : 0);
+                0);
     }
     m_pXPadLoopSteps = makeControl("xpad_loop_steps");
     m_pReleaseType = makeButton("release_type", true, kReleaseTypes);
@@ -194,7 +194,7 @@ FxStation::FxStation(UserSettingsPointer pConfig)
             this,
             [this](double value) {
                 if (value > 0) {
-                    m_pInstruments->reloadUserBanks();
+                    m_pInstruments->reloadBanks();
                 }
             });
 

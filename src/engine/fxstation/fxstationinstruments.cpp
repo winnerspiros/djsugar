@@ -4,8 +4,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
-#include <cmath>
-#include <random>
 
 #include "library/samples/bundledsamples.h"
 #include "moc_fxstationinstruments.cpp"
@@ -18,117 +16,13 @@ namespace fxstation {
 
 namespace {
 
-constexpr float kSynthesisRate = 48000.f;
-constexpr float kPi = 3.14159265358979f;
 // User sounds are cut after this long
 constexpr double kMaxUserSeconds = 4.0;
 
 const char* const kNamePrefixes[kInstruments] = {"kick", "snare", "clap", "hat"};
-
-/// A mono sound into stereo, peaking at peak
-Instrument stereo(const std::vector<float>& mono, float peak) {
-    float maximum = 1e-6f;
-    for (float sample : mono) {
-        maximum = std::max(maximum, std::fabs(sample));
-    }
-    Instrument instrument;
-    instrument.sampleRate = kSynthesisRate;
-    instrument.samples.resize(2 * mono.size());
-    for (size_t i = 0; i < mono.size(); ++i) {
-        const float sample = mono[i] * peak / maximum;
-        instrument.samples[2 * i] = sample;
-        instrument.samples[2 * i + 1] = sample;
-    }
-    return instrument;
-}
-
-std::vector<float> silence(float seconds) {
-    return std::vector<float>(static_cast<size_t>(seconds * kSynthesisRate), 0.f);
-}
-
-// A one pole high pass, enough to shape noise
-struct HighPass {
-    float previousIn = 0.f;
-    float previousOut = 0.f;
-    float coefficient;
-    explicit HighPass(float frequency)
-            : coefficient(1.f / (1.f + 2.f * kPi * frequency / kSynthesisRate)) {
-    }
-    float process(float x) {
-        previousOut = coefficient * (previousOut + x - previousIn);
-        previousIn = x;
-        return previousOut;
-    }
-};
-
-Instrument synthesizeKick() {
-    std::vector<float> sound = silence(0.45f);
-    std::mt19937 random(1);
-    std::uniform_real_distribution<float> noise(-1.f, 1.f);
-    float phase = 0.f;
-    for (size_t i = 0; i < sound.size(); ++i) {
-        const float t = static_cast<float>(i) / kSynthesisRate;
-        // The pitch drops fast from a click to the body
-        const float frequency = 48.f + 140.f * std::exp(-t * 38.f);
-        phase += 2.f * kPi * frequency / kSynthesisRate;
-        const float body = std::sin(phase) * std::exp(-t * 7.f);
-        const float click = t < 0.003f ? noise(random) * (1.f - t / 0.003f) * 0.4f : 0.f;
-        sound[i] = std::tanh(1.6f * body) + click;
-    }
-    return stereo(sound, 0.9f);
-}
-
-Instrument synthesizeSnare() {
-    std::vector<float> sound = silence(0.3f);
-    std::mt19937 random(2);
-    std::uniform_real_distribution<float> noise(-1.f, 1.f);
-    HighPass highPass(1500.f);
-    float phase = 0.f;
-    for (size_t i = 0; i < sound.size(); ++i) {
-        const float t = static_cast<float>(i) / kSynthesisRate;
-        phase += 2.f * kPi * (185.f + 60.f * std::exp(-t * 60.f)) / kSynthesisRate;
-        const float tone = std::sin(phase) * std::exp(-t * 28.f) * 0.55f;
-        const float rattle = highPass.process(noise(random)) * std::exp(-t * 16.f);
-        sound[i] = tone + rattle;
-    }
-    return stereo(sound, 0.75f);
-}
-
-Instrument synthesizeClap() {
-    std::vector<float> sound = silence(0.32f);
-    std::mt19937 random(3);
-    std::uniform_real_distribution<float> noise(-1.f, 1.f);
-    HighPass highPass(900.f);
-    // Three short bursts, then the room
-    const float bursts[] = {0.f, 0.011f, 0.022f};
-    for (size_t i = 0; i < sound.size(); ++i) {
-        const float t = static_cast<float>(i) / kSynthesisRate;
-        float envelope = 0.f;
-        for (float start : bursts) {
-            if (t >= start && t < start + 0.01f) {
-                envelope = std::max(envelope, std::exp(-(t - start) * 220.f));
-            }
-        }
-        if (t >= 0.033f) {
-            envelope = std::max(envelope, 0.7f * std::exp(-(t - 0.033f) * 17.f));
-        }
-        sound[i] = highPass.process(noise(random)) * envelope;
-    }
-    return stereo(sound, 0.7f);
-}
-
-Instrument synthesizeHat() {
-    std::vector<float> sound = silence(0.12f);
-    std::mt19937 random(4);
-    std::uniform_real_distribution<float> noise(-1.f, 1.f);
-    HighPass highPass1(6500.f);
-    HighPass highPass2(6500.f);
-    for (size_t i = 0; i < sound.size(); ++i) {
-        const float t = static_cast<float>(i) / kSynthesisRate;
-        sound[i] = highPass2.process(highPass1.process(noise(random))) * std::exp(-t * 48.f);
-    }
-    return stereo(sound, 0.5f);
-}
+// Bank 1: the app's own drum samples, in res/samples
+const char* const kFactoryFiles[kInstruments] = {
+        "kick.ogg", "snare.ogg", "clap.ogg", "hi-hat.ogg"};
 
 /// Decodes a sound file into stereo, at most kMaxUserSeconds long
 Instrument decode(const QString& path) {
@@ -163,14 +57,8 @@ Instruments::Instruments(UserSettingsPointer pConfig, QObject* pParent)
     for (auto& bank : m_banks) {
         bank.store(nullptr);
     }
-    auto pFactory = std::make_unique<Bank>();
-    pFactory->instruments[0] = synthesizeKick();
-    pFactory->instruments[1] = synthesizeSnare();
-    pFactory->instruments[2] = synthesizeClap();
-    pFactory->instruments[3] = synthesizeHat();
-    publish(0, std::move(pFactory));
     m_threadPool.setMaxThreadCount(1);
-    reloadUserBanks();
+    reloadBanks();
 }
 
 Instruments::~Instruments() {
@@ -198,6 +86,38 @@ ConfigKey Instruments::soundKey(int index, int instrument) {
 }
 
 std::unique_ptr<Bank> Instruments::loadBank(int index) const {
+    std::array<QString, kInstruments> chosen;
+    if (index == 0) {
+        const QString bundled = samples::bundledSamplesDir(m_pConfig);
+        for (int instrument = 0; instrument < kInstruments; ++instrument) {
+            if (!bundled.isEmpty()) {
+                chosen[instrument] = bundled + QLatin1String(kFactoryFiles[instrument]);
+            }
+        }
+    } else {
+        chosen = folderSounds(index);
+    }
+    bool any = false;
+    for (int instrument = 0; instrument < kInstruments; ++instrument) {
+        const QString picked = m_pConfig->getValueString(soundKey(index, instrument));
+        if (!picked.isEmpty() && QFile::exists(picked)) {
+            chosen[instrument] = picked;
+        }
+        any = any || !chosen[instrument].isEmpty();
+    }
+    if (!any) {
+        return nullptr;
+    }
+    auto pBank = std::make_unique<Bank>();
+    for (int instrument = 0; instrument < kInstruments; ++instrument) {
+        if (!chosen[instrument].isEmpty()) {
+            pBank->instruments[instrument] = decode(chosen[instrument]);
+        }
+    }
+    return pBank;
+}
+
+std::array<QString, kInstruments> Instruments::folderSounds(int index) const {
     QDir dir(bankDirectory(index));
     // The sounds stay out of the music apps
     const QString noMedia = QFileInfo(dir.absolutePath()).path() + QStringLiteral("/.nomedia");
@@ -209,12 +129,6 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) const {
         QFile file(noMedia);
         if (!file.open(QIODevice::WriteOnly)) {
             qWarning() << "FxStation: cannot create" << noMedia;
-        }
-    }
-    if (index == 1 && dir.isEmpty()) {
-        const QString bundled = samples::bundledSamplesDir(m_pConfig);
-        if (!bundled.isEmpty()) {
-            dir.setPath(bundled + QStringLiteral("djsugar"));
         }
     }
     QStringList files;
@@ -250,28 +164,11 @@ std::unique_ptr<Bank> Instruments::loadBank(int index) const {
             ++next;
         }
     }
-    bool any = false;
-    for (int instrument = 0; instrument < kInstruments; ++instrument) {
-        const QString picked = m_pConfig->getValueString(soundKey(index, instrument));
-        if (!picked.isEmpty() && QFile::exists(picked)) {
-            chosen[instrument] = picked;
-        }
-        any = any || !chosen[instrument].isEmpty();
-    }
-    if (!any) {
-        return nullptr;
-    }
-    auto pBank = std::make_unique<Bank>();
-    for (int instrument = 0; instrument < kInstruments; ++instrument) {
-        if (!chosen[instrument].isEmpty()) {
-            pBank->instruments[instrument] = decode(chosen[instrument]);
-        }
-    }
-    return pBank;
+    return chosen;
 }
 
-void Instruments::reloadUserBanks() {
-    for (int index = 1; index < kBanks; ++index) {
+void Instruments::reloadBanks() {
+    for (int index = 0; index < kBanks; ++index) {
         m_threadPool.start([this, index]() {
             auto pBank = loadBank(index);
             int sounds = 0;
