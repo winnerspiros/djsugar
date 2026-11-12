@@ -532,6 +532,33 @@ Rectangle {
         id: xpadSection
 
         readonly property var instruments: ["KICK", "SNARE", "CLAP", "HI-HAT"]
+        // The name on each pad: the picked sound, or the instrument
+        property var padNames: instruments
+        function loadPadNames() {
+            padNames = instruments.map((name, index) => {
+                const path = Mixxx.PlayerManager.fxStationSound(bankControl.value, index);
+                if (!path) {
+                    return name;
+                }
+                const file = path.substring(path.lastIndexOf("/") + 1);
+                return file.substring(0, file.lastIndexOf(".") > 0 ? file.lastIndexOf(".") : file.length).replace(/[-_]+/g, " ").toUpperCase();
+            });
+        }
+
+        Component.onCompleted: loadPadNames()
+
+        Connections {
+            target: bankControl
+            function onValueChanged() {
+                xpadSection.loadPadNames();
+            }
+        }
+        Connections {
+            target: soundPicker
+            function onPicked() {
+                Qt.callLater(xpadSection.loadPadNames);
+            }
+        }
         readonly property var divisions: ["1/1", "1/2", "1/4", "1/8", "1/16"]
         // The reload of the user banks, at the right of the title
         property bool showReload: false
@@ -576,7 +603,7 @@ Rectangle {
                         Layout.fillWidth: true
                         active: instrumentControl.value === index
                         activeColor: "#ff4081"
-                        text: muteControl.value > 0 ? modelData + " ✕" : modelData
+                        text: muteControl.value > 0 ? xpadSection.padNames[index] + " ✕" : xpadSection.padNames[index]
                         editable: true
                         // Plays the sound and makes it the one the rolls play
                         onPressed: {
@@ -757,7 +784,7 @@ Rectangle {
                         Layout.fillWidth: true
                         active: selectedMute.value > 0
                         activeColor: "#ffd740"
-                        text: "MUTE " + xpadSection.instruments[Math.max(0, Math.min(3, instrumentControl.value))]
+                        text: "MUTE " + xpadSection.padNames[Math.max(0, Math.min(3, instrumentControl.value))]
                         onClicked: selectedMute.value = selectedMute.value > 0 ? 0 : 1
 
                         Mixxx.ControlProxy {
@@ -1155,7 +1182,7 @@ Rectangle {
             spacing: 6
 
             Text {
-                text: (effectPicker.kind === "scene" ? "SCENE FX " : "RELEASE FX ") + (effectPicker.button + 1) + " · " + effectPicker.names[effectPicker.button]
+                text: (effectPicker.kind === "scene" ? "SCENE FX " : "RELEASE FX ") + (effectPicker.button + 1) + " · " + effectPicker.names[effectPicker.current]
                 color: "#ffffff"
                 font.bold: true
                 font.pixelSize: 14
