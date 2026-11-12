@@ -21,6 +21,10 @@ ColumnLayout {
     property var folders: []
     property var playlists: []
     property string filter: ""
+    // Playlists with a check box, checked when in `checkedIds` (the ones the
+    // track is in): picking one toggles it and the browser stays
+    property bool checkable: false
+    property var checkedIds: []
     // The new name field makes a folder rather than a playlist
     property bool newIsFolder: pickFolder
 
@@ -196,7 +200,10 @@ ColumnLayout {
 
             required property var modelData
             readonly property bool isFolder: modelData.kind === "folder"
+            readonly property bool checked: !isFolder && root.checkedIds.includes(modelData.id)
 
+            border.color: Theme.accentColor
+            border.width: checked ? 1 : 0
             color: entryArea.pressed ? Theme.darkGray3 : Qt.lighter(Theme.darkGray2, 1.25)
             height: 44
             opacity: modelData.disabled ? 0.4 : 1
@@ -223,8 +230,8 @@ ColumnLayout {
             Column {
                 anchors.left: entryIcon.right
                 anchors.leftMargin: 12
-                anchors.right: chevron.left
-                anchors.rightMargin: 6
+                anchors.right: parent.right
+                anchors.rightMargin: 40
                 anchors.verticalCenter: parent.verticalCenter
 
                 Text {
@@ -252,6 +259,28 @@ ColumnLayout {
                 color: Theme.lightGray2
                 font.pixelSize: 20
                 text: entry.isFolder ? "›" : ""
+            }
+            // The check box of a playlist the track is (not) in
+            Rectangle {
+                anchors.right: parent.right
+                anchors.rightMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                border.color: entry.checked ? Theme.accentColor : Theme.lightGray2
+                border.width: 2
+                color: entry.checked ? Theme.accentColor : "transparent"
+                height: 22
+                radius: 6
+                visible: root.checkable && !entry.isFolder
+                width: 22
+
+                Text {
+                    anchors.centerIn: parent
+                    color: Theme.white
+                    font.bold: true
+                    font.pixelSize: 14
+                    text: "✓"
+                    visible: entry.checked
+                }
             }
             MouseArea {
                 id: entryArea

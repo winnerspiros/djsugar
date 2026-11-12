@@ -114,6 +114,9 @@ class QmlMobileLibraryProxy : public QObject {
     Q_INVOKABLE void setPlaylistLocked(int playlistId, bool locked);
     /// Appends the track, adding it to the library if needed
     Q_INVOKABLE bool addTrackToPlaylist(int playlistId, const QUrl& trackUrl);
+    /// The ids of the playlists a file of the library is in, [] if it is not
+    Q_INVOKABLE QVariantList playlistsOfTrack(const QUrl& trackUrl);
+    Q_INVOKABLE bool removeTrackFromPlaylist(int playlistId, const QUrl& trackUrl);
     /// Appends all tracks of a track list, in its current order, adding them
     /// to the library if needed. Returns how many were added, or -1.
     Q_INVOKABLE int addAllTracksToPlaylist(int playlistId, QAbstractItemModel* pTrackList);

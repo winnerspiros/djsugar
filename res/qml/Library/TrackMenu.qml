@@ -92,10 +92,49 @@ Popup {
             font.weight: Font.DemiBold
             text: qsTr("ADD TO PLAYLIST")
         }
+        // Tap to add or remove, as many as wanted; the menu stays open
         PlaylistBrowser {
-            Layout.fillWidth: true
+            id: playlistBrowser
 
-            onPlaylistPicked: id => root.act(() => root.track.addToPlaylist(id))
+            readonly property bool isFile: root.track.trackUrl.toString() !== ""
+
+            function refresh() {
+                if (isFile) {
+                    checkedIds = Mixxx.MobileLibrary.playlistsOfTrack(root.track.trackUrl);
+                }
+            }
+
+            Layout.fillWidth: true
+            checkable: true
+
+            Component.onCompleted: refresh()
+            onPlaylistPicked: id => {
+                if (checkedIds.includes(id)) {
+                    // A streaming track is a file only after its download
+                    if (isFile && Mixxx.MobileLibrary.removeTrackFromPlaylist(id, root.track.trackUrl)) {
+                        checkedIds = checkedIds.filter(c => c !== id);
+                    }
+                    return;
+                }
+                root.track.addToPlaylist(id);
+                checkedIds = checkedIds.concat([id]);
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            color: Theme.lightGray2
+            elide: Text.ElideRight
+            font.pixelSize: 11
+            text: qsTr("In %n playlist(s)", "", playlistBrowser.checkedIds.length)
+        }
+        Skin.Button {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 42
+            activeColor: Theme.accentColor
+            font.bold: true
+            text: qsTr("DONE")
+
+            onClicked: root.close()
         }
     }
 
