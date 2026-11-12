@@ -49,7 +49,7 @@ ApplicationWindow {
     // asks it here. Open popups (the quit question too) take Back themselves.
     Shortcut {
         context: Qt.ApplicationShortcut
-        enabled: root.isMobile && root.Overlay.overlay.children.length === 0
+        enabled: root.isMobile && (!root.Overlay.overlay || root.Overlay.overlay.children.length === 0)
         sequences: ["Back"]
         onActivated: quitPopup.open()
     }

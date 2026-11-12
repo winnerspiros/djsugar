@@ -318,7 +318,7 @@ Item {
 
                                 onStatusChanged: {
                                     if (status === Image.Error) {
-                                        console.warn("Audius cover art load failed:", track.coverArtUrl, errorString);
+                                        console.warn("Audius cover art load failed:", track.coverArtUrl);
                                     }
                                 }
                             }

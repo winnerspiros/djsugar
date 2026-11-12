@@ -353,7 +353,7 @@ Rectangle {
         anchors.centerIn: Overlay.overlay
         modal: true
         padding: 12
-        width: Math.min(320, Overlay.overlay.width - 24)
+        width: Math.min(320, Overlay.overlay ? Overlay.overlay.width - 24 : 320)
 
         Overlay.modal: Rectangle {
             color: "#99000000"
@@ -462,7 +462,7 @@ Rectangle {
         focus: true
         modal: true
         padding: 12
-        width: Math.min(340, Overlay.overlay.width - 24)
+        width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
 
         Overlay.modal: Rectangle {
             color: "#99000000"

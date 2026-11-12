@@ -24,7 +24,7 @@ Popup {
     focus: true
     modal: true
     padding: 12
-    width: Math.min(340, Overlay.overlay.width - 24)
+    width: Math.min(340, Overlay.overlay ? Overlay.overlay.width - 24 : 340)
 
     Overlay.modal: Rectangle {
         color: "#99000000"
