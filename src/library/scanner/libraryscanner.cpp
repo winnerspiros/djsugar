@@ -11,6 +11,9 @@
 #include "moc_libraryscanner.cpp"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
+#ifdef Q_OS_ANDROID
+#include "util/androidpermissions.h"
+#endif
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
 #include "util/db/fwdsqlquery.h"
@@ -240,6 +243,10 @@ void LibraryScanner::slotStartScan() {
         };
         for (const auto& fi : std::as_const(m_libraryRootDirs)) {
             const QString clean = QDir::cleanPath(fi.location());
+            // Registered by older builds
+            if (mixxx::android::isSystemSoundDirectory(clean)) {
+                continue;
+            }
             if (clean == QStringLiteral("/storage/emulated/0")) {
                 appendUnique(QStringLiteral("/storage/emulated/0/Music"));
                 appendUnique(QStringLiteral("/storage/emulated/0/Download"));

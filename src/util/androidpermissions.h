@@ -38,6 +38,9 @@ void requestFullExternalStorageAccess();
 /// The shared Music, Download, Podcasts and Recordings folders that exist:
 /// where the phone keeps its songs. Scanned into the library on start.
 QStringList sharedAudioDirectories();
+/// Folders of phone and app sounds (notification tones, ringtones,
+/// alarms, other apps' media), never scanned as music
+bool isSystemSoundDirectory(const QString& path);
 
 /// Returns the directory Mixxx should offer as the default music directory,
 /// creating it if necessary. Falls back to the app-private music directory if

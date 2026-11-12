@@ -121,6 +121,14 @@ QString publicDirectory(const char* type) {
 
 } // namespace
 
+bool isSystemSoundDirectory(const QString& path) {
+    // Phone and app sounds: notification tones, ringtones, alarms and
+    // the media folders of other apps (e.g. Gmail's notification sounds)
+    static const QRegularExpression kSystemSounds(QStringLiteral(
+            "/(Notifications|Ringtones|Alarms|Android/media)(/|$)"));
+    return kSystemSounds.match(path).hasMatch();
+}
+
 QStringList sharedAudioDirectories() {
     QStringList dirs;
     for (const char* type : {"DIRECTORY_MUSIC",
@@ -169,7 +177,8 @@ QStringList sharedAudioDirectories() {
                 cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0).toString())
                                        .path();
         if (folder.startsWith(QStringLiteral("/storage/")) &&
-                !kVolumeRoot.match(folder).hasMatch() && !folders.contains(folder)) {
+                !kVolumeRoot.match(folder).hasMatch() &&
+                !isSystemSoundDirectory(folder) && !folders.contains(folder)) {
             folders.append(folder);
         }
     }
