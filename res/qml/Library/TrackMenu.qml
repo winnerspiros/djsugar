@@ -86,11 +86,33 @@ Popup {
             color: Theme.darkGray3
             implicitHeight: 1
         }
-        Text {
-            color: Theme.lightGray2
-            font.pixelSize: 12
-            font.weight: Font.DemiBold
-            text: qsTr("ADD TO PLAYLIST")
+        RowLayout {
+            Layout.fillWidth: true
+
+            Text {
+                Layout.fillWidth: true
+                color: Theme.lightGray2
+                font.letterSpacing: 1
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+                text: qsTr("PLAYLISTS")
+            }
+            // How many hold the track, an accent pill
+            Rectangle {
+                color: playlistBrowser.checkedIds.length > 0 ? Qt.alpha(Theme.accentColor, 0.3) : Theme.darkGray3
+                implicitHeight: 20
+                implicitWidth: inText.implicitWidth + 16
+                radius: 10
+
+                Text {
+                    id: inText
+
+                    anchors.centerIn: parent
+                    color: Theme.white
+                    font.pixelSize: 11
+                    text: qsTr("in %1").arg(playlistBrowser.checkedIds.length)
+                }
+            }
         }
         // Tap to add or remove, as many as wanted; the menu stays open
         PlaylistBrowser {
@@ -119,13 +141,6 @@ Popup {
                 root.track.addToPlaylist(id);
                 checkedIds = checkedIds.concat([id]);
             }
-        }
-        Text {
-            Layout.fillWidth: true
-            color: Theme.lightGray2
-            elide: Text.ElideRight
-            font.pixelSize: 11
-            text: qsTr("In %n playlist(s)", "", playlistBrowser.checkedIds.length)
         }
         Skin.Button {
             Layout.fillWidth: true

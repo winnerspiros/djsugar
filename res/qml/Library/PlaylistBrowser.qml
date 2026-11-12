@@ -55,125 +55,223 @@ ColumnLayout {
         }
     }
 
-    Skin.TextField {
+    // Search, when there are many
+    Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 38
-        font.pixelSize: 14
-        placeholderText: qsTr("Search playlists")
+        color: Theme.embeddedBackgroundColor
+        radius: 8
         visible: root.playlists.length > 6
 
-        onTextChanged: root.filter = text
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            color: Theme.lightGray
+            font.pixelSize: 15
+            text: "⌕"
+        }
+        TextField {
+            anchors.fill: parent
+            anchors.leftMargin: 30
+            background: null
+            color: Theme.textColor
+            font.pixelSize: 14
+            inputMethodHints: Qt.ImhNoPredictiveText
+            placeholderText: qsTr("Search playlists")
+            placeholderTextColor: Theme.lightGray
+
+            onTextChanged: root.filter = text
+        }
     }
-    ListView {
-        id: list
-
+    // The playlists, on the sunken background of the library lists
+    Rectangle {
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(44, Math.min(contentHeight, 5 * 48))
-        boundsBehavior: Flickable.StopAtBounds
-        clip: true
-        model: root.entries
-        spacing: 4
+        Layout.preferredHeight: list.wantedHeight + 8
+        color: Theme.sunkenBackgroundColor
+        radius: 10
 
-        delegate: Rectangle {
-            id: entry
+        ListView {
+            id: list
 
-            required property var modelData
-            readonly property bool checked: root.checkedIds.includes(modelData.id)
+            readonly property real wantedHeight: Math.max(48, Math.min(contentHeight, 5 * 50))
 
-            border.color: Theme.accentColor
-            border.width: checked ? 1 : 0
-            color: entryArea.pressed ? Theme.darkGray3 : Qt.lighter(Theme.darkGray2, 1.25)
-            height: 44
-            opacity: modelData.locked ? 0.4 : 1
-            radius: 10
-            width: ListView.view.width
+            anchors.fill: parent
+            anchors.margins: 4
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+            model: root.entries
+            spacing: 2
 
-            Image {
-                id: entryIcon
-
-                anchors.left: parent.left
-                anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                height: 18
-                source: "qrc:/images/library/ic_library_playlist.svg"
-                sourceSize: Qt.size(18, 18)
-                visible: false
-                width: 18
+            ScrollIndicator.vertical: ScrollIndicator {
             }
-            ColorOverlay {
-                anchors.fill: entryIcon
-                color: entry.checked ? Theme.accentColor : Theme.textColor
-                source: entryIcon
-            }
-            Text {
-                anchors.left: entryIcon.right
-                anchors.leftMargin: 12
-                anchors.right: parent.right
-                anchors.rightMargin: 40
-                anchors.verticalCenter: parent.verticalCenter
-                color: Theme.white
-                elide: Text.ElideRight
-                font.pixelSize: 14
-                text: (entry.modelData.locked ? "🔒 " : "") + entry.modelData.name
-            }
-            Rectangle {
-                anchors.right: parent.right
-                anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                border.color: entry.checked ? Theme.accentColor : Theme.lightGray2
-                border.width: 2
-                color: entry.checked ? Theme.accentColor : "transparent"
-                height: 22
-                radius: 6
-                visible: root.checkable
-                width: 22
+            delegate: Rectangle {
+                id: entry
 
-                Text {
-                    anchors.centerIn: parent
-                    color: Theme.white
-                    font.bold: true
-                    font.pixelSize: 14
-                    text: "✓"
+                required property var modelData
+                readonly property bool checked: root.checkedIds.includes(modelData.id)
+
+                color: entryArea.pressed ? Theme.darkGray3 : checked ? Qt.alpha(Theme.accentColor, 0.22) : "transparent"
+                height: 48
+                opacity: modelData.locked ? 0.45 : 1
+                radius: 8
+                width: ListView.view.width
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 120
+                    }
+                }
+
+                // In the playlist: an accent bar, as the sidebar's selection
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Theme.accentColor
+                    height: parent.height - 16
+                    radius: 2
                     visible: entry.checked
+                    width: 3
+                }
+                Image {
+                    id: entryIcon
+
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 20
+                    source: "qrc:/images/library/ic_library_playlist.svg"
+                    sourceSize: Qt.size(20, 20)
+                    visible: false
+                    width: 20
+                }
+                ColorOverlay {
+                    anchors.fill: entryIcon
+                    color: entry.checked ? Theme.accentColor : Theme.textColor
+                    source: entryIcon
+                }
+                Column {
+                    anchors.left: entryIcon.right
+                    anchors.leftMargin: 12
+                    anchors.right: parent.right
+                    anchors.rightMargin: 44
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 1
+
+                    Text {
+                        color: entry.checked ? Theme.white : Theme.textColor
+                        elide: Text.ElideRight
+                        font.pixelSize: 14
+                        font.weight: entry.checked ? Font.DemiBold : Font.Normal
+                        text: (entry.modelData.locked ? "🔒 " : "") + entry.modelData.name
+                        width: parent.width
+                    }
+                    Text {
+                        color: Theme.lightGray
+                        font.pixelSize: 11
+                        text: entry.modelData.count === 1 ? qsTr("1 track") : qsTr("%1 tracks").arg(entry.modelData.count ?? 0)
+                        visible: entry.modelData.count !== undefined
+                    }
+                }
+                // Check box
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    border.color: entry.checked ? Theme.accentColor : Theme.midGray
+                    border.width: 2
+                    color: entry.checked ? Theme.accentColor : "transparent"
+                    height: 22
+                    radius: 11
+                    visible: root.checkable
+                    width: 22
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 120
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        color: Theme.white
+                        font.bold: true
+                        font.pixelSize: 13
+                        scale: entry.checked ? 1 : 0
+                        text: "✓"
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 140
+                                easing.type: Easing.OutBack
+                            }
+                        }
+                    }
+                }
+                MouseArea {
+                    id: entryArea
+
+                    anchors.fill: parent
+                    enabled: !entry.modelData.locked
+
+                    onClicked: root.playlistPicked(entry.modelData.id)
                 }
             }
-            MouseArea {
-                id: entryArea
 
-                anchors.fill: parent
-                enabled: !entry.modelData.locked
-
-                onClicked: root.playlistPicked(entry.modelData.id)
+            Text {
+                anchors.centerIn: parent
+                color: Theme.lightGray
+                font.pixelSize: 13
+                text: root.filter.length > 0 ? qsTr("Nothing found") : qsTr("No playlists yet")
+                visible: list.count === 0
             }
         }
+    }
+    // A new playlist, which gets the track at once
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 44
+        border.color: newName.activeFocus ? Theme.accentColor : "transparent"
+        border.width: 1
+        color: Theme.embeddedBackgroundColor
+        radius: 8
 
         Text {
-            anchors.centerIn: parent
-            color: Theme.lightGray2
-            font.pixelSize: 13
-            text: root.filter.length > 0 ? qsTr("Nothing found") : qsTr("No playlists yet")
-            visible: list.count === 0
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            color: Theme.accentColor
+            font.pixelSize: 20
+            text: "+"
         }
-    }
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: 6
-
-        Skin.TextField {
+        TextField {
             id: newName
 
-            Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.leftMargin: 34
+            anchors.right: addButton.left
+            anchors.top: parent.top
+            background: null
+            color: Theme.textColor
             font.pixelSize: 14
+            inputMethodHints: Qt.ImhNoPredictiveText
             placeholderText: qsTr("New playlist")
+            placeholderTextColor: Theme.lightGray
 
             onAccepted: root.create()
         }
         Skin.Button {
-            Layout.preferredHeight: 40
+            id: addButton
+
             activeColor: Theme.accentColor
+            anchors.right: parent.right
+            anchors.rightMargin: 4
+            anchors.verticalCenter: parent.verticalCenter
             enabled: newName.displayText.trim().length > 0
-            text: qsTr("ADD")
+            height: 36
+            text: qsTr("CREATE")
+            visible: newName.displayText.trim().length > 0
 
             onClicked: root.create()
         }

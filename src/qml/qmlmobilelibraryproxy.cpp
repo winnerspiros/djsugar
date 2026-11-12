@@ -319,6 +319,7 @@ QVariantList QmlMobileLibraryProxy::playlists() const {
                 {QStringLiteral("id"), id},
                 {QStringLiteral("name"), name},
                 {QStringLiteral("locked"), playlistDao.isPlaylistLocked(id)},
+                {QStringLiteral("count"), playlistDao.tracksInPlaylist(id)},
         });
     }
     return result;
