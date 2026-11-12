@@ -753,20 +753,18 @@ message(STATUS "Optimization level: ${OPTIMIZE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
 # CMAKE_INTERPROCEDURAL_OPTIMIZATION can be defined to override the default behaviour.
-# Enable IPO/LTO for Release and RelWithDebInfo builds to improve performance
-# and reduce binary size. Disabled for Debug builds.
+# We keep CMAKE_INTERPROCEDURAL_OPTIMIZATION unset (IPO disabled) to save
+# build time at the cost of a bigger memory footprint at run-time.
+# See https://github.com/mixxxdj/mixxx/pull/3589 for some test results
 # Note: IPO has caused issues on Fedora https://bugzilla.rpmfusion.org/show_bug.cgi?id=5829
-if(
-  NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION
-  AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
-  AND NOT OPTIMIZE STREQUAL "off"
-)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT HAVE_IPO)
-  if(HAVE_IPO)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-  endif()
-endif()
+# Uncomment the following code to enable IPO for Release builds
+#if(NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
+#  include(CheckIPOSupported)
+#  check_ipo_supported(RESULT HAVE_IPO)
+#  if(HAVE_IPO)
+#    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+#  endif()
+#endif()
 
 if(MSVC)
   # Microsoft Visual Studio Compiler
@@ -859,9 +857,9 @@ if(MSVC)
       )
 
       # Reduce the size of the binary in RelWithDebInfo builds
-      # /OPT:REF removes unreferenced functions/data
-      # /OPT:ICF merges identical functions (COMDAT folding)
-      add_link_options(/OPT:REF /OPT:ICF)
+      # Do not use /OPT:ICF because it has no effect.
+      # https://github.com/mixxxdj/mixxx/pull/3660#pullrequestreview-600137258
+      add_link_options(/OPT:REF)
 
       # /INCREMENTAL is incompatible with /OPT:REF, but it's the CMake default for RelWithDebInfo
       # The CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO can be defined by the user in the GUI or in CMakeSettings.json,
@@ -888,9 +886,9 @@ if(MSVC)
       # Note: CMAKE_INTERPROCEDURAL_OPTIMIZATION sets the /GL and /LTCG flags for us
     elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
       # Reduce the size of the binary in Release builds
-      # /OPT:REF removes unreferenced functions/data
-      # /OPT:ICF merges identical functions (COMDAT folding)
-      add_link_options(/OPT:REF /OPT:ICF)
+      # Do not use /OPT:ICF because it has no effect.
+      # https://github.com/mixxxdj/mixxx/pull/3660#pullrequestreview-600137258
+      add_link_options(/OPT:REF)
     endif()
 
     if(OPTIMIZE STREQUAL "portable")
@@ -1126,39 +1124,6 @@ else()
     message(STATUS "Found ccache: ${CCACHE_EXECUTABLE}")
   else()
     message(STATUS "Could NOT find ccache (missing executable)")
-  endif()
-
-  # Release linker flags for GCC/Clang (non-MSVC)
-  # These require -ffunction-sections and -fdata-sections which are
-  # added by the OPTIMIZE logic above for non-Debug builds.
-  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
-    if(APPLE)
-      # macOS: -dead_strip removes unused code/data (requires -ffunction-sections -fdata-sections)
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dead_strip")
-      set(
-        CMAKE_SHARED_LINKER_FLAGS
-        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-dead_strip"
-      )
-      set(
-        CMAKE_MODULE_LINKER_FLAGS
-        "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-dead_strip"
-      )
-    else()
-      # Linux/Unix: --gc-sections removes unused sections, --icf=safe folds identical functions
-      # --as-needed drops unused DT_NEEDED entries
-      set(
-        CMAKE_EXE_LINKER_FLAGS
-        "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed"
-      )
-      set(
-        CMAKE_SHARED_LINKER_FLAGS
-        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed"
-      )
-      set(
-        CMAKE_MODULE_LINKER_FLAGS
-        "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed"
-      )
-    endif()
   endif()
   default_option(CCACHE_SUPPORT "Enable ccache support" "CCACHE_EXECUTABLE;NOT ANDROID")
 
