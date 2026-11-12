@@ -300,7 +300,8 @@ void LibraryScanner::slotStartScan() {
     // Video files are not scanned: their sound plays, but on a phone they are
     // clips and memes, not music
     QStringList audioTypes = SoundSourceProxy::getSupportedFileTypes();
-    for (const QString& videoType : ScannerUtil::videoFileTypes()) {
+    const QStringList videoTypes = ScannerUtil::videoFileTypes();
+    for (const QString& videoType : videoTypes) {
         audioTypes.removeAll(videoType);
     }
     QRegularExpression extensionFilter(RegexUtils::fileExtensionsRegex(audioTypes),

@@ -143,7 +143,8 @@ void TrackDAO::initialize(const QSqlDatabase& database) {
     // Videos and files without audio found by older scans: the scanner skips
     // them now. The ones in a playlist or crate were picked by hand and stay.
     QStringList videoLocations;
-    for (const QString& videoType : ScannerUtil::videoFileTypes()) {
+    const QStringList videoTypes = ScannerUtil::videoFileTypes();
+    for (const QString& videoType : videoTypes) {
         videoLocations.append(QStringLiteral("lower(location) LIKE '%.") + videoType + "'");
     }
     QSqlQuery hideVideos(m_database);

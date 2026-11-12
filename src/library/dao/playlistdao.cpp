@@ -431,7 +431,8 @@ bool PlaylistDAO::renameFolder(int folderId, const QString& name) {
 
 void PlaylistDAO::deleteFolder(int folderId) {
     int parentId = kNoFolder;
-    for (const Folder& folder : getFolders()) {
+    const QList<Folder> folders = getFolders();
+    for (const Folder& folder : folders) {
         if (folder.id == folderId) {
             parentId = folder.parentId;
         }
@@ -459,7 +460,8 @@ void PlaylistDAO::deleteFolder(int folderId) {
 
 bool PlaylistDAO::moveFolder(int folderId, int parentId) {
     QHash<int, int> parents;
-    for (const Folder& folder : getFolders()) {
+    const QList<Folder> folders = getFolders();
+    for (const Folder& folder : folders) {
         parents.insert(folder.id, folder.parentId);
     }
     for (int ancestor = parentId; ancestor > 0; ancestor = parents.value(ancestor, kNoFolder)) {

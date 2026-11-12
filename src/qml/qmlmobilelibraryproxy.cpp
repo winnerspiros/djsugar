@@ -356,7 +356,8 @@ QVariantList QmlMobileLibraryProxy::playlistFolders() const {
     }
     const PlaylistDAO& playlistDao =
             trackCollectionManager()->internalCollection()->getPlaylistDAO();
-    for (const auto& folder : playlistDao.getFolders()) {
+    const QList<PlaylistDAO::Folder> folders = playlistDao.getFolders();
+    for (const auto& folder : folders) {
         result.append(QVariantMap{
                 {QStringLiteral("id"), folder.id},
                 {QStringLiteral("name"), folder.name},
