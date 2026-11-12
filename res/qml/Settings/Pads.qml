@@ -85,7 +85,7 @@ Category {
             PillButton {
                 Layout.alignment: Qt.AlignRight
                 accent: "#00e5ff"
-                label: qsTr("↺ Reset SAMPLER")
+                label: qsTr("Reset SAMPLER")
                 onClicked: {
                     Mixxx.PlayerManager.resetSamplers();
                     picker.pickedPaths = {};
@@ -113,7 +113,7 @@ Category {
             PillButton {
                 Layout.alignment: Qt.AlignRight
                 accent: "#ff4081"
-                label: qsTr("↺ Reset PAD FX")
+                label: qsTr("Reset PAD FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetPadFx();
                     root.revision++;
@@ -153,7 +153,7 @@ Category {
             PillButton {
                 Layout.alignment: Qt.AlignRight
                 accent: "#ffab00"
-                label: qsTr("↺ Reset BEAT FX")
+                label: qsTr("Reset BEAT FX")
                 onClicked: {
                     Mixxx.EffectsManager.resetBeatFx();
                     root.revision++;

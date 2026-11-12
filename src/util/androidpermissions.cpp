@@ -10,6 +10,7 @@
 #include <QJniObject>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <algorithm>
 
 #include "util/assert.h"
 
@@ -132,9 +133,9 @@ QStringList sharedAudioDirectories() {
             dirs.append(QDir::cleanPath(path));
         }
     }
-    // Songs elsewhere (an app's folder, a card, a USB stick): the media
-    // store knows every audio file; each top folder of a volume holding one
-    // is added, e.g. /storage/emulated/0/WhatsApp or /storage/1A2B-3C4D/DJ
+    // Songs elsewhere (an app's folder such as Android/media/com.whatsapp,
+    // a card, a USB stick): the media store knows every audio file. The
+    // folders holding them are added, a folder inside another one once.
     const QJniObject uri = QJniObject::getStaticObjectField(
             "android/provider/MediaStore$Audio$Media",
             "EXTERNAL_CONTENT_URI",
@@ -158,19 +159,33 @@ QStringList sharedAudioDirectories() {
     if (env.checkAndClearExceptions() || !cursor.isValid()) {
         return dirs;
     }
-    // /storage/<volume>/<top folder>/…, the primary volume being emulated/0
-    static const QRegularExpression kTopFolder(
-            QStringLiteral("^(/storage/(?:emulated/\\d+|(?!emulated/)[^/]+)/[^/]+)/"));
+    // A volume root (/storage/emulated/0, /storage/1A2B-3C4D) would watch
+    // the whole volume: its loose files are left out
+    static const QRegularExpression kVolumeRoot(
+            QStringLiteral("^/storage/(emulated/\\d+|[^/]+)$"));
+    QStringList folders;
     while (cursor.callMethod<jboolean>("moveToNext")) {
-        const QString path = cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0)
-                                     .toString();
-        const auto match = kTopFolder.match(path);
-        if (match.hasMatch() && !match.captured(1).endsWith(QStringLiteral("/Android")) &&
-                !dirs.contains(match.captured(1))) {
-            dirs.append(match.captured(1));
+        const QString folder = QFileInfo(
+                cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0).toString())
+                                       .path();
+        if (folder.startsWith(QStringLiteral("/storage/")) &&
+                !kVolumeRoot.match(folder).hasMatch() && !folders.contains(folder)) {
+            folders.append(folder);
         }
     }
     cursor.callMethod<void>("close");
+    // Shortest first: a folder inside an added one is already covered
+    std::sort(folders.begin(), folders.end(), [](const QString& a, const QString& b) {
+        return a.size() < b.size();
+    });
+    for (const QString& folder : std::as_const(folders)) {
+        const bool covered = std::any_of(dirs.cbegin(), dirs.cend(), [&](const QString& dir) {
+            return folder == dir || folder.startsWith(dir + QLatin1Char('/'));
+        });
+        if (!covered) {
+            dirs.append(folder);
+        }
+    }
     return dirs;
 }
 
