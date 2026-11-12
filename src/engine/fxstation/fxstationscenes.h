@@ -26,6 +26,15 @@ class HermiteLine {
     void clear() {
         std::fill(m_buffer.begin(), m_buffer.end(), 0.f);
     }
+    /// The sample `delay` whole frames before the last write
+    float at(int delay) const {
+        const int size = static_cast<int>(m_buffer.size());
+        int i = m_write - 1 - delay;
+        while (i < 0) {
+            i += size;
+        }
+        return m_buffer[i];
+    }
     void write(float x) {
         m_buffer[m_write] = x;
         if (++m_write == static_cast<int>(m_buffer.size())) {
@@ -292,53 +301,141 @@ inline float gateGain(double beat, double division, float width, float softness)
     return 0.f;
 }
 
-/// Pitch shifter: three overlapping grains of a 50 ms window with Hann
-/// windows, Hermite reads, normalized to a constant power (the grains are
-/// not in phase). Smoother and with less flutter than two triangular taps.
-class GrainPitch {
+/// Pitch shifter (WSOLA): a read tap runs through the recent input at the
+/// pitch ratio. When it drifts out of its window it jumps a period back or
+/// forward, to the position (searched over +-5 ms) whose waveform matches
+/// the one playing best, and crossfades until the next jump (up to 30 ms). Joins in phase do not
+/// warble or comb like fixed grains; about 20 ms of latency.
+class WsolaPitch {
   public:
+    static constexpr float kPeriod = 0.03f;
+    static constexpr float kSearch = 0.006f;
+    static constexpr float kFade = 0.03f;
+    static constexpr float kMatch = 0.012f;
     void allocate(float maxSampleRate) {
-        m_window = static_cast<int>(0.05f * maxSampleRate);
+        const int frames = static_cast<int>(0.25f * maxSampleRate) + 16;
         for (auto& line : m_lines) {
-            line.allocate(2 * m_window + 8);
+            line.allocate(frames);
         }
+        m_mono.allocate(frames);
+        setSampleRate(maxSampleRate);
     }
     void setSampleRate(float sampleRate) {
-        m_window = static_cast<int>(0.05f * sampleRate);
+        m_sampleRate = sampleRate;
+        m_period = static_cast<int>(kPeriod * sampleRate);
+        m_search = static_cast<int>(kSearch * sampleRate);
+        m_maxFade = static_cast<int>(kFade * sampleRate);
+        m_fade = m_maxFade;
+        m_match = static_cast<int>(kMatch * sampleRate);
+        clear();
     }
     void clear() {
         for (auto& line : m_lines) {
             line.clear();
         }
-        m_phase = 0.f;
+        m_mono.clear();
+        m_delay = -1.f;
+        m_fadeLeft = 0;
+        m_low = {};
     }
     void process(float* pLeft, float* pRight, float ratio) {
+        ratio = std::clamp(ratio, 0.25f, 4.f);
+        // The longest crossfade that ends before the next jump
+        m_fade = std::max(16,
+                std::min(m_maxFade,
+                        static_cast<int>(0.9f * static_cast<float>(m_period) /
+                                std::max(1e-3f, std::fabs(1.f - ratio)))));
         m_lines[0].write(*pLeft);
         m_lines[1].write(*pRight);
-        m_phase += (1.f - ratio) / static_cast<float>(m_window);
-        m_phase -= std::floor(m_phase);
-        float left = 0.f;
-        float right = 0.f;
-        float power = 0.f;
-        for (int g = 0; g < 3; ++g) {
-            float phase = m_phase + static_cast<float>(g) / 3.f;
-            phase -= std::floor(phase);
-            const float window = 0.5f - 0.5f * std::cos(kTwoPi * phase);
-            power += window * window;
-            const float delay = 2.f + phase * static_cast<float>(m_window);
-            left += window * m_lines[0].read(delay);
-            right += window * m_lines[1].read(delay);
+        m_mono.write(*pLeft + *pRight);
+        // The window of the tap: the old tap still plays the fade, at the
+        // ratio, and must stay behind the write position
+        const float base = 4.f + static_cast<float>(m_search) +
+                static_cast<float>(m_fade) * std::max(0.f, ratio - 1.f);
+        if (m_delay < 0.f) {
+            m_delay = base + 0.5f * static_cast<float>(m_period);
         }
-        // The sum of the squared windows is 9/8 at any phase
-        const float norm = 1.f / std::sqrt(power);
-        *pLeft = left * norm;
-        *pRight = right * norm;
+        if (m_fadeLeft == 0) {
+            if (m_delay < base) {
+                jump(m_delay + static_cast<float>(m_period));
+            } else if (m_delay > base + static_cast<float>(m_period)) {
+                jump(m_delay - static_cast<float>(m_period));
+            }
+        }
+        float left = m_lines[0].read(m_delay);
+        float right = m_lines[1].read(m_delay);
+        if (m_fadeLeft > 0) {
+            // Raised cosine: the joined waveforms are in phase, their
+            // amplitudes add up to one
+            const float t = static_cast<float>(m_fadeLeft) / static_cast<float>(m_fade);
+            const float out = 0.5f - 0.5f * std::cos(3.14159265f * t);
+            left = left * (1.f - out) + m_lines[0].read(m_oldDelay) * out;
+            right = right * (1.f - out) + m_lines[1].read(m_oldDelay) * out;
+            m_oldDelay += 1.f - ratio;
+            --m_fadeLeft;
+        }
+        m_delay += 1.f - ratio;
+        // Shifted up, the images above the old Nyquist are softened
+        if (ratio > 1.f) {
+            const float cutoff = std::min(0.45f, 0.5f / ratio) * m_sampleRate;
+            const float a = 1.f - std::exp(-kTwoPi * cutoff / m_sampleRate);
+            m_low[0] += (left - m_low[0]) * a;
+            m_low[1] += (right - m_low[1]) * a;
+            const float blend = std::min(1.f, ratio - 1.f);
+            left += (m_low[0] - left) * blend;
+            right += (m_low[1] - right) * blend;
+        } else {
+            m_low = {left, right};
+        }
+        *pLeft = left;
+        *pRight = right;
     }
 
   private:
+    void jump(float center) {
+        // The waveform before the tap, against the one before each candidate
+        const int from = static_cast<int>(m_delay);
+        float best = -2.f;
+        int bestDelay = static_cast<int>(center);
+        for (int candidate = static_cast<int>(center) - m_search;
+                candidate <= static_cast<int>(center) + m_search;
+                candidate += 2) {
+            if (candidate < 2) {
+                continue;
+            }
+            // Around the tap: what it played and, as far as recorded, what
+            // the crossfade will play
+            float cross = 0.f;
+            float energy = 1e-9f;
+            const int ahead = std::min({m_match / 2, from, candidate});
+            for (int k = -ahead; k < m_match - ahead; k += 2) {
+                const float y = m_mono.at(candidate + k);
+                cross += m_mono.at(from + k) * y;
+                energy += y * y;
+            }
+            const float score = cross / std::sqrt(energy);
+            if (score > best) {
+                best = score;
+                bestDelay = candidate;
+            }
+        }
+        m_oldDelay = m_delay;
+        m_delay = static_cast<float>(bestDelay) + (m_delay - static_cast<float>(from));
+        m_fadeLeft = m_fade;
+    }
+
     std::array<HermiteLine, 2> m_lines;
-    int m_window = 1;
-    float m_phase = 0.f;
+    HermiteLine m_mono;
+    float m_sampleRate = 48000.f;
+    int m_period = 1;
+    int m_search = 1;
+    int m_fade = 1;
+    int m_maxFade = 1;
+    int m_match = 1;
+    float m_delay = -1.f;
+    float m_oldDelay = 0.f;
+    int m_fadeLeft = 0;
+    std::array<float, 2> m_low{};
 };
 
 /// A 2x oversampler: a 31 tap half band low pass (Kaiser windowed sinc,

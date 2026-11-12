@@ -189,7 +189,7 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     m_spiral.allocate(kPitchWindowFrames);
     m_flanger.allocate(kMaxSampleRate);
     m_roll.allocate(kMaxSampleRate, kMaxSceneRollSeconds);
-    m_grainPitch.allocate(kMaxSampleRate);
+    m_pitch.allocate(kMaxSampleRate);
     // At the highest rate first, so that prepare() never allocates
     m_reverb.setup(kMaxSampleRate);
     m_reverb.setModulation(0.9f);
@@ -256,7 +256,7 @@ void FxStation::prepare(float sampleRate) {
     m_sampleRate = sampleRate;
     m_reverb.setup(std::min(sampleRate, kMaxSampleRate));
     m_reverb.setModulation(0.9f);
-    m_grainPitch.setSampleRate(std::min(sampleRate, kMaxSampleRate));
+    m_pitch.setSampleRate(std::min(sampleRate, kMaxSampleRate));
     m_lowMid.set(kLowMidFrequency, sampleRate);
     m_midHigh.set(kMidHighFrequency, sampleRate);
     m_lowAllPass.set(kMidHighFrequency, sampleRate);
@@ -600,7 +600,7 @@ bool FxStation::processAddedScene(float* pLeft, float* pRight) {
         // Down to the left of the center, up to the right, by up to an
         // octave (two with the range knob up)
         const float semitones = (2.f * dial - 1.f) * (1.f + 23.f * param1);
-        m_grainPitch.process(&left, &right, std::pow(2.f, semitones / 12.f));
+        m_pitch.process(&left, &right, std::pow(2.f, semitones / 12.f));
         amount = 0.5f + 0.5f * param2;
         break;
     }
@@ -949,7 +949,7 @@ void FxStation::process(CSAMPLE* pBuffer, int frames, float sampleRate) {
         m_phaser.clear();
         m_sweepFilter.clear();
         m_roll.stop();
-        m_grainPitch.clear();
+        m_pitch.clear();
         m_drive.clear();
         m_sceneMix.reset(0.f);
         m_lastSceneType = sceneType;

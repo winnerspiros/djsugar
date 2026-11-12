@@ -214,7 +214,7 @@ class FxStation : public QObject {
     fxstation::scenes::Phaser m_phaser;
     fxstation::scenes::SweepFilter m_sweepFilter;
     fxstation::scenes::Roll m_roll;
-    fxstation::scenes::GrainPitch m_grainPitch;
+    fxstation::scenes::WsolaPitch m_pitch;
     fxstation::scenes::Drive m_drive;
 
     // Isolate
