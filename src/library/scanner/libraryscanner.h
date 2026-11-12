@@ -2,6 +2,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include <QElapsedTimer>
 #include <QList>
 #include <QScopedPointer>
 #include <QSemaphore>
@@ -42,6 +43,9 @@ class LibraryScanner : public QThread {
 
     // Call from any thread to cancel the scan.
     void slotCancel();
+    /// Stops the scan without waiting, from any thread: queued work is
+    /// dropped and the queued signals return at once
+    void requestCancel();
 
   signals:
     void scanStarted();
@@ -78,6 +82,7 @@ class LibraryScanner : public QThread {
     void slotAddNewTrack(const QString& trackPath);
 
   private:
+    void commitAndRestart();
     enum ScannerState {
         IDLE,
         STARTING,
@@ -122,6 +127,11 @@ class LibraryScanner : public QThread {
     // Qt even Queue in the way, that you cannot start a
     // new scan while the old one is canceled
     QSemaphore m_stateSema;
+    // Directory hashes written since the last commit, and when that was:
+    // one commit per folder made a scan of thousands of (empty) folders
+    // take minutes on Android storage before the first song showed up
+    bool m_uncommittedHashes = false;
+    QElapsedTimer m_sinceCommit;
     // this is accessed main and LibraryScanner thread
     volatile ScannerState m_state;
 

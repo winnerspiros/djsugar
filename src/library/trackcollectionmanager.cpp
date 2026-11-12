@@ -175,6 +175,10 @@ TrackCollectionManager::TrackCollectionManager(QObject* parent,
 TrackCollectionManager::~TrackCollectionManager() {
     if (m_pScanner) {
         kLogger.info() << "Stopping library scanner thread";
+        // A running scan is canceled first: quitting alone let the scanner
+        // work through its whole queue (thousands of folders) before it
+        // could stop
+        m_pScanner->requestCancel();
         m_pScanner->quit();
 #ifdef Q_OS_ANDROID
         // Android gives no second chance to a hung exit: the user has to

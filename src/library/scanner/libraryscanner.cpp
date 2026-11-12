@@ -614,6 +614,15 @@ void LibraryScanner::cancelAndQuit() {
     changeScannerState(IDLE);
 }
 
+void LibraryScanner::requestCancel() {
+    m_canceled = true;
+    ScannerGlobalPointer scanner = m_scannerGlobal;
+    if (scanner) {
+        scanner->cancel();
+    }
+    m_pool.clear();
+}
+
 // be sure we hold the m_stateSema and we are in CANCELING state
 void LibraryScanner::cancel() {
     DEBUG_ASSERT(m_state == CANCELING);
@@ -720,12 +729,13 @@ void LibraryScanner::slotDirectoryHashedAndScanned(const QString& directoryPath,
         m_libraryHashDao.updateDirectoryHash(directoryPath, hash, 0);
     }
 
-    // Commit the add-tracks transaction at directory boundaries. This
-    // bounds the lifetime of the open transaction when no tracks are
-    // added for a while (e.g. a phase with only unchanged directories),
-    // so that the write lock is never held unnecessarily. During active
-    // track imports, slotAddNewTrack already commits after every track.
-    m_trackDao.addTracksCommitAndRestart();
+    // Folder hashes are committed together, at least every half second so
+    // that the write lock is never held for long (no track cache mutex is
+    // taken here, so batching them cannot deadlock)
+    m_uncommittedHashes = true;
+    if (!m_sinceCommit.isValid() || m_sinceCommit.hasExpired(500)) {
+        commitAndRestart();
+    }
 
     emit progressHashing(directoryPath);
 }
@@ -772,6 +782,10 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         return;
     }
     ScopedTimer timer(QStringLiteral("LibraryScanner::addNewTrack"));
+    // The track cache mutex is taken below: no write may be pending then
+    if (m_uncommittedHashes) {
+        commitAndRestart();
+    }
     // For statistics tracking and to detect moved tracks
     TrackPointer pTrack = m_trackDao.addTracksAddFile(
             trackPath,
@@ -783,7 +797,7 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         // is released before the next addTracksAddFile() call acquires the
         // GlobalTrackCache mutex (see the comment on
         // commit-after-every-track above).
-        m_trackDao.addTracksCommitAndRestart();
+        commitAndRestart();
         return;
     }
 
@@ -806,7 +820,13 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
     // the next addTracksAddFile() call will acquire the GlobalTrackCache
     // mutex, and the scanner must not hold the write lock while waiting
     // for that mutex (see the comment on commit-after-every-track above).
+    commitAndRestart();
+}
+
+void LibraryScanner::commitAndRestart() {
     m_trackDao.addTracksCommitAndRestart();
+    m_uncommittedHashes = false;
+    m_sinceCommit.start();
 }
 
 bool LibraryScanner::changeScannerState(ScannerState newState) {
