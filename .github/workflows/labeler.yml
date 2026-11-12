@@ -8,8 +8,11 @@
 # https://github.com/actions/labeler
 
 name: "Pull Request Labeler"
+# pull_request, not pull_request_target: GitHub restricts the latter on
+# public repositories from December 2026. PRs here come from branches of
+# this repository, which get a token that can write labels.
 on:
-  - pull_request_target
+  - pull_request
 
 permissions:
   contents: read
