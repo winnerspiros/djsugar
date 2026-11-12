@@ -55,6 +55,10 @@ class QmlPlayerManagerProxy : public QObject {
     Q_INVOKABLE QString saveTrimmedSample(double start, double end, const QString& name);
     /// The sound picked for an X-Pad instrument of a user bank (1 to 3)
     Q_INVOKABLE QString fxStationSound(int bank, int instrument) const;
+    /// The FX Station effect on a Scene (kind "scene") or Release (kind
+    /// "release") button, -1 for the button's own
+    Q_INVOKABLE int fxStationButtonEffect(const QString& kind, int button) const;
+    Q_INVOKABLE void setFxStationButtonEffect(const QString& kind, int button, int effect);
     /// An empty path goes back to the bank folder
     Q_INVOKABLE void setFxStationSound(int bank, int instrument, const QString& path);
     Q_INVOKABLE bool startSampleRecording();

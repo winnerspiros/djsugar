@@ -1357,6 +1357,7 @@ add_library(
   src/dialog/dlgreplacecuecolor.cpp
   src/dialog/dlgreplacecuecolordlg.ui
   src/effects/backends/builtin/autopaneffect.cpp
+  src/effects/backends/builtin/backspineffect.cpp
   src/effects/backends/builtin/balanceeffect.cpp
   src/effects/backends/builtin/bessel4lvmixeqeffect.cpp
   src/effects/backends/builtin/bessel8lvmixeqeffect.cpp

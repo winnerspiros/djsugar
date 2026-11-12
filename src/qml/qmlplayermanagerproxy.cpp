@@ -185,6 +185,31 @@ void QmlPlayerManagerProxy::setFxStationSound(int bank, int instrument, const QS
     ControlObject::set(ConfigKey(QStringLiteral("[FxStation]"), QStringLiteral("xpad_reload")), 0);
 }
 
+namespace {
+
+ConfigKey fxStationButtonKey(const QString& kind, int button) {
+    return ConfigKey(QStringLiteral("[FxStation]"),
+            QStringLiteral("%1%2_effect").arg(kind).arg(button + 1));
+}
+
+} // namespace
+
+int QmlPlayerManagerProxy::fxStationButtonEffect(const QString& kind, int button) const {
+    return m_pPlayerManager->config()->getValue(fxStationButtonKey(kind, button), -1);
+}
+
+void QmlPlayerManagerProxy::setFxStationButtonEffect(
+        const QString& kind, int button, int effect) {
+    const UserSettingsPointer pConfig = m_pPlayerManager->config();
+    if (effect < 0) {
+        pConfig->remove(fxStationButtonKey(kind, button));
+    } else {
+        pConfig->setValue(fxStationButtonKey(kind, button), effect);
+    }
+    // Android may close the app without the usual shutdown
+    pConfig->save();
+}
+
 void QmlPlayerManagerProxy::resetSamplers() {
     const QStringList kit = samples::defaultSamplerKit(m_pPlayerManager->config());
     const int count = m_pPlayerManager->numberOfSamplers();

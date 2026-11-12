@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "." as Skin
@@ -18,8 +19,28 @@ Rectangle {
     readonly property bool strip: height < 560 && width >= 900 && height >= 220
     readonly property bool compact: !strip && (height < 560 || width < 760)
     property int tab: 0
+    // The effects of the FX Station, in the order of scene_type and
+    // release_type
+    readonly property var sceneNames: ["BPF ECHO", "ECHO", "NOISE", "SPIRAL UP", "REVERB UP", "HPF ECHO", "LPF ECHO", "CRUSH ECHO", "SPIRAL DOWN", "REVERB DOWN"]
+    readonly property var releaseNames: ["VINYL BRAKE", "ECHO", "BACK SPIN"]
+    // The effect on each Scene and Release button, swapped with the edit
+    // icon; a button plays its own unless swapped
+    property var sceneEffects: sceneNames.map((name, button) => button)
+    property var releaseEffects: releaseNames.map((name, button) => button)
+
+    function loadButtonEffects() {
+        sceneEffects = sceneNames.map((name, button) => {
+            const effect = Mixxx.PlayerManager.fxStationButtonEffect("scene", button);
+            return effect >= 0 && effect < sceneNames.length ? effect : button;
+        });
+        releaseEffects = releaseNames.map((name, button) => {
+            const effect = Mixxx.PlayerManager.fxStationButtonEffect("release", button);
+            return effect >= 0 && effect < releaseNames.length ? effect : button;
+        });
+    }
 
     color: "#0b0e13"
+    Component.onCompleted: loadButtonEffects()
 
     // Touches on the gaps don't reach what is under the panel
     MouseArea {
@@ -34,7 +55,10 @@ Rectangle {
         property bool active: false
         property color activeColor: "#00e5ff"
         property bool enabledLook: true
+        // Shows the edit icon, which emits edit()
+        property bool editable: false
         signal clicked
+        signal edit
         signal held
         signal pressed
         signal released
@@ -57,6 +81,23 @@ Rectangle {
             text: button.text
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.WordWrap
+        }
+        Text {
+            visible: button.editable
+            anchors.right: parent.right
+            anchors.rightMargin: 3
+            anchors.top: parent.top
+            anchors.topMargin: 1
+            color: button.activeColor
+            font.pixelSize: Math.max(9, Math.min(14, button.height * 0.3))
+            text: "✎"
+            z: 1
+
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -8
+                onClicked: button.edit()
+            }
         }
         MouseArea {
             id: buttonArea
@@ -261,14 +302,14 @@ Rectangle {
     component SceneSection: Section {
         id: sceneSection
 
-        readonly property var buildUps: ["BPF ECHO", "ECHO", "NOISE", "SPIRAL UP", "REVERB UP"]
-        readonly property var breakDowns: ["HPF ECHO", "LPF ECHO", "CRUSH ECHO", "SPIRAL DOWN", "REVERB DOWN"]
         readonly property int type: sceneTypeControl.value
         readonly property bool isNoise: type === 2
         readonly property bool isReverb: type === 4 || type === 9
         readonly property bool isSpiral: type === 3 || type === 8
 
-        function select(index) {
+        // Plays the effect on a Scene button, or stops it
+        function select(button) {
+            const index = root.sceneEffects[button];
             if (sceneTypeControl.value === index && sceneOnControl.value > 0) {
                 sceneOnControl.value = 0;
             } else {
@@ -323,18 +364,21 @@ Rectangle {
                 spacing: 3
 
                 Repeater {
-                    model: sceneSection.buildUps
+                    model: 5
 
                     FxButton {
                         required property int index
-                        required property string modelData
+                        readonly property int button: index
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-                        active: sceneOnControl.value > 0 && sceneTypeControl.value === index
+                        active: sceneOnControl.value > 0 && sceneTypeControl.value === root.sceneEffects[button]
                         activeColor: "#ffab40"
-                        text: modelData
-                        onClicked: sceneSection.select(index)
+                        editable: true
+                        text: root.sceneNames[root.sceneEffects[button]]
+                        onClicked: sceneSection.select(button)
+                        onHeld: effectPicker.openFor("scene", button, activeColor)
+                        onEdit: effectPicker.openFor("scene", button, activeColor)
                     }
                 }
             }
@@ -350,18 +394,21 @@ Rectangle {
                 spacing: 3
 
                 Repeater {
-                    model: sceneSection.breakDowns
+                    model: 5
 
                     FxButton {
                         required property int index
-                        required property string modelData
+                        readonly property int button: index + 5
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-                        active: sceneOnControl.value > 0 && sceneTypeControl.value === index + 5
+                        active: sceneOnControl.value > 0 && sceneTypeControl.value === root.sceneEffects[button]
                         activeColor: "#40c4ff"
-                        text: modelData
-                        onClicked: sceneSection.select(index + 5)
+                        editable: true
+                        text: root.sceneNames[root.sceneEffects[button]]
+                        onClicked: sceneSection.select(button)
+                        onHeld: effectPicker.openFor("scene", button, activeColor)
+                        onEdit: effectPicker.openFor("scene", button, activeColor)
                     }
                 }
             }
@@ -752,19 +799,21 @@ Rectangle {
             spacing: 3
 
             Repeater {
-                model: ["VINYL BRAKE", "ECHO", "BACK SPIN"]
+                model: 3
 
                 FxButton {
                     required property int index
-                    required property string modelData
+                    readonly property int effect: root.releaseEffects[index]
 
                     Layout.fillHeight: true
                     Layout.fillWidth: true
-                    active: releaseActiveControl.value > 0 && releaseTypeControl.value === index
+                    active: releaseActiveControl.value > 0 && releaseTypeControl.value === effect
                     activeColor: "#ff6e40"
-                    text: modelData
+                    editable: true
+                    text: root.releaseNames[effect]
+                    onEdit: effectPicker.openFor("release", index, activeColor)
                     onPressed: {
-                        releaseTypeControl.value = index;
+                        releaseTypeControl.value = effect;
                         releaseControl.value = 1;
                     }
                     onReleased: releaseControl.value = 0
@@ -1072,5 +1121,137 @@ Rectangle {
 
         accent: "#ff4081"
         onPicked: path => Mixxx.PlayerManager.setFxStationSound(bank, instrument, path)
+    }
+
+    // The effect of a Scene or Release button: any FX Station effect of
+    // its kind, or back to the button's own
+    Popup {
+        id: effectPicker
+
+        property string kind: "scene"
+        property int button: 0
+        property color accent: "#ffab40"
+        readonly property var names: kind === "scene" ? root.sceneNames : root.releaseNames
+        readonly property int current: (kind === "scene" ? root.sceneEffects : root.releaseEffects)[button]
+
+        function openFor(newKind, newButton, color) {
+            kind = newKind;
+            button = newButton;
+            accent = color;
+            open();
+        }
+        function pick(effect) {
+            Mixxx.PlayerManager.setFxStationButtonEffect(kind, button, effect === button ? -1 : effect);
+            root.loadButtonEffects();
+        }
+
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(parent ? parent.width - 40 : 400, 380)
+        height: Math.min(parent ? parent.height - 40 : 500, 56 * names.length + 110)
+        modal: true
+        padding: 8
+
+        background: Rectangle {
+            color: "#000000"
+            radius: 8
+            border.color: effectPicker.accent
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 6
+
+            Text {
+                text: (effectPicker.kind === "scene" ? "SCENE FX " : "RELEASE FX ") + (effectPicker.button + 1) + " · " + effectPicker.names[effectPicker.button]
+                color: "#ffffff"
+                font.bold: true
+                font.pixelSize: 14
+            }
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                model: effectPicker.names
+                delegate: Rectangle {
+                    id: row
+
+                    required property int index
+                    required property string modelData
+                    readonly property bool current: effectPicker.current === index
+
+                    width: ListView.view.width
+                    height: 44
+                    radius: 6
+                    color: rowArea.pressed ? "#1a1a1a" : current ? Qt.rgba(effectPicker.accent.r, effectPicker.accent.g, effectPicker.accent.b, 0.16) : "#000000"
+
+                    // Accent bar on the chosen row
+                    Rectangle {
+                        visible: row.current
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 4
+                        height: parent.height - 12
+                        radius: 2
+                        color: effectPicker.accent
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.right: checkMark.left
+                        anchors.rightMargin: 8
+                        elide: Text.ElideRight
+                        text: row.modelData + (row.index === effectPicker.button ? qsTr(" (default)") : "")
+                        color: row.current ? effectPicker.accent : "#ffffff"
+                        font.pixelSize: 14
+                        font.bold: row.current
+                    }
+                    Text {
+                        id: checkMark
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        text: "✓"
+                        visible: row.current
+                        color: effectPicker.accent
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 1
+                        color: "#1f1f1f"
+                    }
+                    MouseArea {
+                        id: rowArea
+
+                        anchors.fill: parent
+                        onClicked: effectPicker.pick(row.index)
+                    }
+                }
+            }
+            Rectangle {
+                Layout.alignment: Qt.AlignRight
+                Layout.preferredWidth: 90
+                Layout.preferredHeight: 34
+                radius: 17
+                color: effectPicker.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: qsTr("Done")
+                    color: "#000000"
+                    font.bold: true
+                    font.pixelSize: 13
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: effectPicker.close()
+                }
+            }
+        }
     }
 }
