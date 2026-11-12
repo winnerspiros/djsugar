@@ -312,6 +312,8 @@ bool isHarmlessQtWarning(const QString& message) {
             QLatin1String("no EGLSurface, likely Surface destroyed by Android"),
             QLatin1String("QRhiGles2: Failed to make context current"),
             QLatin1String("Failed to start frame"),
+            // A permission result for a request made from Java, not by Qt
+            QLatin1String("Found no valid pending permission request"),
 #endif
     };
     for (const auto& harmless : kHarmless) {

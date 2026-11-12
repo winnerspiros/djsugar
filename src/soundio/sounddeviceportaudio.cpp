@@ -517,6 +517,11 @@ void SoundDevicePortAudio::makeStreamInactiveAndWait() {
     // will not wait until all the buffers have been flushed, which
     // can take a few (annoying) seconds when you're doing soundcard input.
     m_callbackResult.store(paAbort, std::memory_order_release);
+    PaStream* pStream = m_pStream.load(std::memory_order_relaxed);
+    if (pStream && Pa_IsStreamActive(pStream) != 1) {
+        // No callback runs, so none returns paAbort: nothing to wait for
+        return;
+    }
 
     // We wait until the stream has become inactive, by waiting until the
     // finishedCallback - as set with Pa_SetStreamFinishedCallback - has
@@ -529,7 +534,14 @@ void SoundDevicePortAudio::makeStreamInactiveAndWait() {
             // The timeout should not be reached, because when the process
             // callback returns paAbort, the stream will finish as soon as possible.
             // We have it as a last resort in case inactivating the stream stalls.
-            qWarning() << "PortAudio: Timeout reached when waiting for PortAudio finish callback";
+#ifdef Q_OS_ANDROID
+            // Android stops calling back once the app is closing, before the
+            // stream finishes; Pa_StopStream() then stops it
+            qDebug()
+#else
+            qWarning()
+#endif
+                    << "PortAudio: Timeout reached when waiting for PortAudio finish callback";
         }
     }
 }

@@ -390,7 +390,8 @@ void GlobalTrackCache::deactivate() {
     // referenced or not. This ensures that the eviction
     // callback is triggered for all modified tracks before
     // exiting the application.
-    kLogger.warning()
+    // Expected at every exit: the tracks of the decks and the library
+    kLogger.debug()
             << "Evicting all remaining"
             << m_tracksById.size()
             << '/'
