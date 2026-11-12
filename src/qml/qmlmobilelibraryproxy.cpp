@@ -71,10 +71,6 @@ QmlMobileLibraryProxy::QmlMobileLibraryProxy(QObject* pParent)
     connect(pPlaylistDao, &PlaylistDAO::deleted, this, &QmlMobileLibraryProxy::playlistsChanged);
     connect(pPlaylistDao, &PlaylistDAO::renamed, this, &QmlMobileLibraryProxy::playlistsChanged);
     connect(pPlaylistDao,
-            &PlaylistDAO::foldersChanged,
-            this,
-            &QmlMobileLibraryProxy::playlistsChanged);
-    connect(pPlaylistDao,
             &PlaylistDAO::lockChanged,
             this,
             &QmlMobileLibraryProxy::playlistsChanged);
@@ -323,13 +319,12 @@ QVariantList QmlMobileLibraryProxy::playlists() const {
                 {QStringLiteral("id"), id},
                 {QStringLiteral("name"), name},
                 {QStringLiteral("locked"), playlistDao.isPlaylistLocked(id)},
-                {QStringLiteral("folderId"), playlistDao.getPlaylistFolder(id)},
         });
     }
     return result;
 }
 
-int QmlMobileLibraryProxy::createNamedPlaylist(const QString& name, int folderId) {
+int QmlMobileLibraryProxy::createNamedPlaylist(const QString& name) {
     VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
         return -1;
     }
@@ -342,74 +337,7 @@ int QmlMobileLibraryProxy::createNamedPlaylist(const QString& name, int folderId
     if (playlistDao.getPlaylistIdFromName(trimmedName) != -1) {
         return -1;
     }
-    const int playlistId = playlistDao.createPlaylist(trimmedName);
-    if (playlistId >= 0 && folderId > 0) {
-        playlistDao.setPlaylistFolder(playlistId, folderId);
-    }
-    return playlistId;
-}
-
-QVariantList QmlMobileLibraryProxy::playlistFolders() const {
-    QVariantList result;
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return result;
-    }
-    const PlaylistDAO& playlistDao =
-            trackCollectionManager()->internalCollection()->getPlaylistDAO();
-    const QList<PlaylistDAO::Folder> folders = playlistDao.getFolders();
-    for (const auto& folder : folders) {
-        result.append(QVariantMap{
-                {QStringLiteral("id"), folder.id},
-                {QStringLiteral("name"), folder.name},
-                {QStringLiteral("parentId"), folder.parentId},
-        });
-    }
-    return result;
-}
-
-int QmlMobileLibraryProxy::createPlaylistFolder(const QString& name, int parentId) {
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return -1;
-    }
-    const QString trimmedName = name.trimmed();
-    if (trimmedName.isEmpty()) {
-        return -1;
-    }
-    return trackCollectionManager()->internalCollection()->getPlaylistDAO().createFolder(
-            trimmedName, parentId);
-}
-
-bool QmlMobileLibraryProxy::renamePlaylistFolder(int folderId, const QString& name) {
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return false;
-    }
-    const QString trimmedName = name.trimmed();
-    return !trimmedName.isEmpty() &&
-            trackCollectionManager()->internalCollection()->getPlaylistDAO().renameFolder(
-                    folderId, trimmedName);
-}
-
-void QmlMobileLibraryProxy::deletePlaylistFolder(int folderId) {
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return;
-    }
-    trackCollectionManager()->internalCollection()->getPlaylistDAO().deleteFolder(folderId);
-}
-
-bool QmlMobileLibraryProxy::movePlaylistFolder(int folderId, int parentId) {
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return false;
-    }
-    return trackCollectionManager()->internalCollection()->getPlaylistDAO().moveFolder(
-            folderId, parentId);
-}
-
-void QmlMobileLibraryProxy::movePlaylistToFolder(int playlistId, int folderId) {
-    VERIFY_OR_DEBUG_ASSERT(trackCollectionManager()) {
-        return;
-    }
-    trackCollectionManager()->internalCollection()->getPlaylistDAO().setPlaylistFolder(
-            playlistId, folderId);
+    return playlistDao.createPlaylist(trimmedName);
 }
 
 bool QmlMobileLibraryProxy::renamePlaylist(int playlistId, const QString& name) {

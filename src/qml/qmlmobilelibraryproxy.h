@@ -97,17 +97,7 @@ class QmlMobileLibraryProxy : public QObject {
     Q_INVOKABLE QVariantList playlists() const;
     /// Creates a playlist without asking for the name. Returns its id, or -1
     /// if the name is empty or already used.
-    Q_INVOKABLE int createNamedPlaylist(const QString& name, int folderId = -1);
-    /// Folders of playlists: [{id, name, parentId}], parentId -1 at the top
-    Q_INVOKABLE QVariantList playlistFolders() const;
-    /// The id of the new folder, -1 if the name is empty
-    Q_INVOKABLE int createPlaylistFolder(const QString& name, int parentId);
-    Q_INVOKABLE bool renamePlaylistFolder(int folderId, const QString& name);
-    /// Its playlists and folders move up into its parent
-    Q_INVOKABLE void deletePlaylistFolder(int folderId);
-    /// False if the folder would end up inside itself
-    Q_INVOKABLE bool movePlaylistFolder(int folderId, int parentId);
-    Q_INVOKABLE void movePlaylistToFolder(int playlistId, int folderId);
+    Q_INVOKABLE int createNamedPlaylist(const QString& name);
     /// False if the name is empty or already used
     Q_INVOKABLE bool renamePlaylist(int playlistId, const QString& name);
     Q_INVOKABLE void deletePlaylist(int playlistId);

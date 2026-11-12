@@ -82,13 +82,9 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
     void slotAnalyzePlaylist();
 
   protected:
-    /// Bold if the selected track is in it (or, for a folder, in one inside)
-    bool markTreeItem(TreeItem* pTreeItem);
     struct IdAndLabel {
         int id;
         QString label;
-        // The playlist folder, PlaylistDAO::kNoFolder at the top level
-        int folderId = PlaylistDAO::kNoFolder;
     };
 
     virtual void updateChildModel(const QSet<int>& playlistIds);
@@ -143,6 +139,7 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
     void initActions();
     void connectPlaylistDAO();
     virtual QString getRootViewHtml() const = 0;
+    bool markTreeItem(TreeItem* pTreeItem);
     QString fetchPlaylistLabel(int playlistId);
 
 

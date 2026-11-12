@@ -6,7 +6,6 @@
 #include <QList>
 #include <QSqlTableModel>
 #include <QStandardPaths>
-#include <functional>
 
 #include "library/export/trackexportwizard.h"
 #include "library/library.h"
@@ -830,23 +829,33 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
         return;
     }
 
-    // Playlists are in folders (Playlists) or years (History) at any depth
-    std::function<void(TreeItem*)> update = [&](TreeItem* pTreeItem) {
-        bool ok = false;
-        const int id = pTreeItem->getData().toInt(&ok);
-        if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
-            pTreeItem->setLabel(fetchPlaylistLabel(id));
-            decorateChild(pTreeItem, id);
-            markTreeItem(pTreeItem);
-        }
-        for (TreeItem* pChild : pTreeItem->children()) {
-            update(pChild);
-        }
-    };
+    int id = kInvalidPlaylistId;
+    QString label;
+    bool ok = false;
+
     for (int row = 0; row < m_pSidebarModel->rowCount(); ++row) {
-        TreeItem* pTreeItem = m_pSidebarModel->getItem(m_pSidebarModel->index(row, 0));
+        QModelIndex index = m_pSidebarModel->index(row, 0);
+        TreeItem* pTreeItem = m_pSidebarModel->getItem(index);
         DEBUG_ASSERT(pTreeItem != nullptr);
-        update(pTreeItem);
+        if (pTreeItem->hasChildren()) {
+            for (TreeItem* pChild : pTreeItem->children()) {
+                id = pChild->getData().toInt(&ok);
+                if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
+                    label = fetchPlaylistLabel(id);
+                    pChild->setLabel(label);
+                    decorateChild(pChild, id);
+                    markTreeItem(pChild);
+                }
+            }
+        } else {
+            id = pTreeItem->getData().toInt(&ok);
+            if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
+                label = fetchPlaylistLabel(id);
+                pTreeItem->setLabel(label);
+                decorateChild(pTreeItem, id);
+                markTreeItem(pTreeItem);
+            }
+        }
     }
     m_pSidebarModel->triggerRepaint();
 }
