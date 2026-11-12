@@ -495,16 +495,16 @@ jobs:
         # uses the cached copy). Key includes the buildenv name (which
         # already encodes the dependency revision SHA) so a deps bump
         # automatically invalidates the cache.
-        # macOS 15 x64 cache restore of ~2.4 GB sometimes aborts ("Failed to
-        # restore: The operation was aborted") — the cache action retries
-        # automatically, but we increase the timeout for large caches.
+        # A stalled segment of the ~2.4 GB macOS archive used to hold the job
+        # for the default 10 min before "Failed to restore: The operation was
+        # aborted"; the direct download is faster than that wait.
         if: matrix.buildenv_script != null && runner.os != 'Linux'
         uses: actions/cache@v6
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 3
         with:
           path: ${{ matrix.buildenv_basepath }}
           key: buildenv-${{ matrix.os }}-${{ matrix.compiler_cache_id || matrix.arch }}-${{ env.BUILDENV_NAME }}
-          # Large macOS caches (~2.4 GB) need more time to download
-          lookup-only: false
 
       - name: "[macOS/Linux] Set up build environment"
         if: matrix.buildenv_script != null && runner.os != 'Windows'
