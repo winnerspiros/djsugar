@@ -59,8 +59,10 @@ class NeedleShaper {
         constexpr double kPiDouble = 3.14159265358979323846;
         const double speed = std::fabs(velocity);
         const float level = static_cast<float>(std::min(speed, 1.0));
-        const float g = static_cast<float>(std::tan(
-                kPiDouble * std::clamp(0.45 * std::min(speed, 1.0 / std::max(speed, 1e-3)), 0.002, 0.45)));
+        const float g = static_cast<float>(std::tan(kPiDouble *
+                std::clamp(0.45 * std::min(speed, 1.0 / std::max(speed, 1e-3)),
+                        0.002,
+                        0.45)));
         // Two 2-pole state variable stages (24 dB/oct, Butterworth)
         constexpr float kDamping = 1.41421356f;
         const float a1 = 1.f / (1.f + g * (g + kDamping));
