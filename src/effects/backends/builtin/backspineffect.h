@@ -3,9 +3,11 @@
 #include <vector>
 
 #include "effects/backends/builtin/djfxbase.h"
+#include "effects/backends/builtin/dsp/vinylmotion.h"
 
-// Back Spin: the DJ grabs the record and pulls it back, fast at first and
-// slowing down, the track fading out under the hand. Starts on the beat.
+// Back Spin: the DJ catches the record and throws it back; it coasts to a
+// stop, sounding like a record through a cartridge (fxdsp::NeedleShaper).
+// Starts on the beat.
 class BackSpinGroupState : public DjFxState {
   public:
     explicit BackSpinGroupState(const mixxx::EngineParameters& engineParameters);
@@ -18,6 +20,7 @@ class BackSpinGroupState : public DjFxState {
     double elapsed = 0.0;
     // Speed at the start of the spin, in times the normal speed
     double peakRate = 0.0;
+    fxdsp::NeedleShaper needle;
     bool started = false;
     float lastPhase = 0.0f;
 };

@@ -8,6 +8,7 @@
 #include <random>
 
 #include "effects/backends/builtin/dsp/fdnreverb.h"
+#include "effects/backends/builtin/dsp/vinylmotion.h"
 #include "engine/fxstation/fxstationdsp.h"
 #include "engine/fxstation/fxstationinstruments.h"
 #include "util/types.h"
@@ -220,6 +221,9 @@ class FxStation : public QObject {
     Release m_releaseType;
     double m_releaseElapsed;
     double m_releaseRead;
+    // Top speed of the Back Spin, in times the normal speed
+    static constexpr double kBackSpinPeak = 4.0;
+    fxdsp::NeedleShaper m_backSpinNeedle;
     bool m_releaseWaiting;
     fxstation::Smoother m_liveGain;
 };

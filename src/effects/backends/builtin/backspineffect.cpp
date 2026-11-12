@@ -57,6 +57,7 @@ void BackSpinGroupState::restart() {
     readPos = 0.0;
     elapsed = 0.0;
     peakRate = 0.0;
+    needle.reset();
     started = false;
     lastPhase = 0.0f;
 }
@@ -98,28 +99,39 @@ void BackSpinEffect::processChannel(BackSpinGroupState* pState,
             pOutput[2 * i + 1] = x[1];
             if (quantize ? onBeat : grabbed) {
                 pState->started = true;
-                pState->readPos = pState->written - 1;
-                // The speed falls as (1 - t)^2, so the spin travels a third
-                // of peak * length: never further back than recorded
-                pState->peakRate = std::min(kMaxRate, 3.0 * pState->readPos / spinFrames);
+                pState->readPos = pState->written - 2;
+                // Never further back than recorded
+                pState->peakRate = fxdsp::BackSpinMotion::peakFor(
+                        pState->readPos - 1.0, spinFrames, kMaxRate);
             }
             continue;
         }
         const double t = std::min(1.0, pState->elapsed / spinFrames);
-        const double rate = pState->peakRate * (1.0 - t) * (1.0 - t);
-        const float level = static_cast<float>(std::min(1.0, 4.0 * (1.0 - t)));
-        const int index = static_cast<int>(pState->readPos);
-        const float frac = static_cast<float>(pState->readPos - index);
-        const int next = std::min(index + 1, pState->written - 1);
+        const double velocity = fxdsp::BackSpinMotion::velocity(t, pState->peakRate);
+        // Four point Hermite: a fast spin reads far between samples
+        const double last = static_cast<double>(pState->written - 2);
+        const double position = std::clamp(pState->readPos, 1.0, std::max(1.0, last));
+        const int index = static_cast<int>(position);
+        const float frac = static_cast<float>(position - index);
+        float y[2];
         for (int c = 0; c < 2; ++c) {
-            const float a = history[2 * static_cast<std::size_t>(index) +
-                    static_cast<std::size_t>(c)];
-            const float b = history[2 * static_cast<std::size_t>(next) +
-                    static_cast<std::size_t>(c)];
-            const float y = fxdsp::lerp(a, b, frac) * level;
-            pOutput[2 * i + c] = fxdsp::lerp(x[c], y, mix);
+            const auto sample = [&](int frame) {
+                return history[2 * static_cast<std::size_t>(frame) + static_cast<std::size_t>(c)];
+            };
+            const float p0 = sample(index - 1);
+            const float p1 = sample(index);
+            const float p2 = sample(index + 1);
+            const float p3 = sample(std::min(index + 2, pState->written - 1));
+            const float c1 = 0.5f * (p2 - p0);
+            const float c2 = p0 - 2.5f * p1 + 2.f * p2 - 0.5f * p3;
+            const float c3 = 0.5f * (p3 - p0) + 1.5f * (p1 - p2);
+            y[c] = ((c3 * frac + c2) * frac + c1) * frac + p1;
         }
-        pState->readPos = std::max(0.0, pState->readPos - rate);
+        pState->needle.process(&y[0], &y[1], velocity);
+        for (int c = 0; c < 2; ++c) {
+            pOutput[2 * i + c] = fxdsp::lerp(x[c], y[c], mix);
+        }
+        pState->readPos += velocity;
         pState->elapsed += 1.0;
     }
 }

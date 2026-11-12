@@ -378,6 +378,7 @@ void FxStation::startRelease() {
     // From the last frame of the history, see processRelease()
     m_releaseRead = static_cast<double>(m_history.writeIndex()) - 1.0;
     m_releaseEcho.clear();
+    m_backSpinNeedle.reset();
     m_pReleaseActive->set(1);
 
     // Everything else off at once
@@ -788,13 +789,15 @@ void FxStation::processRelease(float* pLeft, float* pRight, double beat, double 
             break;
         }
         case Release::BackSpin: {
-            // Pulled back fast, slowing down over a beat and a half
+            // Caught and thrown back, coasting to a stop over a beat and a
+            // half, through the cartridge model of the scratch engine
             duration = 1.5;
-            const double rate = -4.0 * std::pow(std::max(0.0, 1.0 - t / duration), 2.0);
-            const float level = static_cast<float>(std::min(1.0, 4.0 * (1.0 - t / duration)));
-            outLeft = m_history.at(0, m_releaseRead) * level;
-            outRight = m_history.at(1, m_releaseRead) * level;
-            m_releaseRead += rate;
+            const double velocity =
+                    fxdsp::BackSpinMotion::velocity(t / duration, kBackSpinPeak);
+            outLeft = m_history.at(0, m_releaseRead);
+            outRight = m_history.at(1, m_releaseRead);
+            m_backSpinNeedle.process(&outLeft, &outRight, velocity);
+            m_releaseRead += velocity;
             break;
         }
         case Release::Echo: {
