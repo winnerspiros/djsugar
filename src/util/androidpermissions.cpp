@@ -140,7 +140,7 @@ QString mediaStoreState() {
             "(Landroid/content/Context;)Ljava/util/Set;",
             context.object());
     QJniEnvironment env;
-    if (env.checkAndClearExceptions() || !volumes.isValid()) {
+    if (!volumes.isValid()) {
         return QString();
     }
     const QJniObject names = volumes.callObjectMethod(
@@ -165,7 +165,9 @@ QString mediaStoreState() {
                 "(Landroid/content/Context;Ljava/lang/String;)J",
                 context.object(),
                 volume.object<jstring>());
-        if (env.checkAndClearExceptions()) {
+        // QJniObject reports and clears a Java exception itself: a failed
+        // call shows as an empty version or a generation of 0
+        if (version.isEmpty() || generation <= 0) {
             return QString();
         }
         state.append(QStringLiteral("%1:%2:%3")

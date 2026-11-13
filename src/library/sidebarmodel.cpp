@@ -584,6 +584,8 @@ void SidebarModel::slotRowsRemoved(const QModelIndex& parent, int start, int end
 }
 
 void SidebarModel::slotModelAboutToBeReset() {
+    // The pressed index dies with the reset
+    stopPressedUntilClickedTimer();
     beginResetModel();
 }
 

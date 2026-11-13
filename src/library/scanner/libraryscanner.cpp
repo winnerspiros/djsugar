@@ -415,7 +415,7 @@ void LibraryScanner::slotFinishHashedScan() {
 }
 
 // Quick hack: return number of relocated tracks
-void LibraryScanner::cleanUpScan() {
+bool LibraryScanner::cleanUpScan() {
     // At the end of a scan, mark all tracks and directories that weren't
     // "verified" as "deleted" (as long as the scan wasn't canceled half way
     // through). This condition is important because our rescanning algorithm
@@ -455,7 +455,7 @@ void LibraryScanner::cleanUpScan() {
                 m_libraryRootDirs,
                 m_scannerGlobal->shouldCancelPointer())) {
         // canceled
-        return;
+        return false;
     }
 
     kLogger.debug() << "Marking unverified tracks as deleted";
@@ -475,7 +475,7 @@ void LibraryScanner::cleanUpScan() {
                     m_scannerGlobal->shouldCancelPointer())) {
             kLogger.info()
                     << "Detecting moved files has been canceled or aborted";
-            return;
+            return false;
         }
         if (!relocatedTracks.isEmpty()) {
             m_numRelocatedTracks = relocatedTracks.size();
@@ -493,7 +493,7 @@ void LibraryScanner::cleanUpScan() {
     // A.
     m_libraryHashDao.removeDeletedDirectoryHashes();
 
-    transaction.commit();
+    const bool committed = transaction.commit();
 
     kLogger.debug() << "Detecting cover art for unscanned files";
     QSet<TrackId> coverArtTracksChanged;
@@ -504,6 +504,7 @@ void LibraryScanner::cleanUpScan() {
     if (!coverArtTracksChanged.isEmpty()) {
         emit tracksChanged(coverArtTracksChanged);
     }
+    return committed;
 }
 
 // is called when all tasks of the second stage are done (threads are finished)
@@ -527,8 +528,10 @@ void LibraryScanner::slotFinishUnhashedScan() {
     m_trackDao.addTracksFinish(!m_scannerGlobal->shouldCancel() &&
             !bScanFinishedCleanly);
 
-    if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {
-        cleanUpScan();
+    if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly &&
+            !cleanUpScan()) {
+        kLogger.warning() << "Scan results could not be saved";
+        bScanFinishedCleanly = false;
     }
 
     if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {

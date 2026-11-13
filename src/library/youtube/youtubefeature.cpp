@@ -2671,6 +2671,8 @@ void YouTubeFeature::slotCleanCache() {
     }
     if (myInstantsCleaned > 0) {
         kLogger.info() << "Removed" << myInstantsCleaned << "myinstants sample(s)";
+        // Not a MediaStore change: the next start scans to mark them missing
+        m_pConfig->setValue(ConfigKey("[Library]", "AndroidMediaStoreState"), QString());
     }
 
     // Clean up stale youtube_library rows whose local files are gone

@@ -620,12 +620,9 @@ QList<PlaylistDAO::PlaylistWithCount> PlaylistDAO::getPlaylistsWithCounts(
     QSqlQuery query(m_database);
     query.prepare(mixxx::DbConnection::collateLexicographically(
             QString("SELECT p.id, p.name, p.locked, "
-                    "       COALESCE(cnt.c, 0) AS count "
+                    "       (SELECT COUNT(*) FROM PlaylistTracks pt "
+                    "        WHERE pt.playlist_id = p.id) AS count "
                     "FROM Playlists p "
-                    "LEFT JOIN (SELECT playlist_id, COUNT(*) AS c "
-                    "           FROM PlaylistTracks "
-                    "           GROUP BY playlist_id) cnt "
-                    "       ON cnt.playlist_id = p.id "
                     "WHERE p.hidden = %1 "
                     "ORDER BY p.name")
                     .arg(hidden)));

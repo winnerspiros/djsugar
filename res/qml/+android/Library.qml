@@ -16,6 +16,12 @@ Item {
 
     property var sidebar: librarySources.sidebar()
     property int librarySourceMode: 0 // 0: Local, 1: Streaming Hub (YouTube lives inside the hub)
+    // A search typed just before switching to the hub applies on return
+    onLibrarySourceModeChanged: {
+        if (librarySourceMode === 0) {
+            applySearch();
+        }
+    }
     // False while a popup (e.g. a deck loader with its own library) covers
     // this library, so only the library in front follows the controller
     property bool acceptsController: true
