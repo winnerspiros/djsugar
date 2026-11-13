@@ -150,6 +150,7 @@ jobs:
               -DRUBBERBAND=OFF
               -DQTKEYCHAIN=OFF
               -DPORTMIDI=OFF
+              -DBATTERY=OFF
               -DNDEBUG=ON
               -DBUILD_TESTING=OFF
               -DBUILD_BENCH=OFF
@@ -829,9 +830,9 @@ jobs:
         # initializing Qt — reaching Mixxx startup is what matters.
         if: matrix.cpack_generator == 'AppImage'
         run: |
-          # The AppImage does not bundle libpipewire or libjack (both excluded),
-          # so the host provides them; the bare runner image lacks them.
-          sudo apt-get install -y --no-install-recommends libpipewire-0.3-0 libjack-jackd2-0
+          # The AppImage does not bundle libpipewire (it is excluded), so the
+          # host must provide it; the bare runner image lacks it.
+          sudo apt-get install -y --no-install-recommends libpipewire-0.3-0
           APPIMAGE=$(ls build/*.AppImage | head -1)
           echo "Smoke-testing ${APPIMAGE}"
           set +e
