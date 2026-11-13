@@ -313,13 +313,13 @@ QVariantList QmlMobileLibraryProxy::playlists() const {
     }
     const PlaylistDAO& playlistDao =
             trackCollectionManager()->internalCollection()->getPlaylistDAO();
-    const auto playlists = playlistDao.getPlaylists(PlaylistDAO::PLHT_NOT_HIDDEN);
-    for (const auto& [id, name] : playlists) {
+    const auto playlists = playlistDao.getPlaylistsWithCounts(PlaylistDAO::PLHT_NOT_HIDDEN);
+    for (const auto& pwc : playlists) {
         result.append(QVariantMap{
-                {QStringLiteral("id"), id},
-                {QStringLiteral("name"), name},
-                {QStringLiteral("locked"), playlistDao.isPlaylistLocked(id)},
-                {QStringLiteral("count"), playlistDao.tracksInPlaylist(id)},
+                {QStringLiteral("id"), pwc.id},
+                {QStringLiteral("name"), pwc.name},
+                {QStringLiteral("locked"), pwc.locked},
+                {QStringLiteral("count"), pwc.count},
         });
     }
     return result;

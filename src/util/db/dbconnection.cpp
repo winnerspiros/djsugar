@@ -452,6 +452,21 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
                 << result;
     }
 
+    // WAL is on: NORMAL keeps the database consistent on a crash and skips
+    // an fsync per transaction (the scanner commits per track). The page
+    // cache (per connection, 16 MB) holds the library table's hot pages,
+    // sorts and temp B-trees stay in memory, and ANALYZE samples instead
+    // of reading every row.
+    for (const char* pragma : {"PRAGMA synchronous=NORMAL",
+                 "PRAGMA cache_size=-16384",
+                 "PRAGMA temp_store=MEMORY",
+                 "PRAGMA analysis_limit=1000"}) {
+        result = sqlite3_exec(handle, pragma, nullptr, nullptr, nullptr);
+        if (result != SQLITE_OK) {
+            kLogger.warning() << "Failed" << pragma << result;
+        }
+    }
+
     result = sqlite3_busy_timeout(handle, 30000);
     if (result != SQLITE_OK) {
         kLogger.warning()
