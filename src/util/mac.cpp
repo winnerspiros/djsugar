@@ -1,6 +1,6 @@
 #include "util/mac.h"
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 QString CFStringToQString(CFStringRef str) {
     if (!str)
         return QString();

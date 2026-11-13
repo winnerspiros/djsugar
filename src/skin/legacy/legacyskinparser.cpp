@@ -2321,7 +2321,7 @@ QString LegacySkinParser::getStyleFromNode(const QDomNode& node) {
         }
 
         QString platformSpecificAttribute;
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
         platformSpecificAttribute = "src-mac";
 #elif defined(__WINDOWS__)
         platformSpecificAttribute = "src-windows";
