@@ -1220,7 +1220,9 @@ void YouTubeFeature::searchAndActivate(const QString& query) {
     // slot. The flag is set explicitly by activateChild(kSampleQueryPrefix).
     // We do NOT clear it here because activateChild sets it BEFORE calling
     // searchAndActivate(), so clearing it here would always wipe it.
-    rebuildSidebar();
+    // The request goes out first: the table and sidebar below are cleared
+    // while YouTube answers, not before it is asked
+    m_service.searchVideos(query, kSearchResultsMax, kSearchBatchSize);
     // Clear the SQL model synchronously so the user does NOT see stale
     // results filtered by the new query. Set the search to the query text
     // (not empty) so the search box preserves what the user typed.
@@ -1228,7 +1230,7 @@ void YouTubeFeature::searchAndActivate(const QString& query) {
         m_pTrackModel->setSearch(query);
     }
     replaceTrackTable({});
-    m_service.searchVideos(query, kSearchResultsMax, kSearchBatchSize);
+    scheduleRebuild();
 }
 
 void YouTubeFeature::onSearchResultsReady(

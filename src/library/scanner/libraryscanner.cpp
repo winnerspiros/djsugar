@@ -125,6 +125,7 @@ LibraryScanner::LibraryScanner(
     setObjectName(QString("LibraryScanner %1").arg(instanceId));
 
     m_pool.setMaxThreadCount(kScannerThreadPoolSize);
+    m_pool.setThreadPriority(QThread::LowPriority);
 
     // Listen to signals from our public methods (invoked by other threads) and
     // connect them to our slots to run the command on the scanner thread.

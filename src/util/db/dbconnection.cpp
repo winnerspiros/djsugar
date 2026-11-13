@@ -184,7 +184,8 @@ struct QtSqliteApi {
     decltype(&::sqlite3_create_collation) create_collation = nullptr;
     decltype(&::sqlite3_create_function) create_function = nullptr;
     decltype(&::sqlite3_exec) exec = nullptr;
-    decltype(&::sqlite3_busy_timeout) busy_timeout = nullptr;
+    decltype(&::sqlite3_busy_handler) busy_handler = nullptr;
+    decltype(&::sqlite3_sleep) sleep = nullptr;
     decltype(&::sqlite3_value_text) value_text = nullptr;
     decltype(&::sqlite3_result_int64) result_int64 = nullptr;
 };
@@ -213,7 +214,8 @@ void loadQtSqlite(const QSqlDriver* pDriver) {
             resolve(&api.create_collation, "sqlite3_create_collation") &&
             resolve(&api.create_function, "sqlite3_create_function") &&
             resolve(&api.exec, "sqlite3_exec") &&
-            resolve(&api.busy_timeout, "sqlite3_busy_timeout") &&
+            resolve(&api.busy_handler, "sqlite3_busy_handler") &&
+            resolve(&api.sleep, "sqlite3_sleep") &&
             resolve(&api.value_text, "sqlite3_value_text") &&
             resolve(&api.result_int64, "sqlite3_result_int64");
     dlclose(pLib); // drops only the reference taken above
@@ -232,7 +234,8 @@ bool resolveQtSqlite(const QSqlDriver* pDriver) {
 #define sqlite3_create_collation s_qtSqlite.create_collation
 #define sqlite3_create_function s_qtSqlite.create_function
 #define sqlite3_exec s_qtSqlite.exec
-#define sqlite3_busy_timeout s_qtSqlite.busy_timeout
+#define sqlite3_busy_handler s_qtSqlite.busy_handler
+#define sqlite3_sleep s_qtSqlite.sleep
 #define sqlite3_value_text s_qtSqlite.value_text
 #define sqlite3_result_int64 s_qtSqlite.result_int64
 #endif // MIXXX_SQLITE3_FROM_QT
@@ -603,10 +606,23 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
         }
     }
 
-    result = sqlite3_busy_timeout(handle, 30000);
+    // Wait for a busy database in 1 ms steps, up to 30 s. SQLite's own
+    // timeout sleeps up to 100 ms between tries: the scanner commits and
+    // starts its next write within a few ms, so the GUI thread waiting that
+    // way misses every gap and froze for seconds while a scan ran.
+    result = sqlite3_busy_handler(
+            handle,
+            [](void*, int count) -> int {
+                if (count >= 30000) {
+                    return 0;
+                }
+                sqlite3_sleep(1);
+                return 1;
+            },
+            nullptr);
     if (result != SQLITE_OK) {
         kLogger.warning()
-                << "Failed to set busy timeout for SQLite3:"
+                << "Failed to set busy handler for SQLite3:"
                 << result;
     }
 #else

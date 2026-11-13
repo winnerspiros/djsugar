@@ -156,7 +156,8 @@ TrackCollectionManager::TrackCollectionManager(QObject* parent,
                 &TrackDAO::slotDatabaseTracksRelocated);
 
         kLogger.info() << "Starting library scanner thread";
-        m_pScanner->start();
+        // Below the GUI and the waveforms: a scan may run for minutes
+        m_pScanner->start(QThread::LowPriority);
 
         // Writing track metadata into source files may take a
         // noticeable amount of time on slow storage and is therefore

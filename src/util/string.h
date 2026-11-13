@@ -5,6 +5,7 @@
 #include <QLocale>
 #include <QString>
 #include <QStringRef>
+#include <algorithm>
 #include <cstring>
 #include <cwchar>
 #include <limits>
@@ -22,12 +23,70 @@ class StringCollator {
     }
 
     int compare(const QString& s1, const QString& s2) const {
+#ifdef Q_OS_ANDROID
+        return foldedCompare(s1, s2);
+#else
         return m_collator.compare(s1, s2);
+#endif
     }
 
     int compare(const QStringRef& s1, const QStringRef& s2) const {
+#ifdef Q_OS_ANDROID
+        return foldedCompare(QStringView(s1.data(), s1.size()),
+                QStringView(s2.data(), s2.size()));
+#else
         return m_collator.compare(s1, s2);
+#endif
     }
+
+#ifdef Q_OS_ANDROID
+    /// Android's C library collates by code point only ("Zebra" before
+    /// "apple", "Été" after "Zoo"): letters are compared without case and
+    /// accents instead, then as they are written when that is all equal.
+    static int foldedCompare(QStringView s1, QStringView s2) {
+        const qsizetype size = std::min(s1.size(), s2.size());
+        for (qsizetype i = 0; i < size; ++i) {
+            if (s1[i] == s2[i]) {
+                continue; // most neighbours in a sort share a prefix
+            }
+            const char16_t c1 = fold(s1[i]);
+            const char16_t c2 = fold(s2[i]);
+            if (c1 != c2) {
+                return c1 < c2 ? -1 : 1;
+            }
+        }
+        if (s1.size() != s2.size()) {
+            return s1.size() < s2.size() ? -1 : 1;
+        }
+        return s1.compare(s2);
+    }
+
+    static char16_t fold(QChar c) {
+        if (c.unicode() < 0x80) {
+            return c.toLower().unicode();
+        }
+        // Greek accents without a decomposition lookup: they are in most
+        // Greek titles
+        switch (c.unicode()) {
+        case u'ά': case u'Ά': return u'α';
+        case u'έ': case u'Έ': return u'ε';
+        case u'ή': case u'Ή': return u'η';
+        case u'ί': case u'Ί': case u'ϊ': case u'Ϊ': case u'ΐ': return u'ι';
+        case u'ό': case u'Ό': return u'ο';
+        case u'ύ': case u'Ύ': case u'ϋ': case u'Ϋ': case u'ΰ': return u'υ';
+        case u'ώ': case u'Ώ': return u'ω';
+        case u'ς': return u'σ';
+        default: break;
+        }
+        if (c.decompositionTag() != QChar::NoDecomposition) {
+            const QString decomposition = c.decomposition();
+            if (!decomposition.isEmpty() && !decomposition[0].isSpace()) {
+                c = decomposition[0];
+            }
+        }
+        return c.toCaseFolded().unicode();
+    }
+#endif
 
   private:
     QCollator m_collator;
