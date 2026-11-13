@@ -20,6 +20,7 @@ Item {
     // "search", "liked", "playlists", "playlist"
     property string listKind: "liked"
     property string playlistName: ""
+    property string playlistId: ""
     // What the rows in resultsModel are; listKind changes before they do
     property bool rowsArePlaylists: false
     property var progress: ({})
@@ -42,7 +43,17 @@ Item {
         root.statusMessage = qsTr("Searching...");
         Mixxx.Spotify.search(query);
     }
+    // Pull to refresh / F5: what is shown is fetched again
+    function refreshList() {
+        if (root.listKind === "search")
+            root.doSearch();
+        else if (root.listKind === "playlist")
+            root.openPlaylist(root.playlistId, root.playlistName);
+        else
+            root.openList(root.listKind);
+    }
     function openPlaylist(id, name) {
+        root.playlistId = id;
         root.listKind = "playlist";
         root.playlistName = name;
         root.isBusy = true;
@@ -261,6 +272,9 @@ Item {
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: root.doSearch()
                 }
+                Skin.SearchClearButton {
+                    field: searchField
+                }
                 Text {
                     anchors.fill: parent
                     anchors.margins: 6
@@ -342,6 +356,9 @@ Item {
 
         ListView {
             id: resultList
+
+            boundsBehavior: Flickable.DragOverBounds
+            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -494,6 +511,14 @@ Item {
                     }
                 }
             }
+
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.refreshList()
+            }
+
         }
     }
 }

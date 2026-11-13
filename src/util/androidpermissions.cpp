@@ -179,21 +179,9 @@ QString mediaStoreState() {
     return state.join(QLatin1Char(';'));
 }
 
-QStringList sharedAudioDirectories() {
-    QStringList dirs;
-    for (const char* type : {"DIRECTORY_MUSIC",
-                 "DIRECTORY_DOWNLOADS",
-                 "DIRECTORY_PODCASTS",
-                 "DIRECTORY_RECORDINGS"}) {
-        // DIRECTORY_RECORDINGS is API 31+: the field lookup fails before
-        const QString path = publicDirectory(type);
-        if (!path.isEmpty() && QFileInfo::exists(path)) {
-            dirs.append(QDir::cleanPath(path));
-        }
-    }
-    // Songs elsewhere (an app's folder such as Android/media/com.whatsapp,
-    // a card, a USB stick): the media store knows every audio file. The
-    // folders holding them are added, a folder inside another one once.
+QStringList mediaStoreAudioFolders() {
+    // The media store knows every audio file on the phone, an app's folder
+    // such as Android/media/com.whatsapp, a card and a USB stick included
     const QJniObject uri = QJniObject::getStaticObjectField(
             "android/provider/MediaStore$Audio$Media",
             "EXTERNAL_CONTENT_URI",
@@ -214,25 +202,45 @@ QStringList sharedAudioDirectories() {
             nullptr,
             nullptr);
     env->DeleteLocalRef(columns);
-    if (env.checkAndClearExceptions() || !cursor.isValid()) {
-        return dirs;
-    }
-    // A volume root (/storage/emulated/0, /storage/1A2B-3C4D) would watch
-    // the whole volume: its loose files are left out
-    static const QRegularExpression kVolumeRoot(
-            QStringLiteral("^/storage/(emulated/\\d+|[^/]+)$"));
     QStringList folders;
+    if (env.checkAndClearExceptions() || !cursor.isValid()) {
+        return folders;
+    }
     while (cursor.callMethod<jboolean>("moveToNext")) {
         const QString folder = QFileInfo(
                 cursor.callObjectMethod("getString", "(I)Ljava/lang/String;", 0).toString())
                                        .path();
         if (folder.startsWith(QStringLiteral("/storage/")) &&
-                !kVolumeRoot.match(folder).hasMatch() &&
                 !isSystemSoundDirectory(folder) && !folders.contains(folder)) {
             folders.append(folder);
         }
     }
     cursor.callMethod<void>("close");
+    return folders;
+}
+
+QStringList sharedAudioDirectories() {
+    QStringList dirs;
+    for (const char* type : {"DIRECTORY_MUSIC",
+                 "DIRECTORY_DOWNLOADS",
+                 "DIRECTORY_PODCASTS",
+                 "DIRECTORY_RECORDINGS"}) {
+        // DIRECTORY_RECORDINGS is API 31+: the field lookup fails before
+        const QString path = publicDirectory(type);
+        if (!path.isEmpty() && QFileInfo::exists(path)) {
+            dirs.append(QDir::cleanPath(path));
+        }
+    }
+    // Songs elsewhere: the folders holding them are added, a folder inside
+    // another one once. A volume root (/storage/emulated/0,
+    // /storage/1A2B-3C4D) would watch the whole volume: its loose files are
+    // left out.
+    static const QRegularExpression kVolumeRoot(
+            QStringLiteral("^/storage/(emulated/\\d+|[^/]+)$"));
+    QStringList folders = mediaStoreAudioFolders();
+    folders.removeIf([](const QString& folder) {
+        return kVolumeRoot.match(folder).hasMatch();
+    });
     // Shortest first: a folder inside an added one is already covered
     std::sort(folders.begin(), folders.end(), [](const QString& a, const QString& b) {
         return a.size() < b.size();

@@ -148,7 +148,9 @@ Item {
     property string listKind: "search"
     readonly property color ytRed: "#ff0033"
     property string playlistName: ""
+    property string listId: ""
     function openList(listId, name) {
+        root.listId = listId;
         root.listKind = listId === "liked" ? "liked" : "playlist";
         root.playlistName = name;
         root.isBusy = true;
@@ -163,6 +165,15 @@ Item {
         Mixxx.YouTube.youTubeAccounts();
         root.openList("liked", qsTr("Liked songs"));
         Mixxx.YouTube.youTubePlaylists();
+    }
+    // Pull to refresh / F5: what is shown is fetched again
+    function refreshList() {
+        if (root.listKind === "search")
+            root.doSearch();
+        else if (root.listKind === "playlists")
+            root.showPlaylists();
+        else
+            root.openList(root.listId, root.playlistName);
     }
     function showPlaylists() {
         root.listKind = "playlists";
@@ -340,6 +351,9 @@ Item {
                         if (activeFocus)
                             Mixxx.YouTube.warmUp();
                     }
+                }
+                Skin.SearchClearButton {
+                    field: searchField
                 }
                 Text {
                     anchors.fill: parent
@@ -641,6 +655,8 @@ Item {
         // The account's playlists; a tap opens one
         ListView {
             id: playlistList
+            boundsBehavior: Flickable.DragOverBounds
+            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -701,6 +717,12 @@ Item {
                     onClicked: root.openList(playlistRow.modelData.id, playlistRow.modelData.name)
                 }
             }
+
+            Skin.PullToRefresh {
+                flickable: playlistList
+                busy: false
+                onRefresh: root.refreshList()
+            }
         }
 
         // Nothing listed: what this view is for, and the way in
@@ -743,6 +765,9 @@ Item {
 
         ListView {
             id: resultList
+
+            boundsBehavior: Flickable.DragOverBounds
+            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -1051,6 +1076,14 @@ Item {
                     }
                 }
             }
+
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.refreshList()
+            }
+
         }
     }
 }

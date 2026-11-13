@@ -274,7 +274,8 @@ Rectangle {
             return span * (view.width - view.usedWidth) / view.dynamicColumnCount;
         }
         flickableDirection: Flickable.VerticalFlick
-        boundsBehavior: Flickable.StopAtBounds
+        boundsBehavior: Flickable.DragOverBounds
+        boundsMovement: Flickable.StopAtBounds
         interactive: true
         keyNavigationEnabled: false
         model: root.model
@@ -430,6 +431,12 @@ Rectangle {
                 // forceLayout is costly - only invoke if there was a change in the column layouts
                 view.forceLayout();
             }
+        }
+
+        Skin.PullToRefresh {
+            flickable: view
+            busy: Mixxx.Library.libraryScanActive
+            onRefresh: Mixxx.Library.rescanLibrary()
         }
     }
     Rectangle {

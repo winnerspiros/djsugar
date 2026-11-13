@@ -192,6 +192,9 @@ Item {
                     clip: true
                     onAccepted: root.doSearch()
                 }
+                Skin.SearchClearButton {
+                    field: searchField
+                }
                 Text {
                     anchors.fill: parent
                     anchors.leftMargin: 12
@@ -384,6 +387,9 @@ Item {
 
         ListView {
             id: resultList
+
+            boundsBehavior: Flickable.DragOverBounds
+            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -671,6 +677,14 @@ Item {
                     }
                 }
             }
+
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.listKind === "likes" ? root.openLikes() : root.doSearch()
+            }
+
         }
     }
 }

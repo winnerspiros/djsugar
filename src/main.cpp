@@ -9,6 +9,9 @@
 #include <QThread>
 #include <QtDebug>
 #include <QtGlobal>
+#ifdef Q_OS_ANDROID
+#include <QJniObject>
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -104,6 +107,14 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
         } else {
             exitCode = pApp->exec();
             qInfo() << "Exit requested";
+#ifdef Q_OS_ANDROID
+            // The app leaves the screen at once; saving and closing the
+            // engine, library and sound (2-3 s) goes on out of sight
+            QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
+                QNativeInterface::QAndroidApplication::context().callMethod<jboolean>(
+                        "moveTaskToBack", "(Z)Z", jboolean(true));
+            });
+#endif
         }
     } else
 #endif

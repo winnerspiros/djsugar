@@ -308,6 +308,33 @@ void LibraryScanner::slotStartScan() {
                     coverExtensionFilter,
                     directoryBlacklist));
 
+#ifdef Q_OS_ANDROID
+    {
+        // Phones hold thousands of folders of photos, app data and backups;
+        // a walk through them all took 25-45 s for ~1400 songs. Only the
+        // folders with music are entered (the media store's, plus those of
+        // library tracks so none goes missing) and those on the way to them.
+        const QStringList audioFolders = mixxx::android::mediaStoreAudioFolders();
+        if (!audioFolders.isEmpty()) {
+            QSet<QString> musicDirs(audioFolders.cbegin(), audioFolders.cend());
+            for (const QString& location : std::as_const(trackLocations)) {
+                musicDirs.insert(location.left(location.lastIndexOf(QLatin1Char('/'))));
+            }
+            QSet<QString> dirsToEnter;
+            for (const QString& leaf : std::as_const(musicDirs)) {
+                for (qsizetype slash = leaf.size(); slash > 0;
+                        slash = leaf.lastIndexOf(QLatin1Char('/'), slash - 1)) {
+                    const QString dir = leaf.left(slash);
+                    if (dirsToEnter.contains(dir)) {
+                        break; // its parents are in already
+                    }
+                    dirsToEnter.insert(dir);
+                }
+            }
+            m_scannerGlobal->setDirectoriesToEnter(std::move(dirsToEnter));
+        }
+    }
+#endif
     m_scannerGlobal->startTimer();
 
     emit scanStarted();

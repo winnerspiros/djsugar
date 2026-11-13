@@ -182,6 +182,7 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 placeholderText: qsTr("Search your local collection...")
+                Skin.SearchClearButton {}
                 // One search once typing pauses, not one per letter
                 onTextChanged: searchDebounce.restart()
                 onAccepted: {

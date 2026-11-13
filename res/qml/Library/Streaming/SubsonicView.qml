@@ -14,6 +14,7 @@ Item {
     property var tracksModel: []
     property var playlistsModel: []
     property string currentPlaylistName: ""
+    property var currentPlaylistId
     property string statusMessage: ""
     property bool isBusy: false
     property var downloadProgressMap: ({})
@@ -25,6 +26,18 @@ Item {
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
         Mixxx.StreamingManager.searchSubsonic(query);
+    }
+    // Pull to refresh / F5: what is shown is fetched again
+    function refreshList() {
+        if (root.activeMode === "playlists") {
+            root.isBusy = true;
+            Mixxx.StreamingManager.getSubsonicPlaylists();
+        } else if (root.activeMode === "playlist_tracks") {
+            root.isBusy = true;
+            Mixxx.StreamingManager.getSubsonicPlaylistSongs(root.currentPlaylistId);
+        } else if (searchInput.text.trim() !== "") {
+            root.search(searchInput.text);
+        }
     }
     function openServer(url) {
         // Only the field: Connect / editingFinished save it, a stray link
@@ -350,6 +363,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 24
                     placeholderText: qsTr("Search artists, tracks or albums in your cloud...")
+                    Skin.SearchClearButton {}
                     color: "#ffffff"
                     font.pixelSize: 11
                     background: Rectangle {
@@ -421,7 +435,8 @@ Item {
                 anchors.fill: parent
                 visible: root.activeMode !== "playlists"
                 clip: true
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.DragOverBounds
+                boundsMovement: Flickable.StopAtBounds
                 model: root.tracksModel
 
                 ScrollBar.vertical: ScrollBar {
@@ -636,6 +651,12 @@ Item {
                         }
                     }
                 }
+
+                Skin.PullToRefresh {
+                    flickable: tracksList
+                    busy: root.isBusy
+                    onRefresh: root.refreshList()
+                }
             }
 
             // --- PLAYLISTS LISTVIEW ---
@@ -644,7 +665,8 @@ Item {
                 anchors.fill: parent
                 visible: root.activeMode === "playlists"
                 clip: true
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.DragOverBounds
+                boundsMovement: Flickable.StopAtBounds
                 model: root.playlistsModel
 
                 ScrollBar.vertical: ScrollBar {
@@ -701,12 +723,19 @@ Item {
                             text: qsTr("Show tracks")
                             onClicked: {
                                 root.currentPlaylistName = modelData.name;
+                                root.currentPlaylistId = modelData.id;
                                 root.isBusy = true;
                                 root.statusMessage = qsTr("Loading %1...").arg(modelData.name);
                                 Mixxx.StreamingManager.getSubsonicPlaylistSongs(modelData.id);
                             }
                         }
                     }
+                }
+
+                Skin.PullToRefresh {
+                    flickable: playlistsList
+                    busy: root.isBusy
+                    onRefresh: root.refreshList()
                 }
             }
 
