@@ -176,7 +176,18 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 placeholderText: qsTr("Search your local collection...")
-                onTextChanged: root.applySearch()
+                // One search once typing pauses, not one per letter
+                onTextChanged: searchDebounce.restart()
+                onAccepted: {
+                    searchDebounce.stop();
+                    root.applySearch();
+                }
+            }
+
+            Timer {
+                id: searchDebounce
+                interval: Math.max(150, Mixxx.Config.librarySearchDebouncingTimeout)
+                onTriggered: root.applySearch()
             }
 
             SplitView {
