@@ -32,7 +32,8 @@ QStringList CoverArtUtils::supportedCoverArtExtensions() {
                << "jpeg"
                << "png"
                << "gif"
-               << "bmp";
+               << "bmp"
+               << "webp";
     return extensions;
 }
 
