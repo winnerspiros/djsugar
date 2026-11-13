@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <stdexcept>
 
@@ -623,6 +624,17 @@ int main(int argc, char* argv[]) {
     qInfo() << "Mixxx shutdown complete with code" << exitCode;
 
     mixxx::Logging::shutdown();
+
+#ifdef Q_OS_ANDROID
+    // Android keeps the process after main() returns: opening the app again
+    // then reused it, half shut down, and failed (worked on the next try).
+    // Everything is saved and closed by now: the task goes, the process ends
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
+        const QJniObject activity = QNativeInterface::QAndroidApplication::context();
+        activity.callMethod<void>("finishAndRemoveTask");
+    }).waitForFinished();
+    std::_Exit(exitCode);
+#endif
 
     return exitCode;
 }

@@ -1602,7 +1602,24 @@ void YouTubeFeature::onDownloadFinished(
     // entry exists. Downloads triggered by selection or context-menu Analyze
     // stay in the library; explicit Load-to-deck requests are handled below.
     TrackRef ref = TrackRef::fromFilePath(localPath);
-    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getOrAddTrack(ref);
+    bool alreadyInLibrary = false;
+    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getOrAddTrack(
+            ref, &alreadyInLibrary);
+    if (pTrack && alreadyInLibrary && pTrack->getId().isValid()) {
+        // Downloaded before and dropped from the cache: its row was marked
+        // missing (or hidden), so the library showed it only after the
+        // next start's scan. The file is back: show it now
+        QSqlQuery query(m_pTrackCollection->database());
+        query.prepare(QStringLiteral(
+                "UPDATE track_locations SET fs_deleted=0 WHERE location=:location"));
+        query.bindValue(QStringLiteral(":location"), ref.getLocation());
+        if (!query.exec()) {
+            kLogger.warning() << "Could not mark download present:" << query.lastError().text();
+        }
+        m_pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
+    }
+    // The local list shows the download at once, not after a restart
+    QTimer::singleShot(0, m_pLibrary, &Library::slotRefreshLibraryModels);
     if (!pTrack) {
         kLogger.warning() << "Could not add downloaded track to library:"
                           << localPath;

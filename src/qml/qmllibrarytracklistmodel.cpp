@@ -110,6 +110,19 @@ QmlLibraryTrackListModel::QmlLibraryTrackListModel(
         pTrackModel->select();
     }
     setSourceModel(pModel);
+    // rowCount is a property in QML: it follows a reload (new tracks)
+    connect(this,
+            &QAbstractItemModel::rowsInserted,
+            this,
+            &QmlLibraryTrackListModel::rowCountChanged);
+    connect(this,
+            &QAbstractItemModel::rowsRemoved,
+            this,
+            &QmlLibraryTrackListModel::rowCountChanged);
+    connect(this,
+            &QAbstractItemModel::modelReset,
+            this,
+            &QmlLibraryTrackListModel::rowCountChanged);
 }
 
 int QmlLibraryTrackListModel::rowCount(const QModelIndex& parent) const {
