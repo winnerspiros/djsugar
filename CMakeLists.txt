@@ -5008,9 +5008,15 @@ else()
           applocal
       )
 
+      # Qt 6.10 made QuickShapesPrivate an interface on top of QuickShapes
+      if(TARGET Qt${QT_VERSION_MAJOR}::QuickShapes)
+        set(MIXXX_QT_QUICKSHAPES Qt${QT_VERSION_MAJOR}::QuickShapes)
+      else()
+        set(MIXXX_QT_QUICKSHAPES Qt${QT_VERSION_MAJOR}::QuickShapesPrivate)
+      endif()
       install(
         IMPORTED_RUNTIME_ARTIFACTS
-          Qt${QT_VERSION_MAJOR}::QuickShapesPrivate
+          ${MIXXX_QT_QUICKSHAPES}
           DESTINATION
           "${MIXXX_INSTALL_DATADIR}"
           COMPONENT
