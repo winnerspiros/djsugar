@@ -111,8 +111,8 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
             // The app leaves the screen at once; saving and closing the
             // engine, library and sound (2-3 s) goes on out of sight
             QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
-                QNativeInterface::QAndroidApplication::context().callMethod<jboolean>(
-                        "moveTaskToBack", "(Z)Z", jboolean(true));
+                const QJniObject activity = QNativeInterface::QAndroidApplication::context();
+                activity.callMethod<jboolean>("moveTaskToBack", "(Z)Z", jboolean(true));
             });
 #endif
         }
