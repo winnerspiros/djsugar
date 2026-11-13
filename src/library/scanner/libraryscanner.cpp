@@ -33,6 +33,7 @@ mixxx::Logger kLogger("LibraryScanner");
 
 QAtomicInt s_instanceCounter(0);
 
+#ifndef Q_OS_ANDROID
 // Returns the number of affected rows or -1 on error
 int execRowCountQuery(FwdSqlQuery& query) {
     VERIFY_OR_DEBUG_ASSERT(query.isPrepared()) {
@@ -44,7 +45,6 @@ int execRowCountQuery(FwdSqlQuery& query) {
     return query.numRowsAffected();
 }
 
-#ifndef Q_OS_ANDROID
 /// Clean up the database and fix inconsistencies from previous runs.
 /// See also: https://github.com/mixxxdj/mixxx/issues/9771
 void cleanUpDatabase(const QSqlDatabase& database) {
