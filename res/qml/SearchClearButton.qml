@@ -32,12 +32,23 @@ AbstractButton {
         }
     }
 
-    contentItem: Text {
-        text: "\u2715"
-        color: root.hovered || root.pressed ? "#ffffff" : "#a0a0a0"
-        font.pixelSize: 14
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
+    // Drawn, not a font glyph: Android fonts have no \u2715
+    contentItem: Item {
+        Repeater {
+            model: [45, -45]
+
+            Rectangle {
+                required property int modelData
+
+                anchors.centerIn: parent
+                width: 12
+                height: 2
+                radius: 1
+                rotation: modelData
+                antialiasing: true
+                color: root.hovered || root.pressed ? "#ffffff" : "#a0a0a0"
+            }
+        }
     }
     background: Rectangle {
         radius: width / 2

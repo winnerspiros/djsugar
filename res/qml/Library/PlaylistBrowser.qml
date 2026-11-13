@@ -83,7 +83,6 @@ ColumnLayout {
             anchors.fill: parent
             anchors.margins: 4
             boundsBehavior: Flickable.DragOverBounds
-            boundsMovement: Flickable.StopAtBounds
             clip: true
             model: root.entries
             spacing: 2

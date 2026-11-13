@@ -1,7 +1,8 @@
 import QtQuick
 
 // Pull down at the top of a list to refresh it; F5 does the same while
-// the list is shown. Declared inside the list with `flickable` set to it and
+// the list is shown. The rows follow the finger and spring back on release.
+// Declared inside the list with `flickable` set to it and
 // `busy` bound to the view's loading state; it sits on the list itself, so it
 // does not scroll with the rows.
 Item {
@@ -9,8 +10,9 @@ Item {
 
     required property Flickable flickable
     property bool busy: false
-    // Pull distance that triggers a refresh, in pixels
-    property real threshold: 80
+    // Gap the pull opens that triggers a refresh, in pixels (the list
+    // resists: about half of the finger's travel)
+    property real threshold: 60
     readonly property real pull: root.flickable ? Math.max(0, -root.flickable.verticalOvershoot) : 0
     property bool armed: false
     // Set by a pull or F5: background loading (a scan at start, a list
@@ -42,8 +44,8 @@ Item {
             root.refreshing = false;
         }
     }
-    // Follows the finger with resistance, rests at 16 px while spinning
-    property real offset: root.spinning ? 16 : Math.min(root.pull * 0.6, root.threshold * 0.9) - root.height
+    // In the gap the pulled list opens, rests at the top while spinning
+    property real offset: root.spinning ? 12 : (root.pull - root.height) / 2
     y: offset
     opacity: root.spinning ? 1 : Math.min(1, root.pull / root.threshold)
     visible: opacity > 0.01
@@ -104,13 +106,31 @@ Item {
         border.width: 1
 
         // Arrow while pulling (turns over once far enough), arc while busy
-        Text {
-            anchors.centerIn: parent
+        Canvas {
+            id: arrow
+
+            anchors.fill: parent
+            anchors.margins: 9
             visible: !root.spinning
-            text: "\u2193"
-            color: root.armed ? "#00e5ff" : "#c0c0c0"
-            font.pixelSize: 18
-            rotation: root.armed ? 180 : Math.min(1, root.pull / root.threshold) * 120
+            // Points down while pulling, flips up once letting go refreshes
+            rotation: root.armed ? 180 : 0
+            property color stroke: root.armed ? "#00e5ff" : "#c0c0c0"
+            onStrokeChanged: requestPaint()
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.reset();
+                ctx.strokeStyle = arrow.stroke;
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 2);
+                ctx.lineTo(width / 2, height - 2);
+                ctx.moveTo(width / 2 - 6, height - 8);
+                ctx.lineTo(width / 2, height - 2);
+                ctx.lineTo(width / 2 + 6, height - 8);
+                ctx.stroke();
+            }
 
             Behavior on rotation {
                 NumberAnimation {

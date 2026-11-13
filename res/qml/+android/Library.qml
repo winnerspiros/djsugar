@@ -181,7 +181,56 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                placeholderText: qsTr("Search your local collection...")
+                anchors.margins: 6
+                height: 40
+                leftPadding: 40
+                color: "#ffffff"
+                font.pixelSize: 14
+                placeholderText: qsTr("Search songs, artists, albums")
+                placeholderTextColor: "#80868f"
+                selectByMouse: true
+                verticalAlignment: TextInput.AlignVCenter
+                inputMethodHints: Qt.ImhNoPredictiveText
+                background: Rectangle {
+                    radius: height / 2
+                    color: searchField.activeFocus ? "#22262e" : "#1a1d23"
+                    border.width: searchField.activeFocus ? 2 : 1
+                    border.color: searchField.activeFocus ? "#00e5ff" : "#2e333c"
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 120
+                        }
+                    }
+
+                    // Magnifier, drawn: no icon font needed
+                    Item {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+
+                        Rectangle {
+                            width: 11
+                            height: 11
+                            radius: width / 2
+                            color: "transparent"
+                            border.width: 2
+                            border.color: searchField.activeFocus ? "#00e5ff" : "#80868f"
+                        }
+                        Rectangle {
+                            x: 9
+                            y: 11
+                            width: 7
+                            height: 2
+                            radius: 1
+                            rotation: 45
+                            antialiasing: true
+                            color: searchField.activeFocus ? "#00e5ff" : "#80868f"
+                        }
+                    }
+                }
                 Skin.SearchClearButton {}
                 // One search once typing pauses, not one per letter
                 onTextChanged: searchDebounce.restart()
@@ -203,6 +252,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: searchField.bottom
+                anchors.topMargin: 6
                 orientation: Qt.Horizontal
 
                 handle: Rectangle {

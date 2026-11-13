@@ -442,7 +442,6 @@ Item {
                 visible: root.activeMode !== "playlists"
                 clip: true
                 boundsBehavior: Flickable.DragOverBounds
-                boundsMovement: Flickable.StopAtBounds
                 model: root.tracksModel
 
                 ScrollBar.vertical: ScrollBar {
@@ -672,7 +671,6 @@ Item {
                 visible: root.activeMode === "playlists"
                 clip: true
                 boundsBehavior: Flickable.DragOverBounds
-                boundsMovement: Flickable.StopAtBounds
                 model: root.playlistsModel
 
                 ScrollBar.vertical: ScrollBar {

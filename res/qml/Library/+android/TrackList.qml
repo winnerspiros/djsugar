@@ -275,7 +275,6 @@ Rectangle {
         }
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.DragOverBounds
-        boundsMovement: Flickable.StopAtBounds
         interactive: true
         keyNavigationEnabled: false
         model: root.model

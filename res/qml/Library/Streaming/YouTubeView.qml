@@ -659,7 +659,6 @@ Item {
         ListView {
             id: playlistList
             boundsBehavior: Flickable.DragOverBounds
-            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -732,7 +731,6 @@ Item {
             id: resultList
 
             boundsBehavior: Flickable.DragOverBounds
-            boundsMovement: Flickable.StopAtBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true

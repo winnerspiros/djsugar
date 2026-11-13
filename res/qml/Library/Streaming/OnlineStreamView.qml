@@ -272,7 +272,6 @@ Item {
                 anchors.fill: parent
                 clip: true
                 boundsBehavior: Flickable.DragOverBounds
-                boundsMovement: Flickable.StopAtBounds
                 model: root.tracksModel
 
                 ScrollBar.vertical: ScrollBar {
