@@ -17,10 +17,10 @@ Item {
     signal refresh
 
     function trigger() {
+        root.armed = false;
         if (root.busy) {
             return;
         }
-        root.armed = false;
         root.refresh();
         // The indicator shows at least briefly, even for an instant refresh
         holdTimer.restart();

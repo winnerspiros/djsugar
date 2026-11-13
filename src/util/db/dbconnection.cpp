@@ -420,7 +420,9 @@ void greeklishKey(const QString& text, QChar esc, QString* pKey) {
         } else if (c == u'b') {
             c = u'v';
         }
-        if (key.isEmpty() || key.back() != QChar(c) || c == u'%') {
+        // Doubled letters count once (ll/λλ); wildcards, digits and the rest
+        // keep their number
+        if (key.isEmpty() || key.back() != QChar(c) || c < u'a' || c > u'z') {
             key.append(QChar(c));
         }
     }

@@ -8,6 +8,8 @@ AbstractButton {
     id: root
 
     property Item field: parent
+    // Off where the field handles Escape itself
+    property bool clearOnEscape: true
 
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
@@ -58,7 +60,7 @@ AbstractButton {
 
     Shortcut {
         sequences: [StandardKey.Cancel]
-        enabled: root.field.activeFocus && root.field.text.length > 0
+        enabled: root.clearOnEscape && root.field.activeFocus && root.field.text.length > 0
         onActivated: root.field.clear()
     }
 }

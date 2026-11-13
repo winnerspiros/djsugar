@@ -93,16 +93,19 @@ Item {
         }
     }
 
-    function doSearch() {
-        if (searchField.text.length === 0) {
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
+    function doSearch(query = searchField.text) {
+        if (query.length === 0) {
             return;
         }
+        root.searchedQuery = query;
         root.listKind = "search";
         root.isBusy = true;
         root.isLoadingMore = false;
         root.hasMore = false;
         root.statusMessage = qsTr("Searching YouTube...");
-        Mixxx.YouTube.search(searchField.text);
+        Mixxx.YouTube.search(query);
     }
 
     // Infinite scroll: the next batch is fetched when the list nears its end.
@@ -169,7 +172,7 @@ Item {
     // Pull to refresh / F5: what is shown is fetched again
     function refreshList() {
         if (root.listKind === "search")
-            root.doSearch();
+            root.doSearch(root.searchedQuery);
         else if (root.listKind === "playlists")
             root.showPlaylists();
         else
@@ -725,44 +728,6 @@ Item {
             }
         }
 
-        // Nothing listed: what this view is for, and the way in
-        Column {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
-            spacing: 10
-            topPadding: 40
-
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 56
-                height: 40
-                radius: 10
-                color: root.ytRed
-
-                Skin.Triangle {
-                    anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: 2
-                    width: 16
-                    height: 18
-                    color: "#ffffff"
-                    pointsRight: true
-                }
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width - 20, 380)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                color: "#c8ccd4"
-                font.pixelSize: 12
-                text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
-                    : root.listKind === "playlist" ? qsTr("This playlist is empty")
-                    : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
-                    : qsTr("Search above. Sign in for your liked songs and playlists")
-            }
-        }
-
         ListView {
             id: resultList
 
@@ -771,7 +736,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.listKind !== "playlists" && (resultsModel.count > 0 || root.isBusy)
+            visible: root.listKind !== "playlists"
             clip: true
             model: resultsModel
             spacing: 2
@@ -1077,6 +1042,43 @@ Item {
                 }
             }
 
+            // Nothing listed: what this view is for, and the way in
+            Column {
+                parent: resultList
+                anchors.fill: parent
+                visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
+                spacing: 10
+                topPadding: 40
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 56
+                    height: 40
+                    radius: 10
+                    color: root.ytRed
+
+                    Skin.Triangle {
+                        anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: 2
+                        width: 16
+                        height: 18
+                        color: "#ffffff"
+                        pointsRight: true
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width - 20, 380)
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    color: "#c8ccd4"
+                    font.pixelSize: 12
+                    text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
+                        : root.listKind === "playlist" ? qsTr("This playlist is empty")
+                        : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
+                        : qsTr("Search above. Sign in for your liked songs and playlists")
+                }
+            }
 
             Skin.PullToRefresh {
                 flickable: resultList

@@ -34,10 +34,13 @@ Item {
         else if (kind === "playlists")
             Mixxx.Spotify.playlists();
     }
-    function doSearch() {
-        const query = searchField.text.trim();
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
+    function doSearch(text = searchField.text) {
+        const query = text.trim();
         if (query.length === 0)
             return;
+        root.searchedQuery = query;
         root.listKind = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
@@ -46,7 +49,7 @@ Item {
     // Pull to refresh / F5: what is shown is fetched again
     function refreshList() {
         if (root.listKind === "search")
-            root.doSearch();
+            root.doSearch(root.searchedQuery);
         else if (root.listKind === "playlist")
             root.openPlaylist(root.playlistId, root.playlistName);
         else

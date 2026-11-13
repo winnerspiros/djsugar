@@ -314,7 +314,12 @@ void LibraryScanner::slotStartScan() {
         // a walk through them all took 25-45 s for ~1400 songs. Only the
         // folders with music are entered (the media store's, plus those of
         // library tracks so none goes missing) and those on the way to them.
-        const QStringList audioFolders = mixxx::android::mediaStoreAudioFolders();
+        // A rescan asked for (pull down, F5, the menu) walks every folder:
+        // it finds music the media store leaves out (.nomedia folders)
+        const bool autoscan = m_manualScan; // holds scan()'s autoscan
+        const QStringList audioFolders = autoscan
+                ? mixxx::android::mediaStoreAudioFolders()
+                : QStringList();
         if (!audioFolders.isEmpty()) {
             QSet<QString> musicDirs(audioFolders.cbegin(), audioFolders.cend());
             for (const QString& location : std::as_const(trackLocations)) {
@@ -850,6 +855,8 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         // GlobalTrackCache mutex (see the comment on
         // commit-after-every-track above).
         commitAndRestart();
+        // Not complete: the next start scans again
+        m_scannerGlobal->clearScanFinishedCleanly();
         return;
     }
 

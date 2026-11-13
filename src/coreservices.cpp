@@ -744,26 +744,14 @@ void CoreServices::initialize() {
                 musicDirAdded = true;
             }
         }
-        // Android counts every media file added, changed or removed: the
-        // folders are walked again only when that count moved since the last
-        // complete scan (or is unknown, before Android 11)
-        const ConfigKey mediaStoreKey("[Library]", "AndroidMediaStoreState");
-        const QString mediaStoreState = mixxx::android::mediaStoreState();
-        if (mediaStoreState.isEmpty() ||
-                mediaStoreState != pConfig->getValueString(mediaStoreKey)) {
-            rescan = true;
-            connect(
-                    m_pTrackCollectionManager.get(),
-                    &TrackCollectionManager::libraryScanSummary,
-                    this,
-                    [pConfig, mediaStoreKey, mediaStoreState](
-                            const LibraryScanResultSummary& result) {
-                        if (result.finishedCleanly && !mediaStoreState.isEmpty()) {
-                            pConfig->setValue(mediaStoreKey, mediaStoreState);
-                        }
-                    },
-                    Qt::SingleShotConnection);
-        }
+    }
+    // Android counts every media file added, changed or removed: the folders
+    // are walked again only when that count moved since the last complete
+    // scan (or is unknown, before Android 11)
+    const ConfigKey mediaStoreKey("[Library]", "AndroidMediaStoreState");
+    const QString mediaStoreState = mixxx::android::mediaStoreState();
+    if (mediaStoreState.isEmpty() || mediaStoreState != pConfig->getValueString(mediaStoreKey)) {
+        rescan = true;
     }
 #endif
 
@@ -781,6 +769,22 @@ void CoreServices::initialize() {
         qInfo() << "Starting library auto-scan (rescan=" << rescan
                 << ", musicDirAdded=" << musicDirAdded
                 << ", roots=" << watchedRoots << ")";
+#ifdef Q_OS_ANDROID
+        // Whatever asked for the scan, the phone counts as known again only
+        // once it finished
+        pConfig->setValue(mediaStoreKey, QString());
+        connect(
+                m_pTrackCollectionManager.get(),
+                &TrackCollectionManager::libraryScanSummary,
+                this,
+                [pConfig, mediaStoreKey, mediaStoreState](
+                        const LibraryScanResultSummary& result) {
+                    if (result.finishedCleanly && !mediaStoreState.isEmpty()) {
+                        pConfig->setValue(mediaStoreKey, mediaStoreState);
+                    }
+                },
+                Qt::SingleShotConnection);
+#endif
         m_pTrackCollectionManager->startLibraryAutoScan();
     } else {
         qInfo() << "Skipping library auto-scan; watched roots =" << watchedRoots;

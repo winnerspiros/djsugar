@@ -15,6 +15,8 @@ Item {
     property var playlistsModel: []
     property string currentPlaylistName: ""
     property var currentPlaylistId
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
     property string statusMessage: ""
     property bool isBusy: false
     property var downloadProgressMap: ({})
@@ -22,6 +24,7 @@ Item {
     // Smart box of the streaming hub (WebView)
     function search(query) {
         searchInput.text = query;
+        root.searchedQuery = query;
         root.activeMode = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
@@ -35,8 +38,9 @@ Item {
         } else if (root.activeMode === "playlist_tracks") {
             root.isBusy = true;
             Mixxx.StreamingManager.getSubsonicPlaylistSongs(root.currentPlaylistId);
-        } else if (searchInput.text.trim() !== "") {
-            root.search(searchInput.text);
+        } else if (root.searchedQuery.trim() !== "") {
+            root.isBusy = true;
+            Mixxx.StreamingManager.searchSubsonic(root.searchedQuery);
         }
     }
     function openServer(url) {
@@ -338,6 +342,7 @@ Item {
                     onClicked: {
                         root.activeMode = "search";
                         if (searchInput.text.trim() !== "") {
+                            root.searchedQuery = searchInput.text;
                             root.isBusy = true;
                             Mixxx.StreamingManager.searchSubsonic(searchInput.text);
                         }
@@ -374,6 +379,7 @@ Item {
                     }
                     onAccepted: {
                         if (text.trim() !== "") {
+                            root.searchedQuery = text;
                             root.isBusy = true;
                             root.statusMessage = qsTr("Searching...");
                             Mixxx.StreamingManager.searchSubsonic(text);
