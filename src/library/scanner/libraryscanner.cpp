@@ -17,6 +17,7 @@
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
 #include "util/db/fwdsqlquery.h"
+#include "util/db/sqlite.h"
 #include "util/logger.h"
 #include "util/performancetimer.h"
 #include "util/regex.h"
@@ -78,27 +79,6 @@ void cleanUpDatabase(const QSqlDatabase& database) {
             << timer.elapsed().debugMillisWithUnit();
 }
 #endif
-
-/// Update statistics for the query planner
-/// See also: https://www.sqlite.org/lang_analyze.html
-void updateQueryPlannerStatisticsForDatabase(const QSqlDatabase& database) {
-    kLogger.info()
-            << "Updating query planner statistics for database...";
-    PerformanceTimer timer;
-    timer.start();
-    const auto sqlStmt = QStringLiteral("ANALYZE");
-    FwdSqlQuery query(database, sqlStmt);
-    const auto numRows = execRowCountQuery(query);
-    VERIFY_OR_DEBUG_ASSERT(numRows >= 0) {
-        kLogger.warning()
-                << "Failed to update query planner statistics for database";
-    }
-    else {
-        kLogger.info()
-                << "Finished updating query planner statistics for database:"
-                << timer.elapsed().debugMillisWithUnit();
-    }
-}
 
 // Committing the add-tracks transaction after every track is essential to
 // avoid a deadlock between the scanner thread and the GUI thread:
@@ -552,7 +532,7 @@ void LibraryScanner::slotFinishUnhashedScan() {
 
     if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {
         const auto dbConnection = mixxx::DbConnectionPooled(m_pDbConnectionPool);
-        updateQueryPlannerStatisticsForDatabase(dbConnection);
+        mixxx::sqlite::updateQueryPlannerStatistics(dbConnection);
     }
 
     if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {

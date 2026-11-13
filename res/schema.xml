@@ -617,4 +617,27 @@ reapplying those migrations.
         rating INTEGER);
     </sql>
   </revision>
+  <revision version="42" min_compatible="3">
+    <description>
+      No-op. A reverted playlist folders experiment reached version 42 on
+      some test devices; those databases continue at 43.
+    </description>
+    <sql>
+    </sql>
+  </revision>
+  <revision version="43" min_compatible="3">
+    <description>
+      Add database indexes for common library queries to improve performance
+      with large libraries (tens of thousands of tracks).
+      Indexes added:
+      - track_locations(directory): scanner directory operations
+      - cues(track_id): cue point lookups per track
+      - PlaylistTracks(playlist_id, position): ordered playlist track retrieval
+    </description>
+    <sql>
+      CREATE INDEX IF NOT EXISTS idx_track_locations_directory ON track_locations (directory);
+      CREATE INDEX IF NOT EXISTS idx_cues_track_id ON cues (track_id);
+      CREATE INDEX IF NOT EXISTS idx_PlaylistTracks_playlist_id_position ON PlaylistTracks (playlist_id, position);
+    </sql>
+  </revision>
 </schema>
