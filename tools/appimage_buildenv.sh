@@ -40,17 +40,11 @@ HOST_ARCH=$(uname -m)  # One of x86_64, aarch64, etc.
 
 case "$HOST_ARCH" in
     x86_64)
-        if [ -n "${BUILDENV_RELEASE}" ]; then
-            : "${VCPKG_TARGET_TRIPLET:=x64-linux-release}"
-            : "${BUILDENV_BRANCH:=2.7-rel}"
-            : "${BUILDENV_NAME:=mixxx-deps-2.7-djsugar-x64-linux-rel-a5313793}"
-            : "${BUILDENV_SHA256:=93de8ee0332fcc03b01d26a7e7528895b0342b1bcd219044808c93fac840ee86}"
-        else
-            : "${VCPKG_TARGET_TRIPLET:=x64-linux}"
-            : "${BUILDENV_BRANCH:=2.7}"
-            : "${BUILDENV_NAME:=mixxx-deps-2.7-x64-linux-332464ba}"
-            : "${BUILDENV_SHA256:=2760a1ba5e5f04a0a3e13330bcd298e1e84773169c105266aee4308599b01fa6}"
-        fi
+        # Only release (-rel) buildenvs are published, debug builds use them too
+        : "${VCPKG_TARGET_TRIPLET:=x64-linux-appimage}"
+        : "${BUILDENV_BRANCH:=2.7-rel}"
+        : "${BUILDENV_NAME:=mixxx-deps-2.7-djsugar-x64-linux-rel-a5313793}"
+        : "${BUILDENV_SHA256:=93de8ee0332fcc03b01d26a7e7528895b0342b1bcd219044808c93fac840ee86}"
         ;;
     aarch64)
         VCPKG_TARGET_TRIPLET="arm64-linux-release"
