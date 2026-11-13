@@ -126,6 +126,31 @@ jobs:
             artifacts_name: macOS ARM DMG
             artifacts_path: build/*.dmg
             artifacts_slug: macos-macosarm
+          - name: iOS arm64
+            os: macos-15-intel
+            cmake_args: >-
+              -DBULK=ON
+              -DCOREAUDIO=ON
+              -DHSS1394=ON
+              -DMODPLUG=ON
+              -DQT6=ON
+              -DQML=OFF
+              -DWAVPACK=ON
+              -DCMAKE_SYSTEM_NAME=iOS
+              -DCMAKE_OSX_ARCHITECTURES=arm64
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0
+              -DVCPKG_TARGET_TRIPLET=arm64-ios-release
+              -DQT_HOST_PATH=${{ env.QT_HOST_PATH }}
+              -DCODE_SIGNING_ALLOWED=NO
+              -DNDEBUG=ON
+            crosscompile: true
+            compiler_cache: ccache
+            compiler_cache_path: /Users/runner/Library/Caches/ccache
+            compiler_cache_id: ios-arm64
+            buildenv_basepath: /Users/runner/buildenv
+            buildenv_script: tools/ios_buildenv.sh
+            artifacts_name: iOS arm64 Build
+            artifacts_slug: ios-arm64
           - name: Windows Server 2025 VS2026 x64
             os: windows-2025-vs2026
             # Attention: If you change the cmake_args for the Windows CI build,
