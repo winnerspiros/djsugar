@@ -13,6 +13,9 @@ Item {
     property real threshold: 80
     readonly property real pull: root.flickable ? Math.max(0, -root.flickable.verticalOvershoot) : 0
     property bool armed: false
+    // Set by a pull or F5: background loading (a scan at start, a list
+    // opening) never shows the indicator
+    property bool refreshing: false
 
     signal refresh
 
@@ -21,6 +24,7 @@ Item {
         if (root.busy) {
             return;
         }
+        root.refreshing = true;
         root.refresh();
         // The indicator shows at least briefly, even for an instant refresh
         holdTimer.restart();
@@ -32,7 +36,12 @@ Item {
     height: 36
     z: 10
 
-    readonly property bool spinning: root.busy || holdTimer.running
+    readonly property bool spinning: root.refreshing && (root.busy || holdTimer.running)
+    onSpinningChanged: {
+        if (!root.spinning) {
+            root.refreshing = false;
+        }
+    }
     // Follows the finger with resistance, rests at 16 px while spinning
     property real offset: root.spinning ? 16 : Math.min(root.pull * 0.6, root.threshold * 0.9) - root.height
     y: offset
