@@ -1,6 +1,7 @@
 #include "qmlapplication.h"
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QMenuBar>
 #include <QQmlEngineExtensionPlugin>
 #include <QQuickStyle>
@@ -505,7 +506,12 @@ QmlApplication::~QmlApplication() {
     // Destroy the QML engine before the waveform factory. Scene-graph nodes
     // owned by the engine may still reference QML waveform renderers and the
     // factory while the engine is tearing down its object tree.
+    QElapsedTimer timer;
+    timer.start();
     m_pAppEngine.reset();
+    if (timer.elapsed() >= 100) {
+        qInfo() << "Exit: closing the QML window took" << timer.elapsed() << "ms";
+    }
     // Delete all the QML singletons in order to prevent leak detection in CoreService
     QmlCoreServices::destroy();
     QmlRecordingProxy::s_pRecordingManager.reset();

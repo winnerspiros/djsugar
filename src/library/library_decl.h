@@ -30,7 +30,8 @@ struct LibraryScanResultSummary {
               numNewMissingTracks(0),
               numRediscoveredTracks(0),
               tracksTotal(0),
-              noDirectoriesConfigured(false) {
+              noDirectoriesConfigured(false),
+              finishedCleanly(false) {
     }
 
     QString durationString;
@@ -42,4 +43,6 @@ struct LibraryScanResultSummary {
     int numRediscoveredTracks;
     int tracksTotal;
     bool noDirectoriesConfigured;
+    /// Every library folder was scanned: not canceled, no failure
+    bool finishedCleanly;
 };

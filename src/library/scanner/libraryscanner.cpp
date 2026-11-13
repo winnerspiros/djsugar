@@ -597,6 +597,8 @@ void LibraryScanner::slotFinishUnhashedScan() {
     result.numRediscoveredTracks = numRediscoveredTracks;
     result.tracksTotal = tracksTotal;
     result.autoscan = m_manualScan;
+    result.finishedCleanly =
+            !m_scannerGlobal->shouldCancel() && bScanFinishedCleanly;
 
     m_scannerGlobal.clear();
     changeScannerState(FINISHED);

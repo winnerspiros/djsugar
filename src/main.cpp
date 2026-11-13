@@ -103,6 +103,7 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
             exitCode = kFatalErrorOnStartupExitCode;
         } else {
             exitCode = pApp->exec();
+            qInfo() << "Exit requested";
         }
     } else
 #endif

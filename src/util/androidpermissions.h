@@ -38,6 +38,9 @@ void requestFullExternalStorageAccess();
 /// The shared Music, Download, Podcasts and Recordings folders that exist:
 /// where the phone keeps its songs. Scanned into the library on start.
 QStringList sharedAudioDirectories();
+/// Changes whenever a media file on the phone is added, changed or removed
+/// (MediaStore generation, Android 11+); empty when unknown
+QString mediaStoreState();
 /// Folders of phone and app sounds (notification tones, ringtones,
 /// alarms, other apps' media), never scanned as music
 bool isSystemSoundDirectory(const QString& path);

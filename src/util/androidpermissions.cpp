@@ -129,6 +129,51 @@ bool isSystemSoundDirectory(const QString& path) {
     return kSystemSounds.match(path).hasMatch();
 }
 
+QString mediaStoreState() {
+    if (android_get_device_api_level() < 30) {
+        return QString(); // no generation counter before Android 11
+    }
+    const QJniObject context = QNativeInterface::QAndroidApplication::context();
+    const QJniObject volumes = QJniObject::callStaticObjectMethod(
+            "android/provider/MediaStore",
+            "getExternalVolumeNames",
+            "(Landroid/content/Context;)Ljava/util/Set;",
+            context.object());
+    QJniEnvironment env;
+    if (env.checkAndClearExceptions() || !volumes.isValid()) {
+        return QString();
+    }
+    const QJniObject names = volumes.callObjectMethod(
+            "toArray", "()[Ljava/lang/Object;");
+    const auto array = names.object<jobjectArray>();
+    QStringList state;
+    for (jsize i = 0; i < env->GetArrayLength(array); ++i) {
+        const QJniObject volume = QJniObject::fromLocalRef(
+                env->GetObjectArrayElement(array, i));
+        // The version changes when a volume's media database is rebuilt,
+        // the generation on every media file added, changed or removed
+        const QString version = QJniObject::callStaticObjectMethod(
+                "android/provider/MediaStore",
+                "getVersion",
+                "(Landroid/content/Context;Ljava/lang/String;)Ljava/lang/String;",
+                context.object(),
+                volume.object<jstring>())
+                                        .toString();
+        const jlong generation = QJniObject::callStaticMethod<jlong>(
+                "android/provider/MediaStore",
+                "getGeneration",
+                "(Landroid/content/Context;Ljava/lang/String;)J",
+                context.object(),
+                volume.object<jstring>());
+        if (env.checkAndClearExceptions()) {
+            return QString();
+        }
+        state.append(QStringLiteral("%1:%2:%3").arg(volume.toString(), version, QString::number(generation)));
+    }
+    state.sort();
+    return state.join(QLatin1Char(';'));
+}
+
 QStringList sharedAudioDirectories() {
     QStringList dirs;
     for (const char* type : {"DIRECTORY_MUSIC",
