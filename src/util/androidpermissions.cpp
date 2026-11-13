@@ -168,7 +168,10 @@ QString mediaStoreState() {
         if (env.checkAndClearExceptions()) {
             return QString();
         }
-        state.append(QStringLiteral("%1:%2:%3").arg(volume.toString(), version, QString::number(generation)));
+        state.append(QStringLiteral("%1:%2:%3")
+                        .arg(volume.toString(),
+                                version,
+                                QString::number(generation)));
     }
     state.sort();
     return state.join(QLatin1Char(';'));
