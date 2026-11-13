@@ -30,7 +30,9 @@ Item {
 
     function applySearch() {
         if (root.sidebar && root.sidebar.tracklist && root.librarySourceMode === 0) {
-            root.sidebar.tracklist.search(searchField.text);
+            // displayText holds the word the keyboard is still composing
+            // (Samsung, Gboard): text gets it only once committed
+            root.sidebar.tracklist.search(searchField.displayText);
         }
     }
     function focusSearch() {
@@ -96,9 +98,8 @@ Item {
 
         // Playlists, crates and folders bring their own track list
         function onTracklistChanged() {
-            if (searchField.text.length > 0) {
-                root.applySearch();
-            }
+            // Also when empty: a list may keep an older search
+            root.applySearch();
         }
     }
 
@@ -193,15 +194,9 @@ Item {
                 inputMethodHints: Qt.ImhNoPredictiveText
                 background: Rectangle {
                     radius: height / 2
-                    color: searchField.activeFocus ? "#22262e" : "#1a1d23"
+                    color: "#000000"
                     border.width: searchField.activeFocus ? 2 : 1
-                    border.color: searchField.activeFocus ? "#00e5ff" : "#2e333c"
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: 120
-                        }
-                    }
+                    border.color: searchField.activeFocus ? "#00e5ff" : "#262a31"
 
                     // Magnifier, drawn: no icon font needed
                     Item {
@@ -233,7 +228,7 @@ Item {
                 }
                 Skin.SearchClearButton {}
                 // One search once typing pauses, not one per letter
-                onTextChanged: searchDebounce.restart()
+                onDisplayTextChanged: searchDebounce.restart()
                 onAccepted: {
                     searchDebounce.stop();
                     root.applySearch();

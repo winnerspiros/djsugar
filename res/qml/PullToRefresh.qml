@@ -39,11 +39,13 @@ Item {
     z: 10
 
     readonly property bool spinning: root.refreshing && (root.busy || holdTimer.running)
-    onSpinningChanged: {
-        if (!root.spinning) {
+    // Done once the work and the short hold both ended
+    function settle() {
+        if (!root.busy && !holdTimer.running) {
             root.refreshing = false;
         }
     }
+    onBusyChanged: root.settle()
     // In the gap the pulled list opens, rests at the top while spinning
     property real offset: root.spinning ? 12 : (root.pull - root.height) / 2
     y: offset
@@ -75,6 +77,7 @@ Item {
         id: holdTimer
 
         interval: 450
+        onTriggered: root.settle()
     }
 
     Connections {

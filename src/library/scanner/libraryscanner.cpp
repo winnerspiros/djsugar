@@ -316,8 +316,10 @@ void LibraryScanner::slotStartScan() {
         // library tracks so none goes missing) and those on the way to them.
         // A rescan asked for (pull down, F5, the menu) walks every folder:
         // it finds music the media store leaves out (.nomedia folders)
+        // The first scan walks every folder too: the media store may not
+        // have indexed everything yet (one missed 513 of 1329 songs)
         const bool autoscan = m_manualScan; // holds scan()'s autoscan
-        const QStringList audioFolders = autoscan
+        const QStringList audioFolders = autoscan && !trackLocations.isEmpty()
                 ? mixxx::android::mediaStoreAudioFolders()
                 : QStringList();
         if (!audioFolders.isEmpty()) {

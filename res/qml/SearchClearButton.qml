@@ -1,8 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-// An X that empties a search field; Escape does the same. The field keeps
-// the keyboard focus. It sits inside a TextField (its parent), or beside a
+// An X that empties a search field; Escape does the same. It sits inside a TextField (its parent), or beside a
 // TextInput: then it goes in the field's box with `field` set.
 AbstractButton {
     id: root
@@ -18,7 +17,8 @@ AbstractButton {
     height: 28
     focusPolicy: Qt.NoFocus
     visible: opacity > 0
-    opacity: root.field.text.length > 0 ? 1 : 0
+    // displayText: the word the keyboard is still composing counts too
+    opacity: root.field.displayText.length > 0 ? 1 : 0
     scale: root.pressed ? 0.85 : 1
 
     Behavior on opacity {
@@ -41,12 +41,12 @@ AbstractButton {
                 required property int modelData
 
                 anchors.centerIn: parent
-                width: 12
+                width: 14
                 height: 2
                 radius: 1
                 rotation: modelData
                 antialiasing: true
-                color: root.hovered || root.pressed ? "#ffffff" : "#a0a0a0"
+                color: root.hovered || root.pressed ? "#ffffff" : "#c8c8c8"
             }
         }
     }
@@ -55,9 +55,11 @@ AbstractButton {
         color: root.pressed ? "#40ffffff" : root.hovered ? "#20ffffff" : "transparent"
     }
 
+    // Clears only: the keyboard stays as it was (closed stays closed)
     onClicked: {
+        // Drops the keyboard's composing word too, not only committed text
+        Qt.inputMethod.reset();
         root.field.clear();
-        root.field.forceActiveFocus();
     }
 
     Component.onCompleted: {
@@ -71,7 +73,10 @@ AbstractButton {
 
     Shortcut {
         sequences: [StandardKey.Cancel]
-        enabled: root.clearOnEscape && root.field.activeFocus && root.field.text.length > 0
-        onActivated: root.field.clear()
+        enabled: root.clearOnEscape && root.field.activeFocus && root.field.displayText.length > 0
+        onActivated: {
+            Qt.inputMethod.reset();
+            root.field.clear();
+        }
     }
 }

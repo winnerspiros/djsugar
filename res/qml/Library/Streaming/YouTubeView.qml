@@ -95,11 +95,13 @@ Item {
 
     // The search shown; refresh repeats it, not what the field holds now
     property string searchedQuery: ""
+    property double searchedAt: 0
     function doSearch(query = searchField.text) {
         if (query.length === 0) {
             return;
         }
         root.searchedQuery = query;
+        root.searchedAt = Date.now();
         root.listKind = "search";
         root.isBusy = true;
         root.isLoadingMore = false;
@@ -171,8 +173,15 @@ Item {
     }
     // Pull to refresh / F5: what is shown is fetched again
     function refreshList() {
-        if (root.listKind === "search")
+        if (root.listKind === "search") {
+            // YouTube allows a few requests per 10 s and a search spends
+            // three or four: results fresher than that are kept as they are
+            if (Date.now() - root.searchedAt < 15000 && resultsModel.count > 0) {
+                root.statusMessage = qsTr("%1 results, up to date").arg(root.allResults.length);
+                return;
+            }
             root.doSearch(root.searchedQuery);
+        }
         else if (root.listKind === "playlists")
             root.showPlaylists();
         else
@@ -293,7 +302,10 @@ Item {
         function onSearchFailed(error) {
             root.isBusy = false;
             root.isLoadingMore = false;
-            root.statusMessage = qsTr("Search error: %1").arg(error);
+            // The list shown stays: a busy YouTube only means try later
+            root.statusMessage = /throttled|rate limit/i.test(error)
+                ? qsTr("YouTube is busy, try again in a few seconds")
+                : qsTr("Search error: %1").arg(error);
         }
         // The feature loads each finished download into the deck its button
         // was pressed for; the view only reports status.

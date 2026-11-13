@@ -434,7 +434,7 @@ Rectangle {
 
         Skin.PullToRefresh {
             flickable: view
-            busy: Mixxx.Library.libraryScanActive
+            busy: false
             onRefresh: Mixxx.Library.rescanLibrary()
         }
     }
