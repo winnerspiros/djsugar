@@ -68,15 +68,37 @@ class StringCollator {
         // Greek accents without a decomposition lookup: they are in most
         // Greek titles
         switch (c.unicode()) {
-        case u'ά': case u'Ά': return u'α';
-        case u'έ': case u'Έ': return u'ε';
-        case u'ή': case u'Ή': return u'η';
-        case u'ί': case u'Ί': case u'ϊ': case u'Ϊ': case u'ΐ': return u'ι';
-        case u'ό': case u'Ό': return u'ο';
-        case u'ύ': case u'Ύ': case u'ϋ': case u'Ϋ': case u'ΰ': return u'υ';
-        case u'ώ': case u'Ώ': return u'ω';
-        case u'ς': return u'σ';
-        default: break;
+        case u'ά':
+        case u'Ά':
+            return u'α';
+        case u'έ':
+        case u'Έ':
+            return u'ε';
+        case u'ή':
+        case u'Ή':
+            return u'η';
+        case u'ί':
+        case u'Ί':
+        case u'ϊ':
+        case u'Ϊ':
+        case u'ΐ':
+            return u'ι';
+        case u'ό':
+        case u'Ό':
+            return u'ο';
+        case u'ύ':
+        case u'Ύ':
+        case u'ϋ':
+        case u'Ϋ':
+        case u'ΰ':
+            return u'υ';
+        case u'ώ':
+        case u'Ώ':
+            return u'ω';
+        case u'ς':
+            return u'σ';
+        default:
+            break;
         }
         if (c.decompositionTag() != QChar::NoDecomposition) {
             const QString decomposition = c.decomposition();
