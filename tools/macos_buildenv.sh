@@ -33,24 +33,20 @@ if [ "$HOST_ARCH" = "x86_64" ]; then
 	if [ -n "${BUILDENV_ARM64_CROSS}" ]; then
 	    if [ -n "${BUILDENV_RELEASE}" ]; then
 	        VCPKG_TARGET_TRIPLET="arm64-osx-min1100-release"
-	        BUILDENV_BRANCH="2.7-rel"
-	        BUILDENV_NAME="mixxx-deps-2.7-arm64-osx-cross-rel-ee6dc7fe"
-	        BUILDENV_SHA256="3e7ac736b13d92c3801c1e9bc2ecea6602b1663acd13f68c0e1a162939a142fb"
+	        BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-osx-rel-a5313793"
+	        BUILDENV_SHA256="d47b9c4a7252027e8c7799197c80b15d36c4dbb98fd5f8dac6d2a25bc1f50dfc"
 	    else
 	        VCPKG_TARGET_TRIPLET="arm64-osx-min1100"
-	        BUILDENV_BRANCH="2.7"
 	        BUILDENV_NAME="mixxx-deps-2.7-arm64-osx-cross-1c20f84a"
 	        BUILDENV_SHA256="d0c1df3b8c5414ee1d7e444ebbdf1215e3e3e1585b9255c607720af2438b7b96"
 	    fi
 	else
 	    if [ -n "${BUILDENV_RELEASE}" ]; then
 	        VCPKG_TARGET_TRIPLET="x64-osx-min1100-release"
-	        BUILDENV_BRANCH="2.7-rel"
-	        BUILDENV_NAME="mixxx-deps-2.7-x64-osx-rel-ee6dc7fe"
-	        BUILDENV_SHA256="0a7481cc3e7b2ec2eaff7b48804a1eda7506c01a0b0f326ffb3d12bd3787b950"
+	        BUILDENV_NAME="mixxx-deps-2.7-djsugar-x64-osx-rel-a5313793"
+	        BUILDENV_SHA256="af0c4457dbfea038077249b326f31d9a472a08c87fd9cc187203eb6e6d599889"
 	    else
 	        VCPKG_TARGET_TRIPLET="x64-osx-min1100"
-	        BUILDENV_BRANCH="2.7"
 	        BUILDENV_NAME="mixxx-deps-2.7-x64-osx-1c20f84a"
 	        BUILDENV_SHA256="617c9cca081520c63fcbb7dc9bc0a8f44044ddbe63af7a53016e344d979e82cd"
 	    fi
@@ -58,12 +54,10 @@ if [ "$HOST_ARCH" = "x86_64" ]; then
 elif [ "$HOST_ARCH" = "arm64" ]; then
     if [ -n "${BUILDENV_RELEASE}" ]; then
         VCPKG_TARGET_TRIPLET="arm64-osx-min1100-release"
-        BUILDENV_BRANCH="2.7-rel"
-        BUILDENV_NAME="mixxx-deps-2.7-arm64-osx-rel-ee6dc7fe"
-        BUILDENV_SHA256="4dec26e22803decbf0ce664ef53c12e6d846df7222bb48d3a47999878e9ba02c"
+        BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-osx-rel-a5313793"
+        BUILDENV_SHA256="7df91633fec93cce18716b60d80da162ee0ad38361058916a9500a698d08ea12"
     else
         VCPKG_TARGET_TRIPLET="arm64-osx-min1100"
-        BUILDENV_BRANCH="2.7"
         BUILDENV_NAME="mixxx-deps-2.7-arm64-osx-1c20f84a"
         BUILDENV_SHA256="3771ecabe4284225a358e38ca9720a7c8b2a78521cf4b20a443dae19d9d54b37"
     fi
@@ -74,7 +68,7 @@ else
     exit 1
 fi
 
-BUILDENV_URL="https://downloads.mixxx.org/dependencies/${BUILDENV_BRANCH}/macOS/${BUILDENV_NAME}.zip"
+BUILDENV_URL="https://github.com/winnerspiros/vcpkg/releases/download/${BUILDENV_NAME}/${BUILDENV_NAME}.zip"
 MIXXX_ROOT="$(realpath "$(dirname "$THIS_SCRIPT_NAME")/..")"
 
 [ -z "$BUILDENV_BASEPATH" ] && BUILDENV_BASEPATH="${MIXXX_ROOT}/buildenv"
