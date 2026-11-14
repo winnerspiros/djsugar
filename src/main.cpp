@@ -72,6 +72,20 @@ const QString kNotifyMaxDbgTimeKey = QStringLiteral("notify_max_dbg_time");
 // An indicator that the QPixmapCache was too small.
 constexpr int kPixmapCacheLimitAt100PercentZoom = 32 * 1024; // 32 MByte
 
+#ifdef Q_OS_ANDROID
+/// Android keeps the process after main() returns, and opening the app again
+/// would reuse it half shut down. Everything is saved by now: the task goes,
+/// the process ends
+[[noreturn]] void endAndroidProcess(int exitCode) {
+    mixxx::Logging::shutdown();
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
+        const QJniObject activity = QNativeInterface::QAndroidApplication::context();
+        activity.callMethod<void>("finishAndRemoveTask");
+    }).waitForFinished();
+    std::_Exit(exitCode);
+}
+#endif
+
 int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
     CmdlineArgs::Instance().parseForUserFeedback();
 
@@ -109,12 +123,13 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
             exitCode = pApp->exec();
             qInfo() << "Exit requested";
 #ifdef Q_OS_ANDROID
-            // The app leaves the screen at once; saving and closing the
-            // engine, library and sound (2-3 s) goes on out of sight
-            QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
-                const QJniObject activity = QNativeInterface::QAndroidApplication::context();
-                activity.callMethod<jboolean>("moveTaskToBack", "(Z)Z", jboolean(true));
-            });
+            // Sound stops and all is saved now; the process ends right after,
+            // as when Android closes the app. A regular shutdown (2-5 s) kept
+            // playing meanwhile, and opening the app again during it reused
+            // the closing process, which then ended (worked on the next try)
+            qmlApplication.stopAndSaveForAndroid();
+            qInfo() << "Mixxx shutdown complete with code" << exitCode;
+            endAndroidProcess(exitCode);
 #endif
         }
     } else
@@ -623,18 +638,10 @@ int main(int argc, char* argv[]) {
 
     qInfo() << "Mixxx shutdown complete with code" << exitCode;
 
-    mixxx::Logging::shutdown();
-
 #ifdef Q_OS_ANDROID
-    // Android keeps the process after main() returns: opening the app again
-    // then reused it, half shut down, and failed (worked on the next try).
-    // Everything is saved and closed by now: the task goes, the process ends
-    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
-        const QJniObject activity = QNativeInterface::QAndroidApplication::context();
-        activity.callMethod<void>("finishAndRemoveTask");
-    }).waitForFinished();
-    std::_Exit(exitCode);
+    endAndroidProcess(exitCode);
 #endif
+    mixxx::Logging::shutdown();
 
     return exitCode;
 }

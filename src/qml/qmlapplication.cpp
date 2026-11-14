@@ -527,6 +527,16 @@ QmlApplication::~QmlApplication() {
     m_pCoreServices.reset();
 }
 
+#if defined(Q_OS_ANDROID)
+void QmlApplication::stopAndSaveForAndroid() {
+    if (const auto pSoundManager = m_pCoreServices->getSoundManager()) {
+        pSoundManager->closeDevices(false);
+    }
+    saveForAndroid(m_pCoreServices);
+    shutDownForAndroid(m_pCoreServices);
+}
+#endif
+
 void QmlApplication::setupSpinnyCoverControls() {
     m_pShowSpinny = make_parented<ControlProxy>("[Skin]", "show_spinnies", this);
     m_pShowCover = make_parented<ControlProxy>("[Skin]", "show_coverart", this);

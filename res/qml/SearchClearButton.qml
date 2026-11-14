@@ -1,14 +1,17 @@
 import QtQuick
 import QtQuick.Controls
 
-// An X that empties a search field; Escape does the same. It sits inside a TextField (its parent), or beside a
-// TextInput: then it goes in the field's box with `field` set.
+// An X that empties a search field; Escape does the same. It sits inside a
+// TextField (its parent), or beside a field with `field` set.
 AbstractButton {
     id: root
 
     property Item field: parent
     // Off where the field handles Escape itself
     property bool clearOnEscape: true
+    // The field keeps its typed text clear of the X: by padding (else the
+    // field is narrowed)
+    property bool padField: field === parent
 
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
@@ -56,15 +59,21 @@ AbstractButton {
     }
 
     // Clears only: the keyboard stays as it was (closed stays closed)
-    onClicked: {
-        // Drops the keyboard's composing word too, not only committed text
-        Qt.inputMethod.reset();
+    onClicked: root.clearField()
+
+    // Emptied first: the keyboard then restarts on the empty field instead of
+    // committing its composing word back into it
+    function clearField() {
         root.field.clear();
+        Qt.inputMethod.reset();
+        if (root.field.displayText.length > 0) {
+            root.field.clear();
+        }
     }
 
     Component.onCompleted: {
         // Typed text stays clear of the X
-        if (root.field === root.parent) {
+        if (root.padField) {
             root.field.rightPadding = Math.max(root.field.rightPadding, root.width + 8);
         } else {
             root.field.anchors.rightMargin = root.width + 8;
@@ -74,9 +83,6 @@ AbstractButton {
     Shortcut {
         sequences: [StandardKey.Cancel]
         enabled: root.clearOnEscape && root.field.activeFocus && root.field.displayText.length > 0
-        onActivated: {
-            Qt.inputMethod.reset();
-            root.field.clear();
-        }
+        onActivated: root.clearField()
     }
 }

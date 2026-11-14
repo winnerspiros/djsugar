@@ -226,13 +226,21 @@ Item {
                         }
                     }
                 }
-                Skin.SearchClearButton {}
                 // One search once typing pauses, not one per letter
                 onDisplayTextChanged: searchDebounce.restart()
                 onAccepted: {
                     searchDebounce.stop();
                     root.applySearch();
                 }
+            }
+
+            // Beside the field, not inside it: inside, a tap on the X reached
+            // the field (cursor, keyboard) and not the X
+            Skin.SearchClearButton {
+                field: searchField
+                padField: true
+                anchors.right: searchField.right
+                anchors.verticalCenter: searchField.verticalCenter
             }
 
             Timer {

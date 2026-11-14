@@ -10,6 +10,10 @@
 #include <QNetworkRequest>
 #include <QUrlQuery>
 
+#include <QTimer>
+
+#include "library/library.h"
+#include "library/trackcollectionmanager.h"
 #include "moc_qmlstreamingproxy.cpp"
 #include "sources/metadatasourcetaglib.h"
 #include "track/trackmetadata.h"
@@ -590,6 +594,27 @@ QString QmlStreamingProxy::getCachedTrackPath(
     return QString();
 }
 
+namespace {
+/// A download goes into the local library at once (it is in the app's cache,
+/// which the library scan does not see), and the list shows it
+void addDownloadToLibrary(Library* pLibrary, const QString& path) {
+    if (!pLibrary) {
+        return;
+    }
+    bool alreadyInLibrary = false;
+    const TrackPointer pTrack = pLibrary->trackCollectionManager()->getOrAddTrack(
+            TrackRef::fromFilePath(path), &alreadyInLibrary);
+    if (!pTrack) {
+        qWarning() << "QmlStreamingProxy: could not add the download to the library:" << path;
+        return;
+    }
+    if (alreadyInLibrary && pTrack->getId().isValid()) {
+        pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
+    }
+    QTimer::singleShot(0, pLibrary, &Library::slotRefreshLibraryModels);
+}
+} // namespace
+
 void QmlStreamingProxy::downloadAndLoad(
         const QString& streamUrl,
         const QString& service,
@@ -616,6 +641,7 @@ void QmlStreamingProxy::downloadAndLoad(
                     s_pPlayerManager->slotLoadLocationToPlayer(cachedPath, targetDeck, autoPlay);
                 } }, Qt::QueuedConnection);
         }
+        addDownloadToLibrary(s_pLibrary, cachedPath);
         emit downloadFinished(trackId, cachedPath, targetDeck, autoPlay);
         return;
     }
@@ -756,6 +782,7 @@ void QmlStreamingProxy::downloadAndLoad(
                 } }, Qt::QueuedConnection);
         }
 
+        addDownloadToLibrary(s_pLibrary, finalPath);
         emit downloadFinished(trackId, finalPath, targetDeck, autoPlay);
     });
 }
