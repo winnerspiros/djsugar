@@ -331,12 +331,6 @@ Rectangle {
                 anchors.fill: parent
                 focus: true
                 sourceComponent: delegate
-
-                onLoaded:
-                // Workaround needed for WaveformOverview column to load the data
-                //     if (track)
-                //         Mixxx.Library.analyze(track)
-                {}
             }
 
             Rectangle {
@@ -364,11 +358,6 @@ Rectangle {
                     }
                 }
             }
-            // Workaround needed for WaveformOverview column to load the data
-            // TableView.onReused: {
-            //     if (track)
-            //         Mixxx.Library.analyze(track)
-            // }
         }
         Timer {
             id: relayoutTimer

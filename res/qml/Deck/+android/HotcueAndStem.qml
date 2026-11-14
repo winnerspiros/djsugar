@@ -100,10 +100,6 @@ Item {
                             readonly property var label: (isSet && root.currentTrack && root.currentTrack.hotcuesModel) ? root.currentTrack.hotcuesModel.get(index).label : null
 
                             activate: activator.pressedButtons == Qt.LeftButton
-                            // onIsSetChanged: {
-                            //     if (!isSet)
-                            //         popup.close();
-                            // }
                             group: root.group
                             hotcueNumber: index + 1
                         }
