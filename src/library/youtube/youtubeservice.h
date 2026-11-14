@@ -468,6 +468,9 @@ class YouTubeService : public QObject {
     QString m_searchContinuationToken;
     // Counts searches: pages and retries of an older search are dropped
     int m_searchGeneration = 0;
+    // One continuation at a time: two on the same token got the same page
+    bool m_continuationInFlight = false;
+    void continueSearchResults(const QString& emittedQuery, int cap, int minResults);
     /// Bounded deferral counters for fetchMore arriving before the first
     /// page sets the token (per query). Prevents silent 20-result cap.
     QMap<QString, int> m_fetchMoreTokenWaits;

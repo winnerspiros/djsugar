@@ -797,6 +797,10 @@ YouTubeService::YouTubeService(QObject* parent)
           m_ytDlpPath(locateYtDlp()),
           m_pipedInstances(kPipedInstances) {
     m_rateLimitTimer.start();
+    // Every continuation ends in searchMoreReady, also an empty or failed one
+    connect(this, &YouTubeService::searchMoreReady, this, [this]() {
+        m_continuationInFlight = false;
+    });
     setupCookieJar();
     loadSessionState();
     if (!m_ytDlpPath.isEmpty()) {
@@ -813,6 +817,15 @@ YouTubeService::YouTubeService(QObject* parent)
 
     // Set up periodic remote config refresh for InnerTube client signatures.
     if (!kRemoteConfigUrl.isEmpty()) {
+        // The version saved before: the same one is not saved again each start
+        QFile savedConfig(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+                QStringLiteral("/youtube/inner_tube_clients.json"));
+        if (savedConfig.open(QIODevice::ReadOnly)) {
+            m_remoteConfigVersion = QJsonDocument::fromJson(savedConfig.readAll())
+                                            .object()
+                                            .value(QStringLiteral("version"))
+                                            .toInt(m_remoteConfigVersion);
+        }
         m_pRemoteConfigTimer = new QTimer(this);
         m_pRemoteConfigTimer->setInterval(kRemoteConfigRefreshMs);
         connect(m_pRemoteConfigTimer,
@@ -874,16 +887,13 @@ void YouTubeService::onRemoteConfigReply(QNetworkReply* reply) {
     }
     const QJsonObject config = doc.object();
     const int remoteVersion = config.value(QStringLiteral("version")).toInt(0);
+    m_remoteConfigLastFetch = m_rateLimitTimer.elapsed();
     if (remoteVersion <= m_remoteConfigVersion) {
-        kLogger.info() << "Remote client config version" << remoteVersion
-                       << "is not newer than local" << m_remoteConfigVersion
-                       << "— skipping";
+        kLogger.debug() << "Remote client config version" << remoteVersion
+                        << "is not newer than local" << m_remoteConfigVersion;
         return;
     }
-    if (applyRemoteConfig(config, remoteVersion)) {
-        m_remoteConfigLastFetch = m_rateLimitTimer.elapsed();
-        kLogger.info() << "Applied remote client config version" << remoteVersion;
-    }
+    applyRemoteConfig(config, remoteVersion);
 }
 
 bool YouTubeService::applyRemoteConfig(const QJsonObject& config, int remoteVersion) {
@@ -920,7 +930,7 @@ bool YouTubeService::applyRemoteConfig(const QJsonObject& config, int remoteVers
         m_remoteConfigVersion = remoteVersion;
         kLogger.info() << "Saved remote client config v" << remoteVersion
                        << "to" << outFile.fileName()
-                       << "(dynamic update requires restart)";
+                       << "(not used at runtime yet)";
         return true;
     }
     kLogger.warning() << "Failed to save remote client config to" << outFile.fileName();
@@ -981,6 +991,7 @@ void YouTubeService::searchVideos(const QString& query, int cap, int minResults)
     // A new search invalidates any continuation from a previous search.
     m_searchContinuationToken.clear();
     ++m_searchGeneration;
+    m_continuationInFlight = false;
     // Primary backend: the YouTube InnerTube /search endpoint. It is hit
     // directly (no third-party Piped proxy), so it does not depend on the
     // health of community-run instances — which is why search used to return
@@ -1627,6 +1638,16 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
 
 void YouTubeService::fetchMoreSearchResults(
         const QString& emittedQuery, int cap, int minResults) {
+    if (m_continuationInFlight) {
+        // The running one answers (searchMoreReady) this request too
+        return;
+    }
+    m_continuationInFlight = true;
+    continueSearchResults(emittedQuery, cap, minResults);
+}
+
+void YouTubeService::continueSearchResults(
+        const QString& emittedQuery, int cap, int minResults) {
     if (m_searchContinuationToken.isEmpty()) {
         // The token is cleared at search start and set when the first page
         // lands (~800 ms window). fetchMore firing inside that window used
@@ -1640,7 +1661,7 @@ void YouTubeService::fetchMoreSearchResults(
             QPointer<YouTubeService> guard(this);
             QTimer::singleShot(kTokenWaitMs, this, [guard, emittedQuery, cap, minResults]() {
                 if (guard) {
-                    guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
+                    guard->continueSearchResults(emittedQuery, cap, minResults);
                 }
             });
             return;
@@ -1710,7 +1731,7 @@ void YouTubeService::fetchMoreSearchResults(
                 this,
                 [guard, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
                     if (guard && guard->m_searchGeneration == generation) {
-                        guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
+                        guard->continueSearchResults(emittedQuery, cap, minResults);
                     }
                 });
         return;
