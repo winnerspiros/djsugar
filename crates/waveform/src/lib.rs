@@ -347,7 +347,7 @@ const fn rgb(hex: u32) -> [f32; 4] {
 /// and high: blue, orange and white as on rekordbox; and lilac (openDJ's
 /// accent), cyan and white.
 pub const BAND_PALETTES: [[[f32; 4]; 3]; 2] = [
-    [rgb(0x1F6BFF), rgb(0xE8902A), rgb(0xF5EEDD)],
+    [rgb(0x0050E0), rgb(0xF8A000), rgb(0xF0E8D0)],
     [rgb(0xB69CFF), rgb(0x22C7E0), rgb(0xF4FBFF)],
 ];
 

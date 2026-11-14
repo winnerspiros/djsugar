@@ -89,6 +89,13 @@ const MONO_LILAC = vec3<f32>(0.714, 0.612, 1.0);
 const MONO_MIX = vec3<f32>(0.357, 0.298, 0.541);
 const MONO_GREY = vec3<f32>(0.40, 0.40, 0.44);
 // Blue style: the body, and what it lightens towards where the highs are loud.
+// 3-Band weights (see three_band): the mids and highs against the lows,
+// the highs' extra share when the overview stacks the bands, and how much
+// darker the mid colour is where the low and the mids overlap.
+const BAND_MID: f32 = 0.75;
+const BAND_HIGH: f32 = 0.2;
+const BAND_HIGH_STACKED: f32 = 2.5;
+const BAND_BOTH = vec3<f32>(0.7, 0.6, 0.6);
 const BLUE_BODY = vec3<f32>(0.173, 0.482, 0.898);   // #2C7BE5
 const BLUE_HIGHS = vec3<f32>(0.863, 0.922, 1.0);    // #DCEBFF
 // Show vocals: the strip over the sung parts.
@@ -471,6 +478,41 @@ fn phrase_color(kind: u32) -> vec3<f32> {
     return PHRASE_COLORS[min(kind, 6u)];
 }
 
+// 3-Band, layered as rekordbox does it. Each band is its RMS body, solid
+// (no peak outlines), weighted so the highs stay a highlight on top rather
+// than the whole shape: the analysis lifts the mids and highs (by 1.4 and 2)
+// so the RGB colours read, which is undone here, and the highs are drawn
+// smaller again, as rekordbox does.
+//
+// Scrolling: the louder of low and mid at the back in its own colour, the
+// part where both sound (the quieter one's height) in a darker mid, and the
+// highs on top. The overview stacks the bands instead, as rekordbox's
+// overview does: low from the line, the mids on it and the highs on top, so
+// the highs are a thin edge along the outside.
+fn three_band(base: vec3<f32>, s: Slice, d: f32, span: f32) -> vec3<f32> {
+    let low = body(s.rms.x, s.peak.x);
+    let mid = body(s.rms.y, s.peak.y) * BAND_MID;
+    let high = body(s.rms.z, s.peak.z) * BAND_HIGH;
+    var color = base;
+    if (p.mode == 1u) {
+        let lr = height(low) * span;
+        let mr = height(low + mid) * span;
+        let hr = height(low + mid + high * BAND_HIGH_STACKED) * span;
+        color = over(color, p.high_color.rgb, fill(hr, d));
+        color = over(color, p.mid_color.rgb, fill(mr, d));
+        color = over(color, p.low_color.rgb, fill(lr, d));
+        return color;
+    }
+    let lr = height(low) * span;
+    let mr = height(mid) * span;
+    let hr = height(high) * span;
+    let back = select(p.mid_color.rgb, p.low_color.rgb, lr > mr);
+    color = over(color, back, fill(max(lr, mr), d));
+    color = over(color, p.mid_color.rgb * BAND_BOTH, fill(min(lr, mr), d));
+    color = over(color, p.high_color.rgb, fill(hr, d));
+    return color;
+}
+
 // Column `s`'s waveform over `base`, at `d` pixels from the centre line.
 fn wave(base: vec3<f32>, s: Slice, bin: f32, d: f32, span: f32) -> vec3<f32> {
     var color = base;
@@ -500,14 +542,7 @@ fn wave(base: vec3<f32>, s: Slice, bin: f32, d: f32, span: f32) -> vec3<f32> {
         let shade = 0.82 + 0.18 * clamp(1.0 - d / max(rms_h, 1.0), 0.0, 1.0);
         color = over(color, c * shade, fill(rms_h, d));
     } else {
-        // Stacked bands: low widest at the back, each its RMS body, solid
-        // (no peak outlines).
-        let lr = height(body(s.rms.x, s.peak.x)) * span;
-        let mr = height(body(s.rms.y, s.peak.y)) * span * 0.85;
-        let hr = height(body(s.rms.z, s.peak.z)) * span * 0.7;
-        color = over(color, p.low_color.rgb, fill(lr, d) * 0.95);
-        color = over(color, p.mid_color.rgb, fill(mr, d) * 0.9);
-        color = over(color, p.high_color.rgb, fill(hr, d) * 0.9);
+        color = three_band(color, s, d, span);
     }
     return color;
 }

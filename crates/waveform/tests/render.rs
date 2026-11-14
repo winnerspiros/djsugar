@@ -1019,3 +1019,70 @@ fn draws_each_stem_in_its_color() {
     let i = ((h / 2 * w + w / 2) * 4) as usize;
     assert!(px[i..i + 3].iter().any(|&c| c > 60), "drawn without stems");
 }
+
+/// 3-Band layers as rekordbox does: equal bands draw the lows widest, the
+/// overlap of low and mids in a darker mid, and the highs as a small core
+/// on top rather than the whole shape.
+#[test]
+fn three_band_keeps_the_highs_small() {
+    let Some((device, queue)) = gpu() else {
+        eprintln!("no GPU adapter; skipping");
+        return;
+    };
+    let renderer = WaveformRenderer::new(&device, &queue);
+    let base = (0..10_000)
+        .map(|_| [200, 200, 200, 220, 200, 200, 200, 220])
+        .collect();
+    let track = Arc::new(GpuTrack::new(
+        &device,
+        &queue,
+        &renderer,
+        1,
+        &levels(base),
+        1000.0,
+    ));
+    let (w, h) = (256u32, 100u32);
+    let mut view = WaveformView::new(&device, Mode::Scrolling, w, h);
+    view.set_style(Style::Bands);
+    view.set_palette(Palette::bands(0));
+    view.set_track(&device, &renderer, Some(&track));
+    let frame = Frame {
+        play_seconds: 5.0,
+        visible_seconds: 4.0,
+        duration: 10.0,
+        first_bar_beat: 0.0,
+        grid: steady_grid(120.0, 0.0),
+        cue: None,
+        loop_range: None,
+        loop_marking: None,
+        hotcues: [None; 8],
+        slip: None,
+        gain: 1.0,
+        phrases: vec![],
+    };
+    view.render(&device, &queue, &renderer, Some(&frame), 1.0);
+    let px = read_back(&device, &queue, &view);
+    let at = |y: u32| -> [u8; 3] {
+        let i = ((y * w + 60) * 4) as usize;
+        [px[i], px[i + 1], px[i + 2]]
+    };
+    // Rows above the centre, from the edge in: background, low (blue),
+    // the low-and-mid overlap (dark orange), then the highs (cream).
+    let blue = |c: [u8; 3]| c[2] > 150 && c[0] < 60;
+    let orange = |c: [u8; 3]| c[0] > 120 && c[2] < 60;
+    let cream = |c: [u8; 3]| c[0] > 200 && c[1] > 200 && c[2] > 170;
+    let top = (0..h / 2)
+        .find(|&y| !(at(y)[0] < 40 && at(y)[2] < 40))
+        .unwrap();
+    let rows: Vec<u32> = (top..h / 2).collect();
+    let count = |f: &dyn Fn([u8; 3]) -> bool| rows.iter().filter(|&&y| f(at(y))).count();
+    assert!(blue(at(top + 1)), "lows outermost: {:?}", at(top + 1));
+    assert!(count(&orange) > 0, "overlap drawn");
+    let highs = count(&cream);
+    assert!(highs > 0, "highs drawn");
+    assert!(
+        highs * 3 < rows.len(),
+        "highs a small core: {highs} of {}",
+        rows.len()
+    );
+}
