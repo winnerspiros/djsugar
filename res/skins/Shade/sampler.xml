@@ -8,7 +8,7 @@
       <WidgetGroup>
         <ObjectName>SamplerLeftBorder</ObjectName>
         <Size>5f,92f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <Size>0e,95f</Size>
@@ -17,7 +17,7 @@
           <WidgetGroup>
             <ObjectName>SamplerTop</ObjectName>
             <Size>0e,24f</Size>
-            <BackPath>style/style_bg_sampler_top.png</BackPath>
+            <BackPath>style/style_bg_sampler_top.webp</BackPath>
             <Layout>horizontal</Layout>
             <Children>
               <TrackProperty>
@@ -84,8 +84,8 @@
                     <NumberStates>1</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_tap_sampler_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_tap_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_tap_sampler_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_tap_sampler.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,tempo_tap</ConfigKey>
@@ -108,7 +108,7 @@
               <WidgetGroup>
                 <ObjectName>SamplerMid</ObjectName>
                 <Size>27f,36f</Size>
-                <BackPath>style/style_bg_sampler_mid.png</BackPath>
+                <BackPath>style/style_bg_sampler_mid.webp</BackPath>
                 <Children>
                   <!-- Preview indicator -->
                   <PushButton>
@@ -117,13 +117,13 @@
                     <RightClickIsPushButton>true</RightClickIsPushButton>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_play_sampler.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_sampler.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_sampler.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_play_sampler_preview.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_sampler_preview.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_sampler_preview.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_sampler_preview.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,play</ConfigKey>
@@ -139,12 +139,12 @@
                     <RightClickIsPushButton>true</RightClickIsPushButton>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_play_sampler_down.png</Pressed>
+                      <Pressed>skin:/btn/btn_play_sampler_down.webp</Pressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_pause_sampler_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_pause_sampler_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_pause_sampler_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_pause_sampler_over.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,cue_gotoandplay</ConfigKey>
@@ -164,7 +164,7 @@
               <WidgetGroup>
                 <ObjectName>SamplerMid</ObjectName>
                 <Size>0e,36f</Size>
-                <BackPath>style/style_bg_sampler_mid.png</BackPath>
+                <BackPath>style/style_bg_sampler_mid.webp</BackPath>
                 <Layout>horizontal</Layout>
                 <Children>
                   <Overview>
@@ -204,20 +204,20 @@
               <WidgetGroup>
                 <ObjectName>SamplerButtonGrid</ObjectName>
                 <Size>42f,36f</Size>
-                <BackPath>style/style_bg_sampler_woverview_buttons.png</BackPath>
+                <BackPath>style/style_bg_sampler_woverview_buttons.webp</BackPath>
                 <Children>
                   <PushButton>
                     <TooltipId>repeat</TooltipId>
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_repeat_sampler.png</Pressed>
-                      <Unpressed>skin:/btn/btn_repeat_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_repeat_sampler.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_repeat_sampler.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_repeat_sampler_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_repeat_sampler_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_repeat_sampler_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_repeat_sampler_over.webp</Unpressed>
                     </State>
                     <Pos>1,0</Pos>
                     <Connection>
@@ -229,8 +229,8 @@
                     <NumberStates>1</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_eject_sampler_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_eject_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_eject_sampler_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_eject_sampler.webp</Unpressed>
                     </State>
                     <Pos>22,0</Pos>
                     <Connection>
@@ -245,18 +245,18 @@
                     <NumberStates>3</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_left_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_left_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_left_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_left_over.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_main.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_main.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_main.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_main.webp</Unpressed>
                     </State>
                     <State>
                       <Number>2</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_right_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_right_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_right_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_right_over.webp</Unpressed>
                     </State>
                     <Pos>1,17</Pos>
                     <Connection>
@@ -270,13 +270,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_keylock_sampler.png</Pressed>
-                      <Unpressed>skin:/btn/btn_keylock_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_keylock_sampler.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_keylock_sampler.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_keylock_sampler_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_keylock_sampler_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_keylock_sampler_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_keylock_sampler_over.webp</Unpressed>
                     </State>
                     <Pos>21,17</Pos>
                     <Connection>
@@ -290,7 +290,7 @@
           <WidgetGroup>
             <ObjectName>SamplerBottom</ObjectName>
             <Size>0e,32f</Size>
-            <BackPath>style/style_bg_sampler_bottom.png</BackPath>
+            <BackPath>style/style_bg_sampler_bottom.webp</BackPath>
             <Layout>horizontal</Layout>
             <Children>
               <WidgetGroup><Size>0e,0min</Size></WidgetGroup>
@@ -303,13 +303,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_sync_sampler_down.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_sampler_down.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_sampler.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_sync_sampler_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_sampler_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_sampler_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_sampler_over.webp</Unpressed>
                     </State>
                     <Pos>3,4</Pos>
                     <Connection>
@@ -341,13 +341,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_pfl_sampler_down.png</Pressed>
-                      <Unpressed>skin:/btn/btn_pfl_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_pfl_sampler_down.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_pfl_sampler.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_pfl_sampler_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_pfl_sampler_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_pfl_sampler_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_pfl_sampler_over.webp</Unpressed>
                     </State>
                     <Pos>134,4</Pos>
                     <Connection>
@@ -357,7 +357,7 @@
                   <Knob>
                     <TooltipId>pregain</TooltipId>
                     <NumberStates>64</NumberStates>
-                    <Path>knobs/knob_rotary_s%1.png</Path>
+                    <Path>knobs/knob_rotary_s%1.webp</Path>
                     <Pos>168,2</Pos>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,pregain</ConfigKey>
@@ -372,15 +372,15 @@
       <WidgetGroup>
         <ObjectName>SamplerVUMeter</ObjectName>
         <Size>8f,92f</Size>
-        <BackPath>style/style_bg_sampler_right.png</BackPath>
+        <BackPath>style/style_bg_sampler_right.webp</BackPath>
         <Children>
           <WidgetGroup>
             <Pos>3,7</Pos>
             <Children>
               <StatusLight>
                 <TooltipId>sampler_peak_indicator</TooltipId>
-                <PathStatusLight>skin:/style/volume_clipping_sampler_over.png</PathStatusLight>
-                <PathBack>skin:/style/volume_clipping_sampler.png</PathBack>
+                <PathStatusLight>skin:/style/volume_clipping_sampler_over.webp</PathStatusLight>
+                <PathBack>skin:/style/volume_clipping_sampler.webp</PathBack>
                 <Connection>
                   <ConfigKey><Variable name="group"/>,peak_indicator</ConfigKey>
                 </Connection>
@@ -393,8 +393,8 @@
             <Children>
               <VuMeter>
                 <TooltipId>sampler_VuMeter</TooltipId>
-                <PathVu>skin:/style/volume_display_sampler_over.png</PathVu>
-                <PathBack>skin:/style/volume_display_sampler.png</PathBack>
+                <PathVu>skin:/style/volume_display_sampler_over.webp</PathVu>
+                <PathBack>skin:/style/volume_display_sampler.webp</PathBack>
                 <Horizontal>false</Horizontal>
                 <PeakHoldSize>5</PeakHoldSize>
                 <PeakHoldTime>500</PeakHoldTime>
@@ -411,12 +411,12 @@
       <WidgetGroup>
         <ObjectName>SamplerPitch</ObjectName>
         <Size>21f,92f</Size>
-        <BackPath>style/style_bg_sampler_right.png</BackPath>
+        <BackPath>style/style_bg_sampler_right.webp</BackPath>
         <Children>
           <SliderComposed>
             <TooltipId>rate</TooltipId>
-            <Handle>knob_pitch_sampler.png</Handle>
-            <Slider>slider_pitch_sampler.png</Slider>
+            <Handle>knob_pitch_sampler.webp</Handle>
+            <Slider>slider_pitch_sampler.webp</Slider>
             <Pos>3,7</Pos>
             <Horizontal>false</Horizontal>
             <Connection>
@@ -429,7 +429,7 @@
       <WidgetGroup>
         <ObjectName>SamplerRightBorder</ObjectName>
         <Size>5f,92f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>SamplerRightBorder</ObjectName>

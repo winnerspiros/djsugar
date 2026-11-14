@@ -23,11 +23,11 @@
           <WidgetGroup>
             <ObjectName>EffectLeftBorder</ObjectName>
             <Size>5f,40f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <Size>0e,40f</Size>
-            <BackPath>style/style_bg_looping.png</BackPath>
+            <BackPath>style/style_bg_looping.webp</BackPath>
             <Layout>horizontal</Layout>
             <Children>
               <PushButton>
@@ -35,13 +35,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_big_plus.png</Pressed>
-                  <Unpressed>skin:/btn/btn_big_plus.png</Unpressed>
+                  <Pressed>skin:/btn/btn_big_plus.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_big_plus.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_big_minus.png</Pressed>
-                  <Unpressed>skin:/btn/btn_big_minus.png</Unpressed>
+                  <Pressed>skin:/btn/btn_big_minus.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_big_minus.webp</Unpressed>
                 </State>
                 <Pos>0,0</Pos>
                 <Connection>
@@ -53,7 +53,7 @@
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
             <Size>5f,40f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
@@ -80,19 +80,19 @@
           <WidgetGroup>
             <ObjectName>EffectLeftBorder</ObjectName>
             <Size>5f,40f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <Size>0e,40f</Size>
-            <BackPath>style/style_bg_looping.png</BackPath>
+            <BackPath>style/style_bg_looping.webp</BackPath>
             <Children>
               <PushButton>
                 <TooltipId>LoadSamplerBank</TooltipId>
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_load.png</Pressed>
-                  <Unpressed>skin:/btn/btn_load.png</Unpressed>
+                  <Pressed>skin:/btn/btn_load.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_load.webp</Unpressed>
                 </State>
                 <Pos>0,6</Pos>
                 <Connection>
@@ -104,8 +104,8 @@
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_save.png</Pressed>
-                  <Unpressed>skin:/btn/btn_save.png</Unpressed>
+                  <Pressed>skin:/btn/btn_save.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_save.webp</Unpressed>
                 </State>
                 <Pos>0,20</Pos>
                 <Connection>
@@ -117,7 +117,7 @@
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
             <Size>5f,40f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
@@ -150,25 +150,25 @@
           <WidgetGroup>
             <ObjectName>SamplerLeftBorder</ObjectName>
             <Size>5f,92f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
 
           <WidgetGroup>
             <Size>0e,92f</Size>
-            <BackPath>style/style_bg_sampler_right.png</BackPath>
+            <BackPath>style/style_bg_sampler_right.webp</BackPath>
             <Children>
               <PushButton>
                 <TooltipId>expand_samplers</TooltipId>
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_big_plus.png</Pressed>
-                  <Unpressed>skin:/btn/btn_big_plus.png</Unpressed>
+                  <Pressed>skin:/btn/btn_big_plus.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_big_plus.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_big_minus.png</Pressed>
-                  <Unpressed>skin:/btn/btn_big_minus.png</Unpressed>
+                  <Pressed>skin:/btn/btn_big_minus.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_big_minus.webp</Unpressed>
                 </State>
                 <Pos>0,6</Pos>
                 <Connection>
@@ -180,7 +180,7 @@
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
             <Size>5f,92f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
@@ -208,20 +208,20 @@
           <WidgetGroup>
             <ObjectName>SamplerLeftBorder</ObjectName>
             <Size>5f,92f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
 
           <WidgetGroup>
             <Size>0e,92f</Size>
-            <BackPath>style/style_bg_sampler_right.png</BackPath>
+            <BackPath>style/style_bg_sampler_right.webp</BackPath>
             <Children>
               <PushButton>
                 <TooltipId>LoadSamplerBank</TooltipId>
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_load.png</Pressed>
-                  <Unpressed>skin:/btn/btn_load.png</Unpressed>
+                  <Pressed>skin:/btn/btn_load.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_load.webp</Unpressed>
                 </State>
                 <Pos>0,6</Pos>
                 <Connection>
@@ -233,8 +233,8 @@
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_save.png</Pressed>
-                  <Unpressed>skin:/btn/btn_save.png</Unpressed>
+                  <Pressed>skin:/btn/btn_save.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_save.webp</Unpressed>
                 </State>
                 <Pos>0,20</Pos>
                 <Connection>
@@ -246,7 +246,7 @@
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>
             <Size>5f,92f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
           <WidgetGroup>
             <ObjectName>EffectRightBorder</ObjectName>

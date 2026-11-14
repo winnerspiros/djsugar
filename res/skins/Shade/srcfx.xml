@@ -6,12 +6,12 @@
       <WidgetGroup>
         <ObjectName>EffectLeftBorder</ObjectName>
         <Size>5f,60f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <Size>100e,60f</Size>
         <Layout>horizontal</Layout>
-        <BackPath>style/style_bg_src.png</BackPath>
+        <BackPath>style/style_bg_src.webp</BackPath>
         <Children>
           <WidgetGroup>
             <Size>0e,54f</Size>
@@ -25,7 +25,7 @@
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>
         <Size>5f,60f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>

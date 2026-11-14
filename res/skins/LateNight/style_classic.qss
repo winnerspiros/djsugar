@@ -141,7 +141,7 @@ WSearchLineEdit,
   #MainControls, #HeadphoneControls,
   #FxParametersBg,
   #SamplerHotcues {
-    background-image: url(skins:LateNight/classic/style/background_tile.png);
+    background-image: url(skins:LateNight/classic/style/background_tile.webp);
   }
 
 #FxParametersFocusBg {
@@ -2630,11 +2630,11 @@ WSearchLineEdit {
 
 #WaveformSplitter::handle,
 #SidebarCoverSplitter::handle {
-    image: url(skins:LateNight/classic/style/splitter_handle_horizontal.png);
+    image: url(skins:LateNight/classic/style/splitter_handle_horizontal.webp);
   }
   #WaveformSplitter::handle:pressed,
   #SidebarCoverSplitter::handle:pressed {
-    image: url(skins:LateNight/classic/style/splitter_handle_horizontal_pressed.png);
+    image: url(skins:LateNight/classic/style/splitter_handle_horizontal_pressed.webp);
   }
   #WaveformSplitter::handle:vertical,
   #SidebarCoverSplitter::handle:vertical {
@@ -2647,11 +2647,11 @@ WSearchLineEdit {
 #LibrarySplitter::handle {
   /* 'height' works although it's actually the width of the handle */
   height: 6px;
-  image: url(skins:LateNight/classic/style/splitter_handle_vertical.png);
+  image: url(skins:LateNight/classic/style/splitter_handle_vertical.webp);
   background-color: #1e1e1e;
   }
   #LibrarySplitter::handle:pressed {
-    image: url(skins:LateNight/classic/style/splitter_handle_vertical_pressed.png);
+    image: url(skins:LateNight/classic/style/splitter_handle_vertical_pressed.webp);
   }
 /************ splitters ***********************/
 

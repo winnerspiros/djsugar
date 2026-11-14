@@ -2832,7 +2832,7 @@ if(ANDROID)
     # Copy only the image files Android actually needs.
     # Exclude res/images/icons/ entirely — Android uses mipmap icons from
     # packaging/android/res/ and the SVG icons are 4.5MB of dead weight.
-    # Exclude templates/logo_mixxx.png — desktop-only about dialog logo.
+    # Exclude templates/logo_mixxx.webp — desktop-only about dialog logo.
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory
       ${CMAKE_SOURCE_DIR}/res/images/preferences
@@ -2845,8 +2845,8 @@ if(ANDROID)
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/library
     COMMAND
       ${CMAKE_COMMAND} -E copy
-      ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.png
-      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.png
+      ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.webp
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.webp
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/keyboard
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/keyboard
@@ -4874,6 +4874,20 @@ else()
         applocal
     )
 
+    if(WIN32)
+      # QWebpPlugin dependencies
+      file(
+        GLOB WEBP_DLLS
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libwebp*.dll"
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libsharpyuv*.dll"
+      )
+      install(
+        FILES ${WEBP_DLLS}
+        DESTINATION "${MIXXX_INSTALL_DATADIR}"
+        COMPONENT applocal
+      )
+    endif()
+
     install(
       IMPORTED_RUNTIME_ARTIFACTS
         # platform plugins
@@ -6218,6 +6232,7 @@ list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "fonts-open-sans")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "fonts-ubuntu")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "libqt6sql6-sqlite")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-qpa-plugins")
+list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-image-formats-plugins") # WebP images
 if(QT_VERSION VERSION_GREATER_EQUAL 6.8)
   list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-svg-plugins")
 endif()

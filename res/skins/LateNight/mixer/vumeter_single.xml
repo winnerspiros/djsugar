@@ -20,16 +20,16 @@
     <Children>
       <StatusLight>
         <TooltipId><Variable name="ChannelType"/>_peak_indicator</TooltipId>
-        <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_clipping_bg_<Variable name="VuColor"/>.png</PathBack>
-        <PathStatusLight>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_clipping_active.png</PathStatusLight>
+        <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_clipping_bg_<Variable name="VuColor"/>.webp</PathBack>
+        <PathStatusLight>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_clipping_active.webp</PathStatusLight>
         <Connection>
           <ConfigKey><Variable name="Group"/>,peak_indicator</ConfigKey>
         </Connection>
       </StatusLight>
       <VuMeter>
         <TooltipId><Variable name="ChannelType"/>_VuMeter</TooltipId>
-        <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_level_bg_<Variable name="VuColor"/>.png</PathBack>
-        <PathVu>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_level_active.png</PathVu>
+        <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_level_bg_<Variable name="VuColor"/>.webp</PathBack>
+        <PathVu>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_<Variable name="VuSize"/>_level_active.webp</PathVu>
         <Horizontal>false</Horizontal>
         <PeakHoldSize>4</PeakHoldSize>
         <PeakHoldTime>500</PeakHoldTime>

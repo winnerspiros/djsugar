@@ -84,14 +84,14 @@ WBeatSpinBox::up-button,
 #spinBoxTransition::up-button,
 #spinBoxRecentDays::up-button {
   border-left: 1px solid #060613;
-  image: url(skin:/btn/btn_spin_up.png) no-repeat;
+  image: url(skin:/btn/btn_spin_up.webp) no-repeat;
 }
 
 WBeatSpinBox::down-button,
 #spinBoxTransition::down-button,
 #spinBoxRecentDays::down-button {
   border-left: 1px solid #060613;
-  image: url(skin:/btn/btn_spin_down.png) no-repeat;
+  image: url(skin:/btn/btn_spin_down.webp) no-repeat;
 }
 WBeatSpinBox::up-button,
 WBeatSpinBox::down-button {
@@ -319,7 +319,7 @@ WEffectSelector QAbstractScrollArea,
     #fadeModeCombobox::down-arrow {
       border-width: 0px 0px 0px 1px;
       margin: 0px;
-      image: url(skin:/btn/btn_spin_down.png) no-repeat;
+      image: url(skin:/btn/btn_spin_down.webp) no-repeat;
     }
     WSearchLineEdit::down-arrow {
       image: url(skin:/btn/btn_search_down_grey.svg) no-repeat;
@@ -469,17 +469,17 @@ WCueMenuPopup QLabel {
   qproperty-icon: url(skin:/btn/btn_delete.svg);
 }
 #CueStandardButton {
-  qproperty-icon: url(skin:/btn/btn_vinylcontrol.png);
+  qproperty-icon: url(skin:/btn/btn_vinylcontrol.webp);
 }
 #CueSavedLoopButton {
-  qproperty-icon: url(skin:/btn/btn_repeat.png);
+  qproperty-icon: url(skin:/btn/btn_repeat.webp);
 }
 #CueSavedJumpButton[direction="impossible"],
 #CueSavedJumpButton[direction="forward"] {
-  qproperty-icon: url(skin:/btn/btn_beatjump_forward.png);
+  qproperty-icon: url(skin:/btn/btn_beatjump_forward.webp);
 }
 #CueSavedJumpButton[direction="backward"] {
-  qproperty-icon: url(skin:/btn/btn_beatjump_backward.png);
+  qproperty-icon: url(skin:/btn/btn_beatjump_backward.webp);
 }
 #CueDeleteButton:pressed, #CueDeleteButton:checked, #CueDeleteButton:clicked,
 #CueStandardButton:pressed, #CueStandardButton:checked,
@@ -828,10 +828,10 @@ WTrackTableViewHeader::down-arrow {
   background-color: rgba(98,111,135,255);
   }
   WTrackTableViewHeader::up-arrow {
-    image: url(skin:/btn/btn_lib_sort_up_black.png)
+    image: url(skin:/btn/btn_lib_sort_up_black.webp)
   }
   WTrackTableViewHeader::down-arrow {
-    image: url(skin:/btn/btn_lib_sort_down_black.png)
+    image: url(skin:/btn/btn_lib_sort_down_black.webp)
   }
 
 /* Scroll bars */
@@ -938,11 +938,11 @@ WCoverArt {
 
 /* splitter between treeview and library*/
 QSplitter::handle {
-  image: url(skin:/style/style_handle_unchecked.png);
+  image: url(skin:/style/style_handle_unchecked.webp);
   background: none;
 }
 QSplitter::handle:pressed {
-  image: url(skin:/style/style_handle_checked.png);
+  image: url(skin:/style/style_handle_checked.webp);
   background: none;
 }
 QSplitter::handle:horizontal {
@@ -1093,7 +1093,7 @@ QPushButton#pushButtonRepeatPlaylist {
 }
 #HotcueButton[displayValue="1"][type="loop"],
 #HotcueButton[displayValue="2"][type="loop"] {
-    image: url(skin:/btn/btn_hotcue_loop.png) no-repeat;
+    image: url(skin:/btn/btn_hotcue_loop.webp) no-repeat;
 }
 
 WRateRange {

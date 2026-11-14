@@ -288,10 +288,10 @@ WTrackTableViewHeader::down-arrow {
   background-color: rgba(63,48,65,200);
   }
   WTrackTableViewHeader::up-arrow {
-    image: url(skin:/btn/btn_lib_sort_up_green.png)
+    image: url(skin:/btn/btn_lib_sort_up_green.webp)
   }
   WTrackTableViewHeader::down-arrow {
-    image: url(skin:/btn/btn_lib_sort_down_green.png)
+    image: url(skin:/btn/btn_lib_sort_down_green.webp)
   }
 #LibraryFeatureControls QPushButton:enabled {
   background-color: #5C5B5D;

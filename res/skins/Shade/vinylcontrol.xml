@@ -1,7 +1,7 @@
 <Template>
   <!-- VinylControl sub-widget -->
   <WidgetGroup>
-    <BackPath>style/style_bg_vinylcontrol.png</BackPath>
+    <BackPath>style/style_bg_vinylcontrol.webp</BackPath>
     <Size>21,82</Size>
     <Children>
       <PushButton>
@@ -9,13 +9,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_over.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_over.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_over.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_over.webp</Unpressed>
         </State>
         <Pos>1,21</Pos>
         <Connection>
@@ -28,13 +28,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_passthrough.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_passthrough.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_passthrough.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_passthrough.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_passthrough_over.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_passthrough_over.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_passthrough_over.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_passthrough_over.webp</Unpressed>
         </State>
         <Pos>1,1</Pos>
         <Connection>
@@ -58,18 +58,18 @@
         <NumberStates>3</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_abs.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_abs.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_abs.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_abs.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_rel.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_rel.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_rel.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_rel.webp</Unpressed>
         </State>
         <State>
           <Number>2</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_const.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_const.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_const.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_const.webp</Unpressed>
         </State>
         <Pos>1,41</Pos>
         <Connection>
@@ -88,18 +88,18 @@
         <NumberStates>3</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_cue_off.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_cue_off.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_cue_off.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_cue_off.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_cue_on.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_cue_on.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_cue_on.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_cue_on.webp</Unpressed>
         </State>
         <State>
           <Number>2</Number>
-          <Pressed>skin:/btn/btn_vinylcontrol_cue_hot.png</Pressed>
-          <Unpressed>skin:/btn/btn_vinylcontrol_cue_hot.png</Unpressed>
+          <Pressed>skin:/btn/btn_vinylcontrol_cue_hot.webp</Pressed>
+          <Unpressed>skin:/btn/btn_vinylcontrol_cue_hot.webp</Unpressed>
         </State>
         <Pos>1,62</Pos>
         <Connection>

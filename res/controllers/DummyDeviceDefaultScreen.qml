@@ -73,7 +73,7 @@ Mixxx.ControllerScreen {
             Image {
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
-                source: "../images/templates/logo_mixxx.png"
+                source: "../images/templates/logo_mixxx.webp"
             }
         }
     }
@@ -90,7 +90,7 @@ Mixxx.ControllerScreen {
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
                 height: 100
-                source: deckPlayer.coverArtUrl ?? "../images/templates/logo_mixxx.png"
+                source: deckPlayer.coverArtUrl ?? "../images/templates/logo_mixxx.webp"
                 visible: deckPlayer.trackLocationUrl?.toString().length !== 0
                 width: 100
             }

@@ -208,8 +208,8 @@
                   <VuMeter>
                     <TooltipId>audio_latency_usage</TooltipId>
                     <Size>59f,5f</Size>
-                    <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/latency_bg.png</PathBack>
-                    <PathVu>skins:LateNight/<Variable name="StyleScheme"/>/style/latency_over.png</PathVu>
+                    <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/latency_bg.webp</PathBack>
+                    <PathVu>skins:LateNight/<Variable name="StyleScheme"/>/style/latency_over.webp</PathVu>
                     <Horizontal>true</Horizontal>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>1000</PeakHoldTime>

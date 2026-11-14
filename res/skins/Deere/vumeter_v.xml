@@ -18,7 +18,7 @@
             <ObjectName>PeakIndicator</ObjectName>
             <TooltipId><Variable name="tooltip_clip"/></TooltipId>
             <Size>8f,8f</Size>
-            <PathStatusLight scalemode="STRETCH">vumeter_clip.png</PathStatusLight>
+            <PathStatusLight scalemode="STRETCH">vumeter_clip.webp</PathStatusLight>
             <Connection>
                 <ConfigKey><Variable name="group"/>,peak_indicator<Variable name="side"/></ConfigKey>
             </Connection>
@@ -36,8 +36,8 @@
                     <Size>3me,me</Size>
                     <MinimumSize>8,40</MinimumSize>
                     <MaximumSize>8,-1</MaximumSize>
-                    <PathBack scalemode="STRETCH">vumeter_v_bg.png</PathBack>
-                    <PathVu scalemode="STRETCH">vumeter_v.png</PathVu>
+                    <PathBack scalemode="STRETCH">vumeter_v_bg.webp</PathBack>
+                    <PathVu scalemode="STRETCH">vumeter_v.webp</PathVu>
                     <Horizontal>false</Horizontal>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>300</PeakHoldTime>
@@ -65,8 +65,8 @@
                     <Size>3me,me</Size>
                     <MinimumSize>8,60</MinimumSize>
                     <MaximumSize>8,-1</MaximumSize>
-                    <PathBack scalemode="STRETCH">vumeter_v_bg.png</PathBack>
-                    <PathVu scalemode="STRETCH">vumeter_v.png</PathVu>
+                    <PathBack scalemode="STRETCH">vumeter_v_bg.webp</PathBack>
+                    <PathVu scalemode="STRETCH">vumeter_v.webp</PathVu>
                     <Horizontal>false</Horizontal>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>300</PeakHoldTime>

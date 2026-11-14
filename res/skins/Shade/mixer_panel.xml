@@ -5,7 +5,7 @@
     <Children>
       <WidgetGroup>
         <Size>255f,224f</Size>
-        <BackPath>style/style_bg_mixer_panel_main.png</BackPath>
+        <BackPath>style/style_bg_mixer_panel_main.webp</BackPath>
         <Children>
           <!-- if we don't put all this in an extra child widget, the <NumberRate> will somehow
           break the parent widgetgroup dimensions
@@ -21,8 +21,8 @@
               -->
               <SliderComposed>
                 <TooltipId>channel_volume</TooltipId>
-                <Handle>knob_volume.png</Handle>
-                <Slider>slider_volume.png</Slider>
+                <Handle>knob_volume.webp</Handle>
+                <Slider>slider_volume.webp</Slider>
                 <Pos>73,55</Pos>
                 <Horizontal>false</Horizontal>
                 <Connection>
@@ -32,8 +32,8 @@
               </SliderComposed>
               <SliderComposed>
                 <TooltipId>channel_volume</TooltipId>
-                <Handle>knob_volume.png</Handle>
-                <Slider>slider_volume.png</Slider>
+                <Handle>knob_volume.webp</Handle>
+                <Slider>slider_volume.webp</Slider>
                 <Pos>168,55</Pos>
                 <Horizontal>false</Horizontal>
                 <Connection>
@@ -51,9 +51,9 @@
                 <TooltipId>autodj_status</TooltipId>
                 <Pos>120,180</Pos>
                 <NumberPos>3</NumberPos>
-                <PathStatusLight1>style/style_icon_autodj.png</PathStatusLight1>
-                <PathStatusLight2>style/style_icon_autodj.png</PathStatusLight2>
-                <PathStatusLight3>style/style_icon_autodj.png</PathStatusLight3>
+                <PathStatusLight1>style/style_icon_autodj.webp</PathStatusLight1>
+                <PathStatusLight2>style/style_icon_autodj.webp</PathStatusLight2>
+                <PathStatusLight3>style/style_icon_autodj.webp</PathStatusLight3>
                 <Connection>
                   <ConfigKey>[AutoDJ],enabled</ConfigKey>
                 </Connection>
@@ -70,8 +70,8 @@
               -->
               <SliderComposed>
                 <TooltipId>crossfader</TooltipId>
-                <Handle>knob_crossfader.png</Handle>
-                <Slider>slider_crossfader.png</Slider>
+                <Handle>knob_crossfader.webp</Handle>
+                <Slider>slider_crossfader.webp</Slider>
                 <Pos>72,200</Pos>
                 <Horizontal>true</Horizontal>
                 <Connection>
@@ -92,13 +92,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_play_deck.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_play_deck_over.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck_over.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck_over.webp</Unpressed>
                 </State>
                 <Connection>
                   <ConfigKey>[Channel1],play_indicator</ConfigKey>
@@ -113,8 +113,8 @@
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_play_deck_preview.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck_preview.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck_preview.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck_preview.webp</Unpressed>
                 </State>
                 <Connection>
                   <ConfigKey>[Channel1],play</ConfigKey>
@@ -128,13 +128,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_play_deck_down.png</Pressed>
+                  <Pressed>skin:/btn/btn_play_deck_down.webp</Pressed>
                   <Unpressed></Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_play_deck_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck_over.webp</Unpressed>
                 </State>
                 <Connection>
                   <ConfigKey>[Channel1],play</ConfigKey>
@@ -157,13 +157,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_play_deck.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_play_deck_over.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck_over.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck_over.webp</Unpressed>
                 </State>
                 <Connection>
                   <ConfigKey>[Channel2],play_indicator</ConfigKey>
@@ -193,13 +193,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_play_deck_down.png</Pressed>
+                  <Pressed>skin:/btn/btn_play_deck_down.webp</Pressed>
                   <Unpressed></Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_play_deck_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_play_deck_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_play_deck_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_play_deck_over.webp</Unpressed>
                 </State>
                 <Connection>
                   <ConfigKey>[Channel2],play</ConfigKey>
@@ -226,13 +226,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_cue_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_cue.png</Unpressed>
+                  <Pressed>skin:/btn/btn_cue_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_cue.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_cue_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_cue_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_cue_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_cue_over.webp</Unpressed>
                 </State>
                 <Pos>11,179</Pos>
                 <Connection>
@@ -256,13 +256,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_cue_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_cue.png</Unpressed>
+                  <Pressed>skin:/btn/btn_cue_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_cue.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_cue_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_cue_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_cue_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_cue_over.webp</Unpressed>
                 </State>
                 <Pos>203,179</Pos>
                 <Connection>
@@ -290,13 +290,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_pfl_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_pfl.png</Unpressed>
+                  <Pressed>skin:/btn/btn_pfl_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_pfl.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_pfl_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_pfl_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_pfl_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_pfl_over.webp</Unpressed>
                 </State>
                 <Pos>65,161</Pos>
                 <Connection>
@@ -308,13 +308,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_pfl_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_pfl.png</Unpressed>
+                  <Pressed>skin:/btn/btn_pfl_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_pfl.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_pfl_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_pfl_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_pfl_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_pfl_over.webp</Unpressed>
                 </State>
                 <Pos>160,161</Pos>
                 <Connection>
@@ -334,13 +334,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>11,84</Pos>
                 <Connection>
@@ -360,13 +360,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>11,113</Pos>
                 <Connection>
@@ -386,13 +386,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>11,142</Pos>
                 <Connection>
@@ -413,13 +413,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>229,84</Pos>
                 <Connection>
@@ -439,13 +439,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>229,113</Pos>
                 <Connection>
@@ -465,13 +465,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_kill_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_kill_over.webp</Unpressed>
                 </State>
                 <Pos>229,142</Pos>
                 <Connection>
@@ -529,8 +529,8 @@
               <StatusLight>
                 <Pos>113,27</Pos>
                 <TooltipId>audio_latency_usage</TooltipId>
-                <PathStatusLight>audio_latency/audio_latency_overload.png</PathStatusLight>
-                <PathBack>audio_latency/audio_latency_overload_back.png</PathBack>
+                <PathStatusLight>audio_latency/audio_latency_overload.webp</PathStatusLight>
+                <PathBack>audio_latency/audio_latency_overload_back.webp</PathBack>
                 <Connection>
                   <ConfigKey>[App],audio_latency_overload</ConfigKey>
                 </Connection>
@@ -543,8 +543,8 @@
                 <Children>
                   <VuMeter>
                     <TooltipId>audio_latency_usage</TooltipId>
-                    <PathVu>skin:/audio_latency/audio_latency_usage.png</PathVu>
-                    <PathBack>skin:/audio_latency/audio_latency_usage_back.png</PathBack>
+                    <PathVu>skin:/audio_latency/audio_latency_usage.webp</PathVu>
+                    <PathBack>skin:/audio_latency/audio_latency_usage_back.webp</PathBack>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>1000</PeakHoldTime>
                     <PeakFallTime>100</PeakFallTime>
@@ -561,28 +561,28 @@
                 <NumberStates>5</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_broadcast_unconnected.png</Pressed>
-                  <Unpressed>skin:/btn/btn_broadcast_unconnected.png</Unpressed>
+                  <Pressed>skin:/btn/btn_broadcast_unconnected.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_broadcast_unconnected.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_broadcast_connecting.png</Pressed>
-                  <Unpressed>skin:/btn/btn_broadcast_connecting.png</Unpressed>
+                  <Pressed>skin:/btn/btn_broadcast_connecting.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_broadcast_connecting.webp</Unpressed>
                 </State>
                 <State>
                   <Number>2</Number>
-                  <Pressed>skin:/btn/btn_broadcast_connected.png</Pressed>
-                  <Unpressed>skin:/btn/btn_broadcast_connected.png</Unpressed>
+                  <Pressed>skin:/btn/btn_broadcast_connected.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_broadcast_connected.webp</Unpressed>
                 </State>
                 <State>
                   <Number>3</Number>
-                  <Pressed>skin:/btn/btn_broadcast_failure.png</Pressed>
-                  <Unpressed>skin:/btn/btn_broadcast_failure.png</Unpressed>
+                  <Pressed>skin:/btn/btn_broadcast_failure.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_broadcast_failure.webp</Unpressed>
                 </State>
                 <State>
                   <Number>4</Number>
-                  <Pressed>skin:/btn/btn_broadcast_warning.png</Pressed>
-                  <Unpressed>skin:/btn/btn_broadcast_warning.png</Unpressed>
+                  <Pressed>skin:/btn/btn_broadcast_warning.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_broadcast_warning.webp</Unpressed>
                 </State>
                 <Pos>111,29</Pos>
                 <Connection>
@@ -605,18 +605,18 @@
                 <NumberStates>3</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_record_off.png</Pressed>
-                  <Unpressed>skin:/btn/btn_record_off.png</Unpressed>
+                  <Pressed>skin:/btn/btn_record_off.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_record_off.webp</Unpressed>
                 </State>
                   <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_record_ready.png</Pressed>
-                  <Unpressed>skin:/btn/btn_record_ready.png</Unpressed>
+                  <Pressed>skin:/btn/btn_record_ready.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_record_ready.webp</Unpressed>
                 </State>
                 <State>
                   <Number>2</Number>
-                  <Pressed>skin:/btn/btn_record_on.png</Pressed>
-                  <Unpressed>skin:/btn/btn_record_on.png</Unpressed>
+                  <Pressed>skin:/btn/btn_record_on.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_record_on.webp</Unpressed>
                 </State>
                 <Pos>214,18</Pos>
                 <Connection>
@@ -660,7 +660,7 @@
               <Knob>
                 <TooltipId>main_gain</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>151,15</Pos>
                 <Connection>
                   <ConfigKey>[Master],gain</ConfigKey>
@@ -669,7 +669,7 @@
               <Knob>
                 <TooltipId>balance</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>184,15</Pos>
                 <Connection>
                   <ConfigKey>[Master],balance</ConfigKey>
@@ -684,7 +684,7 @@
               <Knob>
                 <TooltipId>headMix</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>45,15</Pos>
                 <Connection>
                   <ConfigKey>[Master],headMix</ConfigKey>
@@ -693,7 +693,7 @@
               <Knob>
                 <TooltipId>headphone_gain</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs_no_center/knob_rotary_s%1.png</Path>
+                <Path>knobs_no_center/knob_rotary_s%1.webp</Path>
                 <Pos>78,15</Pos>
                 <Connection>
                   <ConfigKey>[Master],headGain</ConfigKey>
@@ -710,13 +710,13 @@
                 <NumberStates>2</NumberStates>
                 <State>
                   <Number>0</Number>
-                  <Pressed>skin:/btn/btn_headsplit_down.png</Pressed>
-                  <Unpressed>skin:/btn/btn_headsplit.png</Unpressed>
+                  <Pressed>skin:/btn/btn_headsplit_down.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_headsplit.webp</Unpressed>
                 </State>
                 <State>
                   <Number>1</Number>
-                  <Pressed>skin:/btn/btn_headsplit_overdown.png</Pressed>
-                  <Unpressed>skin:/btn/btn_headsplit_over.png</Unpressed>
+                  <Pressed>skin:/btn/btn_headsplit_overdown.webp</Pressed>
+                  <Unpressed>skin:/btn/btn_headsplit_over.webp</Unpressed>
                 </State>
                 <Pos>11,18</Pos>
                 <Connection>
@@ -732,7 +732,7 @@
               <Knob>
                 <TooltipId>pregain</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>32,47</Pos>
                 <Connection>
                   <ConfigKey>[Channel1],pregain</ConfigKey>
@@ -743,7 +743,7 @@
                 <Effect>1</Effect>
                 <EffectParameter>3</EffectParameter>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>32,76</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel1]_Effect1],parameter3</ConfigKey>
@@ -758,7 +758,7 @@
                 <Effect>1</Effect>
                 <EffectParameter>2</EffectParameter>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>32,105</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel1]_Effect1],parameter2</ConfigKey>
@@ -773,7 +773,7 @@
                 <Effect>1</Effect>
                 <EffectParameter>1</EffectParameter>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>32,134</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel1]_Effect1],parameter1</ConfigKey>
@@ -787,7 +787,7 @@
               <Knob>
                 <TooltipId>pregain</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>197,47</Pos>
                 <Connection>
                   <ConfigKey>[Channel2],pregain</ConfigKey>
@@ -798,7 +798,7 @@
                 <Effect>1</Effect>
                 <EffectParameter>3</EffectParameter>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>197,76</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel2]_Effect1],parameter3</ConfigKey>
@@ -814,7 +814,7 @@
                 <EffectParameter>2</EffectParameter>
                 <TooltipId>filterMid</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>197,105</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel2]_Effect1],parameter2</ConfigKey>
@@ -830,7 +830,7 @@
                 <EffectParameter>1</EffectParameter>
                 <TooltipId>filterLow</TooltipId>
                 <NumberStates>64</NumberStates>
-                <Path>knobs/knob_rotary_s%1.png</Path>
+                <Path>knobs/knob_rotary_s%1.webp</Path>
                 <Pos>197,134</Pos>
                 <Connection>
                   <ConfigKey>[EqualizerRack1_[Channel2]_Effect1],parameter1</ConfigKey>
@@ -853,8 +853,8 @@
                 <Children>
                   <VuMeter>
                     <TooltipId>channel_VuMeter</TooltipId>
-                    <PathVu>skin:/style/volume_display_over.png</PathVu>
-                    <PathBack>skin:/style/volume_display.png</PathBack>
+                    <PathVu>skin:/style/volume_display_over.webp</PathVu>
+                    <PathBack>skin:/style/volume_display.webp</PathBack>
                     <Horizontal>false</Horizontal>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>500</PeakHoldTime>
@@ -874,8 +874,8 @@
                 <Children>
                   <VuMeter>
                     <TooltipId>channel_VuMeter</TooltipId>
-                    <PathVu>skin:/style/volume_display_over.png</PathVu>
-                    <PathBack>skin:/style/volume_display.png</PathBack>
+                    <PathVu>skin:/style/volume_display_over.webp</PathVu>
+                    <PathBack>skin:/style/volume_display.webp</PathBack>
                     <Horizontal>false</Horizontal>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>500</PeakHoldTime>
@@ -894,8 +894,8 @@
                 <Children>
                   <VuMeter>
                     <TooltipId>main_VuMeterL</TooltipId>
-                    <PathVu>skin:/style/volume_display_main_over.png</PathVu>
-                    <PathBack>skin:/style/volume_display_main.png</PathBack>
+                    <PathVu>skin:/style/volume_display_main_over.webp</PathVu>
+                    <PathBack>skin:/style/volume_display_main.webp</PathBack>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>500</PeakHoldTime>
                     <PeakFallTime>50</PeakFallTime>
@@ -913,8 +913,8 @@
                 <Children>
                   <VuMeter>
                     <TooltipId>main_VuMeterR</TooltipId>
-                    <PathVu>skin:/style/volume_display_main_over.png</PathVu>
-                    <PathBack>skin:/style/volume_display_main.png</PathBack>
+                    <PathVu>skin:/style/volume_display_main_over.webp</PathVu>
+                    <PathBack>skin:/style/volume_display_main.webp</PathBack>
                     <PeakHoldSize>5</PeakHoldSize>
                     <PeakHoldTime>500</PeakHoldTime>
                     <PeakFallTime>50</PeakFallTime>
@@ -932,8 +932,8 @@
               -->
               <StatusLight>
                 <TooltipId>channel_peak_indicator</TooltipId>
-                <PathStatusLight>skin:/style/volume_clipping_over.png</PathStatusLight>
-                <PathBack>skin:/style/volume_clipping.png</PathBack>
+                <PathStatusLight>skin:/style/volume_clipping_over.webp</PathStatusLight>
+                <PathBack>skin:/style/volume_clipping.webp</PathBack>
                 <Pos>107,57</Pos>
                 <Connection>
                   <ConfigKey>[Channel1],peak_indicator</ConfigKey>
@@ -941,8 +941,8 @@
               </StatusLight>
               <StatusLight>
                 <TooltipId>channel_peak_indicator</TooltipId>
-                <PathStatusLight>skin:/style/volume_clipping_over.png</PathStatusLight>
-                <PathBack>skin:/style/volume_clipping.png</PathBack>
+                <PathStatusLight>skin:/style/volume_clipping_over.webp</PathStatusLight>
+                <PathBack>skin:/style/volume_clipping.webp</PathBack>
                 <Pos>143,57</Pos>
                 <Connection>
                   <ConfigKey>[Channel2],peak_indicator</ConfigKey>
@@ -950,8 +950,8 @@
               </StatusLight>
               <StatusLight>
                 <TooltipId>main_peak_indicator_left</TooltipId>
-                <PathStatusLight>skin:/style/volume_clipping_main_over.png</PathStatusLight>
-                <PathBack>skin:/style/volume_clipping_main.png</PathBack>
+                <PathStatusLight>skin:/style/volume_clipping_main_over.webp</PathStatusLight>
+                <PathBack>skin:/style/volume_clipping_main.webp</PathBack>
                 <Pos>122,57</Pos>
                 <Connection>
                   <ConfigKey>[Main],peak_indicator_left</ConfigKey>
@@ -959,8 +959,8 @@
               </StatusLight>
               <StatusLight>
                 <TooltipId>main_peak_indicator_right</TooltipId>
-                <PathStatusLight>skin:/style/volume_clipping_main_over.png</PathStatusLight>
-                <PathBack>skin:/style/volume_clipping_main.png</PathBack>
+                <PathStatusLight>skin:/style/volume_clipping_main_over.webp</PathStatusLight>
+                <PathBack>skin:/style/volume_clipping_main.webp</PathBack>
                 <Pos>128,57</Pos>
                 <Connection>
                   <ConfigKey>[Main],peak_indicator_right</ConfigKey>
@@ -974,7 +974,7 @@
 
       <WidgetGroup>
         <Size>255f,24f</Size>
-        <BackPath>style/style_bg_mixer_panel_stretch.png</BackPath>
+        <BackPath>style/style_bg_mixer_panel_stretch.webp</BackPath>
         <Connection>
           <ConfigKey>[Skin],show_intro_outro_cues</ConfigKey>
           <BindProperty>visible</BindProperty>
@@ -983,7 +983,7 @@
 
       <WidgetGroup>
         <Size>255f,5f</Size>
-        <BackPath>style/style_bg_mixer_panel_bottom.png</BackPath>
+        <BackPath>style/style_bg_mixer_panel_bottom.webp</BackPath>
       </WidgetGroup>
 
     </Children>

@@ -1,6 +1,6 @@
 <Template>
   <WidgetGroup>
-    <BackPath>style/style_bg_deck_pane.png</BackPath>
+    <BackPath>style/style_bg_deck_pane.webp</BackPath>
     <Layout>vertical</Layout>
     <Children>
       <WidgetGroup><!-- Hotcues 1-8 -->

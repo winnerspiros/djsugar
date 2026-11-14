@@ -7,7 +7,7 @@
       <WidgetGroup>
         <ObjectName>DeckLeftBorder</ObjectName>
         <Size>5f,-1min</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>DeckLeft</ObjectName>
@@ -32,7 +32,7 @@
                       <WidgetGroup>
                         <ObjectName>DeckTopLeftPart</ObjectName>
                         <Size>40f,45f</Size>
-                        <BackPath>style/style_bg_deck_top_left.png</BackPath>
+                        <BackPath>style/style_bg_deck_top_left.webp</BackPath>
                         <Children>
                           <TrackWidgetGroup>
                             <Pos>2,7</Pos>
@@ -55,7 +55,7 @@
                         <ObjectName>DeckTopMidPart</ObjectName>
                         <Size>i,45f</Size>
                         <Layout>vertical</Layout>
-                        <BackPath>style/style_bg_deck_top_mid.png</BackPath>
+                        <BackPath>style/style_bg_deck_top_mid.webp</BackPath>
                         <Children>
                           <WidgetGroup>
                             <ObjectName>TitleEjectRow</ObjectName>
@@ -84,8 +84,8 @@
                                 <NumberStates>1</NumberStates>
                                 <State>
                                   <Number>0</Number>
-                                  <Pressed>skin:/btn/btn_eject_over.png</Pressed>
-                                  <Unpressed>skin:/btn/btn_eject.png</Unpressed>
+                                  <Pressed>skin:/btn/btn_eject_over.webp</Pressed>
+                                  <Unpressed>skin:/btn/btn_eject.webp</Unpressed>
                                 </State>
                                 <Connection>
                                   <ConfigKey><Variable name="group"/>,eject</ConfigKey>
@@ -154,7 +154,7 @@
                       <WidgetGroup>
                         <ObjectName>DeckUpperMidPart</ObjectName>
                         <Size>0e,81f</Size>
-                        <BackPath>style/style_bg_deck_pane.png</BackPath>
+                        <BackPath>style/style_bg_deck_pane.webp</BackPath>
                         <Layout>horizontal</Layout>
                         <Children>
                           <!-- Collapsing Waveform, VinylControl & spinning Vinyl widget-->
@@ -203,9 +203,9 @@
                                         <TooltipId>spinny</TooltipId>
                                         <Size>81f,81f</Size>
                                         <Channel><Variable name="channum"/></Channel>
-                                        <PathBackground scalemode="STRETCH_ASPECT">vinyl_spinny_background.png</PathBackground>
-                                        <PathForeground scalemode="STRETCH_ASPECT">vinyl_spinny_foreground.png</PathForeground>
-                                        <PathGhost scalemode="STRETCH_ASPECT">vinyl_spinny_foreground_ghost.png</PathGhost>
+                                        <PathBackground scalemode="STRETCH_ASPECT">vinyl_spinny_background.webp</PathBackground>
+                                        <PathForeground scalemode="STRETCH_ASPECT">vinyl_spinny_foreground.webp</PathForeground>
+                                        <PathGhost scalemode="STRETCH_ASPECT">vinyl_spinny_foreground_ghost.webp</PathGhost>
                                       </Spinny>
                                     </Children>
                                     <Connection>
@@ -232,7 +232,7 @@
                         <ObjectName>DeckLowerMidPart</ObjectName>
                         <Size>0e,39f</Size>
                         <Layout>horizontal</Layout>
-                        <BackPath>style/style_bg_deck_woverview.png</BackPath>
+                        <BackPath>style/style_bg_deck_woverview.webp</BackPath>
                         <Children>
                           <SingletonContainer>
                             <ObjectName>Overview<Variable name="channum"/></ObjectName>
@@ -242,20 +242,20 @@
                       <WidgetGroup>
                         <ObjectName>DeckLowerLeftPart</ObjectName>
                         <Size>63f,39f</Size>
-                        <BackPath>style/style_bg_deck_woverview_buttons.png</BackPath>
+                        <BackPath>style/style_bg_deck_woverview_buttons.webp</BackPath>
                         <Children>
                           <PushButton>
                             <TooltipId>show_spinny</TooltipId>
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_spinny.png</Pressed>
-                              <Unpressed>skin:/btn/btn_spinny.png</Unpressed>
+                              <Pressed>skin:/btn/btn_spinny.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_spinny.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_spinny_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_spinny_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_spinny_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_spinny_over.webp</Unpressed>
                             </State>
                             <Pos>1,1</Pos>
                             <Connection>
@@ -269,13 +269,13 @@
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_repeat.png</Pressed>
-                              <Unpressed>skin:/btn/btn_repeat.png</Unpressed>
+                              <Pressed>skin:/btn/btn_repeat.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_repeat.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_repeat_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_repeat_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_repeat_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_repeat_over.webp</Unpressed>
                             </State>
                             <Pos>22,1</Pos>
                             <Connection>
@@ -287,13 +287,13 @@
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_slip.png</Pressed>
-                              <Unpressed>skin:/btn/btn_slip.png</Unpressed>
+                              <Pressed>skin:/btn/btn_slip.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_slip.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_slip_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_slip_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_slip_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_slip_over.webp</Unpressed>
                             </State>
                             <Pos>43,1</Pos>
                             <Connection>
@@ -307,8 +307,8 @@
                             <NumberStates>1</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_beatgrid_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_beatgrid.png</Unpressed>
+                              <Pressed>skin:/btn/btn_beatgrid_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_beatgrid.webp</Unpressed>
                             </State>
                             <Pos>1,20</Pos>
                             <Connection>
@@ -328,13 +328,13 @@
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_quantize.png</Pressed>
-                              <Unpressed>skin:/btn/btn_quantize.png</Unpressed>
+                              <Pressed>skin:/btn/btn_quantize.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_quantize.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_quantize_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_quantize_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_quantize_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_quantize_over.webp</Unpressed>
                             </State>
                             <Pos>22,20</Pos>
                             <Connection>
@@ -348,13 +348,13 @@
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_keylock.png</Pressed>
-                              <Unpressed>skin:/btn/btn_keylock.png</Unpressed>
+                              <Pressed>skin:/btn/btn_keylock.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_keylock.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_keylock_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_keylock_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_keylock_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_keylock_over.webp</Unpressed>
                             </State>
                             <Pos>43,20</Pos>
                             <Connection>
@@ -371,20 +371,20 @@
               <WidgetGroup><!-- Speed/key controls -->
                 <ObjectName>DeckRightPart</ObjectName>
                 <Size>52f,165f</Size>
-                <BackPath>style/style_bg_deck_right.png</BackPath>
+                <BackPath>style/style_bg_deck_right.webp</BackPath>
                 <Children>
                   <PushButton>
                     <TooltipId>sync_enabled</TooltipId>
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_sync_bpm_down.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_bpm.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_bpm_down.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_bpm.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_sync_bpm_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_bpm_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_bpm_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_bpm_over.webp</Unpressed>
                     </State>
                     <Pos>3,15</Pos>
                     <Connection>
@@ -402,13 +402,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_sync_key_down.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_key.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_key_down.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_key.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_sync_key_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_sync_key_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_sync_key_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_sync_key_over.webp</Unpressed>
                     </State>
                     <Pos>27,15</Pos>
                     <Connection>
@@ -457,8 +457,8 @@
                     </Children>
                   </WidgetGroup>
                   <SliderComposed>
-                    <Handle>knob_visual_key.png</Handle>
-                    <Slider>slider_visual_key.png</Slider>
+                    <Handle>knob_visual_key.webp</Handle>
+                    <Slider>slider_visual_key.webp</Slider>
                     <Pos>18,55</Pos>
                     <Horizontal>true</Horizontal>
                     <Connection>
@@ -507,8 +507,8 @@
 
                   <SliderComposed>
                     <TooltipId>pitch</TooltipId>
-                    <Handle>knob_visual_key.png</Handle>
-                    <Slider>slider_visual_key.png</Slider>
+                    <Handle>knob_visual_key.webp</Handle>
+                    <Slider>slider_visual_key.webp</Slider>
                     <Pos>18,58</Pos>
                     <Horizontal>true</Horizontal>
                     <Connection>
@@ -558,8 +558,8 @@
 
                   <SliderComposed>
                     <TooltipId>rate</TooltipId>
-                    <Handle>knob_pitch.png</Handle>
-                    <Slider>slider_pitch.png</Slider>
+                    <Handle>knob_pitch.webp</Handle>
+                    <Slider>slider_pitch.webp</Slider>
                     <Pos>20,62</Pos>
                     <Horizontal>false</Horizontal>
                     <Connection>
@@ -618,7 +618,7 @@
           <WidgetGroup>
             <Size>0e,59f</Size>
             <Layout>horizontal</Layout>
-            <BackPath>style/style_bg_deck_pane.png</BackPath>
+            <BackPath>style/style_bg_deck_pane.webp</BackPath>
             <Children>
               <Template src="skin:deck_effect.xml"/>
               <WidgetGroup>
@@ -645,7 +645,7 @@
           <WidgetGroup>
             <ObjectName>DeckLeftBorder</ObjectName>
             <Size>0e,5f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
 
         </Children>
@@ -653,7 +653,7 @@
       <WidgetGroup>
         <ObjectName>DeckRightBorder</ObjectName>
         <Size>5f,-1min</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
     </Children>
   </WidgetGroup>

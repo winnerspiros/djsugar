@@ -119,6 +119,7 @@ case "$1" in
             libprotobuf-dev \
             libqt6opengl6-dev \
             libqt6sql6-sqlite \
+            qt6-image-formats-plugins \
             libqt6svg6-dev \
             librubberband-dev \
             libshout-idjc-dev \

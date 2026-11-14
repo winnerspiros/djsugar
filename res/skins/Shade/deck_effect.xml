@@ -12,13 +12,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_fx_plus.png</Pressed>
-          <Unpressed>skin:/btn/btn_fx_plus.png</Unpressed>
+          <Pressed>skin:/btn/btn_fx_plus.webp</Pressed>
+          <Unpressed>skin:/btn/btn_fx_plus.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_fx_minus.png</Pressed>
-          <Unpressed>skin:/btn/btn_fx_minus.png</Unpressed>
+          <Pressed>skin:/btn/btn_fx_minus.webp</Pressed>
+          <Unpressed>skin:/btn/btn_fx_minus.webp</Unpressed>
         </State>
         <Pos>2,0</Pos>
         <Connection>
@@ -31,13 +31,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_down.png</Pressed>
-          <Unpressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>.png</Unpressed>
+          <Pressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_down.webp</Pressed>
+          <Unpressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_overdown.png</Pressed>
-          <Unpressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_over.png</Unpressed>
+          <Pressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_overdown.webp</Pressed>
+          <Unpressed>skin:/btn/btn_beatloop_<Variable name="effectunitnum"/>_over.webp</Unpressed>
         </State>
         <Pos>4,14</Pos>
         <Connection>
@@ -51,13 +51,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_pfl_fx_down.png</Pressed>
-          <Unpressed>skin:/btn/btn_pfl_fx.png</Unpressed>
+          <Pressed>skin:/btn/btn_pfl_fx_down.webp</Pressed>
+          <Unpressed>skin:/btn/btn_pfl_fx.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_pfl_fx_overdown.png</Pressed>
-          <Unpressed>skin:/btn/btn_pfl_fx_over.png</Unpressed>
+          <Pressed>skin:/btn/btn_pfl_fx_overdown.webp</Pressed>
+          <Unpressed>skin:/btn/btn_pfl_fx_over.webp</Unpressed>
         </State>
           <Pos>25,14</Pos>
         <Connection>
@@ -71,13 +71,13 @@
         <NumberStates>2</NumberStates>
         <State>
           <Number>0</Number>
-          <Pressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_down.png</Pressed>
-          <Unpressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>.png</Unpressed>
+          <Pressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_down.webp</Pressed>
+          <Unpressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>.webp</Unpressed>
         </State>
         <State>
           <Number>1</Number>
-          <Pressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_overdown.png</Pressed>
-          <Unpressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_over.png</Unpressed>
+          <Pressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_overdown.webp</Pressed>
+          <Unpressed>skin:/btn/btn_fx<Variable name="effectunitnum"/>_over.webp</Unpressed>
         </State>
           <Pos>4,35</Pos>
         <Connection>
@@ -89,13 +89,13 @@
       <WidgetGroup>
         <Size>17f,5f</Size>
         <Pos>53,14</Pos>
-        <BackPath>skin:/btn/btn_mix.png</BackPath>
+        <BackPath>skin:/btn/btn_mix.webp</BackPath>
       </WidgetGroup>
 
       <Knob>
         <TooltipId>EffectUnit_mix</TooltipId>
         <NumberStates>64</NumberStates>
-        <Path>knobs_no_center/knob_rotary_s%1.png</Path>
+        <Path>knobs_no_center/knob_rotary_s%1.webp</Path>
         <Pos>49,21</Pos>
         <Connection>
           <ConfigKey>[EffectRack1_EffectUnit<Variable name="effectunitnum"/>],mix</ConfigKey>
@@ -125,13 +125,13 @@
       <WidgetGroup>
         <Size>29f,5f</Size>
         <Pos>76,14</Pos>
-        <BackPath>skin:/btn/btn_super.png</BackPath>
+        <BackPath>skin:/btn/btn_super.webp</BackPath>
       </WidgetGroup>
 
       <Knob>
         <TooltipId>EffectUnit_super1</TooltipId>
         <NumberStates>64</NumberStates>
-        <Path>knobs_no_center/knob_rotary_s%1.png</Path>
+        <Path>knobs_no_center/knob_rotary_s%1.webp</Path>
         <Pos>77,21</Pos>
         <Connection>
           <ConfigKey>[EffectRack1_EffectUnit<Variable name="effectunitnum"/>],super1</ConfigKey>

@@ -43,7 +43,7 @@
         </DefaultMark>
         <Mark>
           <Control>cue_point</Control>
-          <Pixmap>image/marker_cue.png</Pixmap>
+          <Pixmap>image/marker_cue.webp</Pixmap>
           <Text>CUE</Text>
           <Align>bottom</Align>
           <Color>#FF001C</Color>
@@ -61,7 +61,7 @@
         </MarkRange>
         <Mark>
           <Control>loop_start_position</Control>
-          <Pixmap>image/marker_loop_in.png</Pixmap>
+          <Pixmap>image/marker_loop_in.webp</Pixmap>
           <Text>IN</Text>
           <Align>bottom</Align>
           <Color>#00FF00</Color>
@@ -69,7 +69,7 @@
         </Mark>
         <Mark>
           <Control>loop_end_position</Control>
-          <Pixmap>image/marker_loop_out.png</Pixmap>
+          <Pixmap>image/marker_loop_out.webp</Pixmap>
           <Text>OUT</Text>
           <Align>bottom</Align>
           <Color>#00FF00</Color>
