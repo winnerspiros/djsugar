@@ -9,6 +9,8 @@
 - [x] 1.5 Show vocals (hidden with Stems) and Show lyrics in the drop-down, out of Settings
 - [x] 1.6 Size follows gain on by default, sizing the large waveforms only
 - [x] 1.7 User guide: Waveform look and Waveform height in website/book/src/guide/decks.md
+- [x] 1.8 Vocals (Off, Bar, Lyrics) in place of Show vocals and Show lyrics: one cyan lane along the bottom, no strip along the top
+- [x] 1.9 Phrases (Off, Overview, Waveform, Both) in the drop-down, out of the overview and waveform right-click menus
 
 ## Workflow follow-up
 

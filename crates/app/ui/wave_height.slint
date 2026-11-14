@@ -129,45 +129,21 @@ component WaveInfo inherits Rectangle {
     }
 }
 
-// A switch with its name, and what it does behind an ⓘ.
-component WaveSwitch inherits HorizontalLayout {
+// A section's name, and what its choices mean behind an ⓘ.
+component WaveHeading inherits HorizontalLayout {
     in property <string> text;
     in property <string> hint;
-    in property <bool> on;
-    callback toggled(on: bool);
     spacing: 6px;
-    Text { text: root.text; color: Theme.text; font-size: 12px; font-weight: 600; vertical-alignment: center; }
+    WaveLabel { text: root.text; }
     VerticalLayout {
         alignment: center;
         WaveInfo { text: root.hint; }
     }
     Rectangle { horizontal-stretch: 1; }
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 18px;
-            border-radius: 9px;
-            background: on ? Theme.accent.darker(0.25) : Theme.panel-raised.brighter(0.3);
-            Rectangle {
-                x: on ? 16px : 2px;
-                y: 2px;
-                width: 14px;
-                height: 14px;
-                border-radius: 7px;
-                background: on ? #ffffff : Theme.text-dim;
-                animate x { duration: 120ms; }
-            }
-            TouchArea {
-                mouse-cursor: pointer;
-                clicked => { root.toggled(!on); }
-            }
-        }
-    }
 }
 
 // The waveforms button's drop-down: the height as a slider, then how the
-// waveforms look (type, color and Show vocals, needle and Show lyrics). Dragging the slider resizes the waveforms as it moves
+// waveforms look (type, color, needle, vocals and phrases). Dragging the slider resizes the waveforms as it moves
 // and settles on the nearest of the ten steps when let go; arrow keys
 // move a step. `fits` is the highest step the window has room for now; a
 // higher one can still be chosen and shows once there is room.
@@ -312,16 +288,6 @@ export component WaveHeightList inherits VerticalLayout {
             root.picked();
         }
     }
-    // Stems draws the vocals in their own color, so the tint has no part there.
-    if WaveLook.color != 2: WaveSwitch {
-        text: "Show vocals";
-        hint: "Marks the sung parts with a thin cyan strip along the top of the waveforms. Not with Stems, which shows the vocals in their own color.";
-        on: WaveLook.vocals;
-        toggled(on) => {
-            WaveLook.pick-vocals(on);
-            root.picked();
-        }
-    }
     WaveLabel { text: "NEEDLE"; }
     WaveSegments {
         choices: ["Center", "Left"];
@@ -331,12 +297,27 @@ export component WaveHeightList inherits VerticalLayout {
             root.picked();
         }
     }
-    WaveSwitch {
-        text: "Show lyrics";
-        hint: "A track's timed lyrics run along the bottom of its large waveform.";
-        on: WaveLook.lyrics;
-        toggled(on) => {
-            WaveLook.pick-lyrics(on);
+    WaveHeading {
+        text: "VOCALS";
+        hint: "Along the bottom of the large waveforms: a cyan bar where someone sings, or the track's timed lyrics.";
+    }
+    WaveSegments {
+        choices: ["Off", "Bar", "Lyrics"];
+        chosen: WaveLook.vocals;
+        picked(i) => {
+            WaveLook.pick-vocals(i);
+            root.picked();
+        }
+    }
+    WaveHeading {
+        text: "PHRASES";
+        hint: "Intro, build, drop and the rest: a colored bar along the bottom of the overviews, and a line with its name at each start on the large waveforms.";
+    }
+    WaveSegments {
+        choices: ["Off", "Overview", "Waveform", "Both"];
+        chosen: WaveLook.phrases;
+        picked(i) => {
+            WaveLook.pick-phrases(i);
             root.picked();
         }
     }

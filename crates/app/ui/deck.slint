@@ -1302,9 +1302,6 @@ export component Header inherits Rectangle {
     // Where a press on the overview started, and whether it became a drag.
     property <length> press-x;
     property <bool> scrubbing;
-    // Where the overview's right-click menu opens.
-    property <length> menu-x;
-    property <length> menu-y;
     // The phrase under the pointer, named in a tooltip below the overview
     // while the pointer rests there.
     property <PhraseTip> phrase-tip: PhraseView.visible && info.loaded && ota.has-hover
@@ -1505,12 +1502,6 @@ export component Header inherits Rectangle {
                         if e.kind == PointerEventKind.down {
                             hide-tip();
                         }
-                        if e.button == PointerEventButton.right && e.kind == PointerEventKind.down {
-                            menu-x = self.mouse-x;
-                            menu-y = self.mouse-y;
-                            phrase-menu.show();
-                            return;
-                        }
                         if e.button != PointerEventButton.left && e.kind != PointerEventKind.cancel {
                             return;
                         }
@@ -1548,41 +1539,6 @@ export component Header inherits Rectangle {
                         show-tip();
                     }
                 }
-                phrase-menu := PopupWindow {
-                    x: min(menu-x, ov.width - 130px);
-                    y: menu-y;
-                    width: 130px;
-                    Rectangle {
-                        background: Theme.panel-raised;
-                        border-radius: Theme.radius;
-                        border-width: 1px;
-                        border-color: Theme.border;
-                        drop-shadow-blur: 8px;
-                        drop-shadow-color: Theme.s-00000080;
-                    }
-                    VerticalLayout {
-                        padding: 4px;
-                        Rectangle {
-                            height: 24px;
-                            background: pta.has-hover ? Theme.panel-raised.brighter(0.3) : transparent;
-                            border-radius: 4px;
-                            Text {
-                                x: 10px;
-                                text: PhraseView.visible ? "Hide phrases" : "Show phrases";
-                                color: Theme.text;
-                                font-size: 11px;
-                                font-weight: 600;
-                                vertical-alignment: center;
-                            }
-                            pta := TouchArea {
-                                clicked => {
-                                    PhraseView.visible = !PhraseView.visible;
-                                    PhraseView.changed(PhraseView.visible);
-                                }
-                            }
-                        }
-                    }
-                }
             }
             if compact: Text {
                 text: info.loaded ? "-" + info.remaining-seconds : "-0:00";
@@ -1604,15 +1560,12 @@ export component Header inherits Rectangle {
 
 // The effects every slot can hold, in loaded_effect order (1 = the first);
 // set once from the engine's list.
-// Phrase bars on the deck overviews: shown or hidden from an overview's
-// right-click menu, for every deck at once.
+// Phrase bars on the deck overviews and phrase flags on the large
+// waveforms (a line and a name at each phrase start), for every deck at
+// once; picked with Phrases in the waveforms button's drop-down.
 export global PhraseView {
-    in-out property <bool> visible: true;
-    callback changed(on: bool);
-    // Phrase flags on the scrolling waveforms (a line and a name at each
-    // phrase start), switched from a scrolling waveform's right-click menu.
-    in-out property <bool> waveform-visible: true;
-    callback waveform-changed(on: bool);
+    in property <bool> visible: true;
+    in property <bool> waveform-visible: true;
     // The phrase at `seconds` into the track on `deck`, for the overview's
     // tooltip; an empty title where there is none.
     pure callback describe(deck: int, seconds: float) -> PhraseTip;

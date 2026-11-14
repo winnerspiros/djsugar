@@ -485,7 +485,7 @@ pub struct GpuTrack {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Extras<'a> {
     /// Vocal levels, 0 to 255, `vocal_rate` a second, that
-    /// [`WaveformView::set_show_vocals`] tints the sung parts with.
+    /// [`WaveformView::set_show_vocals`] marks the sung parts with.
     pub vocals: &'a [u8],
     pub vocal_rate: f64,
     /// Each stem's peak along the track, `stem_rate` a second, as the
@@ -696,7 +696,7 @@ pub struct WaveformView {
     half: bool,
     /// Where the play line is (see [`WaveformView::set_needle`]).
     needle: f32,
-    /// Tints the sung parts (see [`WaveformView::set_show_vocals`]).
+    /// Marks the sung parts (see [`WaveformView::set_show_vocals`]).
     show_vocals: bool,
     /// The next mix, as fractions of the track (Mono style).
     mix: Option<(f32, f32)>,
@@ -767,8 +767,9 @@ impl WaveformView {
         self.needle = at.clamp(0.1, 0.9);
     }
 
-    /// Tints the parts of the track where someone sings green, from the
-    /// vocal levels its [`GpuTrack::with_extras`] has. Not in the Mono style.
+    /// Marks where someone sings with a cyan bar along the bottom of a
+    /// scrolling view, from the vocal levels its [`GpuTrack::with_extras`]
+    /// has. Not on overviews, nor in the Mono style.
     pub fn set_show_vocals(&mut self, show: bool) {
         self.show_vocals = show;
     }

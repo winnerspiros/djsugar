@@ -8,12 +8,12 @@ The waveforms' look is split: the height is in the waveforms button's drop-down,
 
 ## What Changes
 
-- The waveforms button's drop-down gets the look, in this order: **Waveform height**, **Type**, **Color** (and 3-Band's palette under it), **Show vocals**, **Needle**, **Show lyrics**. It stays open after a pick, so choices can be tried out.
+- The waveforms button's drop-down gets the look, in this order: **Waveform height**, **Type**, **Color** (and 3-Band's palette under it), **Needle**, **Vocals**, **Phrases**. It stays open after a pick, so choices can be tried out.
 - **Waveform height** becomes a slider: the waveforms follow it while it is dragged and settle on the nearest of the ten steps when it is let go, with ticks at the steps (3, the default, taller) and the step's number beside it. Arrow keys move a step.
 - **Type**: Full (the default) or Half, now for the large scrolling waveforms as well as the overviews. A live deck showing lanes of notes, steps or knobs stays Full.
 - **Color**: RGB (the default), 3-Band or Stems. The Blue scheme is dropped; a saved Blue comes back as RGB. 3-Band's Blue-Orange / Lilac-Cyan row shows under it.
 - **Needle**: Center (the default) or Left, the large waveforms' play line a quarter of the way in so three quarters of the strip shows what is coming. The beat grid, cues, loops, lyrics, knob labels and live decks' lanes follow it.
-- **Show vocals** sits under Color and hides with Stems, which draws vocals in their own color; it works without stems (a vocal pass, or the vocal stem when a track has HQ stems). **Show lyrics** sits under Needle. Both keep their setting keys.
+- **Vocals** (Off, Bar, Lyrics) picks one cyan lane along the bottom of the large waveforms: a bar where someone sings (a vocal pass, or the vocal stem when a track has HQ stems) or the timed lyrics, never both. It replaces the Show vocals and Show lyrics switches and the strip along the top. **Phrases** (Off, Overview, Waveform, Both) replaces the right-click Show/Hide phrases on the overviews and the large waveforms.
 - Waveform color, Palette, Overview, Show vocals and Lyrics on waveforms leave Settings › Appearance.
 - **Size follows gain** stays in Settings › Appearance, now on by default, and sizes only the large waveforms: the overviews keep their height.
 

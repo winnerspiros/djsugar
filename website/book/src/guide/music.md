@@ -326,9 +326,9 @@ phrase's color and a small tab with its name (INTRO, BUILD, DROP and so on)
 just under the bar numbers. Between flags the waveform is left as it is. In
 4-Deck, where the waveforms are thin, only the lines show.
 
-Right-click a deck's overview and choose **Hide phrases** (or **Show
-phrases**) to turn the bars off or on for every deck. Right-click a
-scrolling waveform to do the same for the flags; the two are separate.
+Pick which show with **Phrases** in the drop-down on the waveforms button
+in the top bar: **Overview** for the bars, **Waveform** for the flags,
+**Both** or **Off**. It applies to every deck.
 
 ## Bringing in a VirtualDJ library
 

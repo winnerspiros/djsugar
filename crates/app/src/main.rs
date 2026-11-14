@@ -761,27 +761,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             NUM_DECKS
         ])));
     }
-    // Phrase bars on the deck overviews and phrase flags on the scrolling
-    // waveforms, each shown or hidden from its own right-click menu.
-    let phrase_view = app.global::<PhraseView>();
-    phrase_view.set_visible(settings::flag("phrases_visible", true));
-    phrase_view.set_waveform_visible(settings::flag("phrase_flags_visible", true));
-    {
-        let app_weak = app.as_weak();
-        phrase_view.on_changed(move |on| {
-            settings::set("phrases_visible", serde_json::json!(on));
-            if let Some(app) = app_weak.upgrade() {
-                app.window().request_redraw();
-            }
-        });
-        let app_weak = app.as_weak();
-        phrase_view.on_waveform_changed(move |on| {
-            settings::set("phrase_flags_visible", serde_json::json!(on));
-            if let Some(app) = app_weak.upgrade() {
-                app.window().request_redraw();
-            }
-        });
-    }
     {
         use slint::winit_030::WinitWindowAccessor;
         let weak = app.as_weak();
@@ -2787,14 +2766,14 @@ impl Gpu {
             let show_vocals = wave_look::show_vocals();
             let stems_look = wave_look::style() == opendj_waveform::Style::Stems;
             // The stems' levels once they are complete: for the Stems look,
-            // and for Show vocals from high-quality stems' vocal stem.
+            // and for Vocals › Bar from high-quality stems' vocal stem.
             let found = track
                 .and_then(|t| t.audio.as_ref()?.stems())
                 .filter(|s| {
                     stems_look || (show_vocals && s.current().quality == stems::Quality::High)
                 })
                 .and_then(stem_levels::levels);
-            // Show vocals: the vocal stem's level, else the vocal pass's
+            // Vocals › Bar: the vocal stem's level, else the vocal pass's
             // once it has the file.
             let hq_vocals = found
                 .as_ref()
@@ -2810,7 +2789,7 @@ impl Gpu {
             let same_vocals = |v: &Option<Arc<Levels>>| match (v, &vocals) {
                 (Some(a), Some(b)) => Arc::ptr_eq(a, b),
                 (None, None) => true,
-                // Kept on the GPU when Show vocals is off: the view hides them.
+                // Kept on the GPU when Vocals › Bar is off: the view hides them.
                 (Some(_), None) => !show_vocals,
                 _ => false,
             };

@@ -296,11 +296,10 @@ component Waveform inherits Rectangle {
         y: 6px;
         shown: zoom-flash && (WaveZoom.hovered == group || (WaveZoom.hovered == "" && first));
     }
-    // Right-click: show or hide the phrase flags on every scrolling
-    // waveform, and zoom them all.
+    // Right-click: zoom every scrolling waveform.
     wave-menu := PopupWindow {
         x: min(menu-x, root.width - 130px);
-        y: min(menu-y, root.height - 158px);
+        y: min(menu-y, root.height - 134px);
         width: 130px;
         Rectangle {
             background: Theme.panel-raised;
@@ -312,25 +311,6 @@ component Waveform inherits Rectangle {
         }
         VerticalLayout {
             padding: 4px;
-            Rectangle {
-                height: 24px;
-                background: wpa.has-hover ? Theme.panel-raised.brighter(0.3) : transparent;
-                border-radius: 4px;
-                Text {
-                    x: 10px;
-                    text: PhraseView.waveform-visible ? "Hide phrases" : "Show phrases";
-                    color: Theme.text;
-                    font-size: 11px;
-                    font-weight: 600;
-                    vertical-alignment: center;
-                }
-                wpa := TouchArea {
-                    clicked => {
-                        PhraseView.waveform-visible = !PhraseView.waveform-visible;
-                        PhraseView.waveform-changed(PhraseView.waveform-visible);
-                    }
-                }
-            }
             for item[i] in [
                 { text: "Zoom in", enabled: WaveZoom.level < WaveZoom.steps, by: 1 },
                 { text: "Zoom out", enabled: WaveZoom.level > 1, by: -1 },

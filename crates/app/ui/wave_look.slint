@@ -10,13 +10,15 @@ export global WaveLook {
     // Where the play line is on the large waveforms, as a fraction of their
     // width: 0.5 in the middle, 0.25 a quarter in from the left.
     in property <float> needle: 0.5;
-    // Show vocals (tints the sung parts; not with Stems) and Show lyrics.
-    in property <bool> vocals;
-    in property <bool> lyrics: true;
+    // Vocals along the bottom of the large waveforms: 0 Off, 1 Bar (a cyan
+    // bar where someone sings), 2 Lyrics (the timed lyrics, in cyan).
+    in property <int> vocals: 2;
+    // Phrases: 0 Off, 1 Overview, 2 Waveform (the large ones), 3 Both.
+    in property <int> phrases: 3;
     callback pick-color(index: int);
     callback pick-palette(index: int);
     callback pick-half(half: bool);
     callback pick-needle-left(left: bool);
-    callback pick-vocals(on: bool);
-    callback pick-lyrics(on: bool);
+    callback pick-vocals(index: int);
+    callback pick-phrases(index: int);
 }

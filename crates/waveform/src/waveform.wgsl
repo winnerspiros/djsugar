@@ -642,15 +642,16 @@ fn fs_main(@builtin(position) frag: vec4<f32>) -> @location(0) vec4<f32> {
 
     color = mix(under_wave, color, p.trace_alpha);
 
-    // Show vocals: a thin cyan strip along the top edge where someone
-    // sings, so the waveform keeps its own colours (the Stems look shows
-    // the vocals in their own colour already).
-    if (has_track && p.vocal.w > 0.5 && p.style != 2u && !(p.style == 4u && p.stems.w > 0.5)) {
-        let strip = 3.0 * k;
-        if (y < strip + 0.5) {
+    // Vocals › Bar: a cyan bar along the bottom of the large waveform
+    // where someone sings, where the lyrics run when they show instead, so
+    // the waveform keeps its own colours.
+    if (has_track && p.mode == 0u && p.vocal.w > 0.5 && p.style != 2u) {
+        let bar = 4.0 * k;
+        let from_bottom = p.size.y - y;
+        if (from_bottom < bar + 0.5) {
             let v = vocal_at(bin);
             if (v > 0.0) {
-                color = over(color, VOCAL_CYAN, v * clamp(strip - y + 0.5, 0.0, 1.0));
+                color = over(color, VOCAL_CYAN, 0.9 * v * clamp(bar - from_bottom + 0.5, 0.0, 1.0));
             }
         }
     }

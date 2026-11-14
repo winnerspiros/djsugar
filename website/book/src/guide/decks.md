@@ -59,14 +59,17 @@ the height slider, these set how the waveforms look:
   (the default) shows as much of what has played as what is coming;
   **Left** puts it a quarter of the way in, so three quarters of the
   waveform shows what is coming next.
-- **Show vocals** (under Color, off at first) marks the sung parts with a
-  thin cyan strip along the top of the waveforms, leaving their colors as
-  they are. openDJ checks each track for vocals the first time you load it (or when it's analyzed), in the background, so the
-  strip shows up a few seconds after the waveform; after that it's there
-  straight away. Tracks with HQ stems use their vocal stem instead. It
-  hides with **Stems**, which already draws the vocals in their own color.
-- **Show lyrics** (under Needle, on at first) runs a track's timed lyrics
-  along the bottom of its large waveform.
+- **Vocals**: what runs along the bottom of the large waveforms, one at a
+  time. **Lyrics** (the default) shows a track's timed lyrics in cyan.
+  **Bar** draws a cyan bar wherever someone sings, leaving the waveform's
+  colors as they are. openDJ checks each track for vocals the first time
+  you load it (or when it's analyzed), in the background, so the bar shows
+  up a few seconds after the waveform; after that it's there straight
+  away. Tracks with HQ stems use their vocal stem instead. **Off** shows
+  neither.
+- **Phrases**: the colored phrase bar along the bottom of the overviews
+  (**Overview**), the phrase flags on the large waveforms (**Waveform**),
+  **Both** (the default) or neither (**Off**).
 
 The changes show straight away and the menu stays open, so you can try them
 out.

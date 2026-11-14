@@ -4,7 +4,7 @@
 //! is sung to when it ends. The lane itself is drawn in Slint
 //! (`LyricsLane`), scrolling with the waveform.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver};
 
 use opendj_engine::lyrics::{self, Line, Lyrics};
@@ -13,29 +13,19 @@ use slint::{ComponentHandle, Model, ModelRc, VecModel};
 
 use super::super::Browser;
 use super::store;
-use crate::{settings, AppWindow, DeckLines, WaveLine, WaveLyrics, WaveWord};
+use crate::{AppWindow, DeckLines, WaveLine, WaveLyrics, WaveWord};
 
-/// The setting: Show lyrics in the waveforms button's drop-down, on at first.
-pub const SHOWN: &str = "waveform_lyrics";
-
-/// The setting, read once (the settings file isn't read every frame) and
-/// then kept by [`set_shown`]: 0 not read yet, 1 off, 2 on.
-static SHOWN_NOW: AtomicU8 = AtomicU8::new(0);
+/// Whether the lyrics lane shows: Vocals › Lyrics in the waveforms
+/// button's drop-down (see `wave_look`, which keeps the choice).
+static SHOWN_NOW: AtomicBool = AtomicBool::new(true);
 
 pub fn shown() -> bool {
-    match SHOWN_NOW.load(Ordering::Relaxed) {
-        0 => {
-            let on = settings::flag(SHOWN, true);
-            set_shown(on);
-            on
-        }
-        n => n == 2,
-    }
+    SHOWN_NOW.load(Ordering::Relaxed)
 }
 
-/// Show lyrics, in the waveforms button's drop-down, was switched.
+/// Vocals was picked: the lyrics lane shows with Lyrics only.
 pub fn set_shown(on: bool) {
-    SHOWN_NOW.store(if on { 2 } else { 1 }, Ordering::Relaxed);
+    SHOWN_NOW.store(on, Ordering::Relaxed);
 }
 
 #[derive(Default)]

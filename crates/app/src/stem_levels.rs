@@ -18,7 +18,7 @@ pub const RATE: f64 = 100.0;
 type Found = HashMap<usize, (Weak<Stems>, Option<Arc<Levels>>)>;
 
 /// A track's stem levels and each stem's colour, and for high-quality
-/// stems the vocal stem's level for Show vocals (see
+/// stems the vocal stem's level for Vocals › Bar (see
 /// [`Stems::vocal_levels`]).
 pub struct Levels {
     pub levels: Vec<[u8; MAX_STEMS]>,

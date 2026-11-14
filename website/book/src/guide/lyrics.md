@@ -51,10 +51,11 @@ When a track on a deck has timed lyrics, they run along the bottom of its
 big waveform, scrolling with the audio, so you can see where the singing is
 and what comes next while you mix. Each word sits at the moment it is sung,
 on a faint strip for its line. The word being sung is lit and fills with
-lilac, and words already sung stay lilac. Lyrics timed only by line have
+cyan, and words already sung stay cyan. Lyrics timed only by line have
 their words spread over the line by length; [Time words](#time-words)
-places them exactly. Turn this off with **Show lyrics** in the drop-down on
-the waveforms button in the top bar.
+places them exactly. They show while **Vocals** is set
+to **Lyrics** (the default) in the drop-down on the waveforms button in the
+top bar; **Bar** shows a cyan bar where someone sings instead.
 
 ![Lyrics on a deck's waveform](../images/waveform-lyrics.png)
 

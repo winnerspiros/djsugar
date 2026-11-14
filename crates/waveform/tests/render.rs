@@ -864,8 +864,8 @@ fn draws_half_overview_from_the_bottom() {
     }
 }
 
-/// Show vocals marks the sung half of a track with a cyan strip along the
-/// top, and only while on; the waveform keeps its colours.
+/// Vocals › Bar marks the sung half of a track with a cyan bar along the
+/// bottom of the large waveform, and only while on; the overview has none.
 #[test]
 fn tints_the_sung_parts() {
     let Some((device, queue)) = gpu() else {
@@ -892,24 +892,27 @@ fn tints_the_sung_parts() {
         },
     ));
     let (w, h) = (256u32, 60u32);
-    // How cyan (green over red) a pixel is, on the strip along the top edge (row 1) or
-    // in the middle of the waveform.
+    // How cyan (green over red) a pixel is: on the bar along the bottom
+    // edge or in the middle of the waveform.
     let green = |px: &[u8], x: u32, y: u32| {
         let i = ((y * w + x) * 4) as usize;
         px[i + 1] as i32 - px[i] as i32
     };
-    for (show, style) in [
-        (false, Style::Rgb),
-        (true, Style::Rgb),
-        (true, Style::Bands),
+    for (show, style, mode) in [
+        (false, Style::Rgb, Mode::Scrolling),
+        (true, Style::Rgb, Mode::Scrolling),
+        (true, Style::Bands, Mode::Scrolling),
+        (true, Style::Stems, Mode::Scrolling),
+        (true, Style::Rgb, Mode::Overview),
     ] {
-        let mut view = WaveformView::new(&device, Mode::Overview, w, h);
+        let mut view = WaveformView::new(&device, mode, w, h);
         view.set_style(style);
         view.set_show_vocals(show);
         view.set_track(&device, &renderer, Some(&track));
+        // The scrolling view shows 0..10 s with the play line at 5 s.
         let frame = Frame {
-            play_seconds: 0.0,
-            visible_seconds: 8.0,
+            play_seconds: if mode == Mode::Scrolling { 5.0 } else { 0.0 },
+            visible_seconds: 10.0,
             duration: 10.0,
             first_bar_beat: 0.0,
             grid: steady_grid(0.0, 0.0),
@@ -923,18 +926,20 @@ fn tints_the_sung_parts() {
         };
         view.render(&device, &queue, &renderer, Some(&frame), 1.0);
         let px = read_back(&device, &queue, &view);
-        let (sung, not) = (green(&px, w * 3 / 4, 1), green(&px, w / 4, 1));
-        if show {
+        let (sung, not) = (green(&px, w * 7 / 8, h - 2), green(&px, w / 8, h - 2));
+        if show && mode == Mode::Scrolling {
             assert!(sung > not + 40, "{style:?}: sung {sung}, not {not}");
         } else {
-            assert!((sung - not).abs() < 5, "off: sung {sung}, not {not}");
+            assert!(
+                (sung - not).abs() < 5,
+                "{style:?} {mode:?}: sung {sung}, not {not}"
+            );
         }
-        // The waveform itself keeps its colours: the strip is all there is.
-        let (mid_sung, mid_not) = (green(&px, w * 3 / 4, h / 2), green(&px, w / 4, h / 2));
-        assert!(
-            (mid_sung - mid_not).abs() < 5,
-            "{style:?}: middle {mid_sung} vs {mid_not}"
-        );
+        // Nothing along the top any more, and the waveform keeps its colours.
+        for y in [1, h / 2] {
+            let (a, b) = (green(&px, w * 7 / 8, y), green(&px, w / 8, y));
+            assert!((a - b).abs() < 5, "{style:?} {mode:?} row {y}: {a} vs {b}");
+        }
     }
 }
 

@@ -22,9 +22,23 @@ pub const NEEDLE_KEY: &str = "waveform_needle";
 /// Settings › Appearance › Size follows gain, on at first: a deck's gain
 /// knob sizes its large waveform (not the overview).
 pub const GAIN_KEY: &str = "waveform_follows_gain";
-/// Show vocals, in the waveforms button's drop-down, off at first. A new key, so the
-/// earlier "waveform_show_vocals" (on by default) no longer turns it on.
-pub const VOCALS_KEY: &str = "waveform_vocal_tint";
+/// Vocals, in the waveforms button's drop-down: what runs along the bottom
+/// of the large waveforms, one of [`VOCALS_LABELS`]. Lyrics at first.
+pub const VOCALS_KEY: &str = "waveform_vocals";
+/// The switches Vocals took over: Show vocals (the cyan strip) and Show
+/// lyrics. Read once, when Vocals has never been picked.
+const OLD_BAR_KEY: &str = "waveform_vocal_tint";
+const OLD_LYRICS_KEY: &str = "waveform_lyrics";
+/// What runs along the bottom of the large waveforms, never both: nothing,
+/// a cyan bar where someone sings, or the timed lyrics.
+pub const VOCALS_LABELS: [&str; 3] = ["Off", "Bar", "Lyrics"];
+const VOCALS_BAR: u32 = 1;
+const VOCALS_LYRICS: u32 = 2;
+/// Phrases, in the waveforms button's drop-down: the overviews' phrase bar
+/// and the large waveforms' phrase flags, each kept under its own key.
+pub const PHRASES_LABELS: [&str; 4] = ["Off", "Overview", "Waveform", "Both"];
+const PHRASE_BAR_KEY: &str = "phrases_visible";
+const PHRASE_FLAGS_KEY: &str = "phrase_flags_visible";
 
 /// The color schemes, in the drop-down's order.
 pub const COLOR_LABELS: [&str; 3] = ["RGB", "3-Band", "Stems"];
@@ -44,7 +58,7 @@ static HALF: AtomicU32 = AtomicU32::new(0);
 static NEEDLE: AtomicU32 = AtomicU32::new(0);
 static VERSION: AtomicU32 = AtomicU32::new(1);
 static GAIN: AtomicU32 = AtomicU32::new(1);
-static VOCALS: AtomicU32 = AtomicU32::new(0);
+static VOCALS: AtomicU32 = AtomicU32::new(VOCALS_LYRICS);
 
 /// Reads the saved choices; called once at start.
 pub fn load() {
@@ -55,7 +69,8 @@ pub fn load() {
     HALF.store(read(HALF_KEY, SHAPE_LABELS.len()), Ordering::Relaxed);
     NEEDLE.store(read(NEEDLE_KEY, NEEDLE_AT.len()), Ordering::Relaxed);
     GAIN.store(settings::flag(GAIN_KEY, true) as u32, Ordering::Relaxed);
-    VOCALS.store(settings::flag(VOCALS_KEY, false) as u32, Ordering::Relaxed);
+    VOCALS.store(saved_vocals(), Ordering::Relaxed);
+    crate::browser::set_wave_lyrics(vocals() == VOCALS_LYRICS as usize);
     VERSION.fetch_add(1, Ordering::Relaxed);
 }
 
@@ -64,6 +79,28 @@ fn pick(cell: &AtomicU32, key: &str, index: usize, len: usize) {
     cell.store(i, Ordering::Relaxed);
     settings::set(key, serde_json::json!(i));
     VERSION.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Vocals as saved, or from the two switches it replaced: the bar if Show
+/// vocals was on (it was off at first), else the lyrics unless Show lyrics
+/// was switched off.
+fn saved_vocals() -> u32 {
+    let saved = settings::load();
+    if let Some(n) = saved[VOCALS_KEY].as_u64() {
+        return (n as usize).min(VOCALS_LABELS.len() - 1) as u32;
+    }
+    vocals_from_switches(
+        saved[OLD_BAR_KEY].as_bool().unwrap_or(false),
+        saved[OLD_LYRICS_KEY].as_bool().unwrap_or(true),
+    )
+}
+
+fn vocals_from_switches(bar: bool, lyrics: bool) -> u32 {
+    match (bar, lyrics) {
+        (true, _) => VOCALS_BAR,
+        (false, true) => VOCALS_LYRICS,
+        (false, false) => 0,
+    }
 }
 
 /// The drop-down's scheme for a saved value: RGB for anything unknown,
@@ -100,15 +137,29 @@ pub fn follows_gain() -> bool {
     GAIN.load(Ordering::Relaxed) == 1
 }
 
-/// Show vocals was switched; saved by the caller.
-pub fn set_show_vocals(on: bool) {
-    VOCALS.store(on as u32, Ordering::Relaxed);
+/// Picks what runs along the bottom of the large waveforms, and saves it.
+pub fn choose_vocals(index: usize) {
+    let i = index.min(VOCALS_LABELS.len() - 1) as u32;
+    VOCALS.store(i, Ordering::Relaxed);
+    settings::set(VOCALS_KEY, serde_json::json!(i));
+    crate::browser::set_wave_lyrics(i == VOCALS_LYRICS);
     VERSION.fetch_add(1, Ordering::Relaxed);
 }
 
-/// Whether the waveforms mark the sung parts with a cyan strip.
+/// Which of [`VOCALS_LABELS`] is in use.
+pub fn vocals() -> usize {
+    VOCALS.load(Ordering::Relaxed) as usize
+}
+
+/// Whether the large waveforms mark the sung parts with a cyan bar.
 pub fn show_vocals() -> bool {
-    VOCALS.load(Ordering::Relaxed) == 1
+    VOCALS.load(Ordering::Relaxed) == VOCALS_BAR
+}
+
+/// Which of [`PHRASES_LABELS`] the overviews' phrase bar and the large
+/// waveforms' flags make.
+fn phrases_index(bar: bool, flags: bool) -> usize {
+    bar as usize + 2 * flags as usize
 }
 
 /// How tall a deck's waveforms are drawn for its gain knob (1 at the
@@ -165,17 +216,25 @@ pub fn install(app: &crate::AppWindow) {
     let a = after.clone();
     ui.on_pick_needle_left(move |left| a(&|| choose_needle(left as usize)));
     let a = after.clone();
-    ui.on_pick_vocals(move |on| {
-        a(&|| {
-            settings::set(VOCALS_KEY, serde_json::json!(on));
-            set_show_vocals(on);
-        })
-    });
-    ui.on_pick_lyrics(move |on| {
-        after(&|| {
-            settings::set(crate::browser::WAVE_LYRICS, serde_json::json!(on));
-            crate::browser::set_wave_lyrics(on);
-        })
+    ui.on_pick_vocals(move |i| a(&|| choose_vocals(i.max(0) as usize)));
+    // Phrases: the overviews' bar and the large waveforms' flags.
+    let phrases = app.global::<crate::PhraseView>();
+    phrases.set_visible(settings::flag(PHRASE_BAR_KEY, true));
+    phrases.set_waveform_visible(settings::flag(PHRASE_FLAGS_KEY, true));
+    ui.set_phrases(phrases_index(phrases.get_visible(), phrases.get_waveform_visible()) as i32);
+    let weak = app.as_weak();
+    ui.on_pick_phrases(move |i| {
+        let i = (i.max(0) as usize).min(PHRASES_LABELS.len() - 1);
+        let (bar, flags) = (i & 1 == 1, i & 2 == 2);
+        settings::set(PHRASE_BAR_KEY, serde_json::json!(bar));
+        settings::set(PHRASE_FLAGS_KEY, serde_json::json!(flags));
+        if let Some(app) = weak.upgrade() {
+            let phrases = app.global::<crate::PhraseView>();
+            phrases.set_visible(bar);
+            phrases.set_waveform_visible(flags);
+            app.global::<crate::WaveLook>().set_phrases(i as i32);
+            app.window().request_redraw();
+        }
     });
 }
 
@@ -184,8 +243,7 @@ fn show(ui: &crate::WaveLook) {
     ui.set_palette(palette_index() as i32);
     ui.set_half(half());
     ui.set_needle(needle());
-    ui.set_vocals(show_vocals());
-    ui.set_lyrics(crate::browser::wave_lyrics_shown());
+    ui.set_vocals(vocals() as i32);
 }
 
 /// Changes whenever a choice does.
@@ -248,6 +306,23 @@ mod tests {
         NEEDLE.store(7, Ordering::Relaxed);
         assert_eq!(needle(), 0.25);
         NEEDLE.store(0, Ordering::Relaxed);
+    }
+
+    #[test]
+    fn vocals_come_from_the_old_switches() {
+        // Show vocals on wins: the bar and the lyrics never show together.
+        assert_eq!(vocals_from_switches(true, true), VOCALS_BAR);
+        assert_eq!(vocals_from_switches(true, false), VOCALS_BAR);
+        assert_eq!(vocals_from_switches(false, true), VOCALS_LYRICS);
+        assert_eq!(vocals_from_switches(false, false), 0);
+    }
+
+    #[test]
+    fn phrases_pick_bar_flags_or_both() {
+        assert_eq!(PHRASES_LABELS[phrases_index(false, false)], "Off");
+        assert_eq!(PHRASES_LABELS[phrases_index(true, false)], "Overview");
+        assert_eq!(PHRASES_LABELS[phrases_index(false, true)], "Waveform");
+        assert_eq!(PHRASES_LABELS[phrases_index(true, true)], "Both");
     }
 
     #[test]

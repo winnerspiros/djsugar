@@ -103,7 +103,7 @@ export struct DeckLines {
 
 // The lyrics along the bottom of each deck's big waveform.
 export global WaveLyrics {
-    // Show lyrics, in the waveforms button's drop-down.
+    // Vocals › Lyrics, in the waveforms button's drop-down.
     in property <bool> shown: true;
     // Deck 1 first; a deck with no timed lyrics has no lines.
     in property <[DeckLines]> decks;
@@ -123,12 +123,14 @@ export global WaveLyrics {
 
 // The lyrics lane along the bottom of a big waveform, scrolling with the
 // audio: each line a faint strip from when it is sung to when it ends, and
-// each word a chip at its own time. Words already sung are lilac; the word
-// being sung is lit and fills with lilac as it is sung. Everything sits on
+// each word a chip at its own time. Words already sung are cyan; the word
+// being sung is lit and fills with cyan as it is sung. Everything sits on
 // whole physical pixels, moved together by the playhead, so the words don't
 // shimmer and step no more than a screen pixel at a time.
 export component LyricsLane inherits Rectangle {
     in property <[WaveLine]> lines;
+    // The vocals' cyan, as Vocals › Bar draws them.
+    property <color> cyan: #3FD4EE;
     // Seconds into the track at the playhead, and seconds across the width.
     in property <float> now;
     in property <float> visible-seconds: 10;
@@ -148,7 +150,7 @@ export component LyricsLane inherits Rectangle {
         height: parent.height - 4px;
         visible: self.x < parent.width && self.x + self.width > 0;
         border-radius: 3px;
-        background: now >= line.start && now < line.end ? Theme.accent.with-alpha(0.10) : Theme.n-ffffff08;
+        background: now >= line.start && now < line.end ? root.cyan.with-alpha(0.10) : Theme.n-ffffff08;
         for word in line.words: chip := Rectangle {
             property <bool> sung: now >= word.end;
             property <bool> singing: now >= word.start && now < word.end;
@@ -156,16 +158,16 @@ export component LyricsLane inherits Rectangle {
             width: max(3, round(word.end * per-second) - round(word.start * per-second) - 1) * 1px;
             border-radius: 2px;
             clip: true;
-            background: singing ? Theme.accent.with-alpha(0.38) : sung ? Theme.accent.with-alpha(0.14) : Theme.n-ffffff1e;
+            background: singing ? root.cyan.with-alpha(0.38) : sung ? root.cyan.with-alpha(0.14) : Theme.n-ffffff1e;
             label := Text {
                 x: 3px;
                 text: word.text;
-                color: sung ? Theme.lilac-text : singing ? Theme.text : Theme.text-dim;
+                color: sung ? root.cyan : singing ? Theme.text : Theme.text-dim;
                 font-size: 10px;
                 font-weight: 600;
                 vertical-alignment: center;
             }
-            // The part of the word being sung, drawn over in lilac.
+            // The part of the word being sung, drawn over in cyan.
             if singing: Rectangle {
                 x: 0;
                 width: round(3 + label.preferred-width / 1px * clamp((now - word.start) / max(word.end - word.start, 0.01), 0, 1)) * 1px;
@@ -173,7 +175,7 @@ export component LyricsLane inherits Rectangle {
                 Text {
                     x: 3px;
                     text: word.text;
-                    color: Theme.lilac-text;
+                    color: root.cyan;
                     font-size: 10px;
                     font-weight: 600;
                     vertical-alignment: center;
