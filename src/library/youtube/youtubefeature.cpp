@@ -1618,8 +1618,6 @@ void YouTubeFeature::onDownloadFinished(
         }
         m_pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
     }
-    // The local list shows the download at once, not after a restart
-    QTimer::singleShot(0, m_pLibrary, &Library::slotRefreshLibraryModels);
     if (!pTrack) {
         kLogger.warning() << "Could not add downloaded track to library:"
                           << localPath;
@@ -1647,6 +1645,12 @@ void YouTubeFeature::onDownloadFinished(
             pTrack->setCoverInfo(coverInfo);
         }
     }
+    // The file has no tags: the title and artist set above were only in
+    // memory, the library row (what the list shows and searches) got them
+    // when the track was let go, at the latest on quitting. Saved now, the
+    // list shows and finds the download at once
+    m_pLibrary->trackCollectionManager()->saveTrack(pTrack);
+    QTimer::singleShot(0, m_pLibrary, &Library::slotRefreshLibraryModels);
     // Genre: YouTube only knows "Music", so look the song up in the iTunes
     // and Deezer catalogues. The genre of the search query ("frenchcore
     // 2024") is the fallback when neither knows the song.
