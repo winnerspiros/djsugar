@@ -3202,7 +3202,12 @@ void YouTubeService::runYtDlp(const QStringList& args,
         onFailure(tr("yt-dlp not available"));
         return;
     }
-
+#if !QT_CONFIG(process) // iOS: apps cannot spawn processes
+    Q_UNUSED(args);
+    Q_UNUSED(timeoutMs);
+    Q_UNUSED(onSuccess);
+    onFailure(tr("yt-dlp not available"));
+#else
     auto* proc = new QProcess(this);
     proc->setProcessChannelMode(QProcess::SeparateChannels);
 
@@ -3254,6 +3259,7 @@ void YouTubeService::runYtDlp(const QStringList& args,
 
     watchdog->start();
     proc->start(m_ytDlpPath, args);
+#endif
 }
 
 void YouTubeService::searchViaYtDlp(const QString& query, int cap) {

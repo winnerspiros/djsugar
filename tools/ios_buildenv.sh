@@ -39,9 +39,9 @@ HOST_ARCH=$(uname -m)  # One of x86_64, arm64
 # release-only libraries, Qt without ICU and with only the Basic and Fusion
 # Quick Controls styles.
 VCPKG_TARGET_TRIPLET="arm64-ios-release"
-BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-ios-rel-a5313793"
+BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-ios-rel-9f5c0802"
 BUILDENV_TAG="${BUILDENV_NAME}"
-BUILDENV_SHA256="7df91633fec93cce18716b60d80da162ee0ad38361058916a9500a698d08ea12"
+BUILDENV_SHA256="30518297258de1d63a01ee4297ccfdbbc1de7d1e6c99ef71907920d62c4cb631"
 
 # Host triplet for build tools (moc, rcc, etc.) when cross-compiling for iOS
 # On Intel macOS runners, use x64-osx-min1100-release
