@@ -21,9 +21,9 @@ constexpr double kMaxUserSeconds = 4.0;
 
 const char* const kNamePrefixes[kInstruments] = {"kick", "snare", "clap", "hat"};
 // Bank 1: the app's own drum samples, in res/samples. The kick has a
-// click: kick.ogg is nearly all below 150 Hz, which phone speakers drop
+// click: kick.opus is nearly all below 150 Hz, which phone speakers drop
 const char* const kFactoryFiles[kInstruments] = {
-        "hardstyle-kick.ogg", "snare.ogg", "clap.ogg", "hi-hat.ogg"};
+        "hardstyle-kick.opus", "snare.opus", "clap.opus", "hi-hat.opus"};
 
 /// Decodes a sound file into stereo, at most kMaxUserSeconds long
 Instrument decode(const QString& path) {

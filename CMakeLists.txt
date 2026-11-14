@@ -2773,6 +2773,7 @@ if(ANDROID)
     RELATIVE "${CMAKE_SOURCE_DIR}/res/samples"
     "${CMAKE_SOURCE_DIR}/res/samples/*.wav"
     "${CMAKE_SOURCE_DIR}/res/samples/*.ogg"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.opus"
     "${CMAKE_SOURCE_DIR}/res/samples/*.mp3"
     "${CMAKE_SOURCE_DIR}/res/samples/*.flac"
   )
@@ -3093,6 +3094,8 @@ install(
   DESTINATION "${MIXXX_INSTALL_DATADIR}/samples"
   FILES_MATCHING
   PATTERN "*.ogg"
+  PATTERN "*.opus"
+  PATTERN "*.mp3"
   PATTERN "*.wav"
   PATTERN "*.aiff"
   PATTERN "README.md"

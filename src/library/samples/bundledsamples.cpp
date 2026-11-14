@@ -21,6 +21,7 @@ const QStringList kSampleFilters = {
         QStringLiteral("*.aiff"),
         QStringLiteral("*.m4a"),
         QStringLiteral("*.ogg"),
+        QStringLiteral("*.opus"),
         QStringLiteral("*.flac"),
 };
 
@@ -193,13 +194,14 @@ QStringList defaultSamplerKit(const UserSettingsPointer& pConfig) {
             QStringLiteral("djsugar/10_downlifter.ogg"),
             QStringLiteral("djsugar/11_sub_drop.ogg"),
             QStringLiteral("djsugar/16_noise_sweep.ogg"),
-            QStringLiteral("dj-scratch.ogg"),
+            QStringLiteral("dj-scratch.opus"),
             QStringLiteral("djsugar/15_vinyl_stop.ogg"),
             QStringLiteral("djsugar/17_siren.ogg"),
     };
     QStringList files;
     for (const auto& name : kit) {
-        const QString path = dir + name;
+        // Resolves a sample that was re-encoded to another format
+        const QString path = currentBundledSample(dir + name);
         files.append(QFile::exists(path) ? path : QString());
     }
     return files;
