@@ -348,6 +348,7 @@ void YouTubeAccount::signOut() {
     m_name.clear();
     m_continuation.clear();
     ++m_generation;
+    clearRequestsInFlight();
     emit accountChanged();
 }
 
@@ -431,17 +432,26 @@ void YouTubeAccount::post(const QString& endpoint,
                                 .toInt();
                 if (status == 401 || status == 403) {
                     kLogger.warning() << endpoint << "refused the sign-in:" << status;
+                    clearRequestsInFlight();
                     signOut();
                     emit failed(tr("YouTube wants a new sign-in"));
                     return;
                 }
                 if (pReply->error() != QNetworkReply::NoError) {
                     kLogger.warning() << endpoint << "failed:" << status << pReply->errorString();
+                    // Asked again, a failed request runs again
+                    clearRequestsInFlight();
                     emit failed(pReply->errorString());
                     return;
                 }
                 done(QJsonDocument::fromJson(pReply->readAll()).object());
             });
+}
+
+void YouTubeAccount::clearRequestsInFlight() {
+    m_listInFlight.clear();
+    m_playlistsInFlight = false;
+    m_accountsInFlight = false;
 }
 
 void YouTubeAccount::fetchName() {
@@ -477,11 +487,16 @@ void YouTubeAccount::fetchName() {
 }
 
 void YouTubeAccount::openList(const QString& list) {
+    const QString id = list == QStringLiteral("liked") ? QStringLiteral("VLLM") : list;
+    if (id == m_listInFlight) {
+        // Already asked for: its answer goes to every view
+        return;
+    }
     // Only the newest list's pages count (the playlists and channels
     // asked for meanwhile still arrive)
     const quint64 listGeneration = ++m_listGeneration;
     m_continuation.clear();
-    const QString id = list == QStringLiteral("liked") ? QStringLiteral("VLLM") : list;
+    m_listInFlight = id;
     kLogger.info() << "Opening" << id;
     post(QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("browseId"), id}},
@@ -489,6 +504,7 @@ void YouTubeAccount::openList(const QString& list) {
                 if (listGeneration != m_listGeneration) {
                     return;
                 }
+                m_listInFlight.clear();
                 m_continuation = continuation(page);
                 const QList<YouTubeVideoInfo> list = tracks(page);
                 kLogger.info() << id << "answered" << list.size() << "tracks, signed in:"
@@ -552,6 +568,10 @@ void YouTubeAccount::more() {
 }
 
 void YouTubeAccount::fetchPlaylists() {
+    if (m_playlistsInFlight) {
+        return;
+    }
+    m_playlistsInFlight = true;
     post(QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("browseId"), QStringLiteral("FEmusic_liked_playlists")}},
             [this](const QJsonObject& page) {
@@ -596,6 +616,7 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
     });
     const QString token = continuation(page);
     if (token.isEmpty() || pages >= kMaxPlaylistPages) {
+        m_playlistsInFlight = false;
         kLogger.info() << "Playlists:" << playlists.size();
         if (playlists.isEmpty() && pages == 1) {
             kLogger.info() << "Library page" << pageOutline(page);
@@ -611,7 +632,12 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
 }
 
 void YouTubeAccount::fetchAccounts() {
+    if (m_accountsInFlight) {
+        return;
+    }
+    m_accountsInFlight = true;
     post(QStringLiteral("account/accounts_list"), {}, [this](const QJsonObject& page) {
+        m_accountsInFlight = false;
         QVariantList accounts;
         walk(page, [this, &accounts](const QJsonObject& object) {
             const QJsonObject item = object.value(QStringLiteral("accountItem")).toObject();
@@ -683,6 +709,7 @@ void YouTubeAccount::selectAccount(const QString& pageId, const QString& name) {
     m_name = name;
     m_continuation.clear();
     ++m_generation;
+    clearRequestsInFlight();
     save();
     emit accountChanged();
 }

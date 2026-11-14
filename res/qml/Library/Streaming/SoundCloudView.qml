@@ -374,7 +374,9 @@ Item {
             currentIndex: -1
             highlightFollowsCurrentItem: true
             highlightMoveDuration: 0
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
 
             highlight: Rectangle {
                 z: 2
