@@ -1707,7 +1707,9 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
     m_videoIdsDownloading.remove(videoId);
     pumpDownloadQueue();
     int& retries = m_downloadRetryCount[videoId];
-    if (retries < kMaxDownloadRetries) {
+    // Offline a retry fails the same: the user starts it again when online
+    const bool offline = error == tr("No internet connection");
+    if (retries < kMaxDownloadRetries && !offline) {
         retries++;
         kLogger.info() << "YouTube download failed for" << videoId << ":" << error
                        << "— retrying (attempt" << retries + 1 << ")";
@@ -1718,12 +1720,12 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
         return;
     }
     // Exhausted retries — give up and clean up pending state.
+    const int attempts = retries + 1;
     m_downloadRetryCount.remove(videoId);
     m_pendingPlayerLoads.remove(videoId);
     m_pendingAutoDjLoads.remove(videoId);
     kLogger.warning() << "YouTube download failed for" << videoId
-                      << "after" << kMaxDownloadRetries + 1
-                      << "attempts:" << error;
+                      << "after" << attempts << "attempts:" << error;
 }
 
 QHash<QString, QVariantMap> YouTubeFeature::libraryInfoForResults(

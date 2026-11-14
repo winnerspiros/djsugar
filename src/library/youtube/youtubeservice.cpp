@@ -730,6 +730,25 @@ struct ParsedSearchPage {
 /// Parses `body` off the UI thread, then calls `done` on it. `done` checks
 /// itself that its receiver still exists.
 /// The device has no connection (not one server or client failing)
+// When the device last had no connection (ms since epoch, 0: online).
+// Background work (link prefetch, download fallbacks) stops while offline:
+// each of its yt-dlp runs otherwise retried and failed for seconds
+static std::atomic<qint64> s_offlineAtMs{0};
+constexpr qint64 kOfflineHoldMs = 15000;
+
+static void markOffline() {
+    s_offlineAtMs = QDateTime::currentMSecsSinceEpoch();
+}
+
+static void markOnline() {
+    s_offlineAtMs = 0;
+}
+
+[[maybe_unused]] static bool likelyOffline() {
+    const qint64 at = s_offlineAtMs;
+    return at != 0 && QDateTime::currentMSecsSinceEpoch() - at < kOfflineHoldMs;
+}
+
 static bool isOfflineError(QNetworkReply::NetworkError error) {
     switch (error) {
     case QNetworkReply::HostNotFoundError:
@@ -1576,6 +1595,7 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                         return;
                     }
                     if (httpStatus == 0 && isOfflineError(reply->error())) {
+                        markOffline();
                         // No connection: every other client fails the same
                         kLogger.warning() << "InnerTube search: no connection,"
                                           << reply->errorString();
@@ -1649,6 +1669,7 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                             // back by a round trip per page (~0.6 s each on mobile).
                             Q_UNUSED(minResults);
                             Q_UNUSED(clientIdx);
+                            markOnline();
                             kLogger.info() << "InnerTube search answered in"
                                            << searchTimer.elapsed() << "ms,"
                                            << rawBody.size() / 1024 << "KB";
@@ -2669,6 +2690,9 @@ void YouTubeService::downloadAudioStreamChunked(
                         }
                         state->failed = true;
                         state->error = reply->errorString();
+                        if (isOfflineError(reply->error())) {
+                            markOffline();
+                        }
                     }
 
                     if (--state->remaining == 0) {
@@ -2697,6 +2721,7 @@ void YouTubeService::downloadAudioStreamChunked(
                         delete outFile;
                         const qint64 tookMs = std::max<qint64>(
                                 1, QDateTime::currentMSecsSinceEpoch() - chunkedStartMs);
+                        markOnline();
                         kLogger.info()
                                 << "Chunked download completed:" << videoId << "→"
                                 << outPath << contentLength / 1024 << "KB in" << tookMs
@@ -3798,7 +3823,11 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
                 QString id;
                 {
                     QMutexLocker lock(&s_queueMutex);
-                    if (!ready || s_queue.isEmpty()) {
+                    if (!ready || s_queue.isEmpty() || likelyOffline()) {
+                        // Offline: the links are fetched with the next search
+                        if (likelyOffline()) {
+                            s_queue.clear();
+                        }
                         --s_workers;
                         return;
                     }
@@ -3924,6 +3953,15 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                                                 << "[Android] direct download failed for"
                                                 << videoId << ":" << error
                                                 << "- downloading with yt-dlp";
+                                        if (likelyOffline()) {
+                                            // yt-dlp would fail the same,
+                                            // after seconds of retries
+                                            if (guard) {
+                                                Q_EMIT guard->downloadFailed(videoId,
+                                                        tr("No internet connection"));
+                                            }
+                                            return;
+                                        }
                                         markDirectDownloadFailed(videoId);
                                         forgetStreamLink(videoId);
                                         if (guard) {
