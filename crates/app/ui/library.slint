@@ -4925,7 +4925,9 @@ component TrackList inherits Rectangle {
                             height: row-height - 8px;
                             source: r.wave;
                             image-fit: fill;
-                            colorize: selected ? Theme.on-row-selection : (r.available && !r.missing && !r.fade) ? Theme.lilac : Theme.text-dim;
+                            // Its own colors (lilac shades or full color), except as a mask in one color on the
+                            // selection and for tracks that can't play.
+                            colorize: selected ? Theme.on-row-selection : (r.available && !r.missing && !r.fade) ? transparent : Theme.text-dim;
                         }
                         if col.kind == 0 || col.kind == 4 || col.kind == 5: Text {
                             width: 100%;

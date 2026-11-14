@@ -1546,6 +1546,18 @@ impl Prefs {
                         chosen: settings::track_color().unwrap_or(0) as i32,
                         ..item("track_color", TRACK_COLOR, "Track color", "")
                     },
+                    PrefItem {
+                        choices: strings(&crate::waves::STYLES),
+                        chosen: crate::waves::style() as i32,
+                        ..item(
+                            crate::waves::STYLE_KEY,
+                            MENU,
+                            "List waveforms",
+                            "The small waveforms in the track list: shades of lilac, \
+                             or the full color of the deck waveforms (red lows, amber \
+                             mids, blue highs).",
+                        )
+                    },
                 ]);
                 items
             }
@@ -2972,6 +2984,7 @@ impl Prefs {
                 settings::set("key_match_on_load", json!(index.min(2)));
                 self.set("[Controls]", "key_match_on_load", index.min(2) as f64);
             }
+            crate::waves::STYLE_KEY => crate::waves::choose_style(index),
             "track_color" => {
                 if let Some(app) = self.app.upgrade() {
                     app.global::<crate::ColumnUi>()

@@ -81,8 +81,10 @@ impl Waveform {
 
     /// The whole track in `slices` slices, each the loudest peak and the
     /// mean RMS of its part of the finest level, on the same square-root
-    /// scale: what the library draws as a track's mini waveform. Empty
-    /// when the track isn't analysed.
+    /// scale, then the mids' and the highs' shares of its power (0 to 255;
+    /// the bass has the rest): what the library draws as a track's mini
+    /// waveform, shaded by its sound as the deck waveforms are.
+    /// Empty when the track isn't analysed.
     pub fn overview(&self, slices: usize) -> Vec<OverviewSlice> {
         let Some(finest) = self.levels.first().filter(|l| !l.is_empty()) else {
             return Vec::new();
@@ -95,15 +97,30 @@ impl Waveform {
                 let part = &finest[from.min(finest.len() - 1)..to.min(finest.len())];
                 let peak = part.iter().map(|b| b[3]).max().unwrap_or(0);
                 let mean = part.iter().map(|b| power(b[7])).sum::<f32>() / part.len() as f32;
-                [peak, (mean.sqrt().sqrt() * 255.0).round() as u8]
+                let band = |k: usize| part.iter().map(|b| power(b[k])).sum::<f32>();
+                let (low, mid, high) = (band(4), band(5), band(6));
+                let all = low + mid + high;
+                let share = |p: f32| {
+                    if all > 0.0 {
+                        (p / all * 255.0).round() as u8
+                    } else {
+                        85
+                    }
+                };
+                [
+                    peak,
+                    (mean.sqrt().sqrt() * 255.0).round() as u8,
+                    share(mid),
+                    share(high),
+                ]
             })
             .collect()
     }
 }
 
-/// One slice of a track's overview: its peak, then its RMS (see
-/// [`Waveform::overview`]).
-pub type OverviewSlice = [u8; 2];
+/// One slice of a track's overview: its peak, its RMS, then the mids' and
+/// the highs' shares of its power (see [`Waveform::overview`]).
+pub type OverviewSlice = [u8; 4];
 
 /// Where a track's audio comes from.
 #[derive(Clone, Debug)]

@@ -7,6 +7,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
 
@@ -17,6 +18,40 @@ use opendj_engine::{OverviewSlice, Source, Track, Waveform};
 /// for a row on a HiDPI screen. The list stretches it to the column.
 const WIDTH: usize = OVERVIEW_SLICES;
 const HEIGHT: usize = 44;
+
+/// How the mini waveforms are colored (Settings › Appearance): 0 in
+/// shades of lilac, 1 in the deck waveforms' full color.
+pub const STYLE_KEY: &str = "list_wave_color";
+pub const STYLES: [&str; 2] = ["Lilac shades", "Full color"];
+/// The style chosen, read from the settings when first asked for.
+static STYLE: AtomicU8 = AtomicU8::new(u8::MAX);
+/// Set when the style changes, so the rows in view are drawn again.
+static RESTYLED: AtomicBool = AtomicBool::new(false);
+
+/// The style chosen: an index into [`STYLES`].
+pub fn style() -> usize {
+    match STYLE.load(Ordering::Relaxed) {
+        u8::MAX => {
+            let s = (crate::settings::number(STYLE_KEY, 0.0).max(0.0) as u8).min(1);
+            STYLE.store(s, Ordering::Relaxed);
+            s as usize
+        }
+        s => s as usize,
+    }
+}
+
+/// Chooses a style and has the rows in view redrawn in it.
+pub fn choose_style(index: usize) {
+    let s = index.min(STYLES.len() - 1) as u8;
+    crate::settings::set(STYLE_KEY, serde_json::json!(s));
+    STYLE.store(s, Ordering::Relaxed);
+    RESTYLED.store(true, Ordering::Relaxed);
+}
+
+/// True once after the style changed.
+pub fn take_restyled() -> bool {
+    RESTYLED.swap(false, Ordering::Relaxed)
+}
 
 pub struct Waves {
     requests: Sender<PathBuf>,
@@ -66,7 +101,7 @@ impl Waves {
         };
         let mut overviews = self.overviews.borrow_mut();
         match overviews.get(path) {
-            Some(o) => o.as_deref().map(image),
+            Some(o) => o.as_deref().map(|o| image(o, style() == 1)),
             None => {
                 overviews.insert(path.clone(), None);
                 let _ = self.requests.send(path.clone());
@@ -129,9 +164,46 @@ impl Waves {
     }
 }
 
-/// Draws an overview as a waveform mirrored about its middle, in white
-/// with the opacity saying how loud: the list colours it.
-fn image(overview: &[OverviewSlice]) -> slint::Image {
+/// The lilac shades a slice is drawn in by its tone: deep where the bass
+/// leads, the brand lilac (#B69CFF) for mids, pale where the highs lead,
+/// as the deck waveforms color red, amber and blue.
+const DEEP: [f32; 3] = [122.0, 92.0, 214.0]; // #7A5CD6
+const LILAC: [f32; 3] = [182.0, 156.0, 255.0]; // #B69CFF
+const PALE: [f32; 3] = [232.0, 224.0, 255.0]; // #E8E0FF
+
+/// The deck waveforms' colors for the lows, mids and highs.
+const LOW: [f32; 3] = [1.0, 0.22, 0.16];
+const MID: [f32; 3] = [1.0, 0.72, 0.12];
+const HIGH: [f32; 3] = [0.30, 0.62, 1.0];
+
+/// The full color for a slice, mixed as the deck waveforms mix it: each
+/// band's color by its share of the power, brought up to full brightness.
+fn full(mid: u8, high: u8) -> [f32; 3] {
+    let (mid, high) = (mid as f32 / 255.0, high as f32 / 255.0);
+    let low = (1.0 - mid - high).max(0.0);
+    let c: [f32; 3] = std::array::from_fn(|i| low * LOW[i] + mid * MID[i] + high * HIGH[i]);
+    let top = c[0].max(c[1]).max(c[2]).max(0.35);
+    c.map(|v| (v / top).min(1.0) * 255.0)
+}
+
+/// The shade for a slice whose mids and highs have these shares of its
+/// power (0 to 255): its tone runs from 0 (all bass) through a half (all
+/// mids) to 1 (all highs).
+fn shade(mid: u8, high: u8) -> [f32; 3] {
+    let t = ((0.5 * mid as f32 + high as f32) / 255.0).clamp(0.0, 1.0);
+    let (from, to, k) = if t < 0.5 {
+        (DEEP, LILAC, t * 2.0)
+    } else {
+        (LILAC, PALE, (t - 0.5) * 2.0)
+    };
+    std::array::from_fn(|i| from[i] + (to[i] - from[i]) * k)
+}
+
+/// Draws an overview as a waveform mirrored about its middle, each column
+/// in its lilac shade (or, `in_full`, its full color), a touch brighter
+/// towards the centre. Rows that color it (the selection, missing
+/// tracks) use it as a mask.
+fn image(overview: &[OverviewSlice], in_full: bool) -> slint::Image {
     let mut pixels =
         slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(WIDTH as u32, HEIGHT as u32);
     let buf = pixels.make_mut_slice();
@@ -142,7 +214,12 @@ fn image(overview: &[OverviewSlice]) -> slint::Image {
         // hold square roots of the levels, so they're squared first;
         // doubling the stored value instead would fill loud tracks to the
         // edges as flat blocks.
-        let [peak, rms] = overview[x * overview.len() / WIDTH];
+        let [peak, rms, mid, high] = overview[x * overview.len() / WIDTH];
+        let color = if in_full {
+            full(mid, high)
+        } else {
+            shade(mid, high)
+        };
         let linear = |b: u8| (b as f32 / 255.0).powi(2);
         let body = (2.0 * linear(rms)).min(linear(peak));
         let rms = body.powf(0.8) * 0.94 * half;
@@ -152,10 +229,12 @@ fn image(overview: &[OverviewSlice]) -> slint::Image {
             let d = (y as f32 + 0.5 - half).abs() - 0.5;
             let cover = |reach: f32| (reach - d).clamp(0.0, 1.0);
             let a = cover(rms.max(0.5));
+            let lift = 0.88 + 0.12 * (1.0 - d / rms.max(1.0)).clamp(0.0, 1.0);
+            let c = |i: usize| (color[i] * lift).round().clamp(0.0, 255.0) as u8;
             buf[y * WIDTH + x] = slint::Rgba8Pixel {
-                r: 255,
-                g: 255,
-                b: 255,
+                r: c(0),
+                g: c(1),
+                b: c(2),
                 a: (a * 255.0).round() as u8,
             };
         }
@@ -181,22 +260,22 @@ mod tests {
         assert!(waves.learn(&t));
         assert!(!waves.learn(&t), "the same waveform isn't taken twice");
         let half = waves.overviews.borrow()[&PathBuf::from("/music/a.wav")].clone();
-        assert_eq!(half.unwrap()[OVERVIEW_SLICES - 1], [0, 0]);
+        assert_eq!(half.unwrap()[OVERVIEW_SLICES - 1][..2], [0, 0]);
         // Finished: the row shows the whole track.
         bins.fill([200; 8]);
         t.waveform = Arc::new(Waveform::from_finest(1000.0, bins));
         assert!(waves.learn(&t));
         assert!(waves.get(&t).is_some());
         let full = waves.overviews.borrow()[&PathBuf::from("/music/a.wav")].clone();
-        assert_eq!(full.unwrap()[OVERVIEW_SLICES - 1], [200, 200]);
+        assert_eq!(full.unwrap()[OVERVIEW_SLICES - 1][..2], [200, 200]);
     }
 
     #[test]
     fn draws_the_body_about_the_middle() {
-        let quiet = [[0u8, 0]; 4];
-        let loud = [[255u8, 128]; 4];
+        let quiet = [[0u8, 0, 255, 0]; 4];
+        let loud = [[255u8, 128, 255, 0]; 4];
         let alpha = |o: &[OverviewSlice], y: usize| {
-            let img = image(o);
+            let img = image(o, false);
             let buf = img.to_rgba8().unwrap();
             buf.as_slice()[y * WIDTH].a
         };
@@ -208,8 +287,43 @@ mod tests {
         assert_eq!(alpha(&loud, 0), 0);
         assert_eq!(alpha(&loud, 1), alpha(&loud, HEIGHT - 2));
         // Even a track as loud as can be keeps a margin: no flat blocks.
-        let loudest = [[255u8, 255]; 4];
+        let loudest = [[255u8, 255, 255, 0]; 4];
         assert_eq!(alpha(&loudest, 0), 0);
         assert_eq!(alpha(&loudest, HEIGHT - 1), 0);
+    }
+
+    #[test]
+    fn shades_follow_the_tone() {
+        let color = |(mid, high): (u8, u8)| {
+            let img = image(&[[255u8, 128, mid, high]; 4], false);
+            let buf = img.to_rgba8().unwrap();
+            let p = buf.as_slice()[HEIGHT / 2 * WIDTH];
+            (p.r, p.g, p.b)
+        };
+        // Bass deep, mids the brand lilac, highs pale.
+        let (bass, mids, highs) = (color((0, 0)), color((255, 0)), color((0, 255)));
+        assert!(
+            bass.0 < mids.0 && mids.0 < highs.0,
+            "{bass:?} {mids:?} {highs:?}"
+        );
+        assert!(
+            (mids.0 as i32 - 182).abs() <= 2 && mids.2 >= 250,
+            "{mids:?}"
+        );
+    }
+
+    #[test]
+    fn full_color_follows_the_bands() {
+        let color = |(mid, high): (u8, u8)| {
+            let img = image(&[[255u8, 128, mid, high]; 4], true);
+            let buf = img.to_rgba8().unwrap();
+            let p = buf.as_slice()[HEIGHT / 2 * WIDTH];
+            (p.r, p.g, p.b)
+        };
+        // Bass red, mids amber, highs blue, as on the decks.
+        let (bass, mids, highs) = (color((0, 0)), color((255, 0)), color((0, 255)));
+        assert!(bass.0 > 200 && bass.1 < 80 && bass.2 < 80, "{bass:?}");
+        assert!(mids.0 > 200 && mids.1 > 140 && mids.2 < 60, "{mids:?}");
+        assert!(highs.2 > 200 && highs.0 < 100, "{highs:?}");
     }
 }

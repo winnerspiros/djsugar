@@ -26,7 +26,7 @@ const MAGIC: &[u8; 8] = b"MXRSAN07";
 
 /// Starts each stored overview, followed by the analysis's own [`MAGIC`],
 /// so overviews of an older analysis are made again too.
-const OVERVIEW_MAGIC: &[u8; 8] = b"ODJOVW01";
+const OVERVIEW_MAGIC: &[u8; 8] = b"ODJOVW02";
 
 /// Slices in a stored overview: the library's mini waveforms.
 pub const OVERVIEW_SLICES: usize = 256;
@@ -303,7 +303,7 @@ fn store_overview(file: &Path, o: &[OverviewSlice]) {
     if o.is_empty() {
         return;
     }
-    let mut data = Vec::with_capacity(16 + o.len() * 2);
+    let mut data = Vec::with_capacity(16 + o.len() * 4);
     data.extend_from_slice(OVERVIEW_MAGIC);
     data.extend_from_slice(MAGIC);
     data.extend(o.iter().flatten());
@@ -320,7 +320,7 @@ fn store_overview(file: &Path, o: &[OverviewSlice]) {
 
 fn decode_overview(data: &[u8]) -> Option<Vec<OverviewSlice>> {
     let rest = data.strip_prefix(OVERVIEW_MAGIC)?.strip_prefix(MAGIC)?;
-    let (slices, tail) = rest.as_chunks::<2>();
+    let (slices, tail) = rest.as_chunks::<4>();
     (tail.is_empty() && !slices.is_empty()).then(|| slices.to_vec())
 }
 
@@ -534,7 +534,9 @@ mod tests {
         // Its overview: peaks and RMS across the track, kept small.
         let o = a.waveform.overview(OVERVIEW_SLICES);
         assert_eq!(o.len(), OVERVIEW_SLICES);
-        assert!(o.iter().all(|[peak, rms]| rms <= peak));
+        assert!(o
+            .iter()
+            .all(|[peak, rms, mid, high]| rms <= peak && *mid as u16 + *high as u16 <= 256));
         let mut kept = OVERVIEW_MAGIC.to_vec();
         kept.extend_from_slice(MAGIC);
         kept.extend(o.iter().flatten());

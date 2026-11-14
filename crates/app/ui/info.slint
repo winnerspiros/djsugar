@@ -631,7 +631,7 @@ component PreviewBar inherits HorizontalLayout {
             border-radius: 1.5px;
             background: Theme.accent;
         }
-        // The waveform: what has played in lilac, the rest gray.
+        // The waveform: what has played in its own colors, the rest gray.
         if TrackInfo.has-wave: Image {
             width: parent.width;
             height: parent.height;
@@ -649,7 +649,8 @@ component PreviewBar inherits HorizontalLayout {
                 height: bar.height;
                 source: TrackInfo.wave;
                 image-fit: fill;
-                colorize: Theme.lilac;
+                // The played part in the waveform's own lilac shades.
+                colorize: transparent;
             }
         }
         if TrackInfo.has-wave && TrackInfo.preview-position > 0: Rectangle {
