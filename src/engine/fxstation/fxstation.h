@@ -18,29 +18,17 @@ class ControlObject;
 
 namespace mixxx {
 
-/// The FX Station: a remix effector on the main mix, in the style of the
-/// remix stations of DJ booths. Four sections, all locked to the beat grid
-/// of the deck that leads (or to a tapped tempo):
-///
-/// - Scene: build ups (BPF Echo, Echo, Noise, Spiral Up, Reverb Up) and
-///   break downs (HPF Echo, LPF Echo, Crush Echo, Spiral Down, Reverb Down)
-///   on a big dial, with two sub parameters.
-/// - Isolate: three bands (low, mid, high) with Isolator, Cut/Add,
-///   Trans/Roll and Gate/Drive modes.
-/// - X-Pad: kick, snare, clap and hi-hat rolls from 1/1 to 1/16 of a beat,
-///   with pitch, an overdub loop of a bar, mutes and four banks.
-/// - Release: Vinyl Brake, Echo or Back Spin, turning everything else off.
-///
-/// Controls are in the [FxStation] group. Processed on the engine thread,
-/// without allocations or locks; it costs almost nothing while idle.
+/// FX Station: remix effector on the main mix. Four sections locked to
+/// the beat grid: Scene (build-ups/breakdowns on a dial), Isolate (3-band,
+/// 4 modes), X-Pad (rolls, overdub loop), Release (Brake/Echo/Spin).
+/// Engine thread, no allocations, near-zero cost when idle.
 class FxStation : public QObject {
     Q_OBJECT
   public:
     explicit FxStation(UserSettingsPointer pConfig);
     ~FxStation() override;
 
-    /// Processes the main mix in place (interleaved stereo), on the engine
-    /// thread
+    /// Processes the main mix (interleaved stereo), engine thread
     void process(CSAMPLE* pBuffer, int frames, float sampleRate);
 
     // The scene effects, in the order of scene_type

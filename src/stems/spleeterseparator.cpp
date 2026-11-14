@@ -104,8 +104,8 @@ bool SpleeterSeparator::load(const QString& modelDir, const Options& options) {
     try {
         Ort::SessionOptions sessionOptions = StemSeparator::sessionOptions(options);
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
-        for (int stem = 0; stem < kStemCount; ++stem) {
-            const QByteArray path = QDir(modelDir).filePath(kModelFiles[stem]).toUtf8();
+        for (const char* modelFile : kModelFiles) {
+            const QByteArray path = QDir(modelDir).filePath(modelFile).toUtf8();
             m_sessions[stem] = std::make_unique<Ort::Session>(
                     onnxRuntimeEnv(), path.constData(), sessionOptions);
         }

@@ -16,12 +16,10 @@ namespace allshader {
 class WaveformRendererStemGpu;
 } // namespace allshader
 
-/// The stem waveform drawn by the GPU (QML only), like
-/// WaveformRendererRGBGpu: the stem data is uploaded once into a texture and
-/// a vertex shader (waveformstem.vert) gives a geometry made once (eight
-/// rectangles per strip: the outline and the fill of four stems) its
-/// heights and colors, with the same formulas as WaveformRendererStem. On
-/// every frame only a few uniforms change.
+/// Stem waveform rendered by GPU (QML only), like WaveformRendererRGBGpu:
+/// stem data uploaded once into a texture; vertex shader gives geometry
+/// (8 rectangles per strip: outline + fill of 4 stems) heights and colors.
+/// On every frame only a few uniforms change.
 ///
 /// Not for the slip renderer: WaveformRendererStem draws it.
 class allshader::WaveformRendererStemGpu final

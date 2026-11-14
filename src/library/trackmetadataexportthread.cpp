@@ -19,17 +19,11 @@ namespace {
 
 const mixxx::Logger kLogger("TrackMetadataExportThread");
 
-// Writing file tags is dominated by per-file I/O latency, especially
-// on slow or network-mounted storage, so the remaining queue is
-// drained by a few workers rather than a single thread at shutdown.
-// Since pending jobs are deduplicated by file location, no two
-// workers ever write the same file concurrently.
+// Drain remaining queue with parallel workers (I/O-bound on slow/network storage).
+// Dedup by file location prevents concurrent writes to the same file.
 constexpr int kDrainWorkerCount = 4;
 
-// Creates a temporary, uncached copy of the given track that contains
-// all properties needed for exporting the metadata into the source
-// file. The file location and the track id are shared with the
-// original track.
+// Temporary uncached copy of the track with only metadata-export properties.
 TrackPointer createTrackForMetadataExport(const Track& track) {
     auto pTrack =
             std::make_shared<Track>(track.getFileAccess(), track.getId());
@@ -41,10 +35,7 @@ TrackPointer createTrackForMetadataExport(const Track& track) {
     return pTrack;
 }
 
-// Writes the new synchronization timestamp into the database after the
-// export has finished. The evicted track object has already been
-// deleted at this point, so it cannot be saved by the track collection
-// anymore.
+// Write sync timestamp after export (evicted track already deleted).
 void updateSourceSynchronizedAt(
         const QSqlDatabase& dbConnection,
         const TrackId& trackId,
@@ -84,8 +75,7 @@ void TrackMetadataExportThread::enqueueExport(
     const QString location = job.pTrack->getLocation();
     {
         const std::lock_guard lock(m_queueMutex);
-        // A still pending job for the same file is replaced by the
-        // newer snapshot instead of writing the file twice.
+        // Replace a pending job for the same file with a newer snapshot.
         if (const auto it = m_pendingByLocation.find(location);
                 it != m_pendingByLocation.end()) {
             *it.value() = std::move(job);
@@ -108,8 +98,7 @@ void TrackMetadataExportThread::doRun() {
         processJob(std::move(*m_currentJob));
         m_currentJob.reset();
     }
-    // Write all pending jobs before exiting, e.g. after the global
-    // track cache has been deactivated during shutdown.
+    // Drain pending jobs before shutdown.
     const int pending = pendingJobs();
     if (pending > 0) {
         kLogger.info()

@@ -744,6 +744,13 @@ void CoreServices::initialize() {
                 musicDirAdded = true;
             }
         }
+    }
+    // Android counts every media file added, changed or removed: the folders
+    // are walked again only when that count moved since the last complete
+    // scan (or is unknown, before Android 11)
+    const ConfigKey mediaStoreKey("[Library]", "AndroidMediaStoreState");
+    const QString mediaStoreState = mixxx::android::mediaStoreState();
+    if (mediaStoreState.isEmpty() || mediaStoreState != pConfig->getValueString(mediaStoreKey)) {
         rescan = true;
     }
 #endif
@@ -762,6 +769,22 @@ void CoreServices::initialize() {
         qInfo() << "Starting library auto-scan (rescan=" << rescan
                 << ", musicDirAdded=" << musicDirAdded
                 << ", roots=" << watchedRoots << ")";
+#ifdef Q_OS_ANDROID
+        // Whatever asked for the scan, the phone counts as known again only
+        // once it finished
+        pConfig->setValue(mediaStoreKey, QString());
+        connect(
+                m_pTrackCollectionManager.get(),
+                &TrackCollectionManager::libraryScanSummary,
+                this,
+                [pConfig, mediaStoreKey, mediaStoreState](
+                        const LibraryScanResultSummary& result) {
+                    if (result.finishedCleanly && !mediaStoreState.isEmpty()) {
+                        pConfig->setValue(mediaStoreKey, mediaStoreState);
+                    }
+                },
+                Qt::SingleShotConnection);
+#endif
         m_pTrackCollectionManager->startLibraryAutoScan();
     } else {
         qInfo() << "Skipping library auto-scan; watched roots =" << watchedRoots;
@@ -916,6 +939,18 @@ void CoreServices::finalize() {
 
     Timer t("CoreServices::~CoreServices");
     t.start();
+    // Each step of the exit that takes long enough to be felt is logged
+    QString step = QStringLiteral("unregistering QML singletons");
+    mixxx::Duration stepStart;
+    const auto nextStep = [&](const char* name) {
+        const mixxx::Duration now = t.elapsed(false);
+        if (now - stepStart >= mixxx::Duration::fromMillis(100)) {
+            qInfo() << "Exit:" << step << "took"
+                    << (now - stepStart).debugMillisWithUnit();
+        }
+        step = QString::fromLatin1(name);
+        stepStart = now;
+    };
 
 #ifdef MIXXX_USE_QML
     // Delete all the QML singletons in order to prevent controller leaks
@@ -938,25 +973,25 @@ void CoreServices::finalize() {
     ControllerScriptEngineBase::registerPlayerManager(nullptr);
 
     // Stop all pending library operations
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "stopping pending Library tasks";
+    nextStep("stopping pending Library tasks");
     m_pTrackCollectionManager->stopLibraryScan();
     m_pLibrary->stopPendingTasks();
 
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "saving configuration";
+    nextStep("saving configuration");
     m_pSettingsManager->save();
 
     // SoundManager depend on Engine and Config
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting SoundManager";
+    nextStep("deleting SoundManager");
     CLEAR_AND_CHECK_DELETED(m_pSoundManager);
 
     // ControllerManager depends on Config
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting ControllerManager";
+    nextStep("deleting ControllerManager");
     CLEAR_AND_CHECK_DELETED(m_pControllerManager);
 
 #ifdef __VINYLCONTROL__
     // VinylControlManager depends on a CO the engine owns
     // (vinylcontrol_enabled in VinylControlControl)
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting VinylControlManager";
+    nextStep("deleting VinylControlManager");
     CLEAR_AND_CHECK_DELETED(m_pVCManager);
 #endif
 
@@ -968,27 +1003,27 @@ void CoreServices::finalize() {
     // PlayerManager depends on Engine, SoundManager, VinylControlManager, and Config
     // The player manager has to be deleted before the library to ensure
     // that all modified track metadata of loaded tracks is saved.
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting PlayerManager";
+    nextStep("deleting PlayerManager");
     CLEAR_AND_CHECK_DELETED(m_pPlayerManager);
 
     // Delete the library after the view so there are no dangling pointers to
     // the data models.
     // Depends on RecordingManager and PlayerManager
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting Library";
+    nextStep("deleting Library");
     CLEAR_AND_CHECK_DELETED(m_pLibrary);
 
     // RecordingManager depends on config, engine
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting RecordingManager";
+    nextStep("deleting RecordingManager");
     CLEAR_AND_CHECK_DELETED(m_pRecordingManager);
 
 #ifdef __BROADCAST__
     // BroadcastManager depends on config, engine
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting BroadcastManager";
+    nextStep("deleting BroadcastManager");
     CLEAR_AND_CHECK_DELETED(m_pBroadcastManager);
 #endif
 
     // EngineMixer depends on Config and m_pEffectsManager.
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting EngineMixer";
+    nextStep("deleting EngineMixer");
     CLEAR_AND_CHECK_DELETED(m_pEngine);
 #ifdef __RUBBERBAND__
     RubberBandWorkerPool::destroy();
@@ -1001,16 +1036,16 @@ void CoreServices::finalize() {
     // PlayerInfo in EngineRecord.
     PlayerInfo::destroy();
 
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting EffectsManager";
+    nextStep("deleting EffectsManager");
     CLEAR_AND_CHECK_DELETED(m_pEffectsManager);
 
     // Delete the track collections after all internal track pointers
     // in other components have been released by deleting those components
     // beforehand!
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "detaching all track collections";
+    nextStep("detaching all track collections");
     CLEAR_AND_CHECK_DELETED(m_pTrackCollectionManager);
 
-    qDebug() << t.elapsed(false).debugMillisWithUnit() << "closing database connection(s)";
+    nextStep("closing database connection(s)");
     m_pDbConnectionPool->destroyThreadLocalConnection();
     m_pDbConnectionPool.reset(); // should drop the last reference
 
@@ -1020,6 +1055,7 @@ void CoreServices::finalize() {
 
     m_pControlIndicatorTimer.reset();
 
+    nextStep("");
     t.elapsed(true);
 }
 

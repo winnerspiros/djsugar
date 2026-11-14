@@ -20,8 +20,7 @@ constexpr SINT kStride = kSegment * 3 / 4;
 constexpr int kMinAvailableMemoryMb = 300;
 
 const QString kModelFile = QStringLiteral("htdemucs.onnx");
-// The model as optimized by ONNX Runtime on the first run, which loads in a
-// second instead of half a minute
+// ONNX Runtime optimised copy (loads in ~1s instead of ~30s).
 const QString kOptimizedModelFile = QStringLiteral("htdemucs.optimized.onnx");
 
 const char* const kInputName = "mix";
@@ -77,7 +76,6 @@ bool HTDemucsSeparator::separate(const float* pStereo,
                                             : 0.0))) +
             1e-8f;
 
-    // Triangular weights of the overlap-add
     std::vector<float> weights(kSegment);
     for (SINT i = 0; i < kSegment / 2; ++i) {
         weights[i] = static_cast<float>(i + 1) / (kSegment / 2);

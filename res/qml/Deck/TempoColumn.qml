@@ -120,14 +120,14 @@ ColumnLayout {
                     if (!trackLoadedControl.value || keyCO.value <= 0) {
                         return keylockCO.value ? Theme.white : Theme.midGray3;
                     }
-                    return pitchKey.colorsMap[keyCO.value];
+                    return pitchKey.colorsMap[keyCO.value - 1];
                 }
                 font.pixelSize: 8
                 horizontalAlignment: Text.AlignHCenter
                 text: {
                     if (!trackLoadedControl.value || keyCO.value <= 0)
                         return "-";
-                    return pitchKey.textMap[keyCO.value];
+                    return pitchKey.textMap[keyCO.value - 1];
                 }
                 verticalAlignment: Text.AlignVCenter
             }

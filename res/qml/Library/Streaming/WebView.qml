@@ -78,6 +78,7 @@ Item {
                     font.pixelSize: 11
                     inputMethodHints: Qt.ImhNoPredictiveText
                     placeholderText: qsTr("Search your library, or paste a link: Navidrome / Subsonic server, MP3, radio stream...")
+                    Skin.SearchClearButton {}
                     background: Rectangle {
                         color: Theme.darkGray2
                         border.color: smartInput.activeFocus ? root.sources[root.source].color : Theme.midGray3

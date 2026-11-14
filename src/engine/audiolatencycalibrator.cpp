@@ -218,8 +218,8 @@ void AudioLatencyCalibrator::computeOffsets() {
     // stream is not capturing any audio.
     double peakEnergy = 0.0;
     double sumEnergy = 0.0;
-    for (int i = 0; i < m_recordedSignal.size(); ++i) {
-        double s = static_cast<double>(m_recordedSignal[i]);
+    for (float sample : std::as_const(m_recordedSignal)) {
+        double s = static_cast<double>(sample);
         double e = s * s;
         peakEnergy = qMax(peakEnergy, e);
         sumEnergy += e;

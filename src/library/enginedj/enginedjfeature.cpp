@@ -12,6 +12,7 @@
 #include <djinterop/djinterop.hpp>
 #include <functional>
 #include <sstream>
+#include <utility>
 
 #include "library/dao/playlistdao.h"
 #include "library/dao/trackschema.h"
@@ -680,12 +681,12 @@ EngineDJPlaylistModel::EngineDJPlaylistModel(QObject* parent,
                   "mixxx.db.model.enginedj.playlistmodel",
                   kPlaylistsTable,
                   kPlaylistTracksTable,
-                  trackSource) {
+                  std::move(trackSource)) {
 }
 
 void EngineDJPlaylistModel::initSortColumnMapping() {
-    for (int i = 0; i < static_cast<int>(TrackModel::SortColumnId::IdMax); ++i) {
-        m_columnIndexBySortColumnId[i] = -1;
+    for (int& columnIndex : m_columnIndexBySortColumnId) {
+        columnIndex = -1;
     }
     const QList<std::pair<TrackModel::SortColumnId, ColumnCache::Column>> mapping = {
             {TrackModel::SortColumnId::Artist, ColumnCache::COLUMN_LIBRARYTABLE_ARTIST},
@@ -721,7 +722,7 @@ void EngineDJPlaylistModel::initSortColumnMapping() {
 }
 
 EngineDJFeature::EngineDJFeature(Library* pLibrary, UserSettingsPointer pConfig)
-        : BaseExternalLibraryFeature(pLibrary, pConfig, QStringLiteral("enginedj")),
+        : BaseExternalLibraryFeature(pLibrary, std::move(pConfig), QStringLiteral("enginedj")),
           m_pSidebarModel(make_parented<TreeItemModel>(this)),
           m_title(tr("Engine DJ")) {
     QStringList columns = {

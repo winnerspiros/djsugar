@@ -116,8 +116,8 @@ void SponsorBlockController::clearDeck(const QString& group) {
 
 void SponsorBlockController::onTrackChanged(
         const QString& group,
-        TrackPointer pNewTrack,
-        TrackPointer /*pOldTrack*/) {
+        const TrackPointer& pNewTrack,
+        const TrackPointer& /*pOldTrack*/) {
     // Only deck channels (`[Channel1]`, `[Channel2]`, ...) are interesting; we
     // don't bother with sampler/preview groups.
     if (!group.startsWith(QStringLiteral("[Channel"))) {

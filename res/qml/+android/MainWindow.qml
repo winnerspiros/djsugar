@@ -826,15 +826,6 @@ Item {
                     }
                 }
 
-                // Skin.SamplerRow {
-                //     id: samplers
-                //     visible: root.showSamplers
-                //     width: parent.width
-
-                //     Skin.FadeBehavior on visible {
-                //         fadeTarget: samplers
-                //     }
-                // }
                 Loader {
                     id: library
 

@@ -103,8 +103,8 @@ class QmlSpotifyProxy : public QObject {
     /// A list from the bridge (spotify_browse), on a worker thread
     void browse(const QString& request,
             int offset,
-            std::function<void(const QJsonObject&)> onSuccess,
-            std::function<void()> onFailure = {});
+            const std::function<void(const QJsonObject&)>& onSuccess,
+            const std::function<void()>& onFailure = {});
     void fetchList(const QString& request, ListKind kind, bool append);
     QString cacheDir() const;
     void downloadTrack(const QString& spotifyId);

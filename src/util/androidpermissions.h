@@ -5,46 +5,33 @@
 namespace mixxx {
 namespace android {
 
-/// Requests the runtime permissions Mixxx needs to read the user's music
-/// collection.
-///
-/// Which permission that is depends on the API level:
-///  * API >= 33 (Android 13): READ_MEDIA_AUDIO
-///  * API <= 32: READ_EXTERNAL_STORAGE
-/// On API <= 29 WRITE_EXTERNAL_STORAGE is requested in addition, so that
-/// Mixxx may write its own files (recordings, exported QML) to shared
-/// storage.
-///
-/// Returns true if the collection may be read afterwards. Blocks until the
-/// user has answered the system dialog. Must not be called from the Android
-/// UI thread (Qt's main thread is a separate thread, so calling this from
-/// Mixxx' main thread is fine).
+/// Request READ_MEDIA_AUDIO (API >= 33) or READ_EXTERNAL_STORAGE (<= 32).
+/// On API <= 29 also requests WRITE_EXTERNAL_STORAGE.
+/// Blocks for the system dialog. Must not be called from the Android UI thread.
 bool requestMusicLibraryPermissions();
 
 /// Requests RECORD_AUDIO, for recording pad samples. Blocks like
 /// requestMusicLibraryPermissions().
 bool requestMicrophonePermission();
 
-/// Returns true if the app is allowed to read/write arbitrary paths in shared
-/// storage. This is MANAGE_EXTERNAL_STORAGE ("All files access") on API >= 30
-/// and WRITE_EXTERNAL_STORAGE below that.
+/// True if MANAGE_EXTERNAL_STORAGE (API >= 30) or WRITE_EXTERNAL_STORAGE is granted.
 bool hasFullExternalStorageAccess();
 
-/// Opens the system settings page where the user can grant "All files
-/// access". Does nothing if the permission is already granted. This is
-/// asynchronous, the result is only visible after the user returns to Mixxx.
+/// Opens the system settings for "All files access". No-op if already granted.
+/// Asynchronous: result visible only after the user returns.
 void requestFullExternalStorageAccess();
 
-/// The shared Music, Download, Podcasts and Recordings folders that exist:
-/// where the phone keeps its songs. Scanned into the library on start.
+/// Shared Music, Download, Podcasts and Recordings folders. Scanned on start.
 QStringList sharedAudioDirectories();
-/// Folders of phone and app sounds (notification tones, ringtones,
-/// alarms, other apps' media), never scanned as music
+/// Every folder with an audio file in the media store (system sounds excluded).
+QStringList mediaStoreAudioFolders();
+/// MediaStore generation (Android 11+), changes on any file add/change/removal.
+QString mediaStoreState();
+/// Folders of phone and app sounds (notification tones, alarms, other apps' media).
 bool isSystemSoundDirectory(const QString& path);
 
-/// Returns the directory Mixxx should offer as the default music directory,
-/// creating it if necessary. Falls back to the app-private music directory if
-/// shared storage is not accessible.
+/// Default music directory, created if needed. Falls back to app-private if
+/// shared storage is inaccessible.
 QString defaultMusicDirectory();
 
 } // namespace android

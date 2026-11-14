@@ -5,40 +5,28 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Lite skin: as little as possible to draw and to keep up to date, for slow
-// phones and tablets and to save battery. Two decks without waveforms (a
-// position bar redrawn 5 times a second), flat buttons and bars instead of
-// images, Canvas knobs and animations, no level meters, effects panel or
-// XY pad. BROWSE uses the browser of the Booth skin, loaded only while
-// shown.
-//
-// A skin is a folder in res/qml/Skins with a MainWindow.qml whose root item
-// takes the application window, see packaging/android/README.md.
+// Lite skin: minimal drawing for slow devices and battery saving. Two decks,
+// no waveforms (5/s position bar), flat buttons/Canvas knobs, no FX/XY pad.
+// BROWSE loads Booth browser only while shown.
 Item {
     id: root
 
     required property ApplicationWindow applicationWindow
     property var menuBar: null
 
-    // The engine: two decks when Mixxx starts with this skin. The samplers
-    // stay as in the other skins: controller mappings use them (their pads,
-    // and e.g. the DDJ-FLX4 connects to all 16 when it starts), and idle
-    // ones cost next to nothing.
+// Two decks on start; 16 samplers (controllers map to them, idle cost is negligible).
     readonly property int numDecks: 2
     readonly property int numSamplers: 16
     readonly property int numPreviewDecks: 1
 
-    // 1: decks (DECKS), 2: the browser (BROWSE)
-    property int viewMode: 1
+property int viewMode: 1 // 1=DECKS, 2=BROWSE
     readonly property bool browsing: viewMode === 2
-    // The deck LOAD 1/2 opened the browser for, or "". Loading a track into
-    // it returns to the decks.
+    // Deck that opened the browser via LOAD 1/2. Loading a track returns to decks.
     property string loadTarget: ""
     readonly property var loadTargetPlayer: loadTarget.length > 0 ? Mixxx.PlayerManager.getPlayer(loadTarget) : null
     readonly property bool compact: height < 520
 
-    // The colors of the shared parts (library, settings, popups); see
-    // Theme/+android/Theme.qml
+// Shared colours for library, settings, popups. See Theme/+android/Theme.qml
     readonly property var skinTheme: ({
             "accentColor": "#2f6fb4",
             "backgroundColor": "#0b0c0e",
@@ -66,8 +54,7 @@ Item {
             "libraryKeyMatchBackground": "#1a3ad33a"
         })
 
-    // The tabs of the top bar that Settings → Interface → TOP BAR can hide,
-    // with the names of the matching tabs of the other skins
+// Top bar tabs (Settings → Interface → TOP BAR can hide these).
     readonly property var topBarItems: [
         {
             "name": "dj",
@@ -129,7 +116,7 @@ Item {
         target: root.loadTargetPlayer
     }
 
-    // ---- The engine setup of the skins ----
+// ---- Engine setup ----
     Mixxx.ControlProxy {
         group: "[App]"
         key: "num_decks"
@@ -151,8 +138,7 @@ Item {
     Skin.LibraryScanSummaryDialog {
     }
 
-    // A tab of the top bar
-    component Tab: LiteButton {
+component Tab: LiteButton {
         Layout.fillHeight: true
         Layout.preferredWidth: Math.max(root.compact ? 64 : 92, implicitWidth)
         fontPixelSize: root.compact ? 12 : 14
@@ -208,15 +194,14 @@ Item {
             Item {
                 Layout.fillWidth: true
             }
-            // The stem separation: its progress, opens its queue
+// Stem separation progress
             Tab {
                 lit: Mixxx.Stems.hold !== ""
                 text: Mixxx.Stems.hold !== "" ? `🎚 ⏸ ${Mixxx.Stems.pendingCount}` : `🎚 ${Math.round(Mixxx.Stems.progress * 100)}%`
                 visible: Mixxx.Stems.pendingCount > 0
                 onClicked: stemsOverlay.openQueue()
             }
-            // Asks before stopping, keeps its time across skin switches
-            Skin.MobileRecordButton {
+Skin.MobileRecordButton {
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(root.compact ? 64 : 80, implicitWidth)
                 fontPixelSize: root.compact ? 12 : 14
@@ -232,7 +217,7 @@ Item {
             }
         }
 
-        // ---- Decks and mixer ----
+// ---- Decks and mixer ----
         RowLayout {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
@@ -264,7 +249,7 @@ Item {
             }
         }
 
-        // ---- The browser of the Booth skin, only while shown ----
+// ---- Booth browser (only while shown) ----
         Loader {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
@@ -308,12 +293,9 @@ Item {
         }
     }
 
-    // ================= CONTROLLER ACCESS TO THE SCREENS =================
-    // The same [Skin] controls as the other skins: mobile_library_toggle
-    // switches BROWSE, mobile_loader_deck1/2 open the browser for a deck,
-    // and LOAD does that too when the browser isn't shown. mobile_fx_toggle
-    // is created for the mappings that use it; this skin has no effects
-    // panel.
+// ================= [Skin] Controls =================
+    // Same as other skins: mobile_library_toggle, mobile_loader_deck1/2,
+    // mobile_fx_toggle (created for mappings; this skin has no FX panel).
     property bool mobileControlsCreated: false
 
     Mixxx.SkinControlCreator {

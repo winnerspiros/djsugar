@@ -34,8 +34,8 @@ constexpr int kFeedbackTransfers = 2;
 constexpr int kFeedbackPacketsPerTransfer = 4;
 constexpr int kFeedbackPacketSize = 4;
 constexpr size_t kMaxImplicitQueue = 1024;
-// The event thread waits this long after an error of libusb, and gives the
-// output up after this many errors in a row (about half a second)
+// The event thread waits this long after a libusb error, and gives up
+// after this many in a row (~half a second)
 constexpr int kEventErrorPauseMillis = 5;
 constexpr int kMaxEventErrors = 100;
 
@@ -43,9 +43,8 @@ const int kCommonSampleRates[] = {44100, 48000, 88200, 96000, 32000, 176400, 192
 
 std::mutex s_registryMutex;
 std::vector<std::shared_ptr<AndroidUsbAudioDevice>> s_registry;
-// USB device names (e.g. /dev/bus/usb/001/005) for which the permission was
-// already requested, to not ask again on every rescan. A device gets a new
-// name when it is plugged in again.
+/// USB device names (e.g. /dev/bus/usb/001/005) for which permission
+/// was already requested, to not ask again on every rescan.
 QSet<QString> s_permissionRequested;
 
 QJniObject usbManager() {
@@ -57,7 +56,7 @@ QJniObject usbManager() {
             usbService.object());
 }
 
-/// Cheap check through the Java API, which doesn't require the USB permission
+/// Cheap check through the Java API, which doesn't require USB permission
 bool hasAudioStreamingInterface(const QJniObject& usbDevice) {
     const jint interfaceCount = usbDevice.callMethod<jint>("getInterfaceCount");
     for (jint i = 0; i < interfaceCount; ++i) {
@@ -88,8 +87,7 @@ void raiseThreadPriority() {
     }
 #if defined(__aarch64__)
     // The audio engine runs on this thread: enable flush-to-zero (FPCR bit
-    // 24) to avoid the denormal performance penalty, like the other sound
-    // devices do.
+    // 24) to avoid denormal performance penalty, like other sound devices.
     int64_t fpcr;
     asm volatile("mrs %[fpcr], FPCR" : [fpcr] "=r"(fpcr));
     asm volatile("msr FPCR, %[src]" : : [src] "r"(fpcr | (1 << 24)));
@@ -164,7 +162,7 @@ std::vector<std::shared_ptr<AndroidUsbAudioDevice>> AndroidUsbAudioDevice::scan(
     std::vector<std::shared_ptr<AndroidUsbAudioDevice>> found;
     QJniObject manager = usbManager();
     if (mode == DirectMode::Never || !manager.isValid()) {
-        // Devices already claimed stay with us, the kernel driver only comes
+        // Devices already claimed stay with us; the kernel driver only comes
         // back when they are plugged in again
         for (const auto& pDevice : previous) {
             if (pDevice->isConnected() && pDevice->isClaimed()) {

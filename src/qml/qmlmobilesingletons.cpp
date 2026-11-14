@@ -15,6 +15,7 @@ namespace qml {
 void registerMobileQmlSingletons(CoreServices* pCoreServices) {
     QmlStreamingProxy::registerPlayerManager(pCoreServices->getPlayerManager());
     QmlStreamingProxy::registerUserSettings(pCoreServices->getSettings());
+    QmlStreamingProxy::registerLibrary(pCoreServices->getLibrary().get());
     QmlYouTubeProxy::registerLibrary(pCoreServices->getLibrary().get());
     QmlYouTubeProxy::registerPlayerManager(pCoreServices->getPlayerManager());
     QmlSpotifyProxy::registerLibrary(pCoreServices->getLibrary().get());
@@ -30,6 +31,7 @@ void registerMobileQmlSingletons(CoreServices* pCoreServices) {
 void unregisterMobileQmlSingletons() {
     QmlStreamingProxy::registerPlayerManager(nullptr);
     QmlStreamingProxy::registerUserSettings(nullptr);
+    QmlStreamingProxy::registerLibrary(nullptr);
     QmlYouTubeProxy::registerLibrary(nullptr);
     QmlYouTubeProxy::registerPlayerManager(nullptr);
     QmlSpotifyProxy::registerLibrary(nullptr);

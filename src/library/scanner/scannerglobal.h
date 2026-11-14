@@ -54,6 +54,14 @@ class ScannerGlobal {
         return m_directoriesBlacklist.contains(directoryPath);
     }
 
+    /// Limits the walk to these folders; every folder is entered when empty
+    void setDirectoriesToEnter(QSet<QString> dirs) {
+        m_directoriesToEnter = std::move(dirs);
+    }
+    bool shouldEnterDirectory(const QString& directoryPath) const {
+        return m_directoriesToEnter.isEmpty() || m_directoriesToEnter.contains(directoryPath);
+    }
+
     const QRegularExpression& supportedExtensionsRegex() const {
         return m_supportedExtensionsMatcher;
     }
@@ -191,6 +199,7 @@ class ScannerGlobal {
     // Typically there are 1 to 2 entries in the blacklist so a O(n) search in a
     // QList may have better constant factors than a O(1) QSet check. However,
     // this has never been investigated.
+    QSet<QString> m_directoriesToEnter;
     QStringList m_directoriesBlacklist;
 
     // The list of directories verified by the scan.

@@ -5,14 +5,12 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../../Theme"
 
-// BEAT FX of the booth skin: effect unit 1, which the BEAT FX section of
-// controllers like the DDJ-FLX4 drives as well. Shows the focused effect
-// slot, like the effect select of a booth player.
+// BEAT FX booth skin: unit 1 (also driven by controllers like DDJ-FLX4).
 Rectangle {
     id: root
 
     readonly property string unitGroup: "[EffectRack1_EffectUnit1]"
-    // The focused slot; the mappings use the first one when none is
+    // Focused slot; mappings use the first when none is
     readonly property int focusedSlot: Math.min(3, Math.max(1, focusedControl.value))
     readonly property string slotGroup: `[EffectRack1_EffectUnit1_Effect${root.focusedSlot}]`
     readonly property var slot: Mixxx.EffectsManager.getEffectSlot(1, root.focusedSlot)
@@ -30,7 +28,7 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         Layout.fillWidth: true
     }
-    // A button that switches a control on and off
+    // Toggle button
     component ToggleBox: Rectangle {
         id: toggleBox
 

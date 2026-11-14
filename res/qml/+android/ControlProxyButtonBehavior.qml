@@ -16,10 +16,7 @@ Item {
     property bool releaseToZero: true
     property bool longPressLatching: false
     property bool handlePointerInput: true
-    // Touchscreens have no right mouse button. Where the secondary action is
-    // the only way to reach a feature (e.g. the hotcue popup), a long press
-    // stands in for it. Only meaningful if pressAndHoldKey is unset, since
-    // that already claims the long press.
+// Long press substitutes right-click on touchscreens. Only when pressAndHoldKey is unset.
     property bool longPressTriggersSecondary: false
     property int numberStates: 2
     property int longPressDuration: 300
@@ -168,11 +165,8 @@ Item {
         key: root.displayKey.length > 0 ? root.displayKey : root.key
     }
 
-    // A TapHandler (rather than a MouseArea) handles the primary action so
-    // that touch points are tracked individually. With a MouseArea only the
-    // one touch point that Qt synthesizes mouse events from is delivered,
-    // which makes it impossible to press buttons on two decks at the same
-    // time on a touchscreen.
+// TapHandler tracks touch points individually (MouseArea would prevent
+// multi-deck simultaneous presses on touchscreens).
     TapHandler {
         id: primaryHandler
 
@@ -205,9 +199,7 @@ Item {
         onTapped: root.clickPrimary()
     }
 
-    // The secondary action is mouse-only, so a plain MouseArea is used here.
-    // Touch points never reach it because Qt synthesizes left button presses
-    // from touch, which this MouseArea does not accept.
+// Secondary action is mouse-only (Qt synthesises left from touch).
     MouseArea {
         id: secondaryArea
 

@@ -8,9 +8,8 @@
 namespace mixxx {
 namespace samples {
 
-/// Prepares a sound for the trim popup and writes the chosen part as a pad
-/// sample. Any file the decoders read works, whatever its name: phone
-/// pickers often hand out content:// URLs without a usable extension.
+/// Prepares audio for the trim popup and writes the selected range as a pad
+/// sample. Works with any file decoders can read, regardless of extension.
 class SampleEditor : public QObject {
     Q_OBJECT
   public:

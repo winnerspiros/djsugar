@@ -12,12 +12,12 @@ namespace frameclock {
 
 namespace {
 
-// A 60 Hz display at 60 frames per second until a waveform tells better
+// A 60 Hz display at 60 fps until a waveform tells better
 std::atomic<qint64> s_periodMicros{16667};
 std::atomic<qint64> s_intervalMicros{16667};
-// The time of the last frame shown, in microseconds of epoch()
+// The time of the last frame shown, microseconds of epoch()
 std::atomic<qint64> s_lastFrameMicros{0};
-// The time of the last frame shown with a waveform drawn in it, 0 if none
+// The time of the last frame shown with a waveform drawn, 0 if none
 std::atomic<qint64> s_lastTickMicros{0};
 
 // Adapting to the device, see frameShown()
@@ -28,6 +28,10 @@ std::atomic<qint64> s_everySecondRefreshSinceMicros{0};
 int s_frames = 0;
 int s_lateFrames = 0;
 constexpr int kFramesJudged = 90;
+// Late batches in a row. One alone is a moment's load (a list built,
+// a page opened): the waveform keeps its pace.
+int s_lateBatches = 0;
+constexpr int kLateBatchesToSlow = 2;
 // Every refresh is tried again after this long, three times longer after
 // each try that was late again
 constexpr qint64 kFirstRetryMicros = 10'000'000;
@@ -85,6 +89,7 @@ void frameShown() {
             s_everySecondRefresh = false;
             s_frames = 0;
             s_lateFrames = 0;
+            s_lateBatches = 0;
         }
         return;
     }
@@ -97,7 +102,9 @@ void frameShown() {
         ++s_lateFrames;
     }
     if (s_frames >= kFramesJudged) {
-        if (s_lateFrames * 5 > s_frames) {
+        s_lateBatches = s_lateFrames * 5 > s_frames ? s_lateBatches + 1 : 0;
+        if (s_lateBatches >= kLateBatchesToSlow) {
+            s_lateBatches = 0;
             const bool retried = s_everySecondRefreshSinceMicros.load() > 0;
             s_everySecondRefresh = true;
             s_everySecondRefreshSinceMicros = now;

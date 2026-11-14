@@ -6,11 +6,8 @@
 #include <string>
 #include <vector>
 
-/// Parser for the descriptors of USB Audio Class 1 and 2 devices.
-///
-/// It only depends on the C++ standard library so it can be unit tested
-/// without a device; AndroidUsbAudioDevice feeds it the raw descriptors
-/// returned by UsbDeviceConnection.getRawDescriptors().
+/// Parser for USB Audio Class 1 and 2 device descriptors. Depends only on
+/// the C++ standard library for unit-testing without a device.
 namespace mixxx {
 namespace usbaudio {
 

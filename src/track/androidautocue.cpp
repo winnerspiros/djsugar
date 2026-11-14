@@ -29,7 +29,7 @@ void connectDeck(PlayerManager* pPlayerManager, BaseTrackPlayer* pDeck) {
     QObject::connect(pDeck,
             &BaseTrackPlayer::loadingTrack,
             pPlayerManager,
-            [](TrackPointer pNewTrack, TrackPointer) {
+            [](const TrackPointer& pNewTrack, const TrackPointer&) {
                 if (pNewTrack) {
                     snapAutoCueToBeat(pNewTrack.get());
                 }

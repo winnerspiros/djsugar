@@ -9,13 +9,11 @@ import QtQuick
 import QtQuick.Controls
 import "../../Theme"
 
-// BROWSE of the booth skin, laid out like the browser of a player: a column
-// of sources on the left, the tracks in the middle and the selected track
-// on the right. A source with entries (playlists, folders, drives) first
-// lists them in place of the tracks, one level at a time, with ← to go
-// back. The data, the track menu, + ALL, COPY and the controller browsing
-// are the ones of the shared library (Library/), only the columns and the
-// look are the skin's (BoothSourceTree.qml).
+// BROWSE of the booth skin: column of sources on the left, tracks in the middle,
+// selected track on the right. A source with entries lists them in place of the
+// tracks, one level at a time, with ← to go back. Data, track menu, ALL/COPY
+// and controller browsing are from the shared library; only columns and look
+// are the skin's (BoothSourceTree.qml).
 //
 // LOAD 1/2 open it with a target deck (loadTarget): a double tap loads the
 // track into that deck.
@@ -37,11 +35,11 @@ Item {
     property string key: ""
     property string added: ""
 
-    // The entry whose entries are listed, as the rows from the top level
-    // down, or null. Model indexes of the sources are not kept: opening a
-    // source can rebuild its entries (e.g. a Rekordbox drive) and an old
-    // index would point to deleted entries. levelIndex is looked up again
-    // from levelPath after every change.
+    // The entry whose entries are listed, as the rows from the top level down,
+    // or null. Model indexes of the sources are not kept: opening a source can
+    // rebuild its entries (e.g. a Rekordbox drive) and an old index would point
+    // to deleted entries. levelIndex is looked up again from levelPath after
+    // every change.
     property var levelPath: null
     property var levelIndex: null
     // The tracks are shown rather than the entries of levelPath
@@ -469,6 +467,7 @@ Item {
             font.pixelSize: root.compact ? 12 : 14
             height: parent.height - 6
             placeholderText: qsTr("SEARCH")
+            Skin.SearchClearButton {}
             placeholderTextColor: Theme.lightGray3
             visible: !root.streaming
 

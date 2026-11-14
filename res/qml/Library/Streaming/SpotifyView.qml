@@ -6,9 +6,8 @@ import "../.." as Skin
 import "../../Theme"
 import ".." as Library
 
-// Spotify: log in once on Spotify's login page, then search, Liked Songs
-// and playlists. D1/D2 download the track's own Spotify
-// audio (Ogg Vorbis 320 with Premium, else from YouTube Music) and load it to the deck.
+// Spotify browser: login, search, Liked Songs, playlists. Downloads Ogg Vorbis
+// 320 (Premium) or falls back to YouTube Music audio.
 Item {
     id: root
 
@@ -17,10 +16,10 @@ Item {
     property string statusMessage: ""
     property bool isBusy: false
     property bool isLoadingMore: false
-    // "search", "liked", "playlists", "playlist"
-    property string listKind: "liked"
+property string listKind: "liked" // "search", "liked", "playlists", "playlist"
     property string playlistName: ""
-    // What the rows in resultsModel are; listKind changes before they do
+    property string playlistId: ""
+// True when resultsModel rows are playlists (listKind changes before this).
     property bool rowsArePlaylists: false
     property var progress: ({})
 
@@ -33,16 +32,28 @@ Item {
         else if (kind === "playlists")
             Mixxx.Spotify.playlists();
     }
-    function doSearch() {
-        const query = searchField.text.trim();
+// Last searched query (refresh repeats this, not the current field value).
+    property string searchedQuery: ""
+    function doSearch(text = searchField.text) {
+        const query = text.trim();
         if (query.length === 0)
             return;
+        root.searchedQuery = query;
         root.listKind = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
         Mixxx.Spotify.search(query);
     }
+function refreshList() {
+        if (root.listKind === "search")
+            root.doSearch(root.searchedQuery);
+        else if (root.listKind === "playlist")
+            root.openPlaylist(root.playlistId, root.playlistName);
+        else
+            root.openList(root.listKind);
+    }
     function openPlaylist(id, name) {
+        root.playlistId = id;
         root.listKind = "playlist";
         root.playlistName = name;
         root.isBusy = true;
@@ -77,8 +88,7 @@ Item {
         }, group);
     }
 
-    // Controller: BROWSE moves the highlighted row, LOAD opens a playlist or
-    // loads the track to the deck the button belongs to
+// BROWSE moves highlight; LOAD opens playlist or loads track to deck.
     function controllerMove(offset) {
         if (resultsModel.count === 0)
             return;
@@ -261,6 +271,9 @@ Item {
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: root.doSearch()
                 }
+                Skin.SearchClearButton {
+                    field: searchField
+                }
                 Text {
                     anchors.fill: parent
                     anchors.margins: 6
@@ -343,6 +356,8 @@ Item {
         ListView {
             id: resultList
 
+            boundsBehavior: Flickable.DragOverBounds
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -351,7 +366,9 @@ Item {
             currentIndex: -1
             highlightFollowsCurrentItem: true
             highlightMoveDuration: 0
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
 
             highlight: Rectangle {
                 z: 2
@@ -494,6 +511,14 @@ Item {
                     }
                 }
             }
+
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.refreshList()
+            }
+
         }
     }
 }

@@ -5,8 +5,8 @@ import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "Theme"
 
-// The sample picker of the pads: the bundled, imported and recorded
-// sounds, with preview, import (through the trim popup), record and delete.
+// The sample picker of the pads: bundled, imported and recorded
+// sounds, with preview, import (trim popup), record and delete.
 // Used by Settings > Pads & FX and by the FX Station X-Pad.
 Item {
     id: root

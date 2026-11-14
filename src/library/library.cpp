@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QMessageBox>
+#include <QTimer>
 #include <QUrl>
 
 #include "control/controlobject.h"
@@ -91,6 +92,24 @@ Library::Library(
             &TrackCollectionManager::libraryScanFinished,
             this,
             &Library::slotRefreshLibraryModels);
+    // Downloaded and imported tracks show up within seconds, also while a
+    // scan runs (its tracks come when it ends, or on pull down): one
+    // refresh per few seconds at most
+    auto* const pAddedTracksRefresh = new QTimer(this);
+    pAddedTracksRefresh->setSingleShot(true);
+    pAddedTracksRefresh->setInterval(5000);
+    connect(pAddedTracksRefresh,
+            &QTimer::timeout,
+            this,
+            &Library::slotRefreshLibraryModels);
+    connect(m_pTrackCollectionManager->internalCollection(),
+            &TrackCollection::tracksAdded,
+            pAddedTracksRefresh,
+            [pAddedTracksRefresh]() {
+                if (!pAddedTracksRefresh->isActive()) {
+                    pAddedTracksRefresh->start();
+                }
+            });
 
     // TODO(rryan) -- turn this construction / adding of features into a static
     // method or something -- CreateDefaultLibrary

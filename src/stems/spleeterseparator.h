@@ -12,16 +12,10 @@
 namespace mixxx {
 namespace stems {
 
-/// Spleeter 4 stems (Deezer, MIT): one model per stem estimates its
-/// magnitude spectrogram, then a multichannel Wiener filter (as in
-/// Spleeter's "mwf" mode, one EM iteration like norbert) builds the stems
-/// from the mix. The bass of the stems is taken from the low end of the mix
-/// minus the drums, which is where Spleeter is weakest.
-///
-/// Fast and light: the audio is processed in 11.9 s blocks, streaming the
-/// stems out. Two stages overlap: while the models estimate a block, a
-/// second thread filters the one before into the stems and hands them to
-/// the sink.
+/// Spleeter 4 stems (Deezer, MIT) with multichannel Wiener filter.
+/// Bass taken from low end of mix minus drums (Spleeter's weakest area).
+/// Fast: audio in 11.9 s blocks, two stages overlap (model estimation
+/// and filtering).
 class SpleeterSeparator : public StemSeparator {
   public:
     SpleeterSeparator();

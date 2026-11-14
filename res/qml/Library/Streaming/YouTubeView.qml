@@ -6,9 +6,7 @@ import "../.." as Skin
 import "../../Theme"
 import ".." as Library
 
-// YouTube search tab of the Booth streaming hub: searches the built-in
-// YouTube service and loads results straight into a deck. Downloads are
-// cached by the YouTube feature; loading via URL lets it download/stream.
+// YouTube search tab of the Booth streaming hub. Searches YouTube and loads results into a deck.
 Item {
     id: root
 
@@ -19,8 +17,7 @@ Item {
     property bool isBusy: false
     property bool isLoadingMore: false
     property bool hasMore: false
-    // A fetch that ended empty is not retried until this time, so a flagged or
-    // offline connection is not hammered while the user keeps scrolling.
+    // A fetch that ended empty is not retried until this time to avoid hammering a flagged/offline connection while scrolling.
     property double retryMoreAfter: 0
 
     function toRow(video) {
@@ -37,8 +34,7 @@ Item {
         };
     }
 
-    // Same song, another upload: artist and title without the "(Official
-    // Video)" / "[Lyrics]" decorations, and a length within a few seconds.
+    // Same song, another upload: artist and title without decorations, length within a few seconds.
     function songKey(video) {
         return (video.title ?? "").toLowerCase()
             .replace(/[\(\[][^\)\]]*[\)\]]/g, " ")
@@ -61,8 +57,7 @@ Item {
         return -1;
     }
 
-    // Adds a batch below what is already listed, skipping videos the search
-    // has already delivered. Returns how many were new.
+    // Adds a batch below what is already listed, skipping duplicates. Returns how many were new.
     function appendResults(batch) {
         const seen = new Set(root.allResults.map(v => v.id));
         const fresh = batch.filter(v => v.id && !seen.has(v.id));
@@ -93,16 +88,21 @@ Item {
         }
     }
 
-    function doSearch() {
-        if (searchField.text.length === 0) {
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
+    property double searchedAt: 0
+    function doSearch(query = searchField.text) {
+        if (query.length === 0) {
             return;
         }
+        root.searchedQuery = query;
+        root.searchedAt = Date.now();
         root.listKind = "search";
         root.isBusy = true;
         root.isLoadingMore = false;
         root.hasMore = false;
         root.statusMessage = qsTr("Searching YouTube...");
-        Mixxx.YouTube.search(searchField.text);
+        Mixxx.YouTube.search(query);
     }
 
     // Infinite scroll: the next batch is fetched when the list nears its end.
@@ -148,7 +148,9 @@ Item {
     property string listKind: "search"
     readonly property color ytRed: "#ff0033"
     property string playlistName: ""
+    property string listId: ""
     function openList(listId, name) {
+        root.listId = listId;
         root.listKind = listId === "liked" ? "liked" : "playlist";
         root.playlistName = name;
         root.isBusy = true;
@@ -163,6 +165,22 @@ Item {
         Mixxx.YouTube.youTubeAccounts();
         root.openList("liked", qsTr("Liked songs"));
         Mixxx.YouTube.youTubePlaylists();
+    }
+    // Pull to refresh / F5: what is shown is fetched again
+    function refreshList() {
+        if (root.listKind === "search") {
+            // YouTube allows a few requests per 10 s and a search spends
+            // three or four: results fresher than that are kept as they are
+            if (Date.now() - root.searchedAt < 15000 && resultsModel.count > 0) {
+                root.statusMessage = qsTr("%1 results, up to date").arg(root.allResults.length);
+                return;
+            }
+            root.doSearch(root.searchedQuery);
+        }
+        else if (root.listKind === "playlists")
+            root.showPlaylists();
+        else
+            root.openList(root.listId, root.playlistName);
     }
     function showPlaylists() {
         root.listKind = "playlists";
@@ -279,7 +297,10 @@ Item {
         function onSearchFailed(error) {
             root.isBusy = false;
             root.isLoadingMore = false;
-            root.statusMessage = qsTr("Search error: %1").arg(error);
+            // The list shown stays: a busy YouTube only means try later
+            root.statusMessage = /throttled|rate limit/i.test(error)
+                ? qsTr("YouTube is busy, try again in a few seconds")
+                : qsTr("Search error: %1").arg(error);
         }
         // The feature loads each finished download into the deck its button
         // was pressed for; the view only reports status.
@@ -340,6 +361,9 @@ Item {
                         if (activeFocus)
                             Mixxx.YouTube.warmUp();
                     }
+                }
+                Skin.SearchClearButton {
+                    field: searchField
                 }
                 Text {
                     anchors.fill: parent
@@ -641,6 +665,7 @@ Item {
         // The account's playlists; a tap opens one
         ListView {
             id: playlistList
+            boundsBehavior: Flickable.DragOverBounds
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -701,52 +726,22 @@ Item {
                     onClicked: root.openList(playlistRow.modelData.id, playlistRow.modelData.name)
                 }
             }
-        }
 
-        // Nothing listed: what this view is for, and the way in
-        Column {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
-            spacing: 10
-            topPadding: 40
-
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 56
-                height: 40
-                radius: 10
-                color: root.ytRed
-
-                Skin.Triangle {
-                    anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: 2
-                    width: 16
-                    height: 18
-                    color: "#ffffff"
-                    pointsRight: true
-                }
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width - 20, 380)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                color: "#c8ccd4"
-                font.pixelSize: 12
-                text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
-                    : root.listKind === "playlist" ? qsTr("This playlist is empty")
-                    : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
-                    : qsTr("Search above. Sign in for your liked songs and playlists")
+            Skin.PullToRefresh {
+                flickable: playlistList
+                busy: false
+                onRefresh: root.refreshList()
             }
         }
 
         ListView {
             id: resultList
 
+            boundsBehavior: Flickable.DragOverBounds
+
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.listKind !== "playlists" && (resultsModel.count > 0 || root.isBusy)
+            visible: root.listKind !== "playlists"
             clip: true
             model: resultsModel
             spacing: 2
@@ -760,7 +755,9 @@ Item {
                 border.width: 2
                 radius: 4
             }
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
             footer: Item {
                 width: ListView.view.width
                 height: root.isLoadingMore ? 48 : 0
@@ -1051,6 +1048,51 @@ Item {
                     }
                 }
             }
+
+            // Nothing listed: what this view is for, and the way in
+            Column {
+                parent: resultList
+                anchors.fill: parent
+                visible: root.listKind !== "playlists" && resultsModel.count === 0 && !root.isBusy
+                spacing: 10
+                topPadding: 40
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 56
+                    height: 40
+                    radius: 10
+                    color: root.ytRed
+
+                    Skin.Triangle {
+                        anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: 2
+                        width: 16
+                        height: 18
+                        color: "#ffffff"
+                        pointsRight: true
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width - 20, 380)
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    color: "#c8ccd4"
+                    font.pixelSize: 12
+                    text: root.listKind === "liked" ? qsTr("No liked songs here yet: like songs on YouTube Music or YouTube and they show up")
+                        : root.listKind === "playlist" ? qsTr("This playlist is empty")
+                        : Mixxx.YouTube.youTubeSignedIn ? qsTr("Search above, or open your liked songs and playlists")
+                        : qsTr("Search above. Sign in for your liked songs and playlists")
+                }
+            }
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.refreshList()
+            }
+
         }
     }
 }

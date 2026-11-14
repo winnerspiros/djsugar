@@ -23,10 +23,8 @@ struct Range {
     double end;
 };
 
-/// Returns the cut ranges in chronological, non-overlapping form, plus the
-/// total cut duration. Ranges from SponsorBlock can overlap (e.g. an "intro"
-/// and a "selfpromo" segment both covering 0:00–0:15) and we want to merge
-/// them so the running offset we apply to PTS is monotonic.
+/// Returns chronological, non-overlapping cut ranges and total cut duration.
+/// Merges overlapping SponsorBlock segments so PTS offset is monotonic.
 QList<Range> normaliseRanges(const QList<SponsorSegment>& segments, double& totalCut) {
     QList<Range> ranges;
     ranges.reserve(segments.size());
@@ -53,8 +51,7 @@ QList<Range> normaliseRanges(const QList<SponsorSegment>& segments, double& tota
     return merged;
 }
 
-/// Returns the accumulated cut time strictly *before* `tsSec`, used to shift
-/// post-cut PTS back to a contiguous timeline.
+/// Cut time before tsSec for shifting post-cut PTS to a contiguous timeline.
 double cutTimeBefore(const QList<Range>& ranges, double tsSec) {
     double acc = 0.0;
     for (const auto& r : ranges) {
@@ -118,14 +115,11 @@ bool cutAudioRanges(const QString& path, const QList<SponsorSegment>& segments) 
         return false;
     }
 
-    // Stream-copy mapping: clone codecpar from each input stream into a new
-    // output stream with the same time_base. We cut at packet boundaries so
-    // no re-encoding is required.
+    // Stream-copy: clone codecpar, same time_base; cut at packet boundaries (no re-encode).
     QList<int> streamMap(ic->nb_streams, -1);
     for (unsigned i = 0; i < ic->nb_streams; ++i) {
         AVStream* is = ic->streams[i];
-        // Skip non-audio streams (YouTube adaptive audio downloads are
-        // single-stream, but be defensive).
+        // Skip non-audio streams (defensive)
         if (is->codecpar->codec_type != AVMEDIA_TYPE_AUDIO) {
             continue;
         }
@@ -215,8 +209,7 @@ bool cutAudioRanges(const QString& path, const QList<SponsorSegment>& segments) 
         return false;
     }
 
-    // Atomic-ish replace: remove old, rename new. On Android both files live
-    // in the app data dir so this is a single-filesystem rename.
+    // Atomic replace (single-filesystem on Android app data dir)
     if (!QFile::remove(path)) {
         QFile::remove(tmpPath);
         kLogger.warning() << "cutAudioRanges: cannot remove original" << path;

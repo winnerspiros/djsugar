@@ -1,13 +1,10 @@
 #pragma once
 
 // Stereo feedback delay network reverb.
-//
-// Structure (after Geraint Luff, "Let's write a reverb", ADC 2021, and
-// Jot's FDN work): a 4-step Hadamard diffuser builds echo density fast,
-// then an 8-line feedback network with a Householder matrix sustains the
-// tail. Every line has a decay gain derived from RT60, a one-pole high
-// damping and slow, decorrelated delay modulation that removes the
-// metallic ringing of static FDNs. Freeze holds the tank at unity gain.
+// Structure (Geraint Luff, ADC 2021, Jot's FDN work): 4-step Hadamard
+// diffuser, then 8-line FDN with Householder matrix. Each line has
+// decay gain from RT60, one-pole high damping, decorrelated delay
+// modulation. Freeze holds the tank at unity gain.
 
 #include <array>
 

@@ -5,11 +5,9 @@ import Mixxx 1.0 as Mixxx
 import "../Theme"
 import ".." as Skin
 
-// Pick what each performance pad plays, the way rekordbox does it: the pads
-// are drawn like the controller (2 rows of 4), tap one and choose a sample
-// or an effect from the list.
-//   SAMPLER: bank A = samplers 1-8, bank B = samplers 9-16
-//   PAD FX:  PAD FX 1 = pads 1-8, PAD FX 2 = pads 9-16
+// Pick what each performance pad plays, like rekordbox: pads drawn
+// as the controller (2 rows of 4), tap one and choose a sample or
+// effect from the list.
 Category {
     id: root
 

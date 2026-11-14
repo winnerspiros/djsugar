@@ -1,9 +1,7 @@
 import "Theme"
 import QtQuick
 
-// The DJ Sugar mark: the frosted donut record of the splash screen, drawn at
-// any size from plain rectangles, followed by the wordmark. Nothing is loaded
-// from disk and nothing animates, so it costs one cheap scene graph node group.
+// DJ Sugar logo: donut record + wordmark, drawn at any size from rectangles.
 Item {
     id: root
 
@@ -13,7 +11,7 @@ Item {
     implicitHeight: root.size
     implicitWidth: root.showWordmark ? root.size + 7 + wordmark.implicitWidth : root.size
 
-    // The donut, designed on a 66 px grid and scaled to `size`
+    // Donut: 66 px grid scaled to size
     Item {
         id: donut
 

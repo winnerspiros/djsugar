@@ -89,9 +89,11 @@ void RecursiveScanDirectoryTask::run() {
             }
         } else {
             // File is a directory
-            if (m_scannerGlobal->directoryBlacklisted(currentFile)) {
+            if (m_scannerGlobal->directoryBlacklisted(currentFile) ||
+                    !m_scannerGlobal->shouldEnterDirectory(currentFile)) {
                 // Skip blacklisted directories like the iTunes Album
-                // Art Folder since it is probably a waste of time.
+                // Art Folder since it is probably a waste of time, and on
+                // Android the folders without music on the way to any.
                 continue;
             }
             dirsToScan.push_back(mixxx::FileInfo(std::move(currentFileInfo)));

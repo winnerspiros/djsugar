@@ -6,6 +6,7 @@
 
 #include "util/assert.h"
 #include "util/db/fwdsqlquery.h"
+#include "util/db/sqlite.h"
 #include "util/db/sqltransaction.h"
 #include "util/logger.h"
 #include "util/math.h"
@@ -170,6 +171,7 @@ SchemaManager::Result SchemaManager::upgradeToSchemaVersion(
                 << "from version" << currentVersion
                 << "to version" << targetVersion;
     }
+    bool upgraded = false;
     int nextVersion = lastUsedVersion;
     while (nextVersion < targetVersion) {
         nextVersion += 1;
@@ -270,6 +272,7 @@ SchemaManager::Result SchemaManager::upgradeToSchemaVersion(
                 m_settingsDao.setValue(
                         SETTINGS_MINCOMPATIBLE_KEY,
                         minCompatibleVersion);
+                upgraded = true;
                 kLogger.info()
                         << "Upgraded database schema"
                         << "to version" << nextVersion;
@@ -288,6 +291,10 @@ SchemaManager::Result SchemaManager::upgradeToSchemaVersion(
         }
     }
 
+    if (upgraded) {
+        // The planner needs statistics to choose new indexes
+        mixxx::sqlite::updateQueryPlannerStatistics(m_settingsDao.database());
+    }
     if (targetVersion != lastUsedVersion) {
         m_settingsDao.setValue(
                 SETTINGS_LASTUSED_VERSION_KEY,

@@ -1,18 +1,10 @@
 #pragma once
 
-// Shared plumbing for the DJ Sugar built-in effects: manifest helpers, a
-// beat-division table shared by every tempo-synced effect and a state base
-// that owns the beat clock.
-//
-// Conventions every effect follows:
-//  * Output is the complete signal (dry + wet); manifests leave
-//    addDryToWet off and let the engine crossfade on enable and disable.
-//  * State is cleared on Enabling, never on Disabling, so time based
-//    effects can ring out when a deck is unassigned (see
-//    EngineEffectChain tails).
-//  * Every knob is smoothed per sample; nothing allocates in process.
-//  * The linked (super knob) parameter is the one that makes the effect
-//    stronger when turned clockwise.
+// Shared plumbing for DJ Sugar built-in effects: manifest helpers,
+// beat-division table, state base with beat clock.
+// Conventions: dry+wet output, state cleared on Enabling (ring-out on
+// unassign), per-sample smoothing, no allocations in process, super knob
+// makes the effect stronger clockwise.
 
 #include <QList>
 #include <QPair>
@@ -157,9 +149,7 @@ inline float value(const EngineEffectParameterPointer& pParam) {
 
 } // namespace djfx
 
-// Base state: sample rate, the deck's beat clock and a buffer frame count.
-// Effects with stereo state process interleaved stereo frames; Mixxx
-// effect buffers are always stereo (mixxx::kEngineChannelOutputCount).
+// Base state: sample rate, beat clock, buffer frame count (interleaved stereo).
 class DjFxState : public EffectState {
   public:
     explicit DjFxState(const mixxx::EngineParameters& engineParameters)
@@ -167,7 +157,7 @@ class DjFxState : public EffectState {
               m_sampleRate(static_cast<float>(engineParameters.sampleRate())) {
     }
 
-    // Updates the beat clock; call at the start of every buffer.
+    // Call at the start of every buffer.
     void updateClock(const GroupFeatureState& features, int frames) {
         std::optional<double> beatSeconds;
         if (features.beat_length) {
@@ -186,8 +176,7 @@ class DjFxState : public EffectState {
     float m_sampleRate;
 };
 
-// Effect base: binds the engine parameters in manifest order so effects
-// address them by an enum instead of string lookups in the audio thread.
+// Binds engine parameters by enum instead of string lookups in the audio thread.
 template<class State, class Derived>
 class DjFxEffect : public EffectProcessorImpl<State> {
   public:
@@ -218,14 +207,13 @@ class DjFxEffect : public EffectProcessorImpl<State> {
     std::vector<EngineEffectParameterPointer> m_params;
 };
 
-// Declares the members every DjFxEffect subclass implements.
-#define DJFX_EFFECT_INTERFACE(StateClass)                    \
-  public:                                                    \
-    static QString getId();                                  \
-    static EffectManifestPointer getManifest();              \
-    void processChannel(StateClass* pState,                  \
-            const CSAMPLE* pInput,                           \
-            CSAMPLE* pOutput,                                \
-            const mixxx::EngineParameters& engineParameters, \
-            const EffectEnableState enableState,             \
+#define DJFX_EFFECT_INTERFACE(StateClass) /* declares DjFxEffect overrides */ \
+  public:                                                                     \
+    static QString getId();                                                   \
+    static EffectManifestPointer getManifest();                               \
+    void processChannel(StateClass* pState,                                   \
+            const CSAMPLE* pInput,                                            \
+            CSAMPLE* pOutput,                                                 \
+            const mixxx::EngineParameters& engineParameters,                  \
+            const EffectEnableState enableState,                              \
             const GroupFeatureState& groupFeatures) override;

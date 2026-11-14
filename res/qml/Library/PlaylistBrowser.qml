@@ -62,6 +62,7 @@ ColumnLayout {
             font.pixelSize: 14
             inputMethodHints: Qt.ImhNoPredictiveText
             placeholderText: qsTr("Search playlists")
+            Skin.SearchClearButton {}
             placeholderTextColor: Theme.lightGray
 
             onTextChanged: root.filter = text
@@ -81,7 +82,7 @@ ColumnLayout {
 
             anchors.fill: parent
             anchors.margins: 4
-            boundsBehavior: Flickable.StopAtBounds
+            boundsBehavior: Flickable.DragOverBounds
             clip: true
             model: root.entries
             spacing: 2
@@ -207,6 +208,12 @@ ColumnLayout {
                 font.pixelSize: 13
                 text: root.filter.length > 0 ? qsTr("Nothing found") : qsTr("No playlists yet")
                 visible: list.count === 0
+            }
+
+            Skin.PullToRefresh {
+                flickable: list
+                busy: false
+                onRefresh: root.reload()
             }
         }
     }

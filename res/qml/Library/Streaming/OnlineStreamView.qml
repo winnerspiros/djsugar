@@ -14,6 +14,17 @@ Item {
     property var tracksModel: []
     property string statusMessage: ""
     property bool isBusy: false
+    // Last Audius search; empty while trending is shown
+    property string lastQuery: ""
+
+    // Pull to refresh / F5
+    function refreshList() {
+        root.isBusy = true;
+        if (root.lastQuery !== "")
+            Mixxx.StreamingManager.searchAudius(root.lastQuery);
+        else
+            Mixxx.StreamingManager.getAudiusTrending(root.currentGenre);
+    }
     property var downloadProgressMap: ({})
 
     Connections {
@@ -71,6 +82,7 @@ Item {
 
     Component.onCompleted: {
         root.isBusy = true;
+        root.lastQuery = "";
         Mixxx.StreamingManager.getAudiusTrending("Electronic");
     }
 
@@ -78,7 +90,7 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ================= TOP HEADER & BRAND =================
+        // ================= TOP HEADER =================
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 33
@@ -140,13 +152,14 @@ Item {
                     enabled: !root.isBusy
                     onClicked: {
                         root.isBusy = true;
+                        root.lastQuery = "";
                         Mixxx.StreamingManager.getAudiusTrending(root.currentGenre);
                     }
                 }
             }
         }
 
-        // ================= SEARCH & GENRE PILLS =================
+        // ================= SEARCH & GENRE =================
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 33
@@ -165,6 +178,7 @@ Item {
                     Layout.preferredWidth: 208
                     Layout.preferredHeight: 24
                     placeholderText: qsTr("Search tracks, remixes, acapellas...")
+                    Skin.SearchClearButton {}
                     color: "#ffffff"
                     font.pixelSize: 11
                     background: Rectangle {
@@ -175,6 +189,7 @@ Item {
                     }
                     onAccepted: {
                         if (text.trim() !== "") {
+                            root.lastQuery = text;
                             root.isBusy = true;
                             root.statusMessage = qsTr("Searching Audius...");
                             Mixxx.StreamingManager.searchAudius(text);
@@ -190,7 +205,7 @@ Item {
                     onClicked: searchInput.accepted()
                 }
 
-                // Genre Chips Row (Flickable for small screens)
+                // Flickable genre chips
                 Flickable {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 24
@@ -236,6 +251,7 @@ Item {
                                         root.currentGenre = modelData.genre;
                                         root.isBusy = true;
                                         root.statusMessage = qsTr("Loading trending tracks...");
+                                        root.lastQuery = "";
                                         Mixxx.StreamingManager.getAudiusTrending(modelData.genre);
                                     }
                                 }
@@ -255,7 +271,7 @@ Item {
                 id: tracksList
                 anchors.fill: parent
                 clip: true
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.DragOverBounds
                 model: root.tracksModel
 
                 ScrollBar.vertical: ScrollBar {
@@ -476,6 +492,12 @@ Item {
                             Layout.alignment: Qt.AlignHCenter
                         }
                     }
+                }
+
+                Skin.PullToRefresh {
+                    flickable: tracksList
+                    busy: root.isBusy
+                    onRefresh: root.refreshList()
                 }
             }
 

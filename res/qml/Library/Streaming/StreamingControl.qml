@@ -3,12 +3,8 @@ import QtQuick 2.12
 import "../.." as Skin
 import ".." as LibraryComponent
 
-// Controller input for the streaming hub. While the hub is on screen the
-// library's own Control is disabled, so BROWSE and LOAD act on what is
-// shown here: turning BROWSE moves through the results of the open
-// service (YouTube, SoundCloud, ...), LOAD loads the highlighted result
-// on that deck and pressing BROWSE switches between the service tabs
-// (turn to pick a service) and its results.
+// Controller input for the streaming hub. BROWSE/LOAD act on the open
+// service; BROWSE toggle switches between service tabs and results.
 Item {
     id: root
 

@@ -5,6 +5,13 @@
 #include <sqlite3.h>
 #endif // __SQLITE3__
 
+#ifdef MIXXX_SQLITE3_FROM_QT
+#include <dlfcn.h>
+
+#include <atomic>
+#include <mutex>
+#endif // MIXXX_SQLITE3_FROM_QT
+
 #include "util/db/dbconnection.h"
 
 #include "util/db/sqllikewildcards.h"
@@ -168,6 +175,71 @@ namespace {
 
 const QChar kSqlLikeEscapeDefault = '\0';
 
+#ifdef MIXXX_SQLITE3_FROM_QT
+// Qt's SQLite driver has its own copy of SQLite built in. A handle it opened
+// must only be used with the functions of that copy, so they are looked up
+// in the library that holds the driver instead of being linked.
+struct QtSqliteApi {
+    decltype(&::sqlite3_initialize) initialize = nullptr;
+    decltype(&::sqlite3_create_collation) create_collation = nullptr;
+    decltype(&::sqlite3_create_function) create_function = nullptr;
+    decltype(&::sqlite3_exec) exec = nullptr;
+    decltype(&::sqlite3_busy_handler) busy_handler = nullptr;
+    decltype(&::sqlite3_sleep) sleep = nullptr;
+    decltype(&::sqlite3_value_text) value_text = nullptr;
+    decltype(&::sqlite3_result_int64) result_int64 = nullptr;
+};
+
+QtSqliteApi s_qtSqlite;
+std::atomic<bool> s_collationInstalled = false;
+
+void loadQtSqlite(const QSqlDriver* pDriver) {
+    // The driver object's vtable lies in the library that holds the driver
+    Dl_info info{};
+    if (!dladdr(*reinterpret_cast<void* const*>(pDriver), &info) ||
+            !info.dli_fname) {
+        return;
+    }
+    void* pLib = dlopen(info.dli_fname, RTLD_NOW | RTLD_NOLOAD);
+    if (!pLib) {
+        return;
+    }
+    QtSqliteApi api;
+    const auto resolve = [pLib](auto* pFunc, const char* name) {
+        *pFunc = reinterpret_cast<std::remove_pointer_t<decltype(pFunc)>>(
+                dlsym(pLib, name));
+        return *pFunc != nullptr;
+    };
+    const bool ok = resolve(&api.initialize, "sqlite3_initialize") &&
+            resolve(&api.create_collation, "sqlite3_create_collation") &&
+            resolve(&api.create_function, "sqlite3_create_function") &&
+            resolve(&api.exec, "sqlite3_exec") &&
+            resolve(&api.busy_handler, "sqlite3_busy_handler") &&
+            resolve(&api.sleep, "sqlite3_sleep") &&
+            resolve(&api.value_text, "sqlite3_value_text") &&
+            resolve(&api.result_int64, "sqlite3_result_int64");
+    dlclose(pLib); // drops only the reference taken above
+    if (ok) {
+        s_qtSqlite = api;
+    }
+}
+
+bool resolveQtSqlite(const QSqlDriver* pDriver) {
+    static std::once_flag s_once;
+    std::call_once(s_once, [pDriver] { loadQtSqlite(pDriver); });
+    return s_qtSqlite.result_int64 != nullptr;
+}
+
+#define sqlite3_initialize s_qtSqlite.initialize
+#define sqlite3_create_collation s_qtSqlite.create_collation
+#define sqlite3_create_function s_qtSqlite.create_function
+#define sqlite3_exec s_qtSqlite.exec
+#define sqlite3_busy_handler s_qtSqlite.busy_handler
+#define sqlite3_sleep s_qtSqlite.sleep
+#define sqlite3_value_text s_qtSqlite.value_text
+#define sqlite3_result_int64 s_qtSqlite.result_int64
+#endif // MIXXX_SQLITE3_FROM_QT
+
 } // anonymous namespace
 
 // The collating function callback is invoked with a copy of the pArg
@@ -190,123 +262,170 @@ int sqliteStringCompareUTF16(void* pArg,
 
 const char kLexicographicalCollationFunc[] = "mixxxLexicographicalCollationFunc";
 
-bool hasGreek(const QString& string) {
-    for (const QChar c : string) {
-        if (c.unicode() >= 0x0370 && c.unicode() <= 0x03FF) {
-            return true;
-        }
+/// The Latin letters of a lower-case Greek letter without accent, or nullptr
+const char* greekToLatin(char16_t c) {
+    switch (c) {
+    case u'α':
+        return "a";
+    case u'β':
+        return "v";
+    case u'γ':
+        return "g";
+    case u'δ':
+        return "d";
+    case u'ε':
+        return "e";
+    case u'ζ':
+        return "z";
+    case u'η':
+        return "i";
+    case u'θ':
+        return "8";
+    case u'ι':
+    case u'ϊ':
+        return "i";
+    case u'κ':
+        return "k";
+    case u'λ':
+        return "l";
+    case u'μ':
+        return "m";
+    case u'ν':
+        return "n";
+    case u'ξ':
+        return "x";
+    case u'ο':
+        return "o";
+    case u'π':
+        return "p";
+    case u'ρ':
+        return "r";
+    case u'σ':
+    case u'ς':
+        return "s";
+    case u'τ':
+        return "t";
+    case u'υ':
+    case u'ϋ':
+        return "i";
+    case u'φ':
+        return "f";
+    case u'χ':
+        return "x";
+    case u'ψ':
+        return "ps";
+    case u'ω':
+        return "o";
+    default:
+        return nullptr;
     }
-    return false;
 }
 
-/// A key that Greek and Greeklish spellings of a word share, e.g. both
-/// "Λιόλιου" and "lioliou" give "lioliu": the Greek letters as Latin ones
-/// (accents dropped), then the sounds Greeklish writes in different ways the
-/// same way (ou/u, ei/oi/i/y/h/η, ai/e, w/o, 8/th, ks/x, ch/x, b/v), and no
-/// double letters. The wildcards and escaped characters stay as they are.
-QString greeklishKey(const QString& text, QChar esc) {
-    static const QHash<QChar, QString> kGreek = [] {
-        QHash<QChar, QString> map;
-        const QString greek = QStringLiteral(
-                "αάβγδεέζηήθιίϊΐκλμνξοόπρσςτυύϋΰφχψωώ");
-        const QStringList latin = {"a",
-                "a",
-                "v",
-                "g",
-                "d",
-                "e",
-                "e",
-                "z",
-                "i",
-                "i",
-                "8",
-                "i",
-                "i",
-                "i",
-                "i",
-                "k",
-                "l",
-                "m",
-                "n",
-                "x",
-                "o",
-                "o",
-                "p",
-                "r",
-                "s",
-                "s",
-                "t",
-                "i",
-                "i",
-                "i",
-                "i",
-                "f",
-                "x",
-                "ps",
-                "o",
-                "o"};
-        for (int i = 0; i < greek.size(); ++i) {
-            map.insert(greek[i], latin[i]);
-        }
-        return map;
-    }();
-    // Greek digraphs first, as they are written in Greeklish
-    QString lower = text.toLower();
-    lower.replace(QStringLiteral("ου"), QStringLiteral("u"))
-            .replace(QStringLiteral("ού"), QStringLiteral("u"))
-            .replace(QStringLiteral("ευ"), QStringLiteral("ev"))
-            .replace(QStringLiteral("εύ"), QStringLiteral("ev"))
-            .replace(QStringLiteral("αυ"), QStringLiteral("av"))
-            .replace(QStringLiteral("αύ"), QStringLiteral("av"))
-            .replace(QStringLiteral("μπ"), QStringLiteral("b"))
-            .replace(QStringLiteral("ντ"), QStringLiteral("d"))
-            .replace(QStringLiteral("γκ"), QStringLiteral("g"))
-            .replace(QStringLiteral("γγ"), QStringLiteral("g"));
-    QString latin;
-    latin.reserve(lower.size() + 8);
-    for (int i = 0; i < lower.size(); ++i) {
-        const QChar c = lower[i];
-        if (!esc.isNull() && c == esc && i + 1 < lower.size()) {
+/// The sound of two letters that Greeklish writes in different ways, or 0
+char16_t latinPair(char16_t c, char16_t next) {
+    switch (c) {
+    case u'm':
+        return next == u'p' ? u'v' : 0; // μπ, like b
+    case u'n':
+        return next == u't' ? u'd' : 0; // ντ
+    case u'g':
+        return next == u'k' || next == u'g' ? u'g' : 0;
+    case u'o': // ου as ou/oy/u, οι as oi/i
+        return next == u'u' || next == u'y' ? u'u' : next == u'i' ? u'i'
+                                                                  : 0;
+    case u'a':
+        return next == u'i' ? u'e' : 0;
+    case u'e':
+        return next == u'i' ? u'i' : 0;
+    case u't':
+        return next == u'h' ? u'8' : 0;
+    case u'c':
+        return next == u'h' ? u'x' : 0;
+    case u'p':
+        return next == u'h' ? u'f' : 0;
+    case u'k':
+        return next == u's' ? u'x' : 0;
+    default:
+        return 0;
+    }
+}
+
+/// A key that Greek and Greeklish spellings of a word share, with or without
+/// accents, e.g. "Λιόλιου", "λιολιου" and "lioliou" all give "lioliu": Greek
+/// letters as Latin ones, then the sounds Greeklish writes in different ways
+/// the same way (ou/u, ei/oi/i/y/h/η, ai/e, w/o, 8/th, ks/x, ch/x, b/v/mp,
+/// eu/ef/ev), and no double letters. Wildcards and escaped characters stay.
+/// One pass with no lookups beyond a switch: it runs for every row searched.
+void greeklishKey(const QString& text, QChar esc, QString* pKey) {
+    thread_local QString latin;
+    latin.resize(0);
+    latin.reserve(text.size() + 8);
+    const int size = static_cast<int>(text.size());
+    for (int i = 0; i < size; ++i) {
+        QChar c = text[i];
+        if (!esc.isNull() && c == esc && i + 1 < size) {
             latin.append(c);
-            latin.append(lower[++i]);
+            latin.append(text[++i]);
             continue;
         }
-        const auto it = kGreek.constFind(c);
-        latin.append(it != kGreek.constEnd() ? *it : QString(c));
-    }
-    makeLatinLow(latin.data(), static_cast<int>(latin.length()));
-    static const std::pair<const char*, const char*> kSounds[] = {
-            {"mp", "b"},
-            {"nt", "d"},
-            {"gk", "g"},
-            {"eu", "ev"},
-            {"ef", "ev"},
-            {"au", "av"},
-            {"af", "av"},
-            {"ou", "u"},
-            {"ai", "e"},
-            {"ei", "i"},
-            {"oi", "i"},
-            {"th", "8"},
-            {"ch", "x"},
-            {"ph", "f"},
-            {"ks", "x"},
-            {"y", "i"},
-            {"h", "i"},
-            {"w", "o"},
-            {"b", "v"},
-    };
-    for (const auto& [from, to] : kSounds) {
-        latin.replace(QLatin1String(from), QLatin1String(to));
-    }
-    QString key;
-    key.reserve(latin.size());
-    for (const QChar c : std::as_const(latin)) {
-        if (key.isEmpty() || key.back() != c || c == QLatin1Char('%')) {
-            key.append(c);
+        if (c.unicode() < 0x80) {
+            latin.append(c.toLower());
+            continue;
+        }
+        makeLatinLow(&c, 1);
+        // ου is u, αυ/ευ are av/ev, whatever else υ is
+        if ((c == u'ο' || c == u'α' || c == u'ε') && i + 1 < size) {
+            QChar next = text[i + 1];
+            makeLatinLow(&next, 1);
+            if (next == u'υ') {
+                if (c == u'ο') {
+                    latin.append(u'u');
+                } else {
+                    latin.append(c == u'α' ? u'a' : u'e');
+                    latin.append(u'v');
+                }
+                ++i;
+                continue;
+            }
+        }
+        if (const char* pLatin = greekToLatin(c.unicode())) {
+            latin.append(QLatin1String(pLatin));
+        } else {
+            latin.append(c);
         }
     }
-    return key;
+    QString& key = *pKey;
+    key.resize(0);
+    key.reserve(latin.size());
+    const int latinSize = static_cast<int>(latin.size());
+    for (int i = 0; i < latinSize; ++i) {
+        char16_t c = latin[i].unicode();
+        if (!esc.isNull() && c == esc.unicode() && i + 1 < latinSize) {
+            key.append(latin[i]);
+            key.append(latin[++i]);
+            continue;
+        }
+        const char16_t next = i + 1 < latinSize ? latin[i + 1].unicode() : 0;
+        if ((c == u'e' || c == u'a') && (next == u'u' || next == u'f')) {
+            key.append(QChar(c)); // eu/ef/ev, au/af/av
+            c = u'v';
+            ++i;
+        } else if (const char16_t pair = latinPair(c, next)) {
+            c = pair;
+            ++i;
+        } else if (c == u'y' || c == u'h') {
+            c = u'i';
+        } else if (c == u'w') {
+            c = u'o';
+        } else if (c == u'b') {
+            c = u'v';
+        }
+        // Doubled letters count once (ll/λλ); wildcards, digits and the rest
+        // keep their number
+        if (key.isEmpty() || key.back() != QChar(c) || c < u'a' || c > u'z') {
+            key.append(QChar(c));
+        }
+    }
 }
 
 // This implements the like() SQL function. This is used by the LIKE operator.
@@ -345,10 +464,20 @@ void sqliteLikeUtf8(sqlite3_context* context,
     }
 
     int ret = DbConnection::likeCompareLatinLow(&stringB, &stringA, esc);
-    if (!ret && (hasGreek(stringA) || hasGreek(stringB))) {
-        // Greek titles found by Greeklish and the other way round
-        QString pattern = greeklishKey(stringB, esc);
-        QString string = greeklishKey(stringA, QChar());
+    if (!ret) {
+        // Greek titles found by Greeklish and the other way round, and
+        // Greeklish written one way by Greeklish written another (w/o, 8/th)
+        // The pattern is the same for every row of a search
+        thread_local QString lastPattern;
+        thread_local QChar lastEsc;
+        thread_local QString pattern;
+        if (stringB != lastPattern || esc != lastEsc) {
+            lastPattern = stringB;
+            lastEsc = esc;
+            greeklishKey(stringB, esc, &pattern);
+        }
+        thread_local QString string;
+        greeklishKey(stringA, QChar(), &string);
         ret = likeCompareInner(pattern.data(),
                 pattern.length(),
                 string.data(),
@@ -375,6 +504,13 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
                << v.typeName();
         return false; // abort
     }
+#ifdef MIXXX_SQLITE3_FROM_QT
+    if (!resolveQtSqlite(database.driver())) {
+        kLogger.warning() << "SQLite functions of the Qt driver not found:"
+                          << "plain LIKE search and default journal";
+        return true;
+    }
+#endif // MIXXX_SQLITE3_FROM_QT
     // Ensure initialization. sqlite recommends doing this before using it
     // and might become required in future versions
     int rc = sqlite3_initialize();
@@ -403,6 +539,11 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
                 << "Failed to install locale-aware lexicographical collation function for SQLite3:"
                 << result;
     }
+#ifdef MIXXX_SQLITE3_FROM_QT
+    if (result == SQLITE_OK) {
+        s_collationInstalled = true;
+    }
+#endif // MIXXX_SQLITE3_FROM_QT
 
     result = sqlite3_create_function(
             handle,
@@ -452,10 +593,38 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
                 << result;
     }
 
-    result = sqlite3_busy_timeout(handle, 30000);
+    // WAL is on: NORMAL keeps the database consistent on a crash and skips
+    // an fsync per transaction (the scanner commits per track). The page
+    // cache (per connection, 16 MB) holds the library table's hot pages,
+    // sorts and temp B-trees stay in memory, and ANALYZE samples instead
+    // of reading every row.
+    for (const char* pragma : {"PRAGMA synchronous=NORMAL",
+                 "PRAGMA cache_size=-16384",
+                 "PRAGMA temp_store=MEMORY",
+                 "PRAGMA analysis_limit=1000"}) {
+        result = sqlite3_exec(handle, pragma, nullptr, nullptr, nullptr);
+        if (result != SQLITE_OK) {
+            kLogger.warning() << "Failed" << pragma << result;
+        }
+    }
+
+    // Wait for a busy database in 1 ms steps, up to 30 s. SQLite's own
+    // timeout sleeps up to 100 ms between tries: the scanner commits and
+    // starts its next write within a few ms, so the GUI thread waiting that
+    // way misses every gap and froze for seconds while a scan ran.
+    result = sqlite3_busy_handler(
+            handle,
+            [](void*, int count) -> int {
+                if (count >= 30000) {
+                    return 0;
+                }
+                sqlite3_sleep(1);
+                return 1;
+            },
+            nullptr);
     if (result != SQLITE_OK) {
         kLogger.warning()
-                << "Failed to set busy timeout for SQLite3:"
+                << "Failed to set busy handler for SQLite3:"
                 << result;
     }
 #else
@@ -529,6 +698,11 @@ void DbConnection::close() {
 //static
 QString DbConnection::collateLexicographically(const QString& orderByQuery) {
 #ifdef __SQLITE3__
+#ifdef MIXXX_SQLITE3_FROM_QT
+    if (!s_collationInstalled) {
+        return orderByQuery;
+    }
+#endif // MIXXX_SQLITE3_FROM_QT
     return orderByQuery + QStringLiteral(" COLLATE ") + kLexicographicalCollationFunc;
 #else
         return orderByQuery;

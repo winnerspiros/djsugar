@@ -8,19 +8,9 @@
 namespace mixxx {
 namespace qml {
 
-/// Read-only list model exposing N suggested "next track" picks to QML.
-///
-/// Strategy (in order of priority):
-///   1. Tracks currently sitting in the AutoDJ queue (hidden playlist named
-///      "Auto DJ"). This is the user's explicit upcoming queue, so it's the
-///      best signal we have for "what's next".
-///   2. If the queue is shorter than `count`, fill the remainder with the
-///      most-recently-added library tracks that aren't already loaded on a
-///      deck (so we don't suggest something the user is currently mixing).
-///
-/// `refresh()` re-queries the database. The QML side calls it on first show
-/// and every time a deck eject happens (so the strip stays in sync after the
-/// user actually loads a suggestion).
+/// Suggested next-track model for QML.
+/// Priority: AutoDJ queue first, then recently-added library tracks (not on any deck).
+/// refresh() re-queries the DB; call on first show and after deck eject.
 class QmlSuggestionsModel : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
@@ -34,7 +24,7 @@ class QmlSuggestionsModel : public QAbstractListModel {
         DurationSecRole,
         BpmRole,
         LocationRole,
-        SourceRole, // "autodj" or "recent" – lets QML colour-code differently
+        SourceRole, // "autodj" or "recent"
     };
 
     explicit QmlSuggestionsModel(QObject* parent = nullptr);
@@ -51,10 +41,10 @@ class QmlSuggestionsModel : public QAbstractListModel {
     /// Re-query the DB. Cheap enough to call on every deck change.
     Q_INVOKABLE void refresh();
 
-    /// Convenience: load the suggestion at `row` onto the next free deck.
+    /// Load suggestion at row onto the next free deck.
     Q_INVOKABLE void loadOntoNextDeck(int row);
 
-    /// Convenience: append the suggestion at `row` to the AutoDJ queue.
+    /// Append suggestion at row to the AutoDJ queue.
     Q_INVOKABLE void appendToAutoDj(int row);
 
   signals:

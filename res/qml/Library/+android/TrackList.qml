@@ -274,7 +274,7 @@ Rectangle {
             return span * (view.width - view.usedWidth) / view.dynamicColumnCount;
         }
         flickableDirection: Flickable.VerticalFlick
-        boundsBehavior: Flickable.StopAtBounds
+        boundsBehavior: Flickable.DragOverBounds
         interactive: true
         keyNavigationEnabled: false
         model: root.model
@@ -331,12 +331,6 @@ Rectangle {
                 anchors.fill: parent
                 focus: true
                 sourceComponent: delegate
-
-                onLoaded:
-                // Workaround needed for WaveformOverview column to load the data
-                //     if (track)
-                //         Mixxx.Library.analyze(track)
-                {}
             }
 
             Rectangle {
@@ -364,11 +358,6 @@ Rectangle {
                     }
                 }
             }
-            // Workaround needed for WaveformOverview column to load the data
-            // TableView.onReused: {
-            //     if (track)
-            //         Mixxx.Library.analyze(track)
-            // }
         }
         Timer {
             id: relayoutTimer
@@ -430,6 +419,12 @@ Rectangle {
                 // forceLayout is costly - only invoke if there was a change in the column layouts
                 view.forceLayout();
             }
+        }
+
+        Skin.PullToRefresh {
+            flickable: view
+            busy: false
+            onRefresh: Mixxx.Library.rescanLibrary()
         }
     }
     Rectangle {

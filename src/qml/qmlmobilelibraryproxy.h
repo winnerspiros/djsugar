@@ -20,9 +20,8 @@ class RekordboxPlaylistCopy;
 
 namespace qml {
 
-/// Library functions used by the Android UI, exposed as the
-/// `Mixxx.MobileLibrary` singleton. Kept apart from QmlLibraryProxy so that
-/// merging upstream Mixxx stays conflict-free.
+/// Library functions for the Android UI, exposed as Mixxx.MobileLibrary.
+/// Kept apart from QmlLibraryProxy so merging upstream stays conflict-free.
 class QmlMobileLibraryProxy : public QObject {
     Q_OBJECT
     /// Whether the sidebar (playlists, crates...) of the library is shown.
@@ -61,12 +60,10 @@ class QmlMobileLibraryProxy : public QObject {
 
     /// The available backups, newest first
     Q_INVOKABLE QStringList backups() const;
-    /// Backs up the library database and the settings. Returns
-    /// {ok, message}.
+    /// Backs up the library DB and settings. Returns {ok, message}.
     Q_INVOKABLE QVariantMap createBackup();
-    /// Prepares restoring the backup and closes Mixxx; the backup replaces
-    /// the library and the settings when Mixxx starts again. Returns
-    /// {ok, message}.
+    /// Prepares restore and closes Mixxx; the backup replaces the library
+    /// and settings on next start. Returns {ok, message}.
     Q_INVOKABLE QVariantMap restoreBackup(const QString& name);
 
     bool sidebarVisible() const;
@@ -79,14 +76,11 @@ class QmlMobileLibraryProxy : public QObject {
     Q_INVOKABLE QStringList getSubDirectories(const QString& rawPath) const;
     Q_INVOKABLE QString defaultMusicDirectory() const;
     /// Removable storage volumes (SD cards, USB drives) as {path, name, kind}.
-    /// The SD cards and USB drives Android has mounted, to add one as a music
-    /// folder: [{path, name, kind: "sd" | "usb"}]
     /// (from JaviLabarumDJ/mixxx-android android-stable)
     Q_INVOKABLE QVariantList removableVolumes() const;
 
     /// Analyzes all tracks again. With redoBeats, also their beatgrids,
-    /// except locked ones and those imported from Rekordbox: that replaces
-    /// the beatgrids corrected by hand, so the UI asks first.
+    /// except locked ones and those imported from Rekordbox.
     Q_INVOKABLE void analyzeAllTracks(bool redoBeats) const;
     Q_INVOKABLE void analyzeUnanalyzedTracks() const;
     /// Throws the beatgrid of the track away and analyzes it again. Returns
@@ -107,8 +101,8 @@ class QmlMobileLibraryProxy : public QObject {
     /// The ids of the playlists a file of the library is in, [] if it is not
     Q_INVOKABLE QVariantList playlistsOfTrack(const QUrl& trackUrl);
     Q_INVOKABLE bool removeTrackFromPlaylist(int playlistId, const QUrl& trackUrl);
-    /// Appends all tracks of a track list, in its current order, adding them
-    /// to the library if needed. Returns how many were added, or -1.
+    /// Appends all tracks of a track list, in its current order. Returns
+    /// how many were added, or -1.
     Q_INVOKABLE int addAllTracksToPlaylist(int playlistId, QAbstractItemModel* pTrackList);
 
     /// Whether the track list shows a Rekordbox playlist of a USB drive

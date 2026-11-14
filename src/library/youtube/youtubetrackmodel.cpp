@@ -4,6 +4,7 @@
 #include <QSharedPointer>
 #include <QString>
 #include <QUrl>
+#include <utility>
 
 #include "library/baseexternaltrackmodel.h"
 #include "library/basetrackcache.h"
@@ -24,7 +25,7 @@ YouTubeTrackModel::YouTubeTrackModel(QObject* parent,
                   pTrackCollectionManager,
                   "mixxx.db.model.youtube",
                   "youtube_library",
-                  trackSource) {
+                  std::move(trackSource)) {
 }
 
 TrackPointer YouTubeTrackModel::getTrack(const QModelIndex& index) const {

@@ -4,12 +4,10 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import "../../Theme"
 
-// The deck display of the booth skin, in the style of the lower half of a
-// booth player screen: the title bar, the deck number, the remaining time,
-// the tempo, the BPM and the overview of the whole track. The transport and
-// the hot cues are left to the controller; touching the display only
-// changes what it shows (remaining/elapsed time), the tempo settings
-// (master tempo, sync, leader) and opens the beatgrid panel (BPM).
+// Deck display of the booth skin, in the style of a booth player screen:
+// title bar, deck number, remaining time, tempo, BPM, overview.
+// Transport and hot cues are left to the controller; touching the display
+// changes remaining/elapsed time, tempo settings and opens the beatgrid panel.
 Rectangle {
     id: root
 
@@ -28,7 +26,7 @@ Rectangle {
         const position = Math.max(0, Math.min(1, positionControl.value)) * durationControl.value;
         return root.showElapsed ? position : durationControl.value - position;
     }
-    // Text sizes follow the panel size
+    // Text sizes follow panel size
     readonly property real unit: Math.max(9, Math.min(height / 11, width / 30))
 
     function pad(number, digits) {
@@ -101,12 +99,12 @@ Rectangle {
         key: "keylock"
     }
 
-    // A small grey caption, like "REMAIN" or "TEMPO"
+    // A small grey caption
     component Caption: Text {
         color: Theme.lightGray3
         font.pixelSize: Math.round(root.unit * 0.95)
     }
-    // A small outlined switch, where a player has A.HOT CUE / AUTO CUE
+    // A small outlined switch
     component Chip: Rectangle {
         id: chip
 
@@ -232,7 +230,7 @@ Rectangle {
             text: root.loaded ? (root.currentTrack?.keyText ?? "") : ""
         }
 
-        // Linear progress bar across bottom of deck song box when downloading
+        // Linear progress bar across bottom during download
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
@@ -259,7 +257,7 @@ Rectangle {
         }
     }
 
-    // ---- Remaining time, tempo and BPM ----
+    // ---- Info: remaining time, tempo, BPM ----
     Item {
         id: info
 
@@ -294,7 +292,7 @@ Rectangle {
             }
         }
 
-        // Tap: remaining or elapsed time
+        // Tap: show elapsed or remaining time
         Item {
             id: time
 
@@ -472,7 +470,7 @@ Rectangle {
         }
     }
 
-    // ---- Overview of the whole track, with its cue points ----
+    // ---- Overview with cue points ----
     Skin.WaveformOverview {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 3

@@ -5,31 +5,25 @@ import QtQuick
 import QtQuick.Controls
 import "../../Theme"
 
-// Booth skin: a main window in the style of the screen of a booth player,
-// for landscape phones and tablets. The waveforms are stacked over the
-// whole width, the deck displays are below them and BEAT FX (effect unit 1)
-// is on the right. BROWSE shows the skin's browser (BoothBrowse.qml) in
-// place of the waveforms; LOAD 1/2 open it for one deck. DJ shows touch
-// controls for playing without a controller (BoothDjView.qml), and is
-// shown when no controller is used; XY the XY pad. UTILITY opens the
-// shared settings in the skin's frame.
-//
-// A skin is a folder in res/qml/Skins with a MainWindow.qml whose root item
-// takes the application window, see packaging/android/README.md.
+// Booth skin: main window styled like a booth player screen for landscape
+// phones/tablets. Waveforms stacked full width; deck displays below; BEAT FX
+// (effect unit 1) on right. BROWSE shows BoothBrowse.qml; LOAD 1/2 open it
+// for one deck. DJ shows touch controls (BoothDjView.qml) when no controller;
+// XY shows XY pad. UTILITY opens shared settings.
+// A skin is a folder in res/qml/Skins with MainWindow.qml taking the app
+// window; see packaging/android/README.md.
 Item {
     id: root
 
     required property ApplicationWindow applicationWindow
     property var menuBar: null
 
-    // 1: waveforms (WAVE), 2: the browser (BROWSE), 3: touch controls
-    // (DJ), 4: the XY pad (XY)
+    // View modes: 1=waveforms, 2=browser, 3=DJ touch, 4=XY pad
     property int viewMode: 1
     readonly property bool browsing: viewMode === 2
     readonly property bool djView: viewMode === 3
     readonly property bool xyView: viewMode === 4
-    // A controller with an enabled mapping is connected. Without one the DJ
-    // view is shown, as the decks can't be played otherwise.
+    // DJ view shown when no controller connected (decks unplayable otherwise)
     readonly property bool controllerConnected: {
         const devices = Mixxx.ControllerManager.knownDevices;
         for (let i = 0; i < devices.length; ++i) {

@@ -57,7 +57,7 @@ class SponsorBlockController : public QObject {
 
   private slots:
     void onTrackChanged(
-            const QString& group, TrackPointer pNewTrack, TrackPointer pOldTrack);
+            const QString& group, const TrackPointer& pNewTrack, const TrackPointer& pOldTrack);
     void onSponsorSegmentsFetched(
             const QString& videoId, const QList<mixxx::SponsorSegment>& segments);
 

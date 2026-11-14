@@ -33,13 +33,9 @@ struct Bank {
 };
 
 /// The sounds of the X-Pad, all loaded in the background. Bank 1 plays the
-/// app's kick, snare, clap and hi-hat samples; banks 2 to 4 come from
-/// Mixxx/FxStation/Bank N on the storage (files named kick, snare, clap and
-/// hat, a number prefix like "01_" allowed, or else the first four audio
-/// files). An empty Bank 2 plays the bundled DJ Sugar kit. A sound picked
-/// in the app for a pad (soundKey) replaces the default of any bank. The
-/// engine reads a bank without locking; a bank replaced by a reload is
-/// kept until the app quits, since the engine may still be playing it.
+/// app's kick/snare/clap/hat; banks 2-4 from storage. An empty Bank 2 plays
+/// the bundled DJ Sugar kit. A custom sound for a pad replaces the default
+/// of any bank. Engine reads atomically; replaced banks are kept until quit.
 class Instruments : public QObject {
     Q_OBJECT
   public:

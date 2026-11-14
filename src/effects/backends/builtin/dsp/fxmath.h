@@ -1,7 +1,7 @@
 #pragma once
 
-// Shared realtime DSP building blocks for the built-in effects.
-// Header-only, no Mixxx or Qt dependency, no allocation in process calls:
+// Realtime DSP building blocks for built-in effects.
+// Header-only, no Mixxx/Qt dependency, no allocation in process calls:
 // every buffer is sized by the owning effect state outside the audio callback.
 
 #include <algorithm>
@@ -29,15 +29,13 @@ inline float gainToDb(float gain) {
     return 20.0f * std::log10(std::max(gain, 1e-9f));
 }
 
-// Flushes values that would become denormal in recursive structures.
-// ARM64 runs with flush-to-zero in most audio threads, x86 does not
-// necessarily, so feedback paths call this explicitly.
+// Flushes denormals in recursive structures.
+// ARM64 often flushes to zero, x86 does not, so feedback paths call this.
 inline float flush(float x) {
     return std::fabs(x) < 1e-15f ? 0.0f : x;
 }
 
-// Replaces NaN and infinity with silence. Used at the outputs of feedback
-// structures so a single bad sample can never latch an effect into noise.
+// Replaces NaN/inf with silence: a single bad sample never latches feedback noise.
 inline float sanitize(float x) {
     return std::isfinite(x) ? x : 0.0f;
 }
@@ -62,9 +60,7 @@ inline float knobToHz(float knob, float minHz, float maxHz) {
     return minHz * std::pow(maxHz / minHz, clampf(knob, 0.0f, 1.0f));
 }
 
-// Fast tan for the bilinear prewarp, accurate to about 1e-4 relative
-// below 0.45 * Nyquist and still monotonic above. The argument is
-// pi * f / fs and is clamped short of pi / 2.
+// Fast tan for bilinear prewarp, accurate ~1e-4 relative below 0.45*Nyquist.
 inline float prewarp(float hz, float sampleRate) {
     const float w = clampf(kPi * hz / sampleRate, 1e-6f, 1.5f);
     return std::tan(w);
@@ -95,8 +91,7 @@ class Random {
     uint32_t m_state;
 };
 
-// Per-sample one-pole parameter smoother. Rate-independent: the time
-// constant is set in seconds.
+// Per-sample one-pole parameter smoother (time constant in seconds).
 class Smoother {
   public:
     void setTime(float seconds, float sampleRate) {

@@ -7,9 +7,9 @@
 
 namespace allshader {
 
-/// The waveform data of the waveforms drawn by the GPU
-/// (WaveformRendererRGBGpu, WaveformRendererStemGpu), as an RGBA texture:
-/// one texel per visual sample, left and right interleaved, row by row.
+/// The waveform data for GPU-drawn waveforms (WaveformRendererRGBGpu,
+/// WaveformRendererStemGpu), as an RGBA texture: one texel per visual
+/// sample, left/right interleaved, row by row.
 namespace waveformgpudata {
 
 /// Texels per row. 2048 is the smallest maximum texture size of OpenGL ES 3;

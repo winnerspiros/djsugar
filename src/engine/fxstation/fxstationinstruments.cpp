@@ -16,12 +16,11 @@ namespace fxstation {
 
 namespace {
 
-// User sounds are cut after this long
 constexpr double kMaxUserSeconds = 4.0;
 
 const char* const kNamePrefixes[kInstruments] = {"kick", "snare", "clap", "hat"};
-// Bank 1: the app's own drum samples, in res/samples. The kick has a
-// click: kick.opus is nearly all below 150 Hz, which phone speakers drop
+// Built-in drums. hardstyle-kick, not kick.opus: that one is mostly below
+// 150 Hz, which phone speakers drop.
 const char* const kFactoryFiles[kInstruments] = {
         "hardstyle-kick.opus", "snare.opus", "clap.opus", "hi-hat.opus"};
 

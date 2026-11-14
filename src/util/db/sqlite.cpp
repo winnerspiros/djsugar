@@ -3,6 +3,8 @@
 #include <QTimeZone>
 
 #include "util/assert.h"
+#include "util/db/fwdsqlquery.h"
+#include "util/logger.h"
 
 namespace {
 
@@ -51,6 +53,17 @@ QDateTime readGeneratedTimestamp(const QVariant& value) {
 
 QVariant writeGeneratedTimestamp(const QDateTime& value) {
     return value.toUTC().toString(kGeneratedTimestampFormat);
+}
+
+void updateQueryPlannerStatistics(const QSqlDatabase& database) {
+    static mixxx::Logger kLogger("Sqlite");
+    kLogger.info() << "Updating query planner statistics for database...";
+    FwdSqlQuery query(database, QStringLiteral("ANALYZE"));
+    if (!query.execPrepared()) {
+        kLogger.warning() << "Failed to update query planner statistics for database";
+    } else {
+        kLogger.info() << "Finished updating query planner statistics for database";
+    }
 }
 
 } // namespace sqlite

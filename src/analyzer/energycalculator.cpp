@@ -12,10 +12,8 @@ constexpr double kBlockSeconds = 0.02; // 20 ms analysis blocks
 constexpr int kBlocksPerWindow = 50;   // 1 s loudness windows
 constexpr double kWindowSeconds = kBlockSeconds * kBlocksPerWindow;
 constexpr int kBodySpanWindows = 4; // "sustained" = 4 s
-// Body start: where the bass AND the overall level first reach the track's
-// typical level (its 40th percentile, 1 s windows) and stay there for 4 s.
-// "Loud" alone misses intros that are loud but have no drums; tuned on 5
-// tracks with the DJ's own beat times (all within about 1 s).
+// Body start: bass AND overall level (1s windows) reach the 40th
+// percentile and stay 4 s. Tuned on 5 tracks (all within ~1 s).
 constexpr double kBodyTypicalPercentile = 0.4;
 constexpr double kBodyStartMarginDb = 2.0;
 constexpr double kBodyStartFirstWindowMarginDb = 4.0;
@@ -30,8 +28,8 @@ constexpr double kHighCutoffHz = 2500.0;
 constexpr double kSilenceDb = -60.0;
 constexpr double kMinSoundSeconds = 5.0;
 
-// Onset detection: a block this much louder than the average of the
-// previous blocks, above a floor, and not too soon after the last one.
+// Onset detection: block N dB above the average of the previous
+// blocks, above a floor, and not too soon after the last one.
 constexpr int kOnsetHistoryBlocks = 8; // 160 ms
 constexpr double kOnsetRiseDb = 3.0;
 constexpr double kOnsetFloorDb = -45.0;
@@ -49,9 +47,8 @@ constexpr double kWeightLoudness = 0.45;
 constexpr double kWeightBrightness = 0.30;
 constexpr double kWeightBusyness = 0.25;
 
-// Beat grid check (gridDriftBeats). A "hit" = a rise in a band's level from
-// one 20 ms block to the next. Tested on 5 real tracks: correct grids
-// drifted 0.04..0.13 beats; a grid 0.05% too fast/slow 0.15 and more.
+// Beat grid check (gridDriftBeats). A "hit" = a level rise in a band
+// from one 20 ms block to the next. Tested on 5 tracks.
 constexpr double kGridFloorDb = -60.0;
 constexpr int kGridWindowBeats = 16;
 constexpr int kGridWindowsPerRegion = 4; // 64 beats per region

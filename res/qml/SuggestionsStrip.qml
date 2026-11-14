@@ -4,12 +4,8 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts
 import "Theme"
 
-// Slim "next track" suggestions strip, à la Virtual DJ's Sideview.
-// Tap a suggestion → load on the next free deck.
-// Long-press     → append to the AutoDJ queue.
-//
-// Picks come from QmlSuggestionsModel, which prefers tracks already queued
-// in AutoDJ, falling back to most-recently-added when the queue is short.
+// Next-track strip (Virtual DJ Sideview). Tap loads on the next free
+// deck; long-press appends to AutoDJ queue.
 Rectangle {
     id: root
 
@@ -24,10 +20,7 @@ Rectangle {
         count: 4
     }
 
-    // Keep the strip fresh: poll every 2 s while visible. Two indexed SQLite
-    // reads are negligible vs. the engine workload, and the timer auto-stops
-    // when `visible` flips to false (e.g. user maximises a deck), so there is
-    // no cost during heavy mixing when the library is hidden.
+    // Poll every 2 s while visible (auto-stops when hidden, negligible cost).
     Timer {
         interval: 2000
         repeat: true

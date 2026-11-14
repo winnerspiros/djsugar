@@ -55,8 +55,7 @@ Item {
                     Layout.fillHeight: true
                     spacing: 4
 
-                    // Navidrome / Subsonic and direct URL / radio in one
-                    // tab (WebView): it works out what the box is fed
+                    // Navidrome / Subsonic / URL / radio in one tab (WebView): auto-detects
                     Skin.Button {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 196

@@ -18,15 +18,8 @@ namespace android {
 
 /// Copies the files of a Rekordbox playlist into a local folder and makes a
 /// Mixxx playlist of the copies, in the order of the Rekordbox playlist.
-///
-/// The files are copied on a worker thread. Each copy is then added to the
-/// library on the main thread, in the order of the playlist, and gets the
-/// beatgrid, cues, key, color and "date added" Rekordbox exported for it.
-///
-/// Copying a playlist again updates the folder and the playlist: files that
-/// are already in the folder with the same size are not copied again, and
-/// the Mixxx playlist is refilled. Tracks that already were in the library
-/// keep their data.
+/// Files already in the folder with the same size are not copied again.
+/// Tracks already in the library keep their data.
 class RekordboxPlaylistCopy : public QObject {
     Q_OBJECT
   public:

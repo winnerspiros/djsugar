@@ -17,8 +17,7 @@ MusicMatcherClient::MusicMatcherClient(QObject* parent)
     connect(m_pTimer, &QTimer::timeout, this, &MusicMatcherClient::slotTimeout);
 }
 
-MusicMatcherClient::~MusicMatcherClient() {
-}
+MusicMatcherClient::~MusicMatcherClient() = default;
 
 void MusicMatcherClient::findSimilar(const QString& artist, const QString& title, int limit) {
     m_suggestions.clear();

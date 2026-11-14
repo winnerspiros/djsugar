@@ -33,9 +33,8 @@ const ConfigKey kHiddenTopBarItemsKey(
         QStringLiteral("[Skin]"), QStringLiteral("AndroidHiddenTopBarItems"));
 
 const ConfigKey kGraphicsApiKey(QStringLiteral("[Config]"), QStringLiteral("GraphicsApi"));
-// Set to the chosen API before the window starts and cleared after its first
-// frame: still set at the next start means that start never drew anything
-// (driver crash, black window), so the default API is used again.
+// Set before window starts, cleared after first frame. If still set at next
+// start, the chosen API never drew anything (driver crash), so fall back.
 const ConfigKey kGraphicsApiPendingKey(
         QStringLiteral("[Config]"), QStringLiteral("GraphicsApiPending"));
 const ConfigKey kAntialiasingKey(QStringLiteral("[Config]"), QStringLiteral("Antialiasing"));
@@ -44,8 +43,7 @@ constexpr int kDefaultSamples = 4;
 
 bool vulkanAvailable() {
 #if QT_CONFIG(vulkan)
-    // Creating an instance is cheap and tells whether a Vulkan driver (the
-    // loader and at least one device layer) is there at all.
+    // Cheap check for a Vulkan driver (loader + device layer).
     static const bool available = []() {
         QVulkanInstance instance;
         return instance.create();
@@ -108,8 +106,7 @@ namespace qml {
 QmlMobileAppProxy::QmlMobileAppProxy(QObject* pParent)
         : QObject(pParent) {
 #ifdef Q_OS_ANDROID
-    // The cutout moves to the other side when the phone is turned around,
-    // which Android reports through no signal that is cheap to hook here.
+    // Cutout side changes on rotation; poll because Android has no cheap signal.
     m_cutoutTimer.setInterval(1000);
     connect(&m_cutoutTimer, &QTimer::timeout, this, &QmlMobileAppProxy::refreshCutouts);
     m_cutoutTimer.start();

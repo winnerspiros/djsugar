@@ -6,14 +6,9 @@
 #include <optional>
 #include <utility>
 
-/// Auto DJ 2.0 plus Video Mixing Genre Scan: the pure part (no network, no Mixxx types), so
-/// it can be unit-tested. GenreScanner does the web requests.
-///
-/// For each song: search MusicBrainz for the recording by artist + title,
-/// accept only a close match, then take the recording's most-voted genre,
-/// or the artist's most-voted genre if the recording has none.
-/// MusicBrainz genres are community votes: a suggestion, not a fact, so the
-/// DJ reviews every one before it is applied.
+/// MusicBrainz genre lookup (pure logic, no network/types). Searches recording by
+/// artist+title, takes the most-voted genre; falls back to artist genre.
+/// MusicBrainz genres are community votes — the DJ reviews each before applying.
 namespace genrescan {
 
 /// A genre with its number of votes.

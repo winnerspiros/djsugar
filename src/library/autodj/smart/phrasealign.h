@@ -16,7 +16,7 @@ namespace phrasealign {
 
 constexpr int kBeatsPerBar = 4;
 constexpr int kBarsPerPhrase = 8;
-constexpr int kBeatsPerPhrase = kBeatsPerBar * kBarsPerPhrase; // 32
+constexpr int kBeatsPerPhrase = kBeatsPerBar * kBarsPerPhrase;
 /// How late a fade may still start (see plan()).
 constexpr int kLateStartBeats = kBeatsPerBar;
 /// Shortest fade of a mix that is not beatmatched: 1 bar (2 s at 120 BPM).

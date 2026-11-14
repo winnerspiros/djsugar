@@ -28,9 +28,8 @@ bool isConfiguredOutput(const SoundManagerConfig& config, const SoundDevicePoint
 
 template<typename Devices>
 SoundDevicePointer pickBestOutput(const Devices& devices, int* pRank) {
-    // Pick order: a USB audio device (the DJ controller's sound card, e.g.
-    // the FLX4), then the built-in speaker, then any other Oboe output, then
-    // anything else. Earpiece and network outputs are never picked.
+    // Pick order: USB audio (DJ controller, e.g. FLX4), built-in speaker,
+    // then any other Oboe output. Earpiece and network are never picked.
     auto rank = [](const SoundDevicePointer& pDevice) {
         if (!pDevice || pDevice->getNumOutputChannels() <= 0 ||
                 pDevice->getDeviceId().name == kNetworkDeviceInternalName) {
@@ -72,11 +71,9 @@ SoundManagerAndroid::SoundManagerAndroid(SoundManager* pSoundManager)
         config.loadDefaults(m_pSoundManager,
                 SoundManagerConfig::API | SoundManagerConfig::DEVICES |
                         SoundManagerConfig::OTHER);
-        // The generic default is the first stereo device in the list, which
-        // on phones can be the earpiece or an unrouted "default" device. It
-        // opens fine, so the fallback never replaced it and the output had
-        // to be picked by hand after every install. Same pick as the
-        // fallback instead: USB audio, then the built-in speaker.
+        // The generic default is the first stereo device in the list, which on
+        // phones can be the earpiece or an unrouted "default" device. It opens
+        // fine so the fallback never replaced it. Pick USB audio or speaker.
         QList<SoundDevicePointer> outputs;
         for (const QString& api : m_pSoundManager->getHostAPIList()) {
             outputs.append(m_pSoundManager->getDeviceList(api, true, false));
@@ -192,11 +189,9 @@ void SoundManagerAndroid::prepareSetup() {
         config.loadDefaults(m_pSoundManager,
                 SoundManagerConfig::API | SoundManagerConfig::DEVICES |
                         SoundManagerConfig::OTHER);
-        // The generic default is the first stereo device in the list, which
-        // on phones can be the earpiece or an unrouted "default" device. It
-        // opens fine, so the fallback never replaced it and the output had
-        // to be picked by hand after every install. Same pick as the
-        // fallback instead: USB audio, then the built-in speaker.
+        // The generic default is the first stereo device in the list, which on
+        // phones can be the earpiece or an unrouted "default" device. It opens
+        // fine so the fallback never replaced it. Pick USB audio or speaker.
         QList<SoundDevicePointer> outputs;
         for (const QString& api : m_pSoundManager->getHostAPIList()) {
             outputs.append(m_pSoundManager->getDeviceList(api, true, false));

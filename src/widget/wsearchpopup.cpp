@@ -16,6 +16,7 @@
 #include <QStyleFactory>
 #include <QStyleOption>
 #include <QVBoxLayout>
+#include <utility>
 
 class ComboBoxStyle : public QProxyStyle {
   public:
@@ -100,7 +101,7 @@ QList<ParsedTerm> parseSearchTerms(const QString& text) {
 
 WSearchPopup::WSearchPopup(UserSettingsPointer pConfig, QWidget* parent)
         : QDialog(parent),
-          m_pConfig(pConfig) {
+          m_pConfig(std::move(pConfig)) {
     setWindowTitle(tr("Fast Search"));
 
     QStyle* fusion = QStyleFactory::create(QStringLiteral("Fusion"));

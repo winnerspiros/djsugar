@@ -23,7 +23,7 @@ void loadOnnxRuntime() {
         return;
     }
     using GetApiBaseFn = const OrtApiBase* (*)();
-    auto getApiBase = reinterpret_cast<GetApiBaseFn>(dlsym(pLibrary, "OrtGetApiBase"));
+    auto* getApiBase = reinterpret_cast<GetApiBaseFn>(dlsym(pLibrary, "OrtGetApiBase"));
     const OrtApi* pApi = getApiBase ? getApiBase()->GetApi(ORT_API_VERSION) : nullptr;
     if (!pApi) {
         s_initError = QStringLiteral("Unsupported ONNX Runtime library");

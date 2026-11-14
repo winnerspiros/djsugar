@@ -34,10 +34,8 @@ namespace {
 
 const Logger kLogger("StemsWorker");
 
-// Separating takes the memory of the whole decoded track
 constexpr double kMaxTrackMinutes = 20.0;
 constexpr SINT kDecodeChunkFrames = 65536;
-// Below the UI, far below the audio
 constexpr int kWorkerNiceness = 10;
 
 /// Resamples interleaved stereo float audio
@@ -144,7 +142,6 @@ QString StemsWorker::separate(const Job& job, QString* pStemFile) {
     }
 
     // Decode the whole track
-    // Where the time goes, logged at the end
     QElapsedTimer totalTimer;
     totalTimer.start();
     QElapsedTimer stageTimer;
@@ -191,8 +188,7 @@ QString StemsWorker::separate(const Job& job, QString* pStemFile) {
     const SINT trackFrames = static_cast<SINT>(track.size() / 2);
     const qint64 decodeMs = stageTimer.restart();
 
-    // The models separate audio at 44.1 kHz, the stem file keeps the rate of
-    // the track so that its cues and beats stay in place
+    // Models separate at 44.1 kHz; stem file keeps the track's sample rate.
     std::vector<float> resampledTrack;
     const float* pModelInput = track.data();
     SINT modelFrames = trackFrames;
@@ -226,9 +222,7 @@ QString StemsWorker::separate(const Job& job, QString* pStemFile) {
         return QStringLiteral("model");
     }
 
-    // Next to the track if its folder can be written, otherwise in the
-    // app's storage. The drives Mixxx reads itself can't be written, their
-    // tracks are only copies.
+    // Write to companion path next to the track, or fallback for read-only drives.
     QString stemFile = onReadOnlyDrive ? fallbackPath(job.location) : companionPath(job.location);
     QDir().mkpath(QFileInfo(stemFile).absolutePath());
     StemFileWriter writer;

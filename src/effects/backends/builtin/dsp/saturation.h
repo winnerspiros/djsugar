@@ -1,12 +1,7 @@
 #pragma once
 
-// Waveshapers. The Adaa* classes use first-order antiderivative
-// anti-aliasing (Parker, Zavalishin, Le Bivic, "Reducing the aliasing of
-// nonlinear waveshaping using continuous-time convolution", DAFx 2016):
-// y[n] = (F(x[n]) - F(x[n-1])) / (x[n] - x[n-1]) with F the antiderivative
-// of the shaper. This removes most of the harsh fold-back aliasing of
-// naive clipping at the cost of half a sample of delay, with no
-// oversampling.
+// Waveshapers. Adaa* use first-order antiderivative anti-aliasing
+// (Parker, Zavalishin, Le Bivic, DAFx 2016).
 
 #include <cmath>
 
@@ -23,8 +18,7 @@ inline float softClip(float x) {
     return x - (4.0f / 27.0f) * x * x * x;
 }
 
-// Rational tanh approximation (Pade 7/6), error below 2e-4 and exactly
-// bounded to [-1, 1].
+// Rational tanh approximation (Pade 7/6), error < 2e-4, bounded to [-1, 1]
 inline float fastTanh(float x) {
     if (x <= -4.97f) {
         return -1.0f;

@@ -39,7 +39,7 @@ Category {
             anchors.margins: 12
             spacing: 12
 
-            // ================= WHAT IT IS =================
+            // WHAT IT IS
             Card {
                 ColumnLayout {
                     anchors.fill: parent
@@ -69,7 +69,7 @@ Category {
                 }
             }
 
-            // ================= MODELS =================
+            // MODELS
             Card {
                 ColumnLayout {
                     anchors.fill: parent
@@ -118,7 +118,7 @@ Category {
                 }
             }
 
-            // ================= OPTIONS =================
+            // OPTIONS
             Card {
                 ColumnLayout {
                     anchors.fill: parent
@@ -180,7 +180,7 @@ Category {
                 }
             }
 
-            // ================= QUEUE =================
+            // QUEUE
             Card {
                 ColumnLayout {
                     anchors.fill: parent
@@ -200,7 +200,7 @@ Category {
                 }
             }
 
-            // ================= STORAGE =================
+            // STORAGE
             Card {
                 ColumnLayout {
                     anchors.fill: parent
@@ -257,7 +257,7 @@ Category {
         }
     }
 
-    // A card holding one layout, anchored to fill it with margins of 12
+    // A card holding one layout, anchored to fill it with margins
     component Card: Rectangle {
         default property alias content: holder.data
 
