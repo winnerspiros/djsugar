@@ -354,6 +354,8 @@ of these can be switched off (all are on to start):
 - **EQ and filter**: EQ, kills, filter and sculpt go back to the middle.
 - **Gain**: the gain knob goes back to 0 dB (or the track's own gain, if its
   info sets one). Auto gain still levels each track.
+- **Tempo**: the tempo fader goes back to 0%, so the track starts at its own
+  BPM. A synced deck still takes the tempo it follows.
 
 ## Mixer
 

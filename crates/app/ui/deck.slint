@@ -2974,20 +2974,23 @@ component Pitch inherits VerticalLayout {
     // Deck B: pitch reset goes on the fader's right, its outer side.
     in property <bool> mirrored;
     property <int> keylock-index: Controls.resolve(group, "keylock");
-    width: 64px;
-    spacing: 5px;
-    SyncButton { group: group; tint: tint; font-size: 13px; height: 30px; menu-right-aligned: mirrored; tour-id: group + ",sync_enabled"; }
+    width: 72px;
+    spacing: 3px;
+    SyncButton { group: group; tint: tint; font-size: 13px; height: 26px; menu-right-aligned: mirrored; tour-id: group + ",sync_enabled"; }
     VerticalLayout {
         spacing: 1px;
-        Text { text: info.loaded ? info.bpm : "--"; color: Theme.text; font-size: 15px; font-weight: 600; font-family: "Inter Tabular"; horizontal-alignment: center; height: 18px; vertical-alignment: center; }
+        Text { text: info.loaded ? info.bpm : "--"; color: Theme.text; font-size: 12px; font-weight: 600; font-family: "Inter Tabular"; horizontal-alignment: center; height: 14px; vertical-alignment: center; }
         TempoPanelMenu { group: group; info: info; tint: tint; mirrored: mirrored; }
     }
     Rectangle {
         vertical-stretch: 1;
+        // The handle's half at each end reaches into the gaps above and
+        // below, so the fader runs as far up and down as the column allows.
         ControlFader {
             x: (parent.width - self.width) / 2;
-            width: 32px;
-            height: parent.height;
+            y: -6px;
+            width: 48px;
+            height: parent.height + 12px;
             group: group;
             key: "rate";
             center-mark: true;
@@ -3007,8 +3010,9 @@ component Pitch inherits VerticalLayout {
     // The fine − and + under the fader.
     HorizontalLayout {
         alignment: space-around;
-        TempoStep { group: group; key: "rate_perm_down_small"; text: "−"; tint: tint; }
-        TempoStep { group: group; key: "rate_perm_up_small"; text: "+"; tint: tint; }
+        height: 16px;
+        TempoStep { group: group; key: "rate_perm_down_small"; text: "−"; tint: tint; height: 16px; }
+        TempoStep { group: group; key: "rate_perm_up_small"; text: "+"; tint: tint; height: 16px; }
     }
 }
 

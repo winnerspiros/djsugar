@@ -1449,6 +1449,7 @@
 [Controls],auto_reset_eq
 [Controls],auto_reset_fx
 [Controls],auto_reset_gain
+[Controls],auto_reset_tempo
 [Controls],key_match_on_load
 [Controls],pfl_on_load
 [EffectRack1_EffectUnit10],bpm

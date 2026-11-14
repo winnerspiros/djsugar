@@ -392,7 +392,7 @@ pub fn remember_levels(registry: Arc<ControlRegistry>) -> slint::Timer {
 
 /// What loading a track puts back to normal on its deck, as settings and
 /// `[Controls]` keys of the same name, with their titles and help.
-const AUTO_RESETS: [(&str, &str, &str); 3] = [
+const AUTO_RESETS: [(&str, &str, &str); 4] = [
     (
         "auto_reset_fx",
         "Effects",
@@ -407,6 +407,11 @@ const AUTO_RESETS: [(&str, &str, &str); 3] = [
         "auto_reset_gain",
         "Gain",
         "The gain knob goes back to 0 dB; auto gain still levels each track.",
+    ),
+    (
+        "auto_reset_tempo",
+        "Tempo",
+        "The tempo fader goes back to 0%. A synced deck still takes the tempo it follows.",
     ),
 ];
 
@@ -2728,7 +2733,7 @@ impl Prefs {
             "auto_gain" => self.set("[ReplayGain]", "ReplayGainEnabled", f(on)),
             "stems_on_load" => separation::set_on_load(on),
             crate::wave_look::GAIN_KEY => crate::wave_look::set_follows_gain(on),
-            "auto_reset_fx" | "auto_reset_eq" | "auto_reset_gain" => {
+            "auto_reset_fx" | "auto_reset_eq" | "auto_reset_gain" | "auto_reset_tempo" => {
                 self.set("[Controls]", id, f(on))
             }
             _ => {}

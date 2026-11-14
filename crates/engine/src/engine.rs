@@ -2075,7 +2075,7 @@ impl Engine {
                         h.end_position.set(-1.0);
                     }
                     d.c.hotcue_focus.set(-1.0);
-                    let [reset_fx, reset_eq, reset_gain] =
+                    let [reset_fx, reset_eq, reset_gain, reset_tempo] =
                         self.master.auto_reset.each_ref().map(|c| c.get_bool());
                     // The track's own gain, set in its info; auto gain levels
                     // it on top.
@@ -2151,6 +2151,12 @@ impl Engine {
                         let _ = self.returned.push(Returned::Done(old));
                     }
                     d.set_seconds(track.first_beat);
+                    // The tempo fader back to 0%, unless it holds the tempo a
+                    // playing deck follows (below).
+                    if reset_tempo && !d.c.rate.is_locked() {
+                        d.c.rate_reset.set_bool(false);
+                        d.c.rate.set(0.0);
+                    }
                     if let Some(held) = held_bpm.filter(|_| track.bpm > 0.0) {
                         // At the held tempo, or half or double it, whichever
                         // is nearest the track's own.
@@ -4871,7 +4877,7 @@ mod tests {
     }
 
     #[test]
-    fn loading_a_track_resets_fx_eq_and_gain() {
+    fn loading_a_track_resets_fx_eq_gain_and_tempo() {
         let (reg, mut engine, mut input) = setup();
         load(&mut input, 0, short_track(120.0, 4.0));
         load(&mut input, 1, short_track(120.0, 4.0));
@@ -4881,6 +4887,7 @@ mod tests {
         let eq = |k: &str| c("[EqualizerRack1_[Channel1]_Effect1]", k);
         let slot = |u: usize, k: &str| c(&format!("[EffectRack1_EffectUnit{u}_Effect1]"), k);
         deck1("pregain").set(2.0);
+        deck1("rate").set(0.4);
         eq("parameter1").set(0.2);
         eq("button_parameter3").set_bool(true);
         c("[QuickEffectRack1_[Channel1]]", "super1").set(0.8);
@@ -4899,6 +4906,7 @@ mod tests {
         load(&mut input, 0, short_track(124.0, 4.0));
         run(&mut engine, 0.02);
         assert_eq!(deck1("pregain").get(), 1.0);
+        assert_eq!(deck1("rate").get(), 0.0);
         assert_eq!(eq("parameter1").get(), 1.0);
         assert!(!eq("button_parameter3").get_bool());
         assert_eq!(c("[QuickEffectRack1_[Channel1]]", "super1").get(), 0.5);
@@ -4911,15 +4919,17 @@ mod tests {
         assert!(slot(5, "enabled").get_bool());
 
         // Switched off, loading leaves them as they are.
-        for k in ["fx", "eq", "gain"] {
+        for k in ["fx", "eq", "gain", "tempo"] {
             c("[Controls]", &format!("auto_reset_{k}")).set_bool(false);
         }
         deck1("pregain").set(2.0);
+        deck1("rate").set(0.4);
         eq("parameter1").set(0.2);
         slot(1, "enabled").set_bool(true);
         load(&mut input, 0, short_track(126.0, 4.0));
         run(&mut engine, 0.02);
         assert_eq!(deck1("pregain").get(), 2.0);
+        assert_eq!(deck1("rate").get(), 0.4);
         assert_eq!(eq("parameter1").get(), 0.2);
         assert!(slot(1, "enabled").get_bool());
     }

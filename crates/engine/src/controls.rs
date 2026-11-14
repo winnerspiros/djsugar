@@ -762,8 +762,9 @@ pub(crate) struct MasterControls {
     pub(crate) key_match_on_load: ControlHandle,
     /// What loading a track puts back to normal on its deck: `[Controls]`
     /// auto_reset_fx (effects off), auto_reset_eq (EQ, kills, filter and
-    /// sculpt) and auto_reset_gain (the gain knob). All on to start.
-    pub(crate) auto_reset: [ControlHandle; 3],
+    /// sculpt), auto_reset_gain (the gain knob) and auto_reset_tempo (the
+    /// tempo fader back to 0%). All on to start.
+    pub(crate) auto_reset: [ControlHandle; 4],
     /// `[Controls] pfl_on_load`: loading a track cues its deck in the
     /// headphones and takes the other decks out of the cue. On to start;
     /// automix loads leave the cue alone.
@@ -899,7 +900,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
             2.0,
             Behavior::Free,
         ),
-        auto_reset: ["fx", "eq", "gain"].map(|k| {
+        auto_reset: ["fx", "eq", "gain", "tempo"].map(|k| {
             let c = reg.toggle("[Controls]", &format!("auto_reset_{k}"));
             c.set_bool(true);
             c
