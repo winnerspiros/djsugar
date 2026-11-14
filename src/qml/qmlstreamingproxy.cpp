@@ -8,10 +8,13 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSqlError>
+#include <QSqlQuery>
 #include <QTimer>
 #include <QUrlQuery>
 
 #include "library/library.h"
+#include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "moc_qmlstreamingproxy.cpp"
 #include "sources/metadatasourcetaglib.h"
@@ -609,6 +612,17 @@ void addDownloadToLibrary(Library* pLibrary, const QString& path) {
         return;
     }
     if (alreadyInLibrary && pTrack->getId().isValid()) {
+        // Downloaded before and dropped from the cache, its row is marked
+        // missing: the file is back
+        QSqlQuery query(
+                pLibrary->trackCollectionManager()->internalCollection()->database());
+        query.prepare(QStringLiteral(
+                "UPDATE track_locations SET fs_deleted=0 WHERE location=:location"));
+        query.bindValue(QStringLiteral(":location"), pTrack->getLocation());
+        if (!query.exec()) {
+            qWarning() << "QmlStreamingProxy: could not mark the download present:"
+                       << query.lastError().text();
+        }
         pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
     }
     QTimer::singleShot(0, pLibrary, &Library::slotRefreshLibraryModels);

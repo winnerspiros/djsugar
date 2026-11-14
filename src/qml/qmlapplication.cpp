@@ -37,6 +37,7 @@
 #include "qml/qmlrecordingproxy.h"
 #include "recording/recordingmanager.h"
 #include "soundio/soundmanager.h"
+#include "track/globaltrackcache.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
 #include "waveform/overviewtype.h"
@@ -114,27 +115,26 @@ void saveForAndroid(const std::shared_ptr<mixxx::CoreServices>& pCoreServices) {
     if (auto pEffectsManager = pCoreServices->getEffectsManager()) {
         pEffectsManager->saveEffectsXml();
     }
-    const auto pPlayerManager = pCoreServices->getPlayerManager();
     const auto pTrackCollectionManager = pCoreServices->getTrackCollectionManager();
-    if (!pPlayerManager || !pTrackCollectionManager) {
+    if (!pTrackCollectionManager) {
         return;
     }
-    const auto save = [&](BaseTrackPlayer* pPlayer) {
-        if (!pPlayer) {
-            return;
+    // Every track in memory, not only the loaded ones: library edits (and
+    // a download's title) otherwise reach the database only when a track is
+    // let go, which a process end skips. Unchanged tracks are skipped
+    QList<TrackPointer> tracks;
+    {
+        GlobalTrackCacheLocker cacheLocker;
+        const QSet<TrackId> trackIds = cacheLocker.getCachedTrackIds();
+        tracks.reserve(trackIds.size());
+        for (const TrackId& trackId : trackIds) {
+            if (TrackPointer pTrack = cacheLocker.lookupTrackById(trackId)) {
+                tracks.append(std::move(pTrack));
+            }
         }
-        if (const TrackPointer pTrack = pPlayer->getLoadedTrack()) {
-            pTrackCollectionManager->saveTrack(pTrack);
-        }
-    };
-    for (int i = 0; i < pPlayerManager->numberOfDecks(); ++i) {
-        save(pPlayerManager->getDeckBase(i));
     }
-    for (int i = 0; i < pPlayerManager->numberOfSamplers(); ++i) {
-        save(pPlayerManager->getSampler(i));
-    }
-    for (int i = 0; i < pPlayerManager->numberOfPreviewDecks(); ++i) {
-        save(pPlayerManager->getPreviewDeck(i));
+    for (const TrackPointer& pTrack : std::as_const(tracks)) {
+        pTrackCollectionManager->saveTrack(pTrack);
     }
 }
 
@@ -529,12 +529,14 @@ QmlApplication::~QmlApplication() {
 
 #if defined(Q_OS_ANDROID)
 void QmlApplication::stopAndSaveForAndroid() {
+    // Recording and controllers end first, while the engine still runs: the
+    // recording thread closes its file on the engine's next samples
+    shutDownForAndroid(m_pCoreServices);
     if (const auto pSoundManager = m_pCoreServices->getSoundManager()) {
         // Async: the devices close now, without the wait for Linux sound servers
         pSoundManager->closeActiveConfig(true);
     }
     saveForAndroid(m_pCoreServices);
-    shutDownForAndroid(m_pCoreServices);
 }
 #endif
 

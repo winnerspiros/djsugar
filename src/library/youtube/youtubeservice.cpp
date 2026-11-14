@@ -1485,8 +1485,9 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                             clientIdx,
                             onAllFailed,
                             regionOverride,
-                            minResults]() {
-                        if (!guard) {
+                            minResults,
+                            generation = m_searchGeneration]() {
+                        if (!guard || guard->m_searchGeneration != generation) {
                             return;
                         }
                         guard->searchViaInnerTube(emittedQuery,
@@ -1523,8 +1524,14 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                     cap,
                     tryNext,
                     clientIdx,
-                    minResults]() {
+                    minResults,
+                    generation = m_searchGeneration]() {
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: this answer and its fallbacks
+                    // are not shown, its token is not kept
+                    return;
+                }
                 const int httpStatus = reply->attribute(
                                                     QNetworkRequest::HttpStatusCodeAttribute)
                                                .toInt();
@@ -1560,8 +1567,9 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                                 cap,
                                 tryNext,
                                 clientIdx,
-                                minResults](const ParsedSearchPage& page) {
-                            if (!guard) {
+                                minResults,
+                                generation](const ParsedSearchPage& page) {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QJsonObject& root = page.root;
@@ -1733,9 +1741,9 @@ void YouTubeService::fetchMoreSearchResults(
                 QPointer<YouTubeService> guard(this);
                 parseSearchPageAsync(reply->readAll(),
                         cap,
-                        [this, guard, emittedQuery, cap, minResults](
+                        [this, guard, emittedQuery, cap, minResults, generation](
                                 const ParsedSearchPage& page) {
-                            if (!guard) {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QList<YouTubeVideoInfo>& results = page.results;
@@ -1913,8 +1921,9 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                                 minResults,
                                 accumulated,
                                 clientIdx,
-                                more](const ParsedSearchPage& page) mutable {
-                            if (!guard) {
+                                more,
+                                generation](const ParsedSearchPage& page) mutable {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QJsonObject& root = page.root;
