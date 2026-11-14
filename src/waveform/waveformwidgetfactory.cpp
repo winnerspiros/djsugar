@@ -50,6 +50,14 @@
 #include "widget/wvumeterlegacy.h"
 #include "widget/wwaveformviewer.h"
 
+// iOS ships the GLES 2 header only; these are GL 3.0 / GLES 3.0 queries
+#ifndef GL_MAJOR_VERSION
+#define GL_MAJOR_VERSION 0x821B
+#endif
+#ifndef GL_MINOR_VERSION
+#define GL_MINOR_VERSION 0x821C
+#endif
+
 namespace {
 
 // We use an AllBand gain default of 2, because default ReplayGain is "enabled" at -18 LUFS
@@ -191,7 +199,8 @@ WaveformWidgetFactory::WaveformWidgetFactory()
                     "renderer \"%3\"")
                                           .arg(versionString, vendorString, rendererString);
 
-            GLint majorVersion, minorVersion = GL_INVALID_ENUM;
+            GLint majorVersion = GL_INVALID_ENUM;
+            GLint minorVersion = GL_INVALID_ENUM;
             glFunctions->glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
             glFunctions->glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
             if (majorVersion == GL_INVALID_ENUM || minorVersion == GL_INVALID_ENUM) {
