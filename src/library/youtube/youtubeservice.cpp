@@ -980,6 +980,7 @@ void YouTubeService::searchVideos(const QString& query, int cap, int minResults)
 #endif
     // A new search invalidates any continuation from a previous search.
     m_searchContinuationToken.clear();
+    ++m_searchGeneration;
     // Primary backend: the YouTube InnerTube /search endpoint. It is hit
     // directly (no third-party Piped proxy), so it does not depend on the
     // health of community-run instances — which is why search used to return
@@ -1697,11 +1698,13 @@ void YouTubeService::fetchMoreSearchResults(
         kLogger.info() << "Throttled: retrying continuation fetch in"
                        << delay << "ms";
         QPointer<YouTubeService> guard(this);
-        QTimer::singleShot(delay, this, [guard, emittedQuery, cap, minResults]() {
-            if (guard) {
-                guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
-            }
-        });
+        QTimer::singleShot(delay,
+                this,
+                [guard, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
+                    if (guard && guard->m_searchGeneration == generation) {
+                        guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
+                    }
+                });
         return;
     }
     recordRequest();
@@ -1712,8 +1715,12 @@ void YouTubeService::fetchMoreSearchResults(
     connect(reply,
             &QNetworkReply::finished,
             this,
-            [this, reply, emittedQuery, cap, minResults]() {
+            [this, reply, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: its token stays
+                    return;
+                }
                 if (reply->error() != QNetworkReply::NoError) {
                     kLogger.warning()
                             << "InnerTube continuation request failed:"
@@ -1843,8 +1850,9 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                         minResults,
                         accumulated,
                         clientIdx,
-                        more]() {
-                    if (guard) {
+                        more,
+                        generation = m_searchGeneration]() {
+                    if (guard && guard->m_searchGeneration == generation) {
                         guard->autoFetchContinuationPages(emittedQuery,
                                 cap,
                                 minResults,
@@ -1873,11 +1881,16 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                     minResults,
                     accumulated,
                     clientIdx,
-                    more]() mutable {
+                    more,
+                    generation = m_searchGeneration]() mutable {
                 if (!guard) {
                     return;
                 }
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: this one's pages are not shown
+                    return;
+                }
                 if (reply->error() != QNetworkReply::NoError) {
                     kLogger.warning()
                             << "Auto-fetch continuation failed:"
@@ -4381,6 +4394,12 @@ int YouTubeService::throttleDelayMs() const {
     // Until the oldest request leaves the window, plus the jitter: retrying
     // every few hundred ms only spun the main thread until then.
     int delay = jitterDelayMs();
+    if (!m_requestTimestamps.isEmpty()) {
+        // Past the longest gap the check can roll: a shorter retry was
+        // often throttled again, a chain of retries a few hundred ms apart
+        const qint64 sinceLast = m_rateLimitTimer.elapsed() - m_requestTimestamps.last();
+        delay = std::max(delay, static_cast<int>(std::max<qint64>(0, kMaxJitterMs - sinceLast)));
+    }
     if (m_requestTimestamps.size() >= kRateLimitBurst) {
         const qint64 freeAt = m_requestTimestamps.first() + kRateLimitWindowMs;
         delay += static_cast<int>(std::max<qint64>(0, freeAt - m_rateLimitTimer.elapsed()));

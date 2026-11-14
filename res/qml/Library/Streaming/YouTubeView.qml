@@ -760,7 +760,9 @@ Item {
                 border.width: 2
                 radius: 4
             }
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
             footer: Item {
                 width: ListView.view.width
                 height: root.isLoadingMore ? 48 : 0
