@@ -4452,7 +4452,7 @@ component TrackList inherits Rectangle {
         // window, in line with the mixer and the FX bar (moved over when
         // the panel is too narrow, or the buttons on the right need the
         // room), Save and Filter on the right.
-        Rectangle {
+        search-row := Rectangle {
             height: 32px;
             property <length> search-w: clamp(self.width * 0.4, 240px, 520px);
             property <length> centred: LibraryEdit.window-width / 2 - self.absolute-position.x - search-w / 2;
@@ -4586,35 +4586,6 @@ component TrackList inherits Rectangle {
                         return accept;
                     }
                     reject
-                }
-            }
-            // Values of any field that match what's typed, to add as filters.
-            // Shown while there's text, not only with focus, so a click on
-            // a value lands before the field lets go of the keys.
-            if search-text != "" && FilterUi.suggestions.length > 0: Rectangle {
-                x: search-x;
-                y: parent.height + 4px;
-                z: 100;
-                width: max(search-w, 280px);
-                height: suggestions.preferred-height + 12px;
-                background: Theme.n-232326;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Theme.border;
-                drop-shadow-blur: 16px;
-                drop-shadow-color: Theme.s-00000080;
-                suggestions := SuggestionList {
-                    x: 6px;
-                    y: 6px;
-                    width: parent.width - 12px;
-                    items: FilterUi.suggestions;
-                    highlight: FilterUi.highlight;
-                    picked(i) => {
-                        FilterUi.pick-suggestion(i);
-                        FilterUi.highlight = -1;
-                        search-text = "";
-                        search("");
-                    }
                 }
             }
             buttons := HorizontalLayout {
@@ -4986,6 +4957,37 @@ component TrackList inherits Rectangle {
             border-radius: 4px;
             border-width: list-drop.has-drag ? 2px : 0px;
             border-color: Theme.accent;
+        }
+    }
+
+    // Values of any field that match what's typed, to add as filters.
+    // Shown while there's text, not only with focus, so a click on
+    // a value lands before the field lets go of the keys. It sits here,
+    // after the list, so it paints over the column headers and rows
+    // (z only orders siblings, and inside the top row it was covered).
+    if search-text != "" && FilterUi.suggestions.length > 0: Rectangle {
+        x: search-row.x + search-row.search-x;
+        y: search-row.y + search-row.height + 4px;
+        width: max(search-row.search-w, 280px);
+        height: suggestions.preferred-height + 12px;
+        background: Theme.n-232326;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: Theme.s-00000080;
+        suggestions := SuggestionList {
+            x: 6px;
+            y: 6px;
+            width: parent.width - 12px;
+            items: FilterUi.suggestions;
+            highlight: FilterUi.highlight;
+            picked(i) => {
+                FilterUi.pick-suggestion(i);
+                FilterUi.highlight = -1;
+                search-text = "";
+                search("");
+            }
         }
     }
 
