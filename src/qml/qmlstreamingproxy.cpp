@@ -15,6 +15,7 @@
 #include "library/trackcollectionmanager.h"
 #include "moc_qmlstreamingproxy.cpp"
 #include "sources/metadatasourcetaglib.h"
+#include "track/track.h"
 #include "track/trackmetadata.h"
 #include "util/fileinfo.h"
 #include "util/sandbox.h"
