@@ -729,6 +729,19 @@ struct ParsedSearchPage {
 
 /// Parses `body` off the UI thread, then calls `done` on it. `done` checks
 /// itself that its receiver still exists.
+/// The device has no connection (not one server or client failing)
+static bool isOfflineError(QNetworkReply::NetworkError error) {
+    switch (error) {
+    case QNetworkReply::HostNotFoundError:
+    case QNetworkReply::TemporaryNetworkFailureError:
+    case QNetworkReply::NetworkSessionFailedError:
+    case QNetworkReply::UnknownNetworkError:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void parseSearchPageAsync(QByteArray body,
         int cap,
         std::function<void(const ParsedSearchPage&)> done) {
@@ -1534,6 +1547,7 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                     requestQuery,
                     cap,
                     tryNext,
+                    onAllFailed,
                     clientIdx,
                     minResults,
                     generation = m_searchGeneration]() {
@@ -1555,6 +1569,13 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                         // Bot flagged — skip all remaining InnerTube clients.
                         tryNext(tr("Bot detection triggered (HTTP %1)")
                                         .arg(httpStatus));
+                        return;
+                    }
+                    if (httpStatus == 0 && isOfflineError(reply->error())) {
+                        // No connection: every other client fails the same
+                        kLogger.warning() << "InnerTube search: no connection,"
+                                          << reply->errorString();
+                        onAllFailed(tr("No internet connection"));
                         return;
                     }
                     const QString detail = tr("InnerTube search request failed: %1 (HTTP %2)")
