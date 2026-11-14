@@ -21,8 +21,13 @@ QString bundledSamplesCacheDir();
 /// These are kept out of the track library: they are not tracks.
 bool isBundledSample(const QString& path);
 
+/// A saved location of a bundled sample that a later version re-encoded
+/// (e.g. 01_kick.wav -> 01_kick.ogg) resolves to the current file;
+/// any other path is returned unchanged.
+QString currentBundledSample(const QString& path);
+
 /// Absolute paths of all bundled samples, sorted by their path relative to
-/// bundledSamplesDir() (so "djsugar/01_kick.wav" sorts before "kick.ogg").
+/// bundledSamplesDir() (so "djsugar/01_kick.ogg" sorts before "kick.ogg").
 QStringList bundledSampleFiles(const UserSettingsPointer& pConfig);
 
 /// Writable folder for samples the user imported or recorded (ends with a

@@ -80,6 +80,21 @@ bool isBundledSample(const QString& path) {
     return path.startsWith(bundled) || path.startsWith(user) || path.startsWith(work);
 }
 
+QString currentBundledSample(const QString& path) {
+    const QFileInfo info(path);
+    if (info.exists() || !path.startsWith(bundledSamplesCacheDir())) {
+        return path;
+    }
+    const QStringList candidates = info.dir().entryList(
+            {info.completeBaseName() + QStringLiteral(".*")}, QDir::Files);
+    for (const QString& candidate : candidates) {
+        if (isSupportedSample(candidate)) {
+            return info.dir().absoluteFilePath(candidate);
+        }
+    }
+    return path;
+}
+
 QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     const QString sourceDir = bundledSourceDir(pConfig);
     if (sourceDir.isEmpty()) {
@@ -164,22 +179,22 @@ QStringList defaultSamplerKit(const UserSettingsPointer& pConfig) {
     }
     const QStringList kit = {
             // Bank A: drums
-            QStringLiteral("djsugar/01_kick.wav"),
-            QStringLiteral("djsugar/02_snare.wav"),
-            QStringLiteral("djsugar/03_clap.wav"),
-            QStringLiteral("djsugar/04_hat_closed.wav"),
-            QStringLiteral("djsugar/05_hat_open.wav"),
-            QStringLiteral("djsugar/06_rim.wav"),
-            QStringLiteral("djsugar/12_808.wav"),
-            QStringLiteral("djsugar/08_crash.wav"),
+            QStringLiteral("djsugar/01_kick.ogg"),
+            QStringLiteral("djsugar/02_snare.ogg"),
+            QStringLiteral("djsugar/03_clap.ogg"),
+            QStringLiteral("djsugar/04_hat_closed.ogg"),
+            QStringLiteral("djsugar/05_hat_open.ogg"),
+            QStringLiteral("djsugar/06_rim.ogg"),
+            QStringLiteral("djsugar/12_808.ogg"),
+            QStringLiteral("djsugar/08_crash.ogg"),
             // Bank B: FX
-            QStringLiteral("djsugar/14_airhorn.wav"),
-            QStringLiteral("djsugar/09_riser.wav"),
-            QStringLiteral("djsugar/10_downlifter.wav"),
-            QStringLiteral("djsugar/11_sub_drop.wav"),
-            QStringLiteral("djsugar/16_noise_sweep.wav"),
+            QStringLiteral("djsugar/14_airhorn.ogg"),
+            QStringLiteral("djsugar/09_riser.ogg"),
+            QStringLiteral("djsugar/10_downlifter.ogg"),
+            QStringLiteral("djsugar/11_sub_drop.ogg"),
+            QStringLiteral("djsugar/16_noise_sweep.ogg"),
             QStringLiteral("dj-scratch.ogg"),
-            QStringLiteral("djsugar/15_vinyl_stop.wav"),
+            QStringLiteral("djsugar/15_vinyl_stop.ogg"),
             QStringLiteral("djsugar/17_siren.ogg"),
     };
     QStringList files;

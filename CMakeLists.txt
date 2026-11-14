@@ -752,19 +752,36 @@ string(TOLOWER "${OPTIMIZE}" OPTIMIZE)
 message(STATUS "Optimization level: ${OPTIMIZE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
-# CMAKE_INTERPROCEDURAL_OPTIMIZATION can be defined to override the default behaviour.
-# We keep CMAKE_INTERPROCEDURAL_OPTIMIZATION unset (IPO disabled) to save
-# build time at the cost of a bigger memory footprint at run-time.
-# See https://github.com/mixxxdj/mixxx/pull/3589 for some test results
-# Note: IPO has caused issues on Fedora https://bugzilla.rpmfusion.org/show_bug.cgi?id=5829
-# Uncomment the following code to enable IPO for Release builds
-#if(NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
-#  include(CheckIPOSupported)
-#  check_ipo_supported(RESULT HAVE_IPO)
-#  if(HAVE_IPO)
-#    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-#  endif()
-#endif()
+# Release builds use link time optimization (whole-program inlining and dead
+# code removal: faster and smaller binaries) unless
+# CMAKE_INTERPROCEDURAL_OPTIMIZATION is set explicitly.
+if(
+  NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION
+  AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
+  AND NOT OPTIMIZE STREQUAL "off"
+)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT HAVE_IPO OUTPUT IPO_ERROR LANGUAGES C CXX)
+  if(HAVE_IPO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+    message(STATUS "Link time optimization not supported: ${IPO_ERROR}")
+  endif()
+endif()
+message(STATUS "Link time optimization: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+
+# Release builds drop unreferenced functions and data at link time.
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
+  if(MSVC)
+    # /OPT:REF is set below; /Gy makes /OPT:ICF fold identical functions.
+    add_link_options(/OPT:ICF)
+  elseif(APPLE)
+    add_link_options(LINKER:-dead_strip)
+  elseif((GNU_GCC OR LLVM_CLANG) AND NOT ANDROID AND NOT EMSCRIPTEN)
+    add_compile_options(-ffunction-sections -fdata-sections)
+    add_link_options(LINKER:--gc-sections LINKER:-O1 LINKER:--as-needed)
+  endif()
+endif()
 
 if(MSVC)
   # Microsoft Visual Studio Compiler
