@@ -860,11 +860,11 @@ export component PrefRow inherits Rectangle {
     in property <bool> searching;
     // Larger, lighter words, for the tour's setup dialog.
     in property <bool> bright;
-    // A switch's, menu's or choice's help longer than its one line holds
-    // goes in an ⓘ beside the name instead of being cut short (not in the
-    // tour's dialog).
+    // A switch's, menu's, choice's or text field's help longer than its one
+    // line holds goes in an ⓘ beside the name instead of being cut short or
+    // wrapping into the rows below (not in the tour's dialog).
     property <bool> info: !bright && item.detail.character-count > 64
-        && (item.kind == 0 || item.kind == 1 || item.kind == 8);
+        && (item.kind == 0 || item.kind == 1 || item.kind == 8 || item.kind == 9);
     min-height: item.kind == 7 ? 34px : item.kind == 12 ? 30px : item.kind == 16 || item.kind == 17 ? 44px : 52px;
     // A source with settings opens and closes with a click on its row;
     // its switch, drawn over this, still works.
@@ -1122,7 +1122,7 @@ export component PrefRow inherits Rectangle {
                 }
                 // Add-on pages (notes and text fields) wrap: their help is longer.
                 if item.detail != "" && !info && item.kind != 6 && item.kind != 9: Text { text: item.detail; color: bright ? Theme.n-c8c8cd : Theme.text-dim; font-size: bright ? 13px : 12px; overflow: elide; }
-                if item.detail != "" && (item.kind == 6 || item.kind == 9): Text { text: item.detail; color: bright ? Theme.n-c8c8cd : Theme.text-dim; font-size: bright ? 13px : 12px; wrap: word-wrap; }
+                if item.detail != "" && !info && (item.kind == 6 || item.kind == 9): Text { text: item.detail; color: bright ? Theme.n-c8c8cd : Theme.text-dim; font-size: bright ? 13px : 12px; wrap: word-wrap; }
             }
             if item.kind == 0: VerticalLayout {
                 alignment: center;
