@@ -15,6 +15,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
+#include <QNetworkInformation>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPointer>
@@ -740,11 +741,29 @@ static void markOffline() {
     s_offlineAtMs = QDateTime::currentMSecsSinceEpoch();
 }
 
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+namespace {
+void resetFallbacksAfterReconnect();
+} // namespace
+#endif
+
 static void markOnline() {
-    s_offlineAtMs = 0;
+    // exchange: the reset only when the connection came back
+    if (s_offlineAtMs.exchange(0) != 0) {
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+        resetFallbacksAfterReconnect();
+#endif
+    }
 }
 
 [[maybe_unused]] static bool likelyOffline() {
+    // The system's word first (Android tells at once); else a recent
+    // network error of ours
+    if (const QNetworkInformation* pInfo = QNetworkInformation::instance()) {
+        if (pInfo->reachability() == QNetworkInformation::Reachability::Disconnected) {
+            return true;
+        }
+    }
     const qint64 at = s_offlineAtMs;
     return at != 0 && QDateTime::currentMSecsSinceEpoch() - at < kOfflineHoldMs;
 }
@@ -829,6 +848,19 @@ YouTubeService::YouTubeService(QObject* parent)
           m_ytDlpPath(locateYtDlp()),
           m_pipedInstances(kPipedInstances) {
     m_rateLimitTimer.start();
+    // Offline is known at once, and coming back online resets the fallbacks
+    if (QNetworkInformation::loadDefaultBackend() && QNetworkInformation::instance()) {
+        connect(QNetworkInformation::instance(),
+                &QNetworkInformation::reachabilityChanged,
+                this,
+                [](QNetworkInformation::Reachability reachability) {
+                    if (reachability == QNetworkInformation::Reachability::Disconnected) {
+                        markOffline();
+                    } else if (reachability == QNetworkInformation::Reachability::Online) {
+                        markOnline();
+                    }
+                });
+    }
     // Every continuation ends in searchMoreReady, also an empty or failed one
     connect(this, &YouTubeService::searchMoreReady, this, [this]() {
         m_continuationInFlight = false;
@@ -3436,6 +3468,12 @@ std::atomic<int> s_fastClientFailures{0};
 // aria2c (bundled youtubedl-android module) unpacked and usable.
 std::atomic<bool> s_aria2cReady{false};
 constexpr int kMaxFastClientFailures = 3;
+// The lean request first; if YouTube refuses it for a video, the full one
+// (watch page + yt-dlp's default clients).
+// After kMaxLeanFailures lean failures in a row (YouTube changed what the
+// visionos client gets) only the full request is used, until the restart.
+std::atomic<int> s_leanFailures{0};
+constexpr int kMaxLeanFailures = 3;
 // Videos whose direct (extract + parallel Range) download failed this
 // session, and how many failed in a row: after kMaxDirectFailures in a row the
 // direct path is skipped until the app restarts.
@@ -3449,7 +3487,22 @@ bool useDirectDownload(const QString& videoId) {
     return s_directFailuresInRow < kMaxDirectFailures && !s_directFailedVideos.contains(videoId);
 }
 
+// The fallbacks taken after failures were for the session: failures while
+// offline (or as it dropped) made every later download slow (full link
+// extraction ~20 s, yt-dlp's own downloader ~230 KB/s). Back online, the
+// fast paths are tried again
+void resetFallbacksAfterReconnect() {
+    s_leanFailures.store(0);
+    s_fastClientFailures.store(0);
+    QMutexLocker lock(&s_directMutex);
+    s_directFailedVideos.clear();
+    s_directFailuresInRow = 0;
+}
+
 void markDirectDownloadFailed(const QString& videoId) {
+    if (likelyOffline()) {
+        return; // not the direct path's fault
+    }
     QMutexLocker lock(&s_directMutex);
     s_directFailedVideos.insert(videoId);
     ++s_directFailuresInRow;
@@ -3728,12 +3781,6 @@ bool extractStreamLinkWith(
     return true;
 }
 
-// The lean request first; if YouTube refuses it for a video, the full one
-// (watch page + yt-dlp's default clients).
-// After kMaxLeanFailures lean failures in a row (YouTube changed what the
-// visionos client gets) only the full request is used, until the restart.
-std::atomic<int> s_leanFailures{0};
-constexpr int kMaxLeanFailures = 3;
 
 bool extractStreamLinkUncached(
         const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
@@ -3741,6 +3788,9 @@ bool extractStreamLinkUncached(
         if (extractStreamLinkWith(ytdl, videoId, pOut, true)) {
             s_leanFailures.store(0);
             return true;
+        }
+        if (likelyOffline()) {
+            return false; // the full one fails the same
         }
         s_leanFailures.fetch_add(1);
         kLogger.info() << "[Android] lean link extraction failed for" << videoId
@@ -4173,7 +4223,9 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             }
         }
         if ((hasJniException || !response.isValid()) && useFastClient) {
-            ++s_fastClientFailures;
+            if (!likelyOffline()) {
+                ++s_fastClientFailures;
+            }
             kLogger.warning() << "[Android] aria2c download failed for" << videoId
                               << ", retrying with yt-dlp's own downloader:" << errDetail;
             if (settled->load()) {
