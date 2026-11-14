@@ -8,20 +8,9 @@
 #include "analyzer/energycalculator.h"
 #include "track/trackid.h"
 
-/// Auto DJ 2.0 plus Video Mixing: saves and loads energy scores.
-///
-/// Two tables, both created on demand with CREATE TABLE IF NOT EXISTS and
-/// not part of Mixxx's versioned schema (so official schema updates cannot
-/// collide with them, and official Mixxx ignores them):
-///  - `autodj_energy`: measured by AnalyzerEnergy, rewritten on re-analysis
-///  - `autodj_energy_manual`: the DJ's own 1..10 rating, never overwritten
-///    by analysis. A rating always wins over the measured value.
-///  - `autodj_auto_markers`: the Intro End / Outro Start positions the
-///    analyzer set itself, so it can tell them apart from markers the DJ set
-///    or moved (those are never touched).
-///  - `autodj_grid_check`: how far the track's beat grid drifts off the
-///    music (EnergyCalculator::gridDriftBeats), and which grid was checked,
-///    so a grid the DJ changes later is checked again.
+/// Auto DJ 2.0: saves energy scores, auto-markers and grid-check results.
+/// Uses separate tables (autodj_energy, autodj_energy_manual,
+/// autodj_auto_markers, autodj_grid_check) not in Mixxx's versioned schema.
 class EnergyStore {
   public:
     static constexpr int kMinRating = 1;

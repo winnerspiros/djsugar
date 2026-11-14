@@ -6,11 +6,8 @@ import "../.." as Skin
 import "../../Theme"
 import ".." as Library
 
-// SoundCloud search. Results download through the same yt-dlp path as
-// YouTube (ids "sc-<track id>"), so deck loads, the download cache, the
-// library rows and the played/BPM/key chips all work the same way.
-// Go+ tracks are marked and can't be loaded: without the subscription
-// SoundCloud only serves a 30 s preview of them.
+// SoundCloud search. Downloads through yt-dlp (ids "sc-<id>"), same
+// path as YouTube. Go+ tracks: 30 s preview only without subscription.
 Item {
     id: root
 
@@ -22,8 +19,8 @@ Item {
     property string listKind: "search"
     readonly property color scOrange: "#ff5500"
 
-    // The search shown; refresh repeats it, not what the field holds now
-    property string searchedQuery: ""
+    // Searched query; refresh re-fetches it, not the input field
+    property string searchedQuery: ""  // Search query; refresh re-fetches it
     function doSearch(text = searchField.text) {
         const query = text.trim();
         if (query.length === 0)
@@ -68,8 +65,7 @@ Item {
         return bpm > 0 && deckBpm.value > 0 && Math.abs(bpm - deckBpm.value) / deckBpm.value <= 0.06;
     }
 
-    // Controller: BROWSE moves the highlighted result, LOAD downloads it to
-    // the deck the button belongs to
+    // BROWSE moves highlight, LOAD downloads to the deck
     function controllerMove(offset) {
         if (resultsModel.count === 0)
             return;

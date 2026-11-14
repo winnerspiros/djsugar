@@ -19,14 +19,11 @@ Category {
     property bool showBlePanel: true
     property bool isRescanning: false
     property bool showGuide: true
-    // MIDI controllers carry no product information, so they are never
-    // "known" devices. Show every device with a mapping as a card and only
-    // list the remaining ones as unmapped.
+// MIDI controllers have no product info, so never "known". Show mapped devices as cards.
     readonly property var activeDevices: Array.from(manager.knownDevices).concat(
         Array.from(manager.unknownDevices).filter(device => !!device.mapping))
-    // Many controllers have several USB interfaces, e.g. the DDJ-FLX4 shows
-    // up as "DDJ-FLX4" (MIDI) and "DDJ-FLX4 USB_5" (HID). Once one of them
-    // works with a mapping, the others are not listed as unmapped devices.
+// Controllers may have multiple USB interfaces (DDJ-FLX4: MIDI + HID).
+    // Once one interface has a mapping, the others are not listed as unmapped.
     readonly property var unmappedDevices: Array.from(manager.unknownDevices).filter(device => !device.mapping && !root.activeDevices.some(active => active !== device && active.name.length > 0 && device.name.startsWith(active.name)))
     signal requestNavigateToAudio()
 
@@ -59,9 +56,7 @@ Category {
 
     Component.onCompleted: {
         load();
-        // Start scanning right away so Bluetooth MIDI controllers show up
-        // without an extra tap. Falls back to a status message when the
-        // permission or the Bluetooth adapter is not available.
+// Start BLE scan immediately (falls back to status message if unavailable).
         Mixxx.MobileControllers.startBleScan();
         Mixxx.MobileControllers.refreshBleDevices();
     }
@@ -81,8 +76,7 @@ Category {
             spacing: 16
             width: scrollView.availableWidth
 
-            // ================= TOP ACTION & STATUS BAR =================
-            Rectangle {
+Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: topBarCol.implicitHeight + 20
                 color: "#1c202a"
@@ -303,7 +297,7 @@ Category {
                 }
             }
 
-            // ================= BLUETOOTH / BLE MIDI CONTROLLERS =================
+// ================= BLE MIDI =================
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: blePanelCol.implicitHeight + 24
@@ -497,8 +491,7 @@ Category {
                 }
             }
 
-            // Learn controller: a mapping made by pressing each control
-            Rectangle {
+Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 52
                 border.color: learnMouse.containsMouse ? "#00e5ff" : "#273a4b"

@@ -15,9 +15,9 @@ Item {
     // them elsewhere turn them off
     property bool showHud: true
     readonly property int activeWaveformType: Mixxx.Config.waveformType === Mixxx.WaveformDisplay.Type.Simple || Mixxx.Config.waveformType === Mixxx.WaveformDisplay.Type.Filtered || Mixxx.Config.waveformType === Mixxx.WaveformDisplay.Type.HSV || Mixxx.Config.waveformType === Mixxx.WaveformDisplay.Type.RGB || Mixxx.Config.waveformType === Mixxx.WaveformDisplay.Type.Stacked ? Mixxx.Config.waveformType : Mixxx.WaveformDisplay.Type.RGB
-    // Renderer factories are created once by QmlWaveformDisplay. Keep track
-    // of the type that was used for the scene-graph stack so a change from
-    // the legacy preferences dialog can recreate that stack explicitly.
+    // Renderer factories created once by QmlWaveformDisplay. Track the
+    // type for the scene-graph stack so a change from legacy prefs
+    // recreates the stack explicitly.
     property int renderedWaveformType: -1
     readonly property string zoomGroup: Mixxx.Config.waveformZoomSynchronization ? "[Channel1]" : group
     readonly property var deckPlayer: Mixxx.PlayerManager.getPlayer(group)
@@ -55,7 +55,7 @@ Item {
         id: playPositionControl
         group: root.group
         key: "playposition"
-        // Changes with every audio buffer; this is enough for the screen
+        // Changes with every audio buffer; enough for the screen
         // (from JaviLabarumDJ/mixxx-android)
         updateInterval: 100
     }
@@ -92,11 +92,9 @@ Item {
 
         anchors.fill: parent
         backgroundColor: "transparent"
-        // Drawn into a texture of its own: its geometry changes every frame
-        // and is translucent, and in the window that made the scene graph
-        // rebuild the batches of everything around it on every frame (most
-        // of the render thread's time with two decks playing). As a layer,
-        // the window only sees a texture that changes.
+        // Drawn into its own texture: geometry changes every frame and is
+        // translucent, so a shared batch would rebuild on every frame.
+        // As a layer, the window only sees a changing texture.
         // (from JaviLabarumDJ/mixxx-android)
         layer.enabled: true
         frameRate: Mixxx.Config.waveformFrameRate

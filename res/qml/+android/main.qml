@@ -15,9 +15,7 @@ ApplicationWindow {
     readonly property int designWidth: 1792
     readonly property int designHeight: 1008
 
-    // Mobile: the window covers the whole display, camera cutout included.
-    // Qt would pad the content by the safe area; the skins draw edge to edge
-    // and keep their controls clear of the cutout themselves (CutoutInsets).
+    // Full-screen mobile: skins draw edge-to-edge using CutoutInsets.
     bottomPadding: 0
     color: Theme.backgroundColor
     flags: isMobile ? (Qt.Window | Qt.FramelessWindowHint | Qt.MaximizeUsingFullscreenGeometryHint | Qt.ExpandedClientAreaHint) : Qt.Window
@@ -32,9 +30,7 @@ ApplicationWindow {
     visible: true
     width: isMobile ? Screen.width : designWidth
 
-    // Back (also swiping in from the edge of the screen) closes the window
-    // when nothing on it takes the key, which quits Mixxx in the middle of a
-    // set: on mobile it asks first.
+    // Back closes the window when nothing catches it. On mobile: ask first.
     property bool quitConfirmed: false
 
     onClosing: close => {
@@ -44,9 +40,7 @@ ApplicationWindow {
         }
     }
 
-    // From Qt 6.12 a Back that nothing takes moves the app to the background
-    // instead of closing the window, so the quit question never came: Back
-    // asks it here. Open popups (the quit question too) take Back themselves.
+    // Qt 6.12 Back backgrounds the app instead of closing. Handle it here.
     Shortcut {
         context: Qt.ApplicationShortcut
         enabled: root.isMobile && (!root.Overlay.overlay || root.Overlay.overlay.children.length === 0)
@@ -85,9 +79,8 @@ ApplicationWindow {
     // The values of the Theme singleton before any skin changed them
     property var themeDefaults: null
 
-    // A skin can change the shared colors (Theme) through a skinTheme
-    // property of its main window, e.g. {"accentColor": "#1e5fb4"}. The
-    // values of the previous skin are undone first.
+    // A skin can change the Theme colors through its skinTheme property.
+    // Values of the previous skin are undone first.
     function applySkinTheme(skinTheme) {
         if (root.themeDefaults === null) {
             const defaults = {};

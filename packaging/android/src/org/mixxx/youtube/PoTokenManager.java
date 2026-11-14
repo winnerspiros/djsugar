@@ -7,12 +7,10 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Singleton owner of the PO-token WebView. Caches one generator per process;
- * recreates it when the integrity token expires. Called from C++ (Qt main
- * thread) via JNI — blocking calls run the init/token fetch on a worker and
- * wait with timeouts so the UI thread never deadlocks.
- */
+/// PO-token WebView singleton. Caches one generator per process;
+/// recreates when the integrity token expires. Called from C++ (Qt main
+/// thread) via JNI — blocking calls run on a worker thread so the UI
+/// thread never deadlocks.
 public class PoTokenManager {
     private static final String TAG = "PoTokenManager";
     private static final long INIT_TIMEOUT_SEC = 60;
@@ -40,9 +38,7 @@ public class PoTokenManager {
         mLastError = "init ok, generator not yet created";
     }
 
-    /**
-     * Last failure reason, for surfacing Java-side errors to C++ logs.
-     */
+    /** Last failure reason for surfacing Java errors to C++ logs. */
     public String getLastError() {
         return mLastError;
     }
@@ -97,10 +93,8 @@ public class PoTokenManager {
         }
     }
 
-    /**
-     * Blocking: returns "playerPot\nstreamingPot\nvisitorData" or null.
-     * Must NOT be called on the Android main thread (WebView callbacks need it).
-     */
+    /** Blocking: returns "playerPot\nstreamingPot\nvisitorData" or null.
+     * Must NOT be called on the Android main thread (WebView callbacks need it). */
     public String fetchTokens(String videoId, String visitorData) {
         if (!ensureGenerator()) {
             return null;

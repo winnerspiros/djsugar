@@ -46,11 +46,8 @@ public class BleMidiScanner {
         return BleMidiController.isBluetoothEnabled(context);
     }
 
-    /**
-     * Get discovered BLE devices for C++ BleMidiEnumerator.
-     * Format from BleMidiController.getDiscoveredDevices() is:
-     *   "address|name|isMidi|isConnected"
-     */
+    /** Discovered BLE devices for C++ BleMidiEnumerator.
+     * Format: "address|name|isMidi|isConnected" */
     public static List<Map<String, String>> getDiscoveredDevices() {
         List<Map<String, String>> result = new ArrayList<>();
         List<String> devices = BleMidiController.getDiscoveredDevices();
@@ -68,10 +65,7 @@ public class BleMidiScanner {
         return result;
     }
 
-    /**
-     * Returns discovered BLE devices as an array of "address|name|isMidi|connected"
-     * strings for QmlMobileControllersProxy.
-     */
+    /** Discovered BLE devices as "address|name|isMidi|connected" for QML. */
     public static String[] getDiscoveredDeviceStrings() {
         List<String> devices = BleMidiController.getDiscoveredDevices();
         return devices.toArray(new String[0]);

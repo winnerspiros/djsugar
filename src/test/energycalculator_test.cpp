@@ -28,7 +28,6 @@ bool analyse(const std::vector<float>& samples,
         EnergyCalculator::Result* pResult,
         int channels = 2) {
     EnergyCalculator calc(kRate, channels);
-    // Feed in chunks like the analyzer thread does.
     constexpr std::size_t kChunk = 4096 * 2;
     for (std::size_t i = 0; i < samples.size(); i += kChunk) {
         const std::size_t n = std::min(kChunk, samples.size() - i);

@@ -3,39 +3,26 @@
 #include <optional>
 #include <vector>
 
-/// Auto DJ 2.0 plus Video Mixing, phase 2: the maths of a beatmatched transition.
-/// Pure functions, no Mixxx controls, so they can be unit-tested.
+/// Beatmatch maths for Auto DJ transitions. Pure functions, unit-testable.
 namespace beatmatch {
 
-/// Seconds the incoming track takes to glide back to its own tempo
-/// after the mix. Slow enough that the change is not heard.
+/// Seconds the incoming track takes to glide back to its own tempo after the mix; slow enough to go unnoticed.
 constexpr double kGlideSeconds = 30.0;
 
-/// The tempo ratio to play the incoming track at so its beats line up with
-/// the outgoing track (1.0 = its own speed). Uses half/double time when that
-/// is closer (e.g. 72 BPM under 144 BPM). Returns nullopt when the change
-/// would be more than `tolerancePct` percent (the DJ's 5% rule) or a BPM is
-/// unknown; the transition is then a plain crossfade.
+/// The tempo ratio to play the incoming track at (1.0 = own speed). Half/double time considered (e.g. 72 BPM under 144 BPM). Nullopt when change exceeds tolerancePct or a BPM is unknown.
 std::optional<double> matchRatio(double fromBpm, double toTrackBpm, double tolerancePct);
 
-/// Ratio during the glide back: a straight line from `startRatio` to 1.0
-/// over `glideSeconds`.
+/// Glide ratio: straight line from startRatio to 1.0 over glideSeconds.
 double glideRatio(double startRatio, double elapsedSeconds, double glideSeconds = kGlideSeconds);
 
-/// Which bass (low EQ) is cut at a point in the crossfade (0..1).
-/// Hard swap at the middle: first half the incoming bass is cut, second
-/// half the outgoing bass is cut, so two basslines never play together.
+/// Which bass (low EQ) is cut at crossfade position 0..1. Hard swap at the middle so two basslines never play together.
 struct BassState {
     bool fromLowKilled = false;
     bool toLowKilled = false;
 };
 BassState bassSwap(double progress);
 
-/// Full EQ transition, on top of the bass swap: the mids and highs cross
-/// over gradually instead of both tracks playing at full. First half: the
-/// incoming mids/highs rise from kEqBlendFloor to full. Second half: the
-/// outgoing mids/highs fall to kEqBlendFloor. The values multiply the
-/// DJ's own EQ setting (1 = leave it as the DJ set it).
+/// Full EQ transition on top of the bass swap. Mids/highs cross over gradually: incoming rises from kEqBlendFloor to full, outgoing falls. Values multiply the DJ's own EQ setting (1 = unchanged).
 constexpr double kEqBlendFloor = 0.3; // about -10 dB
 struct EqBlend {
     double fromMidHigh = 1.0;
@@ -43,13 +30,7 @@ struct EqBlend {
 };
 EqBlend eqBlend(double progress);
 
-/// Stem mix: when both songs have their parts (drums, bass, other =
-/// instrumental, vocals), the parts cross over instead of the EQ.
-/// First half: the incoming instrumental rises, the outgoing vocals fall.
-/// Middle: drums and bass swap hard, like the bass swap. Second half: the
-/// outgoing instrumental falls, the incoming vocals rise. So two vocals
-/// never play together and two basslines / kicks never clash. The values
-/// multiply the DJ's own part levels (equal-power curves).
+/// Stem mix: when both songs have parts (drums, bass, instrumental, vocals), the parts cross over instead of EQ. Two vocals never play together; two basslines never clash. Equal-power curves.
 struct StemBlend {
     double fromVocals = 1.0;
     double fromInstrumental = 1.0;
@@ -60,38 +41,24 @@ struct StemBlend {
     double toDrums = 0.0;
     double toBass = 0.0;
 };
-/// `fadeDrums`: the drums cross over gradually instead (incoming drums rise
-/// over the first half, outgoing drums fall over the second half); the bass
-/// still swaps at the middle (two basslines clash).
+/// fadeDrums: drums cross over gradually instead; bass still swaps at the middle.
 StemBlend stemBlend(double progress, bool fadeDrums = false);
 
-/// Singing detection: who sings during the mix, and when the outgoing
-/// singer ends a line (as mix progress 0..1).
+/// Who sings during the mix and when the outgoing singer ends a line (mix progress 0..1).
 struct VocalPlan {
     bool fromSings = true;
     bool toSings = true;
     double swapAt = 0.5;
 };
-/// The stem mix with the vocals timed by the singing: a song that does not
-/// sing during the mix keeps its vocals with its instrumental (untouched);
-/// only when both sing are the vocals handed over, at `swapAt`, never
-/// together.
+/// Stem mix with vocals timed by singing. A song that does not sing keeps vocals with instrumental. Only when both sing are vocals handed over at swapAt, never together.
 StemBlend stemBlend(double progress, const VocalPlan& plan, bool fadeDrums = false);
 
-/// Beat lock, for a track whose tempo bends (a beat map): during the mix
-/// the incoming speed is set again and again so that its beats stay on the
-/// outgoing beats, like a DJ riding the pitch fader.
-///
+/// Beat lock for a track with a beat map: continuously set the incoming speed so its beats stay on the outgoing beats.
 /// @param fromBeat outgoing track: beat number now (fractional)
-/// @param fromBeatRealSec outgoing track: length of its beat now, in real
-///        seconds (at the deck's speed)
+/// @param fromBeatRealSec outgoing track: length of its beat now in real seconds (at deck speed)
 /// @param toBeat incoming track: beat number now (fractional)
-/// @param toBeatTrackSec incoming track: length of its beat now, at its
-///        own speed
-/// @return the incoming tempo ratio: the one that gives it the same beat
-///         length, nudged by up to kMaxLockNudge to pull a beat that has
-///         slipped back in line within about kLockBeats beats. A slip of
-///         less than kLockDeadBeats is left alone (no needless wobble).
+/// @param toBeatTrackSec incoming track: length of its beat now at own speed
+/// @return the incoming tempo ratio that gives it the same beat length, nudged up to kMaxLockNudge to pull a slipped beat back in line. Slips under kLockDeadBeats are left alone.
 constexpr double kLockBeats = 2.0;
 constexpr double kMaxLockNudge = 0.06;  // 6 % (key lock keeps the pitch)
 constexpr double kLockDeadBeats = 0.01; // 5 ms at 120 BPM
@@ -104,17 +71,10 @@ double followRatio(double fromBeat,
         double toBeatTrackSec,
         double* pSlipBeats = nullptr);
 
-/// Where the kick really starts after a song's beat lines. Beat analysis
-/// does not put every song's lines at the same point of the kick: in real
-/// songs the kick started 8 to 41 ms after the line. Two songs whose lines
-/// are locked can then still have their kicks 30 ms apart (heard as a
-/// clash), so beat lock lines up the kicks instead.
-///
-/// @param level the drum level (0..1), `rate` values per second (the
-///        waveform: about 441 per second)
-/// @param beatTimes the song's beat lines, in seconds
-/// @return the middle offset in seconds (kick after the line = positive),
-///         or nothing when fewer than 16 beats have a clear hit
+/// Where the kick really starts after a song's beat lines: analysis can place lines 8-41 ms before the kick, so two locked songs can still clash. Beat lock lines up the kicks instead.
+/// @param level drum level (0..1), rate values per second (waveform: ~441/s)
+/// @param beatTimes the song's beat lines in seconds
+/// @return middle offset in seconds (kick after line = positive), or nothing when fewer than 16 beats have a clear hit
 std::optional<double> kickOffset(const std::vector<float>& level,
         double rate,
         const std::vector<double>& beatTimes);

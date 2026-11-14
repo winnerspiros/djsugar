@@ -9,15 +9,7 @@
 namespace mixxx {
 namespace android {
 
-/// Copies the Rekordbox export of a USB stick (its PIONEER and Contents
-/// folders, and the audio files anywhere else on the stick, which Rekordbox
-/// may play from there) to /storage/emulated/0/Music/Mixxx/Rekordbox/<name>,
-/// where it is read like the stick itself (see util/removablestorage.cpp).
-///
-/// Backing up a stick again mirrors it: files that are new or changed (by
-/// size or date) are copied, and files that were removed from the stick
-/// are deleted from the backup. Files are only deleted if the stick could
-/// be read completely and nothing failed to copy.
+/// Rekordbox USB backup: copies PIONEER and Contents folders plus audio files to /storage/emulated/0/Music/Mixxx/Rekordbox/<name>. Mirroring: new/changed files copied, removed files deleted (only if nothing failed).
 class RekordboxDriveBackup : public QObject {
     Q_OBJECT
   public:

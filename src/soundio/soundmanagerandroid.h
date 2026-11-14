@@ -11,21 +11,18 @@ class QTimer;
 class SoundManager;
 
 /// The Android specific behavior of SoundManager: automatic routing to DJ
-/// controllers, the fallback to the built-in speaker and the hotplug of USB
-/// sound cards driven directly by Mixxx.
-///
-/// It lives in its own file so that merging upstream Mixxx stays
-/// conflict-free: SoundManager only calls it at a few points.
+/// controllers, fallback to the built-in speaker, and hotplug of USB sound
+/// cards driven directly by Mixxx. Lives in its own file so merging
+/// upstream stays conflict-free.
 class SoundManagerAndroid : public QObject {
     Q_OBJECT
   public:
     /// See mixxx::androidusb::DirectMode (0 = auto, 1 = always, 2 = never).
-    /// Takes effect after a restart.
+    /// Takes effect after restart.
     static const ConfigKey kUsbDirectModeKey;
-    /// When enabled (the default), a USB sound card with at least 4 output
-    /// channels (a DJ controller) automatically gets the Main output on
-    /// channels 1-2 and the Headphones on channels 3-4 as soon as it is
-    /// present. Disabled when the user picks another routing.
+    /// When enabled (default), a USB sound card with >=4 output channels
+    /// (a DJ controller) gets Main on channels 1-2 and Headphones on 3-4
+    /// as soon as present. Disabled when user picks another routing.
     static const ConfigKey kAutoRouteControllerKey;
 
     /// Called by the SoundManager constructor once the configuration has

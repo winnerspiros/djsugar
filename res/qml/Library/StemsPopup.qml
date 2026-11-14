@@ -6,7 +6,7 @@ import ".." as Skin
 import "../Theme"
 import "../stems.js" as StemsText
 
-// Separates the selected track or all tracks of a list into stems (Android)
+// Separate the selected track or all tracks of a list into stems (Android)
 Popup {
     id: root
 

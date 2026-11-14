@@ -71,7 +71,7 @@ UsbMassStorage::UsbMassStorage(libusb_device_handle* pHandle,
 
 int UsbMassStorage::maxLun() {
     uint8_t lun = 0;
-    // Get Max LUN; devices with a single unit may stall it
+    // Get Max LUN; single-unit devices may stall
     const int result = libusb_control_transfer(m_pHandle,
             static_cast<int>(LIBUSB_ENDPOINT_IN) |
                     static_cast<int>(LIBUSB_REQUEST_TYPE_CLASS) |
@@ -93,7 +93,6 @@ bool UsbMassStorage::open() {
         uint8_t inquiry[36] = {};
         const uint8_t inquiryCommand[6] = {kInquiry, 0, 0, 0, sizeof(inquiry), 0};
         command(inquiryCommand, sizeof(inquiryCommand), inquiry, sizeof(inquiry));
-        // Some sticks need a few tries after being plugged in
         bool ready = false;
         for (int attempt = 0; attempt < 5 && !ready && !m_disconnected; ++attempt) {
             ready = testUnitReady();
@@ -115,7 +114,7 @@ bool UsbMassStorage::testUnitReady() {
     if (command(testCommand, sizeof(testCommand), nullptr, 0)) {
         return true;
     }
-    // Clear the pending sense data (e.g. "medium changed")
+    // Clear pending sense data (e.g. "medium changed")
     uint8_t sense[18] = {};
     const uint8_t senseCommand[6] = {kRequestSense, 0, 0, 0, sizeof(sense), 0};
     command(senseCommand, sizeof(senseCommand), sense, sizeof(sense));

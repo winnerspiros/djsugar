@@ -21,8 +21,7 @@ bool requestPermission(const QString& permission) {
             QtAndroidPrivate::Authorized) {
         return true;
     }
-    // Qt runs main() on a dedicated thread, not on the Android UI thread, so
-    // waiting for the dialog result here does not block the dialog itself.
+    // main() runs on a dedicated thread: waiting for dialog doesn't block UI thread.
     const auto result = QtAndroidPrivate::requestPermission(permission).result();
     if (result != QtAndroidPrivate::Authorized) {
         qWarning() << "Android permission denied:" << permission;
@@ -47,9 +46,7 @@ bool requestMusicLibraryPermissions() {
                 QStringLiteral("android.permission.READ_EXTERNAL_STORAGE"));
     }
     if (apiLevel <= 29) {
-        // Writing to shared storage is only possible with this permission on
-        // legacy storage devices. A denial is not fatal, Mixxx then falls back
-        // to its app-private directory.
+        // Needed on legacy (API <= 29) for writing to shared storage; fallback to app-private dir.
         requestPermission(
                 QStringLiteral("android.permission.WRITE_EXTERNAL_STORAGE"));
     }
@@ -103,9 +100,7 @@ void requestFullExternalStorageAccess() {
 
 namespace {
 
-// Environment.getExternalStoragePublicDirectory(): the shared folder the
-// phone's own apps use. Qt's MusicLocation/DownloadLocation are the
-// app-private folders under Android/data, where no user songs live.
+// Shared folder for phone apps (not Android/data).
 QString publicDirectory(const char* type) {
     const QJniObject jniType = QJniObject::getStaticObjectField(
             "android/os/Environment", type, "Ljava/lang/String;");

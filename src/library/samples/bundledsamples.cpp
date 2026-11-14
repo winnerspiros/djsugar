@@ -44,7 +44,7 @@ QString bundledSourceDir(const UserSettingsPointer& pConfig) {
 }
 
 /// Paths relative to sourceDir. Android cannot list assets:/ subdirectories,
-/// so the APK ships an index.txt written at build time.
+/// so the APK ships index.txt.
 QStringList bundledRelativePaths(const QString& sourceDir) {
     QStringList paths;
     QFile index(sourceDir + QStringLiteral("index.txt"));
@@ -95,7 +95,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
         const QString path = sourceDir + relativePath;
         const QString destPath = destDir + relativePath;
         const QFileInfo dest(destPath);
-        // Same size: already current. Otherwise an update reworked it.
+        // Same size = current; an update would rework it.
         if (dest.exists() && dest.size() == QFileInfo(path).size()) {
             continue;
         }
@@ -105,7 +105,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
             qWarning() << "Failed to copy sample" << path << "to" << destPath;
         }
     }
-    // Drop samples that a later version no longer ships
+// Drop samples no longer shipped
     QDirIterator stale(destDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
     while (stale.hasNext()) {
         const QString path = stale.next();

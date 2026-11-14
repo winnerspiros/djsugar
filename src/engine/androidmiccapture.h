@@ -11,14 +11,8 @@
 #include <QJniObject>
 #endif
 
-/// Captures audio from the phone's built-in microphone using Android's
-/// AudioRecord API, bypassing PortAudio/Oboe routing (which may route to
-/// BT SCO when BT A2DP output is active).
-///
-/// Opens with VOICE_RECOGNITION source to guarantee the built-in mic is
-/// used, and requests 48000 Hz sample rate with PCM 16-bit mono.
-/// Captured samples are converted to CSAMPLE (float) and delivered to
-/// a callback.
+/// Captures mic audio via Android AudioRecord (avoids BT SCO routing issues).
+/// Uses VOICE_RECOGNITION source, 48 kHz PCM 16-bit mono, delivers CSAMPLE.
 class AndroidMicCapture : public QThread {
     Q_OBJECT
   public:

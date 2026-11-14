@@ -9,8 +9,7 @@
 namespace mixxx {
 namespace stems {
 
-/// Separates tracks into stem files, one at a time, in its own thread (see
-/// StemsManager)
+/// Separates tracks into stem files, one at a time, in its own thread.
 class StemsWorker : public QObject {
     Q_OBJECT
   public:

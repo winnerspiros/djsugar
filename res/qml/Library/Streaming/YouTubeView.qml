@@ -6,9 +6,7 @@ import "../.." as Skin
 import "../../Theme"
 import ".." as Library
 
-// YouTube search tab of the Booth streaming hub: searches the built-in
-// YouTube service and loads results straight into a deck. Downloads are
-// cached by the YouTube feature; loading via URL lets it download/stream.
+// YouTube search tab of the Booth streaming hub. Searches YouTube and loads results into a deck.
 Item {
     id: root
 
@@ -19,8 +17,7 @@ Item {
     property bool isBusy: false
     property bool isLoadingMore: false
     property bool hasMore: false
-    // A fetch that ended empty is not retried until this time, so a flagged or
-    // offline connection is not hammered while the user keeps scrolling.
+    // A fetch that ended empty is not retried until this time to avoid hammering a flagged/offline connection while scrolling.
     property double retryMoreAfter: 0
 
     function toRow(video) {
@@ -37,8 +34,7 @@ Item {
         };
     }
 
-    // Same song, another upload: artist and title without the "(Official
-    // Video)" / "[Lyrics]" decorations, and a length within a few seconds.
+    // Same song, another upload: artist and title without decorations, length within a few seconds.
     function songKey(video) {
         return (video.title ?? "").toLowerCase()
             .replace(/[\(\[][^\)\]]*[\)\]]/g, " ")
@@ -61,8 +57,7 @@ Item {
         return -1;
     }
 
-    // Adds a batch below what is already listed, skipping videos the search
-    // has already delivered. Returns how many were new.
+    // Adds a batch below what is already listed, skipping duplicates. Returns how many were new.
     function appendResults(batch) {
         const seen = new Set(root.allResults.map(v => v.id));
         const fresh = batch.filter(v => v.id && !seen.has(v.id));

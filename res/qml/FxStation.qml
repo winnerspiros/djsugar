@@ -4,18 +4,13 @@ import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
 import "." as Skin
 
-// The FX Station (src/engine/fxstation): a remix effector on the main mix
-// with Scene, Isolate, X-Pad and Release sections and its own tempo. Every
-// section is shown at once when there is room: in a row in place of the
-// library (strip), or in two rows over the whole window; on phones one
-// section at a time, in tabs.
+// The FX Station (src/engine/fxstation): a remix effector on the main mix with Scene, Isolate, X-Pad and Release sections. Every section shown at once when room allows.
 Rectangle {
     id: root
 
     signal closeRequested
 
-    // In place of the library, under the decks and the mixer: a single row,
-    // without the header (the FX ST button closes it)
+    // In place of the library, under the decks: a single row, without the header (FX ST closes it)
     readonly property bool strip: height < 560 && width >= 900 && height >= 220
     readonly property bool compact: !strip && (height < 560 || width < 760)
     property int tab: 0
@@ -23,8 +18,7 @@ Rectangle {
     // release_type
     readonly property var sceneNames: ["BPF ECHO", "ECHO", "NOISE", "SPIRAL UP", "REVERB UP", "HPF ECHO", "LPF ECHO", "CRUSH ECHO", "SPIRAL DOWN", "REVERB DOWN", "FLANGER", "PHASER", "FILTER", "ROLL", "GATER", "PITCH", "DRIVE"]
     readonly property var releaseNames: ["VINYL BRAKE", "ECHO", "BACK SPIN"]
-    // The effect on each Scene and Release button, swapped with the edit
-    // icon; a button plays its own unless swapped
+    // The effect on each Scene and Release button, swapped with the edit icon
     property var sceneEffects: sceneNames.map((name, button) => button)
     property var releaseEffects: releaseNames.map((name, button) => button)
 
@@ -55,7 +49,7 @@ Rectangle {
         property bool active: false
         property color activeColor: "#00e5ff"
         property bool enabledLook: true
-        // Shows the edit icon, which emits edit()
+        // Shows the edit icon, emits edit()
         property bool editable: false
         signal clicked
         signal edit

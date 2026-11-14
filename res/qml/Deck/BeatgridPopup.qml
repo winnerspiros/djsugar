@@ -5,9 +5,7 @@ import QtQuick.Layouts
 import ".." as Skin
 import "../Theme"
 
-// Corrects the beatgrid of the track loaded in a deck, e.g. when the
-// analyzer put the beats on the off-beats and quantized play starts half a
-// beat off. The changes are saved with the track.
+// Correct the beatgrid of the track loaded in a deck. Changes are saved.
 Popup {
     id: root
 
@@ -18,7 +16,7 @@ Popup {
     // Kept in a property, or the player object can be collected
     readonly property var player: Mixxx.PlayerManager.getPlayer(root.group)
 
-    // Pressing a button of the grid controls: they act when set to 1
+    // Grid controls act when set to 1
     component GridButton: Skin.Button {
         id: gridButton
 

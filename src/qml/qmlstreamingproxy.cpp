@@ -38,10 +38,9 @@ const QString kDefaultUserAgent = QStringLiteral(
 QmlStreamingProxy::QmlStreamingProxy(QObject* parent)
         : QObject(parent),
           m_pNetworkManager(new QNetworkAccessManager(this)) {
-    // Determine the best cache directory for streaming tracks
+// Streaming track cache directory
 #if defined(Q_OS_ANDROID)
-    // Same external base as the YouTube cache: files in the app's private
-    // data dir were refused by FFmpeg (av_seek_frame EPERM) on device.
+    // Same external base as YouTube cache: FFmpeg refused app-private dirs (EPERM).
     QString baseDir = s_pConfig ? s_pConfig->getSettingsPath() : QString();
     if (baseDir.isEmpty()) {
         baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);

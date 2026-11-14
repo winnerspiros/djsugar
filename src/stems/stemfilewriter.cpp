@@ -24,7 +24,7 @@ struct StemDescription {
     const char* color;
 };
 
-// In the order of the separators, with the default colors of Mixxx
+// Stem order by separator, with Mixxx default colors
 constexpr StemDescription kStems[kStemCount] = {
         {"Drums", "#009E73"},
         {"Bass", "#D55E00"},
@@ -239,7 +239,7 @@ bool StemFileWriter::encode(int streamIndex, const float* pStereo, int frameCoun
     }
     const int frameSize = pContext->frame_size > 0 ? pContext->frame_size : 1024;
     size_t consumed = 0;
-    // Without input, the last partial frame is flushed
+    // Without input, flushes the last partial frame
     while (stream.pending.size() - consumed >= static_cast<size_t>(2 * frameSize) ||
             (!pStereo && stream.pending.size() > consumed)) {
         const int samples = static_cast<int>(std::min<size_t>(
@@ -366,8 +366,7 @@ void StemFileWriter::close() {
 }
 
 bool StemFileWriter::addStemAtom() {
-    // FFmpeg writes the movie box (moov) last: rewrite it with the stem
-    // manifest in its user data box (moov/udta/stem)
+    // FFmpeg writes moov last: rewrite it with the stem manifest in moov/udta/stem
     QFile file(m_path);
     if (!file.open(QIODevice::ReadWrite)) {
         return fail(QStringLiteral("Unable to open %1").arg(m_path));

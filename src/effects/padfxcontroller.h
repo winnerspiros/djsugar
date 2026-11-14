@@ -14,19 +14,10 @@ class ControlObject;
 class ControlPushButton;
 class EffectsManager;
 
-/// Pad FX the way rekordbox does them: each of 16 pads (PAD FX 1 = pads 1-8,
-/// PAD FX 2 = pads 9-16) holds one effect that sounds while the pad is held.
-///
-/// Controllers press `[PadFx_ChannelN],padK` (1 = held, 0 = released). Deck 1
-/// plays its pad effects through effect unit 3 and deck 2 through unit 4, so
-/// the BEAT FX on units 1 and 2 stay untouched. Rolls use the deck's own
-/// beatlooproll controls.
-///
-/// BEAT FX: `[BeatFx],effect` picks the effect type and `[BeatFx],beats`
-/// its length; both load into slot 1 of effect units 1 and 2.
-///
-/// Which effect sits on which pad is user configurable and saved in the
-/// `[PadFx]` config group; the catalog below lists what can be assigned.
+/// Pad FX (rekordbox-style): 16 pads hold effects that sound while held.
+/// Deck 1 → unit 3, deck 2 → unit 4 (leaving BEAT FX on units 1-2).
+/// BEAT FX (effect + beats) load into unit 1-2 slot 1.
+/// Pad assignments are user-configurable in [PadFx] config group.
 class PadFxController : public QObject {
     Q_OBJECT
   public:

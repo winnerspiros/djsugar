@@ -33,8 +33,8 @@ const ConfigKey kWhilePlayingKey(kGroup, QStringLiteral("WhilePlaying"));
 const ConfigKey kChargingOnlyKey(kGroup, QStringLiteral("ChargingOnly"));
 
 constexpr int kDecks = 4;
-// Threads that run the models: all big cores of a phone, or two while a
-// deck plays so that the audio keeps its share
+// Threads that run the models: all big cores of a phone, or 2 while
+// playing so audio keeps its share
 constexpr int kThreads = 4;
 constexpr int kThreadsWhilePlaying = 2;
 
@@ -160,7 +160,7 @@ int StemsManager::enqueue(const QStringList& locations, Model model, bool replac
         ++added;
     }
     if (added > 0) {
-        // The progress notification, Android 13+ asks for it once
+        // The progress notification; Android 13+ asks for it once
         QNativeInterface::QAndroidApplication::runOnAndroidMainThread([]() {
             QJniObject::callStaticMethod<void>("org/mixxx/StemsService",
                     "requestNotificationPermission",

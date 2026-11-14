@@ -5,10 +5,9 @@
 #include "track/track_decl.h"
 #include "track/trackid.h"
 
-/// A small, thread-safe snapshot of the track data that Auto DJ 2.0 plus Video Mixing needs
-/// for mixing decisions. It is copied out of `Track` on the GUI thread so
-/// that the scorer and sequencer can run on a worker thread without ever
-/// touching `Track` objects or the database.
+/// A small, thread-safe snapshot of track data for Auto DJ 2.0 mixing
+/// decisions. Copied out of Track on the GUI thread so the scorer and
+/// sequencer can run without touching Track objects or the DB.
 struct TrackFeatures {
     TrackId id;
     double bpm = 0.0;          ///< 0 = unknown
@@ -29,7 +28,7 @@ struct TrackFeatures {
     /// should be videos too.
     bool isVideo = false;
     /// The beat grid check found that the grid drifts off the music: Auto DJ
-    /// cannot beatmatch this track (it switches quickly instead).
+    /// cannot beatmatch this track (switches quickly instead).
     bool gridUnsteady = false;
 
     /// True for the file types that hold video (mp4, mov, mkv, ...).

@@ -8,9 +8,9 @@
 #include "library/autodj/smart/phrasealign.h"
 #include "track/trackid.h"
 
-/// Auto DJ 2.0 plus Video Mixing: computes the energy score (1..10) of each track and saves
-/// it with EnergyStore. Skips tracks that already have a score from the
-/// current formula version and a beat grid check for the grid it has now.
+/// Auto DJ 2.0: computes energy scores (1..10) and saves with EnergyStore.
+/// Skips tracks that already have a score from the current formula version
+/// and a grid-check matching their current grid.
 class AnalyzerEnergy : public Analyzer {
   public:
     /// The track's beat grid as tempo + first beat (seconds). False (and
@@ -18,7 +18,7 @@ class AnalyzerEnergy : public Analyzer {
     static bool gridOf(const TrackPointer& pTrack, double* pBpm, double* pFirstBeatSec);
     /// The track's beats (seconds at its own speed): a steady grid, or the
     /// time of every beat when Mixxx made a beat map that bends with the
-    /// music ("Assume constant tempo" off). Not valid if it has none.
+    /// music ("Assume constant tempo" off). Invalid if it has none.
     static phrasealign::Grid beatGrid(const TrackPointer& pTrack);
 
     explicit AnalyzerEnergy(const QSqlDatabase& dbConnection);

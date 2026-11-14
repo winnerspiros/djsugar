@@ -118,16 +118,11 @@ class BridgeFinder {
             bool calm,
             quint32 randomValue);
 
-    /// The same SONG gives the same key, whatever the version and whoever
-    /// performs it (covers count as the same song, the DJ's choice): the
-    /// TITLE in lower case, without a leading "The", punctuation, bracketed
-    /// tags ("(12\" Version)", "[Remastered]"), a " - ... Remix / Edit /
-    /// Version" ending, "feat. X", a year tag ("'90") or the artist's own
-    /// name in front. "Dio - Rainbow in the Dark" and "Computer Club -
-    /// Rainbow in the Dark (Extended)" match. Falls back to the display name
-    /// when the title is not tagged ("Artist - Title", or "Title by Artist").
+    /// Title normalized for matching: lowercase, stripped of leading "The",
+    /// punctuation, bracketed tags, remix/edit suffixes, "feat.", year tags,
+    /// and artist name prefix. Falls back to display name when untagged.
     static QString nameKey(const TrackFeatures& track);
-    /// The artist, tidied the same way; empty if unknown.
+    /// Artist normalized the same way; empty if unknown.
     static QString artistKey(const TrackFeatures& track);
     static QString normalizeArtist(const QString& artist);
     static QString normalizeTitle(const QString& title, const QString& normalizedArtist);

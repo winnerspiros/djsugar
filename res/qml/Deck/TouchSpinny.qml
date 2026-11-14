@@ -1,6 +1,5 @@
 import Mixxx 1.0 as Mixxx
-// QtQuick 2.15 is required for cursorShape on pointer handlers below.
-import QtQuick 2.15
+import QtQuick 2.15  // required for cursorShape on pointer handlers
 import QtQuick.Controls 2.12
 
 Item {
@@ -12,7 +11,7 @@ Item {
     property alias indicator: indicatorContainer.contentItem
     property alias ghostIndicator: ghostIndicatorContainer.contentItem
 
-    // Avoid animation short blinking of spinny during startup
+    // Avoid spinny blink during startup
     Component.onCompleted: indicatorTransition.enabled = true
 
     Mixxx.ControlProxy {

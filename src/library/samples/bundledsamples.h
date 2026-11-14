@@ -8,35 +8,28 @@
 namespace mixxx {
 namespace samples {
 
-/// Writable folder holding the samples shipped with DJ Sugar. On first use
-/// (and after an update that adds samples) the bundled files are copied
-/// there, because Android assets can't be opened by the audio decoder.
-/// Returns an empty string when no bundled samples exist.
+/// Writable folder for shipped samples (copied from Android assets; empty if none).
 QString bundledSamplesDir(const UserSettingsPointer& pConfig);
 
-/// Folder the bundled samples are copied to (ends with a slash).
+/// Cache dir for bundled samples (ends with slash).
 QString bundledSamplesCacheDir();
 
-/// True for pad sounds (bundled, the user's own and the ones being trimmed).
-/// These are kept out of the track library: they are not tracks.
+/// True for pad sounds (not tracks; kept out of the track library).
 bool isBundledSample(const QString& path);
 
-/// Absolute paths of all bundled samples, sorted by their path relative to
-/// bundledSamplesDir() (so "djsugar/01_kick.wav" sorts before "kick.ogg").
+/// Paths of all bundled samples, sorted by relative path.
 QStringList bundledSampleFiles(const UserSettingsPointer& pConfig);
 
-/// Writable folder for samples the user imported or recorded (ends with a
-/// slash). Kept apart from the bundled cache so app updates never touch it.
+/// Writable user samples folder (kept apart from bundled cache).
 QString userSamplesDir();
 
-/// Absolute paths of the user's samples, newest first.
+/// User's sample files, newest first.
 QStringList userSampleFiles();
 
-/// True for files the audio decoders can open, any format they support.
+/// True for files decoders can open (any supported format).
 bool isSupportedSample(const QString& fileName);
 
-/// The kit loaded into samplers 1-16 when there is no saved sampler bank,
-/// rekordbox style: drums on bank A (1-8), FX/one-shots on bank B (9-16).
+/// Default sampler kit (rekordbox style): drums on A (1-8), FX on B (9-16).
 QStringList defaultSamplerKit(const UserSettingsPointer& pConfig);
 
 } // namespace samples

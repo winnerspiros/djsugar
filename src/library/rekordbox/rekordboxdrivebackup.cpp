@@ -29,23 +29,22 @@ const QStringList kPdbPaths = {
         QStringLiteral("PIONEER/rekordbox/export.pdb"),
         QStringLiteral(".PIONEER/rekordbox/export.pdb"),
 };
-/// The folders of a Rekordbox export: the database and the analysis, and
-/// the tracks. They are backed up completely.
+/// Rekordbox export folders (DB, analysis, tracks): backed up completely
 const QStringList kExportFolders = {
         QStringLiteral("PIONEER"),
         QStringLiteral(".PIONEER"),
         QStringLiteral("Contents"),
 };
-/// Folders of the systems that are never backed up
+/// System folders never backed up
 const QStringList kSystemFolders = {
         QStringLiteral("System Volume Information"),
         QStringLiteral("$RECYCLE.BIN"),
         QStringLiteral("LOST.DIR"),
         QStringLiteral("Android"),
 };
-/// In every backup folder, with the serial number of its stick
+/// Stick marker file: serial number of the stick
 const QString kStickMarkerFileName = QStringLiteral(".mixxx-stick");
-/// Kept free on the device
+/// Reserved free space on device
 constexpr qint64 kReservedBytes = 200LL * 1024 * 1024;
 constexpr int kProgressIntervalMs = 250;
 
@@ -55,14 +54,12 @@ struct File {
     QDateTime modified;
 };
 
-/// FAT stores the time with 2 s resolution
+/// FAT time resolution: 2 s
 bool sameTime(const QDateTime& a, const QDateTime& b) {
     return a.isValid() && b.isValid() && std::abs(a.secsTo(b)) <= 2;
 }
 
-/// Whether a file of the stick (path relative to its root) is backed up:
-/// everything in the export folders, and the audio files anywhere else,
-/// e.g. tracks in the root folder that Rekordbox plays from there
+/// Files in export folders or audio files elsewhere are backed up
 bool isBackedUp(const QString& relativePath) {
     const QString topLevel = relativePath.section(QChar('/'), 0, 0);
     if (relativePath.contains(QChar('/'))) {
@@ -80,8 +77,7 @@ bool isBackedUp(const QString& relativePath) {
             SoundSourceProxy::getSupportedFileNamesRegex().match(fileName).hasMatch();
 }
 
-/// Sets *pComplete to false if a folder could not be read, in which case
-/// files may be missing from the list
+/// Lists files; *pComplete=false if a folder could not be read
 QList<File> listMountedFiles(const QString& root, bool* pComplete) {
     QList<File> files;
     const QDir rootDir(root);
@@ -105,8 +101,7 @@ QList<File> listMountedFiles(const QString& root, bool* pComplete) {
     return files;
 }
 
-/// Identifies a stick: the serial number of its file system, which Android
-/// also uses as the name of the folder it is mounted at
+/// Stick ID: serial number (or folder name as fallback)
 QString stickId(const QString& drivePath) {
 #ifdef __ANDROID_USB_DRIVE__
     const QString serial = mixxx::usbdrive::driveSerial(drivePath);
@@ -125,10 +120,7 @@ QString readStickMarker(const QString& target) {
     return QString::fromUtf8(marker.readAll()).trimmed();
 }
 
-/// Deletes the backed up files (see isBackedUp()) of the backup `target`
-/// that are not in `stickFiles` (relative paths in lower case), left over
-/// partial files, and the folders that become empty. Returns the number of
-/// deleted files.
+/// Deletes backed up files no longer on the stick, partial files, and empty folders
 int removeDeletedFiles(const QString& target, const QSet<QString>& stickFiles) {
     int deleted = 0;
     const QDir targetDir(target);
@@ -231,8 +223,7 @@ QString RekordboxDriveBackup::start(const QString& drivePath, const QString& nam
         return tr("Enter a name for the backup");
     }
     const QString target = targetDirectory(name.trimmed());
-    // A backup folder only ever mirrors one stick: mirroring another stick
-    // into it would delete the files of the first one
+    // Each backup folder mirrors exactly one stick
     const QString id = stickId(drivePath);
     const QString markedId = readStickMarker(target);
     if (markedId.isEmpty()
@@ -253,8 +244,7 @@ QString RekordboxDriveBackup::start(const QString& drivePath, const QString& nam
     m_filesTotal = 0;
     m_bytesDone = 0;
     m_bytesTotal = 0;
-    // Keeps Android's media library (and other music apps) from listing the
-    // copies as duplicates
+    // Prevents media scanner from listing copies as duplicates
     QFile noMedia(kTargetRoot + QStringLiteral("/.nomedia"));
     if (!noMedia.exists() && noMedia.open(QIODevice::WriteOnly)) {
         noMedia.close();
@@ -279,7 +269,6 @@ void RekordboxDriveBackup::cancel() {
     m_canceled = true;
 }
 
-// Runs on the worker thread
 void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) {
     const auto finish = [this](const QString& message, bool error) {
         QMetaObject::invokeMethod(
@@ -302,8 +291,7 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
 
     QList<File> files;
     bool isDrive = false;
-    // Whether every folder could be read, so that a file missing from the
-    // list was really removed from the stick
+    // complete: every folder read, so missing files are really removed
     bool complete = true;
 #ifdef __ANDROID_USB_DRIVE__
     if (const auto driveFiles =
@@ -324,8 +312,7 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
         return;
     }
 
-    // Only what is new or changed. The copies get the date of the file on
-    // the stick, so a changed date means the file was changed.
+    // Only copy new/changed files (date comparison)
     QList<File> pending;
     qint64 pendingBytes = 0;
     QSet<QString> stickFiles;
@@ -392,8 +379,7 @@ void RekordboxDriveBackup::run(const QString& drivePath, const QString& target) 
     }
 
     const int copied = m_filesDone.load() - failed;
-    // Mirrors the stick only if it was read completely and everything was
-    // copied, so a read error never deletes files of the backup
+    // Mirror only on complete read: a read error never deletes backup files
     int deleted = 0;
     if (!m_canceled && failed == 0 && complete) {
         deleted = removeDeletedFiles(target, stickFiles);

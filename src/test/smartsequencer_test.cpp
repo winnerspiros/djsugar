@@ -64,7 +64,7 @@ double bruteForceBest(const MixScorer& scorer, QVector<TrackFeatures> tracks) {
 
 } // namespace
 
-// ---------- TrackFeatures ----------
+// TrackFeatures tests
 
 TEST(TrackFeaturesTest, OpenKeyToCamelot) {
     EXPECT_EQ(8, TrackFeatures::camelotFromOpenKey(1));  // C major / A minor
@@ -81,7 +81,7 @@ TEST(TrackFeaturesTest, CamelotText) {
     EXPECT_EQ(QStringLiteral("?"), makeTrack(1, 0, false, 120).camelotText());
 }
 
-// ---------- MixScorer: keys ----------
+// MixScorer key tests
 
 TEST(MixScorerTest, CamelotDistanceWrapsRoundTheWheel) {
     EXPECT_EQ(0, MixScorer::camelotDistance(8, 8));

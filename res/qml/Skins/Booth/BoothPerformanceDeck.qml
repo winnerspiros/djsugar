@@ -6,11 +6,9 @@ import QtQuick
 import QtQuick.Layouts
 import "../../Theme"
 
-// The controls of a deck in the DJ view of the booth skin, for playing
-// without a controller, in the style of the PERFORMANCE layout of
-// rekordbox: the pads (hot cues, beat jump or beat loop), the loop size,
-// CUE and PLAY, the jog and the tempo. Deck 2 is mirrored, with its pads on
-// the outer side.
+// The controls of a deck in the DJ view of the booth skin. In the
+// style of rekordbox PERFORMANCE: pads (hot cues, beat jump/loop),
+// loop size, CUE/PLAY, jog and tempo. Deck 2 is mirrored.
 Rectangle {
     id: root
 

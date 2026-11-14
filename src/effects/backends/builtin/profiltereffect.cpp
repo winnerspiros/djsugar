@@ -73,7 +73,6 @@ void ProFilterEffect::processChannel(ProFilterGroupState* pState,
         const float offset = pos - 0.5f;
         const float amount = fxdsp::clampf(
                 (std::fabs(offset) - kDeadZone) / (0.5f - kDeadZone), 0.0f, 1.0f);
-        // Envelopes always run so switching sides is seamless.
         const float mono = 0.5f * (std::fabs(inL) + std::fabs(inR));
         const float fast = pState->fast.process(mono);
         const float slow = pState->slow.process(mono);

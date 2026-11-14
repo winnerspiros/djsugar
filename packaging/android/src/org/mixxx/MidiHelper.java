@@ -17,9 +17,9 @@ import android.util.Log;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/// Thin wrapper around android.media.midi used by AndroidMidiEnumerator and
-/// AndroidMidiController. All MIDI I/O happens in native code through AMidi;
-/// this class only lists devices, opens them and reports hotplug events.
+/// Thin android.media.midi wrapper used by AndroidMidiEnumerator and
+/// AndroidMidiController. Lists devices, opens them, reports hotplug events.
+/// MIDI I/O happens in native code through AMidi.
 public class MidiHelper {
     private static final String TAG = "MixxxMidi";
     private static MidiManager sManager = null;
@@ -126,13 +126,13 @@ public class MidiHelper {
         return device instanceof UsbDevice ? (UsbDevice) device : null;
     }
 
-    /// Returns the USB vendor id, or -1 when the device is not a USB device.
+    /// USB vendor id, -1 if not USB.
     public static int getUsbVendorId(MidiDeviceInfo info) {
         UsbDevice device = getUsbDevice(info);
         return device == null ? -1 : device.getVendorId();
     }
 
-    /// Returns the USB product id, or -1 when the device is not a USB device.
+    /// USB product id, -1 if not USB.
     public static int getUsbProductId(MidiDeviceInfo info) {
         UsbDevice device = getUsbDevice(info);
         return device == null ? -1 : device.getProductId();
@@ -231,9 +231,7 @@ public class MidiHelper {
         }
     }
 
-    /// Returns true when MidiManager already exposes the Bluetooth MIDI device
-    /// with this MAC address. Such devices are handled by AndroidMidiEnumerator,
-    /// so the GATT fallback in BleMidiEnumerator must skip them.
+    /// MidiManager already exposes this BT device? GATT fallback must skip it.
     public static boolean isBluetoothDeviceOpen(String address) {
         if (sManager == null || address == null || address.isEmpty()) {
             return false;
@@ -247,13 +245,13 @@ public class MidiHelper {
         return false;
     }
 
-    // Pre-API-33 Bundle lookup; the typed overload above does not exist there.
+    // Pre-API-33 Bundle lookup
     @SuppressWarnings("deprecation")
     private static Object getParcelableLegacy(Bundle properties, String key) {
         return properties.getParcelable(key);
     }
 
-    /// Returns the MAC address of a Bluetooth MIDI device, or null for other types.
+    /// MAC address of a BT MIDI device, null for non-BT.
     private static String getBluetoothAddress(MidiDeviceInfo info) {
         Bundle properties = info.getProperties();
         if (properties == null) {

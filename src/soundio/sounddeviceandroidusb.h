@@ -16,9 +16,8 @@ class AndroidUsbAudioDevice;
 }
 } // namespace mixxx
 
-/// Sound device for a USB audio interface driven directly by Mixxx on Android
-/// (see AndroidUsbAudioDevice). When it is the clock reference, the engine is
-/// processed on the USB event thread whenever the USB transfers need data.
+/// USB audio device for Android. When clock reference, the engine runs on
+/// the USB event thread.
 class SoundDeviceAndroidUsb : public SoundDevice {
   public:
     /// instance tells identical sound cards apart (1 for the first)
@@ -42,9 +41,7 @@ class SoundDeviceAndroidUsb : public SoundDevice {
 
   private:
     void render(uint8_t* pDestination, int frames);
-    /// For a sound card that isn't the clock reference: reads the frames
-    /// from the FIFO at a rate that follows the card's own clock, so that
-    /// the two clocks drifting apart causes no clicks
+    /// For non-clock-ref cards: reads FIFO at the card's clock rate (drift compensation)
     void resampleFromFifo(int frames);
     void processEngine();
     void updateAudioLatencyUsage(SINT framesPerBuffer);

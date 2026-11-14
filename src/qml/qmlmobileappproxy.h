@@ -16,14 +16,10 @@ class QQuickWindow;
 namespace mixxx {
 namespace qml {
 
-/// Application information used by the Android UI, exposed as the
-/// `Mixxx.MobileApp` singleton: the skin selector backing the Classic/Booth
-/// toggle in Settings → Interface, and the hideable top-bar items.
-/// Ported from JaviLabarumDJ/mixxx-android (android-stable).
+/// Application info for the Android UI: skin selector toggle and hideable top-bar items. Exposed as Mixxx.MobileApp.
 class QmlMobileAppProxy : public QObject {
     Q_OBJECT
-    /// The version of the installed package (versionName on Android), or
-    /// the Mixxx version elsewhere
+    /// The version of the installed package (versionName on Android), or the Mixxx version elsewhere
     Q_PROPERTY(QString packageVersion READ packageVersion CONSTANT)
     /// The skin of the user interface: "Classic", the main window in
     /// res/qml, or the name of a folder in res/qml/Skins with its own
@@ -64,14 +60,12 @@ class QmlMobileAppProxy : public QObject {
 
     QString packageVersion() const;
     /// The version of the installed package, see packageVersion
-    /// (from JaviLabarumDJ/mixxx-android)
     static QString installedVersion();
 
     QString skin() const;
     void setSkin(const QString& skin);
 
-    /// "Classic" and the skins in `skinsFolder` (res/qml/Skins), i.e. its
-    /// subfolders that contain a MainWindow.qml
+    /// "Classic" and the skins in `skinsFolder` (res/qml/Skins) subfolders with a MainWindow.qml
     Q_INVOKABLE QStringList skinsIn(const QUrl& skinsFolder) const;
 
     QString graphicsApi() const;

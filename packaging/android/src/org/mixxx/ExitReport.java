@@ -8,9 +8,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.List;
 
-/// How the app's previous run ended, from Android's own record: it knows of
-/// crashes the app could not write down (a native crash on a thread without
-/// a usable stack, the system killing it), for the log
+/**
+ * How the app's previous run ended, from Android's own record: it knows of
+ * crashes the app could not write down, for the log.
+ */
 public class ExitReport {
     private static final int MAX_TRACE_BYTES = 4 * 1024 * 1024;
     private static final int MAX_REPORT_CHARS = 256 * 1024;

@@ -22,16 +22,15 @@ Item {
             applySearch();
         }
     }
-    // False while a popup (e.g. a deck loader with its own library) covers
-    // this library, so only the library in front follows the controller
+    // False while a popup covers this library; only the front library
+    // follows the controller
     property bool acceptsController: true
     // Remembered across restarts, see Mixxx.MobileLibrary
     readonly property bool showSidebar: Mixxx.MobileLibrary.sidebarVisible
 
     function applySearch() {
         if (root.sidebar && root.sidebar.tracklist && root.librarySourceMode === 0) {
-            // displayText holds the word the keyboard is still composing
-            // (Samsung, Gboard): text gets it only once committed
+            // displayText: composing word from keyboard (Samsung, Gboard)
             root.sidebar.tracklist.search(searchField.displayText);
         }
     }

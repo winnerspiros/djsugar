@@ -18,14 +18,9 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 /**
- * Forces true edge-to-edge fullscreen across the display cutout (camera notch /
- * punch-hole) on Android API 28 through 35+ with Qt 6.9.
- *
- * Qt 6.9's QtDisplayManager.updateFullScreen() and QtActivityDelegate install
- * their own WindowInsets listeners on QtLayout and can reset
- * layoutInDisplayCutoutMode after Activity.onCreate(). This helper re-asserts
- * LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS (API 30+) / SHORT_EDGES (API 28-29) and
- * strips cutout insets/padding from both the DecorView and Qt's child views.
+ * Forces edge-to-edge fullscreen across camera cutouts on Android 28+ with Qt 6.9.
+ * Re-asserts LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS (30+)/SHORT_EDGES (28-29)
+ * and strips insets from DecorView/Qt child views (Qt 6.9 resets them).
  */
 @SuppressWarnings("deprecation")
 public class AndroidScreenManager {
@@ -71,12 +66,8 @@ public class AndroidScreenManager {
     }
 
     /**
-     * The camera cutouts (notch / punch hole) of the display in the pixel
-     * coordinates of the window in its current rotation, flattened as
-     * left, top, right, bottom for each cutout. Empty without a cutout.
-     * Read from the root window insets, which no view of the hierarchy can
-     * consume, so the UI can draw edge to edge and keep its controls clear of
-     * the camera.
+     * Camera cutouts (notch/punch hole) in window pixel coords, flattened
+     * as [left, top, right, bottom] per cutout. Read from root window insets.
      */
     public static int[] getCutoutRects(final Activity activity) {
         if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
