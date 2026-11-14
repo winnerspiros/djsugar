@@ -39,8 +39,8 @@
 #include "qml/qmleffectunitproxy.h"
 #include "test/mixxxtest.h"
 
-// Qt 6.16 deprecates the QPoint drag event constructors for QPointF ones
-#if QT_VERSION >= QT_VERSION_CHECK(6, 16, 0)
+// Qt 6.12 adds QPointF drag event constructors and deprecates the QPoint ones
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
 using DragPoint = QPointF;
 #else
 using DragPoint = QPoint;
