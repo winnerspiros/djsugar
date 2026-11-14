@@ -1723,7 +1723,7 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
     // Exhausted retries — give up and clean up pending state.
     const int attempts = retries + 1;
     m_downloadRetryCount.remove(videoId);
-    m_pendingPlayerLoads.remove(videoId);
+    abandonPendingLoads(videoId); // also settles the deck's progress
     m_pendingAutoDjLoads.remove(videoId);
     kLogger.warning() << "YouTube download failed for" << videoId
                       << "after" << attempts << "attempts:" << error;

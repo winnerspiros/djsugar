@@ -851,7 +851,13 @@ YouTubeService::YouTubeService(QObject* parent)
           m_pipedInstances(kPipedInstances) {
     m_rateLimitTimer.start();
     // Offline is known at once, and coming back online resets the fallbacks
-    if (QNetworkInformation::loadDefaultBackend() && QNetworkInformation::instance()) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+    const bool networkInfoLoaded = QNetworkInformation::loadDefaultBackend();
+#else
+    const bool networkInfoLoaded =
+            QNetworkInformation::load(QNetworkInformation::Feature::Reachability);
+#endif
+    if (networkInfoLoaded && QNetworkInformation::instance()) {
         connect(QNetworkInformation::instance(),
                 &QNetworkInformation::reachabilityChanged,
                 this,
@@ -1213,6 +1219,11 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                         return; // some other track
                     }
                     QObject::disconnect(*pConn);
+                    if (likelyOffline()) {
+                        // InnerTube fails the same; the failure is reported
+                        clearGuard();
+                        return;
+                    }
                     kLogger.warning() << "Bundled yt-dlp failed for" << videoId
                                       << "— falling back to InnerTube direct";
                     downloadViaInnerTube(videoId,
@@ -2723,6 +2734,10 @@ void YouTubeService::downloadAudioStreamChunked(
                         // Dropped or timed out, not refused (403/404...)
                         if (isOfflineError(reply->error())) {
                             markOffline();
+                        } else if (status > 0) {
+                            // The server answered (e.g. 403 for an expired
+                            // link): online, its fallbacks may run
+                            markOnline();
                         }
                         // Offline a resume fails the same: fail the download
                         if (status < 400 && attempt < kChunkRetries && self &&
