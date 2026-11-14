@@ -221,8 +221,20 @@ Item {
                     .toMap()
                     .value("displayOrder")
                     .toInt());
+    const auto orders = [model] {
+        QStringList result;
+        for (int row = 0; row < model->rowCount({}); ++row) {
+            const auto map = model->get(row).toMap();
+            result.append(QStringLiteral("%1=%2(%3)")
+                            .arg(map.value("parameterId").toString(),
+                                    map.value("displayOrder").toString(),
+                                    map.value("controlKey").toString()));
+        }
+        return result.join(' ').toStdString();
+    };
+    SCOPED_TRACE(orders());
     destination->completeParameterSwap(true);
-    EXPECT_EQ(0, model->get(0).toMap().value("displayOrder").toInt());
+    EXPECT_EQ(0, model->get(0).toMap().value("displayOrder").toInt()) << orders();
 }
 
 TEST_F(QmlEffectsProxyTest, EffectsKnobCursorStaysHiddenOutsideKnob) {
@@ -487,7 +499,8 @@ TEST_F(QmlEffectsProxyTest, ParameterReorderingPreservesQmlAndFixedControlBindin
             expectedOrder.append(id);
         }
     }
-    ASSERT_EQ(6, expectedOrder.size());
+    // Every parameter of the effect is loaded (Echo's count differs per fork)
+    ASSERT_EQ(EchoEffect::getManifest()->parameters().size(), expectedOrder.size());
     QQmlEngine engine;
     engine.addImportPath(QStringLiteral(":/mixxx.org/imports"));
     QQmlComponent component(&engine);
