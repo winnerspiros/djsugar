@@ -32,12 +32,12 @@ HOST_ARCH=$(uname -m)  # One of x86_64, arm64, i386, ppc or ppc64
 # Only release (-rel) buildenvs are published, debug builds use them too
 if [ "$HOST_ARCH" = "arm64" ] || [ -n "${BUILDENV_ARM64_CROSS}" ]; then
     VCPKG_TARGET_TRIPLET="arm64-osx-min1100-release"
-    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-osx-rel-a5313793"
-    BUILDENV_SHA256="d47b9c4a7252027e8c7799197c80b15d36c4dbb98fd5f8dac6d2a25bc1f50dfc"
+    BUILDENV_NAME="mixxx-deps-2.7-djsugar-arm64-osx-rel-a08e5148"
+    BUILDENV_SHA256="5a2a2f1bc008ce5b4a67489c5cc2b865e75732d73191decbcfb0857cfaea686b"
 elif [ "$HOST_ARCH" = "x86_64" ]; then
     VCPKG_TARGET_TRIPLET="x64-osx-min1100-release"
-    BUILDENV_NAME="mixxx-deps-2.7-djsugar-x64-osx-rel-a5313793"
-    BUILDENV_SHA256="af0c4457dbfea038077249b326f31d9a472a08c87fd9cc187203eb6e6d599889"
+    BUILDENV_NAME="mixxx-deps-2.7-djsugar-x64-osx-rel-a08e5148"
+    BUILDENV_SHA256="35e01c8606c17c46787090a4896ade2489be37f096cc4f814e4079836526b579"
 else
     echo "ERROR: Unsupported architecture detected: $HOST_ARCH"
     exit 1
