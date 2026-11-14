@@ -405,15 +405,13 @@ Qt::ItemFlags BrowseTableModel::flags(const QModelIndex& index) const {
     // waveform widget to load a track into a Player).
     defaultFlags |= Qt::ItemIsDragEnabled;
 
-    int column = index.column();
-
 #ifdef Q_OS_IOS
     // Make items non-editable on iOS by default, since tapping any track will
     // otherwise trigger the on-screen keyboard (even if they cannot actually
     // be edited).
     return defaultFlags;
 #else
-    switch (column) {
+    switch (index.column()) {
     case COLUMN_FILENAME:
     case COLUMN_BITRATE:
     case COLUMN_DURATION:
