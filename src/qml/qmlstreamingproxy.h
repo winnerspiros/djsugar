@@ -23,6 +23,8 @@
 #include <memory>
 
 #include "mixer/playermanager.h"
+
+class Library;
 #include "preferences/usersettings.h"
 
 namespace mixxx {
@@ -69,6 +71,9 @@ class QmlStreamingProxy : public QObject {
     }
     static void registerUserSettings(UserSettingsPointer pConfig) {
         s_pConfig = std::move(pConfig);
+    }
+    static void registerLibrary(Library* pLibrary) {
+        s_pLibrary = pLibrary;
     }
 
     QString subsonicUrl() const;
@@ -169,6 +174,7 @@ class QmlStreamingProxy : public QObject {
 
     static inline std::shared_ptr<PlayerManager> s_pPlayerManager;
     static inline UserSettingsPointer s_pConfig;
+    static inline Library* s_pLibrary = nullptr;
 
     QNetworkAccessManager* m_pNetworkManager;
     QString m_subsonicUrl;

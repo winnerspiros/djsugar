@@ -20,6 +20,7 @@ Item {
     // "search", "liked", "playlists", "playlist"
     property string listKind: "liked"
     property string playlistName: ""
+    property string playlistId: ""
     // What the rows in resultsModel are; listKind changes before they do
     property bool rowsArePlaylists: false
     property var progress: ({})
@@ -33,16 +34,29 @@ Item {
         else if (kind === "playlists")
             Mixxx.Spotify.playlists();
     }
-    function doSearch() {
-        const query = searchField.text.trim();
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
+    function doSearch(text = searchField.text) {
+        const query = text.trim();
         if (query.length === 0)
             return;
+        root.searchedQuery = query;
         root.listKind = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
         Mixxx.Spotify.search(query);
     }
+    // Pull to refresh / F5: what is shown is fetched again
+    function refreshList() {
+        if (root.listKind === "search")
+            root.doSearch(root.searchedQuery);
+        else if (root.listKind === "playlist")
+            root.openPlaylist(root.playlistId, root.playlistName);
+        else
+            root.openList(root.listKind);
+    }
     function openPlaylist(id, name) {
+        root.playlistId = id;
         root.listKind = "playlist";
         root.playlistName = name;
         root.isBusy = true;
@@ -261,6 +275,9 @@ Item {
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: root.doSearch()
                 }
+                Skin.SearchClearButton {
+                    field: searchField
+                }
                 Text {
                     anchors.fill: parent
                     anchors.margins: 6
@@ -343,6 +360,8 @@ Item {
         ListView {
             id: resultList
 
+            boundsBehavior: Flickable.DragOverBounds
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -351,7 +370,9 @@ Item {
             currentIndex: -1
             highlightFollowsCurrentItem: true
             highlightMoveDuration: 0
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
 
             highlight: Rectangle {
                 z: 2
@@ -494,6 +515,14 @@ Item {
                     }
                 }
             }
+
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.refreshList()
+            }
+
         }
     }
 }

@@ -1,6 +1,7 @@
 #include "qmlapplication.h"
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QMenuBar>
 #include <QQmlEngineExtensionPlugin>
 #include <QQuickStyle>
@@ -36,6 +37,7 @@
 #include "qml/qmlrecordingproxy.h"
 #include "recording/recordingmanager.h"
 #include "soundio/soundmanager.h"
+#include "track/globaltrackcache.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
 #include "waveform/overviewtype.h"
@@ -113,27 +115,26 @@ void saveForAndroid(const std::shared_ptr<mixxx::CoreServices>& pCoreServices) {
     if (auto pEffectsManager = pCoreServices->getEffectsManager()) {
         pEffectsManager->saveEffectsXml();
     }
-    const auto pPlayerManager = pCoreServices->getPlayerManager();
     const auto pTrackCollectionManager = pCoreServices->getTrackCollectionManager();
-    if (!pPlayerManager || !pTrackCollectionManager) {
+    if (!pTrackCollectionManager) {
         return;
     }
-    const auto save = [&](BaseTrackPlayer* pPlayer) {
-        if (!pPlayer) {
-            return;
+    // Every track in memory, not only the loaded ones: library edits (and
+    // a download's title) otherwise reach the database only when a track is
+    // let go, which a process end skips. Unchanged tracks are skipped
+    QList<TrackPointer> tracks;
+    {
+        GlobalTrackCacheLocker cacheLocker;
+        const QSet<TrackId> trackIds = cacheLocker.getCachedTrackIds();
+        tracks.reserve(trackIds.size());
+        for (const TrackId& trackId : trackIds) {
+            if (TrackPointer pTrack = cacheLocker.lookupTrackById(trackId)) {
+                tracks.append(std::move(pTrack));
+            }
         }
-        if (const TrackPointer pTrack = pPlayer->getLoadedTrack()) {
-            pTrackCollectionManager->saveTrack(pTrack);
-        }
-    };
-    for (int i = 0; i < pPlayerManager->numberOfDecks(); ++i) {
-        save(pPlayerManager->getDeckBase(i));
     }
-    for (int i = 0; i < pPlayerManager->numberOfSamplers(); ++i) {
-        save(pPlayerManager->getSampler(i));
-    }
-    for (int i = 0; i < pPlayerManager->numberOfPreviewDecks(); ++i) {
-        save(pPlayerManager->getPreviewDeck(i));
+    for (const TrackPointer& pTrack : std::as_const(tracks)) {
+        pTrackCollectionManager->saveTrack(pTrack);
     }
 }
 
@@ -505,7 +506,12 @@ QmlApplication::~QmlApplication() {
     // Destroy the QML engine before the waveform factory. Scene-graph nodes
     // owned by the engine may still reference QML waveform renderers and the
     // factory while the engine is tearing down its object tree.
+    QElapsedTimer timer;
+    timer.start();
     m_pAppEngine.reset();
+    if (timer.elapsed() >= 100) {
+        qInfo() << "Exit: closing the QML window took" << timer.elapsed() << "ms";
+    }
     // Delete all the QML singletons in order to prevent leak detection in CoreService
     QmlCoreServices::destroy();
     QmlRecordingProxy::s_pRecordingManager.reset();
@@ -520,6 +526,19 @@ QmlApplication::~QmlApplication() {
     QmlApplicationProxy::registerVinylControlManager(nullptr);
     m_pCoreServices.reset();
 }
+
+#if defined(Q_OS_ANDROID)
+void QmlApplication::stopAndSaveForAndroid() {
+    // Recording and controllers end first, while the engine still runs: the
+    // recording thread closes its file on the engine's next samples
+    shutDownForAndroid(m_pCoreServices);
+    if (const auto pSoundManager = m_pCoreServices->getSoundManager()) {
+        // Async: the devices close now, without the wait for Linux sound servers
+        pSoundManager->closeActiveConfig(true);
+    }
+    saveForAndroid(m_pCoreServices);
+}
+#endif
 
 void QmlApplication::setupSpinnyCoverControls() {
     m_pShowSpinny = make_parented<ControlProxy>("[Skin]", "show_spinnies", this);

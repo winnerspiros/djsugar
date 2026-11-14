@@ -614,6 +614,37 @@ QList<QPair<int, QString>> PlaylistDAO::getPlaylists(const HiddenType hidden) co
     }
     return playlists;
 }
+
+QList<PlaylistDAO::PlaylistWithCount> PlaylistDAO::getPlaylistsWithCounts(
+        const HiddenType hidden) const {
+    QSqlQuery query(m_database);
+    query.prepare(mixxx::DbConnection::collateLexicographically(
+            QString("SELECT p.id, p.name, p.locked, "
+                    "       (SELECT COUNT(*) FROM PlaylistTracks pt "
+                    "        WHERE pt.playlist_id = p.id) AS count "
+                    "FROM Playlists p "
+                    "WHERE p.hidden = %1 "
+                    "ORDER BY p.name")
+                    .arg(hidden)));
+
+    QList<PlaylistWithCount> playlists;
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return playlists;
+    }
+
+    while (query.next()) {
+        PlaylistWithCount pwc;
+        pwc.id = query.value(0).toInt();
+        pwc.name = query.value(1).toString();
+        pwc.locked = query.value(2).toBool();
+        pwc.count = query.value(3).toInt();
+        playlists.append(pwc);
+    }
+    return playlists;
+}
+
 QList<QPair<int, QString>> PlaylistDAO::getUnlockedPlaylists(const HiddenType hidden) const {
     // qDebug() << "PlaylistDAO::getPlaylists(hidden =" << hidden
     //          << QThread::currentThread() << m_database.connectionName();

@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QUrlQuery>
 #include <algorithm>
+#include <utility>
 
 #ifdef Q_OS_ANDROID
 #include <jni.h>
@@ -516,25 +517,49 @@ void QmlYouTubeProxy::ensureSoundCloudNetwork() {
     }
 }
 
-void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done, bool clientIdRetried) {
+void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done) {
+    if (done) {
+        m_scMeWaiters.append(std::move(done));
+    }
+    if (m_scMeInFlight) {
+        return;
+    }
+    m_scMeInFlight = true;
+    requestSoundCloudMe(false);
+}
+
+void QmlYouTubeProxy::finishSoundCloudMe(bool ok) {
+    m_scMeInFlight = false;
+    const QList<std::function<void()>> waiters = std::exchange(m_scMeWaiters, {});
+    if (!ok) {
+        return;
+    }
+    for (const auto& waiter : waiters) {
+        waiter();
+    }
+}
+
+void QmlYouTubeProxy::requestSoundCloudMe(bool clientIdRetried) {
     ensureSoundCloudNetwork();
     if (mixxx::soundcloud::token().isEmpty()) {
+        finishSoundCloudMe(false);
         return;
     }
     if (m_scClientId.isEmpty()) {
-        fetchSoundCloudClientId([this, done](bool ok) {
+        fetchSoundCloudClientId([this](bool ok) {
             if (!ok) {
+                finishSoundCloudMe(false);
                 emit soundCloudFailed(tr("SoundCloud is not reachable"));
                 return;
             }
-            fetchSoundCloudMe(done, true);
+            requestSoundCloudMe(true);
         });
         return;
     }
     QUrl url(QStringLiteral("https://api-v2.soundcloud.com/me"));
     url.setQuery(QStringLiteral("client_id=") + m_scClientId);
     QNetworkReply* pReply = m_pScNetwork->get(scRequest(url));
-    connect(pReply, &QNetworkReply::finished, this, [this, pReply, done, clientIdRetried]() {
+    connect(pReply, &QNetworkReply::finished, this, [this, pReply, clientIdRetried]() {
         pReply->deleteLater();
         const int status = pReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QJsonObject me = QJsonDocument::fromJson(pReply->readAll()).object();
@@ -545,19 +570,18 @@ void QmlYouTubeProxy::fetchSoundCloudMe(std::function<void()> done, bool clientI
             m_scAvatar = me.value(QStringLiteral("avatar_url")).toString();
             qInfo() << "SoundCloud: signed in as" << m_scName;
             emit accountsChanged();
-            if (done) {
-                done();
-            }
+            finishSoundCloudMe(true);
             return;
         }
         qWarning() << "SoundCloud /me failed:" << status << pReply->errorString();
         if ((status == 401 || status == 403) && !clientIdRetried) {
             m_scClientId.clear(); // maybe the rotated client id
-            fetchSoundCloudMe(done, true);
+            requestSoundCloudMe(true);
             return;
         }
         const bool parsedWithoutUser = pReply->error() == QNetworkReply::NoError &&
                 !me.isEmpty() && !me.contains(QStringLiteral("id"));
+        finishSoundCloudMe(false);
         if (status == 401 || status == 403 || parsedWithoutUser) {
             // The token is no account's
             mixxx::soundcloud::setToken(QString());

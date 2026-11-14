@@ -530,7 +530,14 @@ void SoundDevicePortAudio::makeStreamInactiveAndWait() {
     // later on.
     {
         std::unique_lock lock(m_finishedMutex);
-        if (!m_finishedCV.wait_for(lock, std::chrono::seconds(1), [&] { return m_bFinished; })) {
+        const auto timeout = std::chrono::milliseconds(
+#ifdef Q_OS_ANDROID
+                200
+#else
+                1000
+#endif
+        );
+        if (!m_finishedCV.wait_for(lock, timeout, [&] { return m_bFinished; })) {
             // The timeout should not be reached, because when the process
             // callback returns paAbort, the stream will finish as soon as possible.
             // We have it as a last resort in case inactivating the stream stalls.

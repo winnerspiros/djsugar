@@ -139,6 +139,8 @@ class YouTubeService : public QObject {
     /// `<cacheDir>/<videoId>.<ext>`. Emits downloadFinished(videoId, path)
     /// or downloadFailed(videoId, error).
     void downloadVideo(const QString& videoId, const QString& cacheDir);
+    /// No connection now (Android's network state or a recent network error)
+    static bool isOffline();
     /// Extracts the stream links of these videos in the background (Android,
     /// bundled yt-dlp), so a tap on one starts the ranged download at once.
     /// No-op elsewhere.
@@ -466,6 +468,11 @@ class YouTubeService : public QObject {
     /// Non-empty when there are more results to fetch via fetchMoreSearchResults().
     /// Cleared at the start of every new searchVideos() call.
     QString m_searchContinuationToken;
+    // Counts searches: pages and retries of an older search are dropped
+    int m_searchGeneration = 0;
+    // One continuation at a time: two on the same token got the same page
+    bool m_continuationInFlight = false;
+    void continueSearchResults(const QString& emittedQuery, int cap, int minResults);
     /// Bounded deferral counters for fetchMore arriving before the first
     /// page sets the token (per query). Prevents silent 20-result cap.
     QMap<QString, int> m_fetchMoreTokenWaits;

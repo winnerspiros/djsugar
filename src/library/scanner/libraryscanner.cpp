@@ -17,6 +17,7 @@
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
 #include "util/db/fwdsqlquery.h"
+#include "util/db/sqlite.h"
 #include "util/logger.h"
 #include "util/performancetimer.h"
 #include "util/regex.h"
@@ -32,6 +33,7 @@ mixxx::Logger kLogger("LibraryScanner");
 
 QAtomicInt s_instanceCounter(0);
 
+#ifndef Q_OS_ANDROID
 // Returns the number of affected rows or -1 on error
 int execRowCountQuery(FwdSqlQuery& query) {
     VERIFY_OR_DEBUG_ASSERT(query.isPrepared()) {
@@ -43,7 +45,6 @@ int execRowCountQuery(FwdSqlQuery& query) {
     return query.numRowsAffected();
 }
 
-#ifndef Q_OS_ANDROID
 /// Clean up the database and fix inconsistencies from previous runs.
 /// See also: https://github.com/mixxxdj/mixxx/issues/9771
 void cleanUpDatabase(const QSqlDatabase& database) {
@@ -78,27 +79,6 @@ void cleanUpDatabase(const QSqlDatabase& database) {
             << timer.elapsed().debugMillisWithUnit();
 }
 #endif
-
-/// Update statistics for the query planner
-/// See also: https://www.sqlite.org/lang_analyze.html
-void updateQueryPlannerStatisticsForDatabase(const QSqlDatabase& database) {
-    kLogger.info()
-            << "Updating query planner statistics for database...";
-    PerformanceTimer timer;
-    timer.start();
-    const auto sqlStmt = QStringLiteral("ANALYZE");
-    FwdSqlQuery query(database, sqlStmt);
-    const auto numRows = execRowCountQuery(query);
-    VERIFY_OR_DEBUG_ASSERT(numRows >= 0) {
-        kLogger.warning()
-                << "Failed to update query planner statistics for database";
-    }
-    else {
-        kLogger.info()
-                << "Finished updating query planner statistics for database:"
-                << timer.elapsed().debugMillisWithUnit();
-    }
-}
 
 // Committing the add-tracks transaction after every track is essential to
 // avoid a deadlock between the scanner thread and the GUI thread:
@@ -145,6 +125,7 @@ LibraryScanner::LibraryScanner(
     setObjectName(QString("LibraryScanner %1").arg(instanceId));
 
     m_pool.setMaxThreadCount(kScannerThreadPoolSize);
+    m_pool.setThreadPriority(QThread::LowPriority);
 
     // Listen to signals from our public methods (invoked by other threads) and
     // connect them to our slots to run the command on the scanner thread.
@@ -327,6 +308,40 @@ void LibraryScanner::slotStartScan() {
                     coverExtensionFilter,
                     directoryBlacklist));
 
+#ifdef Q_OS_ANDROID
+    {
+        // Phones hold thousands of folders of photos, app data and backups;
+        // a walk through them all took 25-45 s for ~1400 songs. Only the
+        // folders with music are entered (the media store's, plus those of
+        // library tracks so none goes missing) and those on the way to them.
+        // A rescan asked for (pull down, F5, the menu) walks every folder:
+        // it finds music the media store leaves out (.nomedia folders)
+        // The first scan walks every folder too: the media store may not
+        // have indexed everything yet (one missed 513 of 1329 songs)
+        const bool autoscan = m_manualScan; // holds scan()'s autoscan
+        const QStringList audioFolders = autoscan && !trackLocations.isEmpty()
+                ? mixxx::android::mediaStoreAudioFolders()
+                : QStringList();
+        if (!audioFolders.isEmpty()) {
+            QSet<QString> musicDirs(audioFolders.cbegin(), audioFolders.cend());
+            for (const QString& location : std::as_const(trackLocations)) {
+                musicDirs.insert(location.left(location.lastIndexOf(QLatin1Char('/'))));
+            }
+            QSet<QString> dirsToEnter;
+            for (const QString& leaf : std::as_const(musicDirs)) {
+                for (qsizetype slash = leaf.size(); slash > 0;
+                        slash = leaf.lastIndexOf(QLatin1Char('/'), slash - 1)) {
+                    const QString dir = leaf.left(slash);
+                    if (dirsToEnter.contains(dir)) {
+                        break; // its parents are in already
+                    }
+                    dirsToEnter.insert(dir);
+                }
+            }
+            m_scannerGlobal->setDirectoriesToEnter(std::move(dirsToEnter));
+        }
+    }
+#endif
     m_scannerGlobal->startTimer();
 
     emit scanStarted();
@@ -434,7 +449,7 @@ void LibraryScanner::slotFinishHashedScan() {
 }
 
 // Quick hack: return number of relocated tracks
-void LibraryScanner::cleanUpScan() {
+bool LibraryScanner::cleanUpScan() {
     // At the end of a scan, mark all tracks and directories that weren't
     // "verified" as "deleted" (as long as the scan wasn't canceled half way
     // through). This condition is important because our rescanning algorithm
@@ -474,7 +489,7 @@ void LibraryScanner::cleanUpScan() {
                 m_libraryRootDirs,
                 m_scannerGlobal->shouldCancelPointer())) {
         // canceled
-        return;
+        return false;
     }
 
     kLogger.debug() << "Marking unverified tracks as deleted";
@@ -494,7 +509,7 @@ void LibraryScanner::cleanUpScan() {
                     m_scannerGlobal->shouldCancelPointer())) {
             kLogger.info()
                     << "Detecting moved files has been canceled or aborted";
-            return;
+            return false;
         }
         if (!relocatedTracks.isEmpty()) {
             m_numRelocatedTracks = relocatedTracks.size();
@@ -512,7 +527,7 @@ void LibraryScanner::cleanUpScan() {
     // A.
     m_libraryHashDao.removeDeletedDirectoryHashes();
 
-    transaction.commit();
+    const bool committed = transaction.commit();
 
     kLogger.debug() << "Detecting cover art for unscanned files";
     QSet<TrackId> coverArtTracksChanged;
@@ -523,6 +538,7 @@ void LibraryScanner::cleanUpScan() {
     if (!coverArtTracksChanged.isEmpty()) {
         emit tracksChanged(coverArtTracksChanged);
     }
+    return committed;
 }
 
 // is called when all tasks of the second stage are done (threads are finished)
@@ -546,13 +562,15 @@ void LibraryScanner::slotFinishUnhashedScan() {
     m_trackDao.addTracksFinish(!m_scannerGlobal->shouldCancel() &&
             !bScanFinishedCleanly);
 
-    if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {
-        cleanUpScan();
+    if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly &&
+            !cleanUpScan()) {
+        kLogger.warning() << "Scan results could not be saved";
+        bScanFinishedCleanly = false;
     }
 
     if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {
         const auto dbConnection = mixxx::DbConnectionPooled(m_pDbConnectionPool);
-        updateQueryPlannerStatisticsForDatabase(dbConnection);
+        mixxx::sqlite::updateQueryPlannerStatistics(dbConnection);
     }
 
     if (!m_scannerGlobal->shouldCancel() && bScanFinishedCleanly) {
@@ -616,6 +634,8 @@ void LibraryScanner::slotFinishUnhashedScan() {
     result.numRediscoveredTracks = numRediscoveredTracks;
     result.tracksTotal = tracksTotal;
     result.autoscan = m_manualScan;
+    result.finishedCleanly =
+            !m_scannerGlobal->shouldCancel() && bScanFinishedCleanly;
 
     m_scannerGlobal.clear();
     changeScannerState(FINISHED);
@@ -837,6 +857,8 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
         // GlobalTrackCache mutex (see the comment on
         // commit-after-every-track above).
         commitAndRestart();
+        // Not complete: the next start scans again
+        m_scannerGlobal->clearScanFinishedCleanly();
         return;
     }
 

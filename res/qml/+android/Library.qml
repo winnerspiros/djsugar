@@ -16,6 +16,12 @@ Item {
 
     property var sidebar: librarySources.sidebar()
     property int librarySourceMode: 0 // 0: Local, 1: Streaming Hub (YouTube lives inside the hub)
+    // A search typed just before switching to the hub applies on return
+    onLibrarySourceModeChanged: {
+        if (librarySourceMode === 0) {
+            applySearch();
+        }
+    }
     // False while a popup (e.g. a deck loader with its own library) covers
     // this library, so only the library in front follows the controller
     property bool acceptsController: true
@@ -24,7 +30,9 @@ Item {
 
     function applySearch() {
         if (root.sidebar && root.sidebar.tracklist && root.librarySourceMode === 0) {
-            root.sidebar.tracklist.search(searchField.text);
+            // displayText holds the word the keyboard is still composing
+            // (Samsung, Gboard): text gets it only once committed
+            root.sidebar.tracklist.search(searchField.displayText);
         }
     }
     function focusSearch() {
@@ -90,9 +98,8 @@ Item {
 
         // Playlists, crates and folders bring their own track list
         function onTracklistChanged() {
-            if (searchField.text.length > 0) {
-                root.applySearch();
-            }
+            // Also when empty: a list may keep an older search
+            root.applySearch();
         }
     }
 
@@ -175,8 +182,71 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                placeholderText: qsTr("Search your local collection...")
-                onTextChanged: root.applySearch()
+                anchors.margins: 6
+                height: 40
+                leftPadding: 40
+                color: "#ffffff"
+                font.pixelSize: 14
+                placeholderText: qsTr("Search songs, artists, albums")
+                placeholderTextColor: "#80868f"
+                selectByMouse: true
+                verticalAlignment: TextInput.AlignVCenter
+                inputMethodHints: Qt.ImhNoPredictiveText
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#000000"
+                    border.width: searchField.activeFocus ? 2 : 1
+                    border.color: searchField.activeFocus ? "#00e5ff" : "#262a31"
+
+                    // Magnifier, drawn: no icon font needed
+                    Item {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+
+                        Rectangle {
+                            width: 11
+                            height: 11
+                            radius: width / 2
+                            color: "transparent"
+                            border.width: 2
+                            border.color: searchField.activeFocus ? "#00e5ff" : "#80868f"
+                        }
+                        Rectangle {
+                            x: 9
+                            y: 11
+                            width: 7
+                            height: 2
+                            radius: 1
+                            rotation: 45
+                            antialiasing: true
+                            color: searchField.activeFocus ? "#00e5ff" : "#80868f"
+                        }
+                    }
+                }
+                // One search once typing pauses, not one per letter
+                onDisplayTextChanged: searchDebounce.restart()
+                onAccepted: {
+                    searchDebounce.stop();
+                    root.applySearch();
+                }
+            }
+
+            // Beside the field, not inside it: inside, a tap on the X reached
+            // the field (cursor, keyboard) and not the X
+            Skin.SearchClearButton {
+                field: searchField
+                padField: true
+                anchors.right: searchField.right
+                anchors.verticalCenter: searchField.verticalCenter
+            }
+
+            Timer {
+                id: searchDebounce
+                interval: Math.max(150, Mixxx.Config.librarySearchDebouncingTimeout)
+                onTriggered: root.applySearch()
             }
 
             SplitView {
@@ -185,6 +255,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: searchField.bottom
+                anchors.topMargin: 6
                 orientation: Qt.Horizontal
 
                 handle: Rectangle {

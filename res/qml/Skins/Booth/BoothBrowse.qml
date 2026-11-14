@@ -469,6 +469,7 @@ Item {
             font.pixelSize: root.compact ? 12 : 14
             height: parent.height - 6
             placeholderText: qsTr("SEARCH")
+            Skin.SearchClearButton {}
             placeholderTextColor: Theme.lightGray3
             visible: !root.streaming
 

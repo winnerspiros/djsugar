@@ -157,7 +157,13 @@ class QmlYouTubeProxy : public QObject {
     void soundCloudRequest(const QUrl& url, bool append, bool clientIdRetried);
     void fetchSoundCloudClientId(std::function<void(bool)> done);
     /// The signed-in SoundCloud user (name, avatar, id); then `done`
-    void fetchSoundCloudMe(std::function<void()> done, bool clientIdRetried = false);
+    void fetchSoundCloudMe(std::function<void()> done);
+    void requestSoundCloudMe(bool clientIdRetried);
+    /// Ends the running /me: its waiters run when it found the user
+    void finishSoundCloudMe(bool ok);
+    // Every view asks when it opens: one /me runs, all waiters get it
+    bool m_scMeInFlight = false;
+    QList<std::function<void()>> m_scMeWaiters;
     void ensureSoundCloudNetwork();
     QNetworkAccessManager* m_pScNetwork = nullptr;
     // An account list (not a search) is open: loadMore() continues it

@@ -341,6 +341,8 @@ void QmlLibraryProxy::rescanLibrary() {
         return;
     }
     if (libraryScanActive()) {
+        // Shows what the running scan found so far
+        s_pLibrary->slotRefreshLibraryModels();
         return;
     }
     TrackCollectionManager* pTrackCollectionManager =

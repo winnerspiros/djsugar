@@ -3872,6 +3872,14 @@ elseif(SQLite3_FOUND)
   # When LOCALECOMPARE is OFF (manually set) but SQLite3 is found (static Qt builds),
   # we still need to link SQLite3 unconditionally
   target_link_libraries(mixxx-lib PRIVATE SQLite3::SQLite3)
+  if(ANDROID)
+    # Qt's SQLite driver has SQLite built in: the search, sort and journal
+    # functions call that copy, looked up at runtime (dbconnection.cpp)
+    target_compile_definitions(
+      mixxx-lib
+      PUBLIC __SQLITE3__ MIXXX_SQLITE3_FROM_QT
+    )
+  endif()
 endif()
 
 # Denon Engine Prime library export support (using libdjinterop)

@@ -15,6 +15,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
+#include <QNetworkInformation>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPointer>
@@ -78,6 +79,8 @@ constexpr int kPipedHttpTimeoutMs = 6 * 1000;
 // throughput on cellular links where a single window saturates slowly.
 constexpr qint64 kChunkedDownloadThresholdBytes = 1LL * 1024 * 1024; // 2 MB
 constexpr int kParallelDownloadChunks = 16;
+// No byte for this long: the chunk connection is stuck, resume it
+constexpr int kChunkStallTimeoutMs = 10000;
 constexpr int kMaxPipedSearchPages = 5;
 // SponsorBlock API timeout — prevents indefinite hangs if the service is slow.
 // 4 s is generous for a single HTTP GET backed by a CDN; most responses arrive
@@ -729,6 +732,56 @@ struct ParsedSearchPage {
 
 /// Parses `body` off the UI thread, then calls `done` on it. `done` checks
 /// itself that its receiver still exists.
+/// The device has no connection (not one server or client failing)
+// When the device last had no connection (ms since epoch, 0: online).
+// Background work (link prefetch, download fallbacks) stops while offline:
+// each of its yt-dlp runs otherwise retried and failed for seconds
+static std::atomic<qint64> s_offlineAtMs{0};
+constexpr qint64 kOfflineHoldMs = 15000;
+
+static void markOffline() {
+    s_offlineAtMs = QDateTime::currentMSecsSinceEpoch();
+}
+
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+namespace {
+void resetFallbacksAfterReconnect();
+} // namespace
+#endif
+
+static void markOnline() {
+    // exchange: the reset only when the connection came back
+    if (s_offlineAtMs.exchange(0) != 0) {
+#if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
+        resetFallbacksAfterReconnect();
+#endif
+    }
+}
+
+[[maybe_unused]] static bool likelyOffline() {
+    // The system's word first (Android tells at once); else a recent
+    // network error of ours
+    if (const QNetworkInformation* pInfo = QNetworkInformation::instance()) {
+        if (pInfo->reachability() == QNetworkInformation::Reachability::Disconnected) {
+            return true;
+        }
+    }
+    const qint64 at = s_offlineAtMs;
+    return at != 0 && QDateTime::currentMSecsSinceEpoch() - at < kOfflineHoldMs;
+}
+
+static bool isOfflineError(QNetworkReply::NetworkError error) {
+    switch (error) {
+    case QNetworkReply::HostNotFoundError:
+    case QNetworkReply::TemporaryNetworkFailureError:
+    case QNetworkReply::NetworkSessionFailedError:
+    case QNetworkReply::UnknownNetworkError:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void parseSearchPageAsync(QByteArray body,
         int cap,
         std::function<void(const ParsedSearchPage&)> done) {
@@ -797,6 +850,29 @@ YouTubeService::YouTubeService(QObject* parent)
           m_ytDlpPath(locateYtDlp()),
           m_pipedInstances(kPipedInstances) {
     m_rateLimitTimer.start();
+    // Offline is known at once, and coming back online resets the fallbacks
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+    const bool networkInfoLoaded = QNetworkInformation::loadDefaultBackend();
+#else
+    const bool networkInfoLoaded =
+            QNetworkInformation::load(QNetworkInformation::Feature::Reachability);
+#endif
+    if (networkInfoLoaded && QNetworkInformation::instance()) {
+        connect(QNetworkInformation::instance(),
+                &QNetworkInformation::reachabilityChanged,
+                this,
+                [](QNetworkInformation::Reachability reachability) {
+                    if (reachability == QNetworkInformation::Reachability::Disconnected) {
+                        markOffline();
+                    } else if (reachability == QNetworkInformation::Reachability::Online) {
+                        markOnline();
+                    }
+                });
+    }
+    // Every continuation ends in searchMoreReady, also an empty or failed one
+    connect(this, &YouTubeService::searchMoreReady, this, [this]() {
+        m_continuationInFlight = false;
+    });
     setupCookieJar();
     loadSessionState();
     if (!m_ytDlpPath.isEmpty()) {
@@ -813,6 +889,15 @@ YouTubeService::YouTubeService(QObject* parent)
 
     // Set up periodic remote config refresh for InnerTube client signatures.
     if (!kRemoteConfigUrl.isEmpty()) {
+        // The version saved before: the same one is not saved again each start
+        QFile savedConfig(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+                QStringLiteral("/youtube/inner_tube_clients.json"));
+        if (savedConfig.open(QIODevice::ReadOnly)) {
+            m_remoteConfigVersion = QJsonDocument::fromJson(savedConfig.readAll())
+                                            .object()
+                                            .value(QStringLiteral("version"))
+                                            .toInt(m_remoteConfigVersion);
+        }
         m_pRemoteConfigTimer = new QTimer(this);
         m_pRemoteConfigTimer->setInterval(kRemoteConfigRefreshMs);
         connect(m_pRemoteConfigTimer,
@@ -874,16 +959,13 @@ void YouTubeService::onRemoteConfigReply(QNetworkReply* reply) {
     }
     const QJsonObject config = doc.object();
     const int remoteVersion = config.value(QStringLiteral("version")).toInt(0);
+    m_remoteConfigLastFetch = m_rateLimitTimer.elapsed();
     if (remoteVersion <= m_remoteConfigVersion) {
-        kLogger.info() << "Remote client config version" << remoteVersion
-                       << "is not newer than local" << m_remoteConfigVersion
-                       << "— skipping";
+        kLogger.debug() << "Remote client config version" << remoteVersion
+                        << "is not newer than local" << m_remoteConfigVersion;
         return;
     }
-    if (applyRemoteConfig(config, remoteVersion)) {
-        m_remoteConfigLastFetch = m_rateLimitTimer.elapsed();
-        kLogger.info() << "Applied remote client config version" << remoteVersion;
-    }
+    applyRemoteConfig(config, remoteVersion);
 }
 
 bool YouTubeService::applyRemoteConfig(const QJsonObject& config, int remoteVersion) {
@@ -920,7 +1002,7 @@ bool YouTubeService::applyRemoteConfig(const QJsonObject& config, int remoteVers
         m_remoteConfigVersion = remoteVersion;
         kLogger.info() << "Saved remote client config v" << remoteVersion
                        << "to" << outFile.fileName()
-                       << "(dynamic update requires restart)";
+                       << "(not used at runtime yet)";
         return true;
     }
     kLogger.warning() << "Failed to save remote client config to" << outFile.fileName();
@@ -980,6 +1062,8 @@ void YouTubeService::searchVideos(const QString& query, int cap, int minResults)
 #endif
     // A new search invalidates any continuation from a previous search.
     m_searchContinuationToken.clear();
+    ++m_searchGeneration;
+    m_continuationInFlight = false;
     // Primary backend: the YouTube InnerTube /search endpoint. It is hit
     // directly (no third-party Piped proxy), so it does not depend on the
     // health of community-run instances — which is why search used to return
@@ -1043,6 +1127,10 @@ void YouTubeService::searchVideos(const QString& query, int cap, int minResults)
             /*regionOverride=*/QString(),
             /*retryCount=*/0,
             minResults);
+}
+
+bool YouTubeService::isOffline() {
+    return likelyOffline();
 }
 
 void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheDir) {
@@ -1131,6 +1219,11 @@ void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheD
                         return; // some other track
                     }
                     QObject::disconnect(*pConn);
+                    if (likelyOffline()) {
+                        // InnerTube fails the same; the failure is reported
+                        clearGuard();
+                        return;
+                    }
                     kLogger.warning() << "Bundled yt-dlp failed for" << videoId
                                       << "— falling back to InnerTube direct";
                     downloadViaInnerTube(videoId,
@@ -1188,6 +1281,10 @@ void YouTubeService::fetchTrending(const QString& region, int cap, int minResult
     // Empty / malformed region: fall back to the project default ("GR") rather
     // than failing, because an empty pane is the worst possible UX for a
     // freshly-opened YouTube tab.
+    // Like a search: the previous one's continuation is not this one's
+    m_searchContinuationToken.clear();
+    ++m_searchGeneration;
+    m_continuationInFlight = false;
     QString r = region.toUpper();
     const bool valid = r.size() == 2 && r.at(0).isLetter() && r.at(1).isLetter();
     if (!valid) {
@@ -1484,8 +1581,9 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                             clientIdx,
                             onAllFailed,
                             regionOverride,
-                            minResults]() {
-                        if (!guard) {
+                            minResults,
+                            generation = m_searchGeneration]() {
+                        if (!guard || guard->m_searchGeneration != generation) {
                             return;
                         }
                         guard->searchViaInnerTube(emittedQuery,
@@ -1521,9 +1619,16 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                     requestQuery,
                     cap,
                     tryNext,
+                    onAllFailed,
                     clientIdx,
-                    minResults]() {
+                    minResults,
+                    generation = m_searchGeneration]() {
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: this answer and its fallbacks
+                    // are not shown, its token is not kept
+                    return;
+                }
                 const int httpStatus = reply->attribute(
                                                     QNetworkRequest::HttpStatusCodeAttribute)
                                                .toInt();
@@ -1536,6 +1641,14 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                         // Bot flagged — skip all remaining InnerTube clients.
                         tryNext(tr("Bot detection triggered (HTTP %1)")
                                         .arg(httpStatus));
+                        return;
+                    }
+                    if (httpStatus == 0 && isOfflineError(reply->error())) {
+                        markOffline();
+                        // No connection: every other client fails the same
+                        kLogger.warning() << "InnerTube search: no connection,"
+                                          << reply->errorString();
+                        onAllFailed(tr("No internet connection"));
                         return;
                     }
                     const QString detail = tr("InnerTube search request failed: %1 (HTTP %2)")
@@ -1559,8 +1672,9 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                                 cap,
                                 tryNext,
                                 clientIdx,
-                                minResults](const ParsedSearchPage& page) {
-                            if (!guard) {
+                                minResults,
+                                generation](const ParsedSearchPage& page) {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QJsonObject& root = page.root;
@@ -1604,6 +1718,7 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
                             // back by a round trip per page (~0.6 s each on mobile).
                             Q_UNUSED(minResults);
                             Q_UNUSED(clientIdx);
+                            markOnline();
                             kLogger.info() << "InnerTube search answered in"
                                            << searchTimer.elapsed() << "ms,"
                                            << rawBody.size() / 1024 << "KB";
@@ -1618,6 +1733,16 @@ void YouTubeService::searchViaInnerTube(const QString& emittedQuery,
 
 void YouTubeService::fetchMoreSearchResults(
         const QString& emittedQuery, int cap, int minResults) {
+    if (m_continuationInFlight) {
+        // The running one answers (searchMoreReady) this request too
+        return;
+    }
+    m_continuationInFlight = true;
+    continueSearchResults(emittedQuery, cap, minResults);
+}
+
+void YouTubeService::continueSearchResults(
+        const QString& emittedQuery, int cap, int minResults) {
     if (m_searchContinuationToken.isEmpty()) {
         // The token is cleared at search start and set when the first page
         // lands (~800 ms window). fetchMore firing inside that window used
@@ -1629,11 +1754,19 @@ void YouTubeService::fetchMoreSearchResults(
         if (waits < kMaxTokenWaits) {
             waits++;
             QPointer<YouTubeService> guard(this);
-            QTimer::singleShot(kTokenWaitMs, this, [guard, emittedQuery, cap, minResults]() {
-                if (guard) {
-                    guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
-                }
-            });
+            QTimer::singleShot(kTokenWaitMs,
+                    this,
+                    [guard, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
+                        if (!guard) {
+                            return;
+                        }
+                        if (guard->m_searchGeneration != generation) {
+                            // A newer search took over (and its continuation)
+                            guard->m_fetchMoreTokenWaits.remove(emittedQuery);
+                            return;
+                        }
+                        guard->continueSearchResults(emittedQuery, cap, minResults);
+                    });
             return;
         }
         m_fetchMoreTokenWaits.remove(emittedQuery);
@@ -1697,11 +1830,13 @@ void YouTubeService::fetchMoreSearchResults(
         kLogger.info() << "Throttled: retrying continuation fetch in"
                        << delay << "ms";
         QPointer<YouTubeService> guard(this);
-        QTimer::singleShot(delay, this, [guard, emittedQuery, cap, minResults]() {
-            if (guard) {
-                guard->fetchMoreSearchResults(emittedQuery, cap, minResults);
-            }
-        });
+        QTimer::singleShot(delay,
+                this,
+                [guard, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
+                    if (guard && guard->m_searchGeneration == generation) {
+                        guard->continueSearchResults(emittedQuery, cap, minResults);
+                    }
+                });
         return;
     }
     recordRequest();
@@ -1712,8 +1847,12 @@ void YouTubeService::fetchMoreSearchResults(
     connect(reply,
             &QNetworkReply::finished,
             this,
-            [this, reply, emittedQuery, cap, minResults]() {
+            [this, reply, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: its token stays
+                    return;
+                }
                 if (reply->error() != QNetworkReply::NoError) {
                     kLogger.warning()
                             << "InnerTube continuation request failed:"
@@ -1726,9 +1865,9 @@ void YouTubeService::fetchMoreSearchResults(
                 QPointer<YouTubeService> guard(this);
                 parseSearchPageAsync(reply->readAll(),
                         cap,
-                        [this, guard, emittedQuery, cap, minResults](
+                        [this, guard, emittedQuery, cap, minResults, generation](
                                 const ParsedSearchPage& page) {
-                            if (!guard) {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QList<YouTubeVideoInfo>& results = page.results;
@@ -1843,8 +1982,9 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                         minResults,
                         accumulated,
                         clientIdx,
-                        more]() {
-                    if (guard) {
+                        more,
+                        generation = m_searchGeneration]() {
+                    if (guard && guard->m_searchGeneration == generation) {
                         guard->autoFetchContinuationPages(emittedQuery,
                                 cap,
                                 minResults,
@@ -1873,11 +2013,16 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                     minResults,
                     accumulated,
                     clientIdx,
-                    more]() mutable {
+                    more,
+                    generation = m_searchGeneration]() mutable {
                 if (!guard) {
                     return;
                 }
                 reply->deleteLater();
+                if (m_searchGeneration != generation) {
+                    // A newer search runs: this one's pages are not shown
+                    return;
+                }
                 if (reply->error() != QNetworkReply::NoError) {
                     kLogger.warning()
                             << "Auto-fetch continuation failed:"
@@ -1900,8 +2045,9 @@ void YouTubeService::autoFetchContinuationPages(const QString& emittedQuery,
                                 minResults,
                                 accumulated,
                                 clientIdx,
-                                more](const ParsedSearchPage& page) mutable {
-                            if (!guard) {
+                                more,
+                                generation](const ParsedSearchPage& page) mutable {
+                            if (!guard || m_searchGeneration != generation) {
                                 return;
                             }
                             const QJsonObject& root = page.root;
@@ -2513,7 +2659,10 @@ void YouTubeService::downloadAudioStreamChunked(
         req.setRawHeader("Range",
                 "bytes=" + QByteArray::number(start) + "-" +
                         QByteArray::number(end));
-        req.setTransferTimeout(kDownloadTimeoutMs);
+        // A stalled connection (no data at all) is dropped and resumed on a
+        // new one: with the 10 min download timeout one stuck chunk of 16
+        // held the whole download (no progress, no error)
+        req.setTransferTimeout(kChunkStallTimeoutMs);
         applyYouTubeRequestAttributes(&req);
 
         QNetworkReply* reply = m_pNam->get(req);
@@ -2583,16 +2732,27 @@ void YouTubeService::downloadAudioStreamChunked(
                                                         QNetworkRequest::HttpStatusCodeAttribute)
                                                    .toInt();
                         // Dropped or timed out, not refused (403/404...)
+                        if (isOfflineError(reply->error())) {
+                            markOffline();
+                        } else if (status > 0) {
+                            // The server answered (e.g. 403 for an expired
+                            // link): online, its fallbacks may run
+                            markOnline();
+                        }
+                        // Offline a resume fails the same: fail the download
                         if (status < 400 && attempt < kChunkRetries && self &&
-                                resumeAt <= end) {
-                            kLogger.debug() << "Chunk of" << videoId << "dropped ("
-                                            << reply->errorString() << "), resuming at"
-                                            << resumeAt;
+                                resumeAt <= end && !likelyOffline()) {
+                            kLogger.info() << "Chunk of" << videoId << "dropped ("
+                                           << reply->errorString() << "), resuming at"
+                                           << resumeAt;
                             (*self)(resumeAt, end, attempt + 1);
                             return;
                         }
                         state->failed = true;
                         state->error = reply->errorString();
+                        if (isOfflineError(reply->error())) {
+                            markOffline();
+                        }
                     }
 
                     if (--state->remaining == 0) {
@@ -2621,6 +2781,7 @@ void YouTubeService::downloadAudioStreamChunked(
                         delete outFile;
                         const qint64 tookMs = std::max<qint64>(
                                 1, QDateTime::currentMSecsSinceEpoch() - chunkedStartMs);
+                        markOnline();
                         kLogger.info()
                                 << "Chunked download completed:" << videoId << "→"
                                 << outPath << contentLength / 1024 << "KB in" << tookMs
@@ -3335,6 +3496,12 @@ std::atomic<int> s_fastClientFailures{0};
 // aria2c (bundled youtubedl-android module) unpacked and usable.
 std::atomic<bool> s_aria2cReady{false};
 constexpr int kMaxFastClientFailures = 3;
+// The lean request first; if YouTube refuses it for a video, the full one
+// (watch page + yt-dlp's default clients).
+// After kMaxLeanFailures lean failures in a row (YouTube changed what the
+// visionos client gets) only the full request is used, until the restart.
+std::atomic<int> s_leanFailures{0};
+constexpr int kMaxLeanFailures = 3;
 // Videos whose direct (extract + parallel Range) download failed this
 // session, and how many failed in a row: after kMaxDirectFailures in a row the
 // direct path is skipped until the app restarts.
@@ -3348,7 +3515,22 @@ bool useDirectDownload(const QString& videoId) {
     return s_directFailuresInRow < kMaxDirectFailures && !s_directFailedVideos.contains(videoId);
 }
 
+// The fallbacks taken after failures were for the session: failures while
+// offline (or as it dropped) made every later download slow (full link
+// extraction ~20 s, yt-dlp's own downloader ~230 KB/s). Back online, the
+// fast paths are tried again
+void resetFallbacksAfterReconnect() {
+    s_leanFailures.store(0);
+    s_fastClientFailures.store(0);
+    QMutexLocker lock(&s_directMutex);
+    s_directFailedVideos.clear();
+    s_directFailuresInRow = 0;
+}
+
 void markDirectDownloadFailed(const QString& videoId) {
+    if (likelyOffline()) {
+        return; // not the direct path's fault
+    }
     QMutexLocker lock(&s_directMutex);
     s_directFailedVideos.insert(videoId);
     ++s_directFailuresInRow;
@@ -3627,12 +3809,6 @@ bool extractStreamLinkWith(
     return true;
 }
 
-// The lean request first; if YouTube refuses it for a video, the full one
-// (watch page + yt-dlp's default clients).
-// After kMaxLeanFailures lean failures in a row (YouTube changed what the
-// visionos client gets) only the full request is used, until the restart.
-std::atomic<int> s_leanFailures{0};
-constexpr int kMaxLeanFailures = 3;
 
 bool extractStreamLinkUncached(
         const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
@@ -3640,6 +3816,9 @@ bool extractStreamLinkUncached(
         if (extractStreamLinkWith(ytdl, videoId, pOut, true)) {
             s_leanFailures.store(0);
             return true;
+        }
+        if (likelyOffline()) {
+            return false; // the full one fails the same
         }
         s_leanFailures.fetch_add(1);
         kLogger.info() << "[Android] lean link extraction failed for" << videoId
@@ -3722,7 +3901,11 @@ void YouTubeService::prefetchStreamLinks(const QStringList& videoIds) {
                 QString id;
                 {
                     QMutexLocker lock(&s_queueMutex);
-                    if (!ready || s_queue.isEmpty()) {
+                    if (!ready || s_queue.isEmpty() || likelyOffline()) {
+                        // Offline: the links are fetched with the next search
+                        if (likelyOffline()) {
+                            s_queue.clear();
+                        }
                         --s_workers;
                         return;
                     }
@@ -3848,6 +4031,15 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
                                                 << "[Android] direct download failed for"
                                                 << videoId << ":" << error
                                                 << "- downloading with yt-dlp";
+                                        if (likelyOffline()) {
+                                            // yt-dlp would fail the same,
+                                            // after seconds of retries
+                                            if (guard) {
+                                                Q_EMIT guard->downloadFailed(videoId,
+                                                        tr("No internet connection"));
+                                            }
+                                            return;
+                                        }
                                         markDirectDownloadFailed(videoId);
                                         forgetStreamLink(videoId);
                                         if (guard) {
@@ -4059,7 +4251,9 @@ void YouTubeService::runAndroidBundled(const QString& videoId,
             }
         }
         if ((hasJniException || !response.isValid()) && useFastClient) {
-            ++s_fastClientFailures;
+            if (!likelyOffline()) {
+                ++s_fastClientFailures;
+            }
             kLogger.warning() << "[Android] aria2c download failed for" << videoId
                               << ", retrying with yt-dlp's own downloader:" << errDetail;
             if (settled->load()) {
@@ -4381,6 +4575,12 @@ int YouTubeService::throttleDelayMs() const {
     // Until the oldest request leaves the window, plus the jitter: retrying
     // every few hundred ms only spun the main thread until then.
     int delay = jitterDelayMs();
+    if (!m_requestTimestamps.isEmpty()) {
+        // Past the longest gap the check can roll: a shorter retry was
+        // often throttled again, a chain of retries a few hundred ms apart
+        const qint64 sinceLast = m_rateLimitTimer.elapsed() - m_requestTimestamps.last();
+        delay = std::max(delay, static_cast<int>(std::max<qint64>(0, kMaxJitterMs - sinceLast)));
+    }
     if (m_requestTimestamps.size() >= kRateLimitBurst) {
         const qint64 freeAt = m_requestTimestamps.first() + kRateLimitWindowMs;
         delay += static_cast<int>(std::max<qint64>(0, freeAt - m_rateLimitTimer.elapsed()));

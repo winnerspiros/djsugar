@@ -1220,7 +1220,9 @@ void YouTubeFeature::searchAndActivate(const QString& query) {
     // slot. The flag is set explicitly by activateChild(kSampleQueryPrefix).
     // We do NOT clear it here because activateChild sets it BEFORE calling
     // searchAndActivate(), so clearing it here would always wipe it.
-    rebuildSidebar();
+    // The request goes out first: the table and sidebar below are cleared
+    // while YouTube answers, not before it is asked
+    m_service.searchVideos(query, kSearchResultsMax, kSearchBatchSize);
     // Clear the SQL model synchronously so the user does NOT see stale
     // results filtered by the new query. Set the search to the query text
     // (not empty) so the search box preserves what the user typed.
@@ -1228,7 +1230,7 @@ void YouTubeFeature::searchAndActivate(const QString& query) {
         m_pTrackModel->setSearch(query);
     }
     replaceTrackTable({});
-    m_service.searchVideos(query, kSearchResultsMax, kSearchBatchSize);
+    scheduleRebuild();
 }
 
 void YouTubeFeature::onSearchResultsReady(
@@ -1600,7 +1602,22 @@ void YouTubeFeature::onDownloadFinished(
     // entry exists. Downloads triggered by selection or context-menu Analyze
     // stay in the library; explicit Load-to-deck requests are handled below.
     TrackRef ref = TrackRef::fromFilePath(localPath);
-    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getOrAddTrack(ref);
+    bool alreadyInLibrary = false;
+    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getOrAddTrack(
+            ref, &alreadyInLibrary);
+    if (pTrack && alreadyInLibrary && pTrack->getId().isValid()) {
+        // Downloaded before and dropped from the cache: its row was marked
+        // missing (or hidden), so the library showed it only after the
+        // next start's scan. The file is back: show it now
+        QSqlQuery query(m_pTrackCollection->database());
+        query.prepare(QStringLiteral(
+                "UPDATE track_locations SET fs_deleted=0 WHERE location=:location"));
+        query.bindValue(QStringLiteral(":location"), ref.getLocation());
+        if (!query.exec()) {
+            kLogger.warning() << "Could not mark download present:" << query.lastError().text();
+        }
+        m_pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
+    }
     if (!pTrack) {
         kLogger.warning() << "Could not add downloaded track to library:"
                           << localPath;
@@ -1628,6 +1645,12 @@ void YouTubeFeature::onDownloadFinished(
             pTrack->setCoverInfo(coverInfo);
         }
     }
+    // The file has no tags: the title and artist set above were only in
+    // memory, the library row (what the list shows and searches) got them
+    // when the track was let go, at the latest on quitting. Saved now, the
+    // list shows and finds the download at once
+    m_pLibrary->trackCollectionManager()->saveTrack(pTrack);
+    QTimer::singleShot(0, m_pLibrary, &Library::slotRefreshLibraryModels);
     // Genre: YouTube only knows "Music", so look the song up in the iTunes
     // and Deezer catalogues. The genre of the search query ("frenchcore
     // 2024") is the fallback when neither knows the song.
@@ -1684,7 +1707,10 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
     m_videoIdsDownloading.remove(videoId);
     pumpDownloadQueue();
     int& retries = m_downloadRetryCount[videoId];
-    if (retries < kMaxDownloadRetries) {
+    // Offline a retry fails the same: the user starts it again when online
+    const bool offline = mixxx::YouTubeService::isOffline() ||
+            error == mixxx::YouTubeService::tr("No internet connection");
+    if (retries < kMaxDownloadRetries && !offline) {
         retries++;
         kLogger.info() << "YouTube download failed for" << videoId << ":" << error
                        << "— retrying (attempt" << retries + 1 << ")";
@@ -1695,12 +1721,12 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
         return;
     }
     // Exhausted retries — give up and clean up pending state.
+    const int attempts = retries + 1;
     m_downloadRetryCount.remove(videoId);
-    m_pendingPlayerLoads.remove(videoId);
+    abandonPendingLoads(videoId); // also settles the deck's progress
     m_pendingAutoDjLoads.remove(videoId);
     kLogger.warning() << "YouTube download failed for" << videoId
-                      << "after" << kMaxDownloadRetries + 1
-                      << "attempts:" << error;
+                      << "after" << attempts << "attempts:" << error;
 }
 
 QHash<QString, QVariantMap> YouTubeFeature::libraryInfoForResults(
@@ -2669,6 +2695,8 @@ void YouTubeFeature::slotCleanCache() {
     }
     if (myInstantsCleaned > 0) {
         kLogger.info() << "Removed" << myInstantsCleaned << "myinstants sample(s)";
+        // Not a MediaStore change: the next start scans to mark them missing
+        m_pConfig->setValue(ConfigKey("[Library]", "AndroidMediaStoreState"), QString());
     }
 
     // Clean up stale youtube_library rows whose local files are gone

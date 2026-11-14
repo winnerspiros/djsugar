@@ -72,7 +72,8 @@ class YouTubeAccount : public QObject {
             const QJsonObject& body,
             const std::function<void(const QJsonObject&)>& done,
             bool signedRequest = true,
-            QObject* pContext = nullptr);
+            QObject* pContext = nullptr,
+            std::function<void()> onFailure = {});
     void save();
     void collectPlaylists(const QJsonObject& page, QVariantList playlists, int pages);
 
@@ -85,6 +86,11 @@ class YouTubeAccount : public QObject {
     QString m_continuation;
     quint64 m_generation = 0;     // drops the replies of a signed-out account
     quint64 m_listGeneration = 0; // drops the pages of a superseded list
+    // Each streaming view asks when it opens: one request runs per kind
+    QString m_listInFlight;
+    bool m_playlistsInFlight = false;
+    bool m_accountsInFlight = false;
+    void clearRequestsInFlight();
 };
 
 } // namespace mixxx

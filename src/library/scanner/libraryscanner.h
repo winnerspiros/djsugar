@@ -104,7 +104,8 @@ class LibraryScanner : public QThread {
     // CANCELING -> IDLE
     bool changeScannerState(LibraryScanner::ScannerState newState);
 
-    void cleanUpScan();
+    /// False when its writes could not be committed
+    bool cleanUpScan();
 
     mixxx::DbConnectionPoolPtr m_pDbConnectionPool;
 

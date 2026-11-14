@@ -28,6 +28,10 @@ std::atomic<qint64> s_everySecondRefreshSinceMicros{0};
 int s_frames = 0;
 int s_lateFrames = 0;
 constexpr int kFramesJudged = 90;
+// Late batches in a row. One alone is a moment's load (a list of songs
+// built, a page opened): the waveform keeps its pace through it.
+int s_lateBatches = 0;
+constexpr int kLateBatchesToSlow = 2;
 // Every refresh is tried again after this long, three times longer after
 // each try that was late again
 constexpr qint64 kFirstRetryMicros = 10'000'000;
@@ -85,6 +89,7 @@ void frameShown() {
             s_everySecondRefresh = false;
             s_frames = 0;
             s_lateFrames = 0;
+            s_lateBatches = 0;
         }
         return;
     }
@@ -97,7 +102,9 @@ void frameShown() {
         ++s_lateFrames;
     }
     if (s_frames >= kFramesJudged) {
-        if (s_lateFrames * 5 > s_frames) {
+        s_lateBatches = s_lateFrames * 5 > s_frames ? s_lateBatches + 1 : 0;
+        if (s_lateBatches >= kLateBatchesToSlow) {
+            s_lateBatches = 0;
             const bool retried = s_everySecondRefreshSinceMicros.load() > 0;
             s_everySecondRefresh = true;
             s_everySecondRefreshSinceMicros = now;

@@ -36,6 +36,13 @@ class QmlApplication : public QObject {
         return m_loadSucceeded;
     }
 
+#if defined(Q_OS_ANDROID)
+    /// Quitting on Android: the sound stops at once, the settings, effects,
+    /// loaded tracks and a recording are saved. The process can end after it,
+    /// without the slow regular shutdown
+    void stopAndSaveForAndroid();
+#endif
+
   public slots:
     bool loadQml(const QString& path);
 

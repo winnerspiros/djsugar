@@ -68,6 +68,14 @@ class PlaylistDAO : public QObject, public virtual DAO {
     unsigned int playlistCount() const;
     // Get all playlist ids and names of a specific type
     QList<QPair<int, QString>> getPlaylists(const HiddenType hidden) const;
+    // Get all playlists with track counts and lock status in a single query (avoids N+1)
+    struct PlaylistWithCount {
+        int id;
+        QString name;
+        int count;
+        bool locked;
+    };
+    QList<PlaylistWithCount> getPlaylistsWithCounts(const HiddenType hidden) const;
     QList<QPair<int, QString>> getUnlockedPlaylists(const HiddenType hidden) const;
     // Find out the name of the playlist at the given Id
     QString getPlaylistName(const int playlistId) const;

@@ -22,10 +22,13 @@ Item {
     property string listKind: "search"
     readonly property color scOrange: "#ff5500"
 
-    function doSearch() {
-        const query = searchField.text.trim();
+    // The search shown; refresh repeats it, not what the field holds now
+    property string searchedQuery: ""
+    function doSearch(text = searchField.text) {
+        const query = text.trim();
         if (query.length === 0)
             return;
+        root.searchedQuery = query;
         root.listKind = "search";
         root.isBusy = true;
         root.statusMessage = qsTr("Searching...");
@@ -192,6 +195,9 @@ Item {
                     clip: true
                     onAccepted: root.doSearch()
                 }
+                Skin.SearchClearButton {
+                    field: searchField
+                }
                 Text {
                     anchors.fill: parent
                     anchors.leftMargin: 12
@@ -355,46 +361,22 @@ Item {
             }
         }
 
-        // Nothing listed yet: what this view is for, and the way in
-        Column {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: resultsModel.count === 0 && !root.isBusy
-            spacing: 10
-            topPadding: 40
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                color: root.scOrange
-                font.pixelSize: 40
-                text: "☁"
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width - 20, 360)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                color: "#c8ccd4"
-                font.pixelSize: 12
-                text: Mixxx.YouTube.soundCloudSignedIn
-                    ? qsTr("Search above, or open your likes")
-                    : qsTr("Search above. Sign in for your likes, and Go+ tracks in full")
-            }
-        }
-
         ListView {
             id: resultList
 
+            boundsBehavior: Flickable.DragOverBounds
+
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: resultsModel.count > 0 || root.isBusy
             clip: true
             model: resultsModel
             spacing: 2
             currentIndex: -1
             highlightFollowsCurrentItem: true
             highlightMoveDuration: 0
-            onContentYChanged: root.maybeLoadMore()
+            // Later, not inside the scroll: the footer it shows changes the
+            // list height, which changed the scroll again (binding loop)
+            onContentYChanged: Qt.callLater(root.maybeLoadMore)
 
             highlight: Rectangle {
                 z: 2
@@ -671,6 +653,40 @@ Item {
                     }
                 }
             }
+
+            // Nothing listed yet: what this view is for, and the way in
+            Column {
+                parent: resultList
+                anchors.fill: parent
+                visible: resultsModel.count === 0 && !root.isBusy
+                spacing: 10
+                topPadding: 40
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    color: root.scOrange
+                    font.pixelSize: 40
+                    text: "☁"
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width - 20, 360)
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    color: "#c8ccd4"
+                    font.pixelSize: 12
+                    text: Mixxx.YouTube.soundCloudSignedIn
+                        ? qsTr("Search above, or open your likes")
+                        : qsTr("Search above. Sign in for your likes, and Go+ tracks in full")
+                }
+            }
+
+            Skin.PullToRefresh {
+                flickable: resultList
+                busy: root.isBusy
+                onRefresh: root.listKind === "likes" ? root.openLikes() : root.doSearch(root.searchedQuery)
+            }
+
         }
     }
 }

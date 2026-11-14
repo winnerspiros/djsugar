@@ -8,10 +8,17 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QTimer>
 #include <QUrlQuery>
 
+#include "library/library.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
 #include "moc_qmlstreamingproxy.cpp"
 #include "sources/metadatasourcetaglib.h"
+#include "track/track.h"
 #include "track/trackmetadata.h"
 #include "util/fileinfo.h"
 #include "util/sandbox.h"
@@ -590,6 +597,38 @@ QString QmlStreamingProxy::getCachedTrackPath(
     return QString();
 }
 
+namespace {
+/// A download goes into the local library at once (it is in the app's cache,
+/// which the library scan does not see), and the list shows it
+void addDownloadToLibrary(Library* pLibrary, const QString& path) {
+    if (!pLibrary) {
+        return;
+    }
+    bool alreadyInLibrary = false;
+    const TrackPointer pTrack = pLibrary->trackCollectionManager()->getOrAddTrack(
+            TrackRef::fromFilePath(path), &alreadyInLibrary);
+    if (!pTrack) {
+        qWarning() << "QmlStreamingProxy: could not add the download to the library:" << path;
+        return;
+    }
+    if (alreadyInLibrary && pTrack->getId().isValid()) {
+        // Downloaded before and dropped from the cache, its row is marked
+        // missing: the file is back
+        QSqlQuery query(
+                pLibrary->trackCollectionManager()->internalCollection()->database());
+        query.prepare(QStringLiteral(
+                "UPDATE track_locations SET fs_deleted=0 WHERE location=:location"));
+        query.bindValue(QStringLiteral(":location"), pTrack->getLocation());
+        if (!query.exec()) {
+            qWarning() << "QmlStreamingProxy: could not mark the download present:"
+                       << query.lastError().text();
+        }
+        pLibrary->trackCollectionManager()->unhideTracks({pTrack->getId()});
+    }
+    QTimer::singleShot(0, pLibrary, &Library::slotRefreshLibraryModels);
+}
+} // namespace
+
 void QmlStreamingProxy::downloadAndLoad(
         const QString& streamUrl,
         const QString& service,
@@ -616,6 +655,7 @@ void QmlStreamingProxy::downloadAndLoad(
                     s_pPlayerManager->slotLoadLocationToPlayer(cachedPath, targetDeck, autoPlay);
                 } }, Qt::QueuedConnection);
         }
+        addDownloadToLibrary(s_pLibrary, cachedPath);
         emit downloadFinished(trackId, cachedPath, targetDeck, autoPlay);
         return;
     }
@@ -756,6 +796,7 @@ void QmlStreamingProxy::downloadAndLoad(
                 } }, Qt::QueuedConnection);
         }
 
+        addDownloadToLibrary(s_pLibrary, finalPath);
         emit downloadFinished(trackId, finalPath, targetDeck, autoPlay);
     });
 }

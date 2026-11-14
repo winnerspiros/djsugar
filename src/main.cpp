@@ -9,9 +9,13 @@
 #include <QThread>
 #include <QtDebug>
 #include <QtGlobal>
+#ifdef Q_OS_ANDROID
+#include <QJniObject>
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <stdexcept>
 
@@ -68,6 +72,20 @@ const QString kNotifyMaxDbgTimeKey = QStringLiteral("notify_max_dbg_time");
 // An indicator that the QPixmapCache was too small.
 constexpr int kPixmapCacheLimitAt100PercentZoom = 32 * 1024; // 32 MByte
 
+#ifdef Q_OS_ANDROID
+/// Android keeps the process after main() returns, and opening the app again
+/// would reuse it half shut down. Everything is saved by now: the task goes,
+/// the process ends
+[[noreturn]] void endAndroidProcess(int exitCode) {
+    mixxx::Logging::shutdown();
+    QNativeInterface::QAndroidApplication::runOnAndroidMainThread([] {
+        const QJniObject activity = QNativeInterface::QAndroidApplication::context();
+        activity.callMethod<void>("finishAndRemoveTask");
+    }).waitForFinished();
+    std::_Exit(exitCode);
+}
+#endif
+
 int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
     CmdlineArgs::Instance().parseForUserFeedback();
 
@@ -103,6 +121,16 @@ int runMixxx(QGuiApplication* pApp, const CmdlineArgs& args) {
             exitCode = kFatalErrorOnStartupExitCode;
         } else {
             exitCode = pApp->exec();
+            qInfo() << "Exit requested";
+#ifdef Q_OS_ANDROID
+            // Sound stops and all is saved now; the process ends right after,
+            // as when Android closes the app. A regular shutdown (2-5 s) kept
+            // playing meanwhile, and opening the app again during it reused
+            // the closing process, which then ended (worked on the next try)
+            qmlApplication.stopAndSaveForAndroid();
+            qInfo() << "Mixxx shutdown complete with code" << exitCode;
+            endAndroidProcess(exitCode);
+#endif
         }
     } else
 #endif
@@ -610,6 +638,9 @@ int main(int argc, char* argv[]) {
 
     qInfo() << "Mixxx shutdown complete with code" << exitCode;
 
+#ifdef Q_OS_ANDROID
+    endAndroidProcess(exitCode);
+#endif
     mixxx::Logging::shutdown();
 
     return exitCode;

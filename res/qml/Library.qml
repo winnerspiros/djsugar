@@ -37,6 +37,9 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         placeholderText: qsTranslate("WSearchLineEdit", "Search...")
+        Skin.SearchClearButton {
+            clearOnEscape: false // Keys.onPressed below
+        }
 
         Keys.onPressed: event => {
             switch (event.key) {
