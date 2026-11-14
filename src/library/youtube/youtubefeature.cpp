@@ -1708,7 +1708,7 @@ void YouTubeFeature::onDownloadFailed(const QString& videoId, const QString& err
     pumpDownloadQueue();
     int& retries = m_downloadRetryCount[videoId];
     // Offline a retry fails the same: the user starts it again when online
-    const bool offline = error == tr("No internet connection");
+    const bool offline = error == mixxx::YouTubeService::tr("No internet connection");
     if (retries < kMaxDownloadRetries && !offline) {
         retries++;
         kLogger.info() << "YouTube download failed for" << videoId << ":" << error
