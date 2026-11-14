@@ -365,7 +365,7 @@ QStringList ytDlpFallbackBins() {
     const QString appDir = QCoreApplication::applicationDirPath();
     if (!appDir.isEmpty()) {
         bins << QDir(appDir).filePath(exe);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
         // .app bundle layout: yt-dlp lives in Contents/MacOS alongside the
         // Mixxx binary, but applicationDirPath() already returns that path.
         // Also probe Contents/Resources just in case.

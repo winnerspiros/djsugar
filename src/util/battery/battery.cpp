@@ -35,7 +35,7 @@ Battery* Battery::getBattery(QObject* parent) {
 #ifdef __BATTERY__
 #if defined(Q_OS_WIN)
     return new BatteryWindows(parent);
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     return new BatteryMac(parent);
 #elif __LINUX__
     return new BatteryLinux(parent);

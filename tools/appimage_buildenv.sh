@@ -40,31 +40,17 @@ HOST_ARCH=$(uname -m)  # One of x86_64, aarch64, etc.
 
 case "$HOST_ARCH" in
     x86_64)
-        if [ -n "${BUILDENV_RELEASE}" ]; then
-            : "${VCPKG_TARGET_TRIPLET:=x64-linux-release}"
-            : "${BUILDENV_BRANCH:=2.7-rel}"
-            : "${BUILDENV_NAME:=mixxx-deps-2.7-x64-linux-rel-9506d686}"
-            : "${BUILDENV_SHA256:=1d9d9781bd5198f8d72228ba1cdb76fe140dd515a5ca3d3b1bf4560900556364}"
-        else
-            : "${VCPKG_TARGET_TRIPLET:=x64-linux}"
-            : "${BUILDENV_BRANCH:=2.7}"
-            : "${BUILDENV_NAME:=mixxx-deps-2.7-x64-linux-332464ba}"
-            : "${BUILDENV_SHA256:=2760a1ba5e5f04a0a3e13330bcd298e1e84773169c105266aee4308599b01fa6}"
-        fi
+        # Only release (-rel) buildenvs are published, debug builds use them too
+        : "${VCPKG_TARGET_TRIPLET:=x64-linux-appimage}"
+        : "${BUILDENV_BRANCH:=2.7-rel}"
+        : "${BUILDENV_NAME:=mixxx-deps-2.7-djsugar-x64-linux-rel-a5313793}"
+        : "${BUILDENV_SHA256:=93de8ee0332fcc03b01d26a7e7528895b0342b1bcd219044808c93fac840ee86}"
         ;;
     aarch64)
-        VCPKG_TARGET_TRIPLET="arm64-linux"
-        : "${BUILDENV_BRANCH:=2.7}"
-        # The arm64-linux buildenv is not yet published by Mixxx, but an
-        # explicit BUILDENV_NAME / BUILDENV_URL override (e.g. a CI artifact)
-        # is still honoured.
-        if [ -z "${BUILDENV_NAME+x}" ] && [ -z "${BUILDENV_URL+x}" ]; then
-            echo "ERROR: arm64-linux buildenv is not yet published by Mixxx."
-            echo "Once a mixxx-deps-<version>-arm64-linux-XXXXXXXX.zip appears on"
-            echo "https://downloads.mixxx.org/dependencies/<version>/Linux/,"
-            echo "set BUILDENV_NAME via the environment or in this script and re-run."
-            exit 1
-        fi
+        VCPKG_TARGET_TRIPLET="arm64-linux-release"
+        : "${BUILDENV_BRANCH:=2.7-rel}"
+        : "${BUILDENV_NAME:=mixxx-deps-2.7-djsugar-arm64-linux-rel-a5313793}"
+        : "${BUILDENV_SHA256:=8bb7aa2353f63c45702a58fe4a370b1264b766be7e1aab961693eef7cd0bcc30}"
         ;;
     *)
         echo "ERROR: Unsupported architecture detected: $HOST_ARCH"
@@ -75,7 +61,7 @@ esac
 
 # Allow overriding the buildenv download URL (e.g. to point at a CI artifact
 # while testing a not-yet-published buildenv).
-: "${BUILDENV_URL:=https://downloads.mixxx.org/dependencies/${BUILDENV_BRANCH}/Linux/${BUILDENV_NAME}.zip}"
+: "${BUILDENV_URL:=https://github.com/winnerspiros/vcpkg/releases/download/${BUILDENV_NAME}/${BUILDENV_NAME}.zip}"
 MIXXX_ROOT="$(mixxx_realpath "$(dirname "$THIS_SCRIPT_NAME")/..")"
 
 [ -z "$BUILDENV_BASEPATH" ] && BUILDENV_BASEPATH="${MIXXX_ROOT}/buildenv"
