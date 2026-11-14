@@ -168,6 +168,23 @@ pub fn install(app: &AppWindow, engine: Rc<AudioEngine>) {
             }
         });
     }
+    {
+        let (engine, weak) = (engine.clone(), app.as_weak());
+        ui.on_delete_strip(move |number| {
+            let Some(n) = usize::try_from(number).ok().filter(|n| (1..=8).contains(n)) else {
+                return;
+            };
+            let mut setup = settings::audio_setup();
+            delete(&mut setup, n);
+            settings::set_audio_setup(&setup);
+            settings::set_mixer_name(n - 1, "");
+            settings::set_mixer_color(n - 1, -1);
+            engine.set_inputs(&setup);
+            if let Some(app) = weak.upgrade() {
+                instruments::show_routes(&app, &engine.input_status(), &engine.status());
+            }
+        });
+    }
     // The popup closed: stop metering the interface for it.
     let timer = slint::Timer::default();
     timer.start(
@@ -292,6 +309,12 @@ fn next_free(setup: &AudioSetup) -> Option<usize> {
 
 /// Strip `strip` (from 1) plays the Mixer deck's Groove Box: one strip
 /// at a time, so another strip playing it goes back to having no input.
+/// Takes channel `strip` (from 1) out of the Mixer: its input goes.
+fn delete(setup: &mut AudioSetup, strip: usize) {
+    let role = InputRole::AUXILIARIES[strip - 1];
+    setup.inputs.retain(|r| r.role != role);
+}
+
 fn set_groove(setup: &mut AudioSetup, strip: usize) {
     let role = InputRole::AUXILIARIES[strip - 1];
     setup
@@ -416,6 +439,17 @@ mod tests {
             .collect();
         assert_eq!(grooves, [InputRole::AUXILIARIES[2]]);
         assert_eq!(next_free(&setup), Some(2));
+    }
+
+    #[test]
+    fn deleting_a_channel_takes_only_its_input() {
+        let mut setup = AudioSetup::default();
+        setup.inputs.push(aux(1, "M4"));
+        setup.inputs.push(aux(2, "M4"));
+        delete(&mut setup, 1);
+        let roles: Vec<_> = setup.inputs.iter().map(|r| r.role).collect();
+        assert_eq!(roles, [InputRole::AUXILIARIES[1]]);
+        assert_eq!(next_free(&setup), Some(1));
     }
 
     #[test]

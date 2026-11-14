@@ -220,6 +220,8 @@ export global InstrumentsUi {
     callback rename-strip(number: int, name: string);
     // Colors channel `number` with palette color `color` (-1: its own).
     callback color-strip(number: int, color: int);
+    // Deletes channel `number`: its input, name and color go.
+    callback delete-strip(number: int);
     // Its popup is open: fresh meters, please.
     callback picker-tick();
     // Choice `index` of picker-rows picked.

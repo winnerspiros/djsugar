@@ -5449,6 +5449,11 @@ component MixerStrip inherits Rectangle {
                 checked: info.color < 0;
                 clicked => { InstrumentsUi.color-strip(info.number, -1); }
             }
+            Rectangle { height: 1px; background: Theme.border; }
+            GrooveMenuItem {
+                text: "Delete";
+                clicked => { InstrumentsUi.delete-strip(info.number); }
+            }
         }
     }
 }
@@ -5481,12 +5486,30 @@ component AddStrip inherits Rectangle {
 }
 
 // The Mixer deck's strips side by side, scrolling sideways when they don't
-// fit, then + to pick another input.
+// fit, then + to pick another input. Not a Flickable: a Flickable takes a
+// press that moves a few pixels as its own drag, so the knobs and faders
+// stopped turning once the strips overflowed. Only a scroll (a trackpad
+// swipe, or the wheel over the strips' gaps) moves them; the knobs and
+// faders pass sideways scrolls on to here.
 component MixerStrips inherits Rectangle {
     in property <color> tint;
-    flick := Flickable {
-        content-width: max(self.width, row.preferred-width);
+    clip: true;
+    // How far the strips are scrolled, 0 or less.
+    property <length> offset: 0;
+    property <length> min-offset: min(0px, self.width - row.preferred-width);
+    property <length> shown: max(min-offset, offset);
+    TouchArea {
+        scroll-event(e) => {
+            if min-offset == 0 {
+                return reject;
+            }
+            offset = max(min-offset, min(0px, shown + (abs(e.delta-x / 1px) >= abs(e.delta-y / 1px) ? e.delta-x : e.delta-y)));
+            accept
+        }
         row := HorizontalLayout {
+            x: shown;
+            width: self.preferred-width;
+            height: parent.height;
             spacing: 4px;
             alignment: start;
             for strip in InstrumentsUi.strips: MixerStrip { info: strip; tint: tint; }
@@ -5885,11 +5908,25 @@ component SlimMixerStrip inherits Rectangle {
 
 // The Mixer's channels in a 4-Deck strip, side by side, scrolling sideways
 // when they don't fit, then + to pick another input.
+// Scrolls as MixerStrips does, not as a Flickable.
 component SlimMixerStrips inherits Rectangle {
     in property <color> tint;
-    Flickable {
-        content-width: max(self.width, row.preferred-width);
+    clip: true;
+    property <length> offset: 0;
+    property <length> min-offset: min(0px, self.width - row.preferred-width);
+    property <length> shown: max(min-offset, offset);
+    TouchArea {
+        scroll-event(e) => {
+            if min-offset == 0 {
+                return reject;
+            }
+            offset = max(min-offset, min(0px, shown + (abs(e.delta-x / 1px) >= abs(e.delta-y / 1px) ? e.delta-x : e.delta-y)));
+            accept
+        }
         row := HorizontalLayout {
+            x: shown;
+            width: self.preferred-width;
+            height: parent.height;
             spacing: 3px;
             alignment: start;
             for strip in InstrumentsUi.strips: SlimMixerStrip { info: strip; tint: tint; }
