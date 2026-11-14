@@ -139,6 +139,8 @@ class YouTubeService : public QObject {
     /// `<cacheDir>/<videoId>.<ext>`. Emits downloadFinished(videoId, path)
     /// or downloadFailed(videoId, error).
     void downloadVideo(const QString& videoId, const QString& cacheDir);
+    /// No connection now (Android's network state or a recent network error)
+    static bool isOffline();
     /// Extracts the stream links of these videos in the background (Android,
     /// bundled yt-dlp), so a tap on one starts the ranged download at once.
     /// No-op elsewhere.

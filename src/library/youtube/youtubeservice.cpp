@@ -1123,6 +1123,10 @@ void YouTubeService::searchVideos(const QString& query, int cap, int minResults)
             minResults);
 }
 
+bool YouTubeService::isOffline() {
+    return likelyOffline();
+}
+
 void YouTubeService::downloadVideo(const QString& videoId, const QString& cacheDir) {
     if (!isValidYouTubeVideoId(videoId)) {
         Q_EMIT downloadFailed(videoId, tr("Invalid YouTube video id"));
@@ -2717,8 +2721,12 @@ void YouTubeService::downloadAudioStreamChunked(
                                                         QNetworkRequest::HttpStatusCodeAttribute)
                                                    .toInt();
                         // Dropped or timed out, not refused (403/404...)
+                        if (isOfflineError(reply->error())) {
+                            markOffline();
+                        }
+                        // Offline a resume fails the same: fail the download
                         if (status < 400 && attempt < kChunkRetries && self &&
-                                resumeAt <= end) {
+                                resumeAt <= end && !likelyOffline()) {
                             kLogger.info() << "Chunk of" << videoId << "dropped ("
                                            << reply->errorString() << "), resuming at"
                                            << resumeAt;
