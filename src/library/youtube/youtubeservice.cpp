@@ -79,6 +79,8 @@ constexpr int kPipedHttpTimeoutMs = 6 * 1000;
 // throughput on cellular links where a single window saturates slowly.
 constexpr qint64 kChunkedDownloadThresholdBytes = 1LL * 1024 * 1024; // 2 MB
 constexpr int kParallelDownloadChunks = 16;
+// No byte for this long: the chunk connection is stuck, resume it
+constexpr int kChunkStallTimeoutMs = 10000;
 constexpr int kMaxPipedSearchPages = 5;
 // SponsorBlock API timeout — prevents indefinite hangs if the service is slow.
 // 4 s is generous for a single HTTP GET backed by a CDN; most responses arrive
@@ -2642,7 +2644,10 @@ void YouTubeService::downloadAudioStreamChunked(
         req.setRawHeader("Range",
                 "bytes=" + QByteArray::number(start) + "-" +
                         QByteArray::number(end));
-        req.setTransferTimeout(kDownloadTimeoutMs);
+        // A stalled connection (no data at all) is dropped and resumed on a
+        // new one: with the 10 min download timeout one stuck chunk of 16
+        // held the whole download (no progress, no error)
+        req.setTransferTimeout(kChunkStallTimeoutMs);
         applyYouTubeRequestAttributes(&req);
 
         QNetworkReply* reply = m_pNam->get(req);
@@ -2714,9 +2719,9 @@ void YouTubeService::downloadAudioStreamChunked(
                         // Dropped or timed out, not refused (403/404...)
                         if (status < 400 && attempt < kChunkRetries && self &&
                                 resumeAt <= end) {
-                            kLogger.debug() << "Chunk of" << videoId << "dropped ("
-                                            << reply->errorString() << "), resuming at"
-                                            << resumeAt;
+                            kLogger.info() << "Chunk of" << videoId << "dropped ("
+                                           << reply->errorString() << "), resuming at"
+                                           << resumeAt;
                             (*self)(resumeAt, end, attempt + 1);
                             return;
                         }
