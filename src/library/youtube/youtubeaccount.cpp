@@ -327,6 +327,10 @@ void YouTubeAccount::setCookies(const QString& cookies) {
     m_cookies = cookies;
     m_pageId.clear();
     m_name.clear();
+    // The previous account's pending answers are not this one's
+    m_continuation.clear();
+    ++m_generation;
+    clearRequestsInFlight();
     save();
     emit accountChanged();
     fetchName();
@@ -356,7 +360,8 @@ void YouTubeAccount::post(const QString& endpoint,
         const QJsonObject& body,
         const std::function<void(const QJsonObject&)>& done,
         bool signedRequest,
-        QObject* pContext) {
+        QObject* pContext,
+        std::function<void()> onFailure) {
     QNetworkRequest request(QUrl(kOrigin + QStringLiteral("/youtubei/v1/") + endpoint +
             QStringLiteral("?prettyPrint=false")));
     request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
@@ -416,7 +421,7 @@ void YouTubeAccount::post(const QString& endpoint,
     connect(pReply,
             &QNetworkReply::finished,
             pContext ? pContext : this,
-            [this, pReply, generation, done, endpoint, signedRequest]() {
+            [this, pReply, generation, done, endpoint, signedRequest, onFailure]() {
                 pReply->deleteLater();
                 if (!signedRequest) {
                     // A song lookup: its own answer, empty on any failure
@@ -432,7 +437,6 @@ void YouTubeAccount::post(const QString& endpoint,
                                 .toInt();
                 if (status == 401 || status == 403) {
                     kLogger.warning() << endpoint << "refused the sign-in:" << status;
-                    clearRequestsInFlight();
                     signOut();
                     emit failed(tr("YouTube wants a new sign-in"));
                     return;
@@ -440,7 +444,9 @@ void YouTubeAccount::post(const QString& endpoint,
                 if (pReply->error() != QNetworkReply::NoError) {
                     kLogger.warning() << endpoint << "failed:" << status << pReply->errorString();
                     // Asked again, a failed request runs again
-                    clearRequestsInFlight();
+                    if (onFailure) {
+                        onFailure();
+                    }
                     emit failed(pReply->errorString());
                     return;
                 }
@@ -498,7 +504,8 @@ void YouTubeAccount::openList(const QString& list) {
     m_continuation.clear();
     m_listInFlight = id;
     kLogger.info() << "Opening" << id;
-    post(QStringLiteral("browse"),
+    post(
+            QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("browseId"), id}},
             [this, id, listGeneration](const QJsonObject& page) {
                 if (listGeneration != m_listGeneration) {
@@ -545,6 +552,13 @@ void YouTubeAccount::openList(const QString& list) {
                     return;
                 }
                 emit tracksReady(list, false);
+            },
+            /*signedRequest=*/true,
+            nullptr,
+            [this, listGeneration]() {
+                if (listGeneration == m_listGeneration) {
+                    m_listInFlight.clear();
+                }
             });
 }
 
@@ -572,11 +586,14 @@ void YouTubeAccount::fetchPlaylists() {
         return;
     }
     m_playlistsInFlight = true;
-    post(QStringLiteral("browse"),
-            QJsonObject{{QStringLiteral("browseId"), QStringLiteral("FEmusic_liked_playlists")}},
-            [this](const QJsonObject& page) {
-                collectPlaylists(page, {}, 1);
-            });
+    post(
+            QStringLiteral("browse"),
+            QJsonObject{{QStringLiteral("browseId"),
+                    QStringLiteral("FEmusic_liked_playlists")}},
+            [this](const QJsonObject& page) { collectPlaylists(page, {}, 1); },
+            /*signedRequest=*/true,
+            nullptr,
+            [this]() { m_playlistsInFlight = false; });
 }
 
 void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList playlists, int pages) {
@@ -624,11 +641,15 @@ void YouTubeAccount::collectPlaylists(const QJsonObject& page, QVariantList play
         emit playlistsReady(playlists);
         return;
     }
-    post(QStringLiteral("browse"),
+    post(
+            QStringLiteral("browse"),
             QJsonObject{{QStringLiteral("continuation"), token}},
             [this, playlists, pages](const QJsonObject& next) {
                 collectPlaylists(next, playlists, pages + 1);
-            });
+            },
+            /*signedRequest=*/true,
+            nullptr,
+            [this]() { m_playlistsInFlight = false; });
 }
 
 void YouTubeAccount::fetchAccounts() {
@@ -636,7 +657,7 @@ void YouTubeAccount::fetchAccounts() {
         return;
     }
     m_accountsInFlight = true;
-    post(QStringLiteral("account/accounts_list"), {}, [this](const QJsonObject& page) {
+    const auto onAccounts = [this](const QJsonObject& page) {
         m_accountsInFlight = false;
         QVariantList accounts;
         walk(page, [this, &accounts](const QJsonObject& object) {
@@ -701,7 +722,13 @@ void YouTubeAccount::fetchAccounts() {
             }
         }
         emit accountsReady(accounts);
-    });
+    };
+    post(QStringLiteral("account/accounts_list"),
+            {},
+            onAccounts,
+            /*signedRequest=*/true,
+            nullptr,
+            [this]() { m_accountsInFlight = false; });
 }
 
 void YouTubeAccount::selectAccount(const QString& pageId, const QString& name) {

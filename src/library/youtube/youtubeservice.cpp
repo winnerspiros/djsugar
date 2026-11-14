@@ -1213,6 +1213,10 @@ void YouTubeService::fetchTrending(const QString& region, int cap, int minResult
     // Empty / malformed region: fall back to the project default ("GR") rather
     // than failing, because an empty pane is the worst possible UX for a
     // freshly-opened YouTube tab.
+    // Like a search: the previous one's continuation is not this one's
+    m_searchContinuationToken.clear();
+    ++m_searchGeneration;
+    m_continuationInFlight = false;
     QString r = region.toUpper();
     const bool valid = r.size() == 2 && r.at(0).isLetter() && r.at(1).isLetter();
     if (!valid) {
@@ -1680,11 +1684,19 @@ void YouTubeService::continueSearchResults(
         if (waits < kMaxTokenWaits) {
             waits++;
             QPointer<YouTubeService> guard(this);
-            QTimer::singleShot(kTokenWaitMs, this, [guard, emittedQuery, cap, minResults]() {
-                if (guard) {
-                    guard->continueSearchResults(emittedQuery, cap, minResults);
-                }
-            });
+            QTimer::singleShot(kTokenWaitMs,
+                    this,
+                    [guard, emittedQuery, cap, minResults, generation = m_searchGeneration]() {
+                        if (!guard) {
+                            return;
+                        }
+                        if (guard->m_searchGeneration != generation) {
+                            // A newer search took over (and its continuation)
+                            guard->m_fetchMoreTokenWaits.remove(emittedQuery);
+                            return;
+                        }
+                        guard->continueSearchResults(emittedQuery, cap, minResults);
+                    });
             return;
         }
         m_fetchMoreTokenWaits.remove(emittedQuery);
