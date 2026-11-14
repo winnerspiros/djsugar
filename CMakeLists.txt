@@ -2312,7 +2312,11 @@ if(APPLE)
 
   # Disable deprecation warnings for OpenGL on macOS as we won't switch to
   # Apple's Metal API in the foreseeable future.
-  target_compile_definitions(mixxx-lib PUBLIC GL_SILENCE_DEPRECATION)
+  # (GLES on iOS)
+  target_compile_definitions(
+    mixxx-lib
+    PUBLIC GL_SILENCE_DEPRECATION GLES_SILENCE_DEPRECATION
+  )
 
   target_sources(mixxx-lib PRIVATE src/util/appleosversion.mm)
 

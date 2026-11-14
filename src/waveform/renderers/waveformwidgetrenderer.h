@@ -220,7 +220,7 @@ class WaveformWidgetRenderer {
     }
 
     rendergraph::Context* getContext() const {
-        return m_pContext;
+        return static_cast<rendergraph::Context*>(m_pContext);
     }
 
   protected:
@@ -261,8 +261,11 @@ class WaveformWidgetRenderer {
     double m_scaleFactor;
     double m_playMarkerPosition;   // 0.0 - left, 0.5 - center, 1.0 - right
 
-    // used by allshader waveformrenderers when used with rendergraph nodes
-    rendergraph::Context* m_pContext;
+    // Used by allshader waveformrenderers with rendergraph nodes. Untyped:
+    // `rendergraph` names the OpenGL backend in mixxx-lib and the scenegraph
+    // backend in mixxx-qml-lib, and a typed field gives this class two
+    // layouts in one program (ODR violation, -Wodr with LTO)
+    void* m_pContext;
 
 #ifdef WAVEFORMWIDGETRENDERER_DEBUG
     PerformanceTimer* m_timer;
