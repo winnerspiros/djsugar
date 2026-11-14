@@ -39,6 +39,13 @@
 #include "qml/qmleffectunitproxy.h"
 #include "test/mixxxtest.h"
 
+// Qt 6.16 deprecates the QPoint drag event constructors for QPointF ones
+#if QT_VERSION >= QT_VERSION_CHECK(6, 16, 0)
+using DragPoint = QPointF;
+#else
+using DragPoint = QPoint;
+#endif
+
 namespace {
 
 class QmlEffectsProxyTest : public MixxxTest {
@@ -196,7 +203,7 @@ Item {
     QMimeData mimeData;
     mimeData.setText(QStringLiteral("Mixxx effect parameter 0\n%1\n0")
                     .arg(slot->getUniqueEffectId()));
-    QDragEnterEvent enter(QPoint(35, 85),
+    QDragEnterEvent enter(DragPoint(35, 85),
             Qt::MoveAction,
             &mimeData,
             Qt::LeftButton,
@@ -747,7 +754,11 @@ Item {
                     .arg(model->data(first, Model::TypeRole).toInt())
                     .arg(slot->getUniqueEffectId()));
     const QPoint position(window.width() - 30, 25);
-    QDragEnterEvent enter(position, Qt::MoveAction, &mime, Qt::LeftButton, Qt::NoModifier);
+    QDragEnterEvent enter(DragPoint(position),
+            Qt::MoveAction,
+            &mime,
+            Qt::LeftButton,
+            Qt::NoModifier);
     QCoreApplication::sendEvent(&window, &enter);
     ASSERT_TRUE(enter.isAccepted());
     QTest::qWait(20);
