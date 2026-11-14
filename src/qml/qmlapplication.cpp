@@ -530,7 +530,8 @@ QmlApplication::~QmlApplication() {
 #if defined(Q_OS_ANDROID)
 void QmlApplication::stopAndSaveForAndroid() {
     if (const auto pSoundManager = m_pCoreServices->getSoundManager()) {
-        pSoundManager->closeDevices(false);
+        // Async: the devices close now, without the wait for Linux sound servers
+        pSoundManager->closeActiveConfig(true);
     }
     saveForAndroid(m_pCoreServices);
     shutDownForAndroid(m_pCoreServices);

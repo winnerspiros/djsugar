@@ -49,8 +49,8 @@ void EngineBufferScaleLinear::setScaleParameters(double baseRate,
     Q_UNUSED(pPitchRatio);
 
     m_dOldRate = m_dRate;
-    m_dRate = base_rate * *pTempoRatio;
-    m_dBaseRate = base_rate;
+    m_dRate = baseRate * *pTempoRatio;
+    m_dBaseRate = baseRate;
 }
 
 void EngineBufferScaleLinear::clear() {
@@ -75,11 +75,11 @@ double EngineBufferScaleLinear::scaleBuffer(
         m_dOldRate = m_dRate;  // If cleared, don't interpolate rate.
         m_bClear = false;
     }
-    double rate_add_old = m_dOldRate; // Smoothly interpolate to new playback rate
-    double rate_add_new = m_dRate;
+    double rateAddOld = m_dOldRate; // Smoothly interpolate to new playback rate
+    double rateAddNew = m_dRate;
     // End of buffer value: the shaping glides to it across the buffer
-    const double shapeRate = std::fabs(rate_add_new);
-    double frames_read = 0;
+    const double shapeRate = std::fabs(rateAddNew);
+    double framesRead = 0;
 
     if (rateAddNew * rateAddOld < 0) {
         // Direction has changed!
@@ -137,7 +137,7 @@ double EngineBufferScaleLinear::scaleBuffer(
             iOutputBufferSize,
             shapeRate,
             shapeRate / std::max(m_dBaseRate, 1e-3));
-    return frames_read;
+    return framesRead;
 }
 
 // A record played by hand sounds the way it does for two reasons, both
@@ -197,9 +197,9 @@ void EngineBufferScaleLinear::shapeScratch(
     m_scratchGain = gain;
 }
 
-SINT EngineBufferScaleLinear::do_copy(CSAMPLE* buf, SINT buf_size) {
-    SINT samples_needed = buf_size;
-    CSAMPLE* write_buf = buf;
+SINT EngineBufferScaleLinear::do_copy(CSAMPLE* buf, SINT bufSize) {
+    SINT samplesNeeded = bufSize;
+    CSAMPLE* writeBuf = buf;
     // Use up what's left of the internal buffer.
     auto iNextFrame = static_cast<SINT>(ceil(m_dNextFrame));
     SINT iNextSample = math_max<SINT>(getOutputSignal().frames2samples(iNextFrame), 0);
