@@ -760,8 +760,14 @@ if(
   AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
   AND NOT OPTIMIZE STREQUAL "off"
 )
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT HAVE_IPO OUTPUT IPO_ERROR LANGUAGES C CXX)
+  if(APPLE)
+    # Apple clang always supports LTO; the generic check links a test
+    # program without CMAKE_OSX_ARCHITECTURES and fails when cross-compiling
+    set(HAVE_IPO TRUE)
+  else()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT HAVE_IPO OUTPUT IPO_ERROR LANGUAGES C CXX)
+  endif()
   if(HAVE_IPO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
   else()
