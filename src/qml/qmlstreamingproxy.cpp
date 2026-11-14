@@ -8,9 +8,8 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QUrlQuery>
-
 #include <QTimer>
+#include <QUrlQuery>
 
 #include "library/library.h"
 #include "library/trackcollectionmanager.h"
