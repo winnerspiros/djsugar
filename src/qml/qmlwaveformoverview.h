@@ -19,7 +19,7 @@ namespace qml {
 
 class QmlWaveformOverview : public QQuickPaintedItem {
     Q_OBJECT
-    Q_FLAGS(Channels)
+    Q_FLAG(Channels)
     Q_PROPERTY(QString group READ getGroup WRITE setGroup NOTIFY groupChanged)
     Q_PROPERTY(mixxx::qml::QmlTrackProxy* track READ getTrack WRITE setTrack
                     NOTIFY trackChanged REQUIRED)

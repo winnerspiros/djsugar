@@ -63,7 +63,11 @@ IF /I "%PLATFORM%"=="arm64" (
     PAUSE
     EXIT /B 1
 )
-SET BUILDENV_URL=https://github.com/winnerspiros/vcpkg/releases/download/!BUILDENV_NAME!/!BUILDENV_NAME!.zip
+IF DEFINED BUILDENV_RELEASE (
+    SET BUILDENV_URL=https://github.com/winnerspiros/vcpkg/releases/download/!BUILDENV_NAME!/!BUILDENV_NAME!.zip
+) ELSE (
+    SET BUILDENV_URL=https://downloads.mixxx.org/dependencies/!BUILDENV_BRANCH!/Windows/!BUILDENV_NAME!.zip
+)
 
 IF "%~1"=="" (
     REM In case of manual start by double click no arguments are specified: Default to COMMAND_setup

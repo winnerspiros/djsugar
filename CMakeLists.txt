@@ -4780,6 +4780,7 @@ if(Qt_IS_STATIC)
       Qt${QT_VERSION_MAJOR}::QICOPlugin
       Qt${QT_VERSION_MAJOR}::QJpegPlugin
       Qt${QT_VERSION_MAJOR}::QSvgPlugin
+      Qt${QT_VERSION_MAJOR}::QWebpPlugin
       # sqldrivers
       Qt${QT_VERSION_MAJOR}::QSQLiteDriverPlugin
   )
@@ -4873,6 +4874,7 @@ else()
         Qt${QT_VERSION_MAJOR}::QICOPlugin
         Qt${QT_VERSION_MAJOR}::QJpegPlugin
         Qt${QT_VERSION_MAJOR}::QSvgPlugin
+        Qt${QT_VERSION_MAJOR}::QWebpPlugin
         DESTINATION
         "${MIXXX_INSTALL_DATADIR}/imageformats"
         COMPONENT

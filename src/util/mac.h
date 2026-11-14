@@ -3,7 +3,7 @@
 
 #include <QtGlobal>
 
-#ifdef Q_OS_MACOS
+#ifdef Q_OS_DARWIN
 #include <QString>
 #include <CoreFoundation/CFString.h>
 
