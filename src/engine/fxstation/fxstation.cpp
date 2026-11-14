@@ -16,18 +16,16 @@ namespace {
 
 const QString kGroup = QStringLiteral("[FxStation]");
 
-// Memory is reserved for this sample rate (higher rates get shorter
-// delays)
+// Higher rates get shorter delays
 constexpr float kMaxSampleRate = 96000.f;
-// The longest echo (two beats at 60 BPM) and the history Release plays from
+// Longest echo (two beats at 60 BPM); history Release plays from here
 constexpr float kMaxEchoSeconds = 2.2f;
 constexpr float kHistorySeconds = 4.f;
-// The longest roll of a band (a quarter of a beat at 40 BPM, and some)
+// Longest roll of a band (quarter beat at 40 BPM)
 constexpr float kMaxRollSeconds = 0.5f;
-// The longest slice of the Roll scene: a beat at 30 BPM
+// Longest Roll scene slice: a beat at 30 BPM
 constexpr float kMaxSceneRollSeconds = 2.f;
-// The sweep of Flanger and Phaser, in beats, and the slices of Roll and
-// steps of Gater, by the first sub parameter
+// Sweep of Flanger/Phaser in beats; Roll slices and Gater steps
 constexpr double kSweepBeats[] = {1.0, 2.0, 4.0, 8.0, 16.0, 32.0};
 constexpr double kSliceBeats[] = {1.0 / 16.0, 1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0};
 template<typename T, size_t N>
@@ -36,20 +34,20 @@ T pick(const T (&values)[N], float knob) {
 }
 constexpr int kPitchWindowFrames = 2048;
 
-// The choices of the multi-state buttons
+// Multi-state button choices
 constexpr int kSceneTypes = 10;
 constexpr int kIsolateModes = 4;
 constexpr int kReleaseTypes = 3;
 
-// Crossovers of Isolate
+// Isolate crossovers
 constexpr float kLowMidFrequency = 300.f;
 constexpr float kMidHighFrequency = 3000.f;
 
-// Echo times of the first sub parameter, in beats
+// Echo times of first sub parameter, in beats
 constexpr double kEchoBeats[] = {0.125, 0.25, 0.375, 0.5, 0.75, 1.0};
 constexpr int kEchoBeatCount = 6;
 
-// The scene is idle when its tail stays below this for a second
+// Scene idle when tail below this for a second
 constexpr float kSilentLevel = 1e-5f;
 
 std::unique_ptr<ControlObject> makeControl(const char* key, double defaultValue = 0.0) {
@@ -59,8 +57,7 @@ std::unique_ptr<ControlObject> makeControl(const char* key, double defaultValue 
     return pControl;
 }
 
-// Knobs and buttons with a range, so that MIDI controllers can be mapped to
-// them (0-127 spans the range) and learned
+// MIDI-mappable knobs/buttons (0-127 spans range)
 std::unique_ptr<ControlObject> makeKnob(
         const char* key, double minimum, double maximum, double defaultValue) {
     auto pControl = std::make_unique<ControlPotmeter>(
@@ -181,7 +178,7 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     m_pBeat = makeControl("beat");
     m_pSource = makeControl("source");
 
-    // Everything the engine needs, reserved now
+    // Engine buffers reserved upfront
     const int maxRate = static_cast<int>(kMaxSampleRate);
     m_echo.allocate(static_cast<int>(kMaxEchoSeconds * maxRate));
     m_releaseEcho.allocate(static_cast<int>(kMaxEchoSeconds * maxRate));
@@ -190,7 +187,7 @@ FxStation::FxStation(UserSettingsPointer pConfig)
     m_flanger.allocate(kMaxSampleRate);
     m_roll.allocate(kMaxSampleRate, kMaxSceneRollSeconds);
     m_pitch.allocate(kMaxSampleRate);
-    // At the highest rate first, so that prepare() never allocates
+    // Highest rate first so prepare() never allocates
     m_reverb.setup(kMaxSampleRate);
     m_reverb.setModulation(0.9f);
     for (auto& buffer : m_rollBuffers) {
@@ -246,7 +243,7 @@ void FxStation::slotFindDecks() {
 }
 
 void FxStation::setReverb(float size, float tone) {
-    // SIZE: room to hall and a longer tail; TONE: darker to the right
+    // SIZE: room to hall, longer tail; TONE: darker right
     m_reverb.setSize(size);
     m_reverb.setDecay(1.f + 7.f * size);
     m_reverb.setDamping(16000.f * std::pow(2.f, -4.f * tone));
@@ -276,8 +273,7 @@ double FxStation::beatFrames() const {
 }
 
 void FxStation::updateClock(int frames) {
-    // The leading deck: the sync leader if it plays, else the loudest one
-    // playing
+    // Leading deck: sync leader if playing, else loudest playing
     int source = -1;
     if (m_pBpmAuto->get() > 0) {
         float loudest = -1.f;
@@ -303,8 +299,7 @@ void FxStation::updateClock(int frames) {
         m_bpm = deck.pBpm.load()->get();
         ControlObject* pDistance = deck.pBeatDistance.load(std::memory_order_relaxed);
         if (pDistance) {
-            // The phase of the deck (and the nudge), keeping the count of
-            // beats
+            // Deck phase (and nudge), tracking beat count
             double difference = fraction(pDistance->get() + m_nudge) - fraction(m_beat);
             if (difference > 0.5) {
                 difference -= 1.0;
@@ -316,7 +311,7 @@ void FxStation::updateClock(int frames) {
     }
     m_pSource->set(source + 1);
 
-    // Nudge: a hundredth of a beat per tenth of a second while held
+    // Nudge: hundredth of a beat per 0.1s while held
     const double nudge = m_pNudge->get();
     if (nudge != 0.0) {
         const double step = 0.1 * nudge * frames / m_sampleRate;
@@ -327,7 +322,7 @@ void FxStation::updateClock(int frames) {
         }
     }
 
-    // Tap: the tempo of the last taps, the beat on the last one
+    // Tap: tempo from last taps, beat on last one
     const bool tap = m_pTap->get() > 0;
     if (tap && !m_previousTap) {
         if (m_tapCount > 0 &&
