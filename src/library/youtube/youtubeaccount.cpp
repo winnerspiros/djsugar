@@ -361,7 +361,7 @@ void YouTubeAccount::post(const QString& endpoint,
         const std::function<void(const QJsonObject&)>& done,
         bool signedRequest,
         QObject* pContext,
-        std::function<void()> onFailure) {
+        const std::function<void()>& onFailure) {
     QNetworkRequest request(QUrl(kOrigin + QStringLiteral("/youtubei/v1/") + endpoint +
             QStringLiteral("?prettyPrint=false")));
     request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));

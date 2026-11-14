@@ -205,8 +205,8 @@ void QmlSpotifyProxy::fetchProfile() {
 
 void QmlSpotifyProxy::browse(const QString& request,
         int offset,
-        std::function<void(const QJsonObject&)> onSuccess,
-        std::function<void()> onFailure) {
+        const std::function<void(const QJsonObject&)>& onSuccess,
+        const std::function<void()>& onFailure) {
     if (!m_loggedIn) {
         emit failed(tr("Log in to Spotify first"));
         return;

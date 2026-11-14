@@ -155,7 +155,7 @@ class QmlYouTubeProxy : public QObject {
     int m_genreLookupsRunning = 0;
 
     void soundCloudRequest(const QUrl& url, bool append, bool clientIdRetried);
-    void fetchSoundCloudClientId(std::function<void(bool)> done);
+    void fetchSoundCloudClientId(const std::function<void(bool)>& done);
     /// The signed-in SoundCloud user (name, avatar, id); then `done`
     void fetchSoundCloudMe(std::function<void()> done);
     void requestSoundCloudMe(bool clientIdRetried);

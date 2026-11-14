@@ -21,6 +21,7 @@
 #include <QUrl>
 #include <algorithm>
 #include <cstdlib>
+#include <utility>
 
 #include "analyzer/analyzerscheduledtrack.h"
 #include "control/controlproxy.h"
@@ -692,7 +693,7 @@ const QString kDefaultRegion = QStringLiteral("GR");
 } // namespace
 
 YouTubeFeature::YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig)
-        : BaseExternalLibraryFeature(pLibrary, pConfig, "youtube"),
+        : BaseExternalLibraryFeature(pLibrary, std::move(pConfig), "youtube"),
           m_pSidebarModel(make_parented<TreeItemModel>(this)),
           m_service(this) {
     m_service.setSponsorBlockEnabled(sponsorBlockAutoSkip());
@@ -877,8 +878,8 @@ YouTubeFeature::YouTubeFeature(Library* pLibrary, UserSettingsPointer pConfig)
             &PlayerInfo::trackChanged,
             this,
             [this](const QString& /*group*/,
-                    TrackPointer pNew,
-                    TrackPointer pOld) {
+                    const TrackPointer& pNew,
+                    const TrackPointer& pOld) {
                 // Pre-download safety net: if AutoDJ (or the user from a stale
                 // playlist) is loading a YouTube-cache track whose file no
                 // longer exists, kick off a background re-download so the
@@ -2342,7 +2343,7 @@ void YouTubeFeature::replaceTrackTable(
         constexpr int kMaxAttempts = kRetryTimeoutMs / kRetryIntervalMs;
         if (locked && attempt < kMaxAttempts) {
             transaction.rollback();
-            const QList<mixxx::YouTubeVideoInfo> pending = videos;
+            const QList<mixxx::YouTubeVideoInfo>& pending = videos;
             QPointer<YouTubeFeature> guard(this);
             QTimer::singleShot(kRetryIntervalMs, this, [guard, pending, attempt]() {
                 if (guard) {

@@ -8,8 +8,7 @@
 #include "moc_androidmidienumerator.cpp"
 #include "soundio/androidusbaudiodevice.h"
 
-AndroidMidiEnumerator::AndroidMidiEnumerator()
-        : MidiEnumerator() {
+AndroidMidiEnumerator::AndroidMidiEnumerator() {
 }
 
 AndroidMidiEnumerator::~AndroidMidiEnumerator() {

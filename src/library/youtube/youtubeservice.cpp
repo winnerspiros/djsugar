@@ -40,6 +40,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include <utility>
 
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
@@ -668,7 +669,7 @@ QList<YouTubeVideoInfo> parseInnerTubeSearch(const QJsonObject& root, int cap) {
 //
 // Extracting recursively is simpler and handles both shapes.
 void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
-    if (out->size() >= 1) {
+    if (!out->empty()) {
         return; // one token is enough
     }
     if (node.isObject()) {
@@ -700,7 +701,7 @@ void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
         }
         for (const QJsonValue& v : obj) {
             extractContinuationTokens(v, out);
-            if (out->size() >= 1) {
+            if (!out->empty()) {
                 return;
             }
         }
@@ -708,7 +709,7 @@ void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
         const QJsonArray arr = node.toArray(); // clazy:exclude=range-loop-detach
         for (const QJsonValue& v : arr) {
             extractContinuationTokens(v, out);
-            if (out->size() >= 1) {
+            if (!out->empty()) {
                 return;
             }
         }
@@ -2405,7 +2406,7 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
         onFailure(tr("No usable audio stream URL"));
         return;
     }
-    const QJsonObject best = rankedStreams.first();
+    const QJsonObject& best = rankedStreams.first();
     const QList<QJsonObject> rest = rankedStreams.mid(1);
     const QString streamUrl = best.value(QStringLiteral("url")).toString();
     if (streamUrl.isEmpty()) {
@@ -2908,7 +2909,6 @@ void YouTubeService::downloadViaInnerTubeClient(
             QString(),
             tryNext,
             onAllFailed);
-    return;
 #endif
 }
 
@@ -3097,7 +3097,7 @@ void YouTubeService::requestPlayerWithPoToken(const QString& videoId,
                     // googlevideo 403s Range requests for token-gated clients.
                     const QString potUrl = withPoTokenParam(streamUrl, streamingPot);
 #else
-                    const QString potUrl = streamUrl;
+                    const QString& potUrl = streamUrl;
                     Q_UNUSED(streamingPot);
 #endif
                     // Extract codec string from e.g. "audio/mp4; codecs=\"mp4a.40.2\""
@@ -3435,8 +3435,8 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
                 // Last non-empty stdout line is the final filepath.
                 QString outPath;
                 const QList<QByteArray> lines = stdoutBytes.split('\n');
-                for (auto it = lines.crbegin(); it != lines.crend(); ++it) {
-                    const QString line = QString::fromLocal8Bit(*it).trimmed();
+                for (const QByteArray& rawLine : std::ranges::reverse_view(lines)) {
+                    const QString line = QString::fromLocal8Bit(rawLine).trimmed();
                     if (!line.isEmpty() && QFileInfo::exists(line)) {
                         outPath = line;
                         break;
@@ -3808,7 +3808,6 @@ bool extractStreamLinkWith(
     saveStreamLinksLocked();
     return true;
 }
-
 
 bool extractStreamLinkUncached(
         const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
@@ -4558,12 +4557,8 @@ bool YouTubeService::shouldThrottleRequest() {
 
     // Check minimum inter-request gap with jitter.
     const int minGap = jitterDelayMs();
-    if (!m_requestTimestamps.isEmpty() &&
-            (now - m_requestTimestamps.last()) < minGap) {
-        return true;
-    }
-
-    return false;
+    return !m_requestTimestamps.isEmpty() &&
+            (now - m_requestTimestamps.last()) < minGap;
 }
 
 void YouTubeService::recordRequest() {

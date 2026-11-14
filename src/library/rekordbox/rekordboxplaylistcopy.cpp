@@ -154,7 +154,7 @@ QString RekordboxPlaylistCopy::start(
         const QFileInfo sourceInfo(source.track.location);
         const QFileInfo targetInfo(source.target);
         if (sourceInfo.exists() &&
-                !(targetInfo.exists() && targetInfo.size() == sourceInfo.size())) {
+                (!targetInfo.exists() || targetInfo.size() != sourceInfo.size())) {
             neededBytes += sourceInfo.size();
         }
     }

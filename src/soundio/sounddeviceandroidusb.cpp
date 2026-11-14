@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <utility>
 
 #include "control/controlobject.h"
 #include "soundio/androidusbaudiodevice.h"
@@ -41,7 +42,7 @@ SoundDeviceAndroidUsb::SoundDeviceAndroidUsb(UserSettingsPointer config,
         SoundManager* sm,
         std::shared_ptr<mixxx::androidusb::AndroidUsbAudioDevice> pDevice,
         int instance)
-        : SoundDevice(config, sm),
+        : SoundDevice(std::move(config), sm),
           m_pDevice(std::move(pDevice)),
           m_framesPerBuffer(0),
           m_isClkRef(false),

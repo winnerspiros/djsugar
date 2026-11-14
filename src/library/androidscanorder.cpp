@@ -23,7 +23,7 @@ struct ScannedTrack {
 };
 
 /// Orders the tracks added at or after scanStart
-void orderTracksByFileDate(QSqlDatabase database, const QDateTime& scanStart) {
+void orderTracksByFileDate(const QSqlDatabase& database, const QDateTime& scanStart) {
     QSqlQuery select(database);
     if (!select.exec(QStringLiteral(
                 "SELECT library.id, library.datetime_added, track_locations.location "

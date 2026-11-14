@@ -16,8 +16,7 @@ WGLWidget::WGLWidget(QWidget* parent)
     Q_UNUSED(parent);
 }
 
-WGLWidget::~WGLWidget() {
-}
+WGLWidget::~WGLWidget() = default;
 
 bool WGLWidget::isContextValid() const {
     return false;

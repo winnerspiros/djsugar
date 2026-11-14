@@ -8,7 +8,7 @@
 
 class NetworkEnumerator : public SoundDeviceEnumerator {
   public:
-    NetworkEnumerator(UserSettingsPointer pConfig,
+    NetworkEnumerator(const UserSettingsPointer& pConfig,
             SoundManager* pSoundManager);
     ~NetworkEnumerator() override;
 
