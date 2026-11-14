@@ -16,10 +16,12 @@ class QQuickWindow;
 namespace mixxx {
 namespace qml {
 
-/// Application info for the Android UI: skin selector toggle and hideable top-bar items. Exposed as Mixxx.MobileApp.
+/// Application info for the Android UI: skin selector toggle and hideable
+/// top-bar items. Exposed as Mixxx.MobileApp.
 class QmlMobileAppProxy : public QObject {
     Q_OBJECT
-    /// The version of the installed package (versionName on Android), or the Mixxx version elsewhere
+    /// The version of the installed package (versionName on Android), or the
+    /// Mixxx version elsewhere
     Q_PROPERTY(QString packageVersion READ packageVersion CONSTANT)
     /// The skin of the user interface: "Classic", the main window in
     /// res/qml, or the name of a folder in res/qml/Skins with its own

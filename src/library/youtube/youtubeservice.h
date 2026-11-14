@@ -37,7 +37,7 @@ struct YouTubeVideoInfo {
     QString uploader;
     int durationSec = 0;
     bool isLive = false;
-    QString genre; // inferred from title/uploader/YouTube category
+    QString genre = QString(); // inferred from title/uploader/YouTube category
 
     // Infer genre from title patterns, uploader channel, or YouTube category
     static QString inferGenre(const QString& title,

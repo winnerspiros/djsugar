@@ -20,7 +20,8 @@ TEST(PhraseAlignTest, BarsAreWholePhrases) {
 }
 
 TEST(PhraseAlignTest, FadeStartsOnLastPhraseThatFits) {
-    // Track ends at 200 s. 8-bar fade (16 s) must start on phrase start (multiple of 16 s) and end by 200 s: 176 -> 192.
+    // Track ends at 200 s. 8-bar fade (16 s) must start on phrase start
+    // (multiple of 16 s) and end by 200 s: 176 -> 192.
     const auto p = phrasealign::plan(k120, k120, 0.0, 200.0, 0.0, 8);
     ASSERT_TRUE(p.has_value());
     EXPECT_DOUBLE_EQ(176.0, p->fromFadeBeginSec);
@@ -39,7 +40,8 @@ TEST(PhraseAlignTest, FollowsTheGridOffset) {
 }
 
 TEST(PhraseAlignTest, IncomingStartsOnAPhraseStart) {
-    // Incoming grid starts at 0.5 s; first sound at 0.52 s (just after first beat) -> start at first beat, not whole phrase later.
+    // Incoming grid starts at 0.5 s; first sound at 0.52 s (just after first
+    // beat) -> start at first beat, not whole phrase later.
     const Grid to{0.5, 0.5};
     const auto p = phrasealign::plan(k120, to, 0.0, 200.0, 0.52, 8);
     ASSERT_TRUE(p.has_value());

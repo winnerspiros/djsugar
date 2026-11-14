@@ -15,7 +15,8 @@ struct AVPacket;
 namespace mixxx {
 namespace stems {
 
-/// Writes a .stem.mp4 (NI format): MP4 with AAC mix + per-stem streams plus a "stem" atom with names and colors.
+/// Writes a .stem.mp4 (NI format): MP4 with AAC mix + per-stem streams plus a
+/// "stem" atom with names and colors.
 class StemFileWriter {
   public:
     StemFileWriter();

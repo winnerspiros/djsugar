@@ -85,7 +85,10 @@ class MixScorer {
     /// Camelot wheel (8A -> 3A), the letter stays.
     static TrackFeatures shiftKey(const TrackFeatures& track, int semitones);
 
-    /// Key morph: shift the incoming key by semitones so it fits the outgoing key. 0 = leave: keys already fit, unknown, or no shift that small works. Smallest shift wins; tie broken by best fit, then down (lower voice sounds more natural).
+    /// Key morph: shift the incoming key by semitones so it fits the outgoing
+    /// key. 0 = leave: keys already fit, unknown, or no shift that small works.
+    /// Smallest shift wins; tie broken by best fit, then down (lower voice
+    /// sounds more natural).
     static int keyMorphSemitones(const TrackFeatures& from, const TrackFeatures& to, int maxShift);
 
     /// Shortest distance round the Camelot wheel: 0..6.

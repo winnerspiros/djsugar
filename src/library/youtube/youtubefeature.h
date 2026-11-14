@@ -60,19 +60,22 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     void requestDownloadToPlayer(
             const QString& videoId, const QString& group, bool play);
     void requestDownload(const QString& videoId);
-    /// Results shown outside YouTube search (e.g. SoundCloud); download gets title/artist like a YouTube result.
+    /// Results shown outside YouTube search (e.g. SoundCloud); download gets
+    /// title/artist like a YouTube result.
     void rememberExternalResults(const QList<mixxx::YouTubeVideoInfo>& results);
     void requestDownloadToAutoDJ(
             const QString& videoId, PlaylistDAO::AutoDJSendLoc loc);
 
-    /// Expose the underlying service so other features can connect to its signals (e.g. AIBroFeature).
+    /// Expose the underlying service so other features can connect to its
+    /// signals (e.g. AIBroFeature).
     mixxx::YouTubeService* service() {
         return &m_service;
     }
 
     /// Absolute path to the per-user yt-dlp cache directory. Created on demand.
     QString cacheDir() const;
-    /// Per video ID: "timesPlayed", "bpm", "key" from library, and "sameAs" (ID of earlier same-song result).
+    /// Per video ID: "timesPlayed", "bpm", "key" from library, and "sameAs" (ID
+    /// of earlier same-song result).
     QHash<QString, QVariantMap> libraryInfoForResults(
             const QList<mixxx::YouTubeVideoInfo>& results) const;
 
@@ -90,7 +93,9 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
             const QString& videoId,
             const QString& group,
             const QString& title);
-    /// Every deck waiting on `videoId` has its track, or the load was abandoned. Fires for fresh downloads and cache hits (never reach service's downloadFinished).
+    /// Every deck waiting on `videoId` has its track, or the load was
+    /// abandoned. Fires for fresh downloads and cache hits (never reach
+    /// service's downloadFinished).
     void playerLoadsSettled(const QString& videoId);
     /// The file of `videoId` is on disk: downloaded or from cache.
     void fileReady(const QString& videoId, const QString& localPath);
@@ -121,7 +126,8 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
   private:
     /// Rebuild the sidebar tree from current search-result and downloaded-track caches.
     void rebuildSidebar();
-    /// Rebuild HTML for the main YOUTUBE_HOME pane (right-hand area). Mirrors sidebar so user sees results before unfolding tree node.
+    /// Rebuild HTML for the main YOUTUBE_HOME pane (right-hand area). Mirrors
+    /// sidebar so user sees results before unfolding tree node.
     void rebuildHomeHtml();
     void requestDownloadFile(const QString& videoId);
     /// Background repair of missing AutoDJ-queued tracks.
@@ -129,11 +135,16 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     bool autoAnalyzeResultsEnabled() const;
     void setAutoAnalyzeResultsEnabled(bool enabled);
     void autoAnalyzeCurrentResults();
-    /// If `pTrack` was downloaded by us and is no longer on any deck, delete its cached audio file and purge from library DB. Tracks referenced by any playlist/crate (incl. AutoDJ queue) are preserved.
+    /// If `pTrack` was downloaded by us and is no longer on any deck, delete
+    /// its cached audio file and purge from library DB. Tracks referenced by
+    /// any playlist/crate (incl. AutoDJ queue) are preserved.
     void maybeReleaseCachedTrack(const TrackPointer& pTrack);
-    /// If `pTrack` is a YouTube-cache track whose file is missing, re-download in background so next play succeeds. No-op for non-YouTube tracks or present files.
+    /// If `pTrack` is a YouTube-cache track whose file is missing, re-download
+    /// in background so next play succeeds. No-op for non-YouTube tracks or
+    /// present files.
     void ensureDownloaded(const TrackPointer& pTrack);
-    /// Walk AutoDJ queue at startup; ensure every YouTube-cache track is on disk, re-downloading swept ones.
+    /// Walk AutoDJ queue at startup; ensure every YouTube-cache track is on
+    /// disk, re-downloading swept ones.
     void prefetchAutoDjQueue();
     void syncAnalyzedTrackMetadata(const TrackPointer& pTrack);
     void fetchGenre(const TrackPointer& pTrack,
@@ -145,29 +156,39 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     /// YouTubeTrackModel for the placeholder/downloaded row model.
     QSharedPointer<BaseTrackCache> m_pTrackCache;
     YouTubeTrackModel* m_pTrackModel = nullptr;
-    /// Replace all rows in `youtube_library` with `videos`, then refresh model. `videos` may include downloaded and not-yet-downloaded entries; we resolve per row. `attempt` bounds deferred retries when write loses SQLite lock to library scanner.
+    /// Replace all rows in `youtube_library` with `videos`, then refresh model.
+    /// `videos` may include downloaded and not-yet-downloaded entries; we
+    /// resolve per row. `attempt` bounds deferred retries when write loses
+    /// SQLite lock to library scanner.
     void replaceTrackTable(
             const QList<mixxx::YouTubeVideoInfo>& videos, int attempt = 0);
-    /// Append rows for `videos` to `youtube_library` without wiping table. Used when InnerTube returns continuation page so new batch appears below existing results.
+    /// Append rows for `videos` to `youtube_library` without wiping table. Used
+    /// when InnerTube returns continuation page so new batch appears below
+    /// existing results.
     void appendToTrackTable(const QList<mixxx::YouTubeVideoInfo>& videos);
-    /// Append/update a single downloaded entry so "Downloaded" column reflects new file without full table rebuild.
+    /// Append/update a single downloaded entry so "Downloaded" column reflects
+    /// new file without full table rebuild.
     void upsertDownloadedRow(const QString& videoId,
             const QString& localPath,
             const QString& title,
             const QString& uploader,
             int durationSec);
-    /// Push newly-arrived thumbnail onto live Track when audio file was already downloaded (deck loaded before thumb).
+    /// Push newly-arrived thumbnail onto live Track when audio file was already
+    /// downloaded (deck loaded before thumb).
     void backfillCoverArt(const QString& videoId, const QString& thumbPath);
 
     // ----- Cover art (YouTube thumbnails) -----
 
     /// Subdirectory of cacheDir() for per-video thumbnail images.
     QString thumbnailDir() const;
-    /// For each video in `videos`, download `hqdefault.jpg` from YouTube's image CDN to `thumbnailDir()/<videoId>.jpg` if not present. On completion, fires dataChanged() on model so cover-art delegate repaints.
+    /// For each video in `videos`, download `hqdefault.jpg` from YouTube's
+    /// image CDN to `thumbnailDir()/<videoId>.jpg` if not present. On
+    /// completion, fires dataChanged() on model so cover-art delegate repaints.
     void fetchThumbnails(const QList<mixxx::YouTubeVideoInfo>& videos);
     /// Set of videoIds whose thumbnails are currently being downloaded.
     QSet<QString> m_thumbnailsDownloading;
-    /// Pending thumbnail videoIds waiting for a download slot. Caps parallel thumbnail TCP+TLS handshakes (mobile data) — see kMaxParallelThumbs.
+    /// Pending thumbnail videoIds waiting for a download slot. Caps parallel
+    /// thumbnail TCP+TLS handshakes (mobile data) — see kMaxParallelThumbs.
     QQueue<QString> m_thumbnailQueue;
     void pumpThumbnailQueue();
 
@@ -175,13 +196,20 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     QPointer<WLibraryTextBrowser> m_pHomeView;
     QPointer<WSearchLineEdit> m_pSearchbox;
     mixxx::YouTubeService m_service;
-    /// Debounce timer for rebuildSidebar() + rebuildHomeHtml() — coalesces rapid calls (e.g. during batch auto-analyze downloads) so UI thread doesn't churn HTML on every download completion.
+    /// Debounce timer for rebuildSidebar() + rebuildHomeHtml() — coalesces
+    /// rapid calls (e.g. during batch auto-analyze downloads) so UI thread
+    /// doesn't churn HTML on every download completion.
     QTimer* m_rebuildTimer = nullptr;
-    /// When true, next rebuildTimer fire also runs buildIndex()+select() to pick up rows updated by upsertDownloadedRow() or analysis completion. Set by those paths instead of calling inline so N rapid completions share one rebuild.
+    /// When true, next rebuildTimer fire also runs buildIndex()+select() to
+    /// pick up rows updated by upsertDownloadedRow() or analysis completion.
+    /// Set by those paths instead of calling inline so N rapid completions
+    /// share one rebuild.
     bool m_pendingModelUpdate = false;
-    /// Schedule a deferred rebuildSidebar() + rebuildHomeHtml(). Multiple calls within debounce window trigger only one rebuild.
+    /// Schedule a deferred rebuildSidebar() + rebuildHomeHtml(). Multiple calls
+    /// within debounce window trigger only one rebuild.
     void scheduleRebuild();
-    /// Debounce timer for thumbnail dataChanged() notifications. Coalesces N simultaneous thumbnail arrivals into a single model repaint.
+    /// Debounce timer for thumbnail dataChanged() notifications. Coalesces N
+    /// simultaneous thumbnail arrivals into a single model repaint.
     QTimer* m_thumbnailTimer = nullptr;
     /// Set when at least one thumbnail arrived since last repaint.
     bool m_thumbnailsDirty = false;
@@ -211,17 +239,27 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
 #else
     static constexpr int kMaxParallelDownloads = 4;
 #endif
-    /// FIFO of videoIds waiting for a download slot. Parallel yt-dlp downloads share one radio; 3-at-a-time on Android fills pipe while user browses (5-14s/track) and leaves CPU for analyzer/library writes.
+    /// FIFO of videoIds waiting for a download slot. Parallel yt-dlp downloads
+    /// share one radio; 3-at-a-time on Android fills pipe while user browses
+    /// (5-14s/track) and leaves CPU for analyzer/library writes.
     QList<QString> m_downloadQueue;
     /// Start queued downloads while slots are free.
     void pumpDownloadQueue();
-    /// Last error from YouTubeService for current `m_lastQuery`. Cleared on new search or successful results. When non-empty, home pane shows error instead of "Searching..." placeholder.
+    /// Last error from YouTubeService for current `m_lastQuery`. Cleared on new
+    /// search or successful results. When non-empty, home pane shows error
+    /// instead of "Searching..." placeholder.
     QString m_lastSearchError;
-    /// Auto-discovered music genres from YouTube Music's browse API. Populated async on first activate(); falls back to kDefaultGenres when empty (fetch failed or not completed).
+    /// Auto-discovered music genres from YouTube Music's browse API. Populated
+    /// async on first activate(); falls back to kDefaultGenres when empty
+    /// (fetch failed or not completed).
     QStringList m_discoveredGenres;
-    /// True while a trending fetch from activate() is in flight; repeated activations don't fire duplicate requests. Cleared when results arrive, fetch fails, or user search supersedes.
+    /// True while a trending fetch from activate() is in flight; repeated
+    /// activations don't fire duplicate requests. Cleared when results arrive,
+    /// fetch fails, or user search supersedes.
     bool m_trendingFetchInFlight = false;
-    /// True when recent searchAndActivate() came from sidebar Samples section (kSampleQueryPrefix). First result auto-downloaded to next sampler slot instead of displayed in table.
+    /// True when recent searchAndActivate() came from sidebar Samples section
+    /// (kSampleQueryPrefix). First result auto-downloaded to next sampler slot
+    /// instead of displayed in table.
     bool m_samplerTargetSearch = false;
 
     // ----- Samples section (DJ Tools + Greek Memes from myinstants.com) -----
@@ -236,7 +274,9 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     QList<MyInstantSound> m_myInstantSounds;
     /// True while a myinstants.com fetch is in-flight.
     bool m_myInstantsFetchInFlight = false;
-    /// QNetworkAccessManager for Samples section (myinstants fetches + MP3 downloads). Separate from YouTubeService so cookie jars and rate-limiting aren't shared.
+    /// QNetworkAccessManager for Samples section (myinstants fetches + MP3
+    /// downloads). Separate from YouTubeService so cookie jars and
+    /// rate-limiting aren't shared.
     QNetworkAccessManager* m_pSamplesNam = nullptr;
     /// Genre of downloaded songs from iTunes/Deezer catalogues.
     mixxx::YouTubeGenreLookup* m_pGenreLookup = nullptr;
@@ -249,6 +289,7 @@ class YouTubeFeature : public BaseExternalLibraryFeature {
     void downloadMyInstant(const QString& mp3Url, const QString& displayName);
     /// Subdirectory of cacheDir() for myinstants MP3 files.
     QString myInstantsCacheDir() const;
-    /// Find next empty sampler slot and emit loadTrackToPlayer(). Falls back to loadTrack() (next deck) when all 32 slots full.
+    /// Find next empty sampler slot and emit loadTrackToPlayer(). Falls back to
+    /// loadTrack() (next deck) when all 32 slots full.
     void loadTrackToNextSampler(const TrackPointer& pTrack);
 };

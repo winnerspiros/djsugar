@@ -36,7 +36,8 @@ QNetworkRequest makeRequest(const QUrl& url) {
     return request;
 }
 
-// Greek to Greeklish for catalogue matching (Pantelis Pantelidis). Input lower-case without accents.
+// Greek to Greeklish for catalogue matching (Pantelis Pantelidis). Input
+// lower-case without accents.
 QString greekToLatin(const QString& text) {
     static const QHash<QString, QString> kPairs = {
             {QStringLiteral("ου"), QStringLiteral("ou")},

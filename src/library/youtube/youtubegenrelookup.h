@@ -9,7 +9,8 @@ class QNetworkAccessManager;
 
 namespace mixxx {
 
-/// Finds the genre of a YouTube song via iTunes + Deezer catalogues (free, no account). Artist, title and duration must match.
+/// Finds the genre of a YouTube song via iTunes + Deezer catalogues (free, no
+/// account). Artist, title and duration must match.
 class YouTubeGenreLookup : public QObject {
     Q_OBJECT
   public:

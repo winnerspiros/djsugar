@@ -105,7 +105,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
             qWarning() << "Failed to copy sample" << path << "to" << destPath;
         }
     }
-// Drop samples no longer shipped
+    // Drop samples no longer shipped
     QDirIterator stale(destDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
     while (stale.hasNext()) {
         const QString path = stale.next();

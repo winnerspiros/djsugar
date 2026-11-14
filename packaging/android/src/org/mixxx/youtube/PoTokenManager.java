@@ -38,7 +38,9 @@ public class PoTokenManager {
         mLastError = "init ok, generator not yet created";
     }
 
-    /** Last failure reason for surfacing Java errors to C++ logs. */
+    /**
+     * Last failure reason for surfacing Java errors to C++ logs.
+     */
     public String getLastError() {
         return mLastError;
     }
@@ -93,8 +95,10 @@ public class PoTokenManager {
         }
     }
 
-    /** Blocking: returns "playerPot\nstreamingPot\nvisitorData" or null.
-     * Must NOT be called on the Android main thread (WebView callbacks need it). */
+    /**
+     * Blocking: returns "playerPot\nstreamingPot\nvisitorData" or null.
+     * Must NOT be called on the Android main thread (WebView callbacks need it).
+     */
     public String fetchTokens(String videoId, String visitorData) {
         if (!ensureGenerator()) {
             return null;

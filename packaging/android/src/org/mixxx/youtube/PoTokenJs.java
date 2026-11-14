@@ -5,12 +5,16 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Pure-Java BotGuard challenge / integrity-token parser (port of NewPipe's JavaScriptUtil.kt). */
+/**
+ * Pure-Java BotGuard challenge / integrity-token parser (port of NewPipe's JavaScriptUtil.kt).
+ */
 public final class PoTokenJs {
     private PoTokenJs() {
     }
 
-/** Parse Create-endpoint challenge into a JS-embeddable JSON object. */
+    /**
+     * Parse Create-endpoint challenge into a JS-embeddable JSON object.
+     */
     public static String parseChallengeData(String raw) throws Exception {
         JSONArray scrambled = new JSONArray(raw);
         JSONArray challengeData;
@@ -69,7 +73,9 @@ public final class PoTokenJs {
         return out.toString();
     }
 
-/** Parse GenerateIT payload. Returns [Uint8Array literal, ttl seconds]. */
+    /**
+     * Parse GenerateIT payload. Returns [Uint8Array literal, ttl seconds].
+     */
     public static String[] parseIntegrityTokenData(String raw) throws Exception {
         JSONArray arr = new JSONArray(raw);
         String tokenB64 = arr.getString(0);
@@ -77,12 +83,16 @@ public final class PoTokenJs {
         return new String[] {base64ToU8(tokenB64), Long.toString(ttl)};
     }
 
-/** Convert string to "new Uint8Array([...])" literal. */
+    /**
+     * Convert string to "new Uint8Array([...])" literal.
+     */
     public static String stringToU8(String s) {
         return newUint8Array(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-/** Uint8Array.toString("97,98,99") -> base64url no padding. */
+    /**
+     * Uint8Array.toString("97,98,99") -> base64url no padding.
+     */
     public static String u8ToBase64(String csv) throws Exception {
         String[] parts = csv.split(",");
         byte[] raw = new byte[parts.length];

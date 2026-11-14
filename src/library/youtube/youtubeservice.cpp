@@ -373,7 +373,7 @@ bool isValidYouTubeVideoId(const QString& videoId) {
     // YouTube video IDs, plus "sc-<track id>" for SoundCloud tracks (same
     // yt-dlp download/cache/deck-load path).
     static const QRegularExpression kVideoIdPattern(
-            QStringLiteral(R"(^([A-Za-z0-9_-]{11}|sc-[0-9]{1,19})$)" ));
+            QStringLiteral(R"(^([A-Za-z0-9_-]{11}|sc-[0-9]{1,19})$)"));
     return kVideoIdPattern.match(videoId).hasMatch();
 }
 

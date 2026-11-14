@@ -9,7 +9,9 @@
 namespace mixxx {
 namespace android {
 
-/// Rekordbox USB backup: copies PIONEER and Contents folders plus audio files to /storage/emulated/0/Music/Mixxx/Rekordbox/<name>. Mirroring: new/changed files copied, removed files deleted (only if nothing failed).
+/// Rekordbox USB backup: copies PIONEER and Contents folders plus audio files
+/// to /storage/emulated/0/Music/Mixxx/Rekordbox/<name>. Mirroring: new/changed
+/// files copied, removed files deleted (only if nothing failed).
 class RekordboxDriveBackup : public QObject {
     Q_OBJECT
   public:

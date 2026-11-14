@@ -43,7 +43,7 @@ public class BleMidiController {
     private static final String TAG = "MixxxBleMidi";
     private static final int REQUEST_BLE_PERMISSIONS = 0x424C;
 
-public static final UUID BLE_MIDI_SERVICE_UUID =
+    public static final UUID BLE_MIDI_SERVICE_UUID =
         UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700");
     public static final UUID BLE_MIDI_CHAR_UUID =
         UUID.fromString("7772E5DB-3868-4112-A1A9-F2669D106BF3");
@@ -302,7 +302,9 @@ public static final UUID BLE_MIDI_SERVICE_UUID =
         sScanning = false;
     }
 
-/** Get discovered devices as "address|name|isMidi|isConnected" strings. */
+    /**
+     * Get discovered devices as "address|name|isMidi|isConnected" strings.
+     */
     public static List<String> getDiscoveredDevices() {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, String> entry : sDiscoveredDevices.entrySet()) {
@@ -334,7 +336,7 @@ public static final UUID BLE_MIDI_SERVICE_UUID =
             || !sDiscoveredDevices.isEmpty();
     }
 
-/**
+    /**
      * Connect to a BLE MIDI device on a background thread.
      * Tries MidiManager.openBluetoothDevice first, then direct GATT.
      */
@@ -438,7 +440,9 @@ public static final UUID BLE_MIDI_SERVICE_UUID =
         sConnected = false;
     }
 
-/** Send raw MIDI bytes (hex-encoded from C++) wrapped in BLE-MIDI 1.0 packet. */
+    /**
+     * Send raw MIDI bytes (hex-encoded from C++) wrapped in BLE-MIDI 1.0 packet.
+     */
     @SuppressLint("MissingPermission")
     public static void writeMidiData(String deviceAddress, String hexData) {
         BluetoothGattCharacteristic ch = sMidiChars.get(deviceAddress);

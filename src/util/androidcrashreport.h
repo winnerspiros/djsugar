@@ -10,7 +10,9 @@ namespace android {
 /// (e.g. /storage/emulated/0/Mixxx/logs)
 QString crashReportDirectory();
 
-/// Writes crash-<time>.txt (library + offset) to crashReportDirectory(), then the system handler runs. The addresses resolve with unstripped libraries of the same build.
+/// Writes crash-<time>.txt (library + offset) to crashReportDirectory(), then
+/// the system handler runs. The addresses resolve with unstripped libraries of
+/// the same build.
 void installCrashReporter();
 
 /// Copies the log of the previous run (mixxx.log.1 after the rotation) to

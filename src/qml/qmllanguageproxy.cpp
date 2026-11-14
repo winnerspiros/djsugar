@@ -55,7 +55,8 @@ void QmlLanguageProxy::installAndroidTranslations(UserSettingsPointer pConfig) {
         return;
     }
     auto* pTranslator = new QTranslator(pApp);
-    // Only the language of the locale itself, e.g. "es_MX" then "es". Loading by QLocale would also try other preferred languages and could pick wrong.
+    // Only the language of the locale itself, e.g. "es_MX" then "es". Loading
+    // by QLocale would also try other preferred languages and could pick wrong.
     if (!pTranslator->load(kAndroidTranslationsPrefix + QChar('_') + locale.name(),
                 translationsPath(pConfig))) {
         delete pTranslator;

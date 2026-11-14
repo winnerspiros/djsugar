@@ -14,7 +14,9 @@ class MidiController;
 namespace mixxx {
 namespace qml {
 
-/// Makes a mapping by learning (Android): choose a Mixxx function, move the controller, and LearningUtils guesses the control type. Saved mapping files take effect at once.
+/// Makes a mapping by learning (Android): choose a Mixxx function, move the
+/// controller, and LearningUtils guesses the control type. Saved mapping files
+/// take effect at once.
 class QmlControllerLearningProxy : public QObject {
     Q_OBJECT
     /// The MIDI controllers that are open
