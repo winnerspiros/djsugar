@@ -1,20 +1,2 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- DJ Sugar symbolic icon (monochrome, for system tray / panel use) -->
-<svg xmlns="http://www.w3.org/2000/svg" height="48" width="236" viewBox="0 0 236 48">
-  <g fill="#fff">
-    <!-- Mini vinyl disc -->
-    <circle cx="24" cy="24" r="20" fill="none" stroke="#fff" stroke-width="2"/>
-    <circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="1.5"/>
-    <circle cx="24" cy="24" r="4" fill="#fff"/>
-    <circle cx="24" cy="24" r="1.5" fill="none" stroke="#fff" stroke-width="1"/>
-    <!-- Tonearm -->
-    <line x1="38" y1="8" x2="30" y2="18" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="38" cy="8" r="3" fill="#fff"/>
-    <!-- "DJ SUGAR" text -->
-    <text x="55" y="34"
-          font-family="Arial Black, Impact, sans-serif"
-          font-size="30" font-weight="900"
-          fill="#fff"
-          letter-spacing="3">DJ SUGAR</text>
-  </g>
-</svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="236" height="48" viewBox="0 0 236 48" xmlns="http://www.w3.org/2000/svg"><g fill="#fff"><circle cx="24" cy="24" r="20" fill="none" stroke="#fff" stroke-width="2"/><circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="1.5"/><circle cx="24" cy="24" r="4" fill="#fff"/><circle cx="24" cy="24" r="1.5" fill="none" stroke="#fff"/><line x1="38" x2="30" y1="8" y2="18" stroke="#fff" stroke-linecap="round" stroke-width="2"/><circle cx="38" cy="8" r="3" fill="#fff"/><text x="55" y="34" fill="#fff" font-family="Arial Black, Impact, sans-serif" font-size="30" font-weight="900" letter-spacing="3">DJ SUGAR</text></g></svg>
