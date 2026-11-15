@@ -102,13 +102,13 @@ One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, 
 
 ## Part R: pure-Rust dependencies
 
-Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS interfaces (ALSA, Wayland, CoreAudio, WASAPI, AAudio) stay: they are the platform itself, reached through Rust bindings.
+Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-layer C libraries are audited in R.11; only true OS ABIs remain.
 
 | # | C/C++ dependency | Replacement | Status |
 | --- | --- | --- | --- |
 | R.1 | rquickjs (QuickJS, C) | boa (pure-Rust JS engine) for legacy JS mappings | TODO |
 | R.2 | openssl-sys | rustls | TODO |
-| R.3 | libsqlite3-sys (diesel/rusqlite) | evaluate turso/limbo; keep SQLite until a pure-Rust engine is stable, library DB is user data | TODO |
+| R.3 | libsqlite3-sys (diesel/rusqlite) | pure-Rust DB (turso/limbo or equivalent) with migration of existing library DBs; scheduled late | TODO |
 | R.4 | signalsmith-stretch (C++) | port to Rust in-tree | TODO |
 | R.5 | whisper-rs-sys (whisper.cpp) | Whisper on burn/candle (burn already a dependency) | TODO |
 | R.6 | mp3lame-sys | pure-Rust MP3 encoder (port shine/LAME core) | TODO |
@@ -116,6 +116,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS i
 | R.8 | hidapi | hidraw/IOKit/Win32 HID via nusb/async-hid | TODO |
 | R.9 | yeslogic-fontconfig-sys | fontique/fontdb font discovery | TODO |
 | R.10 | renderdoc-sys | debug-only feature, off by default | TODO |
+| R.11 | alsa-sys (libasound), wayland-sys, other OS-layer C libs | audit: talk to kernel ALSA ioctls / PipeWire protocol directly; wayland-client pure-Rust backend (no libwayland); keep only true OS ABIs (CoreAudio, WASAPI, AAudio) | TODO |
 
 ## Part T: mapping translator
 
