@@ -87,6 +87,17 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | TODO |
 | 0.8 | Store builds: cargo feature `store` drops YouTube/SoundCloud download and librespot (Play/F-Droid policy); full build ships on GitHub releases; About screen links source (GPL) | TODO |
 
+## Part M: mods
+
+One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, permissions), installed from file or URL, listed/toggled in Settings > Mods.
+
+| # | Part | Status |
+| --- | --- | --- |
+| M.1 | Data mods: sample packs, skins (Slint themes/colors/assets), controller mappings, effect presets. No code. | TODO |
+| M.2 | Source mods: WASM (wasmtime/wasmi) sandbox implementing a `MusicSource` interface (search, browse, resolve-to-audio); host gives HTTP + cache only via declared permissions. YouTube, SoundCloud, Spotify become mods instead of built-ins. | TODO |
+| M.3 | Reuse existing script host (rquickjs) for controller-script mods; native .so/.dll plugins desktop-only (plugin-host crate). | TODO |
+| M.4 | Store policy: Play forbids downloading native code; WASM/JS interpreted in a sandbox is the allowed path. Store build ships no source mods and no built-in mod catalog URL. | TODO |
+
 ## Part 1: DJ Sugar features
 
 | # | Feature (C++ reference on main) | Status |
