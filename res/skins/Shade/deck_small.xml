@@ -6,13 +6,13 @@
     <Children>
       <WidgetGroup>
         <Size>5f,48f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
 
       <WidgetGroup>
         <ObjectName>DeckSmall</ObjectName>
         <Size>i,48f</Size>
-        <BackPath>style/style_bg_deck_small.png</BackPath>
+        <BackPath>style/style_bg_deck_small.webp</BackPath>
         <Layout>horizontal</Layout>
         <Children>
           <WidgetGroup>
@@ -25,7 +25,7 @@
 
               <WidgetGroup>
                 <Size>1f,38f</Size>
-                <BackPath>style/style_component_border.png</BackPath>
+                <BackPath>style/style_component_border.webp</BackPath>
               </WidgetGroup>
 
               <WidgetGroup>
@@ -64,7 +64,7 @@
 
                       <WidgetGroup>
                         <Size>1f,19f</Size>
-                        <BackPath>style/style_component_border.png</BackPath>
+                        <BackPath>style/style_component_border.webp</BackPath>
                       </WidgetGroup>
 
                       <WidgetGroup>
@@ -124,7 +124,7 @@
 
                       <WidgetGroup>
                         <Size>1f,18f</Size>
-                        <BackPath>style/style_component_border.png</BackPath>
+                        <BackPath>style/style_component_border.webp</BackPath>
                       </WidgetGroup>
 
                       <Key>
@@ -146,7 +146,7 @@
 
                       <WidgetGroup>
                         <Size>1f,18f</Size>
-                        <BackPath>style/style_component_border.png</BackPath>
+                        <BackPath>style/style_component_border.webp</BackPath>
                       </WidgetGroup>
 
                       <NumberBpm>
@@ -171,13 +171,13 @@
 
               <WidgetGroup>
                 <Size>1f,38f</Size>
-                <BackPath>style/style_component_border.png</BackPath>
+                <BackPath>style/style_component_border.webp</BackPath>
               </WidgetGroup>
 
               <!-- Play -->
               <WidgetGroup>
                 <Size>41f,38f</Size>
-                <BackPath>style/style_bg_deck_blank.png</BackPath>
+                <BackPath>style/style_bg_deck_blank.webp</BackPath>
                 <Children>
                   <!-- Play indicator, blinks depending on Cue mode -->
                   <PushButton>
@@ -185,13 +185,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_play_deck_small.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_deck_small.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_deck_small.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_deck_small.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_play_deck_small_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_deck_small_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_deck_small_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_deck_small_over.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,play_indicator</ConfigKey>
@@ -206,8 +206,8 @@
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_play_deck_small_preview.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_deck_small_preview.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_deck_small_preview.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_deck_small_preview.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,play</ConfigKey>
@@ -220,13 +220,13 @@
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_play_deck_small_down.png</Pressed>
+                      <Pressed>skin:/btn/btn_play_deck_small_down.webp</Pressed>
                       <Unpressed></Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_play_deck_small_overdown.png</Pressed>
-                      <Unpressed>skin:/btn/btn_play_deck_small_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_play_deck_small_overdown.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_play_deck_small_over.webp</Unpressed>
                     </State>
                     <Connection>
                       <ConfigKey><Variable name="group"/>,play</ConfigKey>
@@ -252,7 +252,7 @@
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>
         <Size>5f,48f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
 
     </Children>

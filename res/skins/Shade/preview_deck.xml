@@ -11,7 +11,7 @@
           <WidgetGroup>
             <ObjectName>SamplerTopBorder</ObjectName>
             <Size>0e,5f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
 
           <!-- Middle part: left border, text/overview, VU, volume, right border -->
@@ -25,11 +25,11 @@
               <WidgetGroup>
                 <ObjectName>SamplerLeftBorder</ObjectName>
                 <Size>5f,0e</Size>
-                <BackPath>style/style_bg_deck_border.png</BackPath>
+                <BackPath>style/style_bg_deck_border.webp</BackPath>
               </WidgetGroup>
 
               <WidgetGroup>
-                <BackPath>style/style_bg_sampler_mid.png</BackPath>
+                <BackPath>style/style_bg_sampler_mid.webp</BackPath>
                 <Layout>vertical</Layout>
                 <Children>
 
@@ -86,7 +86,7 @@
                       <WidgetGroup>
                         <ObjectName>SamplerRightBorder</ObjectName>
                         <Size>1f,0e</Size>
-                        <BackPath>style/style_bg_deck_border.png</BackPath>
+                        <BackPath>style/style_bg_deck_border.webp</BackPath>
                       </WidgetGroup>
 
                       <WidgetGroup>
@@ -97,8 +97,8 @@
                             <NumberStates>1</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_eject_over.png</Pressed>
-                              <Unpressed>skin:/btn/btn_eject.png</Unpressed>
+                              <Pressed>skin:/btn/btn_eject_over.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_eject.webp</Unpressed>
                             </State>
                             <Connection>
                               <ConfigKey>[PreviewDeck1],eject</ConfigKey>
@@ -114,7 +114,7 @@
 
                   <WidgetGroup>
                     <Size>0e,1f</Size>
-                    <BackPath>style/style_bg_deck_border.png</BackPath>
+                    <BackPath>style/style_bg_deck_border.webp</BackPath>
                   </WidgetGroup>
 
                   <WidgetGroup>
@@ -125,20 +125,20 @@
                       <WidgetGroup>
                         <ObjectName>SamplerMid</ObjectName>
                         <Size>27f,35f</Size>
-                        <BackPath>style/style_bg_sampler_mid.png</BackPath>
+                        <BackPath>style/style_bg_sampler_mid.webp</BackPath>
                         <Children>
                           <PushButton>
                             <TooltipId>play_start</TooltipId>
                             <NumberStates>2</NumberStates>
                             <State>
                               <Number>0</Number>
-                              <Pressed>skin:/btn/btn_play_sampler_down.png</Pressed>
-                              <Unpressed>skin:/btn/btn_play_sampler.png</Unpressed>
+                              <Pressed>skin:/btn/btn_play_sampler_down.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_play_sampler.webp</Unpressed>
                             </State>
                             <State>
                               <Number>1</Number>
-                              <Pressed>skin:/btn/btn_play_previewdeck_overdown.png</Pressed>
-                              <Unpressed>skin:/btn/btn_play_previewdeck_over.png</Unpressed>
+                              <Pressed>skin:/btn/btn_play_previewdeck_overdown.webp</Pressed>
+                              <Unpressed>skin:/btn/btn_play_previewdeck_over.webp</Unpressed>
                             </State>
                             <Pos>3,7</Pos>
                             <Connection>
@@ -158,7 +158,7 @@
                       <WidgetGroup>
                         <ObjectName>SamplerMid</ObjectName>
                         <Size>0e,35f</Size>
-                        <BackPath>style/style_bg_sampler_mid.png</BackPath>
+                        <BackPath>style/style_bg_sampler_mid.webp</BackPath>
                         <Layout>horizontal</Layout>
                         <Children>
                           <Overview>
@@ -195,12 +195,12 @@
               <WidgetGroup>
                 <ObjectName>SamplerRightBorder</ObjectName>
                 <Size>1f,0e</Size>
-                <BackPath>style/style_bg_deck_border.png</BackPath>
+                <BackPath>style/style_bg_deck_border.webp</BackPath>
               </WidgetGroup>
 
               <WidgetGroup>
                 <ObjectName>SamplerVUMeter</ObjectName>
-                <BackPath>style/style_bg_deck_pane.png</BackPath>
+                <BackPath>style/style_bg_deck_pane.webp</BackPath>
                 <Size>9f,54f</Size>
                 <Children>
                   <WidgetGroup>
@@ -210,8 +210,8 @@
                     <Children>
                       <StatusLight>
                         <TooltipId>preview_peak_indicator</TooltipId>
-                        <PathStatusLight>skin:/style/volume_clipping_previewdeck_over.png</PathStatusLight>
-                        <PathBack>skin:/style/volume_clipping_previewdeck.png</PathBack>
+                        <PathStatusLight>skin:/style/volume_clipping_previewdeck_over.webp</PathStatusLight>
+                        <PathBack>skin:/style/volume_clipping_previewdeck.webp</PathBack>
                         <Connection>
                           <ConfigKey>[PreviewDeck1],peak_indicator</ConfigKey>
                         </Connection>
@@ -225,8 +225,8 @@
                     <Children>
                       <VuMeter>
                         <TooltipId>preview_VuMeter</TooltipId>
-                        <PathVu>skin:/style/volume_display_previewdeck_over.png</PathVu>
-                        <PathBack>skin:/style/volume_display_previewdeck.png</PathBack>
+                        <PathVu>skin:/style/volume_display_previewdeck_over.webp</PathVu>
+                        <PathBack>skin:/style/volume_display_previewdeck.webp</PathBack>
                         <Horizontal>false</Horizontal>
                         <PeakHoldSize>5</PeakHoldSize>
                         <PeakHoldTime>500</PeakHoldTime>
@@ -242,14 +242,14 @@
               </WidgetGroup>
 
               <WidgetGroup>
-                <BackPath>style/style_bg_deck_pane.png</BackPath>
+                <BackPath>style/style_bg_deck_pane.webp</BackPath>
                 <Size>10f,54f</Size>
                 <Children>
                   <SliderComposed>
                     <TooltipId>pregain</TooltipId>
                     <Pos>0,1</Pos>
                     <Size>8f,52f</Size>
-                    <Handle>knob_volume_previewdeck.png</Handle>
+                    <Handle>knob_volume_previewdeck.webp</Handle>
                     <Horizontal>false</Horizontal>
                     <Connection>
                       <ConfigKey>[PreviewDeck1],pregain</ConfigKey>
@@ -262,7 +262,7 @@
               <WidgetGroup>
                 <ObjectName>SamplerRightBorder</ObjectName>
                 <Size>5f,0e</Size>
-                <BackPath>style/style_bg_deck_border.png</BackPath>
+                <BackPath>style/style_bg_deck_border.webp</BackPath>
               </WidgetGroup>
             </Children>
           </WidgetGroup>
@@ -271,7 +271,7 @@
           <WidgetGroup>
             <ObjectName>SamplerBottomBorder</ObjectName>
             <Size>0e,5f</Size>
-            <BackPath>style/style_bg_deck_border.png</BackPath>
+            <BackPath>style/style_bg_deck_border.webp</BackPath>
           </WidgetGroup>
         </Children>
       </WidgetGroup>

@@ -158,7 +158,7 @@ Item {
         // Image {
         //     id: prepListIcon
         //     visible: (dataType == "Track") ? model.prepared : false
-        //     source: "../Images/PrepListIcon" + (!contactDelegate.isCurrentItem ? "White" : "Blue") + ".png"
+        //     source: "../Images/PrepListIcon" + (!contactDelegate.isCurrentItem ? "White" : "Blue") + ".webp"
         //     width: 10
         //     height: 17
         //     // anchors.left: firstFieldText.right

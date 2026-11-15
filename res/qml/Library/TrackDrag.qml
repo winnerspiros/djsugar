@@ -2,10 +2,8 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import "../Theme"
 
-// Touch drag of a track: hold, then move. A pill with its name follows the
-// finger and drops on a deck, a sampler or a playlist, which light up under
-// it. Before the hold a move scrolls the list; a hold without a move is
-// `held` (the menu). Streaming tracks download first.
+// Track drag: hold then move. A pill follows the finger and drops on a
+// deck, sampler or playlist. Hold without move = menu. Streaming first.
 Item {
     id: root
 

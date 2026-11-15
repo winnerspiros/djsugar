@@ -260,7 +260,7 @@ void QmlMobileLibraryProxy::analyzeTracksMatching(
     if (!trackCollectionManager()) {
         return;
     }
-    const auto pTrackCollection = trackCollectionManager()->internalCollection();
+    auto* const pTrackCollection = trackCollectionManager()->internalCollection();
     if (!pTrackCollection) {
         return;
     }

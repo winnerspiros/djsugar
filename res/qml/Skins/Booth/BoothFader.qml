@@ -2,23 +2,21 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import "../../Theme"
 
-// A fader of the booth skin: the channel faders, the crossfader and the
-// tempo. The handle follows the finger, a double tap resets it. Pointer
-// handlers, so that several faders can be moved at once.
+// A fader of the booth skin: channel faders, crossfader and tempo.
+// The handle follows the finger, double tap resets.
+// Pointer handlers so several faders can be moved at once.
 Item {
     id: root
 
     required property string group
     required property string key
     property bool horizontal: false
-    // The top (or the left) is the start of the range, like the tempo
-    // slider of a player, whose top is minus
+    // top/left is the start of the range (like tempo: top = minus)
     property bool inverted: false
     property color color: Theme.lightGray2
-    // A mark in the middle of the track, e.g. for the tempo and the
-    // crossfader
+    // A mark in the middle, e.g. for tempo and crossfader
     property bool centerMark: false
-    // 0: bottom or left, 1: top or right
+    // 0 = bottom/left, 1 = top/right
     readonly property real position: inverted ? 1 - control.parameter : control.parameter
     readonly property real handleLength: Math.max(14, Math.round((horizontal ? height : width) * 0.6))
     readonly property real travel: Math.max(1, (horizontal ? width : height) - handleLength)

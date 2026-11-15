@@ -19,9 +19,7 @@ namespace {
 
 constexpr int kTimeoutMs = 8000;
 const QString kGreekArtistPass = QStringLiteral("GR-artist");
-// Catalogue versions of a song (radio edit, album version) differ a little
-// in length from the video; more than this is another recording or a video
-// with a long skit.
+// Catalogue versions differ a little from the video; more than this is another recording.
 constexpr int kMaxDurationDiffSec = 40;
 
 // Genres too vague to help a DJ sort a crate.
@@ -38,8 +36,7 @@ QNetworkRequest makeRequest(const QUrl& url) {
     return request;
 }
 
-// Greek to Greeklish, the way the iTunes and Deezer catalogues spell Greek
-// artists ("Παντελής Παντελίδης" is "Pantelis Pantelidis"). Input is
+// Greek to Greeklish for catalogue matching (Pantelis Pantelidis). Input
 // lower-case without accents.
 QString greekToLatin(const QString& text) {
     static const QHash<QString, QString> kPairs = {
@@ -97,8 +94,7 @@ QString greekToLatin(const QString& text) {
     return out;
 }
 
-// The single artists of a credit such as "Daft Punk, Pharrell & Nile
-// Rodgers" (already normalized, so "&" reads "and").
+// The single artists of a credit like "Daft Punk, Pharrell & Nile Rodgers" (already normalized).
 QStringList artistCredits(const QString& normalizedArtist) {
     static const QRegularExpression kSeparators(QStringLiteral(R"(\s+(?:and|x|vs)\s+)"));
     QStringList credits = normalizedArtist.split(kSeparators, Qt::SkipEmptyParts);

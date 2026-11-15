@@ -2,7 +2,7 @@
   <WidgetGroup>
     <Pos>0,0</Pos>
     <Size>93f,54f</Size>
-    <BackPath>style/style_bg_microphone_<Variable name="miclabel"/>.png</BackPath>
+    <BackPath>style/style_bg_microphone_<Variable name="miclabel"/>.webp</BackPath>
     <!--<Layout>horizontal</Layout>-->
     <Children>
       <!--
@@ -12,8 +12,8 @@
       -->
       <StatusLight>
         <TooltipId>microphone_peak_indicator</TooltipId>
-        <PathStatusLight>skin:/style/volume_clipping_microphone_over.png</PathStatusLight>
-        <PathBack>skin:/style/volume_clipping_microphone.png</PathBack>
+        <PathStatusLight>skin:/style/volume_clipping_microphone_over.webp</PathStatusLight>
+        <PathBack>skin:/style/volume_clipping_microphone.webp</PathBack>
         <Pos>82,6</Pos>
         <Connection>
           <ConfigKey>[Microphone<Variable name="micnum"/>],peak_indicator</ConfigKey>
@@ -32,8 +32,8 @@
         <Children>
           <VuMeter>
             <TooltipId>microphone_VuMeter</TooltipId>
-            <PathVu>skin:/style/volume_display_microphone_over.png</PathVu>
-            <PathBack>skin:/style/volume_display_microphone.png</PathBack>
+            <PathVu>skin:/style/volume_display_microphone_over.webp</PathVu>
+            <PathBack>skin:/style/volume_display_microphone.webp</PathBack>
             <PeakHoldSize>5</PeakHoldSize>
             <PeakHoldTime>500</PeakHoldTime>
             <PeakFallTime>50</PeakFallTime>
@@ -53,7 +53,7 @@
       <Knob>
         <TooltipId>microphone_pregain</TooltipId>
         <NumberStates>64</NumberStates>
-        <Path>knobs/knob_rotary_s%1.png</Path>
+        <Path>knobs/knob_rotary_s%1.webp</Path>
         <Pos>49,22</Pos>
         <Connection>
           <ConfigKey>[Microphone<Variable name="micnum"/>],pregain</ConfigKey>

@@ -3,10 +3,9 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import "../../Theme"
 
-// The library sources of the booth skin: the same sources as the shared
-// library (Library/SourceTree.qml), with fewer columns and rows drawn like
-// the track list of a player. The cells of the selected row tell the
-// browser about the track (infoTarget), for its info panel.
+// The library sources of the booth skin: same sources as the shared
+// library (Library/SourceTree.qml), with fewer columns and rows drawn
+// like a player's track list.
 Mixxx.LibrarySourceTree {
     id: root
 

@@ -5,7 +5,7 @@
     <Children>
       <WidgetGroup>
         <Size>0e,5f</Size>
-        <BackPath>style/style_bg_looping.png</BackPath>
+        <BackPath>style/style_bg_looping.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>

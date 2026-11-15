@@ -21,7 +21,7 @@ struct libusb_transfer;
 namespace mixxx {
 namespace androidusb {
 
-/// When Mixxx drives USB sound cards itself instead of using Android's audio
+/// Whether Mixxx drives USB sound cards directly instead of Android's audio
 enum class DirectMode {
     /// Only multichannel (> 2 outputs) sound cards, which many Android devices
     /// fail to play to (e.g. DJ controllers with a headphone output)
@@ -32,22 +32,11 @@ enum class DirectMode {
     Never = 2,
 };
 
-/// User space driver for class compliant USB audio interfaces on Android.
-///
-/// Some Android devices can't play to multichannel USB sound cards (e.g.
-/// Qualcomm "USB audio offload" rejects the 4 channel output of DJ
-/// controllers). This class bypasses the Android audio system: it detaches
-/// the kernel driver and streams the audio itself with isochronous transfers.
-/// It supports USB Audio Class 1 and 2 with synchronous, adaptive and
-/// asynchronous (explicit or implicit feedback) endpoints. Because the kernel
-/// driver owns the whole sound card, the USB-MIDI interface of the device is
-/// driven here as well.
+/// Userspace driver for class-compliant USB audio on Android. Bypasses the
+/// audio system (Qualcomm "USB audio offload") for multichannel DJ controllers.
 class AndroidUsbAudioDevice {
   public:
-    /// Fills pDestination with the given number of frames in the device
-    /// format. Called on the USB event thread.
     using RenderCallback = std::function<void(uint8_t* pDestination, int frames)>;
-    /// Receives one 4 byte USB-MIDI event packet. Called on the USB event thread.
     using MidiCallback = std::function<void(const uint8_t* pPacket)>;
 
     ~AndroidUsbAudioDevice();

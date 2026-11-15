@@ -21,8 +21,7 @@ using namespace rendergraph;
 
 namespace {
 
-/// The uniforms of waveformrgb.vert, in the order of its uniform block (all
-/// of them packed as in std140)
+/// waveformrgb.vert uniforms in std140 order
 enum Uniform {
     kMatrix,
     kLowColor,
@@ -48,8 +47,7 @@ class WaveformRGBGpuMaterial : public Material {
   public:
     WaveformRGBGpuMaterial()
             : Material(uniforms()) {
-        // The vertex shader computes the positions: the scene graph must not
-        // merge this geometry with others, transforming it on the CPU
+        // Vertex shader computes positions; prevent SG merging of geometry
         setFlag(QSGMaterial::RequiresFullMatrix);
     }
 
@@ -123,7 +121,7 @@ struct ColumnVertex {
     QVector3D vertex;
 };
 
-/// The two triangles of a rectangle of a column (-1 for the axis)
+/// Two triangles for a column rectangle (-1 = axis)
 void addRectangle(ColumnVertex* pVertices, float column) {
     constexpr float kCorners[6][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, -1}, {-1, 1}, {1, 1}};
     for (int i = 0; i < 6; ++i) {

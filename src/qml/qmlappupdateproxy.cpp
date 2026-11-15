@@ -154,7 +154,6 @@ void QmlAppUpdateProxy::startCheck(bool automatic) {
     // In-app updates are delivered through the Android DownloadManager
     // and installer; anywhere else the proxy stays idle.
     Q_UNUSED(automatic);
-    return;
 #else
     if (m_state == State::Checking || m_state == State::Downloading ||
             m_state == State::Verifying) {

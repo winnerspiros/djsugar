@@ -34,11 +34,9 @@ bool AndroidMicCapture::startCapture(int sampleRate) {
         return false;
     }
 
-    // Start recording
     m_audioRecord.callMethod<void>("startRecording");
     m_running.storeRelaxed(1);
 
-    // Start the reader thread
     start();
     qDebug() << "AndroidMicCapture: started at" << sampleRate << "Hz";
     return true;
@@ -52,7 +50,6 @@ bool AndroidMicCapture::startCapture(int sampleRate) {
 void AndroidMicCapture::stopCapture() {
 #ifdef Q_OS_ANDROID
     m_running.storeRelaxed(0);
-    // Wait for thread to finish
     wait(2000);
     closeAudioRecord();
     qDebug() << "AndroidMicCapture: stopped, captured"

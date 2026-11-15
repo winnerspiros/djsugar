@@ -59,12 +59,12 @@ QPixmap QmlSkin::preview(const QString& schemeName) const {
     schemeNameFormatted.replace(QChar(' '), QChar('_'));
     preview.load(m_path.absoluteFilePath() +
             QStringLiteral("/skin_preview_") + schemeNameFormatted +
-            QStringLiteral(".png"));
+            QStringLiteral(".webp"));
 
     if (!preview.isNull()) {
         return preview;
     }
-    preview.load(":/images/skin_preview_placeholder.png");
+    preview.load(":/images/skin_preview_placeholder.webp");
     return preview;
 }
 

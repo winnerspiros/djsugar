@@ -15,8 +15,8 @@ namespace scenes {
 
 constexpr float kTwoPi = 6.28318530717959f;
 
-/// A delay line read with 4-point Hermite interpolation: flat to about
-/// 0.4 x the sample rate, no zipper or dulling when the delay moves
+/// A delay line read with 4-point Hermite interpolation: flat to ~0.4x sample rate,
+/// no zipper or dulling when the delay moves
 class HermiteLine {
   public:
     void allocate(int frames) {
@@ -66,7 +66,7 @@ class HermiteLine {
     int m_write = 0;
 };
 
-/// A DC blocker (one pole high pass at about 10 Hz)
+/// A DC blocker (one-pole high pass at ~10 Hz)
 struct DcBlocker {
     float x1 = 0.f;
     float y1 = 0.f;
@@ -301,11 +301,11 @@ inline float gateGain(double beat, double division, float width, float softness)
     return 0.f;
 }
 
-/// Pitch shifter (WSOLA): a read tap runs through the recent input at the
-/// pitch ratio. When it drifts out of its window it jumps a period back or
-/// forward, to the position (searched over +-5 ms) whose waveform matches
-/// the one playing best, and crossfades until the next jump (up to 30 ms). Joins in phase do not
-/// warble or comb like fixed grains; about 20 ms of latency.
+/// Pitch shifter (WSOLA): a read tap runs through recent input at the pitch
+/// ratio. When it drifts out of its window it jumps a period back or forward
+/// to the position (searched +-5 ms) whose waveform matches best, and
+/// crossfades until the next jump (up to 30 ms). No warbling or comb filtering;
+/// ~20 ms latency.
 class WsolaPitch {
   public:
     static constexpr float kPeriod = 0.03f;
@@ -393,7 +393,7 @@ class WsolaPitch {
 
   private:
     void jump(float center) {
-        // The waveform before the tap, against the one before each candidate
+        // The waveform before the tap against each candidate
         const int from = static_cast<int>(m_delay);
         float best = -2.f;
         int bestDelay = static_cast<int>(center);
@@ -403,8 +403,7 @@ class WsolaPitch {
             if (candidate < 2) {
                 continue;
             }
-            // Around the tap: what it played and, as far as recorded, what
-            // the crossfade will play
+            // What the tap played and what the crossfade will play
             float cross = 0.f;
             float energy = 1e-9f;
             const int ahead = std::min({m_match / 2, from, candidate});
@@ -507,9 +506,9 @@ class Oversampler2x {
     std::array<float, kTaps> m_down{};
 };
 
-/// Drive: tanh saturation at twice the rate with antiderivative
-/// anti-aliasing (no fizz of folded harmonics at high drive), a bias for
-/// even harmonics, DC removed, a tone low pass, and the level matched.
+/// Drive: 2x oversampled tanh saturation with antiderivative anti-aliasing
+/// (no folded harmonics at high drive), bias for even harmonics, DC removed,
+/// tone low pass, level matched.
 class Drive {
   public:
     void clear() {

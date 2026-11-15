@@ -127,18 +127,15 @@ class EnergyCalculator {
     OnePole m_low1, m_low2;   // < 150 Hz
     OnePole m_high1, m_high2; // subtracted to get > 2.5 kHz
 
-    // Current block accumulators.
     int m_framesInBlock = 0;
     double m_blockSumFull = 0.0;
     double m_blockSumLow = 0.0;
     double m_blockSumHigh = 0.0;
 
-    // Per-block results.
     std::vector<float> m_blockDb;     // full-band level of each 20 ms block
     std::vector<float> m_blockLowDb;  // bass-band level of each 20 ms block
     std::vector<float> m_blockHighDb; // treble-band level of each 20 ms block
 
-    // Totals over non-silent blocks.
     double m_totalFull = 0.0;
     double m_totalLow = 0.0;
     double m_totalHigh = 0.0;

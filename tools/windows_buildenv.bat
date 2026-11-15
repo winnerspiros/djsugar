@@ -36,8 +36,8 @@ IF /I "%PLATFORM%"=="arm64" (
     IF DEFINED BUILDENV_RELEASE (
         SET BUILDENV_BRANCH=2.7-rel
         SET VCPKG_TARGET_TRIPLET=arm64-windows-release
-        SET BUILDENV_NAME=mixxx-deps-2.7-arm64-windows-rel-ee6dc7fe
-        SET BUILDENV_SHA256=38218f4874d3852a0689009385fe0106ff089511e37d7c062bc698449c8b9110
+        SET BUILDENV_NAME=mixxx-deps-2.7-djsugar-arm64-windows-rel-a5313793
+        SET BUILDENV_SHA256=89a68261f2f21fcdc5094c4a0e1a77786563ea43a42c72b4a6545a8734446117
     ) ELSE (
         SET BUILDENV_BRANCH=2.7
         SET VCPKG_TARGET_TRIPLET=arm64-windows
@@ -48,8 +48,8 @@ IF /I "%PLATFORM%"=="arm64" (
     IF DEFINED BUILDENV_RELEASE (
         SET BUILDENV_BRANCH=2.7-rel
         SET VCPKG_TARGET_TRIPLET=x64-windows-release
-        SET BUILDENV_NAME=mixxx-deps-2.7-x64-windows-rel-ee6dc7fe
-        SET BUILDENV_SHA256=f98a2dcfb697caeed4bc012bc28de2b784728a1d795fbc62f44cc0f0a3b50b39
+        SET BUILDENV_NAME=mixxx-deps-2.7-djsugar-x64-windows-rel-a5313793
+        SET BUILDENV_SHA256=27d033a8752bcc20b22115e922c1f9a7bcdd12ead3fe2af69beae3e08a381e8d
     ) ELSE (
         SET BUILDENV_BRANCH=2.7
         SET VCPKG_TARGET_TRIPLET=x64-windows
@@ -63,7 +63,11 @@ IF /I "%PLATFORM%"=="arm64" (
     PAUSE
     EXIT /B 1
 )
-SET BUILDENV_URL=https://downloads.mixxx.org/dependencies/!BUILDENV_BRANCH!/Windows/!BUILDENV_NAME!.zip
+IF DEFINED BUILDENV_RELEASE (
+    SET BUILDENV_URL=https://github.com/winnerspiros/vcpkg/releases/download/!BUILDENV_NAME!/!BUILDENV_NAME!.zip
+) ELSE (
+    SET BUILDENV_URL=https://downloads.mixxx.org/dependencies/!BUILDENV_BRANCH!/Windows/!BUILDENV_NAME!.zip
+)
 
 IF "%~1"=="" (
     REM In case of manual start by double click no arguments are specified: Default to COMMAND_setup

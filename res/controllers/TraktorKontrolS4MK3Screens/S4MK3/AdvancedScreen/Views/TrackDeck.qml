@@ -38,7 +38,7 @@ Item {
         anchors.fill: parent
         visible: deckInfo.showLogo
 
-        source: engine.getSetting("idleBackground") || "../../../../../images/templates/logo_mixxx.png"
+        source: engine.getSetting("idleBackground") || "../../../../../images/templates/logo_mixxx.webp"
         fillMode: Image.PreserveAspectFit
     }
 

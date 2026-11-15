@@ -2,6 +2,7 @@
 
 #include <QDomDocument>
 #include <algorithm>
+#include <utility>
 
 #include "control/controlobject.h"
 #include "control/controlpushbutton.h"
@@ -62,7 +63,7 @@ QString rollControl(double beats) {
 
 PadFxController::PadFxController(
         UserSettingsPointer pConfig, EffectsManager* pEffectsManager)
-        : m_pConfig(pConfig),
+        : m_pConfig(std::move(pConfig)),
           m_pEffectsManager(pEffectsManager) {
     const QString djEcho = QStringLiteral("org.mixxx.effects.djecho");
     const QString tremolo = QStringLiteral("org.mixxx.effects.tremolo");

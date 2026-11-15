@@ -35,6 +35,7 @@ Item {
     property alias background: background.data
     property alias foreground: foreground.data
     property bool hideCursorWhileDragging: true
+    property bool inputEnabled: true
     property real knobCenterOffsetX: 0
     property real knobCenterOffsetY: 0
     property real max: 1
@@ -105,6 +106,7 @@ Item {
         property real value
 
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        enabled: root.inputEnabled
         target: null
 
         onActiveChanged: {
@@ -141,15 +143,13 @@ Item {
 
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        enabled: root.hideCursorWhileDragging && root.Window.active
+        enabled: root.inputEnabled && root.hideCursorWhileDragging && root.Window.active
     }
     MouseArea {
         acceptedButtons: Qt.NoButton
         anchors.fill: parent
-        // Fullscreen drag capture from JaviLabarumDJ/mixxx-android: keeps the
-        // drag alive when the finger/mouse leaves the knob. Gated off on
-        // Android, where an invisible fullscreen MouseArea would swallow
-        // touches meant for other controls.
+        // Fullscreen drag capture keeps the drag alive off the knob; off on
+        // Android, where it would swallow touches meant for other controls.
         anchors.margins: Qt.platform.os === "android" ? 0 : -Math.max(Screen.desktopAvailableWidth, Screen.desktopAvailableHeight)
         cursorShape: Qt.BlankCursor
         enabled: Qt.platform.os !== "android" ? (root.enabled && root.visible && pointerHandler.enabled && pointerHandler.active) : false
@@ -157,12 +157,33 @@ Item {
         parent: Qt.platform.os === "android" ? parent : (root.Window.window ? root.Window.window.contentItem : null)
         visible: enabled
         z: 2147483647
+    }
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        enabled: root.inputEnabled
+        target: null
 
         onWheel: event => {
             const wheelAdjustment = event.angleDelta.y / root.wheelDeltaStep * root.wheelStepSize;
             const value = Mixxx.MathUtils.clamp(root.value + wheelAdjustment, root.min, root.max);
             root.turned(value);
+            wheelCursorTimer.restart();
             event.accepted = true;
+        }
+    }
+    Timer {
+        id: wheelCursorTimer
+
+        interval: 800
+    }
+    HoverHandler {
+        cursorShape: wheelCursorTimer.running ? Qt.BlankCursor : undefined
+        enabled: root.inputEnabled && root.Window.active
+
+        onHoveredChanged: {
+            if (!hovered) {
+                wheelCursorTimer.stop();
+            }
         }
     }
 }

@@ -73,7 +73,7 @@ class YouTubeAccount : public QObject {
             const std::function<void(const QJsonObject&)>& done,
             bool signedRequest = true,
             QObject* pContext = nullptr,
-            std::function<void()> onFailure = {});
+            const std::function<void()>& onFailure = {});
     void save();
     void collectPlaylists(const QJsonObject& page, QVariantList playlists, int pages);
 

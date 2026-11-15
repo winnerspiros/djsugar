@@ -11,9 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/// The storage volumes Android has mounted (internal shared storage, SD
-/// cards, USB drives), for the FOLDER source of the library and the music
-/// folder picker. See mixxx::androidStorageVolumes().
+/// Android storage volumes (internal, SD, USB). See mixxx::androidStorageVolumes().
 public class StorageHelper {
     private static final String TAG = "MixxxStorage";
 
@@ -21,8 +19,7 @@ public class StorageHelper {
     public static final String KIND_SD = "sd";
     public static final String KIND_USB = "usb";
 
-    /// One line per mounted volume: path, name and kind (internal, sd or
-    /// usb), separated by tabs
+    /// One line per volume: path \t name \t kind (internal/sd/usb)
     public static String[] volumes(Context context) {
         List<String> lines = new ArrayList<>();
         try {
@@ -60,9 +57,7 @@ public class StorageHelper {
         return uuid != null ? new File("/storage/" + uuid) : null;
     }
 
-    /// Android doesn't tell SD cards and USB drives apart, but names them
-    /// e.g. "SD card" / "Tarjeta SD" and "USB drive" / "Unidad USB". A
-    /// removable volume whose name doesn't say SD is taken as a USB drive.
+    // Android names SD cards and USB drives differently; non-SD removable = USB
     private static String kindOf(StorageVolume volume, String name) {
         if (volume.isPrimary() || !volume.isRemovable()) {
             return KIND_INTERNAL;

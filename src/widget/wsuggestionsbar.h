@@ -14,22 +14,12 @@ namespace mixxx {
 class CoreServices;
 }
 
-/// Small "Up Next" status-bar strip for the desktop / DeX UI.
-///
-/// Shows up to N suggestions for what should play next:
-///   * tracks already queued in AutoDJ (highest priority), or
-///   * recently-added library tracks (fallback when the queue is short).
-///
-/// Each pill is a `QPushButton`:
-///   * left-click  → load on the next available deck;
-///   * middle-click or context-menu → append to the AutoDJ queue.
-///
-/// The widget is dirt-cheap to keep on screen: it polls SQLite every 3 s with
-/// two indexed queries, and pauses the timer when hidden (e.g. during full-
-/// screen waveform mode). It also self-refreshes after any user action so the
-/// just-loaded suggestion disappears immediately.
-///
-/// Lives in the bottom QStatusBar of `MixxxMainWindow`.
+/// Small "Up Next" status-bar strip for the desktop/DeX UI.
+/// Shows up to N suggestions: queued AutoDJ tracks (highest priority) or
+/// recently-added library tracks. Each pill is a QPushButton:
+/// left-click loads on the next free deck; middle-click/context-menu
+/// appends to AutoDJ. Polls SQLite every 3 s with two indexed queries;
+/// pauses when hidden. Self-refreshes after user actions.
 class WSuggestionsBar : public QFrame {
     Q_OBJECT
 

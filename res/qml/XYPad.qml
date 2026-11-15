@@ -60,7 +60,7 @@ Rectangle {
         key: "mix"
     }
 
-    // One proxy per deck, so the routing of the previous deck can be
+    // One proxy per deck so the routing of the previous deck can be
     // restored after the target deck changed
     Mixxx.ControlProxy {
         id: routingDeck1Proxy

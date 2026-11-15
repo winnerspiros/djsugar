@@ -40,6 +40,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include <utility>
 
 #if defined(Q_OS_ANDROID) && defined(HAVE_YTDLP_ANDROID)
@@ -61,34 +62,21 @@ namespace mixxx {
 namespace {
 const Logger kLogger("YouTubeService");
 
-// Per-request budgets. Search is bounded — Piped's /search and yt-dlp's
-// page-parse both finish well under a second on a healthy network. Downloads
-// can be larger, but bestaudio for a song is typically <10 MB; the ceiling
-// is generous so a slow connection or long mix doesn't get killed.
-// 15 s is enough for InnerTube (typically <1s); a faster fail means the
-// yt-dlp fallback kicks in sooner on flaky connections.
+// Per-request budgets. Search (Piped/yt-dlp) finishes <1s typically; downloads
+// can be larger (~10 MB bestaudio), so timeout is generous.
 constexpr int kSearchTimeoutMs = 10 * 1000;
 constexpr int kDownloadTimeoutMs = 10 * 60 * 1000; // 10 min
-// Piped HTTP requests get a tighter ceiling — each instance failure should
-// surface fast so we can fail over to the next one without burning too long
-// per dead instance. With 10 instances at 10s each, worst case is ~100s.
+// Piped HTTP timeout: tight so dead instances fail fast and we fail over.
 constexpr int kPipedHttpTimeoutMs = 6 * 1000;
-// Minimum file size before we switch from a single-connection download to 8
-// parallel Range requests. Below this threshold the connection-setup overhead
-// outweighs the gain; above it, 8 TCP streams typically deliver 2-4x higher
-// throughput on cellular links where a single window saturates slowly.
+// Switch to parallel Range requests above this size; below it, connection
+// overhead outweighs gain. 8 streams give 2-4x throughput on cellular.
 constexpr qint64 kChunkedDownloadThresholdBytes = 1LL * 1024 * 1024; // 2 MB
 constexpr int kParallelDownloadChunks = 16;
-// No byte for this long: the chunk connection is stuck, resume it
-constexpr int kChunkStallTimeoutMs = 10000;
+constexpr int kChunkStallTimeoutMs = 10000; // Resume stalled chunk
 constexpr int kMaxPipedSearchPages = 5;
-// SponsorBlock API timeout — prevents indefinite hangs if the service is slow.
-// 4 s is generous for a single HTTP GET backed by a CDN; most responses arrive
-// in < 500 ms. Keeping it short prevents blocking track load on a slow or
-// unreachable SponsorBlock server.
+// SponsorBlock API timeout: short to avoid blocking track load on slow server.
 constexpr int kSponsorBlockTimeoutMs = 3 * 1000;
-// Project default for this fork: the requested first-open YouTube feed is Greek
-// top songs, not generic global/United States YouTube trends.
+// Fork default: Greek top songs, not global trends.
 const QString kDefaultRegion = QStringLiteral("GR");
 
 // Remote client signature update configuration.
@@ -139,19 +127,10 @@ const QString kSettingsGroupYouTube = QStringLiteral("YouTube");
 const QString kSettingsVisitorData = QStringLiteral("visitorData");
 const QString kSettingsBotFlagCount = QStringLiteral("botFlagCount");
 
-// Apply the request attributes every YouTube/Piped/SponsorBlock call needs.
-//
-// The critical one is disabling HTTP/2 on Android: Qt's HTTP/2 stack is
-// unreliable against YouTube's (HTTP/2 + QUIC) endpoints on Android — POST and
-// sometimes GET requests stall until the transfer timeout fires and then fail,
-// which is exactly the "clicking YouTube lags for ~10s and then shows no
-// results" symptom (the request never completes, so search/trending fall all
-// the way through every fallback and surface nothing). Forcing HTTP/1.1 makes
-// these requests complete reliably. Desktop platforms keep HTTP/2 (where it
-// works fine), so behaviour there is unchanged. See QTBUG-100016.
-//
-// We also opt into safe redirect following so a 30x from any endpoint is
-// transparently chased instead of being parsed as an empty body.
+// Apply request attributes for YouTube/Piped/SponsorBlock calls.
+// Critical: disable HTTP/2 on Android (QTBUG-100016) — Qt's HTTP/2 stack
+// stalls against YouTube endpoints. Desktop keeps HTTP/2 (works fine).
+// Also enable safe redirect following.
 void applyYouTubeRequestAttributes(QNetworkRequest* req) {
 #if defined(Q_OS_ANDROID)
     req->setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
@@ -173,13 +152,10 @@ const QStringList kPipedInstances = {
 };
 
 // InnerTube client contexts tried in order by downloadViaInnerTubeClient().
-// Each entry mimics an official YouTube app/device so the player endpoint
-// returns plain (non-cipher) adaptive stream URLs that need no JS signature
-// deciphering. YouTube periodically tightens individual clients (e.g. the
-// ANDROID client now sometimes 403s the actual stream without a poToken), so
-// we fail over across several clients to maximise the chance one still yields
-// a directly-downloadable audio stream. The iOS client is currently the most
-// reliable for unsigned URLs and is therefore tried first.
+// Each mimics an official YouTube app/device so player endpoint returns plain
+// (non-cipher) adaptive stream URLs. YouTube periodically tightens clients
+// (e.g. ANDROID 403s without poToken), so we fail over across several.
+// TVHTML5 (yt-dlp 'tv') goes first — no PO-token needed.
 struct InnerTubeClient {
     const char* clientName;
     const char* clientVersion;
@@ -201,14 +177,11 @@ QVector<InnerTubeClient> innerTubeClients() {
     if (!s_downloadClients.isEmpty()) {
         return s_downloadClients;
     }
-    // Initialize from compiled-in defaults. Order matters: tried first to
-    // last. TVHTML5 (yt-dlp 'tv' client, no PO-token policy upstream) goes
-    // first — it still returns plain stream URLs without a poToken. Mobile
-    // clients (ANDROID_VR/IOS/ANDROID) now need a GVS poToken and 403.
+    // Initialize from compiled-in defaults. Order matters: tried first to last.
+    // TVHTML5 (yt-dlp 'tv', no PO-token policy) goes first. Mobile clients
+    // (ANDROID_VR/IOS/ANDROID) need GVS poToken and 403.
     s_downloadClients = {
-            // TVHTML5 — yt-dlp's current 'tv' client. No GVS PO-token
-            // policy in upstream yt-dlp, so this is the best bet for plain
-            // downloadable audio URLs. TV clients need no poToken.
+            // TVHTML5 — yt-dlp's 'tv' client. No PO-token policy, best for plain URLs.
             {"TVHTML5",
                     "7.20260707.07.00",
                     "7",
@@ -231,14 +204,12 @@ QVector<InnerTubeClient> innerTubeClients() {
                     0,
                     "",
                     ""},
-            // ANDROID_VR (Oculus Quest) — since 2026.08.17 upstream yt-dlp
-            // reports ALL formats (incl. live HLS, itag 18) 403 with 1.65.10.
-            // Kept as a fallback: it still serves some videos, and covers
-            // "made for kids" videos the TV client can't.
+            // ANDROID_VR (Oculus Quest) — since 2026.08.17 all formats 403 with 1.65.10.
+            // Kept as fallback: serves some videos, covers "made for kids".
             {"ANDROID_VR",
                     "1.65.10",
                     "28",
-                    "", // no API key needed; the client context is sufficient
+                    "", // no API key needed
                     "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; "
                     "U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
                     "Oculus",
@@ -246,9 +217,8 @@ QVector<InnerTubeClient> innerTubeClients() {
                     32,
                     "Android",
                     "12L"},
-            // iOS YouTube app — kept as a fallback for videos ANDROID_VR can't
-            // serve. May require a poToken (and then fail over), but still
-            // succeeds for many videos.
+            // iOS YouTube app — fallback for videos ANDROID_VR can't serve.
+            // May require poToken, but succeeds for many.
             {"IOS",
                     "21.26.4",
                     "5",
@@ -260,9 +230,8 @@ QVector<InnerTubeClient> innerTubeClients() {
                     0,
                     "iPhone",
                     "18.3.2.22D82"},
-            // ANDROID client — yt-dlp's current primary download client.
-            // Requires a poToken for most videos, but still works for many.
-            // Added as a fallback before the TVHTML5 client.
+            // ANDROID client — yt-dlp's primary download client.
+            // Requires poToken for most videos, but works for many.
             {"ANDROID",
                     "21.26.364",
                     "3",
@@ -290,19 +259,11 @@ QVector<InnerTubeClient> innerTubeClients() {
     return s_downloadClients;
 }
 
-// Client order used specifically for the InnerTube /search endpoint.
-//
-// This is deliberately NOT innerTubeClients(): the download client list has
-// the iOS client second, but for *search* the iOS client replies with a huge
-// (~5 MB) `elementRenderer` payload that collectInnerTubeVideos() cannot parse
-// — so it always counts as "no usable results" and fails over anyway, after
-// wasting bandwidth and time downloading megabytes on mobile. We skip it here.
-//
-// ANDROID_VR and TVHTML5 both return the compactVideoRenderer shape we parse;
-// WEB returns videoRenderer (also parsed) and is a very reliable last resort
-// that needs no poToken for search. All three were verified live (2026-06) to
-// return HTTP 200 with parseable results. Ordering puts the lightest responses
-// first (ANDROID_VR/TVHTML5 are ~130 KB / ~400 KB; WEB is ~1.3 MB).
+// Client order for InnerTube /search endpoint. NOT innerTubeClients():
+// iOS returns huge elementRenderer (~5 MB) we can't parse, wasting bandwidth.
+// ANDROID_VR and TVHTML5 return compactVideoRenderer; WEB returns videoRenderer
+// (also parsed), reliable, no poToken. Lightest responses first (~130 KB / ~400 KB
+// vs WEB ~1.3 MB). Verified 2026-06 returning HTTP 200 with parseable results.
 const QVector<InnerTubeClient>& innerTubeSearchClients() {
     if (!s_searchClients.isEmpty()) {
         return s_searchClients;
@@ -348,10 +309,9 @@ const QVector<InnerTubeClient>& innerTubeSearchClients() {
 }
 } // anonymous namespace
 
-// Locations to probe for yt-dlp when it is not on PATH. Order matters:
-// the bundled binary next to the Mixxx executable wins, then the user's
-// PATH, then common install dirs that GUI launches often miss because
-// /opt/homebrew/bin and ~/.local/bin are outside the inherited PATH.
+// Locations to probe for yt-dlp when not on PATH. Order matters:
+// bundled binary next to Mixxx executable wins, then PATH, then common
+// install dirs GUI launches miss (/opt/homebrew/bin, ~/.local/bin).
 QStringList ytDlpFallbackBins() {
     QStringList bins;
 #if defined(Q_OS_WIN)
@@ -359,16 +319,14 @@ QStringList ytDlpFallbackBins() {
 #else
     const QString exe = QStringLiteral("yt-dlp");
 #endif
-    // 1. Bundled next to the Mixxx executable (Win/Mac/Linux desktop installs
-    //    ship the official self-contained PyInstaller binary here — see
-    //    cmake/modules/FetchYtDlp.cmake).
+    // 1. Bundled next to Mixxx executable (desktop installs ship it here —
+    //    see cmake/modules/FetchYtDlp.cmake).
     const QString appDir = QCoreApplication::applicationDirPath();
     if (!appDir.isEmpty()) {
         bins << QDir(appDir).filePath(exe);
-#if defined(Q_OS_MAC)
-        // .app bundle layout: yt-dlp lives in Contents/MacOS alongside the
-        // Mixxx binary, but applicationDirPath() already returns that path.
-        // Also probe Contents/Resources just in case.
+#if defined(Q_OS_MACOS)
+        // .app bundle layout: yt-dlp in Contents/MacOS (already covered) or
+        // Contents/Resources.
         bins << QDir(appDir).filePath(QStringLiteral("../Resources/") + exe);
 #endif
     }
@@ -384,9 +342,8 @@ QStringList ytDlpFallbackBins() {
     return bins;
 }
 
-// Map a Piped audio stream's ext-hint (mimeType) to a sensible file
-// extension for the downloaded blob. We name files <id>.<ext> so the rest
-// of YouTubeFeature (and the SoundSource picker) can identify them.
+// Map Piped audio stream ext-hint (mimeType) to file extension for downloaded
+// blob. Named <id>.<ext> so YouTubeFeature/SoundSource picker can identify.
 QString extFromMime(const QString& mime, const QString& codec) {
     const QString m = mime.toLower();
     if (m.contains(QStringLiteral("webm"))) {
@@ -413,8 +370,8 @@ bool isPipedLiveStream(const QJsonObject& obj) {
 }
 
 bool isValidYouTubeVideoId(const QString& videoId) {
-    // YouTube video ids, plus "sc-<track id>" for SoundCloud tracks, which
-    // go through the same yt-dlp download, cache and deck-load path
+    // YouTube video IDs, plus "sc-<track id>" for SoundCloud tracks (same
+    // yt-dlp download/cache/deck-load path).
     static const QRegularExpression kVideoIdPattern(
             QStringLiteral(R"(^([A-Za-z0-9_-]{11}|sc-[0-9]{1,19})$)"));
     return kVideoIdPattern.match(videoId).hasMatch();
@@ -424,8 +381,8 @@ bool isSoundCloudId(const QString& videoId) {
     return videoId.startsWith(QStringLiteral("sc-"));
 }
 
-// The page yt-dlp downloads a video id from: SoundCloud ids map to the API
-// track URL yt-dlp's SoundCloud extractor accepts.
+// Page yt-dlp downloads a video ID from: SoundCloud IDs map to API track
+// URL yt-dlp's SoundCloud extractor accepts.
 QString mediaUrlForId(const QString& videoId) {
     if (isSoundCloudId(videoId)) {
         return QStringLiteral("https://api.soundcloud.com/tracks/") + videoId.mid(3);
@@ -448,10 +405,9 @@ bool isYtDlpLiveStream(const QJsonObject& obj) {
 }
 
 QString countryDisplayName(const QString& code) {
-    // Returns the English name of a country given its ISO 3166-1 alpha-2 code.
-    // Used for constructing YouTube API queries that must be in English.
-    // QLocale::territoryToString / countryToString always returns the Qt built-in
-    // English name (not affected by the user's locale).
+    // Returns English name of country given ISO 3166-1 alpha-2 code.
+    // Used for YouTube API queries (must be English). QLocale::territoryToString
+    // returns Qt built-in English name (unaffected by user locale).
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QLocale forCountry(QStringLiteral("en_") + code);
     const QString name = QLocale::countryToString(forCountry.country());
@@ -464,12 +420,10 @@ QString countryDisplayName(const QString& code) {
 }
 
 QString countryTopSongsCategoryQuery(const QString& region) {
-    // IMPORTANT: Do NOT use tr() here — this string is sent as a YouTube
-    // InnerTube API search query and must always be in English regardless of the
-    // user's locale. Previously this was wrapped in QObject::tr(), so on
-    // non-English locales (e.g. Greek) the query got translated into the local
-    // language and YouTube's API returned zero results — surfacing as a
-    // permanently-blank YouTube tab on first open.
+    // IMPORTANT: Do NOT use tr() — string sent as YouTube InnerTube API search
+    // query, must be English regardless of user locale. Previously wrapped in
+    // tr(), causing zero results on non-English locales (e.g. Greek) -> blank
+    // YouTube tab on first open.
     if (region.compare(QStringLiteral("GR"), Qt::CaseInsensitive) == 0) {
         return QStringLiteral("Greek top songs");
     }
@@ -496,11 +450,10 @@ void appendUniqueVideos(
     }
 }
 
-// Parse a Piped JSON array of stream items (the same `items[]` shape returned
-// by /search and the top-level array returned by /trending) into our internal
-// YouTubeVideoInfo list, capped at `cap`. Non-stream entries (channels,
-// playlists), live/current streams and items with missing id/title are skipped.
-// Factored out so the trending and search response paths share one parser.
+// Parse Piped JSON array of stream items (/search, /trending) into
+// YouTubeVideoInfo list, capped at `cap`. Skips non-streams (channels,
+// playlists), live streams, and items missing id/title. Shared by trending
+// and search paths.
 QList<YouTubeVideoInfo> parsePipedItems(const QJsonArray& items, int cap) {
     QList<YouTubeVideoInfo> results;
     results.reserve(qMin(items.size(), cap));
@@ -668,7 +621,7 @@ QList<YouTubeVideoInfo> parseInnerTubeSearch(const QJsonObject& root, int cap) {
 //
 // Extracting recursively is simpler and handles both shapes.
 void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
-    if (out->size() >= 1) {
+    if (!out->empty()) {
         return; // one token is enough
     }
     if (node.isObject()) {
@@ -700,7 +653,7 @@ void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
         }
         for (const QJsonValue& v : obj) {
             extractContinuationTokens(v, out);
-            if (out->size() >= 1) {
+            if (!out->empty()) {
                 return;
             }
         }
@@ -708,7 +661,7 @@ void extractContinuationTokens(const QJsonValue& node, QStringList* out) {
         const QJsonArray arr = node.toArray(); // clazy:exclude=range-loop-detach
         for (const QJsonValue& v : arr) {
             extractContinuationTokens(v, out);
-            if (out->size() >= 1) {
+            if (!out->empty()) {
                 return;
             }
         }
@@ -2405,7 +2358,7 @@ void YouTubeService::downloadAudioStreamRanked(const QString& videoId,
         onFailure(tr("No usable audio stream URL"));
         return;
     }
-    const QJsonObject best = rankedStreams.first();
+    const QJsonObject& best = rankedStreams.first();
     const QList<QJsonObject> rest = rankedStreams.mid(1);
     const QString streamUrl = best.value(QStringLiteral("url")).toString();
     if (streamUrl.isEmpty()) {
@@ -2908,7 +2861,6 @@ void YouTubeService::downloadViaInnerTubeClient(
             QString(),
             tryNext,
             onAllFailed);
-    return;
 #endif
 }
 
@@ -3097,7 +3049,7 @@ void YouTubeService::requestPlayerWithPoToken(const QString& videoId,
                     // googlevideo 403s Range requests for token-gated clients.
                     const QString potUrl = withPoTokenParam(streamUrl, streamingPot);
 #else
-                    const QString potUrl = streamUrl;
+                    const QString& potUrl = streamUrl;
                     Q_UNUSED(streamingPot);
 #endif
                     // Extract codec string from e.g. "audio/mp4; codecs=\"mp4a.40.2\""
@@ -3250,7 +3202,12 @@ void YouTubeService::runYtDlp(const QStringList& args,
         onFailure(tr("yt-dlp not available"));
         return;
     }
-
+#if !QT_CONFIG(process) // iOS: apps cannot spawn processes
+    Q_UNUSED(args);
+    Q_UNUSED(timeoutMs);
+    Q_UNUSED(onSuccess);
+    onFailure(tr("yt-dlp not available"));
+#else
     auto* proc = new QProcess(this);
     proc->setProcessChannelMode(QProcess::SeparateChannels);
 
@@ -3302,6 +3259,7 @@ void YouTubeService::runYtDlp(const QStringList& args,
 
     watchdog->start();
     proc->start(m_ytDlpPath, args);
+#endif
 }
 
 void YouTubeService::searchViaYtDlp(const QString& query, int cap) {
@@ -3435,8 +3393,8 @@ void YouTubeService::downloadViaYtDlp(const QString& videoId, const QString& cac
                 // Last non-empty stdout line is the final filepath.
                 QString outPath;
                 const QList<QByteArray> lines = stdoutBytes.split('\n');
-                for (auto it = lines.crbegin(); it != lines.crend(); ++it) {
-                    const QString line = QString::fromLocal8Bit(*it).trimmed();
+                for (const QByteArray& rawLine : std::ranges::reverse_view(lines)) {
+                    const QString line = QString::fromLocal8Bit(rawLine).trimmed();
                     if (!line.isEmpty() && QFileInfo::exists(line)) {
                         outPath = line;
                         break;
@@ -3808,7 +3766,6 @@ bool extractStreamLinkWith(
     saveStreamLinksLocked();
     return true;
 }
-
 
 bool extractStreamLinkUncached(
         const QJniObject& ytdl, const QString& videoId, StreamLink* pOut) {
@@ -4558,12 +4515,8 @@ bool YouTubeService::shouldThrottleRequest() {
 
     // Check minimum inter-request gap with jitter.
     const int minGap = jitterDelayMs();
-    if (!m_requestTimestamps.isEmpty() &&
-            (now - m_requestTimestamps.last()) < minGap) {
-        return true;
-    }
-
-    return false;
+    return !m_requestTimestamps.isEmpty() &&
+            (now - m_requestTimestamps.last()) < minGap;
 }
 
 void YouTubeService::recordRequest() {

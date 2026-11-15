@@ -15,9 +15,8 @@ struct AVPacket;
 namespace mixxx {
 namespace stems {
 
-/// Writes a stem file (.stem.mp4, as made by Native Instruments): an MP4 with
-/// an AAC stream of the mix followed by one per stem, and a "stem" atom with
-/// the names and colors of the stems
+/// Writes a .stem.mp4 (NI format): MP4 with AAC mix + per-stem streams plus a
+/// "stem" atom with names and colors.
 class StemFileWriter {
   public:
     StemFileWriter();
@@ -48,8 +47,7 @@ class StemFileWriter {
   private:
     static constexpr int kStreamCount = kStemCount + 1;
 
-    /// The streams are encoded at the same time, each by its own thread;
-    /// their packets are written to the file afterwards, in order
+    /// The streams are encoded in parallel, their packets written to the file afterwards in order
     struct Stream {
         AVCodecContext* pCodecContext = nullptr;
         AVFrame* pFrame = nullptr;

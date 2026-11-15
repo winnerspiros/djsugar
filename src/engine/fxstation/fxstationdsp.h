@@ -5,8 +5,8 @@
 #include <cmath>
 #include <vector>
 
-// Building blocks of the FX Station (fxstation.h): small, allocation free
-// once prepared, for the engine thread. Stereo signals are interleaved.
+/// Building blocks of the FX Station (fxstation.h): small, allocation-free
+/// once prepared, for the engine thread. Stereo signals are interleaved.
 
 namespace mixxx {
 namespace fxstation {
@@ -20,7 +20,7 @@ inline float softClip(float x) {
     return x * (27.f + x2) / (27.f + 9.f * x2);
 }
 
-/// A one pole smoother, e.g. for parameters (per sample or per buffer)
+/// A one-pole smoother, e.g. for parameters (per sample or per buffer)
 struct Smoother {
     float value = 0.f;
     void reset(float v) {
@@ -32,9 +32,8 @@ struct Smoother {
     }
 };
 
-/// A state variable filter (topology preserving transform, Zavalishin):
-/// stable when its frequency moves on every buffer. Low, band and high
-/// pass outputs at once.
+/// A state variable filter (TPT, Zavalishin): stable when frequency moves
+/// per buffer. Low, band and high pass outputs at once.
 struct Svf {
     float g = 0.f;
     float k = 1.f;
@@ -69,7 +68,7 @@ struct Svf {
     }
 };
 
-/// A biquad (transposed direct form II) with Butterworth low and high
+/// A biquad (transposed direct form II) with Butterworth low/high
 /// pass, for the fixed crossovers of Isolate
 struct Biquad {
     float b0 = 1.f, b1 = 0.f, b2 = 0.f, a1 = 0.f, a2 = 0.f;
@@ -110,8 +109,8 @@ struct Biquad {
     }
 };
 
-/// A Linkwitz-Riley crossover (two Butterworth biquads per side): the low
-/// and high parts sum to an all-pass of the input
+/// A Linkwitz-Riley crossover (two Butterworth biquads per side): low
+/// and high sum to an all-pass of the input
 struct Crossover {
     std::array<Biquad, 2> low;
     std::array<Biquad, 2> high;

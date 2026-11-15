@@ -11,7 +11,7 @@
 
 namespace {
 constexpr double kEps = 1e-9;
-// Stop kicking after this many rounds in a row without improvement.
+// Stop kicking after this many stale rounds.
 constexpr int kMaxStaleKicks = 300;
 } // namespace
 

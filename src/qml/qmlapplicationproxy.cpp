@@ -33,7 +33,7 @@ QmlApplicationProxy::QmlApplicationProxy(QObject* pParent)
             &KeyboardEventFilter::keyboardConfigReloaded,
             this,
             &QmlApplicationProxy::menuShortcutsChanged);
-#if !defined(Q_OS_MACOS)
+#ifndef __APPLE__
     connect(s_pKeyboardEventFilter.get(),
             &KeyboardEventFilter::altPressedWithoutKeys,
             this,

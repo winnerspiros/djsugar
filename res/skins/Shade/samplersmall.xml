@@ -6,11 +6,11 @@
       <WidgetGroup>
         <ObjectName>EffectLeftBorder</ObjectName>
         <Size>5f,40f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <Size>0e,40f</Size>
-        <BackPath>style/style_bg_looping.png</BackPath>
+        <BackPath>style/style_bg_looping.webp</BackPath>
         <Layout>horizontal</Layout>
         <Children>
           <WidgetGroup>
@@ -21,13 +21,13 @@
             <NumberStates>2</NumberStates>
             <State>
               <Number>0</Number>
-              <Pressed>skin:/btn/btn_play_sampler_down.png</Pressed>
-              <Unpressed>skin:/btn/btn_play_sampler.png</Unpressed>
+              <Pressed>skin:/btn/btn_play_sampler_down.webp</Pressed>
+              <Unpressed>skin:/btn/btn_play_sampler.webp</Unpressed>
             </State>
             <State>
               <Number>1</Number>
-              <Pressed>skin:/btn/btn_pause_sampler_overdown.png</Pressed>
-              <Unpressed>skin:/btn/btn_pause_sampler_over.png</Unpressed>
+              <Pressed>skin:/btn/btn_pause_sampler_overdown.webp</Pressed>
+              <Unpressed>skin:/btn/btn_pause_sampler_over.webp</Unpressed>
             </State>
             <Connection>
               <ConfigKey>[Sampler<Variable name="samplernum"/>],cue_gotoandplay</ConfigKey>
@@ -122,8 +122,8 @@
                     <NumberStates>1</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_eject_sampler_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_eject_sampler.png</Unpressed>
+                      <Pressed>skin:/btn/btn_eject_sampler_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_eject_sampler.webp</Unpressed>
                     </State>
                     <Pos>0,0</Pos>
                     <Connection>
@@ -138,18 +138,18 @@
                     <NumberStates>3</NumberStates>
                     <State>
                       <Number>0</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_left_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_left_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_left_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_left_over.webp</Unpressed>
                     </State>
                     <State>
                       <Number>1</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_main.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_main.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_main.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_main.webp</Unpressed>
                     </State>
                     <State>
                       <Number>2</Number>
-                      <Pressed>skin:/btn/btn_orientation_sampler_right_over.png</Pressed>
-                      <Unpressed>skin:/btn/btn_orientation_sampler_right_over.png</Unpressed>
+                      <Pressed>skin:/btn/btn_orientation_sampler_right_over.webp</Pressed>
+                      <Unpressed>skin:/btn/btn_orientation_sampler_right_over.webp</Unpressed>
                     </State>
                     <Pos>0,13</Pos>
                     <Connection>
@@ -167,7 +167,7 @@
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>
         <Size>5f,40f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>

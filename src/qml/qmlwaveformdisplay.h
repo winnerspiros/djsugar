@@ -43,7 +43,6 @@ class QmlTrackProxy;
 
 class QmlWaveformDisplay : public QQuickItem, VSyncTimeProvider, public WaveformWidgetRenderer {
     Q_OBJECT
-    Q_FLAGS(Options)
     Q_INTERFACES(QQmlParserStatus)
     Q_PROPERTY(QmlPlayerProxy* player READ getPlayer WRITE setPlayer
                     NOTIFY playerChanged)
@@ -82,6 +81,7 @@ class QmlWaveformDisplay : public QQuickItem, VSyncTimeProvider, public Waveform
     };
     Q_ENUM(Option);
     Q_DECLARE_FLAGS(Options, Option);
+    Q_FLAG(Options)
 
     QmlWaveformDisplay(QQuickItem* parent = nullptr);
     ~QmlWaveformDisplay() override;

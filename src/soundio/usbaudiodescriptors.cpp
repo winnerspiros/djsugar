@@ -58,7 +58,7 @@ int ControlInterface::clockSourceForTerminal(int terminalId) const {
         return -1;
     }
     int clockId = terminal->second;
-    // Follow selectors (first input) and multipliers, guarding against loops
+    // Follow selectors and multipliers, guard against loops
     for (int depth = 0; depth < 8; ++depth) {
         auto clock = clocks.find(clockId);
         if (clock == clocks.end()) {
@@ -199,8 +199,7 @@ DeviceDescription parse(const uint8_t* pData, size_t length) {
             if (currentStream >= 0 && (attributes & 0x3) == kTransferTypeIsochronous) {
                 StreamFormat& format = description.streams[currentStream];
                 const int usage = (attributes >> 4) & 0x3;
-                // UAC1 feedback endpoints are often declared without the
-                // usage bits: an IN endpoint next to an OUT data endpoint
+                // UAC1 feedback often declared without usage bits: IN next to OUT data
                 const bool isFeedback = usage == kUsageFeedback ||
                         (format.endpoint != 0 && !(format.endpoint & 0x80) && isIn);
                 if (isFeedback) {
@@ -208,7 +207,7 @@ DeviceDescription parse(const uint8_t* pData, size_t length) {
                 } else if (format.endpoint == 0) {
                     format.endpoint = address;
                     format.isOutput = !isIn;
-                    // High bandwidth endpoints: additional transactions per microframe
+                    // High bandwidth: additional transactions per microframe
                     format.maxPacketSize = (maxPacket & 0x7ff) * (1 + ((maxPacket >> 11) & 0x3));
                     format.bInterval = interval;
                     format.syncType = static_cast<SyncType>((attributes >> 2) & 0x3);
@@ -268,7 +267,7 @@ const StreamFormat* implicitFeedbackSource(
             return &format;
         }
         if (!pResult || format.channels < pResult->channels) {
-            // The capture stream with fewest channels uses the least bandwidth
+            // Fewest channels uses the least bandwidth
             pResult = &format;
         }
     }
@@ -289,10 +288,9 @@ uint32_t feedbackToFramesPerPacket(uint32_t raw,
     if (feedbackBytes == 3) {
         raw &= 0xffffff;
     }
-    // Feedback may be in 10.14 or 16.16, per frame or per microframe, or
-    // otherwise misscaled by the device. The interpretations differ by at
-    // least a factor of 2, so the first one close to the nominal rate wins.
-    // Shifts are tried by magnitude: 16.16, then 10.14, then the rest.
+    // Feedback may be in 10.14 or 16.16 per frame or microframe, or
+    // otherwise misscaled. The first close to the nominal rate wins.
+    // Shifts tried by magnitude: 16.16, then 10.14, then the rest.
     const uint64_t tolerance = nominalFramesPerPacket / 8;
     for (int shift : {0, 2, -2, 1, -1, 3, -3, 4, -4}) {
         for (int multiplier : {1, 2, 4, 8}) {

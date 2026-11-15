@@ -6,15 +6,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Pure-Java port of NewPipe's JavaScriptUtil.kt: parses BotGuard challenge /
- * integrity-token payloads and formats values as JS Uint8Array literals.
+ * Pure-Java BotGuard challenge / integrity-token parser (port of NewPipe's JavaScriptUtil.kt).
  */
 public final class PoTokenJs {
     private PoTokenJs() {
     }
 
     /**
-     * Parse Create-endpoint challenge into a JSON object embeddable in JS.
+     * Parse Create-endpoint challenge into a JS-embeddable JSON object.
      */
     public static String parseChallengeData(String raw) throws Exception {
         JSONArray scrambled = new JSONArray(raw);
@@ -85,14 +84,14 @@ public final class PoTokenJs {
     }
 
     /**
-     * String -> "new Uint8Array([...])" literal.
+     * Convert string to "new Uint8Array([...])" literal.
      */
     public static String stringToU8(String s) {
         return newUint8Array(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /**
-     * "97,98,99" (Uint8Array.toString) -> base64url no padding.
+     * Uint8Array.toString("97,98,99") -> base64url no padding.
      */
     public static String u8ToBase64(String csv) throws Exception {
         String[] parts = csv.split(",");

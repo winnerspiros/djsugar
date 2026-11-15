@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 
 #include "control/controlpushbutton.h"
+#include "library/samples/bundledsamples.h"
 #include "mixer/playermanager.h"
 #include "mixer/sampler.h"
 #include "moc_samplerbank.cpp"
@@ -220,7 +221,10 @@ bool SamplerBank::loadSamplerBankFromPath(const QString& samplerBankPath) {
 #endif
                                 false);
                     } else {
-                        m_pPlayerManager->slotLoadLocationToPlayer(location, group, false);
+                        m_pPlayerManager->slotLoadLocationToPlayer(
+                                mixxx::samples::currentBundledSample(location),
+                                group,
+                                false);
                     }
                 }
             }

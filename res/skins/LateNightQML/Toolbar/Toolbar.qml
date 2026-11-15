@@ -2147,7 +2147,7 @@ Rectangle {
                     anchors.centerIn: parent
                     fillMode: Image.Stretch
                     height: 5
-                    source: LateNightTheme.lateNightAsset("style", "latency_bg.png")
+                    source: LateNightTheme.lateNightAsset("style", "latency_bg.webp")
                     width: 59
                 }
                 Item {
@@ -2161,7 +2161,7 @@ Rectangle {
                     Image {
                         fillMode: Image.Stretch
                         height: 5
-                        source: LateNightTheme.lateNightAsset("style", "latency_over.png")
+                        source: LateNightTheme.lateNightAsset("style", "latency_over.webp")
                         width: 59
                     }
                 }

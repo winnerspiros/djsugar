@@ -6,7 +6,6 @@
 
 /**
  * Calibration dialog for per-output latency offset.
- *
  * Uses device buffer latency as the baseline for auto-calibration.
  * The user can fine-tune with the coarse spinbox and fine slider.
  */
@@ -47,11 +46,6 @@ class DlgPrefSoundCalibrate : public QDialog {
 };
 
 /// Show the latency calibration dialog for a given output item.
-/// @param parent Parent widget (DlgPrefSound)
-/// @param item The output item being calibrated
-/// @param framesPerBuffer Optional: configured buffer frame count for auto-calibrate baseline
-/// @param sampleRate Optional: configured sample rate for auto-calibrate baseline
-/// @param outputLatencyMs Optional: actual device output latency from PortAudio (0 if unavailable)
 /// Defined in dlgprefsoundcalibrate.cpp to avoid AUTOMOC conflicts.
 void showLatencyCalibrationDialog(QWidget* parent,
         class DlgPrefSoundItem* item,

@@ -12,9 +12,7 @@ class StemsManager;
 
 namespace qml {
 
-/// Separation of tracks into stems, exposed as the `Mixxx.Stems` singleton.
-/// Models are named "spleeter" and "htdemucs". Tracks are identified by their
-/// URL or file location.
+/// Stem separation exposed as Mixxx.Stems singleton. Models: spleeter, htdemucs.
 class QmlStemsProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool spleeterInstalled READ spleeterInstalled NOTIFY modelsChanged)

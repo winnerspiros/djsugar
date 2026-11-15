@@ -401,7 +401,7 @@ Item {
                 FileDialog {
                     id: fileDialog
 
-                    nameFilters: ["Images (*.png *.gif *.jpg)"]
+                    nameFilters: ["Images (*.webp *.gif *.jpg)"]
                     title: qsTr("Select an image")
 
                     onAccepted: {
@@ -599,7 +599,7 @@ Item {
                     }
                     Image {
                         height: 18
-                        source: "../images/work@2x.png"
+                        source: "../images/work@2x.webp"
                         visible: modelData.isUserMapping(Mixxx.Config)
                         width: 18
 

@@ -8,18 +8,18 @@
     <NumberStates>3</NumberStates>
     <State>
       <Number>0</Number>
-      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>.png</Pressed>
-      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>.png</Unpressed>
+      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>.webp</Pressed>
+      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>.webp</Unpressed>
     </State>
     <State>
       <Number>1</Number>
-      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_overdown.png</Pressed>
-      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_over.png</Unpressed>
+      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_overdown.webp</Pressed>
+      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_over.webp</Unpressed>
     </State>
     <State>
       <Number>2</Number>
-      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_overdown.png</Pressed>
-      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_over.png</Unpressed>
+      <Pressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_overdown.webp</Pressed>
+      <Unpressed>skin:/btn/btn_hotcue_<Variable name="hotcue"/>_over.webp</Unpressed>
     </State>
   </HotcueButton>
 </Template>

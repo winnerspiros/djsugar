@@ -11,8 +11,8 @@ Category {
     property bool committing: false
     property bool hasChanges: router.hasChanges
     property string activePreset: ""
-    // True once the user tapped a preset in this session. Only then are the
-    // outputs rebuilt on save; otherwise the configured routing is kept.
+    // True once the user tapped a preset. Only then are outputs rebuilt
+    // on save; otherwise configured routing is kept.
     property bool presetChosen: false
     // Warning or error about the selected preset, shown below the presets
     property string presetMessage: ""
@@ -24,7 +24,7 @@ Category {
     // USB sound cards available now, for the "two players" preset
     property int usbCardCount: 0
 
-    // The Android enumerator suffixes device names with their type, e.g.
+    // The Android enumerator suffixes names with the type, e.g.
     // "TB331FC: Speaker", "DDJ-400: USB" or "Buds: Bluetooth".
     function outputDeviceKinds() {
         let kinds = {
@@ -32,7 +32,7 @@ Category {
             wired: null,
             bluetooth: null,
             usb: null,
-            // All USB sound cards, by name (identical ones are numbered)
+            // All USB sound cards, by name (identical ones numbered)
             usbList: [],
             other: null
         };
@@ -41,8 +41,8 @@ Category {
             let n = d.displayName || "";
             if (n.endsWith(": USB")) {
                 kinds.usbList.push(d);
-                // Prefer the device exposing the most channels (a DJ
-                // controller rather than e.g. a USB headset)
+                // Prefer the device with the most channels (DJ controller rather
+                // than e.g. a USB headset)
                 if (!kinds.usb || d.channelCount > kinds.usb.channelCount)
                     kinds.usb = d;
             } else if (n.endsWith(": Speaker") || n.endsWith(": Altavoz")) {
@@ -65,7 +65,7 @@ Category {
         return !!device && ((device.displayName || "").endsWith(": USB") || device.channelCount >= 4);
     }
 
-    // Returns the outputs a preset needs, without touching anything:
+    // Returns the outputs a preset needs without touching anything:
     // {outputs: [{device, type, channel}], headSplit, syncBuffers, sampleRate, message, error}
     // Output types: 0 = Main, 1 = Headphones, 4 = Deck (index = deck - 1)
     function presetPlan(presetType) {
@@ -133,7 +133,7 @@ Category {
             plan.message = qsTr("Main output through %1 and CUE through the headphones of %2. Using two sound cards may cause slight clicks on the CUE.").arg(mainDev.displayName).arg(k.usb.displayName);
         } else if (presetType === "decks") {
             // Two players (e.g. two CDJs) into an external mixer: each USB
-            // sound card plays its own deck, the mixer does the rest
+            // card plays its own deck, the mixer does the rest
             if (k.usbList.length < 2) {
                 plan.error = true;
                 plan.message = qsTr("Two USB sound cards are needed and %1 was found. Connect both players, wait a few seconds and open the settings again.").arg(k.usbList.length);
@@ -196,7 +196,7 @@ Category {
         keylock.selected = keylock.options[manager.getKeylockEngine()];
         usbDirectMode.selected = usbDirectMode.options[Math.max(0, Math.min(2, Mixxx.MobileAudio.getAndroidUsbDirectMode()))];
 
-        // Detect current preset by analyzing real SoundManager output connections
+        // Detect current preset by analyzing real SoundManager connections
         let detected = "custom";
         try {
             let devices = manager.availableOutputDevices(soundApi.selected);
@@ -359,9 +359,8 @@ Category {
             }
         };
 
-        // Outputs are only rebuilt when the user picked a preset or edited the
-        // matrix; any other change (buffer size, sample rate...) keeps the
-        // configured routing untouched.
+        // Outputs rebuilt only when the user picked a preset or edited the
+        // matrix; other changes (buffer size, sample rate) keep routing.
         const routerEdited = root.showAdvancedRouter && router.hasChanges;
         if (routerEdited) {
             manager.clearOutputs();

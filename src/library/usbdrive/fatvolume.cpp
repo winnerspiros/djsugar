@@ -17,9 +17,9 @@ constexpr uint8_t kAttributeVolumeId = 0x08;
 constexpr uint8_t kAttributeDirectory = 0x10;
 constexpr uint8_t kAttributeLongName = 0x0F;
 constexpr int kEntrySize = 32;
-// Directories are cached, the FAT only partially
+// Directories cached; FAT cached partially
 constexpr int kMaxCachedFatSectors = 4096;
-// Size of the reads when copying files
+// Copy buffer size
 constexpr uint32_t kMaxCopyBytes = 1024 * 1024;
 
 uint16_t le16(const uint8_t* p) {
@@ -38,7 +38,7 @@ bool isPowerOfTwo(uint32_t value) {
     return value != 0 && (value & (value - 1)) == 0;
 }
 
-/// Checks the BIOS parameter block of a FAT boot sector
+/// Checks FAT boot sector BIOS parameter block
 bool isFatBootSector(const uint8_t* p) {
     const uint32_t bytesPerSector = le16(p + 11);
     return (p[0] == 0xEB || p[0] == 0xE9) && p[510] == 0x55 && p[511] == 0xAA &&

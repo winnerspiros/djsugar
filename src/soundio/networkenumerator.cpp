@@ -3,15 +3,14 @@
 #include "engine/sidechain/enginenetworkstream.h"
 #include "soundio/sounddevice.h"
 
-NetworkEnumerator::NetworkEnumerator(UserSettingsPointer pConfig,
+NetworkEnumerator::NetworkEnumerator(const UserSettingsPointer& pConfig,
         SoundManager* pSoundManager)
         : m_pNetworkStream(QSharedPointer<EngineNetworkStream>::create(2, 0)),
           m_pDevice(QSharedPointer<SoundDeviceNetwork>::create(
                   pConfig, pSoundManager, m_pNetworkStream)) {
 }
 
-NetworkEnumerator::~NetworkEnumerator() {
-}
+NetworkEnumerator::~NetworkEnumerator() = default;
 
 std::vector<SoundDevicePointer> NetworkEnumerator::queryDevices() const {
     return std::vector<SoundDevicePointer>{m_pDevice};

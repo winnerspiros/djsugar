@@ -15,13 +15,13 @@ Item {
     property var playlistsModel: []
     property string currentPlaylistName: ""
     property var currentPlaylistId
-    // The search shown; refresh repeats it, not what the field holds now
+    // Searched query; refresh re-fetches the current view
     property string searchedQuery: ""
     property string statusMessage: ""
     property bool isBusy: false
     property var downloadProgressMap: ({})
 
-    // Smart box of the streaming hub (WebView)
+    // Smart box (streaming WebView)
     function search(query) {
         searchInput.text = query;
         root.searchedQuery = query;
@@ -30,7 +30,7 @@ Item {
         root.statusMessage = qsTr("Searching...");
         Mixxx.StreamingManager.searchSubsonic(query);
     }
-    // Pull to refresh / F5: what is shown is fetched again
+    // Refresh: re-fetches the current view
     function refreshList() {
         if (root.activeMode === "playlists") {
             root.isBusy = true;
@@ -44,8 +44,7 @@ Item {
         }
     }
     function openServer(url) {
-        // Only the field: Connect / editingFinished save it, a stray link
-        // never replaces a working server
+        // Only the field saves; a stray link never replaces the server
         serverUrlField.text = url;
         root.showSettings = true;
         userField.forceActiveFocus();

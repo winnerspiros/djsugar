@@ -41,8 +41,7 @@ double MixScorer::camelotCost(const TrackFeatures& from,
     if (d == 1) {
         return sameLetter ? 1.0 : 2.0; // 8A->9A, 8A->9B
     }
-    // DJ "energy boost" moves: +2 steps (+2 semitones) or +7 steps
-    // (+1 semitone), same letter. Only excused when energy really rises.
+    // DJ energy boost: +2 or +7 steps same letter, excused only when energy rises.
     const int step = camelotStep(from.camelotNumber, to.camelotNumber);
     const bool boostMove = sameLetter && (step == 2 || step == -5);
     if (boostExcusesKeyJump && boostMove && energyDelta >= 1.0) {
@@ -94,10 +93,7 @@ double MixScorer::tempoCost(double bpmFrom,
     if (tolerancePct <= 0.0) {
         tolerancePct = 0.1; // avoid division by zero
     }
-    // Log ratio, so speeding up and slowing down by the same amount cost the
-    // same (118 -> 128 and 128 -> 118 are equal). A plain percentage made
-    // going up dearer than going down, which pushed every sort to run from
-    // fast to slow.
+    // Log ratio: equal cost for speeding up/slowing down (plain % biases to fast).
     double diff = std::abs(std::log(bpmTo / bpmFrom));
     if (allowHalfDoubleTime) {
         diff = std::min({diff,
@@ -108,8 +104,7 @@ double MixScorer::tempoCost(double bpmFrom,
     if (pct <= tolerancePct) {
         return pct / tolerancePct; // 0..1: mixable
     }
-    // Past the tolerance the crowd can hear the tempo change (DJ's own
-    // judgement: 5%), so it is a clash straight away and grows from there.
+    // Past tolerance the tempo change is audible — starts as a clash and grows.
     return kClashTempoCost + 1.5 * (pct - tolerancePct);
 }
 

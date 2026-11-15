@@ -55,7 +55,7 @@ phrasealign::Grid AnalyzerEnergy::beatGrid(const TrackPointer& pTrack) {
     if (!pBeats || pBeats->hasConstantTempo()) {
         return steady;
     }
-    // A beat map: every beat from the first to the end of the track.
+    // A beat map: every beat from first to end of track.
     constexpr std::size_t kMaxBeats = 20000; // over an hour at 300 BPM
     const double sampleRate = pTrack->getSampleRate().value();
     const double endSec = pTrack->getDuration();
@@ -88,12 +88,12 @@ bool AnalyzerEnergy::initialize(const AnalyzerTrack& track,
     if (!m_trackId.isValid()) {
         return false;
     }
-    // Already analysed with the current formula? Then skip the audio, but
-    // still refresh the Intro End / Outro Start markers from the stored
-    // body, so "Analyze" puts back a marker the DJ cleared.
+    // Already analysed with the current formula? Skip audio but still
+    // refresh Intro End / Outro Start markers from the stored body, so
+    // "Analyze" puts back a marker the DJ cleared.
     const auto version = EnergyStore::storedVersion(m_db, m_trackId);
     // The beat grid check belongs to the grid it was made on: if the DJ
-    // has changed the grid since (or it was never checked), run again.
+    // changed the grid since, run again.
     double bpm = 0.0;
     double firstBeatSec = 0.0;
     gridOf(pTrack, &bpm, &firstBeatSec);

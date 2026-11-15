@@ -1,10 +1,8 @@
 import QtQuick
 
-// Pull down at the top of a list to refresh it; F5 does the same while
-// the list is shown. The rows follow the finger and spring back on release.
+// Pull down at the top of a list to refresh it; F5 does the same.
 // Declared inside the list with `flickable` set to it and
-// `busy` bound to the view's loading state; it sits on the list itself, so it
-// does not scroll with the rows.
+// `busy` bound to the view's loading state.
 Item {
     id: root
 

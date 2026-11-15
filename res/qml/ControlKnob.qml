@@ -5,6 +5,7 @@ import QtQuick 2.12
 Skin.Knob {
     id: root
 
+    property alias controlProxy: control
     property alias group: control.group
     property alias key: control.key
 
@@ -16,6 +17,17 @@ Skin.Knob {
         id: control
     }
     TapHandler {
+        enabled: root.inputEnabled
         onDoubleTapped: control.reset()
+    }
+    TapHandler {
+        enabled: root.inputEnabled
+        acceptedButtons: Qt.RightButton
+
+        onPressedChanged: {
+            if (pressed) {
+                control.reset();
+            }
+        }
     }
 }

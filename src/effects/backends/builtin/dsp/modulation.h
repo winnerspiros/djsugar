@@ -9,13 +9,10 @@
 
 namespace fxdsp {
 
-// Beat-locked phase. Uses the deck's beat grid when available and falls
-// back to a free-running clock at the last known (or 120) BPM, so effects
-// keep moving on tracks without a grid.
+// Beat-locked phase: uses beat grid when available, free-runs at 120 BPM otherwise.
 class BeatClock {
   public:
-    // Call once per buffer. beatSeconds and beatFractionAtEnd come from
-    // GroupFeatureState; pass std::nullopt when unknown.
+    // Call once per buffer. Pass std::nullopt when unknown.
     void update(std::optional<double> beatSeconds,
             std::optional<double> beatFractionAtEnd,
             int frames,
@@ -26,8 +23,7 @@ class BeatClock {
         m_samplesPerBeat = m_beatSeconds * sampleRate;
         m_inc = 1.0 / m_samplesPerBeat;
         if (beatFractionAtEnd) {
-            // Phase at the start of the buffer, in beats. The integer beat
-            // count is kept locally so multi-beat periods stay continuous.
+            // Phase at buffer start in beats (integer beat kept locally for continuity).
             double start = *beatFractionAtEnd - frames * m_inc;
             const double frac = start - std::floor(start);
             double whole = std::floor(m_beats);
@@ -41,14 +37,12 @@ class BeatClock {
         } else {
             m_synced = false;
         }
-        // Keep the counter small: 64 beats covers every period offered.
         if (m_beats > 4096.0) {
             m_beats -= 4096.0;
         }
     }
 
-    // Advances one frame and returns the phase in [0, 1) of a cycle that
-    // lasts periodBeats beats.
+    // Advance one frame, return phase in [0, 1) for a cycle of periodBeats.
     float tick(double periodBeats) {
         m_beats += m_inc;
         const double p = m_beats / std::max(periodBeats, 1e-3);

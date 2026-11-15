@@ -14,9 +14,8 @@
 namespace mixxx {
 namespace stems {
 
-/// The queue of tracks to separate into stems. The tracks are separated one
-/// at a time in a background thread, and the queue is kept across restarts.
-/// Lives in the main thread.
+/// The queue of tracks to separate into stems. Runs one at a time in a
+/// background thread; the queue persists across restarts.
 class StemsManager : public QObject {
     Q_OBJECT
   public:
@@ -48,11 +47,10 @@ class StemsManager : public QObject {
 
     static StemsManager* instance(UserSettingsPointer pConfig);
 
-    /// Adds tracks to the queue. Skips missing files, files already in the
-    /// queue and, unless replace is set, tracks that have stems. Returns the
-    /// number of tracks added.
+    /// Adds tracks to the queue. Skips missing files, files already queued
+    /// and (unless replace) tracks that already have stems. Returns count.
     int enqueue(const QStringList& locations, Model model, bool replace);
-    /// Removes a track from the queue, stopping it if it is being separated
+    /// Removes a track from the queue, stopping it if running
     void cancel(const QString& location);
     void cancelAll();
     void removeFinished();
@@ -85,13 +83,12 @@ class StemsManager : public QObject {
         return &m_models;
     }
 
-    /// Measures how fast the device separates with a model, see
-    /// benchmarkFinished()
+    /// Measures how fast the device separates, see benchmarkFinished()
     void benchmark(Model model);
     bool isBenchmarking() const {
         return m_benchmarking;
     }
-    /// The measured speed: seconds of audio per second, 0 if not measured
+    /// The measured speed: seconds of audio per second, 0 = not measured
     double measuredSpeed(Model model) const;
 
     UserSettingsPointer config() const {

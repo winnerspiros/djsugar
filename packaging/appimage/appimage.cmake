@@ -125,7 +125,9 @@ install(
     "^libwayland-client\\.so.*"
     # Sound server client libraries (must match the local sound server)
     "^libasound\\.so.*"
-    "^libjack\\.so.*"
+    # Versioned only: vcpkg's jack2 has the unversioned soname libjack.so,
+    # which hosts only ship in -dev packages, so that one is bundled
+    "^libjack\\.so\\..*"
     "^libpipewire.*"
     # Low-level font stack and other system essentials
     "^libfontconfig\\.so.*"

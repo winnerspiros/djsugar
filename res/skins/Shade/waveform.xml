@@ -4,7 +4,7 @@
     <Channel><Variable name="channum"/></Channel>
     <Size>0e,81f</Size>
     <BgColor>#8D98A3</BgColor>
-    <!--<BgPixmap>style/style_bg_waveform.png</BgPixmap>-->
+    <!--<BgPixmap>style/style_bg_waveform.webp</BgPixmap>-->
     <SignalHighColor></SignalHighColor>
     <SignalMidColor></SignalMidColor>
     <SignalLowColor></SignalLowColor>

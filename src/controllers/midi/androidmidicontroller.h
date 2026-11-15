@@ -21,7 +21,7 @@ class AndroidUsbAudioDevice;
 }
 } // namespace mixxx
 
-/// Common base of the Android MIDI controllers: parses a raw MIDI byte stream.
+/// Common base for Android MIDI controllers — parses raw MIDI byte stream.
 class AndroidMidiControllerBase : public MidiController {
     Q_OBJECT
   public:
@@ -39,11 +39,7 @@ class AndroidMidiControllerBase : public MidiController {
     QByteArray m_sysexBuffer;
 };
 
-/// Android MIDI implementation of MidiController
-///
-/// Devices are listed and opened through android.media.midi (see
-/// org.mixxx.MidiHelper) and the actual I/O uses the NDK AMidi API, which is
-/// resolved at runtime because it requires API level 29.
+/// Android MIDI controller via NDK AMidi API (API 29+, resolved at runtime).
 class AndroidMidiController : public AndroidMidiControllerBase {
     Q_OBJECT
   public:

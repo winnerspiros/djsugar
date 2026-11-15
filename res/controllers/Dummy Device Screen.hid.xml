@@ -24,7 +24,7 @@
                <option
                    variable="idleBackground"
                    type="file"
-                   pattern="Images (*.png *.gif *.jpg)"
+                   pattern="Images (*.webp *.gif *.jpg)"
                    label="Idle deck background">
                    <description>
                        The background used for empty decks

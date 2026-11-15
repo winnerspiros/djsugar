@@ -85,7 +85,7 @@ Item {
         height: root.micAux ? 9 : 11
         opacity: root.clipping ? 1 : 0
         smooth: false
-        source: root.micAux ? LateNightTheme.assetMicAuxVuClippingActive : LateNightTheme.lateNightAsset("style", "vu_deck_clipping_active.png")
+        source: root.micAux ? LateNightTheme.assetMicAuxVuClippingActive : LateNightTheme.lateNightAsset("style", "vu_deck_clipping_active.webp")
         width: 6
         y: 1
     }
@@ -105,7 +105,7 @@ Item {
             fillMode: Image.PreserveAspectFit
             height: root.levelHeight
             smooth: false
-            source: root.micAux ? LateNightTheme.assetMicAuxVuLevelActive : LateNightTheme.lateNightAsset("style", "vu_deck_level_active.png")
+            source: root.micAux ? LateNightTheme.assetMicAuxVuLevelActive : LateNightTheme.lateNightAsset("style", "vu_deck_level_active.webp")
             width: 6
         }
     }

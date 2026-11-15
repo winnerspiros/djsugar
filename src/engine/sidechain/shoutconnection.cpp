@@ -1072,7 +1072,7 @@ void ShoutConnection::run() {
 void ShoutConnection::ignoreSigpipe() {
     // If the remote connection is closed, shout_send_raw() can cause a
     // SIGPIPE. If it is unhandled then Mixxx will quit immediately.
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     // The per-thread approach using pthread_sigmask below does not seem to work
     // on macOS.
     struct sigaction sa;

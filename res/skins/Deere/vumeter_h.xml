@@ -18,8 +18,8 @@
             <TooltipId><Variable name="tooltip_meter"/></TooltipId>
             <Size>9me,3me</Size>
             <MaximumSize>80,8</MaximumSize>
-            <PathBack scalemode="STRETCH">vumeter_bg.png</PathBack>
-            <PathVu scalemode="STRETCH">vumeter.png</PathVu>
+            <PathBack scalemode="STRETCH">vumeter_bg.webp</PathBack>
+            <PathVu scalemode="STRETCH">vumeter.webp</PathVu>
             <Horizontal>true</Horizontal>
             <PeakHoldSize>5</PeakHoldSize>
             <PeakHoldTime>300</PeakHoldTime>
@@ -34,7 +34,7 @@
             <TooltipId><Variable name="tooltip_clip"/></TooltipId>
             <Size>3min,3me</Size>
             <MaximumSize>8,8</MaximumSize>
-            <PathStatusLight scalemode="STRETCH">vumeter_clip.png</PathStatusLight>
+            <PathStatusLight scalemode="STRETCH">vumeter_clip.webp</PathStatusLight>
             <Connection>
                 <ConfigKey><Variable name="group"/>,peak_indicator<Variable name="side"/></ConfigKey>
             </Connection>

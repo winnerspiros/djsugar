@@ -48,7 +48,7 @@ TEST(VocalMapTest, BreathsStayOneSection) {
     // Lines of 4 s with 0.8 s breaths in between.
     std::vector<std::pair<double, double>> lines;
     for (double t = 20.0; t < 60.0; t += 4.8) {
-        lines.push_back({t, t + 4.0});
+        lines.emplace_back(t, t + 4.0);
     }
     const auto s = vocalmap::find(vocalLevels(120.0, lines), {}, kRate);
     ASSERT_EQ(s.size(), 1u);

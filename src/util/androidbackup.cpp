@@ -125,7 +125,7 @@ QString backupRootDirectory() {
     return QStringLiteral("/storage/emulated/0/Mixxx/backup");
 }
 
-QString createBackup(const QString& settingsPath, QSqlDatabase database, QString* pError) {
+QString createBackup(const QString& settingsPath, const QSqlDatabase& database, QString* pError) {
     const QString name = QDateTime::currentDateTime().toString(
             QStringLiteral("yyyy-MM-dd_HH-mm-ss"));
     const QString backupDir = backupRootDirectory() + QChar('/') + name;

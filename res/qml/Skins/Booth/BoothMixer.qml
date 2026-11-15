@@ -3,10 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../../Theme"
 
-// The mixer of the DJ view of the booth skin, like the one of the
-// PERFORMANCE layout of rekordbox: for each of the two decks TRIM, HIGH,
-// MID, LOW and FILTER, the headphones CUE, the level meter and the channel
-// fader.
+// Booth skin mixer: per-deck TRIM, EQ, FILTER, CUE, level meter, fader.
 Rectangle {
     id: root
 
@@ -16,8 +13,7 @@ Rectangle {
     border.width: 1
     color: Theme.darkGray4
 
-    // A meter of the level of a channel
-    component LevelMeter: Item {
+component LevelMeter: Item {
         id: meter
 
         required property string group
@@ -48,9 +44,7 @@ Rectangle {
             height: Math.round(parent.height * Math.max(0, Math.min(1, vuControl.value)))
         }
     }
-    // The strip of a deck: the knobs beside the headphones CUE, the meter
-    // and the fader
-    component Channel: RowLayout {
+component Channel: RowLayout {
         id: channel
 
         required property string group
@@ -111,9 +105,7 @@ Rectangle {
                     label: modelData.label
                 }
             }
-            // The quick effect (the filter by default), like the FILTER or
-            // CFX knob of the controllers. Dimmed while it is off (e.g. by
-            // SMART CFX of the DDJ-FLX4).
+// Quick effect (filter by default). Dimmed when off.
             BoothKnob {
                 Layout.fillHeight: true
                 Layout.fillWidth: true

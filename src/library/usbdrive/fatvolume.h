@@ -14,10 +14,8 @@
 namespace mixxx {
 namespace usbdrive {
 
-/// Read-only FAT16/FAT32 file system on a block device. Handles drives with
-/// an MBR or GPT partition table and drives formatted without one
-/// ("superfloppy"), which e.g. Pioneer players accept but many Android
-/// devices don't mount.
+/// Read-only FAT16/FAT32 on a block device. Handles MBR, GPT and
+/// "superfloppy" (no partition table, supported by Pioneer players).
 class FatVolume {
   public:
     /// Reads `count` blocks of the device starting at `lba`

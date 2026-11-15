@@ -6,11 +6,11 @@
       <WidgetGroup>
         <ObjectName>EffectLeftBorder</ObjectName>
         <Size>5f,50f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <Size>0e,50f</Size>
-        <BackPath>style/style_bg_deck_pane.png</BackPath>
+        <BackPath>style/style_bg_deck_pane.webp</BackPath>
         <Layout>horizontal</Layout>
         <Children>
           <!-- Spacer to position parameters more below the focused effect -->
@@ -48,7 +48,7 @@
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>
         <Size>5f,50f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>

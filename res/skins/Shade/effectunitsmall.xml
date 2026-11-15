@@ -7,12 +7,12 @@
       <WidgetGroup>
         <ObjectName>EffectLeftBorder</ObjectName>
         <Size>5f,36f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
 
       <WidgetGroup>
         <Size>0e,36f</Size>
-        <BackPath>style/style_bg_looping.png</BackPath>
+        <BackPath>style/style_bg_looping.webp</BackPath>
         <Layout>horizontal</Layout>
         <Children>
           <Template src="skin:effectslotsmall.xml">
@@ -36,7 +36,7 @@
       <WidgetGroup>
         <ObjectName>EffectRightBorder</ObjectName>
         <Size>5f,36f</Size>
-        <BackPath>style/style_bg_deck_border.png</BackPath>
+        <BackPath>style/style_bg_deck_border.webp</BackPath>
       </WidgetGroup>
 
       <WidgetGroup>

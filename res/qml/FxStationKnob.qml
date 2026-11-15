@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Shapes
 import Mixxx 1.0 as Mixxx
 
-// A knob of the FX Station: drag up or down to turn it, double tap to set it
-// back. Bipolar knobs (-1..1) are off in the middle.
+// A knob of the FX Station: drag up/down to turn it, double tap to
+// reset it. Bipolar knobs (-1..1) are off in the middle.
 Item {
     id: root
 

@@ -26,7 +26,7 @@ constexpr int kSignalCount = sizeof(kSignals) / sizeof(kSignals[0]);
 constexpr int kMaxFrames = 64;
 
 struct sigaction s_previousActions[kSignalCount];
-// Prepared up front: only async-signal-safe calls are made while crashing
+// Prepared up front: async-signal-safe calls only while crashing
 char s_directory[512];
 char s_build[128];
 
@@ -51,10 +51,10 @@ void writeNumber(int fd, uint64_t value, int base) {
     writeString(fd, buffer + pos);
 }
 
-/// Removes the pointer authentication code from a return address
+/// Strip pointer authentication code from a return address
 uintptr_t stripPointerAuthentication(uintptr_t address) {
 #if defined(__aarch64__)
-    // XPACLRI, a no-op on CPUs without pointer authentication
+    // XPACLRI, no-op on CPUs without pointer authentication
     register uintptr_t x30 asm("x30") = address;
     asm("hint #7" : "+r"(x30));
     return x30;
@@ -86,7 +86,7 @@ void writeAddress(int fd, int index, uintptr_t address) {
 }
 
 void onCrash(int signalNumber, siginfo_t* pInfo, void* pContext) {
-    // A fault while writing the report goes to the system's handler
+    // A fault writing the report goes to the system's handler
     restorePreviousActions();
 
     char path[sizeof(s_directory) + 48];
@@ -94,7 +94,7 @@ void onCrash(int signalNumber, siginfo_t* pInfo, void* pContext) {
     char* pEnd = path + strlen(path);
     strcpy(pEnd, "/crash-");
     pEnd += strlen(pEnd);
-    // The time as a number, without the non-reentrant time formatting
+    // Time as a number, avoiding non-reentrant time formatting
     uint64_t seconds = static_cast<uint64_t>(time(nullptr));
     char digits[24];
     int count = 0;

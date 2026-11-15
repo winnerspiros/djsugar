@@ -23,12 +23,12 @@ import org.json.JSONArray;
 
 /**
  * Generates YouTube Proof-of-Origin (PO) tokens on-device using a headless
- * WebView that runs YouTube's BotGuard challenge — port of NewPipe's
- * potoken package (via ytdlnis) to plain Java, no RxJava/coroutines needed.
+ * WebView that runs YouTube's BotGuard challenge. Port of NewPipe's potoken
+ * package (via ytdlnis) to plain Java, no RxJava/coroutines.
  *
- * Flow: load local po_token.html -> BotGuard Create -> run challenge in JS ->
- * GenerateIT (integrityToken) -> mint per-video PO tokens via obtainPoToken().
- * Tokens are ~6h valid; init runs once per process, token fetch per video id.
+ * Flow: load po_token.html -> BotGuard Create -> run challenge in JS ->
+ * GenerateIT (integrityToken) -> obtainPoToken per video id.
+ * Tokens ~6h valid; init runs once per process, token fetch per video id.
  */
 public class PoTokenWebView {
     private static final String TAG = "PoTokenWebView";
@@ -73,8 +73,7 @@ public class PoTokenWebView {
 
     /**
      * Async init: loads BotGuard, runs challenge, obtains integrityToken.
-     * Safe to call from any thread: construction happens on the main thread
-     * (WebView requires a Looper).
+     * Safe from any thread; WebView needs a Looper.
      */
     public static void create(Context context, InitCallback cb) {
         final Context appContext = context.getApplicationContext();
@@ -101,7 +100,7 @@ public class PoTokenWebView {
     }
 
     /**
-     * Mint a PO token bound to identifier (video id for player, visitorData for GVS).
+     * Mint a PO token bound to an identifier (video id or visitorData).
      */
     public void generatePoToken(final String identifier, final PoTokenCallback cb) {
         synchronized (mPending) {

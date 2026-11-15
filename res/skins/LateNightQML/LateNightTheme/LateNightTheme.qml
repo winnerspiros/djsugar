@@ -77,8 +77,8 @@ QtObject {
     readonly property url assetDeckSpinnyMask34: lateNightAsset("style", "spinny_mask_34.svg")
     readonly property url assetDeckStemControlsCollapseButton: lateNightAsset("buttons", "btn__stem_controls_collapse.svg")
     readonly property url assetDeckStemControlsExpandButton: lateNightAsset("buttons", "btn__stem_controls_expand.svg")
-    readonly property url assetWaveformSplitterHandle: lateNightAsset("style", isClassic ? "splitter_handle_horizontal.png" : "splitter_handle_horizontal.svg")
-    readonly property url assetWaveformSplitterHandlePressed: lateNightAsset("style", isClassic ? "splitter_handle_horizontal_pressed.png" : "splitter_handle_horizontal_pressed.svg")
+    readonly property url assetWaveformSplitterHandle: lateNightAsset("style", isClassic ? "splitter_handle_horizontal.webp" : "splitter_handle_horizontal.svg")
+    readonly property url assetWaveformSplitterHandlePressed: lateNightAsset("style", isClassic ? "splitter_handle_horizontal_pressed.webp" : "splitter_handle_horizontal_pressed.svg")
     readonly property url assetDeckSyncActiveButton: isPaleMoon ? lateNightAsset("buttons", "btn__sync_deck_active.svg") : lateNightAsset("buttons", "btn__sync_deck.svg")
     readonly property url assetDeckSyncBackground: lateNightAsset("buttons", "btn_embedded_library.svg")
     readonly property url assetDeckSyncButton: lateNightAsset("buttons", "btn__sync_deck.svg")
@@ -101,6 +101,7 @@ QtObject {
     readonly property url assetFxFocusButton: lateNightAsset("buttons", "btn__fx_focus.svg")
     readonly property url assetFxKnobBackground: lateNightAsset("knobs", "knob_bg_fx.svg")
     readonly property url assetFxMixModeButton: lateNightAsset("buttons", "btn_embedded_mixmode.svg")
+    readonly property url assetFxMixModePressedButton: lateNightAsset("buttons", "btn_embedded_mixmode_active.svg")
     readonly property url assetFxMixModeDryWetButton: lateNightAsset("buttons", "btn__fx_mixmode_d-w.svg")
     readonly property url assetFxMixModeDryWetSumButton: lateNightAsset("buttons", "btn__fx_mixmode_d+w.svg")
     readonly property url assetFxParameterActiveButton: lateNightAsset("buttons", "btn_embedded_fx_parameter_active.svg")
@@ -117,10 +118,10 @@ QtObject {
     readonly property url assetMicAuxAddButton: lateNightAsset("buttons", "btn__plus_flat.svg")
     readonly property url assetMicAuxGainKnobBackground: lateNightAsset("knobs", "knob_bg_small.svg")
     readonly property url assetMicAuxUnconfiguredBackground: lateNightAsset("buttons", "btn_flat_square.svg")
-    readonly property url assetMicAuxVuClippingActive: lateNightAsset("style", "vu_micaux_clipping_active.png")
-    readonly property url assetMicAuxVuClippingBackground: lateNightAsset("style", "vu_micaux_clipping_bg_.png")
-    readonly property url assetMicAuxVuLevelActive: lateNightAsset("style", "vu_micaux_level_active.png")
-    readonly property url assetMicAuxVuLevelBackground: lateNightAsset("style", "vu_micaux_level_bg_.png")
+    readonly property url assetMicAuxVuClippingActive: lateNightAsset("style", "vu_micaux_clipping_active.webp")
+    readonly property url assetMicAuxVuClippingBackground: lateNightAsset("style", "vu_micaux_clipping_bg_.webp")
+    readonly property url assetMicAuxVuLevelActive: lateNightAsset("style", "vu_micaux_level_active.webp")
+    readonly property url assetMicAuxVuLevelBackground: lateNightAsset("style", "vu_micaux_level_bg_.webp")
     readonly property url assetMicDuckAutoButton: lateNightAsset("buttons", "btn__mic_duck_auto.svg")
     readonly property url assetMicDuckManualButton: lateNightAsset("buttons", "btn__mic_duck_manual.svg")
     readonly property url assetMicDuckOffButton: lateNightAsset("buttons", "btn__mic_duck_off.svg")
@@ -150,10 +151,10 @@ QtObject {
     readonly property url assetSamplerPitchSliderHandle: lateNightAsset("sliders", "knob_pitch_sampler.svg")
     readonly property url assetSamplerPlayButton: lateNightAsset("buttons", "btn__play_sampler.svg")
     readonly property url assetSamplerSyncButton: lateNightAsset("buttons", "btn__sync_sampler.svg")
-    readonly property url assetSamplerVuClippingActive: lateNightAsset("style", "vu_sampler_clipping_active.png")
-    readonly property url assetSamplerVuClippingBackground: lateNightAsset("style", "vu_sampler_clipping_bg_.png")
-    readonly property url assetSamplerVuLevelActive: lateNightAsset("style", "vu_sampler_level_active.png")
-    readonly property url assetSamplerVuLevelBackground: lateNightAsset("style", "vu_sampler_level_bg_.png")
+    readonly property url assetSamplerVuClippingActive: lateNightAsset("style", "vu_sampler_clipping_active.webp")
+    readonly property url assetSamplerVuClippingBackground: lateNightAsset("style", "vu_sampler_clipping_bg_.webp")
+    readonly property url assetSamplerVuLevelActive: lateNightAsset("style", "vu_sampler_level_active.webp")
+    readonly property url assetSamplerVuLevelBackground: lateNightAsset("style", "vu_sampler_level_bg_.webp")
     readonly property url assetSamplerXfaderLeft: lateNightAsset("buttons", "btn__xfader_sampler_left.svg")
     readonly property url assetSamplerXfaderMain: lateNightAsset("buttons", "btn__xfader_sampler_main.svg")
     readonly property url assetSamplerXfaderRight: lateNightAsset("buttons", "btn__xfader_sampler_right.svg")
@@ -228,6 +229,8 @@ QtObject {
     readonly property color effectsFillerColor: isClassic ? "#171717" : "#151517"
     readonly property color effectsFocusBorderColor: isClassic ? "#d08e00" : "#257b82"
     readonly property color effectsHeaderColor: isClassic ? "#1e1e1e" : "#151517"
+    readonly property color effectsHeaderInactiveTextColor: isClassic ? "#666666" : "#686666"
+    readonly property color effectsHeaderBorderTopColor: isClassic ? "transparent" : "#212123"
     readonly property color effectsMasterButtonInactiveColor: isClassic ? "#262626" : "#1e1e20"
     readonly property color effectsPanelColor: isClassic ? "#1e1e1e" : "#1e1e20"
     readonly property color effectsParameterActiveColor: "#888888"
@@ -296,7 +299,7 @@ QtObject {
     readonly property color micAuxRackGutterColor: isClassic ? "#0f0f0f" : "#080808"
     readonly property color micAuxUnconfiguredTextColor: isClassic ? "#666666" : "#686666"
     readonly property string micTalkActiveIconSuffix: isPaleMoon ? "active" : ""
-    readonly property url optionalDeckControlsBackgroundTile: isClassic ? lateNightAsset("style", "background_tile.png") : ""
+    readonly property url optionalDeckControlsBackgroundTile: isClassic ? lateNightAsset("style", "background_tile.webp") : ""
     readonly property url optionalDeckRateCenterActive: isPaleMoon ? lateNightAsset("buttons", "btn__rate_center_cyan.svg") : ""
     readonly property url optionalDeckRateCenterInactive: isPaleMoon ? lateNightAsset("buttons", "btn__rate_center_off.svg") : ""
     readonly property url optionalMixerEqKillDotActiveGreen: isPaleMoon ? lateNightAsset("buttons", "btn__eq_kill_dot_active_green.svg") : ""
@@ -450,10 +453,10 @@ QtObject {
         return lateNightAsset("knobs", "knob_indicator_" + kind + "_" + colorName + ".svg");
     }
     function mixerVuClipBackground(colorVariant) {
-        return lateNightAsset("style", "vu_deck_clipping_bg_" + colorVariant + ".png");
+        return lateNightAsset("style", "vu_deck_clipping_bg_" + colorVariant + ".webp");
     }
     function mixerVuLevelBackground(colorVariant) {
-        return lateNightAsset("style", "vu_deck_level_bg_" + colorVariant + ".png");
+        return lateNightAsset("style", "vu_deck_level_bg_" + colorVariant + ".webp");
     }
     function overviewHotcueTextColor(hotcueColor) {
         const red = hotcueColor.r * 255;

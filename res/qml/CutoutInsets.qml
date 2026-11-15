@@ -1,12 +1,9 @@
 import Mixxx 1.0 as Mixxx
 import QtQuick
 
-// How far the content of `target` has to stay clear of the left and right
-// edge of the window for the camera cutout (notch, punch hole) of the display.
-// The window itself is drawn edge to edge, so a skin keeps its backgrounds
-// full size and only moves the controls with these insets. Only a cutout whose
-// height overlaps `target` counts: a phone held in landscape has it in the
-// middle of one short side, so the top bar is not affected by it.
+// Content inset for camera cutout (notch/punch hole). Window is edge-to-edge;
+// skins keep backgrounds full size and move only controls. Only cutouts whose
+// height overlaps `target` are considered.
 QtObject {
     id: root
 

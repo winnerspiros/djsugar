@@ -126,6 +126,47 @@ jobs:
             artifacts_name: macOS ARM DMG
             artifacts_path: build/*.dmg
             artifacts_slug: macos-macosarm
+          - name: iOS arm64
+            os: macos-15-intel
+            # Build check only: unsigned, not packaged. Same feature set as
+            # Android; no hidapi/libusb on iOS.
+            cmake_args: >-
+              -DQT6=ON
+              -DQML=ON
+              -DHID=OFF
+              -DBULK=OFF
+              -DNETWORKAUTH=ON
+              -DFFMPEG=ON
+              -DLOCALECOMPARE=OFF
+              -DBROADCAST=OFF
+              -DLILV=OFF
+              -DVINYLCONTROL=OFF
+              -DMAD=OFF
+              -DMODPLUG=OFF
+              -DWAVPACK=OFF
+              -DSTEM=ON
+              -DENGINEPRIME=OFF
+              -DKEYFINDER=OFF
+              -DRUBBERBAND=OFF
+              -DQTKEYCHAIN=OFF
+              -DPORTMIDI=OFF
+              -DBATTERY=OFF
+              -DNDEBUG=ON
+              -DBUILD_TESTING=OFF
+              -DBUILD_BENCH=OFF
+              -DCMAKE_SYSTEM_NAME=iOS
+              -DCMAKE_OSX_ARCHITECTURES=arm64
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0
+              -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+              -DVCPKG_TARGET_TRIPLET=arm64-ios-release
+              -DVCPKG_DEFAULT_HOST_TRIPLET=x64-osx-min1100-release
+              -DQT_HOST_PATH="$QT_HOST_PATH"
+            crosscompile: true
+            compiler_cache: ccache
+            compiler_cache_path: /Users/runner/Library/Caches/ccache
+            compiler_cache_id: ios-arm64
+            buildenv_basepath: /Users/runner/buildenv
+            buildenv_script: tools/ios_buildenv.sh
           - name: Windows Server 2025 VS2026 x64
             os: windows-2025-vs2026
             # Attention: If you change the cmake_args for the Windows CI build,
@@ -424,6 +465,8 @@ jobs:
       - name: "[macOS/Windows] Get build environment name"
         if: runner.os != 'Linux'
         run: ${{ matrix.buildenv_script }} name
+        env:
+          BUILDENV_RELEASE: TRUE
 
       - name: "[macOS] Import Apple code signing identity"
         id: apple_codesign
@@ -864,7 +907,7 @@ jobs:
         working-directory: build
 
       - name: "[macOS] Sign, Notarize, and Staple Package"
-        if: runner.os == 'macOS' && env.MACOS_CODESIGN_CERTIFICATE_P12_BASE64 != null && env.MACOS_CODESIGN_CERTIFICATE_PASSWORD != null && env.APPLE_APP_SPECIFIC_PASSWORD != null
+        if: runner.os == 'macOS' && endsWith(matrix.artifacts_path, '.dmg') && env.MACOS_CODESIGN_CERTIFICATE_P12_BASE64 != null && env.MACOS_CODESIGN_CERTIFICATE_PASSWORD != null && env.APPLE_APP_SPECIFIC_PASSWORD != null
         run: packaging/macos/sign_notarize_staple.sh build/*.dmg
         env:
           APPLE_ID_USERNAME: daschuer@mixxx.org

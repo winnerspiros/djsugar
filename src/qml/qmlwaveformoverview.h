@@ -19,7 +19,6 @@ namespace qml {
 
 class QmlWaveformOverview : public QQuickPaintedItem {
     Q_OBJECT
-    Q_FLAGS(Channels)
     Q_PROPERTY(QString group READ getGroup WRITE setGroup NOTIFY groupChanged)
     Q_PROPERTY(mixxx::qml::QmlTrackProxy* track READ getTrack WRITE setTrack
                     NOTIFY trackChanged REQUIRED)
@@ -46,6 +45,7 @@ class QmlWaveformOverview : public QQuickPaintedItem {
         BothChannels = LeftChannel | RightChannel,
     };
     Q_DECLARE_FLAGS(Channels, ChannelFlag)
+    Q_FLAG(Channels)
 
     enum class Renderer {
         RGB = 1,

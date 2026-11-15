@@ -35,18 +35,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BLE MIDI scanner and GATT controller for Android.
- *
- * Supports both:
- * 1. Android's system MidiManager.openBluetoothDevice (via MidiHelper)
- * 2. Direct BLE GATT MIDI service (03B80E5A-EDE8-4B33-A751-6CE34EC4C700)
- *    with full Apple / MMA BLE-MIDI 1.0 packet framing and parsing.
+ * Supports MidiManager.openBluetoothDevice and direct BLE GATT MIDI service
+ * (03B80E5A-EDE8-4B33-A751-6CE34EC4C700) with Apple/MMA BLE-MIDI 1.0 framing.
  */
 @SuppressWarnings("deprecation")
 public class BleMidiController {
     private static final String TAG = "MixxxBleMidi";
     private static final int REQUEST_BLE_PERMISSIONS = 0x424C;
 
-    // BLE MIDI UUIDs (Apple / MMA BLE-MIDI 1.0 specification)
     public static final UUID BLE_MIDI_SERVICE_UUID =
         UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700");
     public static final UUID BLE_MIDI_CHAR_UUID =
@@ -307,7 +303,7 @@ public class BleMidiController {
     }
 
     /**
-     * Get discovered devices as a list of "address|name|isMidi|isConnected" strings.
+     * Get discovered devices as "address|name|isMidi|isConnected" strings.
      */
     public static List<String> getDiscoveredDevices() {
         List<String> result = new ArrayList<>();
@@ -341,10 +337,8 @@ public class BleMidiController {
     }
 
     /**
-     * Connects to a specific BLE MIDI device by MAC address on a background
-     * worker thread so the Android/Qt UI thread is never blocked.
-     * Tries Android's MidiManager.openBluetoothDevice first, then falls back
-     * to direct GATT BLE-MIDI connection.
+     * Connect to a BLE MIDI device on a background thread.
+     * Tries MidiManager.openBluetoothDevice first, then direct GATT.
      */
     @SuppressLint("MissingPermission")
     public static boolean connectDevice(Context context, String address, String name) {
@@ -447,9 +441,7 @@ public class BleMidiController {
     }
 
     /**
-     * Send raw MIDI bytes to a connected BLE device.
-     * C++ passes raw MIDI bytes (hex-encoded); Java wraps them once in the
-     * Apple BLE-MIDI 1.0 [header][timestamp_low][midi...] packet.
+     * Send raw MIDI bytes (hex-encoded from C++) wrapped in BLE-MIDI 1.0 packet.
      */
     @SuppressLint("MissingPermission")
     public static void writeMidiData(String deviceAddress, String hexData) {

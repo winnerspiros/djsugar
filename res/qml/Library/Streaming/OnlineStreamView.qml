@@ -17,7 +17,7 @@ Item {
     // Last Audius search; empty while trending is shown
     property string lastQuery: ""
 
-    // Pull to refresh / F5: what is shown is fetched again
+    // Pull to refresh / F5
     function refreshList() {
         root.isBusy = true;
         if (root.lastQuery !== "")
@@ -90,7 +90,7 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ================= TOP HEADER & BRAND =================
+        // ================= TOP HEADER =================
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 33
@@ -159,7 +159,7 @@ Item {
             }
         }
 
-        // ================= SEARCH & GENRE PILLS =================
+        // ================= SEARCH & GENRE =================
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 33
@@ -205,7 +205,7 @@ Item {
                     onClicked: searchInput.accepted()
                 }
 
-                // Genre Chips Row (Flickable for small screens)
+                // Flickable genre chips
                 Flickable {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 24

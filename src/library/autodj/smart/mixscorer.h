@@ -58,8 +58,7 @@ class MixScorer {
             double energyDelta,
             bool boostExcusesKeyJump);
 
-    /// Tempo cost. 0..1 inside the tolerance; beyond it a clash
-    /// (kClashTempoCost and up). Uses the log BPM ratio, so it is symmetric.
+    /// Tempo cost: 0..1 inside the tolerance, beyond it a clash. Symmetric (log BPM ratio).
     static double tempoCost(double bpmFrom,
             double bpmTo,
             double tolerancePct,
@@ -86,12 +85,10 @@ class MixScorer {
     /// Camelot wheel (8A -> 3A), the letter stays.
     static TrackFeatures shiftKey(const TrackFeatures& track, int semitones);
 
-    /// Key morph: how many semitones (-maxShift..+maxShift) to pitch the
-    /// incoming track so its key fits the outgoing one (no key clash).
-    /// 0 = leave it alone: the keys already fit, a key is unknown, or no
-    /// shift that small makes them fit. The smallest shift wins; with a tie,
-    /// the better fit, then down (a lower voice sounds more natural than a
-    /// higher one).
+    /// Key morph: shift the incoming key by semitones so it fits the outgoing
+    /// key. 0 = leave: keys already fit, unknown, or no shift that small works.
+    /// Smallest shift wins; tie broken by best fit, then down (lower voice
+    /// sounds more natural).
     static int keyMorphSemitones(const TrackFeatures& from, const TrackFeatures& to, int maxShift);
 
     /// Shortest distance round the Camelot wheel: 0..6.

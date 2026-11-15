@@ -752,19 +752,42 @@ string(TOLOWER "${OPTIMIZE}" OPTIMIZE)
 message(STATUS "Optimization level: ${OPTIMIZE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
-# CMAKE_INTERPROCEDURAL_OPTIMIZATION can be defined to override the default behaviour.
-# We keep CMAKE_INTERPROCEDURAL_OPTIMIZATION unset (IPO disabled) to save
-# build time at the cost of a bigger memory footprint at run-time.
-# See https://github.com/mixxxdj/mixxx/pull/3589 for some test results
-# Note: IPO has caused issues on Fedora https://bugzilla.rpmfusion.org/show_bug.cgi?id=5829
-# Uncomment the following code to enable IPO for Release builds
-#if(NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
-#  include(CheckIPOSupported)
-#  check_ipo_supported(RESULT HAVE_IPO)
-#  if(HAVE_IPO)
-#    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-#  endif()
-#endif()
+# Release builds use link time optimization (whole-program inlining and dead
+# code removal: faster and smaller binaries) unless
+# CMAKE_INTERPROCEDURAL_OPTIMIZATION is set explicitly.
+if(
+  NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION
+  AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
+  AND NOT OPTIMIZE STREQUAL "off"
+)
+  if(APPLE)
+    # Apple clang always supports LTO; the generic check links a test
+    # program without CMAKE_OSX_ARCHITECTURES and fails when cross-compiling
+    set(HAVE_IPO TRUE)
+  else()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT HAVE_IPO OUTPUT IPO_ERROR LANGUAGES C CXX)
+  endif()
+  if(HAVE_IPO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+    message(STATUS "Link time optimization not supported: ${IPO_ERROR}")
+  endif()
+endif()
+message(STATUS "Link time optimization: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+
+# Release builds drop unreferenced functions and data at link time.
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT OPTIMIZE STREQUAL "off")
+  if(MSVC)
+    # /OPT:REF is set below; /Gy makes /OPT:ICF fold identical functions.
+    add_link_options(/OPT:ICF)
+  elseif(APPLE)
+    add_link_options(LINKER:-dead_strip)
+  elseif((GNU_GCC OR LLVM_CLANG) AND NOT ANDROID AND NOT EMSCRIPTEN)
+    add_compile_options(-ffunction-sections -fdata-sections)
+    add_link_options(LINKER:--gc-sections LINKER:-O1 LINKER:--as-needed)
+  endif()
+endif()
 
 if(MSVC)
   # Microsoft Visual Studio Compiler
@@ -2289,7 +2312,11 @@ if(APPLE)
 
   # Disable deprecation warnings for OpenGL on macOS as we won't switch to
   # Apple's Metal API in the foreseeable future.
-  target_compile_definitions(mixxx-lib PUBLIC GL_SILENCE_DEPRECATION)
+  # (GLES on iOS)
+  target_compile_definitions(
+    mixxx-lib
+    PUBLIC GL_SILENCE_DEPRECATION GLES_SILENCE_DEPRECATION
+  )
 
   target_sources(mixxx-lib PRIVATE src/util/appleosversion.mm)
 
@@ -2756,6 +2783,7 @@ if(ANDROID)
     RELATIVE "${CMAKE_SOURCE_DIR}/res/samples"
     "${CMAKE_SOURCE_DIR}/res/samples/*.wav"
     "${CMAKE_SOURCE_DIR}/res/samples/*.ogg"
+    "${CMAKE_SOURCE_DIR}/res/samples/*.opus"
     "${CMAKE_SOURCE_DIR}/res/samples/*.mp3"
     "${CMAKE_SOURCE_DIR}/res/samples/*.flac"
   )
@@ -2815,7 +2843,7 @@ if(ANDROID)
     # Copy only the image files Android actually needs.
     # Exclude res/images/icons/ entirely — Android uses mipmap icons from
     # packaging/android/res/ and the SVG icons are 4.5MB of dead weight.
-    # Exclude templates/logo_mixxx.png — desktop-only about dialog logo.
+    # Exclude templates/logo_mixxx.webp — desktop-only about dialog logo.
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory
       ${CMAKE_SOURCE_DIR}/res/images/preferences
@@ -2828,8 +2856,8 @@ if(ANDROID)
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/library
     COMMAND
       ${CMAKE_COMMAND} -E copy
-      ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.png
-      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.png
+      ${CMAKE_SOURCE_DIR}/res/images/skin_preview_placeholder.webp
+      ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/images/skin_preview_placeholder.webp
     COMMAND
       ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/res/keyboard
       ${CMAKE_CURRENT_BINARY_DIR}/android-build/assets/keyboard
@@ -3076,6 +3104,8 @@ install(
   DESTINATION "${MIXXX_INSTALL_DATADIR}/samples"
   FILES_MATCHING
   PATTERN "*.ogg"
+  PATTERN "*.opus"
+  PATTERN "*.mp3"
   PATTERN "*.wav"
   PATTERN "*.aiff"
   PATTERN "README.md"
@@ -4788,6 +4818,7 @@ if(Qt_IS_STATIC)
       Qt${QT_VERSION_MAJOR}::QICOPlugin
       Qt${QT_VERSION_MAJOR}::QJpegPlugin
       Qt${QT_VERSION_MAJOR}::QSvgPlugin
+      Qt${QT_VERSION_MAJOR}::QWebpPlugin
       # sqldrivers
       Qt${QT_VERSION_MAJOR}::QSQLiteDriverPlugin
   )
@@ -4864,6 +4895,20 @@ else()
         applocal
     )
 
+    if(WIN32)
+      # QWebpPlugin dependencies
+      file(
+        GLOB WEBP_DLLS
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libwebp*.dll"
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libsharpyuv*.dll"
+      )
+      install(
+        FILES ${WEBP_DLLS}
+        DESTINATION "${MIXXX_INSTALL_DATADIR}"
+        COMPONENT applocal
+      )
+    endif()
+
     install(
       IMPORTED_RUNTIME_ARTIFACTS
         # platform plugins
@@ -4881,6 +4926,7 @@ else()
         Qt${QT_VERSION_MAJOR}::QICOPlugin
         Qt${QT_VERSION_MAJOR}::QJpegPlugin
         Qt${QT_VERSION_MAJOR}::QSvgPlugin
+        Qt${QT_VERSION_MAJOR}::QWebpPlugin
         DESTINATION
         "${MIXXX_INSTALL_DATADIR}/imageformats"
         COMPONENT
@@ -5016,9 +5062,15 @@ else()
           applocal
       )
 
+      # Qt 6.10 made QuickShapesPrivate an interface on top of QuickShapes
+      if(TARGET Qt${QT_VERSION_MAJOR}::QuickShapes)
+        set(MIXXX_QT_QUICKSHAPES Qt${QT_VERSION_MAJOR}::QuickShapes)
+      else()
+        set(MIXXX_QT_QUICKSHAPES Qt${QT_VERSION_MAJOR}::QuickShapesPrivate)
+      endif()
       install(
         IMPORTED_RUNTIME_ARTIFACTS
-          Qt${QT_VERSION_MAJOR}::QuickShapesPrivate
+          ${MIXXX_QT_QUICKSHAPES}
           DESTINATION
           "${MIXXX_INSTALL_DATADIR}"
           COMPONENT
@@ -6201,6 +6253,7 @@ list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "fonts-open-sans")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "fonts-ubuntu")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "libqt6sql6-sqlite")
 list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-qpa-plugins")
+list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-image-formats-plugins") # WebP images
 if(QT_VERSION VERSION_GREATER_EQUAL 6.8)
   list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-svg-plugins")
 endif()
@@ -6276,6 +6329,10 @@ set(
 
 # Use WiX toolset version >= 4.0 for building Windows installers.
 set(CPACK_WIX_VERSION 4)
+# Smallest installer: WiX's highest cabinet compression
+set(CPACK_WIX_BUILD_EXTRA_FLAGS "-dcl" "high")
+# LZMA disk image (macOS 10.15+; the minimum is 11): smaller than zlib UDZO
+set(CPACK_DMG_FORMAT ULMO)
 set(CPACK_WIX_UPGRADE_GUID "921DC99C-4DCF-478D-B950-50685CB9E6BE")
 set(
   CPACK_WIX_LICENSE_RTF

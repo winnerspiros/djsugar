@@ -29,7 +29,6 @@ constexpr int kBlendTickIntervalMs = 80;
 constexpr double kBlendStartMin = 0.90;
 
 // Base blend duration: 8 seconds (genre rules multiply this)
-// Used by kBlendTickIntervalMs to compute total blend steps
 constexpr int kBlendSteps = 100;
 
 // Similarity weights
@@ -80,7 +79,7 @@ constexpr double kBandFadeHighIn = 0.65;
 constexpr double kBandFadeMidIn = 1.0;
 constexpr double kBandFadeLowIn = 1.4;
 
-// Garbage title patterns
+// Garbage title patterns (emojis, meme phrases, non-music content)
 static const QStringList& garbagePatterns() {
     static const QStringList patterns = []() {
         QStringList list;
@@ -424,13 +423,12 @@ AIBroFeature::AIBroFeature(Library* pLibrary,
           m_blendToDeck(-1),
           m_iCurrentDeck(0),
           m_lastSearchTimeMs(0),
-          m_manualTrackPath(),
           m_manualTrackDeck(-1),
           m_hasManualTrack(false),
           m_blendCount(0),
           m_sessionBPM(0.0),
           m_pLibrary(pLibrary),
-          m_pConfig(pConfig),
+          m_pConfig(std::move(pConfig)),
           m_pPlayerManager(pPlayerManager),
           m_pYouTubeFeature(pYouTubeFeature) {
 }

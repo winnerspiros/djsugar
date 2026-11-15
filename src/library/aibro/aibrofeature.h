@@ -21,8 +21,8 @@ class PlayerManager;
 class YouTubeFeature;
 
 /// AI Bro: Intelligent Auto-DJ that finds similar songs on YouTube,
-/// auto-downloads them, and seamlessly blends them together using
-/// professional DJ mixing techniques.
+/// auto-downloads them, and seamlessly blends them using professional DJ
+/// mixing techniques.
 ///
 /// DJ Techniques (inspired by ai-remixmate + AI-DJ-Mixing-System):
 /// - 3-band frequency-selective fade (bass/mid/high fade at different rates)

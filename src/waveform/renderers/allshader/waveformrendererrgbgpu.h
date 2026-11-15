@@ -12,15 +12,14 @@ namespace allshader {
 class WaveformRendererRGBGpu;
 } // namespace allshader
 
-/// The RGB waveform drawn by the GPU (QML only): the waveform data is
-/// uploaded once into a texture, and a vertex shader (waveformrgb.vert)
-/// gives the pixel columns, a geometry made once, their heights and colors,
-/// with the same formulas as WaveformRendererRGB. On every frame only a few
-/// uniforms change: no geometry is built or uploaded, and the scene graph has
-/// nothing to sort again. On slow devices (e.g. an Adreno 610), building
-/// thousands of rectangles on every frame made the waveforms stutter.
+/// The RGB waveform drawn by the GPU (QML only): waveform data uploaded
+/// once into a texture, vertex shader (waveformrgb.vert) gives the pixel
+/// columns (geometry built once) with the same formulas as
+/// WaveformRendererRGB. Each frame changes only a few uniforms: no geometry
+/// is built or uploaded, no scene graph re-sorting. On slow devices
+/// (e.g. Adreno 610), building thousands of rectangles per frame stuttered.
 ///
-/// Not for the slip renderer nor the split stereo signal: WaveformRendererRGB
+/// Not for the slip renderer nor split stereo signal: WaveformRendererRGB
 /// draws those.
 class allshader::WaveformRendererRGBGpu final
         : public allshader::WaveformRendererSignalBase,

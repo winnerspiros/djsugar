@@ -6,10 +6,9 @@
 namespace mixxx {
 namespace qml {
 
-/// Controller functions used by the Android UI, exposed as the
-/// `Mixxx.MobileAudio` singleton. Only the config keys are shared with
-/// SoundManagerAndroid; the proxy itself is platform-independent.
-/// Ported from JaviLabarumDJ/mixxx-android (android-stable).
+/// Controller functions for the Android UI, exposed as
+/// `Mixxx.MobileAudio`. Only config keys are shared with
+/// SoundManagerAndroid; the proxy is platform-independent.
 class QmlMobileAudioProxy : public QObject {
     Q_OBJECT
     QML_NAMED_ELEMENT(MobileAudio)
@@ -20,13 +19,11 @@ class QmlMobileAudioProxy : public QObject {
 
     static QmlMobileAudioProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
 
-    /// When Mixxx drives USB sound cards itself, see
-    /// mixxx::androidusb::DirectMode (0 = auto, 1 = always, 2 = never).
-    /// Takes effect after a restart.
+    /// USB direct mode for sound cards
+    /// (0 = auto, 1 = always, 2 = never). Requires restart.
     Q_INVOKABLE int getAndroidUsbDirectMode() const;
     Q_INVOKABLE void setAndroidUsbDirectMode(int mode);
-    /// Whether a DJ controller sound card automatically gets the Main
-    /// output on channels 1-2 and the Headphones on channels 3-4
+    /// DJ controller sound card auto-routes Main to ch 1-2, Headphones to ch 3-4
     Q_INVOKABLE bool getAutoRouteController() const;
     Q_INVOKABLE void setAutoRouteController(bool enabled);
 };

@@ -22,8 +22,7 @@ struct ModelFile {
     const char* sha256;
 };
 
-// Spleeter: Deezer's models converted to ONNX (MIT). HTDemucs: Meta's model
-// converted to ONNX (MIT), its matrix products quantized to 8 bits.
+// Spleeter: Deezer ONNX models (MIT). HTDemucs: Meta ONNX (MIT), 8-bit quantized.
 const QList<ModelFile> kSpleeterFiles = {
         {"spleeter-drums.fp16.onnx",
                 "drums.fp16.onnx",

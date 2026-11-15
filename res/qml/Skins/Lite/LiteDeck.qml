@@ -4,10 +4,7 @@ import Mixxx 1.0 as Mixxx
 import QtQuick
 import QtQuick.Layouts
 
-// A deck of the Lite skin: the track, a position bar instead of waveforms
-// (redrawn 5 times a second, not at the frame rate), BPM and tempo, hot
-// cues A–D (A–H when there is room), a loop, SYNC, CUE, PLAY and the
-// tempo fader with nudge.
+/// A deck of the Lite skin: position bar (5 fps), BPM/tempo, hot cues A-H, loop, SYNC, CUE, PLAY, tempo fader with nudge.
 Item {
     id: root
 
@@ -66,8 +63,7 @@ Item {
         group: root.group
         key: "duration"
     }
-    // Not bound to the UI: its value changes with every audio buffer, which
-    // would redraw the window that often
+    // Not bound to the UI: its value changes with every audio buffer
     Mixxx.ControlProxy {
         id: positionControl
 

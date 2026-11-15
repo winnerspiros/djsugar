@@ -18,23 +18,19 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 import java.io.ByteArrayInputStream;
 
-/// Spotify's login page inside DJ Sugar: the app stays in front (Android
-/// would cut the network of an app in the background) and the redirect to
-/// the login's loopback address is caught here, never loaded
+/// Spotify login inside DJ Sugar: app stays in foreground, redirect caught locally
 public class SpotifyLoginActivity extends Activity {
     private static final String EXTRA_URL = "url";
     private static final String REDIRECT_PREFIX = "http://127.0.0.1:5588/";
-    /// Google, Facebook and Apple refuse their logins inside an app's
-    /// WebView ("disallowed_useragent"): those go to the browser
+    // Google/Facebook/Apple refuse WebView login: those go to the browser
     private static final String[] BROWSER_ONLY_HOSTS = {
         "accounts.google.com", "www.facebook.com", "m.facebook.com", "appleid.apple.com"};
 
     private boolean mAnswered;
-    // The last page (no query: no codes in the log), for "closed at ..."
+    // Last page (no query), for "closed at ..."
     private String mLastPage = "";
 
-    /// The login's answer (the redirect URL), or "closed:<last page>" when
-    /// the page was closed without one
+    // Login answer (redirect URL) or "closed:<last page>"
     private static native void nativeRedirect(String url);
 
     public static void start(Context context, String url) {
@@ -49,16 +45,14 @@ public class SpotifyLoginActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WebView view = new WebView(this);
-        // The device's saved password (Google Password Manager, Samsung
-        // Pass, ...) is offered on the login form
+        // Offer device password manager autofill
         view.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
         WebSettings settings = view.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         CookieManager.getInstance().setAcceptCookie(true);
         view.setWebViewClient(new WebViewClient() {
-            // The redirect comes after the login form's POST: Android skips
-            // shouldOverrideUrlLoading then, so it is caught in all three
+            // Redirect caught in all three callback paths
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
                 final String url = request.getUrl().toString();
@@ -96,9 +90,7 @@ public class SpotifyLoginActivity extends Activity {
         }
     }
 
-    /// A login the WebView can't do: the whole login goes on in the browser
-    /// from Spotify's first page (the WebView's cookies are not there). Its
-    /// redirect reaches the bridge's loopback port, so the login keeps waiting
+    // Login that must go to browser (cookies not in WebView); redirect still reaches loopback
     private boolean toBrowser(String url) {
         final String host = Uri.parse(url).getHost();
         boolean browserOnly = false;

@@ -16,7 +16,7 @@ namespace stems {
 
 namespace {
 
-// Nice value of the model threads: below the UI and far below the audio
+// Nice value of model threads: below UI, far below audio
 constexpr int kModelThreadNiceness = 10;
 
 struct ModelThread {

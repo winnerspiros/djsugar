@@ -9,15 +9,12 @@
 namespace mixxx {
 namespace qml {
 
-/// Update of the app from the GitHub releases of Mixxx Android, exposed as
-/// the `Mixxx.AppUpdate` singleton. Once a day at most (and when the user
-/// asks) the releases are checked for a newer version; its APK is only
-/// downloaded and installed when the user wants, by the Android
-/// DownloadManager and installer (org.mixxx.AppUpdater).
+/// Checks Mixxx GitHub releases for updates (once/day, on demand).
+/// APK is downloaded via Android DownloadManager, installed by org.mixxx.AppUpdater.
 class QmlAppUpdateProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
-    /// The newest version, e.g. "1.5.4", once a check found it
+    /// Newest version, e.g. "1.5.4"
     Q_PROPERTY(QString latestVersion READ latestVersion NOTIFY stateChanged)
     /// What's new in it (Markdown)
     Q_PROPERTY(QString releaseNotes READ releaseNotes NOTIFY stateChanged)
@@ -28,9 +25,9 @@ class QmlAppUpdateProxy : public QObject {
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
     /// What went wrong, in the Failed state
     Q_PROPERTY(Error error READ error NOTIFY stateChanged)
-    /// True if the check was started by the app, not by the user
+    /// Started by the app, not the user
     Q_PROPERTY(bool automaticCheck READ automaticCheck NOTIFY stateChanged)
-    /// True if the user chose to skip the latest version
+    /// User chose to skip the latest version
     Q_PROPERTY(bool latestSkipped READ latestSkipped NOTIFY stateChanged)
     /// Check at startup (once a day at most)
     Q_PROPERTY(bool autoCheck READ autoCheck WRITE setAutoCheck NOTIFY autoCheckChanged)
@@ -52,11 +49,11 @@ class QmlAppUpdateProxy : public QObject {
 
     enum class Error {
         None,
-        /// The releases could not be read (no connection)
+        /// Could not read releases (no connection)
         Network,
         NoSpace,
         Download,
-        /// The downloaded APK doesn't match the release
+        /// Downloaded APK doesn't match the release
         Damaged,
         Installer,
     };
@@ -99,9 +96,7 @@ class QmlAppUpdateProxy : public QObject {
     /// Downloads the APK of the latest version
     Q_INVOKABLE void download();
     Q_INVOKABLE void cancelDownload();
-    /// Opens the Android installer for the downloaded APK. Returns false if
-    /// Android first needs the permission to install apps from Mixxx (its
-    /// setting is opened).
+    /// Opens the Android installer for the downloaded APK.
     Q_INVOKABLE bool install();
     /// Don't tell about the latest version at startup anymore
     Q_INVOKABLE void skipLatest();

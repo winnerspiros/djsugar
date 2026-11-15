@@ -473,7 +473,7 @@ QNetworkRequest scRequest(const QUrl& url) {
 // SoundCloud's api-v2 needs the client id its web player uses. It sits in
 // one of the player's JS bundles (the last ones, usually); found once and
 // kept in the settings, looked up again only when the API refuses it.
-void QmlYouTubeProxy::fetchSoundCloudClientId(std::function<void(bool)> done) {
+void QmlYouTubeProxy::fetchSoundCloudClientId(const std::function<void(bool)>& done) {
     QNetworkReply* pPage = m_pScNetwork->get(
             scRequest(QUrl(QStringLiteral("https://soundcloud.com/"))));
     connect(pPage, &QNetworkReply::finished, this, [this, pPage, done]() {

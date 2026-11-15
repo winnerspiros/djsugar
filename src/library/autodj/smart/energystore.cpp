@@ -13,9 +13,8 @@
 
 // static
 bool EnergyStore::ensureTable(const QSqlDatabase& db) {
-    // Analyzer threads each call this on their own connection. Without
-    // serialising, two of them both see a missing column and the second
-    // ALTER TABLE fails with "duplicate column name".
+    // Serialize schema changes: concurrent analyzer threads both see a
+    // missing column and the second ALTER TABLE fails.
     static QMutex s_schemaMutex;
     const QMutexLocker locker(&s_schemaMutex);
     QSqlQuery query(db);
@@ -31,7 +30,7 @@ bool EnergyStore::ensureTable(const QSqlDatabase& db) {
         LOG_FAILED_QUERY(query);
         return false;
     }
-    // Columns added in analysis v2. Older tables get them added once.
+    // Columns added in analysis v2; older tables get them added once.
     QSet<QString> columns;
     if (query.exec(QStringLiteral("PRAGMA table_info(autodj_energy)"))) {
         while (query.next()) {

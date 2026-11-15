@@ -21,6 +21,7 @@ const QStringList kSampleFilters = {
         QStringLiteral("*.aiff"),
         QStringLiteral("*.m4a"),
         QStringLiteral("*.ogg"),
+        QStringLiteral("*.opus"),
         QStringLiteral("*.flac"),
 };
 
@@ -44,7 +45,7 @@ QString bundledSourceDir(const UserSettingsPointer& pConfig) {
 }
 
 /// Paths relative to sourceDir. Android cannot list assets:/ subdirectories,
-/// so the APK ships an index.txt written at build time.
+/// so the APK ships index.txt.
 QStringList bundledRelativePaths(const QString& sourceDir) {
     QStringList paths;
     QFile index(sourceDir + QStringLiteral("index.txt"));
@@ -80,6 +81,21 @@ bool isBundledSample(const QString& path) {
     return path.startsWith(bundled) || path.startsWith(user) || path.startsWith(work);
 }
 
+QString currentBundledSample(const QString& path) {
+    const QFileInfo info(path);
+    if (info.exists() || !path.startsWith(bundledSamplesCacheDir())) {
+        return path;
+    }
+    const QStringList candidates = info.dir().entryList(
+            {info.completeBaseName() + QStringLiteral(".*")}, QDir::Files);
+    for (const QString& candidate : candidates) {
+        if (isSupportedSample(candidate)) {
+            return info.dir().absoluteFilePath(candidate);
+        }
+    }
+    return path;
+}
+
 QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
     const QString sourceDir = bundledSourceDir(pConfig);
     if (sourceDir.isEmpty()) {
@@ -95,7 +111,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
         const QString path = sourceDir + relativePath;
         const QString destPath = destDir + relativePath;
         const QFileInfo dest(destPath);
-        // Same size: already current. Otherwise an update reworked it.
+        // Same size = current; an update would rework it.
         if (dest.exists() && dest.size() == QFileInfo(path).size()) {
             continue;
         }
@@ -105,7 +121,7 @@ QString bundledSamplesDir(const UserSettingsPointer& pConfig) {
             qWarning() << "Failed to copy sample" << path << "to" << destPath;
         }
     }
-    // Drop samples that a later version no longer ships
+    // Drop samples no longer shipped
     QDirIterator stale(destDir, kSampleFilters, QDir::Files, QDirIterator::Subdirectories);
     while (stale.hasNext()) {
         const QString path = stale.next();
@@ -164,27 +180,28 @@ QStringList defaultSamplerKit(const UserSettingsPointer& pConfig) {
     }
     const QStringList kit = {
             // Bank A: drums
-            QStringLiteral("djsugar/01_kick.wav"),
-            QStringLiteral("djsugar/02_snare.wav"),
-            QStringLiteral("djsugar/03_clap.wav"),
-            QStringLiteral("djsugar/04_hat_closed.wav"),
-            QStringLiteral("djsugar/05_hat_open.wav"),
-            QStringLiteral("djsugar/06_rim.wav"),
-            QStringLiteral("djsugar/12_808.wav"),
-            QStringLiteral("djsugar/08_crash.wav"),
+            QStringLiteral("djsugar/01_kick.ogg"),
+            QStringLiteral("djsugar/02_snare.ogg"),
+            QStringLiteral("djsugar/03_clap.ogg"),
+            QStringLiteral("djsugar/04_hat_closed.ogg"),
+            QStringLiteral("djsugar/05_hat_open.ogg"),
+            QStringLiteral("djsugar/06_rim.ogg"),
+            QStringLiteral("djsugar/12_808.ogg"),
+            QStringLiteral("djsugar/08_crash.ogg"),
             // Bank B: FX
-            QStringLiteral("djsugar/14_airhorn.wav"),
-            QStringLiteral("djsugar/09_riser.wav"),
-            QStringLiteral("djsugar/10_downlifter.wav"),
-            QStringLiteral("djsugar/11_sub_drop.wav"),
-            QStringLiteral("djsugar/16_noise_sweep.wav"),
-            QStringLiteral("dj-scratch.ogg"),
-            QStringLiteral("djsugar/15_vinyl_stop.wav"),
+            QStringLiteral("djsugar/14_airhorn.ogg"),
+            QStringLiteral("djsugar/09_riser.ogg"),
+            QStringLiteral("djsugar/10_downlifter.ogg"),
+            QStringLiteral("djsugar/11_sub_drop.ogg"),
+            QStringLiteral("djsugar/16_noise_sweep.ogg"),
+            QStringLiteral("dj-scratch.opus"),
+            QStringLiteral("djsugar/15_vinyl_stop.ogg"),
             QStringLiteral("djsugar/17_siren.ogg"),
     };
     QStringList files;
     for (const auto& name : kit) {
-        const QString path = dir + name;
+        // Resolves a sample that was re-encoded to another format
+        const QString path = currentBundledSample(dir + name);
         files.append(QFile::exists(path) ? path : QString());
     }
     return files;
