@@ -1,4 +1,4 @@
-<!-- markdownlint-configure-file { "MD033": { "allowed_elements": ["details", "summary"] } } -->
+<!-- markdownlint-disable MD033 -->
 
 # DJ Sugar
 
