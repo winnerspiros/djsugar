@@ -1,6 +1,6 @@
 //! Checks GitHub once per start for a newer release, so the top of the
-//! window can say so. Pre-releases are skipped (GitHub's "latest" never
-//! returns them), and a version dismissed once isn't shown again.
+//! window can say so. Pre-releases and drafts are skipped, and a version
+//! dismissed once isn't shown again.
 //!
 //! The macOS app, the AppImage and a Windows install made by the setup can
 //! install the update themselves: the download must match the checksum
@@ -26,7 +26,10 @@ use serde_json::Value;
 use crate::diagnostics::VERSION;
 use crate::settings;
 
-const LATEST: &str = "https://api.github.com/repos/winnerspiros/djsugar/releases/latest";
+/// The repository's releases, newest first. It also carries releases of the
+/// older C++ app (major version 2), so only releases with this build's major
+/// version count.
+const RELEASES: &str = "https://api.github.com/repos/winnerspiros/djsugar/releases?per_page=30";
 
 /// A release newer than this build.
 #[derive(Debug, Clone, PartialEq)]
@@ -276,7 +279,7 @@ fn latest() -> Option<Release> {
         .build()
         .into();
     let body: Value = agent
-        .get(LATEST)
+        .get(RELEASES)
         .header("Accept", "application/vnd.github+json")
         .call()
         .map_err(|e| eprintln!("update check: {e}"))
@@ -284,7 +287,22 @@ fn latest() -> Option<Release> {
         .body_mut()
         .read_json()
         .ok()?;
-    newer(&body, VERSION, this_install().as_ref(), system_package())
+    let (install, system) = (this_install(), system_package());
+    body.as_array()?
+        .iter()
+        .filter(|r| same_major(r["tag_name"].as_str().unwrap_or(""), VERSION))
+        .find_map(|r| newer(r, VERSION, install.as_ref(), system))
+}
+
+/// Whether the release tagged `tag` belongs to this app's line.
+fn same_major(tag: &str, current: &str) -> bool {
+    let major = |v: &str| {
+        v.trim_start_matches('v')
+            .split('.')
+            .next()
+            .map(str::to_owned)
+    };
+    major(tag).is_some() && major(tag) == major(current)
 }
 
 /// The release in GitHub's answer, if it is newer than `current`.
@@ -773,6 +791,13 @@ mod tests {
             assert_eq!(p.kind, ".rpm");
         }
         assert_eq!(newer(&release, "0.4.6", None, None).unwrap().package, None);
+    }
+
+    #[test]
+    fn only_this_major_counts() {
+        assert!(super::same_major("v0.7.0", "0.6.0"));
+        assert!(!super::same_major("v2.7-alpha-377f8c3e68", "0.6.0"));
+        assert!(!super::same_major("stem-models", "0.6.0"));
     }
 
     #[test]
