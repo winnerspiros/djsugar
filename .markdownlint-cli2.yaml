@@ -19,6 +19,12 @@ config:
   # Instead, we should follow the "one sentence per line" pattern.
   line-length: false
 
+  # Collapsible sections in README.md.
+  no-inline-html:
+    allowed_elements:
+      - details
+      - summary
+
   # Dollar signs are useful to indicate shell commands/type and help
   # distinguishing wrapped lines from new commands.
   commands-show-output: false

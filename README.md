@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD033 -->
-
 # DJ Sugar
 
 ![DJ Sugar logo](https://raw.githubusercontent.com/winnerspiros/djsugar/main/res/images/icons/scalable/apps/mixxx.svg)
