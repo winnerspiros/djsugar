@@ -64,8 +64,10 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@v7
-      - name: Free disk space
-        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+      - name: Free disk space, add swap
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo swapoff -a && sudo fallocate -l 16G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
       - name: Install system libraries
         # mesa-vulkan-drivers provides lavapipe, a software Vulkan driver, so the
         # waveform shader test runs on CI machines without a GPU.
@@ -82,7 +84,10 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
-      - run: cargo test --workspace --no-run -j2
+      # The app crate (with its generated UI) alone, so its library and test
+      # builds don't run at the same time.
+      - run: cargo test --workspace --exclude djsugar --no-run -j2
+      - run: cargo test -p djsugar --no-run -j1
       # One crate at a time under a memory cap and a time limit, so a test
       # that runs away is stopped and named instead of taking the runner down.
       - name: cargo test
