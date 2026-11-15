@@ -193,14 +193,15 @@ fn draws_beat_grid() {
     let mut view = WaveformView::new(&device, Mode::Scrolling, w, h);
     view.set_track(&device, &renderer, Some(&track));
     let frame = Frame {
-        // A quarter beat past a bar, so the playhead doesn't cover a bar line,
-        // less half a pixel so the lines fall on pixel centres (scrolling,
-        // lines are not snapped to pixels).
-        play_seconds: 40.25 - 0.5 * 8.0 / 640.0,
+        // A quarter beat past a bar, so the playhead doesn't cover a bar line.
+        play_seconds: 40.25,
         visible_seconds: 8.0,
         duration: 200.0,
         first_bar_beat: 0.0,
-        grid: steady_grid(120.0, 0.0),
+        // The grid half a pixel late, so its lines fall on pixel centres (the
+        // scrolling picture moves in whole pixels; lines between two pixels
+        // light both half).
+        grid: steady_grid(120.0, 0.5 * 8.0 / 640.0),
         cue: None,
         loop_range: None,
         loop_marking: None,
@@ -1092,12 +1093,14 @@ fn three_band_keeps_the_highs_small() {
     );
 }
 
-/// Scrolling by part of a pixel draws, in every look, what blending the
-/// frames a whole pixel either side would: the shapes glide sideways and
-/// nothing about them bobs up and down. (Stems once sampled each pixel
-/// around its own position, so their outlines changed as they scrolled.)
+/// Scrolling by part of a pixel draws, in every look, one of the frames a
+/// whole pixel either side, crisp: nothing about the shapes bobs up and
+/// down or goes soft between pixels. (Stems once sampled each pixel around
+/// its own position, so their outlines changed as they scrolled; and
+/// blending two frames kept the shapes' size but softened their outline
+/// halfway between pixels, a shimmer in loud passages.)
 #[test]
-fn scrolling_is_steady_in_every_look() {
+fn scrolling_stays_crisp_in_every_look() {
     let Some((device, queue)) = gpu() else {
         eprintln!("no GPU adapter; skipping");
         return;
@@ -1190,16 +1193,17 @@ fn scrolling_is_steady_in_every_look() {
         for k in 1..8 {
             let t = k as f64 / 8.0;
             let between = ink(t);
-            let (mut off, mut total) = (0.0, 0.0);
-            for x in 0..between.len() {
-                let blend = (1.0 - t) * before[x] + t * after[x];
-                off += (between[x] - blend).abs();
-                total += blend;
-            }
+            let off = |frame: &[f64]| {
+                let diff: f64 = (0..frame.len())
+                    .map(|x| (between[x] - frame[x]).abs())
+                    .sum();
+                diff / frame.iter().sum::<f64>()
+            };
+            let nearest = off(&before).min(off(&after));
             assert!(
-                off / total < 0.01,
-                "{style:?} (half {half}) {t} px on: {:.1}% off a glide",
-                100.0 * off / total
+                nearest < 0.01,
+                "{style:?} (half {half}) {t} px on: {:.1}% off a whole-pixel frame",
+                100.0 * nearest
             );
         }
     }

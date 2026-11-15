@@ -347,9 +347,22 @@ fn columns(bin: f32) -> Columns {
     return Columns(a, b, c - i, i * w, w);
 }
 
+// The play position the scrolling picture is drawn at: snapped so the
+// columns land on whole screen pixels. Gliding between pixels by blending
+// two columns kept the shape's size, but its outline went soft halfway
+// between pixels and sharp again on them, every frame or two: in loud busy
+// passages the top edge seemed to shimmer up and down. Snapped, each frame
+// is crisp and the waveform moves a whole screen pixel at a time. The play
+// line, the marks and the grid all move with it.
+fn view_bin() -> f32 {
+    let w = p.bins_per_pixel;
+    let cx = p.size.x * p.needle;
+    return (round(p.play_bin / w - cx) + cx) * w;
+}
+
 fn column_bin(x: f32) -> f32 {
     if (p.mode == 0u) {
-        return p.play_bin + (x - p.size.x * p.needle) * p.bins_per_pixel;
+        return view_bin() + (x - p.size.x * p.needle) * p.bins_per_pixel;
     }
     return x * p.bins_per_pixel;
 }
@@ -389,7 +402,7 @@ fn gap_before(x: f32, at: f32, w: f32) -> f32 {
 // The x pixel of a slice position.
 fn bin_x(bin: f32) -> f32 {
     if (p.mode == 0u) {
-        return (bin - p.play_bin) / p.bins_per_pixel + p.size.x * p.needle;
+        return (bin - view_bin()) / p.bins_per_pixel + p.size.x * p.needle;
     }
     return bin / p.bins_per_pixel;
 }
