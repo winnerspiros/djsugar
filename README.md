@@ -11,8 +11,10 @@ Mixxx regularly, so every Mixxx feature and controller mapping is included.
 
 ## Downloads
 
-Every push to `main` builds all platforms and publishes a pre-release on the
-[Releases page](https://github.com/winnerspiros/djsugar/releases).
+Every push to `main` that changes the app (code, resources, packaging or build files) builds all
+platforms and publishes a pre-release on the
+[Releases page](https://github.com/winnerspiros/djsugar/releases). Version tags (`vX.Y.Z`) publish
+full releases.
 
 | Platform | Architecture | File |
 | --- | --- | --- |
@@ -93,10 +95,10 @@ DJ Sugar builds with CMake and vcpkg, the same way as Mixxx. The general steps a
 <details>
 <summary>Platform details</summary>
 
-- **Dependencies**: prebuilt per platform in
-  [winnerspiros/vcpkg](https://github.com/winnerspiros/vcpkg) releases (Qt 6.12, FFmpeg, ONNX
-  Runtime and the rest). `tools/<platform>_buildenv.sh setup` downloads the right bundle and checks
-  its SHA256.
+- **Dependencies**: `tools/<platform>_buildenv.sh setup` (`tools/windows_buildenv.bat` on Windows)
+  prepares them. Linux (`debian_buildenv.sh`) installs distribution packages with apt. Windows,
+  macOS, Android and iOS download a prebuilt bundle (Qt 6.12, FFmpeg, ONNX Runtime and the rest)
+  from [winnerspiros/vcpkg](https://github.com/winnerspiros/vcpkg) releases and check its SHA256.
 - **Android**: cross-compiled for arm64 with the NDK, then packaged with Gradle. Spotify support
   needs Rust: `rustup target add aarch64-linux-android`.
 - **iOS**: cross-compiled from macOS with `-DCMAKE_SYSTEM_NAME=iOS`, the `arm64-ios-release`
