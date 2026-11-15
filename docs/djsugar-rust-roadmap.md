@@ -10,6 +10,8 @@ Status: TODO, WIP, DONE. One part per pull request into `rust`.
 
 ## Decisions
 
+- Rust everywhere possible: app, build tooling (xtask, not shell/Python), mods and their SDK. Non-Rust only where a platform forces it (minimal Android/iOS glue) or for compatibility (JS mappings).
+
 - Base on openDJ instead of translating Mixxx: it already has the engine (cpal, symphonia,
   signalsmith-stretch), Mixxx controller mappings (midir, hidapi, rquickjs), library with Mixxx
   import (rusqlite), wgpu waveforms, Slint UI, stems, plugin hosting.
@@ -94,8 +96,8 @@ One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, 
 | # | Part | Status |
 | --- | --- | --- |
 | M.1 | Data mods: sample packs, skins (Slint themes/colors/assets), controller mappings, effect presets. No code. | TODO |
-| M.2 | Source mods: WASM (wasmtime/wasmi) sandbox implementing a `MusicSource` interface (search, browse, resolve-to-audio); host gives HTTP + cache only via declared permissions. YouTube, SoundCloud, Spotify become mods instead of built-ins. | TODO |
-| M.3 | Reuse existing script host (rquickjs) for controller-script mods; native .so/.dll plugins desktop-only (plugin-host crate). | TODO |
+| M.2 | Source mods: written in Rust, compiled to WASM (wasm32-wasip2, wasmtime/wasmi), with a `djsugar-mod` SDK crate; implementing a `MusicSource` interface (search, browse, resolve-to-audio); host gives HTTP + cache only via declared permissions. YouTube, SoundCloud, Spotify become mods instead of built-ins. | TODO |
+| M.3 | Controller mods in Rust (WASM) too; rquickjs kept only to run existing Mixxx/openDJ JS mappings, never for new code. Native plugins desktop-only (plugin-host crate). | TODO |
 | M.4 | Store policy: Play forbids downloading native code; WASM/JS interpreted in a sandbox is the allowed path. Store build ships no source mods and no built-in mod catalog URL. | TODO |
 
 ## Part 1: DJ Sugar features
