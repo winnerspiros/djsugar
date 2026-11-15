@@ -38,7 +38,8 @@ GROUPS = [
     (
         "Performance and size",
         re.compile(
-            r"\b(perf|faster|speed|optimi[sz]\w*|smaller|size|lto|ipo|webp|opus|latency|cache|compression)\b",
+            r"\b(perf|faster|speed|optimi[sz]\w*|smaller|size|lto|ipo|webp"
+            r"|opus|latency|cache|compression)\b",
             re.I,
         ),
     ),
@@ -50,6 +51,7 @@ PLATFORMS = [
     ("Windows", re.compile(r"\bwindows\b|\bmsi\b|\bwin(32|64)?\b", re.I)),
     ("Linux", re.compile(r"\blinux\b|appimage|\bdeb\b|ubuntu|flatpak", re.I)),
 ]
+UPSTREAM = "https://github.com/mixxxdj/mixxx"
 ASSETS = [
     (".apk", "Android (arm64)"),
     (".ipa", "iOS / iPadOS (arm64, unsigned)"),
@@ -74,7 +76,10 @@ def size(path):
 
 
 def is_own_pr(repo, num, title):
-    """True when PR <num> of <repo> has this title (else it came with an upstream merge)."""
+    """True when PR <num> of <repo> has this title.
+
+    Otherwise the PR came in with an upstream Mixxx merge.
+    """
     try:
         own = subprocess.run(
             [
@@ -121,7 +126,8 @@ def main():
             -200:
         ]
         files = [f for f in files if "/" in f or "." in f]
-        line = f"- {subject.strip()} ([{sha[:10]}](https://github.com/{repo}/commit/{sha}))"
+        link = f"https://github.com/{repo}/commit/{sha}"
+        line = f"- {subject.strip()} ([{sha[:10]}]({link}))"
         text = subject + " " + " ".join(files)
         for name, rx in PLATFORMS:
             if rx.search(text):
@@ -139,9 +145,10 @@ def main():
     total = sum(len(v) for v in groups.values()) + len(dev)
     out = []
     if prev:
+        base = f"https://github.com/{repo}"
         out.append(
-            f"{total} changes since [{prev}](https://github.com/{repo}/releases/tag/{prev}) "
-            f"([full diff](https://github.com/{repo}/compare/{prev}...{head}))."
+            f"{total} changes since [{prev}]({base}/releases/tag/{prev}) "
+            f"([full diff]({base}/compare/{prev}...{head}))."
         )
     touched = [name for name, count in platforms.items() if count]
     if touched:
@@ -155,7 +162,7 @@ def main():
             ref = (
                 f"#{num}"
                 if own
-                else f"[mixxxdj/mixxx#{num}](https://github.com/mixxxdj/mixxx/pull/{num})"
+                else f"[mixxxdj/mixxx#{num}]({UPSTREAM}/pull/{num})"
             )
             out.append(
                 f"- {title} ({ref}){'' if own else ', from upstream Mixxx'}"
@@ -188,14 +195,15 @@ def main():
             for f in files:
                 if f.endswith(suffix) and f not in used:
                     used.add(f)
-                    out.append(
-                        f"| {label} | `{f}` | {size(os.path.join(assets_dir, f))} |"
-                    )
+                    mb = size(os.path.join(assets_dir, f))
+                    out.append(f"| {label} | `{f}` | {mb} |")
         out.append("")
         if any(f.endswith(".ipa") for f in files):
             out += [
-                "The iOS build is unsigned: install it with [AltStore](https://altstore.io) or "
-                "[Sideloadly](https://sideloadly.io), which sign it with your Apple ID.",
+                "The iOS build is unsigned: install it with "
+                "[AltStore](https://altstore.io) or "
+                "[Sideloadly](https://sideloadly.io), "
+                "which sign it with your Apple ID.",
                 "",
             ]
     print("\n".join(out))
