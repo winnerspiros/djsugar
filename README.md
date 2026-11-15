@@ -1,3 +1,5 @@
+<!-- markdownlint-configure-file { "MD033": { "allowed_elements": ["details", "summary"] } } -->
+
 # DJ Sugar
 
 ![DJ Sugar logo](https://raw.githubusercontent.com/winnerspiros/djsugar/main/res/images/icons/scalable/apps/mixxx.svg)
@@ -38,27 +40,27 @@ no HID/USB controller support yet.
 
 ## Features
 
-**Streaming**
+### Streaming
 
 - YouTube: search, load to a deck or save to the library, SponsorBlock skips non-music parts
 - SoundCloud: search with genre, cover art and play counts
 - Spotify (Android, Premium): search, Liked Songs and playlists, played as real files
 - Subsonic servers and custom stream URLs
 
-**Performance**
+### Performance
 
 - FX Station: drum pads and effect scenes on top of the decks
 - Built-in sample library, your own recordings and a sample editor
 - On-device stem separation (Spleeter or HTDemucs)
 - Smart Auto DJ: chooses the next track by energy, key and phrase and mixes it in on the beat
 
-**Hardware**
+### Hardware
 
 - Pioneer DDJ-FLX4 over USB and Bluetooth MIDI, detected automatically
 - USB audio interfaces and MIDI learn on Android, no root needed
 - Rekordbox USB drives: read playlists and back them up
 
-**Mobile**
+### Mobile
 
 - Touch skins (Lite and Booth) with a compact library and a streaming hub
 - Low-latency audio through Oboe, latency calibration with the microphone
