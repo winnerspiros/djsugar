@@ -1,0 +1,49 @@
+name: Android
+
+# Builds every crate for Android arm64 with the NDK on the runner, one job per
+# crate so each crate's state shows on its own.
+
+on:
+  push:
+    branches: [rust]
+    paths-ignore: ["docs/**", "openspec/**", "**/*.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - djsugar-control
+          - djsugar-engine
+          - djsugar-controllers
+          - djsugar-library
+          - djsugar-plugins
+          - djsugar-broadcast
+          - djsugar-export
+          - djsugar-osc
+          - djsugar-remote
+          - djsugar-script
+          - djsugar-separation
+          - djsugar-waveform
+          - djsugar
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-${{ matrix.crate }}
+          save-if: ${{ github.ref == 'refs/heads/rust' }}
+      - run: cargo install cargo-ndk --locked
+      - name: cargo ndk check
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: cargo ndk -t arm64-v8a -P 26 check -p ${{ matrix.crate }} --locked
