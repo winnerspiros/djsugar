@@ -2353,7 +2353,7 @@ impl Engine {
 
     /// The Link instance, to turn on and off off the audio thread (see
     /// [`crate::link::watch`]).
-    pub(crate) fn link_handle(&self) -> Arc<rusty_link::AblLink> {
+    pub(crate) fn link_handle(&self) -> Arc<djsugar_link::AblLink> {
         self.link.handle()
     }
 
@@ -4303,7 +4303,7 @@ mod tests {
         let link = engine.link_handle();
         link.enable(true);
         // Another app in the session is at 128 BPM.
-        let mut state = rusty_link::SessionState::new();
+        let mut state = djsugar_link::SessionState::new();
         link.capture_app_session_state(&mut state);
         state.set_tempo(128.0, link.clock_micros());
         link.commit_app_session_state(&state);
@@ -4312,7 +4312,7 @@ mod tests {
         run(&mut engine, 0.05);
         let c = |g: &str, k: &str| reg.get(g, k).unwrap();
         let master = || c("[Link]", "master_deck").get();
-        let session_tempo = |state: &mut rusty_link::SessionState| {
+        let session_tempo = |state: &mut djsugar_link::SessionState| {
             link.capture_app_session_state(state);
             state.tempo()
         };
@@ -4326,7 +4326,7 @@ mod tests {
         assert!((t - 120.0).abs() < 0.01, "session tempo {t}");
         // On the deck's beat.
         let check_phase = |engine: &mut Engine, deck: usize| {
-            let mut s = rusty_link::SessionState::new();
+            let mut s = djsugar_link::SessionState::new();
             link.capture_app_session_state(&mut s);
             let d = &engine.decks[deck];
             let track = d.track.clone().unwrap();

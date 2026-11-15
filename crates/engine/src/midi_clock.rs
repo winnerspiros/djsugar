@@ -26,7 +26,7 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use djsugar_control::{ControlHandle, ControlRegistry};
-use rusty_link::AblLink;
+use djsugar_link::AblLink;
 
 pub const GROUP: &str = "[MidiClock]";
 

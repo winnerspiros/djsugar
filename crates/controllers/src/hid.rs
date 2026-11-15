@@ -93,7 +93,7 @@ pub trait Io {
     fn get_feature(&self, id: u8) -> Option<Vec<u8>>;
 }
 
-/// Output reports waiting to be sent, kept as Mixxx keeps them: a report
+/// Output reports waiting to be sent: a report
 /// sent in the default mode replaces any of the same ID not yet sent, and
 /// isn't sent at all if it's what the device already has. One sent with
 /// `useNonSkippingFIFO` is always sent, in order, before the others.
@@ -192,10 +192,12 @@ pub fn match_mapping<'a>(
 }
 
 /// Finds the HID devices plugged in, and opens them.
+#[cfg(not(target_os = "android"))]
 pub(crate) struct Hid {
     api: hidapi::HidApi,
 }
 
+#[cfg(not(target_os = "android"))]
 impl Hid {
     pub(crate) fn new() -> Result<Self, String> {
         hidapi::HidApi::new()
@@ -233,12 +235,14 @@ impl Hid {
     }
 }
 
-/// The largest report read or asked for; Mixxx's buffer is the same size.
+/// The largest report read or asked for.
 pub(crate) const BUFFER: usize = 255;
 
 /// An open HID device.
+#[cfg(not(target_os = "android"))]
 pub(crate) struct Device(hidapi::HidDevice);
 
+#[cfg(not(target_os = "android"))]
 impl Device {
     /// Waits up to `timeout_ms` for an input report; `Ok(0)` when none came.
     pub(crate) fn read(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, String> {
@@ -248,6 +252,7 @@ impl Device {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl Io for Device {
     fn write(&self, report: &[u8]) -> Result<(), String> {
         self.0.write(report).map(|_| ()).map_err(|e| e.to_string())
@@ -272,6 +277,56 @@ impl Io for Device {
         buf[0] = id;
         let n = self.0.get_feature_report(&mut buf).ok()?;
         (n > 1).then(|| buf[1..n].to_vec())
+    }
+}
+
+/// Android has no hidraw access for apps; USB HID goes through the
+/// platform's USB host API (roadmap C.1), so none are found for now.
+#[cfg(target_os = "android")]
+pub(crate) struct Hid;
+
+#[cfg(target_os = "android")]
+impl Hid {
+    pub(crate) fn new() -> Result<Self, String> {
+        Ok(Self)
+    }
+
+    pub(crate) fn scan(&mut self, _vendors: &[u16]) -> Vec<DeviceInfo> {
+        Vec::new()
+    }
+
+    pub(crate) fn open(&self, _d: &DeviceInfo) -> Result<Device, String> {
+        Err("USB HID controllers are not supported on Android yet".into())
+    }
+}
+
+/// Never made on Android: [`Hid::scan`] finds nothing.
+#[cfg(target_os = "android")]
+pub(crate) enum Device {}
+
+#[cfg(target_os = "android")]
+impl Device {
+    pub(crate) fn read(&self, _buf: &mut [u8], _timeout_ms: i32) -> Result<usize, String> {
+        match *self {}
+    }
+}
+
+#[cfg(target_os = "android")]
+impl Io for Device {
+    fn write(&self, _report: &[u8]) -> Result<(), String> {
+        match *self {}
+    }
+
+    fn send_feature(&self, _report: &[u8]) -> Result<(), String> {
+        match *self {}
+    }
+
+    fn get_input(&self, _id: u8) -> Option<Vec<u8>> {
+        match *self {}
+    }
+
+    fn get_feature(&self, _id: u8) -> Option<Vec<u8>> {
+        match *self {}
     }
 }
 

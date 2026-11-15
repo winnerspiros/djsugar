@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
-use rusty_link::{AblLink, HostTimeFilter, SessionState};
+use djsugar_link::{AblLink, HostTimeFilter, SessionState};
 
 pub const GROUP: &str = "[Link]";
 

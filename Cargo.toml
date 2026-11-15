@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/broadcast", "crates/app"]
+members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/broadcast", "crates/app"]
 exclude = ["third_party"]
 
 [workspace.package]

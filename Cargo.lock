@@ -3018,6 +3018,7 @@ dependencies = [
  "chrono",
  "cpal",
  "djsugar-control",
+ "djsugar-link",
  "djsugar-plugin-host",
  "djsugar-separation",
  "flacenc",
@@ -3032,7 +3033,6 @@ dependencies = [
  "rten",
  "rtrb",
  "rustfft",
- "rusty_link",
  "serde_json",
  "signalsmith-stretch",
  "symphonia",
@@ -3070,6 +3070,14 @@ dependencies = [
  "regex",
  "roxmltree",
  "rusqlite",
+]
+
+[[package]]
+name = "djsugar-link"
+version = "0.6.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "socket2",
 ]
 
 [[package]]
@@ -8421,16 +8429,6 @@ checksum = "59e4234523e38d9c12201955f8216e1a60313e64c5077f4e1cf49b0db77bd7e8"
 dependencies = [
  "rubato 0.16.2",
  "rustfft",
-]
-
-[[package]]
-name = "rusty_link"
-version = "0.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4169045a50ee3c874ee11128b8f06a46947776b23e3ee5f4bca293b6f3bb6f07"
-dependencies = [
- "bindgen 0.72.1",
- "cmake",
 ]
 
 [[package]]

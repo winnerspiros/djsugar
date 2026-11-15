@@ -117,6 +117,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | R.8 | hidapi | hidraw/IOKit/Win32 HID via nusb/async-hid | TODO |
 | R.9 | yeslogic-fontconfig-sys | fontique/fontdb font discovery | TODO |
 | R.10 | renderdoc-sys | debug-only feature, off by default | TODO |
+| R.12 | rusty_link (Ableton Link, C++) | `djsugar-link`: pure-Rust implementation of the Link session protocol (discovery, clock measurement, session join, timeline sharing) | DONE (needs a live test against Ableton Live/Traktor) |
 | R.11 | alsa-sys (libasound), wayland-sys, other OS-layer C libs | audit: talk to kernel ALSA ioctls / PipeWire protocol directly; wayland-client pure-Rust backend (no libwayland); keep only true OS ABIs (CoreAudio, WASAPI, AAudio) | TODO |
 
 ## Part T: mapping translator

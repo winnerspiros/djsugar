@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use djsugar_control::ControlHandle;
-use rusty_link::AblLink;
+use djsugar_link::AblLink;
 
 use crate::midi_clock::{BeatClock, Snapshot, PPQN};
 
