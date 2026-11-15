@@ -85,6 +85,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | 0.5 | iOS arm64 build and unsigned IPA | TODO |
 | 0.6 | iOS audio (CoreAudio via cpal), file access | TODO |
 | 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | TODO |
+| 0.8 | Store builds: cargo feature `store` drops YouTube/SoundCloud download and librespot (Play/F-Droid policy); full build ships on GitHub releases; About screen links source (GPL) | TODO |
 
 ## Part 1: DJ Sugar features
 
