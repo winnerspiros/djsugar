@@ -44,6 +44,18 @@ that is ported or touched must meet these rules; inherited code is brought up to
 - Tests: unit + property tests (proptest) for DSP and parsers, golden-file tests for analysis
   vs the C++ reference, fuzzing (cargo-fuzz) for decoders, tag and playlist parsers.
 
+- One app on every platform: identical features, functions, layouts/skins and settings on
+  Android, iOS, Windows, macOS and Linux. Platform code is limited to thin backends (audio API,
+  USB/MIDI/HID access, file pickers, packaging) behind shared traits; no platform-only features
+  unless the OS makes them impossible, and each such gap is listed in the parity table below.
+  Layouts adapt to screen size and input (touch/mouse), not to the OS.
+
+Platform gaps the OS forces (keep this list short and current):
+
+| Gap | Platforms | Reason |
+| --- | --- | --- |
+| yt-dlp subprocess | iOS | iOS apps cannot spawn processes; needs an in-process extractor |
+
 Baseline inherited from openDJ (2026-11-15): 173 `unsafe` occurrences, 1122 crates in Cargo.lock,
 no tuned release profile, no workspace lint table. Part Q tracks closing these gaps.
 
