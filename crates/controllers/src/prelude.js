@@ -99,7 +99,7 @@
             }
             return c;
         },
-        // Runs the connections on the next poll, as Mixxx queues them; scripts
+        // Runs the connections on the next poll; scripts
         // often trigger during init before what the callbacks use exists.
         trigger: (group, name) => native.trigger(String(group), String(name)),
         log: message => native.log(String(message)),
@@ -162,7 +162,7 @@
     // Mixxx names the controller's script object both `midi` and `controller`.
     globalThis.controller = globalThis.midi;
     if (hid) {
-        // Bytes from an array, ArrayBuffer or typed array, as Mixxx takes them.
+        // Bytes from an array, ArrayBuffer or typed array.
         const bytesOf = data => {
             if (data instanceof ArrayBuffer) {
                 return Array.from(new Uint8Array(data));
@@ -236,7 +236,7 @@
     globalThis.console = {log, info: log, warn: log, error: log, debug: () => {}};
     globalThis.print = message => native.log(String(message));
 
-    // Same perceptual distance Mixxx's ColorMapper uses.
+    // Perceptual colour distance.
     const colorDistance = (a, b) => {
         const [ar, ag, ab] = [(a >> 16) & 0xFF, (a >> 8) & 0xFF, a & 0xFF];
         const [br, bg, bb] = [(b >> 16) & 0xFF, (b >> 8) & 0xFF, b & 0xFF];

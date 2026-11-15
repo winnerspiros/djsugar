@@ -475,7 +475,7 @@ impl Editor {
         self.loading = Some((file, rx));
     }
 
-    /// Uses the own mapping `id` for the Mixxx mapping `base`, or the
+    /// Uses the own mapping `id` for the base mapping `base`, or the
     /// original for `None`, here and on the controller.
     fn use_version(&self, base: &str, id: Option<&str>) {
         settings::set_controller_version(base, id);
@@ -484,14 +484,14 @@ impl Editor {
         }
     }
 
-    /// The Mixxx mapping shown, by file name.
+    /// The base mapping shown, by file name.
     fn base(&self) -> Option<String> {
         let app = self.app.upgrade()?;
         let i = app.global::<ControllerEditor>().get_chosen();
         self.choices.get(i.max(0) as usize).map(|(f, _)| f.clone())
     }
 
-    /// Fills the Mapping menu for the Mixxx mapping `base`: the original,
+    /// Fills the Mapping menu for the base mapping `base`: the original,
     /// the DJ's own copies of it, then what can be done with them.
     fn versions(&mut self, base: &str) {
         let Some(app) = self.app.upgrade() else {
@@ -781,7 +781,7 @@ impl Editor {
     }
 
     /// Writes the own mapping in use as a shared `.djsugar-mapping`, or as a
-    /// Mixxx mapping with its scripts, into `folder`.
+    /// Mixxx-format mapping with its scripts, into `folder`.
     fn export(&mut self, folder: &std::path::Path, mixxx: bool) {
         let (Some(own_dir), Some(shipped)) = (settings::own_mappings_dir(), self.dir.clone())
         else {

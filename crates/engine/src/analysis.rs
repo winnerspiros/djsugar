@@ -429,7 +429,7 @@ impl Analyser {
 fn summarise(slices: &[Slice]) -> Waveform {
     let top = slices.iter().map(|s| s.peak[3]).fold(1e-6f32, f32::max);
     // The bands carry less energy than the whole signal; lift them so the
-    // colours read clearly (as Mixxx's analyzer does with its band gains).
+    // colours read clearly.
     const BAND_GAIN: [f32; 4] = [1.0, 1.4, 2.0, 1.0];
     let q =
         |v: f32, k: usize| ((v * BAND_GAIN[k] / top).clamp(0.0, 1.0).sqrt() * 255.0).round() as u8;
@@ -469,7 +469,7 @@ const FLUX_MEAN_SECS: f64 = 0.5;
 
 /// Spectral flux, one value per onset bin: how much the log-magnitude
 /// spectrum rises from one bin to the next, summed over frequency (as
-/// Mixxx's Queen Mary and librosa's onset detectors do). Fed the mono
+/// the Queen Mary and librosa onset detectors do). Fed the mono
 /// signal a sample at a time; each spectrum is centred on its bin.
 #[derive(Default)]
 struct SpectralFlux {

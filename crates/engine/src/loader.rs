@@ -1,4 +1,4 @@
-//! Loads tracks off the audio thread, the way Mixxx does: a track goes on its
+//! Loads tracks off the audio thread: a track goes on its
 //! deck as soon as its file is opened, and plays while the rest decodes. The
 //! waveform fills in as the audio is analysed, and the tempo and beat grid
 //! follow when the analysis is done. Results are cached on disk, so a track

@@ -186,8 +186,8 @@ const BPM_RANGES: [(f64, f64); 6] = [
     (98.0, 195.0),
     (118.0, 235.0),
 ];
-/// Mixxx's cue_mode values for the two CUE behaviours offered: Mixxx's own
-/// (preview while held) and Numark's (set and return only).
+/// Our cue_mode values for the two CUE behaviours offered: preview while held
+/// (0.0) and set-and-return (3.0).
 const CUE_MODES: [f64; 2] = [0.0, 3.0];
 /// Auto gain targets offered, in LUFS.
 /// The recording formats offered, as (format, bits).
@@ -2461,7 +2461,7 @@ impl Prefs {
             title,
             settings::import_theirs_win(id),
         ));
-        // Mixxx has no streamed tracks.
+        // The Mixxx library has no streamed tracks.
         if id != "mixxx" {
             rows.push(switch(
                 &settings::import_wants_streamed_key(id),

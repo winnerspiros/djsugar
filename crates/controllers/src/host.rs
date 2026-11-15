@@ -1,4 +1,4 @@
-//! What a controller script can reach: controls (with Mixxx's `_set_default`
+//! What a controller script can reach: controls (with `_set_default`
 //! style shortcuts and soft takeover), MIDI output, timers and the
 //! scratch/brake filters. Script natives and MIDI input both go through here.
 
@@ -348,7 +348,7 @@ const HELD_KEYS: [&str; 6] = [
 
 #[derive(Default)]
 struct Scratch {
-    /// Running at 1 kHz (Mixxx's scratch timer).
+    /// Running at 1 kHz (scratch timer).
     active: bool,
     /// This controller turned the deck's `scratch2_enable` on and hasn't
     /// turned it off yet (see [`Host::release_decks`]).
@@ -398,7 +398,7 @@ pub(crate) struct Host {
     /// MIDI messages waiting to be sent.
     pub(crate) sent: Vec<Vec<u8>>,
     watches: Vec<Option<Watch>>,
-    /// Controls `engine.trigger` named since the last poll. As in Mixxx, their
+    /// Controls `engine.trigger` named since the last poll. Their
     /// connections run later, not inside the script call that triggered them.
     triggered: Vec<ConfigKey>,
     /// Messages bound to a script function in the mapping XML; Mixxx gives

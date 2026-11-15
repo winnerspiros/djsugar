@@ -1,4 +1,4 @@
-//! Effect units, as in Mixxx's effect rack: `[EffectRack1_EffectUnitN]` holds
+//! Effect units: `[EffectRack1_EffectUnitN]` holds
 //! three effect slots in series, `[EffectRack1_EffectUnitN_EffectM]`, and is
 //! routed to any of the decks and the main mix.
 //!
@@ -26,7 +26,7 @@ use crate::controls::{
 use crate::dsp::Svf;
 use crate::inputs::{input_group, MICROPHONE, NUM_INPUTS};
 
-/// Mixxx's built-in effects that this engine implements, in `loaded_effect` order.
+/// The built-in effects, in `loaded_effect` order.
 pub const AVAILABLE_EFFECTS: [&str; 18] = [
     "Echo",
     "Reverb",
@@ -135,7 +135,7 @@ fn routable(unit: usize, target: usize) -> bool {
     (unit == MIC_FX_UNIT) == (target > MAIN)
 }
 
-/// A unit's control that routes it to `target`, as in Mixxx.
+/// A unit's control that routes it to `target`.
 pub(crate) fn route_name(target: usize) -> String {
     let group = if target == MAIN {
         "[Master]".to_string()
@@ -439,7 +439,7 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
     }
 }
 
-/// The parameters the meta knob drives, as Mixxx's linked parameters do:
+/// The parameters the meta knob drives:
 /// meta 0 is subtle and 1 strong. The knob is unipolar, so Filter is neutral
 /// at 0 and turning up sweeps its high-pass.
 fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
@@ -699,7 +699,7 @@ impl UnitControls {
         reg.toggle(g, "controller_input_active");
         reg.indicator(g, "num_effects", n).set(n);
         reg.indicator(g, "num_effectslots", n).set(n);
-        // Chain presets are not implemented: -1 is Mixxx's "unsaved chain".
+        // Chain presets are not implemented: -1 means no preset.
         reg.create(g, "loaded_chain_preset", -1.0, -1.0, 64.0, Behavior::Free);
         reg.indicator(g, "num_chain_presets", 64.0).set(1.0);
         reg.push(g, "next_chain_preset");
@@ -1128,9 +1128,8 @@ fn held_after(mut held: u128, notes: &[Midi]) -> u128 {
 /// `loaded_effect` for the Flanger.
 const FLANGER: f64 = 4.0;
 
-/// Mixxx 1.x's flanger, which mappings written before Mixxx 2.0 still drive
-/// (the Numark V7's FX section, among others) though Mixxx itself dropped
-/// it: `[ChannelN],flanger` turns it on for a deck, and `[Flanger]`'s
+/// The legacy flanger, which older controller mappings still drive
+/// (the Numark V7's FX section, among others): `[ChannelN],flanger` turns it on for a deck, and `[Flanger]`'s
 /// `lfoDepth`, `lfoDelay` (microseconds) and `lfoPeriod` (microseconds) set
 /// it for all of them. It plays through the deck's Pad FX unit, which is
 /// free while no pad is held.
@@ -1600,7 +1599,7 @@ impl EffectRack {
             let release = unit.edges[2].pressed(&unit.release);
             let version = unit.super1.version();
             if version != unit.super_seen {
-                // super1 drives every slot's meta knob, as Mixxx's linked super knob does.
+                // super1 drives every slot's meta knob.
                 unit.super_seen = version;
                 let v = unit.super1.get();
                 for slot in &self.slots[u] {
@@ -1855,7 +1854,7 @@ impl EffectRack {
             }
             // Dry/wet. Every effect's output already carries the dry signal
             // where it musically belongs (an echo plays over the original), so
-            // Mixxx's Dry+Wet mode would sound the same and is not separate.
+            // A separate Dry+Wet mode would sound the same.
             let (a, b) = self.mix[u];
             for (k, (_, buf)) in blocks.iter_mut().enumerate() {
                 if !live[k] {
@@ -1913,7 +1912,7 @@ impl EffectRack {
             }
             // Dry/wet. Every effect's output already carries the dry signal
             // where it musically belongs (an echo plays over the original), so
-            // Mixxx's Dry+Wet mode would sound the same and is not separate.
+            // A separate Dry+Wet mode would sound the same.
             let (a, b) = self.mix[u];
             let m = a + (b - a) * r;
             for c in 0..2 {
@@ -2205,7 +2204,7 @@ impl Line {
 }
 
 /// Jon Dattorro's plate reverb ("Effect Design, Part 1", JAES 1997), the
-/// algorithm Mixxx's reverb uses too: input diffusers into a figure-eight
+/// algorithm: input diffusers into a figure-eight
 /// tank of modulated allpasses, damped delays and decay, with the stereo
 /// output tapped from several points of the tank. Smoother and less
 /// metallic than Freeverb's parallel combs.
@@ -2366,7 +2365,7 @@ impl Reverb {
     }
 }
 
-/// Resonant low-pass and high-pass in series, like Mixxx's Filter effect,
+/// Resonant low-pass and high-pass in series,
 /// but with state-variable filters that glide instead of jumping each buffer.
 struct Filter {
     sample_rate: f32,
@@ -2744,8 +2743,7 @@ impl Gate {
 }
 
 /// Beat roll: repeats a slice of 1/16 to 1 beat, each repeat faded in and
-/// out over 3 ms so the seams don't click (Mixxx's Glitch repeats raw audio
-/// buffers instead). With a beat grid it starts recording on the next
+/// out over 3 ms so the seams don't click. With a beat grid it starts recording on the next
 /// division of the grid (the slice, or a quarter beat for longer slices),
 /// so the roll lands on the music's beat; without one, at once.
 struct Roll {
@@ -3433,7 +3431,7 @@ mod tests {
     }
 
     #[test]
-    fn mixxx_1_flanger_plays_through_the_decks_pad_fx_unit() {
+    fn legacy_flanger_plays_through_the_decks_pad_fx_unit() {
         let reg = ControlRegistry::new();
         let mut rack = EffectRack::new(&reg, SR as f64);
         let beats = [0.5; TARGETS];

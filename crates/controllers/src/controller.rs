@@ -69,7 +69,7 @@ impl Io for NoDevice {
 /// How long after loading a mapping its LEDs are sent again.
 const RESEND_AFTER: Duration = Duration::from_millis(1500);
 
-/// Mixxx's `computeValue`: applies a binding's options to a 7-bit value.
+/// `computeValue`: applies a binding's options to a 7-bit value.
 fn compute_value(options: Options, prev: f64, value: f64) -> f64 {
     if options.is_empty() {
         return value;
@@ -325,7 +325,7 @@ impl Controller {
     /// Handles one HID input report, as read from the device (starting with
     /// the report ID if the device numbers its reports): the mapping's
     /// `incomingData` functions get it. A report the same as the last is
-    /// skipped, as Mixxx does.
+    /// skipped.
     pub fn receive_report(&mut self, report: &[u8]) {
         if report.is_empty() || self.repeats.is_repeat(report) {
             return;

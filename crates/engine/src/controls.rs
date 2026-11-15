@@ -1,5 +1,5 @@
-//! Engine controls, created under Mixxx's names so skins and mappings written
-//! for Mixxx find them: `[Channel1],play`, `[Master],crossfader`, ...
+//! Engine controls, created under their standard names so skins and controller mappings
+//! find them: `[Channel1],play`, `[Master],crossfader`, ...
 
 use crate::beats::GridEdit;
 use djsugar_control::{Behavior, ConfigKey, ControlHandle, ControlRegistry};
@@ -61,7 +61,7 @@ pub fn effect_group(unit: usize, effect: usize) -> String {
     format!("[EffectRack1_EffectUnit{}_Effect{}]", unit + 1, effect + 1)
 }
 
-/// hotcue_N_type values, as in Mixxx.
+/// hotcue_N_type values.
 /// The Scratch crossfader curve's cut-in out of the box: a side opens
 /// fully within the last 2% of travel, under a millimetre on most
 /// controllers.
@@ -73,12 +73,12 @@ pub(crate) struct Hotcue {
     pub(crate) activate: ControlHandle,
     pub(crate) clear: ControlHandle,
     pub(crate) enabled: ControlHandle,
-    /// Mixxx 2.4's hotcue_N_status: 0 empty, 1 set, 2 active (held).
+    /// hotcue_N_status: 0 empty, 1 set, 2 active (held).
     pub(crate) status: ControlHandle,
     pub(crate) position: ControlHandle,
-    /// A saved loop's end, -1 for a plain cue (Mixxx's hotcue_N_endposition).
+    /// A saved loop's end, -1 for a plain cue (hotcue_N_endposition).
     pub(crate) end_position: ControlHandle,
-    /// Mixxx's hotcue_N_type: 0 empty, [`HOTCUE_CUE`] or [`HOTCUE_LOOP`].
+    /// hotcue_N_type: 0 empty, [`HOTCUE_CUE`] or [`HOTCUE_LOOP`].
     pub(crate) kind: ControlHandle,
     pub(crate) goto_play: ControlHandle,
     pub(crate) goto_stop: ControlHandle,
@@ -87,14 +87,14 @@ pub(crate) struct Hotcue {
     pub(crate) edges: [Edge; 4],
 }
 
-/// One stem's controls, `[ChannelN_StemM]` as in Mixxx 2.6.
+/// One stem's controls, `[ChannelN_StemM]`.
 pub(crate) struct StemControls {
     pub(crate) volume: ControlHandle,
     pub(crate) mute: ControlHandle,
     /// 0xRRGGBB, or -1 with no stem.
     pub(crate) color: ControlHandle,
     /// The stem is sent into the deck's stem effect (`stem_fx`), as
-    /// Mixxx 2.6's `[QuickEffectRack1_[ChannelN_StemM]],enabled`.
+    /// `[QuickEffectRack1_[ChannelN_StemM]],enabled`.
     pub(crate) fx: ControlHandle,
 }
 
@@ -102,7 +102,7 @@ pub fn stem_group(deck: usize, stem: usize) -> String {
     format!("[Channel{}_Stem{}]", deck + 1, stem + 1)
 }
 
-/// A stem's quick effect group, as in Mixxx 2.6.
+/// A stem's quick effect group.
 pub fn stem_fx_group(deck: usize, stem: usize) -> String {
     format!("[QuickEffectRack1_[Channel{}_Stem{}]]", deck + 1, stem + 1)
 }
@@ -119,14 +119,14 @@ pub(crate) struct DeckControls {
     /// this deck's track ends, or 0. Cleared once it has started.
     pub(crate) play_next: ControlHandle,
     pub(crate) pfl: ControlHandle,
-    /// Mixxx's crossfader assignment: 0 left, 1 thru (not faded), 2 right.
+    /// Crossfader assignment: 0 left, 1 thru (not faded), 2 right.
     /// Decks 1 and 3 start on the left, 2 and 4 on the right.
     pub(crate) orientation: ControlHandle,
     pub(crate) cue_default: ControlHandle,
     /// CUP: seeks to the cue point (or sets it when stopped), plays on release.
     pub(crate) cue_play: ControlHandle,
     pub(crate) cue_point: ControlHandle,
-    /// What CUE does when stopped, as Mixxx's `cue_mode`: 3 (Numark) only
+    /// What CUE does when stopped, as `cue_mode`: 3 (Numark) only
     /// sets and returns to the cue point; the others also play while CUE is
     /// held at the cue point.
     pub(crate) cue_mode: ControlHandle,
@@ -136,7 +136,7 @@ pub(crate) struct DeckControls {
     /// Requested range, applied with its fader adjustment before sync so
     /// the tempo stays where it is. Zero means no pending request.
     pub(crate) rate_range_set: ControlHandle,
-    /// Mixxx's `rate_dir`: which way the tempo fader changes the speed. `rate`
+    /// `rate_dir`: which way the tempo fader changes the speed. `rate`
     /// is where the fader is (+1 at the top); the speed is
     /// `1 + rate * rateRange * rate_dir`. -1, the app's default, slows the
     /// deck down as the fader goes up, as on Pioneer players.
@@ -144,12 +144,12 @@ pub(crate) struct DeckControls {
     /// Pitch reset: while on, the tempo glides back to 0% and the control
     /// turns itself off when it gets there.
     pub(crate) rate_reset: ControlHandle,
-    /// Puts the tempo at 0% at once (Mixxx's `rate_set_zero`).
+    /// Puts the tempo at 0% at once (`rate_set_zero`).
     pub(crate) rate_set_zero: ControlHandle,
     pub(crate) playposition: ControlHandle,
     pub(crate) volume: ControlHandle,
     pub(crate) pregain: ControlHandle,
-    /// The auto gain applied to the deck's track, as a factor (Mixxx's
+    /// The auto gain applied to the deck's track, as a factor (
     /// ReplayGain control of the same name).
     pub(crate) replaygain: ControlHandle,
     pub(crate) vu: ControlHandle,
@@ -169,7 +169,7 @@ pub(crate) struct DeckControls {
     /// What quantize snaps to, in beats: 1/16 to 4 (a bar), 1 by default.
     pub(crate) quantize_beats: ControlHandle,
     /// 0, or 1 while synced decks follow this deck, or 2 while it is
-    /// pinned as their leader (set 2 to pin, 0 to unpin), as in Mixxx.
+    /// pinned as their leader (set 2 to pin, 0 to unpin).
     pub(crate) sync_leader: ControlHandle,
     /// beatloop_N_enabled lights, by loop size in beats.
     pub(crate) beatloop_lights: Vec<(f64, ControlHandle)>,
@@ -190,7 +190,7 @@ pub(crate) struct DeckControls {
     /// `[Sculpt_[ChannelN]]` hpf, freq, gain and lpf.
     pub(crate) sculpt: [ControlHandle; 4],
     pub(crate) hotcues: Vec<Hotcue>,
-    /// Mixxx's hotcue_focus: the last hot cue pressed (1-based), -1 for none.
+    /// hotcue_focus: the last hot cue pressed (1-based), -1 for none.
     pub(crate) hotcue_focus: ControlHandle,
     /// Speed while scratch2_enable is on, in multiples of normal speed.
     pub(crate) scratch2: ControlHandle,
@@ -230,7 +230,7 @@ pub(crate) struct DeckControls {
     pub(crate) beatjump: ControlHandle,
     /// Set to N to multiply the loop length by N; the engine zeroes it.
     pub(crate) loop_scale: ControlHandle,
-    /// Moves the loop by that many beats (Mixxx's loop_move), or by that many
+    /// Moves the loop by that many beats (loop_move), or by that many
     /// of its own lengths (DJ Sugar's loop_move_loops, VirtualDJ's loop_move).
     pub(crate) loop_move: [ControlHandle; 2],
     /// Set to N to move the beat grid N seconds later (negative: earlier),
@@ -252,7 +252,7 @@ pub(crate) struct DeckControls {
     /// beat playing when the first pad went down, while held (slip).
     pub(crate) freeze_pads: [(ControlHandle, Edge); 8],
     pub(crate) keylock: ControlHandle,
-    /// The loaded track's beat grid is locked (Mixxx's `bpmlock`): turning
+    /// The loaded track's beat grid is locked (`bpmlock`): turning
     /// it on or off locks or unlocks the grid.
     pub(crate) bpmlock: ControlHandle,
     /// Clicks on each beat of the grid, louder on bar 1 (DJ Sugar's own), to
@@ -271,10 +271,10 @@ pub(crate) struct DeckControls {
     pub(crate) live_trim: ControlHandle,
     /// The live input's balance, -1 left to 1 right (DJ Sugar's own).
     pub(crate) live_pan: ControlHandle,
-    /// Key shift in semitones on top of the file's key (Mixxx's `pitch`;
+    /// Key shift in semitones on top of the file's key (`pitch`;
     /// `pitch_adjust` is the same control here).
     pub(crate) pitch: ControlHandle,
-    /// The key being played and the file's key, as Mixxx numbers keys.
+    /// The key being played and the file's key, in the `key` control's numbering.
     pub(crate) key: ControlHandle,
     pub(crate) file_key: ControlHandle,
     pub(crate) sync_key: ControlHandle,
@@ -325,7 +325,7 @@ impl DeckControls {
         // 1 slots 9-16.
         reg.create(g, "sampler_page", 0.0, 0.0, 1.0, Behavior::Free);
         alias(reg, g, "pitch_adjust", g, "pitch");
-        // Mixxx's old name for reloop_toggle, which many mappings still use.
+        // The old name for reloop_toggle, which many mappings still use.
         alias(reg, g, "reloop_exit", g, "reloop_toggle");
         // The chain presets are the Color FX (see `crate::effects::COLOR_FX`):
         // 0 none, 1 Filter, then the others. One is chosen for all decks.
@@ -335,7 +335,7 @@ impl DeckControls {
             .set(n_cfx + 1.0);
         let cfx_next = reg.push(&qg, "next_chain_preset");
         let cfx_prev = reg.push(&qg, "prev_chain_preset");
-        // The EQ slot says how many knobs and kills it has, as Mixxx's does;
+        // The EQ slot says how many knobs and kills it has;
         // mappings that build their EQ knobs from these find none otherwise.
         reg.indicator(&eqg, "num_parameters", 3.0).set(3.0);
         reg.indicator(&eqg, "num_button_parameters", 3.0).set(3.0);
@@ -425,7 +425,7 @@ impl DeckControls {
             duration: reg.indicator(g, "duration", 3600.0),
             beat_active: reg.indicator(g, "beat_active", 1.0),
             loop_enabled: reg.toggle(g, "loop_enabled"),
-            // Mixxx reports these in samples; this engine uses seconds.
+            // Mappings expect these in samples; the engine uses seconds.
             loop_start: reg.indicator(g, "loop_start_position", 3600.0),
             loop_end: reg.indicator(g, "loop_end_position", 3600.0),
             loop_in_pending: reg.indicator(g, "loop_in_pending", 1.0),
@@ -558,7 +558,7 @@ impl DeckControls {
     }
 }
 
-/// Loop sizes with their own pads (Mixxx `beatloop_N_activate`), from the
+/// Loop sizes with their own pads (`beatloop_N_activate`), from the
 /// 1/16-beat loop rolls up.
 pub const BEATLOOP_SIZES: [f64; 11] = [
     0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0,
@@ -567,10 +567,10 @@ pub const BEATLOOP_SIZES: [f64; 11] = [
 /// semitones up or down, as on the DDJ-FLX4's KEYBOARD pads in rekordbox.
 /// The top row climbs from the cue's own key, the bottom row goes below it.
 pub const KEYBOARD_SEMITONES: [f64; 8] = [0.0, 1.0, 2.0, 3.0, -4.0, -3.0, -2.0, -1.0];
-/// Beat jump sizes with their own buttons (Mixxx `beatjump_N_forward` / `_backward`).
+/// Beat jump sizes with their own buttons (`beatjump_N_forward` / `_backward`).
 pub const BEATJUMP_SIZES: [f64; 6] = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
 
-/// Formats a beat count the way Mixxx control names do: `0.5`, `1`, `16`.
+/// Formats a beat count the way control names do: `0.5`, `1`, `16`.
 pub fn size_name(size: f64) -> String {
     if size.fract() == 0.0 {
         format!("{}", size as i64)
@@ -629,7 +629,7 @@ pub(crate) fn deck_pushes(reg: &ControlRegistry, g: &str) -> Vec<Push> {
         ("bpm_tap".into(), Action::BpmTap),
         ("rate_perm_up_small".into(), Action::RateStep(0.001)),
         ("rate_perm_down_small".into(), Action::RateStep(-0.001)),
-        // Mixxx's default coarse permanent rate step is 0.5%.
+        // The default coarse permanent rate step is 0.5%.
         ("rate_perm_up".into(), Action::RateStep(0.005)),
         ("rate_perm_down".into(), Action::RateStep(-0.005)),
         ("beatjump_forward".into(), Action::BeatJumpSized(1.0)),
@@ -662,14 +662,14 @@ pub(crate) fn deck_pushes(reg: &ControlRegistry, g: &str) -> Vec<Push> {
             Action::Grid(GridEdit::Tempo(-0.01)),
         ),
         ("beats_undo_adjustment".into(), Action::Grid(GridEdit::Undo)),
-        // Not in Mixxx: bar 1 on the beat here, and back to the grid
+        // bar 1 on the beat here, and back to the grid
         // analysis found.
         (
             "beats_downbeat_here".into(),
             Action::Grid(GridEdit::BarHere),
         ),
         ("beats_reset".into(), Action::Grid(GridEdit::Reset)),
-        // Not in Mixxx: tempo sections and halving or doubling.
+        // tempo sections and halving or doubling.
         (
             "beats_section_add".into(),
             Action::Grid(GridEdit::AddSection),
@@ -875,7 +875,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
         ),
         vu_l: reg.indicator("[Master]", "VuMeterL", 1.0),
         vu_r: reg.indicator("[Master]", "VuMeterR", 1.0),
-        // Mixxx keeps its ReplayGain switch in the [ReplayGain] group too.
+        // The ReplayGain switch lives in the [ReplayGain] group too.
         auto_gain: reg.create(
             "[ReplayGain]",
             "ReplayGainEnabled",
@@ -917,7 +917,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
 /// streaming services level music, about 6 dB below a typical club master.
 pub const DEFAULT_AUTO_GAIN_TARGET: f64 = -14.0;
 
-/// Mixxx 2.4 renamed the meters (`VuMeter` is now `vu_meter`, ...); mappings
+/// Newer mappings name the meters differently (`VuMeter` is now `vu_meter`, ...); mappings
 /// use both names.
 pub(crate) fn alias(
     reg: &ControlRegistry,

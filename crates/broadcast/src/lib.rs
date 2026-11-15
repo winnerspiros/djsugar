@@ -7,7 +7,7 @@
 //! or dead network only ever affects that station's thread: the audio
 //! thread never waits.
 //!
-//! Controls are Mixxx's, so mappings with a broadcast button work:
+//! The controls use the standard names, so mappings with a broadcast button work:
 //! `[Shoutcast],enabled` goes on and off air, `[Shoutcast],status` is 0 off,
 //! 1 connecting, 2 connected to every station, 3 failed, 4 connected to
 //! some. `[Broadcast],on_air_seconds` counts the time on air.

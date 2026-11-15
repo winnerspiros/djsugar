@@ -1,5 +1,5 @@
 //! Stems: a track split into up to four parts (drums, bass, other and
-//! vocals) that play together with their own volume and mute, as in Mixxx 2.6.
+//! vocals) that play together with their own volume and mute.
 //!
 //! Stems come from Native Instruments STEM files (`.stem.mp4` / `.stem.m4a`):
 //! an MP4 with the full mix as its first audio stream, the four stems as the
@@ -26,7 +26,7 @@ use symphonia::core::formats::{FormatOptions, FormatReader};
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
 use symphonia::core::meta::MetadataOptions;
 
-/// Stems per track, as in NI's format and Mixxx.
+/// Stems per track, as in NI's stem format.
 pub const MAX_STEMS: usize = 5;
 
 /// Stems in an NI STEM file or a Demucs separation.

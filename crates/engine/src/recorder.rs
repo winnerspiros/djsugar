@@ -18,7 +18,7 @@
 //! became audible, and `<name>.tracklist.txt`, the same as `0:00 Artist -
 //! Title` lines.
 //!
-//! The controls are Mixxx's: `[Recording],toggle_recording` starts and stops,
+//! The controls: `[Recording],toggle_recording` starts and stops,
 //! `[Recording],status` is 0 (off) or 2 (recording). `[Recording],duration`
 //! counts the seconds recorded.
 

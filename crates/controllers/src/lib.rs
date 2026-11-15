@@ -1,4 +1,4 @@
-//! MIDI and HID controller support driven by Mixxx's own controller mappings.
+//! MIDI and HID controller support driven by controller mappings.
 //!
 //! Mixxx ships a mapping for each supported controller: a `.midi.xml` file
 //! binding MIDI messages to controls or script functions, plus JavaScript
@@ -6,7 +6,7 @@
 //! layers, LEDs). This crate runs those files unchanged: the XML is read as
 //! Mixxx reads it, and the scripts run in QuickJS against the same `engine`
 //! and `midi` API, talking to the shared control registry. USB HID
-//! controllers (the Traktor Kontrol range) run Mixxx's `.hid.xml` mappings
+//! controllers (the Traktor Kontrol range) run `.hid.xml` mappings
 //! the same way, with `controller.sendOutputReport` and its kin; see [`hid`].
 
 pub mod catalog;

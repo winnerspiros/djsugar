@@ -2,7 +2,7 @@
 //! be mapped is tinted. Click one, then move or press a control on a
 //! controller, and that control does it from then on: a row of the DJ's own
 //! mapping for the controller (made, "My …", the first time), put over the
-//! Mixxx mapping it's based on. Meanwhile the controllers' messages are only
+//! base mapping it's based on. Meanwhile the controllers' messages are only
 //! watched, so a press teaches rather than plays. Each change can be undone.
 //!
 //! The mapping wizard (Quick map in the code) does the picking: it asks
@@ -44,7 +44,7 @@ const SETTLE: Duration = Duration::from_millis(600);
 /// A change Map mode made, to undo it, or to do again keeping what the
 /// control did before.
 struct Step {
-    /// The mapping file the controller runs: a Mixxx mapping, or an own
+    /// The mapping file the controller runs: a Mixxx-format mapping, or an own
     /// mapping standing alone (`<id>.json`).
     file: String,
     id: String,
@@ -178,7 +178,7 @@ impl Mapper {
     }
 
     /// The controllers plugged in that run a mapping: port and mapping
-    /// file (a Mixxx mapping, or an own one standing alone).
+    /// file (a Mixxx-format mapping, or an own one standing alone).
     fn ports(&self) -> Vec<(String, String)> {
         self.controllers
             .as_ref()
@@ -460,7 +460,7 @@ impl Mapper {
         self.refresh_mapped();
     }
 
-    /// The Mixxx mapping `file` is, or the one the own mapping in `file`
+    /// The base mapping `file` is (Mixxx format), or the one the own mapping in `file`
     /// is put over.
     fn base(&self, file: &str) -> Option<Mapping> {
         let dir = self.dir.as_ref()?;
@@ -476,7 +476,7 @@ impl Mapper {
 
     /// The own mapping that changes for the controller running `file`:
     /// that one, for an own mapping standing alone; otherwise the one in
-    /// use for that Mixxx mapping, made and put in use first if there is
+    /// use for that base mapping, made and put in use first if there is
     /// none.
     fn own_for(&self, file: &str) -> Option<OwnMapping> {
         let dir = settings::own_mappings_dir()?;

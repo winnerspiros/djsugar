@@ -21,7 +21,7 @@ pub(super) const PALETTE: [u32; 8] = [
 const MEMORY_COLOR: u32 = 0xb69cff;
 /// The Prep layout's number (see `PREP_LAYOUT` in main.rs).
 const PREP_LAYOUT: i32 = 3;
-/// Mixxx's hotcue_N_type for a cue and a saved loop.
+/// Our hotcue_N_type for a cue and a saved loop.
 const CUE_TYPE: f64 = 1.0;
 const LOOP_TYPE: f64 = 4.0;
 

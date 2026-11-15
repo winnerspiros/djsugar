@@ -1,6 +1,6 @@
 //! The audio engine.
 //!
-//! It owns the same controls Mixxx's engine does (`[Channel1],play`,
+//! It owns the named controls (`[Channel1],play`,
 //! `[Master],crossfader`, ...), plays the decks through a 3-band isolator EQ,
 //! a filter and the effect units, mixes them with the crossfader and sends the
 //! result to the sound card. The UI only talks to controls.

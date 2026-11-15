@@ -109,11 +109,11 @@ const JOG_SEARCH_SPEED: f64 = 8.0;
 /// so it doesn't flutter between wheel steps.
 const JOG_SEARCH_HOLD: f64 = 0.15;
 /// `jog_bend` comes in ticks of a jog's rim, 720 to a turn as on Pioneer
-/// controllers. As in Mixxx, where a rim tick is a `jog` of 0.8 and a jog
+/// controllers: a rim tick is a `jog` of 0.8 and a jog
 /// adds a tenth of itself to the rate: each tick a second the rim turns adds
 /// 0.08% of normal speed (a quarter turn a second is about +14%).
 const BEND_PER_TICK_PER_SECOND: f64 = 0.0008;
-/// Seconds the rim's speed is averaged over, like Mixxx's jog filter: the
+/// Seconds the rim's speed is averaged over: the
 /// bend follows the hand smoothly and springs back once the rim stops.
 const BEND_SMOOTH: f64 = 0.15;
 /// Track seconds one rim tick moves a paused deck by.
@@ -130,7 +130,7 @@ fn take_value(c: &ControlHandle) -> f64 {
 }
 
 /// Rate offsets of rate_temp_up, _down, _up_small and _down_small while held
-/// (Mixxx's default temporary pitch bends: 4% coarse, 2% fine).
+/// (default temporary pitch bends: 4% coarse, 2% fine).
 const RATE_TEMP: [f64; 4] = [0.04, -0.04, 0.02, -0.02];
 /// How fast pitch reset brings the tempo back to 0%, as a fraction of
 /// normal speed per second (0.005 = 0.5% a second).
@@ -147,7 +147,7 @@ fn live_balance(pan: f32) -> [f32; 2] {
 }
 
 /// Left and right deck gains for crossfader position `x` (-1 left, +1
-/// right). Shapes: 0 smooth, constant power as in Mixxx's default curve; 1
+/// right). Shapes: 0 smooth, constant power; 1
 /// linear, dipping in the middle; 2 scratch, both full until the last
 /// `cut_in` of travel (a share of it: 0.02 is 2%), where a side cuts out.
 pub(crate) fn xfader_gains(x: f32, shape: u8, cut_in: f32) -> [f32; 2] {
@@ -386,7 +386,7 @@ impl Deck {
     /// moved so the speed stays the same (or to the fader's end when it
     /// doesn't fit). On the audio thread, so no buffer hears the new range
     /// with the old fader position. Raw `rateRange` writes keep their
-    /// Mixxx meaning for existing controller scripts.
+    /// meaning existing controller scripts expect.
     fn change_rate_range(&mut self) {
         let range = take_value(&self.c.rate_range_set);
         if !range.is_finite()
@@ -654,7 +654,7 @@ impl Deck {
             }
             if activate {
                 match saved_loop {
-                    // Pressing the loop that is playing turns it off, as in Mixxx.
+                    // Pressing the loop that is playing turns it off.
                     Some(end)
                         if self.c.loop_enabled.get_bool()
                             && (self.loop_start - position).abs() < 1e-3
@@ -759,7 +759,7 @@ impl Deck {
                 self.loop_end += by;
             }
         }
-        // As in Mixxx, loop_scale moves the loop's end and leaves beatloop_size.
+        // loop_scale moves the loop's end and leaves beatloop_size.
         let scale = self.c.loop_scale.get();
         if scale != 0.0 {
             self.c.loop_scale.set(0.0);
@@ -973,8 +973,8 @@ impl Deck {
             .map(|k| k.playing(self.c.pitch.get(), self.speed(), self.c.keylock.get_bool()));
         self.c
             .file_key
-            .set(self.file_key.map_or(0.0, Key::mixxx_number));
-        self.c.key.set(key.map_or(0.0, Key::mixxx_number));
+            .set(self.file_key.map_or(0.0, Key::control_number));
+        self.c.key.set(key.map_or(0.0, Key::control_number));
     }
 
     /// Loops the slicer's whole section.
@@ -1787,7 +1787,7 @@ impl Engine {
     /// Creates all engine controls in `registry`.
     pub fn new(registry: &ControlRegistry, sample_rate: f64) -> (Self, EngineInput) {
         let master = create_global_controls(registry);
-        // The rate the engine runs at, as Mixxx's [App],samplerate.
+        // The rate the engine runs at, as [App],samplerate.
         registry
             .indicator("[App]", "samplerate", 384_000.0)
             .set(sample_rate);
@@ -2385,7 +2385,8 @@ impl Engine {
             // sync_key: shift the key to the other deck's, or its relative.
             let d = &mut self.decks[i];
             if d.c.sync_key_edge.pressed(&d.c.sync_key) {
-                let theirs = other.and_then(|o| Key::from_mixxx_number(self.decks[o].c.key.get()));
+                let theirs =
+                    other.and_then(|o| Key::from_control_number(self.decks[o].c.key.get()));
                 let d = &self.decks[i];
                 if let (Some(mine), Some(theirs)) = (d.file_key, theirs) {
                     let unshifted = mine.playing(0.0, d.speed(), d.c.keylock.get_bool());
@@ -2595,7 +2596,7 @@ impl Engine {
             .sync_leader
             .filter(|&k| playing(k))
             .or_else(|| (0..NUM_DECKS).find(|&k| playing(k)));
-        let theirs = other.and_then(|o| Key::from_mixxx_number(self.decks[o].c.key.get()));
+        let theirs = other.and_then(|o| Key::from_control_number(self.decks[o].c.key.get()));
         let (Some(mine), Some(theirs)) = (Key::parse(&track.key), theirs) else {
             return;
         };
@@ -2628,7 +2629,7 @@ impl Engine {
     /// With quantize on, or on a synced deck, a deck that jumps (hot cue,
     /// CUE, beat jump, a click on the overview) while the other deck plays
     /// lands on the same part of the beat, at most half a step from where
-    /// it was going, as in Mixxx.
+    /// it was going.
     ///
     /// PLAY on a paused deck starts where it was paused. Only a synced deck
     /// is lined up as it starts, and then just within the beat (half a beat
@@ -3086,7 +3087,7 @@ impl Engine {
         });
         let master_key = self
             .link_master
-            .and_then(|k| Key::from_mixxx_number(self.decks[k].c.key.get()));
+            .and_then(|k| Key::from_control_number(self.decks[k].c.key.get()));
         // The instrument plugin gets its block now and plays while the decks
         // are worked out below; the inputs render once that is done.
         for (i, input) in self.inputs.iter_mut().enumerate() {
@@ -3138,8 +3139,7 @@ impl Engine {
         let auto_gain_target = self.master.auto_gain_target.get() as f32;
         let balance_target = self.master.balance.get() as f32;
         let head_gain = self.master.head_gain.get() as f32;
-        // headMix: -1 = cue only, +1 = main only. Constant power, as in
-        // Mixxx, so the centre plays both equally loud.
+        // headMix: -1 = cue only, +1 = main only. Constant power, so the centre plays both equally loud.
         let mix = (self.master.head_mix.get() as f32 + 1.0) * std::f32::consts::FRAC_PI_4;
         let (cue_mix, main_mix) = (mix.cos(), mix.sin());
         let booth_gain = self.master.booth_gain.get() as f32;
@@ -3246,7 +3246,7 @@ impl Engine {
             } else {
                 d.c.volume.get() as f32
             };
-            // Play and stop act at once, as in Mixxx; scratching, jog and
+            // Play and stop act at once; scratching, jog and
             // search speeds ramp across the buffer.
             let held = d.c.scratch2_enable.get_bool() || d.c.scrub_enable.get_bool();
             // Holding the overview cuts the sound at once instead of winding
@@ -3499,7 +3499,7 @@ impl Engine {
         if groove_on.iter().any(|&on| on) {
             let (leader, leading) = self.leading_beat();
             let leader_key = leading
-                .and_then(|k| Key::from_mixxx_number(self.decks[k].c.key.get()))
+                .and_then(|k| Key::from_control_number(self.decks[k].c.key.get()))
                 .map(|k| k.tonic);
             let link_beat = link.map(|m| (m.tempo, m.beat));
             for i in (0..NUM_DECKS).filter(|&i| groove_on[i]) {
@@ -4024,7 +4024,7 @@ impl Engine {
 
         // Remember where the ramps ended, and publish positions and meters.
         self.clock += dt;
-        // On for half a second, off for half a second, as Mixxx blinks
+        // On for half a second, off for half a second
         // play and cue on controllers.
         for (i, ended) in ended.iter_mut().enumerate() {
             if let Some(j) = self.decks[i].hand_over {
@@ -5150,7 +5150,7 @@ mod tests {
         load(&mut input, 1, tone_track(440.0, "Em"));
         run(&mut engine, 0.05);
         assert_eq!(
-            Key::from_mixxx_number(c("file_key").get()),
+            Key::from_control_number(c("file_key").get()),
             Key::parse("Am")
         );
         // Faster without key lock: pitch and key rise with the speed.
@@ -5160,14 +5160,14 @@ mod tests {
         // Key lock brings the original pitch back at the same speed.
         c("keylock").set_bool(true);
         assert!((main_pitch(&record(&mut engine, 0.6)) - 440.0).abs() < 4.0);
-        assert_eq!(Key::from_mixxx_number(c("key").get()), Key::parse("Am"));
+        assert_eq!(Key::from_control_number(c("key").get()), Key::parse("Am"));
         // pitch_up: one semitone higher (466 Hz) and the key follows.
         c("pitch_up").set_bool(true);
         run(&mut engine, 0.02);
         c("pitch_up").set_bool(false);
         assert_eq!(c("pitch").get(), 1.0);
         assert!((main_pitch(&record(&mut engine, 0.6)) - 466.0).abs() < 4.0);
-        assert_eq!(Key::from_mixxx_number(c("key").get()), Key::parse("A#m"));
+        assert_eq!(Key::from_control_number(c("key").get()), Key::parse("A#m"));
         // sync_key: Am to play with Em, by the smallest shift (Am is already
         // compatible as a neighbour, but matching wants the same number: Em
         // is 9A, Am 8A, so up 7 or down 5; ±6 limit gives -5).
@@ -5175,7 +5175,7 @@ mod tests {
         run(&mut engine, 0.02);
         c("sync_key").set_bool(false);
         assert_eq!(c("pitch").get(), -5.0);
-        assert_eq!(Key::from_mixxx_number(c("key").get()), Key::parse("Em"));
+        assert_eq!(Key::from_control_number(c("key").get()), Key::parse("Em"));
         c("reset_key").set_bool(true);
         run(&mut engine, 0.02);
         assert_eq!(c("pitch").get(), 0.0);
@@ -5202,7 +5202,7 @@ mod tests {
         load(&mut input, 1, tone_track(440.0, "Bbm"));
         run(&mut engine, 0.02);
         assert_eq!((c("pitch").get(), c("keylock").get_bool()), (-1.0, true));
-        assert_eq!(Key::from_mixxx_number(c("key").get()), Key::parse("Am"));
+        assert_eq!(Key::from_control_number(c("key").get()), Key::parse("Am"));
         // Already mixing: no shift.
         load(&mut input, 1, tone_track(440.0, "Em"));
         run(&mut engine, 0.02);
@@ -6007,7 +6007,7 @@ mod tests {
             assert!((bpm - 96.0).abs() < 1.0, "{bpm}");
         }
 
-        // reloop_exit is Mixxx's old name for reloop_toggle.
+        // reloop_exit is the old name for reloop_toggle.
         ctl("beatloop_2_activate").set_bool(true);
         run(&mut engine, 0.02);
         ctl("beatloop_2_activate").set_bool(false);
@@ -6766,7 +6766,7 @@ mod tests {
         run(&mut engine, 0.1);
         assert!(ctl("play").get_bool());
 
-        // Mixxx 2.4's meter names reach the same controls.
+        // The newer meter names reach the same controls.
         assert!(reg.get("[Channel1]", "vu_meter").unwrap().get() > 0.0);
         assert!(reg.get("[Main]", "vu_meter_left").unwrap().get() > 0.0);
     }
@@ -7346,7 +7346,7 @@ mod tests {
         reg.get("[Channel1]", "live_input")
             .unwrap()
             .set(MIXER as f64);
-        // Off from the start, and under Mixxx 2.3's name too.
+        // Off from the start, and under its older name too.
         assert!(!aux("main_mix").get_bool());
         assert!(!aux("master").get_bool());
         let (feed, mut tx) = mic_feed();
@@ -8035,7 +8035,7 @@ mod tests {
         };
         let steady = tone(&|_, _| {});
         assert!(steady < 0.0005, "{steady}");
-        // Jog nudges of a playing deck, as many Mixxx mappings send them.
+        // Jog nudges of a playing deck, as many mappings send them.
         let nudges = tone(&|reg, n| match n {
             20 | 35 => ctl(reg, "jog").set(1.0),
             45 => ctl(reg, "jog").set(-3.0),

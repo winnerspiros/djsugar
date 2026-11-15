@@ -1,6 +1,6 @@
 [package]
 name = "djsugar"
-description = "A Rust DJ application, compatible with Mixxx"
+description = "DJ Sugar, a DJ application"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -6,7 +6,7 @@
 //! sync & play                       a chain runs left to right
 //! loop_exit ? loop_exit : loop 4    condition ? when true : when false
 //! deck 2 (key_lock & quantize)      parentheses group, and pass the deck in
-//! toggle 'slip_enabled'             any control by its Mixxx name
+//! toggle 'slip_enabled'             any control by its name
 //! ```
 //!
 //! A verb on its own targets the master deck. In a condition a verb is

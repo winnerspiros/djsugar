@@ -696,8 +696,8 @@ component MapBar inherits Rectangle {
 }
 
 // Records the mix: a red dot that pulses while recording, with the time.
-// [Recording],toggle_recording starts and stops, as in Mixxx, so
-// controller mappings can use it too.
+// `[Recording],toggle_recording` starts and stops, so controller mappings
+// can use it too.
 component RecordButton inherits Rectangle {
     property <int> toggle-index: Controls.resolve("[Recording]", "toggle_recording");
     property <bool> on: Controls.value(Controls.resolve("[Recording]", "status"), Controls.tick) > 1;

@@ -1009,7 +1009,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // MIDI controllers, driven by Mixxx's mappings. Started after the browser
+    // MIDI controllers, driven by controller mappings. Started after the browser
     // so the library controls the mappings use already exist.
     for key in settings::controllers_scaled() {
         djsugar_controllers::pickup::set_scale(&key, true);
@@ -1444,7 +1444,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let xfader_version = Cell::new(xfader_enabled.version());
     // The big browser (the button above the browser), also from a controller
-    // as Mixxx's `[Skin],show_maximized_library`.
+    // using our `[Skin],show_maximized_library`.
     let big_browser = registry.toggle("[Skin]", "show_maximized_library");
     let big_browser_version = Cell::new(big_browser.version());
     // What the screen last showed, to redraw only when something changed.
@@ -2295,13 +2295,13 @@ impl Decks {
     /// the keys that mix with the other deck's.
     fn key_menu(&self, deck: usize, range: i32, camelot: bool) -> Vec<KeyItem> {
         let h = &self.0[deck];
-        let Some(file) = Key::from_mixxx_number(h.file_key.get()) else {
+        let Some(file) = Key::from_control_number(h.file_key.get()) else {
             return Vec::new();
         };
         let speed = speed(&h.rate, &h.rate_range, &h.rate_dir);
         let base = file.playing(0.0, speed, h.keylock.get_bool());
         // The deck it pairs with: 1 with 2, 3 with 4.
-        let other = Key::from_mixxx_number(self.0[deck ^ 1].key.get());
+        let other = Key::from_control_number(self.0[deck ^ 1].key.get());
         let current = h.pitch.get().round() as i32;
         (-range..=range)
             .map(|shift| {
@@ -2425,12 +2425,12 @@ impl Decks {
             },
             // The key being played, with any shift; a tag that isn't a key
             // is shown as it is.
-            key: match Key::from_mixxx_number(h.key.get()) {
+            key: match Key::from_control_number(h.key.get()) {
                 Some(k) => k.label(camelot),
                 None => t.key.clone(),
             }
             .into(),
-            key_wheel: Key::from_mixxx_number(h.key.get())
+            key_wheel: Key::from_control_number(h.key.get())
                 .or_else(|| Key::parse(&t.key))
                 .map_or(0, |k| k.camelot_number() as i32),
             key_shift: match h.pitch.get().round() as i32 {

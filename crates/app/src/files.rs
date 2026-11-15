@@ -1,4 +1,4 @@
-//! The Files source: folders on the computer, browsed like Mixxx's
+//! The Files source: folders on the computer, browsed like our
 //! "Computer" view.
 //!
 //! The tree starts at pinned folders, the music folder, Home, Desktop,

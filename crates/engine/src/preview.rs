@@ -1,4 +1,4 @@
-//! The preview player, `[PreviewDeck1]` as in Mixxx: listens to a track in
+//! The preview player, `[PreviewDeck1]`: listens to a track in
 //! the headphones without loading it on a deck. It plays into the cue
 //! (headphone) mix only, so the audience never hears it.
 //!

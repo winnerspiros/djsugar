@@ -140,7 +140,7 @@ impl Lr4 {
     }
 }
 
-/// Crossover frequencies of the 3-band EQ, as in Mixxx's default isolator.
+/// Crossover frequencies of the 3-band EQ.
 pub const EQ_LOW_HZ: f64 = 246.0;
 pub const EQ_HIGH_HZ: f64 = 2484.0;
 
@@ -721,7 +721,7 @@ mod tests {
 /// Feedback effects (reverb, echo, phaser) decay towards zero through
 /// denormals, which many CPUs handle very slowly: a fading tail could then
 /// cost many times its usual CPU. Called at the start of every audio buffer,
-/// as Mixxx does on its audio thread.
+/// as is usual on an audio thread.
 pub fn flush_denormals() {
     #[cfg(target_arch = "x86_64")]
     // SAFETY: only sets the MXCSR flush-to-zero (bit 15) and

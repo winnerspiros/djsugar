@@ -405,7 +405,7 @@ impl Chorus {
 /// A Moog-style 4-pole low-pass ladder with resonance and a saturating
 /// input, in Zavalishin's zero-delay-feedback form ("The Art of VA Filter
 /// Design"), so its cutoff can sweep fast without zipper or instability.
-/// Mixxx's Moog Ladder (Huovilainen's model) is the sound it aims for.
+/// Modeled on the Moog ladder (Huovilainen's model).
 pub(super) struct Ladder {
     sample_rate: f32,
     s: [[f32; 4]; 2],

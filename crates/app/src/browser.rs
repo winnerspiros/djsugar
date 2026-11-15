@@ -883,7 +883,7 @@ struct RowData<'a> {
     list: columns::InList,
 }
 
-/// Mixxx's library controls, which controller mappings use to browse and load.
+/// Our library controls, which controller mappings use to browse and load.
 pub(crate) struct LibraryControls {
     /// Steps up (negative) or down (positive) through the focused list.
     steps: Vec<(ControlHandle, f64)>,
@@ -898,7 +898,7 @@ pub(crate) struct LibraryControls {
     folder_steps: [(ControlHandle, f64); 3],
     /// Opens or closes the folder picked in the folders pane.
     toggle_folder: ControlHandle,
-    /// Which pane the browse knob moves in, as Mixxx's `focused_widget`:
+    /// Which pane the browse knob moves in (our `focused_widget`):
     /// 2 the folders, 3 the track list.
     focused_widget: ControlHandle,
 }
@@ -4487,7 +4487,7 @@ impl Browser {
 
     /// Copies the tempo, key and beat grid found by analysing a loaded
     /// track, or a grid the DJ edited, into the library and saves them, as
-    /// Mixxx stores analysis results. The list shows them too.
+    /// we store analysis results. The list shows them too.
     pub fn learn_analysis(&mut self, loaded: &[Option<Arc<Track>>]) {
         let mut changed = HashSet::new();
         let saved = self.saved();
@@ -4844,7 +4844,8 @@ impl Browser {
             .find(|&d| self.loaded[d].is_some())?;
         let t = &self.library[*self.index_of.get(&self.loaded[deck]?)?];
         // The key it plays in, shifted or sped up, once the deck has it.
-        let key = Key::from_mixxx_number(self.deck_key[deck].get()).or_else(|| Key::parse(&t.key));
+        let key =
+            Key::from_control_number(self.deck_key[deck].get()).or_else(|| Key::parse(&t.key));
         Some((t.id, t.bpm, key))
     }
 

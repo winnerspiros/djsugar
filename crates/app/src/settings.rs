@@ -25,8 +25,6 @@ pub fn config_dir() -> Option<PathBuf> {
     }
     let base = djsugar_engine::paths::config_base()?;
     let name = djsugar_engine::paths::app_folder_name();
-    static MOVED: std::sync::Once = std::sync::Once::new();
-    MOVED.call_once(|| djsugar_engine::cache::move_old_folder(&base, name));
     Some(base.join(name))
 }
 
@@ -709,7 +707,7 @@ pub fn own_mappings_dir() -> Option<PathBuf> {
     config_dir().map(|d| d.join("controller-mappings"))
 }
 
-/// The DJ's own mapping used in place of a Mixxx mapping (by its file
+/// The DJ's own mapping used in place of a base mapping (by its file
 /// name), if one was picked.
 pub fn controller_version(based_on: &str) -> Option<String> {
     load()["controller_versions"][based_on]
@@ -717,7 +715,7 @@ pub fn controller_version(based_on: &str) -> Option<String> {
         .map(String::from)
 }
 
-/// Every own mapping picked in place of a Mixxx mapping: the Mixxx
+/// Every own mapping picked in place of a base mapping: the base
 /// mapping's file name, and the own mapping's file.
 pub fn controller_versions() -> HashMap<String, PathBuf> {
     let Some(dir) = own_mappings_dir() else {

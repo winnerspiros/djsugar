@@ -14,8 +14,7 @@ use std::time::{Duration, Instant};
 
 use djsugar_control::ConfigKey;
 
-/// Closer than this, a knob counts as where the hardware is (3 of 128 steps,
-/// as in Mixxx).
+/// Closer than this, a knob counts as where the hardware is (3 of 128 steps).
 pub const THRESHOLD: f64 = 3.0 / 128.0;
 /// A value this soon after the last one taken is always taken: a fast move
 /// can jump past the value between two messages.
@@ -118,7 +117,7 @@ pub(crate) fn always_jumps(key: &ConfigKey) -> bool {
     key.item == "crossfader"
 }
 
-/// One knob or fader's pick-up (Mixxx's soft takeover, plus Scale).
+/// One knob or fader's pick-up (soft takeover, plus Scale).
 pub(crate) struct Takeover {
     time: Option<Instant>,
     /// The last value taken from this hardware. The fast-move grace period

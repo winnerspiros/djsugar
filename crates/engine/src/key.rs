@@ -1,4 +1,4 @@
-//! Musical key detection, after the Queen Mary key detector that Mixxx ships:
+//! Musical key detection, after the Queen Mary key detector:
 //! a chromagram with three bins per semitone from C3 to C7, averaged over the
 //! track, correlated with the major and minor chord profiles of
 //! Noland and Sandler (the ones in qm-dsp's `GetKeyMode`) in all 24 keys.
@@ -170,13 +170,13 @@ impl Key {
         }
     }
 
-    /// The key as Mixxx's `key` control numbers it (ChromaticKey): 1-12 for
+    /// The key as `key` control numbers it (ChromaticKey): 1-12 for
     /// C major to B major, 13-24 for C minor to B minor.
-    pub fn mixxx_number(self) -> f64 {
+    pub fn control_number(self) -> f64 {
         (self.index() + 1) as f64
     }
 
-    pub fn from_mixxx_number(n: f64) -> Option<Key> {
+    pub fn from_control_number(n: f64) -> Option<Key> {
         (n >= 1.0).then(|| Key::from_index(n as u8 - 1)).flatten()
     }
 
@@ -681,10 +681,10 @@ mod tests {
         // Am (8A) with Eb (5B): harmonic needs Cm (5A), three up.
         assert_eq!(k("Am").shift_to_mix(k("Eb"), 2, h), None);
         assert_eq!(
-            Key::from_mixxx_number(k("Am").mixxx_number()),
+            Key::from_control_number(k("Am").control_number()),
             Some(k("Am"))
         );
-        assert_eq!(k("C").mixxx_number(), 1.0);
+        assert_eq!(k("C").control_number(), 1.0);
     }
 
     #[test]

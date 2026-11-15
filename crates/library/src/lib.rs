@@ -1,5 +1,4 @@
-//! DJ Sugar's own music library, modeled on how Mixxx keeps `mixxxdb.sqlite`
-//! but never reading it: every track with its tags, rating, colour and
+//! DJ Sugar's own music library, kept in SQLite: every track with its tags, rating, colour and
 //! comment, its hot cues and beat grid, the DJ's playlists and folders, and
 //! a history of what was played.
 //!

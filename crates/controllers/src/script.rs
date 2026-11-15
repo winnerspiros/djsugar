@@ -94,7 +94,7 @@ impl Script {
         self.host.borrow_mut().error(message);
     }
 
-    /// Evaluates a script file in the global scope, as Mixxx does.
+    /// Evaluates a script file in the global scope.
     pub(crate) fn eval_file(&self, name: &str, source: &str) -> Result<(), String> {
         let source = self.allow_shadowing(source);
         self.context.with(|ctx| {
@@ -171,7 +171,7 @@ impl Script {
     }
 
     /// Calls the function a `<key>` names, e.g. `XoneK2.decks[1].play.input`,
-    /// with `this` bound as the expression implies (Mixxx wraps it the same way).
+    /// with `this` bound as the expression implies.
     pub(crate) fn call_binding(&self, key: &str, args: (f64, f64, f64, f64, &str)) {
         let mut cache = self.functions.borrow_mut();
         let entry = cache.entry(key.to_string()).or_insert_with(|| {
@@ -220,7 +220,7 @@ impl Script {
 
     /// Calls `prefix.incomingData(data, length)` with an HID input report,
     /// as a `Uint8Array` (its first byte is the report ID, for devices that
-    /// number their reports), the way Mixxx hands reports to HID scripts.
+    /// number their reports).
     pub(crate) fn call_incoming_report(&self, prefix: &str, data: &[u8]) {
         self.context.with(|ctx| {
             let result = (|| {

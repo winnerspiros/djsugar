@@ -3,11 +3,10 @@
 //! An HID controller sends its whole state as an input report (a block of
 //! bytes) whenever something on it moves, and takes its lights as output
 //! reports. There are no MIDI messages to bind, so an HID mapping is all
-//! script: Mixxx's `.hid.xml` files name the device (`<info><devices>`) and
+//! script: `.hid.xml` files name the device (`<info><devices>`) and
 //! the scripts, which get every input report in `incomingData` and send
 //! reports with `controller.sendOutputReport`. This module finds the
-//! devices, matches them to mappings, and keeps the output reports the way
-//! Mixxx's `HidIoThread` and `HidIoOutputReport` do.
+//! devices, matches them to mappings, and keeps the output reports.
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::ffi::CString;
@@ -50,7 +49,7 @@ impl Product {
         })
     }
 
-    /// Mixxx's `matchProductInfo`: vendor and product must match; then the
+    /// `matchProductInfo`: vendor and product must match; then the
     /// USB interface where the system says which it is, otherwise the
     /// usage page and usage. A field the mapping leaves out matches anything.
     pub fn matches(&self, d: &DeviceInfo) -> bool {

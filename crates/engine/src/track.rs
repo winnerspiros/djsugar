@@ -140,7 +140,7 @@ type Chunk = OnceLock<Box<[[f32; 2]]>>;
 
 /// Decoded stereo audio at the file's own sample rate.
 ///
-/// A track can play while it is still being decoded, as in Mixxx: an
+/// A track can play while it is still being decoded: an
 /// [`AudioWriter`] fills it in order, one chunk at a time, and frames that
 /// aren't decoded yet read as silence. Decoding runs hundreds of times faster
 /// than playback, so in practice only a seek far ahead in the first second
@@ -331,7 +331,7 @@ pub struct Track {
     /// in step.
     pub grid: BeatGrid,
     pub source: Source,
-    /// Band peaks and RMS for drawing, as Mixxx's analyzer produces for its
+    /// Band peaks and RMS for drawing, as needed for the
     /// RGB waveforms. Empty until the track is loaded and analysed.
     pub waveform: Arc<Waveform>,
     /// Set on the copy of the track that is loaded on a deck.

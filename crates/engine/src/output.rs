@@ -261,7 +261,7 @@ pub const SAMPLE_RATES: [u32; 4] = [44_100, 48_000, 88_200, 96_000];
 /// Buffer sizes offered in the settings, in frames.
 pub const BUFFER_SIZES: [u32; 6] = [64, 128, 256, 512, 1024, 2048];
 
-/// How the audio keeps up, as Mixxx's `[App],audio_latency_*` controls (for
+/// How the audio keeps up, as `[App],audio_latency_*` controls (for
 /// the settings and controller mappings), and whether an output device went
 /// away.
 pub(crate) struct Health {

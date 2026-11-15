@@ -7,7 +7,7 @@
 //! uploaded once as a [`GpuTrack`] that a deck's views share; per frame only
 //! a small uniform block changes.
 //!
-//! This follows the approach of Mixxx's `allshader` renderers
+//! This follows the approach of `allshader` renderers
 //! (`src/waveform/renderers/allshader`), on wgpu instead of OpenGL.
 
 use std::sync::Arc;
@@ -20,7 +20,7 @@ pub const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 /// How the waveform is coloured.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Style {
-    /// One shape coloured by the balance of the bands (Mixxx's RGB).
+    /// One shape coloured by the balance of the bands (RGB).
     #[default]
     Rgb,
     /// Low, mid and high drawn as separate stacked shapes.

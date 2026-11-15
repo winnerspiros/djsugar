@@ -1,7 +1,7 @@
-//! DJ Sugar's own mappings: the DJ's copies of a Mixxx mapping and the ones
+//! DJ Sugar's own mappings: the DJ's copies of a bundled mapping and the ones
 //! imported from other apps. Each is a file in DJ Sugar's mapping format
 //! (see [`crate::format`]) next to the settings,
-//! `controller-mappings/<id>.json`. A Mixxx mapping itself is never written
+//! `controller-mappings/<id>.json`. A bundled mapping itself is never written
 //! to, so the original can always be gone back to.
 
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ pub struct OwnMapping {
     /// Its file name without `.json`.
     pub id: String,
     pub name: String,
-    /// The Mixxx mapping it builds on, by file name; empty when it stands
+    /// The bundled mapping it builds on, by file name; empty when it stands
     /// alone.
     pub based_on: String,
     /// The whole file.
@@ -40,7 +40,7 @@ impl OwnMapping {
     }
 }
 
-/// The own mappings in `dir` based on the Mixxx mapping `based_on`, by name.
+/// The own mappings in `dir` based on the bundled mapping `based_on`, by name.
 pub fn list(dir: &Path, based_on: &str) -> Vec<OwnMapping> {
     all(dir)
         .into_iter()
@@ -79,7 +79,7 @@ pub fn all(dir: &Path) -> Vec<OwnMapping> {
 }
 
 /// Makes a new own mapping called `name`, a copy of `from` (its changes
-/// too), based on the Mixxx mapping `based_on`.
+/// too), based on the bundled mapping `based_on`.
 pub fn create(
     dir: &Path,
     name: &str,

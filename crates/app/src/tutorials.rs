@@ -116,7 +116,7 @@ const fn finish(title: &'static str, body: &'static str, guide: &'static str) ->
     }
 }
 
-/// Set on a pad: a saved loop is hot cue type 4, as in Mixxx.
+/// Set on a pad: a saved loop is hot cue type 4.
 const SAVED_LOOP: Wait = Wait::Any(&[
     Wait::Above("[Channel1]", "hotcue_1_type", 3.5),
     Wait::Above("[Channel1]", "hotcue_2_type", 3.5),

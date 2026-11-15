@@ -1,6 +1,6 @@
-//! Named controls, compatible with Mixxx's `[Group],key` addressing.
+//! Named controls, compatible with `[Group],key` addressing.
 //!
-//! In Mixxx every knob, button and meter is a `ControlObject` looked up by name
+//! Every knob, button and meter is a control looked up by name
 //! in a global, mutex-guarded hash and changed through Qt signals. Here the names
 //! stay the same (so skins and controller mappings keep working), but a name is
 //! resolved once to a [`ControlHandle`]. Reading or writing a handle is a single
@@ -38,7 +38,7 @@ impl fmt::Display for ConfigKey {
 pub enum Behavior {
     /// Linear between `min` and `max` (faders, crossfader, rate).
     Linear,
-    /// Mixxx's EQ/gain knob: 0 → min, 0.5 → default (unity), 1 → max.
+    /// EQ/gain knob: 0 → min, 0.5 → default (unity), 1 → max.
     /// Each half is linear, which matches how DJ EQ knobs centre on unity gain.
     CenteredOnDefault,
     /// On/off; widgets toggle it.
@@ -270,7 +270,7 @@ impl ControlRegistry {
         self.create(group, item, 0.0, f64::MIN, f64::MAX, Behavior::Free)
     }
 
-    /// Makes `alias` resolve to `target`, like Mixxx's `[Master]` → `[Main]` rename.
+    /// Makes `alias` resolve to `target`, like `[Master]` → `[Main]` rename.
     pub fn insert_alias(&self, alias: ConfigKey, target: ConfigKey) {
         self.aliases.write().unwrap().insert(alias, target);
     }

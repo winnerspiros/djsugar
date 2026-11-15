@@ -13,7 +13,7 @@
 //!
 //! The mouse wheel or trackpad over a waveform, its edge bar, its right-click
 //! menu, ⌘= / ⌘− / ⌘0 and View all go through [`set`] (from main.slint's
-//! `WaveZoom`). Controllers use Mixxx's names on each deck's group:
+//! `WaveZoom`). Controllers use our control names on each deck's group:
 //! `waveform_zoom` (1 to 20, higher is tighter), `waveform_zoom_up`,
 //! `waveform_zoom_down` and `waveform_zoom_set_default`. Every deck's
 //! controls set the one shared zoom.

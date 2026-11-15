@@ -1,6 +1,5 @@
 //! Key lock and key shifting: playing a deck at any speed and in any key,
-//! as Mixxx does with its RubberBand scaler. Here the time-stretcher is
-//! Signalsmith Stretch.
+//! with the Signalsmith Stretch time-stretcher.
 //!
 //! The deck's play position stays the position being heard. The stretcher
 //! needs input ahead of that (its latency), so its read position runs ahead

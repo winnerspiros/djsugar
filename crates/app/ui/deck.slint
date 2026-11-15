@@ -2230,7 +2230,7 @@ component HotcueCell inherits Rectangle {
     property <bool> clearing;
     property <bool> set: Controls.value(Controls.resolve(group, "hotcue_" + number + "_enabled"), Controls.tick) > 0;
     property <float> seconds: Controls.value(Controls.resolve(group, "hotcue_" + number + "_position"), Controls.tick);
-    // A saved loop (hotcue type 4, as in Mixxx) shows a loop instead of a play mark.
+    // A saved loop (hotcue type 4) shows a loop instead of a play mark.
     property <bool> is-loop: Controls.value(Controls.resolve(group, "hotcue_" + number + "_type"), Controls.tick) == 4;
     property <int> minutes: floor(seconds / 60);
     property <int> secs: floor(mod(seconds, 60));

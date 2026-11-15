@@ -1,5 +1,4 @@
-//! Keeps each file's analysis (waveform, tempo, first beat) on disk, as Mixxx
-//! does in its library, so a track loaded again shows its waveform at once.
+//! Keeps each file's analysis (waveform, tempo, first beat) on disk, so a track loaded again shows its waveform at once.
 //!
 //! Entries live in the user's cache folder (`~/Library/Caches/DJSugar` on
 //! macOS, `%LOCALAPPDATA%\DJ Sugar` on Windows, `$XDG_CACHE_HOME/djsugar` or
@@ -46,20 +45,7 @@ pub fn cache_dir() -> Option<PathBuf> {
     }
     let base = crate::paths::cache_base()?;
     let name = crate::paths::app_folder_name();
-    static MOVED: std::sync::Once = std::sync::Once::new();
-    MOVED.call_once(|| move_old_folder(&base, name));
     Some(base.join(name))
-}
-
-/// Renames the folder an earlier version kept its files in (`mixxx-rs`)
-/// to `name` inside `base`, unless `name` is there already.
-pub fn move_old_folder(base: &Path, name: &str) {
-    let (old, new) = (base.join("mixxx-rs"), base.join(name));
-    if old.is_dir() && !new.exists() {
-        if let Err(e) = fs::rename(&old, &new) {
-            eprintln!("can't move {} to {}: {e}", old.display(), new.display());
-        }
-    }
 }
 
 /// Where downloaded models are kept (see [`crate::separation::models_dir`]).

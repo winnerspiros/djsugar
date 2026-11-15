@@ -4,7 +4,7 @@
 //! horn, siren, laser, crash), so the pads work with no sample files; the
 //! app puts its sample packs and the DJ's own files on them with
 //! [`crate::AudioEngine::set_sample`]. Samplers go to the main mix after
-//! the crossfader, like Mixxx's.
+//! the crossfader.
 //!
 //! Pressing a pad (`cue_gotoandplay`) does what the slot's `play_mode`
 //! says: 0 one shot (plays to the end; pressing again restarts), 1 hold

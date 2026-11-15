@@ -1,4 +1,4 @@
-//! The microphone and auxiliary inputs, Mixxx's `[Microphone]` and
+//! The microphone and auxiliary inputs, `[Microphone]` and
 //! `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`.
 //! The microphone and auxiliaries take
 //! audio from an input device (see [`crate::output`]), the instrument from an
@@ -116,7 +116,7 @@ pub(crate) struct InputFeed {
     pub(crate) queued: Arc<AtomicUsize>,
 }
 
-/// `[Master],talkover_ducking`, as in Mixxx: off, ducking while the
+/// `[Master],talkover_ducking`: off, ducking while the
 /// microphone picks up a voice, or for as long as talkover is on.
 pub const DUCK_OFF: f64 = 0.0;
 pub const DUCK_AUTO: f64 = 1.0;
@@ -244,7 +244,7 @@ impl InputControls {
         alias(reg, g, "vu_meter", g, "VuMeter");
         alias(reg, g, "vu_meter_left", g, "VuMeterL");
         alias(reg, g, "vu_meter_right", g, "VuMeterR");
-        // Mixxx's microphones and auxiliaries can be put on a crossfader
+        // Microphones and auxiliaries can be put on a crossfader
         // side; here they always bypass it, so this is stored only.
         reg.create(g, "orientation", 1.0, 0.0, 2.0, Behavior::Free);
         reg.indicator(&eqg, "num_parameters", 3.0).set(3.0);
@@ -252,7 +252,7 @@ impl InputControls {
         let on = if input == MICROPHONE {
             reg.toggle(g, "talkover")
         } else {
-            // Mixxx 2.4 renamed `master` to `main_mix`; mappings use both.
+            // Mappings use both `master` and `main_mix`.
             // Off until the DJ turns it on, as the microphone is.
             let on = reg.toggle(g, "main_mix");
             alias(reg, g, "master", g, "main_mix");

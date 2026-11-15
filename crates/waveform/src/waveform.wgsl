@@ -422,7 +422,7 @@ fn over(base: vec3<f32>, c: vec3<f32>, a: f32) -> vec3<f32> {
     return mix(base, c, clamp(a, 0.0, 1.0));
 }
 
-// Colour of a column from the balance of its bands, like Mixxx's RGB waveform:
+// Colour of a column from the balance of its bands:
 // bass-heavy is red, mids amber, hats and vocals blue.
 fn band_color(s: Slice) -> vec3<f32> {
     let w = s.rms.xyz * s.rms.xyz + 1e-5;

@@ -1,4 +1,4 @@
-//! Library search, in Mixxx's search syntax so DJs coming from Mixxx can type
+//! Library search, in the common search syntax so DJs can type
 //! what they already know, plus a few additions. Smart lists are saved
 //! searches, so the same text drives both.
 //!

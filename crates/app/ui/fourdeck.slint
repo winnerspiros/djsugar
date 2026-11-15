@@ -12,7 +12,7 @@ import { ControlButton, ControlFader, Controls, Crossfader, CueHeadphones, Stere
 import { DeckInfo, Header, LiveStrip, LoopStepper, Pads, PadsUi, PlayButton, TempoRangeRow, TempoStep } from "deck.slint";
 import { AudioSettings, Knob, ModeMenu, SideKnob } from "mixer.slint";
 
-// Which side of the crossfader a deck is on, as Mixxx's `orientation`:
+// Which side of the crossfader a deck is on (our `orientation`):
 // 0 left, 1 thru (not faded), 2 right. Click to pick, as in djay.
 component CrossfaderAssign inherits Rectangle {
     in property <int> deck;

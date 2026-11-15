@@ -1,7 +1,7 @@
 //! DJ Sugar's controller mapping format: one JSON file holding a mapping of
 //! the DJ's own or one imported from another DJ app, either standing alone
 //! or `based_on` a Mixxx mapping and holding only what it changes. A
-//! superset of Mixxx's `.midi.xml`: [`DjSugarMapping::from_mixxx`] loses
+//! superset of `.midi.xml`: [`DjSugarMapping::from_mixxx`] loses
 //! nothing. The reference is `docs/dev/mapping-format.md`.
 
 use std::collections::BTreeMap;
@@ -203,7 +203,7 @@ pub fn parse_layer(layer: &str) -> Vec<(String, Option<f64>)> {
 /// What drives a light.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LightSource {
-    /// Mixxx's `<output>`: `on` while the control is within `min..=max`.
+    /// `<output>`: `on` while the control is within `min..=max`.
     Bind {
         control: String,
         min: f64,
@@ -294,7 +294,7 @@ pub struct DjSugarMapping {
     pub imported: Option<Imported>,
     /// JavaScript files as `(file, function prefix)`.
     pub scripts: Vec<(String, String)>,
-    /// Mixxx's `<settings>` definitions and the DJ's `values`, as JSON.
+    /// `<settings>` definitions and the DJ's `values`, as JSON.
     pub settings: Value,
     pub variables: Vec<Variable>,
     /// Whether the controller is used with two decks or four. Rows and

@@ -1,13 +1,13 @@
 //! Automix: plays the Automix list on two decks, crossfading from one track
-//! into the next, like Mixxx's Auto DJ.
+//! into the next.
 //!
 //! Everything goes through the same controls a user or controller moves
 //! (crossfader, volume, EQ, filter, play), so the mix shows on screen.
 //! While Automix is on it holds the crossfader locked: it still slides on
 //! screen, but a mouse, controller or script can't move it and break into a
-//! mix. Switching Automix off hands it back. Mixxx's
-//! `[AutoDJ]` controls are created too, so controller mappings that start
-//! Auto DJ, fade now or skip the next track work.
+//! mix. Switching Automix off hands it back. Our `[AutoDJ]` controls are
+//! created too, so controller mappings that start Auto DJ, fade now or skip
+//! the next track work.
 //!
 //! Times are measured on the outgoing track, in its own seconds, so a mix
 //! follows the deck's tempo and pauses when the deck does.

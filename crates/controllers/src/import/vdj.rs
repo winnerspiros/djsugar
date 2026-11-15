@@ -695,7 +695,7 @@ fn query(name: &str, args: &[Arg], ctx: Ctx) -> R {
             None => "filter > 50%".into(),
         },
         "true" => "var '_always' 0".into(),
-        // Mixxx's focused_widget: 2 the folders, 3 the track list.
+        // focused_widget: 2 the folders, 3 the track list.
         "browser_window" => match text(args, 0) {
             Some("folders") => "get '[Library],focused_widget' < 2.5".into(),
             Some("songs") => "get '[Library],focused_widget' > 2.5".into(),

@@ -1,6 +1,6 @@
 [package]
 name = "djsugar-engine"
-description = "Audio engine: decks, mixer and output, driven through Mixxx controls"
+description = "Audio engine: decks, mixer and output, driven through named controls"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

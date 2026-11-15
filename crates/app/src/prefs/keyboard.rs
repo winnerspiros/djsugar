@@ -98,7 +98,7 @@ impl Prefs {
             NOTE,
             "",
             "A verb alone acts on the master deck; “deck 2 play” on deck 2. “&” runs one action after \
-             another, “play ? pause : play” asks first, and “toggle 'slip_enabled'” reaches any control by its Mixxx name.",
+             another, “play ? pause : play” asks first, and “toggle 'slip_enabled'” reaches any control by its name.",
         ));
         items.extend(djsugar_script::VERBS.iter().map(|v| {
             item(

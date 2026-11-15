@@ -1,4 +1,4 @@
-//! Album art, found the way Mixxx finds it: a picture embedded in the file's
+//! Album art, found as: a picture embedded in the file's
 //! tags (the front cover if there are several), otherwise an image next to the
 //! file. With one image in the folder that one is used; with several, one named
 //! after the track, its file, its album, or "cover", "front", "album" or
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn finds_folder_art_like_mixxx() {
+    fn finds_folder_art() {
         let dir = std::env::temp_dir().join(format!("djsugar-cover-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("01 Opening.wav");

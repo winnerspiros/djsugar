@@ -1,4 +1,4 @@
-//! Finds out what a mapping does by trying it. Mixxx mappings are mostly
+//! Finds out what a mapping does by trying it. Bundled mappings are mostly
 //! JavaScript, so the XML alone can't say what a button does. The probe runs
 //! the mapping against a sandbox copy of the engine's controls, presses each
 //! control once (and again with SHIFT held), and notes which controls change

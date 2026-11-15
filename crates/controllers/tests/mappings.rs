@@ -222,7 +222,7 @@ fn midi_fighter_twister_drives_the_effects() {
     settle(&mut c, 50);
     let fx = "[EffectRack1_EffectUnit1_Effect1]";
     // Effect 1 of unit 1: knob (CC 0x11) is its meta. Turning it sends each
-    // step; soft takeover drops one value early on, as in Mixxx.
+    // step; soft takeover drops one value early on.
     for v in 0x41..=0x50 {
         c.receive(&[0xB0, 0x11, v]);
     }
@@ -498,7 +498,7 @@ fn scripted(name: &str, xml_controls: &str, script: &str) -> (Arc<ControlRegistr
 
 #[test]
 fn trigger_runs_connections_after_the_script_returns() {
-    // As in Mixxx, where engine.trigger is queued: callbacks may use what
+    // where engine.trigger is queued: callbacks may use what
     // init sets up after triggering.
     let (_reg, c) = scripted(
         "trigger",

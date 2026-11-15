@@ -1,6 +1,6 @@
 //! Changing a row of the DJ's own mapping from the Controller Editor: what a
 //! control does, when it acts and how its value is read. A change is a row
-//! of the own mapping's file (see [`crate::format`]) put over the Mixxx
+//! of the own mapping's file (see [`crate::format`]) put over the bundled
 //! mapping it's based on; going back to the original takes the rows away.
 
 use djsugar_control::{Behavior, ControlRegistry};
@@ -32,9 +32,9 @@ pub enum Buttons {
     /// on/off ones.
     #[default]
     Normal,
-    /// Any press is on, let go is off (Mixxx's `button`).
+    /// Any press is on, let go is off (the `button` option).
     Hold,
-    /// Every message is a press (Mixxx's `switch`): for controls that send
+    /// Every message is a press (the `switch` option): for controls that send
     /// one message per press.
     Trigger,
 }

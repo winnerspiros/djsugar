@@ -1,11 +1,11 @@
-//! Reads Mixxx's `.midi.xml` controller mappings: script files, settings,
+//! Reads `.midi.xml` controller mappings: script files, settings,
 //! input bindings and LED outputs, following Mixxx's
 //! `LegacyMidiControllerMappingFileHandler`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-/// Loaded before a mapping's own scripts, as Mixxx does.
+/// Loaded before a mapping's own scripts.
 pub const REQUIRED_SCRIPT: &str = "common-controller-scripts.js";
 
 /// How an incoming value is interpreted (`<options>` in the mapping).
