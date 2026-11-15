@@ -14,7 +14,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 
 | Part | Done | Priority | Timeframe | Input |
 | --- | --- | --- | --- | --- |
-| 0: platforms | 10% (1/10) | P0 | 4-6 weeks | store accounts, signing keys |
+| 0: platforms | 15% (1.5/10) | P0 | 4-6 weeks | store accounts, signing keys |
 | P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | device testing |
 | Q: code quality and performance | 0% (0/9) | P0 | ongoing | no |
 | R: pure-Rust dependencies | 8% (1/12) | P1 | 8-12 weeks | no |
@@ -103,7 +103,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | --- | --- | --- |
 | 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | DONE |
 | 0.1 | CI: Linux, Windows, macOS desktop builds on `rust` | TODO |
-| 0.2 | Android arm64 build (cargo-ndk, Slint android-activity backend, APK packaging) | TODO |
+| 0.2 | Android arm64 build: all crates check in CI (cargo-ndk), winit + FemtoVG wgpu backend, `djsugar-android` cdylib with `android_main`; APK packaging next | WIP |
 | 0.3 | Android audio: cpal AAudio backend, low-latency stream, Oboe parity | TODO |
 | 0.4 | Android storage and permissions (music folders, SAF) | TODO |
 | 0.5 | iOS arm64 build and unsigned IPA | TODO |
