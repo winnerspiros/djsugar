@@ -100,6 +100,33 @@ One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, 
 | M.3 | Controller mods in Rust (WASM) too; rquickjs kept only to run existing Mixxx/openDJ JS mappings, never for new code. Native plugins desktop-only (plugin-host crate). | TODO |
 | M.4 | Store policy: Play forbids downloading native code; WASM/JS interpreted in a sandbox is the allowed path. Store build ships no source mods and no built-in mod catalog URL. | TODO |
 
+## Part R: pure-Rust dependencies
+
+Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS interfaces (ALSA, Wayland, CoreAudio, WASAPI, AAudio) stay: they are the platform itself, reached through Rust bindings.
+
+| # | C/C++ dependency | Replacement | Status |
+| --- | --- | --- | --- |
+| R.1 | rquickjs (QuickJS, C) | boa (pure-Rust JS engine) for legacy JS mappings | TODO |
+| R.2 | openssl-sys | rustls | TODO |
+| R.3 | libsqlite3-sys (diesel/rusqlite) | evaluate turso/limbo; keep SQLite until a pure-Rust engine is stable, library DB is user data | TODO |
+| R.4 | signalsmith-stretch (C++) | port to Rust in-tree | TODO |
+| R.5 | whisper-rs-sys (whisper.cpp) | Whisper on burn/candle (burn already a dependency) | TODO |
+| R.6 | mp3lame-sys | pure-Rust MP3 encoder (port shine/LAME core) | TODO |
+| R.7 | opusic-sys | pure-Rust Opus encoder (evaluate existing crates, else port) | TODO |
+| R.8 | hidapi | hidraw/IOKit/Win32 HID via nusb/async-hid | TODO |
+| R.9 | yeslogic-fontconfig-sys | fontique/fontdb font discovery | TODO |
+| R.10 | renderdoc-sys | debug-only feature, off by default | TODO |
+
+## Part T: mapping translator
+
+Converts existing Mixxx/openDJ controller mappings (XML + JS) into DJ Sugar Rust mods.
+
+| # | Part | Status |
+| --- | --- | --- |
+| T.1 | Parser: XML mapping + JS (oxc/swc, pure Rust) into a typed IR | TODO |
+| T.2 | Codegen: IR to Rust source using the `djsugar-mod` SDK; builds to WASM with the normal toolchain (xtask). Used to convert the bundled mappings once. | TODO |
+| T.3 | In-app import: phones and stores cannot run rustc, so the app compiles the IR directly to a sandboxed, interpretable form (no JS engine needed at runtime). Unsupported constructs fall back to boa and are reported. | TODO |
+
 ## Part 1: DJ Sugar features
 
 | # | Feature (C++ reference on main) | Status |
