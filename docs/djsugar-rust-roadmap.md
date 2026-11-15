@@ -15,6 +15,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 | Part | Done | Priority | Timeframe | Branch | Input |
 | --- | --- | --- | --- | --- | --- |
 | 0: platforms | 10% (1/10) | P0 | 4-6 weeks | `rust-platforms` | store accounts, signing keys |
+| P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | `rust-tuning` | device testing |
 | Q: code quality and performance | 0% (0/9) | P0 | ongoing | every branch | no |
 | R: pure-Rust dependencies | 8% (1/12) | P1 | 8-12 weeks | `rust-pure` | no |
 | C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | `rust-controllers` | hardware tests |
@@ -109,6 +110,21 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | TODO |
 | 0.8 | Store builds: cargo feature `store` drops YouTube/SoundCloud download and librespot (Play/F-Droid policy); full build ships on GitHub releases; About screen links source (GPL) | TODO |
 | 0.9 | Mixcloud sign-in server: Rust token-swap service (holds client secret); app reads its URL from `DJSUGAR_MIXCLOUD_SIGN_IN` until hosted | TODO |
+
+## Part P: per-platform, per-device, per-driver tuning
+
+Every backend picks the fastest path the hardware offers, decided at runtime from a device profile database (manufacturer, model, SoC, GPU, driver version, OS version). Vendor SDKs are reimplemented in Rust where their interfaces allow.
+
+| # | Part | Status |
+| --- | --- | --- |
+| P.1 | Device profile database (Rust, versioned data file): detection on each OS, overrides per manufacturer/model/driver, benchmark-on-first-run to fill gaps | TODO |
+| P.2 | Graphics: wgpu backend choice per device (Vulkan, Metal, DX12, GLES fallback), Vulkan extensions and driver workarounds (Adreno, Mali, Xclipse, PowerVR, NVIDIA, AMD, Intel), present mode, frame pacing, swapchain image count, HDR/120 Hz | TODO |
+| P.3 | Android audio: AAudio exclusive + low-latency performance mode, MMAP path, burst-size buffers, sustained-performance and CPU affinity hints, per-OEM quirks (Samsung, Pixel, Xiaomi, OnePlus...), USB audio class direct path | TODO |
+| P.4 | Desktop audio: WASAPI exclusive/event, ASIO (Rust host), CoreAudio HAL with IO cycle tuning, ALSA direct/PipeWire native with quantum negotiation, JACK; per-interface buffer/latency profiles | TODO |
+| P.5 | Vendor SDK features in Rust where possible: Samsung Professional Audio / low-latency extensions, Qualcomm/MediaTek performance hints (ADPF), Apple Audio Workgroups, Windows MMCSS / Game Mode | TODO |
+| P.6 | CPU: runtime SIMD dispatch (SSE4.2/AVX2/AVX-512, NEON/SVE/SME), big.LITTLE-aware thread placement, real-time thread priority per OS | TODO |
+| P.7 | Power/thermal profiles on mobile and laptops; automatic quality scaling without audio dropouts | TODO |
+| P.8 | Per-device latency and glitch test suite in CI and on-device; results feed P.1 | TODO |
 
 ## Part M: mods
 
