@@ -64,6 +64,9 @@ femtovg = { path = "third_party/femtovg" }
 # (upstream allows only the Skia-based android-activity backend there).
 slint = { path = "third_party/slint" }
 i-slint-backend-selector = { path = "third_party/i-slint-backend-selector" }
+# Adds pregenerated Android bindings (same layout as aarch64 Linux), so no
+# bindgen/libclang at build time.
+rquickjs-sys = { path = "third_party/rquickjs-sys" }
 # Key lock's time-stretcher with split computation; see
 # third_party/signalsmith-stretch/DJSUGAR.md.
 signalsmith-stretch = { path = "third_party/signalsmith-stretch" }

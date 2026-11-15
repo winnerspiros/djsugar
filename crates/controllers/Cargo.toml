@@ -22,7 +22,3 @@ djsugar-engine = { path = "../engine" }
 # Linux it uses hidraw through libudev; on macOS devices are opened shared,
 # so another app can keep using them.
 hidapi = { version = "2.6", default-features = false, features = ["linux-static-hidraw", "macos-shared-device"] }
-
-[target.'cfg(target_os = "android")'.dependencies]
-# No pregenerated QuickJS bindings for Android; generated at build time.
-rquickjs = { version = "0.14", features = ["bindgen"] }
