@@ -12,7 +12,7 @@ name: CI
 # Releases build every platform in release.yml.
 on:
   push:
-    branches: [main, rust]
+    branches: [main, rust, "rust-*"]
     paths-ignore: ["website/**", "docs/**", "openspec/**", "**/*.md"]
   pull_request:
   merge_group:

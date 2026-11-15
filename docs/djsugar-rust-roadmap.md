@@ -8,8 +8,26 @@ here; Mixxx code is read for behaviour, not translated line by line.
 
 Status: TODO, WIP, DONE. One part per pull request into `rust`.
 
+## Overview
+
+Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is what needs the owner.
+
+| Part | Done | Priority | Timeframe | Branch | Input |
+| --- | --- | --- | --- | --- | --- |
+| 0: platforms | 10% (1/10) | P0 | 4-6 weeks | `rust-platforms` | store accounts, signing keys |
+| Q: code quality and performance | 0% (0/9) | P0 | ongoing | every branch | no |
+| R: pure-Rust dependencies | 8% (1/12) | P1 | 8-12 weeks | `rust-pure` | no |
+| C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | `rust-controllers` | hardware tests |
+| 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | `rust-features` | UI/feature review |
+| 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | `rust-parity` | no |
+| T: mapping translator | 0% (0/3) | P2 | 4-6 weeks | `rust-translator` | no |
+| M: mods | 0% (0/4) | P2 | 6-8 weeks | `rust-mods` | no |
+| L: lighting and visuals (later) | 0% (0/4) | P3 | 12+ weeks | - | yes, scope |
+| A: Automix (later, design discussion required before starting) | 0% (0/1) | P3 | tbd | - | yes, design first |
+
 ## Decisions
 
+- Latest stable toolchain, edition and libraries; clean, safe, optimal code. Comments only where the code can't say it.
 - Optimal results are a hard rule: per-platform and per-device optimization (CPU features via runtime dispatch, GPU paths, audio buffer tuning per device, mobile power/thermal profiles); optimization continues until nothing measurable is left.
 - Minimal resources and dependencies: write our own where a dependency is heavy or broad; existing work may serve as a starting point.
 - Rust everywhere possible: app, build tooling (xtask, not shell/Python), mods and their SDK. Non-Rust only where a platform forces it (minimal Android/iOS glue) or for compatibility (JS mappings).
@@ -119,8 +137,8 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | R.8 | hidapi | hidraw/IOKit/Win32 HID via nusb/async-hid | TODO |
 | R.9 | yeslogic-fontconfig-sys | fontique/fontdb font discovery | TODO |
 | R.10 | renderdoc-sys | debug-only feature, off by default | TODO |
-| R.12 | rusty_link (Ableton Link, C++) | `djsugar-link`: pure-Rust implementation of the Link session protocol (discovery, clock measurement, session join, timeline sharing) | DONE (needs a live test against Ableton Live/Traktor) |
 | R.11 | alsa-sys (libasound), wayland-sys, other OS-layer C libs | audit: talk to kernel ALSA ioctls / PipeWire protocol directly; wayland-client pure-Rust backend (no libwayland); keep only true OS ABIs (CoreAudio, WASAPI, AAudio) | TODO |
+| R.12 | rusty_link (Ableton Link, C++) | `djsugar-link`: pure-Rust implementation of the Link session protocol (discovery, clock measurement, session join, timeline sharing) | DONE (needs a live test against Ableton Live/Traktor) |
 
 ## Part T: mapping translator
 
