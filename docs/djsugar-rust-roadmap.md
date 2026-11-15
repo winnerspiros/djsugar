@@ -144,6 +144,21 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | C.7 | Rane Twelve/One style motorized/MIDI platters, jog displays (HID screens on S4 MK3, DDJ-REV7 etc.) | TODO |
 | C.8 | Controller-without-mapping fallback: MIDI learn wizard builds a Rust mapping mod | TODO |
 
+## Part L: lighting and visuals (later)
+
+| # | Part | Status |
+| --- | --- | --- |
+| L.1 | DMX output in Rust: USB interfaces (Enttec Open/Pro, DMXKing), Art-Net, sACN (E1.31) | TODO |
+| L.2 | Fixture library (Open Fixture Library format import), patching, groups | TODO |
+| L.3 | In-app setup: fixture placement in a 3D stage view (wgpu), live preview, beat/phrase-driven scenes and chases | TODO |
+| L.4 | Visualizer support (scope to be decided) | TODO |
+
+## Part A: Automix (later, design discussion required before starting)
+
+| # | Part | Status |
+| --- | --- | --- |
+| A.1 | Automix redesign: scope and approach to be agreed before any work | TODO |
+
 ## Part 1: DJ Sugar features
 
 | # | Feature (C++ reference on main) | Status |
