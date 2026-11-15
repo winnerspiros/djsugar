@@ -26,7 +26,7 @@ const MANIFEST: Manifest = Manifest {
 
 /// The API version asked for: 1.16.1 is what Navidrome speaks.
 const VERSION: &str = "1.16.1";
-const CLIENT: &str = "DJ Sugar";
+const CLIENT: &str = "DJSugar";
 
 /// How big list covers are fetched, in pixels.
 const THUMB: u32 = 96;
@@ -420,7 +420,7 @@ mod tests {
         assert_eq!(
             url,
             format!(
-                "http://nd.lan:4533/rest/ping?u=dj&t={token}&s=c19b2d&v=1.16.1&c=DJ Sugar&f=json&id=a%20b"
+                "http://nd.lan:4533/rest/ping?u=dj&t={token}&s=c19b2d&v=1.16.1&c=DJSugar&f=json&id=a%20b"
             )
         );
         assert!(!url.contains("sesame&"));
