@@ -271,9 +271,11 @@ export component PlayerBar inherits Rectangle {
     property <string> hover-time: floor(hover-s / 60) + ":" + (mod(hover-s, 60) < 10 ? "0" : "") + mod(hover-s, 60);
     // BPM to one decimal, without a trailing ".0".
     property <string> bpm: info.bpm.is-float() ? "" + round(info.bpm.to-float() * 10) / 10 : "";
-    // Both sides of the transport are this wide, so it sits in the middle
-    // of the window.
-    property <length> side: clamp(root.width * 0.28, 340px, 480px);
+    // Both sides of the transport take the same share, so it sits in the
+    // middle of the window; stretch, not a width from the bar's own width,
+    // which would loop through the window's layout.
+    property <float> side-share: 28;
+    property <length> side: (root.width - 2 * pad) * 0.28 + gap;
     property <length> pad: 18px;
     property <length> gap: 28px;
     // Under the pointer the line turns lilac and shows its knob.
@@ -294,7 +296,8 @@ export component PlayerBar inherits Rectangle {
         // The album art, then title, artist, BPM and the key in its wheel
         // colour, and what Automix plays next.
         HorizontalLayout {
-            width: side - pad - gap;
+            min-width: 0px;
+            horizontal-stretch: side-share;
             spacing: 14px;
             VerticalLayout {
                 alignment: center;
@@ -384,7 +387,7 @@ export component PlayerBar inherits Rectangle {
         // Previous, Play/Pause and Next over the progress line, between
         // the time played and the track's length.
         VerticalLayout {
-            horizontal-stretch: 1;
+            horizontal-stretch: 100 - 2 * side-share;
             alignment: center;
             spacing: 8px;
             HorizontalLayout {
@@ -550,7 +553,8 @@ export component PlayerBar inherits Rectangle {
         // The volume, mini player, lyrics and queue buttons, over the
         // file's quality.
         VerticalLayout {
-            width: side - pad - gap;
+            min-width: 0px;
+            horizontal-stretch: side-share;
             alignment: center;
             spacing: 6px;
             HorizontalLayout {

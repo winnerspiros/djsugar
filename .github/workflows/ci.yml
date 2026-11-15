@@ -56,15 +56,22 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
+    env:
+      # Line tables only: full debug info for the whole workspace fills the
+      # runner's disk and memory while linking the test binaries.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
       - name: Install system libraries
         # mesa-vulkan-drivers provides lavapipe, a software Vulkan driver, so the
-        # waveform shader test runs on CI machines without a GPU. cmake and
-        # libclang build Ableton Link.
+        # waveform shader test runs on CI machines without a GPU.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfontconfig-dev libxkbcommon-dev libasound2-dev libudev-dev mesa-vulkan-drivers cmake libclang-dev
+          sudo apt-get install -y libfontconfig-dev libxkbcommon-dev libasound2-dev libudev-dev mesa-vulkan-drivers
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
@@ -80,7 +87,7 @@ jobs:
   windows:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
     # Windows ships as a preview: the app must build and its tests pass there
-    # too. windows-latest already has the cmake and LLVM that Ableton Link needs.
+    # too.
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
