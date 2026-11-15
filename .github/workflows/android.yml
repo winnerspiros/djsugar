@@ -5,7 +5,7 @@ name: Android
 
 on:
   push:
-    branches: [rust, "rust-*"]
+    branches: [rust]
     paths-ignore: ["docs/**", "openspec/**", "**/*.md"]
   workflow_dispatch:
 

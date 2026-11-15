@@ -6,25 +6,25 @@ full history; GPL requires keeping LICENSE and the inherited notices in NOTICE.
 Reference implementation: DJ Sugar C++ on `main` (Mixxx fork). Every DJ Sugar feature is ported
 here; Mixxx code is read for behaviour, not translated line by line.
 
-Status: TODO, WIP, DONE. One part per pull request into `rust`.
+Status: TODO, WIP, DONE. All work lands on `rust`.
 
 ## Overview
 
 Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is what needs the owner.
 
-| Part | Done | Priority | Timeframe | Branch | Input |
-| --- | --- | --- | --- | --- | --- |
-| 0: platforms | 10% (1/10) | P0 | 4-6 weeks | `rust-platforms` | store accounts, signing keys |
-| P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | `rust-tuning` | device testing |
-| Q: code quality and performance | 0% (0/9) | P0 | ongoing | every branch | no |
-| R: pure-Rust dependencies | 8% (1/12) | P1 | 8-12 weeks | `rust-pure` | no |
-| C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | `rust-controllers` | hardware tests |
-| 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | `rust-features` | UI/feature review |
-| 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | `rust-parity` | no |
-| T: mapping translator | 0% (0/3) | P2 | 4-6 weeks | `rust-translator` | no |
-| M: mods | 0% (0/4) | P2 | 6-8 weeks | `rust-mods` | no |
-| L: lighting and visuals (later) | 0% (0/4) | P3 | 12+ weeks | - | yes, scope |
-| A: Automix (later, design discussion required before starting) | 0% (0/1) | P3 | tbd | - | yes, design first |
+| Part | Done | Priority | Timeframe | Input |
+| --- | --- | --- | --- | --- |
+| 0: platforms | 10% (1/10) | P0 | 4-6 weeks | store accounts, signing keys |
+| P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | device testing |
+| Q: code quality and performance | 0% (0/9) | P0 | ongoing | no |
+| R: pure-Rust dependencies | 8% (1/12) | P1 | 8-12 weeks | no |
+| C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | hardware tests |
+| 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | UI/feature review |
+| 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | no |
+| T: mapping translator | 0% (0/3) | P2 | 4-6 weeks | no |
+| M: mods | 0% (0/4) | P2 | 6-8 weeks | no |
+| L: lighting and visuals (later) | 0% (0/4) | P3 | 12+ weeks | yes, scope |
+| A: Automix (later, design discussion required before starting) | 0% (0/1) | P3 | tbd | yes, design first |
 
 ## Decisions
 
