@@ -1,27 +1,18 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
-# Auto-release workflow for winnerspiros/mixxx fork (DJ Sugar).
+# Publishes DJ Sugar builds to GitHub Releases.
 #
-# Triggers:
-#   - Push to main -> creates/updates a rolling "latest" pre-release.
-#   - Manual workflow_dispatch -> create a versioned release (e.g. v2.7.0).
-#   - Push of a version tag (vX.Y.Z) -> create a versioned release.
+#   - Push to main: pre-release v2.7-alpha-<hash>.
+#   - Version tag (vX.Y.Z) or manual run: versioned release.
 #
-# Delegates the actual compilation to the reusable build.yml workflow,
-# which handles all platform-specific details (MSVC toolchain setup,
-# Android NDK/SDK, macOS codesigning, vcpkg deps, etc.).
-#
-# This workflow adds a release-publishing stage on top that collects
-# the built artifacts (DEB, DMG x2, MSI x2, APK) and publishes them to
-# GitHub Releases.
-#
-# Runner cost: 1 version job + 1 build job (build.yml handles its own
-# 6-platform matrix internally) + 1 release job = ~8 concurrent runners
-# instead of the previous 30+ from the cartesian product bug.
+# build.yml builds every platform (its own matrix; do not wrap it in another
+# one). The release job attaches APK, IPA, MSI x2, DMG x2, DEB and AppImage.
 
 name: Auto-Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
     paths:
@@ -148,6 +139,8 @@ jobs:
     if: always() && needs.version.result == 'success'
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # release notes need the history since the last release
 
       # Download artifacts from each build by slug name (build.yml uses
       # artifacts_slug as the upload-artifact name).
@@ -162,18 +155,20 @@ jobs:
       - name: Flatten artifact directories
         run: |
           mkdir -p flat-assets
-          find release-assets -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" -o -name "*.apk" \) -exec mv {} flat-assets/ \;
+          find release-assets -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" -o -name "*.apk" -o -name "*.ipa" -o -name "*.AppImage" \) -exec mv {} flat-assets/ \;
           ls -lh flat-assets/
 
-      # On main-branch pushes we keep a single rolling "latest" pre-release.
-      # On tags / manual runs we create a versioned release.
-      - name: Delete existing "latest" release (rolling update)
-        if: github.ref_name == 'main' && github.ref_type == 'branch'
+      - name: Write release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag_name }}
         run: |
-          gh release delete latest --yes --repo "${{ github.repository }}" 2>/dev/null || true
-          git push --delete origin latest 2>/dev/null || true
+          # Previous published release, not counting the one being (re)made
+          PREV=$(gh release list -R "$GITHUB_REPOSITORY" -L 20 --json tagName,isDraft \
+            -q "[.[] | select(.isDraft | not) | select(.tagName != \"$TAG\")][0].tagName // \"\"")
+          git rev-parse -q --verify "refs/tags/$PREV" >/dev/null || PREV=""
+          python3 tools/release_notes.py "$PREV" "$GITHUB_SHA" "$GITHUB_REPOSITORY" flat-assets > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v3
@@ -182,7 +177,7 @@ jobs:
           name: ${{ needs.version.outputs.release_name }}
           prerelease: ${{ needs.version.outputs.is_prerelease }}
           draft: false
-          generate_release_notes: true
+          body_path: notes.md
           files: flat-assets/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

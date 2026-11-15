@@ -2,100 +2,138 @@
 
 ![DJ Sugar logo](https://raw.githubusercontent.com/winnerspiros/djsugar/main/res/images/icons/scalable/apps/mixxx.svg)
 
-**Free, open-source DJ software — on your phone and on your desktop.**
+**Open-source DJ software for Android, iOS, Windows, macOS and Linux.**
 
-DJ Sugar is a fork of [Mixxx](https://github.com/mixxxdj/mixxx) , built on the Android port by
-[JaviLabarumDJ/mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) . Everything Mixxx
-does stays; DJ Sugar adds streaming sources and a touch UI made for phones. Upstream Mixxx is merged
-in regularly.
+DJ Sugar is a fork of [Mixxx](https://github.com/mixxxdj/mixxx) that adds streaming services,
+on-device stem separation, a touch interface and mobile builds. It started from the Android port
+[JaviLabarumDJ/mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) and merges upstream
+Mixxx regularly, so every Mixxx feature and controller mapping is included.
 
----
+## Downloads
 
-## What DJ Sugar adds
+Every push to `main` that changes the app (code, resources, packaging or build files) builds all
+platforms and publishes a pre-release on the
+[Releases page](https://github.com/winnerspiros/djsugar/releases). Version tags (`vX.Y.Z`) publish
+full releases.
 
-### YouTube
+| Platform | Architecture | File |
+| --- | --- | --- |
+| Android | arm64 | `.apk` |
+| iOS / iPadOS 14+ | arm64 | `.ipa` (unsigned) |
+| Windows | x64, ARM64 | `.msi` |
+| macOS 11+ | Intel, Apple Silicon | `.dmg` |
+| Ubuntu / Debian | x86_64 | `.deb` |
+| Any Linux | x86_64 | `.AppImage` |
 
-- Search inside the app and load results straight to deck 1 or deck 2 (D1 / D2), or save them to the library
-- Genre bubbles to browse
-- Played, BPM, key and duplicate markers on results
-- Fast downloads: yt-dlp finds the audio link, then the file comes in 16 parallel parts
-- The links of the top results are fetched in the background, so a tap usually starts the download at once
-- yt-dlp is bundled on Android and updates itself
-- **SponsorBlock** skips sponsor segments, intros and other non-music parts
+<details>
+<summary>Installing the iOS build</summary>
 
-### SoundCloud
+The `.ipa` is not signed, because there is no paid Apple developer account behind it. Install it
+with [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io): they sign it with your
+own Apple ID. With a free Apple ID the app must be re-signed every 7 days; AltStore does that
+automatically.
 
-- Search with genre, cover art and play counts
-- D1 / D2 / save buttons, same as YouTube
-- Go+ tracks are marked; they are 30-second previews and can't be loaded
+On iOS, YouTube search works but yt-dlp does not (iOS apps cannot run other programs), and there is
+no HID/USB controller support yet.
 
-### Spotify (Android)
+</details>
 
-- Log in with the account of the installed Spotify app: one tap, nothing to type (without the app, Spotify's own login page opens in the app)
-- Search, Liked Songs, top tracks and your playlists
-- D1 / D2 load Spotify's own audio (Ogg Vorbis 320 kbit/s), downloaded once into the cache: waveform, beatgrid, loops and scratching work as with a local file
-- Playing tracks needs **Spotify Premium**; the audio comes through [librespot](https://github.com/librespot-org/librespot)
+## Features
 
-### Controllers
+### Streaming
 
-- **Pioneer DDJ-FLX4** over USB and Bluetooth (BLE MIDI), picked up automatically when connected
-- Jog wheels with scratch (vinyl mode on by default), browse, load, back and stems mode
-  (SHIFT + SAMPLER: pads 1–4 mute, pads 5–8 solo)
-- BROWSE and LOAD work on whichever screen is open: library, YouTube, SoundCloud or Spotify
-- All of Mixxx's controller mappings are included
+- YouTube: search, load to a deck or save to the library, SponsorBlock skips non-music parts
+- SoundCloud: search with genre, cover art and play counts
+- Spotify (Android, Premium): search, Liked Songs and playlists, played as real files
+- Subsonic servers and custom stream URLs
 
-### Android
+### Performance
 
-- Touch UI with a compact library and a streaming hub
-- Low-latency audio through Oboe
-- USB controller permission handling
-- Renderer choice in Settings → Interface
+- FX Station: drum pads and effect scenes on top of the decks
+- Built-in sample library, your own recordings and a sample editor
+- On-device stem separation (Spleeter or HTDemucs)
+- Smart Auto DJ: chooses the next track by energy, key and phrase and mixes it in on the beat
 
-### AI Bro (need rework)
+### Hardware
 
-- Auto-DJ that finds similar songs on YouTube, downloads them and mixes them in
+- Pioneer DDJ-FLX4 over USB and Bluetooth MIDI, detected automatically
+- USB audio interfaces and MIDI learn on Android, no root needed
+- Rekordbox USB drives: read playlists and back them up
 
----
+### Mobile
 
-## 📥 Downloads
+- Touch skins (Lite and Booth) with a compact library and a streaming hub
+- Low-latency audio through Oboe, latency calibration with the microphone
+- Fast library on large phone collections, Greek and Greeklish search
 
-Get the latest build from [Releases](https://github.com/winnerspiros/djsugar/releases). Every push to
-`main` publishes a new pre-release.
+<details>
+<summary>How it works</summary>
 
-| Platform | File |
-| --- | --- |
-| Android (ARM64) | `.apk` |
-| Windows (x64, ARM64) | `.msi` |
-| macOS (Intel, Apple Silicon) | `.dmg` |
-| Ubuntu / Debian (x86_64) | `.deb` |
+- **Language and UI**: C++20 with Qt 6.12. The mobile interface is QML; desktop keeps the Mixxx
+  widget skins and the QML interface.
+- **Streaming**: YouTube goes through yt-dlp (bundled on Android, self-updating) and downloads each
+  file in 16 parallel ranges. Spotify uses [librespot](https://github.com/librespot-org/librespot)
+  (Rust) and caches the Ogg Vorbis 320 kbit/s stream, so waveforms, beatgrids, loops and scratching
+  work as with local files.
+- **Stems**: Spleeter and HTDemucs models run through ONNX Runtime on the device; results are saved
+  as stem files next to the track.
+- **Audio on Android**: Oboe for the system audio path; USB audio interfaces are driven directly
+  over USB from user space.
+- **Library**: SQLite in WAL mode, with a case- and accent-insensitive collation for sorting and
+  search.
+- **Assets**: images ship as WebP, SVGs are optimized, bundled samples are Opus where that is
+  smaller.
+- **Release builds**: link-time optimization and removal of unused code on all platforms.
+
+</details>
 
 ## Building
 
-DJ Sugar uses the same CMake + vcpkg setup as Mixxx: follow the
-[Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md). The Android
-APK is built by the Android job in [`.github/workflows/build.yml`](.github/workflows/build.yml), the
-reference for the exact steps.
+DJ Sugar builds with CMake and vcpkg, the same way as Mixxx. The general steps are in the
+[Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md).
 
-Spotify needs Rust (`rustup target add aarch64-linux-android`); nothing to register: login, browsing
-and audio go through [librespot](https://github.com/librespot-org/librespot).
+<details>
+<summary>Platform details</summary>
+
+- **Dependencies**: `tools/<platform>_buildenv.sh setup` (`tools/windows_buildenv.bat` on Windows)
+  prepares them. Linux (`debian_buildenv.sh`) installs distribution packages with apt. Windows,
+  macOS, Android and iOS download a prebuilt bundle (Qt 6.12, FFmpeg, ONNX Runtime and the rest)
+  from [winnerspiros/vcpkg](https://github.com/winnerspiros/vcpkg) releases and check its SHA256.
+- **Android**: cross-compiled for arm64 with the NDK, then packaged with Gradle. Spotify support
+  needs Rust: `rustup target add aarch64-linux-android`.
+- **iOS**: cross-compiled from macOS with `-DCMAKE_SYSTEM_NAME=iOS`, the `arm64-ios-release`
+  triplet and a host Qt for the build tools (`QT_HOST_PATH`); packaged as an unsigned IPA.
+- **CI**: [`.github/workflows/build.yml`](.github/workflows/build.yml) builds and tests every
+  platform and is the reference for the exact CMake flags of each one.
+  [`auto-release.yml`](.github/workflows/auto-release.yml) publishes the releases.
+
+</details>
 
 ## Bug reports
 
-[Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`:
+[Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`.
+
+<details>
+<summary>Where to find mixxx.log</summary>
 
 - Android: `Android/data/org.mixxx/files/Documents/Mixxx/`
 - Linux: `~/.local/share/mixxx/`
 - Windows: `%LOCALAPPDATA%\Mixxx\`
 - macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
 
+</details>
+
 ## Contributing
 
-Fork, branch, open a pull request. Code style and guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
+Fork, branch and open a pull request. Code style and guidelines are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License and credits
 
-GPLv2 — see [LICENSE](LICENSE).
+GPLv2, see [LICENSE](LICENSE).
 
 - [Mixxx](https://github.com/mixxxdj/mixxx), copyright the Mixxx contributors
-- [mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) by JaviLabarumDJ, the Android port DJ Sugar builds on
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [SponsorBlock](https://sponsor.ajay.app)
+- [mixxx-android](https://github.com/JaviLabarumDJ/mixxx-android) by JaviLabarumDJ
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp), [SponsorBlock](https://sponsor.ajay.app),
+  [librespot](https://github.com/librespot-org/librespot) and
+  [ONNX Runtime](https://github.com/microsoft/onnxruntime)
