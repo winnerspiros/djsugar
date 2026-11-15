@@ -32,7 +32,7 @@ jobs:
           - djsugar-script
           - djsugar-separation
           - djsugar-waveform
-          - djsugar
+          - djsugar-android
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable

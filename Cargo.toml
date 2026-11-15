@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/broadcast", "crates/app"]
+members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/broadcast", "crates/app", "crates/android"]
 exclude = ["third_party"]
 
 [workspace.package]
@@ -60,6 +60,10 @@ opt-level = 2
 # third_party/femtovg/DJSUGAR.md.
 [patch.crates-io]
 femtovg = { path = "third_party/femtovg" }
+# Lets the winit backend with the wgpu FemtoVG renderer run on Android
+# (upstream allows only the Skia-based android-activity backend there).
+slint = { path = "third_party/slint" }
+i-slint-backend-selector = { path = "third_party/i-slint-backend-selector" }
 # Key lock's time-stretcher with split computation; see
 # third_party/signalsmith-stretch/DJSUGAR.md.
 signalsmith-stretch = { path = "third_party/signalsmith-stretch" }

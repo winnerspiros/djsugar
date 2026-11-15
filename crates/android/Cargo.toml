@@ -1,0 +1,15 @@
+[package]
+name = "djsugar-android"
+description = "DJ Sugar's Android entry point"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "djsugar_android"
+crate-type = ["cdylib"]
+
+[target.'cfg(target_os = "android")'.dependencies]
+djsugar = { path = "../app", package = "djsugar" }
+winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }
