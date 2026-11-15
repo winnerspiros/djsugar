@@ -129,6 +129,21 @@ Converts existing Mixxx/openDJ controller mappings (XML + JS) into DJ Sugar Rust
 | T.2 | Codegen: IR to Rust source using the `djsugar-mod` SDK; builds to WASM with the normal toolchain (xtask). Used to convert the bundled mappings once. | TODO |
 | T.3 | In-app import: phones and stores cannot run rustc, so the app compiles the IR directly to a sandboxed, interpretable form (no JS engine needed at runtime). Unsupported constructs fall back to boa and are reported. | TODO |
 
+## Part C: controllers and DVS, every platform
+
+Target: every controller that has a mapping anywhere works on Linux, Windows, macOS, Android and iOS, over USB and Bluetooth LE.
+
+| # | Part | Status |
+| --- | --- | --- |
+| C.1 | Transport layer in Rust: USB MIDI (midir; Android `android.media.midi` via JNI, iOS CoreMIDI), USB HID (R.8), BLE MIDI (btleplug, pure Rust: BlueZ, WinRT, CoreBluetooth, Android) with pairing UI and latency/jitter compensation | TODO |
+| C.2 | Hotplug and auto-detect on every OS (by USB VID/PID, BLE name/service), mapping picked automatically | TODO |
+| C.3 | Coverage: every bundled mapping loads and runs in the test suite; per-controller status list generated from tests, not hand-written | TODO |
+| C.4 | Controllers with built-in audio interfaces (multichannel I/O routing: main, booth, headphones per device) | TODO |
+| C.5 | DVS timecode decoder in Rust: Serato CV02 (Control Vinyl/CD), Traktor MK1/MK2, Mixvibes, with pitch, direction, absolute position, needle drop, relative/absolute modes, per-deck calibration | TODO |
+| C.6 | DVS interfaces: Rane SL1/SL2/SL3/SL4, Rane Seventy/Seventy-Two/Twelve, Pioneer DJM/Serato-certified mixers, Traktor Audio 6/10 and similar; class-compliant multichannel, phono/line switching | TODO |
+| C.7 | Rane Twelve/One style motorized/MIDI platters, jog displays (HID screens on S4 MK3, DDJ-REV7 etc.) | TODO |
+| C.8 | Controller-without-mapping fallback: MIDI learn wizard builds a Rust mapping mod | TODO |
+
 ## Part 1: DJ Sugar features
 
 | # | Feature (C++ reference on main) | Status |
@@ -151,7 +166,7 @@ Converts existing Mixxx/openDJ controller mappings (XML + JS) into DJ Sugar Rust
 | 1.16 | Rekordbox USB drives: read playlists, back up (openDJ has rbox crates) | TODO |
 | 1.17 | Latency calibration with the microphone | TODO |
 | 1.18 | Android controller hotplug | TODO |
-| 1.19 | Rane SL3 DVS (backlog) | TODO |
+| 1.19 | Rane SL3 DVS (see C.5, C.6) | TODO |
 
 ## Part 2: Mixxx parity
 
@@ -161,5 +176,5 @@ Converts existing Mixxx/openDJ controller mappings (XML + JS) into DJ Sugar Rust
 | 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO |
 | 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO |
 | 2.4 | Recording, broadcasting (openDJ has both) | TODO (verify) |
-| 2.5 | Vinyl control (DVS timecode) | TODO |
+| 2.5 | Vinyl control (DVS timecode, see Part C) | TODO |
 | 2.6 | Settings and config migration from Mixxx config | TODO |
