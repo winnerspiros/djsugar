@@ -44,6 +44,6 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/rust' }}
       - run: cargo install cargo-ndk --locked
       - name: cargo ndk check
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
-        run: cargo ndk -t arm64-v8a -P 26 check -p ${{ matrix.crate }} --locked
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          cargo ndk -t arm64-v8a -P 26 check -p ${{ matrix.crate }} --locked
