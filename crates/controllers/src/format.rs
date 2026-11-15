@@ -2,7 +2,7 @@
 //! the DJ's own or one imported from another DJ app, either standing alone
 //! or `based_on` a Mixxx mapping and holding only what it changes. A
 //! superset of Mixxx's `.midi.xml`: [`DjSugarMapping::from_mixxx`] loses
-//! nothing. The reference is `website/book/src/dev/mapping-format.md`.
+//! nothing. The reference is `docs/dev/mapping-format.md`.
 
 use std::collections::BTreeMap;
 use std::path::Path;

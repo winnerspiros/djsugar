@@ -239,7 +239,7 @@ pub const LOOPING: Lesson = Lesson {
             "That's looping",
             "Loops by length, halved and doubled, your own with IN and OUT, kept on a pad, \
              and rolls. The guide has the rest, such as loops on a controller.",
-            "https://github.com/winnerspiros/djsugar/tree/rust/docsguide/looping.html",
+            "https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/looping.md",
         ),
     ],
 };
@@ -366,7 +366,7 @@ pub const USING_FX: Lesson = Lesson {
             "That's FX",
             "Deck effects, the Beat FX and Color FX. The guide lists every effect and what \
              its settings do.",
-            "https://github.com/winnerspiros/djsugar/tree/rust/docsguide/fx.html",
+            "https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/fx.md",
         ),
     ],
 };
@@ -504,7 +504,7 @@ pub const FILTERING: Lesson = Lesson {
             "That's filtering",
             "Search, tempo and key match, filter chips and smart playlists. The guide has \
              the search words, such as bpm:120-126.",
-            "https://github.com/winnerspiros/djsugar/tree/rust/docsguide/filtering.html",
+            "https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/filtering.md",
         ),
     ],
 };
@@ -586,7 +586,7 @@ pub const AUTOMIX: Lesson = Lesson {
             "That's Automix",
             "A queue, its length and style, Mix now and taking over. The guide covers the \
              rest of the list, such as ordering it by key.",
-            "https://github.com/winnerspiros/djsugar/tree/rust/docsguide/automix.html",
+            "https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/automix.md",
         ),
     ],
 };
@@ -802,7 +802,7 @@ pub const DDJ_FLX4: Lesson = Lesson {
             "That's the DDJ-FLX4",
             "A whole mix on the controller, with its pads and effects. The guide shows \
              every button, with SHIFT.",
-            "https://github.com/winnerspiros/djsugar/tree/rust/docsguide/controllers/ddj-flx4.html",
+            "https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/controllers/ddj-flx4.md",
         ),
     ],
 };
@@ -827,7 +827,7 @@ mod tests {
             let last = t.lesson.steps.last().unwrap();
             assert!(matches!(last.wait, Wait::Next), "{}", t.id);
             assert!(
-                matches!(last.action, Some((_, Action::Open(url))) if url.starts_with("https://github.com/winnerspiros/djsugar/tree/rust/docsguide/")),
+                matches!(last.action, Some((_, Action::Open(url))) if url.starts_with("https://github.com/winnerspiros/djsugar/blob/rust/docs/guide/")),
                 "{}",
                 t.id
             );

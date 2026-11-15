@@ -1,9 +1,9 @@
 //! Signing in to Mixcloud and uploading a show.
 //!
 //! Mixcloud's OAuth needs the app's client secret to swap the sign-in code
-//! for a token and has no desktop flow, so the swap happens on github.com/winnerspiros/djsugar
-//! (`website/functions/mixcloud`). DJ Sugar listens on 127.0.0.1, opens
-//! `https://github.com/winnerspiros/djsugarmixcloud/login?port=…&state=…` in the browser, the DJ
+//! for a token and has no desktop flow, so the swap happens on a sign-in
+//! server set by `DJSUGAR_MIXCLOUD_SIGN_IN` (none is hosted yet). DJ Sugar
+//! listens on 127.0.0.1, opens `<server>?port=…&state=…` in the browser, the DJ
 //! signs in on mixcloud.com, and the token comes back to the listener with
 //! the same state. It is kept in the system keychain; Mixcloud tokens don't
 //! expire, but the DJ can revoke one, which shows up as an OAuth error.
@@ -31,7 +31,6 @@ use crate::spotify::{
     decode, encode, open_in_browser, random_token, read_request_line, respond, LOGIN_TIMEOUT,
 };
 
-const SIGN_IN: &str = "https://github.com/winnerspiros/djsugarmixcloud/login";
 const UPLOAD: &str = "https://api.mixcloud.com/upload/";
 const KEYCHAIN_SERVICE: &str = "DJ Sugar Mixcloud";
 const KEYCHAIN_USER: &str = "token";
@@ -112,10 +111,13 @@ pub fn forget_token() {
 /// Opens the browser to sign in and waits for the token (blocking, up to
 /// five minutes). Keeps it in the keychain.
 pub fn sign_in() -> Result<String, String> {
+    let sign_in = std::env::var("DJSUGAR_MIXCLOUD_SIGN_IN").map_err(|_| {
+        "Mixcloud sign-in needs a sign-in server (DJSUGAR_MIXCLOUD_SIGN_IN)".to_string()
+    })?;
     let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     let port = listener.local_addr().map_err(|e| e.to_string())?.port();
     let state = random_token(24);
-    let url = format!("{SIGN_IN}?port={port}&state={state}");
+    let url = format!("{sign_in}?port={port}&state={state}");
     if !open_in_browser(&url) {
         return Err(format!("Couldn't open the browser. Go to {url}"));
     }

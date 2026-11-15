@@ -73,7 +73,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      # Includes the check that website/book/supported-controls.txt matches
+      # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
       - run: cargo test --workspace
 

@@ -88,6 +88,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | 0.6 | iOS audio (CoreAudio via cpal), file access | TODO |
 | 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | TODO |
 | 0.8 | Store builds: cargo feature `store` drops YouTube/SoundCloud download and librespot (Play/F-Droid policy); full build ships on GitHub releases; About screen links source (GPL) | TODO |
+| 0.9 | Mixcloud sign-in server: Rust token-swap service (holds client secret); app reads its URL from `DJSUGAR_MIXCLOUD_SIGN_IN` until hosted | TODO |
 
 ## Part M: mods
 

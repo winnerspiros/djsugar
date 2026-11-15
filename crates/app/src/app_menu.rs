@@ -78,7 +78,7 @@ const _: () = assert!(TUTORIALS.len() == crate::tutorials::TUTORIALS.len());
 const UPDATE_CHECK: &str = "update_check";
 
 /// Where the user guide is.
-const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs";
+const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs/guide";
 
 impl Action {
     const ALL: [Action; 32] = [
