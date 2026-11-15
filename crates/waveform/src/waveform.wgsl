@@ -183,30 +183,44 @@ fn stem_level(j: u32) -> array<f32, 5> {
     return array<f32, 5>(a.x, a.y, a.z, a.w, b.x);
 }
 
-// Each stem's peak around `bin`, as a linear level: interpolated between
-// levels, and on the overview the most over the column.
-fn stems_at(bin: f32) -> array<f32, 5> {
+// Each stem's peak over the slice range [a, b) (in finest-level slices), as
+// a linear level: the loudest level the range covers, weighted by how much
+// of it it covers (as the waveform's columns are, so the shapes stay put as
+// they scroll), or zoomed in past one level a pixel, interpolated between
+// levels.
+fn stems_range(a: f32, b: f32) -> array<f32, 5> {
     var most = array<f32, 5>(0.0, 0.0, 0.0, 0.0, 0.0);
     let count = u32(p.stems.y);
-    if (count == 0u || p.stems.z <= 0.0 || bin < 0.0) {
+    let per = p.stems.z;
+    if (count == 0u || per <= 0.0 || b <= 0.0) {
         return most;
     }
-    let per = p.stems.z;
-    let span = max(p.bins_per_pixel / per, 1.0);
-    let steps = min(u32(ceil(span)), 16u);
-    for (var i = 0u; i < steps; i = i + 1u) {
-        let x = bin / per - 0.5 * span + (f32(i) + 0.5) * span / f32(steps);
-        if (x > f32(count)) {
-            break;
+    let la = max(a, 0.0) / per;
+    let lb = b / per;
+    if (lb - la <= 1.0) {
+        let c = (la + lb) * 0.5 - 0.5;
+        if (c > f32(count)) {
+            return most;
         }
-        let j = u32(clamp(floor(x), 0.0, f32(count - 1u)));
+        let j = u32(clamp(floor(c), 0.0, f32(count - 1u)));
         let k = min(j + 1u, count - 1u);
-        let a = stem_level(j);
-        let b = stem_level(k);
-        let t = clamp(fract(x), 0.0, 1.0);
+        let lo = stem_level(j);
+        let hi = stem_level(k);
+        let t = clamp(c - floor(c), 0.0, 1.0);
         for (var s = 0u; s < 5u; s = s + 1u) {
-            let v = mix(a[s], b[s], t);
-            most[s] = max(most[s], v * v);
+            let v = mix(lo[s], hi[s], t);
+            most[s] = v * v;
+        }
+        return most;
+    }
+    let first = i32(floor(la));
+    let last = min(min(i32(ceil(lb)) - 1, first + 63), i32(count) - 1);
+    for (var i = first; i <= last; i = i + 1) {
+        let cover = clamp(min(lb, f32(i + 1)) - max(la, f32(i)), 0.0, 1.0);
+        let w = smoothstep(0.0, 0.5, cover);
+        let l = stem_level(u32(i));
+        for (var s = 0u; s < 5u; s = s + 1u) {
+            most[s] = max(most[s], l[s] * l[s] * w);
         }
     }
     return most;
@@ -214,9 +228,9 @@ fn stems_at(bin: f32) -> array<f32, 5> {
 
 // The Stems look: each stem's shape in its colour, the tallest at the
 // back so every stem shows where it is louder than the ones in front.
-fn stems_wave(base: vec3<f32>, bin: f32, d: f32, span: f32) -> vec3<f32> {
+fn stems_wave(base: vec3<f32>, levels: array<f32, 5>, d: f32, span: f32) -> vec3<f32> {
     var color = base;
-    var h = stems_at(bin);
+    let h = levels;
     let n = min(u32(p.stems.w), 5u);
     var done = array<bool, 5>(false, false, false, false, false);
     for (var round = 0u; round < n; round = round + 1u) {
@@ -315,19 +329,22 @@ struct Columns {
     a: Slice,
     b: Slice,
     t: f32,
+    // Where column a starts and how wide a column is, in slices.
+    start: f32,
+    width: f32,
 };
 
 fn columns(bin: f32) -> Columns {
     let w = p.bins_per_pixel;
     if (p.mode != 0u) {
         let s = sample_range(bin - 0.5 * w, bin + 0.5 * w);
-        return Columns(s, s, 0.0);
+        return Columns(s, s, 0.0, bin - 0.5 * w, w);
     }
     let c = bin / w - 0.5;
     let i = floor(c);
     let a = sample_range(i * w, (i + 1.0) * w);
     let b = sample_range((i + 1.0) * w, (i + 2.0) * w);
-    return Columns(a, b, c - i);
+    return Columns(a, b, c - i, i * w, w);
 }
 
 fn column_bin(x: f32) -> f32 {
@@ -634,7 +651,10 @@ fn fs_main(@builtin(position) frag: vec4<f32>) -> @location(0) vec4<f32> {
         let cols = columns(bin);
         let stems = p.style == 4u && p.stems.w > 0.5;
         if (stems) {
-            color = stems_wave(color, bin, d, span);
+            // Each stem's shapes per column too, blended like the others.
+            let ha = stems_range(cols.start, cols.start + cols.width);
+            let hb = stems_range(cols.start + cols.width, cols.start + 2.0 * cols.width);
+            color = mix(stems_wave(color, ha, d, span), stems_wave(color, hb, d, span), cols.t);
         } else {
             color = mix(wave(color, cols.a, bin, d, span), wave(color, cols.b, bin, d, span), cols.t);
         }

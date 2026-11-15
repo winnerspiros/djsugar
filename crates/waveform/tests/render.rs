@@ -1091,3 +1091,116 @@ fn three_band_keeps_the_highs_small() {
         rows.len()
     );
 }
+
+/// Scrolling by part of a pixel draws, in every look, what blending the
+/// frames a whole pixel either side would: the shapes glide sideways and
+/// nothing about them bobs up and down. (Stems once sampled each pixel
+/// around its own position, so their outlines changed as they scrolled.)
+#[test]
+fn scrolling_is_steady_in_every_look() {
+    let Some((device, queue)) = gpu() else {
+        eprintln!("no GPU adapter; skipping");
+        return;
+    };
+    let renderer = WaveformRenderer::new(&device, &queue);
+    // Busy music: a loud hit every beat over a noisy bed, and noisy stems.
+    let mut seed = 12345u32;
+    let mut noise = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        (seed % 1000) as f32 / 1000.0
+    };
+    let base: Vec<[u8; 8]> = (0..60_000)
+        .map(|i| {
+            let beat = if i % 469 < 30 { 1.0 } else { 0.45 };
+            let mut s = [0u8; 8];
+            for k in 0..4 {
+                s[k] = (255.0 * beat * (0.5 + 0.5 * noise())) as u8;
+                s[k + 4] = (s[k] as f32 * 0.7) as u8;
+            }
+            s
+        })
+        .collect();
+    let stems: Vec<[u8; opendj_waveform::MAX_STEMS]> = (0..6000)
+        .map(|_| std::array::from_fn(|_| (255.0 * noise()) as u8))
+        .collect();
+    let colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+    let track = Arc::new(GpuTrack::with_extras(
+        &device,
+        &queue,
+        &renderer,
+        1,
+        &levels(base),
+        1000.0,
+        Extras {
+            stems: &stems,
+            stem_rate: 100.0,
+            stem_colors: &colors,
+            ..Extras::default()
+        },
+    ));
+    // 10 s across 1408 pixels (rows a multiple of 256 bytes, for reading back).
+    let (w, h) = (1408u32, 200u32);
+    let visible = 10.0;
+    for (style, half) in [
+        (Style::Rgb, false),
+        (Style::Rgb, true),
+        (Style::Bands, false),
+        (Style::Blue, false),
+        (Style::Stems, false),
+    ] {
+        let mut view = WaveformView::new(&device, Mode::Scrolling, w, h);
+        view.set_style(style);
+        view.set_half(half);
+        view.set_track(&device, &renderer, Some(&track));
+        // How much each column right of the play line differs from the
+        // background, summed down the column, `pixels` on from 30 s.
+        let mut ink = |pixels: f64| -> Vec<f64> {
+            let frame = Frame {
+                play_seconds: 30.0 + pixels * visible / w as f64,
+                visible_seconds: visible,
+                duration: 60.0,
+                first_bar_beat: 0.0,
+                grid: steady_grid(0.0, 0.0),
+                cue: None,
+                loop_range: None,
+                loop_marking: None,
+                hotcues: [None; 8],
+                slip: None,
+                gain: 1.0,
+                phrases: Vec::new(),
+            };
+            view.render(&device, &queue, &renderer, Some(&frame), 1.0);
+            let px = read_back(&device, &queue, &view);
+            (760..w - 30)
+                .map(|x| {
+                    (0..h)
+                        .map(|y| {
+                            let i = ((y * w + x) * 4) as usize;
+                            (0..3)
+                                .map(|c| px[i + c].abs_diff(px[c]) as f64)
+                                .sum::<f64>()
+                        })
+                        .sum()
+                })
+                .collect()
+        };
+        let (before, after) = (ink(0.0), ink(1.0));
+        for k in 1..8 {
+            let t = k as f64 / 8.0;
+            let between = ink(t);
+            let (mut off, mut total) = (0.0, 0.0);
+            for x in 0..between.len() {
+                let blend = (1.0 - t) * before[x] + t * after[x];
+                off += (between[x] - blend).abs();
+                total += blend;
+            }
+            assert!(
+                off / total < 0.01,
+                "{style:?} (half {half}) {t} px on: {:.1}% off a glide",
+                100.0 * off / total
+            );
+        }
+    }
+}
