@@ -82,7 +82,10 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
-      - run: cargo test --workspace
+      # Bounded so linking test binaries and the model tests can't starve
+      # the runner's 16 GB.
+      - run: cargo test --workspace -j2 -- --test-threads=2
+        timeout-minutes: 60
 
   windows:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
