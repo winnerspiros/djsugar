@@ -17,7 +17,6 @@ A recorded set is only a sound file today, with a cue sheet beside it. DJ Sugar 
 - **Export with chapters**: a Mixcloud tracklist, YouTube chapters (first at 0:00, at least 3, each at least 10 s), a .cue sheet, and Export for Mixcloud with ID3 chapters as today, all following the fixes (a cut moves later times).
 - Recordings without a control log open with the recording's waveform and the cue sheet's tracklist only.
 
-Mockups (boards 0 and 1; board 2 is add-set-view): https://claude.ai/artifact/76fLT6FF4ULjWNcXRSQCzv
 
 ## Capabilities
 

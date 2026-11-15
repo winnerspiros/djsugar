@@ -14,7 +14,6 @@ The Mixed Set Editor (add-mixed-set-editor, which comes first in v0.8) shows a r
 - Render: play the edited set offline through DJ Sugar's engine to a new file beside the recording; the recording is never changed. Mixcloud export and tracklist from the new file.
 - The Ableton export (add-ableton-set-export step 3) uses the same timeline, with kept hard moves as rendered audio clips.
 
-Mockups (board 2, and the scratch block on board 1): https://claude.ai/artifact/76fLT6FF4ULjWNcXRSQCzv
 
 ## Capabilities
 
