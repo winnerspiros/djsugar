@@ -199,7 +199,15 @@ Item {
     EXPECT_EQ(image.pixelColor(30, 25), QColor(Qt::red));
     QTest::qWait(550);
     auto* model = destination->getParametersModel();
-    const int originalOrder = model->get(0).toMap().value("displayOrder").toInt();
+    // Row of the first knob, the one the drop moves to the front
+    int knobRow = 0;
+    while (knobRow < model->rowCount({}) &&
+            model->get(knobRow).toMap().value("controlKey").toString() !=
+                    QStringLiteral("parameter1")) {
+        ++knobRow;
+    }
+    ASSERT_LT(knobRow, model->rowCount({}));
+    const int originalOrder = model->get(knobRow).toMap().value("displayOrder").toInt();
     QMimeData mimeData;
     mimeData.setText(QStringLiteral("Mixxx effect parameter 0\n%1\n0")
                     .arg(slot->getUniqueEffectId()));
@@ -213,28 +221,16 @@ Item {
     QDropEvent drop(QPointF(35, 85), Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
     QCoreApplication::sendEvent(&window, &drop);
     EXPECT_TRUE(drop.isAccepted());
-    EXPECT_EQ(originalOrder, model->get(0).toMap().value("displayOrder").toInt());
-    QTRY_COMPARE(model->get(0).toMap().value("displayOrder").toInt(), 0);
+    EXPECT_EQ(originalOrder, model->get(knobRow).toMap().value("displayOrder").toInt());
+    QTRY_COMPARE(model->get(knobRow).toMap().value("displayOrder").toInt(), 0);
     EXPECT_EQ(originalOrder,
             slot->getParametersModel()
-                    ->get(0)
+                    ->get(knobRow)
                     .toMap()
                     .value("displayOrder")
                     .toInt());
-    const auto orders = [model] {
-        QStringList result;
-        for (int row = 0; row < model->rowCount({}); ++row) {
-            const auto map = model->get(row).toMap();
-            result.append(QStringLiteral("%1=%2(%3)")
-                            .arg(map.value("parameterId").toString(),
-                                    map.value("displayOrder").toString(),
-                                    map.value("controlKey").toString()));
-        }
-        return result.join(' ').toStdString();
-    };
-    SCOPED_TRACE(orders());
     destination->completeParameterSwap(true);
-    EXPECT_EQ(0, model->get(0).toMap().value("displayOrder").toInt()) << orders();
+    EXPECT_EQ(0, model->get(knobRow).toMap().value("displayOrder").toInt());
 }
 
 TEST_F(QmlEffectsProxyTest, EffectsKnobCursorStaysHiddenOutsideKnob) {
@@ -501,6 +497,8 @@ TEST_F(QmlEffectsProxyTest, ParameterReorderingPreservesQmlAndFixedControlBindin
     }
     // Every parameter of the effect is loaded (Echo's count differs per fork)
     ASSERT_EQ(EchoEffect::getManifest()->parameters().size(), expectedOrder.size());
+    // Expected positions below are relative to the buttons, which come first
+    const int buttonCount = core->getLoadedParameters().value(EffectParameterType::Button).size();
     QQmlEngine engine;
     engine.addImportPath(QStringLiteral(":/mixxx.org/imports"));
     QQmlComponent component(&engine);
@@ -598,7 +596,7 @@ Item {
     verifyBindings();
     slot->queueParameterMove(Model::Knob, 3, Model::Button, 0, false);
     slot->completeParameterSwap(true);
-    expectedOrder.move(5, 0);
+    expectedOrder.move(buttonCount + 3, 0);
     verifyBindings();
     verifyWrites();
     slot->queueParameterMove(Model::Button, 1, Model::Knob, 0, false);
@@ -607,7 +605,7 @@ Item {
     verifyBindings();
     verifyWrites();
     core->swapParameters(EffectParameterType::Knob, 0, 2);
-    expectedOrder.swapItemsAt(1, 4);
+    expectedOrder.swapItemsAt(1, buttonCount + 2);
     verifyBindings();
     verifyWrites();
     core->swapParameters(EffectParameterType::Button, 0, 1);
