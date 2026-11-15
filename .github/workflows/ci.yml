@@ -82,10 +82,20 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
-      # Bounded so linking test binaries and the model tests can't starve
-      # the runner's 16 GB.
-      - run: cargo test --workspace -j2 -- --test-threads=2
-        timeout-minutes: 60
+      - run: cargo test --workspace --no-run -j2
+      # One crate at a time under a memory cap and a time limit, so a test
+      # that runs away is stopped and named instead of taking the runner down.
+      - name: cargo test
+        timeout-minutes: 75
+        run: |
+          failed=""
+          for p in $(cargo metadata --no-deps --format-version 1 | jq -r '.packages[].name'); do
+            echo "::group::$p"
+            sudo systemd-run --scope --uid="$(id -u)" --gid="$(id -g)" -p MemoryMax=10G --setenv=PATH="$PATH" --setenv=HOME="$HOME" -q \
+              timeout 20m cargo test -p "$p" -- --test-threads=2 || failed="$failed $p"
+            echo "::endgroup::"
+          done
+          [ -z "$failed" ] || { echo "::error::failed:$failed"; exit 1; }
 
   windows:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
