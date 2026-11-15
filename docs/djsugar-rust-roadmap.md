@@ -1,6 +1,8 @@
 # DJ Sugar Rust rewrite: roadmap and tracker
 
-Base: openDJ (github.com/openwave-studio/opendj, GPL-2.0-or-later), imported with full history.
+DJ Sugar is an independent project: we own this code going forward and are not affiliated with
+openDJ or Mixxx. Base: openDJ (github.com/openwave-studio/opendj, GPL-2.0-or-later), imported with
+full history; GPL requires keeping LICENSE and the inherited notices in NOTICE.
 Reference implementation: DJ Sugar C++ on `main` (Mixxx fork). Every DJ Sugar feature is ported
 here; Mixxx code is read for behaviour, not translated line by line.
 
@@ -15,13 +17,13 @@ Status: TODO, WIP, DONE. One part per pull request into `rust`.
 - Database: rusqlite (bundled SQLite). Turso is a later drop-in candidate once it supports custom
   collations and functions; stoolap is not SQLite-file compatible and is not used.
 - vcpkg fork: only kept for C/C++ dependencies that have no Rust replacement (branch `rust`).
-- Keep upstream openDJ mergeable: DJ Sugar code goes in new crates or behind `cfg`/features where
-  possible.
+- No obligation to stay mergeable with openDJ; cherry-pick useful upstream fixes when worth it.
 
 ## Part 0: platforms
 
 | # | Part | Status |
 | --- | --- | --- |
+| 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | TODO |
 | 0.1 | CI: Linux, Windows, macOS desktop builds on `rust` | TODO |
 | 0.2 | Android arm64 build (cargo-ndk, Slint android-activity backend, APK packaging) | TODO |
 | 0.3 | Android audio: cpal AAudio backend, low-latency stream, Oboe parity | TODO |

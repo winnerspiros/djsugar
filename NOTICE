@@ -1,3 +1,20 @@
+DJ Sugar is an independent DJ application written in Rust.
+
+DJ Sugar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 2 of the License, or (at your option)
+any later version. The full text of version 2 is in LICENSE.
+
+DJ Sugar is not affiliated with or endorsed by the openDJ or Mixxx projects.
+
+Credits and inherited notices
+-----------------------------
+
+DJ Sugar's Rust code base started from openDJ
+(https://github.com/openwave-studio/opendj), Copyright the openDJ
+contributors, GPL-2.0-or-later. The earlier C++ DJ Sugar was a fork of
+Mixxx (https://mixxx.org). The original openDJ notice follows unchanged.
+
 openDJ is a Rust application compatible with Mixxx (https://mixxx.org).
 
 openDJ is free software; you can redistribute it and/or modify it under
