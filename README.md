@@ -1,4 +1,4 @@
-# 🍬 DJ Sugar
+# DJ Sugar
 
 ![DJ Sugar logo](https://raw.githubusercontent.com/winnerspiros/djsugar/main/res/images/icons/scalable/apps/mixxx.svg)
 
@@ -9,23 +9,23 @@ DJ Sugar is a fork of [Mixxx](https://github.com/mixxxdj/mixxx), built on the An
 is still here. DJ Sugar adds streaming, a touch interface and mobile builds, and merges upstream Mixxx
 regularly.
 
-## 📥 Downloads
+## Downloads
 
 Every push to `main` publishes a pre-release on the
 [Releases page](https://github.com/winnerspiros/djsugar/releases).
 
 | Platform | File |
-| --- | --- |
-| 🤖 Android (ARM64) | `.apk` |
-| 🍎 iOS / iPadOS (ARM64) | `.ipa`, unsigned: install with AltStore or Sideloadly |
-| 🪟 Windows (x64, ARM64) | `.msi` |
-| 🍏 macOS (Intel, Apple Silicon) | `.dmg` |
-| 🐧 Ubuntu / Debian (x86_64) | `.deb` |
-| 🐧 Any Linux (x86_64) | `.AppImage` |
+| | --- |
+| Android (ARM64) | `.apk` |
+| iOS / iPadOS (ARM64) | `.ipa`, unsigned: install with AltStore or Sideloadly |
+| Windows (x64, ARM64) | `.msi` |
+| macOS (Intel, Apple Silicon) | `.dmg` |
+| Ubuntu / Debian (x86_64) | `.deb` |
+| Any Linux (x86_64) | `.AppImage` |
 
-## ✨ What DJ Sugar adds
+## What DJ Sugar adds
 
-### 🎵 Streaming
+### Streaming
 
 - **YouTube**: search in the app, load to deck 1 or 2, or save to the library. Fast parallel
   downloads, genre bubbles, BPM / key / played markers, SponsorBlock skips non-music parts.
@@ -36,7 +36,7 @@ Every push to `main` publishes a pre-release on the
   so waveforms, beatgrids, loops and scratching work.
 - **Subsonic** servers and custom stream URLs.
 
-### 🎛️ Performance
+### Performance
 
 - **FX Station**: drum pads and effect scenes on top of the decks.
 - **Samples**: built-in sample library, plus your own recordings with a simple editor.
@@ -44,20 +44,20 @@ Every push to `main` publishes a pre-release on the
 - **Smart Auto DJ**: picks the next track by energy, key and phrase, and lines the mix up on the
   beat.
 
-### 🎚️ Controllers and hardware
+### Controllers and hardware
 
 - **Pioneer DDJ-FLX4** over USB and Bluetooth (BLE MIDI), detected automatically.
 - All of Mixxx's controller mappings, plus MIDI learn on Android.
 - USB audio interfaces on Android without root.
 - Rekordbox USB drives: read playlists and back them up.
 
-### 📱 Mobile
+### Mobile
 
 - Touch skins (Lite and Booth) with a compact library and a streaming hub.
 - Low-latency audio through Oboe, latency calibration with the mic.
 - Fast library on large phone collections, Greek and Greeklish search.
 
-## 🛠️ Building
+## Building
 
 DJ Sugar uses the same CMake + vcpkg setup as Mixxx: see the
 [Mixxx build instructions](https://github.com/mixxxdj/mixxx/blob/main/CONTRIBUTING.md).
@@ -68,7 +68,7 @@ for the exact steps of each platform, including Android and iOS.
 
 Spotify on Android needs Rust: `rustup target add aarch64-linux-android`.
 
-## 🐞 Bug reports
+## Bug reports
 
 [Open an issue](https://github.com/winnerspiros/djsugar/issues/new/choose) and attach `mixxx.log`:
 
@@ -77,11 +77,11 @@ Spotify on Android needs Rust: `rustup target add aarch64-linux-android`.
 - Windows: `%LOCALAPPDATA%\Mixxx\`
 - macOS: `~/Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/`
 
-## 🤝 Contributing
+## Contributing
 
 Fork, branch, open a pull request. Code style and guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 📜 License and credits
+## License and credits
 
 GPLv2: see [LICENSE](LICENSE).
 
