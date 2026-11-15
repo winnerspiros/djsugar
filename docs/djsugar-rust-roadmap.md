@@ -19,6 +19,48 @@ Status: TODO, WIP, DONE. One part per pull request into `rust`.
 - vcpkg fork: only kept for C/C++ dependencies that have no Rust replacement (branch `rust`).
 - No obligation to stay mergeable with openDJ; cherry-pick useful upstream fixes when worth it.
 
+## Goal: optimal Rust, not a port
+
+The end result is idiomatic, fast, lean Rust, not translated C++ or a copy of openDJ. Every part
+that is ported or touched must meet these rules; inherited code is brought up to them over time.
+
+- Real-time audio thread: no allocation, no locks, no syscalls, no logging, no panics. Lock-free
+  communication only (rtrb/atomics). Checked with an allocation-failing test allocator
+  (assert_no_alloc) on the engine callback.
+- Performance is measured, not assumed: criterion benchmarks for DSP, decoding, analysis, library
+  queries and waveform generation; regressions fail CI. Profile (perf/samply) before optimising.
+- SIMD where it pays (std::simd/portable or wide/pulp); no per-sample virtual dispatch.
+- unsafe only where unavoidable (FFI, proven hot spots), each block with a `// SAFETY:` comment;
+  unsafe count tracked and driven down. Miri runs on unsafe-containing pure crates.
+- Strong types over primitives (sample rates, frame positions, BPM, keys as newtypes); errors as
+  enums (thiserror), no `unwrap` in non-test code outside proven-infallible spots.
+- Workspace lints: clippy pedantic + nursery selected, `unsafe_op_in_unsafe_fn`, `missing_docs` for
+  public APIs; `cargo deny` for licences/advisories; `cargo machete`/udeps for unused deps.
+- Lean dependency tree: every crate justified; prefer std and small crates; feature-gate heavy
+  ones (ML, plugin hosting) so mobile builds only carry what they use.
+- Release profile: LTO (fat), codegen-units = 1, panic = abort in the app binary, strip; PGO
+  for the engine once benchmarks exist. Track binary size and startup time per platform.
+- Async only for I/O (streaming, downloads); never on the audio or UI thread.
+- Tests: unit + property tests (proptest) for DSP and parsers, golden-file tests for analysis
+  vs the C++ reference, fuzzing (cargo-fuzz) for decoders, tag and playlist parsers.
+
+Baseline inherited from openDJ (2026-11-15): 173 `unsafe` occurrences, 1122 crates in Cargo.lock,
+no tuned release profile, no workspace lint table. Part Q tracks closing these gaps.
+
+## Part Q: code quality and performance
+
+| # | Item | Status |
+| --- | --- | --- |
+| Q.1 | Release profile (LTO, codegen-units 1, panic abort, strip), size/startup tracking | TODO |
+| Q.2 | Workspace lint table, clippy pedantic triage, `cargo deny` + machete in CI | TODO |
+| Q.3 | Audio-callback no-alloc/no-lock guard (assert_no_alloc) + audit of engine thread | TODO |
+| Q.4 | criterion benchmark suite + CI regression check | TODO |
+| Q.5 | unsafe audit: justify, wrap or remove each block; Miri on pure crates | TODO |
+| Q.6 | Dependency diet: remove/feature-gate, target well below the inherited 1122 crates | TODO |
+| Q.7 | SIMD pass on hot DSP (EQ, filters, mixing, waveform summaries) after profiling | TODO |
+| Q.8 | Fuzzing for decoders, tags, playlist and library import parsers | TODO |
+| Q.9 | PGO build for release engine | TODO |
+
 ## Part 0: platforms
 
 | # | Part | Status |
