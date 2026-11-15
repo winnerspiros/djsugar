@@ -1,27 +1,18 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
-# Auto-release workflow for winnerspiros/mixxx fork (DJ Sugar).
+# Publishes DJ Sugar builds to GitHub Releases.
 #
-# Triggers:
-#   - Push to main -> creates/updates a rolling "latest" pre-release.
-#   - Manual workflow_dispatch -> create a versioned release (e.g. v2.7.0).
-#   - Push of a version tag (vX.Y.Z) -> create a versioned release.
+#   - Push to main: pre-release v2.7-alpha-<hash>.
+#   - Version tag (vX.Y.Z) or manual run: versioned release.
 #
-# Delegates the actual compilation to the reusable build.yml workflow,
-# which handles all platform-specific details (MSVC toolchain setup,
-# Android NDK/SDK, macOS codesigning, vcpkg deps, etc.).
-#
-# This workflow adds a release-publishing stage on top that collects
-# the built artifacts (DEB, DMG x2, MSI x2, APK) and publishes them to
-# GitHub Releases.
-#
-# Runner cost: 1 version job + 1 build job (build.yml handles its own
-# 6-platform matrix internally) + 1 release job = ~8 concurrent runners
-# instead of the previous 30+ from the cartesian product bug.
+# build.yml builds every platform (its own matrix; do not wrap it in another
+# one). The release job attaches APK, IPA, MSI x2, DMG x2, DEB and AppImage.
 
 name: Auto-Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
     paths:
@@ -162,18 +153,8 @@ jobs:
       - name: Flatten artifact directories
         run: |
           mkdir -p flat-assets
-          find release-assets -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" -o -name "*.apk" \) -exec mv {} flat-assets/ \;
+          find release-assets -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" -o -name "*.apk" -o -name "*.ipa" -o -name "*.AppImage" \) -exec mv {} flat-assets/ \;
           ls -lh flat-assets/
-
-      # On main-branch pushes we keep a single rolling "latest" pre-release.
-      # On tags / manual runs we create a versioned release.
-      - name: Delete existing "latest" release (rolling update)
-        if: github.ref_name == 'main' && github.ref_type == 'branch'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete latest --yes --repo "${{ github.repository }}" 2>/dev/null || true
-          git push --delete origin latest 2>/dev/null || true
 
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v3

@@ -128,8 +128,8 @@ jobs:
             artifacts_slug: macos-macosarm
           - name: iOS arm64
             os: macos-15-intel
-            # Build check only: unsigned, not packaged. Same feature set as
-            # Android; no hidapi/libusb on iOS.
+            # Unsigned IPA: sideload with AltStore/Sideloadly, which re-sign
+            # it. Same feature set as Android; no hidapi/libusb on iOS.
             cmake_args: >-
               -DQT6=ON
               -DQML=ON
@@ -167,6 +167,9 @@ jobs:
             compiler_cache_id: ios-arm64
             buildenv_basepath: /Users/runner/buildenv
             buildenv_script: tools/ios_buildenv.sh
+            artifacts_name: iOS IPA (unsigned)
+            artifacts_path: build/*.ipa
+            artifacts_slug: ios-arm64
           - name: Windows Server 2025 VS2026 x64
             os: windows-2025-vs2026
             # Attention: If you change the cmake_args for the Windows CI build,
@@ -811,6 +814,16 @@ jobs:
           command: |
             cd build
             cpack -G ${{ matrix.cpack_generator }} -V
+
+      - name: "[iOS] Package unsigned IPA"
+        if: matrix.artifacts_slug == 'ios-arm64'
+        run: |
+          APP=$(find build -maxdepth 3 -name "*.app" -type d | head -1)
+          test -n "$APP" || { echo "no .app bundle"; exit 1; }
+          rm -rf build/ipa && mkdir -p build/ipa/Payload
+          cp -R "$APP" build/ipa/Payload/
+          (cd build/ipa && zip -qry "../djsugar-$(git describe --always)-ios-arm64.ipa" Payload)
+          ls -lh build/*.ipa
 
       - name: "[AppImage] Upload AppImage"
         if: matrix.cpack_generator == 'AppImage'
