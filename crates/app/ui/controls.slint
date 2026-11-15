@@ -30,7 +30,7 @@ export global Controls {
     // True on the half-seconds a paused deck's PLAY outline shows:
     // only with a track loaded, all decks in step. blink and tick are
     // passed in so callers redraw when either changes.
-    pure function paused-blink(group: string, blink: bool, tick: int) -> bool {
+    public pure function paused-blink(group: string, blink: bool, tick: int) -> bool {
         blink
             && value(resolve(group, "track_loaded"), tick) > 0
             && value(resolve(group, "play"), tick) <= 0

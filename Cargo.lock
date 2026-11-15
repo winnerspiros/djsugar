@@ -3012,6 +3012,7 @@ dependencies = [
  "djsugar-engine",
  "djsugar-script",
  "hidapi",
+ "libc",
  "midir",
  "roxmltree",
  "rquickjs",

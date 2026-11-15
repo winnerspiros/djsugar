@@ -192,12 +192,15 @@ pub fn match_mapping<'a>(
 }
 
 /// Finds the HID devices plugged in, and opens them.
-#[cfg(not(target_os = "android"))]
+#[cfg(target_os = "linux")]
+pub(crate) use crate::hidraw::{Device, Hid};
+
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 pub(crate) struct Hid {
     api: hidapi::HidApi,
 }
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 impl Hid {
     pub(crate) fn new() -> Result<Self, String> {
         hidapi::HidApi::new()
@@ -239,10 +242,10 @@ impl Hid {
 pub(crate) const BUFFER: usize = 255;
 
 /// An open HID device.
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 pub(crate) struct Device(hidapi::HidDevice);
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 impl Device {
     /// Waits up to `timeout_ms` for an input report; `Ok(0)` when none came.
     pub(crate) fn read(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, String> {
@@ -252,7 +255,7 @@ impl Device {
     }
 }
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 impl Io for Device {
     fn write(&self, report: &[u8]) -> Result<(), String> {
         self.0.write(report).map(|_| ()).map_err(|e| e.to_string())

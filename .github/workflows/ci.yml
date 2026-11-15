@@ -84,12 +84,18 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
-      # Swap above keeps two large crates compiling at once from taking the
-      # runner down; the time limits name a hung build or test.
-      - run: cargo test --workspace --no-run -j2
-        timeout-minutes: 50
-      - run: cargo test --workspace -- --test-threads=2
+      # The app crate (its generated UI is one very large compile) builds on
+      # its own after the rest; together they exhaust the runner's memory.
+      # Each test step repeats its build step's crate set, so nothing is
+      # rebuilt.
+      - run: cargo test --workspace --exclude djsugar --no-run -j2
         timeout-minutes: 40
+      - run: cargo test -p djsugar --no-run -j1
+        timeout-minutes: 40
+      - run: cargo test --workspace --exclude djsugar -- --test-threads=2
+        timeout-minutes: 30
+      - run: cargo test -p djsugar -- --test-threads=2
+        timeout-minutes: 20
 
   windows:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'

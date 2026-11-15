@@ -161,7 +161,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | # | C/C++ dependency | Replacement | Status |
 | --- | --- | --- | --- |
 | R.1 | rquickjs (QuickJS, C) | boa (pure-Rust JS engine) for legacy JS mappings | TODO |
-| R.2 | openssl-sys | rustls | TODO |
+| R.2 | openssl-sys (pulled in by libsqlite3-sys for SQLCipher, to read encrypted Rekordbox databases) | goes with R.3: pure-Rust SQLCipher-compatible page decryption (AES-256-CBC + HMAC via RustCrypto) | TODO |
 | R.3 | libsqlite3-sys (diesel/rusqlite) | pure-Rust DB (turso/limbo or equivalent) with migration of existing library DBs; scheduled late | TODO |
 | R.4 | signalsmith-stretch (C++) | port to Rust in-tree | TODO |
 | R.5 | whisper-rs-sys (whisper.cpp) | Whisper on burn/candle (burn already a dependency) | TODO |

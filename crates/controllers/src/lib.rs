@@ -15,6 +15,8 @@ pub mod edit;
 pub mod export;
 pub mod format;
 pub mod hid;
+#[cfg(target_os = "linux")]
+mod hidraw;
 mod host;
 pub mod import;
 pub mod layout;

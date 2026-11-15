@@ -1659,7 +1659,7 @@ export component EffectMenu inherits VerticalLayout {
     if tabs: Rectangle { height: 1px; background: Theme.border; }
     Flickable {
         height: min(fx-rows.preferred-height, 420px);
-        viewport-height: fx-rows.preferred-height;
+        content-height: fx-rows.preferred-height;
         fx-rows := VerticalLayout {
             spacing: 0px;
             for row in rows: Rectangle {
