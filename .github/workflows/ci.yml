@@ -84,30 +84,12 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
-      # The app crate (with its generated UI) alone, so its library and test
-      # builds don't run at the same time.
-      - run: cargo test --workspace --exclude djsugar --no-run -j2
+      # Swap above keeps two large crates compiling at once from taking the
+      # runner down; the time limits name a hung build or test.
+      - run: cargo test --workspace --no-run -j2
+        timeout-minutes: 50
+      - run: cargo test --workspace -- --test-threads=2
         timeout-minutes: 40
-      - run: cargo test -p djsugar --no-run -j1 --timings -v
-        timeout-minutes: 40
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cargo-timings
-          path: target/cargo-timings
-      # One crate at a time under a memory cap and a time limit, so a test
-      # that runs away is stopped and named instead of taking the runner down.
-      - name: cargo test
-        timeout-minutes: 75
-        run: |
-          failed=""
-          for p in $(cargo metadata --no-deps --format-version 1 | jq -r '.packages[].name'); do
-            echo "::group::$p"
-            sudo systemd-run --scope --uid="$(id -u)" --gid="$(id -g)" -p MemoryMax=10G --setenv=PATH="$PATH" --setenv=HOME="$HOME" -q \
-              timeout 20m cargo test -p "$p" -- --test-threads=2 || failed="$failed $p"
-            echo "::endgroup::"
-          done
-          [ -z "$failed" ] || { echo "::error::failed:$failed"; exit 1; }
 
   windows:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
