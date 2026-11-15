@@ -21,6 +21,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 | C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | hardware tests |
 | 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | UI/feature review |
 | 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | no |
+| X: library import/export/sync | 0% (0/9) | P1 | 10-14 weeks | no |
 | T: mapping translator | 0% (0/3) | P2 | 4-6 weeks | no |
 | M: mods | 0% (0/4) | P2 | 6-8 weeks | no |
 | L: lighting and visuals (later) | 0% (0/4) | P3 | 12+ weeks | yes, scope |
@@ -125,6 +126,22 @@ Every backend picks the fastest path the hardware offers, decided at runtime fro
 | P.6 | CPU: runtime SIMD dispatch (SSE4.2/AVX2/AVX-512, NEON/SVE/SME), big.LITTLE-aware thread placement, real-time thread priority per OS | TODO |
 | P.7 | Power/thermal profiles on mobile and laptops; automatic quality scaling without audio dropouts | TODO |
 | P.8 | Per-device latency and glitch test suite in CI and on-device; results feed P.1 | TODO |
+
+## Part X: library import, export and sync
+
+All in the app, both directions, no external tool: tracks, playlists/crates, cues, loops, beatgrids, keys, ratings, play history, colours.
+
+| # | Part | Status |
+| --- | --- | --- |
+| X.1 | Common library model and lossless conversion layer (Rust); dry-run preview and conflict report | TODO |
+| X.2 | Rekordbox: XML and the encrypted master.db (6/7), device exports (PDB/ANLZ on USB) | TODO |
+| X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | TODO |
+| X.4 | Traktor: collection.nml with cues, grids and playlists | TODO |
+| X.5 | Engine DJ: database and USB exports | TODO |
+| X.6 | VirtualDJ: database.xml and playlists; Mixxx (exists, extend to export); djay; iTunes/Music XML | TODO |
+| X.7 | Path relinking for moved drives and other OSes; duplicate detection by audio fingerprint | TODO |
+| X.8 | Two-way sync: keep a DJ Sugar library and another app's library in step, incremental | TODO |
+| X.9 | Export to USB for club players (CDJ/XDJ via X.2 formats) | TODO |
 
 ## Part M: mods
 
