@@ -810,7 +810,10 @@ mod tests {
             Path::new("/Applications/DJSugar.app")
         );
         if !cfg!(target_os = "macos") {
-            assert_eq!(untranslocated(moved), Path::new("/Applications/DJSugar.app"));
+            assert_eq!(
+                untranslocated(moved),
+                Path::new("/Applications/DJSugar.app")
+            );
         }
     }
 

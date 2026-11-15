@@ -106,9 +106,12 @@ impl Plugin for TestGain {
 impl DefaultPluginFactory for TestGain {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::{AUDIO_EFFECT, STEREO};
-        PluginDescriptor::new("io.github.winnerspiros.djsugar.test-gain", "DJ Sugar Test Gain")
-            .with_vendor("DJ Sugar")
-            .with_features([AUDIO_EFFECT, STEREO])
+        PluginDescriptor::new(
+            "io.github.winnerspiros.djsugar.test-gain",
+            "DJ Sugar Test Gain",
+        )
+        .with_vendor("DJ Sugar")
+        .with_features([AUDIO_EFFECT, STEREO])
     }
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Shared, PluginError> {
@@ -383,7 +386,9 @@ impl ProviderImpl<'_> for Provider {
                 receiver
                     .begin_preset(Some(c"Not mine"), Some(c"other"))
                     .map_err(fail)?
-                    .add_plugin_id(UniversalPluginId::clap(c"io.github.winnerspiros.djsugar.else"));
+                    .add_plugin_id(UniversalPluginId::clap(
+                        c"io.github.winnerspiros.djsugar.else",
+                    ));
             }
             Location::File { .. } => {
                 receiver

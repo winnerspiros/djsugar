@@ -8,7 +8,9 @@ use djsugar_controllers::routing::DeckChoice;
 use djsugar_controllers::MappingChoice;
 use djsugar_engine::key::{Key, Notation};
 use djsugar_engine::scan::default_music_dir;
-use djsugar_engine::{AudioSetup, InputRole, InputRoute, RecordFormat, RecordSettings, Role, Route};
+use djsugar_engine::{
+    AudioSetup, InputRole, InputRoute, RecordFormat, RecordSettings, Role, Route,
+};
 use djsugar_library::query::FieldNames;
 use djsugar_plugins::inbox::Mode;
 use djsugar_plugins::PluginConfig;

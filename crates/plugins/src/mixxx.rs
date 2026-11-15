@@ -664,7 +664,8 @@ mod tests {
     }
 
     fn library() -> PathBuf {
-        let path = std::env::temp_dir().join(format!("djsugar-mixxx-{}.sqlite", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("djsugar-mixxx-{}.sqlite", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let db = Connection::open(&path).unwrap();
         db.execute_batch(SCHEMA).unwrap();

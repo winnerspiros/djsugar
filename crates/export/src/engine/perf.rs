@@ -10,11 +10,11 @@
 
 use std::io::Write;
 
-use flate2::write::ZlibEncoder;
-use flate2::Compression;
 use djsugar_engine::key::Key;
 use djsugar_engine::track::{Hotcue, Waveform};
 use djsugar_engine::BeatGrid;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 
 /// Engine has eight hot cues and eight saved loops.
 pub const SLOTS: usize = 8;

@@ -9,7 +9,7 @@
 //! and a tap; `device_side` and `action_deck` are settled per side.
 
 use super::Import;
-use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
+use crate::format::{DjSugarMapping, Light, LightSource, Midi, Row, Variable};
 use crate::layout::Layout;
 use crate::mapping::When;
 
@@ -905,7 +905,12 @@ fn is_shown(n: &str) -> bool {
 fn translate(src: &str, ctx: Ctx, encoder: bool) -> Vec<(When, Result<Out, String>)> {
     let v = match parse(src) {
         Ok(v) => v,
-        Err(e) => return vec![(When::Press, Err(format!("DJ Sugar couldn't read this: {e}")))],
+        Err(e) => {
+            return vec![(
+                When::Press,
+                Err(format!("DJ Sugar couldn't read this: {e}")),
+            )]
+        }
     };
     // `holding ? a : b`: a long press and a tap.
     if let V::If(c, then, otherwise) = &v {

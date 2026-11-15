@@ -13,10 +13,10 @@
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use mdns_sd::{ServiceDaemon, ServiceInfo};
 use djsugar_control::ControlRegistry;
 use djsugar_engine::{LoadedTracks, VisualPositions};
 use djsugar_osc::{Config, Osc, DEFAULT_PORT};
+use mdns_sd::{ServiceDaemon, ServiceInfo};
 
 use crate::settings;
 

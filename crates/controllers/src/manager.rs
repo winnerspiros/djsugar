@@ -12,8 +12,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use midir::{Ignore, MidiInput, MidiOutput};
 use djsugar_control::ControlRegistry;
+use midir::{Ignore, MidiInput, MidiOutput};
 
 use crate::controller::Controller;
 use crate::format::DjSugarMapping;
@@ -388,7 +388,9 @@ pub fn list_mappings(dir: &Path) -> Vec<(String, PathBuf)> {
     let mut v: Vec<_> = entries
         .flatten()
         .map(|e| e.path())
-        .filter(|p| p.to_string_lossy().ends_with(".midi.xml") || crate::mapping::is_djsugar_file(p))
+        .filter(|p| {
+            p.to_string_lossy().ends_with(".midi.xml") || crate::mapping::is_djsugar_file(p)
+        })
         .filter_map(|p| Mapping::read_name(&p).map(|n| (n, p)))
         .collect();
     v.sort();

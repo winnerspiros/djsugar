@@ -577,8 +577,10 @@ mod tests {
         let tracks = source.open_folder(&id, &album).unwrap();
         assert_eq!(tracks.len(), 1);
 
-        let dir =
-            std::env::temp_dir().join(format!("djsugar-nd-test-{}-{funkwhale}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "djsugar-nd-test-{}-{funkwhale}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         source
             .download(&id, std::slice::from_ref(&song), &dir)

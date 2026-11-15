@@ -16,7 +16,7 @@ use super::words::{
     beats, deck, eq, eq_kill, filter, fx_slot, fx_unit, indicator, library, master,
 };
 use super::Import;
-use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
+use crate::format::{DjSugarMapping, Light, LightSource, Midi, Row, Variable};
 use crate::mapping::When;
 
 /// Reads frames out of a body.
@@ -803,7 +803,8 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                     light.original = original;
                     if let Some(c) = &odd_condition {
                         light.off = true;
-                        light.note = format!("Depends on Traktor's {c}, which DJ Sugar doesn't have");
+                        light.note =
+                            format!("Depends on Traktor's {c}, which DJ Sugar doesn't have");
                     }
                     m.lights.push(light);
                     continue;

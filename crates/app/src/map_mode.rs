@@ -19,7 +19,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use djsugar_controllers::edit;
-use djsugar_controllers::format::{Action, Midi, DjSugarMapping, Row};
+use djsugar_controllers::format::{Action, DjSugarMapping, Midi, Row};
 use djsugar_controllers::learn::{self, Heard};
 use djsugar_controllers::own::{self, OwnMapping};
 use djsugar_controllers::quick;

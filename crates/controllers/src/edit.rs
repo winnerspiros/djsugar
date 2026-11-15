@@ -6,7 +6,7 @@
 use djsugar_control::{Behavior, ControlRegistry};
 
 use crate::catalog::{describe, Function};
-use crate::format::{Action, Midi, DjSugarMapping, Row};
+use crate::format::{Action, DjSugarMapping, Midi, Row};
 use crate::mapping::{Options, When};
 use crate::view;
 

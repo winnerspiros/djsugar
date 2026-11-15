@@ -44,7 +44,8 @@ pub trait Host {
 pub const PLAYED_AFTER: f64 = 5.0;
 
 /// Automix's line while a hardware mixer does the mixing.
-const NEEDS_MIXER: &str = "Automix needs DJ Sugar's mixer: set Mixer to DJ Sugar in Settings › Mixer.";
+const NEEDS_MIXER: &str =
+    "Automix needs DJ Sugar's mixer: set Mixer to DJ Sugar in Settings › Mixer.";
 
 /// Mix lengths offered, in the order the panel shows them.
 #[derive(Clone, Copy, PartialEq, Debug)]

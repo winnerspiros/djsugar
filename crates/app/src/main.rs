@@ -696,8 +696,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // djsugar_controllers::LAYER_KEYS): clicking a strip's deck number in
     // 4-Deck moves that side over. Outside 4-Deck they go back to decks 1
     // and 2, which are the ones showing.
-    let layers =
-        djsugar_controllers::LAYER_KEYS.map(|k| registry.toggle(djsugar_controllers::LAYER_GROUP, k));
+    let layers = djsugar_controllers::LAYER_KEYS
+        .map(|k| registry.toggle(djsugar_controllers::LAYER_GROUP, k));
     let reset_layers = move |layout: i32| {
         if layout != FOUR_DECK_LAYOUT {
             layers.iter().for_each(|l| l.set_bool(false));

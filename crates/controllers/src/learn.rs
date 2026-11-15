@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::catalog::describe;
-use crate::format::{Midi, DjSugarMapping, Row};
+use crate::format::{DjSugarMapping, Midi, Row};
 use crate::mapping::{Mapping, Options, When};
 
 /// What a hardware control sent, read as a binding: its message and how

@@ -47,7 +47,8 @@ fn main() {
                         println!("    {n:>4}× {w}");
                     }
                     if let Some(dir) = &out {
-                        let path = dir.join(format!("{}.djsugar-mapping", m.name.replace('/', "-")));
+                        let path =
+                            dir.join(format!("{}.djsugar-mapping", m.name.replace('/', "-")));
                         m.write(&path).expect("write");
                     }
                 }

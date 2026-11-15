@@ -4,7 +4,7 @@
 //! its messages differ from deck 1's (another MIDI channel, as on most
 //! controllers, or other numbers), and deck 1's rows are copied over.
 
-use crate::format::{Midi, DjSugarMapping, Row};
+use crate::format::{DjSugarMapping, Midi, Row};
 
 /// The layer of the rows for decks 3 and 4, which only work when the
 /// controller is used with four decks (see [`DjSugarMapping::decks`]).

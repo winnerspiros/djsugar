@@ -6,7 +6,7 @@
 
 use super::words::{beats, deck, eq, filter, fx_slot, indicator, library, master};
 use super::Import;
-use crate::format::{Action, Light, LightSource, Midi, DjSugarMapping, Row};
+use crate::format::{Action, DjSugarMapping, Light, LightSource, Midi, Row};
 
 enum Act {
     Bind(String, &'static [&'static str]),

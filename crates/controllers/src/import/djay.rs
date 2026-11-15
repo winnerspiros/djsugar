@@ -11,7 +11,7 @@ use super::words::{
     beats, deck, eq, eq_kill, filter, fx_slot, fx_unit, indicator, library, master,
 };
 use super::Import;
-use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
+use crate::format::{DjSugarMapping, Light, LightSource, Midi, Row, Variable};
 use crate::mapping::When;
 
 /// An XML property list as JSON.

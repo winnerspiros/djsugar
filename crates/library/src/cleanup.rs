@@ -233,7 +233,9 @@ impl Field {
             Field::Label => t.info.label = value,
             Field::Comment => t.info.comment = value,
             Field::Grouping => t.info.grouping = value,
-            Field::Tag(group) => t.info.set_tags_in(group, djsugar_engine::split_tags(&value)),
+            Field::Tag(group) => t
+                .info
+                .set_tags_in(group, djsugar_engine::split_tags(&value)),
         }
     }
 }

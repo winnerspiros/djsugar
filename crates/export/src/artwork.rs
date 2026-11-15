@@ -6,10 +6,10 @@
 
 use std::path::Path;
 
+use djsugar_engine::cover;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{self, FilterType};
 use image::{Rgb, RgbImage, RgbaImage};
-use djsugar_engine::cover;
 
 const SMALL: u32 = 80;
 const MEDIUM: u32 = 240;
