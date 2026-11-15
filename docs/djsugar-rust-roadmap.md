@@ -77,7 +77,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 
 | # | Part | Status |
 | --- | --- | --- |
-| 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | TODO |
+| 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | DONE |
 | 0.1 | CI: Linux, Windows, macOS desktop builds on `rust` | TODO |
 | 0.2 | Android arm64 build (cargo-ndk, Slint android-activity backend, APK packaging) | TODO |
 | 0.3 | Android audio: cpal AAudio backend, low-latency stream, Oboe parity | TODO |
