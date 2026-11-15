@@ -10,6 +10,8 @@ Status: TODO, WIP, DONE. One part per pull request into `rust`.
 
 ## Decisions
 
+- Optimal results are a hard rule: per-platform and per-device optimization (CPU features via runtime dispatch, GPU paths, audio buffer tuning per device, mobile power/thermal profiles); optimization continues until nothing measurable is left.
+- Minimal resources and dependencies: write our own where a dependency is heavy or broad; existing work may serve as a starting point.
 - Rust everywhere possible: app, build tooling (xtask, not shell/Python), mods and their SDK. Non-Rust only where a platform forces it (minimal Android/iOS glue) or for compatibility (JS mappings).
 
 - Base on openDJ instead of translating Mixxx: it already has the engine (cpal, symphonia,
