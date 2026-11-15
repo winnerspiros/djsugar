@@ -27,7 +27,7 @@ The track menu and dropping on a stage SHALL move tracks: Send to In Prep (or a 
 - **THEN** they are back in In Prep
 
 ### Requirement: Queued file moves
-A stage change SHALL apply in openDJ at once. Its file SHALL only move while "Move files" is on (off by default); otherwise the move waits and is made when it is turned on. A file SHALL never be moved over another.
+A stage change SHALL apply in DJ Sugar at once. Its file SHALL only move while "Move files" is on (off by default); otherwise the move waits and is made when it is turned on. A file SHALL never be moved over another.
 
 #### Scenario: Moves wait
 - **WHEN** Move files is off and a track goes to In Prep

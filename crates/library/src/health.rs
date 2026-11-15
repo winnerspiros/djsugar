@@ -14,7 +14,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use opendj_engine::{Source, Track};
+use djsugar_engine::{Source, Track};
 use rusqlite::{params, OptionalExtension};
 
 use crate::cleanup::{self, Rules};

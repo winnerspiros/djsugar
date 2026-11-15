@@ -25,10 +25,10 @@ impl ListHealth {
 
 /// The source of a playlist made at the top of Playlists rather than in a
 /// folder, so it isn't taken for a crate.
-pub const TOP_PLAYLIST: &str = "opendj";
+pub const TOP_PLAYLIST: &str = "djsugar";
 
 /// The source of a folder at the top of Crates rather than of Playlists.
-pub const CRATE_FOLDER: &str = "opendj-crates";
+pub const CRATE_FOLDER: &str = "djsugar-crates";
 
 /// Whether a list is a crate.
 pub fn is_crate(p: &crate::Playlist) -> bool {

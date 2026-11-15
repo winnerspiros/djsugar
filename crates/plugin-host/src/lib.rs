@@ -1,9 +1,9 @@
-//! Audio plugins run outside openDJ, in `opendj-plugin-host` helper
+//! Audio plugins run outside DJ Sugar, in `djsugar-plugin-host` helper
 //! processes, so a plugin that crashes, hangs or runs slow costs one effect
 //! slot, never the decks.
 //!
-//! - [`shm`]: the block of memory openDJ and a helper share.
-//! - [`client`]: openDJ's side. [`spawn`] starts a helper; the audio thread
+//! - [`shm`]: the block of memory DJ Sugar and a helper share.
+//! - [`client`]: DJ Sugar's side. [`spawn`] starts a helper; the audio thread
 //!   hands it blocks with [`Connection::process`], which plays the block dry
 //!   whenever the helper misses its deadline or is gone.
 //! - [`policy`]: restart once, then disable; hangs count as crashes; a

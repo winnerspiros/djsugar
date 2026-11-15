@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::{Behavior, ConfigKey, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ConfigKey, ControlHandle, ControlRegistry};
 
 use crate::pickup::{self, Takeover};
 
@@ -82,7 +82,7 @@ const ACTIONS: [&str; 18] = [
     "AutoDjAddBottom",
     "AutoDjAddTop",
     "ToggleSelectedSidebarItem",
-    // openDJ's own: opens the Linked tab of the side panel.
+    // DJ Sugar's own: opens the Linked tab of the side panel.
     "ShowLinked",
 ];
 
@@ -318,7 +318,7 @@ impl AlphaBeta {
 }
 
 const SCRATCH_DT: f64 = 0.001;
-/// openDJ: how much faster the scratch filter's quick twin follows the
+/// DJ Sugar: how much faster the scratch filter's quick twin follows the
 /// wheel than the mapping's own filter (alpha times this, beta times its
 /// square). With Mixxx's usual 1/8 and 1/256 the deck heard a hand's
 /// change of speed about 26 ms late and a fast baby scratch at two thirds
@@ -362,7 +362,7 @@ struct Scratch {
     soft_start: bool,
     last_movement: Option<Instant>,
     filter: AlphaBeta,
-    /// openDJ: a quicker filter on the same ticks. While the hand changes
+    /// DJ Sugar: a quicker filter on the same ticks. While the hand changes
     /// speed faster than the smooth filter follows, the smooth one is
     /// pulled to it (see [`SCRATCH_QUICK`]).
     quick: AlphaBeta,
@@ -435,7 +435,7 @@ pub(crate) struct Host {
     /// and `[Main]` are resolved). Writes soft takeover drops still count.
     /// For the Controller Editor, which wants to know what a script does.
     pub(crate) trace: Option<Vec<(ConfigKey, f64)>>,
-    /// openDJ: notes a script moved with `midi.routeNote`, by MIDI channel:
+    /// DJ Sugar: notes a script moved with `midi.routeNote`, by MIDI channel:
     /// a pad pressed on the device acts as the note it is routed to, and that
     /// note's lights show on it. For pad mode buttons that open a pad page
     /// by place, whatever page is in it.

@@ -15,8 +15,8 @@ use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, UNIX_EPOCH};
 
-use opendj_engine::plugins::{scan, scan_audio_units, Descriptor, Plugin, PluginEntry, ScanError};
-use opendj_engine::{AudioEngine, AVAILABLE_EFFECTS};
+use djsugar_engine::plugins::{scan, scan_audio_units, Descriptor, Plugin, PluginEntry, ScanError};
+use djsugar_engine::{AudioEngine, AVAILABLE_EFFECTS};
 use serde_json::{json, Value};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -80,9 +80,9 @@ thread_local! {
 /// The name of what a slot's `loaded_effect` holds: a built-in effect or a
 /// plugin from the FX lists ("" for none).
 pub fn effect_name(loaded_effect: f64) -> String {
-    match opendj_engine::plugin_index(loaded_effect) {
+    match djsugar_engine::plugin_index(loaded_effect) {
         Some(i) => NAMES.with(|n| n.borrow().get(i).cloned().unwrap_or_default()),
-        None => opendj_engine::effect_name(loaded_effect).to_string(),
+        None => djsugar_engine::effect_name(loaded_effect).to_string(),
     }
 }
 
@@ -112,7 +112,7 @@ impl AudioPlugins {
         p
     }
 
-    /// Whether the plugin helper came with this copy of openDJ.
+    /// Whether the plugin helper came with this copy of DJ Sugar.
     pub fn available(&self) -> bool {
         self.engine.plugins_available()
     }
@@ -225,7 +225,7 @@ impl AudioPlugins {
     /// Looks through the folders again in the background. Files already
     /// known, unchanged, are not opened again.
     pub fn start_scan(&mut self) {
-        let Some(helper) = opendj_engine::plugin_helper() else {
+        let Some(helper) = djsugar_engine::plugin_helper() else {
             return;
         };
         if self.scan.is_some() {
@@ -473,7 +473,7 @@ fn grouped(items: Vec<(String, usize, usize)>) -> Vec<FxRow> {
     rows
 }
 
-/// The openDJ FX tab: the built-in effects by kind.
+/// The DJ Sugar FX tab: the built-in effects by kind.
 pub fn builtin_rows() -> Vec<FxRow> {
     grouped(
         AVAILABLE_EFFECTS
@@ -859,7 +859,7 @@ mod tests {
 
     #[test]
     fn finds_plugin_files_and_bundles_but_not_inside_them() {
-        let dir = std::env::temp_dir().join(format!("opendj-find-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-find-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("Vendor/Reverb.vst3/Contents/x86_64-linux")).unwrap();
         std::fs::write(

@@ -1,7 +1,7 @@
 # Flatpak manifest for Flathub. Draft: see packaging/flatpak/README.md for
-# how to test it and submit it. Builds openDJ from the release tag, offline,
+# how to test it and submit it. Builds DJ Sugar from the release tag, offline,
 # with the crates listed in cargo-sources.json.
-id: app.opendj.openDJ
+id: io.github.winnerspiros.DJSugar
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
@@ -9,7 +9,7 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
   # libclang for bindgen (SQLCipher, ALSA bindings).
   - org.freedesktop.Sdk.Extension.llvm18
-command: opendj
+command: djsugar
 finish-args:
   - --share=ipc
   - --socket=wayland
@@ -35,26 +35,26 @@ build-options:
   append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm18/bin
   prepend-ld-library-path: /usr/lib/sdk/llvm18/lib
   env:
-    CARGO_HOME: /run/build/opendj/cargo
+    CARGO_HOME: /run/build/djsugar/cargo
     LIBCLANG_PATH: /usr/lib/sdk/llvm18/lib
 modules:
-  - name: opendj
+  - name: djsugar
     buildsystem: simple
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
-      - cargo --offline build --release -p opendj
-      - install -Dm755 target/release/opendj /app/bin/opendj
-      - mkdir -p /app/share/opendj && cp -R res/controllers /app/share/opendj/
-      - if [ -d res/demo ]; then cp -R res/demo /app/share/opendj/; fi
-      - install -Dm644 res/linux/app.opendj.openDJ.desktop -t /app/share/applications
+      - cargo --offline build --release -p djsugar
+      - install -Dm755 target/release/djsugar /app/bin/djsugar
+      - mkdir -p /app/share/djsugar && cp -R res/controllers /app/share/djsugar/
+      - if [ -d res/demo ]; then cp -R res/demo /app/share/djsugar/; fi
+      - install -Dm644 res/linux/io.github.winnerspiros.DJSugar.desktop -t /app/share/applications
       - sed -e "s/@VERSION@/$(git describe --tags --abbrev=0 | sed s/^v//)/g" -e "s/@DATE@/$(date -u +%Y-%m-%d)/"
-        res/linux/app.opendj.openDJ.metainfo.xml > app.opendj.openDJ.metainfo.xml
-      - install -Dm644 app.opendj.openDJ.metainfo.xml -t /app/share/metainfo
+        res/linux/io.github.winnerspiros.DJSugar.metainfo.xml > io.github.winnerspiros.DJSugar.metainfo.xml
+      - install -Dm644 io.github.winnerspiros.DJSugar.metainfo.xml -t /app/share/metainfo
       # Flathub makes the smaller sizes from this one.
-      - install -Dm644 res/linux/app.opendj.openDJ.png /app/share/icons/hicolor/512x512/apps/app.opendj.openDJ.png
+      - install -Dm644 res/linux/io.github.winnerspiros.DJSugar.png /app/share/icons/hicolor/512x512/apps/io.github.winnerspiros.DJSugar.png
     sources:
       - type: git
-        url: https://github.com/openwave-studio/opendj.git
+        url: https://github.com/winnerspiros/djsugar.git
         tag: v0.6.0
         # Filled in on submission; Flathub's bot updates tag and commit for
         # each new GitHub release.

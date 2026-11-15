@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::UNIX_EPOCH;
 
-use opendj_engine::{cover, tags};
-use opendj_library::health::FileLook;
+use djsugar_engine::{cover, tags};
+use djsugar_library::health::FileLook;
 
 /// A file to look at: the track's id, its path and album.
 type Request = (usize, PathBuf, String);

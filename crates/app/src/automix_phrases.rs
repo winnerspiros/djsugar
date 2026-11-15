@@ -3,9 +3,9 @@
 //! incoming track in from the first bar of its intro, for as many bars as
 //! its intro lasts, so its first phrase change lands as the mix ends.
 
-use opendj_engine::phrases::{self, Phrase, PhraseKind};
-use opendj_engine::track::MarkerKind;
-use opendj_engine::Track;
+use djsugar_engine::phrases::{self, Phrase, PhraseKind};
+use djsugar_engine::track::MarkerKind;
+use djsugar_engine::Track;
 
 /// Shortest and longest phrase mix, in bars of the outgoing track.
 const MIN_BARS: f64 = 8.0;
@@ -171,11 +171,11 @@ pub fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::track::Marker;
+    use djsugar_engine::track::Marker;
 
     /// A 120 BPM track (a bar is 2 s) with phrases starting on these bars.
     fn track(bars: f64, phrases: &[(f64, PhraseKind)]) -> (Track, Vec<Phrase>) {
-        let mut t = (*opendj_engine::synth::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::synth::sample_library()[0]).clone();
         t.bpm = 120.0;
         t.first_beat = 0.0;
         t.grid = Default::default();

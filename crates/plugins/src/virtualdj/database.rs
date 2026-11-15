@@ -16,16 +16,16 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track};
 
-/// Where VirtualDJ keeps its main database: `OPENDJ_VDJ_DATABASE`, else
+/// Where VirtualDJ keeps its main database: `DJSUGAR_VDJ_DATABASE`, else
 /// the first of VirtualDJ's home folders that has one.
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_VDJ_DATABASE") {
+    if let Some(p) = std::env::var_os("DJSUGAR_VDJ_DATABASE") {
         return Some(PathBuf::from(p));
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     [
         "Library/Application Support/VirtualDJ/database.xml",
         "Documents/VirtualDJ/database.xml",
@@ -70,7 +70,7 @@ pub fn import(
 /// The tags of a file on this computer, unless reading them would download
 /// it from iCloud first.
 pub fn read_file_tags(path: &Path) -> Option<Track> {
-    (!opendj_engine::scan::is_cloud_only(path)).then(|| opendj_engine::scan::read_track(0, path))
+    (!djsugar_engine::scan::is_cloud_only(path)).then(|| djsugar_engine::scan::read_track(0, path))
 }
 
 pub fn parse(
@@ -258,7 +258,7 @@ fn song_track(id: usize, path: PathBuf, song: roxmltree::Node) -> Track {
     let imported_tags = [("User1", "User 1"), ("User2", "User 2")]
         .iter()
         .flat_map(|(key, field)| {
-            opendj_engine::hashtags(&attr(tags, key))
+            djsugar_engine::hashtags(&attr(tags, key))
                 .into_iter()
                 .map(|t| (field.to_string(), t))
         })
@@ -283,7 +283,7 @@ fn song_track(id: usize, path: PathBuf, song: roxmltree::Node) -> Track {
         })
         .collect();
     // Saved loops (Size in beats) go on the pads after the hot cues, as
-    // openDJ keeps loops on the same pads; in VirtualDJ's order.
+    // DJ Sugar keeps loops on the same pads; in VirtualDJ's order.
     let mut loops: Vec<(f64, f64, f64)> = points
         .iter()
         .filter(|p| p.attribute("Type") == Some("loop"))
@@ -357,7 +357,7 @@ fn song_track(id: usize, path: PathBuf, song: roxmltree::Node) -> Track {
             last_played: number(infos, "LastPlay")
                 .filter(|p| *p > 0.0)
                 .map(|p| p as i64),
-            // A level VirtualDJ keeps as a factor; openDJ keeps decibels.
+            // A level VirtualDJ keeps as a factor; DJ Sugar keeps decibels.
             gain_db: number(infos, "Gain")
                 .filter(|g| *g > 0.0)
                 .map(|g| (20.0 * g.log10()) as f32),
@@ -441,7 +441,7 @@ mod tests {
         // The file's own tags fill in what VirtualDJ leaves empty.
         let file_tags = |p: &Path| {
             // A file that isn't there reads as empty tags.
-            let mut t = opendj_engine::scan::read_track(0, p);
+            let mut t = djsugar_engine::scan::read_track(0, p);
             t.album = "From the file".into();
             t.info.isrc = "GBAAA9900001".into();
             t.info.year = "2001".into();
@@ -548,8 +548,8 @@ mod tests {
 
     #[test]
     fn reads_a_real_database_when_given_one() {
-        // Set OPENDJ_VDJ_TEST_DB to check against a real VirtualDJ library.
-        let Some(path) = std::env::var_os("OPENDJ_VDJ_TEST_DB") else {
+        // Set DJSUGAR_VDJ_TEST_DB to check against a real VirtualDJ library.
+        let Some(path) = std::env::var_os("DJSUGAR_VDJ_TEST_DB") else {
             return;
         };
         let out = import(Path::new(&path), 0, |_| true, |_| None).unwrap();

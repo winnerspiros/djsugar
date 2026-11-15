@@ -1,4 +1,4 @@
-# openDJ roadmap
+# DJ Sugar roadmap
 
 The open OpenSpec changes in `openspec/changes/`, in the order they are planned (within a release, in build order). Each change's `proposal.md` says why, and its `specs/` say what will be true when it's done. When a change ships, archive it (`openspec archive <name>`) so `openspec/specs/` takes its requirements.
 
@@ -20,7 +20,7 @@ Released so far: v0.1.0 and v0.2.0 (2026-10-15, 2026-10-20) and v0.3.0 (prepared
 - [add-more-audio-decoders](changes/add-more-audio-decoders/proposal.md)
 - [add-controller-viewer](changes/add-controller-viewer/proposal.md) (view-only Controller Editor, pulled forward, 2026-10-27)
 - [add-pioneer-usb-export](changes/add-pioneer-usb-export/proposal.md) (built on rbox, experimental until tried on a player; 2026-10-28)
-- [add-opendjscript](changes/add-opendjscript/proposal.md) (one-line actions for keys and buttons, ⌘1 to ⌘5 rate tracks)
+- [add-djsugarscript](changes/add-djsugarscript/proposal.md) (one-line actions for keys and buttons, ⌘1 to ⌘5 rate tracks)
 - [add-keyboard-shortcuts-editor](changes/add-keyboard-shortcuts-editor/proposal.md) (change keyboard shortcuts in Settings)
 
 ## v0.5 · Stems, performance and switching over
@@ -33,7 +33,7 @@ Released so far: v0.1.0 and v0.2.0 (2026-10-15, 2026-10-20) and v0.3.0 (prepared
 - [add-more-controllers](changes/add-more-controllers/proposal.md) (popular controllers supported and drawn; 2026-10-29, issue #132)
 - [add-hid-controllers](changes/add-hid-controllers/proposal.md) (Traktor Kontrol S2/S3/S4, F1, Z1 and MX2 over USB HID with Mixxx's HID mappings; 2026-11-01)
 - [add-controller-mapper](changes/add-controller-mapper/proposal.md) (own mappings, editing, Map mode and Quick map; moved from v1.0, 2026-10-29, issue #133)
-- [add-controller-mapping-import-export](changes/add-controller-mapping-import-export/proposal.md) (VirtualDJ, Traktor, rekordbox and djay Pro mappings in; openDJ and Mixxx out; keyboard sets; 2026-10-29, issue #133, PR #140)
+- [add-controller-mapping-import-export](changes/add-controller-mapping-import-export/proposal.md) (VirtualDJ, Traktor, rekordbox and djay Pro mappings in; DJ Sugar and Mixxx out; keyboard sets; 2026-10-29, issue #133, PR #140)
 - [improve-beatgrids](changes/improve-beatgrids/proposal.md) (research first, djay Pro as the bar; saved grids and editing; moved from v1.0, 2026-10-29, issue #134)
 - [add-first-run-setup](changes/add-first-run-setup/proposal.md) (first-run guided tour; moved from v1.0, 2026-10-29, issue #135)
 - [add-tutorials](changes/add-tutorials/proposal.md) (advanced tutorials in Help; 2026-10-29, issue #136)
@@ -43,7 +43,7 @@ Released so far: v0.1.0 and v0.2.0 (2026-10-15, 2026-10-20) and v0.3.0 (prepared
 - [add-phone-remote](changes/add-phone-remote/proposal.md) (control Automix and the main levels from a phone, by QR code; step 1 of 5; 2026-11-01)
 - [add-groove-box](changes/add-groove-box/proposal.md) (a step-sequencer Groove Box that takes the place of a deck, beginner first, synthesised classic drum machine kits; replaces add-pattern-sequencer, moved from v1.x, 2026-11-02)
 - [add-batch-edit](changes/add-batch-edit/proposal.md) (edit many tracks at once: pick any set, the Info tab edits them together, tag chips, Fix Names into the review table; 2026-11-02)
-- [add-tag-groups](changes/add-tag-groups/proposal.md) (openDJ's own tag model: named tag groups with tags as entries, imports map into them; Settings › Collection › Tags; 2026-11-04)
+- [add-tag-groups](changes/add-tag-groups/proposal.md) (DJ Sugar's own tag model: named tag groups with tags as entries, imports map into them; Settings › Collection › Tags; 2026-11-04)
 - [add-mixcloud-export](changes/add-mixcloud-export/proposal.md) (a recorded mix as a Mixcloud show: tracklist from the recording's cue sheet, MP3 with chapters, then sign-in and direct upload; 2026-11-03)
 - [add-player-layout](changes/add-player-layout/proposal.md) (Player replaces Simple: a music player over Automix with a queue and search; step 1 of 3; issue #297, 2026-11-03)
 - [redesign-collection-health](changes/redesign-collection-health/proposal.md) (Collection Health as an Overview dashboard with % clean and the stages, five areas in fixing order, then sure fixes at once and a one-by-one review; 2026-11-04)
@@ -65,7 +65,7 @@ Released so far: v0.1.0 and v0.2.0 (2026-10-15, 2026-10-20) and v0.3.0 (prepared
 - [add-live-deck-waveforms](changes/add-live-deck-waveforms/proposal.md) (live decks draw what they play on the scrolling waveform: a live trace on the leading deck's grid, a note roll for instruments, step lanes for the Groove Box, macro lanes as a second view; issue #497, 2026-11-07)
 - [add-midi-device-routing](changes/add-midi-device-routing/proposal.md) (DJ controllers never play instruments, Play instruments per device, a Deck menu with Follow instrument; from a user report, issue #470, 2026-11-07)
 - [rework-instruments](changes/rework-instruments/proposal.md) (Instruments as a browser like Collection with presets, an instrument deck with knobs, trim, pan, safety limiter, scale, chord and arp, and artwork; clips assessed and left out; 2026-11-07)
-- [add-layout-picker](changes/add-layout-picker/proposal.md) (first step of openDJ Layouts: Your layouts in Settings › Layouts with previews, only those in the layout menu, VIEW steps through them; issue #554, a user request 2026-11-10)
+- [add-layout-picker](changes/add-layout-picker/proposal.md) (first step of DJ Sugar Layouts: Your layouts in Settings › Layouts with previews, only those in the layout menu, VIEW steps through them; issue #554, a user request 2026-11-10)
 
 ## v0.7 · Your library, everywhere
 

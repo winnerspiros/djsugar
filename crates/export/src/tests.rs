@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::check;
-use opendj_engine::scan;
+use djsugar_engine::scan;
 use rbox_devlib::DeviceLibrary;
 use rbox_onelib::OneLibrary;
 
@@ -59,7 +59,7 @@ fn an_export_reads_back_in_both_formats() {
     let music = tempfile::tempdir().unwrap();
     let stick = tempfile::tempdir().unwrap();
     // The analysis cache lives beside the music, not in the real one.
-    std::env::set_var("OPENDJ_CACHE", music.path().join("cache"));
+    std::env::set_var("DJSUGAR_CACHE", music.path().join("cache"));
 
     let mut tracks = Vec::new();
     for (i, (artist, title)) in [("Ana", "One"), ("Ben", "Two"), ("Ana", "Three")]
@@ -239,7 +239,7 @@ fn an_engine_dj_export_reads_back() {
     use rusqlite::Connection;
     let music = tempfile::tempdir().unwrap();
     let stick = tempfile::tempdir().unwrap();
-    std::env::set_var("OPENDJ_CACHE", music.path().join("cache"));
+    std::env::set_var("DJSUGAR_CACHE", music.path().join("cache"));
 
     let mut tracks = Vec::new();
     for (i, title) in ["One", "Two"].iter().enumerate() {
@@ -362,7 +362,7 @@ fn an_engine_dj_export_reads_back() {
     assert_eq!(order, ["Two", "One"]);
     drop(db);
 
-    // Exporting again replaces openDJ's own library.
+    // Exporting again replaces DJ Sugar's own library.
     export(&tracks, &lists_one(), &options, &mut |_| true).unwrap();
     let db = Connection::open(stick.path().join("Engine Library/Database2/m.db")).unwrap();
     let n: i64 = db
@@ -455,7 +455,7 @@ fn cover(path: &Path) {
 
 fn memory(n: usize, seconds: f64, end: Option<f64>, color: Option<u32>) -> Hotcue {
     Hotcue {
-        number: opendj_engine::track::MEMORY_CUE + n,
+        number: djsugar_engine::track::MEMORY_CUE + n,
         seconds,
         name: String::new(),
         end,
@@ -467,7 +467,7 @@ fn memory(n: usize, seconds: f64, end: Option<f64>, color: Option<u32>) -> Hotcu
 fn a_full_stick_reads_back_in_an_independent_reader() {
     let music = tempfile::tempdir().unwrap();
     let stick = tempfile::tempdir().unwrap();
-    std::env::set_var("OPENDJ_CACHE", music.path().join("cache"));
+    std::env::set_var("DJSUGAR_CACHE", music.path().join("cache"));
 
     // Many tracks of one file (analysed once) fill several pages and row
     // groups of export.pdb; one more has folder art.
@@ -747,7 +747,7 @@ fn a_full_stick_reads_back_in_an_independent_reader() {
 fn the_independent_reader_refuses_broken_files() {
     let music = tempfile::tempdir().unwrap();
     let stick = tempfile::tempdir().unwrap();
-    std::env::set_var("OPENDJ_CACHE", music.path().join("cache"));
+    std::env::set_var("DJSUGAR_CACHE", music.path().join("cache"));
     let path = music.path().join("One.wav");
     click_track(&path, 3.0);
     let mut t = scan::read_track(1, &path);

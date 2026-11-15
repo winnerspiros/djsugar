@@ -2,7 +2,7 @@
 //! private playlist, its tracks in the list's order (a session as it was
 //! played). Tracks Spotify doesn't have are left out and named.
 
-use opendj_library::ListEntry;
+use djsugar_library::ListEntry;
 
 use super::{Browser, Contents};
 use crate::spotify::{self, Request, Wanted};
@@ -41,9 +41,9 @@ impl Browser {
             return self.export_status(list, "Nothing to export: the list is empty.".into());
         }
         let description = if history {
-            format!("Played with openDJ on {name}, in the order played.")
+            format!("Played with DJ Sugar on {name}, in the order played.")
         } else {
-            "Made with openDJ.".into()
+            "Made with DJ Sugar.".into()
         };
         let count = tracks.len();
         st.service.send(Request::Export {

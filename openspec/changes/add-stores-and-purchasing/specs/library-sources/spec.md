@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: Store sources
-Bandcamp SHALL search in the app and list results with price and format where the store shows them; choosing Buy SHALL open the item's page in the browser. Shopping SHALL offer other stores' own search pages filled with the search. Each store source SHALL be switched on and off in Settings › Sources and SHALL be hidden on a fresh install. openDJ SHALL never take payment, and store links SHALL carry no affiliate or referral tags.
+Bandcamp SHALL search in the app and list results with price and format where the store shows them; choosing Buy SHALL open the item's page in the browser. Shopping SHALL offer other stores' own search pages filled with the search. Each store source SHALL be switched on and off in Settings › Sources and SHALL be hidden on a fresh install. DJ Sugar SHALL never take payment, and store links SHALL carry no affiliate or referral tags.
 
 #### Scenario: Buy on Bandcamp
 - **WHEN** a Bandcamp result's Buy is clicked
 - **THEN** its Bandcamp page opens in the browser
 
 #### Scenario: Fresh install
-- **WHEN** openDJ runs for the first time
+- **WHEN** DJ Sugar runs for the first time
 - **THEN** no store source shows in the rail and no file in Downloads is touched
 
 ### Requirement: Buy any track without a file

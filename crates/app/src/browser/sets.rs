@@ -1,8 +1,8 @@
-//! Crates in the browser (see [`opendj_library::sets`]): the crates each
+//! Crates in the browser (see [`djsugar_library::sets`]): the crates each
 //! track is in, for the Crates column and `crate:`, and tidying the lists
 //! from Collection Health.
 
-use opendj_library::sets::ListHealth;
+use djsugar_library::sets::ListHealth;
 
 use super::filters::CrateLook;
 use super::Browser;
@@ -19,12 +19,12 @@ impl Browser {
             .playlists()
             .unwrap_or_default()
             .into_iter()
-            .filter(opendj_library::sets::is_crate)
+            .filter(djsugar_library::sets::is_crate)
             .map(|p| {
                 let icon = p
                     .icon
                     .as_deref()
-                    .and_then(|name| opendj_library::LIST_ICONS.iter().position(|&i| i == name))
+                    .and_then(|name| djsugar_library::LIST_ICONS.iter().position(|&i| i == name))
                     .unwrap_or(0);
                 let look = CrateLook {
                     icon,

@@ -3,7 +3,7 @@ name = "demucs-core"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "HTDemucs v4 in Rust on burn, from github.com/nikhilunni/demucs-rs (see OPENDJ.md)"
+description = "HTDemucs v4 in Rust on burn, from github.com/nikhilunni/demucs-rs (see DJSUGAR.md)"
 
 [features]
 default = []

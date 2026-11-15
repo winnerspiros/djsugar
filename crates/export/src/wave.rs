@@ -1,15 +1,15 @@
-//! The players' waveforms, made from openDJ's own analysis.
+//! The players' waveforms, made from DJ Sugar's own analysis.
 //!
 //! Every detail waveform has 150 columns a second. The previews are 400
 //! (monochrome), 100 (tiny) and 1200 (colour and three-band) columns for the
-//! whole track. openDJ's analysis keeps band peaks and RMS 1000 times a
+//! whole track. DJ Sugar's analysis keeps band peaks and RMS 1000 times a
 //! second, so each column gathers the slices it covers.
 //!
 //! How heights, whiteness, colours and the three bands are worked out
 //! follows Bake'n Deck's `expressport` (MIT licence, Copyright (c) Masanari
 //! Higashi), which fitted them to rekordbox's own files.
 
-use opendj_engine::track::{Waveform, WaveformBin};
+use djsugar_engine::track::{Waveform, WaveformBin};
 use rbox_anlz::{
     TinyWaveformColumn, Waveform3BandCalibration, Waveform3BandColumn, Waveform3BandDetail,
     Waveform3BandPreview, WaveformColorDetail, WaveformColorDetailColumn, WaveformColorPreview,

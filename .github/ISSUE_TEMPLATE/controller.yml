@@ -19,7 +19,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: openDJ version
+      label: DJ Sugar version
     validations:
       required: true
   - type: input
@@ -31,5 +31,5 @@ body:
     attributes:
       label: Logs
       description: >
-        Settings → Feedback → Logs and crash reports, then drag opendj.log here.
-        It lists the MIDI ports openDJ saw and which mapping it picked.
+        Settings → Feedback → Logs and crash reports, then drag djsugar.log here.
+        It lists the MIDI ports DJ Sugar saw and which mapping it picked.

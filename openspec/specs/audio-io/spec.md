@@ -1,7 +1,7 @@
 # audio-io Specification
 
 ## Purpose
-Where openDJ's sound goes and comes from: output devices for the master, headphone and booth mixes, buffer size and sample rate, and running without a sound device.
+Where DJ Sugar's sound goes and comes from: output devices for the master, headphone and booth mixes, buffer size and sample rate, and running without a sound device.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ Settings › Audio SHALL offer the sample rate, with "Device default" first. A n
 Without a usable output device, the engine SHALL run on a timer so everything except the sound keeps working.
 
 #### Scenario: CI machine
-- **WHEN** openDJ starts on a machine with no sound device
+- **WHEN** DJ Sugar starts on a machine with no sound device
 - **THEN** decks still load, play and move their playheads
 
 ### Requirement: Real-time safety

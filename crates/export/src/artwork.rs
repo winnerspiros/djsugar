@@ -9,7 +9,7 @@ use std::path::Path;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{self, FilterType};
 use image::{Rgb, RgbImage, RgbaImage};
-use opendj_engine::cover;
+use djsugar_engine::cover;
 
 const SMALL: u32 = 80;
 const MEDIUM: u32 = 240;

@@ -1,6 +1,6 @@
 # Proposal
 
-Planned for: **v0.4 · Your collection, cleaned up (in progress: opendj PR #57)**
+Planned for: **v0.4 · Your collection, cleaned up (in progress: djsugar PR #57)**
 
 ## Why
 

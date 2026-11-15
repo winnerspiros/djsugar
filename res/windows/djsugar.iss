@@ -1,5 +1,5 @@
-; Inno Setup script for openDJ's Windows setup. scripts/bundle-windows.ps1
-; runs it with /DVersion=... /DSource=<folder with openDJ.exe> /DOutput=dist.
+; Inno Setup script for DJ Sugar's Windows setup. scripts/bundle-windows.ps1
+; runs it with /DVersion=... /DSource=<folder with DJSugar.exe> /DOutput=dist.
 ; Installs for the current user only, so it needs no administrator.
 
 #ifndef Version
@@ -8,27 +8,27 @@
 
 [Setup]
 ; Never change the AppId: it is how Windows knows a new setup updates the
-; installed openDJ instead of adding a second one.
+; installed DJ Sugar instead of adding a second one.
 AppId={{59D890AB-0739-4D1A-987B-2E441345DC98}
-AppName=openDJ
+AppName=DJ Sugar
 AppVersion={#Version}
-AppVerName=openDJ {#Version}
-AppPublisher=openDJ
-AppPublisherURL=https://opendj.app
-AppSupportURL=https://github.com/openwave-studio/opendj/issues
-AppUpdatesURL=https://github.com/openwave-studio/opendj/releases
-DefaultDirName={autopf}\openDJ
-DefaultGroupName=openDJ
+AppVerName=DJ Sugar {#Version}
+AppPublisher=DJ Sugar
+AppPublisherURL=https://github.com/winnerspiros/djsugar
+AppSupportURL=https://github.com/winnerspiros/djsugar/issues
+AppUpdatesURL=https://github.com/winnerspiros/djsugar/releases
+DefaultDirName={autopf}\DJ Sugar
+DefaultGroupName=DJ Sugar
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 LicenseFile={#Source}\LICENSE-GPL3.txt
-SetupIconFile=opendj.ico
-UninstallDisplayIcon={app}\openDJ.exe
+SetupIconFile=djsugar.ico
+UninstallDisplayIcon={app}\DJSugar.exe
 OutputDir={#Output}
-OutputBaseFilename=openDJ-{#Version}-windows-x64-setup
+OutputBaseFilename=DJSugar-{#Version}-windows-x64-setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -46,13 +46,13 @@ Source: "{#Source}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cre
 Type: filesandordirs; Name: "{app}\controllers"
 
 [Icons]
-Name: "{autoprograms}\openDJ"; Filename: "{app}\openDJ.exe"
-Name: "{autodesktop}\openDJ"; Filename: "{app}\openDJ.exe"; Tasks: desktopicon
+Name: "{autoprograms}\DJ Sugar"; Filename: "{app}\DJSugar.exe"
+Name: "{autodesktop}\DJ Sugar"; Filename: "{app}\DJSugar.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\openDJ.exe"; Description: "{cm:LaunchProgram,openDJ}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\DJSugar.exe"; Description: "{cm:LaunchProgram,DJ Sugar}"; Flags: nowait postinstall skipifsilent
 ; After an in-app update, which runs this setup silently with /RELAUNCH.
-Filename: "{app}\openDJ.exe"; Flags: nowait; Check: IsRelaunch
+Filename: "{app}\DJSugar.exe"; Flags: nowait; Check: IsRelaunch
 
 [Code]
 function IsRelaunch: Boolean;

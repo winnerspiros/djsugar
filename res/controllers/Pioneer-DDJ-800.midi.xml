@@ -3,7 +3,7 @@
     <info>
         <name>Pioneer DDJ-800</name>
         <author>Robert904</author>
-        <description>openDJ's mapping for the Pioneer DDJ-800, written from Pioneer's MIDI message list on top of openDJ's DDJ-FLX4 mapping (based on Mixxx's DDJ-400 mapping).</description>
+        <description>DJ Sugar's mapping for the Pioneer DDJ-800, written from Pioneer's MIDI message list on top of DJ Sugar's DDJ-FLX4 mapping (based on Mixxx's DDJ-400 mapping).</description>
         <manual>pioneer_ddj_FLX4</manual>
         <forums>https://mixxx.discourse.group/t/pioneer-ddj-flx4</forums>
     </info>
@@ -79,7 +79,7 @@
                 </options>
             </control>
             <control>
-                <description>LOAD (DECK1) +SHIFT - press - Show the tracks linked to the selected one (openDJ)</description>
+                <description>LOAD (DECK1) +SHIFT - press - Show the tracks linked to the selected one (DJ Sugar)</description>
                 <group>[Library]</group>
                 <key>ShowLinked</key>
                 <status>0x96</status>
@@ -89,7 +89,7 @@
                 </options>
             </control>
             <control>
-                <description>LOAD (DECK2) +SHIFT - press - VIEW: the next of your layouts (Settings › Layouts) (openDJ)</description>
+                <description>LOAD (DECK2) +SHIFT - press - VIEW: the next of your layouts (Settings › Layouts) (DJ Sugar)</description>
                 <group>[Skin]</group>
                 <key>layout_next</key>
                 <status>0x96</status>
@@ -483,7 +483,7 @@
             </control>
 
             <control>
-                <description>RELOOP/EXIT (DECK1) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>RELOOP/EXIT (DECK1) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel1]</group>
                 <key>beatloop_activate</key>
                 <status>0x90</status>
@@ -493,7 +493,7 @@
                 </options>
             </control>
             <control>
-                <description>RELOOP/EXIT (DECK2) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>RELOOP/EXIT (DECK2) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel2]</group>
                 <key>beatloop_activate</key>
                 <status>0x91</status>
@@ -920,7 +920,7 @@
                 </options>
             </control>
 
-            <!-- openDJ: MASTER LEVEL and HEADPHONES LEVEL, on the numbers Pioneer's
+            <!-- DJ Sugar: MASTER LEVEL and HEADPHONES LEVEL, on the numbers Pioneer's
                  DDJ-400 and DDJ-SB3 use for them, so the knobs on screen follow. -->
             <control>
                 <description>MASTER LEVEL - rotate - Main gain</description>
@@ -1031,7 +1031,7 @@
 
 
             <control>
-                <description>BEAT LEFT - press - openDJ: halve the Beat FX length (SHIFT: AUTO tempo)</description>
+                <description>BEAT LEFT - press - DJ Sugar: halve the Beat FX length (SHIFT: AUTO tempo)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxLeftPressed</key>
                 <status>0x94</status>
@@ -1042,7 +1042,7 @@
             </control>
 
             <control>
-                <description>BEAT RIGHT - press - openDJ: double the Beat FX length (SHIFT: TAP tempo)</description>
+                <description>BEAT RIGHT - press - DJ Sugar: double the Beat FX length (SHIFT: TAP tempo)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxRightPressed</key>
                 <status>0x94</status>
@@ -1078,7 +1078,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX ON/OFF +SHIFT - press - openDJ: release the Beat FX, its tail ringing out (when on CHAN1/1+2)</description>
+                <description>BEAT FX ON/OFF +SHIFT - press - DJ Sugar: release the Beat FX, its tail ringing out (when on CHAN1/1+2)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
                 <status>0x94</status>
@@ -3235,7 +3235,7 @@
             <!-- KEYBOARD MODE END -->
 
             <!-- PAD Section END -->
-            <!-- openDJ: LOOP ROLL pads. The device has no such mode: the
+            <!-- DJ Sugar: LOOP ROLL pads. The device has no such mode: the
                  script routes a pad mode's pads to these notes when its
                  tab shows loop rolls (see PioneerDDJFLX4.routePads). -->
             <control>
@@ -3581,7 +3581,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT LOW CUT ECHO - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT LOW CUT ECHO - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x20</midino>
                 <options>
@@ -3591,7 +3591,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT ECHO - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT ECHO - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x21</midino>
                 <options>
@@ -3601,7 +3601,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT MT DELAY - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT MT DELAY - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x22</midino>
                 <options>
@@ -3611,7 +3611,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT SPIRAL - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT SPIRAL - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x23</midino>
                 <options>
@@ -3621,7 +3621,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT REVERB - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT REVERB - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x24</midino>
                 <options>
@@ -3631,7 +3631,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT TRANS - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT TRANS - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x25</midino>
                 <options>
@@ -3641,7 +3641,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT ENIGMA JET - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT ENIGMA JET - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x26</midino>
                 <options>
@@ -3651,7 +3651,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT FLANGER - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT FLANGER - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x27</midino>
                 <options>
@@ -3661,7 +3661,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT PHASER - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT PHASER - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x28</midino>
                 <options>
@@ -3671,7 +3671,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT PITCH - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT PITCH - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x29</midino>
                 <options>
@@ -3681,7 +3681,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT SLIP ROLL - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT SLIP ROLL - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x2A</midino>
                 <options>
@@ -3691,7 +3691,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT ROLL - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT ROLL - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x2B</midino>
                 <options>
@@ -3701,7 +3701,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT MOBIUS SAW - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT MOBIUS SAW - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x2C</midino>
                 <options>
@@ -3711,7 +3711,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit5_Effect1]</group>
                 <key>PioneerDDJ800.beatFxSelect</key>
-                <description>BEAT FX SELECT MOBIUS TRI - turn - Load the closest openDJ effect</description>
+                <description>BEAT FX SELECT MOBIUS TRI - turn - Load the closest DJ Sugar effect</description>
                 <status>0x94</status>
                 <midino>0x2D</midino>
                 <options>
@@ -4397,7 +4397,7 @@
             <!-- Deck 2 pads -->
 
             <!-- SAMPLER Mode Pads end-->
-            <!-- openDJ: LOOP ROLL pads (see the controls above). -->
+            <!-- DJ Sugar: LOOP ROLL pads (see the controls above). -->
             <output>
                 <group>[Channel1]</group>
                 <key>beatlooproll_0.0625_activate</key>

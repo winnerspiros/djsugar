@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
 ### Requirement: Mapping format
-openDJ SHALL read and write controller mappings in the documented `.opendj-mapping` format, a superset of Mixxx's `.midi.xml`, and an exported file SHALL carry the scripts it needs.
+DJ Sugar SHALL read and write controller mappings in the documented `.djsugar-mapping` format, a superset of Mixxx's `.midi.xml`, and an exported file SHALL carry the scripts it needs.
 
 #### Scenario: Round trip
-- **WHEN** a mapping is exported as `.opendj-mapping` and imported on another computer
+- **WHEN** a mapping is exported as `.djsugar-mapping` and imported on another computer
 - **THEN** it has the same rows, lights and scripts
 
 ### Requirement: Import from other DJ apps

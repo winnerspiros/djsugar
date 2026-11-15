@@ -22,7 +22,7 @@ use std::f32::consts::TAU;
 use std::path::Path;
 use std::sync::Arc;
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::controls::Edge;
 use crate::decode::Decoder;
@@ -684,7 +684,7 @@ mod tests {
 
     #[test]
     fn long_files_are_refused() {
-        let dir = std::env::temp_dir().join(format!("opendj-sampler-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-sampler-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("long.wav");
         crate::decode::tests::write_wav(&path, 8_000, 1, &vec![0i16; 8_000 * 61]);

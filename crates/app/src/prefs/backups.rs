@@ -70,7 +70,7 @@ impl Prefs {
                     &if pending && !self.backup_note.is_empty() {
                         self.backup_note.clone()
                     } else if pending {
-                        "A backup is restored when openDJ next starts.".to_string()
+                        "A backup is restored when DJ Sugar next starts.".to_string()
                     } else {
                         "Replaces the collection and settings. How things are now is backed up \
                          first."
@@ -105,7 +105,7 @@ impl Prefs {
                 } else {
                     choose(
                         "backup_restore",
-                        "Choose an openDJ backup (.opendjbackup)",
+                        "Choose an DJ Sugar backup (.djsugarbackup)",
                         false,
                         self.chosen_tx.clone(),
                     );

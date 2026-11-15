@@ -5,10 +5,10 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use opendj_engine::live_wave::LiveSlice;
-use opendj_engine::track::{Track, Waveform, WaveformBin, WAVEFORM_RATE};
-use opendj_engine::NUM_DECKS;
-use opendj_waveform::{
+use djsugar_engine::live_wave::LiveSlice;
+use djsugar_engine::track::{Track, Waveform, WaveformBin, WAVEFORM_RATE};
+use djsugar_engine::NUM_DECKS;
+use djsugar_waveform::{
     GridSection, Lanes, Mark, MarkKind, PhraseKind, GRID_SECTIONS, MAX_MARKS, MAX_PHRASES,
 };
 
@@ -493,7 +493,7 @@ mod tests {
     /// its play line, at the leader's speed; long-gone ones are left out.
     #[test]
     fn moves_the_leaders_phrases_onto_the_live_window() {
-        let mut t = (*opendj_engine::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::sample_library()[0]).clone();
         t.bpm = 120.0;
         t.first_beat = 0.0;
         t.grid = Default::default();

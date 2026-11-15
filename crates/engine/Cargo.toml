@@ -1,15 +1,15 @@
 [package]
-name = "opendj-engine"
+name = "djsugar-engine"
 description = "Audio engine: decks, mixer and output, driven through Mixxx controls"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-control = { path = "../control" }
-opendj-separation = { path = "../separation" }
+djsugar-control = { path = "../control" }
+djsugar-separation = { path = "../separation" }
 # Plugins run in a helper process; the engine only needs the client side.
-opendj-plugin-host = { path = "../plugin-host", default-features = false }
+djsugar-plugin-host = { path = "../plugin-host", default-features = false }
 cpal = "0.18"
 symphonia = { version = "0.6", features = ["all"] }
 lofty = "0.25"

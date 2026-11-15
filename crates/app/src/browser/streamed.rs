@@ -1,5 +1,5 @@
 //! Streamed tracks standing in lists brought in from another app (see
-//! [`opendj_library::ListEntry::Streamed`]): shown greyed in their place,
+//! [`djsugar_library::ListEntry::Streamed`]): shown greyed in their place,
 //! matched to the collection as files arrive (the same ISRC, else the same
 //! artist and title at the same length) or by hand with Change Match…, and
 //! opened on their service's page. While the DJ is signed in to TIDAL or
@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use opendj_engine::import::StreamedTrack;
-use opendj_library::ListEntry;
+use djsugar_engine::import::StreamedTrack;
+use djsugar_library::ListEntry;
 
 use super::columns::InList;
 use super::{Browser, Contents, Manual};

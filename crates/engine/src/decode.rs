@@ -246,7 +246,7 @@ pub(crate) mod tests {
 
     #[test]
     fn decodes_mono_wav_to_stereo() {
-        let dir = std::env::temp_dir().join(format!("opendj-decode-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-decode-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("tone.wav");
         let samples: Vec<i16> = (0..48_000)
@@ -265,7 +265,7 @@ pub(crate) mod tests {
 
     #[test]
     fn audio_plays_while_decoding() {
-        let dir = std::env::temp_dir().join(format!("opendj-stream-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-stream-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("long.wav");
         // Ten seconds, so it spans several chunks.

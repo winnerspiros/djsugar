@@ -363,10 +363,10 @@ mod tests {
     use super::*;
 
     const CUE: &str = r#"REM DATE 2026-11-03 21:05
-REM COMMENT "Recorded with openDJ"
-PERFORMER "openDJ"
-TITLE "openDJ 2026-11-03 21.05"
-FILE "openDJ 2026-11-03 21.05.wav" WAVE
+REM COMMENT "Recorded with DJ Sugar"
+PERFORMER "DJ Sugar"
+TITLE "DJ Sugar 2026-11-03 21.05"
+FILE "DJ Sugar 2026-11-03 21.05.wav" WAVE
   TRACK 01 AUDIO
     TITLE "Glue"
     PERFORMER "Bicep"
@@ -376,7 +376,7 @@ FILE "openDJ 2026-11-03 21.05.wav" WAVE
     TITLE "Opal (Four Tet Remix)"
     PERFORMER "Bicep"
     INDEX 01 04:05:38
-FILE "openDJ 2026-11-03 21.05 (part 2).wav" WAVE
+FILE "DJ Sugar 2026-11-03 21.05 (part 2).wav" WAVE
   TRACK 03 AUDIO
     TITLE "Atlas"
     PERFORMER "Bicep"
@@ -387,7 +387,7 @@ FILE "openDJ 2026-11-03 21.05 (part 2).wav" WAVE
     fn reads_the_recorders_cue_sheet() {
         let files = parse_cue(CUE);
         assert_eq!(files.len(), 2);
-        assert_eq!(files[0].name, "openDJ 2026-11-03 21.05.wav");
+        assert_eq!(files[0].name, "DJ Sugar 2026-11-03 21.05.wav");
         assert_eq!(files[0].tracks.len(), 2);
         assert_eq!(files[0].tracks[1].title, "Opal (Four Tet Remix)");
         assert!((files[0].tracks[1].start - (245.0 + 38.0 / 75.0)).abs() < 1e-9);
@@ -471,7 +471,7 @@ FILE "openDJ 2026-11-03 21.05 (part 2).wav" WAVE
     /// An MP3 with chapters that FFmpeg reads, when it is installed.
     #[test]
     fn writes_an_mp3_with_chapters() {
-        let dir = std::env::temp_dir().join(format!("opendj-mixcloud-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-mixcloud-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("mix.mp3");
         let rate = 48_000;

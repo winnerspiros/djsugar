@@ -1,7 +1,7 @@
 //! Tests over a real UDP socket on this computer.
 
 use super::*;
-use opendj_control::Behavior;
+use djsugar_control::Behavior;
 
 fn registry() -> Arc<ControlRegistry> {
     let reg = ControlRegistry::new();

@@ -22,7 +22,7 @@
 
 - [x] 3.1 New pack (built with phase 2)
 - [x] 3.1b Rename, delete (to `.deleted`, two clicks) and show a pack in the file manager
-- [x] 3.2 `.opendjpack` export (the pads as they are, to Downloads; built-in sounds stay built in) and import (menu and drop on a pad; only files pack.json names, by plain name, 1 GB cap)
+- [x] 3.2 `.djsugarpack` export (the pads as they are, to Downloads; built-in sounds stay built in) and import (menu and drop on a pad; only files pack.json names, by plain name, 1 GB cap)
 
 ## 3b. Audio thread (v0.5)
 

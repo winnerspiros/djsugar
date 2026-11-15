@@ -1,4 +1,4 @@
-//! Every verb openDJscript knows, for the parser, the runner and editors.
+//! Every verb DJSugarScript knows, for the parser, the runner and editors.
 
 /// What a verb does, which says how it runs and what it answers in a
 /// condition.

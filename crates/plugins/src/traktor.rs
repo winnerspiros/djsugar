@@ -16,9 +16,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
-use opendj_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
+use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
 use roxmltree::{Document, Node};
 
 use crate::{ImportedLibrary, LibraryImport, ListGroup};
@@ -28,12 +28,12 @@ pub const PLAYLISTS: &str = "playlists";
 pub struct Traktor;
 
 /// Traktor's collection where Traktor keeps it, the newest version's (or
-/// `OPENDJ_TRAKTOR_COLLECTION`).
+/// `DJSUGAR_TRAKTOR_COLLECTION`).
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_TRAKTOR_COLLECTION") {
+    if let Some(p) = std::env::var_os("DJSUGAR_TRAKTOR_COLLECTION") {
         return Some(PathBuf::from(p));
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     newest_collection(&home.join("Documents").join("Native Instruments"))
 }
 
@@ -392,7 +392,7 @@ fn track(n: Node, file: PathBuf) -> Track {
 
 /// The playlist tree under `$ROOT`, folders within folders, in Traktor's
 /// order. Traktor's own lists (`_LOOPS`, `_RECORDINGS`) stay out, and so do
-/// smart lists, whose searches openDJ can't say yet.
+/// smart lists, whose searches DJ Sugar can't say yet.
 fn playlists(doc: &Document, files: &HashMap<String, PathBuf>) -> Vec<ImportedList> {
     let mut out = Vec::new();
     let root = doc
@@ -502,7 +502,7 @@ mod tests {
 
     fn write(name: &str) -> PathBuf {
         let path =
-            std::env::temp_dir().join(format!("opendj-traktor-{name}-{}.nml", std::process::id()));
+            std::env::temp_dir().join(format!("djsugar-traktor-{name}-{}.nml", std::process::id()));
         std::fs::write(&path, NML).unwrap();
         path
     }
@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn finds_the_newest_traktor_folder() {
-        let dir = std::env::temp_dir().join(format!("opendj-ni-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-ni-{}", std::process::id()));
         for v in ["Traktor 3.4.0", "Traktor 3.10.1", "Traktor Kontrol S2"] {
             std::fs::create_dir_all(dir.join(v)).unwrap();
         }

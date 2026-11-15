@@ -19,7 +19,7 @@ A download whose checksum doesn't match SHALL NOT be installed. A repository's s
 
 #### Scenario: Tampered index
 - **WHEN** a pinned repository's index is signed by another key
-- **THEN** openDJ refuses its updates and says why
+- **THEN** DJ Sugar refuses its updates and says why
 
 ### Requirement: Updates
 Add-on updates SHALL be checked at start and at most once a day, shown as a dot on Settings, and never installed while a deck plays.
@@ -33,4 +33,4 @@ A crashed add-on SHALL be restarted with a growing delay and its source SHALL sh
 
 #### Scenario: Crash
 - **WHEN** an add-on exits unexpectedly
-- **THEN** its source shows it stopped and openDJ starts it again after a delay
+- **THEN** its source shows it stopped and DJ Sugar starts it again after a delay

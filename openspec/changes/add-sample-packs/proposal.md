@@ -4,9 +4,9 @@ Planned for: **v0.5 · Stems and performance** (asked for in issue #60; phases 1
 
 ## Why
 
-The sampler plays eight sounds that are built into the app and can't be changed. Every DJ has their own drops, air horns, rewinds and name tags, and issue #60 (a dancehall DJ) says that without them they need a separate sampler app beside openDJ. djay, VirtualDJ, Serato, rekordbox and Mixxx all let DJs load their own samples; djay and rekordbox group them in packs and banks.
+The sampler plays eight sounds that are built into the app and can't be changed. Every DJ has their own drops, air horns, rewinds and name tags, and issue #60 (a dancehall DJ) says that without them they need a separate sampler app beside DJ Sugar. djay, VirtualDJ, Serato, rekordbox and Mixxx all let DJs load their own samples; djay and rekordbox group them in packs and banks.
 
-There is also a bug to fix on the way: the DDJ-FLX4 mapping plays `[Sampler1]` to `[Sampler16]` (left deck pads 1-4 and 9-12, right deck 5-8 and 13-16, like rekordbox), but openDJ only has eight samplers, so the lower pad row on the controller does nothing and the right deck's pads don't play what the screen shows.
+There is also a bug to fix on the way: the DDJ-FLX4 mapping plays `[Sampler1]` to `[Sampler16]` (left deck pads 1-4 and 9-12, right deck 5-8 and 13-16, like rekordbox), but DJ Sugar only has eight samplers, so the lower pad row on the controller does nothing and the right deck's pads don't play what the screen shows.
 
 ## What Changes
 
@@ -16,7 +16,7 @@ There is also a bug to fix on the way: the DDJ-FLX4 mapping plays `[Sampler1]` t
 - Load a file onto a pad by dragging it from Finder or the track list, or with right-click › Load file…. WAV, AIFF, FLAC, MP3, M4A and OGG.
 - Per pad: a level knob, a name you can rename, a play mode (one shot, hold, on/off, loop), Reset to pack sample and Clear.
 - Pad settings (sample, name, level, mode) are saved per pack in `settings.json`; pack files are never changed by editing pads.
-- Export a pack (with its files) as one `.opendjpack` file and import it on another computer.
+- Export a pack (with its files) as one `.djsugarpack` file and import it on another computer.
 - Later phases: record a sample from a deck, the mic or the master; loop samples that stay in sync with the master deck; Get more Packs.
 
 ## Capabilities

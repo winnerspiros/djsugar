@@ -20,10 +20,10 @@ The import wizard SHALL list the source's playlists and folders with a check box
 
 #### Scenario: Leave a folder out
 - **WHEN** the DJ unticks a VirtualDJ folder in the wizard
-- **THEN** its lists don't appear in openDJ, and its tracks come across only if another list or the collection holds them
+- **THEN** its lists don't appear in DJ Sugar, and its tracks come across only if another list or the collection holds them
 
 ### Requirement: Cross-source matching
-When two imports point at different files of the same track (same artist, title and duration within 2 s), openDJ SHALL ask which copy to keep, defaulting to the one already in the stages, and merge the rest onto it.
+When two imports point at different files of the same track (same artist, title and duration within 2 s), DJ Sugar SHALL ask which copy to keep, defaulting to the one already in the stages, and merge the rest onto it.
 
 #### Scenario: Same song twice
 - **WHEN** VirtualDJ and rekordbox hold different copies of a track

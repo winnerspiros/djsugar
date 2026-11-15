@@ -34,7 +34,7 @@ define_class!(
     // doesn't implement Drop.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "OpenDJMenuTarget"]
+    #[name = "DJSugarMenuTarget"]
     struct MenuTarget;
 
     impl MenuTarget {

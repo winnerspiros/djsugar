@@ -26,8 +26,8 @@ Settings › Broadcast SHALL have a switch to send plays to ListenBrainz (off at
 - **THEN** Settings says the token was not accepted
 
 ### Requirement: Last.fm
-Settings › Broadcast SHALL have a switch to send the same plays to Last.fm (off at first), fields for the DJ's own API key and shared secret (openDJ ships none), and a Sign in button that opens Last.fm in the browser and keeps the session it returns out of backups. Plays SHALL be sent as now playing and as scrobbles by the same rule as ListenBrainz, and SHALL wait in a file when Last.fm can't be reached.
+Settings › Broadcast SHALL have a switch to send the same plays to Last.fm (off at first), fields for the DJ's own API key and shared secret (DJ Sugar ships none), and a Sign in button that opens Last.fm in the browser and keeps the session it returns out of backups. Plays SHALL be sent as now playing and as scrobbles by the same rule as ListenBrainz, and SHALL wait in a file when Last.fm can't be reached.
 
 #### Scenario: Signing in
-- **WHEN** the DJ pastes their key and secret, presses Sign in and allows openDJ on last.fm
+- **WHEN** the DJ pastes their key and secret, presses Sign in and allows DJ Sugar on last.fm
 - **THEN** Settings says "Signed in as" their Last.fm name, and the next track heard scrobbles

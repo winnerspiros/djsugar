@@ -8,4 +8,4 @@
 
 ## Workflow follow-up
 
-- Archive the change once its PR is merged, after add-opendjscript.
+- Archive the change once its PR is merged, after add-djsugarscript.

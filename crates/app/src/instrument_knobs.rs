@@ -6,7 +6,7 @@
 
 use std::rc::Rc;
 
-use opendj_engine::AudioEngine;
+use djsugar_engine::AudioEngine;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::{AppWindow, InstrumentsUi, ParamMatch};

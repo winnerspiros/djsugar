@@ -8,10 +8,10 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 
-use opendj_control::{ConfigKey, ControlRegistry};
+use djsugar_control::{ConfigKey, ControlRegistry};
 
 use crate::catalog::{describe, describe_value, humanize, Function};
-use crate::format::OpenDjMapping;
+use crate::format::DjSugarMapping;
 use crate::layout::Layout;
 use crate::mapping::{Input, Mapping, Options, SettingDef, When};
 use crate::probe::{is_shift_binding, message_key, probe, Effect, MessageKey, Probe};
@@ -57,7 +57,7 @@ pub struct Source {
     /// A control, or a script function for script bindings.
     pub key: String,
     pub options: Options,
-    /// An openDJscript line, in an openDJ mapping.
+    /// An DJSugarScript line, in an DJ Sugar mapping.
     pub action: Option<String>,
     pub layer: Vec<(String, Option<f64>)>,
     pub when: When,
@@ -313,7 +313,7 @@ impl Builder<'_> {
             None if desc_shift => "SHIFT".into(),
             None => String::new(),
         };
-        // An openDJ mapping's own layer and when: "SHIFT", "Long press".
+        // An DJ Sugar mapping's own layer and when: "SHIFT", "Long press".
         let mut extra: Vec<String> = input
             .layer
             .iter()
@@ -449,7 +449,7 @@ fn when_text(w: When) -> &'static str {
     }
 }
 
-/// What an openDJscript line does: `deck 1 play` is Play on Deck 1, as a
+/// What an DJSugarScript line does: `deck 1 play` is Play on Deck 1, as a
 /// binding to that control would be; anything else is named `name`.
 fn script_function(line: &str, name: String) -> Function {
     let words: Vec<&str> = line.split_whitespace().collect();
@@ -507,7 +507,7 @@ fn split_top(s: &str, sep: char) -> Option<(&str, &str)> {
     None
 }
 
-/// One plain action in an openDJscript line, in words: `deck 1 hot_cue 4`
+/// One plain action in an DJSugarScript line, in words: `deck 1 hot_cue 4`
 /// is "Hot cue 4" on Deck 1, `press '[Channel2],hotcue_3_clear'` what
 /// Mixxx's control does.
 fn line_function(line: &str) -> Option<Function> {
@@ -592,7 +592,7 @@ pub fn build(path: &Path, registry: Arc<ControlRegistry>) -> Result<MappingView,
 /// mapping's file, for one that stands alone (made with Quick map).
 pub fn build_own(
     path: &Path,
-    own: &OpenDjMapping,
+    own: &DjSugarMapping,
     registry: Arc<ControlRegistry>,
 ) -> Result<MappingView, String> {
     let (base, dir) = if crate::is_own_file(&path.to_string_lossy()) {

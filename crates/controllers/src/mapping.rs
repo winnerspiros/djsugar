@@ -100,7 +100,7 @@ const NAMES: [(&str, u32); 15] = [
     ("fourteen-bit-lsb", Options::FOURTEEN_BIT_LSB),
 ];
 
-/// When a row of an openDJ mapping acts, for buttons.
+/// When a row of an DJ Sugar mapping acts, for buttons.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum When {
     /// On press (and, for a fader or knob, on every move).
@@ -151,9 +151,9 @@ pub struct Input {
     pub options: Options,
     /// What the mapping's author wrote about it, if anything.
     pub description: String,
-    /// openDJ mappings only: an openDJscript line to run instead of `key`.
+    /// DJ Sugar mappings only: an DJSugarScript line to run instead of `key`.
     pub action: Option<String>,
-    /// openDJ mappings only: variables that must be set for the row to act,
+    /// DJ Sugar mappings only: variables that must be set for the row to act,
     /// as `(name, value)`; a value of `None` means anything above 0.
     pub layer: Vec<(String, Option<f64>)>,
     pub when: When,
@@ -162,7 +162,7 @@ pub struct Input {
 }
 
 /// Lights an LED while a control's value is within `min..=max`, or, in an
-/// openDJ mapping, as an openDJscript line says.
+/// DJ Sugar mapping, as an DJSugarScript line says.
 #[derive(Clone, Debug, Default)]
 pub struct Output {
     pub group: String,
@@ -174,7 +174,7 @@ pub struct Output {
     pub min: f64,
     pub max: f64,
     pub description: String,
-    /// openDJ mappings only: a line ending in `on`, `off`, `blink`,
+    /// DJ Sugar mappings only: a line ending in `on`, `off`, `blink`,
     /// `color` or `led`, asked several times a second.
     pub script: Option<String>,
     /// What `color 'name'` sends.
@@ -225,7 +225,7 @@ pub struct Mapping {
     /// Keyed by `(status, midino)`; several bindings may share a key.
     pub inputs: HashMap<(u8, u8), Vec<Input>>,
     pub outputs: Vec<Output>,
-    /// openDJ mappings only: variables for openDJscript rows and lights,
+    /// DJ Sugar mappings only: variables for DJSugarScript rows and lights,
     /// with their starting values.
     pub variables: Vec<(String, f64)>,
     /// The USB HID devices an HID mapping (`.hid.xml`) is for, from
@@ -269,9 +269,9 @@ fn text<'a>(node: roxmltree::Node<'a, 'a>, name: &str) -> Option<&'a str> {
     child(node, name).map(|n| n.text().unwrap_or("").trim())
 }
 
-/// Whether `path` is a mapping in openDJ's own format that ships with
-/// openDJ, rather than a Mixxx `.midi.xml`.
-pub fn is_opendj_file(path: &Path) -> bool {
+/// Whether `path` is a mapping in DJ Sugar's own format that ships with
+/// DJ Sugar, rather than a Mixxx `.midi.xml`.
+pub fn is_djsugar_file(path: &Path) -> bool {
     path.extension()
         .is_some_and(|e| e == crate::format::EXTENSION)
 }
@@ -284,8 +284,8 @@ impl Mapping {
     }
 
     pub fn load(path: &Path) -> Result<Self, String> {
-        if is_opendj_file(path) {
-            return Self::load_opendj(path);
+        if is_djsugar_file(path) {
+            return Self::load_djsugar(path);
         }
         let xml = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
         let mut m = Self::parse(&xml, path.parent().unwrap_or(Path::new(".")))?;
@@ -293,11 +293,11 @@ impl Mapping {
         Ok(m)
     }
 
-    /// One of openDJ's own mappings that ships with it, in openDJ's format
-    /// (`.opendj-mapping`): put over the Mixxx mapping it names, if any,
+    /// One of DJ Sugar's own mappings that ships with it, in DJ Sugar's format
+    /// (`.djsugar-mapping`): put over the Mixxx mapping it names, if any,
     /// with its scripts beside it.
-    fn load_opendj(path: &Path) -> Result<Self, String> {
-        let mine = crate::format::OpenDjMapping::read(path)?;
+    fn load_djsugar(path: &Path) -> Result<Self, String> {
+        let mine = crate::format::DjSugarMapping::read(path)?;
         let dir = path.parent().unwrap_or(Path::new("."));
         let base = match &mine.based_on {
             Some(b) if dir.join(b) != path => Some(Self::load(&dir.join(b))?),
@@ -311,7 +311,7 @@ impl Mapping {
     /// Reads just the `<info><name>` of a mapping, for matching devices
     /// without parsing every file in full.
     pub fn read_name(path: &Path) -> Option<String> {
-        if is_opendj_file(path) {
+        if is_djsugar_file(path) {
             let v: serde_json::Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
             return v["name"].as_str().map(str::to_string);
         }

@@ -14,7 +14,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_engine::{Track, NUM_DECKS};
+use djsugar_engine::{Track, NUM_DECKS};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::automix::AutoMix;

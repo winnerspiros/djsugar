@@ -1,5 +1,5 @@
 //! Settings › Collection › Storage: how much of the disk holding
-//! the music is the music, openDJ's caches and everything else, drawn as
+//! the music is the music, DJ Sugar's caches and everything else, drawn as
 //! macOS draws its storage bar.
 //!
 //! The music's size takes a walk through its folders, so it runs on its
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn a_folder_counts_its_files_once() {
-        let dir = std::env::temp_dir().join(format!("opendj-storage-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-storage-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("a")).unwrap();
         std::fs::write(dir.join("a/one.mp3"), vec![1u8; 10_000]).unwrap();
         std::fs::write(dir.join("two.mp3"), vec![1u8; 10_000]).unwrap();

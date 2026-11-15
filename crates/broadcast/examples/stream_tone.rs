@@ -1,13 +1,13 @@
 //! Streams a tone to an Icecast server, for trying broadcasting by hand:
 //!
-//! `cargo run -p opendj-broadcast --example stream_tone -- HOST PORT MOUNT PASSWORD [opus|mp3] [SECONDS]`
+//! `cargo run -p djsugar-broadcast --example stream_tone -- HOST PORT MOUNT PASSWORD [opus|mp3] [SECONDS]`
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_broadcast::{Broadcaster, Format, Settings, Source, Station, Target};
-use opendj_control::ControlRegistry;
+use djsugar_broadcast::{Broadcaster, Format, Settings, Source, Station, Target};
+use djsugar_control::ControlRegistry;
 
 struct Tone {
     at: u64,
@@ -58,7 +58,7 @@ fn main() {
     let now_playing = Arc::new(move || {
         // A new "track" every five seconds.
         let n = started.elapsed().as_secs() / 5 + 1;
-        Some(("openDJ".to_string(), format!("Test tone {n}")))
+        Some(("DJ Sugar".to_string(), format!("Test tone {n}")))
     });
     let b = Broadcaster::new(&reg, RATE, Box::new(source), now_playing);
     b.configure(Settings {
@@ -70,7 +70,7 @@ fn main() {
                 port: a[1].parse().expect("port"),
                 mount: a[2].clone(),
                 format,
-                stream_name: "openDJ test".into(),
+                stream_name: "DJ Sugar test".into(),
                 ..Station::default()
             },
             password: a[3].clone(),

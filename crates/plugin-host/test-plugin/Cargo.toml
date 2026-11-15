@@ -1,6 +1,6 @@
 [package]
-name = "opendj-test-clap"
-description = "A tiny CLAP effect for openDJ's plugin-host tests: stereo gain"
+name = "djsugar-test-clap"
+description = "A tiny CLAP effect for DJ Sugar's plugin-host tests: stereo gain"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

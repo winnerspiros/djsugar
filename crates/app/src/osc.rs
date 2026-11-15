@@ -1,5 +1,5 @@
 //! Settings › Controllers › OSC: starts and stops the OSC port
-//! (`opendj_osc`) as the settings say.
+//! (`djsugar_osc`) as the settings say.
 //!
 //! Off at first. The port runs on a thread of its own; this only opens it
 //! again when a setting changes. Switches apply at once; typed settings
@@ -14,9 +14,9 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use mdns_sd::{ServiceDaemon, ServiceInfo};
-use opendj_control::ControlRegistry;
-use opendj_engine::{LoadedTracks, VisualPositions};
-use opendj_osc::{Config, Osc, DEFAULT_PORT};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::{LoadedTracks, VisualPositions};
+use djsugar_osc::{Config, Osc, DEFAULT_PORT};
 
 use crate::settings;
 
@@ -41,7 +41,7 @@ struct Running {
     _advert: Option<Advert>,
 }
 
-/// `openDJ._osc._udp.local.`, withdrawn when dropped.
+/// `DJ Sugar._osc._udp.local.`, withdrawn when dropped.
 struct Advert {
     daemon: ServiceDaemon,
     name: String,
@@ -50,10 +50,10 @@ struct Advert {
 impl Advert {
     fn start(port: u16) -> Option<Self> {
         let daemon = ServiceDaemon::new().ok()?;
-        let host = format!("{}.local.", hostname().unwrap_or_else(|| "opendj".into()));
+        let host = format!("{}.local.", hostname().unwrap_or_else(|| "djsugar".into()));
         let info = ServiceInfo::new(
             "_osc._udp.local.",
-            "openDJ",
+            "DJ Sugar",
             &host,
             "",
             port,
@@ -164,7 +164,7 @@ pub fn targets() -> (Vec<std::net::SocketAddr>, Vec<String>) {
         if t.trim().is_empty() {
             continue;
         }
-        match opendj_osc::parse_target(t) {
+        match djsugar_osc::parse_target(t) {
             Some(a) => good.push(a),
             None => bad.push(t.trim().to_string()),
         }
@@ -241,7 +241,7 @@ pub fn status() -> String {
     let whom = if config.local_only {
         "apps on this computer".to_string()
     } else {
-        match opendj_remote::local_addresses().first() {
+        match djsugar_remote::local_addresses().first() {
             Some((_, ip)) => format!("tablets and apps at {ip}"),
             None => "apps on the network".to_string(),
         }

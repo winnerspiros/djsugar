@@ -4,7 +4,7 @@ Planned for: **v0.7 · Your library, everywhere** (from a gap review of Player m
 
 ## Why
 
-In Spotify and TIDAL a click on an artist or album opens its page: the art, Play and Shuffle, the tracks, the albums. In openDJ's Player, the artist goes nowhere and Go to Artist only narrows the list with a filter chip. A collection is browsed by artist and album as much as by list, so Player needs the same pages, and a DJ also wants them played in an order that mixes.
+In Spotify and TIDAL a click on an artist or album opens its page: the art, Play and Shuffle, the tracks, the albums. In DJ Sugar's Player, the artist goes nowhere and Go to Artist only narrows the list with a filter chip. A collection is browsed by artist and album as much as by list, so Player needs the same pages, and a DJ also wants them played in an order that mixes.
 
 ## What Changes
 

@@ -1,13 +1,13 @@
 //! The Controller Editor's view of three common controllers: script-driven
 //! controls get their meaning from the sandbox probe.
 
-use opendj_control::ControlRegistry;
-use opendj_controllers::default_mappings_dir;
-use opendj_controllers::view::{build, MappingView};
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::default_mappings_dir;
+use djsugar_controllers::view::{build, MappingView};
 
 fn view(file: &str) -> MappingView {
     let reg = ControlRegistry::new();
-    let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+    let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
     build(&default_mappings_dir().unwrap().join(file), reg).unwrap()
 }
 
@@ -111,7 +111,7 @@ fn ddj_sb3_shift_layers() {
 /// script errors.
 #[test]
 fn looked_after_mappings_read_cleanly() {
-    for c in opendj_controllers::support::all() {
+    for c in djsugar_controllers::support::all() {
         let Some(file) = c.file else { continue };
         // HID mappings are all script: the editor doesn't show them.
         if file.ends_with(".hid.xml") {

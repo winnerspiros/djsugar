@@ -6,11 +6,11 @@
 //! that have no cover also get the first one found online, on a thread of
 //! its own so the next track's analysis doesn't wait for it. With Show
 //! vocals on, each track also gets its vocal pass (see
-//! [`opendj_engine::vocals`]), so the decks have it at once.
+//! [`djsugar_engine::vocals`]), so the decks have it at once.
 //!
 //! Both threads run at low priority, so the UI and the audio come first,
 //! and while a deck plays the analysis takes one core and rests between
-//! tracks (see [`opendj_engine::background`]).
+//! tracks (see [`djsugar_engine::background`]).
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -18,8 +18,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_engine::loader::analyse_file;
-use opendj_engine::{background, cover, vocals, Source, Track};
+use djsugar_engine::loader::analyse_file;
+use djsugar_engine::{background, cover, vocals, Source, Track};
 
 use crate::coverart;
 

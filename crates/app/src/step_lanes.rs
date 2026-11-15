@@ -8,11 +8,11 @@
 
 use std::collections::VecDeque;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::groove::{fill_seed, groove_group, GrooveHit, GROOVES, ROWS, STEPS};
-use opendj_engine::groove_fills::{auto_fill, held_fill};
-use opendj_engine::NUM_DECKS;
-use opendj_waveform::{Lanes, Mark, MarkKind, MAX_MARKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::groove::{fill_seed, groove_group, GrooveHit, GROOVES, ROWS, STEPS};
+use djsugar_engine::groove_fills::{auto_fill, held_fill};
+use djsugar_engine::NUM_DECKS;
+use djsugar_waveform::{Lanes, Mark, MarkKind, MAX_MARKS};
 
 /// How opaque the sound is under the lanes.
 const UNDER_STEPS: f32 = 0.3;

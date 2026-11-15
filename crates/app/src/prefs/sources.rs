@@ -61,7 +61,7 @@ impl Prefs {
         };
 
         let mut items = Vec::new();
-        // openDJ's own sources, then everything outside it, as in the
+        // DJ Sugar's own sources, then everything outside it, as in the
         // rail's "..." menu.
         items.push(item("", HEADING, "BUILT-IN", ""));
         for name in ["Collection", "Files", "Albums", "Recordings", "Jam"] {
@@ -110,7 +110,7 @@ impl Prefs {
 
         // Plugin sources, by kind: the DJ's own servers, built-in sources,
         // then add-ons.
-        let builtin: Vec<&str> = opendj_plugins::builtin()
+        let builtin: Vec<&str> = djsugar_plugins::builtin()
             .iter()
             .map(|p| p.manifest().id)
             .collect();

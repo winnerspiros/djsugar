@@ -12,7 +12,7 @@ The tree's right-click menu SHALL offer **Export to USB…** on any playlist, fo
 - **THEN** the dialog says to plug in a stick formatted FAT32 or exFAT and press Refresh, and Export can't be pressed
 
 ### Requirement: What a player gets
-For each exported track the stick SHALL hold its audio, its beat grid, hot cues A to H with names and colours, memory cues and loops, the waveforms players draw, its album art, and its title, artist, album, genre, label, key (in the notation openDJ shows), BPM, rating, colour, comment, year and play count. Tracks never analysed SHALL be analysed first.
+For each exported track the stick SHALL hold its audio, its beat grid, hot cues A to H with names and colours, memory cues and loops, the waveforms players draw, its album art, and its title, artist, album, genre, label, key (in the notation DJ Sugar shows), BPM, rating, colour, comment, year and play count. Tracks never analysed SHALL be analysed first.
 
 #### Scenario: Hot cues past H
 - **WHEN** a track has hot cues on pads I or J

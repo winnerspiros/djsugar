@@ -2,7 +2,7 @@
 
 ## 1. Test rig and Watch
 
-- [ ] 1.1 `crates/prodjlink` (opendj-prodjlink): discovery, status, beat and mixer packet decoding behind a trait; fixtures from Deckbench and djl-analysis
+- [ ] 1.1 `crates/prodjlink` (djsugar-prodjlink): discovery, status, beat and mixer packet decoding behind a trait; fixtures from Deckbench and djl-analysis
 - [ ] 1.2 Deckbench integration test harness on Linux (pinned release, started and stopped by the test), run in CI
 - [ ] 1.3 Watch: passive listener bound per interface; players list with model, number, play state, tempo, master, on air, loaded track; dbserver metadata queries with backoff when refused
 - [ ] 1.4 Events: tempo master beats to OSC `/beat`, `/prodjlink/N/...` events, now-playing feed option, History rows for tracks played on players
@@ -21,7 +21,7 @@
 
 ## 4. Show tools
 
-- [ ] 4.1 dbserver answers for openDJ's own decks: title, artist, album, BPM, key, duration, artwork; unknown requests answered without an error
+- [ ] 4.1 dbserver answers for DJ Sugar's own decks: title, artist, album, BPM, key, duration, artwork; unknown requests answered without an error
 - [ ] 4.2 Deckbench and Beat Link Trigger checks of the metadata
 
 ## 5. DJM

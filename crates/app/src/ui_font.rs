@@ -1,5 +1,5 @@
 //! The interface font. On macOS it is the system font, San Francisco;
-//! elsewhere the bundled Inter Tabular. `OPENDJ_UI_FONT` names
+//! elsewhere the bundled Inter Tabular. `DJSUGAR_UI_FONT` names
 //! another font file to use.
 //!
 //! Running times and clocks need digits of one width, which San Francisco
@@ -21,7 +21,7 @@ use write_fonts::tables::name::{Name, NameRecord};
 use write_fonts::{FontBuilder, OffsetMarker};
 
 /// The family the adapted font is registered as.
-pub const FAMILY: &str = "openDJ UI";
+pub const FAMILY: &str = "DJ Sugar UI";
 
 /// The macOS system font.
 const SYSTEM_FONT: &str = "/System/Library/Fonts/SFNS.ttf";
@@ -29,7 +29,7 @@ const SYSTEM_FONT: &str = "/System/Library/Fonts/SFNS.ttf";
 /// Registers the interface font, if there is one to adapt, and returns the
 /// family to use; `None` keeps the bundled font.
 pub fn install() -> Option<&'static str> {
-    let path = std::env::var_os("OPENDJ_UI_FONT")
+    let path = std::env::var_os("DJSUGAR_UI_FONT")
         .map(std::path::PathBuf::from)
         .or_else(|| cfg!(target_os = "macos").then(|| SYSTEM_FONT.into()))?;
     let data = std::fs::read(&path).ok()?;

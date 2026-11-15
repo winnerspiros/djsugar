@@ -1,4 +1,4 @@
-//! openDJ's control names for the things every DJ app maps, shared by the
+//! DJ Sugar's control names for the things every DJ app maps, shared by the
 //! importers.
 
 /// `[Channel2],play`.

@@ -144,7 +144,7 @@ fn load_module(bundle: &Path) -> Result<Module, String> {
     let lib_path = library_path(bundle);
     let fail = |e: libloading::Error| format!("can't load {}: {e}", lib_path.display());
     // SAFETY: loading a plugin runs its code; this only happens in a
-    // helper process that openDJ can lose without harm.
+    // helper process that DJ Sugar can lose without harm.
     #[cfg(target_os = "linux")]
     let (lib, handle) = unsafe {
         let unix = libloading::os::unix::Library::new(&lib_path).map_err(fail)?;
@@ -197,7 +197,7 @@ fn load_module(bundle: &Path) -> Result<Module, String> {
 }
 
 /// Lists the audio processors in a bundle by loading it (in a throwaway
-/// helper, `opendj-plugin-host --scan`).
+/// helper, `djsugar-plugin-host --scan`).
 pub fn scan(bundle: &Path) -> Result<Vec<Descriptor>, String> {
     let module = load_module(bundle)?;
     let f = &module.factory;
@@ -236,7 +236,7 @@ pub fn scan(bundle: &Path) -> Result<Vec<Descriptor>, String> {
     Ok(found)
 }
 
-// ---- What openDJ offers the plugin --------------------------------------
+// ---- What DJ Sugar offers the plugin --------------------------------------
 
 struct HostApp;
 
@@ -246,7 +246,7 @@ impl Class for HostApp {
 
 impl IHostApplicationTrait for HostApp {
     unsafe fn getName(&self, name: *mut String128) -> tresult {
-        copy_wstring("openDJ", &mut *name);
+        copy_wstring("DJ Sugar", &mut *name);
         kResultOk
     }
 
@@ -384,7 +384,7 @@ impl IParamValueQueueTrait for Queue {
         kResultOk
     }
     unsafe fn addPoint(&self, _offset: i32, value: ParamValue, index: *mut i32) -> tresult {
-        // Output changes from the plugin: keep the last, openDJ ignores them for now.
+        // Output changes from the plugin: keep the last, DJ Sugar ignores them for now.
         self.value.set(value);
         self.points.set(1);
         if !index.is_null() {
@@ -550,7 +550,7 @@ impl IEventListTrait for Events {
         }
     }
     unsafe fn addEvent(&self, _e: *mut Event) -> tresult {
-        // Output events from the plugin: openDJ doesn't take them.
+        // Output events from the plugin: DJ Sugar doesn't take them.
         kResultFalse
     }
 }
@@ -837,7 +837,7 @@ impl MainThread for Vst3Main {
             let view = ComPtr::from_raw(controller.createView(ViewType::kEditor))
                 .ok_or("it has no window of its own")?;
             if view.isPlatformTypeSupported(kind) != kResultTrue {
-                return Err("its window can't be shown inside openDJ's".into());
+                return Err("its window can't be shown inside DJ Sugar's".into());
             }
             let frame = self
                 .frame

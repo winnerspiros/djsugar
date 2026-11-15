@@ -50,12 +50,12 @@ fn text(s: Option<&CStr>) -> String {
 
 fn load_entry(file: &Path) -> Result<PluginEntry, String> {
     // SAFETY: loading a plugin runs its code; that is why this happens in a
-    // helper process that openDJ can lose without harm.
+    // helper process that DJ Sugar can lose without harm.
     unsafe { PluginEntry::load(file) }.map_err(|e| format!("can't load {}: {e}", file.display()))
 }
 
 /// Lists the plugins in one `.clap` file. Runs in a throwaway helper
-/// (`opendj-plugin-host --scan`), never in openDJ.
+/// (`djsugar-plugin-host --scan`), never in DJ Sugar.
 pub fn scan(file: &Path) -> Result<Vec<Descriptor>, String> {
     let entry = load_entry(file)?;
     let factory = entry
@@ -215,7 +215,7 @@ fn preset_files(dir: &Path, types: &[String], depth: usize, out: &mut Vec<std::p
 
 /// Plugin `id`'s presets, from the file's preset discovery providers, as
 /// (name, reference for [`MainThread::load_preset`]). Runs in a throwaway
-/// helper (`opendj-plugin-host --presets`), never in openDJ.
+/// helper (`djsugar-plugin-host --presets`), never in DJ Sugar.
 pub fn presets(file: &Path, id: &str) -> Result<Vec<(String, String)>, String> {
     let entry = load_entry(file)?;
     let host = host_info()?;
@@ -280,9 +280,9 @@ pub fn presets(file: &Path, id: &str) -> Result<Vec<(String, String)>, String> {
 
 fn host_info() -> Result<HostInfo, String> {
     HostInfo::new(
-        "openDJ",
-        "openDJ",
-        "https://opendj.app",
+        "DJ Sugar",
+        "DJ Sugar",
+        "https://github.com/winnerspiros/djsugar",
         env!("CARGO_PKG_VERSION"),
     )
     .map_err(|e| e.to_string())
@@ -585,7 +585,7 @@ impl MainThread for ClapMain {
             is_floating: false,
         };
         if !gui.is_api_supported(&handle, config) {
-            return Err("its window can't be shown inside openDJ's".into());
+            return Err("its window can't be shown inside DJ Sugar's".into());
         }
         gui.create(&handle, config)
             .map_err(|_| "its window failed to open")?;

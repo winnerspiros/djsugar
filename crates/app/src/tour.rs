@@ -15,9 +15,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_controllers::{Controllers, Port};
-use opendj_engine::{scan, synth, AudioEngine, Track, NUM_DECKS};
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::{Controllers, Port};
+use djsugar_engine::{scan, synth, AudioEngine, Track, NUM_DECKS};
 use serde_json::json;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -307,8 +307,8 @@ pub struct Tour {
 }
 
 impl Tour {
-    /// Sets up the tour's callbacks. `first_run` is true when openDJ has no
-    /// settings yet: the tour starts. A DJ who had openDJ before it is
+    /// Sets up the tour's callbacks. `first_run` is true when DJ Sugar has no
+    /// settings yet: the tour starts. A DJ who had DJ Sugar before it is
     /// offered it once instead.
     pub fn install(
         app: &AppWindow,
@@ -904,7 +904,7 @@ fn changed_controls(wait: &Wait, out: &mut Vec<(Control, f64)>) {
 fn page_words(page: Page, controllers: &[String]) -> (String, String) {
     let (title, body) = match page {
         Page::Welcome => (
-            "Welcome to openDJ",
+            "Welcome to DJ Sugar",
             "A few quick steps to get you set up. Skip any of them; Help › Take the Tour \
              runs it again."
                 .to_string(),
@@ -913,7 +913,7 @@ fn page_words(page: Page, controllers: &[String]) -> (String, String) {
         Page::Part(Part::Controller) => (
             "Controller",
             if controllers.is_empty() {
-                "No controller plugged in. openDJ finds one whenever you plug it in.".to_string()
+                "No controller plugged in. DJ Sugar finds one whenever you plug it in.".to_string()
             } else {
                 format!("Found {}.", controllers.join(" and "))
             },
@@ -932,7 +932,7 @@ fn page_words(page: Page, controllers: &[String]) -> (String, String) {
     (title.to_string(), body)
 }
 
-/// Other DJ apps whose library is on this computer, by name: those openDJ
+/// Other DJ apps whose library is on this computer, by name: those DJ Sugar
 /// can't import yet are offered as coming soon.
 pub fn other_dj_apps() -> Vec<&'static str> {
     let home = std::env::var_os("HOME")
@@ -969,7 +969,7 @@ pub fn other_dj_apps() -> Vec<&'static str> {
 }
 
 /// Where the demo tracks are: next to the executable (`../Resources/demo`
-/// in a macOS bundle, `demo/` beside it, or `../share/opendj/demo` in a
+/// in a macOS bundle, `demo/` beside it, or `../share/djsugar/demo` in a
 /// Linux install), otherwise the repository's `res/demo`.
 fn demo_dir() -> Option<PathBuf> {
     let mut candidates = Vec::new();
@@ -979,13 +979,13 @@ fn demo_dir() -> Option<PathBuf> {
     {
         candidates.push(exe_dir.join("../Resources/demo"));
         candidates.push(exe_dir.join("demo"));
-        candidates.push(exe_dir.join("../share/opendj/demo"));
+        candidates.push(exe_dir.join("../share/djsugar/demo"));
     }
     candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../res/demo"));
     candidates.into_iter().find(|d| d.is_dir())
 }
 
-/// The lesson's two tracks: the demo tracks shipped with openDJ, in file
+/// The lesson's two tracks: the demo tracks shipped with DJ Sugar, in file
 /// name order, or two of the built-in synthesised ones if they're missing.
 /// They aren't added to the library.
 fn demo_tracks() -> Vec<Arc<Track>> {
@@ -1152,7 +1152,7 @@ mod tests {
     #[test]
     fn every_lesson_points_at_controls_that_exist() {
         let registry = ControlRegistry::new();
-        opendj_engine::create_controls(&registry);
+        djsugar_engine::create_controls(&registry);
         let lessons =
             std::iter::once(&FIRST_MIX).chain(tutorials::TUTORIALS.iter().map(|t| t.lesson));
         for lesson in lessons {

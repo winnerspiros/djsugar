@@ -12,7 +12,7 @@ Any effect slot (deck FX, Beat FX, pad FX and the microphone's unit, so on decks
 - **THEN** the microphone and aux inputs are heard through it, and the decks are not
 
 ### Requirement: Out-of-process plugins
-Every plugin SHALL run in an `opendj-plugin-host` helper process, never in openDJ's own process. The audio thread SHALL hand each block to the helper and wait no longer than a deadline; a block that is late, or whose helper is gone, SHALL be played dry.
+Every plugin SHALL run in an `djsugar-plugin-host` helper process, never in DJ Sugar's own process. The audio thread SHALL hand each block to the helper and wait no longer than a deadline; a block that is late, or whose helper is gone, SHALL be played dry.
 
 #### Scenario: Crash
 - **WHEN** a plugin crashes
@@ -30,10 +30,10 @@ A crashed or hung plugin SHALL be restarted bypassed, with its last saved state,
 - **THEN** it is disabled and its slot stays dry until the DJ enables it again
 
 ### Requirement: Plugin scanning
-openDJ SHALL NOT scan plugins at startup. Scanning SHALL run when the DJ presses Scan in Settings › Plugins, or in the background when a plugin folder changes, each plugin in its own scanner process with a timeout, with results cached by path, size and modification time. A plugin that fails to scan SHALL be listed with the reason and a Retry button.
+DJ Sugar SHALL NOT scan plugins at startup. Scanning SHALL run when the DJ presses Scan in Settings › Plugins, or in the background when a plugin folder changes, each plugin in its own scanner process with a timeout, with results cached by path, size and modification time. A plugin that fails to scan SHALL be listed with the reason and a Retry button.
 
 #### Scenario: Many plugins
-- **WHEN** 500 unchanged plugins are installed and openDJ starts
+- **WHEN** 500 unchanged plugins are installed and DJ Sugar starts
 - **THEN** startup takes no longer than without them
 
 ### Requirement: Plugin allow-list
@@ -58,7 +58,7 @@ A plugin's reported latency SHALL be compensated by reading its deck ahead by th
 - **THEN** the two decks' beats still line up at the master output
 
 ### Requirement: Plugin editors
-A plugin's own editor SHALL open in a separate window owned by its helper process, never inside openDJ's window.
+A plugin's own editor SHALL open in a separate window owned by its helper process, never inside DJ Sugar's window.
 
 #### Scenario: Open editor
 - **WHEN** the DJ opens a plugin's editor

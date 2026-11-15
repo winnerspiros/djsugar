@@ -49,7 +49,7 @@ pub enum Origin {
     Lrc(PathBuf),
     /// The track's own tags.
     Tag,
-    /// Lyrics openDJ saved in its own folder, for a track whose folder
+    /// Lyrics DJ Sugar saved in its own folder, for a track whose folder
     /// can't be written (see [`save`]).
     Saved(PathBuf),
 }
@@ -58,15 +58,15 @@ pub enum Origin {
 pub struct Lyrics {
     pub lines: Vec<Line>,
     pub origin: Origin,
-    /// Written down by openDJ from the audio (see [`AUTO`]), not by a person.
+    /// Written down by DJ Sugar from the audio (see [`AUTO`]), not by a person.
     pub auto: bool,
 }
 
-/// The LRC tag openDJ writes at the top of lyrics it transcribed from the
+/// The LRC tag DJ Sugar writes at the top of lyrics it transcribed from the
 /// audio with Whisper, so they read as made by a program.
-pub const AUTO: &str = "[re:openDJ Whisper transcription]";
+pub const AUTO: &str = "[re:DJ Sugar Whisper transcription]";
 
-/// Whether LRC `text` is lyrics openDJ transcribed (it has the [`AUTO`] tag).
+/// Whether LRC `text` is lyrics DJ Sugar transcribed (it has the [`AUTO`] tag).
 pub fn is_auto(text: &str) -> bool {
     text.lines().take(20).any(|l| l.trim() == AUTO)
 }
@@ -673,7 +673,7 @@ pub fn find(path: &Path) -> Option<Lyrics> {
     from_sidecar(path).or_else(|| from_tags(path))
 }
 
-/// Like [`find`], then lyrics openDJ saved for the track in `store`.
+/// Like [`find`], then lyrics DJ Sugar saved for the track in `store`.
 pub fn find_with(path: &Path, store: Option<&Path>) -> Option<Lyrics> {
     find(path).or_else(|| {
         let saved = stored_path(store?, path);
@@ -688,7 +688,7 @@ pub fn find_with(path: &Path, store: Option<&Path>) -> Option<Lyrics> {
     })
 }
 
-/// Where in `store` openDJ keeps lyrics for `track`: named by a hash of
+/// Where in `store` DJ Sugar keeps lyrics for `track`: named by a hash of
 /// the track's path (FNV-1a, the same on every run and platform).
 pub fn stored_path(store: &Path, track: &Path) -> PathBuf {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
@@ -915,7 +915,7 @@ mod tests {
 
     #[test]
     fn saves_beside_or_in_the_store() {
-        let dir = std::env::temp_dir().join(format!("opendj-lyrics-save-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-lyrics-save-{}", std::process::id()));
         let store = dir.join("store");
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("Tune.mp3");
@@ -937,7 +937,7 @@ mod tests {
 
     #[test]
     fn finds_sidecar_first() {
-        let dir = std::env::temp_dir().join(format!("opendj-lyrics-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-lyrics-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("Song.flac");
         fs::write(&track, b"not audio").unwrap();

@@ -1425,8 +1425,8 @@ component MasterPill inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    title: "openDJ";
-    icon: @image-url("icons/opendj.svg");
+    title: "DJ Sugar";
+    icon: @image-url("icons/djsugar.svg");
     preferred-width: 1680px;
     preferred-height: 1050px;
     min-width: 1280px;
@@ -1462,7 +1462,7 @@ export component AppWindow inherits Window {
     // A newer release on GitHub, shown at the top right until dismissed;
     // the app hides it while a deck plays.
     in-out property <string> update-version;
-    // "Install & restart" when openDJ can update itself, else "Download".
+    // "Install & restart" when DJ Sugar can update itself, else "Download".
     in property <string> update-action: "Download";
     // While installing: "Downloading…" and so on, in place of the buttons.
     in property <string> update-status;
@@ -1472,7 +1472,7 @@ export component AppWindow inherits Window {
     in property <int> sort-column: 1;
     in property <bool> sort-ascending: true;
     in-out property <int> current-track <=> browser.current-row;
-    // The track list's scroll, kept per list while openDJ runs.
+    // The track list's scroll, kept per list while DJ Sugar runs.
     out property <length> track-scroll-y: browser.list-scroll-y;
     public function show-tracks-at(row: int, offset: length, y: length) {
         browser.show-list-at(row, offset, y);
@@ -1807,7 +1807,7 @@ export component AppWindow inherits Window {
     // Shortcuts no focused field took: ⌘, opens settings (Ctrl+, on
     // Linux; Slint reads ⌘ as control on macOS), Esc closes them, and the
     // space bar pauses or resumes the master deck. Any other key goes to
-    // the keyboard shortcuts, which run openDJscript (⌘1 to ⌘5 rate the
+    // the keyboard shortcuts, which run DJSugarScript (⌘1 to ⌘5 rate the
     // picked tracks).
     keys := FocusScope {
         // ← and → bend the deck started last while held, by 2% (4% with
@@ -1971,9 +1971,9 @@ export component AppWindow inherits Window {
                     spacing: 8px;
                     VerticalLayout {
                         alignment: center;
-                        Image { source: @image-url("icons/opendj-mark.svg"); width: 32px; height: 20px; }
+                        Image { source: @image-url("icons/djsugar-mark.svg"); width: 32px; height: 20px; }
                     }
-                    Text { text: "openDJ"; color: Theme.text; font-family: Theme.brand-font; font-size: 21px; vertical-alignment: center; }
+                    Text { text: "DJ Sugar"; color: Theme.text; font-family: Theme.brand-font; font-size: 21px; vertical-alignment: center; }
                 }
                 HorizontalLayout {
                     padding-left: 4px + traffic-light-inset;
@@ -2377,7 +2377,7 @@ export component AppWindow inherits Window {
                 padding-right: update-status == "" ? 6px : 14px;
                 spacing: 12px;
                 Text {
-                    text: "openDJ " + update-version + " is available";
+                    text: "DJ Sugar " + update-version + " is available";
                     color: Theme.text;
                     font-size: 13px;
                     vertical-alignment: center;

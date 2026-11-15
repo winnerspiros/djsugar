@@ -802,7 +802,7 @@ fn set_job(path: &Path, state: Separation) {
         .insert(path.to_owned(), state);
 }
 
-/// The command that runs Demucs. `OPENDJ_DEMUCS` overrides it; otherwise
+/// The command that runs Demucs. `DJSUGAR_DEMUCS` overrides it; otherwise
 /// the first `demucs` program found (see [`search_dirs`]), else the first
 /// Python there that has the `demucs` module, else `python3 -m demucs`
 /// (`py -m demucs`, through the Python launcher, on Windows).
@@ -812,7 +812,7 @@ fn demucs_command() -> Command {
 
 fn find_demucs() -> Command {
     use crate::process::exe_name;
-    if let Some(cmd) = std::env::var_os("OPENDJ_DEMUCS") {
+    if let Some(cmd) = std::env::var_os("DJSUGAR_DEMUCS") {
         return Command::new(cmd);
     }
     // Remembered once found, so later separations skip the search. Not
@@ -1117,7 +1117,7 @@ mod tests {
 
     #[test]
     fn decodes_and_mixes_separate_stem_files() {
-        let dir = std::env::temp_dir().join(format!("opendj-stems-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-stems-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let files: Vec<PathBuf> = (0..4)
             .map(|k| {

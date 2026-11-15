@@ -62,7 +62,7 @@
 
 use std::sync::Arc;
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::groove_dice::{self, Dice, Habits, Move, Track};
 use crate::groove_fills;

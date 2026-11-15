@@ -15,9 +15,9 @@
 use std::fmt::Write as _;
 use std::path::Path;
 
-use opendj_engine::import::StreamedTrack;
-use opendj_engine::key::Key;
-use opendj_engine::{Source, Track};
+use djsugar_engine::import::StreamedTrack;
+use djsugar_engine::key::Key;
+use djsugar_engine::{Source, Track};
 
 /// A list or folder to write. Folders come before what they hold.
 #[derive(Debug, Clone, Default)]
@@ -51,7 +51,7 @@ pub fn write(tracks: &[Track], lists: &[XmlList], version: &str) -> String {
     x.push_str("<DJ_PLAYLISTS Version=\"1.0.0\">\n");
     let _ = writeln!(
         x,
-        "  <PRODUCT Name=\"openDJ\" Version=\"{}\" Company=\"openDJ\"/>",
+        "  <PRODUCT Name=\"DJ Sugar\" Version=\"{}\" Company=\"DJ Sugar\"/>",
         esc(version)
     );
     let _ = writeln!(x, "  <COLLECTION Entries=\"{count}\">");
@@ -351,8 +351,8 @@ fn esc(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::rekordbox::PLAYLISTS;
-    use opendj_engine::beats::{BeatGrid, GridMarker};
-    use opendj_engine::{Hotcue, LibraryInfo, TrackTag, MEMORY_CUE};
+    use djsugar_engine::beats::{BeatGrid, GridMarker};
+    use djsugar_engine::{Hotcue, LibraryInfo, TrackTag, MEMORY_CUE};
     use std::path::PathBuf;
     use std::sync::Arc;
 
@@ -507,7 +507,7 @@ mod tests {
     fn round_trips_through_the_reader() {
         let (tracks, lists) = collection();
         let text = write(&tracks, &lists, "0.6.0");
-        let path = std::env::temp_dir().join(format!("opendj-rbx-out-{}.xml", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-rbx-out-{}.xml", std::process::id()));
         std::fs::write(&path, &text).unwrap();
         let lib = super::super::xml::read(&path, &[PLAYLISTS], |_| true).unwrap();
         std::fs::remove_file(&path).ok();

@@ -1,6 +1,6 @@
 //! The browser: folder tree, track list and Automix / Sidelist panel.
 //!
-//! The collection is the saved library (see `opendj_library`): the scanned
+//! The collection is the saved library (see `djsugar_library`): the scanned
 //! music folder, or the built-in sample
 //! library when there is none. The DJ's lists and folders, ratings,
 //! colors and play history are kept in the library database. With the Spotify source
@@ -14,21 +14,21 @@ use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::key::{self, Key};
-use opendj_engine::scan::{is_audio, read_track};
-use opendj_engine::{deck_group, AudioEngine, Hotcue, Track, NUM_DECKS, NUM_HOTCUES};
-use opendj_library::dupes::{Case, Group};
-use opendj_library::health::{Area, Check, Facts};
-use opendj_library::query::{self, Context, Indexed, Query};
-use opendj_library::sets::{is_crate, is_imported, CRATE_FOLDER};
-use opendj_library::stages::{Folders, Stage};
-use opendj_library::{Library, PlaylistKind};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::key::{self, Key};
+use djsugar_engine::scan::{is_audio, read_track};
+use djsugar_engine::{deck_group, AudioEngine, Hotcue, Track, NUM_DECKS, NUM_HOTCUES};
+use djsugar_library::dupes::{Case, Group};
+use djsugar_library::health::{Area, Check, Facts};
+use djsugar_library::query::{self, Context, Indexed, Query};
+use djsugar_library::sets::{is_crate, is_imported, CRATE_FOLDER};
+use djsugar_library::stages::{Folders, Stage};
+use djsugar_library::{Library, PlaylistKind};
 use slint::{ComponentHandle, DataTransfer, Model, ModelRc, SharedString, VecModel};
 
-use opendj_library::Wanted;
-use opendj_plugins::inbox::Mode;
-use opendj_plugins::{ItemKind, StoreItem, StoreQuery};
+use djsugar_library::Wanted;
+use djsugar_plugins::inbox::Mode;
+use djsugar_plugins::{ItemKind, StoreItem, StoreQuery};
 
 mod albums;
 mod analysis;
@@ -114,7 +114,7 @@ enum Contents {
     All,
     /// Track ids in playlist order.
     List(Vec<usize>),
-    /// A smart list: the tracks a search finds (see `opendj_library::query`).
+    /// A smart list: the tracks a search finds (see `djsugar_library::query`).
     Query(String),
     /// Tracks with this grouping.
     Grouping(String),
@@ -146,14 +146,14 @@ enum Contents {
     /// An album downloaded into the Inbox, by its folder (see
     /// `inbox_albums`).
     InboxAlbum(PathBuf),
-    /// The tracks at a stage (see [`opendj_library::stages`]), or only those
+    /// The tracks at a stage (see [`djsugar_library::stages`]), or only those
     /// in one subfolder of its folder (a triage crate).
     Stage(Stage, Option<PathBuf>),
     /// Collection Health's page, or the tracks one of its checks finds (see
-    /// [`opendj_library::health`]).
+    /// [`djsugar_library::health`]).
     Health(Option<Check>),
     /// The groups of copies of one case, under Collection Health's
-    /// Duplicates (see [`opendj_library::dupes`]).
+    /// Duplicates (see [`djsugar_library::dupes`]).
     Dupes(Case),
     /// One of Collection Health's areas: the tracks of the check (or case
     /// of copies) picked on its chips.
@@ -244,7 +244,7 @@ struct Undo {
     /// Tracks to bring back into the library: merged copies.
     restore: Vec<usize>,
     /// The batch of changes to tags to take back (see
-    /// [`opendj_library::cleanup`]).
+    /// [`djsugar_library::cleanup`]).
     changes: Option<i64>,
     /// Missing tracks that were found elsewhere, by id, with the place
     /// they pointed at before.
@@ -429,7 +429,7 @@ fn reveal_dir(nodes: &mut Vec<Node>, path: &Path) -> Option<usize> {
 const BROWSED_BASE: usize = 800_000;
 
 fn is_browsed(t: &Track) -> bool {
-    (BROWSED_BASE..opendj_library::ID_BASE).contains(&t.id)
+    (BROWSED_BASE..djsugar_library::ID_BASE).contains(&t.id)
 }
 
 /// A file picked for a missing track, and the track's id.
@@ -437,30 +437,30 @@ type Located = (usize, PathBuf);
 
 fn file_path(t: &Track) -> Option<&Path> {
     match &t.source {
-        opendj_engine::Source::File(p) => Some(p),
+        djsugar_engine::Source::File(p) => Some(p),
         _ => None,
     }
 }
 
 /// A tree node for one of the DJ's smart lists.
 /// A crate's row, in its color and with its icon.
-fn crate_node(p: &opendj_library::Playlist, depth: i32) -> Node {
+fn crate_node(p: &djsugar_library::Playlist, depth: i32) -> Node {
     let mut n = Node::new(p.name.clone(), depth, KIND_CRATE, Contents::Playlist(p.id));
     n.playlist = Some(p.id);
     n.color = p.color.and_then(|rgb| {
-        opendj_library::query::COLOR_NAMES
+        djsugar_library::query::COLOR_NAMES
             .iter()
             .position(|&(_, c)| c == rgb)
     });
     n.icon = p
         .icon
         .as_deref()
-        .and_then(|name| opendj_library::LIST_ICONS.iter().position(|&i| i == name))
+        .and_then(|name| djsugar_library::LIST_ICONS.iter().position(|&i| i == name))
         .unwrap_or(0);
     n
 }
 
-fn smart_node(p: &opendj_library::Playlist, depth: i32) -> Node {
+fn smart_node(p: &djsugar_library::Playlist, depth: i32) -> Node {
     let mut n = Node::new(
         p.name.clone(),
         depth,
@@ -598,7 +598,7 @@ pub struct Browser {
     /// Keys in Camelot notation rather than notes.
     camelot: bool,
     /// The key notation the rows were written with, to redo them on a change.
-    notation: opendj_engine::key::Notation,
+    notation: djsugar_engine::key::Notation,
     /// Album art thumbnails for the list.
     art: Art,
     /// Mini waveforms for the list's Waveform column.
@@ -643,7 +643,7 @@ pub struct Browser {
     review_at: Option<usize>,
     /// Audio files in the stage and music folders, and what the collection
     /// knows of them, to find missing files in; read when first needed.
-    relink_files: OnceCell<opendj_library::relocate::Index>,
+    relink_files: OnceCell<djsugar_library::relocate::Index>,
     /// Files picked with "Find file…" for a missing track (by id).
     located: (Sender<Located>, Receiver<Located>),
     /// The node selected on the other tab, to go back to.
@@ -667,14 +667,14 @@ pub struct Browser {
     /// The crates each track is in, by track id.
     crates: HashMap<usize, Vec<String>>,
     /// Empty crates and entries for removed tracks.
-    list_health: opendj_library::sets::ListHealth,
+    list_health: djsugar_library::sets::ListHealth,
     /// Hot cue controls per deck: enabled and position.
     /// Each deck's hot cues: enabled, position and a saved loop's end.
     hotcues: [Vec<(ControlHandle, ControlHandle, ControlHandle)>; NUM_DECKS],
     watch: [CueWatch; NUM_DECKS],
     cues: cues::CueState,
     /// The Prep checklist's ticks and scores, by track id.
-    marks: HashMap<usize, opendj_library::checklist::Marks>,
+    marks: HashMap<usize, djsugar_library::checklist::Marks>,
     /// The checklist's lines, as last read from the settings.
     checklist_setup: RefCell<Option<(std::time::Instant, checklist::Setup)>>,
     /// What the Checklist tab and Prep's count show.
@@ -789,7 +789,7 @@ struct StreamState {
     /// The [`spotify::Playlist::version`] each playlist's tracks were
     /// fetched at.
     versions: HashMap<String, String>,
-    /// Playlists whose tracks are up to date: fetched since openDJ started
+    /// Playlists whose tracks are up to date: fetched since DJ Sugar started
     /// or since the last refresh, or kept from last time at the version the
     /// service gives now. Others are fetched again in the background when
     /// opened, showing the tracks kept from last time meanwhile.
@@ -979,13 +979,13 @@ impl crate::automix::Host for AutomixHost<'_> {
     }
 }
 
-const ROW_PAYLOAD: &str = "opendj-row:";
-/// Rows of a side panel tab: `opendj-side:<tab>:<rows>`.
-const SIDE_PAYLOAD: &str = "opendj-side:";
-/// The track on a deck, picked up by its cover: `opendj-deck:<deck>`.
-const DECK_PAYLOAD: &str = "opendj-deck:";
-/// One of the DJ's lists or folders dragged in the tree: `opendj-list:<id>`.
-const LIST_PAYLOAD: &str = "opendj-list:";
+const ROW_PAYLOAD: &str = "djsugar-row:";
+/// Rows of a side panel tab: `djsugar-side:<tab>:<rows>`.
+const SIDE_PAYLOAD: &str = "djsugar-side:";
+/// The track on a deck, picked up by its cover: `djsugar-deck:<deck>`.
+const DECK_PAYLOAD: &str = "djsugar-deck:";
+/// One of the DJ's lists or folders dragged in the tree: `djsugar-list:<id>`.
+const LIST_PAYLOAD: &str = "djsugar-list:";
 
 /// The list or folder a tree drag carries.
 fn dragged_list(data: &DataTransfer) -> Option<i64> {
@@ -1256,7 +1256,7 @@ impl Browser {
             inbox: Inbox::start(
                 inbox_settings,
                 library_path,
-                opendj_engine::scan::default_music_dir(),
+                djsugar_engine::scan::default_music_dir(),
                 stores::configured(),
             ),
             buy: None,
@@ -1267,7 +1267,7 @@ impl Browser {
             shown_view: None,
             waiting_view: None,
             camelot: crate::settings::camelot_keys(),
-            notation: opendj_engine::key::notation(),
+            notation: djsugar_engine::key::notation(),
             art: Art::start(),
             waves: Waves::start(),
             wave_rows: Vec::new(),
@@ -1904,7 +1904,7 @@ impl Browser {
                 let row = row.max(0) as usize;
                 let color = usize::try_from(n)
                     .ok()
-                    .and_then(|i| opendj_library::query::COLOR_NAMES.get(i))
+                    .and_then(|i| djsugar_library::query::COLOR_NAMES.get(i))
                     .map(|&(_, rgb)| rgb);
                 b.color_rows(row, row, color);
             })
@@ -2893,7 +2893,7 @@ impl Browser {
     /// Follows the key notation picked by clicking a deck's key, and keeps it
     /// for next time. Called every frame.
     pub fn set_camelot(&mut self, camelot: bool) {
-        let notation = opendj_engine::key::notation();
+        let notation = djsugar_engine::key::notation();
         if camelot != self.camelot || notation != self.notation {
             self.camelot = camelot;
             self.notation = notation;
@@ -3370,7 +3370,7 @@ impl Browser {
             && self
                 .library
                 .first()
-                .is_some_and(|t| opendj_library::row_id(t.id).is_some())
+                .is_some_and(|t| djsugar_library::row_id(t.id).is_some())
     }
 
     /// The collection's tree: the collection with Wanted and the stages
@@ -3550,8 +3550,8 @@ impl Browser {
     /// the DJ's own. The newest day starts open.
     fn history_nodes(
         &self,
-        playlists: &[opendj_library::Playlist],
-        sessions: &[&opendj_library::Playlist],
+        playlists: &[djsugar_library::Playlist],
+        sessions: &[&djsugar_library::Playlist],
     ) -> Vec<Node> {
         let sizes = self
             .db
@@ -3844,7 +3844,7 @@ impl Browser {
             return;
         };
         let rgb = color
-            .and_then(|i| opendj_library::query::COLOR_NAMES.get(i))
+            .and_then(|i| djsugar_library::query::COLOR_NAMES.get(i))
             .map(|&(_, rgb)| rgb);
         if let Err(e) = db.set_playlist_color(id, rgb) {
             eprintln!("can't color the list: {e}");
@@ -3858,7 +3858,7 @@ impl Browser {
         let (Some(id), Some(db)) = (self.own_list_at(row), &self.db) else {
             return;
         };
-        let name = opendj_library::LIST_ICONS
+        let name = djsugar_library::LIST_ICONS
             .get(icon)
             .filter(|_| icon > 0)
             .copied();
@@ -4038,7 +4038,7 @@ impl Browser {
                 self.watch[d] = CueWatch::default();
                 continue;
             };
-            if opendj_library::row_id(t.id).is_none() {
+            if djsugar_library::row_id(t.id).is_none() {
                 continue;
             }
             let w = &mut self.watch[d];
@@ -4398,7 +4398,7 @@ impl Browser {
 
     fn sample_of(&self, id: usize) -> Option<(PathBuf, String)> {
         let t = self.library.get(id).filter(|_| self.playable(id))?;
-        let opendj_engine::Source::File(path) = &t.source else {
+        let djsugar_engine::Source::File(path) = &t.source else {
             return None;
         };
         let name = if t.title.is_empty() {
@@ -4967,7 +4967,7 @@ impl Browser {
                         .info
                         .tags
                         .iter()
-                        .any(|x| opendj_engine::same_tag(&x.name, l))
+                        .any(|x| djsugar_engine::same_tag(&x.name, l))
                 })
                 .collect(),
             Contents::Folder => {
@@ -5980,19 +5980,19 @@ mod drag_tests {
 
     #[test]
     fn reads_what_a_drag_carries() {
-        assert_eq!(parse_dragged("opendj-row:3"), Some(Dragged::Rows(3, 3)));
-        assert_eq!(parse_dragged("opendj-row:2-5"), Some(Dragged::Rows(2, 5)));
+        assert_eq!(parse_dragged("djsugar-row:3"), Some(Dragged::Rows(3, 3)));
+        assert_eq!(parse_dragged("djsugar-row:2-5"), Some(Dragged::Rows(2, 5)));
         assert_eq!(
-            parse_dragged("opendj-side:0:1-2"),
+            parse_dragged("djsugar-side:0:1-2"),
             Some(Dragged::Side(0, 1, 2))
         );
         assert_eq!(
-            parse_dragged("opendj-side:1:4"),
+            parse_dragged("djsugar-side:1:4"),
             Some(Dragged::Side(1, 4, 4))
         );
-        assert_eq!(parse_dragged("opendj-deck:1"), Some(Dragged::Deck(1)));
-        assert_eq!(parse_dragged("opendj-deck:9"), None);
-        assert_eq!(parse_dragged("opendj-row:5-2"), None);
+        assert_eq!(parse_dragged("djsugar-deck:1"), Some(Dragged::Deck(1)));
+        assert_eq!(parse_dragged("djsugar-deck:9"), None);
+        assert_eq!(parse_dragged("djsugar-row:5-2"), None);
         assert_eq!(parse_dragged("hello"), None);
     }
 

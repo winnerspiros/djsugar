@@ -42,7 +42,7 @@ pub fn start() -> Service {
     let (requests, rx) = channel();
     let (tx, events) = channel();
     let saved = Saved::load(SAVED).filter(|_| crate::browser::STREAMING_ENABLED);
-    let client_id = std::env::var("OPENDJ_SOUNDCLOUD_CLIENT_ID")
+    let client_id = std::env::var("DJSUGAR_SOUNDCLOUD_CLIENT_ID")
         .ok()
         .filter(|s| !s.is_empty())
         .or_else(|| saved.as_ref().map(|s| s.client_id.clone()))

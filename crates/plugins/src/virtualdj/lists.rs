@@ -18,7 +18,7 @@
 
 use std::path::{Path, PathBuf};
 
-use opendj_engine::import::{
+use djsugar_engine::import::{
     ImportedEntry, ImportedList, ImportedListKind, ListGroup, StreamedTrack,
 };
 
@@ -45,7 +45,7 @@ pub fn groups() -> Vec<ListGroup> {
         ListGroup {
             id: FILTERS,
             title: "Filter folders",
-            detail: "As smart lists, where openDJ's search can say the same \
+            detail: "As smart lists, where DJ Sugar's search can say the same \
                      thing; VirtualDJ's built-in ones too.",
             on_by_default: false,
         },
@@ -61,7 +61,7 @@ pub fn groups() -> Vec<ListGroup> {
 /// What reading the lists found besides the lists themselves.
 #[derive(Debug, Default)]
 pub struct Skipped {
-    /// Filter folders whose search openDJ can't say (yet).
+    /// Filter folders whose search DJ Sugar can't say (yet).
     pub filters: Vec<String>,
 }
 
@@ -431,9 +431,9 @@ pub(crate) fn day_start(name: &str) -> Option<i64> {
 }
 
 /// VirtualDJ's filter language (`genre is "house" and bpm > 120`) in
-/// openDJ's search syntax, where it has the same terms: field comparisons
+/// DJ Sugar's search syntax, where it has the same terms: field comparisons
 /// joined by `and` and `or`. Anything else (`top 10`, `group by`,
-/// brackets, fields openDJ doesn't keep) gives None.
+/// brackets, fields DJ Sugar doesn't keep) gives None.
 pub fn translate_filter(filter: &str) -> Option<String> {
     let words = tokens(filter)?;
     let mut out: Vec<String> = Vec::new();
@@ -505,7 +505,7 @@ enum Kind {
     DaysAgo,
 }
 
-/// The field a filter names at the start of `words`, as openDJ calls it,
+/// The field a filter names at the start of `words`, as DJ Sugar calls it,
 /// and how many words it took. Fields can be several words ("play count").
 fn field(words: &[String]) -> Option<(&'static str, Kind, usize)> {
     let lower: Vec<String> = words
@@ -557,7 +557,7 @@ fn field(words: &[String]) -> Option<(&'static str, Kind, usize)> {
     }
 }
 
-/// One `field op value` condition at the start of `words`, as an openDJ
+/// One `field op value` condition at the start of `words`, as an DJ Sugar
 /// search term, and how many words it took.
 fn condition(words: &[String]) -> Option<(String, usize)> {
     let (name, kind, n) = field(words)?;
@@ -690,7 +690,7 @@ mod tests {
 
     #[test]
     fn reads_a_vdj_folder_tree() {
-        let home = std::env::temp_dir().join(format!("opendj-vdj-lists-{}", std::process::id()));
+        let home = std::env::temp_dir().join(format!("djsugar-vdj-lists-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&home);
         let pl = home.join("Playlists");
         std::fs::create_dir_all(pl.join("GY Pro/GY Sets")).unwrap();
@@ -760,7 +760,7 @@ mod tests {
     }
     #[test]
     fn reads_my_lists_instead_of_old_playlists() {
-        let home = std::env::temp_dir().join(format!("opendj-vdj-mylists-{}", std::process::id()));
+        let home = std::env::temp_dir().join(format!("djsugar-vdj-mylists-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&home);
         // The pre-2024 copy VirtualDJ leaves behind.
         std::fs::create_dir_all(home.join("Playlists")).unwrap();

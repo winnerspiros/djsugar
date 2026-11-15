@@ -1,4 +1,4 @@
-# Contributing to openDJ
+# Contributing to DJ Sugar
 
 Thanks for helping. A few rules keep the issue tracker and the releases in step.
 

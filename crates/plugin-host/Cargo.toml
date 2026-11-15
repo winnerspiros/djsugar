@@ -1,5 +1,5 @@
 [package]
-name = "opendj-plugin-host"
+name = "djsugar-plugin-host"
 description = "Runs audio plugins in a helper process, so a plugin that crashes, hangs or runs slow can't stop the decks"
 version.workspace = true
 edition.workspace = true
@@ -26,12 +26,12 @@ block2 = "0.6"
 libc = "0.2"
 
 [features]
-# The plugin formats, for the helper binary. openDJ itself only needs the
+# The plugin formats, for the helper binary. DJ Sugar itself only needs the
 # client side (shared memory and process control), without them.
 default = ["formats"]
 formats = ["dep:clack-host", "dep:clack-extensions", "dep:vst3", "dep:libloading", "dep:winit"]
 
 [[bin]]
-name = "opendj-plugin-host"
-path = "src/bin/opendj-plugin-host.rs"
+name = "djsugar-plugin-host"
+path = "src/bin/djsugar-plugin-host.rs"
 required-features = ["formats"]

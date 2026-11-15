@@ -42,7 +42,7 @@ pub struct TrackRow {
     pub play_count: i32,
     /// Artwork id, 0 for none.
     pub artwork: i64,
-    /// The track's id in openDJ's library.
+    /// The track's id in DJ Sugar's library.
     pub library_id: i64,
     /// When it was added, as a Unix time.
     pub added_unix: i64,
@@ -83,7 +83,7 @@ pub struct Model {
 
 /// The library id the stick's databases name as where they came from, for
 /// both formats. rekordbox uses its own collection's id; this one is
-/// openDJ's, so players never mistake the stick for a rekordbox library.
+/// DJ Sugar's, so players never mistake the stick for a rekordbox library.
 pub const MASTER_DB_ID: i64 = 0x0D3A_0001;
 
 /// What rekordbox writes for a track it analysed, in both formats.

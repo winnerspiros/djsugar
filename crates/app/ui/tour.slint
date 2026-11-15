@@ -1,6 +1,6 @@
 // The guided tour: the setup dialog (audio, controller, library), the
 // tips a lesson shows over the app, and the offer of the tour to a DJ who
-// had openDJ before it. The app (tour.rs) runs it through Tour and
+// had DJ Sugar before it. The app (tour.rs) runs it through Tour and
 // TourSetup; the settings rows in the dialog are the Settings pages' own,
 // so they work as they do there.
 import { Theme } from "theme.slint";
@@ -86,9 +86,9 @@ export component TourSetupDialog inherits Rectangle {
                         spacing: 8px;
                         VerticalLayout {
                             alignment: center;
-                            Image { source: @image-url("icons/opendj-mark.svg"); width: 26px; height: 16px; }
+                            Image { source: @image-url("icons/djsugar-mark.svg"); width: 26px; height: 16px; }
                         }
-                        Text { text: "openDJ"; color: Theme.text; font-family: Theme.brand-font; font-size: 17px; vertical-alignment: center; }
+                        Text { text: "DJ Sugar"; color: Theme.text; font-family: Theme.brand-font; font-size: 17px; vertical-alignment: center; }
                     }
                     Rectangle { height: 18px; }
                     for name[i] in TourSetup.parts: PartRow {
@@ -233,7 +233,7 @@ export component TourTip inherits Rectangle {
     }
 }
 
-// The tour offered once, under the top bar, to a DJ who used openDJ before
+// The tour offered once, under the top bar, to a DJ who used DJ Sugar before
 // it came: take it, or ✕ for never.
 export component TourOffer inherits Rectangle {
     width: row.preferred-width;
@@ -249,7 +249,7 @@ export component TourOffer inherits Rectangle {
         padding-right: 6px;
         spacing: 12px;
         Text {
-            text: "New: a guided tour of openDJ";
+            text: "New: a guided tour of DJ Sugar";
             color: Theme.text;
             font-size: 13px;
             vertical-alignment: center;

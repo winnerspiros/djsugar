@@ -1,17 +1,17 @@
-//! Loads a real VST3 bundle (the `opendj-test-vst3` gain in
+//! Loads a real VST3 bundle (the `djsugar-test-vst3` gain in
 //! `crates/plugin-host/test-vst3`) through the helper.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use opendj_plugin_host::{scan, spawn, Connection, Helper, Options, Outcome, Plugin, Transport};
+use djsugar_plugin_host::{scan, spawn, Connection, Helper, Options, Outcome, Plugin, Transport};
 
 const FRAMES: usize = 256;
 const DEADLINE: Duration = Duration::from_millis(500);
 
 fn helper() -> PathBuf {
-    env!("CARGO_BIN_EXE_opendj-plugin-host").into()
+    env!("CARGO_BIN_EXE_djsugar-plugin-host").into()
 }
 
 /// Builds the test plugin once and lays it out as a `.vst3` bundle.
@@ -21,7 +21,7 @@ fn bundle() -> PathBuf {
         let target = helper().parent().unwrap().parent().unwrap().to_path_buf();
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
         let ok = std::process::Command::new(cargo)
-            .args(["build", "-q", "-p", "opendj-test-vst3", "--target-dir"])
+            .args(["build", "-q", "-p", "djsugar-test-vst3", "--target-dir"])
             .arg(&target)
             .status()
             .expect("cargo runs")
@@ -29,25 +29,25 @@ fn bundle() -> PathBuf {
         assert!(ok, "the test plugin builds");
         let (built, inner) = if cfg!(windows) {
             (
-                "opendj_test_vst3.dll",
-                "Contents/x86_64-win/openDJTestGain.vst3".to_string(),
+                "djsugar_test_vst3.dll",
+                "Contents/x86_64-win/DJSugarTestGain.vst3".to_string(),
             )
         } else if cfg!(target_os = "macos") {
             (
-                "libopendj_test_vst3.dylib",
-                "Contents/MacOS/openDJTestGain".to_string(),
+                "libdjsugar_test_vst3.dylib",
+                "Contents/MacOS/DJSugarTestGain".to_string(),
             )
         } else {
             (
-                "libopendj_test_vst3.so",
+                "libdjsugar_test_vst3.so",
                 format!(
-                    "Contents/{}-linux/openDJTestGain.so",
+                    "Contents/{}-linux/DJSugarTestGain.so",
                     std::env::consts::ARCH
                 ),
             )
         };
         let dir = target.join(format!("vst3-test-{}", std::process::id()));
-        let bundle = dir.join("openDJTestGain.vst3");
+        let bundle = dir.join("DJSugarTestGain.vst3");
         let lib = bundle.join(inner);
         std::fs::create_dir_all(lib.parent().unwrap()).unwrap();
         std::fs::copy(target.join("debug").join(built), &lib).unwrap();
@@ -94,8 +94,8 @@ fn scanning_finds_the_effect() {
     assert_eq!(found.len(), 1, "only the processor, not the controller");
     let d = &found[0];
     assert_eq!(d.id.len(), 32);
-    assert_eq!(d.name, "openDJ Test Gain");
-    assert_eq!(d.vendor, "openDJ");
+    assert_eq!(d.name, "DJ Sugar Test Gain");
+    assert_eq!(d.vendor, "DJ Sugar");
     assert!(d.is_audio_effect(), "{:?}", d.features);
 }
 
@@ -103,7 +103,7 @@ fn scanning_finds_the_effect() {
 fn the_plugin_describes_itself() {
     let (_conn, helper) = start();
     let info = helper.info();
-    assert_eq!(info.name, "openDJ Test Gain");
+    assert_eq!(info.name, "DJ Sugar Test Gain");
     assert_eq!(info.latency, 64);
     assert_eq!(info.params.len(), 2);
     assert_eq!(info.params[0].name, "Gain");
@@ -161,7 +161,7 @@ fn a_missing_class_fails_to_start() {
 
 #[test]
 fn notes_reach_the_plugin() {
-    use opendj_plugin_host::Midi;
+    use djsugar_plugin_host::Midi;
     let (mut conn, _helper) = start();
     conn.set_param(1, 1.0); // the test plugin writes the first note's key into sample 1
     let silent = vec![0.0f32; FRAMES];

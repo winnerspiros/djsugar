@@ -74,7 +74,7 @@ MASTER (`[Master],gain`), BOOTH (`booth_gain`) and balance SHALL set the master 
 MASTER, PHONES (`headGain`), CUE MIX and BOOTH SHALL be saved as the DJ leaves them and put back at the next start. The first time, MASTER SHALL start at 50 % of its travel, PHONES at 25 % and CUE MIX fully on the cue side; BOOTH at 100 %.
 
 #### Scenario: First start
-- **WHEN** openDJ starts with no saved levels
+- **WHEN** DJ Sugar starts with no saved levels
 - **THEN** MASTER is at 50 %, PHONES at 25 % and the headphones hear only the cue
 
 #### Scenario: Next start

@@ -94,7 +94,7 @@ impl Prefs {
 
     /// An open group's tags: color, name (renamed on Return; a name the
     /// group has merges the two) and ×.
-    pub(super) fn tag_rows(&self, db: &opendj_library::Library, group: i64) -> Vec<PrefItem> {
+    pub(super) fn tag_rows(&self, db: &djsugar_library::Library, group: i64) -> Vec<PrefItem> {
         let tags = db.tags_of_group(group).unwrap_or_default();
         if tags.is_empty() {
             return vec![item(

@@ -1,8 +1,8 @@
 //! Logs and crash reports, so there is something to attach to a bug report.
 //!
-//! When openDJ isn't started from a terminal (the macOS app, a desktop
-//! launcher), everything it prints goes to `logs/opendj.log` in the
-//! settings folder, and the previous run's log is kept as `opendj.1.log`.
+//! When DJ Sugar isn't started from a terminal (the macOS app, a desktop
+//! launcher), everything it prints goes to `logs/djsugar.log` in the
+//! settings folder, and the previous run's log is kept as `djsugar.1.log`.
 //! A panic on any thread also writes `logs/crash-<time>.txt` with the
 //! backtrace.
 
@@ -11,7 +11,7 @@ use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-const REPOSITORY: &str = "https://github.com/openwave-studio/opendj";
+const REPOSITORY: &str = "https://github.com/winnerspiros/djsugar";
 
 pub fn logs_dir() -> Option<PathBuf> {
     crate::settings::config_dir().map(|d| d.join("logs"))
@@ -26,14 +26,14 @@ pub fn install() {
     if !std::io::stderr().is_terminal() {
         redirect_stderr(&dir);
     }
-    eprintln!("openDJ {VERSION} on {}", platform());
+    eprintln!("DJ Sugar {VERSION} on {}", platform());
 
     let default = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default(info);
         let thread = std::thread::current();
         let report = format!(
-            "openDJ {VERSION} on {}\nThread: {}\n\n{info}\n\n{}\n",
+            "DJ Sugar {VERSION} on {}\nThread: {}\n\n{info}\n\n{}\n",
             platform(),
             thread.name().unwrap_or("unnamed"),
             Backtrace::force_capture(),
@@ -51,8 +51,8 @@ pub fn install() {
 #[cfg(unix)]
 fn redirect_stderr(dir: &Path) {
     use std::os::fd::AsRawFd;
-    let log = dir.join("opendj.log");
-    let _ = std::fs::rename(&log, dir.join("opendj.1.log"));
+    let log = dir.join("djsugar.log");
+    let _ = std::fs::rename(&log, dir.join("djsugar.1.log"));
     let Ok(file) = std::fs::File::create(&log) else {
         return;
     };
@@ -69,8 +69,8 @@ fn redirect_stderr(dir: &Path) {
 fn redirect_stderr(dir: &Path) {
     use std::os::windows::io::IntoRawHandle;
     use windows_sys::Win32::System::Console::{SetStdHandle, STD_ERROR_HANDLE};
-    let log = dir.join("opendj.log");
-    let _ = std::fs::rename(&log, dir.join("opendj.1.log"));
+    let log = dir.join("djsugar.log");
+    let _ = std::fs::rename(&log, dir.join("djsugar.1.log"));
     let Ok(file) = std::fs::File::create(&log) else {
         return;
     };
@@ -131,7 +131,7 @@ mod tests {
     fn issue_links_carry_the_version() {
         let url = issue_url("bug_report.yml");
         assert!(url.starts_with(
-            "https://github.com/openwave-studio/opendj/issues/new?template=bug_report.yml&version="
+            "https://github.com/winnerspiros/djsugar/issues/new?template=bug_report.yml&version="
         ));
         assert!(url.contains(VERSION));
         assert!(!url.contains(' '));

@@ -3,7 +3,7 @@
 //! the lists a track is in, the artist's or album's tracks, loading on a
 //! deck and the Info tab.
 
-use opendj_library::query::{keyword, quoted};
+use djsugar_library::query::{keyword, quoted};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::{Browser, Contents, COLLECTION};
@@ -127,7 +127,7 @@ impl Browser {
     }
 
     /// The library track at a row of the list.
-    fn row_track(&self, row: usize) -> Option<&opendj_engine::Track> {
+    fn row_track(&self, row: usize) -> Option<&djsugar_engine::Track> {
         let i = self.rows.get(row).copied().flatten()?;
         self.library.get(i).map(|t| &**t)
     }

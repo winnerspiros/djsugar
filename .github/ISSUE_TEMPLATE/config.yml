@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security problem
-    url: https://github.com/openwave-studio/opendj/security/advisories/new
+    url: https://github.com/winnerspiros/djsugar/security/advisories/new
     about: Please report security problems privately.

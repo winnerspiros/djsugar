@@ -6,7 +6,7 @@ The library database: what it keeps about each track, how tracks come in from th
 ## Requirements
 
 ### Requirement: One library database
-openDJ SHALL keep its library in one SQLite file (`library.sqlite` in the settings folder): every track's tags, rating, colour, comment, cues, loops, grid and analysis, the DJ's lists and the play history. Once a track is in it, the library SHALL be the source of truth.
+DJ Sugar SHALL keep its library in one SQLite file (`library.sqlite` in the settings folder): every track's tags, rating, colour, comment, cues, loops, grid and analysis, the DJ's lists and the play history. Once a track is in it, the library SHALL be the source of truth.
 
 #### Scenario: Edits survive a rescan
 - **WHEN** a track's rating is changed and the music folder is rescanned
@@ -20,14 +20,14 @@ A track SHALL be able to hold every field VirtualDJ, rekordbox and OneLibrary ke
 - **THEN** each of those is stored
 
 ### Requirement: Music folder scan
-openDJ SHALL look through the music folders (any number, added and removed in Settings › Collection, `~/Music` until set, or `OPENDJ_MUSIC`) at each start (unless Update library on start is off) and on Rescan, adding new files and re-reading tags only of files changed since. Bringing a track in SHALL only read its tags.
+DJ Sugar SHALL look through the music folders (any number, added and removed in Settings › Collection, `~/Music` until set, or `DJSUGAR_MUSIC`) at each start (unless Update library on start is off) and on Rescan, adding new files and re-reading tags only of files changed since. Bringing a track in SHALL only read its tags.
 
 #### Scenario: New file found
 - **WHEN** a file is added to the music folder and Rescan is pressed
 - **THEN** it appears in the Collection with its tags and is not yet analysed
 
 #### Scenario: No scan on start
-- **WHEN** Update library on start is off and openDJ starts
+- **WHEN** Update library on start is off and DJ Sugar starts
 - **THEN** the library shows as saved and the music folders are only looked through on Rescan
 
 ### Requirement: Playlists and folders

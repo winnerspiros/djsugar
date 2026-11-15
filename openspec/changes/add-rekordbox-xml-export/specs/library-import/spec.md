@@ -12,12 +12,12 @@ The Collection node's menu SHALL offer **Export Collection as rekordbox XML…**
 - **THEN** the file holds three `TEMPO` entries at those positions and tempos
 
 #### Scenario: Round trip
-- **WHEN** an exported file is imported by openDJ's own rekordbox XML reader into an empty collection
+- **WHEN** an exported file is imported by DJ Sugar's own rekordbox XML reader into an empty collection
 - **THEN** every exported tag, cue, loop, grid marker and list comes back unchanged
 
 ### Requirement: Keep rekordbox.xml up to date
-With **Keep rekordbox.xml up to date** ticked in Settings › Collection › General, openDJ SHALL rewrite the whole-collection export at the chosen path in the background, at most once a minute and only after the collection changes.
+With **Keep rekordbox.xml up to date** ticked in Settings › Collection › General, DJ Sugar SHALL rewrite the whole-collection export at the chosen path in the background, at most once a minute and only after the collection changes.
 
-#### Scenario: Library tool follows openDJ
+#### Scenario: Library tool follows DJ Sugar
 - **WHEN** the tick is on and the DJ adds a hot cue
 - **THEN** the file at the chosen path holds that cue within about a minute

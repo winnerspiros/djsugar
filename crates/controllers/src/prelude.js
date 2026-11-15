@@ -188,7 +188,7 @@
                 new Uint8Array(native.hidGetFeature(Number(reportID) & 0xFF)).buffer,
         };
     }
-    // openDJ: makes note `from` on MIDI channel `channel` (0-15) act as note
+    // DJ Sugar: makes note `from` on MIDI channel `channel` (0-15) act as note
     // `to`, in both directions: pressing it runs `to`'s bindings, and lights
     // sent to `to` show on it. `to === from` undoes it.
     globalThis.midi.routeNote = function(channel, from, to) {

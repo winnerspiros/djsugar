@@ -24,7 +24,7 @@
 //!
 //! `row_clear` empties the selected row of the groove on screen.
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::groove::{groove_group, GROOVES, ROWS, STEPS};
 

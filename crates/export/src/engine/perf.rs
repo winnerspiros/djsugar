@@ -1,6 +1,6 @@
 //! A track's `PerformanceData` for Engine DJ: the beat grid, the overview
 //! waveform, hot cues, saved loops and the track data (sample rate, length,
-//! key and band peaks), made from openDJ's own analysis.
+//! key and band peaks), made from DJ Sugar's own analysis.
 //!
 //! The byte layouts follow EngineX-OS's `pkg/enginedb/performance.go`
 //! (<https://github.com/Cd1s/EngineX-OS>, MIT licence, Copyright (c) 2026
@@ -12,9 +12,9 @@ use std::io::Write;
 
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use opendj_engine::key::Key;
-use opendj_engine::track::{Hotcue, Waveform};
-use opendj_engine::BeatGrid;
+use djsugar_engine::key::Key;
+use djsugar_engine::track::{Hotcue, Waveform};
+use djsugar_engine::BeatGrid;
 
 /// Engine has eight hot cues and eight saved loops.
 pub const SLOTS: usize = 8;
@@ -129,7 +129,7 @@ pub fn markers(grid: &BeatGrid, sr: f64, duration: f64) -> Vec<Marker> {
     }
     at.sort_unstable();
     at.dedup();
-    // openDJ counts bars in fours from beat 0, as Engine does.
+    // DJ Sugar counts bars in fours from beat 0, as Engine does.
     at.iter()
         .enumerate()
         .map(|(i, &b)| Marker {

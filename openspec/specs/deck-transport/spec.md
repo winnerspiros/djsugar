@@ -6,10 +6,10 @@ How a DJ loads a track on one of the four decks and moves around in it: play and
 ## Requirements
 
 ### Requirement: Four decks
-openDJ SHALL have four decks, `[Channel1]` to `[Channel4]`, each able to hold and play one track. Decks 1 and 2 SHALL be shown in every layout; decks 3 and 4 SHALL be shown in the 4-Deck layout.
+DJ Sugar SHALL have four decks, `[Channel1]` to `[Channel4]`, each able to hold and play one track. Decks 1 and 2 SHALL be shown in every layout; decks 3 and 4 SHALL be shown in the 4-Deck layout.
 
 #### Scenario: Four deck groups exist
-- **WHEN** `opendj --list-controls` is run
+- **WHEN** `djsugar --list-controls` is run
 - **THEN** it lists controls for `[Channel1]` through `[Channel4]` and `[App],num_decks` reads 4
 
 ### Requirement: Loading a track
@@ -76,7 +76,7 @@ Each deck SHALL have 8 hot cues with a position, colour and optional name, saved
 - **THEN** the first press stores the nearest beat, and the second jumps playback there
 
 #### Scenario: Hot cues survive a restart
-- **WHEN** hot cues are set, openDJ quits and the track is loaded again
+- **WHEN** hot cues are set, DJ Sugar quits and the track is loaded again
 - **THEN** the same hot cues are there
 
 ### Requirement: Saved loops

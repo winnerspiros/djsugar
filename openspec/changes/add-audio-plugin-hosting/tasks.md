@@ -2,16 +2,16 @@
 
 ## 1. Isolation (format-independent)
 
-- [x] 1.1 `crates/plugin-host`: shared-memory block exchange, `opendj-plugin-host` helper, deadline with dry fallback, crash/hang detection, restart and disable policy, test effects (gain, crash, hang, slow)
+- [x] 1.1 `crates/plugin-host`: shared-memory block exchange, `djsugar-plugin-host` helper, deadline with dry fallback, crash/hang detection, restart and disable policy, test effects (gain, crash, hang, slow)
 - [x] 1.2a Real-time priority for the helper's audio thread (macOS time-constraint policy, Linux SCHED_FIFO where allowed); all plugins in a buffer share 60% of its time
-- [ ] 1.2 Join openDJ's audio workgroup on macOS; real-time priority on Windows (MMCSS)
-- [x] 1.3a Plugin host thread in the engine (`opendj_engine::plugins`): a helper per slot and routed target, restart once with the slot off, then disable and empty the slot; hangs and long CPU overruns count; failed starts empty the slot
-- [ ] 1.3 Restart with saved state (also keeps editor changes when a plugin restarts or openDJ reopens); crash counter kept between sessions
+- [ ] 1.2 Join DJ Sugar's audio workgroup on macOS; real-time priority on Windows (MMCSS)
+- [x] 1.3a Plugin host thread in the engine (`djsugar_engine::plugins`): a helper per slot and routed target, restart once with the slot off, then disable and empty the slot; hangs and long CPU overruns count; failed starts empty the slot
+- [ ] 1.3 Restart with saved state (also keeps editor changes when a plugin restarts or DJ Sugar reopens); crash counter kept between sessions
 
 ## 2. CLAP
 
 - [x] 2.1 Host CLAP effects in the helper with `clack-host`: load, process, parameters, transport (state comes with 1.3)
-- [x] 2.2a Scanner process with a timeout (`opendj-plugin-host --scan`, `scan()`)
+- [x] 2.2a Scanner process with a timeout (`djsugar-plugin-host --scan`, `scan()`)
 - [x] 2.2a Settings › Mixer › FX plugins: folders (system defaults), Scan in throwaway helpers, cache by file size and date (`audio-plugins.json`), failures with Retry, a tick per effect for the FX lists (allow-list)
 - [x] 2.2b Settings › Plugins page with Effects, Instruments and Folders tabs; CLAP/VST3/AU chips, plugins by maker (tick a whole maker), search; up to six files scanned at once (#255)
 - [ ] 2.2 Favourites
@@ -36,7 +36,7 @@
 
 ## 5. Ship
 
-- [x] 5.1a The bundle scripts and workflows build and ship `opendj-plugin-host` beside the app; on macOS it is signed first with `res/macos/plugin-host.entitlements` (`disable-library-validation`, JIT), the app keeps its own entitlements
+- [x] 5.1a The bundle scripts and workflows build and ship `djsugar-plugin-host` beside the app; on macOS it is signed first with `res/macos/plugin-host.entitlements` (`disable-library-validation`, JIT), the app keeps its own entitlements
 - [ ] 5.1 Check a notarized build on a Mac with third-party plugins
 - [ ] 5.2 Update the effects user guide page in website/book/src/guide
 

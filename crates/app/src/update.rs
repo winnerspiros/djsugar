@@ -6,8 +6,8 @@
 //! install the update themselves: the download must match the checksum
 //! GitHub publishes for it, and on macOS it must also be notarized and
 //! signed by the same developer as the running app (on Windows, once
-//! openDJ is signed, by the same publisher). The old app is swapped out,
-//! or on Windows the new setup runs silently, and openDJ starts again.
+//! DJ Sugar is signed, by the same publisher). The old app is swapped out,
+//! or on Windows the new setup runs silently, and DJ Sugar starts again.
 //! A .deb or .rpm install gets a link to the new package, which the
 //! system's software installer opens; a Flatpak doesn't check at all, as
 //! Flathub updates it. Other installs (the Linux tarball, the Windows zip,
@@ -26,7 +26,7 @@ use serde_json::Value;
 use crate::diagnostics::VERSION;
 use crate::settings;
 
-const LATEST: &str = "https://api.github.com/repos/openwave-studio/opendj/releases/latest";
+const LATEST: &str = "https://api.github.com/repos/winnerspiros/djsugar/releases/latest";
 
 /// A release newer than this build.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +48,7 @@ pub struct Package {
     pub url: String,
 }
 
-/// How openDJ was installed on Linux, when a package manager did it.
+/// How DJ Sugar was installed on Linux, when a package manager did it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum SystemPackage {
     Deb,
@@ -64,8 +64,8 @@ impl SystemPackage {
     }
 
     /// Whether `name` is this kind of package for this computer, as
-    /// scripts/bundle-linux.sh names them: opendj_0.5.0_amd64.deb and
-    /// opendj-0.5.0-1.x86_64.rpm.
+    /// scripts/bundle-linux.sh names them: djsugar_0.5.0_amd64.deb and
+    /// djsugar-0.5.0-1.x86_64.rpm.
     fn wants(self, name: &str) -> bool {
         let arch = std::env::consts::ARCH;
         match self {
@@ -75,32 +75,32 @@ impl SystemPackage {
                     "aarch64" => "arm64",
                     other => other,
                 };
-                name.starts_with("opendj_") && name.ends_with(&format!("_{deb_arch}.deb"))
+                name.starts_with("djsugar_") && name.ends_with(&format!("_{deb_arch}.deb"))
             }
             SystemPackage::Rpm => {
-                name.starts_with("opendj-") && name.ends_with(&format!(".{arch}.rpm"))
+                name.starts_with("djsugar-") && name.ends_with(&format!(".{arch}.rpm"))
             }
         }
     }
 }
 
-/// The package manager that put this openDJ in /usr/bin, if any.
+/// The package manager that put this DJ Sugar in /usr/bin, if any.
 fn system_package() -> Option<SystemPackage> {
     if !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some() {
         return None;
     }
     let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
-    if exe != Path::new("/usr/bin/opendj") {
+    if exe != Path::new("/usr/bin/djsugar") {
         return None;
     }
-    if Path::new("/var/lib/dpkg/info/opendj.list").is_file() {
+    if Path::new("/var/lib/dpkg/info/djsugar.list").is_file() {
         return Some(SystemPackage::Deb);
     }
     let out = Command::new("rpm")
-        .args(["-qf", "--queryformat", "%{NAME}", "/usr/bin/opendj"])
+        .args(["-qf", "--queryformat", "%{NAME}", "/usr/bin/djsugar"])
         .output()
         .ok()?;
-    (out.status.success() && out.stdout == b"opendj").then_some(SystemPackage::Rpm)
+    (out.status.success() && out.stdout == b"djsugar").then_some(SystemPackage::Rpm)
 }
 
 /// Inside a Flatpak, where Flathub brings the updates.
@@ -115,21 +115,21 @@ pub struct Asset {
     pub digest: Option<String>,
 }
 
-/// What this copy of openDJ is, as far as updating goes.
+/// What this copy of DJ Sugar is, as far as updating goes.
 #[derive(Debug, Clone, PartialEq)]
 enum Install {
-    /// The openDJ.app bundle at this path.
+    /// The DJSugar.app bundle at this path.
     MacApp(PathBuf),
     /// The AppImage file at this path.
     AppImage(PathBuf),
     /// Installed by the Windows setup, which left its uninstaller next to
-    /// openDJ.exe at this path.
+    /// DJSugar.exe at this path.
     WindowsSetup(PathBuf),
 }
 
 fn this_install() -> Option<Install> {
     if cfg!(target_os = "macos") {
-        // .../openDJ.app/Contents/MacOS/opendj
+        // .../DJSugar.app/Contents/MacOS/djsugar
         let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
         let app = exe.parent()?.parent()?.parent()?;
         (app.extension()? == "app").then(|| Install::MacApp(untranslocated(app)))
@@ -157,7 +157,7 @@ fn untranslocated(app: &Path) -> PathBuf {
     }
     PathBuf::from("/Applications").join(
         app.file_name()
-            .unwrap_or(std::ffi::OsStr::new("openDJ.app")),
+            .unwrap_or(std::ffi::OsStr::new("DJSugar.app")),
     )
 }
 
@@ -272,7 +272,7 @@ fn dismissed(version: &str) -> bool {
 fn latest() -> Option<Release> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(10)))
-        .user_agent(format!("openDJ/{VERSION}"))
+        .user_agent(format!("DJSugar/{VERSION}"))
         .build()
         .into();
     let body: Value = agent
@@ -347,7 +347,7 @@ pub fn install(release: Release) -> Receiver<Progress> {
     let (tx, rx) = channel();
     std::thread::spawn(move || {
         let result = (|| {
-            let install = this_install().ok_or("this copy of openDJ can't update itself")?;
+            let install = this_install().ok_or("this copy of DJ Sugar can't update itself")?;
             let asset = release
                 .asset
                 .as_ref()
@@ -359,7 +359,7 @@ pub fn install(release: Release) -> Receiver<Progress> {
             Err(e) => {
                 eprintln!("update to {}: {e}", release.version);
                 Progress::Failed(format!(
-                    "Couldn't install openDJ {}: {e}. The release page has the download.",
+                    "Couldn't install DJ Sugar {}: {e}. The release page has the download.",
                     release.version
                 ))
             }
@@ -388,14 +388,14 @@ fn run(install: &Install, asset: &Asset, tx: &Sender<Progress>) -> Result<(), St
                     .arg(&file)
                     .arg(&unpacked),
             )?;
-            let new_app = unpacked.join("openDJ.app");
+            let new_app = unpacked.join("DJSugar.app");
             check_signature(&new_app, app)?;
             let _ = tx.send(Progress::Status("Installing…".into()));
             swap_app(app, &new_app)
         }
         Install::WindowsSetup(exe) => {
             check_publisher(&file, exe)?;
-            // Runs once openDJ has quit (see `relaunch`), so it's kept.
+            // Runs once DJ Sugar has quit (see `relaunch`), so it's kept.
             std::fs::rename(&file, windows_setup(&dir)).map_err(|e| e.to_string())?;
             return Ok(());
         }
@@ -424,7 +424,7 @@ fn run(install: &Install, asset: &Asset, tx: &Sender<Progress>) -> Result<(), St
 pub(crate) fn download(url: &str, to: &Path) -> Result<(), String> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(15 * 60)))
-        .user_agent(format!("openDJ/{VERSION}"))
+        .user_agent(format!("DJSugar/{VERSION}"))
         .build()
         .into();
     let mut response = agent.get(url).call().map_err(|e| e.to_string())?;
@@ -495,12 +495,12 @@ fn check_signature(new_app: &Path, running: &Path) -> Result<(), String> {
     }
 }
 
-/// Where a downloaded Windows setup waits for openDJ to quit.
+/// Where a downloaded Windows setup waits for DJ Sugar to quit.
 fn windows_setup(updates: &Path) -> PathBuf {
-    updates.join("openDJ-setup.exe")
+    updates.join("DJSugar-setup.exe")
 }
 
-/// When the running openDJ.exe is signed, the new setup must have a valid
+/// When the running DJSugar.exe is signed, the new setup must have a valid
 /// signature from the same publisher. Unsigned builds (until the signing
 /// certificate arrives) rely on the checksum alone.
 fn check_publisher(setup: &Path, running: &Path) -> Result<(), String> {
@@ -522,7 +522,7 @@ fn publisher(file: &Path) -> Option<(String, bool)> {
          \"$($s.Status)|$($s.SignerCertificate.Subject)\"",
         file.display().to_string().replace('\'', "''")
     );
-    let out = opendj_engine::process::background(Command::new("powershell"))
+    let out = djsugar_engine::process::background(Command::new("powershell"))
         .args(["-NoProfile", "-NonInteractive", "-Command", &script])
         .output()
         .ok()?;
@@ -550,7 +550,7 @@ fn team_in(codesign_output: &str) -> Option<String> {
 /// the old one; puts the old one back if the move fails.
 fn swap_app(app: &Path, new_app: &Path) -> Result<(), String> {
     let parent = app.parent().ok_or("no folder")?;
-    let old = parent.join(".openDJ-previous.app");
+    let old = parent.join(".DJSugar-previous.app");
     let _ = std::fs::remove_dir_all(&old);
     // The app may not be there when a translocated copy is running and its
     // original couldn't be found: the update then goes in fresh.
@@ -597,7 +597,7 @@ pub fn relaunch() {
 }
 
 /// Starts the downloaded setup, which closes what's left of this process,
-/// installs over it without asking and, given /RELAUNCH, starts openDJ
+/// installs over it without asking and, given /RELAUNCH, starts DJ Sugar
 /// again.
 fn run_windows_setup() {
     let Some(dir) = crate::settings::config_dir() else {
@@ -641,13 +641,13 @@ fn is_newer(candidate: &str, current: &str) -> bool {
 /// Where the stem separation and beat detection models are published:
 /// assets of the `stem-models` pre-release (so the updater and the website,
 /// which look at the latest release, skip it).
-const MODELS_URL: &str = "https://github.com/openwave-studio/opendj/releases/download/stem-models";
+const MODELS_URL: &str = "https://github.com/winnerspiros/djsugar/releases/download/stem-models";
 
 /// Lets the engine download a model (stem separation, Beat This!, Whisper)
 /// the first time it is needed, checked against the hash the engine knows
 /// it by: SHA-256, or SHA-1 for the 40-digit hashes of Whisper models.
 pub fn install_model_fetch() {
-    opendj_engine::separation::set_fetch(Box::new(|name, hash, to| {
+    djsugar_engine::separation::set_fetch(Box::new(|name, hash, to| {
         download(&format!("{MODELS_URL}/{name}"), to)?;
         let kind = if hash.len() == 40 { "sha1" } else { "sha256" };
         check_digest(to, Some(&format!("{kind}:{hash}")))
@@ -675,7 +675,7 @@ mod tests {
     fn reads_githubs_answer() {
         let release = json!({
             "tag_name": "v0.3.0",
-            "html_url": "https://github.com/openwave-studio/opendj/releases/tag/v0.3.0",
+            "html_url": "https://github.com/winnerspiros/djsugar/releases/tag/v0.3.0",
             "draft": false,
             "prerelease": false,
         });
@@ -683,7 +683,7 @@ mod tests {
             newer(&release, "0.2.0", None, None),
             Some(Release {
                 version: "0.3.0".into(),
-                url: "https://github.com/openwave-studio/opendj/releases/tag/v0.3.0".into(),
+                url: "https://github.com/winnerspiros/djsugar/releases/tag/v0.3.0".into(),
                 asset: None,
                 package: None,
             })
@@ -700,17 +700,17 @@ mod tests {
             "tag_name": "v0.3.0",
             "html_url": "https://example.com/r",
             "assets": [
-                {"name": "openDJ-0.3.0-macos.zip", "browser_download_url": "https://example.com/mac", "digest": "sha256:ab"},
-                {"name": "openDJ-0.3.0-x86_64.AppImage", "browser_download_url": "https://example.com/appimage"},
-                {"name": "opendj-0.3.0-linux-x86_64.tar.gz", "browser_download_url": "https://example.com/tar"},
-                {"name": "opendj-0.3.0-windows-x64.zip", "browser_download_url": "https://example.com/zip"},
-                {"name": "openDJ-0.3.0-windows-x64-setup.exe", "browser_download_url": "https://example.com/setup"},
+                {"name": "DJSugar-0.3.0-macos.zip", "browser_download_url": "https://example.com/mac", "digest": "sha256:ab"},
+                {"name": "DJSugar-0.3.0-x86_64.AppImage", "browser_download_url": "https://example.com/appimage"},
+                {"name": "djsugar-0.3.0-linux-x86_64.tar.gz", "browser_download_url": "https://example.com/tar"},
+                {"name": "djsugar-0.3.0-windows-x64.zip", "browser_download_url": "https://example.com/zip"},
+                {"name": "DJSugar-0.3.0-windows-x64-setup.exe", "browser_download_url": "https://example.com/setup"},
             ],
         });
         let mac = newer(
             &release,
             "0.2.0",
-            Some(&Install::MacApp("/A/openDJ.app".into())),
+            Some(&Install::MacApp("/A/DJSugar.app".into())),
             None,
         );
         assert_eq!(
@@ -731,7 +731,7 @@ mod tests {
         let windows = newer(
             &release,
             "0.2.0",
-            Some(&Install::WindowsSetup("C:/openDJ/openDJ.exe".into())),
+            Some(&Install::WindowsSetup("C:/DJSugar/DJSugar.exe".into())),
             None,
         );
         assert_eq!(
@@ -746,11 +746,11 @@ mod tests {
             "tag_name": "v0.5.0",
             "html_url": "https://example.com/r",
             "assets": [
-                {"name": "opendj_0.5.0_amd64.deb", "browser_download_url": "https://example.com/deb"},
-                {"name": "opendj_0.5.0_arm64.deb", "browser_download_url": "https://example.com/deb-arm"},
-                {"name": "opendj-0.5.0-1.x86_64.rpm", "browser_download_url": "https://example.com/rpm"},
-                {"name": "opendj-0.5.0-1.aarch64.rpm", "browser_download_url": "https://example.com/rpm-arm"},
-                {"name": "opendj-0.5.0-linux-x86_64.tar.gz", "browser_download_url": "https://example.com/tar"},
+                {"name": "djsugar_0.5.0_amd64.deb", "browser_download_url": "https://example.com/deb"},
+                {"name": "djsugar_0.5.0_arm64.deb", "browser_download_url": "https://example.com/deb-arm"},
+                {"name": "djsugar-0.5.0-1.x86_64.rpm", "browser_download_url": "https://example.com/rpm"},
+                {"name": "djsugar-0.5.0-1.aarch64.rpm", "browser_download_url": "https://example.com/rpm-arm"},
+                {"name": "djsugar-0.5.0-linux-x86_64.tar.gz", "browser_download_url": "https://example.com/tar"},
             ],
         });
         let deb = newer(&release, "0.4.6", None, Some(SystemPackage::Deb)).unwrap();
@@ -777,7 +777,7 @@ mod tests {
 
     #[test]
     fn checks_the_digest() {
-        let dir = std::env::temp_dir().join(format!("opendj-update-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-update-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("f");
         std::fs::write(&file, b"abc").unwrap();
@@ -794,7 +794,7 @@ mod tests {
 
     #[test]
     fn reads_the_team() {
-        let signed = "Executable=/A/openDJ.app/Contents/MacOS/opendj\nAuthority=Developer ID Application: Example (AB12CD34EF)\nTeamIdentifier=AB12CD34EF\n";
+        let signed = "Executable=/A/DJSugar.app/Contents/MacOS/djsugar\nAuthority=Developer ID Application: Example (AB12CD34EF)\nTeamIdentifier=AB12CD34EF\n";
         assert_eq!(team_in(signed).as_deref(), Some("AB12CD34EF"));
         assert_eq!(team_in("Signature=adhoc\nTeamIdentifier=not set\n"), None);
     }
@@ -802,15 +802,15 @@ mod tests {
     #[test]
     fn spots_a_translocated_app() {
         let moved =
-            Path::new("/private/var/folders/q2/x/T/AppTranslocation/2C83-7F26/d/openDJ.app");
+            Path::new("/private/var/folders/q2/x/T/AppTranslocation/2C83-7F26/d/DJSugar.app");
         assert!(is_translocated(moved));
-        assert!(!is_translocated(Path::new("/Applications/openDJ.app")));
+        assert!(!is_translocated(Path::new("/Applications/DJSugar.app")));
         assert_eq!(
-            untranslocated(Path::new("/Applications/openDJ.app")),
-            Path::new("/Applications/openDJ.app")
+            untranslocated(Path::new("/Applications/DJSugar.app")),
+            Path::new("/Applications/DJSugar.app")
         );
         if !cfg!(target_os = "macos") {
-            assert_eq!(untranslocated(moved), Path::new("/Applications/openDJ.app"));
+            assert_eq!(untranslocated(moved), Path::new("/Applications/DJSugar.app"));
         }
     }
 

@@ -11,10 +11,10 @@
 
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::lyrics::{Line, Timing};
-use opendj_engine::stems::MAX_STEMS;
-use opendj_engine::{stem_group, NUM_DECKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::lyrics::{Line, Timing};
+use djsugar_engine::stems::MAX_STEMS;
+use djsugar_engine::{stem_group, NUM_DECKS};
 use slint::winit_030::winit::window::Fullscreen;
 use slint::winit_030::WinitWindowAccessor;
 use slint::{CloseRequestResponse, ComponentHandle, SharedString};
@@ -89,7 +89,7 @@ impl Karaoke {
         let bpm = (0..NUM_DECKS)
             .map(|d| {
                 registry
-                    .get(&opendj_engine::deck_group(d), "bpm")
+                    .get(&djsugar_engine::deck_group(d), "bpm")
                     .expect("deck bpm")
             })
             .collect();
@@ -130,7 +130,7 @@ fn sung(line: &Line) -> bool {
 pub(super) fn screen(lines: &[Line], seconds: f64, beat: f64) -> Screen {
     let start_of = |i: usize| lines.get(i).and_then(|l| l.start);
     let next_sung = |from: usize| (from..lines.len()).find(|&i| sung(&lines[i]));
-    let current = opendj_engine::lyrics::line_at(lines, seconds);
+    let current = djsugar_engine::lyrics::line_at(lines, seconds);
     // The line being sung, while it is or just was.
     let singing = current.filter(|&i| {
         if !sung(&lines[i]) {
@@ -219,7 +219,7 @@ impl Browser {
             crate::settings::set(PAGE, serde_json::json!(on));
             w(&|b| b.serve_page(on))
         });
-        // Closing openDJ closes the karaoke screen too, or the app would run
+        // Closing DJ Sugar closes the karaoke screen too, or the app would run
         // on behind it.
         let w = with.clone();
         app.window().on_close_requested(move || {
@@ -357,7 +357,7 @@ impl Browser {
             "playing": playing,
             "bpm": bpm,
         });
-        opendj_remote::overlay::set_karaoke(now.to_string(), lines);
+        djsugar_remote::overlay::set_karaoke(now.to_string(), lines);
     }
 
     /// The vocal stem of `deck`'s track: the one named so, or the fourth,
@@ -461,7 +461,7 @@ impl Browser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::lyrics::parse;
+    use djsugar_engine::lyrics::parse;
 
     #[test]
     fn page_lines_carry_word_times() {

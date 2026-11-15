@@ -48,9 +48,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
-use opendj_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
+use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
 use rusqlite::{Connection, OpenFlags};
 
 use crate::{ImportedLibrary, LibraryImport, ListGroup};
@@ -65,12 +65,12 @@ const ROOT: &str = "mediaItemPlaylist-root";
 
 pub struct Djay;
 
-/// djay Pro's library where djay keeps it (or `OPENDJ_DJAY_LIBRARY`).
+/// djay Pro's library where djay keeps it (or `DJSUGAR_DJAY_LIBRARY`).
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_DJAY_LIBRARY") {
+    if let Some(p) = std::env::var_os("DJSUGAR_DJAY_LIBRARY") {
         return Some(PathBuf::from(p));
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     [
         "Music/djay/djay Media Library.djayMediaLibrary/MediaLibrary.db",
         "Music/djay/djay Media Library/MediaLibrary.db",
@@ -174,7 +174,7 @@ impl Drop for Copy {
 fn open(path: &Path) -> Result<(Connection, Copy), String> {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let dir = std::env::temp_dir().join(format!(
-        "opendj-djay-{}-{}",
+        "djsugar-djay-{}-{}",
         std::process::id(),
         N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
@@ -535,7 +535,7 @@ fn stream_uri(obj: &Obj) -> Option<String> {
     fn find(v: &Value) -> Option<String> {
         match v {
             Value::Url(s) | Value::Str(s) => {
-                opendj_engine::import::StreamedTrack::parse(s).map(|_| s.clone())
+                djsugar_engine::import::StreamedTrack::parse(s).map(|_| s.clone())
             }
             Value::Arr(items) => items.iter().find_map(find),
             _ => None,
@@ -847,7 +847,7 @@ mod tests {
     /// of history.
     fn library(name: &str) -> PathBuf {
         let path =
-            std::env::temp_dir().join(format!("opendj-djay-{name}-{}.db", std::process::id()));
+            std::env::temp_dir().join(format!("djsugar-djay-{name}-{}.db", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let db = Connection::open(&path).unwrap();
         db.execute_batch(

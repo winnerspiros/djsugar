@@ -21,7 +21,7 @@
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 use slint::ComponentHandle;
 
 use crate::{settings, AppWindow, WaveZoom, NUM_DECKS};

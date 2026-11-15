@@ -1,6 +1,6 @@
 {
  "file": "Allen and Heath Xone K2.midi.xml",
- "also": ["Allen and Heath Xone K2 - 2 Decks.opendj-mapping", "Allen and Heath Xone K2 - Mixer.opendj-mapping"],
+ "also": ["Allen and Heath Xone K2 - 2 Decks.djsugar-mapping", "Allen and Heath Xone K2 - Mixer.djsugar-mapping"],
  "width": 478,
  "height": 1102,
  "channel": 15,

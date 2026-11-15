@@ -730,7 +730,7 @@ mod tests {
     use crate::decode::tests::write_wav;
     use crate::engine::Engine;
     use crate::key::Key;
-    use opendj_control::ControlRegistry;
+    use djsugar_control::ControlRegistry;
     use std::sync::mpsc;
 
     #[test]
@@ -828,7 +828,7 @@ mod tests {
 
     #[test]
     fn plays_before_analysis_then_reloads_from_cache() {
-        let dir = std::env::temp_dir().join(format!("opendj-loader-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-loader-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         cache::TEST_DIR.set(dir.join("cache")).unwrap();
         let path = dir.join("beats.wav");

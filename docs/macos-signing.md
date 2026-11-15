@@ -1,6 +1,6 @@
 # Signing and notarizing the macOS app
 
-The release workflow signs openDJ.app with a Developer ID certificate and has
+The release workflow signs DJSugar.app with a Developer ID certificate and has
 Apple notarize it, so the app opens with a double-click on any Mac. It does
 this only when the five repository secrets below are set; without them the
 app is ad-hoc signed as before.
@@ -13,15 +13,15 @@ app is ad-hoc signed as before.
    one.)
 2. **Export it as a .p12.** Open Keychain Access → *My Certificates*, find
    "Developer ID Application: <your name> (<TEAM ID>)", right-click →
-   *Export…*, save as `opendj.p12` and choose a password.
+   *Export…*, save as `djsugar.p12` and choose a password.
 3. **Encode it for GitHub:**
 
    ```sh
-   base64 -i opendj.p12 | pbcopy
+   base64 -i djsugar.p12 | pbcopy
    ```
 
 4. **Make an app-specific password** at <https://account.apple.com> →
-   Sign-In and Security → App-Specific Passwords. Name it "openDJ notarize".
+   Sign-In and Security → App-Specific Passwords. Name it "DJ Sugar notarize".
 5. **Find your Team ID** at <https://developer.apple.com/account> →
    Membership details (10 characters, e.g. `AB12CD34EF`).
 6. **Add the secrets** in GitHub → the repository → Settings → Secrets and
@@ -35,7 +35,7 @@ app is ad-hoc signed as before.
    | `APPLE_APP_PASSWORD` | the app-specific password from step 4 |
    | `APPLE_TEAM_ID` | the Team ID from step 5 |
 
-Then delete `opendj.p12` from your Mac (the certificate stays in Keychain).
+Then delete `djsugar.p12` from your Mac (the certificate stays in Keychain).
 
 ## Checking it
 
@@ -43,7 +43,7 @@ Run the Release workflow by hand (Actions → Release → *Run workflow*), downl
 the `release-macos` artifact and check it on your Mac:
 
 ```sh
-spctl -a -vv /Applications/openDJ.app   # "accepted, source=Notarized Developer ID"
+spctl -a -vv /Applications/DJSugar.app   # "accepted, source=Notarized Developer ID"
 ```
 
 Notarization usually takes a few minutes. If it fails, the log shows a
@@ -52,13 +52,13 @@ submission id; `xcrun notarytool log <id> --apple-id … --team-id …` says why
 ## What gets signed
 
 - Hardened runtime and a secure timestamp, which notarization requires.
-- Entitlements in `res/macos/opendj.entitlements`: only
+- Entitlements in `res/macos/djsugar.entitlements`: only
   `com.apple.security.device.audio-input`, so microphone and line inputs keep
   working under the hardened runtime.
 
 ## In-app updates
 
-openDJ checks GitHub's latest release when it starts (Settings → Help →
+DJ Sugar checks GitHub's latest release when it starts (Settings → Help →
 Check for updates). The macOS app installs an update itself only if the
 download matches GitHub's checksum, passes Gatekeeper (notarized) and is
 signed by the same Team ID as the running app, so every release must be

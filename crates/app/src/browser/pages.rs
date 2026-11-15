@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use opendj_engine::key::Key;
-use opendj_engine::Track;
+use djsugar_engine::key::Key;
+use djsugar_engine::Track;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::home::{Mix, Tile};

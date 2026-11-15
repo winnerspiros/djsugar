@@ -16,7 +16,7 @@ LEDs: each control found above (and each `<output>` row) is set to on and back i
 
 ## Controller pictures
 
-openDJ draws its own simple top views from a layout file per controller (`crates/controllers/layouts/*.json`): each control's position, size, shape, kind, label and the MIDI messages it sends with their layer ("SHIFT", "Hot cue", "Bank 2"). A message may leave the channel open (`B? 00`) for the Xone K2, whose channel is set on the device. Mixxx manual drawings and Allen & Heath's sheet were used only as references for positions.
+DJ Sugar draws its own simple top views from a layout file per controller (`crates/controllers/layouts/*.json`): each control's position, size, shape, kind, label and the MIDI messages it sends with their layer ("SHIFT", "Hot cue", "Bank 2"). A message may leave the channel open (`B? 00`) for the Xone K2, whose channel is set on the device. Mixxx manual drawings and Allen & Heath's sheet were used only as references for positions.
 
 ## Press to find
 

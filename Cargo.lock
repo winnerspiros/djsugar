@@ -2928,6 +2928,252 @@ dependencies = [
 ]
 
 [[package]]
+name = "djsugar"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "djsugar-broadcast",
+ "djsugar-control",
+ "djsugar-controllers",
+ "djsugar-engine",
+ "djsugar-export",
+ "djsugar-library",
+ "djsugar-osc",
+ "djsugar-plugins",
+ "djsugar-remote",
+ "djsugar-script",
+ "djsugar-waveform",
+ "getrandom 0.4.3",
+ "hound",
+ "image",
+ "keyring",
+ "libc",
+ "md5",
+ "mdns-sd",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "read-fonts",
+ "rfd",
+ "ring",
+ "rtrb",
+ "rusty-chromaprint",
+ "serde_json",
+ "sha1 0.11.0",
+ "sha2 0.11.1",
+ "skrifa",
+ "slint",
+ "slint-build",
+ "souvlaki",
+ "sysinfo 0.38.4",
+ "ureq",
+ "windows-sys 0.61.2",
+ "winresource",
+ "write-fonts",
+ "x11-dl",
+ "zip 9.4.2",
+]
+
+[[package]]
+name = "djsugar-broadcast"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "djsugar-control",
+ "mp3lame-encoder",
+ "ogg",
+ "opus",
+ "percent-encoding",
+ "rustls",
+ "serde",
+ "serde_json",
+ "webpki-roots",
+]
+
+[[package]]
+name = "djsugar-control"
+version = "0.6.0"
+
+[[package]]
+name = "djsugar-controllers"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "djsugar-control",
+ "djsugar-engine",
+ "djsugar-script",
+ "hidapi",
+ "midir",
+ "roxmltree",
+ "rquickjs",
+ "serde_json",
+]
+
+[[package]]
+name = "djsugar-engine"
+version = "0.6.0"
+dependencies = [
+ "beat-this",
+ "chrono",
+ "cpal",
+ "djsugar-control",
+ "djsugar-plugin-host",
+ "djsugar-separation",
+ "flacenc",
+ "flate2",
+ "image",
+ "libc",
+ "lofty",
+ "matrixmultiply",
+ "mi-plaits-dsp",
+ "midir",
+ "rayon",
+ "rten",
+ "rtrb",
+ "rustfft",
+ "rusty_link",
+ "serde_json",
+ "signalsmith-stretch",
+ "symphonia",
+ "whisper-rs",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "djsugar-export"
+version = "0.6.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "diesel",
+ "djsugar-engine",
+ "flate2",
+ "getrandom 0.4.3",
+ "image",
+ "lofty",
+ "rbox-anlz",
+ "rbox-db",
+ "rbox-devlib",
+ "rbox-onelib",
+ "rusqlite",
+ "sha1 0.11.0",
+ "tempfile",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "djsugar-library"
+version = "0.6.0"
+dependencies = [
+ "djsugar-engine",
+ "regex",
+ "roxmltree",
+ "rusqlite",
+]
+
+[[package]]
+name = "djsugar-osc"
+version = "0.6.0"
+dependencies = [
+ "djsugar-control",
+ "rosc",
+]
+
+[[package]]
+name = "djsugar-plugin-host"
+version = "0.6.0"
+dependencies = [
+ "block2 0.6.2",
+ "clack-extensions",
+ "clack-host",
+ "libc",
+ "libloading 0.8.9",
+ "memmap2",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "serde_json",
+ "vst3",
+ "winit",
+]
+
+[[package]]
+name = "djsugar-plugins"
+version = "0.6.0"
+dependencies = [
+ "chrono",
+ "djsugar-engine",
+ "md5",
+ "plist",
+ "rbox-anlz",
+ "rbox-core",
+ "rbox-masterdb",
+ "roxmltree",
+ "rusqlite",
+ "serde_json",
+ "ureq",
+ "zip 9.4.2",
+]
+
+[[package]]
+name = "djsugar-remote"
+version = "0.6.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "if-addrs",
+ "qrcode",
+ "serde_json",
+ "sha2 0.11.1",
+ "tungstenite",
+]
+
+[[package]]
+name = "djsugar-script"
+version = "0.6.0"
+dependencies = [
+ "djsugar-control",
+]
+
+[[package]]
+name = "djsugar-separation"
+version = "0.6.0"
+dependencies = [
+ "burn",
+ "burn-ndarray",
+ "demucs-core",
+ "half",
+ "matrixmultiply",
+ "pollster 0.4.0",
+ "realfft",
+ "safetensors 0.7.0",
+]
+
+[[package]]
+name = "djsugar-test-clap"
+version = "0.6.0"
+dependencies = [
+ "clack-extensions",
+ "clack-plugin",
+]
+
+[[package]]
+name = "djsugar-test-vst3"
+version = "0.6.0"
+dependencies = [
+ "vst3",
+]
+
+[[package]]
+name = "djsugar-waveform"
+version = "0.6.0"
+dependencies = [
+ "ab_glyph",
+ "bytemuck",
+ "pollster 0.4.0",
+ "wgpu 30.0.1",
+]
+
+[[package]]
 name = "dlib"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6624,252 +6870,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "opendj"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "getrandom 0.4.3",
- "hound",
- "image",
- "keyring",
- "libc",
- "md5",
- "mdns-sd",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "opendj-broadcast",
- "opendj-control",
- "opendj-controllers",
- "opendj-engine",
- "opendj-export",
- "opendj-library",
- "opendj-osc",
- "opendj-plugins",
- "opendj-remote",
- "opendj-script",
- "opendj-waveform",
- "read-fonts",
- "rfd",
- "ring",
- "rtrb",
- "rusty-chromaprint",
- "serde_json",
- "sha1 0.11.0",
- "sha2 0.11.1",
- "skrifa",
- "slint",
- "slint-build",
- "souvlaki",
- "sysinfo 0.38.4",
- "ureq",
- "windows-sys 0.61.2",
- "winresource",
- "write-fonts",
- "x11-dl",
- "zip 9.4.2",
-]
-
-[[package]]
-name = "opendj-broadcast"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "mp3lame-encoder",
- "ogg",
- "opendj-control",
- "opus",
- "percent-encoding",
- "rustls",
- "serde",
- "serde_json",
- "webpki-roots",
-]
-
-[[package]]
-name = "opendj-control"
-version = "0.6.0"
-
-[[package]]
-name = "opendj-controllers"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "hidapi",
- "midir",
- "opendj-control",
- "opendj-engine",
- "opendj-script",
- "roxmltree",
- "rquickjs",
- "serde_json",
-]
-
-[[package]]
-name = "opendj-engine"
-version = "0.6.0"
-dependencies = [
- "beat-this",
- "chrono",
- "cpal",
- "flacenc",
- "flate2",
- "image",
- "libc",
- "lofty",
- "matrixmultiply",
- "mi-plaits-dsp",
- "midir",
- "opendj-control",
- "opendj-plugin-host",
- "opendj-separation",
- "rayon",
- "rten",
- "rtrb",
- "rustfft",
- "rusty_link",
- "serde_json",
- "signalsmith-stretch",
- "symphonia",
- "whisper-rs",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "opendj-export"
-version = "0.6.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "diesel",
- "flate2",
- "getrandom 0.4.3",
- "image",
- "lofty",
- "opendj-engine",
- "rbox-anlz",
- "rbox-db",
- "rbox-devlib",
- "rbox-onelib",
- "rusqlite",
- "sha1 0.11.0",
- "tempfile",
- "unicode-normalization",
-]
-
-[[package]]
-name = "opendj-library"
-version = "0.6.0"
-dependencies = [
- "opendj-engine",
- "regex",
- "roxmltree",
- "rusqlite",
-]
-
-[[package]]
-name = "opendj-osc"
-version = "0.6.0"
-dependencies = [
- "opendj-control",
- "rosc",
-]
-
-[[package]]
-name = "opendj-plugin-host"
-version = "0.6.0"
-dependencies = [
- "block2 0.6.2",
- "clack-extensions",
- "clack-host",
- "libc",
- "libloading 0.8.9",
- "memmap2",
- "objc2 0.6.5",
- "objc2-foundation 0.3.2",
- "serde_json",
- "vst3",
- "winit",
-]
-
-[[package]]
-name = "opendj-plugins"
-version = "0.6.0"
-dependencies = [
- "chrono",
- "md5",
- "opendj-engine",
- "plist",
- "rbox-anlz",
- "rbox-core",
- "rbox-masterdb",
- "roxmltree",
- "rusqlite",
- "serde_json",
- "ureq",
- "zip 9.4.2",
-]
-
-[[package]]
-name = "opendj-remote"
-version = "0.6.0"
-dependencies = [
- "getrandom 0.4.3",
- "if-addrs",
- "qrcode",
- "serde_json",
- "sha2 0.11.1",
- "tungstenite",
-]
-
-[[package]]
-name = "opendj-script"
-version = "0.6.0"
-dependencies = [
- "opendj-control",
-]
-
-[[package]]
-name = "opendj-separation"
-version = "0.6.0"
-dependencies = [
- "burn",
- "burn-ndarray",
- "demucs-core",
- "half",
- "matrixmultiply",
- "pollster 0.4.0",
- "realfft",
- "safetensors 0.7.0",
-]
-
-[[package]]
-name = "opendj-test-clap"
-version = "0.6.0"
-dependencies = [
- "clack-extensions",
- "clack-plugin",
-]
-
-[[package]]
-name = "opendj-test-vst3"
-version = "0.6.0"
-dependencies = [
- "vst3",
-]
-
-[[package]]
-name = "opendj-waveform"
-version = "0.6.0"
-dependencies = [
- "ab_glyph",
- "bytemuck",
- "pollster 0.4.0",
- "wgpu 30.0.1",
-]
-
-[[package]]
 name = "openssl-src"
 version = "300.6.1+3.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7124,8 +7124,8 @@ dependencies = [
 name = "phrase-bench"
 version = "0.6.0"
 dependencies = [
- "opendj-engine",
- "opendj-library",
+ "djsugar-engine",
+ "djsugar-library",
 ]
 
 [[package]]
@@ -9136,9 +9136,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "stem-bench"
 version = "0.6.0"
 dependencies = [
+ "djsugar-engine",
+ "djsugar-separation",
  "hound",
- "opendj-engine",
- "opendj-separation",
 ]
 
 [[package]]

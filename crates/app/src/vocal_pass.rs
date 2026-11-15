@@ -1,5 +1,5 @@
 //! The vocal pass behind Vocals › Bar (the waveforms button's drop-down): for each file
-//! loaded on a deck, the levels of [`opendj_engine::vocals`], read from the
+//! loaded on a deck, the levels of [`djsugar_engine::vocals`], read from the
 //! cache or worked out on one background thread, a file at a time. The
 //! renderer asks with [`levels`] every frame and uploads them with the
 //! waveform once they are there.
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use opendj_engine::vocals;
+use djsugar_engine::vocals;
 
 /// Called when a file's levels arrive, to draw again.
 type Wake = Box<dyn Fn() + Send + Sync>;

@@ -1,11 +1,11 @@
 //! The helper's window for a plugin's own editor, on the helper's main
 //! thread.
 //!
-//! openDJ asks for the editor through the shared block (`editor`); the
+//! DJ Sugar asks for the editor through the shared block (`editor`); the
 //! helper's main loop calls [`EditorWindow::step`] between the plugin's idle
 //! calls. The window (and the platform's event loop under it) is only made
 //! the first time an editor is asked for, so helpers whose editor is never
-//! opened stay headless. The window floats above openDJ, is titled after the
+//! opened stay headless. The window floats above DJ Sugar, is titled after the
 //! plugin and where it plays, and closing it only hides the editor: the
 //! plugin keeps playing.
 
@@ -81,7 +81,7 @@ pub struct EditorWindow {
     events: Events,
     /// The editor is in the window.
     open: bool,
-    /// The last ask failed: don't try again until openDJ asks anew.
+    /// The last ask failed: don't try again until DJ Sugar asks anew.
     refused: bool,
 }
 
@@ -101,7 +101,7 @@ impl EditorWindow {
         self.event_loop.is_some()
     }
 
-    /// Follows openDJ's ask in `editor`, reporting in `shown`, and handles
+    /// Follows DJ Sugar's ask in `editor`, reporting in `shown`, and handles
     /// the window's events; waits up to `wait` for them. Without a window
     /// this only sleeps.
     pub fn step(
@@ -152,7 +152,7 @@ impl EditorWindow {
         std::process::exit(0);
     }
 
-    /// [`EditorWindow::step`] inside the platform's loop: follows openDJ's
+    /// [`EditorWindow::step`] inside the platform's loop: follows DJ Sugar's
     /// ask and handles what the window's events left.
     pub fn step_in(
         &mut self,
@@ -165,7 +165,7 @@ impl EditorWindow {
         self.after_events(main, editor, shown);
     }
 
-    /// Opens or closes the editor as openDJ asks.
+    /// Opens or closes the editor as DJ Sugar asks.
     fn follow(
         &mut self,
         main: &mut dyn MainThread,
@@ -311,7 +311,7 @@ fn new_event_loop() -> Result<EventLoop<()>, String> {
     #[cfg(target_os = "macos")]
     {
         use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
-        // No Dock icon or menu bar of its own: the window belongs to openDJ.
+        // No Dock icon or menu bar of its own: the window belongs to DJ Sugar.
         builder
             .with_activation_policy(ActivationPolicy::Accessory)
             .with_default_menu(false);
@@ -402,7 +402,7 @@ fn keep_awake(on: bool) {
                 // NSActivityUserInitiatedAllowingIdleSystemSleep |
                 // NSActivityLatencyCritical
                 let options: u64 = 0x00EF_FFFF | 0xFF_0000_0000;
-                let reason = objc2_foundation::NSString::from_str("Plugin playing in openDJ");
+                let reason = objc2_foundation::NSString::from_str("Plugin playing in DJ Sugar");
                 let activity: Option<Retained<AnyObject>> =
                     msg_send![info, beginActivityWithOptions: options, reason: &*reason];
                 *a = activity;

@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
-use opendj_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
+use djsugar_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
 use roxmltree::{Document, Node};
 
 use super::PLAYLISTS;
@@ -326,7 +326,7 @@ mod tests {
 
     #[test]
     fn reads_a_rekordbox_xml() {
-        let path = std::env::temp_dir().join(format!("opendj-rb-{}.xml", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-rb-{}.xml", std::process::id()));
         std::fs::write(&path, XML).unwrap();
         let lib = read(&path, &[PLAYLISTS], |p| p.starts_with("/Users")).unwrap();
         assert_eq!(lib.tracks.len(), 1);

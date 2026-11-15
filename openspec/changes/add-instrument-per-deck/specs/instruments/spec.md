@@ -8,7 +8,7 @@ Each deck SHALL be able to play its own instrument plugin at the same time as in
 - **THEN** both play at once, channel 1 plays only the bass and channel 2 only the pad
 
 ### Requirement: Plugins side by side
-Within each audio buffer openDJ SHALL hand every plugin that can run independently its block before waiting for any of them, so plugins on different decks and the instruments do their work at the same time rather than one after another. A plugin that misses its time SHALL play dry (effects) or silent (instruments) for that buffer, as before.
+Within each audio buffer DJ Sugar SHALL hand every plugin that can run independently its block before waiting for any of them, so plugins on different decks and the instruments do their work at the same time rather than one after another. A plugin that misses its time SHALL play dry (effects) or silent (instruments) for that buffer, as before.
 
 #### Scenario: Two heavy effects
 - **WHEN** deck 1 and deck 2 each run a plugin effect that needs 1.5 ms of a 5.3 ms buffer

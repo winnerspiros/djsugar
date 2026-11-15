@@ -13,13 +13,13 @@ credit you in the release notes unless you'd rather not be named.
 ## What counts
 
 Anything that lets a file, a controller mapping, a network answer or another
-program on the machine make openDJ do something it shouldn't. For example:
+program on the machine make DJ Sugar do something it shouldn't. For example:
 
 - a crash or runaway memory use from opening an audio file, a tag, a cover
   image or a playlist
 - a controller script reaching outside the controls it is meant to drive
 - Spotify sign-in details being readable by other users or programs
-- files being written outside the folders openDJ is meant to use, for
+- files being written outside the folders DJ Sugar is meant to use, for
   example by the purchase inbox
 
 Bugs that only lose audio quality or crash on ordinary use are welcome too,

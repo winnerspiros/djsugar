@@ -349,7 +349,7 @@ pub struct LibraryInfo {
     /// The track's grouping, e.g. "11 YOGA".
     pub grouping: String,
     /// The DJ's tags on the track, each in one of their tag groups (see
-    /// `opendj_library::tags`): "Uplifting" in Mood, "Synth" and "Vocals"
+    /// `djsugar_library::tags`): "Uplifting" in Mood, "Synth" and "Vocals"
     /// in Instruments.
     pub tags: Vec<TrackTag>,
     /// Tags another app keeps for the track, as it brings them in: where

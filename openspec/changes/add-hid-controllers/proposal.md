@@ -5,10 +5,10 @@ Planned for: **v0.5 · Stems, performance and switching over** (2026-11-01)
 ## Why
 
 Native Instruments' Traktor Kontrol controllers (S2, S3, S4, F1, Z1, MX2) are
-USB HID devices, not MIDI ones, so openDJ couldn't use them. They're common
+USB HID devices, not MIDI ones, so DJ Sugar couldn't use them. They're common
 among DJs switching over from Traktor. Mixxx drives them with HID mappings
 (`.hid.xml` plus JavaScript), the same way it drives MIDI controllers, so
-openDJ can run those mappings as it runs Mixxx's MIDI ones.
+DJ Sugar can run those mappings as it runs Mixxx's MIDI ones.
 
 ## What Changes
 
@@ -28,7 +28,7 @@ openDJ can run those mappings as it runs Mixxx's MIDI ones.
   out: an HID mapping is all script.
 - The S2 MK3, S3 and S4 MK3 join the supported list as Beta, with guide pages,
   until testers try them.
-- Linux: a udev rule (`res/linux/70-opendj-hid-controllers.rules`, in the
+- Linux: a udev rule (`res/linux/70-djsugar-hid-controllers.rules`, in the
   download too) so the person at the computer can open them.
 
 ## Capabilities

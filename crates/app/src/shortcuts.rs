@@ -1,10 +1,10 @@
-//! Keyboard shortcuts: a key, written like `cmd+1`, runs an openDJscript
+//! Keyboard shortcuts: a key, written like `cmd+1`, runs an DJSugarScript
 //! line. The defaults are here; the DJ's own replace them key by key
 //! (settings `keyboard_shortcuts`). Space, ⌘comma, ⌘A and Esc stay fixed in
 //! main.slint and never reach this.
 
-use opendj_control::ControlRegistry;
-use opendj_script::{query_control, run_control, Call, Error, Host, Kind};
+use djsugar_control::ControlRegistry;
+use djsugar_script::{query_control, run_control, Call, Error, Host, Kind};
 
 use crate::browser::Browser;
 use crate::settings;
@@ -341,7 +341,7 @@ pub fn rebind(own: &mut Vec<(String, String)>, old: &str, new: &str) -> Option<S
 
 /// A key as the DJ reads it: `⌘⇧1` on macOS, `Ctrl+Shift+1` elsewhere.
 /// Saves imported shortcuts as a new set named after `file` and starts
-/// using it; keys openDJ keeps for itself are left out. Returns its name.
+/// using it; keys DJ Sugar keeps for itself are left out. Returns its name.
 pub fn import_set(file: &str, keys: &[(String, String)]) -> String {
     let mut own = Vec::new();
     for (key, script) in keys {
@@ -412,12 +412,12 @@ pub fn describe(script: &str) -> (String, bool) {
             false,
         );
     }
-    if let Err(e) = opendj_script::parse(script) {
+    if let Err(e) = djsugar_script::parse(script) {
         return (e.message, true);
     }
     let mut helps: Vec<&str> = Vec::new();
     for word in script.split(|c: char| !(c.is_alphanumeric() || c == '_')) {
-        if let Some(v) = opendj_script::verb(word) {
+        if let Some(v) = djsugar_script::verb(word) {
             if !helps.contains(&v.help) {
                 helps.push(v.help);
             }
@@ -428,7 +428,7 @@ pub fn describe(script: &str) -> (String, bool) {
 
 /// A verb as it's written with its arguments, for the editor's list:
 /// `loop [beats]`, `hot_cue <number>`.
-pub fn usage(v: &opendj_script::Verb) -> String {
+pub fn usage(v: &djsugar_script::Verb) -> String {
     let mut out = v.name.to_string();
     for a in v.args {
         match a.default {
@@ -440,8 +440,8 @@ pub fn usage(v: &opendj_script::Verb) -> String {
 }
 
 /// A verb ready to run: arguments it needs get a sample value.
-pub fn sample(v: &opendj_script::Verb) -> String {
-    use opendj_script::ArgKind;
+pub fn sample(v: &djsugar_script::Verb) -> String {
+    use djsugar_script::ArgKind;
     let mut out = v.name.to_string();
     for a in v.args.iter().filter(|a| a.default.is_none()) {
         out.push(' ');
@@ -455,7 +455,7 @@ pub fn sample(v: &opendj_script::Verb) -> String {
     out
 }
 
-/// Runs openDJscript in the app: control verbs on the registry, `rating`
+/// Runs DJSugarScript in the app: control verbs on the registry, `rating`
 /// on the browser.
 pub struct AppHost<'a> {
     pub registry: &'a ControlRegistry,
@@ -545,7 +545,7 @@ mod tests {
     fn the_default_shortcuts_parse_and_are_written_normally() {
         for s in DEFAULTS {
             assert_eq!(normalize(s.key).as_deref(), Some(s.key));
-            opendj_script::parse(s.script).unwrap();
+            djsugar_script::parse(s.script).unwrap();
         }
     }
 
@@ -605,14 +605,14 @@ mod tests {
         assert_eq!(
             describe("rating 3"),
             (
-                opendj_script::verb("rating").unwrap().help.to_string(),
+                djsugar_script::verb("rating").unwrap().help.to_string(),
                 false
             )
         );
         assert!(describe("ratin 3").1);
         assert!(!describe("").1);
-        for v in opendj_script::VERBS {
-            opendj_script::parse(&sample(v)).unwrap_or_else(|e| panic!("{}: {e}", sample(v)));
+        for v in djsugar_script::VERBS {
+            djsugar_script::parse(&sample(v)).unwrap_or_else(|e| panic!("{}: {e}", sample(v)));
         }
     }
 

@@ -5,7 +5,7 @@ Showing the words of the track playing, from lyrics the DJ already has or finds,
 ## ADDED Requirements
 
 ### Requirement: Lyrics beside the track
-openDJ SHALL read lyrics from an `.lrc` file beside the track (`Song.lrc`, or `Song.mp3.lrc`) before the track's tags. In an `.lrc` file it SHALL read line times, word times (enhanced LRC), lines with several times, and `[offset:]` (a positive offset shows lyrics sooner).
+DJ Sugar SHALL read lyrics from an `.lrc` file beside the track (`Song.lrc`, or `Song.mp3.lrc`) before the track's tags. In an `.lrc` file it SHALL read line times, word times (enhanced LRC), lines with several times, and `[offset:]` (a positive offset shows lyrics sooner).
 
 #### Scenario: LRC beside the track
 - **WHEN** `Song.mp3` has `Song.lrc` beside it with `[00:12.00]First line`
@@ -16,7 +16,7 @@ openDJ SHALL read lyrics from an `.lrc` file beside the track (`Song.lrc`, or `S
 - **THEN** the line is timed by word, "the" from 10.4 s
 
 ### Requirement: Lyrics in tags
-When there is no `.lrc` file, openDJ SHALL read the track's ID3 `SYLT` (timed in milliseconds), ID3 `USLT`, Vorbis `LYRICS` and MP4 `©lyr`, reading LRC text in them as timed, and SHALL show the most finely timed of what it finds.
+When there is no `.lrc` file, DJ Sugar SHALL read the track's ID3 `SYLT` (timed in milliseconds), ID3 `USLT`, Vorbis `LYRICS` and MP4 `©lyr`, reading LRC text in them as timed, and SHALL show the most finely timed of what it finds.
 
 #### Scenario: LRC text in a tag
 - **WHEN** a FLAC file's `LYRICS` holds LRC text and there is no `.lrc` file
@@ -34,7 +34,7 @@ The side panel SHALL have a Lyrics tab that follows the track playing (or, as pi
 - **THEN** the tab says it has no lyrics and how to add them
 
 ### Requirement: Online lookup only when asked
-openDJ SHALL fetch lyrics from the internet only when the DJ presses Find, SHALL let the DJ turn the lookup off (it is on at first), and SHALL never send lyrics anywhere.
+DJ Sugar SHALL fetch lyrics from the internet only when the DJ presses Find, SHALL let the DJ turn the lookup off (it is on at first), and SHALL never send lyrics anywhere.
 
 #### Scenario: First launch
 - **WHEN** a track with no lyrics is shown in the Lyrics tab on a new install

@@ -1,4 +1,4 @@
-//! openDJ: the Slint UI wired to the control registry, the audio engine
+//! DJ Sugar: the Slint UI wired to the control registry, the audio engine
 //! and the GPU waveform renderer.
 
 // No console window behind the app on Windows (debug builds keep it, for
@@ -12,21 +12,21 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::cover::Cover;
-use opendj_engine::key::Key;
-use opendj_engine::scan::scan;
-use opendj_engine::stems;
-use opendj_engine::synth::SAMPLE_LIBRARY_SIZE;
-use opendj_engine::vocals::Levels;
-use opendj_engine::{
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::cover::Cover;
+use djsugar_engine::key::Key;
+use djsugar_engine::scan::scan;
+use djsugar_engine::stems;
+use djsugar_engine::synth::SAMPLE_LIBRARY_SIZE;
+use djsugar_engine::vocals::Levels;
+use djsugar_engine::{
     deck_group, deck_outputs_split, default_output_device, effect_group, output_devices,
     sample_library, AudioEngine, AudioSetup, Role, Route, Source, Track, VisualPositions, Waveform,
     AVAILABLE_EFFECTS, COLOR_FX, EFFECTS_PER_UNIT, NUM_DECKS, WAVEFORM_RATE,
 };
-use opendj_library::Library;
-use opendj_plugins::source::{QueryKind, SourceQuery};
-use opendj_waveform::{
+use djsugar_library::Library;
+use djsugar_plugins::source::{QueryKind, SourceQuery};
+use djsugar_waveform::{
     steady_grid, wgpu, Extras, Frame, GpuTrack, GridSection, Mode, Palette, PhraseKind,
     WaveformRenderer, WaveformView, GRID_SECTIONS,
 };
@@ -562,7 +562,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     diagnostics::install();
     // Before any thread starts: Beat This! takes a few cores, not all.
-    opendj_engine::background::configure();
+    djsugar_engine::background::configure();
     // Windows wakes sleeping threads only every 15.6 ms unless asked for
     // 1 ms: the controller threads' 1 kHz scratch filter and their timers
     // need it, or a jog is heard in 16 ms steps.
@@ -591,9 +591,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_fullsize_content_view(true)
     });
     backend.select()?;
-    // Wayland and X11 match the window to app.opendj.openDJ.desktop by
+    // Wayland and X11 match the window to io.github.winnerspiros.DJSugar.desktop by
     // this, for the dock icon and name.
-    let _ = slint::set_xdg_app_id("app.opendj.openDJ");
+    let _ = slint::set_xdg_app_id("io.github.winnerspiros.DJSugar");
     // San Francisco on macOS; registered before any window.
     let ui_family = ui_font::install();
 
@@ -608,7 +608,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let broadcast = broadcast::Broadcast::start(&registry, &engine);
     // The saved library, with the tracks it had last time; the built-in
     // samples until there is anything in it.
-    let library_path = settings::config_dir().map(|d| opendj_library::default_path(&d));
+    let library_path = settings::config_dir().map(|d| djsugar_library::default_path(&d));
     let db = library_path
         .as_deref()
         .and_then(|p| match Library::open(p) {
@@ -687,17 +687,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         app.get_layout() as f64,
         0.0,
         LAST_LAYOUT as f64,
-        opendj_control::Behavior::Toggle,
+        djsugar_control::Behavior::Toggle,
     );
     // VIEW (the DDJ-FLX4's SHIFT + right LOAD): the next of the DJ's
     // layouts (layouts.rs), round to the first.
     let layout_next = registry.push("[Skin]", "layout_next");
     // The deck 3 and 4 switches for two-deck controllers (see
-    // opendj_controllers::LAYER_KEYS): clicking a strip's deck number in
+    // djsugar_controllers::LAYER_KEYS): clicking a strip's deck number in
     // 4-Deck moves that side over. Outside 4-Deck they go back to decks 1
     // and 2, which are the ones showing.
     let layers =
-        opendj_controllers::LAYER_KEYS.map(|k| registry.toggle(opendj_controllers::LAYER_GROUP, k));
+        djsugar_controllers::LAYER_KEYS.map(|k| registry.toggle(djsugar_controllers::LAYER_GROUP, k));
     let reset_layers = move |layout: i32| {
         if layout != FOUR_DECK_LAYOUT {
             layers.iter().for_each(|l| l.set_bool(false));
@@ -805,7 +805,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect::<Vec<_>>(),
         )));
     app.global::<EffectList>()
-        .set_mic_unit(opendj_engine::MIC_FX_UNIT as i32);
+        .set_mic_unit(djsugar_engine::MIC_FX_UNIT as i32);
     app.global::<EffectList>()
         .set_builtin_rows(ModelRc::new(VecModel::from(audio_plugins::builtin_rows())));
     // Plugins the DJ ticked join the FX lists after the built-in effects.
@@ -913,7 +913,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if names.is_empty() {
                 return;
             }
-            // A playlist search with the songs openDJ read, so the source
+            // A playlist search with the songs DJ Sugar read, so the source
             // needs no Spotify sign-in of its own, and downloads go into a
             // folder named after the list.
             let Some(name) = b.borrow().list_name(i as usize) else {
@@ -984,7 +984,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let remote = Rc::new(RefCell::new(remote::Remote::new(&registry)));
     remote::Remote::install(&remote, &app);
 
-    // Keyboard shortcuts, each an openDJscript line.
+    // Keyboard shortcuts, each an DJSugarScript line.
     {
         let browser = browser.clone();
         let registry = registry.clone();
@@ -1002,7 +1002,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 picked: (first, last),
                 master: master.clamp(0, 3) as u8 + 1,
             };
-            if let Err(e) = opendj_script::run(&script, &mut host) {
+            if let Err(e) = djsugar_script::run(&script, &mut host) {
                 eprintln!("{key} ({script}): {e}");
             }
             true
@@ -1012,11 +1012,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // MIDI controllers, driven by Mixxx's mappings. Started after the browser
     // so the library controls the mappings use already exist.
     for key in settings::controllers_scaled() {
-        opendj_controllers::pickup::set_scale(&key, true);
+        djsugar_controllers::pickup::set_scale(&key, true);
     }
-    opendj_controllers::routing::load_deck_choices(settings::controller_decks());
-    let controllers = match opendj_controllers::default_mappings_dir() {
-        Some(dir) => Some(Rc::new(opendj_controllers::Controllers::start(
+    djsugar_controllers::routing::load_deck_choices(settings::controller_decks());
+    let controllers = match djsugar_controllers::default_mappings_dir() {
+        Some(dir) => Some(Rc::new(djsugar_controllers::Controllers::start(
             registry.clone(),
             dir,
             settings::controller_mappings(),
@@ -1042,7 +1042,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if samples {
         for (deck, track) in [(0, 0), (1, 4)] {
             let groove = registry
-                .get(&opendj_engine::groove::groove_group(deck), "enabled")
+                .get(&djsugar_engine::groove::groove_group(deck), "enabled")
                 .is_some_and(|c| c.get_bool());
             if !groove {
                 engine.load_track(deck, library[track].clone());
@@ -1106,7 +1106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             slint::TimerMode::Repeated,
             Duration::from_millis(500),
             move || {
-                for port in opendj_controllers::routing::take_new_players() {
+                for port in djsugar_controllers::routing::take_new_players() {
                     engine.alert(format!(
                         "{} plays the instrument. Settings › Controllers changes that.",
                         short_port_name(&port)
@@ -1115,7 +1115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let Some(app) = weak.upgrade() else {
                     return;
                 };
-                let name = opendj_controllers::routing::last_player()
+                let name = djsugar_controllers::routing::last_player()
                     .map(|(p, _)| short_port_name(&p).to_string())
                     .unwrap_or_default();
                 let ui = app.global::<InstrumentsUi>();
@@ -1440,7 +1440,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         1.0,
         0.0,
         1.0,
-        opendj_control::Behavior::Toggle,
+        djsugar_control::Behavior::Toggle,
     );
     let xfader_version = Cell::new(xfader_enabled.version());
     // The big browser (the button above the browser), also from a controller
@@ -1551,7 +1551,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     None => {}
                 }
                 let playing = play_controls.iter().any(|c| c.get() > 0.5);
-                opendj_engine::background::set_playing(playing);
+                djsugar_engine::background::set_playing(playing);
                 if update_ready.get() {
                     if playing {
                         app.set_update_status("Restarts when the decks stop".into());
@@ -1824,7 +1824,7 @@ fn sync_library(library_path: Option<PathBuf>, tx: std::sync::mpsc::Sender<Vec<A
         .and_then(|p| Library::open(p).ok())
         .map(|db| {
             db.scanned_folders().unwrap_or_else(|| {
-                opendj_engine::scan::default_music_dir()
+                djsugar_engine::scan::default_music_dir()
                     .into_iter()
                     .collect()
             })
@@ -1991,9 +1991,9 @@ fn short_port_name(port: &str) -> &str {
     port.split(':').next().unwrap_or(port)
 }
 
-/// Prints every control openDJ has, aliases included, as sorted `[Group],key`
+/// Prints every control DJ Sugar has, aliases included, as sorted `[Group],key`
 /// lines. The website's controller pages use this list to mark mapping lines
-/// that don't do anything in openDJ yet (website/book/supported-controls.txt).
+/// that don't do anything in DJ Sugar yet (website/book/supported-controls.txt).
 fn list_controls() {
     print!("{}", control_list());
 }
@@ -2001,7 +2001,7 @@ fn list_controls() {
 /// The lines `--list-controls` prints, one `[Group],key` per line.
 fn control_list() -> String {
     let registry = ControlRegistry::new();
-    opendj_engine::create_controls(&registry);
+    djsugar_engine::create_controls(&registry);
     broadcast::create_controls(&registry);
     browser::LibraryControls::create(&registry);
     automix::AutoMix::new(&registry);
@@ -2064,8 +2064,8 @@ fn bind_controls(app: &AppWindow, registry: Arc<ControlRegistry>) -> impl Fn() -
     let g = get.clone();
     controls.on_hardware(move |i, _| {
         g(i).and_then(|c| {
-            let hw = opendj_controllers::pickup::hardware_position(c.key())?;
-            ((hw - c.get_parameter()).abs() > opendj_controllers::pickup::THRESHOLD)
+            let hw = djsugar_controllers::pickup::hardware_position(c.key())?;
+            ((hw - c.get_parameter()).abs() > djsugar_controllers::pickup::THRESHOLD)
                 .then_some(hw as f32)
         })
         .unwrap_or(-1.0)
@@ -2099,13 +2099,13 @@ fn bind_controls(app: &AppWindow, registry: Arc<ControlRegistry>) -> impl Fn() -
         // a newly resolved control adds to it too.
         h.handles.iter().map(|c| c.version() as u64).sum::<u64>()
             + h.handles.len() as u64
-            + opendj_controllers::pickup::version()
+            + djsugar_controllers::pickup::version()
     }
 }
 
 #[cfg(test)]
 mod control_list_tests {
-    /// The website marks mapping lines openDJ doesn't support from this
+    /// The website marks mapping lines DJ Sugar doesn't support from this
     /// file. A test rather than a CI step running `--list-controls`, so CI
     /// doesn't build the whole app a second time just for this.
     #[test]
@@ -2118,7 +2118,7 @@ mod control_list_tests {
         assert!(
             saved == super::control_list(),
             "website/book/supported-controls.txt is out of date; regenerate it with \
-             `cargo run -q -p opendj -- --list-controls > website/book/supported-controls.txt`"
+             `cargo run -q -p djsugar -- --list-controls > website/book/supported-controls.txt`"
         );
     }
 }
@@ -2245,7 +2245,7 @@ impl Decks {
                     .get(&format!("[Groove{}]", d + 1), "enabled")
                     .expect("groove box control"),
                 looper: reg
-                    .get(&opendj_engine::looper::looper_group(d), "enabled")
+                    .get(&djsugar_engine::looper::looper_group(d), "enabled")
                     .expect("looper control"),
                 sync_leader: c("sync_leader"),
                 playposition: c("playposition"),
@@ -2592,7 +2592,7 @@ struct Gpu {
     /// The sound of decks playing live, and each one's waveform on the GPU.
     live: Option<live_trace::LiveTraces>,
     /// The notes the Instrument input holds, for its deck's note roll.
-    instrument: Arc<opendj_engine::InstrumentView>,
+    instrument: Arc<djsugar_engine::InstrumentView>,
     /// The Groove Box decks' step lanes, and their Groove Boxes' controls.
     steps: Option<step_lanes::StepLanes>,
     grooves: [step_lanes::GrooveHandles; NUM_DECKS],
@@ -2771,7 +2771,7 @@ impl Gpu {
             self.overview[d].set_background(overview_background);
             let track = track.as_ref().filter(|t| !t.waveform.is_empty());
             let show_vocals = wave_look::show_vocals();
-            let stems_look = wave_look::style() == opendj_waveform::Style::Stems;
+            let stems_look = wave_look::style() == djsugar_waveform::Style::Stems;
             // The stems' levels once they are complete: for the Stems look,
             // and for Vocals › Bar from high-quality stems' vocal stem.
             let found = track
@@ -2789,9 +2789,9 @@ impl Gpu {
             let (vocals, vocal_rate) = match (hq_vocals, track.map(|t| &t.source)) {
                 (Some(v), _) => (Some(v), stem_levels::RATE),
                 (None, Some(Source::File(path))) if show_vocals => {
-                    (vocal_pass::levels(path), opendj_engine::vocals::RATE)
+                    (vocal_pass::levels(path), djsugar_engine::vocals::RATE)
                 }
-                _ => (None, opendj_engine::vocals::RATE),
+                _ => (None, djsugar_engine::vocals::RATE),
             };
             let same_vocals = |v: &Option<Arc<Levels>>| match (v, &vocals) {
                 (Some(a), Some(b)) => Arc::ptr_eq(a, b),

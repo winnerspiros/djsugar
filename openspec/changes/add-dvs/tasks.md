@@ -2,7 +2,7 @@
 
 ## 1. Build
 
-- [ ] 1.1 `opendj-timecode` crate: xwax decoder port, all timecodes, Kalman speed filter, generator, tests against xwax C
+- [ ] 1.1 `djsugar-timecode` crate: xwax decoder port, all timecodes, Kalman speed filter, generator, tests against xwax C
 - [ ] 1.2 Engine: per-deck timecode inputs, decode in the callback, position-following into the scratch path, passthrough, Mixxx controls
 - [ ] 1.3 Modes: absolute / relative / constant, needle drop, lead-in, cueing, needle-lift handling
 - [ ] 1.4 UI: Settings › Audio › Vinyl with calibration and signal scope, deck mode badges

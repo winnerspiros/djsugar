@@ -41,7 +41,7 @@ The microphone SHALL have its own effect unit (the last unit, MIC FX) with Rever
 - **THEN** the voice has reverb and the decks don't
 
 ### Requirement: Silent input warning
-On macOS openDJ SHALL ask for microphone access, and Settings › Audio › Inputs SHALL warn when a chosen input sends only silence.
+On macOS DJ Sugar SHALL ask for microphone access, and Settings › Audio › Inputs SHALL warn when a chosen input sends only silence.
 
 #### Scenario: Permission missing
 - **WHEN** an input is chosen but receives only silence

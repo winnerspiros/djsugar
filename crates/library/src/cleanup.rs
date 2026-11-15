@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use rusqlite::params;
 
-use opendj_engine::Track;
+use djsugar_engine::Track;
 
 use crate::{now, row_id, track_id, Error, Library};
 
@@ -233,7 +233,7 @@ impl Field {
             Field::Label => t.info.label = value,
             Field::Comment => t.info.comment = value,
             Field::Grouping => t.info.grouping = value,
-            Field::Tag(group) => t.info.set_tags_in(group, opendj_engine::split_tags(&value)),
+            Field::Tag(group) => t.info.set_tags_in(group, djsugar_engine::split_tags(&value)),
         }
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "opendj"
+name = "djsugar"
 description = "A Rust DJ application, compatible with Mixxx"
 version.workspace = true
 edition.workspace = true
@@ -13,21 +13,21 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 # Media keys and the system's Now Playing: MPNowPlayingInfoCenter on macOS,
 # SystemMediaTransportControls on Windows, MPRIS over pure-Rust zbus on Linux.
 souvlaki = { version = "0.9", default-features = false, features = ["use_zbus"] }
-opendj-broadcast = { path = "../broadcast" }
-opendj-control = { path = "../control" }
-opendj-controllers = { path = "../controllers" }
-opendj-script = { path = "../script" }
-opendj-engine = { path = "../engine" }
+djsugar-broadcast = { path = "../broadcast" }
+djsugar-control = { path = "../control" }
+djsugar-controllers = { path = "../controllers" }
+djsugar-script = { path = "../script" }
+djsugar-engine = { path = "../engine" }
 rtrb = "0.4"
-opendj-library = { version = "0.6.0", path = "../library" }
-opendj-export = { path = "../export" }
-opendj-plugins = { path = "../plugins" }
-opendj-remote = { path = "../remote" }
-opendj-osc = { path = "../osc" }
+djsugar-library = { version = "0.6.0", path = "../library" }
+djsugar-export = { path = "../export" }
+djsugar-plugins = { path = "../plugins" }
+djsugar-remote = { path = "../remote" }
+djsugar-osc = { path = "../osc" }
 # Bonjour: tablets find the OSC port on the network.
 md5 = "0.8"
 mdns-sd = "0.21"
-opendj-waveform = { path = "../waveform" }
+djsugar-waveform = { path = "../waveform" }
 serde_json = "1"
 sha1 = "0.11"
 sha2 = "0.11"
@@ -40,7 +40,7 @@ sysinfo = { version = "0.38", default-features = false, features = ["disk"] }
 slint = { version = "~1.18", features = ["unstable-wgpu-30", "unstable-fontique-011", "unstable-winit-030", "renderer-femtovg-wgpu"] }
 ureq = { version = "3", features = ["json"] }
 write-fonts = "0.50"
-# Sample packs travel as .opendjpack zips.
+# Sample packs travel as .djsugarpack zips.
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [target.'cfg(unix)'.dependencies]
@@ -79,7 +79,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphic
 slint-build = "~1.18"
 
 [target.'cfg(windows)'.build-dependencies]
-# Puts the icon and version into openDJ.exe, for Explorer and the taskbar.
+# Puts the icon and version into DJSugar.exe, for Explorer and the taskbar.
 winresource = { version = "0.1", default-features = false }
 
 [dev-dependencies]

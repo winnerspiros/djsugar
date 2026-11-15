@@ -8,7 +8,7 @@ The waveforms button's drop-down SHALL hold, in order, the waveform height as a 
 - **THEN** the waveforms grow with the slider while it moves and settle on height 7
 
 #### Scenario: Old Blue setting
-- **WHEN** openDJ starts with the Blue scheme saved
+- **WHEN** DJ Sugar starts with the Blue scheme saved
 - **THEN** the waveforms are RGB and the drop-down shows RGB
 
 ### Requirement: Vocals along the bottom

@@ -1,4 +1,4 @@
-//! Clean-up in the browser (see [`opendj_library::cleanup`]): the review
+//! Clean-up in the browser (see [`djsugar_library::cleanup`]): the review
 //! table of changes to names, the genres page, finding covers and looking
 //! up tags online for many tracks at once, and making (and taking back)
 //! changes to tags, in the library and in the files.
@@ -7,10 +7,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
 
-use opendj_engine::{tags, Track};
-use opendj_library::cleanup::{self, Change, Field, Logged};
-use opendj_library::health::{self, says_nothing, Check};
-use opendj_library::query::Indexed;
+use djsugar_engine::{tags, Track};
+use djsugar_library::cleanup::{self, Change, Field, Logged};
+use djsugar_library::health::{self, says_nothing, Check};
+use djsugar_library::query::Indexed;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::health::tracks;
@@ -19,7 +19,7 @@ use super::{file_path, is_browsed, Browser, Undo};
 use crate::coverart::{self, Wanted};
 use crate::lookup::{self, Found, Miss, Query};
 use crate::{cover_scan, settings, CleanupRow, CleanupUi, FixNamesUi, GenreRow};
-use opendj_library::fix_names::{self, Ready, Tool};
+use djsugar_library::fix_names::{self, Ready, Tool};
 
 /// How many changes the Fix Names dialog shows before Review.
 const PREVIEW: usize = 6;
@@ -917,7 +917,7 @@ impl Browser {
         if jobs.is_empty() {
             return if key.is_empty() {
                 "These tracks have no artist and title to look up by, in their tags or file names. \
-                 An AcoustID key in Settings › Collection lets openDJ recognise them by their sound."
+                 An AcoustID key in Settings › Collection lets DJ Sugar recognise them by their sound."
                     .into()
             } else {
                 "None of these files is on this computer, and they have no artist and title to look up by."
@@ -1198,7 +1198,7 @@ mod tests {
             key: String::new(),
             duration: 300.0,
             first_beat: 0.0,
-            source: opendj_engine::Source::Synth { seed: 1 },
+            source: djsugar_engine::Source::Synth { seed: 1 },
             waveform: Default::default(),
             audio: None,
             cover: None,
@@ -1249,7 +1249,7 @@ mod tests {
             key: String::new(),
             duration: 300.0,
             first_beat: 0.0,
-            source: opendj_engine::Source::File(path.into()),
+            source: djsugar_engine::Source::File(path.into()),
             waveform: Default::default(),
             audio: None,
             cover: None,

@@ -8,11 +8,11 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_broadcast::{
+use djsugar_broadcast::{
     Broadcaster, NowPlaying, Settings, Source, State, Station, StationStatus, Target,
 };
-use opendj_control::ControlRegistry;
-use opendj_engine::{deck_group, AudioEngine, LoadedTracks, MasterFeed, NUM_DECKS};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::{deck_group, AudioEngine, LoadedTracks, MasterFeed, NUM_DECKS};
 use serde_json::json;
 use slint::{ComponentHandle, ModelRc, VecModel};
 
@@ -26,9 +26,9 @@ pub const DJ_NAME: &str = "broadcast_dj_name";
 /// top bar. Off by default, for DJs who never broadcast.
 pub const ENABLED: &str = "broadcast_enabled";
 
-/// The keychain's name for openDJ's broadcast passwords; each station's
+/// The keychain's name for DJ Sugar's broadcast passwords; each station's
 /// entry is under its id.
-const KEYCHAIN_SERVICE: &str = "openDJ broadcast";
+const KEYCHAIN_SERVICE: &str = "DJ Sugar broadcast";
 /// A password is written to the keychain once typing has stopped this long.
 const SAVE_AFTER: Duration = Duration::from_secs(1);
 /// A deck counts as heard from this channel fader position up, as for the
@@ -168,7 +168,7 @@ fn audible(registry: &ControlRegistry, loaded: &LoadedTracks) -> Option<(String,
 pub fn audible_deck(
     registry: &ControlRegistry,
     loaded: &LoadedTracks,
-) -> Option<(usize, std::sync::Arc<opendj_engine::Track>)> {
+) -> Option<(usize, std::sync::Arc<djsugar_engine::Track>)> {
     let get = |g: &str, k: &str, d: f64| registry.get(g, k).map_or(d, |c| c.get());
     let xfader = if get("[Mixer]", "crossfader_enabled", 1.0) > 0.5 {
         get("[Master]", "crossfader", 0.0)

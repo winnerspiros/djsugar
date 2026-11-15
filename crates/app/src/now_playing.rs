@@ -1,7 +1,7 @@
 //! The now-playing feed for streaming and overlay software: the track the
 //! audience hears, as `now-playing.txt` (one line from a template) and
 //! `now-playing.json` (with the last ten tracks) in a folder the DJ picks,
-//! and as an overlay page for OBS (see `opendj_remote::overlay`).
+//! and as an overlay page for OBS (see `djsugar_remote::overlay`).
 //!
 //! Off until switched on in Settings › Broadcast. The track is the deck
 //! heard most in the master mix (as for the radio title), once it has been
@@ -17,16 +17,16 @@ use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_engine::{LoadedTracks, Track};
-use opendj_remote::overlay::{self, Overlay};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::{LoadedTracks, Track};
+use djsugar_remote::overlay::{self, Overlay};
 use serde_json::{json, Value};
 
 use crate::{broadcast, settings};
 
 /// The switch: off at first.
 pub const ENABLED: &str = "now_playing";
-/// Where the files go; empty is `~/Music/openDJ/Now Playing`.
+/// Where the files go; empty is `~/Music/DJSugar/Now Playing`.
 pub const FOLDER: &str = "now_playing_folder";
 /// The text file's line.
 pub const TEMPLATE: &str = "now_playing_template";
@@ -70,7 +70,7 @@ pub fn set_karaoke_page(on: bool) {
         CHANGED.store(true, Ordering::Release);
     }
     if !on {
-        opendj_remote::overlay::set_karaoke(r#"{"state":0}"#.into(), None);
+        djsugar_remote::overlay::set_karaoke(r#"{"state":0}"#.into(), None);
     }
 }
 
@@ -83,9 +83,9 @@ pub fn karaoke_url() -> String {
 /// The folder the files are written to.
 pub fn folder() -> PathBuf {
     settings::path_of(FOLDER).unwrap_or_else(|| {
-        opendj_engine::scan::default_music_dir()
+        djsugar_engine::scan::default_music_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("openDJ")
+            .join("DJ Sugar")
             .join("Now Playing")
     })
 }
@@ -244,7 +244,7 @@ impl NowPlaying {
         }
         set_karaoke_url(match (&self.overlay, karaoke) {
             (Some(o), true) => {
-                let ip = opendj_remote::local_addresses()
+                let ip = djsugar_remote::local_addresses()
                     .first()
                     .map(|(_, ip)| ip.to_string())
                     .unwrap_or_else(|| "127.0.0.1".into());
@@ -346,7 +346,7 @@ fn fill(template: &str, fields: &Value) -> String {
         .to_string()
 }
 
-fn jpeg(cover: &opendj_engine::cover::Cover) -> Option<Vec<u8>> {
+fn jpeg(cover: &djsugar_engine::cover::Cover) -> Option<Vec<u8>> {
     let rgba = image::RgbaImage::from_raw(cover.width, cover.height, cover.rgba.clone())?;
     let rgb = image::DynamicImage::ImageRgba8(rgba).to_rgb8();
     let mut out = Vec::new();
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn files_are_replaced_whole() {
-        let dir = std::env::temp_dir().join(format!("opendj-np-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-np-{}", std::process::id()));
         write_files(&dir, "A - B", "{}").unwrap();
         write_files(&dir, "C - D", "{\"x\":1}").unwrap();
         assert_eq!(

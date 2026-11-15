@@ -10,7 +10,7 @@ Settings SHALL open with ⌘, (Ctrl+, on Linux) or from the macOS app menu, with
 ## ADDED Requirements
 
 ### Requirement: Advanced settings
-Settings › Advanced SHALL list every setting openDJ has, including those on the other pages, as one searchable list. Each row SHALL show a plain-English name, its stable key in small grey text, and its value; its help SHALL be in an ⓘ popover as on the other pages.
+Settings › Advanced SHALL list every setting DJ Sugar has, including those on the other pages, as one searchable list. Each row SHALL show a plain-English name, its stable key in small grey text, and its value; its help SHALL be in an ⓘ popover as on the other pages.
 
 #### Scenario: Find a tweak
 - **WHEN** the DJ opens Advanced and types "tails"

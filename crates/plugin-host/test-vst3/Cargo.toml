@@ -1,6 +1,6 @@
 [package]
-name = "opendj-test-vst3"
-description = "A tiny VST3 effect for openDJ's plugin-host tests: stereo gain"
+name = "djsugar-test-vst3"
+description = "A tiny VST3 effect for DJ Sugar's plugin-host tests: stereo gain"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

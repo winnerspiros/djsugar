@@ -11,7 +11,7 @@
   - Tip buttons `Action::Set` (open a pad page through `pad_panel`) and `Action::Open` (the guide page).
 - Starting one switches to 2-Deck and sets the few controls it needs (`prepare`); closing or finishing puts the layout back. Finishing the last tip marks it done (`tutorial_done_<id>` in settings).
 - **Settings › Help › Tutorials** lists each with what it covers, its length, ✓ once done, and **Start**. The DDJ-FLX4 tutorial shows "Plug in a DDJ-FLX4 to start" instead of Start until one is plugged in.
-- The last tip of each has **Open the guide**: `guide/looping`, `guide/fx`, `guide/filtering`, `guide/automix`, `guide/controllers/ddj-flx4` on opendj.app/docs.
+- The last tip of each has **Open the guide**: `guide/looping`, `guide/fx`, `guide/filtering`, `guide/automix`, `guide/controllers/ddj-flx4` on github.com/winnerspiros/djsugar/docs.
 
 ## Steps
 

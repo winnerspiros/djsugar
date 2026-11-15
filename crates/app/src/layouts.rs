@@ -1,4 +1,4 @@
-//! The DJ's layouts: which of openDJ's layouts the layout menu at the top
+//! The DJ's layouts: which of DJ Sugar's layouts the layout menu at the top
 //! left offers, in their order, and the menu's chooser (its pencil) where
 //! each is switched on or off and dragged into place. A controller's VIEW
 //! (`[Skin],layout_next`) steps through the ones switched on.

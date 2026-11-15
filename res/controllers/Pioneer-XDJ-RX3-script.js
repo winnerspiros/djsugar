@@ -1,7 +1,7 @@
 // Pioneer-XDJ-RX3-script.js
 // ****************************************************************************
-// * openDJ mapping script for the Pioneer XDJ-RX3 in PC (MIDI) control mode.
-// * Written from AlphaTheta's "XDJ-RX3 MIDI Message List", reusing openDJ's
+// * DJ Sugar mapping script for the Pioneer XDJ-RX3 in PC (MIDI) control mode.
+// * Written from AlphaTheta's "XDJ-RX3 MIDI Message List", reusing DJ Sugar's
 // * DDJ-FLX4/FLX6 scripts (from Mixxx's DDJ-400 and DDJ-FLX4 mappings:
 // * Warker, nschloe, dj3730, jusko, Robert904).
 // ****************************************************************************
@@ -11,7 +11,7 @@
 //  channel 5 and each deck's pads on channels 6 to 9. Its SHIFT button sends
 //  nothing: every control sends its own message with SHIFT held.
 //
-//  On start the script puts the mixer in MIDI control mode, so openDJ mixes
+//  On start the script puts the mixer in MIDI control mode, so DJ Sugar mixes
 //  and plays the master through the XDJ-RX3's sound card; it puts it back on
 //  shutdown.
 //
@@ -86,7 +86,7 @@ PioneerXDJRX3.highResMSB = {
 //
 
 PioneerXDJRX3.init = function() {
-    // openDJ mixes: the mixer sends MIDI rather than mixing itself.
+    // DJ Sugar mixes: the mixer sends MIDI rather than mixing itself.
     midi.sendShortMsg(0xB4, 0x65, 0x00);
 
     PioneerXDJRX3.decks.forEach(function(group, i) {
@@ -408,7 +408,7 @@ PioneerXDJRX3.colorFxLights = function() {
 };
 
 //
-// BEAT FX: openDJ's Beat FX unit
+// BEAT FX: DJ Sugar's Beat FX unit
 //
 
 PioneerXDJRX3.beatFxUnit = "[EffectRack1_EffectUnit5]";
@@ -689,7 +689,7 @@ PioneerXDJRX3.keyboardLights = function(group) {
 };
 
 //
-// openDJ: PAD FX1 and PAD FX2
+// DJ Sugar: PAD FX1 and PAD FX2
 //
 
 // What each pad holds on, as on the deck's screen (deck.slint's pad-fx and
@@ -751,7 +751,7 @@ PioneerXDJRX3.samplerPadShiftPressed = function(_channel, _control, value, statu
 //
 //
 
-// openDJ: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
+// DJ Sugar: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
 // Instru, Bass, Acapella on top; Kick, HiHat, Stems FX, Instrumental below.
 // A number from 1 is the stem ([ChannelN_StemM]: 1 kick, 2 bass, 3
 // instruments, 4 vocals, 5 hi-hats); 0 is Acapella, -1 Instrumental and -2
@@ -852,7 +852,7 @@ PioneerXDJRX3.stemMuteChanged = PioneerXDJRX3.stemCountChanged;
 //
 
 PioneerXDJRX3.pitchAdjusted = function(_value, group, _control) {
-    // openDJ: the KEYBOARD pads show the key shift too.
+    // DJ Sugar: the KEYBOARD pads show the key shift too.
     PioneerXDJRX3.keyboardLights(group);
     const pitchAdjust = Math.round(engine.getValue(group, "pitch_adjust"));
     let lights = 0b00000000;

@@ -12,9 +12,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 
-use opendj_broadcast::mixcloud::{self, Mp3File, Section, Show};
-use opendj_engine::decode::Decoder;
-use opendj_engine::scan::read_track;
+use djsugar_broadcast::mixcloud::{self, Mp3File, Section, Show};
+use djsugar_engine::decode::Decoder;
+use djsugar_engine::scan::read_track;
 use slint::ComponentHandle;
 
 use super::{file_path, Browser, MIXED_SETS};
@@ -436,12 +436,12 @@ mod tests {
     #[test]
     fn parts_share_the_recordings_name() {
         assert_eq!(
-            recording_base(Path::new("/s/openDJ 2026-11-03 21.05 (part 2).wav")),
-            Path::new("/s/openDJ 2026-11-03 21.05")
+            recording_base(Path::new("/s/DJSugar 2026-11-03 21.05 (part 2).wav")),
+            Path::new("/s/DJSugar 2026-11-03 21.05")
         );
         assert_eq!(
-            recording_base(Path::new("/s/openDJ 2026-11-03 21.05.flac")),
-            Path::new("/s/openDJ 2026-11-03 21.05")
+            recording_base(Path::new("/s/DJSugar 2026-11-03 21.05.flac")),
+            Path::new("/s/DJSugar 2026-11-03 21.05")
         );
     }
 
@@ -449,7 +449,7 @@ mod tests {
     /// parts' tracks as chapters.
     #[test]
     fn joins_parts_and_times_their_tracks() {
-        let dir = std::env::temp_dir().join(format!("opendj-mix-export-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-mix-export-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let rate = 44_100u32;

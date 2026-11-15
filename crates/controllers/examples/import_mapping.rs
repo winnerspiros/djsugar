@@ -1,6 +1,6 @@
 //! Imports mapping files from other DJ apps and prints what came across:
-//! `cargo run -p opendj-controllers --example import_mapping -- FILE...`
-//! With `--write DIR` each mapping is also saved as `.opendj-mapping`.
+//! `cargo run -p djsugar-controllers --example import_mapping -- FILE...`
+//! With `--write DIR` each mapping is also saved as `.djsugar-mapping`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ fn main() {
     }
     for f in files {
         println!("== {f}");
-        match opendj_controllers::import::import_file(Path::new(&f)) {
+        match djsugar_controllers::import::import_file(Path::new(&f)) {
             Err(e) => println!("  {e}"),
             Ok(i) => {
                 println!("  {}", i.summary());
@@ -47,7 +47,7 @@ fn main() {
                         println!("    {n:>4}× {w}");
                     }
                     if let Some(dir) = &out {
-                        let path = dir.join(format!("{}.opendj-mapping", m.name.replace('/', "-")));
+                        let path = dir.join(format!("{}.djsugar-mapping", m.name.replace('/', "-")));
                         m.write(&path).expect("write");
                     }
                 }

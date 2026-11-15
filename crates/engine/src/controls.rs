@@ -2,7 +2,7 @@
 //! for Mixxx find them: `[Channel1],play`, `[Master],crossfader`, ...
 
 use crate::beats::GridEdit;
-use opendj_control::{Behavior, ConfigKey, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ConfigKey, ControlHandle, ControlRegistry};
 
 pub const NUM_DECKS: usize = 4;
 pub const NUM_HOTCUES: usize = 8;
@@ -219,7 +219,7 @@ pub(crate) struct DeckControls {
     /// when the trick ends.
     pub(crate) slip_enabled: ControlHandle,
     /// Where the silent playhead is while slipping, in seconds; -1 when not
-    /// slipping (openDJ's own, for the ghost playhead on the waveforms).
+    /// slipping (DJ Sugar's own, for the ghost playhead on the waveforms).
     pub(crate) slip_position: ControlHandle,
     pub(crate) mute: ControlHandle,
     pub(crate) play_indicator: ControlHandle,
@@ -231,7 +231,7 @@ pub(crate) struct DeckControls {
     /// Set to N to multiply the loop length by N; the engine zeroes it.
     pub(crate) loop_scale: ControlHandle,
     /// Moves the loop by that many beats (Mixxx's loop_move), or by that many
-    /// of its own lengths (openDJ's loop_move_loops, VirtualDJ's loop_move).
+    /// of its own lengths (DJ Sugar's loop_move_loops, VirtualDJ's loop_move).
     pub(crate) loop_move: [ControlHandle; 2],
     /// Set to N to move the beat grid N seconds later (negative: earlier),
     /// as a drag of the waveform does; the engine zeroes it.
@@ -241,35 +241,35 @@ pub(crate) struct DeckControls {
     /// beatlooproll_N_activate by size, plus beatlooproll_activate as size 0
     /// (meaning beatloop_size). Each loops while held.
     pub(crate) rolls: Vec<(f64, ControlHandle, Edge)>,
-    /// SLICER (openDJ's own): while on, the 8 beats from where it was
+    /// SLICER (DJ Sugar's own): while on, the 8 beats from where it was
     /// switched on loop, one beat on each pad.
     pub(crate) slicer_enabled: ControlHandle,
     /// `slicer_N_activate`: plays beat N of the section, in time, while held.
     pub(crate) slicer_pads: [(ControlHandle, Edge); 8],
     /// `slicer_N_status`: beat N of the section is playing (the pad's light).
     pub(crate) slicer_status: [ControlHandle; 8],
-    /// `freeze_N_activate` (openDJ's own): repeats the Nth eighth of the
+    /// `freeze_N_activate` (DJ Sugar's own): repeats the Nth eighth of the
     /// beat playing when the first pad went down, while held (slip).
     pub(crate) freeze_pads: [(ControlHandle, Edge); 8],
     pub(crate) keylock: ControlHandle,
     /// The loaded track's beat grid is locked (Mixxx's `bpmlock`): turning
     /// it on or off locks or unlocks the grid.
     pub(crate) bpmlock: ControlHandle,
-    /// Clicks on each beat of the grid, louder on bar 1 (openDJ's own), to
+    /// Clicks on each beat of the grid, louder on bar 1 (DJ Sugar's own), to
     /// check the grid by ear.
     pub(crate) metronome: ControlHandle,
-    /// The deck's grid edit mode (openDJ's own): while on, the scrolling
+    /// The deck's grid edit mode (DJ Sugar's own): while on, the scrolling
     /// waveform draws the grid louder and dragging it moves the grid. Turns
     /// off when a new track loads.
     pub(crate) beats_edit: ControlHandle,
-    /// A live input played through the deck instead of a track (openDJ's
+    /// A live input played through the deck instead of a track (DJ Sugar's
     /// own): 0 none, else 1 + the input (see [`crate::inputs`]), so 1 the
     /// microphone, 2 the auxiliary input, 3 the instrument.
     pub(crate) live_input: ControlHandle,
     /// The live input's trim before the channel, in dB (-12 to +24), for
-    /// gear that comes in quiet (openDJ's own).
+    /// gear that comes in quiet (DJ Sugar's own).
     pub(crate) live_trim: ControlHandle,
-    /// The live input's balance, -1 left to 1 right (openDJ's own).
+    /// The live input's balance, -1 left to 1 right (DJ Sugar's own).
     pub(crate) live_pan: ControlHandle,
     /// Key shift in semitones on top of the file's key (Mixxx's `pitch`;
     /// `pitch_adjust` is the same control here).
@@ -299,7 +299,7 @@ impl DeckControls {
         reg.create(g, "pad_panel", -1.0, -1.0, 16.0, Behavior::Free);
         // Touching the jog's top scratches (on, as on vinyl) or only bends
         // like the rim (off, CDJ mode). Only controller mappings read it;
-        // on by default (openDJ's own, as VirtualDJ's vinyl_mode).
+        // on by default (DJ Sugar's own, as VirtualDJ's vinyl_mode).
         reg.create(g, "vinyl_mode", 1.0, 0.0, 1.0, Behavior::Toggle);
         // Asks the skin to open pad tab 0-7 by its place (a controller's pad
         // mode buttons: 0-3 plain, 4-7 with Shift), whatever panel it shows;
@@ -739,7 +739,7 @@ pub(crate) struct MasterControls {
     /// The crossfader's curve: 0 smooth (constant power), 1 linear, 2 a
     /// sharp cut at the ends for scratching.
     pub(crate) xfader_shape: ControlHandle,
-    /// openDJ: on the Scratch curve, how far from its end a side opens
+    /// DJ Sugar: on the Scratch curve, how far from its end a side opens
     /// fully, as a share of the crossfader's travel (0.02 is 2%).
     pub(crate) xfader_cut_in: ControlHandle,
     pub(crate) xfader_reverse: ControlHandle,
@@ -780,7 +780,7 @@ pub(crate) struct MasterControls {
     /// [`crate::engine::DeckTap`]).
     pub(crate) deck_tap: ControlHandle,
     /// `[Master] external_mixer`: a hardware mixer does the mixing. Each
-    /// deck goes out Pre-fader at full level, with openDJ's EQ, filter,
+    /// deck goes out Pre-fader at full level, with DJ Sugar's EQ, filter,
     /// faders, crossfader, cue, master effects and limiter left out.
     pub(crate) external_mixer: ControlHandle,
     /// `[Master] record_source`: what recording, going on air and the

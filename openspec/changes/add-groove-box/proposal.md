@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (moved from v1.x,
 
 ## Why
 
-Traktor Pro 4 has a Pattern Player, rekordbox a sampler sequencer, and hardware like Novation Circuit Tracks and Ableton Move make it easy to lay a beat under a mix. openDJ has a sampler with packs but nothing that plays a rhythm by itself. The goal is a simple groove box that can take the place of a deck, that a beginner can start in one press and stay in time with the mix without thinking about it.
+Traktor Pro 4 has a Pattern Player, rekordbox a sampler sequencer, and hardware like Novation Circuit Tracks and Ableton Move make it easy to lay a beat under a mix. DJ Sugar has a sampler with packs but nothing that plays a rhythm by itself. The goal is a simple groove box that can take the place of a deck, that a beginner can start in one press and stay in time with the mix without thinking about it.
 
 ## What Changes
 
@@ -14,7 +14,7 @@ Traktor Pro 4 has a Pattern Player, rekordbox a sampler sequencer, and hardware 
 - **Three knobs** for the selected row (LEVEL, PITCH, DECAY) and SWING for the whole groove. More (step velocity, chance, nudge) only in a step's right-click menu.
 - **Four grooves per deck (A-D)**, switched on the next bar; copy, clear and **Back to the kit's groove**.
 - **DUCK**: the music on another deck dips on every kick, as Traktor's Pattern Player does. Off until chosen.
-- **Kits** are sample packs with grooves (same `pack.json`, `.opendjpack` export and import, Get more Packs). Built in: synthesised kits in the style of classic drum machines, made by openDJ itself, so they need no sample files and no licences.
+- **Kits** are sample packs with grooves (same `pack.json`, `.djsugarpack` export and import, Get more Packs). Built in: synthesised kits in the style of classic drum machines, made by DJ Sugar itself, so they need no sample files and no licences.
 - **Always in time.** The groove follows the leading deck (the one SYNC follows), or Ableton Link when no deck plays, or keeps its own tempo when nothing does. Every step plays on the exact sample it falls on, whatever the audio buffer size.
 - **Controllers.** PLAY, EQ, filter and fader work through the deck's usual controls. New `[GrooveN]` controls for steps, rows, grooves and knobs; a **Steps** pad page shows 8 steps of the selected row on any pad controller, with the page shifter for steps 9-16.
 

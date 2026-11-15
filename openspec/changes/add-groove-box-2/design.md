@@ -16,16 +16,16 @@ Full notes: project notes `notes/groove-box-2-research.md`.
 | mpump (browser groovebox, AGPL-3.0, TypeScript) | Synthesised drum kits level-matched to classic machines; 9 drum voices plus bass and synth rows with semitone, velocity and slide per step and scale lock; Euclid; one-tap randomise with 3 levels of undo; per-channel trance gate patterns; song mode with scenes and transitions; MIDI clock in, Link through a bridge; a beat shared as a URL | Undo for Dice and Remix, slide and scale lock on the melodic row, a 303-style filter for its synth, share a groove as a short text code |
 | Patterning 3 | Each sound a ring with its own step count (polyrhythm at a glance), Euclidean mode, per-ring direction and rotation, parametric swing, a timeline to arrange patterns | Euclid per row, rotate a row, the timeline; the circle itself only as an optional view |
 
-What none of them do, and openDJ can: follow a DJ mix. The timeline lines up with the other decks' waveforms, FILL can fire on the leading deck's phrases, and the melodic row follows the leading deck's key.
+What none of them do, and DJ Sugar can: follow a DJ mix. The timeline lines up with the other decks' waveforms, FILL can fire on the leading deck's phrases, and the melodic row follows the leading deck's key.
 
 ### Deluge, mpump and AudioKit code
 
-AudioKit (MIT, Swift for Apple platforms only) is a toolkit, not a groove box. Its Swift layers and sequencers don't carry over, but the C DSP under SoundpipeAudioKit and DunneAudioKit does: Moog ladder, Korg low-pass and TB-303 style filters, FM and phase distortion oscillators, metal bar and plucked string models, transient shaper. MIT code can go into openDJ (GPL-2.0-or-later) with its notice kept. That is the first place to look when the synth voices and the melodic row need filters, checking each file's licence first, since some Soundpipe modules came from Csound under the LGPL.
+AudioKit (MIT, Swift for Apple platforms only) is a toolkit, not a groove box. Its Swift layers and sequencers don't carry over, but the C DSP under SoundpipeAudioKit and DunneAudioKit does: Moog ladder, Korg low-pass and TB-303 style filters, FM and phase distortion oscillators, metal bar and plucked string models, transient shaper. MIT code can go into DJ Sugar (GPL-2.0-or-later) with its notice kept. That is the first place to look when the synth voices and the melodic row need filters, checking each file's licence first, since some Soundpipe modules came from Csound under the LGPL.
 
 mpump is AGPL-3.0 JavaScript for the browser: nothing to port into a Rust engine, ideas only.
 
 
-The Deluge firmware is GPL-3.0; openDJ is GPL-2.0-or-later, so its code can be used in openDJ, but files taken from it become GPL-3.0 and so does every build that contains them. The useful parts (step conditions, probability groups, play direction) are small and well described, so they are written fresh from the behaviour rather than ported; its DSP (filters, reverbs, wavefolder) can be looked at again for the synth voices if a port is worth the licence change.
+The Deluge firmware is GPL-3.0; DJ Sugar is GPL-2.0-or-later, so its code can be used in DJ Sugar, but files taken from it become GPL-3.0 and so does every build that contains them. The useful parts (step conditions, probability groups, play direction) are small and well described, so they are written fresh from the behaviour rather than ported; its DSP (filters, reverbs, wavefolder) can be looked at again for the synth voices if a port is worth the licence change.
 
 ## Principles kept from 1.0
 
@@ -57,8 +57,8 @@ Alternatives considered for the strip: more rows (the grid area grows instead, s
 
 After a listening comparison in the mpump porting thread:
 
-- **Sounds:** the built-in kits move to the Plaits drum models (analog and synthetic kick and snare, hi-hat) through the Rust crate `mi-plaits-dsp` (MIT, a port of Mutable Instruments Plaits). Plaits has no clap or cymbals, so those stay openDJ's own synthesis. mpump's drum synth and sound machines are not used (its highs sound tinny).
-- **Patterns:** mpump's 20 genres, about 400 named drum patterns (names kept as they are, artist nods included) and its A/B chain (alternate two grooves every bar) are kept and played on openDJ's kits. They are AGPL-3.0 data, so the relicence ask to their author narrows to the pattern files.
+- **Sounds:** the built-in kits move to the Plaits drum models (analog and synthetic kick and snare, hi-hat) through the Rust crate `mi-plaits-dsp` (MIT, a port of Mutable Instruments Plaits). Plaits has no clap or cymbals, so those stay DJ Sugar's own synthesis. mpump's drum synth and sound machines are not used (its highs sound tinny).
+- **Patterns:** mpump's 20 genres, about 400 named drum patterns (names kept as they are, artist nods included) and its A/B chain (alternate two grooves every bar) are kept and played on DJ Sugar's kits. They are AGPL-3.0 data, so the relicence ask to their author narrows to the pattern files.
 - **Rows:** nine drum rows in mpump's order (kick, rim, snare, closed hat, open hat, cowbell, cymbal, clap, ride) so its patterns map one to one; the Steps pad page gets a shift page for the ninth. Kit names change only slightly ("808", "909", "Linn-style", never a full model name).
 - **Now:** eight tracks with the SEQUENCER, SYNTH and MIXER tabs are built (task 3.0); going to nine rows comes with the patterns.
 
@@ -129,7 +129,7 @@ From the DDJ-GRV6's Groove Circuit idea (task 5.6 of `add-groove-box`):
 
 ## Kits and items
 
-`pack.json` grows: up to 16 `rows`, per row `knob` and `kind` (`drum` or `melodic`), grooves with `fill` and `variation`, and `chains`. Users' grooves and chains are saved in the kit's overrides and can be saved as items shown in the Instruments source, dragged onto a Groove Box, and exported with the kit. A groove can be copied as a short text code (steps, conditions and kit name) to paste into a message and back into any openDJ, as mpump shares beats as links. A groove or chain can also be dragged out as a standard MIDI file (General MIDI drum notes per row), as Triaz and Drum Designer do.
+`pack.json` grows: up to 16 `rows`, per row `knob` and `kind` (`drum` or `melodic`), grooves with `fill` and `variation`, and `chains`. Users' grooves and chains are saved in the kit's overrides and can be saved as items shown in the Instruments source, dragged onto a Groove Box, and exported with the kit. A groove can be copied as a short text code (steps, conditions and kit name) to paste into a message and back into any DJ Sugar, as mpump shares beats as links. A groove or chain can also be dragged out as a standard MIDI file (General MIDI drum notes per row), as Triaz and Drum Designer do.
 
 ## Controllers
 

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use opendj_waveform::{
+use djsugar_waveform::{
     steady_grid, wgpu, Extras, Frame, GpuTrack, Mode, Palette, PhraseKind, Style, WaveformRenderer,
     WaveformView,
 };
@@ -476,7 +476,7 @@ fn draws_mono_played_rest_and_mix() {
 /// drawn over a fainter waveform.
 #[test]
 fn draws_live_lanes() {
-    use opendj_waveform::{Lanes, Mark, MarkKind};
+    use djsugar_waveform::{Lanes, Mark, MarkKind};
     let Some((device, queue)) = gpu() else {
         eprintln!("no GPU adapter; skipping");
         return;
@@ -561,7 +561,7 @@ fn draws_live_lanes() {
 
 #[test]
 fn draws_knob_levels() {
-    use opendj_waveform::{Lanes, Mark, MarkKind};
+    use djsugar_waveform::{Lanes, Mark, MarkKind};
     let Some((device, queue)) = gpu() else {
         eprintln!("no GPU adapter; skipping");
         return;
@@ -682,7 +682,7 @@ fn draws_phrase_flags() {
         visible_seconds: 8.0,
         duration: 100.0,
         first_bar_beat: 0.0,
-        grid: [None; opendj_waveform::GRID_SECTIONS],
+        grid: [None; djsugar_waveform::GRID_SECTIONS],
         cue: None,
         loop_range: None,
         loop_marking: None,
@@ -1125,7 +1125,7 @@ fn scrolling_stays_crisp_in_every_look() {
             s
         })
         .collect();
-    let stems: Vec<[u8; opendj_waveform::MAX_STEMS]> = (0..6000)
+    let stems: Vec<[u8; djsugar_waveform::MAX_STEMS]> = (0..6000)
         .map(|_| std::array::from_fn(|_| (255.0 * noise()) as u8))
         .collect();
     let colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];

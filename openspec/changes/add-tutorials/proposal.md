@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (2026-10-29)
 
 ## Why
 
-openDJ's deeper features are easy to miss. After the first-run tour, DJs should be able to learn each one inside the app, with real music playing, when they're ready.
+DJ Sugar's deeper features are easy to miss. After the first-run tour, DJs should be able to learn each one inside the app, with real music playing, when they're ready.
 
 ## What Changes
 

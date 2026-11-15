@@ -6,14 +6,14 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-rekordbox XML is the exchange format of the DJ library world. rekordbox imports it, and library tools (Lexicon, Rekord Buddy, Mixed In Key, DJ.Studio and others) read it and convert it to Serato, Traktor, Engine DJ and VirtualDJ. One exporter lets a DJ take openDJ's prep (cues, loops, grids, colours, playlists) to almost any other app, which makes switching to openDJ less of a one-way door. openDJ already reads the format (`crates/plugins/src/rekordbox/xml.rs`), so the field mapping is known. Research: notes/ecosystem-standards-review.md in the project files.
+rekordbox XML is the exchange format of the DJ library world. rekordbox imports it, and library tools (Lexicon, Rekord Buddy, Mixed In Key, DJ.Studio and others) read it and convert it to Serato, Traktor, Engine DJ and VirtualDJ. One exporter lets a DJ take DJ Sugar's prep (cues, loops, grids, colours, playlists) to almost any other app, which makes switching to DJ Sugar less of a one-way door. DJ Sugar already reads the format (`crates/plugins/src/rekordbox/xml.rs`), so the field mapping is known. Research: notes/ecosystem-standards-review.md in the project files.
 
 ## What Changes
 
 - **File › Export › rekordbox XML…** beside the other exports (the list or folder picked in the sidebar, or the whole collection when Collection is picked), and **Export as rekordbox XML…** in the Collection node's menu and on any list or folder (that list's tracks and the list tree only).
 - The DJ's tags go into the comment as `/* Tag / Tag */`, as rekordbox's "Add My Tag to comments" writes them; pads past H go out as memory cues; track colours as the nearest of rekordbox's eight.
 - Each track carries its tags, rating, colour, comment, date added, play count, beat grid (every grid marker, so variable tempo survives), hot cues with numbers and colours, memory cues, and saved loops. Playlists, crates, sets and folders keep their tree.
-- Optional **Keep rekordbox.xml up to date** in Settings › Collection › General: openDJ rewrites the file in the background a minute after the collection changes, so a library tool or rekordbox can be pointed at it once.
+- Optional **Keep rekordbox.xml up to date** in Settings › Collection › General: DJ Sugar rewrites the file in the background a minute after the collection changes, so a library tool or rekordbox can be pointed at it once.
 
 ## Capabilities
 
@@ -28,7 +28,7 @@ None.
 ## Out of Scope
 
 - Traktor NML and Serato exports (library tools convert from rekordbox XML; native writers can follow later).
-- Phrases, stems and openDJ-only fields (stages, sets' set-list metadata), which rekordbox XML can't hold.
+- Phrases, stems and DJSugar-only fields (stages, sets' set-list metadata), which rekordbox XML can't hold.
 - Writing into rekordbox's own master.db.
 
 ## Difficulty

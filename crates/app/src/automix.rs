@@ -15,8 +15,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::{deck_group, eq_group, quick_effect_group, Track, NUM_DECKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::{deck_group, eq_group, quick_effect_group, Track, NUM_DECKS};
 
 use crate::automix_phrases::{self, Plan, Start};
 use crate::AppWindow;
@@ -44,7 +44,7 @@ pub trait Host {
 pub const PLAYED_AFTER: f64 = 5.0;
 
 /// Automix's line while a hardware mixer does the mixing.
-const NEEDS_MIXER: &str = "Automix needs openDJ's mixer: set Mixer to openDJ in Settings › Mixer.";
+const NEEDS_MIXER: &str = "Automix needs DJ Sugar's mixer: set Mixer to DJ Sugar in Settings › Mixer.";
 
 /// Mix lengths offered, in the order the panel shows them.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -255,7 +255,7 @@ pub struct AutoMix {
     crossfader: ControlHandle,
     enabled: ControlHandle,
     /// `[Master] external_mixer`: a hardware mixer does the mixing, so
-    /// Automix, which needs openDJ's crossfader, stays off.
+    /// Automix, which needs DJ Sugar's crossfader, stays off.
     external: ControlHandle,
     fade_now: Press,
     /// The press of fade_now is Player's Next: cut straight over.
@@ -1340,9 +1340,9 @@ impl AutoMix {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::engine::{Command, Engine, EngineInput};
-    use opendj_engine::loader::prepare;
-    use opendj_engine::synth::sample_library;
+    use djsugar_engine::engine::{Command, Engine, EngineInput};
+    use djsugar_engine::loader::prepare;
+    use djsugar_engine::synth::sample_library;
 
     const SR: f64 = 48_000.0;
     const FPS: f64 = 60.0;
@@ -1503,7 +1503,7 @@ mod tests {
 
     fn file_track(n: usize, path: std::path::PathBuf) -> Arc<Track> {
         let mut t = (*track(n, 0.0)).clone();
-        t.source = opendj_engine::track::Source::File(path);
+        t.source = djsugar_engine::track::Source::File(path);
         t.duration = 0.0;
         t.bpm = 0.0;
         Arc::new(t)
@@ -1526,7 +1526,7 @@ mod tests {
         for (rate_a, rate_b, keylock, semitones) in cases {
             let case = format!("{rate_a}/{rate_b} Hz, key lock {keylock}, key {semitones:+}");
             let dir = std::env::temp_dir().join(format!(
-                "opendj-gapless-{}-{rate_a}-{rate_b}-{keylock}-{semitones}",
+                "djsugar-gapless-{}-{rate_a}-{rate_b}-{keylock}-{semitones}",
                 std::process::id()
             ));
             std::fs::create_dir_all(&dir).unwrap();

@@ -30,18 +30,18 @@ use crate::backup;
 use crate::broadcast::{self, Broadcast};
 use crate::list_picker::{Picker, Ticked};
 use crate::osc;
-use opendj_control::ControlRegistry;
-use opendj_controllers::routing::{self, DeckChoice};
-use opendj_controllers::{is_system_port, own, Controllers, MappingChoice, Port};
-use opendj_engine::inputs::{DEFAULT_DUCK_STRENGTH, DUCK_AUTO};
-use opendj_engine::{
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::routing::{self, DeckChoice};
+use djsugar_controllers::{is_system_port, own, Controllers, MappingChoice, Port};
+use djsugar_engine::inputs::{DEFAULT_DUCK_STRENGTH, DUCK_AUTO};
+use djsugar_engine::{
     analysis, beatthis, cache, channel_names, deck_group, deck_outputs_split, engine,
     input_devices, key, meter, separation, AudioSetup, InputRole, InputRoute, RecordFormat,
     Recorder, BUFFER_SIZES, DEFAULT_AUTO_GAIN_TARGET, NUM_DECKS, SAMPLE_RATES, XFADER_CUT_IN,
 };
-use opendj_library::query;
-use opendj_plugins::source::DOWNLOAD_FOLDER;
-use opendj_plugins::{LibraryImport, Plugin, SettingKind};
+use djsugar_library::query;
+use djsugar_plugins::source::DOWNLOAD_FOLDER;
+use djsugar_plugins::{LibraryImport, Plugin, SettingKind};
 use serde_json::json;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -81,7 +81,7 @@ const IMPORT_TAB: usize = 3;
 const HEALTH_TAB: usize = 4;
 /// The Storage tab's place in LIBRARY_TABS: the storage bar and backups.
 const STORAGE_TAB: usize = 5;
-/// Other DJ apps whose libraries openDJ can't bring in yet, listed on the
+/// Other DJ apps whose libraries DJ Sugar can't bring in yet, listed on the
 /// Import tab so the DJ sees what's coming.
 const COMING_IMPORTS: [(&str, &str); 1] = [("Serato DJ", "Tracks, cues, loops and crates.")];
 const ANALYSIS: i32 = 7;
@@ -591,7 +591,7 @@ pub struct Prefs {
     /// Opens the outputs again with the saved audio settings.
     audio_changed: Box<dyn Fn()>,
     /// Opens the inputs again with the saved audio settings, and tells
-    /// each input's state (see [`opendj_engine::AudioEngine::input_status`]).
+    /// each input's state (see [`djsugar_engine::AudioEngine::input_status`]).
     inputs: InputHooks,
     /// The inputs table's rows last shown, and what each row's menus
     /// offered: the devices ("" for None), and the first channel of each
@@ -776,7 +776,7 @@ impl Prefs {
                     .and_then(|d| backup::stage_restore(&d, &path))
                 {
                     Ok(s) => format!(
-                        "Restores {} when openDJ next starts. Quit and open it again.",
+                        "Restores {} when DJ Sugar next starts. Quit and open it again.",
                         s.describe()
                     ),
                     Err(e) => e,
@@ -789,7 +789,7 @@ impl Prefs {
                     .file_name()
                     .map(|f| f.to_string_lossy().into_owned())
                     .unwrap_or_default();
-                self.shortcut_note = match opendj_controllers::import::import_file(&path) {
+                self.shortcut_note = match djsugar_controllers::import::import_file(&path) {
                     Ok(i) if !i.shortcuts.is_empty() => {
                         let set = shortcuts::import_set(&file, &i.shortcuts);
                         let mut note = format!("{set}: {}", i.summary());
@@ -1703,7 +1703,7 @@ impl Prefs {
                 r as f64 / 1000.0
             ),
             _ => format!(
-                "Runs at {} kHz now. A change applies the next time openDJ starts.",
+                "Runs at {} kHz now. A change applies the next time DJ Sugar starts.",
                 running / 1000.0
             ),
         };
@@ -1766,7 +1766,7 @@ impl Prefs {
                         names.push(r.device.clone());
                         // A Mixer channel playing the Mixer deck's Groove
                         // Box: no interface to connect.
-                        if r.device == opendj_engine::inputs::GROOVE_BOX {
+                        if r.device == djsugar_engine::inputs::GROOVE_BOX {
                             shown.push(name.to_string());
                         } else {
                             shown.push(format!("{name} (not connected)"));
@@ -1939,7 +1939,7 @@ impl Prefs {
         )
     }
 
-    /// Settings › Controllers: the controllers openDJ has a mapping for,
+    /// Settings › Controllers: the controllers DJ Sugar has a mapping for,
     /// and any others added; the rest wait under Add a controller.
     /// Settings › Controllers: each controller, then MIDI Clock.
     fn controller_items(&mut self) -> Vec<PrefItem> {
@@ -2078,12 +2078,12 @@ impl Prefs {
 
     /// Settings › Collection: the music folders, as a list with + and −.
     fn music_folder_items(&self) -> Vec<PrefItem> {
-        let env = std::env::var_os("OPENDJ_MUSIC").is_some();
+        let env = std::env::var_os("DJSUGAR_MUSIC").is_some();
         vec![folder_list(
             MUSIC_FOLDERS_LIST,
             "Music Collection",
             if env {
-                "Set by OPENDJ_MUSIC for now."
+                "Set by DJSUGAR_MUSIC for now."
             } else {
                 ""
             },
@@ -2141,13 +2141,13 @@ impl Prefs {
         items.push(switch(
             settings::MOVE_FILES,
             "Move files",
-            "Allow openDJ to move files between stage folders.",
+            "Allow DJ Sugar to move files between stage folders.",
             settings::move_files(),
         ));
         items.push(switch(
             settings::RENAME_TO_TRIAGE,
             "Rename files",
-            "Allow openDJ to rename files when moving them to the In Prep folder.",
+            "Allow DJ Sugar to rename files when moving them to the In Prep folder.",
             settings::rename_to_triage(),
         ));
         // With the Prep layout (v0.6).
@@ -2246,7 +2246,7 @@ impl Prefs {
             "What Collection Health's \"Junk in names\" looks for. Clean up shows every change before \
              it is made.",
         ));
-        for (key, name, about, default) in opendj_library::cleanup::Rules::ALL {
+        for (key, name, about, default) in djsugar_library::cleanup::Rules::ALL {
             items.push(switch(key, name, about, settings::flag(key, default)));
         }
         items
@@ -2293,7 +2293,7 @@ impl Prefs {
         items
     }
 
-    /// Settings › Collection › Import: each DJ app openDJ can bring a library
+    /// Settings › Collection › Import: each DJ app DJ Sugar can bring a library
     /// in from. One not set up offers Set up…; once it's on, its own
     /// settings open up under its name. Apps still to come say so.
     fn import_items(&self) -> Vec<PrefItem> {
@@ -2301,7 +2301,7 @@ impl Prefs {
             "",
             NOTE,
             "",
-            "Bring in another DJ app's library: its tracks, cues, grids and lists join your collection. openDJ \
+            "Bring in another DJ app's library: its tracks, cues, grids and lists join your collection. DJ Sugar \
              keeps them up to date while you still use that app.",
         )];
         if !self.import_note.is_empty() {
@@ -2811,16 +2811,16 @@ impl Prefs {
             self.edit_station(i, |s| match field {
                 "server" => {
                     s.server = if index == 1 {
-                        opendj_broadcast::ServerKind::Shoutcast
+                        djsugar_broadcast::ServerKind::Shoutcast
                     } else {
-                        opendj_broadcast::ServerKind::Icecast
+                        djsugar_broadcast::ServerKind::Icecast
                     }
                 }
                 "format" => {
                     s.format = if index == 1 {
-                        opendj_broadcast::Format::Opus
+                        djsugar_broadcast::Format::Opus
                     } else {
-                        opendj_broadcast::Format::Mp3
+                        djsugar_broadcast::Format::Mp3
                     }
                 }
                 "bitrate" => s.bitrate = BITRATES.get(index).copied().unwrap_or(s.bitrate),
@@ -2854,7 +2854,7 @@ impl Prefs {
             return;
         }
         if let Some(key) = id.strip_prefix("shortcut:") {
-            let Some(verb) = opendj_script::VERBS.get(index) else {
+            let Some(verb) = djsugar_script::VERBS.get(index) else {
                 return;
             };
             let mut own = settings::keyboard_shortcuts();
@@ -3509,14 +3509,14 @@ fn rate_dir() -> f64 {
 }
 
 /// The library, for changing its tag groups here.
-fn open_library() -> Option<opendj_library::Library> {
-    let path = settings::config_dir().map(|d| opendj_library::default_path(&d))?;
-    opendj_library::Library::open(&path).ok()
+fn open_library() -> Option<djsugar_library::Library> {
+    let path = settings::config_dir().map(|d| djsugar_library::default_path(&d))?;
+    djsugar_library::Library::open(&path).ok()
 }
 
 /// Changes the library's tag groups; the browser picks the change up.
 fn with_library(
-    change: impl FnOnce(&mut opendj_library::Library) -> Result<(), opendj_library::Error>,
+    change: impl FnOnce(&mut djsugar_library::Library) -> Result<(), djsugar_library::Error>,
 ) {
     let Some(mut db) = open_library() else {
         return;
@@ -3583,7 +3583,7 @@ fn patch_rows(model: &ModelRc<PrefItem>, items: &[PrefItem]) -> bool {
 /// follows the choice.
 fn mixer_mode_item() -> PrefItem {
     PrefItem {
-        choices: strings(&["openDJ", "External"]),
+        choices: strings(&["DJ Sugar", "External"]),
         chosen: i32::from(settings::flag("external_mixer", false)),
         ..item(
             "external_mixer",
@@ -3591,7 +3591,7 @@ fn mixer_mode_item() -> PrefItem {
             "Mixer",
             "External: a hardware mixer (DJM, Xone, Rane) does the EQ, faders, \
              crossfader and headphone cue. Each deck plays on its own output at full \
-             level, and openDJ's mixer, Automix and limiter are off.",
+             level, and DJ Sugar's mixer, Automix and limiter are off.",
         )
     }
 }
@@ -3729,7 +3729,7 @@ const MUSIC_FOLDERS_LIST: &str = "music_folders";
 const PLUGIN_FOLDERS_LIST: &str = "audio_plugin_folders";
 
 /// Settings › Controllers › OSC: tablets, visuals and show software
-/// controlling openDJ and following it over Open Sound Control.
+/// controlling DJ Sugar and following it over Open Sound Control.
 fn osc_items() -> Vec<PrefItem> {
     let on = settings::flag(osc::ENABLED, false);
     let mut items = vec![switch(
@@ -3753,7 +3753,7 @@ fn osc_items() -> Vec<PrefItem> {
             osc::PORT,
             TEXT,
             "Port",
-            "The UDP port openDJ listens on. 9000 at first.",
+            "The UDP port DJ Sugar listens on. 9000 at first.",
         )
     });
     let (_, bad) = osc::targets();
@@ -3776,13 +3776,13 @@ fn osc_items() -> Vec<PrefItem> {
     items.push(switch(
         osc::LOCAL_ONLY,
         "Only this computer",
-        "Off, tablets and other computers on your network can control openDJ too.",
+        "Off, tablets and other computers on your network can control DJ Sugar too.",
         settings::flag(osc::LOCAL_ONLY, true),
     ));
     items.push(switch(
         osc::SEND_ONLY,
         "Send only",
-        "Ignores incoming controls, so other apps can follow openDJ but not change it. \
+        "Ignores incoming controls, so other apps can follow DJ Sugar but not change it. \
          /subscribe still works.",
         settings::flag(osc::SEND_ONLY, false),
     ));
@@ -3819,10 +3819,10 @@ fn folder_list(
 
 /// A small outline of a controller for its row on Settings › Controllers,
 /// as Path commands in a 100 × 60 box: its picture's panels and controls
-/// when openDJ has one for the mapping, else a generic two-deck shape.
+/// when DJ Sugar has one for the mapping, else a generic two-deck shape.
 fn controller_outline(mapping_file: Option<&str>) -> String {
     use std::fmt::Write;
-    let Some(layout) = mapping_file.and_then(opendj_controllers::layout::Layout::for_file) else {
+    let Some(layout) = mapping_file.and_then(djsugar_controllers::layout::Layout::for_file) else {
         return "M 6 10 L 94 10 L 94 50 L 6 50 Z M 20 18 A 12 12 0 1 1 19.99 18 Z \
                 M 80 18 A 12 12 0 1 1 79.99 18 Z M 46 18 L 46 42 M 54 18 L 54 42"
             .to_string();
@@ -3935,7 +3935,7 @@ fn importer(id: &str) -> Option<Box<dyn LibraryImport>> {
 /// Whose tags win when a track's differ.
 fn theirs_row(id: &str, title: &str, theirs_win: bool) -> PrefItem {
     PrefItem {
-        choices: strings(&[title, "openDJ"]),
+        choices: strings(&[title, "DJ Sugar"]),
         chosen: if theirs_win { 0 } else { 1 },
         ..item(
             id,
@@ -3986,8 +3986,8 @@ fn wizard_rows(importer: &dyn LibraryImport, w: &WizardState) -> Vec<PrefItem> {
                 NOTE,
                 "",
                 &format!(
-                    "Grids and cues you edit in openDJ stay either way. Import brings it in \
-                     now. openDJ checks {title}'s files each time it starts and brings in \
+                    "Grids and cues you edit in DJ Sugar stay either way. Import brings it in \
+                     now. DJ Sugar checks {title}'s files each time it starts and brings in \
                      what changed; you can change these choices in Settings › Collection."
                 ),
             ),
@@ -4196,7 +4196,7 @@ fn capitalized(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::plugins::Plugin;
+    use djsugar_engine::plugins::Plugin;
 
     #[test]
     fn removing_an_auxiliary_input_moves_the_later_ones_up() {

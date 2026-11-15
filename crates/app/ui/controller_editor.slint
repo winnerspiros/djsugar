@@ -115,7 +115,7 @@ export global ControllerEditor {
     in property <string> dialog-action;
     in-out property <string> dialog-text;
     in property <string> author;
-    // "Beta" or "Supported" for a controller on openDJ's own list.
+    // "Beta" or "Supported" for a controller on DJ Sugar's own list.
     in property <string> support;
     // While the mapping is being read, or why it could not be.
     in property <bool> loading;
@@ -167,7 +167,7 @@ export global ControllerEditor {
     in property <string> edit-hint;
     // The row can be changed (a greyed row can't yet).
     in property <bool> edit-enabled: true;
-    // What the row does: 0 a function, 1 an openDJscript line, 2 a shift
+    // What the row does: 0 a function, 1 an DJSugarScript line, 2 a shift
     // (a variable on while held), 3 a mode button (a variable flipped on
     // each press). See `does-modes`.
     in property <[string]> does-modes;
@@ -648,7 +648,7 @@ component RowEditor inherits Rectangle {
             Rectangle { horizontal-stretch: 1; }
         }
         if ControllerEditor.edit-enabled && ControllerEditor.edit-does == 1: EditField {
-            label: "openDJscript";
+            label: "DJSugarScript";
             wrong: ControllerEditor.edit-script-error != "";
             hint: ControllerEditor.edit-script-error != "" ? ControllerEditor.edit-script-error
                 : "Press Enter to use it. For example: var 'shift' ? sync : play_pause, or deck 1 loop 4 & deck 2 loop 4.";

@@ -18,7 +18,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use opendj_engine::{Source, Track};
+use djsugar_engine::{Source, Track};
 use rusqlite::{params, OptionalExtension};
 
 use crate::query::normalized;
@@ -507,7 +507,7 @@ fn free_place(dir: &Path, path: &Path, taken: impl Fn(&Path) -> bool) -> PathBuf
 mod tests {
     use super::*;
     use crate::tests::file_track;
-    use opendj_engine::Hotcue;
+    use djsugar_engine::Hotcue;
 
     fn copy(id: usize, path: &str, seconds: f64) -> Track {
         let mut t = file_track(path, "Clouds");
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn compares_bytes() {
-        let dir = std::env::temp_dir().join(format!("opendj-dupes-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-dupes-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let (a, b, c) = (dir.join("a"), dir.join("b"), dir.join("c"));
         std::fs::write(&a, b"same bytes").unwrap();

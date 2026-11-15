@@ -1,14 +1,14 @@
 ## Purpose
 
-Letting a DJ control Automix and the main levels from a phone on the same network, by opening a page openDJ serves, without installing an app.
+Letting a DJ control Automix and the main levels from a phone on the same network, by opening a page DJ Sugar serves, without installing an app.
 
 ## ADDED Requirements
 
 ### Requirement: Off until switched on
-The remote SHALL not listen on the network until the DJ switches it on under REMOTE in the top bar. It SHALL stay on across restarts only if it was on when openDJ quit.
+The remote SHALL not listen on the network until the DJ switches it on under REMOTE in the top bar. It SHALL stay on across restarts only if it was on when DJ Sugar quit.
 
 #### Scenario: First launch
-- **WHEN** openDJ starts for the first time
+- **WHEN** DJ Sugar starts for the first time
 - **THEN** REMOTE is off and nothing listens on the network
 
 ### Requirement: Pairing
@@ -48,11 +48,11 @@ A paired phone SHALL show the Automix list as a queue with a small cover on ever
 - **THEN** the waiting track shows a lock and can't be moved or removed
 
 ### Requirement: Album art on the phone
-openDJ SHALL serve covers to paired phones only, at two sizes (list and now playing), through addresses that carry a key given out at pairing and that changes each time the remote starts.
+DJ Sugar SHALL serve covers to paired phones only, at two sizes (list and now playing), through addresses that carry a key given out at pairing and that changes each time the remote starts.
 
 #### Scenario: A stranger asks for a cover
 - **WHEN** a device without the key requests a cover address
-- **THEN** openDJ answers 404
+- **THEN** DJ Sugar answers 404
 
 ### Requirement: Sleep timer
 A paired phone SHALL set a sleep timer (15, 30, 45, 60 or 90 minutes) after which the master level fades out over 20 seconds and Automix stops, and SHALL show the time left on the queue's Timer button.

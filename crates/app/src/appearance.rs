@@ -2,7 +2,7 @@
 //!
 //! Sets `Theme.light`, which every Theme colour reads, and the window's
 //! native appearance so the title bar matches. Under Match system the
-//! computer's setting is followed, also when it changes while openDJ runs
+//! computer's setting is followed, also when it changes while DJ Sugar runs
 //! (winit's `ThemeChanged`, sent on macOS and Windows; elsewhere the
 //! system's look is unknown and Dark is used).
 

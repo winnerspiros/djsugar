@@ -4,14 +4,14 @@ Planned for: **v0.4 · Your collection, cleaned up** (built early, 2026-10-28; e
 
 ## Why
 
-Many DJs play out on Pioneer players that only read a USB stick prepared by rekordbox. Exporting straight from openDJ lets them prepare in openDJ and play anywhere, without keeping a second library in rekordbox. VirtualDJ and Engine DJ already do this.
+Many DJs play out on Pioneer players that only read a USB stick prepared by rekordbox. Exporting straight from DJ Sugar lets them prepare in DJ Sugar and play anywhere, without keeping a second library in rekordbox. VirtualDJ and Engine DJ already do this.
 
 Earlier this was decided against because there was no player to test on. rbox (<https://github.com/dylanljones/rbox>, Rust, GPL-3.0-only) now writes both of Pioneer's stick formats and their analysis files, so the work is small enough to build and ship marked experimental. Research: `/mnt/project-files/notes/pioneer-usb-export-review.md` (§7 covers rbox).
 
 ## What Changes
 
-- A new `opendj-export` crate writes a stick: the audio, each track's analysis files (`ANLZ0000.DAT/.EXT/.2EX`: beat grid, cues, loops, waveforms), album art, and the library in both formats: the Device Library (`export.pdb`, `exportExt.pdb`) and OneLibrary (`exportLibrary.db`).
-- Everything comes from openDJ's own library and analysis cache; tracks never analysed are analysed first.
+- A new `djsugar-export` crate writes a stick: the audio, each track's analysis files (`ANLZ0000.DAT/.EXT/.2EX`: beat grid, cues, loops, waveforms), album art, and the library in both formats: the Device Library (`export.pdb`, `exportExt.pdb`) and OneLibrary (`exportLibrary.db`).
+- Everything comes from DJ Sugar's own library and analysis cache; tracks never analysed are analysed first.
 - **Export to USB…** in the tree's right-click menu, on any list, folder, smart list or stage, opens a dialog to pick the drive and which players the stick is for, then shows progress and a result.
 - byte layouts rbox leaves to the caller (waveform encodings, cue colours, the analysis folder hash, MP3 frame counts) follow Bake'n Deck (`baken`, MIT), with its rekordbox test vectors.
 

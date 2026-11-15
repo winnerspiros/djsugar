@@ -344,7 +344,7 @@ const fn rgb(hex: u32) -> [f32; 4] {
 }
 
 /// The palettes the stacked bands ([`Style::Bands`]) come in, as low, mid
-/// and high: blue, orange and white as on rekordbox; and lilac (openDJ's
+/// and high: blue, orange and white as on rekordbox; and lilac (DJ Sugar's
 /// accent), cyan and white.
 pub const BAND_PALETTES: [[[f32; 4]; 3]; 2] = [
     [rgb(0x0050E0), rgb(0xF8A000), rgb(0xF0E8D0)],

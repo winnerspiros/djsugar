@@ -6,17 +6,17 @@ MIDI controller support using Mixxx's own mappings unchanged, how controllers ar
 ## Requirements
 
 ### Requirement: Mixxx mappings run unchanged
-openDJ SHALL read Mixxx `.midi.xml` mappings and run their JavaScript in QuickJS against Mixxx's `engine` and `midi` API (soft takeover, timers, scratch and brake filters, MIDI out), using the same control names.
+DJ Sugar SHALL read Mixxx `.midi.xml` mappings and run their JavaScript in QuickJS against Mixxx's `engine` and `midi` API (soft takeover, timers, scratch and brake filters, MIDI out), using the same control names.
 
 #### Scenario: Supported controller
 - **WHEN** a controller Mixxx supports is plugged in
 - **THEN** its mapping loads and it works with nothing to set up
 
 ### Requirement: Hot plugging
-Plugging a controller in or out while openDJ runs SHALL be picked up within about a second, each controller on its own thread, on both macOS and Linux. On macOS the MIDI device thread SHALL run its run loop so CoreMIDI can report device changes. LEDs SHALL be sent again 1.5 s after start.
+Plugging a controller in or out while DJ Sugar runs SHALL be picked up within about a second, each controller on its own thread, on both macOS and Linux. On macOS the MIDI device thread SHALL run its run loop so CoreMIDI can report device changes. LEDs SHALL be sent again 1.5 s after start.
 
 #### Scenario: Plug in while running
-- **WHEN** a DDJ-FLX4 is plugged in while openDJ runs
+- **WHEN** a DDJ-FLX4 is plugged in while DJ Sugar runs
 - **THEN** it works within about a second, with nothing to press
 
 #### Scenario: Unplug while running
@@ -28,14 +28,14 @@ Settings › Controllers SHALL have a Refresh button that closes every controlle
 
 #### Scenario: Controller not showing
 - **WHEN** a plugged-in controller is missing and Refresh is pressed
-- **THEN** openDJ looks for devices at once and starts the controller with its mapping
+- **THEN** DJ Sugar looks for devices at once and starts the controller with its mapping
 
 ### Requirement: Controllers settings
-Settings › Controllers SHALL list the connected controllers openDJ has a mapping for, with the mapping in use, let one be set to Not used, and say when mappings are missing or a mapping failed. Other MIDI devices (virtual ports, apps, unmapped gear) SHALL stay off the list until picked from Add a controller. Remove SHALL take a controller off the list and stop using it until it is added again; both are kept by device key. Each controller SHALL have an Edit button that opens the Controller Editor on its mapping.
+Settings › Controllers SHALL list the connected controllers DJ Sugar has a mapping for, with the mapping in use, let one be set to Not used, and say when mappings are missing or a mapping failed. Other MIDI devices (virtual ports, apps, unmapped gear) SHALL stay off the list until picked from Add a controller. Remove SHALL take a controller off the list and stop using it until it is added again; both are kept by device key. Each controller SHALL have an Edit button that opens the Controller Editor on its mapping.
 
 #### Scenario: Turn off a controller
 - **WHEN** a controller is set to Not used
-- **THEN** openDJ ignores it
+- **THEN** DJ Sugar ignores it
 
 #### Scenario: Unmapped device
 - **WHEN** a MIDI device with no mapping is plugged in
@@ -57,7 +57,7 @@ A mapping without decks 3 and 4 SHALL get `[Controller],deck3`/`deck4` switches.
 - **THEN** the FLX4's left side plays deck 3 and the number is lit
 
 ### Requirement: Controls list and docs
-`opendj --list-controls` SHALL print every control; the website SHALL have a page per mapped controller. `OPENDJ_MIDI_DEBUG` SHALL log MIDI both ways.
+`djsugar --list-controls` SHALL print every control; the website SHALL have a page per mapped controller. `DJSUGAR_MIDI_DEBUG` SHALL log MIDI both ways.
 
 #### Scenario: CI catches new controls
 - **WHEN** a control is added without regenerating supported-controls.txt
@@ -68,4 +68,4 @@ HID controllers SHALL NOT be supported yet, and the docs SHALL say so.
 
 #### Scenario: HID controller
 - **WHEN** a HID-only controller is plugged in
-- **THEN** openDJ does not use it
+- **THEN** DJ Sugar does not use it

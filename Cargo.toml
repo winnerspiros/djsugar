@@ -9,7 +9,7 @@ edition = "2021"
 license = "GPL-2.0-or-later"
 
 # Decoding, analysis and synthesis are far too slow unoptimised, even in tests.
-[profile.dev.package.opendj-engine]
+[profile.dev.package.djsugar-engine]
 opt-level = 2
 
 [profile.dev.package.symphonia-core]
@@ -24,7 +24,7 @@ opt-level = 2
 [profile.dev.package.signalsmith-stretch]
 opt-level = 2
 
-[profile.dev.package.opendj-separation]
+[profile.dev.package.djsugar-separation]
 opt-level = 2
 
 [profile.dev.package.matrixmultiply]
@@ -57,9 +57,9 @@ opt-level = 2
 
 # femtovg (Slint's renderer) with a fix for its pipeline cache, which threw
 # away pipelines each flush and rebuilt them every frame. See
-# third_party/femtovg/OPENDJ.md.
+# third_party/femtovg/DJSUGAR.md.
 [patch.crates-io]
 femtovg = { path = "third_party/femtovg" }
 # Key lock's time-stretcher with split computation; see
-# third_party/signalsmith-stretch/OPENDJ.md.
+# third_party/signalsmith-stretch/DJSUGAR.md.
 signalsmith-stretch = { path = "third_party/signalsmith-stretch" }

@@ -1,9 +1,9 @@
 [package]
-name = "opendj-script"
-description = "openDJscript: one-line actions for keyboard shortcuts, and later pads, mappings, OSC and MCP"
+name = "djsugar-script"
+description = "DJSugarScript: one-line actions for keyboard shortcuts, and later pads, mappings, OSC and MCP"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-control = { path = "../control" }
+djsugar-control = { path = "../control" }

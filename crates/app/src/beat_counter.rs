@@ -8,8 +8,8 @@
 //! from the phrase analysis; a track without phrases counts in phrases of
 //! eight bars from its first bar.
 
-use opendj_engine::{phrases, Track};
-use opendj_waveform::PhraseKind;
+use djsugar_engine::{phrases, Track};
+use djsugar_waveform::PhraseKind;
 
 /// Bars in a phrase when the track has no phrase analysis.
 pub const DEFAULT_PHRASE_BARS: i64 = 8;
@@ -179,7 +179,7 @@ mod tests {
     /// A steady 120 BPM track (half a second a beat, two seconds a bar)
     /// whose first beat is at `first_beat`.
     fn track(first_beat: f64) -> Track {
-        let mut t = (*opendj_engine::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::sample_library()[0]).clone();
         t.bpm = 120.0;
         t.first_beat = first_beat;
         t.grid = Default::default();

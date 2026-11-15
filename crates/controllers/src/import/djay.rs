@@ -11,7 +11,7 @@ use super::words::{
     beats, deck, eq, eq_kill, filter, fx_slot, fx_unit, indicator, library, master,
 };
 use super::Import;
-use crate::format::{Light, LightSource, Midi, OpenDjMapping, Row, Variable};
+use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
 use crate::mapping::When;
 
 /// An XML property list as JSON.
@@ -161,7 +161,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
         .strip_suffix(".djayMidiMapping")
         .unwrap_or(file)
         .to_string();
-    let mut m = OpenDjMapping::new(&format!("{title} (djay Pro)"));
+    let mut m = DjSugarMapping::new(&format!("{title} (djay Pro)"));
     m.controller.name = device.clone();
     if !device.is_empty() {
         m.controller.ports.push(device);
@@ -232,7 +232,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                     msg,
                     path,
                     path,
-                    "openDJ has no match for this djay Pro function yet",
+                    "DJ Sugar has no match for this djay Pro function yet",
                 ),
             });
         }

@@ -1,5 +1,5 @@
 //! Scrobbling to Last.fm, beside ListenBrainz (see `scrobble`), with the
-//! DJ's own API account: openDJ ships no key. The DJ makes one at
+//! DJ's own API account: DJ Sugar ships no key. The DJ makes one at
 //! last.fm/api/account/create, pastes the key and shared secret in
 //! Settings › Broadcast and signs in once in the browser; the session key
 //! that comes back is kept in the settings (out of backups, as its name
@@ -16,7 +16,7 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use opendj_engine::Track;
+use djsugar_engine::Track;
 use serde_json::{json, Value};
 
 use crate::settings;
@@ -150,7 +150,7 @@ enum Failed {
 fn agent() -> ureq::Agent {
     ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(15)))
-        .user_agent(concat!("openDJ/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("DJSugar/", env!("CARGO_PKG_VERSION")))
         // Last.fm answers errors as JSON with a 4xx status.
         .http_status_as_error(false)
         .build()
@@ -231,7 +231,7 @@ pub fn sign_in() {
             if token.is_empty() {
                 return done("Last.fm didn't start the sign-in.".into());
             }
-            set_status("Allow openDJ in the browser, then come back here.".into());
+            set_status("Allow DJ Sugar in the browser, then come back here.".into());
             crate::spotify::open_in_browser(&format!(
                 "{AUTH}?api_key={}&token={token}",
                 account.key
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn a_play_as_last_fm_takes_it() {
-        let mut t = (*opendj_engine::synth::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::synth::sample_library()[0]).clone();
         t.artist = "Lilac Waves".into();
         t.title = "Midnight Drive".into();
         t.album = "Night Shift".into();

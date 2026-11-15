@@ -12,7 +12,7 @@
 //!   Rane players running Engine OS (see [`engine`]).
 //!
 //! The Pioneer files are written with rbox (<https://github.com/dylanljones/rbox>).
-//! Everything comes from openDJ's own library and analysis; tracks that were
+//! Everything comes from DJ Sugar's own library and analysis; tracks that were
 //! never analysed are analysed first.
 
 mod anlz;
@@ -29,9 +29,9 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use opendj_engine::key::Key;
-use opendj_engine::track::Hotcue;
-use opendj_engine::{cache, loader, BeatGrid, Source, Track};
+use djsugar_engine::key::Key;
+use djsugar_engine::track::Hotcue;
+use djsugar_engine::{cache, loader, BeatGrid, Source, Track};
 
 use model::{ListRow, Model, TrackRow};
 
@@ -234,7 +234,7 @@ fn year(text: &str) -> i32 {
 }
 
 /// The grid the DJ plays with: the library's, else the analysis's.
-fn grid_for(track: &Track, analysis: &opendj_engine::analysis::Analysis) -> BeatGrid {
+fn grid_for(track: &Track, analysis: &djsugar_engine::analysis::Analysis) -> BeatGrid {
     if !track.grid.is_empty() {
         track.grid.clone()
     } else if track.bpm > 0.0 {

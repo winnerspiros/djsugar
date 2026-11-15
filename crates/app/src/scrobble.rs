@@ -17,8 +17,8 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_engine::{LoadedTracks, Track};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::{LoadedTracks, Track};
 use serde_json::{json, Value};
 
 use crate::{broadcast, settings};
@@ -71,8 +71,8 @@ pub fn counts(heard: f64, duration: f64) -> bool {
 /// playing now (None).
 fn listen(t: &Track, at: Option<i64>) -> Value {
     let mut info = json!({
-        "media_player": "openDJ",
-        "submission_client": "openDJ",
+        "media_player": "DJ Sugar",
+        "submission_client": "DJ Sugar",
         "submission_client_version": env!("CARGO_PKG_VERSION"),
     });
     if t.duration > 0.0 {
@@ -238,7 +238,7 @@ enum Failed {
 fn agent() -> ureq::Agent {
     ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(15)))
-        .user_agent(concat!("openDJ/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("DJSugar/", env!("CARGO_PKG_VERSION")))
         .build()
         .into()
 }
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn a_listen_as_listenbrainz_takes_it() {
-        let mut t = (*opendj_engine::synth::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::synth::sample_library()[0]).clone();
         t.artist = "Lilac Waves".into();
         t.title = "Midnight Drive".into();
         t.album = "Night Shift".into();
@@ -432,7 +432,7 @@ mod tests {
         );
         assert_eq!(
             v["track_metadata"]["additional_info"]["media_player"],
-            "openDJ"
+            "DJ Sugar"
         );
         assert!(listen(&t, None).get("listened_at").is_none());
     }

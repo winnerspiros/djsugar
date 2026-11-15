@@ -5,7 +5,7 @@ Showing the words of the track playing on a screen of their own, for singing alo
 ## ADDED Requirements
 
 ### Requirement: Karaoke screen
-openDJ SHALL offer a karaoke screen, a window of its own, that follows the track playing and shows the line to sing large, the line before it faded and the next two lines. When another display is connected it SHALL open full screen there.
+DJ Sugar SHALL offer a karaoke screen, a window of its own, that follows the track playing and shows the line to sing large, the line before it faded and the next two lines. When another display is connected it SHALL open full screen there.
 
 #### Scenario: Opening on a second display
 - **WHEN** a second display is connected and the DJ presses Karaoke in the Lyrics tab
@@ -33,7 +33,7 @@ While the karaoke screen is open, the Lyrics tab SHALL have a Vocals slider sett
 - **THEN** the next track plays with its vocal stem muted
 
 ### Requirement: Karaoke page
-While the karaoke screen is open and the DJ shares it, openDJ SHALL serve the same screen as a web page at `/karaoke` on its local web server, reachable from other devices on the network, and SHALL show the page's address in the Lyrics tab. The page SHALL keep time itself between updates, so the word fill stays smooth.
+While the karaoke screen is open and the DJ shares it, DJ Sugar SHALL serve the same screen as a web page at `/karaoke` on its local web server, reachable from other devices on the network, and SHALL show the page's address in the Lyrics tab. The page SHALL keep time itself between updates, so the word fill stays smooth.
 
 #### Scenario: Opening on a TV
 - **WHEN** the DJ presses Share in the Lyrics tab and opens the address shown in a TV's browser

@@ -1,7 +1,7 @@
 # Flathub
 
-`app.opendj.openDJ.yml` is a draft Flatpak manifest for Flathub. It builds
-openDJ from a release tag inside the Flatpak SDK, offline, so every crate
+`io.github.winnerspiros.DJSugar.yml` is a draft Flatpak manifest for Flathub. It builds
+DJ Sugar from a release tag inside the Flatpak SDK, offline, so every crate
 in `Cargo.lock` has to be listed in a `cargo-sources.json` next to it.
 
 ## Try it locally
@@ -13,8 +13,8 @@ flatpak install flathub org.freedesktop.Sdk//24.08 \
 # The crate list, from flatpak-builder-tools (cargo/flatpak-cargo-generator.py):
 python3 flatpak-cargo-generator.py ../../Cargo.lock -o cargo-sources.json
 # For a local test, point the git source at this checkout (type: dir, path: ../..).
-flatpak-builder --user --install --force-clean build app.opendj.openDJ.yml
-flatpak run app.opendj.openDJ
+flatpak-builder --user --install --force-clean build io.github.winnerspiros.DJSugar.yml
+flatpak run io.github.winnerspiros.DJSugar
 ```
 
 ## Submit
@@ -27,12 +27,12 @@ flatpak run app.opendj.openDJ
    The answers are in the manifest's comments: USB DJ controllers (MIDI and
    HID) and direct ALSA audio need device access, as for Mixxx's Flatpak;
    music folders and the VirtualDJ/rekordbox/Mixxx imports need home.
-4. Once accepted, Flathub creates `flathub/app.opendj.openDJ`. Its bot reads
+4. Once accepted, Flathub creates `flathub/io.github.winnerspiros.DJSugar`. Its bot reads
    `x-checker-data` and opens a pull request for each new GitHub release; the
    crate list has to be regenerated in that pull request when `Cargo.lock`
    changed.
-5. Verify the app on Flathub (domain check for opendj.app) so it shows as
+5. Verify the app on Flathub (domain check for github.com/winnerspiros/djsugar) so it shows as
    verified.
 
-Inside a Flatpak openDJ doesn't check GitHub for updates (Flathub brings
+Inside a Flatpak DJ Sugar doesn't check GitHub for updates (Flathub brings
 them), see `crates/app/src/update.rs`.

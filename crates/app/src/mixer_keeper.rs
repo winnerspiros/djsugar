@@ -7,7 +7,7 @@
 
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 use serde_json::{json, Map, Value};
 
 use crate::settings;
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn a_channel_comes_back_as_it_was_left() {
         let reg = ControlRegistry::new();
-        let (_engine, _input) = opendj_engine::engine::Engine::new(&reg, 48_000.0);
+        let (_engine, _input) = djsugar_engine::engine::Engine::new(&reg, 48_000.0);
         // Every kept control exists.
         let controls = kept(&reg);
         let get = |g: &str, k: &str| reg.get(g, k).unwrap();
@@ -123,7 +123,7 @@ mod tests {
         let saved = snapshot(&controls);
 
         let reg = ControlRegistry::new();
-        let (_engine, _input) = opendj_engine::engine::Engine::new(&reg, 48_000.0);
+        let (_engine, _input) = djsugar_engine::engine::Engine::new(&reg, 48_000.0);
         restore(&kept(&reg), &saved);
         let get = |g: &str, k: &str| reg.get(g, k).unwrap().get();
         assert_eq!(get("[Auxiliary3]", "pregain"), 2.0);

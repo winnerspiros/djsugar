@@ -6,8 +6,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use opendj_controllers::routing;
-use opendj_controllers::Controllers;
+use djsugar_controllers::routing;
+use djsugar_controllers::Controllers;
 use slint::{ComponentHandle, ModelRc, SharedString};
 
 use crate::settings;
@@ -30,10 +30,10 @@ impl State {
             .collect();
         ui.set_keyboards(ModelRc::from(names.as_slice()));
         let device = self.device.as_ref().map_or(0, |d| {
-            let key = opendj_controllers::device_key(d);
+            let key = djsugar_controllers::device_key(d);
             self.keyboards
                 .iter()
-                .position(|k| opendj_controllers::device_key(k) == key)
+                .position(|k| djsugar_controllers::device_key(k) == key)
                 .map_or(0, |i| i + 1)
         });
         ui.set_midi_device(device as i32);
@@ -44,10 +44,10 @@ impl State {
     fn list(&mut self, connected: Vec<String>) -> bool {
         let mut list = connected;
         if let Some(d) = &self.device {
-            let key = opendj_controllers::device_key(d);
+            let key = djsugar_controllers::device_key(d);
             if !list
                 .iter()
-                .any(|k| opendj_controllers::device_key(k) == key)
+                .any(|k| djsugar_controllers::device_key(k) == key)
             {
                 list.push(d.clone());
             }

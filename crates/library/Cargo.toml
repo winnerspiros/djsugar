@@ -1,12 +1,12 @@
 [package]
-name = "opendj-library"
+name = "djsugar-library"
 description = "The saved music library: tracks, cues, beat grids, playlists and history in SQLite"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-engine = { path = "../engine" }
+djsugar-engine = { path = "../engine" }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 regex = "1"
 roxmltree = "0.21"

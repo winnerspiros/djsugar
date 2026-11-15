@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>openDJ · Now Playing</title>
+<title>DJ Sugar · Now Playing</title>
 <style>
   html, body { margin: 0; background: transparent; overflow: hidden; }
   body { font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: #fff; }
@@ -69,7 +69,7 @@
       const j = await r.json();
       if (j.style && document.body.className !== j.style) document.body.className = j.style;
       show(j.current || null);
-    } catch (e) { /* openDJ closed or the feed was switched off */ }
+    } catch (e) { /* DJ Sugar closed or the feed was switched off */ }
   }
   poll();
   setInterval(poll, 1000);

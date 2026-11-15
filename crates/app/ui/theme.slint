@@ -12,7 +12,7 @@ import "fonts/ZenDots-Regular.ttf";
 export global Theme {
     // The bundled Inter Tabular, or the system font on macOS (see ui_font.rs).
     in-out property <string> font-family: "Inter Tabular";
-    // The openDJ wordmark.
+    // The DJ Sugar wordmark.
     out property <string> brand-font: "Zen Dots";
     // Light appearance (Settings › Appearance), set from Rust:
     // every colour below has a Light value beside its Dark one. The large
@@ -49,7 +49,7 @@ export global Theme {
     out property <color> knob-ring: root.light ? #d5d3de : #3a3a3e;
     out property <color> fader-handle: root.light ? #6e6c7a : #8e8e93;
     out property <color> tick: root.light ? #b5b3c0 : #3e3e42;
-    // Electric Lilac, openDJ's own color: the logo, the accent and the
+    // Electric Lilac, DJ Sugar's own color: the logo, the accent and the
     // library highlight.
     out property <color> lilac: #b69cff;
     out property <color> accent: root.lilac;

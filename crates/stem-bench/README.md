@@ -1,6 +1,6 @@
 # stem-bench
 
-Times openDJ's stem separation on this machine: Spleeter (instant stems on
+Times DJ Sugar's stem separation on this machine: Spleeter (instant stems on
 load) and HTDemucs (high quality, in the background), on the GPU and the CPU.
 It is a tool for choosing settings, not part of the app.
 

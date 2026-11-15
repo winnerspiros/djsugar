@@ -4,7 +4,7 @@
 //! Automix list: the fewest Camelot steps, then the smallest tempo change.
 //! A little chance among the best few keeps two runs from being the same.
 
-use opendj_engine::key::{Key, Mixing};
+use djsugar_engine::key::{Key, Mixing};
 
 use crate::automix_order::{bpm_jump, key_steps};
 

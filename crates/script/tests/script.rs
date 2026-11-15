@@ -1,5 +1,5 @@
-use opendj_control::{Behavior, ControlRegistry};
-use opendj_script::{
+use djsugar_control::{Behavior, ControlRegistry};
+use djsugar_script::{
     level_control, parse, query_control, run, run_control, Call, Error, Host, Kind,
 };
 
@@ -167,7 +167,7 @@ fn mistakes_are_caught_before_anything_runs() {
         ("(play & sync", "Expected ')'", 12),
         ("play & ", "Expected a verb", 7),
         ("set 'x", "This quote is never closed", 4),
-        ("play ; sync", "';' isn't part of openDJscript", 5),
+        ("play ; sync", "';' isn't part of DJSugarScript", 5),
     ];
     for (src, message, at) in cases {
         let err = parse(src).unwrap_err();
@@ -207,7 +207,7 @@ fn encoder_clicks_move_a_level_from_where_it_is() {
     run("deck 1 eq_high", &mut t).unwrap();
     let eq = t.get("[EqualizerRack1_[Channel1]_Effect1]", "parameter3");
     assert!(
-        (eq - (1.0 - 4.0 * opendj_script::STEP)).abs() < 1e-9,
+        (eq - (1.0 - 4.0 * djsugar_script::STEP)).abs() < 1e-9,
         "{eq}"
     );
     // Turning on past the end stays at the end; a written level still sets it.
@@ -241,8 +241,8 @@ fn presses_of_a_counted_action_add_up() {
 
 #[test]
 fn blink_takes_a_colour() {
-    assert!(opendj_script::parse("blink 500 'green'").is_ok());
-    assert!(opendj_script::parse("blink").is_ok());
+    assert!(djsugar_script::parse("blink 500 'green'").is_ok());
+    assert!(djsugar_script::parse("blink").is_ok());
 }
 
 #[test]

@@ -6,7 +6,7 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-openDJ plays one instrument plugin at a time: the Instruments browser can put a synth on deck 3, but loading a second synth for deck 4 replaces the first and cold-starts its helper. Playing a bass on one deck and a pad on another, each from its own keyboard or sequencer track, is the natural next step for live playing over the mix.
+DJ Sugar plays one instrument plugin at a time: the Instruments browser can put a synth on deck 3, but loading a second synth for deck 4 replaces the first and cold-starts its helper. Playing a bass on one deck and a pad on another, each from its own keyboard or sequencer track, is the natural next step for live playing over the mix.
 
 The engine cost of several instruments is small in itself: each plugin runs in its own helper process, and a round trip costs about 0.03 to 0.06 ms of a 5.3 ms buffer (256 frames at 48 kHz) and about 3 MB per helper before the plugin's own memory. Two things made several heavy plugins costly, though: the audio thread waited for each plugin before handing the next one its block, so their DSP times added up inside the plugins' share of the buffer even though they run on different cores; and a loaded instrument got a block every buffer, even when silent and on no deck.
 

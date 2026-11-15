@@ -19,7 +19,7 @@ ignore = [
 ]
 
 [licenses]
-# Everything here is compatible with distributing openDJ under GPL-3.0.
+# Everything here is compatible with distributing DJ Sugar under GPL-3.0.
 allow = [
     "0BSD",
     "Apache-2.0",

@@ -7,7 +7,7 @@
 //! means something in a release build):
 //!
 //! ```text
-//! cargo test --release -p opendj-engine fx_bench -- --ignored --nocapture
+//! cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture
 //! ```
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -307,7 +307,7 @@ fn fx_bench() {
     // the share of one CPU core it needs.
     let budget = 1e9 / SR as f64;
     println!();
-    println!("openDJ FX benchmark, 48 kHz stereo, ns per frame (share of a core)");
+    println!("DJ Sugar FX benchmark, 48 kHz stereo, ns per frame (share of a core)");
     println!("{:<14}{:>10}{:>10}", "effect", "ns/frame", "% core");
     for kind in KINDS {
         let mut inst = instance(kind, defaults(kind));

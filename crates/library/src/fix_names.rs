@@ -3,7 +3,7 @@
 //! Each gives the changes it would make, for the review table; nothing is
 //! written here.
 
-use opendj_engine::Track;
+use djsugar_engine::Track;
 use regex::{NoExpand, Regex, RegexBuilder};
 
 use crate::cleanup::{Change, Field};
@@ -245,7 +245,7 @@ impl Ready {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::Source;
+    use djsugar_engine::Source;
 
     fn track(artist: &str, title: &str) -> Track {
         Track {

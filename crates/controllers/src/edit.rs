@@ -3,10 +3,10 @@
 //! of the own mapping's file (see [`crate::format`]) put over the Mixxx
 //! mapping it's based on; going back to the original takes the rows away.
 
-use opendj_control::{Behavior, ControlRegistry};
+use djsugar_control::{Behavior, ControlRegistry};
 
 use crate::catalog::{describe, Function};
-use crate::format::{Action, Midi, OpenDjMapping, Row};
+use crate::format::{Action, Midi, DjSugarMapping, Row};
 use crate::mapping::{Options, When};
 use crate::view;
 
@@ -211,7 +211,7 @@ fn midi_of(row: &view::Row) -> Option<Midi> {
 
 /// The own mapping's rows for the message and layer of `row`.
 fn own_rows<'a>(
-    own: &'a OpenDjMapping,
+    own: &'a DjSugarMapping,
     row: &'a view::Row,
 ) -> impl Iterator<Item = (usize, &'a Row)> + 'a {
     own.rows.iter().enumerate().filter(move |(_, r)| {
@@ -224,14 +224,14 @@ fn own_rows<'a>(
 }
 
 /// Whether the own mapping changes `row`.
-pub fn is_edited(own: &OpenDjMapping, row: &view::Row) -> bool {
+pub fn is_edited(own: &DjSugarMapping, row: &view::Row) -> bool {
     own_rows(own, row).next().is_some()
 }
 
 /// Sets what `row` does in the own mapping. The row's message then does only
 /// this on its layer, whatever the base mapping or its script did there
 /// (SHIFT functions a script gave the same button go too).
-pub fn set(own: &mut OpenDjMapping, row: &view::Row, b: &Binding) {
+pub fn set(own: &mut DjSugarMapping, row: &view::Row, b: &Binding) {
     let (Some(midi), Some(first)) = (midi_of(row), row.sources.first()) else {
         return;
     };
@@ -276,13 +276,13 @@ pub fn set(own: &mut OpenDjMapping, row: &view::Row, b: &Binding) {
     own.rows.push(new);
 }
 
-/// What a control can do besides a function: an openDJscript line, or be a
+/// What a control can do besides a function: an DJSugarScript line, or be a
 /// modifier other rows look at through their `layer` ("Only when").
 #[derive(Clone, Debug, PartialEq)]
 pub enum Does {
     /// A function from the picker (see [`Binding`]).
     Function,
-    /// An openDJscript line: `deck 1 play ? pause : play`.
+    /// An DJSugarScript line: `deck 1 play ? pause : play`.
     Script(String),
     /// Sets the variable to 1 while held and 0 when let go: a SHIFT.
     Hold(String),
@@ -292,7 +292,7 @@ pub enum Does {
 
 impl Does {
     /// What the row shown does, read from its own mapping rows.
-    pub fn of(own: Option<&OpenDjMapping>, row: &view::Row) -> Self {
+    pub fn of(own: Option<&DjSugarMapping>, row: &view::Row) -> Self {
         let Some(line) = row.sources.first().and_then(|s| s.action.clone()) else {
             return Does::Function;
         };
@@ -326,7 +326,7 @@ fn unquote(s: &str) -> String {
 
 /// The own mapping's rows on the message and layer of `row`, at any time.
 fn own_rows_all_whens<'a>(
-    own: &'a OpenDjMapping,
+    own: &'a DjSugarMapping,
     row: &'a view::Row,
 ) -> impl Iterator<Item = &'a Row> + 'a {
     let layer = row
@@ -369,17 +369,17 @@ pub fn check_layer(text: &str) -> Result<String, String> {
     Ok(parts.join(" & "))
 }
 
-/// Makes `row` an openDJscript line or a modifier ([`Does`]); for
+/// Makes `row` an DJSugarScript line or a modifier ([`Does`]); for
 /// [`Does::Function`] it does nothing (use [`set`]). The message's other
 /// rows on this layer go, so a modifier does only that. A modifier's
 /// variable is added to the mapping's variables if it's new.
-pub fn set_does(own: &mut OpenDjMapping, row: &view::Row, does: &Does) {
+pub fn set_does(own: &mut DjSugarMapping, row: &view::Row, does: &Does) {
     let when = row.sources.first().map_or(When::Press, |s| s.when);
     set_does_at(own, row, does, when);
 }
 
 /// As [`set_does`], with a script line acting at `when` (Acts on).
-pub fn set_does_at(own: &mut OpenDjMapping, row: &view::Row, does: &Does, when: When) {
+pub fn set_does_at(own: &mut DjSugarMapping, row: &view::Row, does: &Does, when: When) {
     let (Some(midi), Some(first)) = (midi_of(row), row.sources.first()) else {
         return;
     };
@@ -447,7 +447,7 @@ pub fn set_does_at(own: &mut OpenDjMapping, row: &view::Row, does: &Does, when: 
 /// Puts what `row` does on the layer `layer` ("Only when", already
 /// checked with [`check_layer`]) too, or instead when `moving`: there the
 /// message stops doing it on its own layer.
-pub fn set_layer(own: &mut OpenDjMapping, row: &view::Row, layer: &str, moving: bool) {
+pub fn set_layer(own: &mut DjSugarMapping, row: &view::Row, layer: &str, moving: bool) {
     let (Some(midi), Some(first)) = (midi_of(row), row.sources.first()) else {
         return;
     };
@@ -505,7 +505,7 @@ pub fn set_layer(own: &mut OpenDjMapping, row: &view::Row, layer: &str, moving: 
 }
 
 /// Puts `row` back as the base mapping has it.
-pub fn reset(own: &mut OpenDjMapping, row: &view::Row) {
+pub fn reset(own: &mut DjSugarMapping, row: &view::Row) {
     let gone: Vec<usize> = own_rows(own, row).map(|(i, _)| i).collect();
     let mut i = 0;
     own.rows.retain(|_| {
@@ -652,7 +652,7 @@ mod tests {
         let (base, dir) = flx4();
         let key = (0x90, 0x0B);
         let row = view_row(&base, key);
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         own.based_on = Some("Pioneer-DDJ-FLX4.midi.xml".into());
         let mut b = Binding::of(&row);
         b.control = Some("[Channel1],sync_enabled".into());
@@ -678,7 +678,7 @@ mod tests {
         let (base, dir) = flx4();
         let key = (0x90, 0x0B);
         let row = view_row(&base, key);
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         let mut b = Binding::of(&row);
         b.when = When::Long;
         set(&mut own, &row, &b);
@@ -687,7 +687,7 @@ mod tests {
         assert_eq!(inputs.len(), 1);
         assert_eq!(inputs[0].when, When::Long);
         // Doing nothing is a row that only takes the base's away.
-        let mut none = OpenDjMapping::new("Mine");
+        let mut none = DjSugarMapping::new("Mine");
         set(&mut none, &row, &Binding::nothing(When::Press));
         assert!(!none.build(Some(&base), &dir).inputs.contains_key(&key));
     }
@@ -731,7 +731,7 @@ mod tests {
         let (base, dir) = flx4();
         let key = (0x90, 0x0B);
         let row = view_row(&base, key);
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         set_does(&mut own, &row, &Does::Hold("shift".into()));
         assert_eq!(own.variables.len(), 1);
         let built = own.build(Some(&base), &dir);
@@ -745,7 +745,7 @@ mod tests {
 
         // CUE on deck 1 does sync while shift is held, and still cues.
         let cue = view_row(&base, (0x90, 0x0C));
-        let mut copy = OpenDjMapping::new("Mine");
+        let mut copy = DjSugarMapping::new("Mine");
         set_layer(&mut copy, &cue, "shift", false);
         let built = copy.build(Some(&base), &dir);
         let inputs = &built.inputs[&(0x90, 0x0C)];
@@ -754,7 +754,7 @@ mod tests {
             .any(|i| i.layer == [("shift".to_string(), None)]));
         assert!(inputs.iter().any(|i| i.layer.is_empty()));
         // Moved, it only works with shift.
-        let mut moved = OpenDjMapping::new("Mine");
+        let mut moved = DjSugarMapping::new("Mine");
         set_layer(&mut moved, &cue, "shift", true);
         let built = moved.build(Some(&base), &dir);
         assert!(built.inputs[&(0x90, 0x0C)]
@@ -767,7 +767,7 @@ mod tests {
         let (base, dir) = flx4();
         let key = (0x90, 0x0B);
         let row = view_row(&base, key);
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         set_does(
             &mut own,
             &row,

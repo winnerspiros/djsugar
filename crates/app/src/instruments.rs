@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use slint::{ComponentHandle, DataTransfer, ModelRc, SharedString, VecModel};
 
-use opendj_engine::inputs;
+use djsugar_engine::inputs;
 
 use crate::audio_plugins::Found;
 use crate::presets::{self, Preset, GROOVE};
@@ -18,8 +18,8 @@ use crate::{
     settings, AppWindow, InstrumentNode, InstrumentsUi, LiveItem, MixerStripInfo, Preferences,
 };
 
-/// What dragging an item carries: `opendj-live:<kind>:<index>`.
-const LIVE_PAYLOAD: &str = "opendj-live:";
+/// What dragging an item carries: `djsugar-live:<kind>:<index>`.
+const LIVE_PAYLOAD: &str = "djsugar-live:";
 
 /// Kinds of item, as `LiveItem.kind`.
 const KIT: i32 = 1;
@@ -378,7 +378,7 @@ fn rows(s: &State) -> Vec<LiveItem> {
         index: 0,
         name: "Groove Box".into(),
         r#type: "Drum machine".into(),
-        maker: "openDJ".into(),
+        maker: "DJ Sugar".into(),
         format: "Built in".into(),
         problem: "".into(),
     };
@@ -387,7 +387,7 @@ fn rows(s: &State) -> Vec<LiveItem> {
         index: 0,
         name: "Looper".into(),
         r#type: "Looper".into(),
-        maker: "openDJ".into(),
+        maker: "DJ Sugar".into(),
         format: "Built in".into(),
         problem: "".into(),
     };
@@ -763,9 +763,9 @@ mod tests {
         assert_eq!(parse(&payload(1, 2)), Some(1002));
         assert_eq!(parse(&payload(2, 0)), Some(2000));
         assert_eq!(parse(&payload(MIXER, 0)), Some(7000));
-        assert_eq!(parse("opendj-row:3"), None);
-        assert_eq!(parse("opendj-live:8:0"), None);
-        assert_eq!(parse("opendj-live:1:x"), None);
+        assert_eq!(parse("djsugar-row:3"), None);
+        assert_eq!(parse("djsugar-live:8:0"), None);
+        assert_eq!(parse("djsugar-live:1:x"), None);
     }
 
     fn state(current: &str) -> State {

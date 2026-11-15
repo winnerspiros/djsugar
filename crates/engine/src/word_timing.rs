@@ -16,7 +16,7 @@ use crate::lyrics::{Line, Word};
 pub const MODEL: &str = "ggml-large-v3-turbo-q5_0.bin";
 
 /// The model file and its SHA-1, as whisper.cpp publishes it (the
-/// `stem-models` release of openDJ carries the same bytes).
+/// `stem-models` release of DJ Sugar carries the same bytes).
 pub const MODELS: [(&str, &str); 1] = [(MODEL, "e050f7970618a659205450ad97eb95a18d69c9ee")];
 
 /// Whisper listens at 16 kHz, mono.
@@ -88,7 +88,7 @@ fn vocals(path: &Path, report: &Report) -> Result<Vec<f32>, String> {
         .flatten()
         .map(|f| (f[0] + f[1]) * 0.5)
         .collect();
-    opendj_separation::resample(&mono, audio.sample_rate, RATE)
+    djsugar_separation::resample(&mono, audio.sample_rate, RATE)
 }
 
 fn listen(

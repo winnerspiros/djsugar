@@ -1,10 +1,10 @@
-//! Scores openDJ's phrase detection against the phrases another app found
+//! Scores DJ Sugar's phrase detection against the phrases another app found
 //! for the same tracks (rekordbox's, brought in with its library import).
 //!
 //!     cargo run --release -p phrase-bench -- LIBRARY [--limit N] [--csv]
 //!
-//! LIBRARY is openDJ's `library.sqlite` (on macOS in
-//! `~/Library/Application Support/openDJ`). Every track there with imported
+//! LIBRARY is DJ Sugar's `library.sqlite` (on macOS in
+//! `~/Library/Application Support/DJSugar`). Every track there with imported
 //! phrases whose file can be read is decoded and analysed afresh (nothing
 //! is written to the library or the cache), on the library's own beat grid,
 //! and its detected phrases are compared with the imported ones:
@@ -19,9 +19,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::phrases::{self, Phrase, PhraseKind};
-use opendj_engine::track::{Chroma, MarkerKind, Source, Track};
-use opendj_engine::{analysis, decode};
+use djsugar_engine::phrases::{self, Phrase, PhraseKind};
+use djsugar_engine::track::{Chroma, MarkerKind, Source, Track};
+use djsugar_engine::{analysis, decode};
 
 struct Options {
     library: PathBuf,
@@ -51,7 +51,7 @@ fn options() -> Result<Options, String> {
         }
     }
     if o.library.as_os_str().is_empty() {
-        return Err("give the path of openDJ's library.sqlite".into());
+        return Err("give the path of DJ Sugar's library.sqlite".into());
     }
     Ok(o)
 }
@@ -202,7 +202,7 @@ fn main() {
             std::process::exit(2);
         }
     };
-    let library = match opendj_library::Library::open(&o.library) {
+    let library = match djsugar_library::Library::open(&o.library) {
         Ok(l) => l,
         Err(e) => {
             eprintln!("can't open {}: {e}", o.library.display());

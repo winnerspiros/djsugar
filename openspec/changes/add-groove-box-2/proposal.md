@@ -23,7 +23,7 @@ A Groove Box deck has no audio file, so it never has a waveform. The strip that 
 - **Record from pads.** What is played on the sampler pads or a controller's pads while recording is armed lands in the groove, quantised to the step.
 - **Sounds from the mix.** Drop a track region, a sampler pad or a file on a row to use it as that row's sound; with stems, take the kick or snare from the drum stem of a loaded track.
 - **Replace drums.** A Groove Box can sit over a track deck: it mutes the track's drum stem and plays its own groove in the track's grid, with roll and stutter on the groove.
-- **Grooves as items.** Grooves and chains can be saved, named and dragged from the Instruments source like kits, and exported in `.opendjpack`, or dragged out as a MIDI file.
+- **Grooves as items.** Grooves and chains can be saved, named and dragged from the Instruments source like kits, and exported in `.djsugarpack`, or dragged out as a MIDI file.
 
 ## Capabilities
 

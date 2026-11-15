@@ -1,7 +1,7 @@
 //! Export to USB (for Pioneer DJ and Engine DJ players) from File › Export
 //! and the tree's menu: the dialog (see `ui/usb_export.slint`),
 //! the lists and tracks of the node it was opened on, and the export
-//! itself on a thread of its own (see [`opendj_export`]).
+//! itself on a thread of its own (see [`djsugar_export`]).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::sync::Arc;
 
-use opendj_engine::Track;
-use opendj_export::{List, Options, Report, Step};
+use djsugar_engine::Track;
+use djsugar_export::{List, Options, Report, Step};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::{Browser, Contents};
@@ -32,7 +32,7 @@ struct Job {
 
 enum Message {
     Step(Step),
-    Done(Result<Report, opendj_export::Error>),
+    Done(Result<Report, djsugar_export::Error>),
 }
 
 impl Browser {
@@ -188,7 +188,7 @@ impl Browser {
             .name("usb export".into())
             .spawn(move || {
                 let steps = send.clone();
-                let result = opendj_export::export(&tracks, &lists, &options, &mut |step| {
+                let result = djsugar_export::export(&tracks, &lists, &options, &mut |step| {
                     let _ = steps.send(Message::Step(step));
                     !stopped.load(Ordering::Relaxed)
                 });
@@ -217,7 +217,7 @@ impl Browser {
                 }
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => {
-                    done = Some(Err(opendj_export::Error::Other(
+                    done = Some(Err(djsugar_export::Error::Other(
                         "the export stopped".into(),
                     )));
                     break;
@@ -244,7 +244,7 @@ impl Browser {
             ui.set_running(false);
             let (text, failed) = match result {
                 Ok(report) => (summary(&report), false),
-                Err(opendj_export::Error::Cancelled) => (
+                Err(djsugar_export::Error::Cancelled) => (
                     "Stopped. The stick's library is as it was.".to_string(),
                     false,
                 ),
@@ -260,7 +260,7 @@ impl Browser {
 fn drive_name(path: &std::path::Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "openDJ".into())
+        .unwrap_or_else(|| "DJ Sugar".into())
 }
 
 fn summary(r: &Report) -> String {

@@ -1,5 +1,5 @@
 [package]
-name = "opendj-broadcast"
+name = "djsugar-broadcast"
 description = "Live broadcasting: encodes the master and streams it to Icecast and Shoutcast servers"
 version.workspace = true
 edition.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 base64 = "0.22"
 mp3lame-encoder = "0.2"
 ogg = "0.9"
-opendj-control = { path = "../control" }
+djsugar-control = { path = "../control" }
 opus = "0.4"
 percent-encoding = "2"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

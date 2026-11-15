@@ -14,7 +14,7 @@ There SHALL be 16 sampler slots (`[Sampler1]` to `[Sampler16]`). A deck's SAMPLE
 ## ADDED Requirements
 
 ### Requirement: Sample packs
-A sample pack SHALL be a named set of up to 16 samples with an optional cover, author and licence. The built-in sounds SHALL be the Default DJ Sample Pack, which can't be deleted. A SAMPLE PACK menu under the pads, never between the page tabs and the pads, SHALL list the packs with their covers, switch the slots to the chosen pack, offer + to make a new empty pack or import a `.opendjpack` file, and end with Get more Packs. The chosen pack SHALL be kept across restarts.
+A sample pack SHALL be a named set of up to 16 samples with an optional cover, author and licence. The built-in sounds SHALL be the Default DJ Sample Pack, which can't be deleted. A SAMPLE PACK menu under the pads, never between the page tabs and the pads, SHALL list the packs with their covers, switch the slots to the chosen pack, offer + to make a new empty pack or import a `.djsugarpack` file, and end with Get more Packs. The chosen pack SHALL be kept across restarts.
 
 #### Scenario: Switch pack
 - **WHEN** "Dancehall Drops" is chosen in the SAMPLE PACK menu
@@ -54,7 +54,7 @@ An audio file (WAV, AIFF, FLAC, MP3, M4A or OGG, up to 60 seconds) SHALL be load
 Each pad SHALL have a level from silent to +6 dB (0 dB by default), set with a small knob on the pad in edit mode, where pads can also be dragged onto each other to swap them, and a play mode: One shot (plays to the end; pressing again restarts), Hold (plays while held), On/Off (pressing again stops) or Loop (repeats until pressed again). Shift + pad SHALL stop a playing sample. Level, name, sample and mode SHALL be saved per pack in settings, without changing the pack's files.
 
 #### Scenario: Turn a drop down
-- **WHEN** pad 6's level knob is turned to -6 dB and openDJ is restarted
+- **WHEN** pad 6's level knob is turned to -6 dB and DJ Sugar is restarted
 - **THEN** pad 6 still plays at -6 dB
 
 #### Scenario: Swap two pads
@@ -66,7 +66,7 @@ Each pad SHALL have a level from silent to +6 dB (0 dB by default), set with a s
 - **THEN** the sample stops when the pad is released
 
 ### Requirement: Share packs
-A pack SHALL be exportable as one `.opendjpack` file holding its samples, names, levels, modes, cover and licence, and importable on another computer by + › Import or by dropping the file on the SAMPLE PACK menu.
+A pack SHALL be exportable as one `.djsugarpack` file holding its samples, names, levels, modes, cover and licence, and importable on another computer by + › Import or by dropping the file on the SAMPLE PACK menu.
 
 #### Scenario: Move a pack
 - **WHEN** "Dancehall Drops" is exported on one computer and the file is imported on another

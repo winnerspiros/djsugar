@@ -1,9 +1,9 @@
 {
- "format": "opendj-mapping",
+ "format": "djsugar-mapping",
  "version": 1,
  "name": "Allen & Heath Xone:K2 - Mixer",
- "author": "openDJ",
- "description": "openDJ's own mapping for one Xone:K2 on the Mixer deck: each column is a Mixer channel, Ch 1 to Ch 4 from left to right, top to bottom as the channel on screen. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15.\n\nTop encoder: TRIM (press: back to 0 dB; its light shows clipping in red). First knob: PAN. The buttons under the knobs: FX (red), S solo (amber), cue in the headphones (green). Fader: the channel's volume. The first row of the matrix is the channel's on/off number button (green while on); the three rows below are its meter (green, green, amber, red on a clip). Bottom encoders: headphones level (left) and headphones cue/main mix (right; press the right one to centre it). The second and third knobs are free for your own rows.",
+ "author": "DJ Sugar",
+ "description": "DJ Sugar's own mapping for one Xone:K2 on the Mixer deck: each column is a Mixer channel, Ch 1 to Ch 4 from left to right, top to bottom as the channel on screen. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15.\n\nTop encoder: TRIM (press: back to 0 dB; its light shows clipping in red). First knob: PAN. The buttons under the knobs: FX (red), S solo (amber), cue in the headphones (green). Fader: the channel's volume. The first row of the matrix is the channel's on/off number button (green while on); the three rows below are its meter (green, green, amber, red on a clip). Bottom encoders: headphones level (left) and headphones cue/main mix (right; press the right one to centre it). The second and third knobs are free for your own rows.",
  "controller": {
   "name": "Allen & Heath Xone:K2",
   "ports": [

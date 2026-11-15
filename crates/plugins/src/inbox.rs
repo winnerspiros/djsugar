@@ -9,7 +9,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
-use opendj_engine::scan::is_audio;
+use djsugar_engine::scan::is_audio;
 
 use crate::{InboxFile, Manifest, Plugin};
 
@@ -305,7 +305,7 @@ mod tests {
     use std::io::Write;
 
     fn temp(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("opendj-inbox-{name}-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("djsugar-inbox-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d

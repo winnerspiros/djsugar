@@ -9,10 +9,10 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
 
-use opendj_engine::Source;
-use opendj_library::query::Indexed;
-use opendj_library::stages::{self, Stage};
-use opendj_library::Change;
+use djsugar_engine::Source;
+use djsugar_library::query::Indexed;
+use djsugar_library::stages::{self, Stage};
+use djsugar_library::Change;
 use serde_json::json;
 
 use super::albums::{album_title, most};
@@ -138,7 +138,7 @@ impl Browser {
                 by_dir.entry(dir.to_path_buf()).or_default().push(i);
             }
         }
-        let downloads = opendj_engine::paths::home_dir().map(|h| h.join("Downloads"));
+        let downloads = djsugar_engine::paths::home_dir().map(|h| h.join("Downloads"));
         let mut found: Vec<InboxAlbum> = by_dir
             .into_iter()
             .filter(|(dir, _)| !self.folders.inbox.contains(dir) && downloads.as_ref() != Some(dir))
@@ -276,7 +276,7 @@ impl Browser {
             }
         };
         if failed.is_empty() {
-            if let Err(e) = opendj_library::move_leftovers(dir, &to_dir) {
+            if let Err(e) = djsugar_library::move_leftovers(dir, &to_dir) {
                 eprintln!("can't move the rest of {}: {e}", dir.display());
             }
         }

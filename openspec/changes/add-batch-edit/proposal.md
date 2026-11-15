@@ -6,7 +6,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (follow-up to col
 
 Tidying a collection means changing many tracks at once: one album name on twelve tracks, a mood tag on thirty, "(Original Mix)" off a whole Inbox. Today the track list can only pick a run of rows (shift-click), and the Info tab edits one track. The safe machinery already exists (the clean-up review table, the `tag_changes` log with batch Undo, and `hand_edited` protection), but there is no way in for arbitrary sets of tracks or for typing one value into many.
 
-Every library tool compared (Lexicon, Mp3tag, MusicBrainz Picard, beets, Yate, Serato, rekordbox, VirtualDJ, Traktor, Mixxx) lets the DJ pick any set of tracks and edit them together. Lexicon and Mp3tag show a placeholder for fields that differ; Lexicon and rekordbox treat tags as chips added to or removed from many tracks; Mp3tag, Lexicon and Yate offer case conversion and find and replace. openDJ keeps its own strengths: changes are reviewed before they are written, and a batch can be taken back.
+Every library tool compared (Lexicon, Mp3tag, MusicBrainz Picard, beets, Yate, Serato, rekordbox, VirtualDJ, Traktor, Mixxx) lets the DJ pick any set of tracks and edit them together. Lexicon and Mp3tag show a placeholder for fields that differ; Lexicon and rekordbox treat tags as chips added to or removed from many tracks; Mp3tag, Lexicon and Yate offer case conversion and find and replace. DJ Sugar keeps its own strengths: changes are reviewed before they are written, and a batch can be taken back.
 
 ## What Changes
 

@@ -8,7 +8,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use opendj_waveform::{Palette, Style, BAND_PALETTES};
+use djsugar_waveform::{Palette, Style, BAND_PALETTES};
 
 use crate::settings;
 

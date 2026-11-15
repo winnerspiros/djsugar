@@ -74,7 +74,7 @@ impl Prefs {
                 "",
                 NOTE,
                 "Plugins",
-                "This copy of openDJ came without its plugin helper (opendj-plugin-host), so CLAP, VST3 and Audio Unit plugins can't run.",
+                "This copy of DJ Sugar came without its plugin helper (djsugar-plugin-host), so CLAP, VST3 and Audio Unit plugins can't run.",
             )];
         }
         let effects = p.effects();
@@ -107,7 +107,7 @@ impl Prefs {
             items.push(folder_list(
                 PLUGIN_FOLDERS_LIST,
                 "Plugin folders",
-                "Where openDJ looks for .clap and .vst3 plugins, besides the system's own plugin \
+                "Where DJ Sugar looks for .clap and .vst3 plugins, besides the system's own plugin \
                  folders.",
                 &p.folders(),
                 false,
@@ -253,7 +253,7 @@ impl Prefs {
         }
     }
 
-    /// Keyboard shortcuts, each an openDJscript line (see shortcuts.rs).
+    /// Keyboard shortcuts, each an DJSugarScript line (see shortcuts.rs).
     pub(super) fn audio_plugin_pressed(&mut self, id: &str) -> bool {
         if let Some(maker) = id
             .strip_prefix("audio_plugin_maker:")

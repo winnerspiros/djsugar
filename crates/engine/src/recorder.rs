@@ -31,7 +31,7 @@ use std::sync::{Arc, Mutex, Weak};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 use serde_json::{json, Value};
 
 use crate::track::{Source, Track};
@@ -113,11 +113,11 @@ impl Default for RecordSettings {
     }
 }
 
-/// `~/Music/openDJ/Recordings`.
+/// `~/Music/DJSugar/Recordings`.
 pub fn default_dir() -> PathBuf {
     crate::scan::default_music_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("openDJ")
+        .join("DJ Sugar")
         .join("Recordings")
 }
 
@@ -481,9 +481,9 @@ impl Recorder {
     }
 }
 
-/// `<dir>/openDJ 2026-10-19 21.05`, with " 2", " 3"... if that is taken.
+/// `<dir>/DJSugar 2026-10-19 21.05`, with " 2", " 3"... if that is taken.
 fn unique_base(dir: &Path, now: &chrono::DateTime<chrono::Local>, format: RecordFormat) -> PathBuf {
-    let stem = format!("openDJ {}", now.format("%Y-%m-%d %H.%M"));
+    let stem = format!("DJ Sugar {}", now.format("%Y-%m-%d %H.%M"));
     let mut n = 1;
     loop {
         let name = if n == 1 {
@@ -919,7 +919,7 @@ fn log_controls(
     line(
         &mut out,
         json!({
-            "opendj_recording": 1,
+            "djsugar_recording": 1,
             "started": started.to_rfc3339(),
             "sample_rate": rate,
             "audio": audio_name(&parts.lock().unwrap()[0].path),
@@ -1080,8 +1080,8 @@ fn write_cue(
 ) -> io::Result<()> {
     let mut s = String::new();
     s.push_str(&format!("REM DATE {}\n", started.format("%Y-%m-%d %H:%M")));
-    s.push_str("REM COMMENT \"Recorded with openDJ\"\n");
-    s.push_str("PERFORMER \"openDJ\"\n");
+    s.push_str("REM COMMENT \"Recorded with DJ Sugar\"\n");
+    s.push_str("PERFORMER \"DJ Sugar\"\n");
     s.push_str(&format!("TITLE \"{}\"\n", cue_text(&audio_name(base))));
     let mut current = usize::MAX;
     for (n, c) in cues.iter().enumerate() {
@@ -1164,7 +1164,7 @@ mod tests {
             (RecordFormat::Flac, 16),
         ] {
             let dir = std::env::temp_dir().join(format!(
-                "opendj-rec-test-{}-{}-{bits}",
+                "djsugar-rec-test-{}-{}-{bits}",
                 std::process::id(),
                 format.name()
             ));
@@ -1233,7 +1233,7 @@ mod tests {
                 .lines()
                 .map(|l| serde_json::from_str(l).unwrap())
                 .collect();
-            assert_eq!(lines[0]["opendj_recording"], 1);
+            assert_eq!(lines[0]["djsugar_recording"], 1);
             assert!(lines[1]["snapshot"]["[Channel1],volume"].is_number());
             assert!(lines.iter().any(|l| l["load"]["title"] == "Test \"Tone\""));
             let volume = lines
@@ -1286,14 +1286,14 @@ mod tests {
 
     #[test]
     fn parts_get_numbered() {
-        let base = Path::new("/r/openDJ 2026-10-19 21.05");
+        let base = Path::new("/r/DJSugar 2026-10-19 21.05");
         assert_eq!(
             audio_path(base, 1, RecordFormat::Wav),
-            Path::new("/r/openDJ 2026-10-19 21.05.wav")
+            Path::new("/r/DJSugar 2026-10-19 21.05.wav")
         );
         assert_eq!(
             audio_path(base, 2, RecordFormat::Flac),
-            Path::new("/r/openDJ 2026-10-19 21.05 (part 2).flac")
+            Path::new("/r/DJSugar 2026-10-19 21.05 (part 2).flac")
         );
     }
 }

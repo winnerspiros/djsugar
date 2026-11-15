@@ -1,4 +1,4 @@
-//! The DJ's tags: openDJ's own model, not any other app's.
+//! The DJ's tags: DJ Sugar's own model, not any other app's.
 //!
 //! Tags sit in **groups** the DJ makes and names (Mood, Instruments,
 //! Vibe…). A group holds as many tags as the DJ likes, and lets a track
@@ -14,7 +14,7 @@
 
 use std::collections::HashMap;
 
-use opendj_engine::{hashtags, same_tag, tag_name, LibraryInfo, TrackTag};
+use djsugar_engine::{hashtags, same_tag, tag_name, LibraryInfo, TrackTag};
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::{row_id, Error, Library};

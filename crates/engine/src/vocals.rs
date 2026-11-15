@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use opendj_separation::spleeter;
+use djsugar_separation::spleeter;
 
 use crate::decode::decode;
 use crate::separation::{channels, spleeter_net};
@@ -34,13 +34,13 @@ pub type Levels = Vec<u8>;
 fn detect(audio: &Audio, mut keep_going: impl FnMut() -> bool) -> Result<Vec<u8>, String> {
     let net = spleeter_net()?;
     let [l, r] = channels(audio);
-    let model_rate = opendj_separation::SAMPLE_RATE;
+    let model_rate = djsugar_separation::SAMPLE_RATE;
     let (l, r) = if audio.sample_rate == model_rate {
         (l, r)
     } else {
         (
-            opendj_separation::resample(&l, audio.sample_rate, model_rate)?,
-            opendj_separation::resample(&r, audio.sample_rate, model_rate)?,
+            djsugar_separation::resample(&l, audio.sample_rate, model_rate)?,
+            djsugar_separation::resample(&r, audio.sample_rate, model_rate)?,
         )
     };
     let mut stopped = false;

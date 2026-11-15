@@ -1,6 +1,6 @@
 //! The Albums and Mixed Sets sources in the rail: the albums folder (an
 //! album a folder, or Artist/Album) and the mixed sets folder (recordings
-//! of whole sets, openDJ's own among them), each as a tree of its folders
+//! of whole sets, DJ Sugar's own among them), each as a tree of its folders
 //! over the collection's tracks. Mixed sets stay out of the collection;
 //! albums are in it too.
 //!
@@ -10,7 +10,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
-use opendj_engine::Track;
+use djsugar_engine::Track;
 use slint::{ComponentHandle, ModelRc, VecModel};
 
 use super::{

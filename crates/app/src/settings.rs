@@ -4,27 +4,27 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::browser::columns::{Hidden, Layout};
-use opendj_controllers::routing::DeckChoice;
-use opendj_controllers::MappingChoice;
-use opendj_engine::key::{Key, Notation};
-use opendj_engine::scan::default_music_dir;
-use opendj_engine::{AudioSetup, InputRole, InputRoute, RecordFormat, RecordSettings, Role, Route};
-use opendj_library::query::FieldNames;
-use opendj_plugins::inbox::Mode;
-use opendj_plugins::PluginConfig;
+use djsugar_controllers::routing::DeckChoice;
+use djsugar_controllers::MappingChoice;
+use djsugar_engine::key::{Key, Notation};
+use djsugar_engine::scan::default_music_dir;
+use djsugar_engine::{AudioSetup, InputRole, InputRoute, RecordFormat, RecordSettings, Role, Route};
+use djsugar_library::query::FieldNames;
+use djsugar_plugins::inbox::Mode;
+use djsugar_plugins::PluginConfig;
 use serde_json::{json, Value};
 
-/// Where openDJ keeps its settings: `OPENDJ_CONFIG`, else
-/// `~/Library/Application Support/openDJ` on macOS, `%APPDATA%\openDJ` on
-/// Windows and `$XDG_CONFIG_HOME/opendj` (or `~/.config/opendj`) elsewhere.
+/// Where DJ Sugar keeps its settings: `DJSUGAR_CONFIG`, else
+/// `~/Library/Application Support/DJSugar` on macOS, `%APPDATA%\DJ Sugar` on
+/// Windows and `$XDG_CONFIG_HOME/djsugar` (or `~/.config/djsugar`) elsewhere.
 pub fn config_dir() -> Option<PathBuf> {
-    if let Some(d) = std::env::var_os("OPENDJ_CONFIG") {
+    if let Some(d) = std::env::var_os("DJSUGAR_CONFIG") {
         return Some(PathBuf::from(d));
     }
-    let base = opendj_engine::paths::config_base()?;
-    let name = opendj_engine::paths::app_folder_name();
+    let base = djsugar_engine::paths::config_base()?;
+    let name = djsugar_engine::paths::app_folder_name();
     static MOVED: std::sync::Once = std::sync::Once::new();
-    MOVED.call_once(|| opendj_engine::cache::move_old_folder(&base, name));
+    MOVED.call_once(|| djsugar_engine::cache::move_old_folder(&base, name));
     Some(base.join(name))
 }
 
@@ -249,7 +249,7 @@ pub fn set_audio_setup(setup: &AudioSetup) {
 }
 
 /// The sources hidden from the library rail, by name; `None` until the DJ
-/// (or openDJ, on first start) has saved a choice.
+/// (or DJ Sugar, on first start) has saved a choice.
 /// Names saved before Mixed Sets was renamed Recordings, and Instruments
 /// Jam, read as the new names.
 pub fn hidden_sources() -> Option<Vec<String>> {
@@ -438,7 +438,7 @@ pub fn import_enabled(importer: &str) -> bool {
 
 /// The database an importer reads: the one the DJ picked in the import
 /// wizard, else the one the app keeps where it usually does.
-pub fn import_database(importer: &dyn opendj_plugins::LibraryImport) -> Option<PathBuf> {
+pub fn import_database(importer: &dyn djsugar_plugins::LibraryImport) -> Option<PathBuf> {
     path_of(&import_database_key(importer.id())).or_else(|| importer.database())
 }
 
@@ -486,7 +486,7 @@ pub fn import_group_key(importer: &str, group: &str) -> String {
 }
 
 /// The kinds of lists the DJ wants `importer` to bring in, by id.
-pub fn import_groups(importer: &dyn opendj_plugins::LibraryImport) -> Vec<&'static str> {
+pub fn import_groups(importer: &dyn djsugar_plugins::LibraryImport) -> Vec<&'static str> {
     let v = load();
     importer
         .list_groups()
@@ -501,7 +501,7 @@ pub fn import_groups(importer: &dyn opendj_plugins::LibraryImport) -> Vec<&'stat
 }
 
 /// The setting with the lists the DJ ticked or unticked for `importer`, by
-/// [`ImportedList::key`](opendj_plugins::ImportedList::key): only those that
+/// [`ImportedList::key`](djsugar_plugins::ImportedList::key): only those that
 /// differ from what comes in by default are kept.
 pub fn import_lists_key(importer: &str) -> String {
     format!("import_lists:{importer}")
@@ -522,7 +522,7 @@ pub fn import_list_choices(importer: &str) -> HashMap<String, bool> {
 /// Whether `list` comes in, by the DJ's `choices`.
 pub fn import_list_wanted(
     choices: &HashMap<String, bool>,
-    list: &opendj_plugins::ImportedList,
+    list: &djsugar_plugins::ImportedList,
 ) -> bool {
     choices
         .get(&list.key())
@@ -597,7 +597,7 @@ pub fn set_controller_shown(key: &str, shown: bool) {
 }
 
 /// Controllers whose knobs and faders use Scale rather than Pick-up, by
-/// device key (see `opendj_controllers::pickup`).
+/// device key (see `djsugar_controllers::pickup`).
 pub fn controllers_scaled() -> Vec<String> {
     load()["controller_scale"]
         .as_object()
@@ -726,7 +726,7 @@ pub fn controller_versions() -> HashMap<String, PathBuf> {
         .map(|m| {
             m.iter()
                 .filter_map(|(k, v)| {
-                    Some((k.clone(), opendj_controllers::own::path(&dir, v.as_str()?)))
+                    Some((k.clone(), djsugar_controllers::own::path(&dir, v.as_str()?)))
                 })
                 .collect()
         })
@@ -750,11 +750,11 @@ pub fn set_controller_version(based_on: &str, id: Option<&str>) {
     });
 }
 
-/// The folders scanned for music: `OPENDJ_MUSIC`, else the ones chosen in
+/// The folders scanned for music: `DJSUGAR_MUSIC`, else the ones chosen in
 /// settings. There's no default: `~/Music` is where Ableton, GarageBand and
 /// the like keep their samples, so it's only scanned when the DJ adds it.
 pub fn music_folders() -> Vec<PathBuf> {
-    if std::env::var_os("OPENDJ_MUSIC").is_some() {
+    if std::env::var_os("DJSUGAR_MUSIC").is_some() {
         return default_music_dir().into_iter().collect();
     }
     let v = load();
@@ -775,10 +775,10 @@ pub fn set_music_folders(folders: &[PathBuf]) {
     save(|v| v[MUSIC_FOLDERS] = json!(folders));
 }
 
-/// The stage folders (see [`opendj_library::stages`]): any number of inbox
+/// The stage folders (see [`djsugar_library::stages`]): any number of inbox
 /// folders, one triage folder and one collection folder.
-pub fn stage_folders() -> opendj_library::stages::Folders {
-    opendj_library::stages::Folders {
+pub fn stage_folders() -> djsugar_library::stages::Folders {
+    djsugar_library::stages::Folders {
         inbox: paths(STAGE_INBOX),
         triage: path_of(STAGE_TRIAGE),
         collection: path_of(STAGE_COLLECTION),
@@ -790,11 +790,11 @@ pub fn stage_folders() -> opendj_library::stages::Folders {
 /// rail's Albums source.
 pub const ALBUMS_FOLDER: &str = "albums_folder";
 /// Mixed sets: recordings of whole DJ sets, hours long. Kept out of the
-/// collection, in the rail's Mixed Sets source; openDJ's own recordings go
+/// collection, in the rail's Mixed Sets source; DJ Sugar's own recordings go
 /// in a subfolder.
 pub const MIXED_SETS_FOLDER: &str = "mixed_sets_folder";
 /// The subfolder of the mixed sets folder that recordings are saved in.
-pub const RECORDINGS_SUBFOLDER: &str = "openDJ Recordings";
+pub const RECORDINGS_SUBFOLDER: &str = "DJ Sugar Recordings";
 
 pub fn albums_folder() -> Option<PathBuf> {
     path_of(ALBUMS_FOLDER)
@@ -807,7 +807,7 @@ pub fn mixed_sets_folder() -> Option<PathBuf> {
 pub const STAGE_INBOX: &str = "stage_inbox";
 pub const STAGE_TRIAGE: &str = "stage_triage";
 pub const STAGE_COLLECTION: &str = "stage_collection";
-/// Whether openDJ moves files between the stage folders. Off until the DJ
+/// Whether DJ Sugar moves files between the stage folders. Off until the DJ
 /// turns it on, as another app may still point at where they are; moves
 /// wait in a queue meanwhile.
 pub const MOVE_FILES: &str = "move_files";
@@ -820,8 +820,8 @@ pub fn move_files() -> bool {
 }
 
 /// The clean-up rules turned on in Settings › Collection.
-pub fn cleanup_rules() -> opendj_library::cleanup::Rules {
-    opendj_library::cleanup::Rules::from(flag)
+pub fn cleanup_rules() -> djsugar_library::cleanup::Rules {
+    djsugar_library::cleanup::Rules::from(flag)
 }
 
 pub fn rename_to_triage() -> bool {
@@ -829,7 +829,7 @@ pub fn rename_to_triage() -> bool {
 }
 
 /// The purchase inbox: whether it's on, the folder it watches, and what it
-/// does with what arrives (see [`opendj_plugins::inbox::Mode`]).
+/// does with what arrives (see [`djsugar_plugins::inbox::Mode`]).
 pub struct InboxSettings {
     pub on: bool,
     pub dir: Option<PathBuf>,
@@ -842,16 +842,16 @@ pub struct InboxSettings {
     pub music_app: Option<(PathBuf, u64)>,
 }
 
-/// The inbox settings. `OPENDJ_INBOX` sets the folder (and switches it
+/// The inbox settings. `DJSUGAR_INBOX` sets the folder (and switches it
 /// on); otherwise it watches Downloads. It's off until the DJ turns it on,
 /// so nothing in Downloads moves unasked.
 pub fn inbox() -> InboxSettings {
     let v = load();
-    let env = std::env::var_os("OPENDJ_INBOX").map(PathBuf::from);
+    let env = std::env::var_os("DJSUGAR_INBOX").map(PathBuf::from);
     let dir = env
         .clone()
         .or_else(|| v["inbox_dir"].as_str().map(PathBuf::from))
-        .or_else(|| opendj_engine::paths::home_dir().map(|h| h.join("Downloads")));
+        .or_else(|| djsugar_engine::paths::home_dir().map(|h| h.join("Downloads")));
     let since = v["inbox_since"].as_u64().unwrap_or_else(now_secs);
     let music_app = match (music_app_folder(), v["inbox_music_app_since"].as_u64()) {
         (Some(dir), Some(since)) => Some((dir, since)),
@@ -891,7 +891,7 @@ pub fn music_app_folder() -> Option<PathBuf> {
     if !cfg!(target_os = "macos") {
         return None;
     }
-    let music = opendj_engine::paths::home_dir()?.join("Music");
+    let music = djsugar_engine::paths::home_dir()?.join("Music");
     [
         "Music/Media.localized/Music",
         "Music/Media/Music",
@@ -968,7 +968,7 @@ pub fn field_names() -> FieldNames {
             .as_str()
             .filter(|s| !s.trim().is_empty())
             .map_or_else(|| FieldNames::default().grouping, String::from),
-        ..opendj_library::query::field_names()
+        ..djsugar_library::query::field_names()
     }
 }
 
@@ -979,7 +979,7 @@ pub fn set_grouping_name(name: &str) {
 
 /// Makes searches, chips and columns know the grouping by its name.
 fn publish_grouping_name() {
-    opendj_library::query::set_field_names(field_names());
+    djsugar_library::query::set_field_names(field_names());
 }
 
 /// What the DJ called the numbered tag fields before tag groups, for
@@ -990,10 +990,10 @@ pub fn old_tag_field_names() -> Vec<String> {
 
 /// Makes searches, chips, columns and the Info tab know the library's tag
 /// groups as they are now.
-pub fn publish_tag_groups(db: &opendj_library::Library) {
+pub fn publish_tag_groups(db: &djsugar_library::Library) {
     if let (Ok(tags), Ok(tag_colors)) = (db.tag_groups(), db.tag_colors()) {
         let names = field_names();
-        opendj_library::query::set_field_names(FieldNames {
+        djsugar_library::query::set_field_names(FieldNames {
             tags,
             tag_colors,
             ..names
@@ -1006,7 +1006,7 @@ pub fn publish_tag_groups(db: &opendj_library::Library) {
 pub fn tags_changed() {
     let mut names = field_names();
     names.tags_revision += 1;
-    opendj_library::query::set_field_names(names);
+    djsugar_library::query::set_field_names(names);
 }
 
 /// The filter chips kept on the bar, by field. A bar saved before the
@@ -1195,7 +1195,7 @@ fn shortcut_json(shortcuts: &[(String, String)]) -> Value {
         .collect::<Vec<_>>())
 }
 
-/// The name openDJ's own set of keyboard shortcuts goes by.
+/// The name DJ Sugar's own set of keyboard shortcuts goes by.
 pub const DEFAULT_KEYBOARD_SET: &str = "Default";
 
 /// The keyboard shortcut set in use; [`DEFAULT_KEYBOARD_SET`] unless the DJ
@@ -1225,7 +1225,7 @@ pub fn keyboard_sets() -> Vec<String> {
     names
 }
 
-/// The keyboard shortcuts of the set in use, as (key, openDJscript line)
+/// The keyboard shortcuts of the set in use, as (key, DJSugarScript line)
 /// pairs in the order saved. They replace the default for the same key
 /// ([`crate::shortcuts::DEFAULTS`]); an empty line turns that key off.
 pub fn keyboard_shortcuts() -> Vec<(String, String)> {
@@ -1346,7 +1346,7 @@ pub fn show_key(key: &str, camelot: bool) -> String {
     }
 }
 
-/// Whether the phone remote was on when openDJ last quit; off at first.
+/// Whether the phone remote was on when DJ Sugar last quit; off at first.
 pub fn remote_on() -> bool {
     load()["remote_on"].as_bool().unwrap_or(false)
 }
@@ -1357,18 +1357,18 @@ pub fn set_remote_on(on: bool) {
 
 /// The phones paired with the remote. Each keeps only a hash of the token
 /// its phone logs in with.
-pub fn remote_devices() -> Vec<opendj_remote::Device> {
+pub fn remote_devices() -> Vec<djsugar_remote::Device> {
     load()["remote_devices"]
         .as_array()
         .map(|a| {
             a.iter()
-                .filter_map(opendj_remote::Device::from_json)
+                .filter_map(djsugar_remote::Device::from_json)
                 .collect()
         })
         .unwrap_or_default()
 }
 
-pub fn set_remote_devices(devices: &[opendj_remote::Device]) {
+pub fn set_remote_devices(devices: &[djsugar_remote::Device]) {
     let list: Vec<Value> = devices.iter().map(|d| d.to_json()).collect();
     save(|v| v["remote_devices"] = Value::Array(list));
 }

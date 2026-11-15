@@ -1,5 +1,5 @@
 [package]
-name = "opendj-waveform"
+name = "djsugar-waveform"
 description = "GPU waveform renderer (wgpu) that draws into textures the Slint UI displays"
 version.workspace = true
 edition.workspace = true

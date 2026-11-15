@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::catalog::describe;
-use crate::format::{Midi, OpenDjMapping, Row};
+use crate::format::{Midi, DjSugarMapping, Row};
 use crate::mapping::{Mapping, Options, When};
 
 /// What a hardware control sent, read as a binding: its message and how
@@ -100,7 +100,7 @@ pub fn hear_for(msgs: &[Vec<u8>], control: &str) -> Option<Heard> {
 }
 
 /// What a control on screen that has no control of its own (a pad mode
-/// tab) does instead, as `script:` and an openDJscript line:
+/// tab) does instead, as `script:` and an DJSugarScript line:
 /// `script:deck 1 set 'pad_tab' 2`.
 pub const SCRIPT: &str = "script:";
 
@@ -110,7 +110,7 @@ pub const SCRIPT: &str = "script:";
 /// `keep`, when it carries on doing it too. Returns what it did before, in
 /// words ("Cue · Deck 1").
 pub fn learn(
-    own: &mut OpenDjMapping,
+    own: &mut DjSugarMapping,
     base: Option<&Mapping>,
     heard: &Heard,
     control: &str,
@@ -154,7 +154,7 @@ pub fn learn(
             variables: Vec::new(),
         };
         only.inputs.insert(key, before.clone());
-        own.rows.extend(OpenDjMapping::from_mixxx(&only).rows);
+        own.rows.extend(DjSugarMapping::from_mixxx(&only).rows);
     }
     let option_names: Vec<&str> = heard.options.iter().map(String::as_str).collect();
     let mut row = match control.strip_prefix(SCRIPT) {
@@ -192,7 +192,7 @@ pub fn learn(
 }
 
 /// The controls `mapping` binds a message to directly (`[Channel1],play`),
-/// and its openDJscript lines (`script:deck 1 set 'pad_tab' 2`), for
+/// and its DJSugarScript lines (`script:deck 1 set 'pad_tab' 2`), for
 /// marking the ones already mapped.
 pub fn bound_controls(mapping: &Mapping) -> HashSet<String> {
     mapping
@@ -263,7 +263,7 @@ mod tests {
             midi: Midi::new(0x90, 0x0B),
             options: Vec::new(),
         };
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         let was = learn(
             &mut own,
             Some(&base),
@@ -289,7 +289,7 @@ mod tests {
         );
         assert_eq!(own.rows.len(), 1);
 
-        let mut both = OpenDjMapping::new("Both");
+        let mut both = DjSugarMapping::new("Both");
         learn(
             &mut both,
             Some(&base),
@@ -309,7 +309,7 @@ mod tests {
             midi: Midi::new(0x90, 0x1B),
             options: Vec::new(),
         };
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         let key = "script:deck 1 set 'pad_tab' 2";
         learn(&mut own, None, &tab, key, "BEAT JUMP", false);
         assert_eq!(own.rows.len(), 1);

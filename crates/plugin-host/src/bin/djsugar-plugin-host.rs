@@ -1,19 +1,19 @@
 //! The helper process. Two modes:
 //!
-//! - `opendj-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> |
+//! - `djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> |
 //!   --vst3 <bundle> --id <cid>)`
-//!   maps the block openDJ shares, loads one effect, describes it on stdout
+//!   maps the block DJ Sugar shares, loads one effect, describes it on stdout
 //!   (`name`, `latency`, `param` lines, then `ready`) and runs a block each
-//!   time openDJ writes a byte to stdin. It exits when stdin closes, so a
-//!   helper never outlives openDJ. `--title <text>` names the window the
-//!   plugin's editor opens in, when openDJ asks for it. `--state <file>`
+//!   time DJ Sugar writes a byte to stdin. It exits when stdin closes, so a
+//!   helper never outlives DJ Sugar. `--title <text>` names the window the
+//!   plugin's editor opens in, when DJ Sugar asks for it. `--state <file>`
 //!   names the file the plugin's state is saved to and loaded from when
-//!   openDJ asks (see `shm::Header::state_cmd`); if it exists at start, the
+//!   DJ Sugar asks (see `shm::Header::state_cmd`); if it exists at start, the
 //!   plugin starts from it.
-//! - `opendj-plugin-host --scan <file>` lists the plugins in a CLAP file or
+//! - `djsugar-plugin-host --scan <file>` lists the plugins in a CLAP file or
 //!   VST3 bundle, and `--scan-au` lists the installed Audio Units (macOS)
 //!   (`plugin` lines, then `done`) and exits.
-//! - `opendj-plugin-host --presets (--clap <file> --id <id> | --au <id>)`
+//! - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)`
 //!   lists the plugin's own presets (`preset` lines, name then reference, then `done`)
 //!   and exits.
 //!
@@ -26,15 +26,15 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_plugin_host::effects::{self, Effect, MainThread, Plugin};
-use opendj_plugin_host::shm::{self, Midi, Shm, CHANNELS, MAX_EVENTS, MAX_PARAMS};
-use opendj_plugin_host::window::EditorWindow;
-use opendj_plugin_host::Transport;
+use djsugar_plugin_host::effects::{self, Effect, MainThread, Plugin};
+use djsugar_plugin_host::shm::{self, Midi, Shm, CHANNELS, MAX_EVENTS, MAX_PARAMS};
+use djsugar_plugin_host::window::EditorWindow;
+use djsugar_plugin_host::Transport;
 
 /// macOS: makes this helper a background (accessory) app before any plugin
-/// code runs. The helper sits inside openDJ.app, so once a plugin touches
+/// code runs. The helper sits inside DJSugar.app, so once a plugin touches
 /// AppKit on load (many instruments do) macOS would otherwise show it as a
-/// second "openDJ" in the Dock and the ⌘-Tab switcher. Quitting that one
+/// second "DJ Sugar" in the Dock and the ⌘-Tab switcher. Quitting that one
 /// would kill the plugin.
 #[cfg(target_os = "macos")]
 fn stay_in_background() {
@@ -106,10 +106,10 @@ fn main() {
     }
     if list_presets {
         let found = match (clap, id, au) {
-            (Some(file), Some(id), None) => opendj_plugin_host::clap::presets(&file, &id),
+            (Some(file), Some(id), None) => djsugar_plugin_host::clap::presets(&file, &id),
             #[cfg(target_os = "macos")]
-            (None, _, Some(au)) => opendj_plugin_host::au::presets(&au),
-            _ => fail("usage: opendj-plugin-host --presets (--clap <file> --id <id> | --au <id>)"),
+            (None, _, Some(au)) => djsugar_plugin_host::au::presets(&au),
+            _ => fail("usage: djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)"),
         };
         return run_presets(found);
     }
@@ -119,7 +119,7 @@ fn main() {
         (None, None, Some(file), None, Some(id)) => Plugin::Vst3 { file, id },
         (None, None, None, Some(id), _) => Plugin::Au { id },
         _ => fail(
-            "usage: opendj-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> | --vst3 <bundle> --id <cid> | --au <type:subtype:maker>)",
+            "usage: djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> | --vst3 <bundle> --id <cid> | --au <type:subtype:maker>)",
         ),
     };
     let Some(shm_path) = shm_path else {
@@ -133,7 +133,7 @@ fn main() {
         effects::load(&plugin, sample_rate, shm.max_frames(), &picks).unwrap_or_else(|e| fail(&e));
 
     // Describe it, and start the shared parameters at its current values,
-    // so openDJ changes only what the DJ touches.
+    // so DJ Sugar changes only what the DJ touches.
     let info = &loaded.info;
     say(&format!("name\t{}", clean(&info.name)));
     say(&format!("latency\t{}", info.latency));
@@ -177,7 +177,7 @@ fn main() {
     say("ready");
 
     // Main thread: serve the plugin's main-thread requests, and its editor
-    // window, until openDJ lets go. Exiting without tearing the plugin down
+    // window, until DJ Sugar lets go. Exiting without tearing the plugin down
     // is deliberate: a plugin can't crash on the way out if it is never
     // asked to clean up.
     let title = title.unwrap_or_else(|| info.name.clone());
@@ -230,7 +230,7 @@ fn main() {
 /// How often the plugin's main thread is served, at the longest.
 const IDLE: Duration = Duration::from_millis(10);
 
-/// Does what openDJ asked about the plugin's state, if anything: saves it
+/// Does what DJ Sugar asked about the plugin's state, if anything: saves it
 /// to the state file (through a temporary file, so a reader never sees half
 /// of it) or loads it from there. True when it loaded one.
 fn serve_state(m: &mut dyn MainThread, h: &shm::Header, path: Option<&std::path::Path>) -> bool {
@@ -262,14 +262,14 @@ fn serve_state(m: &mut dyn MainThread, h: &shm::Header, path: Option<&std::path:
     (cmd == shm::STATE_LOAD || cmd == shm::STATE_PRESET) && result.is_ok()
 }
 
-/// How often the plugin's parameter values are read back for openDJ.
+/// How often the plugin's parameter values are read back for DJ Sugar.
 const READ_PARAMS: Duration = Duration::from_millis(50);
 
-/// Keeps the plugin's parameters and openDJ's knobs in step, on the main
-/// thread: tells the plugin's main side what openDJ set, and hands back
+/// Keeps the plugin's parameters and DJ Sugar's knobs in step, on the main
+/// thread: tells the plugin's main side what DJ Sugar set, and hands back
 /// what the plugin has now (see `shm::Header::values`).
 struct ParamSync {
-    /// The shared values openDJ last set.
+    /// The shared values DJ Sugar last set.
     set: Vec<f32>,
     now: Vec<f64>,
     next: std::time::Instant,
@@ -368,7 +368,7 @@ fn run_audio(shm: &Shm, mut fx: Box<dyn Effect>) {
     let mut promoted = false;
     loop {
         match stdin.read(&mut wake) {
-            Ok(0) | Err(_) => return, // openDJ closed the pipe or quit
+            Ok(0) | Err(_) => return, // DJ Sugar closed the pipe or quit
             Ok(_) => {}
         }
         let seq = h.seq_in.load(Ordering::Acquire);
@@ -379,7 +379,7 @@ fn run_audio(shm: &Shm, mut fx: Box<dyn Effect>) {
         let frames = (h.frames.load(Ordering::Relaxed) as usize).min(max);
         if !promoted && frames > 0 {
             // Now that the block length is known: the audio thread runs at
-            // real-time priority, as openDJ's own does, so a busy computer
+            // real-time priority, as DJ Sugar's own does, so a busy computer
             // (or the plugin's own window drawing) doesn't make it late.
             promoted = true;
             let rate = h.sample_rate.load(Ordering::Relaxed).max(1);
@@ -428,14 +428,14 @@ fn run_audio(shm: &Shm, mut fx: Box<dyn Effect>) {
 fn run_scan_au() {
     #[cfg(target_os = "macos")]
     {
-        print_found(&opendj_plugin_host::au::scan());
+        print_found(&djsugar_plugin_host::au::scan());
         say("done");
     }
     #[cfg(not(target_os = "macos"))]
     fail("Audio Units only run on macOS");
 }
 
-fn print_found(found: &[opendj_plugin_host::Descriptor]) {
+fn print_found(found: &[djsugar_plugin_host::Descriptor]) {
     for d in found {
         say(&format!(
             "plugin\t{}\t{}\t{}\t{}\t{}",
@@ -449,10 +449,10 @@ fn print_found(found: &[opendj_plugin_host::Descriptor]) {
 }
 
 fn run_scan(file: &std::path::Path) {
-    let found = if opendj_plugin_host::client::is_vst3(file) {
-        opendj_plugin_host::vst3::scan(file)
+    let found = if djsugar_plugin_host::client::is_vst3(file) {
+        djsugar_plugin_host::vst3::scan(file)
     } else {
-        opendj_plugin_host::clap::scan(file)
+        djsugar_plugin_host::clap::scan(file)
     };
     match found {
         Ok(found) => {

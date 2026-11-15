@@ -9,9 +9,9 @@ fn main() {
     #[cfg(windows)]
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         let mut res = winresource::WindowsResource::new();
-        res.set_icon("../../res/windows/opendj.ico")
-            .set("ProductName", "openDJ")
-            .set("FileDescription", "openDJ");
+        res.set_icon("../../res/windows/djsugar.ico")
+            .set("ProductName", "DJ Sugar")
+            .set("FileDescription", "DJ Sugar");
         res.compile().expect("embed the Windows icon");
     }
 }

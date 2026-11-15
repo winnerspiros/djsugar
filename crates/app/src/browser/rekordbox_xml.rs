@@ -2,15 +2,15 @@
 //! sidebar row picked. On the Collection node it writes every track and the
 //! whole list tree (Crates and Playlists as folders); on a list or folder
 //! just that list, or the folder with everything in it. The file itself is
-//! written by `opendj_plugins::rekordbox::xml_export`, on the save
+//! written by `djsugar_plugins::rekordbox::xml_export`, on the save
 //! dialog's thread.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use opendj_engine::Track;
-use opendj_plugins::rekordbox::xml_export::{self, XmlList};
+use djsugar_engine::Track;
+use djsugar_plugins::rekordbox::xml_export::{self, XmlList};
 
 use super::{Browser, Contents, COLLECTION, KIND_SECTION};
 use crate::LibraryEdit;
@@ -79,7 +79,7 @@ impl Browser {
         } else {
             format!(
                 "{}.xml",
-                opendj_library::playlist_files::file_name(&self.node_title(node))
+                djsugar_library::playlist_files::file_name(&self.node_title(node))
             )
         };
         let prompt = format!(

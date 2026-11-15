@@ -1,11 +1,11 @@
-//! Prints the tempo and beat grid openDJ finds for audio files:
-//! `cargo run --release -p opendj-engine --example analyse_file -- FILE...`
+//! Prints the tempo and beat grid DJ Sugar finds for audio files:
+//! `cargo run --release -p djsugar-engine --example analyse_file -- FILE...`
 //! With `--neural`, Beat This! refines the grid too (models from
-//! `OPENDJ_MODELS` or downloaded).
+//! `DJSUGAR_MODELS` or downloaded).
 
 use std::path::Path;
 
-use opendj_engine::{analysis, beatthis, decode};
+use djsugar_engine::{analysis, beatthis, decode};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();

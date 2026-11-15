@@ -25,14 +25,14 @@ use std::sync::atomic::{fence, AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 use rusty_link::AblLink;
 
 pub const GROUP: &str = "[MidiClock]";
 
-/// The port openDJ makes for other apps on the same computer (macOS and
+/// The port DJ Sugar makes for other apps on the same computer (macOS and
 /// Linux).
-pub const VIRTUAL_PORT: &str = "openDJ Clock";
+pub const VIRTUAL_PORT: &str = "DJ Sugar Clock";
 
 /// Pulses per quarter note (beat), as MIDI clock always has.
 pub const PPQN: f64 = 24.0;
@@ -468,12 +468,12 @@ impl MidiClock {
         if cfg!(unix) {
             names.push(VIRTUAL_PORT.to_string());
         }
-        if let Ok(out) = midir::MidiOutput::new("openDJ clock ports") {
+        if let Ok(out) = midir::MidiOutput::new("DJ Sugar clock ports") {
             names.extend(
                 out.ports()
                     .iter()
                     .filter_map(|p| out.port_name(p).ok())
-                    .filter(|n| !n.contains(VIRTUAL_PORT) && !n.contains("openDJ")),
+                    .filter(|n| !n.contains(VIRTUAL_PORT) && !n.contains("DJ Sugar")),
             );
         }
         names
@@ -497,7 +497,7 @@ pub(crate) fn create_controls(reg: &ControlRegistry) {
         0.0,
         0.0,
         2.0,
-        opendj_control::Behavior::Free,
+        djsugar_control::Behavior::Free,
     );
 }
 
@@ -549,7 +549,7 @@ impl Output {
 }
 
 fn open(port: &str) -> Option<Box<dyn Sink>> {
-    let out = midir::MidiOutput::new("openDJ").ok()?;
+    let out = midir::MidiOutput::new("DJ Sugar").ok()?;
     if port == VIRTUAL_PORT {
         #[cfg(unix)]
         {
@@ -569,7 +569,7 @@ fn open(port: &str) -> Option<Box<dyn Sink>> {
         .ports()
         .into_iter()
         .find(|p| out.port_name(p).as_deref() == Ok(port))?;
-    match out.connect(&p, "openDJ clock") {
+    match out.connect(&p, "DJ Sugar clock") {
         Ok(c) => Some(Box::new(c)),
         Err(e) => {
             eprintln!("{port}: cannot open MIDI output for clock: {e}");
@@ -1066,7 +1066,7 @@ mod tests {
 
     /// The clock thread's timing on this computer: how far each pulse goes
     /// out from when it's due. Target: under 0.5 ms spread while idle.
-    /// Run with `cargo test -p opendj-engine midi_clock -- --ignored
+    /// Run with `cargo test -p djsugar-engine midi_clock -- --ignored
     /// --nocapture`.
     #[test]
     #[ignore = "timing; run by hand"]

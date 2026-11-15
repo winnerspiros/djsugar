@@ -4,7 +4,7 @@ Planned for: **v0.8 · From the booth to the studio** (2026-11-14, a user reques
 
 ## Why
 
-Download sources are add-ons, one per rail entry: Soulseek today, and YouTube and SoundCloud from the yt-dlp add-on (dj-nahuel/ytdlp-opendj). Each has its own search, so finding one track means typing it into each source in turn and comparing the results by eye. The sources are good at different things: Soulseek for lossless copies of released music, YouTube for the widest catalog of released songs, SoundCloud for edits, bootlegs and free downloads. A DJ wants to ask once and see the best copy wherever it is.
+Download sources are add-ons, one per rail entry: Soulseek today, and YouTube and SoundCloud from the yt-dlp add-on (dj-nahuel/ytdlp-djsugar). Each has its own search, so finding one track means typing it into each source in turn and comparing the results by eye. The sources are good at different things: Soulseek for lossless copies of released music, YouTube for the widest catalog of released songs, SoundCloud for edits, bootlegs and free downloads. A DJ wants to ask once and see the best copy wherever it is.
 
 Wanted has the same gap. Auto-download is set per source, so a track Soulseek can't find is never tried on YouTube, and "Add to Downloads" only routes Spotify links to the one source that takes them.
 

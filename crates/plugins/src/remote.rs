@@ -1,4 +1,4 @@
-//! Add-ons as programs of their own: openDJ starts the program and talks to
+//! Add-ons as programs of their own: DJ Sugar starts the program and talks to
 //! it over its stdin and stdout, one JSON message per line. An add-on built
 //! on these traits calls [`serve`] from its `main`; inside the app a
 //! [`RemotePlugin`] stands in for it, so the rail, Settings and the source
@@ -32,8 +32,8 @@ pub const PROTOCOL: u64 = 1;
 
 // ---- The add-on's side --------------------------------------------------
 
-/// Runs `plugin` as an add-on program: answers openDJ on stdin and stdout
-/// until openDJ closes stdin, then returns (dropping the plugin, so it can
+/// Runs `plugin` as an add-on program: answers DJ Sugar on stdin and stdout
+/// until DJ Sugar closes stdin, then returns (dropping the plugin, so it can
 /// stop anything it started).
 pub fn serve(mut plugin: Box<dyn Plugin>) {
     let stdin = std::io::stdin();
@@ -144,7 +144,7 @@ fn answer(plugin: &mut dyn Plugin, method: &str, p: &Value) -> Result<Value, Plu
     }
 }
 
-// ---- openDJ's side ------------------------------------------------------
+// ---- DJ Sugar's side ------------------------------------------------------
 
 /// What an add-on program said it is, kept for the run so the many places
 /// that make plugins don't each start the program just to ask.
@@ -185,7 +185,7 @@ struct Process {
 
 impl Process {
     fn start(program: &Path) -> Result<(Self, Value), PluginError> {
-        let mut child = opendj_engine::process::background(Command::new(program))
+        let mut child = djsugar_engine::process::background(Command::new(program))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -202,7 +202,7 @@ impl Process {
         let hello = process.call("initialize", json!({ "protocol": PROTOCOL }))?;
         if hello["protocol"].as_u64() != Some(PROTOCOL) {
             return Err(PluginError::Format(format!(
-                "{} speaks add-on protocol {}, openDJ speaks {PROTOCOL}",
+                "{} speaks add-on protocol {}, DJ Sugar speaks {PROTOCOL}",
                 program.display(),
                 hello["protocol"]
             )));
@@ -440,10 +440,10 @@ impl SearchSource for RemotePlugin {
     }
 }
 
-/// The add-on programs to load: each one named in `OPENDJ_ADDONS` (paths
+/// The add-on programs to load: each one named in `DJSUGAR_ADDONS` (paths
 /// separated like `PATH`), then every program in `dir`.
 pub fn programs(dir: Option<&Path>) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = std::env::var_os("OPENDJ_ADDONS")
+    let mut out: Vec<PathBuf> = std::env::var_os("DJSUGAR_ADDONS")
         .map(|v| {
             std::env::split_paths(&v)
                 .filter(|p| !p.as_os_str().is_empty())

@@ -1,12 +1,12 @@
 [package]
-name = "opendj-plugins"
+name = "djsugar-plugins"
 description = "Plugins: store search (Bandcamp and links to other stores) and the purchase inbox"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-engine = { path = "../engine" }
+djsugar-engine = { path = "../engine" }
 serde_json = "1"
 md5 = "0.8"
 ureq = { version = "3", features = ["json"] }
@@ -19,7 +19,7 @@ rbox-anlz = "0.3.0"
 rbox-core = "0.3.0"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 
-# rekordbox's master.db is SQLCipher, built as in opendj-export: on
+# rekordbox's master.db is SQLCipher, built as in djsugar-export: on
 # CommonCrypto on macOS, with OpenSSL built in elsewhere.
 [target.'cfg(target_vendor = "apple")'.dependencies]
 rbox-masterdb = { version = "0.3.0", default-features = false, features = ["bundled"] }

@@ -52,11 +52,11 @@ What is streamed is exactly what is recorded: the master after the limiter, mic 
 
 ### Encoders and licences
 
-openDJ builds are GPL-3.0, so every encoder must be GPL-compatible:
+DJ Sugar builds are GPL-3.0, so every encoder must be GPL-compatible:
 
 | Format | Source | Platforms |
 |---|---|---|
-| Opus (in Ogg for Icecast) | libopus, BSD | All. Needs 48 kHz: resampled by openDJ's own polyphase resampler when the engine runs at 44.1 kHz |
+| Opus (in Ogg for Icecast) | libopus, BSD | All. Needs 48 kHz: resampled by DJ Sugar's own polyphase resampler when the engine runs at 44.1 kHz |
 | MP3 | LAME, LGPL | All |
 | AAC (LC and HE-AAC) | The operating system: AudioToolbox on macOS, Media Foundation on Windows | macOS, Windows. Not Linux: libfdk-aac can't ship in a GPL app; FFmpeg's encoder may be used when the system has FFmpeg (later) |
 | H.264 (step 3) | VideoToolbox (macOS), Media Foundation (Windows), OpenH264 (Linux, Cisco's binary fetched on first use as Firefox does, which covers the patent licence) | All |
@@ -72,7 +72,7 @@ Default for Icecast: MP3 128 kb/s, because it plays everywhere and Icecast shows
 
 ### Video for platforms that need it (step 3)
 
-Twitch and YouTube reject audio-only streams. openDJ sends a 1280×720 picture it draws itself with Slint's software renderer: cover art, artist, title, a progress bar and the DJ's name and logo, at a low frame rate (it changes only when the track does), so encoding costs next to nothing. This is not video mixing (out of scope by project decision); it is a picture for the audio.
+Twitch and YouTube reject audio-only streams. DJ Sugar sends a 1280×720 picture it draws itself with Slint's software renderer: cover art, artist, title, a progress bar and the DJ's name and logo, at a low frame rate (it changes only when the track does), so encoding costs next to nothing. This is not video mixing (out of scope by project decision); it is a picture for the audio.
 
 ### Credentials
 
@@ -83,7 +83,7 @@ Server passwords and stream keys are kept in the system keychain (macOS Keychain
 Mixxx's names where they exist, so mappings with a broadcast button work:
 
 - `[Shoutcast],enabled` (ON AIR on or off) and `[Shoutcast],status` (0 off, 1 connecting, 2 connected, 3 failed, 4 some stations failed).
-- openDJ's own: `[Master],loudness_momentary`, `[Master],loudness_short_term`, `[Master],loudness_integrated`, `[Master],loudness_range`, `[Master],true_peak`, `[Master],loudness_reset`, `[Broadcast],on_air_seconds`.
+- DJ Sugar's own: `[Master],loudness_momentary`, `[Master],loudness_short_term`, `[Master],loudness_integrated`, `[Master],loudness_range`, `[Master],true_peak`, `[Master],loudness_reset`, `[Broadcast],on_air_seconds`.
 
 ## Open questions
 

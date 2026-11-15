@@ -1,14 +1,14 @@
 //! Playlist files from the tree: File › Export › M3U8… on a list, folder,
 //! history session, album or mixed set, and **Import Playlist File…** in
 //! the Playlists + menu (M3U, M3U8, PLS and XSPF). The file reading and
-//! writing is in `opendj_library::playlist_files`.
+//! writing is in `djsugar_library::playlist_files`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use opendj_library::playlist_files::{self as pf, OutEntry};
-use opendj_library::ListEntry;
+use djsugar_library::playlist_files::{self as pf, OutEntry};
+use djsugar_library::ListEntry;
 
 use super::{file_path, is_browsed, Browser, Contents};
 use crate::LibraryEdit;
@@ -223,7 +223,7 @@ impl Browser {
                     break;
                 }
                 if c.is_file() {
-                    let t = opendj_engine::scan::read_track(0, &c);
+                    let t = djsugar_engine::scan::read_track(0, &c);
                     hit = self.add_browsed(t);
                     break;
                 }
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn a_folder_becomes_a_folder_of_files() {
-        let dir = std::env::temp_dir().join(format!("opendj-m3u-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-m3u-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let track = |p: &Path| OutEntry::File {

@@ -1,15 +1,15 @@
 //! The filter bar above the track list: a chip per field, as djay Pro
 //! has, that narrows the list along with the search. Each chip turns into
-//! search text (see `opendj_library::query`), so chips, typed searches and
+//! search text (see `djsugar_library::query`), so chips, typed searches and
 //! smart lists all agree.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use opendj_engine::key::Key;
-use opendj_engine::Track;
-use opendj_library::query::{self, and_text, keyword, quoted, FieldNames, Query, COLOR_NAMES};
+use djsugar_engine::key::Key;
+use djsugar_engine::Track;
+use djsugar_library::query::{self, and_text, keyword, quoted, FieldNames, Query, COLOR_NAMES};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::Browser;
@@ -836,7 +836,7 @@ impl Browser {
         let f = &self.filter;
         let q = Query::parse(&f.filters.text(&f.fields, self.deck_ref));
         let cx = self.context();
-        let left: Vec<&opendj_engine::Track> = tracks
+        let left: Vec<&djsugar_engine::Track> = tracks
             .iter()
             .filter(|&&id| q.is_empty() || q.matches(&self.library[id], &self.indexed[id], &cx))
             .map(|&id| &*self.library[id])
@@ -1334,16 +1334,16 @@ fn capitalized(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_library::query::{Indexed, Query};
+    use djsugar_library::query::{Indexed, Query};
 
     fn track(id: usize, genre: &str, grouping: &str, tags: &str, bpm: f64, key: &str) -> Track {
-        let mut t = std::sync::Arc::unwrap_or_clone(opendj_engine::sample_library().remove(0));
+        let mut t = std::sync::Arc::unwrap_or_clone(djsugar_engine::sample_library().remove(0));
         t.id = id;
         t.genre = genre.into();
         t.bpm = bpm;
         t.key = key.into();
         t.info.grouping = grouping.into();
-        t.info.set_tags_in(1, opendj_engine::hashtags(tags));
+        t.info.set_tags_in(1, djsugar_engine::hashtags(tags));
         t.info.color = None;
         t.rating = 0;
         t
@@ -1455,7 +1455,7 @@ mod tests {
     #[test]
     fn core_fields_then_tags_then_the_rest() {
         let names = FieldNames {
-            tags: vec![opendj_library::tags::TagGroup::new(7, "Mood")],
+            tags: vec![djsugar_library::tags::TagGroup::new(7, "Mood")],
             ..FieldNames::default()
         };
         let fields = fields(&names);
@@ -1658,7 +1658,7 @@ mod tests {
         f.toggle("crate", &list[1]);
         let q = Query::parse(&f.text(&fields, None));
         let names = crates.clone();
-        let cx = opendj_library::query::Context {
+        let cx = djsugar_library::query::Context {
             crates: Some(&names),
             ..Default::default()
         };

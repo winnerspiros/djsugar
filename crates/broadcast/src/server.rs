@@ -179,7 +179,7 @@ fn connect_icecast(
         station.user.trim()
     };
     let request = format!(
-        "PUT {} HTTP/1.1\r\nHost: {}:{}\r\nAuthorization: Basic {}\r\nUser-Agent: openDJ/{}\r\n\
+        "PUT {} HTTP/1.1\r\nHost: {}:{}\r\nAuthorization: Basic {}\r\nUser-Agent: DJSugar/{}\r\n\
          Content-Type: {}\r\n{}Expect: 100-continue\r\n\r\n",
         mount(station),
         station.host,
@@ -265,7 +265,7 @@ fn get(
         .map(|a| format!("Authorization: Basic {a}\r\n"))
         .unwrap_or_default();
     let req = format!(
-        "GET {path} HTTP/1.0\r\nHost: {host}:{port}\r\nUser-Agent: openDJ/{}\r\n{auth}\r\n",
+        "GET {path} HTTP/1.0\r\nHost: {host}:{port}\r\nUser-Agent: DJSugar/{}\r\n{auth}\r\n",
         env!("CARGO_PKG_VERSION")
     );
     s.write_all(req.as_bytes()).map_err(|e| e.to_string())?;

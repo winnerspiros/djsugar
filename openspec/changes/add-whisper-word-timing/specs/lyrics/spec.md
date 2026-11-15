@@ -16,11 +16,11 @@ For lyrics not timed by word, the Lyrics tab SHALL offer Time Words, which liste
 - **THEN** the lyrics are left as they were and the tab says the words couldn't be made out
 
 ### Requirement: Transcription of tracks without lyrics
-For a track with no lyrics, the Lyrics tab SHALL offer Transcribe, which writes down the words Whisper hears in the vocals as lyrics timed by word, grouped into lines at pauses and sentence ends, and saves them as an `.lrc` beside the track marked as transcribed by openDJ. The tab SHALL show such lyrics as transcribed by openDJ.
+For a track with no lyrics, the Lyrics tab SHALL offer Transcribe, which writes down the words Whisper hears in the vocals as lyrics timed by word, grouped into lines at pauses and sentence ends, and saves them as an `.lrc` beside the track marked as transcribed by DJ Sugar. The tab SHALL show such lyrics as transcribed by DJ Sugar.
 
 #### Scenario: A track with no lyrics
 - **WHEN** the DJ presses Transcribe for a track with no lyrics and Whisper hears "Hold the line." then "Love isn't always on time"
-- **THEN** the track gets two lines timed by word, and the tab says "Transcribed by openDJ"
+- **THEN** the track gets two lines timed by word, and the tab says "Transcribed by DJ Sugar"
 
 #### Scenario: Nothing sung
 - **WHEN** Whisper hears no words in an instrumental track

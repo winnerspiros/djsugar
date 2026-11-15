@@ -8,7 +8,7 @@ People switching need to find their features: a full manual, a shortcuts page, a
 
 ## What Changes
 
-- A complete user manual on opendj.app, a keyboard shortcuts page, and guides for DJs coming from rekordbox, Serato, Traktor, VirtualDJ and djay.
+- A complete user manual on github.com/winnerspiros/djsugar, a keyboard shortcuts page, and guides for DJs coming from rekordbox, Serato, Traktor, VirtualDJ and djay.
 
 ## Capabilities
 

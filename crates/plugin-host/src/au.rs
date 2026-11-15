@@ -862,7 +862,7 @@ unsafe fn each_factory_preset(unit: AudioUnit, mut f: impl FnMut(&AUPreset)) {
 
 /// Unit `id`'s factory presets, as (name, reference for
 /// [`MainThread::load_preset`]). Runs in a throwaway helper
-/// (`opendj-plugin-host --presets --au`), never in openDJ.
+/// (`djsugar-plugin-host --presets --au`), never in DJ Sugar.
 pub fn presets(id: &str) -> Result<Vec<(String, String)>, String> {
     let want = parse_id(id).ok_or_else(|| format!("bad Audio Unit id {id:?}"))?;
     // SAFETY: AudioToolbox calls with valid pointers; the unit lives until

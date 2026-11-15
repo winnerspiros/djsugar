@@ -2,7 +2,7 @@
 //! away instead of after signing in and fetching them all again.
 //!
 //! Each service has a file in `streaming/` of the cache folder
-//! ([`opendj_engine::cache::cache_dir`]): the name signed in as, the list of
+//! ([`djsugar_engine::cache::cache_dir`]): the name signed in as, the list of
 //! playlists, and the tracks of the playlists opened so far with the version
 //! of the playlist they were fetched at. Only what the service's API showed
 //! is kept (titles, artists, ids), never audio. Signing out deletes the file.
@@ -38,7 +38,7 @@ fn path(service: &str) -> Option<PathBuf> {
     if cfg!(test) {
         return None;
     }
-    opendj_engine::cache::cache_dir().map(|d| d.join("streaming").join(format!("{service}.json")))
+    djsugar_engine::cache::cache_dir().map(|d| d.join("streaming").join(format!("{service}.json")))
 }
 
 /// What was kept of `service` (its id, such as "spotify") last time.

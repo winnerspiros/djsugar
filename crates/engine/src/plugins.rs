@@ -2,7 +2,7 @@
 //! plugin loaded on a target its unit is routed to, attaches it to the audio
 //! thread, and watches it.
 //!
-//! The audio thread never waits for a plugin (see `opendj-plugin-host`): a
+//! The audio thread never waits for a plugin (see `djsugar-plugin-host`): a
 //! block the helper can't deliver in time plays dry. This thread decides what
 //! happens next. A helper that crashes, or misses too many blocks in a row,
 //! is restarted once with its slot switched off; the second time, or when it
@@ -18,12 +18,12 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-pub use opendj_plugin_host::presets as plugin_presets;
-pub use opendj_plugin_host::{
+use djsugar_control::{ControlHandle, ControlRegistry};
+pub use djsugar_plugin_host::presets as plugin_presets;
+pub use djsugar_plugin_host::{
     presets as own_presets, scan, scan_audio_units, Descriptor, Limits, Plugin, ScanError,
 };
-use opendj_plugin_host::{spawn, Action, Editor, Helper, Options, Policy, Status};
+use djsugar_plugin_host::{spawn, Action, Editor, Helper, Options, Policy, Status};
 
 use crate::controls::{effect_group, effect_unit_group, EFFECTS_PER_UNIT, NUM_EFFECT_UNITS};
 use crate::effects::{
@@ -71,7 +71,7 @@ impl std::fmt::Display for PluginEvent {
             ),
             PluginEvent::Disabled { name, reason } => write!(
                 f,
-                "{name} is off until you restart openDJ: {reason}. The music kept playing."
+                "{name} is off until you restart DJ Sugar: {reason}. The music kept playing."
             ),
             PluginEvent::NoWindow { name, reason } => {
                 write!(f, "{name}'s window can't open: {reason}.")
@@ -82,7 +82,7 @@ impl std::fmt::Display for PluginEvent {
 
 #[derive(Clone, Debug)]
 pub struct HostOptions {
-    /// The `opendj-plugin-host` binary.
+    /// The `djsugar-plugin-host` binary.
     pub helper: PathBuf,
     pub sample_rate: u32,
     /// How often the controls and the helpers are checked.
@@ -136,7 +136,7 @@ enum SoundRequest {
     /// All of plugin `key`'s knob picks, as a preset has them.
     Picks(String, Vec<(usize, u32)>, Sender<Result<(), String>>),
     /// One of plugin `key`'s own presets, by the reference its preset list
-    /// gave (see `opendj_plugin_host::presets`).
+    /// gave (see `djsugar_plugin_host::presets`).
     Preset(String, String, Sender<Result<(), String>>),
 }
 
@@ -204,7 +204,7 @@ impl PluginHost {
     }
 
     /// Keeps each plugin's sound (its whole state) in `folder`: saved when
-    /// it stops, is swapped out, its window closes or openDJ quits, and
+    /// it stops, is swapped out, its window closes or DJ Sugar quits, and
     /// loaded when it starts again, so tweaks made in its window last.
     pub fn set_sound_folder(&self, folder: PathBuf) {
         self.list.lock().unwrap().sounds = Some(folder);
@@ -1326,15 +1326,15 @@ mod tests {
             let target = profile.parent().unwrap();
             let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
             let ok = std::process::Command::new(cargo)
-                .args(["build", "-q", "-p", "opendj-plugin-host", "--bin"])
-                .arg("opendj-plugin-host")
+                .args(["build", "-q", "-p", "djsugar-plugin-host", "--bin"])
+                .arg("djsugar-plugin-host")
                 .arg("--target-dir")
                 .arg(target)
                 .status()
                 .expect("cargo runs")
                 .success();
             assert!(ok, "the helper builds");
-            let name = format!("opendj-plugin-host{}", std::env::consts::EXE_SUFFIX);
+            let name = format!("djsugar-plugin-host{}", std::env::consts::EXE_SUFFIX);
             target.join("debug").join(name)
         })
         .clone()
@@ -1798,7 +1798,7 @@ mod tests {
     #[test]
     fn an_instruments_sound_is_kept_for_next_time() {
         let mut rig = Rig::new("test-gain");
-        let folder = std::env::temp_dir().join(format!("opendj-sounds-{}", std::process::id()));
+        let folder = std::env::temp_dir().join(format!("djsugar-sounds-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).unwrap();
         let file = sound_file(&folder, "test-synth");
@@ -1848,7 +1848,7 @@ mod tests {
     #[test]
     fn a_knob_pick_is_kept_and_the_instrument_restarts_with_it() {
         let mut rig = Rig::new("test-gain");
-        let folder = std::env::temp_dir().join(format!("opendj-picks-{}", std::process::id()));
+        let folder = std::env::temp_dir().join(format!("djsugar-picks-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         rig.host.set_sound_folder(folder.clone());
         rig.host.set_instruments(vec![PluginEntry {
@@ -1899,7 +1899,7 @@ mod tests {
     fn a_preset_sound_is_read_and_given_to_the_instrument() {
         let mut rig = Rig::new("test-gain");
         assert!(rig.host.instrument_sound().is_err(), "nothing playing");
-        let folder = std::env::temp_dir().join(format!("opendj-presets-{}", std::process::id()));
+        let folder = std::env::temp_dir().join(format!("djsugar-presets-{}", std::process::id()));
         rig.host.set_sound_folder(folder.clone());
         rig.host.set_instruments(vec![PluginEntry {
             key: "test-synth".into(),

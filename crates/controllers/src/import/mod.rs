@@ -1,6 +1,6 @@
-//! Reads controller mappings made in other DJ apps into openDJ's format:
+//! Reads controller mappings made in other DJ apps into DJ Sugar's format:
 //! VirtualDJ mapper files, Traktor `.tsi`, rekordbox MIDI Learn `.csv` and
-//! djay Pro `.djayMidiMapping`. What has no openDJ equivalent yet stays as
+//! djay Pro `.djayMidiMapping`. What has no DJ Sugar equivalent yet stays as
 //! a greyed row holding the other app's text, so nothing is silently lost.
 
 mod djay;
@@ -11,7 +11,7 @@ mod words;
 
 use std::path::Path;
 
-use crate::format::OpenDjMapping;
+use crate::format::DjSugarMapping;
 
 /// The apps mappings can be imported from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,8 +37,8 @@ impl App {
 /// shortcuts when it was a keyboard mapping, and notes for the report.
 #[derive(Debug, Default)]
 pub struct Import {
-    pub mappings: Vec<OpenDjMapping>,
-    /// `(key, openDJscript)` in openDJ's key spelling (`cmd+alt+1`).
+    pub mappings: Vec<DjSugarMapping>,
+    /// `(key, DJSugarScript)` in DJ Sugar's key spelling (`cmd+alt+1`).
     pub shortcuts: Vec<(String, String)>,
     /// Shortcuts that couldn't come across: `(key, original action)`.
     pub skipped_shortcuts: Vec<(String, String)>,
@@ -47,7 +47,7 @@ pub struct Import {
 
 impl Import {
     /// One line for the import report: "182 of 211 rows work; 29 are kept
-    /// greyed until openDJ can do them."
+    /// greyed until DJ Sugar can do them."
     pub fn summary(&self) -> String {
         let (mut ok, mut off) = (0, 0);
         for m in &self.mappings {
@@ -61,7 +61,7 @@ impl Import {
                 format!("All {ok} rows came across.")
             } else {
                 format!(
-                    "{ok} of {} rows work; {off} are kept greyed until openDJ can do them.",
+                    "{ok} of {} rows work; {off} are kept greyed until DJ Sugar can do them.",
                     ok + off
                 )
             });
@@ -107,7 +107,7 @@ pub fn import_file(path: &Path) -> Result<Import, String> {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     let app = detect(path, &bytes)
-        .ok_or("This isn't a mapping openDJ can read: it reads VirtualDJ, Traktor, rekordbox and djay Pro mappings.")?;
+        .ok_or("This isn't a mapping DJ Sugar can read: it reads VirtualDJ, Traktor, rekordbox and djay Pro mappings.")?;
     let text = String::from_utf8_lossy(&bytes);
     let mut import = match app {
         App::Traktor => traktor::import(&text, &file)?,

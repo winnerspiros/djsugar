@@ -1,4 +1,4 @@
-//! The stages in the browser (see [`opendj_library::stages`]): Inbox, Triage
+//! The stages in the browser (see [`djsugar_library::stages`]): Inbox, Triage
 //! and Collection at the top of the tree with their counts, each stage's
 //! subfolders under it (triage crates such as "Yoga STG"), and moving
 //! tracks between them from the track menu or by dropping them on a stage.
@@ -7,10 +7,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::{Source, Track};
-use opendj_library::query::Indexed;
-use opendj_library::stages::{self, Folders, Stage};
-use opendj_library::{Change, PlaylistKind};
+use djsugar_engine::{Source, Track};
+use djsugar_library::query::Indexed;
+use djsugar_library::stages::{self, Folders, Stage};
+use djsugar_library::{Change, PlaylistKind};
 use slint::{ModelRc, SharedString, VecModel};
 
 use super::{
@@ -171,7 +171,7 @@ impl Browser {
     /// Moves library tracks (indices into `library`) to `stage`, into the
     /// subfolder `dir` of its folder when given (a triage crate). The
     /// stage is saved at once; files move now if the DJ has file moves on,
-    /// else their moves wait (see [`opendj_library::Library::apply_moves`]).
+    /// else their moves wait (see [`djsugar_library::Library::apply_moves`]).
     /// Going from the inbox to triage, a file is renamed "Artist - Title
     /// (Remix)"; going from a triage crate to the collection, the track
     /// joins the list named after the crate.

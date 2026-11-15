@@ -27,7 +27,7 @@ None.
 
 ## Out of Scope
 
-- openDJ effects and plugins recreated as Live devices beyond EQ Three and Auto Filter.
+- DJ Sugar effects and plugins recreated as Live devices beyond EQ Three and Auto Filter.
 - Per-deck pre-fader audio in recordings (belongs with add-deck-outputs; the rebuilt set uses the original files).
 - Reading .als files back. DAWproject (not read by Live) could later reuse the same timeline.
 

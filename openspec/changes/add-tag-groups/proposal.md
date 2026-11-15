@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (follows add-batc
 
 ## Why
 
-openDJ's tags were shaped by VirtualDJ: numbered text fields (User 1, User 2, then `user_more` lines) holding space-separated hashtags, with names for the fields kept in the app's settings. That model leaks everywhere: a tag can't have a space ("Peak Time"), a tag can't be renamed or merged across the collection, rekordbox's My Tag categories had nowhere to go (they ended up as loose `labels`), and the settings page talked about "fields" instead of tags.
+DJ Sugar's tags were shaped by VirtualDJ: numbered text fields (User 1, User 2, then `user_more` lines) holding space-separated hashtags, with names for the fields kept in the app's settings. That model leaks everywhere: a tag can't have a space ("Peak Time"), a tag can't be renamed or merged across the collection, rekordbox's My Tag categories had nowhere to go (they ended up as loose `labels`), and the settings page talked about "fields" instead of tags.
 
 DJ library tools that do tags well (Lexicon's tag categories, rekordbox's My Tag, Serato's crates-as-tags) treat a tag as an entry of its own, in a category the DJ names, and import other apps' tags into those categories.
 

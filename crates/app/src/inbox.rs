@@ -1,6 +1,6 @@
 //! The purchase inbox, on a thread of its own: watches the inbox folder,
 //! files what arrives into the music folder and adds it to the library
-//! (see [`opendj_plugins::inbox`]).
+//! (see [`djsugar_plugins::inbox`]).
 //!
 //! Files a store plugin recognises (or that match a track the DJ went to
 //! buy) are filed under `Purchased/<Store>/…` as the settings say. Other
@@ -11,11 +11,11 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, Instant, UNIX_EPOCH};
 
-use opendj_engine::scan::{read_comment, read_track};
-use opendj_engine::{Source, Track};
-use opendj_library::Library;
-use opendj_plugins::inbox::{self, Mode, Watcher};
-use opendj_plugins::{InboxFile, Plugin};
+use djsugar_engine::scan::{read_comment, read_track};
+use djsugar_engine::{Source, Track};
+use djsugar_library::Library;
+use djsugar_plugins::inbox::{self, Mode, Watcher};
+use djsugar_plugins::{InboxFile, Plugin};
 
 use crate::settings::InboxSettings;
 
@@ -207,7 +207,7 @@ impl Worker {
         let staging = self
             .watcher
             .dir
-            .join(".opendj-unpacked")
+            .join(".djsugar-unpacked")
             .join(inbox::safe_name(&name, "zip"));
         let audio = inbox::unpack(path, &staging).map_err(|e| e.to_string())?;
         let archive = path.file_name().map(|n| n.to_string_lossy().into_owned());
@@ -278,12 +278,12 @@ impl Worker {
         }
         // A Wanted track: the store it's being bought on. One that went to
         // the Wanted list from a streaming service and wasn't opened with
-        // Buy came from a store openDJ doesn't know.
+        // Buy came from a store DJ Sugar doesn't know.
         let w = db
             .wanted_for(&f.artist, &f.title, f.duration, &f.isrc, false)
             .ok()??;
-        let store = opendj_plugins::buy::store_traits(&w.pending_store)
-            .or_else(|| opendj_plugins::buy::store_traits(&w.store.to_lowercase()))
+        let store = djsugar_plugins::buy::store_traits(&w.pending_store)
+            .or_else(|| djsugar_plugins::buy::store_traits(&w.store.to_lowercase()))
             .map_or("Other", |t| t.name);
         Some((store.to_string(), false))
     }
@@ -354,7 +354,7 @@ pub fn add_download(library: &Path, path: &Path, store: &str) -> Result<Track, S
     }
     // Downloads land outside the stage folders, so say where they are.
     if track.info.stage.is_empty() && db.put_in_inbox(track.id).is_ok() {
-        track.info.stage = opendj_library::stages::Stage::Inbox.name().into();
+        track.info.stage = djsugar_library::stages::Stage::Inbox.name().into();
     }
     let _ = db.log_inbox(path, "imported", Some(track.id));
     Ok(track)

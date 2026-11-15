@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Your layouts
-openDJ SHALL keep the DJ's layouts as an ordered list (`layouts`), at first Player, 2-Deck, 2-Deck Pro and 4-Deck. The layout menu at the top left SHALL list only these, in this order. The layout in use SHALL always be in the list. Layouts added to openDJ later SHALL NOT join the list by themselves.
+DJ Sugar SHALL keep the DJ's layouts as an ordered list (`layouts`), at first Player, 2-Deck, 2-Deck Pro and 4-Deck. The layout menu at the top left SHALL list only these, in this order. The layout in use SHALL always be in the list. Layouts added to DJ Sugar later SHALL NOT join the list by themselves.
 
 #### Scenario: A layout taken out
 - **WHEN** the DJ takes 2-Deck Pro out of their layouts

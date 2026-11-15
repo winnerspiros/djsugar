@@ -1,8 +1,8 @@
 //! Time words: Whisper listens to the track's vocals and the lyrics shown
-//! get a time for each word (see [`opendj_engine::word_timing`]), saved as
+//! get a time for each word (see [`djsugar_engine::word_timing`]), saved as
 //! an enhanced `.lrc` beside the track. Transcribe does the same for a
 //! track with no lyrics, writing down the words heard, marked as made by
-//! openDJ ([`lyrics::AUTO`]). One track at a time, on a thread
+//! DJ Sugar ([`lyrics::AUTO`]). One track at a time, on a thread
 //! of its own: the first time downloads the model (about 550 MB), and a
 //! track without stems has its vocals separated first.
 
@@ -10,9 +10,9 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
 
-use opendj_engine::lyrics::{self, Line, Timing};
-use opendj_engine::word_timing::{self, Stage};
-use opendj_engine::Source;
+use djsugar_engine::lyrics::{self, Line, Timing};
+use djsugar_engine::word_timing::{self, Stage};
+use djsugar_engine::Source;
 use slint::{ComponentHandle, SharedString};
 
 use super::super::Browser;

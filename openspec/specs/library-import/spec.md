@@ -26,11 +26,11 @@ Each track SHALL keep VirtualDJ's tags, stars, colour, comment, play count, date
 - **THEN** its hot cues have the same names and colours
 
 ### Requirement: Read only and kept up to date
-openDJ SHALL only read VirtualDJ's files. While the import is on, changes SHALL be brought in at each start; tracks are matched by file so nothing is added twice; grids and cues edited in openDJ SHALL be kept; the VirtualDJ folder SHALL be remade each time.
+DJ Sugar SHALL only read VirtualDJ's files. While the import is on, changes SHALL be brought in at each start; tracks are matched by file so nothing is added twice; grids and cues edited in DJ Sugar SHALL be kept; the VirtualDJ folder SHALL be remade each time.
 
 #### Scenario: Edited grid kept
-- **WHEN** a track's grid was edited in openDJ and VirtualDJ's file changes
-- **THEN** the openDJ grid stays
+- **WHEN** a track's grid was edited in DJ Sugar and VirtualDJ's file changes
+- **THEN** the DJ Sugar grid stays
 
 ### Requirement: Stop and remove
 Stop SHALL keep what came in but stop updating. Remove… (pressed twice) SHALL take out the VirtualDJ folder and history, VirtualDJ's cues, grids and markers, and tracks only VirtualDJ had.

@@ -217,7 +217,7 @@ fn lex(src: &str) -> Result<Vec<(Token, usize)>, Error> {
             }
             out.push((Token::Word(s), at));
         } else {
-            return Err(Error::at(format!("'{c}' isn't part of openDJscript"), at));
+            return Err(Error::at(format!("'{c}' isn't part of DJSugarScript"), at));
         }
     }
     Ok(out)

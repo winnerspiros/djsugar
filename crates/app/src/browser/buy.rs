@@ -1,18 +1,18 @@
 //! Buy on Wanted rows: each track is looked up in every store Buy knows
 //! (on a thread, so the UI never waits), the best store is chosen for it
-//! (see [`opendj_plugins::buy`]), and the Buy sheet groups the tracks by
+//! (see [`djsugar_plugins::buy`]), and the Buy sheet groups the tracks by
 //! store. Opening a store opens its pages one at a time (Next for the
 //! next), marks the tracks
 //! as being bought there, and the purchase inbox matches the files that
-//! arrive back to them. openDJ never takes payment.
+//! arrive back to them. DJ Sugar never takes payment.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver};
 
-use opendj_plugins::buy::{self, BuyTrack, Offer};
-use opendj_plugins::musicbrainz::MusicBrainz;
+use djsugar_plugins::buy::{self, BuyTrack, Offer};
+use djsugar_plugins::musicbrainz::MusicBrainz;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::Browser;
@@ -164,7 +164,7 @@ impl Browser {
             .spawn(move || {
                 // The built-in stores only: add-on programs aren't started
                 // for this.
-                let mut stores = opendj_plugins::builtin();
+                let mut stores = djsugar_plugins::builtin();
                 stores.retain(|p| buy::store_traits(p.manifest().id).is_some());
                 for p in &mut stores {
                     let id = p.manifest().id;
@@ -356,7 +356,7 @@ fn offer_label(o: &Offer) -> String {
 /// app's iTunes Store, where it's bought, not on the Apple Music website.
 pub(super) fn open_page(url: &str) {
     let app_link = if cfg!(target_os = "macos") {
-        opendj_plugins::itunes::store_app_link(url)
+        djsugar_plugins::itunes::store_app_link(url)
     } else {
         None
     };

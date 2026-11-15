@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#151329">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>openDJ Remote</title>
+<title>DJ Sugar Remote</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23151329'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23B69CFF' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23B69CFF'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -223,8 +223,8 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 </svg>
 
 <section id="pairView" class="pair hidden">
-  <div class="logo">openDJ <span>Remote</span></div>
-  <p>Scan the QR code under REMOTE in openDJ, or type the PIN shown there.</p>
+  <div class="logo">DJ Sugar <span>Remote</span></div>
+  <p>Scan the QR code under REMOTE in DJ Sugar, or type the PIN shown there.</p>
   <input id="pin" class="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" aria-label="PIN">
   <button id="pairBtn" class="wide lilac">Pair</button>
   <div id="pairErr" class="err"></div>
@@ -259,7 +259,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
   </div>
   <button class="next" id="nextCard"></button>
   <div class="bottom">
-    <div class="where"><svg class="ico"><use href="#i-laptop"/></svg><span id="where">openDJ</span></div>
+    <div class="where"><svg class="ico"><use href="#i-laptop"/></svg><span id="where">DJ Sugar</span></div>
     <button class="iconbtn" id="queueBtn" aria-label="Queue"><svg class="ico"><use href="#i-queue"/></svg></button>
   </div>
 </section>
@@ -306,12 +306,12 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 
 <div id="scrim" class="scrim hidden"><div class="sheet" id="sheet"></div></div>
 <div id="toast" class="toast"></div>
-<div id="offline" class="offline hidden">Reconnecting to openDJ…</div>
+<div id="offline" class="offline hidden">Reconnecting to DJ Sugar…</div>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const STORE = "opendj-remote";
+const STORE = "djsugar-remote";
 let memory = null;
 function loadCreds() { try { return JSON.parse(localStorage.getItem(STORE)) || memory; } catch (e) { return memory; } }
 function saveCreds(c) { memory = c; try { c ? localStorage.setItem(STORE, JSON.stringify(c)) : localStorage.removeItem(STORE); } catch (e) {} }
@@ -408,7 +408,7 @@ $("pairBtn").onclick = async () => {
 $("pin").addEventListener("keydown", e => { if (e.key === "Enter") $("pairBtn").click(); });
 
 function onEvent(name, data) {
-  if (name === "revoked") { saveCreds(null); authed = false; showPair("This phone was removed in openDJ. Pair it again to carry on."); return; }
+  if (name === "revoked") { saveCreds(null); authed = false; showPair("This phone was removed in DJ Sugar. Pair it again to carry on."); return; }
   state[name] = data;
   if (name === "automix") { drawNow(); drawQueue(); drawEdit(); refreshSheet(); }
   if (name === "now") { drawNow(); drawQueue(); }
@@ -459,7 +459,7 @@ function drawNow() {
   st.textContent = text;
   st.classList.toggle("quiet", !a.on);
   $("topSub").textContent = a.on ? `${a.lengths[a.length]} · ${a.styles[a.style]}` : "Off";
-  $("where").textContent = `openDJ · ${a.queue.length - a.fixed} up next`;
+  $("where").textContent = `DJ Sugar · ${a.queue.length - a.fixed} up next`;
   const playing = a.on && n.playing;
   $("playIcon").setAttribute("href", playing ? "#i-pause" : "#i-play");
   $("playBtn").setAttribute("aria-label", playing ? "Pause" : "Play");
@@ -758,7 +758,7 @@ function drawSheet() {
       + [15, 30, 45, 60, 90].map(n => `<button class="opt" data-timer="${n}">${n} minutes</button>`).join("")
       + (left != null || m.sleeping ? `<button class="opt danger" data-timer="0">Turn the timer off</button>` : "");
   } else if (sheet.kind === "more") {
-    h = `<h3>openDJ Remote</h3>
+    h = `<h3>DJ Sugar Remote</h3>
       <button class="opt" data-go="queue">Queue</button>
       <button class="opt" data-go="search">Add tracks</button>
       <button class="opt" data-go="timer">Sleep timer</button>

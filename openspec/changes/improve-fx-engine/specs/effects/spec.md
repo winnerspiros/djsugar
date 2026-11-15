@@ -8,7 +8,7 @@ The effect rack SHALL NOT allocate, lock or wait on the audio thread. It SHALL h
 - **THEN** the benchmark reports the rack's cost per frame, and no allocation happens on the audio thread
 
 #### Scenario: Memory
-- **WHEN** openDJ starts at 48 kHz
+- **WHEN** DJ Sugar starts at 48 kHz
 - **THEN** the rack holds under 40 MB of delay memory, instead of one two-second buffer per instance
 
 #### Scenario: Pool empty
@@ -44,7 +44,7 @@ Echo, Flanger and Spiral SHALL read their delay lines with cubic or better inter
 - **THEN** the tone's level stays within 1 dB across the sweep
 
 ### Requirement: More effects
-openDJ SHALL add Drive (oversampled so it doesn't alias), Chorus, a Ladder filter, a Hall reverb, Rev Roll and Filter Echo, after the twelve existing effects so saved choices keep their meaning. Each SHALL be beat-synced where it has a time setting, and each SHALL have click-free parameters.
+DJ Sugar SHALL add Drive (oversampled so it doesn't alias), Chorus, a Ladder filter, a Hall reverb, Rev Roll and Filter Echo, after the twelve existing effects so saved choices keep their meaning. Each SHALL be beat-synced where it has a time setting, and each SHALL have click-free parameters.
 
 #### Scenario: Drive without aliasing
 - **WHEN** Drive distorts a 5 kHz sine at full drive
@@ -53,7 +53,7 @@ openDJ SHALL add Drive (oversampled so it doesn't alias), Chorus, a Ladder filte
 ## MODIFIED Requirements
 
 ### Requirement: Effect list
-openDJ SHALL offer these effects: Echo, Reverb, Filter, Flanger, Bitcrusher, Phaser, Gate, Roll, Echo Out, Brake, Noise, Spiral, Drive, Chorus, Ladder, Hall, Rev Roll and Filter Echo, each with up to four parameters.
+DJ Sugar SHALL offer these effects: Echo, Reverb, Filter, Flanger, Bitcrusher, Phaser, Gate, Roll, Echo Out, Brake, Noise, Spiral, Drive, Chorus, Ladder, Hall, Rev Roll and Filter Echo, each with up to four parameters.
 
 #### Scenario: Effects listed
 - **WHEN** an effect slot's menu is opened

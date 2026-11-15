@@ -55,7 +55,7 @@ pub enum ImportedListKind {
     History {
         started: i64,
     },
-    /// A saved search in openDJ's search syntax.
+    /// A saved search in DJ Sugar's search syntax.
     Smart {
         query: String,
     },

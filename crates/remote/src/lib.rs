@@ -1,4 +1,4 @@
-//! The phone remote: openDJ serves a small web page on the local network,
+//! The phone remote: DJ Sugar serves a small web page on the local network,
 //! and a phone that opens it controls Automix and the main levels.
 //!
 //! Nothing listens until the DJ switches the remote on. A phone pairs once,
@@ -613,7 +613,7 @@ impl Connection<'_> {
         let Some(d) = s.pairing.check(device, token) else {
             drop(s);
             self.bad_hellos += 1;
-            let reply = json!({"id": id, "error": {"message": "This phone isn't paired any more. Scan the QR code in openDJ again.", "unpaired": true}}).to_string();
+            let reply = json!({"id": id, "error": {"message": "This phone isn't paired any more. Scan the QR code in DJ Sugar again.", "unpaired": true}}).to_string();
             return if self.bad_hellos >= MAX_BAD_HELLOS {
                 Handled::Close(reply)
             } else {

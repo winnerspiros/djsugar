@@ -2,7 +2,7 @@
 
 ## Where phrases come from
 
-`opendj_engine::phrases::detect(track)` once the waveform is ready, otherwise `phrases::stored(track)` (imported phrases are kept as they are). This is what Quick review's Tab already does (`browser/cues.rs::jump_phrase`). A `Phrase` has `start` and `kind`; a phrase ends where the next one starts, the last one at the track's end.
+`djsugar_engine::phrases::detect(track)` once the waveform is ready, otherwise `phrases::stored(track)` (imported phrases are kept as they are). This is what Quick review's Tab already does (`browser/cues.rs::jump_phrase`). A `Phrase` has `start` and `kind`; a phrase ends where the next one starts, the last one at the track's end.
 
 Imported automix points are `markers` with `MarkerKind::Automix`: VirtualDJ's `fadeStart` (out) and `realStart` (in), Traktor's FADE OUT and FADE IN (imported with the same names).
 

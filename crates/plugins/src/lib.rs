@@ -19,7 +19,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-pub use opendj_engine::import::{ImportedLibrary, ImportedList, ListGroup};
+pub use djsugar_engine::import::{ImportedLibrary, ImportedList, ListGroup};
 
 pub mod archive;
 pub mod bandcamp;
@@ -344,7 +344,7 @@ pub fn builtin() -> Vec<Box<dyn Plugin>> {
     out
 }
 
-/// The other DJ apps whose libraries openDJ can bring in. Each is off until
+/// The other DJ apps whose libraries DJ Sugar can bring in. Each is off until
 /// the DJ turns it on in Settings > Library.
 pub fn importers() -> Vec<Box<dyn LibraryImport>> {
     vec![
@@ -359,9 +359,9 @@ pub fn importers() -> Vec<Box<dyn LibraryImport>> {
 
 /// The User-Agent plugins send, so stores can see who is asking.
 pub const USER_AGENT: &str = concat!(
-    "openDJ/",
+    "DJSugar/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/openwave-studio/opendj)"
+    " (+https://github.com/winnerspiros/djsugar)"
 );
 
 /// Percent-encodes text for a URL query.

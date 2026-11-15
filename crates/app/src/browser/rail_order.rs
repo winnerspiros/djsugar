@@ -2,7 +2,7 @@
 //! rail's "•••" menu (library.slint, `RailOrder`).
 //!
 //! Collection stays first, with Collection Health under it. The others move
-//! within their section: openDJ's own (Built-in), then the services,
+//! within their section: DJ Sugar's own (Built-in), then the services,
 //! servers and add-ons (External). Kept in settings.json under
 //! `rail_order`, by name, so add-ons can come and go.
 
@@ -13,7 +13,7 @@ use slint::{ComponentHandle, VecModel};
 
 use crate::{AppWindow, RailOrder};
 
-/// openDJ's own sources after Collection, in their first order.
+/// DJ Sugar's own sources after Collection, in their first order.
 const BUILT_IN: [&str; 4] = ["Files", "Albums", "Recordings", "Jam"];
 
 /// The services in their first order; add-ons' sources follow.

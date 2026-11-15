@@ -314,13 +314,13 @@ fn move_file(from: &Path, to: &Path) -> io::Result<()> {
     if let Some(dir) = to.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let cached = opendj_engine::cache::before_move(from);
+    let cached = djsugar_engine::cache::before_move(from);
     if std::fs::rename(from, to).is_err() {
         // Another disk: copy, then remove the original once the copy is whole.
         std::fs::copy(from, to)?;
         std::fs::remove_file(from)?;
     }
-    opendj_engine::cache::file_moved(to, cached);
+    djsugar_engine::cache::file_moved(to, cached);
     Ok(())
 }
 
@@ -350,7 +350,7 @@ mod tests {
             .unwrap()
             .into_iter()
             .map(|t| match t.source {
-                opendj_engine::Source::File(p) => (t.info.stage, p),
+                djsugar_engine::Source::File(p) => (t.info.stage, p),
                 _ => unreachable!(),
             })
             .collect()
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn tracks_once_hidden_from_the_inbox_come_back_to_it() {
-        let dir = std::env::temp_dir().join(format!("opendj-hidden-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-hidden-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("library.db");
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn moves_wait_until_applied_and_can_be_undone() {
-        let dir = std::env::temp_dir().join(format!("opendj-moves-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-moves-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let inbox = dir.join("Downloads");
         std::fs::create_dir_all(&inbox).unwrap();
@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn a_batch_applies_alone_and_takes_the_folder_along() {
-        let dir = std::env::temp_dir().join(format!("opendj-album-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-album-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let album = dir.join("Downloaded/Soulseek/Air/Moon Safari");
         std::fs::create_dir_all(&album).unwrap();

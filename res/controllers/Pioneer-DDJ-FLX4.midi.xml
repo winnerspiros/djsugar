@@ -98,7 +98,7 @@
                 </options>
             </control>
             <control>
-                <description>LOAD (DECK1) +SHIFT - press - Show the tracks linked to the selected one (openDJ)</description>
+                <description>LOAD (DECK1) +SHIFT - press - Show the tracks linked to the selected one (DJ Sugar)</description>
                 <group>[Library]</group>
                 <key>ShowLinked</key>
                 <status>0x96</status>
@@ -108,7 +108,7 @@
                 </options>
             </control>
             <control>
-                <description>LOAD (DECK2) +SHIFT - press - VIEW: the next of your layouts (Settings › Layouts) (openDJ)</description>
+                <description>LOAD (DECK2) +SHIFT - press - VIEW: the next of your layouts (Settings › Layouts) (DJ Sugar)</description>
                 <group>[Skin]</group>
                 <key>layout_next</key>
                 <status>0x96</status>
@@ -502,7 +502,7 @@
             </control>
 
             <control>
-                <description>RELOOP/EXIT (DECK1) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>RELOOP/EXIT (DECK1) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel1]</group>
                 <key>beatloop_activate</key>
                 <status>0x90</status>
@@ -512,7 +512,7 @@
                 </options>
             </control>
             <control>
-                <description>RELOOP/EXIT (DECK2) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>RELOOP/EXIT (DECK2) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel2]</group>
                 <key>beatloop_activate</key>
                 <status>0x91</status>
@@ -939,7 +939,7 @@
                 </options>
             </control>
 
-            <!-- openDJ: MASTER LEVEL and HEADPHONES LEVEL, on the numbers Pioneer's
+            <!-- DJ Sugar: MASTER LEVEL and HEADPHONES LEVEL, on the numbers Pioneer's
                  DDJ-400 and DDJ-SB3 use for them, so the knobs on screen follow. -->
             <control>
                 <description>MASTER LEVEL - rotate - Main gain</description>
@@ -1070,7 +1070,7 @@
             </control>
 
             <control>
-                <description>BEAT LEFT - press - openDJ: halve the Beat FX length (SHIFT: AUTO tempo)</description>
+                <description>BEAT LEFT - press - DJ Sugar: halve the Beat FX length (SHIFT: AUTO tempo)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxLeftPressed</key>
                 <status>0x94</status>
@@ -1081,7 +1081,7 @@
             </control>
 
             <control>
-                <description>BEAT RIGHT - press - openDJ: double the Beat FX length (SHIFT: TAP tempo)</description>
+                <description>BEAT RIGHT - press - DJ Sugar: double the Beat FX length (SHIFT: TAP tempo)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxRightPressed</key>
                 <status>0x94</status>
@@ -1147,7 +1147,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX ON/OFF +SHIFT - press - openDJ: release the Beat FX, its tail ringing out (when on CHAN1/1+2)</description>
+                <description>BEAT FX ON/OFF +SHIFT - press - DJ Sugar: release the Beat FX, its tail ringing out (when on CHAN1/1+2)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
                 <status>0x94</status>
@@ -1157,7 +1157,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX ON/OFF +SHIFT - press - openDJ: release the Beat FX, its tail ringing out (when on CHAN12)</description>
+                <description>BEAT FX ON/OFF +SHIFT - press - DJ Sugar: release the Beat FX, its tail ringing out (when on CHAN12)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
                 <status>0x95</status>
@@ -3314,7 +3314,7 @@
             <!-- KEYBOARD MODE END -->
 
             <!-- PAD Section END -->
-            <!-- openDJ: LOOP ROLL pads. The device has no such mode: the
+            <!-- DJ Sugar: LOOP ROLL pads. The device has no such mode: the
                  script routes a pad mode's pads to these notes when its
                  tab shows loop rolls (see PioneerDDJFLX4.routePads). -->
             <control>
@@ -4156,7 +4156,7 @@
             <!-- Deck 2 pads -->
 
             <!-- SAMPLER Mode Pads end-->
-            <!-- openDJ: LOOP ROLL pads (see the controls above). -->
+            <!-- DJ Sugar: LOOP ROLL pads (see the controls above). -->
             <output>
                 <group>[Channel1]</group>
                 <key>beatlooproll_0.0625_activate</key>

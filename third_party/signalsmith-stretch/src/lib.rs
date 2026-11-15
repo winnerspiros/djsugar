@@ -44,7 +44,7 @@ impl Stretch {
     /// Like [Self::preset_default], but spreads each block's computation
     /// evenly over the following interval instead of doing it all in the
     /// call where the block starts. Costs one interval of output latency.
-    /// (Added for openDJ.)
+    /// (Added for DJ Sugar.)
     pub fn preset_default_split(channel_count: u32, sample_rate: u32) -> Self {
         let ptr = unsafe {
             sys::signalsmith_stretch_create_preset_default_split(

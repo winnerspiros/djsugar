@@ -16,7 +16,7 @@ use super::words::{
     beats, deck, eq, eq_kill, filter, fx_slot, fx_unit, indicator, library, master,
 };
 use super::Import;
-use crate::format::{Light, LightSource, Midi, OpenDjMapping, Row, Variable};
+use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
 use crate::mapping::When;
 
 /// Reads frames out of a body.
@@ -252,7 +252,7 @@ fn midi_name(name: &str) -> Option<Midi> {
     })
 }
 
-/// What a Traktor command does in openDJ.
+/// What a Traktor command does in DJ Sugar.
 enum Act {
     Bind(String, Vec<&'static str>),
     Script(String),
@@ -284,7 +284,7 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
         DIRECT => Act::Bind(c, vec![]),
         RELATIVE => Act::Bind(c, vec![encoder]),
         RESET => Act::Script(format!("set '{c}' 0.5")),
-        _ => Act::No("openDJ only moves this from a fader, knob or endless knob"),
+        _ => Act::No("DJ Sugar only moves this from a fader, knob or endless knob"),
     };
     let unit = d;
     match a.command {
@@ -308,7 +308,7 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
             DEC => bind(deck(d, "pitch_down")),
             RESET => bind(deck(d, "reset_key")),
             DIRECT if button.is_empty() => Act::Bind(deck(d, "pitch_adjust"), vec![]),
-            _ => Act::No("openDJ can't set the key to this value from a button yet"),
+            _ => Act::No("DJ Sugar can't set the key to this value from a button yet"),
         },
         202 => bind(deck(d, "reloop_toggle")),
         2392 => bind(deck(d, "loop_in")),
@@ -320,21 +320,21 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
             RELATIVE => Act::Script(format!("deck {d} (value > 50% ? loop_half : loop_double)")),
             DIRECT if !button.is_empty() => match loop_size(a.set_to.int()) {
                 Some(n) => Act::Script(format!("set '[Channel{d}],beatloop_size' {}", beats(n))),
-                None => Act::No("Traktor loop size openDJ doesn't have"),
+                None => Act::No("Traktor loop size DJ Sugar doesn't have"),
             },
-            _ => Act::No("openDJ picks loop sizes with buttons or an endless knob"),
+            _ => Act::No("DJ Sugar picks loop sizes with buttons or an endless knob"),
         },
         2317 => match loop_size(a.set_to.int()) {
             Some(n) => bind(deck(d, &format!("beatloop_{}_toggle", beats(n)))),
-            None => Act::No("Traktor loop size openDJ doesn't have"),
+            None => Act::No("Traktor loop size DJ Sugar doesn't have"),
         },
         2328 => match a.set_to.int() {
             n @ 0..=7 => bind(deck(d, &format!("hotcue_{}_activate", n + 1))),
-            _ => Act::No("Traktor hot cue openDJ doesn't have"),
+            _ => Act::No("Traktor hot cue DJ Sugar doesn't have"),
         },
         2331 => match a.set_to.int() {
             n @ 0..=7 => bind(deck(d, &format!("hotcue_{}_clear", n + 1))),
-            _ => Act::No("Traktor hot cue openDJ doesn't have"),
+            _ => Act::No("Traktor hot cue DJ Sugar doesn't have"),
         },
         2380 | 2351 => match (i, move_size(a.set_to.int())) {
             (INC, _) => bind(deck(d, "beatjump_forward")),
@@ -350,17 +350,17 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
                     if forward { "forward" } else { "backward" }
                 ),
             )),
-            _ => Act::No("Traktor moves by this size or by a loop, which openDJ doesn't do yet"),
+            _ => Act::No("Traktor moves by this size or by a loop, which DJ Sugar doesn't do yet"),
         },
-        // Traktor's move size is openDJ's beat jump size; its mode (beat
+        // Traktor's move size is DJ Sugar's beat jump size; its mode (beat
         // jump or loop move) stays beat jump.
         2372 => match (i, move_size(a.set_to.int())) {
             (_, Some((n, _))) if !button.is_empty() => {
                 Act::Script(format!("set '[Channel{d}],beatjump_size' {}", beats(n)))
             }
-            _ => Act::No("openDJ sets the beat jump size from buttons"),
+            _ => Act::No("DJ Sugar sets the beat jump size from buttons"),
         },
-        2391 => Act::No("openDJ's move buttons always beat jump; moving the loop isn't mappable yet"),
+        2391 => Act::No("DJ Sugar's move buttons always beat jump; moving the loop isn't mappable yet"),
         2311 | 2313 => bind(deck(d, "quantize")),
         // Mixer.
         102 => fader(deck(d, "volume")),
@@ -395,7 +395,7 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
                 INC => bind(fx_slot(unit, slot, "next_effect")),
                 DEC => bind(fx_slot(unit, slot, "prev_effect")),
                 RELATIVE => Act::Bind(fx_slot(unit, slot, "effect_selector"), vec![encoder]),
-                _ => Act::No("openDJ steps through effects rather than picking one by number"),
+                _ => Act::No("DJ Sugar steps through effects rather than picking one by number"),
             }
         }
         // Browser.
@@ -403,17 +403,17 @@ fn translate(a: &Assignment, d: u8, encoder: &'static str) -> Act {
             INC => bind(library("MoveDown")),
             DEC => bind(library("MoveUp")),
             RELATIVE => Act::Bind(library("MoveVertical"), vec!["selectknob"]),
-            _ => Act::No("openDJ moves through the list with buttons or an endless knob"),
+            _ => Act::No("DJ Sugar moves through the list with buttons or an endless knob"),
         },
         3328 => match i {
             RELATIVE => Act::Bind(library("MoveFocus"), vec!["selectknob"]),
-            _ => Act::No("openDJ has no folder tree to move through from a controller yet"),
+            _ => Act::No("DJ Sugar has no folder tree to move through from a controller yet"),
         },
-        120 | 2187 => Act::No("Jog wheels need the controller's own script; openDJ's mappings for the FLX4 and others have one"),
+        120 | 2187 => Act::No("Jog wheels need the controller's own script; DJ Sugar's mappings for the FLX4 and others have one"),
         id if (233..=260).contains(&id) || (2000..=2010).contains(&id) => {
-            Act::No("openDJ has no Remix Decks")
+            Act::No("DJ Sugar has no Remix Decks")
         }
-        _ => Act::No("openDJ has no match for this Traktor command yet"),
+        _ => Act::No("DJ Sugar has no match for this Traktor command yet"),
     }
 }
 
@@ -451,11 +451,11 @@ fn translate_light(a: &Assignment, d: u8) -> Result<LightSource, &'static str> {
         2333..=2340 => shown(deck(d, &format!("hotcue_{}_enabled", a.command - 2332))),
         2328 => match a.set_to.int() {
             n @ 0..=7 => shown(deck(d, &format!("hotcue_{}_enabled", n + 1))),
-            _ => Err("Traktor hot cue openDJ doesn't have"),
+            _ => Err("Traktor hot cue DJ Sugar doesn't have"),
         },
         2317 => match loop_size(a.set_to.int()) {
             Some(n) => shown(deck(d, &format!("beatloop_{}_enabled", beats(n)))),
-            None => Err("Traktor loop size openDJ doesn't have"),
+            None => Err("Traktor loop size DJ Sugar doesn't have"),
         },
         2712 | 2713 => Ok(LightSource::Bind {
             control: deck(d, "vu_meter"),
@@ -464,7 +464,7 @@ fn translate_light(a: &Assignment, d: u8) -> Result<LightSource, &'static str> {
             on,
             off,
         }),
-        _ => Err("openDJ has no match for this Traktor light yet"),
+        _ => Err("DJ Sugar has no match for this Traktor light yet"),
     }
 }
 
@@ -494,7 +494,7 @@ fn modifier_rows(a: &Assignment, var: &str, msg: Midi) -> Vec<Row> {
             msg,
             "",
             "",
-            "openDJ sets modifiers by holding, toggling or setting them, not by stepping",
+            "DJ Sugar sets modifiers by holding, toggling or setting them, not by stepping",
         )],
     }
 }
@@ -703,7 +703,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
         .to_string();
     let mut import = Import::default();
     // Traktor 4 splits a controller into several devices on the same
-    // port (deck A, pads, mixer); openDJ keeps one mapping per port.
+    // port (deck A, pads, mixer); DJ Sugar keeps one mapping per port.
     let mut by_port: Vec<(String, Vec<&Device>)> = Vec::new();
     for d in &devices {
         match by_port.iter_mut().find(|(p, _)| *p == d.port_in) {
@@ -717,7 +717,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
             .map(|d| controller_name(d))
             .find(|n| !n.is_empty())
             .unwrap_or_else(|| title.clone());
-        let mut m = OpenDjMapping::new(&format!("{controller} (Traktor)"));
+        let mut m = DjSugarMapping::new(&format!("{controller} (Traktor)"));
         m.controller.name = controller.clone();
         if !port.is_empty() && port != "All Ports" && port != "None" {
             m.controller.ports.push(port.clone());
@@ -803,7 +803,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                     light.original = original;
                     if let Some(c) = &odd_condition {
                         light.off = true;
-                        light.note = format!("Depends on Traktor's {c}, which openDJ doesn't have");
+                        light.note = format!("Depends on Traktor's {c}, which DJ Sugar doesn't have");
                     }
                     m.lights.push(light);
                     continue;
@@ -843,7 +843,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                     r.layer = layer.join(" & ");
                     if let Some(c) = &odd_condition {
                         r.off = true;
-                        r.note = format!("Depends on Traktor's {c}, which openDJ doesn't have");
+                        r.note = format!("Depends on Traktor's {c}, which DJ Sugar doesn't have");
                         r.action = crate::format::Action::Nothing;
                     }
                     if !r.off {
@@ -878,7 +878,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
     if import.mappings.is_empty() {
         return Err(import.notes.join(" ").chars().take(400).collect::<String>()
             + if import.notes.is_empty() {
-                "This Traktor file has nothing openDJ can map."
+                "This Traktor file has nothing DJ Sugar can map."
             } else {
                 ""
             });
@@ -1035,7 +1035,7 @@ mod tests {
         let i = import(&sample(), "K2.tsi").unwrap();
         for r in &i.mappings[0].rows {
             if let crate::format::Action::Script(s) = &r.action {
-                opendj_script::parse(s).unwrap_or_else(|e| panic!("{s}: {e:?}"));
+                djsugar_script::parse(s).unwrap_or_else(|e| panic!("{s}: {e:?}"));
             }
         }
     }

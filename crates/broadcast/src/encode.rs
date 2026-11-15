@@ -104,7 +104,7 @@ impl OggOpus {
         head.extend(0i16.to_le_bytes());
         head.push(0);
         self.write(head, PacketWriteEndInfo::EndPage, 0)?;
-        let vendor = format!("openDJ {}", env!("CARGO_PKG_VERSION"));
+        let vendor = format!("DJ Sugar {}", env!("CARGO_PKG_VERSION"));
         let mut comments = Vec::new();
         if !artist.is_empty() {
             comments.push(format!("ARTIST={artist}"));

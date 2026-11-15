@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn serves_the_karaoke_page() {
         let o = Overlay::start(DEFAULT_PORT + 60, false).unwrap();
-        assert!(get(o.port(), "/karaoke").contains("openDJ Karaoke"));
+        assert!(get(o.port(), "/karaoke").contains("DJ Sugar Karaoke"));
         set_karaoke(r#"{"id":1}"#.into(), Some(r#"{"id":1,"lines":[]}"#.into()));
         assert!(get(o.port(), "/karaoke.json").ends_with(r#"{"id":1}"#));
         set_karaoke(r#"{"id":2}"#.into(), None);

@@ -1,10 +1,10 @@
 [package]
-name = "opendj-osc"
+name = "djsugar-osc"
 description = "Open Sound Control: every control by address, with feedback, for tablets, visuals and show software"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-control = { path = "../control" }
+djsugar-control = { path = "../control" }
 rosc = "0.11"

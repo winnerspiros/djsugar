@@ -260,7 +260,7 @@ impl Browser {
         let t = &self.library[i];
         Item {
             bpm: t.bpm,
-            key: opendj_engine::key::Key::parse(&t.key),
+            key: djsugar_engine::key::Key::parse(&t.key),
             artist: main_artist(&t.artist).to_lowercase(),
         }
     }

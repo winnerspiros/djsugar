@@ -6,9 +6,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_controllers::hid::{self, Io};
-use opendj_controllers::{default_mappings_dir, Controller, Mapping};
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::hid::{self, Io};
+use djsugar_controllers::{default_mappings_dir, Controller, Mapping};
 
 /// A device that answers every report request with zeros and keeps what it
 /// is sent. Input reports are as long as the S4 MK3's longest; feature
@@ -39,7 +39,7 @@ const REPORT: usize = 128;
 
 fn load(file: &str) -> (Arc<ControlRegistry>, Controller, Rc<FakeDevice>) {
     let reg = ControlRegistry::new();
-    let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+    let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
     let path = default_mappings_dir().unwrap().join(file);
     let mapping = Mapping::load(&path).unwrap();
     assert!(mapping.is_hid(), "{file}");
@@ -220,7 +220,7 @@ fn maschine_mikro_mk3_knows_the_kits() {
         .unwrap()
         .join("Native-Instruments-Maschine-Mikro-MK3.js");
     let script = std::fs::read_to_string(path).unwrap();
-    for kit in opendj_engine::kits::KITS.iter() {
+    for kit in djsugar_engine::kits::KITS.iter() {
         let sounds: Vec<String> = kit.sounds().map(|s| format!("\"{s}\"")).collect();
         let line = format!(
             "{{name: \"{}\", sounds: [{}]}}",

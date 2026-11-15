@@ -4,11 +4,11 @@ Planned for: **v0.6 · Buy it from the artist** (moved from v0.5 at the 0.5.0 re
 
 ## Why
 
-Ableton Link keeps apps in time, but most hardware (drum machines, grooveboxes, synths with arpeggiators, Elektron and Roland boxes, modular through a clock converter) only follows MIDI clock. DJs who play live gear over their decks today buy a Link-to-MIDI box or run a second app to do it. Taking clock in lets a DJ lock the decks to a live act or a drum machine. Today openDJ throws incoming clock bytes away (`crates/controllers/src/controller.rs`). Research: notes/ecosystem-standards-review.md in the project files.
+Ableton Link keeps apps in time, but most hardware (drum machines, grooveboxes, synths with arpeggiators, Elektron and Roland boxes, modular through a clock converter) only follows MIDI clock. DJs who play live gear over their decks today buy a Link-to-MIDI box or run a second app to do it. Taking clock in lets a DJ lock the decks to a live act or a drum machine. Today DJ Sugar throws incoming clock bytes away (`crates/controllers/src/controller.rs`). Research: notes/ecosystem-standards-review.md in the project files.
 
 ## What Changes
 
-- **MIDI clock out**, in the MASTER panel beside the Link switch: a CLOCK OUT switch and, in Settings › Controllers › MIDI Clock, the outputs to send to (any MIDI output, plus a virtual "openDJ Clock" port on macOS and Linux for other apps on the same computer). The clock follows the same deck Link follows (the master deck), at 24 pulses per beat, timed for when the audio is heard, not when it is rendered.
+- **MIDI clock out**, in the MASTER panel beside the Link switch: a CLOCK OUT switch and, in Settings › Controllers › MIDI Clock, the outputs to send to (any MIDI output, plus a virtual "DJ Sugar Clock" port on macOS and Linux for other apps on the same computer). The clock follows the same deck Link follows (the master deck), at 24 pulses per beat, timed for when the audio is heard, not when it is rendered.
 - **Start, Stop and bar alignment:** Start is sent on the next downbeat when the master deck starts (or when the DJ presses RESTART ON BAR), with Song Position so pattern-based gear lands on the bar. Stop when the master deck stops, or keep running at the last tempo (setting).
 - **Per-output offset** (-50 to +50 ms) to make up for gear that sounds late or early.
 - **MIDI clock in:** choose an input in Settings › Controllers › MIDI Clock. It becomes a sync leader called **CLOCK**: decks with SYNC on follow its tempo and its beat (from Start and Song Position). The tempo is smoothed, so a jittery hardware clock still gives a steady BPM.

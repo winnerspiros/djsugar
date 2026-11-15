@@ -4,7 +4,7 @@ Research: `/mnt/project-files/notes/stores-buy-wanted-review.md` (project files)
 
 ## Ground rules
 
-- openDJ never takes payment; every purchase uses the store's own checkout.
+- DJ Sugar never takes payment; every purchase uses the store's own checkout.
 - No affiliate or referral tags, so the store's full share goes to the label and artist.
 - No fixed store order. Per track: stores that have it, then artist-direct, then fastest to the library, then lossless. A pinned store rises only among stores that have the track.
 - Nothing in Downloads or a store-app folder moves until the DJ turns the inbox on; only files newer than that moment count.
@@ -28,10 +28,10 @@ Each step is its own PR and useful alone.
 
 From `add-addon-repositories` (full note `notes/addon-repositories.md` in project files). Phase 1 (PR #36) loads executables from `<config>/addons/` and speaks JSON lines over stdio.
 
-- **Index format:** one `opendj-addons.json` per repository, hosted anywhere; on GitHub a release asset at `/releases/latest/download/opendj-addons.json`. Chosen over a registry service so anyone can publish.
-- **Trust:** checksums always; an ed25519 key pinned on first add (trust on first use). Add-ons are not sandboxed; openDJ shows publisher, declared hosts and "unsupported".
+- **Index format:** one `djsugar-addons.json` per repository, hosted anywhere; on GitHub a release asset at `/releases/latest/download/djsugar-addons.json`. Chosen over a registry service so anyone can publish.
+- **Trust:** checksums always; an ed25519 key pinned on first add (trust on first use). Add-ons are not sandboxed; DJ Sugar shows publisher, declared hosts and "unsupported".
 - **Secrets:** tokens in the macOS Keychain / Linux Secret Service, never in settings.json.
-- **Versions:** `initialize` carries the protocol version; an index entry names the openDJ versions it needs, and too-new add-ons show but can't install.
+- **Versions:** `initialize` carries the protocol version; an index entry names the DJ Sugar versions it needs, and too-new add-ons show but can't install.
 
 ### Risks
 - Malicious add-on from an unsupported repository → warning before install, publisher and hosts shown, remove in one click.
@@ -58,7 +58,7 @@ From `add-addon-repositories` (full note `notes/addon-repositories.md` in projec
 
 - Bandcamp has no public API for a fan's collection. Sync uses the same endpoints the Bandcamp site uses for a signed-in fan: the collection list and each item's download page. The session cookie comes from a sign-in window (embedded web view or the system browser with a pasted cookie as a fallback) and is kept in the system keychain.
 - It runs on demand ("Sync now") and optionally once a day; downloads one at a time, spaced, to stay polite. Each purchase is downloaded once (Bandcamp item id stored), unpacked by the inbox and tagged with the Bandcamp comment that the inbox already recognises.
-- Built into openDJ beside the Bandcamp search (same plugin), since the purchase inbox is core and both use the same unofficial endpoints.
+- Built into DJ Sugar beside the Bandcamp search (same plugin), since the purchase inbox is core and both use the same unofficial endpoints.
 
 ## More artist-direct stores
 
@@ -71,5 +71,5 @@ From `add-addon-repositories` (full note `notes/addon-repositories.md` in projec
 ## Decisions (2026-11-13)
 
 - Bandcamp sync downloads FLAC by default, with AIFF as an option for players that need it.
-- Bandcamp sync is built into openDJ beside Bandcamp search, not a separate add-on: both use the same endpoints and the purchase inbox is core.
+- Bandcamp sync is built into DJ Sugar beside Bandcamp search, not a separate add-on: both use the same endpoints and the purchase inbox is core.
 - Buy… from a streaming list or placeholder adds the track to Wanted visibly, marked as being bought, so unfinished purchases are not lost.

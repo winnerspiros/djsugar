@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=openDJ
+Name=DJ Sugar
 GenericName=DJ Software
 Comment=Mix music with decks, stems, effects and DJ controllers
-Exec=opendj
-Icon=app.opendj.openDJ
+Exec=djsugar
+Icon=io.github.winnerspiros.DJSugar
 Terminal=false
 Categories=AudioVideo;Audio;Player;Mixer;
 Keywords=DJ;mix;mixer;decks;turntable;Mixxx;VirtualDJ;rekordbox;
-StartupWMClass=app.opendj.openDJ
+StartupWMClass=io.github.winnerspiros.DJSugar

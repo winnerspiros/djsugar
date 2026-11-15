@@ -5,10 +5,10 @@
 //! but no audio for a DJ app, so a song plays only when the collection holds
 //! the same track.
 //!
-//! Apple's API needs two tokens. The developer token is a JWT that openDJ
+//! Apple's API needs two tokens. The developer token is a JWT that DJ Sugar
 //! signs with the DJ's own MusicKit key (a `.p8` file from their Apple
 //! Developer account, with its Key ID and their Team ID). The music user
-//! token comes from MusicKit JS: openDJ serves a small sign-in page on
+//! token comes from MusicKit JS: DJ Sugar serves a small sign-in page on
 //! [`PORT`], which asks Apple for it and hands it back at `/callback`.
 //! The Team ID, Key ID, key path and user token are kept in
 //! `applemusic.json` in the config folder; the user token lasts about six
@@ -36,7 +36,7 @@ const API: &str = "https://api.music.apple.com";
 const MUSICKIT: &str = "https://js-cdn.music.apple.com/musickit/v3/musickit.js";
 /// Where the sign-in is kept, in the config folder.
 const SAVED: &str = "applemusic.json";
-/// How long a developer token openDJ signs is good for.
+/// How long a developer token DJ Sugar signs is good for.
 const TOKEN_LIFETIME: u64 = 12 * 60 * 60;
 /// The most songs a list reads.
 const MAX_TRACKS: usize = 2000;
@@ -282,7 +282,7 @@ impl Worker {
         Ok(items.iter().filter_map(parse_song).collect())
     }
 
-    /// Signs a developer token, then has the DJ sign in on openDJ's page.
+    /// Signs a developer token, then has the DJ sign in on DJ Sugar's page.
     fn login(&mut self, key: Key) -> Result<Session, String> {
         let developer_token = key.developer_token()?;
         let listener = TcpListener::bind(("127.0.0.1", PORT))
@@ -386,16 +386,16 @@ fn error_message(status: u16, body: &Value) -> String {
 /// `/callback` as the code.
 fn sign_in_page(developer_token: &str, state: &str) -> String {
     format!(
-        r#"<!doctype html><meta charset=utf-8><title>openDJ</title>
+        r#"<!doctype html><meta charset=utf-8><title>DJ Sugar</title>
 <body style="font:16px -apple-system,sans-serif;background:#1c1c1e;color:#eee;display:grid;place-items:center;height:90vh">
-<div style="text-align:center"><p id=msg>Sign in to Apple Music to see your library in openDJ.</p>
+<div style="text-align:center"><p id=msg>Sign in to Apple Music to see your library in DJ Sugar.</p>
 <button id=go disabled style="font:inherit;padding:8px 20px;border-radius:16px;border:0;background:#fa2d48;color:#fff">Sign in with Apple Music</button></div>
 <script src="{MUSICKIT}" async></script>
 <script>
 const back = (k, v) => location.href = "/callback?" + k + "=" + encodeURIComponent(v) + "&state={state}";
 document.addEventListener("musickitloaded", async () => {{
   try {{
-    await MusicKit.configure({{ developerToken: "{developer_token}", app: {{ name: "openDJ", build: "1" }} }});
+    await MusicKit.configure({{ developerToken: "{developer_token}", app: {{ name: "DJ Sugar", build: "1" }} }});
     const go = document.getElementById("go");
     go.disabled = false;
     go.onclick = async () => {{

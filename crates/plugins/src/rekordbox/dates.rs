@@ -117,7 +117,7 @@ pub fn fix(path: &Path) -> rusqlite::Result<usize> {
 }
 
 /// A rekordbox timestamp in rbox's format. Spellings it can't make sense
-/// of (NULL, empty, garbage) become the Unix epoch: openDJ doesn't use
+/// of (NULL, empty, garbage) become the Unix epoch: DJ Sugar doesn't use
 /// these dates, rbox only needs them to parse.
 pub fn normalise(v: &Value) -> String {
     let date = match v {
@@ -194,7 +194,7 @@ impl FixedCopy {
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_nanos());
         let dir =
-            std::env::temp_dir().join(format!("opendj-rekordbox-{}-{stamp}", std::process::id()));
+            std::env::temp_dir().join(format!("djsugar-rekordbox-{}-{stamp}", std::process::id()));
         std::fs::create_dir_all(&dir)?;
         let copy = Self {
             db: dir.join("master.db"),
@@ -291,7 +291,7 @@ mod tests {
     /// DJ's file is left as it was.
     #[test]
     fn opens_a_library_with_odd_dates_through_a_copy() {
-        let dir = std::env::temp_dir().join(format!("opendj-rb-dates-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-rb-dates-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("master.db");
@@ -341,7 +341,7 @@ mod tests {
     /// reads in rbox, the DJ's file is left as it was.
     #[test]
     fn opens_a_library_with_nulls_through_a_copy() {
-        let dir = std::env::temp_dir().join(format!("opendj-rb-nulls-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-rb-nulls-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("master.db");

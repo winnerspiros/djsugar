@@ -1,7 +1,7 @@
 # automix Specification
 
 ## Purpose
-Automix: openDJ beatmatches and crossfades through a list for the DJ, in a chosen length and style, on decks 1 and 2.
+Automix: DJ Sugar beatmatches and crossfades through a list for the DJ, in a chosen length and style, on decks 1 and 2.
 
 ## Requirements
 

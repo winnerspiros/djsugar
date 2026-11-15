@@ -11,7 +11,7 @@
 ## 2. External mixer mode
 
 - [x] 2.1 engine: `[Master],external_mixer` bypasses EQ, filter, fader, crossfader, master FX and limiter for decks; mixer controls ignored
-- [x] 2.2 app: "Mix on" switch (Settings › Audio › Mixer: openDJ / External, above the outputs; External shows fixed Deck 1-4, Headphones and Sampler rows); slim deck strips with meters replacing the mixer in 2-Deck and 4-Deck layouts; Automix and limiter disabled with notes
+- [x] 2.2 app: "Mix on" switch (Settings › Audio › Mixer: DJ Sugar / External, above the outputs; External shows fixed Deck 1-4, Headphones and Sampler rows); slim deck strips with meters replacing the mixer in 2-Deck and 4-Deck layouts; Automix and limiter disabled with notes
 - [x] 2.3 Sampler and Groove Box fall back to Deck 1's pair; mic/aux not mixed; recorder input source option (Settings › Audio › Recording input: master mix or an Auxiliary input, `[Master],record_source`)
 - [ ] 2.4 Manual check with an interface into a hardware mixer (or Ableton as the "mixer")
 - [x] 2.5 User guide: "External mixer" page; regenerate supported-controls.txt

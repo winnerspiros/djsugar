@@ -34,8 +34,8 @@ The WAVEFORMS button in the top bar SHALL show or hide the large waveforms (sett
 - **THEN** the large waveforms disappear and the library gets the space
 
 ### Requirement: Idle redraw
-The window SHALL redraw only when something on it changes, so an idle openDJ uses little CPU.
+The window SHALL redraw only when something on it changes, so an idle DJ Sugar uses little CPU.
 
 #### Scenario: Idle
 - **WHEN** no deck plays and nothing is touched
-- **THEN** openDJ uses close to no CPU
+- **THEN** DJ Sugar uses close to no CPU

@@ -16,7 +16,7 @@ use slint::{
 };
 
 /// `live` for a deck playing the Mixer.
-const MIXER: i32 = opendj_engine::inputs::MIXER as i32;
+const MIXER: i32 = djsugar_engine::inputs::MIXER as i32;
 
 use crate::{settings, AppWindow, InstrumentsUi, TrackDrag};
 
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn an_image_is_kept_under_its_key_in_place_of_the_last() {
-        let dir = std::env::temp_dir().join(format!("opendj-art-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-art-{}", std::process::id()));
         let src = dir.join("src");
         std::fs::create_dir_all(&src).unwrap();
         let png = src.join("Juno.PNG");
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn a_plugins_nks_art_is_found_by_maker_and_name() {
-        let root = std::env::temp_dir().join(format!("opendj-nks-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("djsugar-nks-{}", std::process::id()));
         let product = root.join("arturia").join("jun-6 v");
         std::fs::create_dir_all(&product).unwrap();
         assert_eq!(nks_art(&root, "Arturia", "Jun-6 V"), None);

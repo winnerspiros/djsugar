@@ -1,13 +1,13 @@
 [package]
-name = "opendj-controllers"
+name = "djsugar-controllers"
 description = "MIDI and HID controller support driven by Mixxx's own controller mappings"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-control = { path = "../control" }
-opendj-script = { path = "../script" }
+djsugar-control = { path = "../control" }
+djsugar-script = { path = "../script" }
 base64 = "0.22"
 # USB HID controllers (Native Instruments Traktor Kontrol and others). On
 # Linux it uses hidraw through libudev; on macOS devices are opened shared,
@@ -19,4 +19,4 @@ rquickjs = { version = "0.14", features = ["classes", "properties"] }
 serde_json = "1"
 
 [dev-dependencies]
-opendj-engine = { path = "../engine" }
+djsugar-engine = { path = "../engine" }

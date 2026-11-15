@@ -1,12 +1,12 @@
 [package]
-name = "opendj-export"
+name = "djsugar-export"
 description = "Writes the library to a USB stick that Pioneer DJ players (export.pdb, OneLibrary and analysis files) and Engine DJ players (m.db) read"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-opendj-engine = { path = "../engine" }
+djsugar-engine = { path = "../engine" }
 rbox-devlib = "0.3.0"
 rbox-onelib = { version = "0.3.0", default-features = false }
 rbox-anlz = "0.3.0"

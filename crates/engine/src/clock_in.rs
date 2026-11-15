@@ -15,7 +15,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use opendj_control::ControlHandle;
+use djsugar_control::ControlHandle;
 use rusty_link::AblLink;
 
 use crate::midi_clock::{BeatClock, Snapshot, PPQN};
@@ -198,7 +198,7 @@ pub(crate) fn open(
     bpm: ControlHandle,
     running: ControlHandle,
 ) -> Option<midir::MidiInputConnection<()>> {
-    let mut input = midir::MidiInput::new("openDJ clock in").ok()?;
+    let mut input = midir::MidiInput::new("DJ Sugar clock in").ok()?;
     // Clock and the other real-time messages are what this is for.
     input.ignore(midir::Ignore::SysexAndActiveSense);
     let p = input
@@ -208,7 +208,7 @@ pub(crate) fn open(
     let mut reader = ClockReader::default();
     let connected = input.connect(
         &p,
-        "openDJ clock in",
+        "DJ Sugar clock in",
         move |_, bytes, _| {
             // Link's clock, which the audio thread times buffers by.
             let now = link.clock_micros() as f64;
@@ -234,14 +234,14 @@ pub(crate) fn open(
 
 /// The MIDI inputs there are now, for clock in.
 pub fn input_ports() -> Vec<String> {
-    let Ok(input) = midir::MidiInput::new("openDJ clock ports") else {
+    let Ok(input) = midir::MidiInput::new("DJ Sugar clock ports") else {
         return Vec::new();
     };
     input
         .ports()
         .iter()
         .filter_map(|p| input.port_name(p).ok())
-        .filter(|n| !n.contains("openDJ"))
+        .filter(|n| !n.contains("DJ Sugar"))
         .collect()
 }
 

@@ -329,9 +329,9 @@ export component Jog inherits Rectangle {
         border-width: 1px;
         border-color: Theme.s-00000000;
     }
-    // The small jogs carry the openDJ mark in light grey instead of text.
+    // The small jogs carry the DJ Sugar mark in light grey instead of text.
     if plain: Image {
-        source: @image-url("icons/opendj-mark.svg");
+        source: @image-url("icons/djsugar-mark.svg");
         colorize: Theme.n-a1a1a6;
         width: centre * 0.62;
         height: self.width / 1.6;
@@ -1628,7 +1628,7 @@ export global EffectList {
     in property <[int]> slider-params: [-1, 0, 1, -1, 0, -1, -1, -1, -1, -1, 1, -1, 1, -1, 1, 0, -1, -1];
 }
 
-// The effect menu's contents: openDJ FX and Plugins tabs (when plugins are
+// The effect menu's contents: DJ Sugar FX and Plugins tabs (when plugins are
 // ticked), then the tab's effects grouped by kind; a long list scrolls.
 // Picking an effect calls `picked` with its place in EffectList.names.
 export component EffectMenu inherits VerticalLayout {
@@ -1643,7 +1643,7 @@ export component EffectMenu inherits VerticalLayout {
     if tabs: HorizontalLayout {
         height: 26px;
         spacing: 2px;
-        for t[i] in ["openDJ FX", "Plugins"]: Rectangle {
+        for t[i] in ["DJ Sugar FX", "Plugins"]: Rectangle {
             horizontal-stretch: 1;
             border-radius: 4px;
             background: tab == i ? Theme.control-pressed : tta.has-hover ? Theme.n-2a2b2e : transparent;
@@ -2454,7 +2454,7 @@ export component Pads inherits HorizontalLayout {
         { key: "beatjump_32_forward", light: "beatjump_32_forward", text: "32 ›" },
     ];
     // VirtualDJ's STEMS pads: stems 1 to 5 are kick, bass, instruments,
-    // vocals and hi-hats (see opendj_engine::stems::default_info).
+    // vocals and hi-hats (see djsugar_engine::stems::default_info).
     property <[StemPadSpec]> stem-pads: [
         { stem: 4, text: "Vocal", tint: #09AD18 },
         { stem: 3, text: "Instru", tint: #A26018 },

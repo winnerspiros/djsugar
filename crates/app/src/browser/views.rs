@@ -1,6 +1,6 @@
 //! Where each list was left: how far it was scrolled and which track was
 //! picked, so going back to a list after another shows it as it was. Kept
-//! only while openDJ runs.
+//! only while DJ Sugar runs.
 
 use slint::Model;
 

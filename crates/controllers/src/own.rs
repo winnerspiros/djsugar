@@ -1,12 +1,12 @@
-//! openDJ's own mappings: the DJ's copies of a Mixxx mapping and the ones
-//! imported from other apps. Each is a file in openDJ's mapping format
+//! DJ Sugar's own mappings: the DJ's copies of a Mixxx mapping and the ones
+//! imported from other apps. Each is a file in DJ Sugar's mapping format
 //! (see [`crate::format`]) next to the settings,
 //! `controller-mappings/<id>.json`. A Mixxx mapping itself is never written
 //! to, so the original can always be gone back to.
 
 use std::path::{Path, PathBuf};
 
-use crate::format::OpenDjMapping;
+use crate::format::DjSugarMapping;
 
 /// One of the DJ's own mappings.
 #[derive(Clone, Debug, PartialEq)]
@@ -18,12 +18,12 @@ pub struct OwnMapping {
     /// alone.
     pub based_on: String,
     /// The whole file.
-    pub mapping: OpenDjMapping,
+    pub mapping: DjSugarMapping,
 }
 
 impl OwnMapping {
     pub fn read(path: &Path) -> Option<Self> {
-        let mapping = OpenDjMapping::read(path).ok()?;
+        let mapping = DjSugarMapping::read(path).ok()?;
         Some(OwnMapping {
             id: path.file_stem()?.to_string_lossy().into_owned(),
             name: mapping.name.clone(),
@@ -88,7 +88,7 @@ pub fn create(
 ) -> std::io::Result<OwnMapping> {
     let mapping = from
         .map(|f| f.mapping.clone())
-        .unwrap_or_else(|| OpenDjMapping::new(name));
+        .unwrap_or_else(|| DjSugarMapping::new(name));
     save_new(dir, name, based_on, mapping)
 }
 
@@ -98,7 +98,7 @@ pub fn save_new(
     dir: &Path,
     name: &str,
     based_on: &str,
-    mapping: OpenDjMapping,
+    mapping: DjSugarMapping,
 ) -> std::io::Result<OwnMapping> {
     let stem: String = name
         .chars()
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn copies_rename_and_delete() {
-        let dir = std::env::temp_dir().join(format!("opendj-own-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-own-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let base = "Pioneer-DDJ-FLX4.midi.xml";
         assert!(list(&dir, base).is_empty());

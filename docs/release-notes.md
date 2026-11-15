@@ -1,4 +1,4 @@
-openDJ 0.6.0 turns openDJ into an instrument as much as a DJ app. Plugin instruments and the Groove Box get a deck of their own with scale, chord and arpeggiator, a looper layers them over the mix, and live decks draw what they play on the waveforms. Player mode becomes a full music player with Home, artist and album pages, Now Playing, Keep going and scrobbling. Lyrics arrive everywhere: a Lyrics tab, on the waveforms, a karaoke screen, and Whisper to time or write down the words.
+DJ Sugar 0.6.0 turns DJ Sugar into an instrument as much as a DJ app. Plugin instruments and the Groove Box get a deck of their own with scale, chord and arpeggiator, a looper layers them over the mix, and live decks draw what they play on the waveforms. Player mode becomes a full music player with Home, artist and album pages, Now Playing, Keep going and scrobbling. Lyrics arrive everywhere: a Lyrics tab, on the waveforms, a karaoke screen, and Whisper to time or write down the words.
 
 ## What's new
 
@@ -65,33 +65,33 @@ openDJ 0.6.0 turns openDJ into an instrument as much as a DJ app. Plugin instrum
 
 **Moved home**
 
-- openDJ now lives at github.com/openwave-studio/opendj. Old links redirect. On macOS the app has a new bundle ID, so macOS asks once more for microphone, keychain and folder access (Desktop, Documents, removable drives, other apps' data for imports) after this update. System Settings › Privacy & Security › Files and Folders lists openDJ twice until the old copy is gone.
+- DJ Sugar now lives at github.com/winnerspiros/djsugar. Old links redirect. On macOS the app has a new bundle ID, so macOS asks once more for microphone, keychain and folder access (Desktop, Documents, removable drives, other apps' data for imports) after this update. System Settings › Privacy & Security › Files and Folders lists DJ Sugar twice until the old copy is gone.
 
 ## Install
 
-**macOS** (Apple Silicon and Intel, macOS 11 or newer): if you have 0.3.0 or newer, openDJ offers this update itself when it starts. Otherwise download `openDJ-…-macos.zip`, unzip it and move openDJ to Applications.
+**macOS** (Apple Silicon and Intel, macOS 11 or newer): if you have 0.3.0 or newer, DJ Sugar offers this update itself when it starts. Otherwise download `DJSugar-…-macos.zip`, unzip it and move DJ Sugar to Applications.
 
 **Windows** (preview; 64-bit Windows 10 and 11):
 
-- `openDJ-…-windows-x64-setup.exe`: installs for your user, no administrator needed, and updates itself from now on.
-- `opendj-…-windows-x64.zip`: portable. Unzip anywhere and run `openDJ.exe`.
+- `DJSugar-…-windows-x64-setup.exe`: installs for your user, no administrator needed, and updates itself from now on.
+- `djsugar-…-windows-x64.zip`: portable. Unzip anywhere and run `DJSugar.exe`.
 
 The Windows build isn't signed yet, so on first run SmartScreen says "Windows protected your PC": click More info, then Run anyway. ASIO drivers show next to Windows Audio devices in Settings › Audio. Windows on ARM runs it through emulation.
 
 **Linux** (x86_64, glibc 2.35 or newer, e.g. Ubuntu 22.04+, Fedora 36+, Debian 12+):
 
-- `opendj_…_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) or `opendj-…x86_64.rpm` (Fedora, openSUSE): open it to install with your software centre, or run `sudo apt install ./opendj_…_amd64.deb` / `sudo dnf install ./opendj-…x86_64.rpm`. openDJ then shows up with your other apps, Traktor Kontrol controllers work without extra setup, and when a new version is out openDJ offers the new package.
-- `openDJ-…-x86_64.AppImage`: make it executable (`chmod +x`) and run it. AppImages from 0.3.0 on update themselves.
-- `opendj-…-linux-x86_64.tar.gz`: unpack anywhere and run `bin/opendj`.
+- `djsugar_…_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) or `djsugar-…x86_64.rpm` (Fedora, openSUSE): open it to install with your software centre, or run `sudo apt install ./djsugar_…_amd64.deb` / `sudo dnf install ./djsugar-…x86_64.rpm`. DJ Sugar then shows up with your other apps, Traktor Kontrol controllers work without extra setup, and when a new version is out DJ Sugar offers the new package.
+- `DJSugar-…-x86_64.AppImage`: make it executable (`chmod +x`) and run it. AppImages from 0.3.0 on update themselves.
+- `djsugar-…-linux-x86_64.tar.gz`: unpack anywhere and run `bin/djsugar`.
 
-openDJ needs ALSA and a Vulkan driver, which most desktops already have.
+DJ Sugar needs ALSA and a Vulkan driver, which most desktops already have.
 
-Add your music folders in Settings › Collection, or let the guided tour do it the first time openDJ starts. MIDI controllers that Mixxx supports load their mapping when plugged in.
+Add your music folders in Settings › Collection, or let the guided tour do it the first time DJ Sugar starts. MIDI controllers that Mixxx supports load their mapping when plugged in.
 
 ## Known limits
 
 - Windows is a preview: unsigned, and less tested than macOS and Linux.
-- Streaming services are browse only. Buying from stores opens the store's page; openDJ doesn't check out for you.
+- Streaming services are browse only. Buying from stores opens the store's page; DJ Sugar doesn't check out for you.
 - Automix uses decks 1 and 2 only.
 - Controllers marked Beta, including the Xone K2 and Maschine Mikro MK3 mappings, the Traktor Kontrol controllers and the XDJ-RX3 and Numark V7 mappings, haven't all been tried on the hardware yet.
 - Plugins: their latency isn't compensated. On Linux, plugin windows need X11 (XWayland on Wayland).

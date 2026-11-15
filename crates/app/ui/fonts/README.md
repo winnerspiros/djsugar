@@ -7,7 +7,7 @@ sideways as they count. It is renamed as the licence asks of
 modified versions. Made with fontTools by pointing the character map of each
 digit 0 to 9 at its `.tnum` glyph.
 
-Zen Dots, used for the openDJ name in the top bar, is by Yoshimichi Ohira
+Zen Dots, used for the DJ Sugar name in the top bar, is by Yoshimichi Ohira
 ([googlefonts/zen-dots](https://github.com/googlefonts/zen-dots)), licensed
 under the SIL Open Font License (see `OFL-ZenDots.txt`). It is included
 unchanged.

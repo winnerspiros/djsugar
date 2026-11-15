@@ -60,7 +60,7 @@ unsafe fn len_wstring(string: *const TChar) -> usize {
     len as usize
 }
 
-const PLUGIN_NAME: &str = "openDJ Test Gain";
+const PLUGIN_NAME: &str = "DJ Sugar Test Gain";
 
 struct GainProcessor {
     gain: AtomicU64,
@@ -553,7 +553,7 @@ impl IPluginFactory2Trait for Factory {
         info.name = base.name;
         info.classFlags = 0;
         copy_cstring(if index == 0 { "Fx" } else { "" }, &mut info.subCategories);
-        copy_cstring("openDJ", &mut info.vendor);
+        copy_cstring("DJ Sugar", &mut info.vendor);
         copy_cstring("1.0.0", &mut info.version);
         copy_cstring("VST 3.8.0", &mut info.sdkVersion);
         kResultOk
@@ -564,8 +564,8 @@ impl IPluginFactoryTrait for Factory {
     unsafe fn getFactoryInfo(&self, info: *mut PFactoryInfo) -> tresult {
         let info = &mut *info;
 
-        copy_cstring("openDJ", &mut info.vendor);
-        copy_cstring("https://opendj.app", &mut info.url);
+        copy_cstring("DJ Sugar", &mut info.vendor);
+        copy_cstring("https://github.com/winnerspiros/djsugar", &mut info.url);
         copy_cstring("", &mut info.email);
         info.flags = PFactoryInfo_::FactoryFlags_::kUnicode as int32;
 

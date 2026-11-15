@@ -1,5 +1,5 @@
 name: Suggest a feature
-description: Something you'd like openDJ to do, or do differently.
+description: Something you'd like DJ Sugar to do, or do differently.
 labels: [enhancement]
 body:
   - type: textarea
@@ -16,7 +16,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: openDJ version
+      label: DJ Sugar version
   - type: input
     id: system
     attributes:

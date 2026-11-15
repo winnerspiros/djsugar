@@ -14,7 +14,7 @@ typedef struct signalsmith_stretch signalsmith_stretch_t;
 // Creates a new SignalsmithStretch instance.
 signalsmith_stretch_t *signalsmith_stretch_create(int channel_count, size_t block_length, size_t interval);
 signalsmith_stretch_t *signalsmith_stretch_create_preset_default(int channel_count, float sample_rate);
-// openDJ: presetDefault with splitComputation, spreading each block's work
+// DJ Sugar: presetDefault with splitComputation, spreading each block's work
 // evenly over the interval instead of doing it all at once.
 signalsmith_stretch_t *signalsmith_stretch_create_preset_default_split(int channel_count, float sample_rate);
 signalsmith_stretch_t *signalsmith_stretch_create_preset_cheaper(int channel_count, float sample_rate);

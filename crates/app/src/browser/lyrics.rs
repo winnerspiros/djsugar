@@ -1,6 +1,6 @@
 //! The side panel's Lyrics tab: the lyrics of the track playing (or the
 //! one selected, or a deck's), read from an `.lrc` file beside it or from
-//! its tags (see [`opendj_engine::lyrics`]). Timed lyrics follow the deck
+//! its tags (see [`djsugar_engine::lyrics`]). Timed lyrics follow the deck
 //! the track is on: the line sung now is lit, and a click on a line plays
 //! from it. Find looks the track up on LRCLIB when the DJ has turned that
 //! on (see [`crate::lrclib`]) and saves the pick as an `.lrc` beside it.
@@ -16,9 +16,9 @@ pub(super) mod wave;
 use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::lyrics::{self, Lyrics, Origin, Timing};
-use opendj_engine::{deck_group, Source, Track, NUM_DECKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::lyrics::{self, Lyrics, Origin, Timing};
+use djsugar_engine::{deck_group, Source, Track, NUM_DECKS};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::Browser;
@@ -121,16 +121,16 @@ fn describe(l: &Lyrics) -> String {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "an .lrc file".into()),
         Origin::Tag => "the file's tags".into(),
-        Origin::Saved(_) => "saved by openDJ".into(),
+        Origin::Saved(_) => "saved by DJ Sugar".into(),
     };
     if l.auto {
-        format!("Transcribed by openDJ · {from}")
+        format!("Transcribed by DJ Sugar · {from}")
     } else {
         format!("{timing} · {from}")
     }
 }
 
-/// Where openDJ keeps lyrics for tracks whose folder can't be written.
+/// Where DJ Sugar keeps lyrics for tracks whose folder can't be written.
 fn store() -> Option<std::path::PathBuf> {
     settings::config_dir().map(|d| d.join("lyrics"))
 }
@@ -534,6 +534,6 @@ mod tests {
             origin: Origin::Lrc(PathBuf::from("/music/Song.lrc")),
             auto: true,
         };
-        assert_eq!(describe(&l), "Transcribed by openDJ · Song.lrc");
+        assert_eq!(describe(&l), "Transcribed by DJ Sugar · Song.lrc");
     }
 }

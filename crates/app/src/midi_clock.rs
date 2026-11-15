@@ -2,12 +2,12 @@
 //! an offset, the input clock comes in from, and whether the clock keeps
 //! running when the decks stop. They
 //! are kept in settings.json and handed to the engine's clock thread (see
-//! `opendj_engine::midi_clock`). CLOCK OUT itself is in the MASTER panel.
+//! `djsugar_engine::midi_clock`). CLOCK OUT itself is in the MASTER panel.
 
 use std::sync::OnceLock;
 
-use opendj_control::ControlRegistry;
-use opendj_engine::midi_clock::{MidiClock, OutputConfig, GROUP, MAX_OFFSET_MS, VIRTUAL_PORT};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::midi_clock::{MidiClock, OutputConfig, GROUP, MAX_OFFSET_MS, VIRTUAL_PORT};
 use serde_json::{json, Value};
 use slint::{ModelRc, SharedString, VecModel};
 

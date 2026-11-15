@@ -9,7 +9,7 @@ Every deck draws one waveform look: RGB, where one shape is red, amber or blue b
 ## What Changes
 
 - Settings › Decks › **Waveform color**, a dropdown: **RGB** (default, as today), **3-Band** (bass, mids and highs stacked, bass widest at the back), **Blue** (one blue shape, lighter where the highs are loud), and **Stems** (each stem in its pad color, stacked, when the track has stems; the RGB look otherwise).
-- Settings › Decks › **Palette**, shown for 3-Band: **Blue-Orange-White** (as on rekordbox) or **Lilac-Cyan-White** (openDJ's accent for the bass, cyan mids, white highs).
+- Settings › Decks › **Palette**, shown for 3-Band: **Blue-Orange-White** (as on rekordbox) or **Lilac-Cyan-White** (DJ Sugar's accent for the bass, cyan mids, white highs).
 - Settings › Decks › **Overview**: **Full** or **Half**. Half draws the overview under each deck from its bottom edge up, as rekordbox does; the big scrolling waveform stays whole.
 - Settings › Decks › **Show vocals**: tints the parts of a track where someone sings green on the RGB, 3-Band and Blue looks. A light vocal-detection pass at analysis gives every track a vocal level, so it works without separating stems; tracks with stems use the vocal stem.
 - Maybe: **Size follows gain**, off at first: the deck's gain knob makes its waveforms taller or shorter, as on VirtualDJ. Kept only if it feels right on a controller.

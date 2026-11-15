@@ -6,8 +6,8 @@
 //! [`Browser::keep`] keeps up to date from the deck's pads; an edit here
 //! changes that list, saves it, and sets the pads to match.
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::{deck_group, Hotcue, Track, MEMORY_CUE, NUM_DECKS, NUM_HOTCUES};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::{deck_group, Hotcue, Track, MEMORY_CUE, NUM_DECKS, NUM_HOTCUES};
 use slint::{Color, ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::Browser;
@@ -330,7 +330,7 @@ impl Browser {
         if w.track.map(|(t, _)| t) == Some(id) {
             w.saved = cues.clone();
         }
-        if opendj_library::row_id(id).is_some() && self.saved() {
+        if djsugar_library::row_id(id).is_some() && self.saved() {
             if let Some(db) = &mut self.db {
                 if let Err(e) = db.save_cues(id, &cues) {
                     eprintln!("can't save the cues: {e}");
@@ -467,10 +467,10 @@ impl Browser {
             return;
         }
         let now = d.playposition.get() * duration;
-        let phrases = if opendj_engine::phrases::waveform_ready(&t) {
-            opendj_engine::phrases::detect(&t)
+        let phrases = if djsugar_engine::phrases::waveform_ready(&t) {
+            djsugar_engine::phrases::detect(&t)
         } else {
-            opendj_engine::phrases::stored(&t)
+            djsugar_engine::phrases::stored(&t)
         };
         let mut starts: Vec<f64> = phrases.iter().map(|p| p.start).collect();
         if starts.len() < 2 {

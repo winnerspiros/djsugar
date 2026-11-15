@@ -1,5 +1,5 @@
 //! The Wanted list: tracks the DJ means to get. Only the DJ puts tracks on
-//! it: Buy on a store result, Copy to openDJ on a streaming playlist, or
+//! it: Buy on a store result, Copy to DJ Sugar on a streaming playlist, or
 //! Add to Wanted on streaming tracks and playlists (Spotify, TIDAL…) and on
 //! the streamed tracks standing in lists brought in from another app. A
 //! track leaves it when the collection gets it, or with Remove from Wanted.
@@ -11,7 +11,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use opendj_library::ListEntry;
+use djsugar_library::ListEntry;
 use slint::ComponentHandle;
 
 use super::{columns, Browser, Contents, StoreRow};
@@ -155,7 +155,7 @@ impl Browser {
     }
 
     /// The wanted tracks in rows `first` to `last` of the Wanted list.
-    pub(super) fn wanted_at(&self, first: usize, last: usize) -> Vec<&opendj_library::Wanted> {
+    pub(super) fn wanted_at(&self, first: usize, last: usize) -> Vec<&djsugar_library::Wanted> {
         if !self.shows_wanted() {
             return Vec::new();
         }
@@ -538,8 +538,8 @@ impl Browser {
 
 /// What the Wanted list shows in the store column: where the track is
 /// being bought, or the service or store it came from.
-pub(super) fn detail(w: &opendj_library::Wanted) -> String {
-    match opendj_plugins::buy::store_traits(&w.pending_store) {
+pub(super) fn detail(w: &djsugar_library::Wanted) -> String {
+    match djsugar_plugins::buy::store_traits(&w.pending_store) {
         Some(t) => format!("Buying on {}…", t.name),
         None => w.store.clone(),
     }
@@ -557,7 +557,7 @@ pub(super) fn sorts_by(id: i32) -> bool {
 /// Sorts Wanted rows, which come newest first, by column `id`; -1 (or a
 /// column it can't sort by) keeps them newest first. Ties stay newest
 /// first, and tracks of unknown length go last.
-pub(super) fn sort(rows: &mut [opendj_library::Wanted], id: i32, ascending: bool) {
+pub(super) fn sort(rows: &mut [djsugar_library::Wanted], id: i32, ascending: bool) {
     use std::cmp::Ordering;
     if !sorts_by(id) {
         return;
@@ -569,8 +569,8 @@ pub(super) fn sort(rows: &mut [opendj_library::Wanted], id: i32, ascending: bool
         }
         return;
     }
-    let text = |s: &str| opendj_library::query::fold(s);
-    let mut keyed: Vec<(String, opendj_library::Wanted)> = rows
+    let text = |s: &str| djsugar_library::query::fold(s);
+    let mut keyed: Vec<(String, djsugar_library::Wanted)> = rows
         .iter()
         .map(|w| {
             let key = match id {
@@ -638,8 +638,8 @@ mod tests {
         );
     }
 
-    fn wanted(id: i64, artist: &str, title: &str, duration: f64) -> opendj_library::Wanted {
-        opendj_library::Wanted {
+    fn wanted(id: i64, artist: &str, title: &str, duration: f64) -> djsugar_library::Wanted {
+        djsugar_library::Wanted {
             id,
             store: "TIDAL".into(),
             artist: artist.into(),
@@ -651,7 +651,7 @@ mod tests {
         }
     }
 
-    fn ids(rows: &[opendj_library::Wanted]) -> Vec<i64> {
+    fn ids(rows: &[djsugar_library::Wanted]) -> Vec<i64> {
         rows.iter().map(|w| w.id).collect()
     }
 

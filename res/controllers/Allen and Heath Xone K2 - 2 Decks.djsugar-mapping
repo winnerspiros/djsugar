@@ -1,9 +1,9 @@
 {
- "format": "opendj-mapping",
+ "format": "djsugar-mapping",
  "version": 1,
  "name": "Allen & Heath Xone:K2 - 2 Decks",
- "author": "openDJ",
- "description": "openDJ's own mapping for one Xone:K2 with two decks. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15. Bottom right is SHIFT.\n\nLeft half is deck 1, right half deck 2, mirrored. Top encoders: filter (outer; Shift: headphones on the left, master on the right; press resets) and gain (inner; turns the loop size while a loop is on; press: 4-beat loop; Shift: move the loop). Outer knobs: the deck's three FX, with ON under each (Shift: next effect). Inner knobs: treble, mid, bass, with kills under them (red); those buttons and the gain encoder's light are the deck's level meter. Faders: pitch (outer), volume (inner). Bottom buttons: hot cues 1-4 (Shift deletes), beat jump back and forward 32 beats (Shift: 16), SYNC (outer; Shift: tempo reset) and PLAY (inner; Shift: back to start). Bottom encoders: browse, press to load the side's deck, hold to open a folder; Shift turns are the deck's jog wheel.",
+ "author": "DJ Sugar",
+ "description": "DJ Sugar's own mapping for one Xone:K2 with two decks. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15. Bottom right is SHIFT.\n\nLeft half is deck 1, right half deck 2, mirrored. Top encoders: filter (outer; Shift: headphones on the left, master on the right; press resets) and gain (inner; turns the loop size while a loop is on; press: 4-beat loop; Shift: move the loop). Outer knobs: the deck's three FX, with ON under each (Shift: next effect). Inner knobs: treble, mid, bass, with kills under them (red); those buttons and the gain encoder's light are the deck's level meter. Faders: pitch (outer), volume (inner). Bottom buttons: hot cues 1-4 (Shift deletes), beat jump back and forward 32 beats (Shift: 16), SYNC (outer; Shift: tempo reset) and PLAY (inner; Shift: back to start). Bottom encoders: browse, press to load the side's deck, hold to open a folder; Shift turns are the deck's jog wheel.",
  "controller": {
   "name": "Allen & Heath Xone:K2",
   "ports": [

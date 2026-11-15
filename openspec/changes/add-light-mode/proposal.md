@@ -4,7 +4,7 @@ Planned for: **v0.7 · Your library, everywhere** (from a user request, issue #6
 
 ## Why
 
-openDJ is dark only. Dark panels are hard to read in daylight, at outdoor gigs and in bright rooms, and many people keep their computer in light mode. Serato added a Day Mode for summer gigs in 2019, VirtualDJ has a Daylight colour scheme and rekordbox 7 has a light theme. Of these, rekordbox keeps its waveforms on black, while Serato's put them on white where they read pale; VirtualDJ users add black boxes behind the waveforms in Daylight by hand.
+DJ Sugar is dark only. Dark panels are hard to read in daylight, at outdoor gigs and in bright rooms, and many people keep their computer in light mode. Serato added a Day Mode for summer gigs in 2019, VirtualDJ has a Daylight colour scheme and rekordbox 7 has a light theme. Of these, rekordbox keeps its waveforms on black, while Serato's put them on white where they read pale; VirtualDJ users add black boxes behind the waveforms in Daylight by hand.
 
 ## What Changes
 

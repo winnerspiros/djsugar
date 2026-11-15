@@ -1,12 +1,12 @@
 [package]
 name = "stem-bench"
-description = "Times openDJ's stem separation models on this machine (Spleeter and HTDemucs, GPU and CPU)"
+description = "Times DJ Sugar's stem separation models on this machine (Spleeter and HTDemucs, GPU and CPU)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-opendj-engine = { path = "../engine" }
-opendj-separation = { path = "../separation" }
+djsugar-engine = { path = "../engine" }
+djsugar-separation = { path = "../separation" }
 hound = "3"

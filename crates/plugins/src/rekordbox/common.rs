@@ -1,12 +1,12 @@
 //! What the two ways of reading rekordbox share: its colours, hot cue
 //! letters, phrase names and beat grids, and its intelligent playlists in
-//! openDJ's search syntax.
+//! DJ Sugar's search syntax.
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::{Marker, MarkerKind};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::{Marker, MarkerKind};
 
 /// The 16 colours of rekordbox's hot cue menu, by the code it keeps for
-/// each, as rekordbox shows them (the same table opendj-export writes).
+/// each, as rekordbox shows them (the same table djsugar-export writes).
 const HOT_CUE_COLOURS: [(i64, u32); 16] = [
     (0x01, 0x305AFF),
     (0x05, 0x50B4FF),
@@ -46,7 +46,7 @@ pub fn track_colour(id: i64) -> Option<u32> {
         .and_then(|i| COLOURS.get(i).copied())
 }
 
-/// openDJ's hot cue number (from 0) for rekordbox's cue kind in master.db:
+/// DJ Sugar's hot cue number (from 0) for rekordbox's cue kind in master.db:
 /// 1 to 3 are A to C, and D to H are kept as 5 to 9.
 pub fn hot_cue_number(kind: i64) -> Option<usize> {
     match kind {
@@ -140,7 +140,7 @@ pub struct Condition<'a> {
     pub right: &'a str,
 }
 
-/// An intelligent playlist in openDJ's search syntax, where openDJ can say
+/// An intelligent playlist in DJ Sugar's search syntax, where DJ Sugar can say
 /// the same: `any` joins the conditions with `|`. `tag_name` gives a My Tag's
 /// name from its id. None when a condition has no equivalent here.
 pub fn smart_query(
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn intelligent_playlists_in_opendjs_search() {
+    fn intelligent_playlists_in_djsugars_search() {
         let c = |property, operator, left, right| Condition {
             property,
             operator,

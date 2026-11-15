@@ -1,7 +1,7 @@
 //! Who may use the remote: phones paired once, by the QR code's one-time
 //! code or by the PIN, and kept as devices that can be revoked.
 //!
-//! A paired phone keeps a long random token; openDJ keeps only its SHA-256,
+//! A paired phone keeps a long random token; DJ Sugar keeps only its SHA-256,
 //! so the settings file never holds anything a phone could log in with.
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};

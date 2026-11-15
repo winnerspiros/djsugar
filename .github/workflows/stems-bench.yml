@@ -1,6 +1,6 @@
 name: Stems benchmark
 
-# Times openDJ's stem separation models (crates/separation) on GitHub's Linux
+# Times DJ Sugar's stem separation models (crates/separation) on GitHub's Linux
 # and Apple Silicon machines, and attaches the converted model files so they
 # can be used with `stem-bench` elsewhere. It takes up to 90 minutes, so it
 # runs only by hand from the Actions tab (pick the branch to benchmark).

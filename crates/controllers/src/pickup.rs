@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use opendj_control::ConfigKey;
+use djsugar_control::ConfigKey;
 
 /// Closer than this, a knob counts as where the hardware is (3 of 128 steps,
 /// as in Mixxx).

@@ -1,8 +1,8 @@
-# signalsmith-stretch 0.1.3, patched for openDJ
+# signalsmith-stretch 0.1.3, patched for DJ Sugar
 
 This is the `signalsmith-stretch` 0.1.3 Rust wrapper from crates.io (MIT),
 bundling Signalsmith Stretch 1.3.1 and Signalsmith Linear (MIT, see the
-licence files). openDJ's key lock and key shifts use it, through
+licence files). DJ Sugar's key lock and key shifts use it, through
 `[patch.crates-io]` in the workspace `Cargo.toml`. The examples, the web and
 command-line folders, the linear library's tests and the dev-dependencies are
 left out; nothing else changed except the following.

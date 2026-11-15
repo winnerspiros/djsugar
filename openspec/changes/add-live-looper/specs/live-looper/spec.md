@@ -47,7 +47,7 @@ Save loop SHALL write a layer, or all layers mixed, to the Inbox as a WAV file t
 - **THEN** a WAV of the mixed layers appears in the Inbox with BPM 124
 
 ### Requirement: Latency compensation
-openDJ SHALL measure each input's round-trip latency on request in Settings › Audio and SHALL move recorded audio back by it, so a loop recorded from an input lines up with the beat it was played to. While a looper records from an input, the input's queue SHALL keep in time by stretching rather than by dropping or padding audio.
+DJ Sugar SHALL measure each input's round-trip latency on request in Settings › Audio and SHALL move recorded audio back by it, so a loop recorded from an input lines up with the beat it was played to. While a looper records from an input, the input's queue SHALL keep in time by stretching rather than by dropping or padding audio.
 
 #### Scenario: A played loop lands on the beat
 - **WHEN** the round trip measures 11 ms and the user plays a hit exactly on bar 9's downbeat while recording

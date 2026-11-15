@@ -16,8 +16,8 @@ use std::f32::consts::{PI, TAU};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
-use opendj_plugin_host::{Connection, Midi, Transport};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_plugin_host::{Connection, Midi, Transport};
 
 use crate::controls::{
     deck_group, effect_group, effect_unit_group, Edge, BEAT_FX_UNIT, EFFECTS_PER_UNIT, MIC_FX_UNIT,
@@ -1278,7 +1278,7 @@ impl EffectRack {
         let (index, n) = instance_indices();
         let (to_engine, from_host) = rtrb::RingBuffer::new(2 * n);
         let (to_host, from_engine) = rtrb::RingBuffer::new(2 * n);
-        let (notes_tx, notes) = rtrb::RingBuffer::new(opendj_plugin_host::shm::MAX_EVENTS);
+        let (notes_tx, notes) = rtrb::RingBuffer::new(djsugar_plugin_host::shm::MAX_EVENTS);
         let units: [UnitControls; NUM_EFFECT_UNITS] =
             std::array::from_fn(|u| UnitControls::create(reg, u));
         reg.indicator("[Master]", "num_effectsavailable", KINDS.len() as f64)
@@ -1313,11 +1313,11 @@ impl EffectRack {
             legacy: LegacyFlanger::create(reg),
             instrument: None,
             notes,
-            notes_waiting: Vec::with_capacity(opendj_plugin_host::shm::MAX_EVENTS),
+            notes_waiting: Vec::with_capacity(djsugar_plugin_host::shm::MAX_EVENTS),
             note_input: Some(NoteInput { tx: notes_tx }),
             scale: Box::default(),
             arp: Box::default(),
-            arp_in: Vec::with_capacity(opendj_plugin_host::shm::MAX_EVENTS),
+            arp_in: Vec::with_capacity(djsugar_plugin_host::shm::MAX_EVENTS),
             scale_mask: 0,
             view: Arc::default(),
             scope_ring: vec![0.0; SCOPE_SAMPLES],

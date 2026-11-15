@@ -1,9 +1,9 @@
 //! Signing in to Mixcloud and uploading a show.
 //!
 //! Mixcloud's OAuth needs the app's client secret to swap the sign-in code
-//! for a token and has no desktop flow, so the swap happens on opendj.app
-//! (`website/functions/mixcloud`). openDJ listens on 127.0.0.1, opens
-//! `https://opendj.app/mixcloud/login?port=…&state=…` in the browser, the DJ
+//! for a token and has no desktop flow, so the swap happens on github.com/winnerspiros/djsugar
+//! (`website/functions/mixcloud`). DJ Sugar listens on 127.0.0.1, opens
+//! `https://github.com/winnerspiros/djsugarmixcloud/login?port=…&state=…` in the browser, the DJ
 //! signs in on mixcloud.com, and the token comes back to the listener with
 //! the same state. It is kept in the system keychain; Mixcloud tokens don't
 //! expire, but the DJ can revoke one, which shows up as an OAuth error.
@@ -24,16 +24,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use opendj_broadcast::mixcloud::Show;
+use djsugar_broadcast::mixcloud::Show;
 use serde_json::Value;
 
 use crate::spotify::{
     decode, encode, open_in_browser, random_token, read_request_line, respond, LOGIN_TIMEOUT,
 };
 
-const SIGN_IN: &str = "https://opendj.app/mixcloud/login";
+const SIGN_IN: &str = "https://github.com/winnerspiros/djsugarmixcloud/login";
 const UPLOAD: &str = "https://api.mixcloud.com/upload/";
-const KEYCHAIN_SERVICE: &str = "openDJ Mixcloud";
+const KEYCHAIN_SERVICE: &str = "DJ Sugar Mixcloud";
 const KEYCHAIN_USER: &str = "token";
 
 fn keychain() -> Result<keyring::Entry, String> {
@@ -167,7 +167,7 @@ fn wait_for_token(listener: &TcpListener, state: &str) -> Result<String, String>
             respond(
                 &mut stream,
                 "400 Bad Request",
-                "This sign-in link is out of date. Try again from openDJ.",
+                "This sign-in link is out of date. Try again from DJ Sugar.",
             );
             continue;
         }
@@ -175,7 +175,7 @@ fn wait_for_token(listener: &TcpListener, state: &str) -> Result<String, String>
             respond(
                 &mut stream,
                 "200 OK",
-                "Signed in to Mixcloud. You can close this tab and go back to openDJ.",
+                "Signed in to Mixcloud. You can close this tab and go back to DJ Sugar.",
             );
             return Ok(token);
         }
@@ -304,7 +304,7 @@ fn upload_to(
     if !problems.is_empty() {
         return Err(other(problems.join(" ")));
     }
-    let boundary = format!("openDJ{}", random_token(12));
+    let boundary = format!("DJSugar{}", random_token(12));
     let name = mp3
         .file_name()
         .unwrap_or_default()
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn streams_the_file_to_the_server() {
         use std::io::Write;
-        let dir = std::env::temp_dir().join(format!("opendj-mc-up-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-mc-up-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let mp3 = dir.join("mix.mp3");
         let audio: Vec<u8> = (0..300_000u32).map(|i| (i % 251) as u8).collect();

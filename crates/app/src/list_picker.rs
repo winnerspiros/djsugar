@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use opendj_plugins::{ImportedList, LibraryImport, ListGroup};
+use djsugar_plugins::{ImportedList, LibraryImport, ListGroup};
 use std::path::Path;
 
 /// One row of the tree: a folder (with children) or a list.
@@ -87,7 +87,7 @@ impl Picker {
                 let mut path: Vec<String> =
                     l.folders.iter().skip(shared as usize).cloned().collect();
                 // History by year, so years of sessions stay short.
-                if let (true, opendj_engine::import::ImportedListKind::History { started }) =
+                if let (true, djsugar_engine::import::ImportedListKind::History { started }) =
                     (path.is_empty(), &l.kind)
                 {
                     if let Some(year) = year_of(*started) {
@@ -114,7 +114,7 @@ impl Picker {
                 let default_on = l.wanted_by_default();
                 let on = group_on && choices.get(&key).copied().unwrap_or(default_on);
                 let detail = match l.kind {
-                    opendj_engine::import::ImportedListKind::Smart { .. } => {
+                    djsugar_engine::import::ImportedListKind::Smart { .. } => {
                         "Smart list".to_string()
                     }
                     _ if streamed > 0 && streamed == total => match total {
@@ -272,7 +272,7 @@ fn year_of(t: i64) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::import::{ImportedEntry, ImportedListKind};
+    use djsugar_engine::import::{ImportedEntry, ImportedListKind};
 
     fn list(folders: &[&str], name: &str, kind: ImportedListKind) -> ImportedList {
         ImportedList {

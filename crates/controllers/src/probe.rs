@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 
-use opendj_control::{ConfigKey, ControlHandle, ControlRegistry};
+use djsugar_control::{ConfigKey, ControlHandle, ControlRegistry};
 
 use crate::controller::Controller;
 use crate::mapping::{Mapping, Options};

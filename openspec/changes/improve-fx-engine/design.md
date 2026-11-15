@@ -2,7 +2,7 @@
 
 ## Context
 
-openDJ's effects are its own Rust code (`crates/engine/src/effects.rs` and `dsp.rs`). The FX library review (`notes/fx-engine-review.md`, 2026-10-27) decided to keep that engine and port MIT-licensed algorithms into it by hand, rather than depend on fundsp, bosai-dsp, Airwindows or Signalsmith DSP. The goal for v0.5 (2026-11-01): high sound quality and low CPU, on four decks at once.
+DJ Sugar's effects are its own Rust code (`crates/engine/src/effects.rs` and `dsp.rs`). The FX library review (`notes/fx-engine-review.md`, 2026-10-27) decided to keep that engine and port MIT-licensed algorithms into it by hand, rather than depend on fundsp, bosai-dsp, Airwindows or Signalsmith DSP. The goal for v0.5 (2026-11-01): high sound quality and low CPU, on four decks at once.
 
 The engine runs everything frame by frame inside the audio callback: each deck's sample goes through EQ, Color FX, Sculpt and the effect rack, then into the main mix, whose effects run before the limiter. Effects read their controls once per buffer in `EffectRack::prepare` and run per frame in `EffectRack::process`.
 
@@ -26,7 +26,7 @@ The engine runs everything frame by frame inside the audio callback: each deck's
 
 A harness in `crates/engine/src/effects/bench.rs` runs with the engine's tests:
 
-- `fx_bench` (ignored by default; run with `cargo test --release -p opendj-engine fx_bench -- --ignored --nocapture`) prints ns per frame and the share of a core for each effect, each Color FX, an idle rack and a busy rack, plus the rack's memory.
+- `fx_bench` (ignored by default; run with `cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture`) prints ns per frame and the share of a core for each effect, each Color FX, an idle rack and a busy rack, plus the rack's memory.
 - A counting global allocator (test builds only) checks that `prepare` and `process` never allocate, while effects are switched, released and turned on and off.
 - Quality checks: silence in gives silence out, every effect stays finite and bounded with every parameter at 0 or 1 on full-scale noise, and feedback tails decay to exact zeros with flush-to-zero on.
 
@@ -54,7 +54,7 @@ Once the above lands, the rack processes each active instance over a block of fr
 
 ### New effects
 
-Written for openDJ after published, MIT-licensed designs, each file header naming its source and `NOTICE` listing them (no code copied), in `crates/engine/src/effects/extra.rs`:
+Written for DJ Sugar after published, MIT-licensed designs, each file header naming its source and `NOTICE` listing them (no code copied), in `crates/engine/src/effects/extra.rs`:
 
 - **Drive:** a smooth x/sqrt(1+x²) saturator with a little bias for even harmonics, 4x oversampled through two Kaiser half-band stages and with first-order antiderivative anti-aliasing, then a DC blocker, a tone low-pass and level matching. Drive tops out at 24 dB: beyond that a sine becomes a square whose top harmonics alias whatever is done, and the test (5 kHz at full drive, audible aliasing 60 dB down) fails.
 - **Chorus:** three voices swung around 14 ms, a third of a cycle apart, spread in stereo, sweep in beats and locked to the grid.

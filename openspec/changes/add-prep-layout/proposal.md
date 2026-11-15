@@ -6,7 +6,7 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-Tracks wait in In Prep until their grid, cues and tags are right, but there is no place built for that work: grid tools sit in a jog menu, hot cues on pads sized for performing, and the stage move in the track menu. rekordbox (EXPORT mode), Serato, Traktor, Engine DJ, VirtualDJ and djay Pro all prepare tracks on one deck with a large waveform, grid tools on one side and cue pads on the other, browser below. None ties preparation to a stage, so openDJ can make getting a track from In Prep to Play Ready one short, keyboard-driven pass of 15 to 60 seconds.
+Tracks wait in In Prep until their grid, cues and tags are right, but there is no place built for that work: grid tools sit in a jog menu, hot cues on pads sized for performing, and the stage move in the track menu. rekordbox (EXPORT mode), Serato, Traktor, Engine DJ, VirtualDJ and djay Pro all prepare tracks on one deck with a large waveform, grid tools on one side and cue pads on the other, browser below. None ties preparation to a stage, so DJ Sugar can make getting a track from In Prep to Play Ready one short, keyboard-driven pass of 15 to 60 seconds.
 
 ## What Changes
 

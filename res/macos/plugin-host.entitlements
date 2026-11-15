@@ -4,7 +4,7 @@
 <dict>
   <!-- Plugins are signed by their own developers (or not at all), so the
        helper that loads them may load code from any team. Only the helper
-       has this; openDJ itself keeps library validation. -->
+       has this; DJ Sugar itself keeps library validation. -->
   <key>com.apple.security.cs.disable-library-validation</key><true/>
   <!-- Some plugins generate code at run time (JIT, scripting engines). -->
   <key>com.apple.security.cs.allow-jit</key><true/>

@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn waits_for_bytes_to_arrive() {
-        let dir = std::env::temp_dir().join(format!("opendj-growing-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-growing-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("song.mp3");
         let mut writer = File::create(&path).unwrap();

@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::{deck_group, AudioEngine, Track, NUM_DECKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::{deck_group, AudioEngine, Track, NUM_DECKS};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::{AppWindow, DeckActions};
@@ -62,7 +62,7 @@ impl PutBack {
                     playposition: c(&g, "playposition"),
                     live_input: c(&g, "live_input"),
                     groove: c(&format!("[Groove{}]", d + 1), "enabled"),
-                    looper: c(&opendj_engine::looper::looper_group(d), "enabled"),
+                    looper: c(&djsugar_engine::looper::looper_group(d), "enabled"),
                     now: None,
                     last: None,
                     seek: None,
@@ -175,7 +175,7 @@ fn name(held: &Held) -> String {
         Held::Track(..) => "the track".into(),
         Held::Groove => "the Groove Box".into(),
         Held::Looper => "the Looper".into(),
-        Held::Live(input) if *input as usize == opendj_engine::inputs::MIXER => "the Mixer".into(),
+        Held::Live(input) if *input as usize == djsugar_engine::inputs::MIXER => "the Mixer".into(),
         Held::Live(input) if *input as usize == 1 => "the mic".into(),
         Held::Live(input) if *input as usize == 3 => "the instrument".into(),
         Held::Live(_) => "the input".into(),
@@ -185,8 +185,8 @@ fn name(held: &Held) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::engine::Engine;
-    use opendj_engine::sample_library;
+    use djsugar_engine::engine::Engine;
+    use djsugar_engine::sample_library;
 
     struct Rig {
         reg: Arc<ControlRegistry>,
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn a_live_deck_is_offered_back_by_its_name() {
         let mut r = Rig::new();
-        let mixer = opendj_engine::inputs::MIXER as f64;
+        let mixer = djsugar_engine::inputs::MIXER as f64;
         r.c("[Channel2]", "live_input").set(mixer);
         r.frame(&[None, None, None, None]);
         r.c("[Channel2]", "live_input").set(0.0);

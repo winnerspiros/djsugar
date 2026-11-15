@@ -2,7 +2,7 @@
 
 ## 0. Add-on repositories
 
-- [ ] 0.1 Parse and verify `opendj-addons.json` with signed and unsigned fixtures
+- [ ] 0.1 Parse and verify `djsugar-addons.json` with signed and unsigned fixtures
 - [ ] 0.2 Install, update and remove into `<config>/addons/` with tests
 - [ ] 0.3 Settings › Add-ons with Installed, Available and Repositories and the token field with keychain storage; screenshot
 - [ ] 0.4 Restart crashed add-ons with backoff and show the reason; test with a crashing stub

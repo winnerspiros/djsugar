@@ -8,13 +8,13 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 Internet radio, podcasts and DJ livestreams are a big part of why people pick Mixxx: it streams straight to Icecast with a mic, talkover and Auto DJ. But it gets the parts a broadcaster cares about wrong. Its main output has no limiter. Its meters don't read in any unit and fill up at about −11 dBFS average, so any modern track pegs them. It has no loudness (LUFS) meter, so a stream can't be set to a target. And it can't reach Twitch, YouTube or Mixcloud Live without OBS in between.
 
-openDJ already has most of what's needed underneath: a look-ahead master limiter, EBU R128 loudness measurement (used for auto gain), mic and aux inputs with talkover ducking, Automix, and a recorder that taps the master off the audio thread and knows which track is audible. Licensed DJ streaming (Mixcloud Live, Twitch DJ Program) is growing, and streaming platforms all level loudness now, so a clean stream at a known loudness matters more than a loud one.
+DJ Sugar already has most of what's needed underneath: a look-ahead master limiter, EBU R128 loudness measurement (used for auto gain), mic and aux inputs with talkover ducking, Automix, and a recorder that taps the master off the audio thread and knows which track is audible. Licensed DJ streaming (Mixcloud Live, Twitch DJ Program) is growing, and streaming platforms all level loudness now, so a clean stream at a known loudness matters more than a loud one.
 
 ## What Changes
 
 1. **Broadcast meter (step 1).** A loudness meter on the master: momentary, short-term and integrated LUFS, loudness range and true peak, with targets for Internet radio (−16), Podcast / talk (−18), Livestream (−14) and Broadcast EBU R128 (−23). It lives in the MASTER panel, and in the top bar while recording or on air. The master limiter catches true peaks (between samples), not only sample peaks, with a −1 dBTP ceiling while recording or broadcasting. The peak meters keep their dBFS scale and get a scale printed beside the master meter.
 2. **Icecast and Shoutcast radio (step 2).** Settings › Broadcast holds stations (server, port, mount point, user, password, TLS, format and bitrate). ON AIR in the top bar streams the master, mic included, to every station that is switched on, with the audible track's artist and title as now-playing. Formats: Opus, MP3, and AAC where the system has an encoder. Automatic reconnect, and a status pill showing time on air, a connection light per station and listener counts when the server reports them. Uses Mixxx's `[Shoutcast]` controls so controller mappings with a broadcast button work.
-3. **Go live to Twitch, YouTube, Mixcloud Live and others (step 3).** Platform presets that need only a stream key. Sends RTMP with the mix and a simple video picture openDJ draws itself (a "now playing" card with cover, artist, title and the DJ's name and logo), so no OBS is needed. Several destinations at once.
+3. **Go live to Twitch, YouTube, Mixcloud Live and others (step 3).** Platform presets that need only a stream key. Sends RTMP with the mix and a simple video picture DJ Sugar draws itself (a "now playing" card with cover, artist, title and the DJ's name and logo), so no OBS is needed. Several destinations at once.
 4. **Low-latency streaming over WebRTC (step 4).** A WHIP output (the WebRTC ingest standard, RFC 9725) for services that accept it, with Opus audio and sub-second delay. Also lays the ground for remote guest mics and back-to-back sets between two places later.
 5. **Radio show tools (step 5).** A show timer with a top-of-hour countdown, station IDs and jingles from the sampler, an ON AIR light on the mic, a now-playing feed (JSON and WebSocket, through the phone remote's server) for stream overlays, and the show's recording saved with chapters from its tracklist, ready to upload.
 
@@ -30,8 +30,8 @@ openDJ already has most of what's needed underneath: a look-ahead master limiter
 
 ## Out of Scope
 
-- Video mixing, camera switching, scenes or overlays beyond the now-playing card. A camera feed stays a job for OBS, which can take openDJ's audio and now-playing feed.
-- Running a server: openDJ is the source, not an Icecast server or a station automation tool (AzuraCast and LibreTime do that and accept openDJ as a live DJ).
+- Video mixing, camera switching, scenes or overlays beyond the now-playing card. A camera feed stays a job for OBS, which can take DJ Sugar's audio and now-playing feed.
+- Running a server: DJ Sugar is the source, not an Icecast server or a station automation tool (AzuraCast and LibreTime do that and accept DJ Sugar as a live DJ).
 - SRT output and Media over QUIC (watch them; revisit after step 4).
 - Licences for public broadcasting (SoundExchange, PRS, GEMA and so on). The Broadcast settings say that the DJ needs them for a public station.
 - Recording or streaming individual decks or stems separately.

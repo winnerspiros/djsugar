@@ -8,8 +8,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_engine::{LoadedTracks, NUM_DECKS};
+use djsugar_control::ControlRegistry;
+use djsugar_engine::{LoadedTracks, NUM_DECKS};
 use slint::ComponentHandle;
 
 use crate::{broadcast, AppWindow, SleepUi};
@@ -51,7 +51,7 @@ fn fade_level(into: Duration) -> f64 {
 }
 
 impl Sleep {
-    fn control(&self, group: &str, key: &str) -> Option<opendj_control::ControlHandle> {
+    fn control(&self, group: &str, key: &str) -> Option<djsugar_control::ControlHandle> {
         self.registry.get(group, key)
     }
 

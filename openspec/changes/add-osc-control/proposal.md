@@ -4,7 +4,7 @@ Planned for: **v0.6 · Buy it from the artist** (moved from v0.5 at the 0.5.0 re
 
 ## Why
 
-Open Sound Control is how the rest of the live world talks: TouchOSC and Open Stage Control on tablets, Resolume, VDMX, TouchDesigner and Synesthesia for visuals, QLab for shows, many lighting desks, Max and Pure Data. openDJ's controls already have names (`[Channel1],play`), so every control can have an OSC address for free, and openDJ knows things visuals and lights want (beats, bars, phrase changes, the track playing). Research: notes/ecosystem-standards-review.md in the project files.
+Open Sound Control is how the rest of the live world talks: TouchOSC and Open Stage Control on tablets, Resolume, VDMX, TouchDesigner and Synesthesia for visuals, QLab for shows, many lighting desks, Max and Pure Data. DJ Sugar's controls already have names (`[Channel1],play`), so every control can have an OSC address for free, and DJ Sugar knows things visuals and lights want (beats, bars, phrase changes, the track playing). Research: notes/ecosystem-standards-review.md in the project files.
 
 ## What Changes
 
@@ -19,7 +19,7 @@ Open Sound Control is how the rest of the live world talks: TouchOSC and Open St
 
 ### New Capabilities
 
-- `osc-control`: control openDJ and follow what it does over Open Sound Control
+- `osc-control`: control DJ Sugar and follow what it does over Open Sound Control
 
 ### Modified Capabilities
 

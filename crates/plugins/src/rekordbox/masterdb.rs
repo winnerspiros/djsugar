@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
-use opendj_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
+use djsugar_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
 use rbox_masterdb::{
     DjmdContent, DjmdContentView, HistoryType, LogicalOperator, MasterDb, PlaylistType, SmartList,
 };
@@ -410,7 +410,7 @@ fn read_lists_with(
                         .and_then(|s| smart_query(&s, tag_names))
                     else {
                         eprintln!(
-                            "rekordbox: intelligent playlist openDJ's search can't say yet: {}",
+                            "rekordbox: intelligent playlist DJ Sugar's search can't say yet: {}",
                             p.name
                         );
                         continue;

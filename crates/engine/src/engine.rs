@@ -9,7 +9,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::auto_trim::AutoTrim;
 use crate::beats::GridEdit;
@@ -461,15 +461,15 @@ impl Deck {
     }
 
     /// Tempo, beat and play state, for plugins on this deck.
-    fn transport(&self) -> opendj_plugin_host::Transport {
+    fn transport(&self) -> djsugar_plugin_host::Transport {
         let playing = self.c.play.get_bool();
         match self.track.as_ref() {
-            Some(t) if t.bpm > 0.0 => opendj_plugin_host::Transport {
+            Some(t) if t.bpm > 0.0 => djsugar_plugin_host::Transport {
                 bpm: self.effective_bpm(),
                 beat: (self.seconds() - t.first_beat) / t.beat_length(),
                 playing,
             },
-            _ => opendj_plugin_host::Transport {
+            _ => djsugar_plugin_host::Transport {
                 bpm: 120.0,
                 beat: 0.0,
                 playing,
@@ -3110,7 +3110,7 @@ impl Engine {
         let xfader_on =
             self.master.xfader_enabled.get_bool() || self.master.autodj_enabled.get_bool();
         // A hardware mixer does the mixing: each deck goes out on its own at
-        // full level, and openDJ's mixer (EQ, filter, faders, crossfader,
+        // full level, and DJ Sugar's mixer (EQ, filter, faders, crossfader,
         // cue, master effects and limiter) stands aside.
         let external = self.master.external_mixer.get_bool();
         let xfade_target: [f32; NUM_DECKS] =
@@ -4769,7 +4769,7 @@ mod tests {
         let deck1 = |key: &str| reg.get("[Channel1]", key).unwrap();
         deck1("play").set(1.0);
         reg.get("[Channel2]", "play").unwrap().set(1.0);
-        // openDJ's mixer would silence deck 1 several times over.
+        // DJ Sugar's mixer would silence deck 1 several times over.
         deck1("volume").set(0.0);
         deck1("orientation").set(2.0);
         reg.get("[Master]", "crossfader").unwrap().set(-1.0);
@@ -4791,7 +4791,7 @@ mod tests {
 
     /// What deck outputs cost: four playing decks rendered with no deck
     /// outputs and with all of them. Run with
-    /// `cargo test --release -p opendj-engine deck_output_cost -- --ignored --nocapture`.
+    /// `cargo test --release -p djsugar-engine deck_output_cost -- --ignored --nocapture`.
     #[test]
     #[ignore]
     fn deck_output_cost() {
@@ -7062,19 +7062,19 @@ mod tests {
     /// 256-frame buffer, as a sound card at 5.8 ms would ask for them, and
     /// fails if the engine needs more than the buffer's time on average or
     /// the slowest buffer runs far past it. Run with `--nocapture` to see
-    /// the numbers; `OPENDJ_STRESS_SECONDS` runs it longer, as a soak.
+    /// the numbers; `DJSUGAR_STRESS_SECONDS` runs it longer, as a soak.
     #[test]
     fn keeps_up_under_stress() {
         const FRAMES: usize = 256;
         let (reg, mut engine, mut input) = setup();
-        let seconds: f64 = std::env::var("OPENDJ_STRESS_SECONDS")
+        let seconds: f64 = std::env::var("DJSUGAR_STRESS_SECONDS")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(6.0);
-        // `OPENDJ_STRESS_NO_FX` and `OPENDJ_STRESS_NO_JUMPS` leave out the
+        // `DJSUGAR_STRESS_NO_FX` and `DJSUGAR_STRESS_NO_JUMPS` leave out the
         // effects or the beatjumps, to time key lock on its own.
-        let fx = std::env::var_os("OPENDJ_STRESS_NO_FX").is_none();
-        let jumps = std::env::var_os("OPENDJ_STRESS_NO_JUMPS").is_none();
+        let fx = std::env::var_os("DJSUGAR_STRESS_NO_FX").is_none();
+        let jumps = std::env::var_os("DJSUGAR_STRESS_NO_JUMPS").is_none();
         let track = short_track(124.0, 30.0);
         for deck in 0..NUM_DECKS {
             load(&mut input, deck, track.clone());
@@ -7946,7 +7946,7 @@ mod tests {
     #[test]
     fn loading_the_master_deck_keeps_the_synced_deck_steady() {
         // Deck 1 syncs to deck 2, which is stopped; deck 2 then loads a
-        // faster track, with the master pinned there or picked by openDJ.
+        // faster track, with the master pinned there or picked by DJ Sugar.
         for (pinned, keylock) in [(true, false), (true, true), (false, true)] {
             let (reg, mut engine, mut input) = setup();
             load(&mut input, 0, long_tone_track(150.0, "", 30.0));

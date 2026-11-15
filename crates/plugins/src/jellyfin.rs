@@ -2,7 +2,7 @@
 //! searched by album, artist, song or playlist, played from the cache and
 //! brought into the collection as the original files.
 //!
-//! openDJ signs in with the username and password at
+//! DJ Sugar signs in with the username and password at
 //! `/Users/AuthenticateByName` and keeps the access token it gets back for
 //! this run. Calls carry it in an `X-Emby-Token` header, and addresses the
 //! app fetches by themselves (downloads, covers) carry it as `api_key`.
@@ -80,7 +80,7 @@ impl Plugin for Jellyfin {
                 "password",
                 SettingKind::Secret,
                 "Password",
-                "Sent once to sign in; openDJ then uses the server's access token.",
+                "Sent once to sign in; DJ Sugar then uses the server's access token.",
             ),
         ]
         .into_iter()
@@ -113,10 +113,10 @@ pub(crate) struct JellyfinServer {
     session: Mutex<Option<Session>>,
 }
 
-/// How openDJ introduces itself to the server.
+/// How DJ Sugar introduces itself to the server.
 fn client_header(token: Option<&str>) -> String {
     let mut h = format!(
-        "MediaBrowser Client=\"openDJ\", Device=\"openDJ\", DeviceId=\"opendj\", Version=\"{}\"",
+        "MediaBrowser Client=\"DJ Sugar\", Device=\"DJ Sugar\", DeviceId=\"djsugar\", Version=\"{}\"",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(t) = token {
@@ -605,7 +605,7 @@ mod tests {
         let song = snap.items.iter().find(|f| !f.folder).unwrap().clone();
         assert_eq!(source.open_folder(&id, &album).unwrap().len(), 1);
 
-        let dir = std::env::temp_dir().join(format!("opendj-jf-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-jf-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         source
             .download(&id, std::slice::from_ref(&song), &dir)

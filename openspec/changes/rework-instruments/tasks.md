@@ -9,7 +9,7 @@
 ## 2. Presets
 
 - [x] 2.1 Plugin state save and restore (CLAP state, VST3 component and controller state, AU full state) in the plugin host; kept across restarts
-- [x] 2.2 openDJ preset files (`Instruments/Presets/<instrument>/`) for plugins and the Groove Box; SAVE menu on the deck (Save, Save as new, Rename)
+- [x] 2.2 DJ Sugar preset files (`Instruments/Presets/<instrument>/`) for plugins and the Groove Box; SAVE menu on the deck (Save, Save as new, Rename)
 - [x] 2.3 Plugin presets listed from the formats: CLAP preset discovery, `.vstpreset`, AU factory presets and `.aupreset`
 - [x] 2.5 Recently played in the tree; column sort (My presets and presets under their instrument, default sound first, are in)
 - [x] 2.4 ‹ › on the deck steps through the instrument's presets in the browser's order

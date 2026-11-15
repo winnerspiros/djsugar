@@ -1,13 +1,13 @@
-//! The block of memory openDJ and a helper share: a header of atomics, then
+//! The block of memory DJ Sugar and a helper share: a header of atomics, then
 //! the input and output audio, one channel after the other.
 //!
 //! Who may touch what, and when:
 //!
-//! - openDJ writes the input, the frame count and the transport, then bumps
+//! - DJ Sugar writes the input, the frame count and the transport, then bumps
 //!   `seq_in`. It only does so while the helper is idle (`seq_out == seq_in`).
 //! - The helper reads them after it sees the new `seq_in`, writes the output,
 //!   then sets `seq_out` to that number.
-//! - openDJ reads the output only once `seq_out` has caught up.
+//! - DJ Sugar reads the output only once `seq_out` has caught up.
 //!
 //! The release/acquire pairs on the two counters order every other access, so
 //! the audio buffers themselves need no locks.
@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use memmap2::MmapMut;
 
-/// "openDJ P" in ASCII, so a helper can tell it was handed the right file.
+/// "DJ Sugar P" in ASCII, so a helper can tell it was handed the right file.
 pub const MAGIC: u64 = 0x6f70_656e_444a_2050;
 /// Bumped whenever the layout below changes.
 pub const VERSION: u32 = 5;
@@ -39,7 +39,7 @@ pub struct Header {
     pub sample_rate: AtomicU32,
     /// Frames in the block `seq_in` names.
     pub frames: AtomicU32,
-    /// Block openDJ last handed over.
+    /// Block DJ Sugar last handed over.
     pub seq_in: AtomicU64,
     /// Block the helper last finished.
     pub seq_out: AtomicU64,
@@ -56,13 +56,13 @@ pub struct Header {
     /// it falls on in the high 32 bits and the three MIDI bytes below.
     pub events_len: AtomicU32,
     pub events: [AtomicU64; MAX_EVENTS],
-    /// openDJ asks for the plugin's own window: 1 open, 0 closed. The
+    /// DJ Sugar asks for the plugin's own window: 1 open, 0 closed. The
     /// helper's main thread follows it.
     pub editor: AtomicU32,
     /// What the helper did about it: 0 closed, 1 open, 2 the plugin has no
     /// window of its own (or it failed to open). Closing the window sets 0.
     pub editor_shown: AtomicU32,
-    /// openDJ asks for the plugin's state: [`STATE_SAVE`] (write it to the
+    /// DJ Sugar asks for the plugin's state: [`STATE_SAVE`] (write it to the
     /// helper's state file) or [`STATE_LOAD`] (read it from there), then
     /// bumps `state_asked`. The helper's main thread does it, stores
     /// `state_ok` (1 done, 0 failed) and sets `state_done` to `state_asked`.
@@ -72,7 +72,7 @@ pub struct Header {
     pub state_ok: AtomicU32,
     /// The parameters' values as the plugin has them now, in its own
     /// ranges, as `f32` bits: its window or a loaded sound can change them
-    /// behind openDJ's back. The helper's main thread writes them now and
+    /// behind DJ Sugar's back. The helper's main thread writes them now and
     /// then and bumps `values_seq` after.
     pub values: [AtomicU32; MAX_PARAMS],
     pub values_seq: AtomicU32,
@@ -153,7 +153,7 @@ pub fn size_for(max_frames: usize) -> usize {
 }
 
 impl Shm {
-    /// Creates the file at `path` and maps it (openDJ's side).
+    /// Creates the file at `path` and maps it (DJ Sugar's side).
     pub fn create(path: &Path, max_frames: usize, sample_rate: u32) -> io::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
@@ -170,7 +170,7 @@ impl Shm {
         Ok(shm)
     }
 
-    /// Maps a file openDJ created (the helper's side).
+    /// Maps a file DJ Sugar created (the helper's side).
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
         let len = file.metadata()?.len() as usize;
@@ -184,7 +184,7 @@ impl Shm {
         {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "not an openDJ plugin block, or another version",
+                "not an DJ Sugar plugin block, or another version",
             ));
         }
         let max_frames = h.max_frames.load(Ordering::Relaxed) as usize;
@@ -198,7 +198,7 @@ impl Shm {
     }
 
     fn map(file: &File, max_frames: usize) -> io::Result<Self> {
-        // SAFETY: the file is ours (openDJ creates it with create_new, the
+        // SAFETY: the file is ours (DJ Sugar creates it with create_new, the
         // helper is handed its path); nothing else resizes it.
         let map = unsafe { MmapMut::map_mut(file)? };
         Ok(Self { map, max_frames })

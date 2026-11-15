@@ -8,9 +8,9 @@ use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use opendj_engine::key::Key;
-use opendj_library::sets::is_imported;
-use opendj_library::PlaylistKind;
+use djsugar_engine::key::Key;
+use djsugar_library::sets::is_imported;
+use djsugar_library::PlaylistKind;
 use slint::{Color, ComponentHandle, Image, ModelRc, VecModel};
 
 use super::pages::{year, Page};

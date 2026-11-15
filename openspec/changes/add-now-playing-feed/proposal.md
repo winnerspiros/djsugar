@@ -4,12 +4,12 @@ Planned for: **v0.5 · Stems, performance and switching over** (2026-11-02, from
 
 ## Why
 
-DJs who stream (Twitch, YouTube, Mixcloud Live, Kick) want the current track on screen, and VJ and lighting software wants to know what is playing. VirtualDJ, Serato (through third-party tools) and Mixxx all get asked for this, and the usual answer is a text file that OBS reads. openDJ already knows which deck the audience hears and has a small web server for the phone remote, so the feed costs little. Research: notes/ecosystem-standards-review.md in the project files.
+DJs who stream (Twitch, YouTube, Mixcloud Live, Kick) want the current track on screen, and VJ and lighting software wants to know what is playing. VirtualDJ, Serato (through third-party tools) and Mixxx all get asked for this, and the usual answer is a text file that OBS reads. DJ Sugar already knows which deck the audience hears and has a small web server for the phone remote, so the feed costs little. Research: notes/ecosystem-standards-review.md in the project files.
 
 ## What Changes
 
 - A **Now Playing** switch in Settings › Mixer (off at first).
-- When on, openDJ decides which track the audience hears (the loudest deck in the master mix, held for a few seconds so a quick cut doesn't count) and publishes it:
+- When on, DJ Sugar decides which track the audience hears (the loudest deck in the master mix, held for a few seconds so a quick cut doesn't count) and publishes it:
   - `now-playing.txt` with a template the DJ can change (default `{artist} - {title}`), and `now-playing.json` with title, artist, album, cover, BPM, key, deck, start time and the last ten tracks, written to a folder the DJ picks;
   - an **overlay page** at `http://127.0.0.1:<port>/now-playing` with a clear background, for an OBS Browser Source, in three styles (lower third, corner card, ticker);
   - the same JSON at `/now-playing.json` and as events on a WebSocket, for other tools.

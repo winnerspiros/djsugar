@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Describes openDJ to GNOME Software, KDE Discover and Flathub.
+<!-- Describes DJ Sugar to GNOME Software, KDE Discover and Flathub.
      scripts/bundle-linux.sh fills in the release line at build time. -->
 <component type="desktop-application">
-  <id>app.opendj.openDJ</id>
+  <id>io.github.winnerspiros.DJSugar</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0-or-later</project_license>
-  <name>openDJ</name>
+  <name>DJ Sugar</name>
   <summary>Mix music with decks, stems, effects and DJ controllers</summary>
-  <developer id="app.opendj">
-    <name>openDJ</name>
+  <developer id="io.github.winnerspiros.djsugar">
+    <name>DJ Sugar</name>
   </developer>
   <description>
     <p>
-      openDJ is free, open-source DJ software built to be fast and easy to use.
+      DJ Sugar is free, open-source DJ software built to be fast and easy to use.
       It plays your music folders and works with the DJ controllers Mixxx supports.
     </p>
     <ul>
@@ -26,16 +26,16 @@
       <li>Ableton Link and fast GPU waveforms</li>
     </ul>
   </description>
-  <launchable type="desktop-id">app.opendj.openDJ.desktop</launchable>
-  <icon type="stock">app.opendj.openDJ</icon>
-  <url type="homepage">https://opendj.app</url>
-  <url type="bugtracker">https://github.com/openwave-studio/opendj/issues</url>
-  <url type="vcs-browser">https://github.com/openwave-studio/opendj</url>
-  <url type="donation">https://buymeacoffee.com/opendj</url>
+  <launchable type="desktop-id">io.github.winnerspiros.DJSugar.desktop</launchable>
+  <icon type="stock">io.github.winnerspiros.DJSugar</icon>
+  <url type="homepage">https://github.com/winnerspiros/djsugar</url>
+  <url type="bugtracker">https://github.com/winnerspiros/djsugar/issues</url>
+  <url type="vcs-browser">https://github.com/winnerspiros/djsugar</url>
+  <url type="donation">https://buymeacoffee.com/djsugar</url>
   <screenshots>
     <screenshot type="default">
       <caption>Two decks, the mixer and the collection</caption>
-      <image>https://raw.githubusercontent.com/openwave-studio/opendj/main/docs/screenshot.jpg</image>
+      <image>https://raw.githubusercontent.com/winnerspiros/djsugar/main/docs/screenshot.jpg</image>
     </screenshot>
   </screenshots>
   <categories>
@@ -58,7 +58,7 @@
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="@VERSION@" date="@DATE@">
-      <url type="details">https://github.com/openwave-studio/opendj/releases/tag/v@VERSION@</url>
+      <url type="details">https://github.com/winnerspiros/djsugar/releases/tag/v@VERSION@</url>
     </release>
   </releases>
 </component>

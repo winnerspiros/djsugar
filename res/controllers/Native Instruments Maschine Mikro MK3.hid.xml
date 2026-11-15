@@ -2,8 +2,8 @@
 <MixxxControllerPreset mixxxVersion="2.4.0" schemaVersion="1">
     <info>
         <name>Native Instruments Maschine Mikro MK3</name>
-        <author>openDJ</author>
-        <description>Plays and edits openDJ's Groove Box: steps, live play with recording, grooves and kits on the 16 pads, with the screen, encoder and touch strip.</description>
+        <author>DJ Sugar</author>
+        <description>Plays and edits DJ Sugar's Groove Box: steps, live play with recording, grooves and kits on the 16 pads, with the screen, encoder and touch strip.</description>
         <devices>
             <product protocol="hid" vendor_id="0x17cc" product_id="0x1700" />
         </devices>

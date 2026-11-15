@@ -28,9 +28,9 @@ fn is_xml(path: &Path) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
 }
 
-/// rekordbox's database where rekordbox keeps it (or `OPENDJ_RB_DATABASE`).
+/// rekordbox's database where rekordbox keeps it (or `DJSUGAR_RB_DATABASE`).
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_RB_DATABASE") {
+    if let Some(p) = std::env::var_os("DJSUGAR_RB_DATABASE") {
         return Some(PathBuf::from(p));
     }
     if let Ok(l) = rbox_core::locate::locate_library() {
@@ -38,7 +38,7 @@ pub fn default_database() -> Option<PathBuf> {
             return Some(l.db_path);
         }
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     [
         "Library/Pioneer/rekordbox/master.db",
         "AppData/Roaming/Pioneer/rekordbox/master.db",
@@ -95,7 +95,7 @@ impl LibraryImport for Rekordbox {
             ListGroup {
                 id: SMART,
                 title: "Intelligent playlists",
-                detail: "As smart lists, where openDJ's search can say the same thing.",
+                detail: "As smart lists, where DJ Sugar's search can say the same thing.",
                 on_by_default: false,
             },
             ListGroup {

@@ -11,10 +11,10 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::{LoadedTracks, Track, VisualPositions, NUM_DECKS};
-use opendj_osc::{OscMessage, OscType};
-use opendj_waveform::PhraseKind;
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::{LoadedTracks, Track, VisualPositions, NUM_DECKS};
+use djsugar_osc::{OscMessage, OscType};
+use djsugar_waveform::PhraseKind;
 
 use crate::beat_counter;
 
@@ -262,11 +262,11 @@ pub fn spawn(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_control::Behavior;
+    use djsugar_control::Behavior;
 
     /// 120 BPM from 0 s: a beat every half second, a bar every two.
     fn track(title: &str) -> Arc<Track> {
-        let mut t = (*opendj_engine::sample_library()[0]).clone();
+        let mut t = (*djsugar_engine::sample_library()[0]).clone();
         t.title = title.into();
         t.bpm = 120.0;
         t.first_beat = 0.0;

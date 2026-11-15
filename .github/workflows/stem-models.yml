@@ -1,6 +1,6 @@
 name: Publish stem models
 
-# Builds the stem separation models openDJ downloads the first time it needs
+# Builds the stem separation models DJ Sugar downloads the first time it needs
 # them (Spleeter converted from Deezer's checkpoint, HTDemucs as safetensors),
 # and fetches the Beat This! beat detection models (ONNX, from beat-this-rs)
 # and the Whisper model for word timing (whisper.cpp's large-v3-turbo-q5_0),
@@ -64,6 +64,6 @@ jobs:
           if ! gh release view stem-models >/dev/null 2>&1; then
             gh release create stem-models --prerelease --target "$GITHUB_SHA" \
               --title "Stem separation models" \
-              --notes "Models openDJ downloads the first time it needs them: Spleeter 4stems (MIT, Deezer) for stems on load, HTDemucs (MIT, Meta) for high-quality stems, Beat This! (MIT, JKU Linz) for beats and downbeats, and Whisper large-v3-turbo (MIT, OpenAI; ggml from whisper.cpp) for word timing. Not an app release."
+              --notes "Models DJ Sugar downloads the first time it needs them: Spleeter 4stems (MIT, Deezer) for stems on load, HTDemucs (MIT, Meta) for high-quality stems, Beat This! (MIT, JKU Linz) for beats and downbeats, and Whisper large-v3-turbo (MIT, OpenAI; ggml from whisper.cpp) for word timing. Not an app release."
           fi
           gh release upload stem-models models/*.safetensors models/*.onnx models/*.bin --clobber

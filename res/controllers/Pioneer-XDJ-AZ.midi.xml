@@ -2,8 +2,8 @@
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.6">
     <info>
         <name>Pioneer XDJ-AZ</name>
-        <author>openDJ (from its XDJ-RX3 mapping)</author>
-        <description>openDJ mapping for the Pioneer XDJ-AZ in PC control (MIDI) mode: four decks, the mixer, Beat FX and Color FX, pads that follow the screen, jog displays. Beta: written from AlphaTheta's MIDI message list, not yet tried on the hardware.</description>
+        <author>DJ Sugar (from its XDJ-RX3 mapping)</author>
+        <description>DJ Sugar mapping for the Pioneer XDJ-AZ in PC control (MIDI) mode: four decks, the mixer, Beat FX and Color FX, pads that follow the screen, jog displays. Beta: written from AlphaTheta's MIDI message list, not yet tried on the hardware.</description>
         <manual>pioneer_xdj_az</manual>
     </info>
     <controller id="XDJ-AZ">
@@ -22,7 +22,7 @@
                 </options>
             </control>
             <control>
-                <description>ROTARY SELECTOR +SHIFT - rotate - zoom the waveforms (openDJ)</description>
+                <description>ROTARY SELECTOR +SHIFT - rotate - zoom the waveforms (DJ Sugar)</description>
                 <group>[Library]</group>
                 <key>PioneerXDJAZ.waveformZoom</key>
                 <status>0xB0</status>
@@ -122,7 +122,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH FWD (DECK1) - press - jump 32 beats forward (openDJ)</description>
+                <description>TRACK SEARCH FWD (DECK1) - press - jump 32 beats forward (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.quickJumpForward</key>
                 <status>0x90</status>
@@ -132,7 +132,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH REV (DECK1) - press - jump 32 beats back (openDJ)</description>
+                <description>TRACK SEARCH REV (DECK1) - press - jump 32 beats back (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.quickJumpBack</key>
                 <status>0x90</status>
@@ -192,7 +192,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL NEXT (DECK1) - press - double the loop (openDJ)</description>
+                <description>CUE/LOOP CALL NEXT (DECK1) - press - double the loop (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.cueLoopCallRight</key>
                 <status>0x90</status>
@@ -202,7 +202,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL PREV (DECK1) - press - halve the loop (openDJ)</description>
+                <description>CUE/LOOP CALL PREV (DECK1) - press - halve the loop (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.cueLoopCallLeft</key>
                 <status>0x90</status>
@@ -252,7 +252,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK1) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK1) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.masterPressed</key>
                 <status>0x90</status>
@@ -382,7 +382,7 @@
                 </options>
             </control>
             <control>
-                <description>HOT CUE (DECK1) - press - pad page (openDJ)</description>
+                <description>HOT CUE (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -392,7 +392,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT LOOP (DECK1) - press - pad page (openDJ)</description>
+                <description>BEAT LOOP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -402,7 +402,7 @@
                 </options>
             </control>
             <control>
-                <description>SLIP LOOP (DECK1) - press - pad page (openDJ)</description>
+                <description>SLIP LOOP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -412,7 +412,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT JUMP (DECK1) - press - pad page (openDJ)</description>
+                <description>BEAT JUMP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -422,7 +422,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + HOT CUE (DECK1) - press - pad page (openDJ)</description>
+                <description>SHIFT + HOT CUE (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -432,7 +432,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT LOOP (DECK1) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT LOOP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -442,7 +442,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + SLIP LOOP (DECK1) - press - pad page (openDJ)</description>
+                <description>SHIFT + SLIP LOOP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -452,7 +452,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT JUMP (DECK1) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT JUMP (DECK1) - press - pad page (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x90</status>
@@ -492,7 +492,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -512,7 +512,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 1 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x95</status>
@@ -562,7 +562,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -622,7 +622,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -642,7 +642,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 2 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x95</status>
@@ -692,7 +692,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -752,7 +752,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -772,7 +772,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 3 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x95</status>
@@ -822,7 +822,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -882,7 +882,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -902,7 +902,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 4 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x95</status>
@@ -952,7 +952,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x95</status>
@@ -1012,7 +1012,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1032,7 +1032,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 5 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x99</status>
@@ -1082,7 +1082,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1142,7 +1142,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1162,7 +1162,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 6 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x99</status>
@@ -1212,7 +1212,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1272,7 +1272,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1292,7 +1292,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 7 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x99</status>
@@ -1342,7 +1342,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1402,7 +1402,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK1) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK1) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1422,7 +1422,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK1) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 8 (DECK1) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x99</status>
@@ -1472,7 +1472,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK1) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK1) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x99</status>
@@ -1542,7 +1542,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH FWD (DECK2) - press - jump 32 beats forward (openDJ)</description>
+                <description>TRACK SEARCH FWD (DECK2) - press - jump 32 beats forward (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.quickJumpForward</key>
                 <status>0x91</status>
@@ -1552,7 +1552,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH REV (DECK2) - press - jump 32 beats back (openDJ)</description>
+                <description>TRACK SEARCH REV (DECK2) - press - jump 32 beats back (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.quickJumpBack</key>
                 <status>0x91</status>
@@ -1612,7 +1612,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL NEXT (DECK2) - press - double the loop (openDJ)</description>
+                <description>CUE/LOOP CALL NEXT (DECK2) - press - double the loop (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.cueLoopCallRight</key>
                 <status>0x91</status>
@@ -1622,7 +1622,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL PREV (DECK2) - press - halve the loop (openDJ)</description>
+                <description>CUE/LOOP CALL PREV (DECK2) - press - halve the loop (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.cueLoopCallLeft</key>
                 <status>0x91</status>
@@ -1672,7 +1672,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK2) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK2) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.masterPressed</key>
                 <status>0x91</status>
@@ -1802,7 +1802,7 @@
                 </options>
             </control>
             <control>
-                <description>HOT CUE (DECK2) - press - pad page (openDJ)</description>
+                <description>HOT CUE (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1812,7 +1812,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT LOOP (DECK2) - press - pad page (openDJ)</description>
+                <description>BEAT LOOP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1822,7 +1822,7 @@
                 </options>
             </control>
             <control>
-                <description>SLIP LOOP (DECK2) - press - pad page (openDJ)</description>
+                <description>SLIP LOOP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1832,7 +1832,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT JUMP (DECK2) - press - pad page (openDJ)</description>
+                <description>BEAT JUMP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1842,7 +1842,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + HOT CUE (DECK2) - press - pad page (openDJ)</description>
+                <description>SHIFT + HOT CUE (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1852,7 +1852,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT LOOP (DECK2) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT LOOP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1862,7 +1862,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + SLIP LOOP (DECK2) - press - pad page (openDJ)</description>
+                <description>SHIFT + SLIP LOOP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1872,7 +1872,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT JUMP (DECK2) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT JUMP (DECK2) - press - pad page (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x91</status>
@@ -1912,7 +1912,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -1932,7 +1932,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 1 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x96</status>
@@ -1982,7 +1982,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2042,7 +2042,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2062,7 +2062,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 2 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x96</status>
@@ -2112,7 +2112,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2172,7 +2172,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2192,7 +2192,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 3 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x96</status>
@@ -2242,7 +2242,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2302,7 +2302,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2322,7 +2322,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 4 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x96</status>
@@ -2372,7 +2372,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x96</status>
@@ -2432,7 +2432,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2452,7 +2452,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 5 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9A</status>
@@ -2502,7 +2502,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2562,7 +2562,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2582,7 +2582,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 6 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9A</status>
@@ -2632,7 +2632,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2692,7 +2692,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2712,7 +2712,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 7 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9A</status>
@@ -2762,7 +2762,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2822,7 +2822,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK2) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK2) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2842,7 +2842,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK2) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 8 (DECK2) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9A</status>
@@ -2892,7 +2892,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK2) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK2) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9A</status>
@@ -2962,7 +2962,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH FWD (DECK3) - press - jump 32 beats forward (openDJ)</description>
+                <description>TRACK SEARCH FWD (DECK3) - press - jump 32 beats forward (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.quickJumpForward</key>
                 <status>0x92</status>
@@ -2972,7 +2972,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH REV (DECK3) - press - jump 32 beats back (openDJ)</description>
+                <description>TRACK SEARCH REV (DECK3) - press - jump 32 beats back (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.quickJumpBack</key>
                 <status>0x92</status>
@@ -3032,7 +3032,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL NEXT (DECK3) - press - double the loop (openDJ)</description>
+                <description>CUE/LOOP CALL NEXT (DECK3) - press - double the loop (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.cueLoopCallRight</key>
                 <status>0x92</status>
@@ -3042,7 +3042,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL PREV (DECK3) - press - halve the loop (openDJ)</description>
+                <description>CUE/LOOP CALL PREV (DECK3) - press - halve the loop (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.cueLoopCallLeft</key>
                 <status>0x92</status>
@@ -3092,7 +3092,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK3) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK3) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.masterPressed</key>
                 <status>0x92</status>
@@ -3222,7 +3222,7 @@
                 </options>
             </control>
             <control>
-                <description>HOT CUE (DECK3) - press - pad page (openDJ)</description>
+                <description>HOT CUE (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3232,7 +3232,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT LOOP (DECK3) - press - pad page (openDJ)</description>
+                <description>BEAT LOOP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3242,7 +3242,7 @@
                 </options>
             </control>
             <control>
-                <description>SLIP LOOP (DECK3) - press - pad page (openDJ)</description>
+                <description>SLIP LOOP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3252,7 +3252,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT JUMP (DECK3) - press - pad page (openDJ)</description>
+                <description>BEAT JUMP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3262,7 +3262,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + HOT CUE (DECK3) - press - pad page (openDJ)</description>
+                <description>SHIFT + HOT CUE (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3272,7 +3272,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT LOOP (DECK3) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT LOOP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3282,7 +3282,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + SLIP LOOP (DECK3) - press - pad page (openDJ)</description>
+                <description>SHIFT + SLIP LOOP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3292,7 +3292,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT JUMP (DECK3) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT JUMP (DECK3) - press - pad page (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x92</status>
@@ -3332,7 +3332,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3352,7 +3352,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 1 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x97</status>
@@ -3402,7 +3402,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3462,7 +3462,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3482,7 +3482,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 2 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x97</status>
@@ -3532,7 +3532,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3592,7 +3592,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3612,7 +3612,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 3 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x97</status>
@@ -3662,7 +3662,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3722,7 +3722,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3742,7 +3742,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 4 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x97</status>
@@ -3792,7 +3792,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x97</status>
@@ -3852,7 +3852,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -3872,7 +3872,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 5 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9B</status>
@@ -3922,7 +3922,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -3982,7 +3982,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4002,7 +4002,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 6 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9B</status>
@@ -4052,7 +4052,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4112,7 +4112,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4132,7 +4132,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 7 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9B</status>
@@ -4182,7 +4182,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4242,7 +4242,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK3) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK3) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4262,7 +4262,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK3) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 8 (DECK3) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9B</status>
@@ -4312,7 +4312,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK3) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK3) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9B</status>
@@ -4382,7 +4382,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH FWD (DECK4) - press - jump 32 beats forward (openDJ)</description>
+                <description>TRACK SEARCH FWD (DECK4) - press - jump 32 beats forward (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.quickJumpForward</key>
                 <status>0x93</status>
@@ -4392,7 +4392,7 @@
                 </options>
             </control>
             <control>
-                <description>TRACK SEARCH REV (DECK4) - press - jump 32 beats back (openDJ)</description>
+                <description>TRACK SEARCH REV (DECK4) - press - jump 32 beats back (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.quickJumpBack</key>
                 <status>0x93</status>
@@ -4452,7 +4452,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL NEXT (DECK4) - press - double the loop (openDJ)</description>
+                <description>CUE/LOOP CALL NEXT (DECK4) - press - double the loop (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.cueLoopCallRight</key>
                 <status>0x93</status>
@@ -4462,7 +4462,7 @@
                 </options>
             </control>
             <control>
-                <description>CUE/LOOP CALL PREV (DECK4) - press - halve the loop (openDJ)</description>
+                <description>CUE/LOOP CALL PREV (DECK4) - press - halve the loop (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.cueLoopCallLeft</key>
                 <status>0x93</status>
@@ -4512,7 +4512,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK4) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK4) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.masterPressed</key>
                 <status>0x93</status>
@@ -4642,7 +4642,7 @@
                 </options>
             </control>
             <control>
-                <description>HOT CUE (DECK4) - press - pad page (openDJ)</description>
+                <description>HOT CUE (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4652,7 +4652,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT LOOP (DECK4) - press - pad page (openDJ)</description>
+                <description>BEAT LOOP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4662,7 +4662,7 @@
                 </options>
             </control>
             <control>
-                <description>SLIP LOOP (DECK4) - press - pad page (openDJ)</description>
+                <description>SLIP LOOP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4672,7 +4672,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT JUMP (DECK4) - press - pad page (openDJ)</description>
+                <description>BEAT JUMP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4682,7 +4682,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + HOT CUE (DECK4) - press - pad page (openDJ)</description>
+                <description>SHIFT + HOT CUE (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4692,7 +4692,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT LOOP (DECK4) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT LOOP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4702,7 +4702,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + SLIP LOOP (DECK4) - press - pad page (openDJ)</description>
+                <description>SHIFT + SLIP LOOP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4712,7 +4712,7 @@
                 </options>
             </control>
             <control>
-                <description>SHIFT + BEAT JUMP (DECK4) - press - pad page (openDJ)</description>
+                <description>SHIFT + BEAT JUMP (DECK4) - press - pad page (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padModeKeyPressed</key>
                 <status>0x93</status>
@@ -4752,7 +4752,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -4772,7 +4772,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 1 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x98</status>
@@ -4822,7 +4822,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 1 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -4882,7 +4882,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -4902,7 +4902,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 2 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x98</status>
@@ -4952,7 +4952,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 2 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -5012,7 +5012,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -5032,7 +5032,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 3 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x98</status>
@@ -5082,7 +5082,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 3 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -5142,7 +5142,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -5162,7 +5162,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 4 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x98</status>
@@ -5212,7 +5212,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 4 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x98</status>
@@ -5272,7 +5272,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5292,7 +5292,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 5 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9C</status>
@@ -5342,7 +5342,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 5 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 5 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5402,7 +5402,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5422,7 +5422,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 6 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9C</status>
@@ -5472,7 +5472,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 6 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 6 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5532,7 +5532,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5552,7 +5552,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 7 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9C</status>
@@ -5602,7 +5602,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 7 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 7 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5662,7 +5662,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK4) PAD FX 2 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK4) PAD FX 2 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -5682,7 +5682,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK4) BEAT JUMP - press - jump (openDJ)</description>
+                <description>PAD 8 (DECK4) BEAT JUMP - press - jump (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.beatjumpPadPressed</key>
                 <status>0x9C</status>
@@ -5732,7 +5732,7 @@
                 </options>
             </control>
             <control>
-                <description>PAD 8 (DECK4) PAD FX 1 - hold - the pad's effect (openDJ)</description>
+                <description>PAD 8 (DECK4) PAD FX 1 - hold - the pad's effect (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerXDJAZ.padFxPressed</key>
                 <status>0x9C</status>
@@ -6092,7 +6092,7 @@
                 </options>
             </control>
             <control>
-                <description>SPACE - press - the COLOR knobs play space (openDJ)</description>
+                <description>SPACE - press - the COLOR knobs play space (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6102,7 +6102,7 @@
                 </options>
             </control>
             <control>
-                <description>DUB ECHO - press - the COLOR knobs play dub echo (openDJ)</description>
+                <description>DUB ECHO - press - the COLOR knobs play dub echo (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6112,7 +6112,7 @@
                 </options>
             </control>
             <control>
-                <description>SWEEP - press - the COLOR knobs play sweep (openDJ)</description>
+                <description>SWEEP - press - the COLOR knobs play sweep (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6122,7 +6122,7 @@
                 </options>
             </control>
             <control>
-                <description>NOISE - press - the COLOR knobs play noise (openDJ)</description>
+                <description>NOISE - press - the COLOR knobs play noise (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6132,7 +6132,7 @@
                 </options>
             </control>
             <control>
-                <description>CRUSH - press - the COLOR knobs play crush (openDJ)</description>
+                <description>CRUSH - press - the COLOR knobs play crush (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6142,7 +6142,7 @@
                 </options>
             </control>
             <control>
-                <description>FILTER - press - the COLOR knobs play filter (openDJ)</description>
+                <description>FILTER - press - the COLOR knobs play filter (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerXDJAZ.colorFxPressed</key>
                 <status>0xB4</status>
@@ -6572,7 +6572,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT DELAY - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT DELAY - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6582,7 +6582,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT ECHO - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT ECHO - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6592,7 +6592,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT PING PONG - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT PING PONG - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6602,7 +6602,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT SPIRAL - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT SPIRAL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6612,7 +6612,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT HELIX - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT HELIX - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6622,7 +6622,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT REVERB - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT REVERB - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6632,7 +6632,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT FLANGER - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT FLANGER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6642,7 +6642,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT PHASER - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT PHASER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6652,7 +6652,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT FILTER - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT FILTER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6662,7 +6662,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT TRIPLET FILTER - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT TRIPLET FILTER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6672,7 +6672,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT TRANS - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT TRANS - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6682,7 +6682,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT ROLL - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT ROLL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6692,7 +6692,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT TRIPLET ROLL - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT TRIPLET ROLL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6702,7 +6702,7 @@
                 </options>
             </control>
             <control>
-                <description>EFFECT SELECT MOBIUS - rotate - pick the Beat FX (openDJ)</description>
+                <description>EFFECT SELECT MOBIUS - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxSelect</key>
                 <status>0xB4</status>
@@ -6712,7 +6712,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CH3 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CH3 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6722,7 +6722,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CH1 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CH1 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6732,7 +6732,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CH2 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CH2 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6742,7 +6742,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CH4 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CH4 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6752,7 +6752,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT MIC - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT MIC - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6762,7 +6762,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CF.A - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CF.A - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6772,7 +6772,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT CF.B - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT CF.B - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>
@@ -6782,7 +6782,7 @@
                 </options>
             </control>
             <control>
-                <description>CH SELECT MASTER - rotate - where the Beat FX goes (openDJ)</description>
+                <description>CH SELECT MASTER - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerXDJAZ.beatFxChannelSelect</key>
                 <status>0xB4</status>

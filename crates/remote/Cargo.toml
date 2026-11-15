@@ -1,5 +1,5 @@
 [package]
-name = "opendj-remote"
+name = "djsugar-remote"
 description = "The phone remote: a small web page and WebSocket served on the local network"
 version.workspace = true
 edition.workspace = true

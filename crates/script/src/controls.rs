@@ -1,6 +1,6 @@
 //! The verbs that are controls underneath.
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::verbs::Kind;
 use crate::{Call, Error};

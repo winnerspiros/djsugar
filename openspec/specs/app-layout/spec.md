@@ -48,7 +48,7 @@ Space SHALL play or pause the master deck when no text field has focus.
 - **THEN** deck 1 plays or pauses
 
 ### Requirement: Look
-The UI SHALL use djay Pro's colours, widgets and fonts with VirtualDJ's placement, the openDJ logo and Electric Lilac (#B69CFF) for accents.
+The UI SHALL use djay Pro's colours, widgets and fonts with VirtualDJ's placement, the DJ Sugar logo and Electric Lilac (#B69CFF) for accents.
 
 #### Scenario: Accent colour
 - **WHEN** a control is active

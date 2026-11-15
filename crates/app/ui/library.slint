@@ -145,7 +145,7 @@ export global ColumnUi {
 }
 
 // The order of the rail's sources after Collection, by source number:
-// openDJ's own, then the services and add-ons. Dragged in the "•••" menu.
+// DJ Sugar's own, then the services and add-ons. Dragged in the "•••" menu.
 export global RailOrder {
     in property <[int]> built-in: [1, 9, 10, 12];
     in property <[int]> external: [2, 3, 4, 8, 11];
@@ -331,7 +331,7 @@ export global LibraryEdit {
     callback load-on-deck(row: int, deck: int);
     // Opens the side panel's Info tab on the row's track.
     callback show-info(row: int);
-    // The key that runs this openDJscript line (⌘I), for a menu line's hint.
+    // The key that runs this DJSugarScript line (⌘I), for a menu line's hint.
     pure callback key-for(script: string) -> string;
     // How many decks are shown, for "Load on Deck".
     in property <int> decks: 2;
@@ -737,7 +737,7 @@ export global CleanupUi {
 }
 
 // The Wanted list: tracks the DJ means to get. Only the DJ puts tracks on
-// it (Buy, Copy to openDJ, Add to Wanted).
+// it (Buy, Copy to DJ Sugar, Add to Wanted).
 export global WantedUi {
     // Whether the track list shows the Wanted list.
     in property <bool> shown;
@@ -786,7 +786,7 @@ export struct BuyRow {
 }
 
 // Buy on Wanted rows: each track's best store, artist-direct first,
-// grouped so each store's own cart collects them for one checkout. openDJ
+// grouped so each store's own cart collects them for one checkout. DJ Sugar
 // never takes payment.
 export global BuyUi {
     in property <bool> open;
@@ -1932,7 +1932,7 @@ component SourceIcon inherits Rectangle {
     // 5 = Bandcamp, 6 = Beatport, 7 = OneLibrary, 8 = SoundCloud,
     // 9 = albums, 10 = mixed sets, 11 = Mixcloud, 12 = instruments
     in property <int> kind;
-    // Every icon fills the same 30 px; openDJ's own sit on a tile tinted
+    // Every icon fills the same 30 px; DJ Sugar's own sit on a tile tinted
     // with their colour.
     width: 30px;
     height: 30px;
@@ -1952,8 +1952,8 @@ component SourceIcon inherits Rectangle {
         : @linear-gradient(180deg, #fc5c7d 0%, #fa2d48 100%);
     border-width: kind == 3 || kind == 7 ? 1px : 0px;
     border-color: Theme.border;
-    // Collection: openDJ's own logo.
-    if kind == 0: Image { width: 30px; height: 30px; source: @image-url("icons/opendj.svg"); }
+    // Collection: DJ Sugar's own logo.
+    if kind == 0: Image { width: 30px; height: 30px; source: @image-url("icons/djsugar.svg"); }
     // Files: an open folder, in lilac.
     if kind == 1: Image { width: 22px; height: 22px; source: @image-url("icons/rail-files.svg"); }
     // Spotify: its own logo, unaltered as its brand rules ask.
@@ -2140,7 +2140,7 @@ component SourceMenuTitle inherits Rectangle {
     }
 }
 
-// A source's icon in the rail and its menu: openDJ's own drawing, or an
+// A source's icon in the rail and its menu: DJ Sugar's own drawing, or an
 // add-on's picture (sources numbered from `built-ins`).
 component RailIcon inherits Rectangle {
     in property <int> kind;
@@ -2254,7 +2254,7 @@ component SourceRail inherits Rectangle {
     callback shown-changed(source: int, on: bool);
     property <[string]> names: ["Collection", "Files", "Spotify", "TIDAL", "Apple Music", "Bandcamp", "Beatport", "OneLibrary", "SoundCloud", "Albums", "Recordings", "Mixcloud", "Jam"];
     // The rail shows Collection, then RailOrder's sections in the DJ's
-    // order. OneLibrary (7) isn't a source: openDJ writes it when exporting
+    // order. OneLibrary (7) isn't a source: DJ Sugar writes it when exporting
     // to a USB stick. Bandcamp (5) and Beatport (6) wait for the stores.
 
     // What each source is, for its tooltip.
@@ -3623,7 +3623,7 @@ component HealthPanel inherits Rectangle {
                 clicked => { HealthUi.restore(); }
             }
             if HealthUi.quarantined > 0: HealthFooterLine {
-                text: HealthUi.quarantined + " files of merged copies in _Quarantine. openDJ never deletes them: empty the folder yourself once you're sure.";
+                text: HealthUi.quarantined + " files of merged copies in _Quarantine. DJ Sugar never deletes them: empty the folder yourself once you're sure.";
                 action: HealthUi.quarantine-exists ? "Show folder" : "";
                 clicked => { HealthUi.show-quarantine(); }
             }
@@ -5386,7 +5386,7 @@ component BuyDialog inherits Rectangle {
                 Text {
                     text: BuyUi.looked < BuyUi.count
                         ? "Looking in the stores… " + BuyUi.looked + " of " + BuyUi.count
-                        : "Open a store's tracks one by one: add each to the store's cart, then Next. Check out once on that store; payment never goes through openDJ. Click a track to open just that one.";
+                        : "Open a store's tracks one by one: add each to the store's cart, then Next. Check out once on that store; payment never goes through DJ Sugar. Click a track to open just that one.";
                     color: Theme.text-dim;
                     font-size: 12px;
                     wrap: word-wrap;

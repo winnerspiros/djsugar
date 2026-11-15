@@ -3,7 +3,7 @@ schema: spec-driven
 # Project context: constraints that should guide every OpenSpec artifact.
 # Decisions here are the project owner's and are not visible in the code.
 context: |
-  openDJ is a free, open-source DJ app (GPL-2.0-or-later source, GPL-3.0 builds
+  DJ Sugar is a free, open-source DJ app (GPL-2.0-or-later source, GPL-3.0 builds
   because of Slint), written in Rust, that started as a rewrite of Mixxx.
   - Platforms: macOS (Apple Silicon and Intel) and Linux only. Windows is v2.0.
   - UI toolkit is Slint; waveforms are drawn on the GPU with wgpu shaders.

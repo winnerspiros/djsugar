@@ -82,7 +82,7 @@ A track deck with stems SHALL offer Replace drums: a Groove Box over the deck th
 - **THEN** the track's drum stem fades out and the groove's drums play on the track's beats until it is turned off
 
 ### Requirement: MIDI file export
-A groove or chain SHALL be draggable out of openDJ as a standard MIDI file, each drum row on its General MIDI drum note and the melodic row on its notes, at the groove's tempo.
+A groove or chain SHALL be draggable out of DJ Sugar as a standard MIDI file, each drum row on its General MIDI drum note and the melodic row on its notes, at the groove's tempo.
 
 #### Scenario: Into a DAW
 - **WHEN** groove A is dragged from the Groove Box onto a DAW track

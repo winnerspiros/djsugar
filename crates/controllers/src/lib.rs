@@ -55,13 +55,13 @@ pub fn is_system_port(port: &str) -> bool {
     SYSTEM.iter().any(|s| port.contains(s))
 }
 
-/// Where Mixxx's mappings are: `OPENDJ_CONTROLLERS` if set, otherwise next
+/// Where Mixxx's mappings are: `DJSUGAR_CONTROLLERS` if set, otherwise next
 /// to the executable (`../Resources/controllers` in a macOS bundle,
-/// `controllers/` beside it, or `../share/opendj/controllers` in a Linux
+/// `controllers/` beside it, or `../share/djsugar/controllers` in a Linux
 /// install or AppImage), otherwise the repository's `res/controllers`.
 pub fn default_mappings_dir() -> Option<PathBuf> {
     let valid = |p: &PathBuf| p.join(mapping::REQUIRED_SCRIPT).is_file();
-    if let Some(dir) = std::env::var_os("OPENDJ_CONTROLLERS") {
+    if let Some(dir) = std::env::var_os("DJSUGAR_CONTROLLERS") {
         return Some(PathBuf::from(dir)).filter(valid);
     }
     let mut candidates = Vec::new();
@@ -71,7 +71,7 @@ pub fn default_mappings_dir() -> Option<PathBuf> {
     {
         candidates.push(exe_dir.join("../Resources/controllers"));
         candidates.push(exe_dir.join("controllers"));
-        candidates.push(exe_dir.join("../share/opendj/controllers"));
+        candidates.push(exe_dir.join("../share/djsugar/controllers"));
     }
     candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../res/controllers"));
     candidates.into_iter().find(valid)

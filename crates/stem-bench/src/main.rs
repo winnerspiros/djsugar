@@ -1,4 +1,4 @@
-//! Times openDJ's stem separation on this machine.
+//! Times DJ Sugar's stem separation on this machine.
 //!
 //!     cargo run --release -p stem-bench -- TRACK [options]
 //!
@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use opendj_separation::{htdemucs, spleeter, Cpu, Gpu, SAMPLE_RATE};
+use djsugar_separation::{htdemucs, spleeter, Cpu, Gpu, SAMPLE_RATE};
 
 struct Options {
     track: PathBuf,
@@ -171,7 +171,7 @@ fn spleeter_run(
     Ok(())
 }
 
-fn htdemucs_run<B: opendj_separation::burn::prelude::Backend>(
+fn htdemucs_run<B: djsugar_separation::burn::prelude::Backend>(
     label: &str,
     weights: &[u8],
     device: &B::Device,
@@ -208,7 +208,7 @@ fn main() {
 fn run() -> Result<(), String> {
     let o = options()?;
     let t = Instant::now();
-    let audio = opendj_engine::decode::decode(&o.track)?;
+    let audio = djsugar_engine::decode::decode(&o.track)?;
     let mut channels: [Vec<f32>; 2] = [Vec::new(), Vec::new()];
     for i in 0..audio.len() {
         let [l, r] = audio.frame(i);
@@ -217,7 +217,7 @@ fn run() -> Result<(), String> {
     }
     if audio.sample_rate != SAMPLE_RATE {
         for c in &mut channels {
-            *c = opendj_separation::resample(c, audio.sample_rate, SAMPLE_RATE)?;
+            *c = djsugar_separation::resample(c, audio.sample_rate, SAMPLE_RATE)?;
         }
     }
     if let Some(s) = o.seconds {
@@ -233,8 +233,8 @@ fn run() -> Result<(), String> {
         t.elapsed().as_secs_f64()
     );
     let audio = [&channels[0][..], &channels[1][..]];
-    let gpu = opendj_separation::burn::backend::wgpu::WgpuDevice::default();
-    let cpu = opendj_separation::burn::backend::ndarray::NdArrayDevice::Cpu;
+    let gpu = djsugar_separation::burn::backend::wgpu::WgpuDevice::default();
+    let cpu = djsugar_separation::burn::backend::ndarray::NdArrayDevice::Cpu;
 
     if o.spleeter {
         println!("Spleeter (instant stems):");

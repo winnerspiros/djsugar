@@ -1,18 +1,18 @@
-//! Loads a real CLAP binary (the `opendj-test-clap` gain in
+//! Loads a real CLAP binary (the `djsugar-test-clap` gain in
 //! `crates/plugin-host/test-plugin`) through the helper.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use opendj_plugin_host::{presets, scan, spawn, Options, Outcome, Plugin, ScanError, Transport};
+use djsugar_plugin_host::{presets, scan, spawn, Options, Outcome, Plugin, ScanError, Transport};
 
 const FRAMES: usize = 256;
 const DEADLINE: Duration = Duration::from_millis(500);
-const ID: &str = "app.opendj.test-gain";
+const ID: &str = "io.github.winnerspiros.djsugar.test-gain";
 
 fn helper() -> PathBuf {
-    env!("CARGO_BIN_EXE_opendj-plugin-host").into()
+    env!("CARGO_BIN_EXE_djsugar-plugin-host").into()
 }
 
 /// Builds the test plugin once, next to this test's own binaries.
@@ -22,31 +22,31 @@ fn test_plugin() -> PathBuf {
         let target = helper().parent().unwrap().parent().unwrap().to_path_buf();
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
         let ok = std::process::Command::new(cargo)
-            .args(["build", "-q", "-p", "opendj-test-clap", "--target-dir"])
+            .args(["build", "-q", "-p", "djsugar-test-clap", "--target-dir"])
             .arg(&target)
             .status()
             .expect("cargo runs")
             .success();
         assert!(ok, "the test plugin builds");
         let name = if cfg!(windows) {
-            "opendj_test_clap.dll"
+            "djsugar_test_clap.dll"
         } else if cfg!(target_os = "macos") {
-            "libopendj_test_clap.dylib"
+            "libdjsugar_test_clap.dylib"
         } else {
-            "libopendj_test_clap.so"
+            "libdjsugar_test_clap.so"
         };
         target.join("debug").join(name)
     })
     .clone()
 }
 
-fn start() -> (opendj_plugin_host::Connection, opendj_plugin_host::Helper) {
+fn start() -> (djsugar_plugin_host::Connection, djsugar_plugin_host::Helper) {
     start_from(None)
 }
 
 fn start_from(
     state: Option<Vec<u8>>,
-) -> (opendj_plugin_host::Connection, opendj_plugin_host::Helper) {
+) -> (djsugar_plugin_host::Connection, djsugar_plugin_host::Helper) {
     spawn(&Options {
         picks: Vec::new(),
         helper: helper(),
@@ -63,7 +63,7 @@ fn start_from(
 }
 
 fn run(
-    conn: &mut opendj_plugin_host::Connection,
+    conn: &mut djsugar_plugin_host::Connection,
     transport: Transport,
 ) -> (Outcome, Vec<f32>, Vec<f32>) {
     let l: Vec<f32> = (0..FRAMES)
@@ -82,14 +82,14 @@ fn scanning_finds_the_effect() {
     assert_eq!(found.len(), 1);
     let d = &found[0];
     assert_eq!(d.id, ID);
-    assert_eq!(d.name, "openDJ Test Gain");
-    assert_eq!(d.vendor, "openDJ");
+    assert_eq!(d.name, "DJ Sugar Test Gain");
+    assert_eq!(d.vendor, "DJ Sugar");
     assert!(d.is_audio_effect(), "{:?}", d.features);
 }
 
 #[test]
 fn scanning_a_broken_file_fails_cleanly() {
-    let dir = std::env::temp_dir().join(format!("opendj-scan-test-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("djsugar-scan-test-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let bad = dir.join("not-a-plugin.clap");
     std::fs::write(&bad, b"this is not a library").unwrap();
@@ -127,7 +127,7 @@ fn a_knob_takes_the_parameter_picked_for_it() {
 fn the_plugin_describes_itself() {
     let (_conn, helper) = start();
     let info = helper.info();
-    assert_eq!(info.name, "openDJ Test Gain");
+    assert_eq!(info.name, "DJ Sugar Test Gain");
     assert_eq!(info.latency, 64);
     // In its remote controls page's order, not its own.
     assert_eq!(info.params.len(), 3);
@@ -182,12 +182,12 @@ fn the_plugins_sound_is_saved_and_brought_back() {
 
 #[test]
 fn the_plugins_own_presets_are_listed_and_load() {
-    let dir = std::env::temp_dir().join(format!("opendj-clap-presets-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("djsugar-clap-presets-{}", std::process::id()));
     std::fs::create_dir_all(dir.join("Sub")).unwrap();
     std::fs::write(dir.join("Sub/Half.gain"), "0.5").unwrap();
     std::fs::write(dir.join("notes.txt"), "not a preset").unwrap();
     // Only this test's listing reads it.
-    std::env::set_var("OPENDJ_TEST_PRESETS", &dir);
+    std::env::set_var("DJSUGAR_TEST_PRESETS", &dir);
     let plugin = Plugin::Clap {
         file: test_plugin(),
         id: ID.into(),
@@ -198,7 +198,7 @@ fn the_plugins_own_presets_are_listed_and_load() {
     // Another plugin's preset is left out; a file's is named after it.
     assert_eq!(names, ["Loud", "Quiet", "Half"]);
     let (mut conn, helper) = start();
-    let gain = |helper: &opendj_plugin_host::Helper| {
+    let gain = |helper: &djsugar_plugin_host::Helper| {
         let state = helper.save_state().expect("the plugin saves its state");
         f64::from_bits(u64::from_le_bytes(state.try_into().unwrap()))
     };
@@ -250,7 +250,7 @@ fn a_missing_plugin_id_fails_to_start() {
 
 #[test]
 fn notes_reach_the_plugin() {
-    use opendj_plugin_host::Midi;
+    use djsugar_plugin_host::Midi;
     let (mut conn, _helper) = start();
     conn.set_param(1, 1.0); // the test plugin writes the first note's key into sample 1
     let silent = vec![0.0f32; FRAMES];

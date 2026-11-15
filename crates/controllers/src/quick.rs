@@ -4,10 +4,10 @@
 //! its messages differ from deck 1's (another MIDI channel, as on most
 //! controllers, or other numbers), and deck 1's rows are copied over.
 
-use crate::format::{Midi, OpenDjMapping, Row};
+use crate::format::{Midi, DjSugarMapping, Row};
 
 /// The layer of the rows for decks 3 and 4, which only work when the
-/// controller is used with four decks (see [`OpenDjMapping::decks`]).
+/// controller is used with four decks (see [`DjSugarMapping::decks`]).
 pub const FOUR_DECKS: &str = "decks=4";
 
 /// One control the walk asks for.
@@ -200,9 +200,9 @@ pub fn shift(m: Midi, from: Midi, to: Midi) -> Option<Midi> {
 /// deck 1's sends `from`. Rows for messages already used are left out.
 /// With four decks, the copies for decks 3 and 4 only work then. Returns
 /// how many rows were added.
-pub fn copy_deck(own: &mut OpenDjMapping, from: Midi, to: Midi, deck: u8) -> usize {
+pub fn copy_deck(own: &mut DjSugarMapping, from: Midi, to: Midi, deck: u8) -> usize {
     let channel = format!("[Channel{deck}]");
-    let used = |own: &OpenDjMapping, m: &Midi| {
+    let used = |own: &DjSugarMapping, m: &Midi| {
         own.rows
             .iter()
             .any(|r| (r.midi.status, r.midi.number) == (m.status, m.number))
@@ -283,7 +283,7 @@ mod tests {
         );
         assert_eq!(shift(eq, p1, p2), None);
 
-        let mut own = OpenDjMapping::new("Quick");
+        let mut own = DjSugarMapping::new("Quick");
         own.rows.push(Row::bind(p1, "[Channel1],play", &[]));
         own.rows.push(Row::bind(
             Midi::new(0xB0, 0x07),

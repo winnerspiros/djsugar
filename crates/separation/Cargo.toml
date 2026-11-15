@@ -1,5 +1,5 @@
 [package]
-name = "opendj-separation"
+name = "djsugar-separation"
 description = "Stem separation in-process: Spleeter for instant stems, HTDemucs for high quality, on the GPU or CPU"
 version.workspace = true
 edition.workspace = true

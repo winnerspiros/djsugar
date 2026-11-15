@@ -14,7 +14,7 @@
 
 - [ ] 2.1 `pack.json` kits: `"kind": "kit"`, rows, named grooves as step strings
 - [x] 2.2 Four synthesised built-in kits in classic drum machine styles, each with at least four grooves (see design.md)
-- [ ] 2.3 Kit edits as overrides in settings, Back to the kit's groove; import and export with `.opendjpack`
+- [ ] 2.3 Kit edits as overrides in settings, Back to the kit's groove; import and export with `.djsugarpack`
 
 ## 3. 2-Deck Groove Box
 

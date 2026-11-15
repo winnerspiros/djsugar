@@ -12,9 +12,9 @@ use crate::track::{Source, Track};
 pub const MAX_FILES: usize = 50_000;
 const MAX_DEPTH: usize = 12;
 
-/// The folder to scan: `OPENDJ_MUSIC` if set, otherwise `~/Music`.
+/// The folder to scan: `DJSUGAR_MUSIC` if set, otherwise `~/Music`.
 pub fn default_music_dir() -> Option<PathBuf> {
-    if let Some(dir) = std::env::var_os("OPENDJ_MUSIC") {
+    if let Some(dir) = std::env::var_os("DJSUGAR_MUSIC") {
         return Some(PathBuf::from(dir));
     }
     crate::paths::home_dir().map(|h| h.join("Music"))
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn finds_and_reads_wav_files() {
-        let dir = std::env::temp_dir().join(format!("opendj-scan-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-scan-{}", std::process::id()));
         let sub = dir.join("Artist/Album");
         std::fs::create_dir_all(&sub).unwrap();
         crate::decode::tests::write_wav(&sub.join("01 Tune.wav"), 44_100, 2, &vec![0; 88_200]);
@@ -225,7 +225,7 @@ mod tests {
     fn reads_the_comment() {
         use lofty::config::WriteOptions;
         use lofty::tag::{Tag, TagType};
-        let dir = std::env::temp_dir().join(format!("opendj-comment-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-comment-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("bought.wav");
         crate::decode::tests::write_wav(&path, 44_100, 2, &vec![0; 4_410]);

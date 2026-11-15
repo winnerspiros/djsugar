@@ -6,7 +6,7 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-The Groove Box is played and edited only on screen. Pad controllers (Maschine, Launchpad, Akai pads, Circuit Tracks) are made for this: enter steps, play the sounds live and record them, load a named groove and change it on the fly. Each controller differs only in how it reports presses and takes colours, so the behaviour belongs to openDJ and each mapping stays thin. Research: notes/maschine-mikro-mk3-review.md in the project files.
+The Groove Box is played and edited only on screen. Pad controllers (Maschine, Launchpad, Akai pads, Circuit Tracks) are made for this: enter steps, play the sounds live and record them, load a named groove and change it on the fly. Each controller differs only in how it reports presses and takes colours, so the behaviour belongs to DJ Sugar and each mapping stays thin. Research: notes/maschine-mikro-mk3-review.md in the project files.
 
 ## What Changes
 

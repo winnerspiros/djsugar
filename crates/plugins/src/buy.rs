@@ -5,7 +5,7 @@
 //! No fixed store order. A store that has the track comes before one that
 //! can only be searched; among those, artist-direct stores first, then the
 //! one whose files reach the library fastest, then lossless ones. Links
-//! carry no affiliate or referral tags. openDJ never takes payment.
+//! carry no affiliate or referral tags. DJ Sugar never takes payment.
 
 use crate::musicbrainz::MusicBrainz;
 use crate::{ItemKind, Plugin, PluginError, StoreItem, StoreQuery};
@@ -17,7 +17,7 @@ pub const BATCH: usize = 1;
 /// How a store's files reach the library once bought.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Speed {
-    /// openDJ fetches them from the DJ's account.
+    /// DJ Sugar fetches them from the DJ's account.
     Pulled,
     /// The store's own app downloads them into a folder the inbox watches.
     App,

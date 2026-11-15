@@ -5,7 +5,7 @@
 //! afterwards keeps working as before. The first `fixed` tracks (the one
 //! playing and the one waiting on a deck) stay where they are.
 
-use opendj_engine::key::{Key, Mixing};
+use djsugar_engine::key::{Key, Mixing};
 
 /// The orders the Automix panel's Order menu offers, in its order.
 #[derive(Clone, Copy, PartialEq, Debug)]

@@ -4,7 +4,7 @@ Planned for: **v0.8 · From the booth to the studio** (moved from v0.7 on 2026-1
 
 ## Why
 
-A recorded set is only a sound file today, with a cue sheet beside it. openDJ already logs every control change, track load and jump next to each recording (`<name>.controls.jsonl`), so it can show the set as it was played: which tracks, where each transition happened, how long it lasted and what was moved. Mix editors such as DJ.Studio show mixes this way but cannot open a set played live. This first step is for reviewing a set and making the fixes DJs most often make after recording one (trim, level one track, loudness, cut out a mistake, tracklist with chapters), without the warping and automation lanes that make DAWs hard for beginners. Changing the mix itself, re-rendering through the engine and exports to Ableton follow in v0.8 (add-set-view, add-ableton-set-export).
+A recorded set is only a sound file today, with a cue sheet beside it. DJ Sugar already logs every control change, track load and jump next to each recording (`<name>.controls.jsonl`), so it can show the set as it was played: which tracks, where each transition happened, how long it lasted and what was moved. Mix editors such as DJ.Studio show mixes this way but cannot open a set played live. This first step is for reviewing a set and making the fixes DJs most often make after recording one (trim, level one track, loudness, cut out a mistake, tracklist with chapters), without the warping and automation lanes that make DAWs hard for beginners. Changing the mix itself, re-rendering through the engine and exports to Ableton follow in v0.8 (add-set-view, add-ableton-set-export).
 
 ## What Changes
 

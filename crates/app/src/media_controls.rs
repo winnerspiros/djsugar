@@ -6,7 +6,7 @@
 //!
 //! Only Player mode takes them, so a headphone button can't stop a deck in
 //! the middle of a set; Settings › Player › Media keys in every layout
-//! lets the DJ layouts have them too. Outside those, openDJ leaves the
+//! lets the DJ layouts have them too. Outside those, DJ Sugar leaves the
 //! system's Now Playing.
 //!
 //! A timer on the UI thread keeps the system in step, calling it only when
@@ -16,7 +16,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use opendj_engine::LoadedTracks;
+use djsugar_engine::LoadedTracks;
 use slint::{ComponentHandle, Model, Timer, TimerMode};
 use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
@@ -238,7 +238,7 @@ fn write_cover(key: &str, cover: &slint::Image) -> Option<PathBuf> {
     } else {
         image
     };
-    let dir = opendj_engine::cache::cache_dir()?.join("now-playing");
+    let dir = djsugar_engine::cache::cache_dir()?.join("now-playing");
     std::fs::create_dir_all(&dir).ok()?;
     let hash = key.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
         (h ^ b as u64).wrapping_mul(0x100_0000_01b3)
@@ -281,8 +281,8 @@ fn create(app: &AppWindow) -> Option<Result<MediaControls, String>> {
         }
     }
     let config = PlatformConfig {
-        display_name: "openDJ",
-        dbus_name: "opendj",
+        display_name: "DJ Sugar",
+        dbus_name: "djsugar",
         hwnd,
     };
     Some(MediaControls::new(config).map_err(|e| format!("{e:?}")))

@@ -1,5 +1,5 @@
 //! Simple top views of controllers for the Controller Editor: where each
-//! control sits, its shape and kind, and the MIDI messages it sends. openDJ
+//! control sits, its shape and kind, and the MIDI messages it sends. DJ Sugar
 //! draws these itself from `layouts/*.json`, one for each controller on the
 //! [support](crate::support) list that has a mapping.
 //!
@@ -73,8 +73,8 @@ pub struct Part {
 pub struct Layout {
     /// The mapping file this draws.
     pub file: String,
-    /// Other mapping files for the same controller: openDJ's own mappings
-    /// of it (`.opendj-mapping`).
+    /// Other mapping files for the same controller: DJ Sugar's own mappings
+    /// of it (`.djsugar-mapping`).
     pub also: Vec<String>,
     pub width: f32,
     pub height: f32,

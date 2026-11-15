@@ -52,7 +52,7 @@ pub enum Action {
     ReportProblem,
     SuggestFeature,
     ShowLogs,
-    /// Looks for a new version when openDJ starts; a tick.
+    /// Looks for a new version when DJ Sugar starts; a tick.
     CheckForUpdates,
 }
 
@@ -78,7 +78,7 @@ const _: () = assert!(TUTORIALS.len() == crate::tutorials::TUTORIALS.len());
 const UPDATE_CHECK: &str = "update_check";
 
 /// Where the user guide is.
-const USER_GUIDE: &str = "https://opendj.app/docs";
+const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs";
 
 impl Action {
     const ALL: [Action; 32] = [
@@ -380,7 +380,7 @@ pub const MENUS: &[Menu] = &[
 ];
 
 /// The app's own items, outside File and Edit: in macOS's app menu
-/// (openDJ, whose Quit Slint adds), and on Windows and Linux at the foot
+/// (DJ Sugar, whose Quit Slint adds), and on Windows and Linux at the foot
 /// of the ☰ list, under the menus' names.
 pub const APP_ITEMS: &[Entry] = &[
     Entry::Item {

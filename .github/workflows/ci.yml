@@ -74,7 +74,7 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that website/book/supported-controls.txt matches
-      # `opendj --list-controls` (control_list_tests in crates/app).
+      # `djsugar --list-controls` (control_list_tests in crates/app).
       - run: cargo test --workspace
 
   windows:
@@ -106,7 +106,7 @@ jobs:
           command: check advisories licenses sources
 
   macos-app:
-    # Builds an unsigned openDJ.app for Apple Silicon and attaches it to the run,
+    # Builds an unsigned DJSugar.app for Apple Silicon and attaches it to the run,
     # so the app can be tried without installing Rust.
     needs: changes
     if: needs.changes.outputs.code == 'true' && github.event_name != 'merge_group'
@@ -122,14 +122,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
-      - run: cargo build --release -p opendj -p opendj-plugin-host
+      - run: cargo build --release -p djsugar -p djsugar-plugin-host
       # The version in Cargo.toml (what the app reports in Settings), with
-      # the commit as the build, so About openDJ says which build this is.
-      - run: scripts/bundle-macos.sh target/release/opendj "" "test build $(git rev-parse --short HEAD)"
+      # the commit as the build, so About DJ Sugar says which build this is.
+      - run: scripts/bundle-macos.sh target/release/djsugar "" "test build $(git rev-parse --short HEAD)"
       - uses: actions/upload-artifact@v7
         with:
-          name: opendj-macos
-          path: dist/opendj-macos.zip
+          name: djsugar-macos
+          path: dist/djsugar-macos.zip
 
   windows-app:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
@@ -142,16 +142,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
-      - run: cargo build --release -p opendj -p opendj-plugin-host
+      - run: cargo build --release -p djsugar -p djsugar-plugin-host
       # The version in Cargo.toml, as the app reports it, so the setup and
       # Apps & features name the same version.
       - run: |
           $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"' | Select-Object -First 1).Matches[0].Groups[1].Value
-          scripts/bundle-windows.ps1 target/release/opendj.exe $v
+          scripts/bundle-windows.ps1 target/release/djsugar.exe $v
         shell: pwsh
       - uses: actions/upload-artifact@v7
         with:
-          name: opendj-windows
+          name: djsugar-windows
           path: |
             dist/*.zip
             dist/*-setup.exe

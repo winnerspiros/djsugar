@@ -14,9 +14,9 @@ use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::sampler::{sampler_group, Sample as Audio, NUM_SAMPLERS, SAMPLE_NAMES};
-use opendj_engine::{AudioEngine, SampleSource};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::sampler::{sampler_group, Sample as Audio, NUM_SAMPLERS, SAMPLE_NAMES};
+use djsugar_engine::{AudioEngine, SampleSource};
 use serde_json::{json, Map, Value};
 use slint::{ComponentHandle, DataTransfer, Image, ModelRc, SharedString, VecModel, Weak};
 
@@ -29,7 +29,7 @@ const PACK_FILE: &str = "pack.json";
 /// How long the level knob rests before a change is saved.
 const SAVE_AFTER: Duration = Duration::from_millis(600);
 /// What a pad dragged in edit mode carries: its slot.
-const PAD_PAYLOAD: &str = "opendj-sampler-pad:";
+const PAD_PAYLOAD: &str = "djsugar-sampler-pad:";
 
 /// A sample on a pad or in a pack.
 #[derive(Clone, Debug, PartialEq)]
@@ -163,7 +163,7 @@ pub fn create_pack(dir: &Path, name: &str) -> std::io::Result<String> {
 
 /// The extension of a shared pack: a zip of `pack.json`, its samples and
 /// its cover.
-pub const PACK_EXTENSION: &str = "opendjpack";
+pub const PACK_EXTENSION: &str = "djsugarpack";
 
 /// The most a pack may unpack to, so a broken or hostile file can't fill
 /// the disk: sixteen minute-long WAVs fit easily.
@@ -229,7 +229,7 @@ pub fn delete_pack(folder: &Path) -> Result<(), String> {
 }
 
 /// Writes a pack called `name` with these pads (`samples`, by slot) and
-/// cover to `to`, an `.opendjpack` zip: `pack.json` and each sample file
+/// cover to `to`, an `.djsugarpack` zip: `pack.json` and each sample file
 /// once. Built-in sounds stay built in. Pads whose file is missing are left
 /// out. Returns how many samples went in.
 pub fn export_pack(
@@ -320,7 +320,7 @@ pub fn export_pack(
     Ok(count)
 }
 
-/// Unpacks the `.opendjpack` at `file` into a new pack folder in `dir`;
+/// Unpacks the `.djsugarpack` at `file` into a new pack folder in `dir`;
 /// returns its id. Only `pack.json` and the files it names come out, each
 /// by its plain file name, so nothing lands outside the pack's folder.
 pub fn import_pack(file: &Path, dir: &Path) -> Result<String, String> {
@@ -497,7 +497,7 @@ fn sample_seconds(source: &SampleSource) -> Option<f64> {
     match source {
         SampleSource::Builtin(n) => Some(Audio::builtin(*n, 48_000.0).seconds()),
         SampleSource::File(p) => {
-            let d = opendj_engine::decode::Decoder::open(p).ok()?;
+            let d = djsugar_engine::decode::Decoder::open(p).ok()?;
             let a = d.audio();
             (d.length_known() && a.sample_rate > 0).then(|| a.len() as f64 / a.sample_rate as f64)
         }
@@ -888,13 +888,13 @@ impl Sampler {
     }
 
     /// Exports the pads as they are, under the chosen pack's name, to an
-    /// `.opendjpack` in Downloads, and shows it.
+    /// `.djsugarpack` in Downloads, and shows it.
     fn export_pack(&self) {
         let pack = self.pack();
-        let folder = opendj_engine::paths::home_dir()
+        let folder = djsugar_engine::paths::home_dir()
             .map(|h| h.join("Downloads"))
             .filter(|d| d.is_dir())
-            .or_else(opendj_engine::paths::home_dir);
+            .or_else(djsugar_engine::paths::home_dir);
         let Some(folder) = folder else {
             return;
         };
@@ -922,7 +922,7 @@ impl Sampler {
 
     fn pick_pack_file(&self) {
         let tx = self.import_tx.clone();
-        crate::prefs::choose_file("Choose a sample pack (.opendjpack)", move |path| {
+        crate::prefs::choose_file("Choose a sample pack (.djsugarpack)", move |path| {
             let _ = tx.send(path);
         });
     }
@@ -1096,7 +1096,7 @@ fn dragged_pad(data: &DataTransfer) -> Option<usize> {
     parse_pad(&data.plain_text().ok()?)
 }
 
-/// An `.opendjpack` dropped from the file manager.
+/// An `.djsugarpack` dropped from the file manager.
 fn dropped_pack(data: &DataTransfer) -> Option<PathBuf> {
     data.file_paths()
         .ok()?
@@ -1119,9 +1119,9 @@ mod tests {
 
     #[test]
     fn pad_payload_names_the_slot() {
-        assert_eq!(parse_pad("opendj-sampler-pad:12"), Some(12));
-        assert_eq!(parse_pad("opendj-sampler-pad:x"), None);
-        assert_eq!(parse_pad("opendj-track:3"), None);
+        assert_eq!(parse_pad("djsugar-sampler-pad:12"), Some(12));
+        assert_eq!(parse_pad("djsugar-sampler-pad:x"), None);
+        assert_eq!(parse_pad("djsugar-track:3"), None);
     }
 
     fn kick() -> Sample {
@@ -1166,7 +1166,7 @@ mod tests {
 
     #[test]
     fn packs_are_read_and_made() {
-        let dir = std::env::temp_dir().join(format!("opendj-packs-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-packs-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let id = create_pack(&dir, "Dancehall Drops!").unwrap();
@@ -1196,7 +1196,7 @@ mod tests {
 
     #[test]
     fn packs_export_import_rename_and_delete() {
-        let root = std::env::temp_dir().join(format!("opendj-pack-share-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("djsugar-pack-share-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let (src, dir) = (root.join("src"), root.join("packs"));
         std::fs::create_dir_all(src.join("b")).unwrap();
@@ -1214,7 +1214,7 @@ mod tests {
         pads[1] = file(src.join("drop.wav"), "Pull Up");
         pads[3] = file(src.join("b").join("drop.wav"), "Big Tune");
         pads[5] = file(src.join("gone.wav"), "Gone");
-        let to = root.join("My Drops.opendjpack");
+        let to = root.join("My Drops.djsugarpack");
         assert!(is_pack_file(&to));
         assert_eq!(export_pack("My Drops", None, &pads, &to).unwrap(), 3);
         let id = import_pack(&to, &dir).unwrap();
@@ -1248,7 +1248,7 @@ mod tests {
         assert!(!packs.iter().any(|p| p.id == id));
         assert!(dir.join(".deleted").is_dir());
         // A zip without pack.json, and one naming files outside the pack.
-        let bad = root.join("bad.opendjpack");
+        let bad = root.join("bad.djsugarpack");
         {
             use std::io::Write;
             let mut z = zip::ZipWriter::new(std::fs::File::create(&bad).unwrap());
@@ -1258,7 +1258,7 @@ mod tests {
             z.finish().unwrap();
         }
         assert!(import_pack(&bad, &dir).is_err());
-        let sneaky = root.join("sneaky.opendjpack");
+        let sneaky = root.join("sneaky.djsugarpack");
         {
             use std::io::Write;
             let mut z = zip::ZipWriter::new(std::fs::File::create(&sneaky).unwrap());

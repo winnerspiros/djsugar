@@ -6,7 +6,7 @@ Beat-synced effects: the deck effect units, the Beat FX unit, the pad FX units a
 ## Requirements
 
 ### Requirement: Effect list
-openDJ SHALL offer these effects: Echo, Reverb, Filter, Flanger, Bitcrusher, Phaser, Gate, Roll, Echo Out, Brake, Noise and Spiral, each with up to four parameters.
+DJ Sugar SHALL offer these effects: Echo, Reverb, Filter, Flanger, Bitcrusher, Phaser, Gate, Roll, Echo Out, Brake, Noise and Spiral, each with up to four parameters.
 
 #### Scenario: Effects listed
 - **WHEN** an effect slot's menu is opened
@@ -51,7 +51,7 @@ Two rows under the mixer's crossfader SHALL show the Beat FX unit Pioneer style:
 Each deck's own unit (units 1 to 4) SHALL start with Reverb, Echo and Gate in its three slots.
 
 #### Scenario: Fresh start
-- **WHEN** openDJ starts
+- **WHEN** DJ Sugar starts
 - **THEN** each deck's FX show Reverb, Echo and Gate, all off
 
 ### Requirement: Pad FX

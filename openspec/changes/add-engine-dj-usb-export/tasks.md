@@ -3,8 +3,8 @@
 ## 1. Writer
 
 - [x] 1.1 `m.db` schema 3.0.2, Information row, tracks with metadata, playlists and folders in order, album art rows and files
-- [x] 1.2 Performance data from openDJ's analysis: beat grid markers, overview waveform, track data with key and band peaks, hot cues, loops, main cue
-- [x] 1.3 Audio shared with the Pioneer export under `/Contents`; refuse to replace an Engine Library openDJ didn't write
+- [x] 1.2 Performance data from DJ Sugar's analysis: beat grid markers, overview waveform, track data with key and band peaks, hot cues, loops, main cue
+- [x] 1.3 Audio shared with the Pioneer export under `/Contents`; refuse to replace an Engine Library DJ Sugar didn't write
 - [x] 1.4 End-to-end test reading the stick's `m.db` back
 
 ## 2. App

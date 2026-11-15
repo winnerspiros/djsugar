@@ -1,9 +1,9 @@
 //! Keeps each file's analysis (waveform, tempo, first beat) on disk, as Mixxx
 //! does in its library, so a track loaded again shows its waveform at once.
 //!
-//! Entries live in the user's cache folder (`~/Library/Caches/openDJ` on
-//! macOS, `%LOCALAPPDATA%\openDJ` on Windows, `$XDG_CACHE_HOME/opendj` or
-//! `~/.cache/opendj` elsewhere, or `OPENDJ_CACHE`), named by a hash of the file's path, size and
+//! Entries live in the user's cache folder (`~/Library/Caches/DJSugar` on
+//! macOS, `%LOCALAPPDATA%\DJ Sugar` on Windows, `$XDG_CACHE_HOME/djsugar` or
+//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and
 //! modification time, so an edited file is analysed again.
 
 use std::fs;
@@ -35,13 +35,13 @@ pub const OVERVIEW_SLICES: usize = 256;
 #[cfg(test)]
 pub(crate) static TEST_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
-/// openDJ's cache folder (`OPENDJ_CACHE` overrides it).
+/// DJ Sugar's cache folder (`DJSUGAR_CACHE` overrides it).
 pub fn cache_dir() -> Option<PathBuf> {
     #[cfg(test)]
     if let Some(dir) = TEST_DIR.get() {
         return Some(dir.clone());
     }
-    if let Some(dir) = std::env::var_os("OPENDJ_CACHE") {
+    if let Some(dir) = std::env::var_os("DJSUGAR_CACHE") {
         return Some(PathBuf::from(dir));
     }
     let base = crate::paths::cache_base()?;
@@ -464,7 +464,7 @@ fn decode_chroma(data: &[u8]) -> Option<Chroma> {
 mod tests {
     #[test]
     fn the_stems_used_longest_ago_go_first() {
-        let root = std::env::temp_dir().join(format!("opendj-stems-trim-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("djsugar-stems-trim-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let old = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
         for (i, name) in ["a", "b", "c", "d.work1"].iter().enumerate() {
@@ -499,7 +499,7 @@ mod tests {
 
     #[test]
     fn round_trips_and_notices_changed_files() {
-        let dir = std::env::temp_dir().join(format!("opendj-cache-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-cache-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("track.wav");
         fs::write(&track, b"first version").unwrap();

@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn a_plugins_presets_are_found_in_its_makers_folder() {
-        let root = std::env::temp_dir().join(format!("opendj-presets-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("djsugar-presets-{}", std::process::id()));
         let dir = root.join("Maker Co").join("Synth_One");
         std::fs::create_dir_all(dir.join("Bass")).unwrap();
         std::fs::write(dir.join("Bass/Deep.vstpreset"), vstpreset(CLASS, b"a", b"")).unwrap();

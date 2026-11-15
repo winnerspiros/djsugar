@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Converts Deezer's Spleeter 4-stem checkpoint to the safetensors file openDJ loads.
+"""Converts Deezer's Spleeter 4-stem checkpoint to the safetensors file DJ Sugar loads.
 
     curl -LO https://github.com/deezer/spleeter/releases/download/v1.4.0/4stems.tar.gz
     mkdir 4stems && tar xzf 4stems.tar.gz -C 4stems

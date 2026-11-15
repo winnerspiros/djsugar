@@ -4,7 +4,7 @@
 
 use std::time::{Duration, Instant};
 
-use opendj_library::stages::Stage;
+use djsugar_library::stages::Stage;
 use slint::ComponentHandle;
 
 use super::{staging::stage_number, Browser, Contents};

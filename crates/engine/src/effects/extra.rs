@@ -1,5 +1,5 @@
 //! The v0.5 effects: Drive, Chorus, Ladder, Hall and Filter Echo (Rev Roll
-//! is [`super::Roll`] played backwards). Written for openDJ after the
+//! is [`super::Roll`] played backwards). Written for DJ Sugar after the
 //! designs named on each; no code is copied from those projects.
 
 use std::f32::consts::{PI, TAU};

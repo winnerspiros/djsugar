@@ -3,7 +3,7 @@
 
 use std::process::Command;
 
-/// `cmd` set up for a program openDJ runs in the background: on Windows it
+/// `cmd` set up for a program DJ Sugar runs in the background: on Windows it
 /// gets no console window of its own, which would otherwise flash up from
 /// an app that has none.
 pub fn background(mut cmd: Command) -> Command {

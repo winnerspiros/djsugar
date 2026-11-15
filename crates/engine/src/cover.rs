@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn finds_folder_art_like_mixxx() {
-        let dir = std::env::temp_dir().join(format!("opendj-cover-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-cover-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("01 Opening.wav");
         crate::decode::tests::write_wav(&track, 44_100, 1, &[0; 100]);

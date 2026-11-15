@@ -1,6 +1,6 @@
-# openDJ on Windows
+# DJ Sugar on Windows
 
-Windows ships as a preview from openDJ 0.4: 64-bit Windows 10 and 11 on x64
+Windows ships as a preview from DJ Sugar 0.4: 64-bit Windows 10 and 11 on x64
 PCs. Windows on ARM runs the x64 build through emulation (fine for testing,
 for example in UTM on an Apple Silicon Mac); a native ARM64 build can come
 later.
@@ -9,23 +9,23 @@ later.
 
 Each release has two Windows files, made by `scripts/bundle-windows.ps1`:
 
-- `openDJ-VERSION-windows-x64-setup.exe`: installs for the current user into
-  `%LOCALAPPDATA%\Programs\openDJ`, with a Start menu entry and an
-  uninstaller. No administrator needed. openDJ installed this way updates
+- `DJSugar-VERSION-windows-x64-setup.exe`: installs for the current user into
+  `%LOCALAPPDATA%\Programs\DJ Sugar`, with a Start menu entry and an
+  uninstaller. No administrator needed. DJ Sugar installed this way updates
   itself: it downloads the next setup, checks its SHA-256 against GitHub's,
   and runs it silently when the decks stop.
-- `opendj-VERSION-windows-x64.zip`: portable. Unzip anywhere and run
-  `openDJ.exe`. It doesn't update itself; the banner links to the release.
+- `djsugar-VERSION-windows-x64.zip`: portable. Unzip anywhere and run
+  `DJSugar.exe`. It doesn't update itself; the banner links to the release.
 
-The setup is built with Inno Setup 6 from `res/windows/opendj.iss`. Its
-`AppId` must never change, or a new setup installs a second openDJ instead
+The setup is built with Inno Setup 6 from `res/windows/djsugar.iss`. Its
+`AppId` must never change, or a new setup installs a second DJ Sugar instead
 of updating the first.
 
-## Where openDJ keeps things
+## Where DJ Sugar keeps things
 
-- Settings, library and logs: `%APPDATA%\openDJ` (logs in `logs\opendj.log`,
-  the previous run in `opendj.1.log`, crash reports as `crash-*.txt`).
-- Analysis cache and stems: `%LOCALAPPDATA%\openDJ`.
+- Settings, library and logs: `%APPDATA%\DJ Sugar` (logs in `logs\djsugar.log`,
+  the previous run in `djsugar.1.log`, crash reports as `crash-*.txt`).
+- Analysis cache and stems: `%LOCALAPPDATA%\DJ Sugar`.
 
 ## Audio
 
@@ -37,13 +37,13 @@ panel. ASIO4ALL works for devices without an ASIO driver.
 
 The build downloads Steinberg's ASIO SDK (GPLv3) through cpal's `asio`
 feature, which also needs LLVM (libclang) for bindgen; the GitHub Windows
-runners have it. Built copies of openDJ were already GPL-3.0 because of
+runners have it. Built copies of DJ Sugar were already GPL-3.0 because of
 Slint, so this changes nothing about the licence (see NOTICE).
 
 ## Controllers
 
 Windows lets only one app at a time open a MIDI device. If VirtualDJ,
-rekordbox or another DJ app is running and holding the controller, openDJ
+rekordbox or another DJ app is running and holding the controller, DJ Sugar
 can't open it; the log says so. Quit the other app and press Refresh in
 Settings > Controllers.
 
@@ -52,7 +52,7 @@ Settings > Controllers.
 Windows builds are unsigned for now, so Windows SmartScreen shows "Windows
 protected your PC" on first run (More info > Run anyway), and the release
 notes say so. SignPath Foundation's free signing for open source projects
-turned openDJ's application down (2026-10-29), so signing waits for a
+turned DJ Sugar's application down (2026-10-29), so signing waits for a
 later release. When it comes back, either route below fits the release
 workflow.
 
@@ -70,10 +70,10 @@ SignPath (if a new application is accepted later):
 
 Azure Trusted Signing (about $10 a month, open to individuals in the US
 and Canada) also works: `scripts/bundle-windows.ps1` runs `SIGN_COMMAND`
-(for example a `signtool sign /dlib ...` line) on `openDJ.exe` and on the
+(for example a `signtool sign /dlib ...` line) on `DJSugar.exe` and on the
 setup when that variable is set.
 
-Once openDJ is signed, the in-app updater also requires each new setup to
+Once DJ Sugar is signed, the in-app updater also requires each new setup to
 carry a valid signature from the same publisher as the running copy.
 
 ## Testing
@@ -81,4 +81,4 @@ carry a valid signature from the same publisher as the running copy.
 CI builds and tests every pull request on `windows-latest`, and the
 `windows-app` job attaches the setup and zip to the run. To try a build:
 open the pull request's Checks tab, pick the CI run, and download
-`opendj-windows` from its artifacts.
+`djsugar-windows` from its artifacts.

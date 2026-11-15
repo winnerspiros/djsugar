@@ -1,15 +1,15 @@
 //! VirtualDJ mapper files: `<map value="PLAY_PAUSE" action="play_pause"/>`.
 //! A mapper names the controller's buttons (`SHIFT_` for shifted, `LED_`
 //! for lights) but not their MIDI; VirtualDJ keeps that in its own device
-//! definitions, which are encrypted. openDJ has its own tables for the
+//! definitions, which are encrypted. DJ Sugar has its own tables for the
 //! controllers it knows, built on the pictures of them in `layouts/`.
 //!
-//! The actions are VDJscript, which openDJscript is modelled on, so most
+//! The actions are VDJscript, which DJSugarScript is modelled on, so most
 //! lines translate verb by verb. `holding ? a : b` becomes a long press
 //! and a tap; `device_side` and `action_deck` are settled per side.
 
 use super::Import;
-use crate::format::{Light, LightSource, Midi, OpenDjMapping, Row, Variable};
+use crate::format::{Light, LightSource, Midi, DjSugarMapping, Row, Variable};
 use crate::layout::Layout;
 use crate::mapping::When;
 
@@ -198,7 +198,7 @@ fn lex(src: &str) -> Result<Vec<Tok>, String> {
                     c[s..i].iter().collect::<String>().to_ascii_lowercase(),
                 ));
             }
-            _ => return Err(format!("'{ch}' isn't VDJscript openDJ reads")),
+            _ => return Err(format!("'{ch}' isn't VDJscript DJ Sugar reads")),
         }
     }
     Ok(out)
@@ -281,7 +281,7 @@ impl P {
                 Ok(inner)
             }
             // `browsed_song rating 5`: the track picked in the browser,
-            // which is where openDJscript's rating acts anyway.
+            // which is where DJSugarScript's rating acts anyway.
             Some(Tok::Word(w)) if w == "browsed_song" || w == "browsed_file" => {
                 self.i += 1;
                 self.prim()
@@ -586,7 +586,7 @@ fn action(name: &str, args: &[Arg], ctx: Ctx) -> R {
         "browser_window" if args.is_empty() => return press("[Library],MoveFocusForward".into()),
         "browser_zoom" => "expand_browser".into(),
         // Held: the bend lasts until the release row lets go (see
-        // `translate`). openDJ bends by Mixxx's 2% or 4% at once, without
+        // `translate`). DJ Sugar bends by Mixxx's 2% or 4% at once, without
         // VirtualDJ's easing in.
         "pitch_bend" => match num(args, 0) {
             Some(n) if n != 0.0 => return Ok(format!("set '{}' 1", ch(d, bend(n)))),
@@ -613,12 +613,12 @@ fn action(name: &str, args: &[Arg], ctx: Ctx) -> R {
         "nothing" => "set_var '_' 0".into(),
         "true" | "false" => return no("a mode switch for VirtualDJ's own definitions"),
         "touchwheel" | "touchwheel_touch" | "jog" => {
-            return no("jog wheels are left to openDJ's mapping for this controller")
+            return no("jog wheels are left to DJ Sugar's mapping for this controller")
         }
         "pad_page" | "padpage" => {
-            return no("openDJ's pad pages aren't switched from a mapping yet")
+            return no("DJ Sugar's pad pages aren't switched from a mapping yet")
         }
-        _ => return no(&format!("openDJ has no '{name}' yet")),
+        _ => return no(&format!("DJ Sugar has no '{name}' yet")),
     };
     Ok(s)
 }
@@ -649,7 +649,7 @@ fn pad(shift: bool, n: u8, ctx: Ctx) -> R {
             let s = n as u16 + if d == 2 { 8 } else { 0 };
             Ok(format!("press '[Sampler{s}],cue_gotoandplay'"))
         }
-        _ => no("this VirtualDJ pad page has no openDJ match yet"),
+        _ => no("this VirtualDJ pad page has no DJ Sugar match yet"),
     }
 }
 
@@ -701,7 +701,7 @@ fn query(name: &str, args: &[Arg], ctx: Ctx) -> R {
             Some("songs") => "get '[Library],focused_widget' > 2.5".into(),
             _ => return no("asking about that browser window"),
         },
-        _ => return no(&format!("openDJ can't ask '{name}' yet")),
+        _ => return no(&format!("DJ Sugar can't ask '{name}' yet")),
     };
     Ok(s)
 }
@@ -763,7 +763,7 @@ fn fixed(v: &V, ctx: Ctx) -> Option<bool> {
             None
         }
         V::Verb(n, _) if n == "doubleclick" => Some(false),
-        // VirtualDJ asks whether its effect chooser is open; openDJ's isn't
+        // VirtualDJ asks whether its effect chooser is open; DJ Sugar's isn't
         // opened from a controller.
         V::Verb(n, _) if n == "effect_select" => Some(false),
         V::Deck(_, inner) if matches!(inner.as_ref(), V::Verb(n, _) if n == "effect_select") => {
@@ -793,7 +793,7 @@ fn cond(v: &V, ctx: Ctx) -> R {
                 "level" | "volume" => "level",
                 "gain" => "gain",
                 "pitch" => "pitch",
-                v => return no(&format!("openDJ can't compare '{v}' yet")),
+                v => return no(&format!("DJ Sugar can't compare '{v}' yet")),
             };
             Ok(format!(
                 "deck {deck} {what} {} {}%",
@@ -905,7 +905,7 @@ fn is_shown(n: &str) -> bool {
 fn translate(src: &str, ctx: Ctx, encoder: bool) -> Vec<(When, Result<Out, String>)> {
     let v = match parse(src) {
         Ok(v) => v,
-        Err(e) => return vec![(When::Press, Err(format!("openDJ couldn't read this: {e}")))],
+        Err(e) => return vec![(When::Press, Err(format!("DJ Sugar couldn't read this: {e}")))],
     };
     // `holding ? a : b`: a long press and a tap.
     if let V::If(c, then, otherwise) = &v {
@@ -934,7 +934,7 @@ fn translate(src: &str, ctx: Ctx, encoder: bool) -> Vec<(When, Result<Out, Strin
 
 fn one(v: &V, ctx: Ctx, encoder: bool) -> Result<Out, String> {
     if matches!(v, V::Verb(n, a) if n == "pitch" && a.is_empty()) {
-        return Err("left to openDJ's own mapping for this controller, which knows which way its tempo fader runs".into());
+        return Err("left to DJ Sugar's own mapping for this controller, which knows which way its tempo fader runs".into());
     }
     if !ctx.light {
         let (deck, inner) = match v {
@@ -951,9 +951,9 @@ fn one(v: &V, ctx: Ctx, encoder: bool) -> Result<Out, String> {
         }
     }
     let s = act(v, ctx)?;
-    // What it wrote has to read back as openDJscript.
-    opendj_script::parse(&s)
-        .map_err(|e| format!("openDJ couldn't run its translation '{s}': {}", e.message))?;
+    // What it wrote has to read back as DJSugarScript.
+    djsugar_script::parse(&s)
+        .map_err(|e| format!("DJ Sugar couldn't run its translation '{s}': {}", e.message))?;
     Ok(Out::Script(s))
 }
 
@@ -1183,7 +1183,7 @@ fn k2_places(dev: &Device, name: &str) -> Vec<Place> {
         "2" if rest.ends_with("_OUTER") => vec![(1, 1, Side::Left), (4, 2, Side::Right)],
         "2" if rest.ends_with("_INNER") => vec![(2, 1, Side::Left), (3, 2, Side::Right)],
         // Columns 1 to 4; the mapping's deck order (3 1 2 4 to start, as
-        // VirtualDJ and openDJ's 4-Deck screen) says which deck each is.
+        // VirtualDJ and DJ Sugar's 4-Deck screen) says which deck each is.
         "4" => vec![
             (1, 1, Side::Left),
             (2, 2, Side::Left),
@@ -1444,7 +1444,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
     }
     let dev = device(&device_name).ok_or_else(|| {
         format!(
-            "openDJ doesn't know where the buttons of VirtualDJ's '{device_name}' are yet. It knows the DDJ-FLX4, Xone:K2 and Midi Fighter Twister."
+            "DJ Sugar doesn't know where the buttons of VirtualDJ's '{device_name}' are yet. It knows the DDJ-FLX4, Xone:K2 and Midi Fighter Twister."
         )
     })?;
     let title = file
@@ -1455,7 +1455,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
         .unwrap_or(file)
         .trim()
         .to_string();
-    let mut m = OpenDjMapping::new(&format!("{title} (VirtualDJ)"));
+    let mut m = DjSugarMapping::new(&format!("{title} (VirtualDJ)"));
     m.controller.name = dev.name.to_string();
     m.controller.layout = Some(dev.layout.file.clone());
     m.based_on = Some(dev.layout.file.clone());
@@ -1502,7 +1502,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                 page: p.page,
                 light: led,
             };
-            // The controller's own SHIFT message, else openDJ's shift layer.
+            // The controller's own SHIFT message, else DJ Sugar's shift layer.
             let (msg, mut layer) = match (shift, p.shifted) {
                 (true, Some(s)) => (s, String::new()),
                 (true, None) => (p.midi, "shift".to_string()),
@@ -1591,7 +1591,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
                 row.by_position = p.by_position;
                 row.when = when;
                 // Two names on one button: VirtualDJ picks by its own rules;
-                // openDJ keeps the first.
+                // DJ Sugar keeps the first.
                 let key = (msg, layer.clone(), when);
                 if !row.off && taken.contains(&key) {
                     row.off = true;
@@ -1642,7 +1642,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
         }
     }
     import.notes.push(format!(
-        "VirtualDJ keeps its controller definitions encrypted, so openDJ placed these names with its own table for the {}. Anything left greyed keeps working as openDJ's own mapping for it does.",
+        "VirtualDJ keeps its controller definitions encrypted, so DJ Sugar placed these names with its own table for the {}. Anything left greyed keeps working as DJ Sugar's own mapping for it does.",
         dev.name
     ));
     if !dev.note.is_empty() {
@@ -1654,7 +1654,7 @@ pub(super) fn import(text: &str, file: &str) -> Result<Import, String> {
     }
     if !unknown.is_empty() {
         import.notes.push(format!(
-            "openDJ doesn't know where these are on the {}: {}.",
+            "DJ Sugar doesn't know where these are on the {}: {}.",
             dev.name,
             unknown.join(", ")
         ));
@@ -1724,7 +1724,7 @@ fn keyboard(maps: &[(String, String)]) -> Import {
         let v = parse(src);
         let line = v.and_then(|v| {
             let s = act(&strip_default_deck(v), ctx)?;
-            opendj_script::parse(&s).map_err(|e| e.message)?;
+            djsugar_script::parse(&s).map_err(|e| e.message)?;
             Ok(s)
         });
         match line {
@@ -1733,14 +1733,14 @@ fn keyboard(maps: &[(String, String)]) -> Import {
         }
     }
     import.notes.push(
-        "Keyboard shortcuts that openDJ can't do yet are listed in the report and left as they were."
+        "Keyboard shortcuts that DJ Sugar can't do yet are listed in the report and left as they were."
             .into(),
     );
     import
 }
 
 /// A keyboard line has no deck of its own: verbs without `deck` act on the
-/// master deck, which openDJscript does when no deck is written. Lines
+/// master deck, which DJSugarScript does when no deck is written. Lines
 /// translated with deck 1 would name it, so `deck default` stays unnamed.
 fn strip_default_deck(v: V) -> V {
     match v {
@@ -1954,7 +1954,7 @@ mod tests {
         assert!(i.notes.iter().any(|n| n.contains("MYSTERY_KNOB")));
         for r in &m.rows {
             if let Action::Script(s) = &r.action {
-                opendj_script::parse(s).unwrap();
+                djsugar_script::parse(s).unwrap();
             }
         }
     }
@@ -1992,7 +1992,7 @@ mod tests {
     }
 
     #[test]
-    fn a_k2_import_runs_over_opendjs_k2_mapping() {
+    fn a_k2_import_runs_over_djsugars_k2_mapping() {
         let dir = crate::default_mappings_dir().expect("bundled mappings");
         let base = crate::Mapping::load(&dir.join("Allen and Heath Xone K2.midi.xml")).unwrap();
         let m = &import(K2, "k2.xml").unwrap().mappings[0];

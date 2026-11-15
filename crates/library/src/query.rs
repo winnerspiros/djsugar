@@ -42,8 +42,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::RwLock;
 
-use opendj_engine::key::{Key, Mixing};
-use opendj_engine::{Source, Track};
+use djsugar_engine::key::{Key, Mixing};
+use djsugar_engine::{Source, Track};
 
 pub use crate::tags::TagGroup;
 
@@ -112,7 +112,7 @@ impl FieldNames {
     pub fn tag_color(&self, group: i64, name: &str) -> Option<u32> {
         self.tag_colors
             .iter()
-            .find(|(g, n, _)| *g == group && opendj_engine::same_tag(n, name))
+            .find(|(g, n, _)| *g == group && djsugar_engine::same_tag(n, name))
             .map(|(_, _, c)| *c)
     }
 
@@ -1048,11 +1048,11 @@ pub fn file_exists(t: &Track) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::Hotcue;
+    use djsugar_engine::Hotcue;
     use std::path::PathBuf;
 
     fn track(id: usize, artist: &str, title: &str, bpm: f64, key: &str) -> Track {
-        let mut t = std::sync::Arc::unwrap_or_clone(opendj_engine::sample_library().remove(0));
+        let mut t = std::sync::Arc::unwrap_or_clone(djsugar_engine::sample_library().remove(0));
         t.id = id;
         t.artist = artist.into();
         t.title = title.into();

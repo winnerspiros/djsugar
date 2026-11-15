@@ -15,8 +15,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use base64::Engine as _;
-use opendj_engine::decode::Decoder;
-use opendj_plugins::encode;
+use djsugar_engine::decode::Decoder;
+use djsugar_plugins::encode;
 use rusty_chromaprint::{Configuration, Fingerprinter};
 use serde_json::Value;
 
@@ -586,7 +586,7 @@ mod tests {
 
     #[test]
     fn fingerprints_audio() {
-        let dir = std::env::temp_dir().join(format!("opendj-fp-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-fp-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("tone.wav");
         let rate = 44100u32;

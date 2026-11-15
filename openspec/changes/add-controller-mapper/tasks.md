@@ -2,7 +2,7 @@
 
 ## 1. Own mappings
 
-- [x] 1.1 openDJ mapping file (name, based_on, changes) with create/rename/delete tests
+- [x] 1.1 DJ Sugar mapping file (name, based_on, changes) with create/rename/delete tests
 - [x] 1.2 Mapping menu in the Controller Editor: Original, own copies, Duplicate, Rename, Delete
 - [x] 1.3 The controller runs the picked copy with its changes applied; Reload Original (a row's Back to original, or Original mapping in the menu)
 
@@ -21,7 +21,7 @@
 
 ## 4. Fixes after trying it (2026-11-01)
 
-- [x] 4.1 Map mode reaches the FX bar (ON, D/W, slider, ‹ ›), the pad mode tabs (an openDJscript row `deck N set 'pad_tab' K`) and headphone cue
+- [x] 4.1 Map mode reaches the FX bar (ON, D/W, slider, ‹ ›), the pad mode tabs (an DJSugarScript row `deck N set 'pad_tab' K`) and headphone cue
 - [x] 4.2 The MIDI button shows the MIDI Association wordmark, no socket icon
 - [x] 4.3 Quick map becomes the Mapping wizard: asks which controller (buttons, or a press on it); the computer's own ports (Network Session, IAC Driver, Midi Through, GS Wavetable) are never offered or called unmapped
 - [x] 4.4 Used with, Deck order and Knobs and faders move from Settings › Controllers to the editor's Options tab

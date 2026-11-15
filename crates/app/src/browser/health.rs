@@ -1,4 +1,4 @@
-//! Collection Health in the browser (see [`opendj_library::health`]): a node in
+//! Collection Health in the browser (see [`djsugar_library::health`]): a node in
 //! the collection's tree with one node per check under it, the checks'
 //! page, and the fixes each check offers for its tracks.
 
@@ -7,13 +7,13 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::{tags, Track};
-use opendj_library::cleanup::Field;
-use opendj_library::dupes::{self, Case, FileFacts, Group};
-use opendj_library::health::{self, Area, Check, Facts};
-use opendj_library::query::Indexed;
-use opendj_library::relocate::{self, Lookup};
-use opendj_library::stages::Stage;
+use djsugar_engine::{tags, Track};
+use djsugar_library::cleanup::Field;
+use djsugar_library::dupes::{self, Case, FileFacts, Group};
+use djsugar_library::health::{self, Area, Check, Facts};
+use djsugar_library::query::Indexed;
+use djsugar_library::relocate::{self, Lookup};
+use djsugar_library::stages::Stage;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::{
@@ -226,7 +226,7 @@ fn audio_files(roots: &[PathBuf]) -> Vec<PathBuf> {
             let hidden = e.file_name().to_string_lossy().starts_with('.');
             match e.file_type() {
                 Ok(t) if t.is_dir() && !hidden => stack.push(path),
-                Ok(t) if t.is_file() && opendj_engine::scan::is_audio(&path) => out.push(path),
+                Ok(t) if t.is_file() && djsugar_engine::scan::is_audio(&path) => out.push(path),
                 _ => {}
             }
         }
@@ -790,7 +790,7 @@ impl Browser {
     }
 
     /// Merges groups of copies, each into the copy kept (see
-    /// [`opendj_library::Library::merge_copies`]), as one change the undo
+    /// [`djsugar_library::Library::merge_copies`]), as one change the undo
     /// line takes back.
     fn merge(&mut self, plan: Vec<(usize, Vec<usize>)>) -> String {
         if plan.is_empty() {
@@ -1913,7 +1913,7 @@ impl Browser {
             .iter()
             .filter_map(|(id, _)| file_path(&self.library[*self.index_of.get(id)?]))
             .filter(|p| p.exists())
-            .map(|p| opendj_engine::scan::read_track(0, p))
+            .map(|p| djsugar_engine::scan::read_track(0, p))
             .collect();
         let Some(db) = &mut self.db else { return };
         let mut n = 0;
@@ -1938,7 +1938,7 @@ impl Browser {
 
     /// Tags long tracks "mix", in the first tag group.
     fn tag_mix(&mut self, indices: &[usize]) -> String {
-        let Some(group) = opendj_library::query::group_at(0) else {
+        let Some(group) = djsugar_library::query::group_at(0) else {
             return "Make a tag group first, in Settings › Collection › Tags.".into();
         };
         let mut n = 0;
@@ -1998,7 +1998,7 @@ mod tests {
 
     #[test]
     fn finds_files_by_name_below_folders() {
-        let dir = std::env::temp_dir().join(format!("opendj-relink-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-relink-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("a/b")).unwrap();
         std::fs::write(dir.join("a/b/Song.MP3"), b"x").unwrap();
         std::fs::write(dir.join("a/notes.txt"), b"x").unwrap();

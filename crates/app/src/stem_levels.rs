@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
-use opendj_engine::stems::Stems;
-use opendj_waveform::MAX_STEMS;
+use djsugar_engine::stems::Stems;
+use djsugar_waveform::MAX_STEMS;
 
 /// Levels per second: a level every 10 ms, enough for the scrolling view.
 pub const RATE: f64 = 100.0;

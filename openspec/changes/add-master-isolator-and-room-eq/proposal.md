@@ -4,10 +4,10 @@ Planned for: **v0.8 · From the booth to the studio** (2026-11-14, a user reques
 
 ## Why
 
-openDJ's master has a level, a balance and a true-peak limiter, and nothing that shapes its sound. Two needs come up in DJ tools and venues:
+DJ Sugar's master has a level, a balance and a true-peak limiter, and nothing that shapes its sound. Two needs come up in DJ tools and venues:
 
-- **Riding the whole mix.** Pioneer's DJM-V10 has a three-band Isolator on the master, used by long-mix house and disco DJs to take the low end out of everything for a breakdown and bring it back. openDJ can only do this deck by deck.
-- **Fixing the room.** Many venues can't tune their system at soundcheck, which leaves muddy bass or harsh highs. djay Pro users load an EQ plugin in its Main Out Effect slot for this, and VirtualDJ users ask for a master EQ. In openDJ the same needs a plugin in a master FX slot, which is easy to switch off by mistake and also ends up in recordings. Booth monitors have the same problem with no fix at all.
+- **Riding the whole mix.** Pioneer's DJM-V10 has a three-band Isolator on the master, used by long-mix house and disco DJs to take the low end out of everything for a breakdown and bring it back. DJ Sugar can only do this deck by deck.
+- **Fixing the room.** Many venues can't tune their system at soundcheck, which leaves muddy bass or harsh highs. djay Pro users load an EQ plugin in its Main Out Effect slot for this, and VirtualDJ users ask for a master EQ. In DJ Sugar the same needs a plugin in a master FX slot, which is easy to switch off by mistake and also ends up in recordings. Booth monitors have the same problem with no fix at all.
 
 Mastered tracks don't need a parametric EQ, so this change puts one only where the room is corrected, and keeps the live control to three knobs.
 

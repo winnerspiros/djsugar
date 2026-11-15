@@ -11,8 +11,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use opendj_engine::inputs::GROOVE_BOX;
-use opendj_engine::{
+use djsugar_engine::inputs::GROOVE_BOX;
+use djsugar_engine::{
     channel_names, input_devices, AudioEngine, AudioSetup, InputRole, InputRoute, Role,
 };
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
@@ -383,7 +383,7 @@ mod tests {
         // Nothing set up: the first input device.
         assert_eq!(device_for(&setup, 1, &devices), "MacBook Pro Microphone");
         // The main output's interface, when it has inputs.
-        setup.routes.push(opendj_engine::Route {
+        setup.routes.push(djsugar_engine::Route {
             role: Role::Master,
             device: "M4".into(),
             pair: 0,

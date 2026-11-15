@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Duration;
 
-use opendj_engine::{cover, tags};
-use opendj_plugins::{encode, USER_AGENT};
+use djsugar_engine::{cover, tags};
+use djsugar_plugins::{encode, USER_AGENT};
 use serde_json::Value;
 
 /// An online source: the image links it has for what is wanted.
@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn finds_the_tag_and_folder_covers() {
-        let dir = std::env::temp_dir().join(format!("opendj-coverart-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-coverart-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("song.mp3");
         std::fs::write(&path, b"not really audio").unwrap();
@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn reads_a_picked_picture_file() {
-        let dir = std::env::temp_dir().join(format!("opendj-coverfile-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-coverfile-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let big = dir.join("big.png");
         image::RgbaImage::from_pixel(2048, 1024, image::Rgba([1, 2, 3, 255]))

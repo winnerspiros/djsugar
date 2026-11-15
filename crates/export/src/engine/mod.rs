@@ -28,9 +28,9 @@ pub use perf::Performance;
 const SCHEMA: &str = include_str!("schema.sql");
 pub const LIBRARY_DIR: &str = "Engine Library";
 /// Left beside the library so a later export knows the library is
-/// openDJ's to replace. Engine drops tables it doesn't know from `m.db`,
+/// DJ Sugar's to replace. Engine drops tables it doesn't know from `m.db`,
 /// so this can't live in there.
-pub const MARK: &str = "Engine Library/Database2/.opendj-export";
+pub const MARK: &str = "Engine Library/Database2/.djsugar-export";
 
 /// Album art, each picture once, by its SHA-1.
 #[derive(Debug, Clone, Default)]
@@ -57,7 +57,7 @@ pub fn check(root: &Path) -> Result<(), Error> {
     let db = root.join(LIBRARY_DIR).join("Database2/m.db");
     if db.exists() && !root.join(MARK).exists() {
         return Err(Error::Other(
-            "the stick already has an Engine DJ library that openDJ didn't write; \
+            "the stick already has an Engine DJ library that DJ Sugar didn't write; \
              use another stick, or move its \"Engine Library\" folder off it first"
                 .into(),
         ));
@@ -259,7 +259,7 @@ pub fn write(root: &Path, model: &Model) -> Result<(), Error> {
     }
     fs::write(
         root.join(MARK),
-        "This Engine Library was written by openDJ.\n",
+        "This Engine Library was written by DJ Sugar.\n",
     )?;
     fs::copy(&built, dir.join("m.db"))?;
     Ok(())

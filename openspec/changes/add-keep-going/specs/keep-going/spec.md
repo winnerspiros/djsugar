@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Keep going switch
-In Player mode, Up Next's header SHALL offer a Keep going switch, off at first. While it is on and Automix plays, openDJ SHALL add the next pick to the end of Up Next whenever fewer than two tracks wait. Switching it on SHALL switch Automix on. Outside Player mode it SHALL add nothing.
+In Player mode, Up Next's header SHALL offer a Keep going switch, off at first. While it is on and Automix plays, DJ Sugar SHALL add the next pick to the end of Up Next whenever fewer than two tracks wait. Switching it on SHALL switch Automix on. Outside Player mode it SHALL add nothing.
 
 #### Scenario: The list runs out
 - **WHEN** Keep going is on in Player mode and the last track the DJ queued starts

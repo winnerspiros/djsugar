@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::manager::device_key;
 

@@ -12,7 +12,7 @@ When a recording stops, its files SHALL be in the Mixed Sets source without wait
 - **THEN** the new recording is listed there straight away
 
 ### Requirement: Tracklist beside the recording
-When a recording stops, openDJ SHALL write `<name>.tracklist.txt` beside it, one `m:ss Artist - Title` line (`h:mm:ss` from an hour) per track, timed from when the track became audible.
+When a recording stops, DJ Sugar SHALL write `<name>.tracklist.txt` beside it, one `m:ss Artist - Title` line (`h:mm:ss` from an hour) per track, timed from when the track became audible.
 
 #### Scenario: Two tracks
 - **WHEN** a recording has one track audible from the start and the next from 4 minutes 5 seconds
@@ -26,8 +26,8 @@ Export for Mixcloud SHALL make one 320 kbps MP3 from a mixed set, joining the pa
 - **THEN** one MP3 holds both, and the second part's tracks start after the first part's length
 
 ### Requirement: Upload checks first
-Before uploading, openDJ SHALL check what Mixcloud would turn down (no name, a description over 1000 characters, audio over 4 GB) and say so, since Mixcloud only answers after the whole file is sent.
+Before uploading, DJ Sugar SHALL check what Mixcloud would turn down (no name, a description over 1000 characters, audio over 4 GB) and say so, since Mixcloud only answers after the whole file is sent.
 
 #### Scenario: Too long a description
 - **WHEN** the description is 1200 characters
-- **THEN** openDJ says it is too long before any audio is sent
+- **THEN** DJ Sugar says it is too long before any audio is sent

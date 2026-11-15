@@ -10,9 +10,9 @@
 
 use std::collections::VecDeque;
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::NUM_DECKS;
-use opendj_waveform::{Lanes, Mark, MarkKind, MAX_MARKS};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::NUM_DECKS;
+use djsugar_waveform::{Lanes, Mark, MarkKind, MAX_MARKS};
 
 /// Knobs a page shows, each a colour (`MarkKind::Level`'s 1 to 8).
 pub const KNOBS: usize = 8;

@@ -1,7 +1,7 @@
 # add-ons Specification
 
 ## Purpose
-How openDJ is extended: the fixed plugin points (store search, inbox hints, library import, rail sources, settings pages), add-ons as separate programs, and the rail sources add-ons provide.
+How DJ Sugar is extended: the fixed plugin points (store search, inbox hints, library import, rail sources, settings pages), add-ons as separate programs, and the rail sources add-ons provide.
 
 ## Requirements
 
@@ -13,10 +13,10 @@ A plugin SHALL be able to search a store and send the DJ to buy (never taking pa
 - **THEN** Settings shows a page for it, saved under `plugins.<id>`
 
 ### Requirement: Add-ons as programs
-Every executable in `<config>/addons/`, plus any named in `OPENDJ_ADDONS`, SHALL be started at launch and spoken to over stdin/stdout, one JSON message per line; the first request is `initialize`. Errors SHALL be `network`, `format` or `unsupported`. Installing an add-on SHALL NOT need rebuilding openDJ.
+Every executable in `<config>/addons/`, plus any named in `DJSUGAR_ADDONS`, SHALL be started at launch and spoken to over stdin/stdout, one JSON message per line; the first request is `initialize`. Errors SHALL be `network`, `format` or `unsupported`. Installing an add-on SHALL NOT need rebuilding DJ Sugar.
 
 #### Scenario: Drop-in add-on
-- **WHEN** an add-on program is copied into the add-ons folder and openDJ restarts
+- **WHEN** an add-on program is copied into the add-ons folder and DJ Sugar restarts
 - **THEN** its source shows in the rail
 
 ### Requirement: Isolation
@@ -41,8 +41,8 @@ A source's settings SHALL be able to pick its download folder.
 - **THEN** its downloads land there
 
 ### Requirement: Licence-sensitive add-ons stay outside
-Add-ons that fetch content of unclear licence (such as Soulseek) SHALL live outside the openDJ repository, with the DJ responsible for what they download.
+Add-ons that fetch content of unclear licence (such as Soulseek) SHALL live outside the DJ Sugar repository, with the DJ responsible for what they download.
 
 #### Scenario: Soulseek not bundled
-- **WHEN** openDJ is installed from a release
+- **WHEN** DJ Sugar is installed from a release
 - **THEN** no Soulseek add-on is included

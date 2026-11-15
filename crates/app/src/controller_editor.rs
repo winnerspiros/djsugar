@@ -1,6 +1,6 @@
 //! The Controller Editor: shows what a controller's mapping does, by
 //! function, with the controller's picture. Reading a mapping means running
-//! it in a sandbox (see `opendj_controllers::probe`), which takes a moment,
+//! it in a sandbox (see `djsugar_controllers::probe`), which takes a moment,
 //! so it happens on a thread of its own. While the editor is open, messages
 //! from the controllers are watched: pressing a control finds it.
 //!
@@ -15,15 +15,15 @@ use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_controllers::edit::{self, Binding, Buttons, Choice, Does, Encoder};
-use opendj_controllers::format::OpenDjMapping;
-use opendj_controllers::layout::Layout;
-use opendj_controllers::own::{self, OwnMapping};
-use opendj_controllers::probe::{message_key, MessageKey};
-use opendj_controllers::view::{self, LightRow, MappingView, Row};
-use opendj_controllers::{is_own_file, Controllers, MappingChoice};
-use opendj_controllers::{pickup, support};
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::edit::{self, Binding, Buttons, Choice, Does, Encoder};
+use djsugar_controllers::format::DjSugarMapping;
+use djsugar_controllers::layout::Layout;
+use djsugar_controllers::own::{self, OwnMapping};
+use djsugar_controllers::probe::{message_key, MessageKey};
+use djsugar_controllers::view::{self, LightRow, MappingView, Row};
+use djsugar_controllers::{is_own_file, Controllers, MappingChoice};
+use djsugar_controllers::{pickup, support};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::{
@@ -34,7 +34,7 @@ use crate::{
 /// What a row can do, in the row editor's Does menu (see [`Does`]).
 const DOES_MODES: [&str; 4] = [
     "A function",
-    "An openDJscript line",
+    "An DJSugarScript line",
     "Shift: on while held",
     "Mode: on/off each press",
 ];
@@ -173,7 +173,7 @@ impl Editor {
         let editor = Rc::new(RefCell::new(Editor {
             app: app.as_weak(),
             controllers,
-            dir: opendj_controllers::default_mappings_dir(),
+            dir: djsugar_controllers::default_mappings_dir(),
             choices: Vec::new(),
             loading: None,
             reselect: None,
@@ -449,7 +449,7 @@ impl Editor {
             self.fill();
             self.picture();
         }
-        let own: Option<OpenDjMapping> = self.current_own().map(|m| m.mapping.clone());
+        let own: Option<DjSugarMapping> = self.current_own().map(|m| m.mapping.clone());
         let (tx, rx) = mpsc::channel();
         let path = match settings::own_mappings_dir() {
             Some(d) if is_own_file(&file) => d.join(&file),
@@ -461,7 +461,7 @@ impl Editor {
                 // A sandbox with every control the app has, so the mapping
                 // runs as it would for real without touching the decks.
                 let registry = ControlRegistry::new();
-                opendj_engine::create_controls(&registry);
+                djsugar_engine::create_controls(&registry);
                 let _library = crate::browser::LibraryControls::create(&registry);
                 let _automix = crate::automix::AutoMix::new(&registry);
                 let functions = edit::choices(&registry);
@@ -619,7 +619,7 @@ impl Editor {
             (_, Some(Action::Import)) => {
                 let (tx, rx) = mpsc::channel();
                 crate::prefs::choose_file(
-                    "Choose a mapping from VirtualDJ, Traktor, rekordbox, djay Pro or openDJ",
+                    "Choose a mapping from VirtualDJ, Traktor, rekordbox, djay Pro or DJ Sugar",
                     move |p| {
                         let _ = tx.send(p);
                     },
@@ -704,7 +704,7 @@ impl Editor {
         self.dialog = Some(Dialog::Report);
     }
 
-    /// Reads a mapping from another app (or a shared openDJ one) into a new
+    /// Reads a mapping from another app (or a shared DJ Sugar one) into a new
     /// mapping of the DJ's own, and switches the controller to it.
     fn import(&mut self, path: &std::path::Path) {
         let (Some(base), Some(dir)) = (self.base(), settings::own_mappings_dir()) else {
@@ -714,15 +714,15 @@ impl Editor {
             .file_name()
             .map(|f| f.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let result = if file.ends_with(".opendj-mapping") {
-            opendj_controllers::export::read_opendj(path, &dir).map(|m| {
-                opendj_controllers::import::Import {
+        let result = if file.ends_with(".djsugar-mapping") {
+            djsugar_controllers::export::read_djsugar(path, &dir).map(|m| {
+                djsugar_controllers::import::Import {
                     mappings: vec![m],
                     ..Default::default()
                 }
             })
         } else {
-            opendj_controllers::import::import_file(path)
+            djsugar_controllers::import::import_file(path)
         };
         let import = match result {
             Ok(i) => i,
@@ -780,7 +780,7 @@ impl Editor {
         self.report(&format!("Imported {file}"), lines.join("\n\n"));
     }
 
-    /// Writes the own mapping in use as a shared `.opendj-mapping`, or as a
+    /// Writes the own mapping in use as a shared `.djsugar-mapping`, or as a
     /// Mixxx mapping with its scripts, into `folder`.
     fn export(&mut self, folder: &std::path::Path, mixxx: bool) {
         let (Some(own_dir), Some(shipped)) = (settings::own_mappings_dir(), self.dir.clone())
@@ -796,9 +796,9 @@ impl Editor {
             let base = m
                 .based_on
                 .as_ref()
-                .and_then(|b| opendj_controllers::Mapping::load(&shipped.join(b)).ok());
+                .and_then(|b| djsugar_controllers::Mapping::load(&shipped.join(b)).ok());
             let built = m.build(base.as_ref(), &shipped);
-            opendj_controllers::export::write_mixxx(&m, &built, folder)
+            djsugar_controllers::export::write_mixxx(&m, &built, folder)
         } else {
             let stem: String = m
                 .name
@@ -811,8 +811,8 @@ impl Editor {
                     }
                 })
                 .collect();
-            let path = folder.join(format!("{}.opendj-mapping", stem.trim()));
-            opendj_controllers::export::write_opendj(&m, &shipped, &own_dir, &path)
+            let path = folder.join(format!("{}.djsugar-mapping", stem.trim()));
+            djsugar_controllers::export::write_djsugar(&m, &shipped, &own_dir, &path)
         };
         match result {
             Ok(r) => {
@@ -1263,7 +1263,7 @@ impl Editor {
             .into(),
         );
         g.set_edit_midi(row.midi.clone().into());
-        // Run by the mapping's JavaScript (not an openDJscript line).
+        // Run by the mapping's JavaScript (not an DJSugarScript line).
         let script = row
             .sources
             .first()
@@ -1494,7 +1494,7 @@ impl Editor {
     /// Changes the selected row in the own mapping in use, making one first
     /// when the original is shown, then saves it, restarts the controller
     /// with it and reads the view again.
-    fn apply(&mut self, f: impl FnOnce(&mut OpenDjMapping, &Row)) {
+    fn apply(&mut self, f: impl FnOnce(&mut DjSugarMapping, &Row)) {
         let (Some(app), Some(base), Some(dir)) = (
             self.app.upgrade(),
             self.base(),
@@ -1600,7 +1600,7 @@ impl Editor {
         };
         let g = app.global::<ControllerEditor>();
         let line = g.get_edit_script().to_string();
-        let error = match opendj_script::parse(line.trim()) {
+        let error = match djsugar_script::parse(line.trim()) {
             _ if line.trim().is_empty() => "Type a line, such as deck 1 play_pause.".to_string(),
             Ok(_) => String::new(),
             Err(e) => e.message,
@@ -1724,7 +1724,7 @@ impl Editor {
                          it; Scale takes over at once and closes the gap as you move."
                     .into(),
                 choices: strings(&["Pick-up", "Scale"]),
-                chosen: pickup::scale(&opendj_controllers::device_key(port)) as i32,
+                chosen: pickup::scale(&djsugar_controllers::device_key(port)) as i32,
             });
         }
         g.set_playing(ModelRc::new(VecModel::from(rows)));
@@ -1741,7 +1741,7 @@ impl Editor {
         let g = app.global::<ControllerEditor>();
         if id == "takeover" {
             for port in self.live_ports() {
-                let key = opendj_controllers::device_key(&port);
+                let key = djsugar_controllers::device_key(&port);
                 pickup::set_scale(&key, index == 1);
                 settings::set_controller_scaled(&key, index == 1);
             }
@@ -1836,7 +1836,7 @@ type Found = (&'static str, usize, EditorRow);
 /// group that is one category (Effects), by target ("FX 1", "FX 2") when
 /// there are many. A group with one section has no second heading.
 /// The greyed rows of an import, grouped by why, most first.
-fn greyed(m: &opendj_controllers::format::OpenDjMapping) -> String {
+fn greyed(m: &djsugar_controllers::format::DjSugarMapping) -> String {
     let mut why: Vec<(String, usize)> = Vec::new();
     let notes = m
         .rows
@@ -2074,7 +2074,7 @@ fn search_text(r: &EditorRow, category: &str) -> String {
     .join(" ")
 }
 
-/// The layers a held button turns on: an openDJ mapping's `set_var '<name>'`
+/// The layers a held button turns on: an DJ Sugar mapping's `set_var '<name>'`
 /// rows, and any control called SHIFT.
 fn held_layers(v: &MappingView, held: &HashSet<MessageKey>) -> HashSet<String> {
     let mut on = HashSet::new();
@@ -2157,10 +2157,10 @@ mod tests {
 
     fn k2() -> MappingView {
         let reg = ControlRegistry::new();
-        let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
-        let dir = opendj_controllers::default_mappings_dir().unwrap();
+        let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
+        let dir = djsugar_controllers::default_mappings_dir().unwrap();
         view::build(
-            &dir.join("Allen and Heath Xone K2 - 2 Decks.opendj-mapping"),
+            &dir.join("Allen and Heath Xone K2 - 2 Decks.djsugar-mapping"),
             reg,
         )
         .unwrap()

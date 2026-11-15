@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Converts an openkeyscan-analyzer KeyNet checkpoint into the weights file
-openDJ's neural key detector reads (crates/engine/models).
+DJ Sugar's neural key detector reads (crates/engine/models).
 
     python3 scripts/export-keynet.py openkeyscan3.pt crates/engine/models/keynet.bin
 

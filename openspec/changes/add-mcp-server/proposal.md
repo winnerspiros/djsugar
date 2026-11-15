@@ -4,7 +4,7 @@ Planned for: **v1.0 · Ready for any DJ switching over**
 
 ## Why
 
-No other DJ app can be driven from an AI assistant. openDJ's control names and library crate make a local MCP server straightforward.
+No other DJ app can be driven from an AI assistant. DJ Sugar's control names and library crate make a local MCP server straightforward.
 
 ## What Changes
 
@@ -16,7 +16,7 @@ No other DJ app can be driven from an AI assistant. openDJ's control names and l
 
 ### New Capabilities
 
-- `mcp-server`: control openDJ from an AI assistant over MCP
+- `mcp-server`: control DJ Sugar from an AI assistant over MCP
 
 ### Modified Capabilities
 

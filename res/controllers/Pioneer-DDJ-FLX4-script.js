@@ -16,7 +16,7 @@
 //      * Beat Jump Mode
 //      * Sampler Mode
 //      * Keyshift mode
-//      * openDJ: Keyboard mode, Pad FX1 and Pad FX2
+//      * DJ Sugar: Keyboard mode, Pad FX1 and Pad FX2
 //
 //  Custom (Mixxx specific mappings):
 //      * BeatFX: Assigned Effect Unit 1
@@ -172,7 +172,7 @@ PioneerDDJFLX4.sendKeepAlive = function() {
 };
 
 // Jog wheel constants
-// openDJ: whether touching the top scratches follows each deck's VINYL
+// DJ Sugar: whether touching the top scratches follows each deck's VINYL
 // switch ([ChannelN] vinyl_mode, on by default) instead of this constant.
 PioneerDDJFLX4.vinylMode = function(deckNum) {
     return engine.getValue("[Channel" + deckNum + "]", "vinyl_mode") > 0;
@@ -181,7 +181,7 @@ PioneerDDJFLX4.alpha = 1.0/8;
 PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha/32;
 
 // Multiplier for fast seek through track using SHIFT+JOGWHEEL
-// openDJ: half of Mixxx's 150, which searched too fast.
+// DJ Sugar: half of Mixxx's 150, which searched too fast.
 PioneerDDJFLX4.fastSeekScale = 75;
 
 PioneerDDJFLX4.tempoRanges = [0.06, 0.10, 0.16, 0.25];
@@ -194,7 +194,7 @@ PioneerDDJFLX4.loopAdjustOut = [false, false];
 PioneerDDJFLX4.loopAdjustMultiply = 50;
 
 // Beatjump pad (beatjump_size values)
-// openDJ: 4, 8, 16 and 32 beats back and forward, as on the deck's screen.
+// DJ Sugar: 4, 8, 16 and 32 beats back and forward, as on the deck's screen.
 PioneerDDJFLX4.beatjumpSizeForPad = {
     0x20: -4,  // PAD 1
     0x21: 4,   // PAD 2
@@ -281,11 +281,11 @@ PioneerDDJFLX4.init = function() {
     PioneerDDJFLX4.setLoopButtonLights(0x90, 0x7F);
     PioneerDDJFLX4.setLoopButtonLights(0x91, 0x7F);
 
-    // openDJ: the controller starts in HOT CUE mode; light its button.
+    // DJ Sugar: the controller starts in HOT CUE mode; light its button.
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.hotcueMode, true);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.hotcueMode, true);
 
-    // openDJ: the pads follow the pages in the deck's pad tabs.
+    // DJ Sugar: the pads follow the pages in the deck's pad tabs.
     for (let tab = 1; tab <= 8; ++tab) {
         engine.makeConnection("[Channel1]", "pad_slot_" + tab, PioneerDDJFLX4.padSlotChanged);
         engine.makeConnection("[Channel2]", "pad_slot_" + tab, PioneerDDJFLX4.padSlotChanged);
@@ -304,7 +304,7 @@ PioneerDDJFLX4.init = function() {
     engine.makeConnection("[Channel1]", "stem_count", PioneerDDJFLX4.stemCountChanged);
     engine.makeConnection("[Channel2]", "stem_count", PioneerDDJFLX4.stemCountChanged);
 
-    // openDJ: and when the pads switch to and from the Stems FX layer.
+    // DJ Sugar: and when the pads switch to and from the Stems FX layer.
     for (const deck of [1, 2]) {
         engine.makeConnection(`[Channel${deck}]`, "stem_fx_mode", PioneerDDJFLX4.stemCountChanged);
     }
@@ -364,7 +364,7 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
 // Effects
 //
 
-// openDJ: the BEAT FX section drives openDJ's Beat FX unit, one effect
+// DJ Sugar: the BEAT FX section drives DJ Sugar's Beat FX unit, one effect
 // sent to deck 1, deck 2 or both, as in rekordbox:
 //   FX SELECT steps through the effects (SHIFT: backwards),
 //   BEAT < > halve and double its length (SHIFT: AUTO tempo, TAP tempo),
@@ -557,13 +557,13 @@ PioneerDDJFLX4.loopToggle = function(value, group, control) {
 //
 
 PioneerDDJFLX4.cueLoopCallLeft = function(_channel, _control, value, _status, group) {
-    // openDJ: loop_halve rather than loop_scale, so the loop size box on
+    // DJ Sugar: loop_halve rather than loop_scale, so the loop size box on
     // screen follows, and sets the next loop's size when none is on.
     engine.setValue(group, "loop_halve", value ? 1 : 0);
 };
 
 PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, group) {
-    // openDJ: loop_double rather than loop_scale, so the loop size box on
+    // DJ Sugar: loop_double rather than loop_scale, so the loop size box on
     // screen follows, and sets the next loop's size when none is on.
     engine.setValue(group, "loop_double", value ? 1 : 0);
 };
@@ -575,7 +575,7 @@ PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, g
 // press of the same button.
 //
 
-// openDJ: a press turns sync on, as the SYNC button on screen does, and
+// DJ Sugar: a press turns sync on, as the SYNC button on screen does, and
 // another turns it off.
 PioneerDDJFLX4.syncPressed = function(channel, control, value, status, group) {
     if (value > 0) {
@@ -633,7 +633,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     if (engine.isScratching(deckNum)) {
         engine.scratchTick(deckNum, newVal);
     } else {
-        // openDJ: the rim (and the platter when not touched) bends the
+        // DJ Sugar: the rim (and the platter when not touched) bends the
         // speed while it turns, faster clockwise and slower
         // counterclockwise, as in rekordbox. jog_bend takes rim ticks.
         engine.setValue(group, "jog_bend", newVal);
@@ -732,7 +732,7 @@ PioneerDDJFLX4.decreaseBeatjumpSizes = function(_channel, control, value, _statu
 // Sampler mode
 //
 
-// openDJ: each side's sampler pads play the 8 slots of its deck's sampler
+// DJ Sugar: each side's sampler pads play the 8 slots of its deck's sampler
 // page (`sampler_page`: 0 slots 1-8, 1 slots 9-16), the same 8 the screen
 // shows. The mapping names the rekordbox layout (left pads 1-4 and 9-12,
 // right pads 5-8 and 13-16), which only says which pad was pressed.
@@ -772,7 +772,7 @@ PioneerDDJFLX4.samplerPlayOutputCallbackFunction = function(_value, _group, _con
     PioneerDDJFLX4.samplerLights(false);
 };
 
-// openDJ: the pad tab each pad mode button opens on the deck's screen (see
+// DJ Sugar: the pad tab each pad mode button opens on the deck's screen (see
 // the deck's `pad_tab` control): tabs 1-4 for the four buttons, 5-8 for the
 // same buttons with SHIFT, whatever page is in the tab.
 PioneerDDJFLX4.padTabForMode = {
@@ -786,15 +786,15 @@ PioneerDDJFLX4.padTabForMode = {
     0x6F: 7, // KEY SHIFT (SHIFT + SAMPLER)
 };
 
-// openDJ: the first pad note of each pad mode, in tab order.
+// DJ Sugar: the first pad note of each pad mode, in tab order.
 PioneerDDJFLX4.padModeNotes = [0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70];
 
-// openDJ: the pad notes that play each pad panel (numbers as for the deck's
+// DJ Sugar: the pad notes that play each pad panel (numbers as for the deck's
 // `pad_panel`): its own pad mode's, or for loop rolls notes of their own
 // (see the LOOP ROLL controls). Stems share KEYBOARD's notes (keyboardStems).
 PioneerDDJFLX4.panelNotes = [0x00, 0x10, 0x20, 0x30, 0x40, 0x60, 0x50, 0x40, 0x70, 0x78];
 
-// openDJ: the pads follow the screen. Each pad mode's pads play the panel in
+// DJ Sugar: the pads follow the screen. Each pad mode's pads play the panel in
 // its tab (the deck's `pad_slot_N`), with that panel's lights, whatever it
 // is: put STEMS in tab 4 and the SAMPLER button gives stems pads.
 PioneerDDJFLX4.routePads = function(left) {
@@ -823,15 +823,15 @@ PioneerDDJFLX4.padSlotChanged = function(_value, group, _control) {
     PioneerDDJFLX4.routePads(group === "[Channel1]");
 };
 
-// openDJ: the pad mode button last pressed on each deck.
+// DJ Sugar: the pad mode button last pressed on each deck.
 PioneerDDJFLX4.padMode = {"[Channel1]": 0x1B, "[Channel2]": 0x1B};
 
-// openDJ: KEYBOARD plays the last hot cue pressed at eight pitches, as in
+// DJ Sugar: KEYBOARD plays the last hot cue pressed at eight pitches, as in
 // rekordbox. Pressing KEYBOARD again turns its pads into the stems pads
 // (see stemPads), and back.
 PioneerDDJFLX4.keyboardStems = {"[Channel1]": false, "[Channel2]": false};
 
-// openDJ: turns off a deck's pad mode button lights.
+// DJ Sugar: turns off a deck's pad mode button lights.
 PioneerDDJFLX4.padModeLightsOff = function(deck) {
     ["hotcueMode", "keyboardMode", "padFX1Mode", "padFX2Mode", "beatJumpMode",
         "beatLoopMode", "samplerMode", "keyShiftMode"].forEach(function(mode) {
@@ -856,7 +856,7 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
         }
         PioneerDDJFLX4.routePads(group === "[Channel1]");
     }
-    // openDJ: only the chosen mode stays lit.
+    // DJ Sugar: only the chosen mode stays lit.
     if (value) {
         PioneerDDJFLX4.padModeLightsOff(deck);
     }
@@ -881,7 +881,7 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
 };
 
 //
-// openDJ: KEYBOARD mode
+// DJ Sugar: KEYBOARD mode
 //
 
 // The engine's KEYBOARD_SEMITONES, pad by pad (keyboard_N_activate).
@@ -922,7 +922,7 @@ PioneerDDJFLX4.keyboardLights = function(group) {
 };
 
 //
-// openDJ: PAD FX1 and PAD FX2
+// DJ Sugar: PAD FX1 and PAD FX2
 //
 
 // What each pad holds on, as on the deck's screen (deck.slint's pad-fx and
@@ -1037,7 +1037,7 @@ PioneerDDJFLX4.quickJumpBack = function(_channel, _control, value, _status, grou
 // Stems mode
 //
 
-// openDJ: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
+// DJ Sugar: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
 // Instru, Bass, Acapella on top; Kick, HiHat, Stems FX, Instrumental below.
 // A number from 1 is the stem ([ChannelN_StemM]: 1 kick, 2 bass, 3
 // instruments, 4 vocals, 5 hi-hats); 0 is Acapella, -1 Instrumental and -2
@@ -1188,7 +1188,7 @@ PioneerDDJFLX4.stemMuteChanged = PioneerDDJFLX4.stemCountChanged;
 //
 
 PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
-    // openDJ: the KEYBOARD pads show the key shift too.
+    // DJ Sugar: the KEYBOARD pads show the key shift too.
     PioneerDDJFLX4.keyboardLights(group);
     const pitchAdjust = Math.round(engine.getValue(group, "pitch_adjust"));
     let lights = 0b00000000;

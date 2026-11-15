@@ -1,5 +1,5 @@
 //! Finding the files of missing tracks again, after they were moved or
-//! renamed outside openDJ.
+//! renamed outside DJ Sugar.
 //!
 //! The files in the DJ's folders are looked through in tiers, the surest
 //! first, and the first tier that has any candidate gives the answer:

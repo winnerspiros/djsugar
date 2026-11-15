@@ -2,12 +2,12 @@
 
 ## Protocol pieces used
 
-| Port | Packet | openDJ |
+| Port | Packet | DJ Sugar |
 | --- | --- | --- |
 | UDP 50000 | keep-alive (0x06), number claim | Sent while joined (Follow, Lead, show tools); not in Watch |
 | UDP 50002 | CDJ status (0x0a), every 200 ms, unicast to each peer | Read always; sent while joined |
 | UDP 50001 | beat (0x28); master takeover request (0x26) and response (0x27); sync commands (0x2a) | Read always; hand-off and beats sent in Lead |
-| TCP 12523, then the advertised port | dbserver | Queried in Watch for players' tracks; answered for openDJ's own decks (show tools) |
+| TCP 12523, then the advertised port | dbserver | Queried in Watch for players' tracks; answered for DJ Sugar's own decks (show tools) |
 | UDP 50002 from a DJM | mixer status: on air, fader start | Read |
 
 Layouts follow djl-analysis and Beat Link; nothing is copied from either.
@@ -19,7 +19,7 @@ Layouts follow djl-analysis and Beat Link; nothing is copied from either.
 - BPM (0x92) is the track's; pitch (0x8c, 0x100000 = none) is the change. Tempo heard = BPM × pitch.
 - A unit answers a takeover request and names the requester in 0x9f only if the requester's status says it is synced; cancel after 3 s and log it.
 - Requests can be 0x28 bytes; don't drop packets shorter than a status.
-- Old players (NXS2, XDJ-1000MK2) answer dbserver and NFS only to numbers 1 to 4. openDJ uses 5 and above, so Watch may get no metadata from them; show the track id then, not an error.
+- Old players (NXS2, XDJ-1000MK2) answer dbserver and NFS only to numbers 1 to 4. DJ Sugar uses 5 and above, so Watch may get no metadata from them; show the track id then, not an error.
 
 ## Player number
 
@@ -27,7 +27,7 @@ Auto picks the lowest free number from 5 upward after listening 5 s (CDJ-3000 ne
 
 ## Library choice
 
-Start on `prodjlink-rs` (MIT, MSRV 1.75, no tokio) for parsing and joining, or a small in-tree codec if its API does not fit Lead; keep it behind `opendj-prodjlink`'s own trait. `prolink` (GPL-3.0-only, tokio) is the candidate for the later serving step. Both are young single-maintainer crates, so pin versions.
+Start on `prodjlink-rs` (MIT, MSRV 1.75, no tokio) for parsing and joining, or a small in-tree codec if its API does not fit Lead; keep it behind `djsugar-prodjlink`'s own trait. `prolink` (GPL-3.0-only, tokio) is the candidate for the later serving step. Both are young single-maintainer crates, so pin versions.
 
 ## Testing
 

@@ -110,7 +110,7 @@ pub enum Request {
     Playlists,
     /// Make a private playlist called `name` with these tracks in this
     /// order; answered with [`Event::Exported`] or [`Event::ExportFailed`].
-    /// `list` is the openDJ list it comes from.
+    /// `list` is the DJ Sugar list it comes from.
     Export {
         list: i64,
         name: String,
@@ -206,7 +206,7 @@ impl Service {
         let (tx, events) = channel();
         // Without streaming, no sign-in from last time either.
         let saved = Saved::load(SAVED).filter(|_| crate::browser::STREAMING_ENABLED);
-        let client_id = std::env::var("OPENDJ_SPOTIFY_CLIENT_ID")
+        let client_id = std::env::var("DJSUGAR_SPOTIFY_CLIENT_ID")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| saved.as_ref().map(|s| s.client_id.clone()))
@@ -686,10 +686,10 @@ impl Worker {
 }
 
 /// What to tell the DJ when making a playlist failed. A sign-in from
-/// before openDJ could make playlists isn't allowed to.
+/// before DJ Sugar could make playlists isn't allowed to.
 fn export_error(e: &str) -> String {
     if e.contains(" 403") {
-        "Spotify didn't let openDJ make a playlist. Sign out of Spotify in openDJ and sign in again to allow it, then export again.".into()
+        "Spotify didn't let DJ Sugar make a playlist. Sign out of Spotify in DJ Sugar and sign in again to allow it, then export again.".into()
     } else {
         e.to_string()
     }
@@ -975,7 +975,7 @@ pub(crate) fn wait_for_code(
 }
 
 /// [`wait_for_code`], serving `page` at `/start` first: a sign-in page of
-/// openDJ's own, for a service whose sign-in runs in the browser.
+/// DJ Sugar's own, for a service whose sign-in runs in the browser.
 pub(crate) fn wait_for_code_after(
     listener: &TcpListener,
     state: &str,
@@ -1007,7 +1007,7 @@ pub(crate) fn wait_for_code_after(
             respond(
                 &mut stream,
                 "400 Bad Request",
-                "This sign-in link is out of date. Try again from openDJ.",
+                "This sign-in link is out of date. Try again from DJ Sugar.",
             );
             continue;
         }
@@ -1015,7 +1015,7 @@ pub(crate) fn wait_for_code_after(
             respond(
                 &mut stream,
                 "200 OK",
-                &format!("Signed in to {service}. You can close this tab and go back to openDJ."),
+                &format!("Signed in to {service}. You can close this tab and go back to DJ Sugar."),
             );
             return Ok(code);
         }
@@ -1052,7 +1052,7 @@ pub(crate) fn read_request_line(stream: &mut TcpStream) -> Option<String> {
 
 pub(crate) fn respond(stream: &mut TcpStream, status: &str, message: &str) {
     let body = format!(
-        "<!doctype html><meta charset=utf-8><title>openDJ</title>\
+        "<!doctype html><meta charset=utf-8><title>DJ Sugar</title>\
          <body style=\"font:16px -apple-system,sans-serif;background:#1c1c1e;color:#eee;\
          display:grid;place-items:center;height:90vh\"><p>{message}</p>"
     );

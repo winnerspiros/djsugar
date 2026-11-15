@@ -48,7 +48,7 @@ pub trait MainThread {
         false
     }
 
-    /// openDJ set parameter `index` to `value` (its own range), for a
+    /// DJ Sugar set parameter `index` to `value` (its own range), for a
     /// plugin whose editor keeps its own copy of the values, as a VST3
     /// controller does.
     fn param_set(&mut self, index: usize, value: f64) {
@@ -131,7 +131,7 @@ pub struct Param {
     pub value: f64,
 }
 
-/// What openDJ learns about a loaded effect.
+/// What DJ Sugar learns about a loaded effect.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Info {
     pub name: String,

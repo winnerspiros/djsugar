@@ -8,6 +8,6 @@
 ## 2. The deck each device plays
 
 - [x] 2.1 Deck menu in Settings › Controllers (Auto, As mapped, Follow instrument, Deck 1-4), kept in settings
-- [x] 2.2 Mappings (Mixxx XML and scripts, openDJ rows and lights) move to the followed or picked deck, and follow the instrument when it moves
+- [x] 2.2 Mappings (Mixxx XML and scripts, DJ Sugar rows and lights) move to the followed or picked deck, and follow the instrument when it moves
 - [x] 2.3 A keyboard pinned to a deck plays the instrument only while it is on that deck
 - [ ] 2.4 Tried on hardware: Xone K2 and FLX4 as mapped, KeyLab and MicroFreak playing an instrument dragged between decks

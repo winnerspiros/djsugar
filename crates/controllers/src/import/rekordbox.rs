@@ -6,7 +6,7 @@
 
 use super::words::{beats, deck, eq, filter, fx_slot, indicator, library, master};
 use super::Import;
-use crate::format::{Action, Light, LightSource, Midi, OpenDjMapping, Row};
+use crate::format::{Action, Light, LightSource, Midi, DjSugarMapping, Row};
 
 enum Act {
     Bind(String, &'static [&'static str]),
@@ -93,7 +93,7 @@ fn translate(function: &str, kind: &str, d: u8) -> Option<Act> {
 }
 
 /// `9E34` → status 9E, number 34. rekordbox writes notes as 8n or 9n
-/// alike; openDJ listens for the note-on.
+/// alike; DJ Sugar listens for the note-on.
 fn midi(cell: &str) -> Option<Midi> {
     let cell = cell.trim();
     if cell.len() != 4 {
@@ -123,7 +123,7 @@ pub(super) fn import(text: &str) -> Result<Import, String> {
         .and_then(|r| r.split_once(','))
         .map(|(_, n)| n.trim().to_string())
         .ok_or("This isn't a rekordbox MIDI mapping")?;
-    let mut m = OpenDjMapping::new(&format!("{name} (rekordbox)"));
+    let mut m = DjSugarMapping::new(&format!("{name} (rekordbox)"));
     m.controller.name = name.clone();
     m.controller.ports.push(name.clone());
     let mut uses_shift = false;
@@ -152,7 +152,7 @@ pub(super) fn import(text: &str) -> Result<Import, String> {
                     msg,
                     function,
                     function,
-                    "openDJ has no match for this rekordbox function yet",
+                    "DJ Sugar has no match for this rekordbox function yet",
                 ),
             };
             row.name = if d == 0 {

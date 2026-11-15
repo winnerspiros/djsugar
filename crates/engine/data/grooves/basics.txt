@@ -1,4 +1,4 @@
-# openDJ's own grooves, under openDJ's licence (GPL-2.0-or-later).
+# DJ Sugar's own grooves, under DJ Sugar's licence (GPL-2.0-or-later).
 #
 # Format: `genre <name>` starts a genre; `groove <name> | <about>` starts a
 # groove; each row after it is a sound (kick, snare, closed-hat, open-hat, clap,

@@ -17,13 +17,13 @@ pub struct Descriptor {
 }
 
 impl Descriptor {
-    /// Effects are what openDJ can use; instruments and note effects aren't.
+    /// Effects are what DJ Sugar can use; instruments and note effects aren't.
     pub fn is_audio_effect(&self) -> bool {
         self.features.iter().any(|f| f == "audio-effect")
             && !self.features.iter().any(|f| f == "instrument")
     }
 
-    /// Instruments play notes; openDJ plays one as an input of its own.
+    /// Instruments play notes; DJ Sugar plays one as an input of its own.
     pub fn is_instrument(&self) -> bool {
         self.features.iter().any(|f| f == "instrument")
     }
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn moduleinfo_lists_audio_modules_only() {
-        let dir = std::env::temp_dir().join(format!("opendj-moduleinfo-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-moduleinfo-{}", std::process::id()));
         let res = dir.join("Test.vst3/Contents/Resources");
         std::fs::create_dir_all(&res).unwrap();
         std::fs::write(

@@ -11,8 +11,8 @@ component Part inherits Text {
 }
 
 export component KaraokeWindow inherits Window {
-    title: "openDJ Karaoke";
-    icon: @image-url("icons/opendj.svg");
+    title: "DJ Sugar Karaoke";
+    icon: @image-url("icons/djsugar.svg");
     preferred-width: 1280px;
     preferred-height: 720px;
     min-width: 480px;
@@ -81,7 +81,7 @@ export component KaraokeWindow inherits Window {
         spacing: root.height * 0.03;
         padding: 48px;
         Text {
-            text: root.state == 0 ? "openDJ Karaoke" : root.song;
+            text: root.state == 0 ? "DJ Sugar Karaoke" : root.song;
             color: Theme.text;
             font-size: root.height * 0.08;
             font-weight: 800;

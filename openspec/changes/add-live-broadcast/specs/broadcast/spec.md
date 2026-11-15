@@ -9,7 +9,7 @@ Settings › Broadcast SHALL hold a list of stations. An Icecast or Shoutcast st
 
 #### Scenario: Add an Icecast station
 - **WHEN** the DJ adds an Icecast 2 station with host `radio.example.org`, port 8000, mount `/live`, user `source` and a password, and clicks Test
-- **THEN** openDJ connects, reports "Connected" and disconnects
+- **THEN** DJ Sugar connects, reports "Connected" and disconnects
 
 ### Requirement: Station details
 A station MAY also have a stream name, description, genre and website, and "List in public directories", which SHALL be off by default.
@@ -23,7 +23,7 @@ Server passwords and stream keys SHALL be kept in the system keychain, shown mas
 
 #### Scenario: Settings file
 - **WHEN** a station with a password has been saved
-- **THEN** the password is not in openDJ's settings file
+- **THEN** the password is not in DJ Sugar's settings file
 
 ### Requirement: On air
 ON AIR in the top bar (`[Shoutcast],enabled`) SHALL stream the master output, mic and aux included, exactly as it is recorded, to every station that is switched on, at the same time. While on air the pill SHALL show the time on air and a light per station (connecting, connected, failed), and its panel the listener count for Icecast stations that report one. `[Shoutcast],status` SHALL be 0 off, 1 connecting, 2 connected to all, 3 failed, 4 connected to some. The ON AIR pill SHALL only show while "Broadcasting" is on in Settings › Broadcast (off by default) and at least one station is set up and switched on, or while on air from a controller.
@@ -44,7 +44,7 @@ Streaming SHALL never cause an audio dropout, whatever the network does: encodin
 - **THEN** the mix in the headphones and on the master output keeps playing without a dropout, and the station's light turns amber
 
 ### Requirement: Reconnect
-When a station's connection drops or falls more than about 10 seconds behind, openDJ SHALL reconnect by itself, first at once and then every 5 seconds, for up to 10 minutes, then mark the station failed and say why (wrong password, mount in use, server unreachable).
+When a station's connection drops or falls more than about 10 seconds behind, DJ Sugar SHALL reconnect by itself, first at once and then every 5 seconds, for up to 10 minutes, then mark the station failed and say why (wrong password, mount in use, server unreachable).
 
 #### Scenario: Wi-Fi blip
 - **WHEN** the network drops for 5 seconds while on air
@@ -62,7 +62,7 @@ While on air, each station SHALL receive the audible track's artist and title as
 - **THEN** listeners' players show B once B's fader is above A's, not when B loads
 
 ### Requirement: Go live to platforms
-Settings › Broadcast SHALL offer platform presets (Twitch, YouTube, Mixcloud Live, Facebook, Kick and Custom RTMP) that need only a stream key. A platform station SHALL stream the master with a picture openDJ draws (the audible track's cover, artist, title and progress, and the DJ's name and logo), updated when the track changes. Several platforms and radio stations SHALL be able to stream at once.
+Settings › Broadcast SHALL offer platform presets (Twitch, YouTube, Mixcloud Live, Facebook, Kick and Custom RTMP) that need only a stream key. A platform station SHALL stream the master with a picture DJ Sugar draws (the audible track's cover, artist, title and progress, and the DJ's name and logo), updated when the track changes. Several platforms and radio stations SHALL be able to stream at once.
 
 #### Scenario: Twitch without OBS
 - **WHEN** the DJ pastes a Twitch stream key into the Twitch preset and presses ON AIR

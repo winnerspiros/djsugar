@@ -12,7 +12,7 @@ The Wanted list holds tracks the DJ means to own. Getting from there to a file i
 
 - **Buy… on Wanted rows** (one or many): every store that can be checked is searched at once, and the Buy sheet shows, per track, which stores have it. Among stores that have it, artist-direct comes first, then the store that gets the file into the library fastest.
 - **Coverage first**: stores strong on ambient, experimental and independent releases (Bandcamp, Bleep, Boomkat, Qobuz, Apple, Mirlo) are checked alongside Beatport, Juno and Traxsource, so a track missing from one catalogue is still found.
-- **Open by store**: track pages open in the browser (or the Music app for Apple) in small batches, so the store's own cart collects them for one checkout. openDJ never takes payment.
+- **Open by store**: track pages open in the browser (or the Music app for Apple) in small batches, so the store's own cart collects them for one checkout. DJ Sugar never takes payment.
 - **Track links, not just searches**, where a store id can be found: Bandcamp search, the public iTunes Search API, cross-links by ISRC (MusicBrainz, Odesli). Other stores fall back to their search page.
 - **Pending purchases**: the Wanted rows sent to a store are remembered for a while so arriving files can be matched back to them.
 - **More inbox folders**: besides Downloads, the inbox can watch store-app download folders (Music app, Qobuz, Amazon), taking only new files.

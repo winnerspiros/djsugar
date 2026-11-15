@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Keyboard shortcuts editor
-Settings SHALL have a Keyboard page listing every shortcut with its key and openDJscript line, where the DJ changes a key by pressing it, edits or picks the action, resets or turns off a default, removes their own, adds new ones, and resets all. A line that doesn't parse SHALL show its mistake while it's typed.
+Settings SHALL have a Keyboard page listing every shortcut with its key and DJSugarScript line, where the DJ changes a key by pressing it, edits or picks the action, resets or turns off a default, removes their own, adds new ones, and resets all. A line that doesn't parse SHALL show its mistake while it's typed.
 
 #### Scenario: Move a rating to another key
 - **WHEN** the DJ clicks ⌘1's key on the Keyboard page and presses F1

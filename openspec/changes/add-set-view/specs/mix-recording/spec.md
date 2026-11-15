@@ -8,7 +8,7 @@ Control changes in the control log SHALL be stamped with the audio frame at whic
 - **THEN** its log line's time matches the frame where the jump is heard in the recording
 
 ### Requirement: Render an edited set
-After the DJ moves, stretches or edits transitions or lanes in the Mixed Set Editor, openDJ SHALL render the set through its engine to a new file beside the recording and SHALL NOT change the recording.
+After the DJ moves, stretches or edits transitions or lanes in the Mixed Set Editor, DJ Sugar SHALL render the set through its engine to a new file beside the recording and SHALL NOT change the recording.
 
 #### Scenario: Scratch kept or bypassed
 - **WHEN** a set has a scratch on deck 2 and the DJ leaves it on Keep from recording

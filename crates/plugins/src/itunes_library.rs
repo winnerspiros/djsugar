@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
-use opendj_engine::{LibraryInfo, Source, Track};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind, StreamedTrack};
+use djsugar_engine::{LibraryInfo, Source, Track};
 use plist::{Dictionary, Value};
 
 use crate::{ImportedLibrary, LibraryImport, ListGroup};
@@ -29,12 +29,12 @@ pub const SMART: &str = "smart";
 pub struct ItunesLibrary;
 
 /// Where iTunes and the Music app leave their Library XML, newest first
-/// when there are several (or `OPENDJ_ITUNES_LIBRARY`).
+/// when there are several (or `DJSUGAR_ITUNES_LIBRARY`).
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_ITUNES_LIBRARY") {
+    if let Some(p) = std::env::var_os("DJSUGAR_ITUNES_LIBRARY") {
         return Some(PathBuf::from(p));
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     newest(&candidates(&home))
 }
 
@@ -237,7 +237,7 @@ fn is_music(t: &Dictionary) -> bool {
 }
 
 /// An Apple Music track (or one only in the DJ's iCloud library): not a
-/// file here, or a protected download openDJ can't play. It stands in the
+/// file here, or a protected download DJ Sugar can't play. It stands in the
 /// lists until the collection has the song.
 fn streamed(t: &Dictionary) -> Option<StreamedTrack> {
     let remote = string(t, "Track Type") == Some("Remote") || !t.contains_key("Location");
@@ -506,7 +506,7 @@ mod tests {
 
     fn write(name: &str) -> PathBuf {
         let path =
-            std::env::temp_dir().join(format!("opendj-itunes-{name}-{}.xml", std::process::id()));
+            std::env::temp_dir().join(format!("djsugar-itunes-{name}-{}.xml", std::process::id()));
         std::fs::write(&path, XML).unwrap();
         path
     }
@@ -598,7 +598,7 @@ mod tests {
         assert_eq!(preview(&path).unwrap(), "3 tracks and 1 playlist.");
         std::fs::remove_file(&path).ok();
         let other =
-            std::env::temp_dir().join(format!("opendj-itunes-other-{}.xml", std::process::id()));
+            std::env::temp_dir().join(format!("djsugar-itunes-other-{}.xml", std::process::id()));
         std::fs::write(
             &other,
             "<plist version=\"1.0\"><dict><key>A</key><string>b</string></dict></plist>",
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn finds_the_newest_library_xml() {
-        let home = std::env::temp_dir().join(format!("opendj-itunes-home-{}", std::process::id()));
+        let home = std::env::temp_dir().join(format!("djsugar-itunes-home-{}", std::process::id()));
         let all = candidates(&home);
         assert!(newest(&all).is_none());
         std::fs::create_dir_all(home.join("Music/iTunes")).unwrap();

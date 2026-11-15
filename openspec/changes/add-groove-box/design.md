@@ -57,7 +57,7 @@ Cells about 22 px; on screens too narrow for 16 the row shows 8 with the 1/2 pag
 {
   "kind": "kit",
   "name": "Boom",
-  "author": "openDJ",
+  "author": "DJ Sugar",
   "licence": "GPL-3.0-or-later",
   "samples": [ { "builtin": 101, "name": "Kick" }, … up to 16 ],
   "rows": [0, 2, 3, 4],
@@ -71,11 +71,11 @@ Cells about 22 px; on screens too narrow for 16 the row shows 8 with the 1/2 pag
 
 ### Classic drum machine sounds and licences (a user request for CC sounds from classic groove boxes, 2026-11-02)
 
-openDJ's builds are GPL-3.0 and published on GitHub, so anything bundled must allow redistribution, commercial use included. What was found:
+DJ Sugar's builds are GPL-3.0 and published on GitHub, so anything bundled must allow redistribution, commercial use included. What was found:
 
 | Source | Machines | Licence | Verdict |
 |---|---|---|---|
-| Synthesised by openDJ | 808, 909, 606 and CR-78 style voices: kick as a pitch-swept sine with a click, snare as tones plus filtered noise, clap as noise bursts, hats as six detuned square waves through a band-pass (the 808's own method), toms, rim, cowbell, shaker | Ours, GPL | **Built in.** The analogue circuits are well documented, the sound is the classic character, there are no files and no licence questions. Extends the synthesised Kick/Snare/Clap/Hat already in `crates/engine/src/sampler.rs` |
+| Synthesised by DJ Sugar | 808, 909, 606 and CR-78 style voices: kick as a pitch-swept sine with a click, snare as tones plus filtered noise, clap as noise bursts, hats as six detuned square waves through a band-pass (the 808's own method), toms, rim, cowbell, shaker | Ours, GPL | **Built in.** The analogue circuits are well documented, the sound is the classic character, there are no files and no licence questions. Extends the synthesised Kick/Snare/Clap/Hat already in `crates/engine/src/sampler.rs` |
 | Freesound, filtered to CC0 | e.g. "TR-909 Drum Hits" by GRD-music- (made on a Roland JD-Xi), a "Roland TR606 sampleset", a "Roland TR08" set | CC0 as stated by the uploaders | **Get more Packs**, as a "Classic Machines" kit in the curated packs repository, after checking every sound's licence page and keeping a credits file |
 | Michael Fischer's TR-808 set (1994, machines.hyperreal.org; repackaged by fluid-music as "no licensing restrictions") | TR-808, 116 samples | Called "ABSOLUTELY FREE!" with no licence text | Only with written permission from the author |
 | Autodafe XoX Drums | 606, 707, 808, 909 | Article says the source is public domain, sources not credited | No, origin unclear |

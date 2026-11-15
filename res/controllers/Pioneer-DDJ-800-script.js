@@ -1,6 +1,6 @@
 // Pioneer-DDJ-800-script.js
 // ****************************************************************************
-// * openDJ mapping script for the Pioneer DDJ-800: what it adds to openDJ's
+// * DJ Sugar mapping script for the Pioneer DDJ-800: what it adds to DJ Sugar's
 // * DDJ-FLX4 script, which drives the rest (the DDJ-800 numbers its decks,
 // * pads, mixer and browser as the DDJ-400 and DDJ-FLX4 do). Written from
 // * Pioneer's "DDJ-800 MIDI Message List".
@@ -19,7 +19,7 @@ PioneerDDJ800.decks = ["[Channel1]", "[Channel2]"];
 PioneerDDJ800.beatFxUnit = "[EffectRack1_EffectUnit5]";
 PioneerDDJ800.beatFxSlot = "[EffectRack1_EffectUnit5_Effect1]";
 
-// FX SELECT positions (notes 0x20 to 0x2D) and the closest of openDJ's
+// FX SELECT positions (notes 0x20 to 0x2D) and the closest of DJ Sugar's
 // effects, as `loaded_effect` numbers: 1 Echo, 2 Reverb, 4 Flanger,
 // 6 Phaser, 7 Gate, 8 Roll, 12 Spiral, 14 Chorus, 15 Ladder, 18 Filter Echo.
 PioneerDDJ800.beatFxEffects = {

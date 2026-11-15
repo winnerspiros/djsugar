@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use opendj_engine::{LoadedTracks, Track};
+use djsugar_engine::{LoadedTracks, Track};
 use slint::{ComponentHandle, Model, ModelRc, Timer, TimerMode, VecModel};
 
 use crate::{AppWindow, NowDetail, NowPlayingUi, Theme, UpNextUi};

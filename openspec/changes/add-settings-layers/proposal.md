@@ -21,12 +21,12 @@ choices, View › Reset layout and Show all hints again. Profiles stay out of sc
 
 Small behaviours (what loading a track resets, where it starts, whether echo tails ring out) shape a DJ's flow more than
 big features. VirtualDJ exposes about 330 of them in one flat list; most DJs never find the ones that matter, and DJs
-switching over expect their few favourite tweaks to exist. openDJ favours convention over configuration, so it sorts
+switching over expect their few favourite tweaks to exist. DJ Sugar favours convention over configuration, so it sorts
 every candidate into three layers instead of copying the list.
 
 ## What Changes
 
-- **Layer 1, no setting**: behaviours openDJ simply has, with no switch. New ones: key shift and stems reset on load,
+- **Layer 1, no setting**: behaviours DJ Sugar simply has, with no switch. New ones: key shift and stems reset on load,
   instant doubles (loading a track that plays on another deck starts it at the same place, in step), loops trimmed to
   the grid, killed EQ bands grey on the waveform.
 - **Layer 2, Settings pages grouped by what the DJ is doing**: Settings › Decks gets sections Loading, Playing and Tempo
@@ -37,7 +37,7 @@ every candidate into three layers instead of copying the list.
   right-click menu.
 - **Layer 3, Advanced**: a Settings page with one searchable list of every tweak, plain-English names with the stable key
   shown small, a description line, **Show modified**, a reset on each row and **Reset all**. Layer-2 choices appear here
-  too, so Show modified is the full picture of how this openDJ differs from the defaults.
+  too, so Show modified is the full picture of how this DJ Sugar differs from the defaults.
 - Search in Settings finds rows by meaning as well as name ("pitch" finds tempo, "PFL" finds headphones cue).
 - Window and panel state (sizes, columns, last folder, zooms) is never a setting: it is saved quietly and **View › Reset
   layout** puts it back. Help gets **Show all hints again**.

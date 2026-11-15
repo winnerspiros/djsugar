@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn writes_and_reads_back_every_field() {
-        let dir = std::env::temp_dir().join(format!("opendj-tags-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-tags-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("song.wav");
         crate::decode::tests::write_wav(&path, 44_100, 2, &vec![0; 4_410]);
@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn embeds_a_cover() {
-        let dir = std::env::temp_dir().join(format!("opendj-tagcover-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-tagcover-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("song.wav");
         crate::decode::tests::write_wav(&path, 44_100, 2, &vec![0; 4_410]);

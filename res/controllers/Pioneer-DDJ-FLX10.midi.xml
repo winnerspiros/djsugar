@@ -2,8 +2,8 @@
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.6">
     <info>
         <name>Pioneer DDJ-FLX10</name>
-        <author>openDJ (from its DDJ-FLX6 mapping)</author>
-        <description>openDJ mapping for the Pioneer DDJ-FLX10: four decks, the four-channel mixer, Beat FX and Sound Color FX, pads that follow the screen, stems, jog displays. Beta: written from AlphaTheta's MIDI message list, not yet tried on the hardware.</description>
+        <author>DJ Sugar (from its DDJ-FLX6 mapping)</author>
+        <description>DJ Sugar mapping for the Pioneer DDJ-FLX10: four decks, the four-channel mixer, Beat FX and Sound Color FX, pads that follow the screen, stems, jog displays. Beta: written from AlphaTheta's MIDI message list, not yet tried on the hardware.</description>
         <manual>pioneer_ddj_flx10</manual>
     </info>
     <controller id="DDJ-FLX10">
@@ -62,7 +62,7 @@
                 </options>
             </control>
             <control>
-                <description>VIEW - press - switch between the Pro and Player layouts (openDJ)</description>
+                <description>VIEW - press - switch between the Pro and Player layouts (DJ Sugar)</description>
                 <group>[Skin]</group>
                 <key>layout</key>
                 <status>0x96</status>
@@ -363,7 +363,7 @@
                 </options>
             </control>
             <control>
-                <description>DECK (DECK1) - the side now plays deck 1 (openDJ)</description>
+                <description>DECK (DECK1) - the side now plays deck 1 (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.deckSelected</key>
                 <status>0x90</status>
@@ -413,7 +413,7 @@
                 </options>
             </control>
             <control>
-                <description>4 BEAT/EXIT (DECK1) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>4 BEAT/EXIT (DECK1) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel1]</group>
                 <key>beatloop_activate</key>
                 <status>0x90</status>
@@ -473,7 +473,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK1) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK1) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.masterPressed</key>
                 <status>0x90</status>
@@ -694,7 +694,7 @@
                 </options>
             </control>
             <control>
-                <description>JOG DIAL SIDE +SHIFT (DECK1) - rotate - search through the track (openDJ)</description>
+                <description>JOG DIAL SIDE +SHIFT (DECK1) - rotate - search through the track (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.jogSearch</key>
                 <status>0xB0</status>
@@ -845,7 +845,7 @@
                 </options>
             </control>
             <control>
-                <description>DECK (DECK2) - the side now plays deck 2 (openDJ)</description>
+                <description>DECK (DECK2) - the side now plays deck 2 (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.deckSelected</key>
                 <status>0x91</status>
@@ -895,7 +895,7 @@
                 </options>
             </control>
             <control>
-                <description>4 BEAT/EXIT (DECK2) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>4 BEAT/EXIT (DECK2) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel2]</group>
                 <key>beatloop_activate</key>
                 <status>0x91</status>
@@ -955,7 +955,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK2) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK2) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.masterPressed</key>
                 <status>0x91</status>
@@ -1176,7 +1176,7 @@
                 </options>
             </control>
             <control>
-                <description>JOG DIAL SIDE +SHIFT (DECK2) - rotate - search through the track (openDJ)</description>
+                <description>JOG DIAL SIDE +SHIFT (DECK2) - rotate - search through the track (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.jogSearch</key>
                 <status>0xB1</status>
@@ -1327,7 +1327,7 @@
                 </options>
             </control>
             <control>
-                <description>DECK (DECK3) - the side now plays deck 3 (openDJ)</description>
+                <description>DECK (DECK3) - the side now plays deck 3 (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.deckSelected</key>
                 <status>0x92</status>
@@ -1377,7 +1377,7 @@
                 </options>
             </control>
             <control>
-                <description>4 BEAT/EXIT (DECK3) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>4 BEAT/EXIT (DECK3) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel3]</group>
                 <key>beatloop_activate</key>
                 <status>0x92</status>
@@ -1437,7 +1437,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK3) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK3) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.masterPressed</key>
                 <status>0x92</status>
@@ -1658,7 +1658,7 @@
                 </options>
             </control>
             <control>
-                <description>JOG DIAL SIDE +SHIFT (DECK3) - rotate - search through the track (openDJ)</description>
+                <description>JOG DIAL SIDE +SHIFT (DECK3) - rotate - search through the track (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.jogSearch</key>
                 <status>0xB2</status>
@@ -1809,7 +1809,7 @@
                 </options>
             </control>
             <control>
-                <description>DECK (DECK4) - the side now plays deck 4 (openDJ)</description>
+                <description>DECK (DECK4) - the side now plays deck 4 (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.deckSelected</key>
                 <status>0x93</status>
@@ -1859,7 +1859,7 @@
                 </options>
             </control>
             <control>
-                <description>4 BEAT/EXIT (DECK4) - press - (loop off) openDJ: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
+                <description>4 BEAT/EXIT (DECK4) - press - (loop off) DJ Sugar: new beat loop of beatloop_size at the play position, (loop on) Loop exit</description>
                 <group>[Channel4]</group>
                 <key>beatloop_activate</key>
                 <status>0x93</status>
@@ -1919,7 +1919,7 @@
                 </options>
             </control>
             <control>
-                <description>MASTER (DECK4) - press - make this deck the sync leader, again to let the app choose (openDJ)</description>
+                <description>MASTER (DECK4) - press - make this deck the sync leader, again to let the app choose (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.masterPressed</key>
                 <status>0x93</status>
@@ -2140,7 +2140,7 @@
                 </options>
             </control>
             <control>
-                <description>JOG DIAL SIDE +SHIFT (DECK4) - rotate - search through the track (openDJ)</description>
+                <description>JOG DIAL SIDE +SHIFT (DECK4) - rotate - search through the track (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.jogSearch</key>
                 <status>0xB3</status>
@@ -2200,7 +2200,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX ON/OFF +SHIFT (FX1) - press - release the Beat FX, letting its tail ring out (openDJ)</description>
+                <description>BEAT FX ON/OFF +SHIFT (FX1) - press - release the Beat FX, letting its tail ring out (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxOnOffShiftPressed</key>
                 <status>0x94</status>
@@ -2210,7 +2210,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX ON/OFF (FX1-1) - press - turn the Beat FX on or off (openDJ)</description>
+                <description>BEAT FX ON/OFF (FX1-1) - press - turn the Beat FX on or off (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxOnOffPressed</key>
                 <status>0x94</status>
@@ -2220,7 +2220,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT &lt; +SHIFT (FX1) - press - AUTO tempo (openDJ)</description>
+                <description>BEAT &lt; +SHIFT (FX1) - press - AUTO tempo (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxLeftPressed</key>
                 <status>0x94</status>
@@ -2230,7 +2230,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT &gt; +SHIFT (FX1) - press - TAP tempo (openDJ)</description>
+                <description>BEAT &gt; +SHIFT (FX1) - press - TAP tempo (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxRightPressed</key>
                 <status>0x94</status>
@@ -2240,7 +2240,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX LEVEL/DEPTH (FX1-1) - rotate (MSB) - the Beat FX depth (openDJ)</description>
+                <description>BEAT FX LEVEL/DEPTH (FX1-1) - rotate (MSB) - the Beat FX depth (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxLevelDepthRotate</key>
                 <status>0xB4</status>
@@ -6600,7 +6600,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART DRUMS (DECK1) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART DRUMS (DECK1) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x90</status>
@@ -6610,7 +6610,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART VOCAL (DECK1) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART VOCAL (DECK1) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x90</status>
@@ -6620,7 +6620,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART INST (DECK1) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART INST (DECK1) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x90</status>
@@ -6740,7 +6740,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART DRUMS (DECK2) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART DRUMS (DECK2) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x91</status>
@@ -6750,7 +6750,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART VOCAL (DECK2) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART VOCAL (DECK2) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x91</status>
@@ -6760,7 +6760,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART INST (DECK2) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART INST (DECK2) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x91</status>
@@ -6880,7 +6880,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART DRUMS (DECK3) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART DRUMS (DECK3) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x92</status>
@@ -6890,7 +6890,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART VOCAL (DECK3) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART VOCAL (DECK3) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x92</status>
@@ -6900,7 +6900,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART INST (DECK3) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART INST (DECK3) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x92</status>
@@ -7020,7 +7020,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART DRUMS (DECK4) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART DRUMS (DECK4) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x93</status>
@@ -7030,7 +7030,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART VOCAL (DECK4) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART VOCAL (DECK4) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x93</status>
@@ -7040,7 +7040,7 @@
                 </options>
             </control>
             <control>
-                <description>ACTIVE PART INST (DECK4) - press - mute or unmute those stems (openDJ)</description>
+                <description>ACTIVE PART INST (DECK4) - press - mute or unmute those stems (DJ Sugar)</description>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX10.activePartPressed</key>
                 <status>0x93</status>
@@ -7050,7 +7050,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT LOW CUT ECHO - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT LOW CUT ECHO - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7060,7 +7060,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT ECHO - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT ECHO - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7070,7 +7070,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT MT DELAY - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT MT DELAY - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7080,7 +7080,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT SPIRAL - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT SPIRAL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7090,7 +7090,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT REVERB - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT REVERB - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7100,7 +7100,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT TRANS - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT TRANS - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7110,7 +7110,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT ENIGMA JET - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT ENIGMA JET - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7120,7 +7120,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT FLANGER - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT FLANGER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7130,7 +7130,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT PHASER - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT PHASER - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7140,7 +7140,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT STRETCH - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT STRETCH - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7150,7 +7150,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT SLIP ROLL - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT SLIP ROLL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7160,7 +7160,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT ROLL - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT ROLL - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7170,7 +7170,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT MOBIUS SAW - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT MOBIUS SAW - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7180,7 +7180,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX SELECT MOBIUS TRI - rotate - pick the Beat FX (openDJ)</description>
+                <description>BEAT FX SELECT MOBIUS TRI - rotate - pick the Beat FX (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxSelect</key>
                 <status>0x94</status>
@@ -7190,7 +7190,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT CH1 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT CH1 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7200,7 +7200,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT CH2 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT CH2 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7210,7 +7210,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT CH3 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT CH3 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7220,7 +7220,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT CH4 - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT CH4 - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7230,7 +7230,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT MASTER - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT MASTER - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7240,7 +7240,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT MIC - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT MIC - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7250,7 +7250,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT FX CH SELECT SAMPLER - rotate - where the Beat FX goes (openDJ)</description>
+                <description>BEAT FX CH SELECT SAMPLER - rotate - where the Beat FX goes (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxChannelSelect</key>
                 <status>0x94</status>
@@ -7260,7 +7260,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT &lt; - press - halve the Beat FX length (openDJ)</description>
+                <description>BEAT &lt; - press - halve the Beat FX length (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxLeftPressed</key>
                 <status>0x94</status>
@@ -7270,7 +7270,7 @@
                 </options>
             </control>
             <control>
-                <description>BEAT &gt; - press - double the Beat FX length (openDJ)</description>
+                <description>BEAT &gt; - press - double the Beat FX length (DJ Sugar)</description>
                 <group>[EffectRack1_EffectUnit5]</group>
                 <key>PioneerDDJFLX10.beatFxRightPressed</key>
                 <status>0x94</status>
@@ -7280,7 +7280,7 @@
                 </options>
             </control>
             <control>
-                <description>SOUND COLOR FX SPACE - press - what the COLOR knobs play (openDJ)</description>
+                <description>SOUND COLOR FX SPACE - press - what the COLOR knobs play (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerDDJFLX10.colorFxPressed</key>
                 <status>0x96</status>
@@ -7290,7 +7290,7 @@
                 </options>
             </control>
             <control>
-                <description>SOUND COLOR FX D.ECHO - press - what the COLOR knobs play (openDJ)</description>
+                <description>SOUND COLOR FX D.ECHO - press - what the COLOR knobs play (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerDDJFLX10.colorFxPressed</key>
                 <status>0x96</status>
@@ -7300,7 +7300,7 @@
                 </options>
             </control>
             <control>
-                <description>SOUND COLOR FX CRUSH - press - what the COLOR knobs play (openDJ)</description>
+                <description>SOUND COLOR FX CRUSH - press - what the COLOR knobs play (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerDDJFLX10.colorFxPressed</key>
                 <status>0x96</status>
@@ -7310,7 +7310,7 @@
                 </options>
             </control>
             <control>
-                <description>SOUND COLOR FX NOISE - press - what the COLOR knobs play (openDJ)</description>
+                <description>SOUND COLOR FX NOISE - press - what the COLOR knobs play (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerDDJFLX10.colorFxPressed</key>
                 <status>0x96</status>
@@ -7320,7 +7320,7 @@
                 </options>
             </control>
             <control>
-                <description>SOUND COLOR FX FILTER - press - what the COLOR knobs play (openDJ)</description>
+                <description>SOUND COLOR FX FILTER - press - what the COLOR knobs play (DJ Sugar)</description>
                 <group>[Master]</group>
                 <key>PioneerDDJFLX10.colorFxPressed</key>
                 <status>0x96</status>

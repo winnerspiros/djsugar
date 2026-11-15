@@ -1,4 +1,4 @@
-//! openDJscript: short action lines in the style of VirtualDJ's VDJscript.
+//! DJSugarScript: short action lines in the style of VirtualDJ's VDJscript.
 //!
 //! ```text
 //! rating 3                          rate the tracks picked in the browser

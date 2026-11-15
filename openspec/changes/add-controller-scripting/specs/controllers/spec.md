@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
-### Requirement: openDJscript rows in the Controller Editor
-The Controller Editor SHALL let the DJ give a control an openDJscript line instead of a function, checking the line as it is typed and saving it to the DJ's own mapping only when it parses.
+### Requirement: DJSugarScript rows in the Controller Editor
+The Controller Editor SHALL let the DJ give a control an DJSugarScript line instead of a function, checking the line as it is typed and saving it to the DJ's own mapping only when it parses.
 
 #### Scenario: Conditional line
-- **WHEN** the DJ picks "An openDJscript line" for PLAY and enters `var 'shift' ? sync : play_pause`
+- **WHEN** the DJ picks "An DJSugarScript line" for PLAY and enters `var 'shift' ? sync : play_pause`
 - **THEN** PLAY syncs while the shift variable is on and plays or pauses otherwise
 
 #### Scenario: Mistake

@@ -1,4 +1,4 @@
-//! The controllers openDJ looks after itself, beyond running Mixxx's
+//! The controllers DJ Sugar looks after itself, beyond running Mixxx's
 //! mappings: each has a picture in the Controller Editor and a guide page,
 //! and is marked Beta until someone tries it on the hardware, then
 //! Supported. The list is `support.json`, which the website reads too.

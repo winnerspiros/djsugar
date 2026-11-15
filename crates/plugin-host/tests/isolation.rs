@@ -3,7 +3,7 @@
 
 use std::time::{Duration, Instant};
 
-use opendj_plugin_host::{spawn, Action, Connection, Helper, Options, Outcome, Policy, Status};
+use djsugar_plugin_host::{spawn, Action, Connection, Helper, Options, Outcome, Policy, Status};
 
 const FRAMES: usize = 256;
 /// Generous, so a busy CI machine doesn't turn a good block late.
@@ -16,8 +16,8 @@ fn start(effect: &str) -> (Connection, Helper) {
 fn start_from(effect: &str, state: Option<Vec<u8>>) -> (Connection, Helper) {
     spawn(&Options {
         picks: Vec::new(),
-        helper: env!("CARGO_BIN_EXE_opendj-plugin-host").into(),
-        plugin: opendj_plugin_host::Plugin::Test(effect.into()),
+        helper: env!("CARGO_BIN_EXE_djsugar-plugin-host").into(),
+        plugin: djsugar_plugin_host::Plugin::Test(effect.into()),
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -131,9 +131,9 @@ fn a_slow_block_plays_dry_and_the_next_one_recovers() {
 }
 
 #[test]
-fn the_helper_quits_when_opendj_lets_go() {
+fn the_helper_quits_when_djsugar_lets_go() {
     let (conn, mut helper) = start("test-gain");
-    drop(conn); // closes the helper's stdin, as when openDJ quits
+    drop(conn); // closes the helper's stdin, as when DJ Sugar quits
     assert!(matches!(
         helper.wait_exit(Duration::from_secs(5)),
         Status::Exited(_)
@@ -144,8 +144,8 @@ fn the_helper_quits_when_opendj_lets_go() {
 fn an_unknown_effect_fails_to_start() {
     let err = spawn(&Options {
         picks: Vec::new(),
-        helper: env!("CARGO_BIN_EXE_opendj-plugin-host").into(),
-        plugin: opendj_plugin_host::Plugin::Test("no-such-plugin".into()),
+        helper: env!("CARGO_BIN_EXE_djsugar-plugin-host").into(),
+        plugin: djsugar_plugin_host::Plugin::Test("no-such-plugin".into()),
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -176,7 +176,7 @@ fn a_round_trip_is_short() {
 
 #[test]
 fn an_instrument_plays_the_notes_it_is_sent() {
-    use opendj_plugin_host::Midi;
+    use djsugar_plugin_host::Midi;
     let (mut conn, _helper) = start("test-synth");
     let silent = vec![0.0f32; FRAMES];
     let mut l = vec![9.0; FRAMES];
@@ -214,7 +214,7 @@ fn an_instrument_plays_the_notes_it_is_sent() {
 #[test]
 fn a_helper_that_never_exits_after_answering_does_not_stall_a_scan() {
     use std::os::unix::fs::PermissionsExt;
-    let dir = std::env::temp_dir().join(format!("opendj-scan-test-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("djsugar-scan-test-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let helper = dir.join("helper.sh");
     std::fs::write(
@@ -224,7 +224,7 @@ fn a_helper_that_never_exits_after_answering_does_not_stall_a_scan() {
     .unwrap();
     std::fs::set_permissions(&helper, std::fs::Permissions::from_mode(0o755)).unwrap();
     let start = Instant::now();
-    let found = opendj_plugin_host::client::scan(
+    let found = djsugar_plugin_host::client::scan(
         &helper,
         std::path::Path::new("x.clap"),
         Duration::from_secs(5),
@@ -236,12 +236,12 @@ fn a_helper_that_never_exits_after_answering_does_not_stall_a_scan() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// openDJ asks for a plugin's window through the shared block; the helper
+/// DJ Sugar asks for a plugin's window through the shared block; the helper
 /// opens it (where there is a display) or says there is none to show, and
 /// closes it when asked.
 #[test]
 fn the_editor_opens_and_closes_when_asked() {
-    use opendj_plugin_host::Editor;
+    use djsugar_plugin_host::Editor;
     let wait_for = |helper: &Helper, want: Editor| {
         let end = Instant::now() + Duration::from_secs(10);
         while helper.editor() != want && Instant::now() < end {

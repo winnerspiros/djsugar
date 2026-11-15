@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (2026-11-02, from
 
 ## Why
 
-M3U8 is the one playlist format every DJ app, media player, car stereo and library tool reads. openDJ reads VirtualDJ's M3U playlists during the VirtualDJ import but can't export any list as a file, and can't take in a loose `.m3u8` someone sends. Research: notes/ecosystem-standards-review.md in the project files.
+M3U8 is the one playlist format every DJ app, media player, car stereo and library tool reads. DJ Sugar reads VirtualDJ's M3U playlists during the VirtualDJ import but can't export any list as a file, and can't take in a loose `.m3u8` someone sends. Research: notes/ecosystem-standards-review.md in the project files.
 
 ## What Changes
 

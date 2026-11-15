@@ -92,7 +92,7 @@ fn serves_the_page() {
         "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
     );
     assert!(r.starts_with("HTTP/1.1 200"), "{r}");
-    assert!(r.contains("<title>openDJ Remote</title>"));
+    assert!(r.contains("<title>DJ Sugar Remote</title>"));
     let r = get(
         server.port(),
         "GET /nope HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",

@@ -97,7 +97,7 @@ pub struct Genre {
     pub grooves: Vec<Groove>,
 }
 
-/// The files the library is read from, in order: openDJ's own grooves,
+/// The files the library is read from, in order: DJ Sugar's own grooves,
 /// then mpump's (AGPL-3.0, see NOTICE; written by
 /// `scripts/import-mpump-grooves.py`).
 const FILES: [&str; 2] = [

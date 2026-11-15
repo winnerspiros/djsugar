@@ -4,17 +4,17 @@ Planned for: **v0.5** (with the controller mapper, #133)
 
 ## Why
 
-A user request (2026-11-01): the Controller Editor should support openDJscript, so a
+A user request (2026-11-01): the Controller Editor should support DJSugarScript, so a
 mapping can do things like conditional logic based on the controller's
 modes, modifiers and SHIFT. The mapping format and the runtime already have
-it (openDJscript rows, `layer` conditions on variables, `set_var` /
+it (DJSugarScript rows, `layer` conditions on variables, `set_var` /
 `toggle_var` / `var`, long press, tap, double press), and VirtualDJ and
 Traktor imports already write it; the editor could only give a control a
 plain function.
 
 ## What Changes
 
-- The row editor gets **Does**: *A function* (as before), *An openDJscript
+- The row editor gets **Does**: *A function* (as before), *An DJSugarScript
   line*, *Shift: on while held* or *Mode: on/off each press*.
   - A line is checked as it's typed (the parser's own message under it) and
     used on Enter; **Acts on** (press, release, long press, tap, double
@@ -27,14 +27,14 @@ plain function.
   shift`), checked as typed. **Move** puts the row on that layer instead,
   **Copy** as well, so SHIFT + CUE can do something else while CUE still
   cues. The mapping's variables are listed under it.
-- Lines can ask anything openDJscript asks: `var 'shift' ? sync : play_pause`,
+- Lines can ask anything DJSugarScript asks: `var 'shift' ? sync : play_pause`,
   `deck 1 play ? deck 1 pause : deck 1 play`.
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `controllers`: the Controller Editor edits openDJscript rows, modifiers and layers
+- `controllers`: the Controller Editor edits DJSugarScript rows, modifiers and layers
 
 ## Out of Scope (later)
 

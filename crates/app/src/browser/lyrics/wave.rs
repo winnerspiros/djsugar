@@ -1,14 +1,14 @@
 //! Lyrics along the bottom of each deck's big waveform: the timed lyrics
 //! of the track on the deck, read when it loads (see
-//! [`opendj_engine::lyrics::find_with`]), each line a strip from when it
+//! [`djsugar_engine::lyrics::find_with`]), each line a strip from when it
 //! is sung to when it ends. The lane itself is drawn in Slint
 //! (`LyricsLane`), scrolling with the waveform.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver};
 
-use opendj_engine::lyrics::{self, Line, Lyrics};
-use opendj_engine::{Source, NUM_DECKS};
+use djsugar_engine::lyrics::{self, Line, Lyrics};
+use djsugar_engine::{Source, NUM_DECKS};
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 
 use super::super::Browser;

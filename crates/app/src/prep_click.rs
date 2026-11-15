@@ -4,7 +4,7 @@
 //! the one that turned it on. Turned off by hand, it stays off for that
 //! track.
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 
 pub struct PrepClick {
     metronome: ControlHandle,

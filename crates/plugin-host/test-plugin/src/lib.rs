@@ -9,7 +9,7 @@
 //! Its own presets, through CLAP preset discovery and preset load: "Loud"
 //! (gain 1.5) and "Quiet" (0.25) inside the plugin, a preset for another
 //! plugin a host should leave out, and any `.gain` file (the gain as text)
-//! in the folder `OPENDJ_TEST_PRESETS` names.
+//! in the folder `DJSUGAR_TEST_PRESETS` names.
 //!
 //! It is a real `.clap` binary, loaded through the same path as third-party
 //! plugins.
@@ -106,8 +106,8 @@ impl Plugin for TestGain {
 impl DefaultPluginFactory for TestGain {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::{AUDIO_EFFECT, STEREO};
-        PluginDescriptor::new("app.opendj.test-gain", "openDJ Test Gain")
-            .with_vendor("openDJ")
+        PluginDescriptor::new("io.github.winnerspiros.djsugar.test-gain", "DJ Sugar Test Gain")
+            .with_vendor("DJ Sugar")
             .with_features([AUDIO_EFFECT, STEREO])
     }
 
@@ -280,8 +280,8 @@ impl Entry for TestEntry {
         Ok(Self {
             plugins: PluginFactoryWrapper::new(Plugins(TestGain::get_descriptor())),
             presets: PresetDiscoveryFactoryWrapper::new(Presets(ProviderDescriptor::new(
-                "app.opendj.test-gain.presets",
-                "openDJ Test Gain presets",
+                "io.github.winnerspiros.djsugar.test-gain.presets",
+                "DJ Sugar Test Gain presets",
             ))),
         })
     }
@@ -343,7 +343,7 @@ impl PresetDiscoveryFactoryImpl for Presets {
                     flags: Flags::IS_FACTORY_CONTENT,
                     location: Location::Plugin,
                 });
-                if let Some(dir) = std::env::var_os("OPENDJ_TEST_PRESETS") {
+                if let Some(dir) = std::env::var_os("DJSUGAR_TEST_PRESETS") {
                     let dir = CString::new(dir.to_string_lossy().into_owned()).unwrap_or_default();
                     let _ = indexer.declare_filetype(FileType {
                         name: c"Gain",
@@ -370,7 +370,7 @@ impl ProviderImpl<'_> for Provider {
         location: Location,
         receiver: &mut MetadataReceiver,
     ) -> Result<(), PluginError> {
-        let me = UniversalPluginId::clap(c"app.opendj.test-gain");
+        let me = UniversalPluginId::clap(c"io.github.winnerspiros.djsugar.test-gain");
         let fail = |_| PluginError::Message("the host refused a preset");
         match location {
             Location::Plugin => {
@@ -383,7 +383,7 @@ impl ProviderImpl<'_> for Provider {
                 receiver
                     .begin_preset(Some(c"Not mine"), Some(c"other"))
                     .map_err(fail)?
-                    .add_plugin_id(UniversalPluginId::clap(c"app.opendj.else"));
+                    .add_plugin_id(UniversalPluginId::clap(c"io.github.winnerspiros.djsugar.else"));
             }
             Location::File { .. } => {
                 receiver

@@ -11,7 +11,7 @@ Most lyrics a DJ can get are timed by line (LRCLIB, most `.lrc` files) or not ti
 - **Time Words** in the Lyrics tab, for lyrics not yet timed by word: Whisper (whisper.cpp through whisper-rs) listens to the track's vocal stem, separating it with HTDemucs first when the track has no stems yet, and the lyrics the DJ has are lined up with the words it heard (a global alignment of the two word lists, so missed and extra words don't throw it off). Words it heard take its times; the words between are spread over the gap by length. The result is saved as an enhanced `.lrc` beside the track, like Find, and every view picks it up.
 - The model, OpenAI Whisper large-v3-turbo (5-bit, about 550 MB, MIT), is downloaded the first time it is needed from the `stem-models` release, checked against the SHA-1 whisper.cpp publishes for it. On a Mac it runs on the GPU (Metal).
 - The tab says what is happening: downloading the model, separating the vocals, timing words with a percentage, or why it failed (too few words heard to trust).
-- Later in this change: **transcribe** a track with no lyrics, marked as made by openDJ.
+- Later in this change: **transcribe** a track with no lyrics, marked as made by DJ Sugar.
 
 ## Capabilities
 

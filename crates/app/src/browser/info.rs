@@ -9,15 +9,15 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use super::cleanup::{info_proposals, query_for, QueryFor};
 use crate::lookup::{Found, Miss};
 
-use opendj_engine::cover::{self, Cover};
-use opendj_engine::preview::PREVIEW_GROUP;
-use opendj_engine::scan::is_cloud_only;
-use opendj_engine::tags::{self, TagFields};
-use opendj_engine::{BeatGrid, Source};
+use djsugar_engine::cover::{self, Cover};
+use djsugar_engine::preview::PREVIEW_GROUP;
+use djsugar_engine::scan::is_cloud_only;
+use djsugar_engine::tags::{self, TagFields};
+use djsugar_engine::{BeatGrid, Source};
 
 use std::collections::BTreeMap;
 
-use opendj_library::cleanup::Field;
+use djsugar_library::cleanup::Field;
 
 use super::tag_chips;
 use super::*;
@@ -846,7 +846,7 @@ impl Browser {
             return;
         };
         ui.set_has_track(true);
-        ui.set_editable(writable(t).is_some() || opendj_library::row_id(t.id).is_some());
+        ui.set_editable(writable(t).is_some() || djsugar_library::row_id(t.id).is_some());
         ui.set_title(t.title.clone().into());
         ui.set_artist(t.artist.clone().into());
         ui.set_rating(t.rating as i32);
@@ -927,7 +927,7 @@ impl Browser {
                 status = format!("Couldn't save to your collection: {e}");
             }
             // Clean-up and Look up online leave what the DJ typed alone.
-            if opendj_library::cleanup::Field::from_name(id).is_some() {
+            if djsugar_library::cleanup::Field::from_name(id).is_some() {
                 let _ = db.mark_hand_edited(t.id, id);
             }
             if id == "bpm" && t.bpm > 0.0 {
@@ -964,7 +964,7 @@ impl Browser {
         ui.set_editable(
             tracks
                 .iter()
-                .any(|t| writable(t).is_some() || opendj_library::row_id(t.id).is_some()),
+                .any(|t| writable(t).is_some() || djsugar_library::row_id(t.id).is_some()),
         );
         ui.set_title(format!("{} tracks", tracks.len()).into());
         ui.set_artist(names_summary(tracks.iter().map(|t| t.artist.as_str())).into());
@@ -1104,7 +1104,7 @@ impl Browser {
         let Some(QueryFor { query, .. }) = query_for(&t, &key, &token) else {
             ui.set_status(
                 "There's no artist and title to look this track up by, in its tags or \
-                 file name. An AcoustID key in Settings › Collection lets openDJ \
+                 file name. An AcoustID key in Settings › Collection lets DJ Sugar \
                  recognise it by its sound."
                     .into(),
             );

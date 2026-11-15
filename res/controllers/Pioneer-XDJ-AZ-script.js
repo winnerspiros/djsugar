@@ -1,7 +1,7 @@
 // Pioneer-XDJ-AZ-script.js
 // ****************************************************************************
-// * openDJ mapping script for the Pioneer XDJ-AZ in PC (MIDI) control mode.
-// * Written from AlphaTheta's "XDJ-AZ MIDI Message List", from openDJ's
+// * DJ Sugar mapping script for the Pioneer XDJ-AZ in PC (MIDI) control mode.
+// * Written from AlphaTheta's "XDJ-AZ MIDI Message List", from DJ Sugar's
 // * XDJ-RX3 script (itself from Mixxx's DDJ-400 and DDJ-FLX4 mappings:
 // * Warker, nschloe, dj3730, jusko, Robert904).
 // ****************************************************************************
@@ -25,7 +25,7 @@
 //  tab.
 //
 //  The XDJ-AZ has no MIDI message to hand its mixer to the computer; its
-//  mixer section sends MIDI, which openDJ's mixer follows.
+//  mixer section sends MIDI, which DJ Sugar's mixer follows.
 //
 //  The jog displays show the playhead going round and the cue point.
 //
@@ -458,7 +458,7 @@ PioneerXDJAZ.colorFxLights = function() {
 };
 
 //
-// BEAT FX: openDJ's Beat FX unit
+// BEAT FX: DJ Sugar's Beat FX unit
 //
 
 PioneerXDJAZ.beatFxUnit = "[EffectRack1_EffectUnit5]";
@@ -770,7 +770,7 @@ PioneerXDJAZ.keyboardLights = function(group) {
 };
 
 //
-// openDJ: PAD FX1 and PAD FX2
+// DJ Sugar: PAD FX1 and PAD FX2
 //
 
 // What each pad holds on, as on the deck's screen (deck.slint's pad-fx and
@@ -832,7 +832,7 @@ PioneerXDJAZ.samplerPadShiftPressed = function(_channel, _control, value, status
 //
 //
 
-// openDJ: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
+// DJ Sugar: the stems pads, laid out as on screen (VirtualDJ's): Vocal,
 // Instru, Bass, Acapella on top; Kick, HiHat, Stems FX, Instrumental below.
 // A number from 1 is the stem ([ChannelN_StemM]: 1 kick, 2 bass, 3
 // instruments, 4 vocals, 5 hi-hats); 0 is Acapella, -1 Instrumental and -2
@@ -933,7 +933,7 @@ PioneerXDJAZ.stemMuteChanged = PioneerXDJAZ.stemCountChanged;
 //
 
 PioneerXDJAZ.pitchAdjusted = function(_value, group, _control) {
-    // openDJ: the KEYBOARD pads show the key shift too.
+    // DJ Sugar: the KEYBOARD pads show the key shift too.
     PioneerXDJAZ.keyboardLights(group);
     const pitchAdjust = Math.round(engine.getValue(group, "pitch_adjust"));
     let lights = 0b00000000;

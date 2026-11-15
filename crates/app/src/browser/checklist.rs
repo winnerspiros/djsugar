@@ -10,8 +10,8 @@
 
 use std::time::Instant;
 
-use opendj_engine::Track;
-use opendj_library::checklist::MAX_SCORE;
+use djsugar_engine::Track;
+use djsugar_library::checklist::MAX_SCORE;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::{columns, Browser};

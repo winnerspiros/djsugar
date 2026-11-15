@@ -11,7 +11,7 @@ The network is KeyNet from F. Korzeniowski and G. Widmer, "Genre-Agnostic Key
 Classification With Convolutional Neural Networks", ISMIR 2018.
 
 The weights come under the MIT licence below, which lets them be used in
-openDJ's GPL code as long as this notice stays with them.
+DJ Sugar's GPL code as long as this notice stays with them.
 
 ```
 MIT License

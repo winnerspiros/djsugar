@@ -16,7 +16,7 @@
 
 use std::path::{Path, PathBuf};
 
-use opendj_engine::Track;
+use djsugar_engine::Track;
 
 /// A step on the way into the collection.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -287,7 +287,7 @@ impl Prep {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::Source;
+    use djsugar_engine::Source;
 
     #[test]
     fn albums_go_under_their_artist() {

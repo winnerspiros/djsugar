@@ -1,11 +1,11 @@
 [package]
 name = "phrase-bench"
-description = "Scores openDJ's phrase detection against phrases imported from rekordbox"
+description = "Scores DJ Sugar's phrase detection against phrases imported from rekordbox"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-opendj-engine = { path = "../engine" }
-opendj-library = { path = "../library" }
+djsugar-engine = { path = "../engine" }
+djsugar-library = { path = "../library" }

@@ -7,7 +7,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::hid::{Io, Repeats};
 use crate::host::{HidLink, Host, Target};
@@ -36,12 +36,12 @@ pub struct Controller {
     /// what arrives while they are still starting up, so the states sent
     /// with `init` are repeated once they're ready.
     resend_at: Option<Instant>,
-    /// `OPENDJ_MIDI_DEBUG` set: log messages both ways.
+    /// `DJSUGAR_MIDI_DEBUG` set: log messages both ways.
     debug: bool,
     /// The deck 3 and 4 switches and deck shift as the outputs last
     /// resolved them.
     layers: crate::host::RouteState,
-    /// openDJ mappings: openDJscript rows and lights.
+    /// DJ Sugar mappings: DJSugarScript rows and lights.
     rows: ScriptRows,
     /// HID: the last input report, to skip repeats.
     repeats: Repeats,
@@ -252,7 +252,7 @@ impl Controller {
             fourteen_bit: Vec::new(),
             outputs,
             resend_at: Some(Instant::now() + RESEND_AFTER),
-            debug: std::env::var_os("OPENDJ_MIDI_DEBUG").is_some(),
+            debug: std::env::var_os("DJSUGAR_MIDI_DEBUG").is_some(),
             layers: ([false; 2], 0),
             rows,
             repeats: Repeats::default(),
@@ -275,7 +275,7 @@ impl Controller {
 
     /// The controls scripts wrote since the last call, while tracing, with
     /// the last value other than 0 written to each.
-    pub fn take_trace(&mut self) -> Vec<(opendj_control::ConfigKey, f64)> {
+    pub fn take_trace(&mut self) -> Vec<(djsugar_control::ConfigKey, f64)> {
         match &mut self.host.borrow_mut().trace {
             Some(t) => std::mem::take(t),
             None => Vec::new(),

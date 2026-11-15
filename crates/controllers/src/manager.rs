@@ -13,14 +13,14 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use midir::{Ignore, MidiInput, MidiOutput};
-use opendj_control::ControlRegistry;
+use djsugar_control::ControlRegistry;
 
 use crate::controller::Controller;
-use crate::format::OpenDjMapping;
+use crate::format::DjSugarMapping;
 use crate::hid;
 use crate::mapping::Mapping;
 
-const CLIENT: &str = "openDJ";
+const CLIENT: &str = "DJ Sugar";
 const RESCAN: Duration = Duration::from_secs(1);
 /// LEDs and connection callbacks are refreshed at least this often.
 const POLL: Duration = Duration::from_millis(10);
@@ -63,7 +63,7 @@ pub struct Port {
     /// A USB HID controller rather than a MIDI port: it runs an HID mapping,
     /// which can't be edited or mapped by hand.
     pub hid: bool,
-    /// Why it isn't running, when openDJ knows: an HID device the system
+    /// Why it isn't running, when DJ Sugar knows: an HID device the system
     /// wouldn't open, say.
     pub problem: Option<String>,
     /// It plays instruments: it has no mapping (see [`Controllers::keyboards`]).
@@ -388,7 +388,7 @@ pub fn list_mappings(dir: &Path) -> Vec<(String, PathBuf)> {
     let mut v: Vec<_> = entries
         .flatten()
         .map(|e| e.path())
-        .filter(|p| p.to_string_lossy().ends_with(".midi.xml") || crate::mapping::is_opendj_file(p))
+        .filter(|p| p.to_string_lossy().ends_with(".midi.xml") || crate::mapping::is_djsugar_file(p))
         .filter_map(|p| Mapping::read_name(&p).map(|n| (n, p)))
         .collect();
     v.sort();
@@ -463,7 +463,7 @@ pub fn is_own_file(file: &str) -> bool {
 /// Mixxx mapping it names, if any.
 pub(crate) fn load_mapping(path: &Path, own: Option<&Path>) -> Result<Mapping, String> {
     if is_own_file(&path.to_string_lossy()) {
-        let mine = OpenDjMapping::read(path)?;
+        let mine = DjSugarMapping::read(path)?;
         let dir = crate::default_mappings_dir().unwrap_or_default();
         let base = match &mine.based_on {
             Some(b) => Some(Mapping::load(&dir.join(b))?),
@@ -475,7 +475,7 @@ pub(crate) fn load_mapping(path: &Path, own: Option<&Path>) -> Result<Mapping, S
     let Some(own) = own else {
         return Ok(base);
     };
-    let mine = OpenDjMapping::read(own)?;
+    let mine = DjSugarMapping::read(own)?;
     let dir = path.parent().unwrap_or(Path::new("."));
     Ok(mine.build(Some(&base), dir))
 }
@@ -851,7 +851,7 @@ fn run_keyboard(
     let device = crate::routing::device_hash(port);
     let conn = input.connect(
         &in_port,
-        "openDJ keys",
+        "DJ Sugar keys",
         move |_, msg, _| {
             monitor(&name, msg);
             if LEARNING.load(Ordering::Relaxed) {
@@ -949,7 +949,7 @@ fn run_device(
     };
     let _in_conn = match input.connect(
         &in_port,
-        "openDJ in",
+        "DJ Sugar in",
         move |_, msg, _| {
             let _ = tx.send(msg.to_vec());
         },
@@ -981,7 +981,7 @@ fn run_device(
                     .find(|p| output.port_name(p).is_ok_and(|n| tokens(&n) == want))
             })?
             .clone();
-        output.connect(&p, "openDJ out").ok()
+        output.connect(&p, "DJ Sugar out").ok()
     });
     let send = move |m: &[u8]| {
         if let Some(out) = out_conn.as_mut() {
@@ -1070,13 +1070,13 @@ fn run_controller(
 /// What to tell the DJ when an HID device won't open.
 fn hid_open_problem(error: &str) -> String {
     if cfg!(target_os = "linux") {
-        "Linux didn't let openDJ open it. Add the udev rule from the controllers guide, \
+        "Linux didn't let DJ Sugar open it. Add the udev rule from the controllers guide, \
          then plug it in again."
             .into()
     } else if cfg!(windows) {
-        format!("Windows didn't let openDJ open it ({error}). Is another DJ app using it?")
+        format!("Windows didn't let DJ Sugar open it ({error}). Is another DJ app using it?")
     } else {
-        format!("The system didn't let openDJ open it ({error}). Quit Traktor and try again.")
+        format!("The system didn't let DJ Sugar open it ({error}). Quit Traktor and try again.")
     }
 }
 
@@ -1155,7 +1155,7 @@ fn run_hid(
 }
 
 /// A stand-in device for trying mappings without hardware:
-/// `OPENDJ_VIRTUAL_MIDI="Midi Fighter Twister=/tmp/twister"` reads MIDI
+/// `DJSUGAR_VIRTUAL_MIDI="Midi Fighter Twister=/tmp/twister"` reads MIDI
 /// messages as hex lines ("B0 11 40") from that file or FIFO, as if they came
 /// from a device with that name. It's listed with the devices plugged in,
 /// so it gets a mapping the same way. Messages to the device are printed.
@@ -1166,7 +1166,7 @@ struct StandIn {
 }
 
 fn stand_in_devices() -> Vec<StandIn> {
-    let Ok(spec) = std::env::var("OPENDJ_VIRTUAL_MIDI") else {
+    let Ok(spec) = std::env::var("DJSUGAR_VIRTUAL_MIDI") else {
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -1256,14 +1256,14 @@ mod tests {
         for (port, file) in [
             ("DDJ-FLX4", "Pioneer-DDJ-FLX4.midi.xml"),
             ("DDJ-FLX4:DDJ-FLX4 MIDI 1 24:0", "Pioneer-DDJ-FLX4.midi.xml"),
-            // openDJ's own K2 mapping comes before Mixxx's.
+            // DJ Sugar's own K2 mapping comes before Mixxx's.
             (
                 "XONE:K2",
-                "Allen and Heath Xone K2 - 2 Decks.opendj-mapping",
+                "Allen and Heath Xone K2 - 2 Decks.djsugar-mapping",
             ),
             (
                 "XONE:K2:XONE:K2 MIDI 1 28:0",
-                "Allen and Heath Xone K2 - 2 Decks.opendj-mapping",
+                "Allen and Heath Xone K2 - 2 Decks.djsugar-mapping",
             ),
             ("PIONEER DDJ-SX", "Pioneer DDJ-SX.midi.xml"),
             ("PIONEER DDJ-SX2", "Pioneer DDJ-SX2.midi.xml"),

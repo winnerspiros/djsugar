@@ -1,4 +1,4 @@
-//! Backups of the collection and settings, as one `.opendjbackup` zip:
+//! Backups of the collection and settings, as one `.djsugarbackup` zip:
 //! `backup.json`, `settings.json` (without sign-ins), a snapshot of
 //! `library.sqlite`, `audio-plugins.json` and the own controller mappings.
 //!
@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 
 use crate::settings;
 
-pub const EXTENSION: &str = "opendjbackup";
+pub const EXTENSION: &str = "djsugarbackup";
 /// Settings › Collection › Storage › Back up: 0 off, 1 daily, 2 weekly.
 pub const EVERY_KEY: &str = "backup_every";
 pub const DEFAULT_EVERY: usize = 1;
@@ -34,7 +34,7 @@ const MAPPINGS: &str = "controller-mappings";
 const PENDING: &str = "restore-pending";
 /// Automatic and Back up now files start with this; others in the folder
 /// (a restore's "Before restore", the DJ's own) are never pruned.
-const AUTO_PREFIX: &str = "openDJ backup ";
+const AUTO_PREFIX: &str = "DJ Sugar backup ";
 /// More than this in one file of a backup is not ours.
 const MAX_FILE: u64 = 8 << 30;
 
@@ -171,7 +171,7 @@ pub fn write(config: &Path, to: &Path) -> Result<Summary, String> {
     let snapshot = to.with_extension("sqlite.partial");
     let _ = std::fs::remove_file(&snapshot);
     if library.is_file() {
-        if let Err(e) = opendj_library::snapshot(&library, &snapshot) {
+        if let Err(e) = djsugar_library::snapshot(&library, &snapshot) {
             // A damaged collection (the very reason to restore) still goes
             // in, as it is.
             let _ = std::fs::remove_file(&snapshot);
@@ -218,7 +218,7 @@ pub fn write(config: &Path, to: &Path) -> Result<Summary, String> {
         }
         zip.start_file(MANIFEST, deflate).map_err(|e| err(&e))?;
         let manifest = json!({
-            "app": "openDJ",
+            "app": "DJ Sugar",
             "version": env!("CARGO_PKG_VERSION"),
             "created": chrono::Local::now().to_rfc3339(),
             "collection": summary.collection,
@@ -359,7 +359,7 @@ fn wanted(name: &str) -> Option<PathBuf> {
 /// Checks the backup at `file` and unpacks it to be put in place at the
 /// next start. Replaces a restore already waiting.
 pub fn stage_restore(config: &Path, file: &Path) -> Result<Summary, String> {
-    let bad = |what: &str| format!("This isn't an openDJ backup: {what}");
+    let bad = |what: &str| format!("This isn't an DJ Sugar backup: {what}");
     let f = std::fs::File::open(file).map_err(|e| format!("{}: {e}", file.display()))?;
     let mut archive = zip::ZipArchive::new(f).map_err(|e| bad(&e.to_string()))?;
     {
@@ -372,7 +372,7 @@ pub fn stage_restore(config: &Path, file: &Path) -> Result<Summary, String> {
             .read_to_string(&mut text)
             .map_err(|e| bad(&e.to_string()))?;
         let v: Value = serde_json::from_str(&text).map_err(|e| bad(&e.to_string()))?;
-        if v["app"] != "openDJ" {
+        if v["app"] != "DJ Sugar" {
             return Err(bad("it was made by another app"));
         }
     }
@@ -509,7 +509,7 @@ mod tests {
 
     fn temp(name: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!(
-            "opendj-backup-{name}-{}-{:?}",
+            "djsugar-backup-{name}-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -529,7 +529,7 @@ mod tests {
             .to_string(),
         )
         .unwrap();
-        let db = opendj_library::Library::open(&dir.join(LIBRARY)).unwrap();
+        let db = djsugar_library::Library::open(&dir.join(LIBRARY)).unwrap();
         drop(db);
         std::fs::write(dir.join(AUDIO_PLUGINS), "{}").unwrap();
         std::fs::create_dir_all(dir.join(MAPPINGS).join("sub")).unwrap();
@@ -559,7 +559,7 @@ mod tests {
         let config = temp("config");
         let out = temp("out");
         config_with_everything(&config);
-        let file = out.join("b.opendjbackup");
+        let file = out.join("b.djsugarbackup");
         let s = write(&config, &file).unwrap();
         assert_eq!(
             s,
@@ -596,7 +596,7 @@ mod tests {
         // The current sign-in is kept.
         assert_eq!(v["discogs_token"], json!("new"));
         assert!(config.join(MAPPINGS).join("sub").join("b.js").is_file());
-        opendj_library::Library::open(&config.join(LIBRARY)).unwrap();
+        djsugar_library::Library::open(&config.join(LIBRARY)).unwrap();
         // How things were is saved, and isn't pruned as an automatic one.
         let saved: Vec<_> = std::fs::read_dir(&backups).unwrap().flatten().collect();
         assert_eq!(saved.len(), 1);
@@ -645,7 +645,7 @@ mod tests {
                 .set_modified(t)
                 .unwrap();
         }
-        std::fs::write(dir.join("Before restore x.opendjbackup"), "").unwrap();
+        std::fs::write(dir.join("Before restore x.djsugarbackup"), "").unwrap();
         prune(&dir, 2);
         let left: Vec<String> = automatic(&dir)
             .into_iter()
@@ -658,7 +658,7 @@ mod tests {
                 format!("{AUTO_PREFIX}2.{EXTENSION}")
             ]
         );
-        assert!(dir.join("Before restore x.opendjbackup").exists());
+        assert!(dir.join("Before restore x.djsugarbackup").exists());
         let day = Duration::from_secs(86_400);
         let now = SystemTime::now();
         assert!(due(None, day, now));

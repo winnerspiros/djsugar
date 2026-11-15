@@ -4,7 +4,7 @@ Planned for: **v0.7 · Your library, everywhere** (from a gap review of Player m
 
 ## Why
 
-Spotify and TIDAL never stop: when the queue ends they play on with tracks like the last one (Autoplay, Track Radio). In openDJ, Player mode goes quiet when Up Next runs out. A DJ's library is better suited to this than a streaming catalogue, since every track has a key and a tempo, but a set that adds tracks on its own is not what a DJ wants on the decks. So it is a switch, off at first, and only in Player mode, like cruise control.
+Spotify and TIDAL never stop: when the queue ends they play on with tracks like the last one (Autoplay, Track Radio). In DJ Sugar, Player mode goes quiet when Up Next runs out. A DJ's library is better suited to this than a streaming catalogue, since every track has a key and a tempo, but a set that adds tracks on its own is not what a DJ wants on the decks. So it is a switch, off at first, and only in Player mode, like cruise control.
 
 ## What Changes
 

@@ -22,10 +22,10 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use base64::Engine as _;
-use opendj_control::ControlRegistry;
-use opendj_engine::groove::groove_group;
-use opendj_engine::plugins::{own_presets, plugin_presets, Plugin};
-use opendj_engine::AudioEngine;
+use djsugar_control::ControlRegistry;
+use djsugar_engine::groove::groove_group;
+use djsugar_engine::plugins::{own_presets, plugin_presets, Plugin};
+use djsugar_engine::AudioEngine;
 use serde_json::{json, Map, Value};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -242,7 +242,7 @@ const LIST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 /// run for its own presets, one after another in the background; each answer is kept and
 /// shown as it comes.
 fn ask_plugins(app: &AppWindow, plugins: &[Instrument]) {
-    let Some(helper) = opendj_engine::plugin_helper() else {
+    let Some(helper) = djsugar_engine::plugin_helper() else {
         return;
     };
     let todo: Vec<(String, Plugin)> = STATE.with_borrow_mut(|s| {
@@ -797,7 +797,7 @@ pub fn show(app: &AppWindow) {
     let Some(ctx) = ctx() else {
         return;
     };
-    let current: Vec<Option<Preset>> = (0..opendj_engine::NUM_DECKS)
+    let current: Vec<Option<Preset>> = (0..djsugar_engine::NUM_DECKS)
         .map(|d| ctx.current(d))
         .collect();
     let names: Vec<String> = current
@@ -830,7 +830,7 @@ mod tests {
     use super::*;
 
     fn temp(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("opendj-{name}-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("djsugar-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         d
     }

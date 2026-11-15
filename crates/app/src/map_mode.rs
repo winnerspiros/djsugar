@@ -8,7 +8,7 @@
 //! The mapping wizard (Quick map in the code) does the picking: it asks
 //! which controller (a button for each one plugged in, or a press on it),
 //! then two decks or four, then makes a new mapping that stands alone and
-//! walks through the usual controls (see [`opendj_controllers::quick`]),
+//! walks through the usual controls (see [`djsugar_controllers::quick`]),
 //! deck 1's one by one and the other decks from one press each. Ports the
 //! computer makes (macOS's Network Session) are never offered.
 
@@ -18,12 +18,12 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use opendj_controllers::edit;
-use opendj_controllers::format::{Action, Midi, OpenDjMapping, Row};
-use opendj_controllers::learn::{self, Heard};
-use opendj_controllers::own::{self, OwnMapping};
-use opendj_controllers::quick;
-use opendj_controllers::{
+use djsugar_controllers::edit;
+use djsugar_controllers::format::{Action, Midi, DjSugarMapping, Row};
+use djsugar_controllers::learn::{self, Heard};
+use djsugar_controllers::own::{self, OwnMapping};
+use djsugar_controllers::quick;
+use djsugar_controllers::{
     device_key, is_own_file, is_system_port, Controllers, Mapping, MappingChoice,
 };
 use slint::ComponentHandle;
@@ -48,7 +48,7 @@ struct Step {
     /// mapping standing alone (`<id>.json`).
     file: String,
     id: String,
-    before: OpenDjMapping,
+    before: DjSugarMapping,
     heard: Heard,
     control: String,
     name: String,
@@ -96,7 +96,7 @@ impl Mapper {
         let m = Rc::new(RefCell::new(Mapper {
             app: app.as_weak(),
             controllers,
-            dir: opendj_controllers::default_mappings_dir(),
+            dir: djsugar_controllers::default_mappings_dir(),
             active: false,
             armed: None,
             heard: None,
@@ -374,9 +374,9 @@ impl Mapper {
         let (status, number) = (heard.midi.status, heard.midi.number);
         let name = match &walking {
             Some((_, Some(name), _)) => name.clone(),
-            _ => opendj_controllers::layout::Layout::for_file(&file)
+            _ => djsugar_controllers::layout::Layout::for_file(&file)
                 .and_then(|l| l.find(status, number).map(|(p, _)| p.label.clone()))
-                .unwrap_or_else(|| opendj_controllers::view::message_text(status, number)),
+                .unwrap_or_else(|| djsugar_controllers::view::message_text(status, number)),
         };
         let Some(mine) = self.own_for(&file) else {
             g.set_status("Couldn't make a mapping of your own.".into());
@@ -396,7 +396,7 @@ impl Mapper {
                 g.set_last(
                     format!(
                         "Deck {deck}'s PLAY sends the same as deck 1's, so the controller doesn't \
-                         tell them apart. Use openDJ's deck {deck} switch instead."
+                         tell them apart. Use DJ Sugar's deck {deck} switch instead."
                     )
                     .into(),
                 );
@@ -646,7 +646,7 @@ impl Mapper {
         };
         let taken: Vec<String> = own::all(&dir).into_iter().map(|m| m.name).collect();
         let name = edit::my_name(short_port_name(&w.port), &taken);
-        let mut mapping = OpenDjMapping::new(&name);
+        let mut mapping = DjSugarMapping::new(&name);
         mapping.decks = Some(decks);
         if decks == 4 {
             mapping.deck_order = Some([1, 2, 3, 4]);
@@ -732,7 +732,7 @@ impl Mapper {
         let Some(mut mine) = OwnMapping::read(&own::path(&dir, &step.id)) else {
             return;
         };
-        let midi_of = |m: &OpenDjMapping, control: &str| -> Option<Midi> {
+        let midi_of = |m: &DjSugarMapping, control: &str| -> Option<Midi> {
             m.rows.iter().find_map(|r| match &r.action {
                 Action::Bind { control: c, .. } if c == control && r.layer.is_empty() => {
                     Some(r.midi)
@@ -840,11 +840,11 @@ impl Mapper {
             let own = if is_own_file(&file) {
                 own_dir
                     .as_ref()
-                    .and_then(|d| OpenDjMapping::read(&d.join(&file)).ok())
+                    .and_then(|d| DjSugarMapping::read(&d.join(&file)).ok())
             } else {
                 settings::controller_version(&file)
                     .zip(own_dir.as_ref())
-                    .and_then(|(id, d)| OpenDjMapping::read(&own::path(d, &id)).ok())
+                    .and_then(|(id, d)| DjSugarMapping::read(&own::path(d, &id)).ok())
             };
             let built = match (own, &self.dir) {
                 (Some(o), Some(d)) => o.build(base.as_ref(), d),
@@ -865,7 +865,7 @@ impl Mapper {
 }
 
 /// What a control on screen does, in words: "Play · Deck 1", or for a pad
-/// mode tab (an openDJscript line, see [`learn::SCRIPT`]) "Pad mode
+/// mode tab (an DJSugarScript line, see [`learn::SCRIPT`]) "Pad mode
 /// button 2 · Deck 1".
 fn describe(control: &str) -> String {
     if let Some(line) = control.strip_prefix(learn::SCRIPT) {
@@ -880,7 +880,7 @@ fn describe(control: &str) -> String {
         };
     }
     let (group, key) = control.split_once(',').unwrap_or(("", ""));
-    let f = opendj_controllers::catalog::describe(group, key);
+    let f = djsugar_controllers::catalog::describe(group, key);
     if f.target.is_empty() {
         f.name
     } else {

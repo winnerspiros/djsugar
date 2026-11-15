@@ -9,7 +9,7 @@ The Lyrics tab and the karaoke screen show the words of one track. A DJ mixing t
 ## What Changes
 
 - **Lyrics on the waveforms**: a thin lane along the bottom of each deck's big scrolling waveform (2-Deck, 4-Deck and Prep) shows the track's timed lyrics, each line a strip from when it is sung to when it ends, scrolling with the audio. The line being sung is lit, and its words fill with lilac in step with it.
-- Lyrics are read when a track loads on a deck, as the Lyrics tab reads them (`.lrc` beside the track, tags, openDJ's own lyrics folder), on a thread of their own.
+- Lyrics are read when a track loads on a deck, as the Lyrics tab reads them (`.lrc` beside the track, tags, DJ Sugar's own lyrics folder), on a thread of their own.
 - Settings › Decks › **Lyrics on waveforms** turns the lane off; on at first. The lane makes way for an instrument deck's macro lanes.
 
 ## Capabilities

@@ -9,7 +9,7 @@ Any deck SHALL be able to become a Groove Box from its header menu, and back to 
 
 #### Scenario: Loaded deck
 - **WHEN** Groove Box is chosen on a deck that holds a track
-- **THEN** openDJ asks to eject the track first and nothing changes until it is ejected
+- **THEN** DJ Sugar asks to eject the track first and nothing changes until it is ejected
 
 ### Requirement: One press to play
 Every kit SHALL come with at least four named grooves and the first SHALL be loaded when the kit is chosen. PLAY (`[ChannelN],play` on the Groove Box deck) SHALL start the groove on the next bar of the leading deck when one plays, and at once otherwise; pressing it again SHALL stop at once. A new Groove Box SHALL start with its channel fader as a new deck has it, so it is never louder than the music by surprise.
@@ -66,10 +66,10 @@ The groove's tempo and bar SHALL follow, in this order: the leading deck while i
 - **THEN** the groove plays at 100 BPM on Live's bar
 
 ### Requirement: Kits
-A kit SHALL be a sample pack with up to 16 sounds, four of them on the rows, and named grooves written as steps. Kits SHALL use the pack store, `.opendjpack` export and import, and Get more Packs; a kit's sounds also play on the sampler pads. openDJ SHALL ship at least four built-in kits synthesised by the app itself, in the style of classic drum machines and named by style (for example *Boom* and *Punch*), never by a manufacturer's model name. Kits from others SHALL carry their author and licence, shown in the kit menu.
+A kit SHALL be a sample pack with up to 16 sounds, four of them on the rows, and named grooves written as steps. Kits SHALL use the pack store, `.djsugarpack` export and import, and Get more Packs; a kit's sounds also play on the sampler pads. DJ Sugar SHALL ship at least four built-in kits synthesised by the app itself, in the style of classic drum machines and named by style (for example *Boom* and *Punch*), never by a manufacturer's model name. Kits from others SHALL carry their author and licence, shown in the kit menu.
 
 #### Scenario: Import a kit
-- **WHEN** a `.opendjpack` file holding a kit is dropped on the Groove Box
+- **WHEN** a `.djsugarpack` file holding a kit is dropped on the Groove Box
 - **THEN** the kit joins the kit menu with its grooves, author and licence
 
 ### Requirement: Controller control

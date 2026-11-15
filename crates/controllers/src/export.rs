@@ -1,12 +1,12 @@
-//! Writing a mapping out: as one self-contained `.opendj-mapping` to share,
-//! or as a Mixxx `.midi.xml` with its scripts. Mixxx has no openDJscript,
+//! Writing a mapping out: as one self-contained `.djsugar-mapping` to share,
+//! or as a Mixxx `.midi.xml` with its scripts. Mixxx has no DJSugarScript,
 //! layers or long presses, so what it can't hold is listed in a report.
 
 use std::path::{Path, PathBuf};
 
-use opendj_script::{Expr, Kind};
+use djsugar_script::{Expr, Kind};
 
-use crate::format::OpenDjMapping;
+use crate::format::DjSugarMapping;
 use crate::mapping::{Input, Mapping, Options, When, REQUIRED_SCRIPT};
 
 /// What an export wrote and what it had to leave out.
@@ -19,8 +19,8 @@ pub struct Report {
 
 /// The mapping with the scripts it needs inside it, so the file works on
 /// another computer: every script file found in `own_dir` (the DJ's own
-/// mappings) goes in `sources`. Files openDJ ships stay referenced.
-pub fn self_contained(m: &OpenDjMapping, shipped_dir: &Path, own_dir: &Path) -> OpenDjMapping {
+/// mappings) goes in `sources`. Files DJ Sugar ships stay referenced.
+pub fn self_contained(m: &DjSugarMapping, shipped_dir: &Path, own_dir: &Path) -> DjSugarMapping {
     let mut out = m.clone();
     for (file, _) in &m.scripts {
         if shipped_dir.join(file).is_file() {
@@ -33,9 +33,9 @@ pub fn self_contained(m: &OpenDjMapping, shipped_dir: &Path, own_dir: &Path) -> 
     out
 }
 
-/// Writes a shared `.opendj-mapping`.
-pub fn write_opendj(
-    m: &OpenDjMapping,
+/// Writes a shared `.djsugar-mapping`.
+pub fn write_djsugar(
+    m: &DjSugarMapping,
     shipped_dir: &Path,
     own_dir: &Path,
     path: &Path,
@@ -47,10 +47,10 @@ pub fn write_opendj(
     })
 }
 
-/// Reads a shared `.opendj-mapping`, writing the scripts it carries into
+/// Reads a shared `.djsugar-mapping`, writing the scripts it carries into
 /// `own_dir` so it runs.
-pub fn read_opendj(path: &Path, own_dir: &Path) -> Result<OpenDjMapping, String> {
-    let mut m = OpenDjMapping::read(path)?;
+pub fn read_djsugar(path: &Path, own_dir: &Path) -> Result<DjSugarMapping, String> {
+    let mut m = DjSugarMapping::read(path)?;
     for (file, text) in std::mem::take(&mut m.sources) {
         // Only plain file names: a shared file mustn't write elsewhere.
         if file.contains('/') || file.contains('\\') || file.starts_with('.') {
@@ -69,13 +69,13 @@ fn xml(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// An openDJscript row that is just one control, as Mixxx's group and key
+/// An DJSugarScript row that is just one control, as Mixxx's group and key
 /// and whether it's pressed (a button) rather than set from a fader.
 fn plain(line: &str) -> Option<(String, String, bool)> {
-    let script = opendj_script::parse(line).ok()?;
+    let script = djsugar_script::parse(line).ok()?;
     let mut e = &script.0;
     let mut deck = None;
-    while let Expr::OnDeck(opendj_script::Deck::Number(d), inner) = e {
+    while let Expr::OnDeck(djsugar_script::Deck::Number(d), inner) = e {
         deck = Some(*d);
         e = inner;
     }
@@ -102,7 +102,7 @@ fn plain(line: &str) -> Option<(String, String, bool)> {
 }
 
 /// The mapping as Mixxx writes it, with its base merged in.
-pub fn mixxx_xml(m: &OpenDjMapping, built: &Mapping, report: &mut Report) -> String {
+pub fn mixxx_xml(m: &DjSugarMapping, built: &Mapping, report: &mut Report) -> String {
     let mut x = String::new();
     x.push_str("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
     x.push_str("<MixxxControllerPreset mixxxVersion=\"2.4.0\" schemaVersion=\"1\">\n  <info>\n");
@@ -111,7 +111,7 @@ pub fn mixxx_xml(m: &OpenDjMapping, built: &Mapping, report: &mut Report) -> Str
         x.push_str(&format!("    <author>{}</author>\n", xml(&m.author)));
     }
     let description = if m.description.is_empty() {
-        "Exported from openDJ.".to_string()
+        "Exported from DJ Sugar.".to_string()
     } else {
         m.description.clone()
     };
@@ -159,7 +159,7 @@ pub fn mixxx_xml(m: &OpenDjMapping, built: &Mapping, report: &mut Report) -> Str
     for o in &built.outputs {
         if let Some(line) = &o.script {
             report.left_out.push(format!(
-                "Light {:02X} {:02X}: an openDJscript light ({line})",
+                "Light {:02X} {:02X}: an DJSugarScript light ({line})",
                 o.status, o.control
             ));
             continue;
@@ -223,7 +223,7 @@ fn control(input: &Input, (status, number): (u8, u8), report: &mut Report) -> Op
             None => {
                 report
                     .left_out
-                    .push(format!("{what}: openDJscript ({line})"));
+                    .push(format!("{what}: DJSugarScript ({line})"));
                 return None;
             }
         },
@@ -264,7 +264,7 @@ fn layer_text(layer: &[(String, Option<f64>)]) -> String {
 }
 
 /// Writes `<dir>/<name>.midi.xml` and copies its script files next to it.
-pub fn write_mixxx(m: &OpenDjMapping, built: &Mapping, dir: &Path) -> std::io::Result<Report> {
+pub fn write_mixxx(m: &DjSugarMapping, built: &Mapping, dir: &Path) -> std::io::Result<Report> {
     let mut report = Report::default();
     let text = mixxx_xml(m, built, &mut report);
     let stem: String = m
@@ -328,7 +328,7 @@ mod tests {
     fn exports_what_mixxx_can_hold_and_reports_the_rest() {
         let dir = crate::default_mappings_dir().expect("bundled mappings");
         let base = Mapping::load(&dir.join("Pioneer-DDJ-FLX4.midi.xml")).unwrap();
-        let mut m = OpenDjMapping::new("FLX4 mine");
+        let mut m = DjSugarMapping::new("FLX4 mine");
         m.controller.name = "DDJ-FLX4".into();
         m.based_on = Some("Pioneer-DDJ-FLX4.midi.xml".into());
         m.rows
@@ -356,16 +356,16 @@ mod tests {
 
     #[test]
     fn shared_files_carry_their_scripts() {
-        let tmp = std::env::temp_dir().join(format!("opendj-export-{}", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!("djsugar-export-{}", std::process::id()));
         let own = tmp.join("own");
         std::fs::create_dir_all(&own).unwrap();
         std::fs::write(own.join("mine.js"), "var Mine = {};").unwrap();
-        let mut m = OpenDjMapping::new("Mine");
+        let mut m = DjSugarMapping::new("Mine");
         m.scripts.push(("mine.js".into(), "Mine".into()));
-        let path = tmp.join("Mine.opendj-mapping");
-        write_opendj(&m, &tmp.join("shipped"), &own, &path).unwrap();
+        let path = tmp.join("Mine.djsugar-mapping");
+        write_djsugar(&m, &tmp.join("shipped"), &own, &path).unwrap();
         let other = tmp.join("other");
-        let back = read_opendj(&path, &other).unwrap();
+        let back = read_djsugar(&path, &other).unwrap();
         assert_eq!(back.name, "Mine");
         assert_eq!(
             std::fs::read_to_string(other.join("mine.js")).unwrap(),

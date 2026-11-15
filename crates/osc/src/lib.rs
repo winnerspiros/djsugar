@@ -21,12 +21,12 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use opendj_control::{ConfigKey, ControlHandle, ControlRegistry};
+use djsugar_control::{ConfigKey, ControlHandle, ControlRegistry};
 use rosc::address::{Matcher, OscAddress};
 use rosc::OscPacket;
 pub use rosc::{OscMessage, OscType};
 
-/// The port openDJ listens on unless the DJ picks another.
+/// The port DJ Sugar listens on unless the DJ picks another.
 pub const DEFAULT_PORT: u16 = 9000;
 /// The most feedback passes a second, so the most times a control's value
 /// is sent each second.

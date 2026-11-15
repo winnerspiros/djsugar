@@ -12,7 +12,7 @@ A MIDI device SHALL play the Instrument input only when it runs no mapping and i
 - **THEN** its MIDI port plays the instrument and its DAW port does not, until the DJ picks Play instruments for it
 
 #### Scenario: A keyboard plays for the first time
-- **WHEN** a keyboard plays the instrument for the first time since openDJ started
+- **WHEN** a keyboard plays the instrument for the first time since DJ Sugar started
 - **THEN** a notice names it, and the instrument deck says it is playing from it
 
 ### Requirement: The deck a device plays

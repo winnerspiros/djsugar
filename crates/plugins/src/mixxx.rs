@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use opendj_engine::beats::{BeatGrid, GridMarker};
-use opendj_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
-use opendj_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
+use djsugar_engine::beats::{BeatGrid, GridMarker};
+use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
+use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
 use rusqlite::{Connection, OpenFlags};
 
 use crate::{ImportedLibrary, LibraryImport, ListGroup};
@@ -20,12 +20,12 @@ pub const HISTORY: &str = "history";
 
 pub struct Mixxx;
 
-/// Mixxx's database where Mixxx keeps it (or `OPENDJ_MIXXX_DATABASE`).
+/// Mixxx's database where Mixxx keeps it (or `DJSUGAR_MIXXX_DATABASE`).
 pub fn default_database() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("OPENDJ_MIXXX_DATABASE") {
+    if let Some(p) = std::env::var_os("DJSUGAR_MIXXX_DATABASE") {
         return Some(PathBuf::from(p));
     }
-    let home = opendj_engine::paths::home_dir()?;
+    let home = djsugar_engine::paths::home_dir()?;
     [
         // The Mac App Store and newer builds keep it in the sandbox.
         "Library/Containers/org.mixxx.mixxx/Data/Library/Application Support/Mixxx/mixxxdb.sqlite",
@@ -664,7 +664,7 @@ mod tests {
     }
 
     fn library() -> PathBuf {
-        let path = std::env::temp_dir().join(format!("opendj-mixxx-{}.sqlite", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-mixxx-{}.sqlite", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let db = Connection::open(&path).unwrap();
         db.execute_batch(SCHEMA).unwrap();

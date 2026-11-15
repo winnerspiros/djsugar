@@ -14,8 +14,8 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
-use opendj_engine::scan::{find_audio_files, is_audio, read_track};
-use opendj_engine::Track;
+use djsugar_engine::scan::{find_audio_files, is_audio, read_track};
+use djsugar_engine::Track;
 use serde_json::json;
 
 /// What a place in the tree is, for its icon.
@@ -48,7 +48,7 @@ pub fn roots() -> Vec<Root> {
             place: Place::Pinned,
         })
         .collect();
-    let home = opendj_engine::paths::home_dir();
+    let home = djsugar_engine::paths::home_dir();
     let mut places = Vec::new();
     for (i, music) in crate::settings::music_folders().into_iter().enumerate() {
         let name = if i == 0 {
@@ -520,7 +520,7 @@ mod tests {
     use super::*;
 
     fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("opendj-files-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-files-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir

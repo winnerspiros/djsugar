@@ -6,7 +6,7 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-openDJ can play instruments, the Groove Box and interface inputs through decks, but nothing it plays can be kept and built on in the moment. A DJ who hears a great four bars in the mix has no way to grab them, and someone playing a synth over the mix can't layer a bass line, then a pad, then a lead on top of each other. Traktor's Loop Recorder and loop stations (Boss RC-505 style) show the simple model DJs reach for: a few layers, record, overdub, play, undo, locked to the beat. Loopy Pro shows the far end of the range (a clip canvas with groups, follow actions and scenes), which is a whole app of its own, overlaps the DAW many DJs run alongside, and was assessed and left out of the Instruments rework. It already plays along with openDJ over Ableton Link.
+DJ Sugar can play instruments, the Groove Box and interface inputs through decks, but nothing it plays can be kept and built on in the moment. A DJ who hears a great four bars in the mix has no way to grab them, and someone playing a synth over the mix can't layer a bass line, then a pad, then a lead on top of each other. Traktor's Loop Recorder and loop stations (Boss RC-505 style) show the simple model DJs reach for: a few layers, record, overdub, play, undo, locked to the beat. Loopy Pro shows the far end of the range (a clip canvas with groups, follow actions and scenes), which is a whole app of its own, overlaps the DAW many DJs run alongside, and was assessed and left out of the Instruments rework. It already plays along with DJ Sugar over Ableton Link.
 
 ## What Changes
 

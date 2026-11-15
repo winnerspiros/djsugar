@@ -1,14 +1,14 @@
-//! The app's side of the Groove Box (`opendj_engine::groove`): the kits'
+//! The app's side of the Groove Box (`djsugar_engine::groove`): the kits'
 //! and the groove library's names for the screen, and the Groove Boxes kept
 //! across restarts in `settings.json` under `groove_box`, one object per
 //! deck of its controls' values.
 
 use std::time::{Duration, Instant};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::groove::{groove_group, GROOVES, ROWS};
-use opendj_engine::NUM_DECKS;
-use opendj_engine::{kits, patterns};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::groove::{groove_group, GROOVES, ROWS};
+use djsugar_engine::NUM_DECKS;
+use djsugar_engine::{kits, patterns};
 use serde_json::{json, Map, Value};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -91,7 +91,7 @@ pub fn install(app: &AppWindow) {
     ui.set_genres(ModelRc::new(VecModel::from(genres)));
 }
 
-/// Brings a Groove Box saved by an older openDJ up to [`LAYOUT`]: the kit
+/// Brings a Groove Box saved by an older DJ Sugar up to [`LAYOUT`]: the kit
 /// it picked moves to its new place, and its rows' sounds go back to the
 /// rows' own (rows 1-4 were already kick, snare, hat and open hat).
 pub(crate) fn upgrade(values: &mut Map<String, Value>) {
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn every_kept_control_exists() {
         let reg = ControlRegistry::new();
-        let (_engine, _input) = opendj_engine::engine::Engine::new(&reg, 48_000.0);
+        let (_engine, _input) = djsugar_engine::engine::Engine::new(&reg, 48_000.0);
         for key in kept_keys() {
             assert!(reg.get("[Groove1]", &key).is_some(), "{key}");
         }

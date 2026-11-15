@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems and performance**
 
 ## Why
 
-openDJ's effects should be high quality and cheap enough to run on four decks at once. A review of fundsp, bosai-dsp, Airwindows and Signalsmith (`/mnt/project-files/notes/fx-engine-review.md`, 2026-10-27) found that none of them should replace openDJ's own engine. Each one is missing what DJ effects need: beat sync, release tails, click-free switching and Mixxx's controls. The biggest gains are in our own engine:
+DJ Sugar's effects should be high quality and cheap enough to run on four decks at once. A review of fundsp, bosai-dsp, Airwindows and Signalsmith (`/mnt/project-files/notes/fx-engine-review.md`, 2026-10-27) found that none of them should replace DJ Sugar's own engine. Each one is missing what DJ effects need: beat sync, release tails, click-free switching and Mixxx's controls. The biggest gains are in our own engine:
 - The rack reserves about 100 MB of delay memory up front. This is estimated, not measured.
 - Effects run one sample at a time.
 - Modulated delays use linear interpolation.
@@ -40,7 +40,7 @@ None.
 ## Out of Scope
 
 - Third-party plugin hosting (`add-audio-plugin-hosting`, v2.0).
-- Code under GPL-3.0-only, because openDJ is GPL-2.0-or-later.
+- Code under GPL-3.0-only, because DJ Sugar is GPL-2.0-or-later.
 
 ## Impact
 

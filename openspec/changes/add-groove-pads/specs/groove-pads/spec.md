@@ -33,7 +33,7 @@ With `pad_mode` 2, pads 1-4 SHALL pick groove A-D (switching on the next bar), p
 - **THEN** pad 2 shows waiting, groove B starts on the next bar, and pad 2 then shows playing
 
 ### Requirement: Maschine Mikro MK3
-openDJ SHALL drive a Maschine Mikro MK3 over USB HID without NI software: pads with pressure, STEP / PAD MODE / PATTERN for the modes, LEFT and RIGHT for the row, PLAY, STOP, RESTART, REC, ERASE, MUTE and SOLO, the encoder and touch strip for the row's level, pitch and decay and the swing and tempo, the button and pad lights, and the screen showing deck, kit, groove, tempo, row and mode.
+DJ Sugar SHALL drive a Maschine Mikro MK3 over USB HID without NI software: pads with pressure, STEP / PAD MODE / PATTERN for the modes, LEFT and RIGHT for the row, PLAY, STOP, RESTART, REC, ERASE, MUTE and SOLO, the encoder and touch strip for the row's level, pitch and decay and the swing and tempo, the button and pad lights, and the screen showing deck, kit, groove, tempo, row and mode.
 
 #### Scenario: Plug in
 - **WHEN** a Mikro MK3 is plugged in and deck 2 is a Groove Box

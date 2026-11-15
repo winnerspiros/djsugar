@@ -1,4 +1,4 @@
-//! openDJ's own music library, modeled on how Mixxx keeps `mixxxdb.sqlite`
+//! DJ Sugar's own music library, modeled on how Mixxx keeps `mixxxdb.sqlite`
 //! but never reading it: every track with its tags, rating, colour and
 //! comment, its hot cues and beat grid, the DJ's playlists and folders, and
 //! a history of what was played.
@@ -15,9 +15,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use opendj_engine::beats::BeatGrid;
-use opendj_engine::import::{ImportedLibrary, ImportedList, ImportedListKind, StreamedTrack};
-use opendj_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
+use djsugar_engine::beats::BeatGrid;
+use djsugar_engine::import::{ImportedLibrary, ImportedList, ImportedListKind, StreamedTrack};
+use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
 use rusqlite::{params, Connection, OptionalExtension};
 
 pub use rusqlite::Error;
@@ -2576,7 +2576,7 @@ fn import_lists(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::beats::GridMarker;
+    use djsugar_engine::beats::GridMarker;
 
     pub(crate) fn file_track(path: &str, title: &str) -> Track {
         Track {
@@ -2935,7 +2935,7 @@ mod tests {
 
     #[test]
     fn a_second_apps_copy_joins_the_song_already_here() {
-        use opendj_engine::import::ImportedEntry;
+        use djsugar_engine::import::ImportedEntry;
         let mut lib = Library::in_memory().unwrap();
         let mut vdj = imported_track("/vdj/a.mp3");
         vdj.artist = "Bicep".into();
@@ -3008,7 +3008,7 @@ mod tests {
 
     #[test]
     fn streamed_tracks_stand_in_their_lists() {
-        use opendj_engine::import::ImportedEntry;
+        use djsugar_engine::import::ImportedEntry;
         let mut lib = Library::in_memory().unwrap();
         lib.sync(&[file_track("/m/a.mp3", "Have It")]).unwrap();
         let streamed = |id: &str, title: &str| {
@@ -3101,7 +3101,7 @@ mod tests {
 
     #[test]
     fn imports_details_markers_and_lists() {
-        use opendj_engine::import::ImportedEntry;
+        use djsugar_engine::import::ImportedEntry;
         let mut lib = Library::in_memory().unwrap();
         lib.sync(&[file_track("/m/a.mp3", "A")]).unwrap();
         let mine = lib
@@ -3114,7 +3114,7 @@ mod tests {
         b.info.last_played = Some(1_700_000_000);
         b.info.hotcues[0].color = Some(0x00ff00);
         b.info.hotcues.push(Hotcue {
-            number: opendj_engine::MEMORY_CUE,
+            number: djsugar_engine::MEMORY_CUE,
             seconds: 5.0,
             ..Default::default()
         });
@@ -3371,7 +3371,7 @@ mod tests {
 
     #[test]
     fn a_write_after_a_read_waits_for_another_connection() {
-        let path = std::env::temp_dir().join(format!("opendj-locked-{}.db", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-locked-{}.db", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let mut a = Library::open(&path).unwrap();
         a.sync(&[file_track("/m/a.mp3", "A")]).unwrap();
@@ -3400,7 +3400,7 @@ mod tests {
 
     #[test]
     fn a_version_4_library_marks_imported_keys() {
-        let path = std::env::temp_dir().join(format!("opendj-lib-v4-{}.db", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-lib-v4-{}.db", std::process::id()));
         {
             let mut lib = Library::open(&path).unwrap();
             let mut t = file_track("/m/a.mp3", "A");
@@ -3467,7 +3467,7 @@ mod tests {
 
     #[test]
     fn a_version_3_library_gains_saved_loops() {
-        let path = std::env::temp_dir().join(format!("opendj-v3-{}.sqlite", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-v3-{}.sqlite", std::process::id()));
         let _ = std::fs::remove_file(&path);
         {
             let db = Connection::open(&path).unwrap();
@@ -3495,7 +3495,7 @@ mod tests {
 
     #[test]
     fn a_version_1_library_gains_smart_lists() {
-        let path = std::env::temp_dir().join(format!("opendj-v1-{}.sqlite", std::process::id()));
+        let path = std::env::temp_dir().join(format!("djsugar-v1-{}.sqlite", std::process::id()));
         let _ = std::fs::remove_file(&path);
         {
             let db = Connection::open(&path).unwrap();
@@ -3699,7 +3699,7 @@ mod tests {
 
     #[test]
     fn an_import_can_want_its_playlists_streamed_tracks() {
-        use opendj_engine::import::ImportedEntry;
+        use djsugar_engine::import::ImportedEntry;
         let mut lib = Library::in_memory().unwrap();
         let streamed = |id: &str| {
             let mut e = ImportedEntry::new(format!("netsearch://td{id}"), None);
@@ -3799,7 +3799,7 @@ mod tests {
 
     #[test]
     fn opening_drops_what_imports_put_on_the_wanted_list() {
-        let dir = std::env::temp_dir().join(format!("opendj-wanted-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-wanted-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let path = dir.join("library.db");
         let _ = std::fs::remove_file(&path);

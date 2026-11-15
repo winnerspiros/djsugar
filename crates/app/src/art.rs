@@ -1,5 +1,5 @@
 //! Album art thumbnails for the browser's first column. Covers are found
-//! the same way the decks find them (see [`opendj_engine::cover`]) on a
+//! the same way the decks find them (see [`djsugar_engine::cover`]) on a
 //! background thread, and kept once per album folder, so a library of
 //! whole albums decodes each cover once.
 
@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use opendj_engine::cover::{self, Cover};
-use opendj_engine::{Source, Track};
+use djsugar_engine::cover::{self, Cover};
+use djsugar_engine::{Source, Track};
 
 /// Longest side of a thumbnail: twice the column, for HiDPI screens.
 const THUMB_SIZE: u32 = 56;

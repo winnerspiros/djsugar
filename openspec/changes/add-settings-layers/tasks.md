@@ -13,7 +13,7 @@ the hot cue, end warning and backup rows are in `add-settings-deck-choices`. Wha
 
 - [ ] 2.1 Key shift and stems reset on load (check what key match on load already does)
 - [ ] 2.2 Instant doubles
-- [ ] 2.3 Loops trimmed to the grid (check what openDJ does today)
+- [ ] 2.3 Loops trimmed to the grid (check what DJ Sugar does today)
 
 ## 3. Remaining layer-2 choices
 

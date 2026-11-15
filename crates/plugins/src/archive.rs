@@ -1,6 +1,6 @@
 //! The Internet Archive as a source in the rail: its freely licensed audio
 //! (netlabel releases, live recordings, public domain) searched from
-//! openDJ, each item listed as an album with its cover, and downloaded
+//! DJ Sugar, each item listed as an album with its cover, and downloaded
 //! into the collection with its cover next to the files.
 //!
 //! Only items with a Creative Commons or public domain licence are listed,

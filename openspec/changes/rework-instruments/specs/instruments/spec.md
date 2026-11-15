@@ -8,14 +8,14 @@ The Instruments source SHALL show a tree (Recently played, My presets, Groove Bo
 - **THEN** the list shows only Acid V's presets tagged Bass, and dragging one onto deck 2 plays Acid V with that sound through deck 2
 
 ### Requirement: Presets
-openDJ SHALL save an instrument's sound as a preset file holding the instrument, its full state, knob pages, trim, pan, scale settings, name, tags and art. A Groove Box preset SHALL hold its kit, patterns, swing and track sound settings. Loading a preset SHALL bring the instrument back exactly as saved. A plugin's own presets SHALL be listed where its format lets a host read them.
+DJ Sugar SHALL save an instrument's sound as a preset file holding the instrument, its full state, knob pages, trim, pan, scale settings, name, tags and art. A Groove Box preset SHALL hold its kit, patterns, swing and track sound settings. Loading a preset SHALL bring the instrument back exactly as saved. A plugin's own presets SHALL be listed where its format lets a host read them.
 
 #### Scenario: Keep a tweaked sound
-- **WHEN** the user changes Jun-6 V's sound in its window, presses SAVE › Save as new and names it "Ambient Ebow", then restarts openDJ and loads "Ambient Ebow"
+- **WHEN** the user changes Jun-6 V's sound in its window, presses SAVE › Save as new and names it "Ambient Ebow", then restarts DJ Sugar and loads "Ambient Ebow"
 - **THEN** Jun-6 V sounds as it did when saved
 
 #### Scenario: Tweaks survive a restart
-- **WHEN** the user changes a plugin's sound in its window, closes the window and restarts openDJ
+- **WHEN** the user changes a plugin's sound in its window, closes the window and restarts DJ Sugar
 - **THEN** the plugin loads with the changed sound
 
 #### Scenario: Step through presets on the deck

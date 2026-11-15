@@ -1,5 +1,5 @@
 //! The phone remote, on the app's side: switches the server in
-//! `opendj-remote` on and off, carries out what phones ask for on the UI
+//! `djsugar-remote` on and off, carries out what phones ask for on the UI
 //! thread, and pushes Automix, the decks and the main levels to them.
 //!
 //! Everything a phone does goes through the same functions and controls as
@@ -11,9 +11,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use opendj_control::{ControlHandle, ControlRegistry};
-use opendj_engine::{deck_group, Track, NUM_DECKS};
-use opendj_remote::{Event, Server};
+use djsugar_control::{ControlHandle, ControlRegistry};
+use djsugar_engine::{deck_group, Track, NUM_DECKS};
+use djsugar_remote::{Event, Server};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use slint::{ComponentHandle, Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
@@ -98,7 +98,7 @@ fn seen(last: u64) -> String {
 }
 
 fn qr_image(text: &str) -> Image {
-    match opendj_remote::qr::rgba(text, 4) {
+    match djsugar_remote::qr::rgba(text, 4) {
         Some((side, px)) => {
             let buf =
                 SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&px, side as u32, side as u32);
@@ -203,7 +203,7 @@ impl Remote {
         ui.set_error("".into());
         if on && self.server.is_none() {
             match Server::start(
-                opendj_remote::DEFAULT_PORT,
+                djsugar_remote::DEFAULT_PORT,
                 crate::settings::remote_devices(),
             ) {
                 Ok(s) => {
@@ -275,14 +275,14 @@ impl Remote {
             return;
         };
         let (code, generation) = server.pair_code();
-        let addresses = opendj_remote::local_addresses();
+        let addresses = djsugar_remote::local_addresses();
         let Some((_, ip)) = addresses.first() else {
             let ui = app.global::<RemoteUi>();
             ui.set_url("".into());
             ui.set_error("This computer isn't on a network. Join Wi-Fi to use the remote.".into());
             return;
         };
-        let base = opendj_remote::base_url(*ip, server.port());
+        let base = djsugar_remote::base_url(*ip, server.port());
         if self.drawn == (generation, base.clone()) {
             return;
         }
@@ -290,7 +290,7 @@ impl Remote {
         if ui.get_error().starts_with("This computer isn't") {
             ui.set_error("".into());
         }
-        ui.set_qr(qr_image(&opendj_remote::pair_url(
+        ui.set_qr(qr_image(&djsugar_remote::pair_url(
             *ip,
             server.port(),
             &code,
@@ -299,7 +299,7 @@ impl Remote {
         let others: Vec<String> = addresses[1..]
             .iter()
             .map(|(_, ip)| {
-                opendj_remote::base_url(*ip, server.port())
+                djsugar_remote::base_url(*ip, server.port())
                     .trim_end_matches('/')
                     .to_string()
             })
@@ -594,7 +594,7 @@ impl Remote {
     /// address; the app remembers which file it stands for.
     fn art_id(&self, t: &Track) -> Option<String> {
         let key = crate::art::Art::key(t)?;
-        let opendj_engine::Source::File(path) = &t.source else {
+        let djsugar_engine::Source::File(path) = &t.source else {
             return None;
         };
         let digest = Sha256::digest(key.as_bytes());
@@ -783,7 +783,7 @@ impl Remote {
 /// scaled to `size` and sent as JPEG.
 fn find_art(map: &ArtMap, id: &str, size: u32) -> Option<Vec<u8>> {
     let (path, album) = map.lock().ok()?.get(id).cloned()?;
-    let cover = opendj_engine::cover::find_sized(&path, &album, size)?;
+    let cover = djsugar_engine::cover::find_sized(&path, &album, size)?;
     let rgba = image::RgbaImage::from_raw(cover.width, cover.height, cover.rgba)?;
     let rgb = image::DynamicImage::ImageRgba8(rgba).to_rgb8();
     let mut jpeg = Vec::new();

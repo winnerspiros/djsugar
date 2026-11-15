@@ -20,7 +20,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::controls::alias;
 use crate::dsp::Isolator;
@@ -83,7 +83,7 @@ pub(crate) enum Routing {
 /// Knobs the instrument's plugin parameters show on:
 /// `[Instrument1],parameter1` to `parameter32`, 0 to 1 across each one's
 /// own range. As many as the plugin host shares with a helper.
-pub const INSTRUMENT_PARAMETERS: usize = opendj_plugin_host::shm::MAX_PARAMS;
+pub const INSTRUMENT_PARAMETERS: usize = djsugar_plugin_host::shm::MAX_PARAMS;
 
 /// The input's control group.
 pub const fn input_group(input: usize) -> &'static str {

@@ -10,7 +10,7 @@
 //! Chord mode (`chord_mode`, see [`CHORDS`]) plays a chord built on the
 //! scale from each key; `chord_learn` takes the next chord held as Mine.
 
-use opendj_plugin_host::Midi;
+use djsugar_plugin_host::Midi;
 
 use crate::key::Key;
 

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use crate::{ImportedLibrary, ImportedList, LibraryImport, ListGroup};
-use opendj_engine::import::ImportedListKind;
+use djsugar_engine::import::ImportedListKind;
 
 pub mod database;
 pub mod lists;
@@ -192,7 +192,7 @@ impl LibraryImport for VirtualDj {
         describe_streamed(&mut lists, &import.streamed);
         if !skipped.filters.is_empty() {
             eprintln!(
-                "VirtualDJ filter folders openDJ's search can't say yet: {}",
+                "VirtualDJ filter folders DJ Sugar's search can't say yet: {}",
                 skipped.filters.join("; ")
             );
         }

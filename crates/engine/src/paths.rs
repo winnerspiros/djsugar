@@ -37,14 +37,14 @@ pub fn cache_base() -> Option<PathBuf> {
     }
 }
 
-/// The name of openDJ's own folder inside [`config_base`] and
-/// [`cache_base`]: "openDJ" on macOS and Windows, where folders there are
-/// named like the app, and "opendj" on Linux.
+/// The name of DJ Sugar's own folder inside [`config_base`] and
+/// [`cache_base`]: "DJ Sugar" on macOS and Windows, where folders there are
+/// named like the app, and "djsugar" on Linux.
 pub fn app_folder_name() -> &'static str {
     if cfg!(any(target_os = "macos", windows)) {
-        "openDJ"
+        "DJ Sugar"
     } else {
-        "opendj"
+        "djsugar"
     }
 }
 

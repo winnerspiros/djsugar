@@ -254,7 +254,7 @@ type SamplerCache = Rc<RefCell<HashMap<crate::ImageFlags, wgpu::Sampler>>>;
 #[derive(Debug)]
 struct CachedPipeline {
     pipeline: wgpu::RenderPipeline,
-    /// Flushes since it was last used. openDJ: a frame can take several
+    /// Flushes since it was last used. DJ Sugar: a frame can take several
     /// flushes (the window and each layer drawn to a texture), each needing
     /// other pipelines, so evicting what one flush didn't use rebuilt (and
     /// recompiled) pipelines every frame.

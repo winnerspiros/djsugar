@@ -1,5 +1,5 @@
 //! Sources in the rail that come from add-ons (see
-//! [`opendj_plugins::source`]): saved searches on the left, what they found
+//! [`djsugar_plugins::source`]): saved searches on the left, what they found
 //! in the list, and downloads that join the collection when they finish.
 //!
 //! Each source runs on a thread of its own, which also asks how searches
@@ -12,13 +12,13 @@ use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
 
-use opendj_engine::Track;
-use opendj_plugins::inbox::safe_name;
-use opendj_plugins::source::{
+use djsugar_engine::Track;
+use djsugar_plugins::inbox::safe_name;
+use djsugar_plugins::source::{
     megabytes, DownloadUpdate, Found, Prefer, Progress, QueryKind, SearchSource, Snapshot,
     SourceInfo, SourceQuery, StatusPage, DOWNLOAD_FOLDER,
 };
-use opendj_plugins::{Plugin, PluginConfig, PluginError, Setting, SettingKind};
+use djsugar_plugins::{Plugin, PluginConfig, PluginError, Setting, SettingKind};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 
 use crate::{
@@ -534,7 +534,7 @@ impl Source {
             all.insert(
                 s.added.to_string(),
                 serde_json::json!({
-                    "items": s.items.iter().map(opendj_plugins::remote::found_json).collect::<Vec<_>>(),
+                    "items": s.items.iter().map(djsugar_plugins::remote::found_json).collect::<Vec<_>>(),
                     "note": s.note,
                     "title": s.title,
                 }),
@@ -576,7 +576,7 @@ fn read_kept(text: &str) -> HashMap<u64, Kept> {
             let items: Vec<Found> = v["items"]
                 .as_array()?
                 .iter()
-                .map(opendj_plugins::remote::found_from)
+                .map(djsugar_plugins::remote::found_from)
                 .collect();
             let text = |k: &str| v[k].as_str().unwrap_or_default().to_string();
             Some((added.parse().ok()?, (items, text("note"), text("title"))))
@@ -728,7 +728,7 @@ impl Sources {
             checked: HashSet::new(),
             anchor: None,
             rows: Vec::new(),
-            music: opendj_engine::scan::default_music_dir(),
+            music: djsugar_engine::scan::default_music_dir(),
             list: list.clone(),
             setup_values: HashMap::new(),
             setup_status: String::new(),
@@ -2124,7 +2124,7 @@ pub fn needs_setup(settings: &[Setting], config: &PluginConfig) -> bool {
 /// Where playing sources keep their caches: `sources` in the app's cache
 /// folder, one folder per source.
 fn caches_root() -> Option<PathBuf> {
-    opendj_engine::cache::cache_dir().map(|d| d.join("sources"))
+    djsugar_engine::cache::cache_dir().map(|d| d.join("sources"))
 }
 
 /// Where a playing source keeps its cache: `sources/<name>` in the app's
@@ -2287,7 +2287,7 @@ fn folder_or_default(set: &str, name: &str, music: Option<&Path>) -> Option<Path
     if set.is_empty() {
         return music.map(|m| m.join("Downloaded").join(safe_name(name, "Downloads")));
     }
-    opendj_engine::paths::expand_tilde(set)
+    djsugar_engine::paths::expand_tilde(set)
 }
 
 /// Queued or running.
@@ -2441,7 +2441,7 @@ mod tests {
 
     #[test]
     fn makes_room_oldest_first() {
-        let dir = std::env::temp_dir().join(format!("opendj-cache-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-cache-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let old = dir.join("A/Old");
         let new = dir.join("B/New");
@@ -2489,7 +2489,7 @@ mod tests {
 
     #[test]
     fn keeps_a_cached_file() {
-        let dir = std::env::temp_dir().join(format!("opendj-keep-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("djsugar-keep-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let from = dir.join("cached.flac");
@@ -2689,7 +2689,7 @@ mod tests {
             folder_or_default("/data/slsk", "Soulseek", None),
             Some(PathBuf::from("/data/slsk"))
         );
-        let home = opendj_engine::paths::home_dir().unwrap();
+        let home = djsugar_engine::paths::home_dir().unwrap();
         assert_eq!(
             folder_or_default("~/Music/In", "Soulseek", None),
             Some(home.join("Music/In"))
@@ -2799,8 +2799,8 @@ mod tests {
     }
 
     impl Plugin for Previewer {
-        fn manifest(&self) -> &opendj_plugins::Manifest {
-            static M: opendj_plugins::Manifest = opendj_plugins::Manifest {
+        fn manifest(&self) -> &djsugar_plugins::Manifest {
+            static M: djsugar_plugins::Manifest = djsugar_plugins::Manifest {
                 id: "previewer",
                 name: "Previewer",
                 hosts: &[],
@@ -2892,7 +2892,7 @@ mod tests {
         };
         let text = serde_json::json!({
             "1700": {
-                "items": [opendj_plugins::remote::found_json(&found)],
+                "items": [djsugar_plugins::remote::found_json(&found)],
                 "note": "1 found",
                 "title": "",
             },

@@ -13,7 +13,7 @@
 //! are a little further off; the others are named by where they fall. Neighbours of the same kind merge.
 //!
 //! The method follows the research in the project notes
-//! (phrase-analysis-review.md); it was written for openDJ.
+//! (phrase-analysis-review.md); it was written for DJ Sugar.
 
 use crate::track::{Chroma, Marker, MarkerKind, Track};
 

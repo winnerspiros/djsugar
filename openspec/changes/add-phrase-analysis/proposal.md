@@ -6,12 +6,12 @@ The tasks still open moved to **v0.8 · From the booth to the studio** on 2026-1
 
 ## Why
 
-Phrases (intro, build, drop, breakdown, outro) feed automatic cues, phrase-aware Automix and lighting later. rekordbox, VirtualDJ and Traktor 4 have them; djay does not. openDJ already has what detection needs (beat grid, 3-band waveform, chroma), so it can be done in Rust inside the normal analysis pass, with no model to download. Research: `notes/phrase-analysis-review.md` in the project files.
+Phrases (intro, build, drop, breakdown, outro) feed automatic cues, phrase-aware Automix and lighting later. rekordbox, VirtualDJ and Traktor 4 have them; djay does not. DJ Sugar already has what detection needs (beat grid, 3-band waveform, chroma), so it can be done in Rust inside the normal analysis pass, with no model to download. Research: `notes/phrase-analysis-review.md` in the project files.
 
 ## What Changes
 
 - Detect phrases on the beat grid during analysis: whole bars, segmented by band energy and a chroma novelty curve, with a length prior that prefers 8- and 16-bar phrases; labelled Intro, Build, Drop, Chorus, Verse, Breakdown or Outro (sections that come back are matched, so a chorus returning or a second verse gets the same label), with an energy level 1-10.
-- Keep phrases in the existing `markers` table (kind `phrase`, source `opendj`). Imported phrases win and are kept.
+- Keep phrases in the existing `markers` table (kind `phrase`, source `djsugar`). Imported phrases win and are kept.
 - Show them as coloured bands on the overview, phrase lines on the scrolling waveform, and "Drop · 8 bars left" on the deck.
 - Automatic cues: a CUE point at the first downbeat with sound and hot cues on phrase changes, named after the phrase, filling only empty pads unless asked.
 - Search by phrase (`has:intro>=16`).

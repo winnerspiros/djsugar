@@ -112,8 +112,8 @@ impl PlexServer {
         let mut response = server::agent()
             .get(&self.url(path))
             .header("Accept", "application/json")
-            .header("X-Plex-Product", "openDJ")
-            .header("X-Plex-Client-Identifier", "opendj")
+            .header("X-Plex-Product", "DJ Sugar")
+            .header("X-Plex-Client-Identifier", "djsugar")
             .call()
             .map_err(|e| format!("Couldn't reach the server: {e}"))?;
         match response.status().as_u16() {

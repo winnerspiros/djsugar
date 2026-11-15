@@ -1,4 +1,4 @@
-//! openDJ mappings' openDJscript rows and lights, as a controller runs them:
+//! DJ Sugar mappings' DJSugarScript rows and lights, as a controller runs them:
 //! layers made of the mapping's variables, long, tap and double presses,
 //! fader and knob values handed to the line, and lights that ask a line
 //! what to show.
@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_script::{level_control, query_control, run_control, Call, Error, Host, Kind, Script};
+use djsugar_control::ControlRegistry;
+use djsugar_script::{level_control, query_control, run_control, Call, Error, Host, Kind, Script};
 
 use crate::mapping::{Input, Mapping, Options, Output, When, DOUBLE_PRESS, LONG_PRESS};
 
@@ -180,7 +180,7 @@ impl ScriptRows {
         let mut lights = Vec::new();
         outputs.retain(|o| match &o.script {
             Some(line) => {
-                let script = opendj_script::parse(line).ok();
+                let script = djsugar_script::parse(line).ok();
                 lights.push(ScriptLight {
                     output: o.clone(),
                     level: script.as_ref().is_some_and(|s| s.is_level()),
@@ -243,7 +243,7 @@ impl ScriptRows {
         let script = self
             .parsed
             .entry(line.to_string())
-            .or_insert_with(|| opendj_script::parse(line).ok())
+            .or_insert_with(|| djsugar_script::parse(line).ok())
             .clone();
         let Some(script) = script else {
             self.error(format!("can't read the row '{line}'"));
@@ -269,7 +269,7 @@ impl ScriptRows {
         }
     }
 
-    /// One message for a row with an openDJscript line. `value` is 0 to 1
+    /// One message for a row with an DJSugarScript line. `value` is 0 to 1
     /// (a 14-bit pair already joined).
     pub(crate) fn handle(
         &mut self,
@@ -434,7 +434,7 @@ impl ScriptRows {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_control::Behavior;
+    use djsugar_control::Behavior;
 
     fn registry() -> std::sync::Arc<ControlRegistry> {
         let reg = ControlRegistry::new();
@@ -569,7 +569,7 @@ mod tests {
         rows.handle(&reg, &enc, 0xB0, 0x00, 2.0, t);
         rows.handle(&reg, &enc, 0xB0, 0x00, -1.0, t);
         let v = reg.get("[Channel1]", "volume").unwrap().get();
-        assert!((v - 0.5 - opendj_script::STEP).abs() < 1e-9, "{v}");
+        assert!((v - 0.5 - djsugar_script::STEP).abs() < 1e-9, "{v}");
     }
 
     #[test]

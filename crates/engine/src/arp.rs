@@ -11,7 +11,7 @@
 //! key is arpeggiated too. Steps fall on the master deck's beat grid while
 //! it plays, and run on at its tempo otherwise.
 
-use opendj_plugin_host::{Midi, Transport};
+use djsugar_plugin_host::{Midi, Transport};
 
 /// `arp_mode` values.
 pub const MODES: [&str; 5] = ["Up", "Down", "Up-down", "Random", "Order"];

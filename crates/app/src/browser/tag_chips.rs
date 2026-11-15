@@ -5,13 +5,13 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use opendj_engine::{hashtags, same_tag as same, split_tags};
-use opendj_library::cleanup::Field;
+use djsugar_engine::{hashtags, same_tag as same, split_tags};
+use djsugar_library::cleanup::Field;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::Browser;
 use crate::{LibraryEdit, MenuTag, TagChip, TrackInfo};
-use opendj_engine::Track;
+use djsugar_engine::Track;
 
 /// How many tags a field suggests while typing.
 const SUGGESTIONS: usize = 6;
@@ -343,7 +343,7 @@ impl Browser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opendj_engine::Source;
+    use djsugar_engine::Source;
 
     fn track(tags: &str) -> Track {
         let mut t = Track {

@@ -253,7 +253,7 @@ export component ControlKnob inherits Rectangle {
     MapMark { key: root.group + "," + root.key; }
 }
 
-// The headphone icon, openDJ's own: a round headband with two cups
+// The headphone icon, DJ Sugar's own: a round headband with two cups
 // tilted outward. Drawn on a 24-unit grid; strokes scale with `size`.
 export component HeadphoneIcon inherits Rectangle {
     in property <length> size: 16px;
@@ -944,7 +944,7 @@ export component MasterBadge inherits Rectangle {
         triggered => {
             tip-mine = true;
             HoverTip.title = "MASTER";
-            HoverTip.body = pinned ? "Synced decks follow this deck. Click to let openDJ pick the master again"
+            HoverTip.body = pinned ? "Synced decks follow this deck. Click to let DJ Sugar pick the master again"
                 : leading ? "Synced decks follow this deck. Click to keep it the master"
                 : "Click to make this deck the master that synced decks follow";
             HoverTip.right-aligned = true;

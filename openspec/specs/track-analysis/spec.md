@@ -1,7 +1,7 @@
 # track-analysis Specification
 
 ## Purpose
-How openDJ works out a track's waveform, tempo, beat grid, key and loudness, when it does so, and how results are kept.
+How DJ Sugar works out a track's waveform, tempo, beat grid, key and loudness, when it does so, and how results are kept.
 
 ## Requirements
 
@@ -41,8 +41,8 @@ Settings › Analysis "Key detection" SHALL offer Standard (chroma template, def
 - **THEN** its key comes from the neural detector and is marked as detected
 
 ### Requirement: Analysis cache
-Results SHALL be cached on disk by file path, size and modification time, so an edited file is analysed again, and SHALL survive tag rewrites made by openDJ. Settings › Collection "Clear" SHALL throw the cache away.
+Results SHALL be cached on disk by file path, size and modification time, so an edited file is analysed again, and SHALL survive tag rewrites made by DJ Sugar. Settings › Collection "Clear" SHALL throw the cache away.
 
 #### Scenario: Edited file re-analysed
-- **WHEN** a file's audio is replaced outside openDJ
+- **WHEN** a file's audio is replaced outside DJ Sugar
 - **THEN** it is analysed again the next time it loads

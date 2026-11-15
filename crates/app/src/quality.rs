@@ -2,8 +2,8 @@
 //! loaded file's format with its bit depth and sample rate when lossless
 //! ("FLAC 24-BIT 96 KHZ"), or its bitrate when not ("MP3 320 KBPS").
 
-use opendj_engine::tags;
-use opendj_engine::track::{Source, Track};
+use djsugar_engine::tags;
+use djsugar_engine::track::{Source, Track};
 
 /// The tag for each deck's track, read from the file once per track.
 #[derive(Default)]
@@ -40,7 +40,7 @@ pub fn describe(info: &tags::FileInfo) -> (String, bool) {
     if format.is_empty() {
         return (String::new(), false);
     }
-    let lossless = opendj_library::dupes::lossless(&format, info.bit_depth);
+    let lossless = djsugar_library::dupes::lossless(&format, info.bit_depth);
     let khz = |rate: u32| {
         let k = rate as f64 / 1000.0;
         if k.fract() == 0.0 {

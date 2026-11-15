@@ -68,7 +68,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 
-use opendj_control::ControlRegistry;
+use djsugar_control::ControlRegistry;
 
 pub use beats::{BeatGrid, GridMarker};
 pub use controls::{
@@ -170,10 +170,10 @@ impl MasterFeed {
     }
 }
 
-/// The plugin helper, `opendj-plugin-host`, installed beside the app.
+/// The plugin helper, `djsugar-plugin-host`, installed beside the app.
 pub fn plugin_helper() -> Option<std::path::PathBuf> {
     let exe = std::env::current_exe().ok()?;
-    let name = format!("opendj-plugin-host{}", std::env::consts::EXE_SUFFIX);
+    let name = format!("djsugar-plugin-host{}", std::env::consts::EXE_SUFFIX);
     let path = exe.parent()?.join(name);
     path.is_file().then_some(path)
 }

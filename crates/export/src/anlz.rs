@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use opendj_engine::track::Hotcue;
+use djsugar_engine::track::Hotcue;
 use rbox_anlz::{
     Anlz, AnlzString, AnlzTag, Beat, BeatGrid, ColorIndex, Cue, CueList, CueListType, CueStatus,
     CueType, ExtendedCue, ExtendedCueList, Header, VBR,
@@ -304,7 +304,7 @@ pub fn build(stem: &Path, t: TrackAnalysis) -> Result<[Anlz; 3], Error> {
 
 /// The grid as the players keep it: every beat, numbered 1 to 4 in its bar
 /// from the grid's first beat, with the tempo there.
-pub fn beats(grid: &opendj_engine::BeatGrid, duration: f64) -> Vec<Beat> {
+pub fn beats(grid: &djsugar_engine::BeatGrid, duration: f64) -> Vec<Beat> {
     if grid.is_empty() || duration <= 0.0 {
         return Vec::new();
     }
@@ -336,7 +336,7 @@ pub fn beats(grid: &opendj_engine::BeatGrid, duration: f64) -> Vec<Beat> {
 mod tests {
     use super::*;
     use crate::wave;
-    use opendj_engine::track::Waveform;
+    use djsugar_engine::track::Waveform;
 
     fn cue(number: usize, seconds: f64) -> Hotcue {
         Hotcue {
@@ -356,7 +356,7 @@ mod tests {
             &stem,
             TrackAnalysis {
                 stick_path: "/Contents/A/B/c.mp3",
-                beats: beats(&opendj_engine::BeatGrid::constant(120.0, 0.1), 2.0),
+                beats: beats(&djsugar_engine::BeatGrid::constant(120.0, 0.1), 2.0),
                 bpm: 120.0,
                 cues,
                 waveforms: wave::waveforms(&waveform, 2.0),
@@ -418,7 +418,7 @@ mod tests {
     /// From a rekordbox export: one memory cue named "1.1Bars" at 1.547 s.
     #[test]
     fn memory_cue_bytes_match_rekordbox() {
-        let mut memory = cue(opendj_engine::track::MEMORY_CUE, 1.547);
+        let mut memory = cue(djsugar_engine::track::MEMORY_CUE, 1.547);
         memory.name = "1.1Bars".into();
         let (dir, [mut dat, _, _]) = files(&[memory]);
         dat.dump().unwrap();
@@ -429,7 +429,7 @@ mod tests {
 
     #[test]
     fn grid_beats_count_bars_from_the_first_beat() {
-        let b = beats(&opendj_engine::BeatGrid::constant(120.0, 0.25), 2.25);
+        let b = beats(&djsugar_engine::BeatGrid::constant(120.0, 0.25), 2.25);
         let got: Vec<_> = b.iter().map(|b| (b.beat_number, b.tempo, b.time)).collect();
         assert_eq!(
             got,

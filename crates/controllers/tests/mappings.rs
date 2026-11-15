@@ -5,13 +5,13 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use opendj_control::ControlRegistry;
-use opendj_controllers::{default_mappings_dir, list_mappings, Controller, Mapping};
+use djsugar_control::ControlRegistry;
+use djsugar_controllers::{default_mappings_dir, list_mappings, Controller, Mapping};
 
 fn load(file: &str) -> (Arc<ControlRegistry>, Controller) {
     let reg = ControlRegistry::new();
     // Creates every engine control; the engine itself isn't run.
-    let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+    let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
     let path = default_mappings_dir().unwrap().join(file);
     let mapping = Mapping::load(&path).unwrap();
     let c = Controller::new("test", mapping, reg.clone()).unwrap();
@@ -50,7 +50,7 @@ fn settle(c: &mut Controller, ms: u64) {
 #[test]
 fn ddj_400_tempo_range_keeps_the_tempo() {
     let reg = ControlRegistry::new();
-    let (mut engine, _input) = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+    let (mut engine, _input) = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
     let path = default_mappings_dir()
         .unwrap()
         .join("Pioneer-DDJ-400.midi.xml");
@@ -251,11 +251,11 @@ fn midi_fighter_twister_drives_the_effects() {
     assert_eq!(c.errors(), Vec::<String>::new());
 }
 
-/// openDJ's own two-deck K2 mapping, with Latching Layers off on MIDI
+/// DJ Sugar's own two-deck K2 mapping, with Latching Layers off on MIDI
 /// channel 15.
 #[test]
 fn xone_k2_two_decks() {
-    const K2: &str = "Allen and Heath Xone K2 - 2 Decks.opendj-mapping";
+    const K2: &str = "Allen and Heath Xone K2 - 2 Decks.djsugar-mapping";
     let (reg, mut c) = load(K2);
     let press = |c: &mut Controller, note: u8| {
         c.receive(&[0x9E, note, 0x7F]);
@@ -364,10 +364,10 @@ fn xone_k2_two_decks() {
     assert_eq!(c.errors(), Vec::<String>::new());
 }
 
-/// openDJ's K2 mapping for the Mixer deck: a column a channel.
+/// DJ Sugar's K2 mapping for the Mixer deck: a column a channel.
 #[test]
 fn xone_k2_mixer() {
-    const K2: &str = "Allen and Heath Xone K2 - Mixer.opendj-mapping";
+    const K2: &str = "Allen and Heath Xone K2 - Mixer.djsugar-mapping";
     let (reg, mut c) = load(K2);
     let press = |c: &mut Controller, note: u8| {
         c.receive(&[0x9E, note, 0x7F]);
@@ -434,7 +434,7 @@ fn every_bundled_mapping_loads_and_takes_its_messages() {
         .map(|e| e.path())
         .filter(|p| {
             let name = p.to_string_lossy();
-            name.ends_with(".midi.xml") || name.ends_with(".opendj-mapping")
+            name.ends_with(".midi.xml") || name.ends_with(".djsugar-mapping")
         })
         .collect();
     files.sort();
@@ -455,7 +455,7 @@ fn every_bundled_mapping_loads_and_takes_its_messages() {
         }
         let messages: Vec<(u8, u8)> = mapping.inputs.keys().copied().collect();
         let reg = ControlRegistry::new();
-        let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+        let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
         let mut c = Controller::new("test", mapping, reg)
             .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         // Some of Mixxx's mappings have script errors of their own; what
@@ -474,7 +474,7 @@ fn every_bundled_mapping_loads_and_takes_its_messages() {
 
 /// A one-off mapping with its own script, in a fresh folder.
 fn scripted(name: &str, xml_controls: &str, script: &str) -> (Arc<ControlRegistry>, Controller) {
-    let dir = std::env::temp_dir().join(format!("opendj-test-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("djsugar-test-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let common = "common-controller-scripts.js";
     std::fs::copy(
@@ -490,7 +490,7 @@ fn scripted(name: &str, xml_controls: &str, script: &str) -> (Arc<ControlRegistr
     );
     let mapping = Mapping::parse(&xml, &dir).unwrap();
     let reg = ControlRegistry::new();
-    let _engine = opendj_engine::engine::Engine::new(&reg, 44_100.0);
+    let _engine = djsugar_engine::engine::Engine::new(&reg, 44_100.0);
     let c = Controller::new("test", mapping, reg.clone()).unwrap();
     std::fs::remove_dir_all(&dir).ok();
     (reg, c)
@@ -798,10 +798,10 @@ fn ddj_flx4_pads_follow_the_tabs() {
     assert_eq!(c.errors(), Vec::<String>::new());
 }
 
-/// The controllers openDJ looks after start without script errors.
+/// The controllers DJ Sugar looks after start without script errors.
 #[test]
 fn looked_after_mappings_start_cleanly() {
-    for c in opendj_controllers::support::all() {
+    for c in djsugar_controllers::support::all() {
         // HID mappings need a device to answer them: see tests/hid.rs.
         if let Some(file) = c.file.filter(|f| !f.ends_with(".hid.xml")) {
             let (_reg, mut c) = load(&file);
@@ -834,7 +834,7 @@ fn mixtrack_platinum_fx_screens() {
 }
 
 /// The V7's mapping is from Mixxx 1.11: its FX, Reloop/Exit and Tap use
-/// controls Mixxx later dropped, which openDJ keeps for it.
+/// controls Mixxx later dropped, which DJ Sugar keeps for it.
 #[test]
 fn numark_v7_reaches_its_old_controls() {
     let (reg, mut c) = load("Numark V7.midi.xml");
@@ -866,8 +866,8 @@ fn numark_v7_reaches_its_old_controls() {
 
 #[test]
 fn pickup_shows_where_the_hardware_is() {
-    use opendj_control::ConfigKey;
-    use opendj_controllers::pickup;
+    use djsugar_control::ConfigKey;
+    use djsugar_controllers::pickup;
     let (reg, mut c) = load("Pioneer-DDJ-FLX4.midi.xml");
     c.publish_positions();
     settle(&mut c, 10);
@@ -1093,10 +1093,10 @@ fn xdj_rx3_decks_mixer_and_pads() {
 
 #[test]
 fn a_controller_follows_the_instrument_to_its_deck() {
-    use opendj_controllers::routing::{set_deck_choice, DeckChoice};
+    use djsugar_controllers::routing::{set_deck_choice, DeckChoice};
     // Deck choices are kept by device name, process-wide: one of its own.
     const PORT: &str = "Follow Test K2";
-    const K2: &str = "Allen and Heath Xone K2 - 2 Decks.opendj-mapping";
+    const K2: &str = "Allen and Heath Xone K2 - 2 Decks.djsugar-mapping";
     let (reg, mut c) = load(K2);
     c.follow_deck_choice(PORT);
     let press = |c: &mut Controller| {
@@ -1136,7 +1136,7 @@ fn a_controller_follows_the_instrument_to_its_deck() {
 
 #[test]
 fn a_mixxx_mapping_follows_too() {
-    use opendj_controllers::routing::{set_deck_choice, DeckChoice};
+    use djsugar_controllers::routing::{set_deck_choice, DeckChoice};
     const PORT: &str = "Follow Test FLX4";
     let (reg, mut c) = load("Pioneer-DDJ-FLX4.midi.xml");
     c.follow_deck_choice(PORT);
@@ -1205,7 +1205,7 @@ fn ddj_rx_quantize() {
     assert_eq!(c.errors(), Vec::<String>::new());
 }
 
-/// openDJ's DDJ-800 mapping: the DDJ-FLX4's, moved to the DDJ-800's
+/// DJ Sugar's DDJ-800 mapping: the DDJ-FLX4's, moved to the DDJ-800's
 /// messages, plus its own buttons and Beat FX switches.
 #[test]
 fn ddj_800_decks_mixer_and_beat_fx() {
@@ -1251,7 +1251,7 @@ fn ddj_800_decks_mixer_and_beat_fx() {
     c.receive(&[0x94, 0x24, 0x7F]);
     let slot = "[EffectRack1_EffectUnit5_Effect1]";
     assert_eq!(
-        opendj_engine::effect_name(get(&reg, slot, "loaded_effect")),
+        djsugar_engine::effect_name(get(&reg, slot, "loaded_effect")),
         "Reverb"
     );
     let on = get(&reg, slot, "enabled");

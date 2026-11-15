@@ -1,4 +1,4 @@
-//! openDJ's side: starts a helper and trades audio blocks with it.
+//! DJ Sugar's side: starts a helper and trades audio blocks with it.
 //!
 //! [`spawn`] returns two halves. The [`Connection`] goes to the audio thread:
 //! [`Connection::process`] never allocates, never locks and never waits
@@ -23,7 +23,7 @@ pub const READY_TIMEOUT: Duration = Duration::from_secs(10);
 /// What to start.
 #[derive(Clone, Debug)]
 pub struct Options {
-    /// The `opendj-plugin-host` binary.
+    /// The `djsugar-plugin-host` binary.
     pub helper: PathBuf,
     /// Which effect the helper loads.
     pub plugin: Plugin,
@@ -191,7 +191,7 @@ impl std::fmt::Display for ScanError {
 /// Lists the plugins in one CLAP file or VST3 bundle. A VST3 bundle's
 /// `moduleinfo.json` is read directly when it has one; otherwise the file is
 /// loaded in a throwaway helper that is killed after `timeout`. Loading a
-/// plugin runs its code, so this never happens inside openDJ.
+/// plugin runs its code, so this never happens inside DJ Sugar.
 pub fn scan(helper: &Path, file: &Path, timeout: Duration) -> Result<Vec<Descriptor>, ScanError> {
     if is_vst3(file) {
         if let Some(found) = crate::descriptor::scan_moduleinfo(file) {
@@ -356,7 +356,7 @@ fn shm_path() -> PathBuf {
         std::env::temp_dir()
     };
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    dir.join(format!("opendj-plugin-{}-{id}", std::process::id()))
+    dir.join(format!("djsugar-plugin-{}-{id}", std::process::id()))
 }
 
 /// The state file beside a helper's shared block, in the temp folder (the
@@ -701,7 +701,7 @@ impl Helper {
             .store(open as u32, Ordering::Release);
     }
 
-    /// Whether openDJ's ask for the window still stands: the helper takes
+    /// Whether DJ Sugar's ask for the window still stands: the helper takes
     /// it back when the DJ closes the window or the plugin has none.
     pub fn editor_asked(&self) -> bool {
         self.shm.header().editor.load(Ordering::Acquire) == 1

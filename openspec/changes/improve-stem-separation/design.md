@@ -2,13 +2,13 @@
 
 ## Context
 
-openDJ separates today by running Python Demucs (`htdemucs`) as a subprocess (`crates/engine/src/stems.rs`, `run_demucs`), writing four FLAC files to the cache, and loading them through the same path as NI stem files. `Stems` already fills progressively (chunks of 65,536 frames, `OnceLock` per chunk, 16-bit), and the engine plays `Σ gain × stem`.
+DJ Sugar separates today by running Python Demucs (`htdemucs`) as a subprocess (`crates/engine/src/stems.rs`, `run_demucs`), writing four FLAC files to the cache, and loading them through the same path as NI stem files. `Stems` already fills progressively (chunks of 65,536 frames, `OnceLock` per chunk, 16-bit), and the engine plays `Σ gain × stem`.
 
 A user request (2026-10-27): run Spleeter, which is old but very fast, when a track loads so there is always *something*, then run HTDemucs or BS-RoFormer in the background and swap it in. Use the GPU where it helps.
 
 ## Research: models
 
-SDR is the usual separation quality score in dB (higher is better, +1 dB is clearly audible). "MUSDB" is the MUSDB18-HQ test set; "Multisong" is ZFTurbo's larger set. Speeds are as reported by the source, not yet measured on openDJ's target machines.
+SDR is the usual separation quality score in dB (higher is better, +1 dB is clearly audible). "MUSDB" is the MUSDB18-HQ test set; "Multisong" is ZFTurbo's larger set. Speeds are as reported by the source, not yet measured on DJ Sugar's target machines.
 
 | Model | Year | Avg SDR (MUSDB) | Size | Speed reported | Weights licence |
 |---|---|---|---|---|---|
@@ -39,7 +39,7 @@ What this means:
 | candle | Metal | CUDA | pure Rust | Every model hand-ported; no Vulkan, so no AMD/Intel GPUs on Linux. |
 | Python (bundled) | MPS | CUDA | 1–2 GB of Python, Torch | Rejected: download size, signing and notarizing every .so, startup time. |
 
-**Recommendation: burn with the wgpu backend for both models, with burn's CPU backend as the fallback.** One runtime, no C++ dependency, the same two GPU APIs openDJ already depends on, and AMD/Intel GPUs on Linux work too. Keep ONNX models as the interchange format so `ort` + CoreML can be swapped in if the benchmark in task 1 shows burn far behind (the main reason would be the Neural Engine for the Spleeter tier on Mac).
+**Recommendation: burn with the wgpu backend for both models, with burn's CPU backend as the fallback.** One runtime, no C++ dependency, the same two GPU APIs DJ Sugar already depends on, and AMD/Intel GPUs on Linux work too. Keep ONNX models as the interchange format so `ort` + CoreML can be swapped in if the benchmark in task 1 shows burn far behind (the main reason would be the Neural Engine for the Spleeter tier on Mac).
 
 ## Decisions
 
@@ -62,7 +62,7 @@ Only high-quality stems are cached, keyed as today (`cache::stems_dir`), and onl
 Models never run on the audio thread. The worker uses its own wgpu device and submits small batches so the waveform renderer stays smooth; it pauses while the app reports dropped frames or audio underruns, and drops to the CPU backend when no GPU adapter is found. One deck's fast tier always has priority over background work.
 
 ### Model files
-Downloaded on first use from a GitHub release asset of openDJ, checked by SHA-256, stored in the app data folder: Spleeter ≈40 MB fp16 (or ≈80 MB fp32), HTDemucs 84 MB. Settings > Stems shows the download state. If the download fails, the old Demucs command path still works when Demucs is installed (kept for one release, then removed).
+Downloaded on first use from a GitHub release asset of DJ Sugar, checked by SHA-256, stored in the app data folder: Spleeter ≈40 MB fp16 (or ≈80 MB fp32), HTDemucs 84 MB. Settings > Stems shows the download state. If the download fails, the old Demucs command path still works when Demucs is installed (kept for one release, then removed).
 
 ## Risks / Trade-offs
 
@@ -70,7 +70,7 @@ Downloaded on first use from a GitHub release asset of openDJ, checked by SHA-25
 - **Memory**: fast and high-quality layers for a deck are about 2 × 250 MB for a 6-minute track at 16-bit. The fast layer is freed chunk by chunk as the high-quality one replaces it; four decks stay under about 1.5 GB.
 - **GPU contention with waveforms** → separate device, small batches, pause on dropped frames; measure frame times during separation.
 - **Intel Macs** have weak GPUs → Intel gets the fast tier on load and HTDemucs only in the background when idle or for prepared lists; SCNet-small is the fallback model if needed.
-- **Licences**: Spleeter MIT (one open question upstream), HTDemucs MIT. All MUSDB-trained weights carry the dataset's research terms in their history; openDJ is free and non-commercial, and the *Best* tier's community weights get a separate check before shipping.
+- **Licences**: Spleeter MIT (one open question upstream), HTDemucs MIT. All MUSDB-trained weights carry the dataset's research terms in their history; DJ Sugar is free and non-commercial, and the *Best* tier's community weights get a separate check before shipping.
 - **Two wgpu versions** (Slint's wgpu 30 and burn's) may both end up in the binary → acceptable size cost; check in task 1.
 
 ## Open questions

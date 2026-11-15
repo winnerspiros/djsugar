@@ -200,7 +200,7 @@ pub(super) fn lastfm_items() -> Vec<PrefItem> {
     } else if signed_in {
         format!("Signed in as {user}")
     } else {
-        "Opens Last.fm in the browser to allow openDJ.".to_string()
+        "Opens Last.fm in the browser to allow DJ Sugar.".to_string()
     };
     items.push(PrefItem {
         action: if fm::signing_in() {
@@ -228,7 +228,7 @@ impl Prefs {
     /// Settings › Broadcast: the stations to stream to, the now-playing
     /// text, and what a public station needs.
     pub(super) fn broadcast_page(&mut self) -> Vec<PrefItem> {
-        use opendj_broadcast::{Format, ServerKind};
+        use djsugar_broadcast::{Format, ServerKind};
         let Some(b) = self.broadcast.clone() else {
             return vec![item(
                 "",
@@ -286,7 +286,7 @@ impl Prefs {
                 ..item(&id(field), TEXT, title, detail)
             };
             let icecast = s.server == ServerKind::Icecast;
-            items.push(text("name", "Name", "What openDJ calls it.", &s.name));
+            items.push(text("name", "Name", "What DJ Sugar calls it.", &s.name));
             items.push(PrefItem {
                 choices: strings(&["Icecast 2", "Shoutcast 1"]),
                 chosen: if icecast { 0 } else { 1 },
@@ -320,7 +320,7 @@ impl Prefs {
                     &id("password"),
                     TEXT,
                     "Password",
-                    "The source password. Kept in your system's keychain, not in openDJ's \
+                    "The source password. Kept in your system's keychain, not in DJ Sugar's \
                      settings.",
                 )
             });
@@ -438,7 +438,7 @@ impl Prefs {
                 NOTE,
                 "",
                 &format!(
-                    "Passwords can't be kept in your system's keychain ({trouble}), so openDJ \
+                    "Passwords can't be kept in your system's keychain ({trouble}), so DJ Sugar \
                      remembers them until it quits."
                 ),
             ));
@@ -478,7 +478,7 @@ impl Prefs {
     pub(super) fn edit_station(
         &mut self,
         i: usize,
-        f: impl FnOnce(&mut opendj_broadcast::Station),
+        f: impl FnOnce(&mut djsugar_broadcast::Station),
     ) {
         if let Some(b) = &self.broadcast {
             b.edit(i, f);

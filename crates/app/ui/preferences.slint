@@ -20,7 +20,7 @@ export struct PrefItem {
     // commands in `value`), its mapping menu, an on/off switch (`on`) and a
     // cog pressing id + "#edit" ("Edit" in `action`) or id + "#quick"
     // ("Map it"), and its Deck menu in `choices2`, 11 a keyboard shortcut: its key in `title` (none
-    // for the row that adds one), its openDJscript line in `value`, the
+    // for the row that adds one), its DJSugarScript line in `value`, the
     // verbs to pick from in `choices`, the button's label in `action`; `on`
     // shows `detail` as a mistake, 12 a tick box, 13 the inputs table, 14
     // a + adding a row (pressing id), 15 a row picking a controller to
@@ -337,7 +337,7 @@ component KeyButton inherits Rectangle {
     }
 }
 
-// A shortcut's openDJscript line; each change is saved at once.
+// A shortcut's DJSugarScript line; each change is saved at once.
 component ScriptField inherits Rectangle {
     in property <PrefItem> item;
     horizontal-stretch: 1;
@@ -1089,7 +1089,7 @@ export component PrefRow inherits Rectangle {
         }
         if item.kind != 7 && item.kind != 11 && item.kind != 12 && item.kind != 16 && item.kind != 17 && item.kind != 21 && item.kind != 22 && item.kind != 23 && item.kind != 24: HorizontalLayout {
             spacing: 16px;
-            // A controller's outline, drawn from its picture when openDJ
+            // A controller's outline, drawn from its picture when DJ Sugar
             // has one.
             if item.kind == 10: VerticalLayout {
                 alignment: center;

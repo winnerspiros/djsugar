@@ -24,7 +24,7 @@ pub const MEL: &str = "beat-this-mel.onnx";
 /// The small beat model (2M parameters).
 pub const SMALL: &str = "beat-this-small.onnx";
 
-/// Each model file and its SHA-256, as the `stem-models` release of openDJ
+/// Each model file and its SHA-256, as the `stem-models` release of DJ Sugar
 /// has them (`.github/workflows/stem-models.yml`).
 pub const MODELS: [(&str, &str); 2] = [
     (
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(beats.len(), 99);
     }
 
-    /// Runs only where the models are in `OPENDJ_MODELS` (they aren't
+    /// Runs only where the models are in `DJSUGAR_MODELS` (they aren't
     /// downloaded in tests).
     #[test]
     fn puts_bar_one_on_a_downbeat() {
@@ -204,7 +204,7 @@ mod tests {
             .iter()
             .any(|(n, _)| crate::separation::model(n).is_none())
         {
-            eprintln!("skipped: no Beat This! models in OPENDJ_MODELS");
+            eprintln!("skipped: no Beat This! models in DJSUGAR_MODELS");
             return;
         }
         let audio = synth::render_with(124.0, 0.3, 40.0, 7);

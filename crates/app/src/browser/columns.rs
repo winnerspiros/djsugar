@@ -6,9 +6,9 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::rc::Rc;
 
-use opendj_engine::key::Key;
-use opendj_engine::Track;
-use opendj_library::query::FieldNames;
+use djsugar_engine::key::Key;
+use djsugar_engine::Track;
+use djsugar_library::query::FieldNames;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 
 use super::Browser;
@@ -55,7 +55,7 @@ pub const PREP: i32 = 18;
 pub const WAVE: i32 = 19;
 /// Where the file is: its folder and name, e.g. "_Staging/Kerala.flac".
 pub const LOCATION: i32 = 20;
-/// The crates the track is in (see [`opendj_library::sets`]).
+/// The crates the track is in (see [`djsugar_library::sets`]).
 pub const CRATES: i32 = 21;
 /// Where the track is in the list shown: for a history session, the order
 /// it was played in.
@@ -404,7 +404,7 @@ pub fn cell(id: i32, t: &Track, camelot: bool) -> String {
         TAGGED => if tagged(t) { "✓" } else { "—" }.into(),
         KEY_ID => crate::settings::show_key(&t.key, camelot),
         LOCATION => match &t.source {
-            opendj_engine::Source::File(p) => {
+            djsugar_engine::Source::File(p) => {
                 let name = p.file_name().map(|n| n.to_string_lossy());
                 let dir = p
                     .parent()
@@ -418,7 +418,7 @@ pub fn cell(id: i32, t: &Track, camelot: bool) -> String {
             }
             _ => String::new(),
         },
-        id if id >= TAGS => opendj_library::query::group_at((id - TAGS) as usize)
+        id if id >= TAGS => djsugar_library::query::group_at((id - TAGS) as usize)
             .map(|g| i.tags_in(g).collect::<Vec<_>>().join("  "))
             .unwrap_or_default(),
         _ => String::new(),
@@ -458,7 +458,7 @@ pub fn tagged(t: &Track) -> bool {
 /// A dot for each part of basic preparation, filled when done: tags
 /// (artist and title), rating, tempo and key.
 pub fn prep_dots(t: &Track) -> String {
-    let p = opendj_library::stages::Prep::of(t);
+    let p = djsugar_library::stages::Prep::of(t);
     [p.tags, p.rating, p.analysed]
         .iter()
         .map(|&done| if done { '●' } else { '○' })
@@ -579,7 +579,7 @@ pub fn compare(id: i32, a: &Track, b: &Track) -> Ordering {
 /// Colors in the order the menu lists them (red, orange, yellow, green,
 /// cyan, blue, purple, pink), others after them, none last.
 pub fn color_order(color: Option<u32>) -> (usize, u32) {
-    use opendj_library::query::COLOR_NAMES;
+    use djsugar_library::query::COLOR_NAMES;
     match color {
         Some(c) => (
             COLOR_NAMES
@@ -593,11 +593,11 @@ pub fn color_order(color: Option<u32>) -> (usize, u32) {
 }
 
 fn analysed(t: &Track) -> bool {
-    opendj_library::stages::Prep::of(t).analysed
+    djsugar_library::stages::Prep::of(t).analysed
 }
 
 fn prep_count(t: &Track) -> usize {
-    let p = opendj_library::stages::Prep::of(t);
+    let p = djsugar_library::stages::Prep::of(t);
     [p.tags, p.rating, p.analysed]
         .iter()
         .filter(|d| **d)
@@ -1051,7 +1051,7 @@ mod tests {
 
     #[test]
     fn shows_and_sorts_library_fields() {
-        let mut a = std::sync::Arc::unwrap_or_clone(opendj_engine::sample_library().remove(0));
+        let mut a = std::sync::Arc::unwrap_or_clone(djsugar_engine::sample_library().remove(0));
         let mut b = a.clone();
         a.info.grouping = "10 SONG".into();
         b.info.grouping = "2 ONS".into();
@@ -1077,7 +1077,7 @@ mod tests {
         assert!(l.show_color(false, &defs));
         assert_eq!(ids(&l), [TITLE_ID]);
 
-        let mut a = std::sync::Arc::unwrap_or_clone(opendj_engine::sample_library().remove(0));
+        let mut a = std::sync::Arc::unwrap_or_clone(djsugar_engine::sample_library().remove(0));
         let mut b = a.clone();
         a.info.color = Some(0x007aff);
         b.info.color = Some(0xff3b30);

@@ -1,5 +1,5 @@
 //! Reads TSAF, the object archive djay Pro keeps each record of its library
-//! in. Only reading: openDJ never writes djay's library.
+//! in. Only reading: DJ Sugar never writes djay's library.
 //!
 //! The layout follows djay-pro-autohotcue's `tsaf.py` (MIT, Copyright (c)
 //! 2026 payne0420), which round-trips every blob of a real library byte for
@@ -26,7 +26,7 @@ pub enum Value {
     Bool(bool),
     Data(Vec<u8>),
     /// A container written earlier in the same blob, by the order
-    /// containers finished. Not followed: nothing openDJ reads uses it.
+    /// containers finished. Not followed: nothing DJ Sugar reads uses it.
     Ref(usize),
 }
 

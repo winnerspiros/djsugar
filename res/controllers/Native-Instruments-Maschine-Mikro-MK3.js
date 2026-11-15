@@ -1,4 +1,4 @@
-// Native Instruments Maschine Mikro MK3: openDJ's Groove Box on the pads.
+// Native Instruments Maschine Mikro MK3: DJ Sugar's Groove Box on the pads.
 //
 // The Mikro is a plain USB HID device (17cc:1700); no NI software or MIDI
 // mode is needed. Report layout as documented by r00tman's MIT-licensed
@@ -475,7 +475,7 @@ MikroMK3.sendLights = function() {
 
 MikroMK3.lines = function() {
     if (!this.isGroove(this.deck)) {
-        return ["NO GROOVE BOX", "PRESS GROOVE BOX", "ON A STOPPED DECK", "IN OPENDJ"];
+        return ["NO GROOVE BOX", "PRESS GROOVE BOX", "ON A STOPPED DECK", "IN DJSUGAR"];
     }
     const g = this.group();
     const kit = this.KITS[Math.round(engine.getValue(g, "kit"))] || this.KITS[0];

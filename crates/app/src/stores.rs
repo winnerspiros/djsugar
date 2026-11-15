@@ -5,16 +5,16 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
-use opendj_plugins::{remote, LibraryImport, Plugin, PluginError, StoreItem, StoreQuery};
+use djsugar_plugins::{remote, LibraryImport, Plugin, PluginError, StoreItem, StoreQuery};
 
 /// How long typing has to pause before a store is asked.
 const DEBOUNCE: Duration = Duration::from_millis(400);
 
 /// The plugins the app has: the built-in stores, then the add-on programs
 /// in the `addons` folder of the app's config folder (and any named in
-/// `OPENDJ_ADDONS`).
+/// `DJSUGAR_ADDONS`).
 pub fn plugins() -> Vec<Box<dyn Plugin>> {
-    let mut all = opendj_plugins::builtin();
+    let mut all = djsugar_plugins::builtin();
     all.extend(addons());
     all
 }
@@ -48,9 +48,9 @@ pub fn configured() -> Vec<Box<dyn Plugin>> {
 }
 
 /// The other DJ apps whose libraries the app can bring in (see
-/// [`opendj_plugins::LibraryImport`]), turned on or not.
+/// [`djsugar_plugins::LibraryImport`]), turned on or not.
 pub fn importers() -> Vec<Box<dyn LibraryImport>> {
-    opendj_plugins::importers()
+    djsugar_plugins::importers()
 }
 
 /// The importers the DJ turned on in Settings > Library.

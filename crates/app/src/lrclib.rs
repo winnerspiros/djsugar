@@ -1,10 +1,10 @@
 //! Finding lyrics on LRCLIB (lrclib.net), a free community database of
 //! synced lyrics with no key. On by default, and switched off in Settings ›
 //! Collection › Health; asked only when the DJ presses Find in the Lyrics
-//! tab, one request at a time, with openDJ's User-Agent as LRCLIB asks.
+//! tab, one request at a time, with DJ Sugar's User-Agent as LRCLIB asks.
 //! Nothing is ever sent to LRCLIB but the track's names and length.
 
-use opendj_plugins::encode;
+use djsugar_plugins::encode;
 use serde_json::Value;
 
 use crate::coverart::{try_json, Failed};

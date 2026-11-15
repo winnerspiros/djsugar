@@ -1,5 +1,5 @@
 # Lets the person at the computer open USB HID DJ controllers without root,
-# so openDJ can run their mappings. The .deb and .rpm install it for you.
+# so DJ Sugar can run their mappings. The .deb and .rpm install it for you.
 # With the AppImage or tarball, copy it to /etc/udev/rules.d/, then run
 #   sudo udevadm control --reload-rules && sudo udevadm trigger
 # and plug the controller in again.

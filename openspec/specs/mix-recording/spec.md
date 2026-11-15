@@ -16,7 +16,7 @@ REC in the top bar (`[Recording],toggle_recording`) SHALL record the master mix,
 The file's header SHALL be rewritten every couple of seconds so a crash or power cut keeps everything until then. WAV recordings SHALL move to a new part before 4 GB.
 
 #### Scenario: Power cut
-- **WHEN** openDJ is killed during a recording
+- **WHEN** DJ Sugar is killed during a recording
 - **THEN** the file plays up to a couple of seconds before the kill
 
 ### Requirement: Tracklist

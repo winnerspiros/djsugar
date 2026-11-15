@@ -31,7 +31,7 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::time::Duration;
 
-use opendj_control::{Behavior, ControlHandle, ControlRegistry};
+use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::controls::Edge;
 use crate::groove::{Clock, Source};

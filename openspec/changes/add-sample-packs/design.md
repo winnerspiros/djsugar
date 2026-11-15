@@ -12,7 +12,7 @@
 
 What we take from them:
 
-- **djay's look and flow** (as in reference screenshots): SAMPLE PACK menu with covers, + and Get more Packs; pencil for edit mode with level knobs and "…"; the Choose Sample popover with preview buttons, lengths and Record New Sample. It matches openDJ's djay-style look.
+- **djay's look and flow** (as in reference screenshots): SAMPLE PACK menu with covers, + and Get more Packs; pencil for edit mode with level knobs and "…"; the Choose Sample popover with preview buttons, lengths and Record New Sample. It matches DJ Sugar's djay-style look.
 - **Serato/rekordbox play modes**: One shot (Serato's Trigger), Hold (Gate), On/Off, Loop (rekordbox). That covers issue #60's one-shot / hold / loop.
 - **16 slots, like rekordbox and djay**, shown as two pages of 8 on each deck with a 1/2 page button beside the pads (2026-10-27), so a deck's 8 pads always read in order.
 - **VirtualDJ's recordings folder**: recordings land in their own "My Recordings" pack.
@@ -52,7 +52,7 @@ What we take from them:
 
   `file` is a path on disk (a sample borrowed from another pack with Choose Sample is saved by its path), `builtin` one of the built-in sounds, and `empty: true` a cleared pad. Only what differs from the pack is saved. This matches a user request ("store levels in settings") and keeps packs shareable.
 - **New pack** makes an empty user pack folder. A file loaded onto a pad of a user pack is copied into that pack's folder on export only, so we don't duplicate audio on disk.
-- **`.opendjpack`** is a zip of the pack folder with the overrides folded into `pack.json` and the referenced files copied in. Import unzips into `<config>/samples/`, keeping both if the name is taken.
+- **`.djsugarpack`** is a zip of the pack folder with the overrides folded into `pack.json` and the referenced files copied in. Import unzips into `<config>/samples/`, keeping both if the name is taken.
 - Loose files dropped on the Default pack's pads work too (as overrides); nobody is forced to make a pack first.
 
 ### Engine
@@ -74,14 +74,14 @@ What we take from them:
 - **Pack menu**: popover with each pack's cover (or a lilac initial tile), the chosen one highlighted in Electric Lilac #B69CFF, + at the top right (New pack…, Import pack…), and a full-width Get more Packs button at the bottom. Right-click a pack: Rename, Export…, Show in Finder, Delete (not on Default).
 - **Edit mode (✎)**: each pad gets a small level knob on its left and a "…" on its right, as in djay. In edit mode a pad can be dragged onto another to swap them (2026-10-27). Out of edit mode pads stay big, clean triggers. Right-click works in both modes.
 - **Choose Sample popover**: anchored above the pad; pack menu at the top; scrolling list of samples with ▶ preview and length (`0:00.7`); a From file… row; and (phase 4) Record New Sample with buttons for deck 1, mic and deck 2.
-- **Drag and drop**: files from Finder or tracks from the track list onto any pad; the pad outline turns lilac while hovering. Dropping onto the pack menu imports `.opendjpack` files.
+- **Drag and drop**: files from Finder or tracks from the track list onto any pad; the pad outline turns lilac while hovering. Dropping onto the pack menu imports `.djsugarpack` files.
 - **Missing files**: name dimmed with a small warning mark; the "…" menu offers Locate file….
 
 ### Get more Packs (later)
 
 Options to look at when that dialog is designed:
 
-1. **Curated openDJ packs** (recommended): a small `opendj-sample-packs` repository, each pack built from CC0 (and CC-BY with credits in `pack.json`) sounds, published as `.opendjpack` release assets. The dialog lists them from a JSON index, like add-on repositories. No account needed, licences checked by us, fast downloads.
+1. **Curated DJ Sugar packs** (recommended): a small `djsugar-sample-packs` repository, each pack built from CC0 (and CC-BY with credits in `pack.json`) sounds, published as `.djsugarpack` release assets. The dialog lists them from a JSON index, like add-on repositories. No account needed, licences checked by us, fast downloads.
 2. **Freesound** directly: huge CC catalogue and real "packs", but downloading originals needs OAuth2 (a Freesound login) and is limited to 500 a day; previews work with an API key. Licences are mixed (CC0, CC-BY, CC-BY-NC), so we'd filter out NC since DJs play paid gigs.
 3. **Add-on packs**: sample-pack add-ons from add-on repositories (`add-stores-and-purchasing` step 0), for third parties to publish their own.
 
@@ -89,7 +89,7 @@ Options to look at when that dialog is designed:
 
 1. **Engine**: 16 slots, file loading, stereo, play modes, level, `num_samplers`, FLX4 check.
 2. **Packs and pads UI**: pack store, Default pack, settings overrides, SAMPLE PACK strip, edit mode (with pad swap), "…"/right-click menu, Choose Sample popover, drag and drop, rename, reset.
-3. **Share**: new pack, `.opendjpack` export and import.
+3. **Share**: new pack, `.djsugarpack` export and import.
 4. **Record** New Sample (deck, mic, master, loop-length capture) and synced loops.
 5. **Get more Packs** dialog (after its own design).
 

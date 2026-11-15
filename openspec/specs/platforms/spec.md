@@ -1,16 +1,16 @@
 # platforms Specification
 
 ## Purpose
-Where openDJ runs and how it is built and shipped: macOS and Linux, the release builds, signing, where its files live, and its licence.
+Where DJ Sugar runs and how it is built and shipped: macOS and Linux, the release builds, signing, where its files live, and its licence.
 
 ## Requirements
 
 ### Requirement: Supported platforms
-openDJ SHALL run on macOS 11+ (Apple Silicon and Intel) and Linux x86_64 with glibc 2.35+, ALSA and Vulkan. Windows SHALL NOT be supported before v2.0.
+DJ Sugar SHALL run on macOS 11+ (Apple Silicon and Intel) and Linux x86_64 with glibc 2.35+, ALSA and Vulkan. Windows SHALL NOT be supported before v2.0.
 
 #### Scenario: Linux
 - **WHEN** the AppImage runs on Ubuntu 22.04
-- **THEN** openDJ starts
+- **THEN** DJ Sugar starts
 
 ### Requirement: Release builds
 A release tag SHALL build a macOS zip (signed and notarized), a Linux AppImage and a Linux tarball, and publish `docs/release-notes.md` as the release body.
@@ -20,10 +20,10 @@ A release tag SHALL build a macOS zip (signed and notarized), a Linux AppImage a
 - **THEN** macOS opens it without a quarantine warning
 
 ### Requirement: Files on disk
-Settings, the library, logs and add-ons SHALL live in `~/Library/Application Support/openDJ` on macOS and `$XDG_CONFIG_HOME/opendj` elsewhere (`OPENDJ_CONFIG` overrides); the analysis cache in `~/Library/Caches/openDJ` or `$XDG_CACHE_HOME/opendj` (`OPENDJ_CACHE`).
+Settings, the library, logs and add-ons SHALL live in `~/Library/Application Support/DJSugar` on macOS and `$XDG_CONFIG_HOME/djsugar` elsewhere (`DJSUGAR_CONFIG` overrides); the analysis cache in `~/Library/Caches/DJSugar` or `$XDG_CACHE_HOME/djsugar` (`DJSUGAR_CACHE`).
 
 #### Scenario: Custom config
-- **WHEN** openDJ starts with `OPENDJ_CONFIG=/tmp/x`
+- **WHEN** DJ Sugar starts with `DJSUGAR_CONFIG=/tmp/x`
 - **THEN** settings and the library are read from and written to /tmp/x
 
 ### Requirement: Licence

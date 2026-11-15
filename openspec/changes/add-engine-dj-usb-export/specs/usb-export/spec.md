@@ -12,9 +12,9 @@ The Export to USB dialog SHALL also offer Engine DJ players (Denon DJ Prime and 
 - **THEN** the stick holds both libraries, and each track's audio is on it once
 
 #### Scenario: A library Engine DJ wrote
-- **WHEN** the stick already holds an Engine Library that openDJ didn't write
+- **WHEN** the stick already holds an Engine Library that DJ Sugar didn't write
 - **THEN** the export stops before writing anything, says so, and the library is left as it was
 
 #### Scenario: Exporting again
-- **WHEN** the DJ exports to a stick openDJ wrote an Engine Library to before
+- **WHEN** the DJ exports to a stick DJ Sugar wrote an Engine Library to before
 - **THEN** that library is replaced with the exported lists, and audio already on the stick isn't copied again

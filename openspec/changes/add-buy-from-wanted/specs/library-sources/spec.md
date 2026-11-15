@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Buy from Wanted
-Selecting one or more Wanted tracks and choosing Buy… SHALL search every store that can be checked and show, per track, the stores that have it, ranked artist-direct first, then by how fast the file reaches the library, then lossless first; stores that can only be searched SHALL follow. Store links SHALL carry no affiliate or referral tags. Opening a store group SHALL open its track pages (or its search page when no track link is known) one at a time, with Next for the following track; clicking a track SHALL open only its page. openDJ SHALL never take payment.
+Selecting one or more Wanted tracks and choosing Buy… SHALL search every store that can be checked and show, per track, the stores that have it, ranked artist-direct first, then by how fast the file reaches the library, then lossless first; stores that can only be searched SHALL follow. Store links SHALL carry no affiliate or referral tags. Opening a store group SHALL open its track pages (or its search page when no track link is known) one at a time, with Next for the following track; clicking a track SHALL open only its page. DJ Sugar SHALL never take payment.
 
 #### Scenario: Several tracks on Bandcamp
 - **WHEN** three Wanted tracks are bought and all are found on Bandcamp
@@ -41,4 +41,4 @@ On macOS the inbox SHALL optionally watch the Music app's media folder, its Arti
 
 #### Scenario: The DJ's own music
 - **WHEN** a song the DJ imported into the Music app appears in its folder and isn't being bought
-- **THEN** openDJ leaves it alone
+- **THEN** DJ Sugar leaves it alone

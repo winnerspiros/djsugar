@@ -5,7 +5,7 @@ use super::*;
 /// A shortcut's row on the Keyboard page.
 pub(super) fn shortcut_item(r: &shortcuts::Row) -> PrefItem {
     let (detail, wrong) = shortcuts::describe(&r.script);
-    let verbs: Vec<&str> = opendj_script::VERBS.iter().map(|v| v.name).collect();
+    let verbs: Vec<&str> = djsugar_script::VERBS.iter().map(|v| v.name).collect();
     PrefItem {
         value: r.script.as_str().into(),
         on: wrong,
@@ -38,7 +38,7 @@ impl Prefs {
                 NOTE,
                 "",
                 &format!(
-                    "Each key runs a line of openDJscript, such as “rating 3” or “deck 2 sync & play”. \
+                    "Each key runs a line of DJSugarScript, such as “rating 3” or “deck 2 sync & play”. \
                      Click a key to change it, type the action, or pick one from Actions. {fixed}"
                 ),
             ),
@@ -86,7 +86,7 @@ impl Prefs {
                 BUTTON,
                 "Reset all shortcuts",
                 &format!(
-                    "Back to openDJ's own: {} to {} rate the picked tracks.",
+                    "Back to DJ Sugar's own: {} to {} rate the picked tracks.",
                     shortcuts::display("cmd+1"),
                     shortcuts::display("cmd+5")
                 ),
@@ -100,7 +100,7 @@ impl Prefs {
             "A verb alone acts on the master deck; “deck 2 play” on deck 2. “&” runs one action after \
              another, “play ? pause : play” asks first, and “toggle 'slip_enabled'” reaches any control by its Mixxx name.",
         ));
-        items.extend(opendj_script::VERBS.iter().map(|v| {
+        items.extend(djsugar_script::VERBS.iter().map(|v| {
             item(
                 &format!("verb:{}", v.name),
                 NOTE,

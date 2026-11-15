@@ -6,7 +6,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Separate any track
-Any track that is not an NI stem file SHALL get stems from openDJ itself, without Python or Demucs installed. The models SHALL download on first use and SHALL be checked before use. Separation SHALL run off the audio thread, on the GPU when one is available (Metal on macOS, Vulkan on Linux) and on the CPU otherwise. When the models cannot be downloaded and Demucs is installed, SEPARATE STEMS SHALL still use Demucs; otherwise the STEMS page SHALL say why there are no stems and offer TRY AGAIN.
+Any track that is not an NI stem file SHALL get stems from DJ Sugar itself, without Python or Demucs installed. The models SHALL download on first use and SHALL be checked before use. Separation SHALL run off the audio thread, on the GPU when one is available (Metal on macOS, Vulkan on Linux) and on the CPU otherwise. When the models cannot be downloaded and Demucs is installed, SEPARATE STEMS SHALL still use Demucs; otherwise the STEMS page SHALL say why there are no stems and offer TRY AGAIN.
 
 #### Scenario: Fresh Mac
 - **WHEN** a track is loaded on a fresh install with the models downloaded
@@ -56,7 +56,7 @@ When *Stems on load* is on, loading a track SHALL start a fast separation from t
 - **THEN** the vocals are muted from the cue point on
 
 ### Requirement: High-quality stems in the background
-After the fast separation, openDJ SHALL separate the track again with the high-quality model in the background, nearest the playhead first, and cache the result. A later load SHALL use the cached stems at once with no fast separation. The STEMS page SHALL show whether the deck has Instant or HQ stems.
+After the fast separation, DJ Sugar SHALL separate the track again with the high-quality model in the background, nearest the playhead first, and cache the result. A later load SHALL use the cached stems at once with no fast separation. The STEMS page SHALL show whether the deck has Instant or HQ stems.
 
 #### Scenario: Cached HQ stems
 - **WHEN** a track with cached high-quality stems is loaded

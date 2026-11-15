@@ -11,7 +11,7 @@ on:
       - .github/workflows/release.yml
       - scripts/bundle-*
       - res/windows/**
-      - res/macos/opendj.entitlements
+      - res/macos/djsugar.entitlements
   workflow_dispatch:
 
 # A new push to a pull request cancels the packaging run for the push before it.
@@ -62,15 +62,15 @@ jobs:
           # doesn't compile everything again.
           cache-on-failure: true
       - run: |
-          cargo build --release -p opendj -p opendj-plugin-host --target aarch64-apple-darwin
-          cargo build --release -p opendj -p opendj-plugin-host --target x86_64-apple-darwin
+          cargo build --release -p djsugar -p djsugar-plugin-host --target aarch64-apple-darwin
+          cargo build --release -p djsugar -p djsugar-plugin-host --target x86_64-apple-darwin
           mkdir -p dist
-          lipo -create -output dist/opendj \
-            target/aarch64-apple-darwin/release/opendj \
-            target/x86_64-apple-darwin/release/opendj
-          lipo -create -output dist/opendj-plugin-host \
-            target/aarch64-apple-darwin/release/opendj-plugin-host \
-            target/x86_64-apple-darwin/release/opendj-plugin-host
+          lipo -create -output dist/djsugar \
+            target/aarch64-apple-darwin/release/djsugar \
+            target/x86_64-apple-darwin/release/djsugar
+          lipo -create -output dist/djsugar-plugin-host \
+            target/aarch64-apple-darwin/release/djsugar-plugin-host \
+            target/x86_64-apple-darwin/release/djsugar-plugin-host
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
       - name: Import signing certificate
@@ -88,27 +88,27 @@ jobs:
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
           rm "$RUNNER_TEMP/cert.p12"
           echo "MACOS_SIGN_IDENTITY=Developer ID Application" >> "$GITHUB_ENV"
-      - run: scripts/bundle-macos.sh dist/opendj "${{ needs.version.outputs.version }}"
+      - run: scripts/bundle-macos.sh dist/djsugar "${{ needs.version.outputs.version }}"
       - name: Notarize
         if: env.MACOS_SIGN_IDENTITY != '' && env.APPLE_APP_PASSWORD != ''
         run: |
-          xcrun notarytool submit dist/opendj-macos.zip --wait \
+          xcrun notarytool submit dist/djsugar-macos.zip --wait \
             --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID"
           # Staple the ticket so the app opens offline too, then zip it again.
           # Apple's ticket server can lag or drop the connection, so retry.
           for attempt in 1 2 3 4 5; do
-            xcrun stapler staple dist/openDJ.app && break
+            xcrun stapler staple dist/DJSugar.app && break
             [ "$attempt" = 5 ] && exit 1
             sleep 30
           done
-          rm dist/opendj-macos.zip
-          (cd dist && ditto -c -k --keepParent openDJ.app opendj-macos.zip)
+          rm dist/djsugar-macos.zip
+          (cd dist && ditto -c -k --keepParent DJSugar.app djsugar-macos.zip)
       - run: |
-          mv dist/opendj-macos.zip "dist/openDJ-${{ needs.version.outputs.version }}-macos.zip"
+          mv dist/djsugar-macos.zip "dist/DJSugar-${{ needs.version.outputs.version }}-macos.zip"
       - uses: actions/upload-artifact@v7
         with:
           name: release-macos
-          path: dist/openDJ-*-macos.zip
+          path: dist/DJSugar-*-macos.zip
 
   linux:
     # Built on the oldest supported Ubuntu, so the binary runs on any distro
@@ -122,8 +122,8 @@ jobs:
           sudo apt-get install -y libfontconfig-dev libxkbcommon-dev libasound2-dev libudev-dev cmake libclang-dev imagemagick rpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release -p opendj -p opendj-plugin-host
-      - run: scripts/bundle-linux.sh target/release/opendj "${{ needs.version.outputs.version }}"
+      - run: cargo build --release -p djsugar -p djsugar-plugin-host
+      - run: scripts/bundle-linux.sh target/release/djsugar "${{ needs.version.outputs.version }}"
       - uses: actions/upload-artifact@v7
         with:
           name: release-linux
@@ -144,8 +144,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo build --release -p opendj -p opendj-plugin-host
-      - run: scripts/bundle-windows.ps1 target/release/opendj.exe "${{ needs.version.outputs.version }}"
+      - run: cargo build --release -p djsugar -p djsugar-plugin-host
+      - run: scripts/bundle-windows.ps1 target/release/djsugar.exe "${{ needs.version.outputs.version }}"
         shell: pwsh
       - uses: actions/upload-artifact@v7
         with:
@@ -168,7 +168,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v3
         with:
-          name: openDJ ${{ needs.version.outputs.version }}
+          name: DJ Sugar ${{ needs.version.outputs.version }}
           body_path: docs/release-notes.md
           # Adds the list of merged pull requests (grouped by .github/release.yml)
           # under the hand-written notes.

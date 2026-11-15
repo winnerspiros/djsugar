@@ -1,7 +1,7 @@
-//! openDJ's controller mapping format: one JSON file holding a mapping of
+//! DJ Sugar's controller mapping format: one JSON file holding a mapping of
 //! the DJ's own or one imported from another DJ app, either standing alone
 //! or `based_on` a Mixxx mapping and holding only what it changes. A
-//! superset of Mixxx's `.midi.xml`: [`OpenDjMapping::from_mixxx`] loses
+//! superset of Mixxx's `.midi.xml`: [`DjSugarMapping::from_mixxx`] loses
 //! nothing. The reference is `website/book/src/dev/mapping-format.md`.
 
 use std::collections::BTreeMap;
@@ -11,10 +11,10 @@ use serde_json::{json, Map, Value};
 
 use crate::mapping::{Input, Mapping, Options, Output, ScriptFile, When, REQUIRED_SCRIPT};
 
-pub const FORMAT: &str = "opendj-mapping";
+pub const FORMAT: &str = "djsugar-mapping";
 pub const VERSION: u64 = 1;
-/// What a shared mapping file is called: `My FLX4.opendj-mapping`.
-pub const EXTENSION: &str = "opendj-mapping";
+/// What a shared mapping file is called: `My FLX4.djsugar-mapping`.
+pub const EXTENSION: &str = "djsugar-mapping";
 
 /// A MIDI message a row listens to or a light sends: `"90 0B"`, a 14-bit
 /// pair `"B0 00+B0 20"` (MSB then LSB), or pitch bend `"E0"`.
@@ -94,7 +94,7 @@ pub enum Action {
     },
     /// A function of the mapping's JavaScript, called with this group.
     Js { function: String, group: String },
-    /// An openDJscript line.
+    /// An DJSugarScript line.
     Script(String),
     /// Nothing: an `off` or `remove` row.
     Nothing,
@@ -154,7 +154,7 @@ impl Row {
         }
     }
 
-    /// A row for something openDJ can't do yet: kept greyed with the other
+    /// A row for something DJ Sugar can't do yet: kept greyed with the other
     /// app's text and why.
     pub fn unsupported(midi: Midi, name: &str, original: &str, note: &str) -> Self {
         Self {
@@ -213,7 +213,7 @@ pub enum LightSource {
     },
     /// Set by the mapping's JavaScript; listed for the editor.
     Js(String),
-    /// An openDJscript line ending in `on`, `off`, `blink`, `color`, `led`.
+    /// An DJSugarScript line ending in `on`, `off`, `blink`, `color`, `led`.
     Script(String),
     Nothing,
 }
@@ -262,7 +262,7 @@ pub struct ControllerInfo {
     pub name: String,
     /// MIDI port names it matches.
     pub ports: Vec<String>,
-    /// openDJ's drawing of it: `flx4`, `xone-k2`, `twister`.
+    /// DJ Sugar's drawing of it: `flx4`, `xone-k2`, `twister`.
     pub layout: Option<String>,
 }
 
@@ -282,9 +282,9 @@ pub struct Variable {
     pub saved: bool,
 }
 
-/// A mapping in openDJ's format.
+/// A mapping in DJ Sugar's format.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct OpenDjMapping {
+pub struct DjSugarMapping {
     pub name: String,
     pub author: String,
     pub description: String,
@@ -302,11 +302,11 @@ pub struct OpenDjMapping {
     /// the variable `decks` holds it.
     pub decks: Option<u8>,
     /// With four decks, the deck at each position from left to right:
-    /// `[3, 1, 2, 4]` as on openDJ's 4-Deck screen.
+    /// `[3, 1, 2, 4]` as on DJ Sugar's 4-Deck screen.
     pub deck_order: Option<[u8; 4]>,
     pub rows: Vec<Row>,
     pub lights: Vec<Light>,
-    /// In a shared file: script files (and a `based_on` mapping openDJ
+    /// In a shared file: script files (and a `based_on` mapping DJ Sugar
     /// doesn't ship) by file name.
     pub sources: BTreeMap<String, String>,
     pub extra: Map<String, Value>,
@@ -548,7 +548,7 @@ pub fn split_control(control: &str) -> Option<(String, String)> {
 }
 
 /// The variable that holds whether the controller is used with two decks or
-/// four (see [`OpenDjMapping::decks`]).
+/// four (see [`DjSugarMapping::decks`]).
 pub const DECKS: &str = "decks";
 
 /// `text` with the decks 1 to 4 it names (`deck 2`, `[Channel2]`, effect
@@ -581,7 +581,7 @@ pub fn reorder_decks(text: &str, order: [u8; 4]) -> String {
     out
 }
 
-impl OpenDjMapping {
+impl DjSugarMapping {
     /// The rows and lights for the decks the controller is used with: those
     /// on the other use's layer go, the `decks=` condition goes from the
     /// rest, and with four decks the ones `by_position` follow `deck_order`.
@@ -686,19 +686,19 @@ impl OpenDjMapping {
         }
     }
 
-    /// Reads a mapping, including the files openDJ 0.4 wrote (`name`,
+    /// Reads a mapping, including the files DJ Sugar 0.4 wrote (`name`,
     /// `based_on`, `changes`, no `format`).
     pub fn from_json(v: &Value) -> Result<Self, String> {
         let mut o = v.as_object().cloned().ok_or("not a JSON object")?;
         match o.remove("format") {
             Some(Value::String(f)) if f == FORMAT => {}
             None => {}
-            Some(_) => return Err("not an openDJ mapping".into()),
+            Some(_) => return Err("not an DJ Sugar mapping".into()),
         }
         let version = o.remove("version").and_then(|v| v.as_u64()).unwrap_or(1);
         if version > VERSION {
             return Err(format!(
-                "made by a newer openDJ (format version {version}); update openDJ to open it"
+                "made by a newer DJ Sugar (format version {version}); update DJ Sugar to open it"
             ));
         }
         let mut rows = Vec::new();
@@ -1299,7 +1299,7 @@ mod tests {
     /// it as the release.
     #[test]
     fn note_rows_hear_their_note_off() {
-        let mut m = OpenDjMapping::new("K2");
+        let mut m = DjSugarMapping::new("K2");
         let mut up = Row::script(Midi::new(0x9E, 0x0F), "set_var 'shift' 0");
         up.when = When::Release;
         m.rows = vec![Row::script(Midi::new(0x9E, 0x0F), "set_var 'shift' 1"), up];
@@ -1334,15 +1334,15 @@ mod tests {
     }
 
     #[test]
-    fn reads_opendj_0_4_files() {
+    fn reads_djsugar_0_4_files() {
         let v =
             json!({ "name": "FLX4 house", "based_on": "Pioneer-DDJ-FLX4.midi.xml", "changes": [] });
-        let m = OpenDjMapping::from_json(&v).unwrap();
+        let m = DjSugarMapping::from_json(&v).unwrap();
         assert_eq!(m.name, "FLX4 house");
         assert_eq!(m.based_on.as_deref(), Some("Pioneer-DDJ-FLX4.midi.xml"));
         assert!(m.rows.is_empty());
-        assert!(OpenDjMapping::from_json(&json!({ "format": "x" })).is_err());
-        assert!(OpenDjMapping::from_json(&json!({ "format": FORMAT, "version": 9 })).is_err());
+        assert!(DjSugarMapping::from_json(&json!({ "format": "x" })).is_err());
+        assert!(DjSugarMapping::from_json(&json!({ "format": FORMAT, "version": 9 })).is_err());
     }
 
     #[test]
@@ -1359,11 +1359,11 @@ mod tests {
             "lights": [ { "midi": "97 04", "script": "deck 1 play ? on : off", "colors": { "red": 15 } } ],
             "later": { "a": 1 }
         });
-        let m = OpenDjMapping::from_json(&v).unwrap();
+        let m = DjSugarMapping::from_json(&v).unwrap();
         assert_eq!(m.rows.len(), 4);
         assert_eq!(m.rows[2].when, When::Long);
         assert_eq!(m.counts(), (4, 1));
-        let again = OpenDjMapping::from_json(&m.to_json()).unwrap();
+        let again = DjSugarMapping::from_json(&m.to_json()).unwrap();
         assert_eq!(again, m);
         assert_eq!(m.to_json()["later"]["a"], 1);
         assert_eq!(m.to_json()["rows"][2]["future"], 3);
@@ -1375,7 +1375,7 @@ mod tests {
         let base = Mapping::load(&dir.join("Pioneer-DDJ-FLX4.midi.xml")).unwrap();
         let play = (0x90, 0x0B);
         assert!(base.inputs.contains_key(&play));
-        let mut own = OpenDjMapping::new("Mine");
+        let mut own = DjSugarMapping::new("Mine");
         own.based_on = Some("Pioneer-DDJ-FLX4.midi.xml".into());
         own.rows
             .push(Row::script(Midi::new(0x90, 0x0B), "deck 1 sync"));
@@ -1406,8 +1406,8 @@ mod tests {
             "DJ TechTools MIDI Fighter Twister.midi.xml",
         ] {
             let mixxx = Mapping::load(&dir.join(file)).unwrap();
-            let own = OpenDjMapping::from_mixxx(&mixxx);
-            let again = OpenDjMapping::from_json(&own.to_json()).unwrap();
+            let own = DjSugarMapping::from_mixxx(&mixxx);
+            let again = DjSugarMapping::from_json(&own.to_json()).unwrap();
             let built = again.build(None, &dir);
             let count = |m: &Mapping| m.inputs.values().map(Vec::len).sum::<usize>();
             assert_eq!(count(&built), count(&mixxx), "{file}");

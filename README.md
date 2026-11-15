@@ -19,7 +19,7 @@ sudo apt install cmake libfontconfig-dev libxkbcommon-dev libasound2-dev libudev
 cargo run --release
 ```
 
-Set `OPENDJ_MUSIC=/path/to/music` to use a music folder other than `~/Music` (the variable is
+Set `DJSUGAR_MUSIC=/path/to/music` to use a music folder other than `~/Music` (the variable is
 renamed in the rebrand step of the roadmap).
 
 ## License and credits

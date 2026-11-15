@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{BufferSize, ErrorKind, FromSample, SampleFormat, SizedSample, SupportedBufferSize};
-use opendj_control::{ControlHandle, ControlRegistry};
+use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::engine::{Engine, MIX_CHANNELS, OUTPUT_CHANNELS};
 use crate::inputs::{InputFeed, AUXILIARIES, GROOVE_BOX, MICROPHONE, NUM_AUXILIARIES, NUM_INPUTS};
@@ -481,7 +481,7 @@ pub fn default_output_device() -> Option<String> {
 }
 
 fn no_audio() -> bool {
-    std::env::var_os("OPENDJ_NO_AUDIO").is_some()
+    std::env::var_os("DJSUGAR_NO_AUDIO").is_some()
 }
 
 fn device_name(d: &cpal::Device) -> String {
@@ -726,7 +726,7 @@ impl Outputs {
                 Some(h) if !h.load(Ordering::Relaxed) => format!(
                     "{status} · silent so far{}",
                     if cfg!(target_os = "macos") {
-                        ": allow openDJ in System Settings › Privacy & Security › Microphone"
+                        ": allow DJ Sugar in System Settings › Privacy & Security › Microphone"
                     } else {
                         ""
                     }
@@ -936,7 +936,7 @@ impl Outputs {
             }
             self.main_status = format!("{label} went away");
             return Some(format!(
-                "{label} went away, so the decks stopped. openDJ plays there again \
+                "{label} went away, so the decks stopped. DJ Sugar plays there again \
                  once it is back, or pick another in Settings › Audio."
             ));
         }
@@ -950,7 +950,7 @@ impl Outputs {
         Some(if std::mem::take(&mut self.lost_reported) {
             format!("{label} is back.")
         } else {
-            format!("{label} stopped; openDJ reopened it.")
+            format!("{label} stopped; DJ Sugar reopened it.")
         })
     }
 
@@ -978,7 +978,7 @@ impl Outputs {
             return None;
         }
         self.input_retry_at = None;
-        Some("An audio input stopped; openDJ reopened it.".to_string())
+        Some("An audio input stopped; DJ Sugar reopened it.".to_string())
     }
 
     /// Whether the system refused the audio thread real-time priority.
@@ -1013,7 +1013,7 @@ impl Outputs {
 
     fn open(&mut self, setup: &AudioSetup) -> Result<(), String> {
         if no_audio() {
-            return Err("OPENDJ_NO_AUDIO is set".into());
+            return Err("DJSUGAR_NO_AUDIO is set".into());
         }
         let khz = self.rate / 1000.0;
         let buffer = setup.buffer_frames;

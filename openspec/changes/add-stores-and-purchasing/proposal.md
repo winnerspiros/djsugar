@@ -6,7 +6,7 @@ Replaces four changes that were never started (`enable-stores-and-purchase-inbox
 
 ## Why
 
-Buying music should be the easy way to get a track into openDJ, with as much of the money as possible reaching the artist. Much is already built but hidden or half-joined:
+Buying music should be the easy way to get a track into DJ Sugar, with as much of the money as possible reaching the artist. Much is already built but hidden or half-joined:
 
 - Bandcamp search, store links, the wanted list and the purchase inbox are in the code (PR #27), but the Bandcamp and Beatport sources still say "Coming soon" (`STORES_ENABLED = false`).
 - Buy… on Wanted works (PR #359, #422, #476): every store is checked, ranked by who has the track, artist-direct, speed to the library and lossless, and arrivals are matched back to Wanted. It only works from Wanted, and an unmatched arrival can't be tied to its Wanted row by hand.
@@ -19,7 +19,7 @@ One change, in one release, makes these a single path: find a track anywhere, bu
 
 ## What Changes
 
-0. **Add-on repositories.** Settings › Add-ons with Installed, Available and Repositories. A repository is one `opendj-addons.json` at a URL listing each add-on with a download and checksum per platform; the official one is built in, others are marked unsupported. Private GitHub repositories with a read-only token kept in the keychain. Update checks at start and at most daily, never installing while a deck plays. Crashed add-ons restart with a growing delay. Store add-ons (step 6) and download add-ons install from here.
+0. **Add-on repositories.** Settings › Add-ons with Installed, Available and Repositories. A repository is one `djsugar-addons.json` at a URL listing each add-on with a download and checksum per platform; the official one is built in, others are marked unsupported. Private GitHub repositories with a read-only token kept in the keychain. Update checks at start and at most daily, never installing while a deck plays. Crashed add-ons restart with a growing delay. Store add-ons (step 6) and download add-ons install from here.
 1. **Stores switched on.** The Bandcamp source searches in the app and lists results with price and format where the store shows them; Buy opens the page in the browser. A Shopping row offers the other stores' own search pages. Each store can be switched on and off in Settings › Sources; the purchase inbox stays off until the DJ turns it on.
 2. **Buy… everywhere a track has no file** (was Find and buy): Spotify, TIDAL, Apple Music and SoundCloud rows not in the collection, list placeholders from imports, Wanted rows and Up Next, using the same Buy sheet and ranking as Buy from Wanted. Tracks bought from outside Wanted are put on Wanted as being bought, so their arrival is matched the same way.
 3. **Better track links.** Odesli (song.link) as a second cross-link source after MusicBrainz, with a short cache; prices shown where the store's lookup gives one.
@@ -41,7 +41,7 @@ One change, in one release, makes these a single path: find a track anywhere, bu
 
 ## Out of Scope
 
-- Taking payment or keeping payment details in openDJ; buying without the DJ checking out on the store.
+- Taking payment or keeping payment details in DJ Sugar; buying without the DJ checking out on the store.
 - Affiliate, referral or tracking tags on any store link.
 - DRM-protected downloads, stream ripping or any DRM workaround.
 - Streaming playback.

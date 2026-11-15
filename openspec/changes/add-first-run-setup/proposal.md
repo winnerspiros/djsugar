@@ -4,7 +4,7 @@ Planned for: **v0.5 · Stems, performance and switching over** (moved from v1.0,
 
 ## Why
 
-Settings are found by exploring, and a DJ switching over should be playing within minutes. A user request (2026-10-29) asks for a guided tour the first time openDJ opens.
+Settings are found by exploring, and a DJ switching over should be playing within minutes. A user request (2026-10-29) asks for a guided tour the first time DJ Sugar opens.
 
 ## What Changes
 
