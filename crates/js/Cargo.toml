@@ -1,0 +1,6 @@
+[package]
+name = "djsugar-js"
+description = "A JavaScript interpreter for controller mapping scripts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true

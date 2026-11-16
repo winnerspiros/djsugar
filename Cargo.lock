@@ -3624,6 +3624,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "djsugar-js"
+version = "0.6.0"
+
+[[package]]
 name = "djsugar-library"
 version = "0.6.0"
 dependencies = [
