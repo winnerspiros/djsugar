@@ -139,7 +139,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next(&mut self) -> Result<Token> {
+    pub fn token(&mut self) -> Result<Token> {
         let newline_before = self.skip_trivia()?;
         let start = self.pos;
         let tok = self.read()?;
@@ -163,7 +163,7 @@ impl<'a> Lexer<'a> {
                 }
                 self.pos += c.len_utf8();
             }
-            return self.next().map(|t| t.tok);
+            return self.token().map(|t| t.tok);
         }
         if is_id_start(c) || c == '\\' {
             let (name, escaped) = self.ident()?;
@@ -618,7 +618,7 @@ mod tests {
         let mut l = Lexer::new(s);
         let mut out = Vec::new();
         loop {
-            let t = l.next().unwrap();
+            let t = l.token().unwrap();
             if t.tok == Tok::Eof {
                 return out;
             }
@@ -681,27 +681,27 @@ b'"#
     #[test]
     fn comments_and_line_breaks() {
         let mut l = Lexer::new("a /* x\n */ b // c\n d");
-        assert!(!l.next().unwrap().newline_before);
-        assert!(l.next().unwrap().newline_before);
-        assert!(l.next().unwrap().newline_before);
+        assert!(!l.token().unwrap().newline_before);
+        assert!(l.token().unwrap().newline_before);
+        assert!(l.token().unwrap().newline_before);
     }
 
     #[test]
     fn templates_and_regexes() {
         let mut l = Lexer::new("`a${x}b\\u0041`");
         assert_eq!(
-            l.next().unwrap().tok,
+            l.token().unwrap().tok,
             Tok::Template(Some("a".into()), "a".into(), false)
         );
-        l.next().unwrap();
-        let close = l.next().unwrap();
+        l.token().unwrap();
+        let close = l.token().unwrap();
         assert_eq!(close.tok, Tok::Punct("}"));
         assert_eq!(
             l.template_continue(close.start).unwrap().tok,
             Tok::Template(Some("bA".into()), "b\\u0041".into(), true)
         );
         let mut l = Lexer::new("/[/]a\\//gi");
-        let t = l.next().unwrap();
+        let t = l.token().unwrap();
         assert_eq!(
             l.regex(t.start, false).unwrap().tok,
             Tok::Regex("[/]a\\/".into(), "gi".into())
