@@ -77,6 +77,8 @@ i-slint-backend-winit = { path = "third_party/i-slint-backend-winit" }
 # fp16 enabled on its aarch64 half-precision asm, which newer LLVM rejects
 # without it.
 gemm-common = { path = "third_party/gemm-common" }
+# Linux/BSD fonts found by scanning the font directories, without fontconfig.
+fontique = { path = "third_party/fontique" }
 # Adds pregenerated Android bindings (same layout as aarch64 Linux), so no
 # bindgen/libclang at build time.
 rquickjs-sys = { path = "third_party/rquickjs-sys" }

@@ -84,7 +84,3 @@ winresource = { version = "0.1", default-features = false }
 
 [dev-dependencies]
 hound = "3"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-# Loads libfontconfig at run time: no build-time link or dev package.
-fontique = { version = "0.11", default-features = false, features = ["fontconfig-dlopen"] }
