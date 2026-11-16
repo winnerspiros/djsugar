@@ -3630,6 +3630,7 @@ dependencies = [
  "djsugar-remote",
  "djsugar-script",
  "djsugar-waveform",
+ "fontique",
  "getrandom 0.4.3",
  "hound",
  "image",

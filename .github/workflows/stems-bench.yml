@@ -49,7 +49,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfontconfig-dev libxkbcommon-dev libasound2-dev mesa-vulkan-drivers cmake libclang-dev
+          sudo apt-get install -y libxkbcommon-dev libasound2-dev mesa-vulkan-drivers cmake libclang-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release -p stem-bench

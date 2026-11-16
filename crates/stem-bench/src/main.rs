@@ -15,6 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use djsugar_separation::burn::tensor::Device;
 use djsugar_separation::{htdemucs, spleeter, SAMPLE_RATE};
 
 struct Options {

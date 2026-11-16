@@ -73,7 +73,7 @@ jobs:
         # waveform shader test runs on CI machines without a GPU.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfontconfig-dev libxkbcommon-dev libasound2-dev libudev-dev mesa-vulkan-drivers
+          sudo apt-get install -y libxkbcommon-dev libasound2-dev mesa-vulkan-drivers
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt

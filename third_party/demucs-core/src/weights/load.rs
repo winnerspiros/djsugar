@@ -713,17 +713,17 @@ mod tests {
         // Fill Q with 1s, K with 2s, V with 3s
         let mut in_proj_w = Vec::new();
         for val in [1.0f32, 2.0, 3.0] {
-            in_proj_w.extend(std::iter::repeat(val).take(d * d));
+            in_proj_w.extend(std::iter::repeat_n(val, d * d));
         }
 
         // in_proj_bias: [3*d] = [12]
         let mut in_proj_b = Vec::new();
         for val in [0.1f32, 0.2, 0.3] {
-            in_proj_b.extend(std::iter::repeat(val).take(d));
+            in_proj_b.extend(std::iter::repeat_n(val, d));
         }
 
         // out_proj: [d, d] weight + [d] bias
-        let out_w: Vec<f32> = std::iter::repeat(0.5).take(d * d).collect();
+        let out_w: Vec<f32> = std::iter::repeat_n(0.5, d * d).collect();
         let out_b: Vec<f32> = vec![0.0; d];
 
         let safetensors_bytes = make_test_safetensors(&[

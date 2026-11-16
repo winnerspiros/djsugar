@@ -509,7 +509,7 @@ mod tests {
         let emb = create_sin_embed(50, 128, &Default::default());
         let data: Vec<f32> = emb.to_data().try_to_vec().unwrap();
         // All values should be in [-1, 1] since they're sin/cos
-        assert!(data.iter().all(|&v| v >= -1.0 - 1e-6 && v <= 1.0 + 1e-6));
+        assert!(data.iter().all(|v| (-1.0 - 1e-6..=1.0 + 1e-6).contains(v)));
     }
 
     #[test]
@@ -535,7 +535,7 @@ mod tests {
     fn sin_2d_embed_bounded() {
         let emb = create_2d_sin_embed(128, 4, 4, &Default::default());
         let data: Vec<f32> = emb.to_data().try_to_vec().unwrap();
-        assert!(data.iter().all(|&v| v >= -1.0 - 1e-6 && v <= 1.0 + 1e-6));
+        assert!(data.iter().all(|v| (-1.0 - 1e-6..=1.0 + 1e-6).contains(v)));
     }
 
     fn make_transformer_layer(is_cross: bool, with_norm_out: bool) -> TransformerLayer {
