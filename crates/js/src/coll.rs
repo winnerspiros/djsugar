@@ -11,7 +11,7 @@ enum Key {
     Null,
     Bool(bool),
     Num(u64),
-    Str(Rc<str>),
+    Str(Name),
     Obj(*const Obj),
 }
 

@@ -348,3 +348,44 @@ fn collections_and_bytes() {
     assert_eq!(out("var d = new DataView(new ArrayBuffer(4)); d.setUint16(0, 0x1234); d.setInt8(2, -2); var out = d.getUint8(0) + ',' + d.getUint16(0, true) + ',' + d.getUint8(2);"), "18,13330,254");
     assert_eq!(out("var f = new Function('a', 'b', 'return a * b + this.x'); var x = 1; var out = f(3, 4) + Function('return this')().x;"), "14");
 }
+
+/// A components-style handler: prototype methods, `this` fields, closures.
+#[test]
+fn component_handler_speed() {
+    let e = Engine::new();
+    e.eval(r#"
+var engine = { values: {}, setValue: function (g, k, v) { this.values[k] = v; }, getValue: function (g, k) { return this.values[k] || 0; } };
+function Component(o) { this.group = o.group; this.key = o.key; this.max = 127; this.shift = false; }
+Component.prototype.inValueScale = function (v) { return v / this.max; };
+Component.prototype.input = function (ch, ctrl, value, status) {
+    var v = this.inValueScale(value);
+    if (this.shift) { v = 1 - v; }
+    engine.setValue(this.group, this.key, v);
+    this.output(engine.getValue(this.group, this.key));
+};
+Component.prototype.output = function (v) { this.last = v > 0.5 ? 0x7f : 0; };
+function Pot(o) { Component.call(this, o); }
+Pot.prototype = Object.create(Component.prototype);
+Pot.prototype.inValueScale = function (v) { return Component.prototype.inValueScale.call(this, v) * 2; };
+var pots = [];
+for (var i = 0; i < 8; i++) { pots.push(new Pot({ group: "[Channel1]", key: "k" + i })); }
+function handle(ch, ctrl, value, status) { for (var i = 0; i < pots.length; i++) { pots[i].input(ch, ctrl, value + i, status); } }
+"#).unwrap();
+    let f = e.get(&Value::Obj(e.global().clone()), "handle").unwrap();
+    let n = 20_000;
+    let mut best = f64::MAX;
+    for _ in 0..5 {
+        let t = std::time::Instant::now();
+        for i in 0..n {
+            let a = [
+                Value::Num(0.0),
+                Value::Num(7.0),
+                Value::Num((i % 128) as f64),
+                Value::Num(176.0),
+            ];
+            e.call(&f, Value::Undefined, &a).unwrap();
+        }
+        best = best.min(t.elapsed().as_secs_f64() * 1e6 / n as f64);
+    }
+    eprintln!("djsugar-js components {best:.2} us/call (best of 5)");
+}

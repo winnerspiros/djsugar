@@ -123,7 +123,6 @@ const MAX_DEPTH: u32 = 300;
 const MAX_YIELDS: usize = 1 << 20;
 
 thread_local! {
-    static DEPTH: Cell<u32> = const { Cell::new(0) };
     static YIELDS: RefCell<Vec<Vec<Value>>> = const { RefCell::new(Vec::new()) };
 }
 
@@ -511,21 +510,15 @@ impl<'s> Compiler<'s> {
                 None => Box::new(|_, _| Ok(Flow::Return(Value::Undefined))),
             },
             Stmt::If(c, a, b) => {
-                let c = self.expr(c)?;
+                let c = self.cond(c)?;
                 let a = self.stmt(a, &[])?;
                 match b {
                     Some(b) => {
                         let b = self.stmt(b, &[])?;
-                        Box::new(move |rt, f| {
-                            if c(rt, f)?.truthy() {
-                                a(rt, f)
-                            } else {
-                                b(rt, f)
-                            }
-                        })
+                        Box::new(move |rt, f| if c(rt, f)? { a(rt, f) } else { b(rt, f) })
                     }
                     None => Box::new(move |rt, f| {
-                        if c(rt, f)?.truthy() {
+                        if c(rt, f)? {
                             a(rt, f)
                         } else {
                             Ok(Flow::Normal)
@@ -546,11 +539,11 @@ impl<'s> Compiler<'s> {
                 })
             }
             Stmt::While(c, body) => {
-                let c = self.expr(c)?;
+                let c = self.cond(c)?;
                 let body = self.stmt(body, &[])?;
                 let labels: Rc<[Name]> = labels.into();
                 Box::new(move |rt, f| {
-                    while c(rt, f)?.truthy() {
+                    while c(rt, f)? {
                         if let Some(out) = loop_flow(body(rt, f)?, &labels) {
                             return out;
                         }
@@ -559,14 +552,14 @@ impl<'s> Compiler<'s> {
                 })
             }
             Stmt::DoWhile(body, c) => {
-                let c = self.expr(c)?;
+                let c = self.cond(c)?;
                 let body = self.stmt(body, &[])?;
                 let labels: Rc<[Name]> = labels.into();
                 Box::new(move |rt, f| loop {
                     if let Some(out) = loop_flow(body(rt, f)?, &labels) {
                         return out;
                     }
-                    if !c(rt, f)?.truthy() {
+                    if !c(rt, f)? {
                         return Ok(Flow::Normal);
                     }
                 })
@@ -588,7 +581,7 @@ impl<'s> Compiler<'s> {
                     Some(ForInit::Expr(e)) => Some(self.stmt(&Stmt::Expr(e.clone()), &[])?),
                     Some(ForInit::Pattern(_)) => return unsupported("pattern in a for head"),
                 };
-                let test = test.as_ref().map(|t| self.expr(t)).transpose()?;
+                let test = test.as_ref().map(|t| self.cond(t)).transpose()?;
                 let update = update.as_ref().map(|t| self.expr(t)).transpose()?;
                 let body = self.stmt(body, &[])?;
                 self.scope().blocks.pop();
@@ -599,7 +592,7 @@ impl<'s> Compiler<'s> {
                     }
                     loop {
                         if let Some(t) = &test {
-                            if !t(rt, f)?.truthy() {
+                            if !t(rt, f)? {
                                 return Ok(Flow::Normal);
                             }
                         }
@@ -1045,16 +1038,10 @@ impl<'s> Compiler<'s> {
             }
             Expr::Assign(op, target, value) => self.assign(op, target, value)?,
             Expr::Cond(c, a, b) => {
-                let c = self.expr(c)?;
+                let c = self.cond(c)?;
                 let a = self.expr(a)?;
                 let b = self.expr(b)?;
-                Box::new(move |rt, f| {
-                    if c(rt, f)?.truthy() {
-                        a(rt, f)
-                    } else {
-                        b(rt, f)
-                    }
-                })
+                Box::new(move |rt, f| if c(rt, f)? { a(rt, f) } else { b(rt, f) })
             }
             Expr::Seq(items) => {
                 let items: Vec<Ex> = items.iter().map(|i| self.expr(i)).collect::<CR<_>>()?;
@@ -1085,10 +1072,8 @@ impl<'s> Compiler<'s> {
                     Box::new(move |rt, f| {
                         let v = o(rt, f)?;
                         if let Value::Obj(ob) = &v {
-                            if !matches!(ob.kind, Kind::Proxy(..)) {
-                                if let Some(x) = ob.own_data_hinted(&name, &hint) {
-                                    return Ok(x);
-                                }
+                            if let Some(x) = ob.get_atom(&name, &hint) {
+                                return Ok(x);
                             }
                         }
                         rt.get(&v, &name)
@@ -1549,12 +1534,19 @@ impl<'s> Compiler<'s> {
                 let o = self.expr(o)?;
                 let name = name.clone();
                 let opt_member = *opt_member;
+                let hint = Cell::new(0);
                 Box::new(move |rt, f| {
                     let this = o(rt, f)?;
                     if opt_member && this.is_nullish() {
                         return Err(Exc::Short);
                     }
-                    let func = rt.get(&this, &name)?;
+                    let func = match &this {
+                        Value::Obj(ob) => match ob.get_atom(&name, &hint) {
+                            Some(v) => v,
+                            None => rt.get(&this, &name)?,
+                        },
+                        _ => rt.get(&this, &name)?,
+                    };
                     if optional && func.is_nullish() {
                         return Err(Exc::Short);
                     }
@@ -1872,7 +1864,7 @@ impl<'s> Compiler<'s> {
                             let v = p(rt, f)?;
                             append(rt, &mut buf, &v)?;
                         }
-                        let out = Value::Str(Rc::from(buf.as_str()));
+                        let out = Value::Str(Name::from(buf.as_str()));
                         SCRATCH.set(buf);
                         return Ok(out);
                     }
@@ -1883,30 +1875,132 @@ impl<'s> Compiler<'s> {
         }))
     }
 
+    /// An operand read inline instead of through a closure when it is a
+    /// local or a constant.
+    fn opnd(&mut self, e: &Expr) -> CR<Opnd> {
+        Ok(match e {
+            Expr::Num(n) => Opnd::Num(*n),
+            Expr::Ident(n, _) => match self.resolve(n) {
+                Loc::Slot(0, i) => Opnd::Slot(i),
+                _ => Opnd::Ex(self.expr(e)?),
+            },
+            _ => Opnd::Ex(self.expr(e)?),
+        })
+    }
+
+    /// `e` evaluated for its truth only.
+    fn cond(&mut self, e: &Expr) -> CR<Cnd> {
+        macro_rules! cmp {
+            ($a:expr, $b:expr, $num:expr, $slow:expr) => {{
+                let x = self.opnd($a)?;
+                let y = self.opnd($b)?;
+                Ok(match (x, y) {
+                    (Opnd::Slot(i), Opnd::Num(n)) => Box::new(move |rt: &Rt, f: &Frame| {
+                        let a = &f.env.slots.borrow()[i];
+                        if let Value::Num(a) = a {
+                            let g: fn(f64, f64) -> bool = $num;
+                            return Ok(g(*a, n));
+                        }
+                        let a = a.clone();
+                        let g: fn(&Rt, &Value, &Value) -> R<bool> = $slow;
+                        g(rt, &a, &Value::Num(n))
+                    }),
+                    (Opnd::Slot(i), Opnd::Slot(j)) => Box::new(move |rt: &Rt, f: &Frame| {
+                        let s = f.env.slots.borrow();
+                        if let (Value::Num(a), Value::Num(b)) = (&s[i], &s[j]) {
+                            let g: fn(f64, f64) -> bool = $num;
+                            return Ok(g(*a, *b));
+                        }
+                        let (a, b) = (s[i].clone(), s[j].clone());
+                        drop(s);
+                        let g: fn(&Rt, &Value, &Value) -> R<bool> = $slow;
+                        g(rt, &a, &b)
+                    }),
+                    (x, y) => Box::new(move |rt: &Rt, f: &Frame| {
+                        let a = x.get(rt, f)?;
+                        let b = y.get(rt, f)?;
+                        if let (Value::Num(a), Value::Num(b)) = (&a, &b) {
+                            let g: fn(f64, f64) -> bool = $num;
+                            return Ok(g(*a, *b));
+                        }
+                        let g: fn(&Rt, &Value, &Value) -> R<bool> = $slow;
+                        g(rt, &a, &b)
+                    }),
+                })
+            }};
+        }
+        match e {
+            Expr::Binary("<", a, b) => cmp!(a, b, |a, b| a < b, |rt, a, b| Ok(
+                rt.less(a, b)? == Some(true)
+            )),
+            Expr::Binary(">", a, b) => cmp!(a, b, |a, b| a > b, |rt, a, b| Ok(
+                rt.less(b, a)? == Some(true)
+            )),
+            Expr::Binary("<=", a, b) => cmp!(a, b, |a, b| a <= b, |rt, a, b| Ok(
+                rt.less(b, a)? == Some(false)
+            )),
+            Expr::Binary(">=", a, b) => cmp!(a, b, |a, b| a >= b, |rt, a, b| Ok(
+                rt.less(a, b)? == Some(false)
+            )),
+            Expr::Binary("===", a, b) => cmp!(a, b, |a, b| a == b, |_, a, b| Ok(a.strict_eq(b))),
+            Expr::Binary("!==", a, b) => cmp!(a, b, |a, b| a != b, |_, a, b| Ok(!a.strict_eq(b))),
+            Expr::Unary("!", a) => {
+                let c = self.cond(a)?;
+                Ok(Box::new(move |rt, f| Ok(!c(rt, f)?)))
+            }
+            Expr::Logical("&&", a, b) => {
+                let (x, y) = (self.cond(a)?, self.cond(b)?);
+                Ok(Box::new(move |rt, f| Ok(x(rt, f)? && y(rt, f)?)))
+            }
+            Expr::Logical("||", a, b) => {
+                let (x, y) = (self.cond(a)?, self.cond(b)?);
+                Ok(Box::new(move |rt, f| Ok(x(rt, f)? || y(rt, f)?)))
+            }
+            _ => {
+                let x = self.opnd(e)?;
+                Ok(match x {
+                    Opnd::Slot(i) => Box::new(move |_, f| Ok(f.env.slots.borrow()[i].truthy())),
+                    x => Box::new(move |rt, f| Ok(x.get(rt, f)?.truthy())),
+                })
+            }
+        }
+    }
+
     fn binary(&mut self, op: &'static str, a: &Expr, b: &Expr) -> CR<Ex> {
         if op == "+" && matches!(a, Expr::Binary("+", ..)) {
             return self.concat(a, b);
         }
-        let x = self.expr(a)?;
-        let y = self.expr(b)?;
+        if matches!(op, "<" | ">" | "<=" | ">=" | "===" | "!==") {
+            let c = self.cond(&Expr::Binary(op, Box::new(a.clone()), Box::new(b.clone())))?;
+            return Ok(Box::new(move |rt, f| Ok(Value::Bool(c(rt, f)?))));
+        }
+        let x = self.opnd(a)?;
+        let y = self.opnd(b)?;
         macro_rules! num_op {
             ($e:expr) => {
                 Box::new(move |rt: &Rt, f: &Frame| {
-                    let a = x(rt, f)?;
-                    let b = y(rt, f)?;
+                    let g: fn(f64, f64) -> f64 = $e;
+                    if let (Opnd::Slot(i), Opnd::Num(n)) = (&x, &y) {
+                        if let Value::Num(a) = f.env.slots.borrow()[*i] {
+                            return Ok(Value::Num(g(a, *n)));
+                        }
+                    }
+                    let a = x.get(rt, f)?;
+                    let b = y.get(rt, f)?;
                     if let (Value::Num(a), Value::Num(b)) = (&a, &b) {
-                        let g: fn(f64, f64) -> f64 = $e;
                         return Ok(Value::Num(g(*a, *b)));
                     }
-                    let g: fn(f64, f64) -> f64 = $e;
                     Ok(Value::Num(g(num(rt, a)?, num(rt, b)?)))
                 })
             };
         }
         Ok(match op {
             "+" => Box::new(move |rt, f| {
-                let a = x(rt, f)?;
-                let b = y(rt, f)?;
+                let a = x.get(rt, f)?;
+                let b = y.get(rt, f)?;
+                if let (Value::Num(a), Value::Num(b)) = (&a, &b) {
+                    return Ok(Value::Num(a + b));
+                }
                 rt.add(&a, &b)
             }),
             "-" => num_op!(|a, b| a - b),
@@ -1919,34 +2013,11 @@ impl<'s> Compiler<'s> {
             "<<" => num_op!(|a, b| to_int32(a).wrapping_shl(to_int32(b) as u32 & 31) as f64),
             ">>" => num_op!(|a, b| (to_int32(a) >> (to_int32(b) as u32 & 31)) as f64),
             ">>>" => num_op!(|a, b| ((to_int32(a) as u32) >> (to_int32(b) as u32 & 31)) as f64),
-            "===" => Box::new(move |rt, f| Ok(Value::Bool(x(rt, f)?.strict_eq(&y(rt, f)?)))),
-            "!==" => Box::new(move |rt, f| Ok(Value::Bool(!x(rt, f)?.strict_eq(&y(rt, f)?)))),
-            "<" | ">" | "<=" | ">=" => {
-                let op: &'static str = match op {
-                    "<" => "<",
-                    ">" => ">",
-                    "<=" => "<=",
-                    _ => ">=",
-                };
-                Box::new(move |rt, f| {
-                    let a = x(rt, f)?;
-                    let b = y(rt, f)?;
-                    if let (Value::Num(a), Value::Num(b)) = (&a, &b) {
-                        return Ok(Value::Bool(match op {
-                            "<" => a < b,
-                            ">" => a > b,
-                            "<=" => a <= b,
-                            _ => a >= b,
-                        }));
-                    }
-                    Ok(Value::Bool(compare(rt, op, &a, &b)?))
-                })
-            }
             op => {
                 let g = binop(op);
                 Box::new(move |rt, f| {
-                    let a = x(rt, f)?;
-                    let b = y(rt, f)?;
+                    let a = x.get(rt, f)?;
+                    let b = y.get(rt, f)?;
                     g(rt, &a, &b)
                 })
             }
@@ -1954,46 +2025,62 @@ impl<'s> Compiler<'s> {
     }
 }
 
-fn compare(rt: &Rt, op: &str, a: &Value, b: &Value) -> R<bool> {
-    Ok(match op {
-        "<" => rt.less(a, b)? == Some(true),
-        ">" => rt.less(b, a)? == Some(true),
-        "<=" => rt.less(b, a)? == Some(false),
-        _ => rt.less(a, b)? == Some(false),
-    })
+type Cnd = Box<dyn Fn(&Rt, &Frame) -> R<bool>>;
+
+pub enum Opnd {
+    Slot(usize),
+    Num(f64),
+    Ex(Ex),
+}
+
+impl Opnd {
+    #[inline(always)]
+    fn get(&self, rt: &Rt, f: &Frame) -> R<Value> {
+        match self {
+            Opnd::Slot(i) => Ok(f.env.slots.borrow()[*i].clone()),
+            Opnd::Num(n) => Ok(Value::Num(*n)),
+            Opnd::Ex(e) => e(rt, f),
+        }
+    }
 }
 
 type BinFn = Box<dyn Fn(&Rt, &Value, &Value) -> R<Value>>;
 
+/// The generic form of a binary operator, chosen once per site.
 fn binop(op: &'static str) -> BinFn {
-    Box::new(move |rt, a, b| {
-        let n = |v: &Value| rt.to_num(v);
-        Ok(match op {
-            "+" => return rt.add(a, b),
-            "-" => Value::Num(n(a)? - n(b)?),
-            "*" => Value::Num(n(a)? * n(b)?),
-            "/" => Value::Num(n(a)? / n(b)?),
-            "%" => Value::Num(n(a)? % n(b)?),
-            "**" => Value::Num(pow(n(a)?, n(b)?)),
-            "&" => Value::Num((to_int32(n(a)?) & to_int32(n(b)?)) as f64),
-            "|" => Value::Num((to_int32(n(a)?) | to_int32(n(b)?)) as f64),
-            "^" => Value::Num((to_int32(n(a)?) ^ to_int32(n(b)?)) as f64),
-            "<<" => Value::Num(to_int32(n(a)?).wrapping_shl(to_int32(n(b)?) as u32 & 31) as f64),
-            ">>" => Value::Num((to_int32(n(a)?) >> (to_int32(n(b)?) as u32 & 31)) as f64),
-            ">>>" => Value::Num(((to_int32(n(a)?) as u32) >> (to_int32(n(b)?) as u32 & 31)) as f64),
-            "==" => Value::Bool(rt.equals(a, b)?),
-            "!=" => Value::Bool(!rt.equals(a, b)?),
-            "instanceof" => Value::Bool(rt.instance_of(a, b)?),
-            "in" => match b {
-                Value::Obj(o) => {
-                    let k = rt.to_key(a)?;
-                    Value::Bool(rt.has(o, &k))
-                }
-                _ => return rt.type_error("right side of `in` is not an object"),
-            },
-            _ => unreachable!("{op}"),
-        })
-    })
+    macro_rules! num {
+        ($e:expr) => {
+            Box::new(|rt: &Rt, a: &Value, b: &Value| {
+                let g: fn(f64, f64) -> f64 = $e;
+                Ok(Value::Num(g(rt.to_num(a)?, rt.to_num(b)?)))
+            })
+        };
+    }
+    match op {
+        "+" => Box::new(|rt, a, b| rt.add(a, b)),
+        "-" => num!(|a, b| a - b),
+        "*" => num!(|a, b| a * b),
+        "/" => num!(|a, b| a / b),
+        "%" => num!(|a, b| a % b),
+        "**" => num!(pow),
+        "&" => num!(|a, b| (to_int32(a) & to_int32(b)) as f64),
+        "|" => num!(|a, b| (to_int32(a) | to_int32(b)) as f64),
+        "^" => num!(|a, b| (to_int32(a) ^ to_int32(b)) as f64),
+        "<<" => num!(|a, b| to_int32(a).wrapping_shl(to_int32(b) as u32 & 31) as f64),
+        ">>" => num!(|a, b| (to_int32(a) >> (to_int32(b) as u32 & 31)) as f64),
+        ">>>" => num!(|a, b| ((to_int32(a) as u32) >> (to_int32(b) as u32 & 31)) as f64),
+        "==" => Box::new(|rt, a, b| Ok(Value::Bool(rt.equals(a, b)?))),
+        "!=" => Box::new(|rt, a, b| Ok(Value::Bool(!rt.equals(a, b)?))),
+        "instanceof" => Box::new(|rt, a, b| Ok(Value::Bool(rt.instance_of(a, b)?))),
+        "in" => Box::new(|rt, a, b| match b {
+            Value::Obj(o) => {
+                let k = rt.to_key(a)?;
+                Ok(Value::Bool(rt.has(o, &k)))
+            }
+            _ => rt.type_error("right side of `in` is not an object"),
+        }),
+        _ => unreachable!("{op}"),
+    }
 }
 
 pub fn pow(a: f64, b: f64) -> f64 {
@@ -2214,37 +2301,39 @@ fn run_closure(
     new_target: Value,
 ) -> R<Value> {
     let code = &c.code;
-    let depth = DEPTH.with(|d| {
-        let v = d.get() + 1;
-        d.set(v);
-        v
-    });
-    struct Guard;
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            DEPTH.with(|d| d.set(d.get() - 1));
-        }
-    }
-    let _g = Guard;
+    let depth = rt.depth.get() + 1;
     if depth > MAX_DEPTH {
         let p = rt.range_error_proto.clone();
         return rt.throw(&p, "too much recursion");
     }
-    let mut slots = vec![Value::Undefined; code.nslots.get()];
-    if code.bind.is_none() {
-        for (i, &s) in code.simple_params.iter().enumerate() {
-            if let Some(a) = args.get(i) {
+    rt.depth.set(depth);
+    struct Guard<'a>(&'a Cell<u32>);
+    impl Drop for Guard<'_> {
+        fn drop(&mut self) {
+            self.0.set(self.0.get() - 1);
+        }
+    }
+    let _g = Guard(&rt.depth);
+    let mut env = POOL.with(|p| p.borrow_mut().pop()).unwrap_or_else(|| {
+        Rc::new(Env {
+            slots: RefCell::new(Vec::new()),
+            parent: None,
+        })
+    });
+    {
+        let e = Rc::get_mut(&mut env).expect("pooled environments are unshared");
+        e.parent = Some(c.env.clone());
+        let slots = e.slots.get_mut();
+        slots.resize(code.nslots.get(), Value::Undefined);
+        if code.bind.is_none() {
+            for (&s, a) in code.simple_params.iter().zip(args) {
                 slots[s] = a.clone();
             }
         }
+        if let Some(s) = code.self_slot {
+            slots[s] = Value::Obj(fo.clone());
+        }
     }
-    if let Some(s) = code.self_slot {
-        slots[s] = Value::Obj(fo.clone());
-    }
-    let env = Rc::new(Env {
-        slots: RefCell::new(slots),
-        parent: Some(c.env.clone()),
-    });
     let frame = match &c.lexical {
         Some((t, h, func, nt)) => Frame {
             env,
@@ -2281,7 +2370,37 @@ fn run_closure(
         r?;
         return Ok(rt.generator(items));
     }
-    run_body(&code.body, rt, &frame)
+    let r = run_body(&code.body, rt, &frame);
+    recycle(frame.env);
+    r
+}
+
+/// Environments no closure kept, ready for reuse by the next call.
+const POOL_MAX: usize = 32;
+
+thread_local! {
+    static POOL: RefCell<Vec<Rc<Env>>> = const { RefCell::new(Vec::new()) };
+}
+
+#[inline]
+fn recycle(mut env: Rc<Env>) {
+    let Some(e) = Rc::get_mut(&mut env) else {
+        return;
+    };
+    let slots = e.slots.get_mut();
+    if slots.capacity() > 64 {
+        return;
+    }
+    // Values are dropped before touching the pool: dropping can free other
+    // environments.
+    slots.clear();
+    e.parent = None;
+    POOL.with(|p| {
+        let mut p = p.borrow_mut();
+        if p.len() < POOL_MAX {
+            p.push(env);
+        }
+    });
 }
 
 fn run_body(body: &[St], rt: &Rt, frame: &Frame) -> R<Value> {

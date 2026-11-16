@@ -2,7 +2,7 @@
 
 use std::rc::Rc;
 
-pub type Name = Rc<str>;
+pub type Name = crate::str::Str;
 pub type P<T> = Box<T>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

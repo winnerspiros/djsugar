@@ -51,7 +51,7 @@ pub enum Value {
     Null,
     Bool(bool),
     Num(f64),
-    Str(Rc<str>),
+    Str(Name),
     Obj(Rc<Obj>),
     /// An array slot never assigned. Only ever stored in an array's items;
     /// reads see `undefined`.
@@ -76,42 +76,119 @@ pub enum Prop {
     Accessor(Option<Value>, Option<Value>),
 }
 
-/// Properties in insertion order, indexed by name once there are many.
+/// Interned names: every property key is the one shared allocation for its
+/// text, so a key matches by address. Entries nothing else holds are purged
+/// as the table grows.
+#[derive(Default)]
+struct Interner {
+    by_text: StdMap<Name, (), std::hash::BuildHasherDefault<FastHash>>,
+    addrs: StdMap<usize, (), std::hash::BuildHasherDefault<FastHash>>,
+    purge_at: usize,
+}
+
+thread_local! {
+    static INTERNER: RefCell<Interner> = RefCell::new(Interner { purge_at: 4096, ..Default::default() });
+}
+
+#[inline]
+fn addr(s: &str) -> usize {
+    s.as_ptr() as usize
+}
+
+/// Whether `s` is an interned name (checked by address only).
+#[inline]
+pub fn is_interned(s: &str) -> bool {
+    INTERNER.with(|i| i.borrow().addrs.contains_key(&addr(s)))
+}
+
+/// The interned name for `s`, if one exists.
+pub fn interned(s: &str) -> Option<Name> {
+    INTERNER.with(|i| i.borrow().by_text.get_key_value(s).map(|(k, _)| k.clone()))
+}
+
+/// The shared name for `s`, created if new.
+pub fn intern(s: &str) -> Name {
+    INTERNER.with(|i| {
+        let mut i = i.borrow_mut();
+        if let Some((k, _)) = i.by_text.get_key_value(s) {
+            return k.clone();
+        }
+        if i.by_text.len() >= i.purge_at {
+            let Interner { by_text, addrs, .. } = &mut *i;
+            by_text.retain(|k, _| {
+                let keep = Name::strong_count(k) > 1;
+                if !keep {
+                    addrs.remove(&addr(k));
+                }
+                keep
+            });
+            i.purge_at = (i.by_text.len() * 2).max(4096);
+        }
+        let n: Name = Name::from(s);
+        i.addrs.insert(addr(&n), ());
+        i.by_text.insert(n.clone(), ());
+        n
+    })
+}
+
+/// `intern`, reusing `n` itself when it is new.
+pub fn intern_rc(n: &Name) -> Name {
+    if is_interned(n) {
+        return n.clone();
+    }
+    intern(n)
+}
+
+/// Properties in insertion order, indexed by key address once there are many.
 #[derive(Default)]
 pub struct Props {
     list: Vec<(Name, Prop)>,
-    index: Option<HashMap<Name, usize>>,
+    index: Option<HashMap<usize, usize>>,
 }
 
-const INDEX_FROM: usize = 12;
+const INDEX_FROM: usize = 8;
 
 impl Props {
-    pub fn find(&self, name: &str) -> Option<usize> {
-        if let Some(ix) = &self.index {
-            return ix.get(name).copied();
+    #[inline]
+    fn find_addr(&self, a: usize) -> Option<usize> {
+        match &self.index {
+            Some(ix) => ix.get(&a).copied(),
+            None => self.list.iter().position(|(n, _)| addr(n) == a),
         }
-        let p = name.as_ptr();
-        // Names from the same source text are usually the same allocation.
-        if let Some(i) = self
-            .list
-            .iter()
-            .position(|(n, _)| n.as_ptr() == p && n.len() == name.len())
-        {
-            return Some(i);
-        }
-        self.list.iter().position(|(n, _)| &**n == name)
     }
 
-    /// `find`, trying the index this site found last time first.
-    #[inline]
-    pub fn find_hinted(&self, name: &str, hint: &Cell<u32>) -> Option<usize> {
-        let h = hint.get() as usize;
-        if let Some((n, _)) = self.list.get(h) {
-            if std::ptr::eq(n.as_ptr(), name.as_ptr()) && n.len() == name.len() || **n == *name {
-                return Some(h);
+    pub fn find(&self, name: &str) -> Option<usize> {
+        if self.list.is_empty() {
+            return None;
+        }
+        if let Some(i) = self.find_addr(addr(name)) {
+            if self.list[i].0.len() == name.len() {
+                return Some(i);
             }
         }
-        let i = self.find(name)?;
+        if is_interned(name) {
+            return None;
+        }
+        let canon = interned(name)?;
+        self.find_addr(addr(&canon))
+    }
+
+    /// `find` for a name known to be interned: by address alone.
+    #[inline]
+    pub fn find_atom(&self, name: &str) -> Option<usize> {
+        self.find_addr(addr(name))
+            .filter(|&i| self.list[i].0.len() == name.len())
+    }
+
+    /// `find_atom`, trying the index this site found last time first.
+    #[inline]
+    pub fn find_atom_hinted(&self, name: &str, hint: &Cell<u32>) -> Option<usize> {
+        if let Some((n, _)) = self.list.get(hint.get() as usize) {
+            if addr(n) == addr(name) && n.len() == name.len() {
+                return Some(hint.get() as usize);
+            }
+        }
+        let i = self.find_atom(name)?;
         hint.set(i as u32);
         Some(i)
     }
@@ -130,19 +207,20 @@ impl Props {
                 };
             }
             None => {
+                let name = intern_rc(name);
                 if let Some(ix) = &mut self.index {
-                    ix.insert(name.clone(), self.list.len());
+                    ix.insert(addr(&name), self.list.len());
                 } else if self.list.len() >= INDEX_FROM {
-                    let mut ix: HashMap<Name, usize> = self
+                    let mut ix: HashMap<usize, usize> = self
                         .list
                         .iter()
                         .enumerate()
-                        .map(|(i, (n, _))| (n.clone(), i))
+                        .map(|(i, (n, _))| (addr(n), i))
                         .collect();
-                    ix.insert(name.clone(), self.list.len());
+                    ix.insert(addr(&name), self.list.len());
                     self.index = Some(ix);
                 }
-                self.list.push((name.clone(), prop));
+                self.list.push((name, prop));
             }
         }
     }
@@ -157,7 +235,7 @@ impl Props {
                 self.list
                     .iter()
                     .enumerate()
-                    .map(|(i, (n, _))| (n.clone(), i))
+                    .map(|(i, (n, _))| (addr(n), i))
                     .collect(),
             );
         }
@@ -227,14 +305,60 @@ impl Obj {
     }
 
     /// The property found along the prototype chain.
-    /// An own data property read through a site's cache.
+    /// An own data property, `name` interned, read through a site's cache.
     #[inline]
     pub fn own_data_hinted(&self, name: &str, hint: &Cell<u32>) -> Option<Value> {
         let props = self.props.borrow();
-        match &props.list[props.find_hinted(name, hint)?].1 {
+        match &props.list[props.find_atom_hinted(name, hint)?].1 {
             Prop::Data(v) | Prop::Method(v) => Some(v.clone()),
             Prop::Accessor(..) => None,
         }
+    }
+
+    /// A data property found along the prototype chain, `name` interned.
+    /// None means the full lookup must decide (accessors, proxies, misses,
+    /// array lengths).
+    #[inline]
+    pub fn get_atom(&self, name: &str, hint: &Cell<u32>) -> Option<Value> {
+        if matches!(self.kind, Kind::Proxy(..))
+            || matches!(self.kind, Kind::Array(_)) && name == "length"
+        {
+            return None;
+        }
+        {
+            let props = self.props.borrow();
+            if let Some(i) = props.find_atom_hinted(name, hint) {
+                return match &props.list[i].1 {
+                    Prop::Data(v) | Prop::Method(v) => Some(v.clone()),
+                    Prop::Accessor(..) => None,
+                };
+            }
+        }
+        let mut cur: *const Obj = self
+            .proto
+            .borrow()
+            .as_ref()
+            .map_or(std::ptr::null(), Rc::as_ptr);
+        // SAFETY: no script runs during the walk, so every object on the
+        // chain stays alive (each is held by the one before it).
+        while let Some(o) = unsafe { cur.as_ref() } {
+            if matches!(o.kind, Kind::Proxy(..)) {
+                return None;
+            }
+            let props = o.props.borrow();
+            if let Some(i) = props.find_atom(name) {
+                return match &props.list[i].1 {
+                    Prop::Data(v) | Prop::Method(v) => Some(v.clone()),
+                    Prop::Accessor(..) => None,
+                };
+            }
+            cur = o
+                .proto
+                .borrow()
+                .as_ref()
+                .map_or(std::ptr::null(), Rc::as_ptr);
+        }
+        None
     }
 
     pub fn lookup(self: &Rc<Obj>, name: &str) -> Option<Prop> {
@@ -253,6 +377,8 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    /// Script call depth, bounded to keep the native stack safe.
+    pub depth: Cell<u32>,
     pub generator_proto: Rc<Obj>,
     pub regexp_proto: Rc<Obj>,
     pub global: Rc<Obj>,
@@ -472,7 +598,7 @@ impl Rt {
         })
     }
 
-    pub fn to_str(&self, v: &Value) -> R<Rc<str>> {
+    pub fn to_str(&self, v: &Value) -> R<Name> {
         Ok(match v {
             Value::Undefined | Value::Hole => "undefined".into(),
             Value::Null => "null".into(),
@@ -585,7 +711,7 @@ impl Rt {
         self.get(v, &k)
     }
 
-    pub fn to_key(&self, key: &Value) -> R<Rc<str>> {
+    pub fn to_key(&self, key: &Value) -> R<Name> {
         match key {
             Value::Str(s) => Ok(s.clone()),
             _ => self.to_str(key),
@@ -748,7 +874,7 @@ impl Rt {
                     v => s.push_str(&self.to_str(v)?),
                 }
             }
-            return Ok(Value::Str(Rc::from(s.as_str())));
+            return Ok(Value::Str(Name::from(s.as_str())));
         }
         Ok(Value::Num(self.to_num(&a)? + self.to_num(&b)?))
     }
@@ -861,7 +987,7 @@ pub fn str_len(s: &str) -> usize {
     }
 }
 
-pub fn char_at(s: &str, i: usize) -> Option<Rc<str>> {
+pub fn char_at(s: &str, i: usize) -> Option<Name> {
     if s.is_ascii() {
         return s.get(i..i + 1).map(Into::into);
     }

@@ -3,22 +3,22 @@
 //! parser asks for those to be read again ([`Lexer::regex`],
 //! [`Lexer::template_continue`]).
 
-use std::rc::Rc;
+use crate::ast::Name;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Tok {
-    Ident(Rc<str>),
+    Ident(Name),
     /// An identifier written with a `\u` escape: never a keyword.
-    EscapedIdent(Rc<str>),
-    Private(Rc<str>),
+    EscapedIdent(Name),
+    Private(Name),
     Num(f64),
-    BigInt(Rc<str>),
-    Str(Rc<str>),
+    BigInt(Name),
+    Str(Name),
     /// A template from its start up to the first `${` (or its end):
     /// cooked text (None where an escape is invalid), raw text, and whether
     /// it ended there.
-    Template(Option<Rc<str>>, Rc<str>, bool),
-    Regex(Rc<str>, Rc<str>),
+    Template(Option<Name>, Name, bool),
+    Regex(Name, Name),
     Punct(&'static str),
     Eof,
 }
@@ -212,7 +212,7 @@ impl<'a> Lexer<'a> {
         err(format!("unexpected character {c:?}"), start)
     }
 
-    fn ident(&mut self) -> Result<(Rc<str>, bool)> {
+    fn ident(&mut self) -> Result<(Name, bool)> {
         let start = self.pos;
         let mut out = String::new();
         let mut escaped = false;
@@ -243,7 +243,7 @@ impl<'a> Lexer<'a> {
         if out.is_empty() {
             return err("expected an identifier", start);
         }
-        Ok((out.into(), escaped))
+        Ok((crate::value::intern(&out), escaped))
     }
 
     /// After `\u`: `XXXX` or `{X...}`.
@@ -407,7 +407,7 @@ impl<'a> Lexer<'a> {
             };
             self.pos += c.len_utf8();
             match c {
-                c if c == quote => return Ok(Tok::Str(out.into())),
+                c if c == quote => return Ok(Tok::Str(crate::value::intern(&out))),
                 '\\' => {
                     if let Some(e) = self.escape(false)? {
                         out.push(e);
@@ -586,7 +586,7 @@ impl<'a> Lexer<'a> {
                 _ => {}
             }
         }
-        let body: Rc<str> = self.src[pos + 1..self.pos - 1].into();
+        let body: Name = self.src[pos + 1..self.pos - 1].into();
         let fstart = self.pos;
         while let Some(c) = self.peek_char() {
             if !is_id_part(c) {

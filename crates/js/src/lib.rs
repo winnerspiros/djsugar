@@ -8,6 +8,7 @@ pub mod lexer;
 pub mod parser;
 mod regex;
 mod run;
+pub mod str;
 pub mod value;
 
 use std::rc::Rc;

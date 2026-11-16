@@ -1,6 +1,6 @@
 //! The standard objects mapping scripts use.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::number_to_string;
@@ -38,7 +38,7 @@ fn array_of(o: &Rc<Obj>) -> &RefCell<Vec<Value>> {
     }
 }
 
-fn this_str(rt: &Rt, this: &Value) -> R<Rc<str>> {
+fn this_str(rt: &Rt, this: &Value) -> R<Name> {
     if this.is_nullish() {
         return rt.type_error("string method called on undefined or null");
     }
@@ -82,6 +82,7 @@ pub fn realm() -> Rt {
     let error_proto = p(Kind::Plain);
     let sub = || Obj::new(Some(error_proto.clone()), Kind::Plain);
     let rt = Rt {
+        depth: Cell::new(0),
         global: p(Kind::Plain),
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),
         string_proto: p(Kind::Plain),
@@ -864,7 +865,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
         let cmp = arg(a, 0);
         let mut err = None;
         // Merge sort: stable, and safe with comparators that are inconsistent.
-        let mut keyed: Vec<(Value, Option<Rc<str>>)> = Vec::with_capacity(v.len());
+        let mut keyed: Vec<(Value, Option<Name>)> = Vec::with_capacity(v.len());
         for x in v.drain(..) {
             let k = if cmp.is_nullish() && !matches!(x, Value::Undefined) {
                 Some(rt.to_str(&x)?)
@@ -873,7 +874,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
             };
             keyed.push((x, k));
         }
-        let mut less = |x: &(Value, Option<Rc<str>>), y: &(Value, Option<Rc<str>>)| -> bool {
+        let mut less = |x: &(Value, Option<Name>), y: &(Value, Option<Name>)| -> bool {
             if err.is_some() {
                 return false;
             }
@@ -1870,7 +1871,7 @@ fn last_index(rt: &Rt, re: &Value) -> R<usize> {
 }
 
 /// The match array `exec` returns, updating `lastIndex` for g/y.
-fn exec(rt: &Rt, re: &Value, s: &Rc<str>) -> R<Value> {
+fn exec(rt: &Rt, re: &Value, s: &Name) -> R<Value> {
     let r = re_of(re).unwrap();
     let u = utf16(s);
     let sticky = r.global || r.sticky;
@@ -1972,7 +1973,7 @@ fn expand(with: &str, m: &[Value], groups: &Value, pos: usize, s: &[u16], rt: &R
     Ok(out)
 }
 
-fn regex_replace(rt: &Rt, re: &Value, s: &Rc<str>, with: &Value, all_required: bool) -> R<Value> {
+fn regex_replace(rt: &Rt, re: &Value, s: &Name, with: &Value, all_required: bool) -> R<Value> {
     let r = re_of(re).unwrap();
     if all_required && !r.global {
         return rt.type_error("replaceAll needs a global regular expression");
