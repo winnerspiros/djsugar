@@ -110,8 +110,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
+      # The app crate's test build runs out of memory alongside the rest on
+      # this runner, as on Linux: lighter debug info, and the app on its own.
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+        env:
+          CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      - run: cargo test --workspace --exclude djsugar
+        env:
+          CARGO_PROFILE_DEV_DEBUG: line-tables-only
+          CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      - run: cargo test -p djsugar -j1
+        env:
+          CARGO_PROFILE_DEV_DEBUG: line-tables-only
+          CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
   dependencies:
     # Known vulnerabilities in dependencies, and licences that can't ship in a
