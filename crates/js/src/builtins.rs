@@ -85,6 +85,7 @@ pub fn realm() -> Rt {
         global: p(Kind::Plain),
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),
         string_proto: p(Kind::Plain),
+        regexp_proto: p(Kind::Plain),
         number_proto: p(Kind::Plain),
         boolean_proto: p(Kind::Plain),
         type_error_proto: sub(),
@@ -289,8 +290,20 @@ pub fn realm() -> Rt {
     ctor(
         "Function",
         &rt.function_proto,
-        Box::new(|rt, _, _| rt.type_error("Function() is not supported")),
+        Box::new(|rt, _, a| {
+            let body = match a.last() {
+                Some(b) => rt.to_str(b)?,
+                None => "".into(),
+            };
+            let params = a[..a.len().saturating_sub(1)]
+                .iter()
+                .map(|p| rt.to_str(p).map(|p| p.to_string()))
+                .collect::<R<Vec<_>>>()?;
+            crate::run::compile_function(rt, &params.join(","), &body)
+        }),
     );
+    crate::date::install(&rt);
+    crate::coll::install(&rt);
     let fp = rt.function_proto.clone();
     method(&rt, &fp, "call", |rt, this, a| {
         rt.call(this, arg(a, 0), a.get(1..).unwrap_or(&[]))
@@ -365,6 +378,7 @@ pub fn realm() -> Rt {
 
     array(&rt, &ctor);
     string(&rt, &ctor);
+    regexp(&rt, &ctor);
     number(&rt, &ctor);
     ctor(
         "Boolean",
@@ -1801,5 +1815,385 @@ impl JsonParser<'_> {
             }
         }
         Ok(from16(&u))
+    }
+}
+
+fn re_of(v: &Value) -> Option<&crate::regex::Regex> {
+    match v {
+        Value::Obj(o) => match &o.kind {
+            Kind::Regex(r) => Some(r),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn last_index(rt: &Rt, re: &Value) -> R<usize> {
+    let n = rt.to_num(&rt.get(re, "lastIndex")?)?;
+    Ok(if n.is_nan() || n < 0.0 { 0 } else { n as usize })
+}
+
+/// The match array `exec` returns, updating `lastIndex` for g/y.
+fn exec(rt: &Rt, re: &Value, s: &Rc<str>) -> R<Value> {
+    let r = re_of(re).unwrap();
+    let u = utf16(s);
+    let sticky = r.global || r.sticky;
+    let start = if sticky { last_index(rt, re)? } else { 0 };
+    let found = if start > u.len() {
+        None
+    } else {
+        r.exec(&u, start)
+    };
+    let Some(caps) = found else {
+        if sticky {
+            rt.set(re, &"lastIndex".into(), Value::Num(0.0))?;
+        }
+        return Ok(Value::Null);
+    };
+    let (a, b) = caps[0].unwrap();
+    if sticky {
+        rt.set(re, &"lastIndex".into(), Value::Num(b as f64))?;
+    }
+    let items: Vec<Value> = caps
+        .iter()
+        .map(|c| c.map_or(Value::Undefined, |(x, y)| from16(&u[x..y])))
+        .collect();
+    let arr = rt.array(items.clone());
+    rt.set(&arr, &"index".into(), Value::Num(a as f64))?;
+    rt.set(&arr, &"input".into(), Value::Str(s.clone()))?;
+    let groups = if r.names.is_empty() {
+        Value::Undefined
+    } else {
+        let g = rt.object();
+        for (n, i) in &r.names {
+            g.put_name(&n.as_str().into(), items[*i].clone());
+        }
+        Value::Obj(g)
+    };
+    rt.set(&arr, &"groups".into(), groups)?;
+    Ok(arr)
+}
+
+/// `$&`, `$1`, `$<name>` and friends in a replacement string.
+fn expand(with: &str, m: &[Value], groups: &Value, pos: usize, s: &[u16], rt: &Rt) -> R<String> {
+    let mut out = String::new();
+    let w: Vec<char> = with.chars().collect();
+    let mut i = 0;
+    let whole = rt.to_str(&m[0])?;
+    while i < w.len() {
+        if w[i] != '$' || i + 1 == w.len() {
+            out.push(w[i]);
+            i += 1;
+            continue;
+        }
+        let n = w[i + 1];
+        i += 2;
+        match n {
+            '$' => out.push('$'),
+            '&' => out += &whole,
+            '`' => out += &String::from_utf16_lossy(&s[..pos]),
+            '\'' => {
+                out += &String::from_utf16_lossy(&s[(pos + utf16(&whole).len()).min(s.len())..])
+            }
+            '<' if !matches!(groups, Value::Undefined) => {
+                let end = w[i..].iter().position(|&c| c == '>').map(|p| i + p);
+                match end {
+                    Some(e) => {
+                        let name: String = w[i..e].iter().collect();
+                        let v = rt.get(groups, &name)?;
+                        if !matches!(v, Value::Undefined) {
+                            out += &rt.to_str(&v)?;
+                        }
+                        i = e + 1;
+                    }
+                    None => out.push_str("$<"),
+                }
+            }
+            d if d.is_ascii_digit() => {
+                let mut g = d as usize - '0' as usize;
+                if i < w.len()
+                    && w[i].is_ascii_digit()
+                    && g * 10 + (w[i] as usize - '0' as usize) < m.len()
+                {
+                    g = g * 10 + (w[i] as usize - '0' as usize);
+                    i += 1;
+                }
+                if g >= 1 && g < m.len() {
+                    if !matches!(m[g], Value::Undefined) {
+                        out += &rt.to_str(&m[g])?;
+                    }
+                } else {
+                    out.push('$');
+                    out.push(d);
+                }
+            }
+            c => {
+                out.push('$');
+                out.push(c);
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn regex_replace(rt: &Rt, re: &Value, s: &Rc<str>, with: &Value, all_required: bool) -> R<Value> {
+    let r = re_of(re).unwrap();
+    if all_required && !r.global {
+        return rt.type_error("replaceAll needs a global regular expression");
+    }
+    let u = utf16(s);
+    let callable = with.as_obj().is_some_and(|o| o.is_callable());
+    let with_s = if callable {
+        "".into()
+    } else {
+        rt.to_str(with)?
+    };
+    let mut out: Vec<u16> = Vec::new();
+    let mut at = if r.sticky && !r.global {
+        last_index(rt, re)?
+    } else {
+        0
+    };
+    let mut copied = 0;
+    while at <= u.len() {
+        let Some(caps) = r.exec(&u, at) else { break };
+        if r.sticky && caps[0].unwrap().0 != at {
+            break;
+        }
+        let (a, b) = caps[0].unwrap();
+        out.extend_from_slice(&u[copied..a]);
+        let m: Vec<Value> = caps
+            .iter()
+            .map(|c| c.map_or(Value::Undefined, |(x, y)| from16(&u[x..y])))
+            .collect();
+        let groups = if r.names.is_empty() {
+            Value::Undefined
+        } else {
+            let g = rt.object();
+            for (n, i) in &r.names {
+                g.put_name(&n.as_str().into(), m[*i].clone());
+            }
+            Value::Obj(g)
+        };
+        let rep = if callable {
+            let mut args = m.clone();
+            args.push(Value::Num(a as f64));
+            args.push(Value::Str(s.clone()));
+            if !matches!(groups, Value::Undefined) {
+                args.push(groups);
+            }
+            rt.to_str(&rt.call(with, Value::Undefined, &args)?)?
+                .to_string()
+        } else {
+            expand(&with_s, &m, &groups, a, &u, rt)?
+        };
+        out.extend(rep.encode_utf16());
+        copied = b;
+        if !r.global {
+            break;
+        }
+        at = if b == a { b + 1 } else { b };
+    }
+    if r.global || r.sticky {
+        rt.set(re, &"lastIndex".into(), Value::Num(0.0))?;
+    }
+    out.extend_from_slice(&u[copied.min(u.len())..]);
+    Ok(from16(&out))
+}
+
+fn regexp(rt: &Rt, ctor: &Ctor) {
+    ctor(
+        "RegExp",
+        &rt.regexp_proto,
+        Box::new(|rt, _, a| {
+            let (src, flags) = match (re_of(&arg(a, 0)), arg(a, 1)) {
+                (Some(r), Value::Undefined) => (r.source.clone(), r.flags.clone()),
+                (Some(r), f) => (r.source.clone(), rt.to_str(&f)?.to_string()),
+                (None, f) => (
+                    match arg(a, 0) {
+                        Value::Undefined => "(?:)".to_string(),
+                        p => rt.to_str(&p)?.to_string(),
+                    },
+                    match f {
+                        Value::Undefined => String::new(),
+                        f => rt.to_str(&f)?.to_string(),
+                    },
+                ),
+            };
+            rt.regexp(&src, &flags)
+        }),
+    );
+    let p = rt.regexp_proto.clone();
+    method(rt, &p, "exec", |rt, this, a| {
+        if re_of(this).is_none() {
+            return rt.type_error("exec on a non-RegExp");
+        }
+        let s = rt.to_str(&arg(a, 0))?;
+        exec(rt, this, &s)
+    });
+    method(rt, &p, "test", |rt, this, a| {
+        if re_of(this).is_none() {
+            return rt.type_error("test on a non-RegExp");
+        }
+        let s = rt.to_str(&arg(a, 0))?;
+        Ok(Value::Bool(!matches!(exec(rt, this, &s)?, Value::Null)))
+    });
+    method(rt, &p, "toString", |rt, this, _| {
+        let src = rt.to_str(&rt.get(this, "source")?)?;
+        let fl = rt.to_str(&rt.get(this, "flags")?)?;
+        Ok(Value::Str(format!("/{src}/{fl}").into()))
+    });
+
+    let sp = rt.string_proto.clone();
+    let old = |n: &str| {
+        sp.props
+            .borrow()
+            .get(n)
+            .cloned()
+            .map(|p| match p {
+                Prop::Data(v) | Prop::Method(v) => v,
+                _ => Value::Undefined,
+            })
+            .unwrap()
+    };
+    for (name, all) in [("replace", false), ("replaceAll", true)] {
+        let prev = old(name);
+        method(rt, &sp, name, move |rt, this, a| {
+            if re_of(&arg(a, 0)).is_some() {
+                let s = this_str(rt, this)?;
+                return regex_replace(rt, &arg(a, 0), &s, &arg(a, 1), all);
+            }
+            rt.call(&prev, this.clone(), a)
+        });
+    }
+    let prev = old("split");
+    method(rt, &sp, "split", move |rt, this, a| {
+        let sep = arg(a, 0);
+        let Some(r) = re_of(&sep) else {
+            return rt.call(&prev, this.clone(), a);
+        };
+        let s = this_str(rt, this)?;
+        let u = utf16(&s);
+        let limit = match arg(a, 1) {
+            Value::Undefined => usize::MAX,
+            l => rt.to_num(&l)? as u32 as usize,
+        };
+        let mut out = Vec::new();
+        if u.is_empty() {
+            if r.exec(&u, 0).is_none() {
+                out.push(Value::Str(s));
+            }
+            return Ok(rt.array(out));
+        }
+        let (mut p, mut q) = (0, 0);
+        while q < u.len() {
+            match r.exec(&u, q) {
+                Some(caps) => {
+                    let (a, e) = caps[0].unwrap();
+                    if a >= u.len() {
+                        break;
+                    }
+                    if e == p || (e == a && a == q && a == p) {
+                        q = a + 1;
+                        continue;
+                    }
+                    if e == a && a < q {
+                        q += 1;
+                        continue;
+                    }
+                    out.push(from16(&u[p..a]));
+                    for c in &caps[1..] {
+                        out.push(c.map_or(Value::Undefined, |(x, y)| from16(&u[x..y])));
+                    }
+                    p = e;
+                    q = if e == a { e + 1 } else { e };
+                }
+                None => break,
+            }
+        }
+        out.push(from16(&u[p..]));
+        out.truncate(limit);
+        Ok(rt.array(out))
+    });
+    method(rt, &sp, "match", |rt, this, a| {
+        let s = this_str(rt, this)?;
+        let re = match arg(a, 0) {
+            v if re_of(&v).is_some() => v,
+            Value::Undefined => rt.regexp("(?:)", "")?,
+            v => rt.regexp(&rt.to_str(&v)?, "")?,
+        };
+        if !re_of(&re).unwrap().global {
+            return exec(rt, &re, &s);
+        }
+        rt.set(&re, &"lastIndex".into(), Value::Num(0.0))?;
+        let mut all = Vec::new();
+        loop {
+            let m = exec(rt, &re, &s)?;
+            if matches!(m, Value::Null) {
+                break;
+            }
+            let whole = rt.get(&m, "0")?;
+            if rt.to_str(&whole)?.is_empty() {
+                let li = last_index(rt, &re)?;
+                rt.set(&re, &"lastIndex".into(), Value::Num((li + 1) as f64))?;
+            }
+            all.push(whole);
+        }
+        Ok(if all.is_empty() {
+            Value::Null
+        } else {
+            rt.array(all)
+        })
+    });
+    method(rt, &sp, "search", |rt, this, a| {
+        let s = this_str(rt, this)?;
+        let re = match arg(a, 0) {
+            v if re_of(&v).is_some() => v,
+            v => rt.regexp(&rt.to_str(&v)?, "")?,
+        };
+        let r = re_of(&re).unwrap();
+        Ok(Value::Num(
+            r.exec(&utf16(&s), 0)
+                .map_or(-1.0, |c| c[0].unwrap().0 as f64),
+        ))
+    });
+}
+
+impl Rt {
+    pub fn regexp(&self, src: &str, flags: &str) -> R<Value> {
+        let r = match crate::regex::Regex::new(src, flags) {
+            Ok(r) => r,
+            Err(e) => {
+                let p = self.global.lookup("SyntaxError");
+                return match p {
+                    Some(Prop::Method(f)) => {
+                        Err(Exc::Throw(self.construct(&f, &[Value::str(&e)], &f)?))
+                    }
+                    _ => self.type_error(&e),
+                };
+            }
+        };
+        let flags_sorted: String = "dgimsuvy".chars().filter(|c| flags.contains(*c)).collect();
+        let props = [
+            (
+                "source",
+                Value::str(if src.is_empty() { "(?:)" } else { src }),
+            ),
+            ("flags", Value::str(&flags_sorted)),
+            ("global", Value::Bool(r.global)),
+            ("ignoreCase", Value::Bool(r.ignore_case)),
+            ("multiline", Value::Bool(r.multiline)),
+            ("sticky", Value::Bool(r.sticky)),
+            ("unicode", Value::Bool(r.unicode)),
+            ("dotAll", Value::Bool(r.dot_all)),
+        ];
+        let o = Obj::new(Some(self.regexp_proto.clone()), Kind::Regex(Box::new(r)));
+        o.props
+            .borrow_mut()
+            .set(&"lastIndex".into(), Prop::Method(Value::Num(0.0)));
+        for (k, v) in props {
+            o.props.borrow_mut().set(&k.into(), Prop::Method(v));
+        }
+        Ok(Value::Obj(o))
     }
 }

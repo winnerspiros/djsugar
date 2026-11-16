@@ -244,7 +244,13 @@ impl<'s> Compiler<'s> {
         let mut vars = Vec::new();
         var_names(&p.body, &mut vars);
         lexical_names(&p.body, &mut vars);
-        let body = self.block_body(&p.body)?;
+        let mut body = self.block_body(&p.body)?;
+        // The script's value: its last statement, when that's an expression.
+        if let Some(Stmt::Expr(e)) = p.body.last() {
+            body.pop();
+            let e = self.expr(e)?;
+            body.push(Box::new(move |rt, f| Ok(Flow::Return(e(rt, f)?))));
+        }
         let s = self.scopes.pop().unwrap();
         Ok((body, s.slots, vars))
     }
@@ -906,7 +912,13 @@ impl<'s> Compiler<'s> {
             Expr::Null => Box::new(|_, _| Ok(Value::Null)),
             Expr::Undefined => Box::new(|_, _| Ok(Value::Undefined)),
             Expr::BigInt(_) => return unsupported("BigInt"),
-            Expr::Regex(..) => return unsupported("regular expressions"),
+            Expr::Regex(body, flags) => {
+                if let Err(e) = crate::regex::Regex::new(body, flags) {
+                    return Err(CompileError(e));
+                }
+                let (body, flags) = (body.clone(), flags.clone());
+                Box::new(move |rt, _| rt.regexp(&body, &flags))
+            }
             Expr::Await(_) | Expr::Yield(..) => return unsupported("async and generators"),
             Expr::Ident(n, _) => self.reader(n, false),
             Expr::This => Box::new(|_, f| Ok(f.this.clone())),
@@ -2229,4 +2241,46 @@ pub fn run_program(rt: &Rt, body: &[St], nslots: usize, vars: &[Name]) -> R<Valu
         }
     }
     Ok(last)
+}
+
+/// `Function(params, body)`: a function compiled in the global scope.
+pub fn compile_function(rt: &Rt, params: &str, body: &str) -> R<Value> {
+    let src = format!("(function anonymous({params}\n) {{\n{body}\n}})");
+    let compiled = crate::parser::parse(&src)
+        .map_err(|e| e.message)
+        .and_then(|prog| {
+            let Some(Stmt::Expr(e)) = prog.body.first() else {
+                return Err("expected a function".to_string());
+            };
+            let mut c = Compiler::new(&src);
+            c.scopes.push(Scope {
+                blocks: vec![Vec::new()],
+                slots: 0,
+                global: true,
+            });
+            c.expr(e).map_err(|e| e.0)
+        });
+    let make = match compiled {
+        Ok(m) => m,
+        Err(m) => {
+            let p = rt.global.lookup("SyntaxError");
+            return match p {
+                Some(Prop::Method(f)) => {
+                    Err(Exc::Throw(rt.construct(&f, &[Value::Str(m.into())], &f)?))
+                }
+                _ => rt.type_error(&m),
+            };
+        }
+    };
+    let frame = Frame {
+        env: Rc::new(Env {
+            slots: RefCell::new(Vec::new()),
+            parent: None,
+        }),
+        this: Value::Obj(rt.global.clone()),
+        home: None,
+        func: None,
+        new_target: Value::Undefined,
+    };
+    make(rt, &frame)
 }

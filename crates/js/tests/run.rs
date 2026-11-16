@@ -157,60 +157,101 @@ fn host_functions() {
     let _ = ev("1");
 }
 
-/// Every bundled mapping script: how many compile and run their top level
-/// against a stand-in host.
+/// Every bundled mapping, loaded like the app does: the prelude, then the
+/// script files its XML lists, then each `init` call.
 #[test]
-fn bundled_scripts() {
+fn bundled_mappings() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../res/controllers");
-    let mut files: Vec<_> = std::fs::read_dir(&dir)
+    let prelude =
+        std::fs::read_to_string(dir.join("../../crates/controllers/src/prelude.js")).unwrap();
+    let mut xmls: Vec<_> = std::fs::read_dir(&dir)
         .unwrap()
         .flatten()
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "js"))
+        .filter(|p| p.extension().is_some_and(|x| x == "xml"))
         .collect();
-    files.sort();
-    let mut fails = Vec::new();
-    for p in &files {
-        let src = std::fs::read_to_string(p).unwrap();
-        let e = Engine::new();
-        e.set_log(|_| {});
-        e.eval(HOST).unwrap();
-        for lib in [
-            "lodash.mixxx.js",
-            "common-controller-scripts.js",
-            "midi-components-0.0.js",
-        ] {
-            if p.file_name().unwrap() != lib {
-                let l = std::fs::read_to_string(dir.join(lib)).unwrap();
-                let _ = e.eval(&l);
+    xmls.sort();
+    let (mut ok, mut total, mut fails) = (0, 0, Vec::new());
+    for x in &xmls {
+        let xml = std::fs::read_to_string(x).unwrap();
+        let mut files = vec!["common-controller-scripts.js".to_string()];
+        let mut prefixes = Vec::new();
+        for tag in xml.split("<file ").skip(1) {
+            let attr = |n: &str| {
+                tag.split(&format!("{n}=\""))
+                    .nth(1)
+                    .and_then(|r| r.split('"').next())
+                    .map(str::to_string)
+            };
+            if let Some(f) = attr("filename") {
+                if !files.contains(&f) {
+                    files.push(f);
+                }
+            }
+            if let Some(p) = attr("functionprefix").filter(|p| !p.is_empty()) {
+                prefixes.push(p);
             }
         }
-        if let Err(err) = e.eval(&src) {
-            fails.push(format!(
-                "{}: {err}",
-                p.file_name().unwrap().to_string_lossy()
-            ));
+        if files.len() == 1 {
+            continue;
+        }
+        total += 1;
+        let e = Engine::new();
+        e.set_log(|_| {});
+        let hid = xml.contains("<hid")
+            || xml.contains("HIDController")
+            || x.to_string_lossy().contains("hid");
+        let setup = prelude.clone();
+        let r = e.eval(NATIVE).and_then(|_| e.eval(&setup)).and_then(|f| {
+            let g = Value::Obj(e.global().clone());
+            let native = e.get(&g, "native0")?;
+            e.call(
+                &f,
+                Value::Undefined,
+                &[native, e.object(), Value::Bool(hid)],
+            )
+        });
+        let mut err = r.err().map(|e| format!("prelude: {e}"));
+        for f in &files {
+            if err.is_some() {
+                break;
+            }
+            match std::fs::read_to_string(dir.join(f)) {
+                Ok(src) => err = e.eval(&src).err().map(|e| format!("{f}: {e}")),
+                Err(_) => err = Some(format!("{f}: missing")),
+            }
+        }
+        for p in &prefixes {
+            if err.is_some() {
+                break;
+            }
+            err = e.eval(&format!("if (typeof {p} !== 'undefined' && typeof {p}.init === 'function') {p}.init('test', false);")).err().map(|e| format!("{p}.init: {e}"));
+        }
+        match err {
+            None => ok += 1,
+            Some(m) => fails.push(format!("{}: {m}", x.file_name().unwrap().to_string_lossy())),
         }
     }
-    let ok = files.len() - fails.len();
-    eprintln!("{ok} of {} scripts run\n{}", files.len(), fails.join("\n"));
+    eprintln!(
+        "{ok} of {total} mappings load and init\n{}",
+        fails.join("\n")
+    );
     assert!(ok > 0);
 }
 
-const HOST: &str = r#"
-var engine = new Proxy0();
+const NATIVE: &str = r#"
 function Proxy0() {}
-["getValue", "setValue", "getParameter", "setParameter", "makeConnection", "connectControl", "trigger",
- "beginTimer", "stopTimer", "scratchEnable", "scratchTick", "scratchDisable", "isScratching", "brake",
- "spinback", "softTakeover", "softTakeoverIgnoreNextValue", "log", "getSetting", "makeUnbufferedConnection",
- "softStart", "getParameterForValue", "reset", "getDefaultValue", "getDefaultParameter"].forEach(function (n) {
-    Proxy0.prototype[n] = function () { return n === "makeConnection" ? { disconnect: function () {}, trigger: function () {} } : 0; };
-});
-var midi = { sendShortMsg: function () {}, sendSysexMsg: function () {}, send: function () {}, makeInputHandler: function () {} };
-var controller = { send: function () {}, sendOutputReport: function () {}, sendFeatureReport: function () {}, getInputReport: function () {}, getFeatureReport: function () { return []; } };
-var script = {};
-var svg = {};
-var color = {};
+var native0 = new Proxy0();
+var watchId = 0;
+["defaultParameter", "defaultValue", "get", "getParameter", "hidGetFeature", "hidGetInput", "hidOutput", "hidSendFeature",
+ "inputHandlerAllowed", "inputHandlers", "isScratching", "log", "parameterForValue", "ramp", "rampActive", "reset", "routeNote",
+ "scratchDisable", "scratchEnable", "scratchTick", "send", "set", "setParameter", "softTakeover", "softTakeoverIgnoreNextValue",
+ "softTakeoverWillIgnore", "timerStart", "timerStop", "trigger", "unwatch"].forEach(function (n) { native0[n] = function () { return 0; }; });
+native0.watch = function () { return ++watchId; };
+native0.timerStart = function () { return ++watchId; };
+native0.inputHandlerAllowed = function () { return true; };
+native0.hidGetInput = function () { return new Uint8Array(64); };
+native0.hidGetFeature = function () { return new Uint8Array(64); };
 "#;
 
 #[test]
@@ -244,4 +285,53 @@ function wheelTurn(channel, control, value, status, group) {
         "djsugar-js {:.2} us/call",
         t.elapsed().as_secs_f64() * 1e6 / n as f64
     );
+}
+
+#[test]
+fn regular_expressions() {
+    assert_eq!(
+        out(
+            r#"var m = /\[Channel(\d)\]/.exec("[Channel3]"); var out = m[1] + m.index + /x/i.test("X");"#
+        ),
+        "30true"
+    );
+    assert_eq!(
+        out(r#"var out = "a1b22c333".replace(/\d+/g, n => "<" + n.length + ">");"#),
+        "a<1>b<2>c<3>"
+    );
+    assert_eq!(
+        out(r#"var out = "2024-01-05".replace(/(\d+)-(\d+)-(\d+)/, "$3/$2/$1");"#),
+        "05/01/2024"
+    );
+    assert_eq!(
+        out(r#"var out = "a, b,c".split(/\s*,\s*/).join("|") + "x".split(/(x)/).length;"#),
+        "a|b|c3"
+    );
+    assert_eq!(
+        out(
+            r#"var out = "one two three".match(/\w+/g).length + "abc".search(/c/) + String(/a\/b/g);"#
+        ),
+        "5/a\\/b/g"
+    );
+    assert_eq!(
+        out(
+            r#"var r = /o/g, n = 0; while (r.exec("foo boo")) n++; var out = n + new RegExp("^[a-z]+$").test("abc");"#
+        ),
+        "5"
+    );
+    assert_eq!(
+        out(
+            r#"var out = "John Smith".replace(/(?<first>\w+) (?<last>\w+)/, "$<last>, $<first>");"#
+        ),
+        "Smith, John"
+    );
+}
+
+#[test]
+fn collections_and_bytes() {
+    assert_eq!(out("var m = new Map([[1, 'a']]); m.set('k', 2).set(NaN, 3); m.delete(1); var out = m.size + ',' + m.get(NaN) + ',' + [...m.keys()].join('/');"), "2,3,k/NaN");
+    assert_eq!(out("var s = new Set([1, 1, 2]); s.add(3); var t = 0; s.forEach(v => t += v); var out = s.size + ',' + t + s.has(2);"), "3,6true");
+    assert_eq!(out("var b = new Uint8Array([1, 2, 300]); b[0] = -1; var out = b.length + ',' + Array.from(b).join('/') + ',' + b.subarray(1).length;"), "3,255/2/44,2");
+    assert_eq!(out("var d = new DataView(new ArrayBuffer(4)); d.setUint16(0, 0x1234); d.setInt8(2, -2); var out = d.getUint8(0) + ',' + d.getUint16(0, true) + ',' + d.getUint8(2);"), "18,13330,254");
+    assert_eq!(out("var f = new Function('a', 'b', 'return a * b + this.x'); var x = 1; var out = f(3, 4) + Function('return this')().x;"), "14");
 }

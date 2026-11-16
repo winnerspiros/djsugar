@@ -2,8 +2,11 @@
 
 pub mod ast;
 mod builtins;
+mod coll;
+mod date;
 pub mod lexer;
 pub mod parser;
+mod regex;
 mod run;
 pub mod value;
 

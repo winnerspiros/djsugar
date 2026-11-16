@@ -130,6 +130,11 @@ pub enum Kind {
     Closure(Closure),
     Native(Name, Rc<NativeFn>),
     Bound(Value, Value, Vec<Value>),
+    Regex(Box<crate::regex::Regex>),
+    Map(RefCell<crate::coll::Coll>),
+    Set(RefCell<crate::coll::Coll>),
+    Buffer(crate::coll::Bytes),
+    Typed(crate::coll::View),
 }
 
 pub struct Obj {
@@ -179,6 +184,7 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    pub regexp_proto: Rc<Obj>,
     pub global: Rc<Obj>,
     pub object_proto: Rc<Obj>,
     pub function_proto: Rc<Obj>,
@@ -436,6 +442,8 @@ impl Rt {
                             return Ok(x.clone());
                         }
                     }
+                } else if let (Kind::Typed(t), Some(i)) = (&o.kind, index_of_name(name)) {
+                    return Ok(t.get(i).map_or(Value::Undefined, Value::Num));
                 }
                 self.get_from(o, v, name)
             }
@@ -470,13 +478,15 @@ impl Rt {
         if let Value::Num(n) = key {
             if let Some(i) = as_index(*n) {
                 match v {
-                    Value::Obj(o) => {
-                        if let Kind::Array(items) = &o.kind {
+                    Value::Obj(o) => match &o.kind {
+                        Kind::Array(items) => {
                             if let Some(x) = items.borrow().get(i) {
                                 return Ok(x.clone());
                             }
                         }
-                    }
+                        Kind::Typed(t) => return Ok(t.get(i).map_or(Value::Undefined, Value::Num)),
+                        _ => {}
+                    },
                     Value::Str(s) => return Ok(char_at(s, i).map_or(Value::Undefined, Value::Str)),
                     _ => {}
                 }
@@ -517,6 +527,11 @@ impl Rt {
                 return Ok(());
             }
         }
+        if let (Kind::Typed(t), Some(i)) = (&o.kind, index_of_name(name)) {
+            let n = self.to_num(&value)?;
+            t.set(i, n);
+            return Ok(());
+        }
         let own_data = matches!(
             o.props.borrow().get(name),
             Some(Prop::Data(_) | Prop::Method(_))
@@ -535,9 +550,17 @@ impl Rt {
 
     pub fn set_index(&self, target: &Value, key: &Value, value: Value) -> R<()> {
         if let (Value::Obj(o), Value::Num(n)) = (target, key) {
-            if let (Kind::Array(items), Some(i)) = (&o.kind, as_index(*n)) {
-                set_item(items, i, value);
-                return Ok(());
+            match (&o.kind, as_index(*n)) {
+                (Kind::Array(items), Some(i)) => {
+                    set_item(items, i, value);
+                    return Ok(());
+                }
+                (Kind::Typed(t), Some(i)) => {
+                    let x = self.to_num(&value)?;
+                    t.set(i, x);
+                    return Ok(());
+                }
+                _ => {}
             }
         }
         let k = self.to_key(key)?;
@@ -556,8 +579,12 @@ impl Rt {
     /// Own enumerable keys, array indices first.
     pub fn own_keys(&self, o: &Rc<Obj>) -> Vec<Name> {
         let mut out: Vec<Name> = Vec::new();
-        if let Kind::Array(items) = &o.kind {
-            out.extend((0..items.borrow().len()).map(|i| Name::from(i.to_string())));
+        match &o.kind {
+            Kind::Array(items) => {
+                out.extend((0..items.borrow().len()).map(|i| Name::from(i.to_string())))
+            }
+            Kind::Typed(t) => out.extend((0..t.len).map(|i| Name::from(i.to_string()))),
+            _ => {}
         }
         out.extend(o.props.borrow().keys().cloned());
         out
@@ -635,8 +662,22 @@ impl Rt {
     pub fn list(&self, v: &Value) -> R<Vec<Value>> {
         match v {
             Value::Obj(o) => {
-                if let Kind::Array(items) = &o.kind {
-                    return Ok(items.borrow().clone());
+                match &o.kind {
+                    Kind::Array(items) => return Ok(items.borrow().clone()),
+                    Kind::Typed(t) => {
+                        return Ok((0..t.len).map(|i| Value::Num(t.get(i).unwrap())).collect())
+                    }
+                    Kind::Set(c) => {
+                        return Ok(c.borrow().items().map(|(k, _)| k.clone()).collect())
+                    }
+                    Kind::Map(c) => {
+                        return Ok(c
+                            .borrow()
+                            .items()
+                            .map(|(k, v)| self.array(vec![k.clone(), v.clone()]))
+                            .collect());
+                    }
+                    _ => {}
                 }
                 let n = self.to_num(&self.get(v, "length")?)?;
                 let n = as_index(n).unwrap_or(0);
