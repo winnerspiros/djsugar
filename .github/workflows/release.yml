@@ -62,15 +62,15 @@ jobs:
           # doesn't compile everything again.
           cache-on-failure: true
       - run: |
-          cargo build --release -p djsugar -p djsugar-plugin-host --target aarch64-apple-darwin
-          cargo build --release -p djsugar -p djsugar-plugin-host --target x86_64-apple-darwin
+          cargo build --profile dist -p djsugar -p djsugar-plugin-host --target aarch64-apple-darwin
+          cargo build --profile dist -p djsugar -p djsugar-plugin-host --target x86_64-apple-darwin
           mkdir -p dist
           lipo -create -output dist/djsugar \
-            target/aarch64-apple-darwin/release/djsugar \
-            target/x86_64-apple-darwin/release/djsugar
+            target/aarch64-apple-darwin/dist/djsugar \
+            target/x86_64-apple-darwin/dist/djsugar
           lipo -create -output dist/djsugar-plugin-host \
-            target/aarch64-apple-darwin/release/djsugar-plugin-host \
-            target/x86_64-apple-darwin/release/djsugar-plugin-host
+            target/aarch64-apple-darwin/dist/djsugar-plugin-host \
+            target/x86_64-apple-darwin/dist/djsugar-plugin-host
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
       - name: Import signing certificate
@@ -122,8 +122,8 @@ jobs:
           sudo apt-get install -y libxkbcommon-dev libasound2-dev cmake libclang-dev imagemagick rpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release -p djsugar -p djsugar-plugin-host
-      - run: scripts/bundle-linux.sh target/release/djsugar "${{ needs.version.outputs.version }}"
+      - run: cargo build --profile dist -p djsugar -p djsugar-plugin-host
+      - run: scripts/bundle-linux.sh target/dist/djsugar "${{ needs.version.outputs.version }}"
       - uses: actions/upload-artifact@v7
         with:
           name: release-linux
@@ -144,8 +144,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo build --release -p djsugar -p djsugar-plugin-host
-      - run: scripts/bundle-windows.ps1 target/release/djsugar.exe "${{ needs.version.outputs.version }}"
+      - run: cargo build --profile dist -p djsugar -p djsugar-plugin-host
+      - run: scripts/bundle-windows.ps1 target/dist/djsugar.exe "${{ needs.version.outputs.version }}"
         shell: pwsh
       - uses: actions/upload-artifact@v7
         with:

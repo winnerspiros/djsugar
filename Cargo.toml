@@ -8,6 +8,14 @@ version = "0.6.0"
 edition = "2021"
 license = "GPL-2.0-or-later"
 
+# What releases ship: whole-program optimisation and one codegen unit.
+# Panics still unwind; stem separation and word timing recover from them.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+
 # Decoding, analysis and synthesis are far too slow unoptimised, even in tests.
 [profile.dev.package.djsugar-engine]
 opt-level = 2
