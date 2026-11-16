@@ -18,6 +18,9 @@ pub enum Value {
     Num(f64),
     Str(Rc<str>),
     Obj(Rc<Obj>),
+    /// An array slot never assigned. Only ever stored in an array's items;
+    /// reads see `undefined`.
+    Hole,
 }
 
 /// What unwinds the stack: a thrown value, or a `?.` chain stopping short.
@@ -135,7 +138,14 @@ pub enum Kind {
     Set(RefCell<crate::coll::Coll>),
     Buffer(crate::coll::Bytes),
     Typed(crate::coll::View),
+    /// A generator's values not yet handed out.
+    Generator(RefCell<std::vec::IntoIter<Value>>),
+    /// A target and the handler whose traps stand in for it.
+    Proxy(Value, Value),
 }
+
+/// The well-known `Symbol.iterator` key.
+pub const ITERATOR: &str = "\0@@iterator";
 
 pub struct Obj {
     pub props: RefCell<Props>,
@@ -184,6 +194,7 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    pub generator_proto: Rc<Obj>,
     pub regexp_proto: Rc<Obj>,
     pub global: Rc<Obj>,
     pub object_proto: Rc<Obj>,
@@ -205,7 +216,7 @@ pub struct Rt {
 impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Undefined => f.write_str("undefined"),
+            Value::Undefined | Value::Hole => f.write_str("undefined"),
             Value::Null => f.write_str("null"),
             Value::Bool(b) => write!(f, "{b}"),
             Value::Num(n) => f.write_str(&number_to_string(*n)),
@@ -217,13 +228,21 @@ impl std::fmt::Debug for Value {
 }
 
 impl Value {
+    #[inline]
+    pub fn unhole(&self) -> Value {
+        match self {
+            Value::Hole => Value::Undefined,
+            v => v.clone(),
+        }
+    }
+
     pub fn str(s: &str) -> Value {
         Value::Str(s.into())
     }
 
     pub fn truthy(&self) -> bool {
         match self {
-            Value::Undefined | Value::Null => false,
+            Value::Undefined | Value::Hole | Value::Null => false,
             Value::Bool(b) => *b,
             Value::Num(n) => *n != 0.0 && !n.is_nan(),
             Value::Str(s) => !s.is_empty(),
@@ -244,7 +263,7 @@ impl Value {
 
     pub fn type_of(&self) -> &'static str {
         match self {
-            Value::Undefined => "undefined",
+            Value::Undefined | Value::Hole => "undefined",
             Value::Null => "object",
             Value::Bool(_) => "boolean",
             Value::Num(_) => "number",
@@ -382,7 +401,7 @@ impl Rt {
 
     pub fn to_num(&self, v: &Value) -> R<f64> {
         Ok(match v {
-            Value::Undefined => f64::NAN,
+            Value::Undefined | Value::Hole => f64::NAN,
             Value::Null => 0.0,
             Value::Bool(b) => *b as u8 as f64,
             Value::Num(n) => *n,
@@ -396,7 +415,7 @@ impl Rt {
 
     pub fn to_str(&self, v: &Value) -> R<Rc<str>> {
         Ok(match v {
-            Value::Undefined => "undefined".into(),
+            Value::Undefined | Value::Hole => "undefined".into(),
             Value::Null => "null".into(),
             Value::Bool(b) => if *b { "true" } else { "false" }.into(),
             Value::Num(n) => number_to_string(*n).into(),
@@ -433,13 +452,24 @@ impl Rt {
     pub fn get(&self, v: &Value, name: &str) -> R<Value> {
         match v {
             Value::Obj(o) => {
+                if let Kind::Proxy(target, handler) = &o.kind {
+                    let trap = self.get(handler, "get")?;
+                    if trap.is_nullish() {
+                        return self.get(target, name);
+                    }
+                    return self.call(
+                        &trap,
+                        handler.clone(),
+                        &[target.clone(), Value::str(name), v.clone()],
+                    );
+                }
                 if let Kind::Array(items) = &o.kind {
                     if name == "length" {
                         return Ok(Value::Num(items.borrow().len() as f64));
                     }
                     if let Some(i) = index_of_name(name) {
                         if let Some(x) = items.borrow().get(i) {
-                            return Ok(x.clone());
+                            return Ok(x.unhole());
                         }
                     }
                 } else if let (Kind::Typed(t), Some(i)) = (&o.kind, index_of_name(name)) {
@@ -481,7 +511,7 @@ impl Rt {
                     Value::Obj(o) => match &o.kind {
                         Kind::Array(items) => {
                             if let Some(x) = items.borrow().get(i) {
-                                return Ok(x.clone());
+                                return Ok(x.unhole());
                             }
                         }
                         Kind::Typed(t) => return Ok(t.get(i).map_or(Value::Undefined, Value::Num)),
@@ -523,9 +553,21 @@ impl Rt {
                 let Some(n) = as_index(n) else {
                     return self.throw(&self.range_error_proto.clone(), "invalid array length");
                 };
-                items.borrow_mut().resize(n, Value::Undefined);
+                items.borrow_mut().resize(n, Value::Hole);
                 return Ok(());
             }
+        }
+        if let Kind::Proxy(t, handler) = &o.kind {
+            let trap = self.get(handler, "set")?;
+            if trap.is_nullish() {
+                return self.set(t, name, value);
+            }
+            self.call(
+                &trap,
+                handler.clone(),
+                &[t.clone(), Value::Str(name.clone()), value, target.clone()],
+            )?;
+            return Ok(());
         }
         if let (Kind::Typed(t), Some(i)) = (&o.kind, index_of_name(name)) {
             let n = self.to_num(&value)?;
@@ -568,8 +610,24 @@ impl Rt {
     }
 
     pub fn has(&self, o: &Rc<Obj>, name: &str) -> bool {
+        if let Kind::Proxy(t, handler) = &o.kind {
+            let trap = self.get(handler, "has").unwrap_or_default();
+            if !trap.is_nullish() {
+                return self
+                    .call(&trap, handler.clone(), &[t.clone(), Value::str(name)])
+                    .is_ok_and(|r| r.truthy());
+            }
+            return t.as_obj().is_some_and(|t| self.has(t, name));
+        }
         if let Kind::Array(items) = &o.kind {
-            if name == "length" || index_of_name(name).is_some_and(|i| i < items.borrow().len()) {
+            if name == "length"
+                || index_of_name(name).is_some_and(|i| {
+                    items
+                        .borrow()
+                        .get(i)
+                        .is_some_and(|v| !matches!(v, Value::Hole))
+                })
+            {
                 return true;
             }
         }
@@ -580,9 +638,15 @@ impl Rt {
     pub fn own_keys(&self, o: &Rc<Obj>) -> Vec<Name> {
         let mut out: Vec<Name> = Vec::new();
         match &o.kind {
-            Kind::Array(items) => {
-                out.extend((0..items.borrow().len()).map(|i| Name::from(i.to_string())))
-            }
+            Kind::Proxy(Value::Obj(t), _) => return self.own_keys(t),
+            Kind::Array(items) => out.extend(
+                items
+                    .borrow()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| !matches!(v, Value::Hole))
+                    .map(|(i, _)| Name::from(i.to_string())),
+            ),
             Kind::Typed(t) => out.extend((0..t.len).map(|i| Name::from(i.to_string()))),
             _ => {}
         }
@@ -663,7 +727,9 @@ impl Rt {
         match v {
             Value::Obj(o) => {
                 match &o.kind {
-                    Kind::Array(items) => return Ok(items.borrow().clone()),
+                    Kind::Array(items) => {
+                        return Ok(items.borrow().iter().map(Value::unhole).collect())
+                    }
                     Kind::Typed(t) => {
                         return Ok((0..t.len).map(|i| Value::Num(t.get(i).unwrap())).collect())
                     }
@@ -678,6 +744,22 @@ impl Rt {
                             .collect());
                     }
                     _ => {}
+                }
+                let it = self.get(v, ITERATOR)?;
+                if it.as_obj().is_some_and(|o| o.is_callable()) {
+                    let iter = self.call(&it, v.clone(), &[])?;
+                    if let Some(Kind::Generator(rest)) = iter.as_obj().map(|o| &o.kind) {
+                        return Ok(rest.borrow_mut().by_ref().collect());
+                    }
+                    let next = self.get(&iter, "next")?;
+                    let mut out = Vec::new();
+                    loop {
+                        let r = self.call(&next, iter.clone(), &[])?;
+                        if self.get(&r, "done")?.truthy() {
+                            return Ok(out);
+                        }
+                        out.push(self.get(&r, "value")?);
+                    }
                 }
                 let n = self.to_num(&self.get(v, "length")?)?;
                 let n = as_index(n).unwrap_or(0);
@@ -699,7 +781,7 @@ fn set_item(items: &RefCell<Vec<Value>>, i: usize, value: Value) {
     if i < v.len() {
         v[i] = value;
     } else {
-        v.resize(i, Value::Undefined);
+        v.resize(i, Value::Hole);
         v.push(value);
     }
 }

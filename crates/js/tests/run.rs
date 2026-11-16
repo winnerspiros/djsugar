@@ -16,6 +16,13 @@ fn out(src: &str) -> String {
 #[test]
 fn arithmetic_and_strings() {
     assert_eq!(out("var out = 1 + 2 * 3 - 4 / 2 + 7 % 3 + 2 ** 3"), "14");
+    assert_eq!(out("var out = [Math.clz32(1), Math.imul(0xffffffff, 5), eval('1 + 2'), ArrayBuffer.isView(new Uint8Array(1))].join();"), "31,-5,3,true");
+    assert_eq!(out("function* r(n) { for (let i = 0; i < n; i++) yield i; } function* m(f, it) { for (const x of it) yield f(x); } var out = [...m(x => x * 2, r(4))].join() + [...r(0)].length;"), "0,2,4,60");
+    assert_eq!(out("class C { constructor() { this.a = 1; this.b = 2; } *[Symbol.iterator]() { for (const k in this) yield this[k]; yield* [9]; } } var out = 0; for (const v of new C()) out += v;"), "12");
+    assert_eq!(out("var it = { [Symbol.iterator]() { let i = 0; return { next: () => ({ value: i, done: i++ > 2 }) }; } }; var out = Array.from(it).join() + [...new Set([3, 3, 4])].join();"), "0,1,23,4");
+    assert_eq!(out("var p = new Proxy([1, 2], { get: (t, k) => k === '0' ? 'x' : t[k] }); var out = p[0] + p[1] + p.length + Array.isArray(p) + ('1' in p);"), "x22truetrue");
+    assert_eq!(out("var a = []; a[2] = 'c'; a[1] = 'b'; var k = ''; for (var i in a) k += i; delete a[1]; var out = k + a.length + (1 in a) + a.hasOwnProperty(2) + a[0] + [,1].length + Object.keys(new Array(3)).length;"), "123falsetrueundefined20");
+    assert_eq!(out("var g = (function* () { yield 1; yield 2; })(); var a = g.next(), b = g.next(), c = g.next(); var out = [a.value, b.value, c.done, typeof Symbol.iterator].join();"), "1,2,true,string");
     assert_eq!(out("var out = '[Channel' + (1 + 1) + ']'"), "[Channel2]");
     assert_eq!(out("var out = (0x7f & 0x0f) | (1 << 4) ^ 3 >>> 0"), "31");
     assert_eq!(out("var out = -1 >>> 28"), "15");

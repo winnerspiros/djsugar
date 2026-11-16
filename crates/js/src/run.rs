@@ -51,6 +51,7 @@ pub struct FnCode {
     bind: Option<Binder>,
     body: Vec<St>,
     arrow: bool,
+    generator: bool,
     strict: bool,
     method: bool,
     self_slot: Option<usize>,
@@ -97,8 +98,13 @@ pub struct Compiler<'s> {
 
 const MAX_DEPTH: u32 = 300;
 
+/// Generators run to completion when called and hand out what they
+/// yielded; this bounds one that never ends.
+const MAX_YIELDS: usize = 1 << 20;
+
 thread_local! {
     static DEPTH: Cell<u32> = const { Cell::new(0) };
+    static YIELDS: RefCell<Vec<Vec<Value>>> = const { RefCell::new(Vec::new()) };
 }
 
 #[inline]
@@ -340,9 +346,6 @@ impl<'s> Compiler<'s> {
         class: ClassKind,
         default_ctor: bool,
     ) -> CR<Rc<FnCode>> {
-        if f.generator {
-            return unsupported("generators");
-        }
         if f.is_async {
             return unsupported("async functions");
         }
@@ -429,6 +432,7 @@ impl<'s> Compiler<'s> {
             bind,
             body,
             arrow: f.arrow,
+            generator: f.generator,
             strict: f.strict,
             method,
             self_slot,
@@ -919,7 +923,29 @@ impl<'s> Compiler<'s> {
                 let (body, flags) = (body.clone(), flags.clone());
                 Box::new(move |rt, _| rt.regexp(&body, &flags))
             }
-            Expr::Await(_) | Expr::Yield(..) => return unsupported("async and generators"),
+            Expr::Await(_) => return unsupported("async functions"),
+            Expr::Yield(arg, delegate) => {
+                let arg = arg.as_ref().map(|a| self.expr(a)).transpose()?;
+                let delegate = *delegate;
+                Box::new(move |rt, f| {
+                    let v = match &arg {
+                        Some(a) => a(rt, f)?,
+                        None => Value::Undefined,
+                    };
+                    let items = if delegate { rt.list(&v)? } else { vec![v] };
+                    let full = YIELDS.with(|y| {
+                        let mut y = y.borrow_mut();
+                        let top = y.last_mut().expect("yield outside a generator");
+                        top.extend(items);
+                        top.len() > MAX_YIELDS
+                    });
+                    if full {
+                        let p = rt.range_error_proto.clone();
+                        return rt.throw(&p, "generator yielded too many values");
+                    }
+                    Ok(Value::Undefined)
+                })
+            }
             Expr::Ident(n, _) => self.reader(n, false),
             Expr::This => Box::new(|_, f| Ok(f.this.clone())),
             Expr::NewTarget => Box::new(|_, f| Ok(f.new_target.clone())),
@@ -938,7 +964,7 @@ impl<'s> Compiler<'s> {
                     let mut out = Vec::with_capacity(parts.len());
                     for p in &parts {
                         match p {
-                            None => out.push(Value::Undefined),
+                            None => out.push(Value::Hole),
                             Some((false, e)) => out.push(e(rt, f)?),
                             Some((true, e)) => out.extend(rt.list(&e(rt, f)?)?),
                         }
@@ -1319,6 +1345,7 @@ impl<'s> Compiler<'s> {
                 bind: None,
                 body: vec![body],
                 arrow: false,
+                generator: false,
                 strict: true,
                 method: true,
                 self_slot: None,
@@ -1911,7 +1938,7 @@ fn delete(rt: &Rt, o: &Value, name: &str) -> bool {
         if let Kind::Array(items) = &o.kind {
             if let Some(i) = index_of_name(name) {
                 if let Some(x) = items.borrow_mut().get_mut(i) {
-                    *x = Value::Undefined;
+                    *x = Value::Hole;
                 }
                 return true;
             }
@@ -2163,8 +2190,19 @@ fn run_closure(
     if code.default_ctor && code.class == ClassKind::Derived {
         super_call(rt, &frame, args)?;
     }
-    for s in &code.body {
-        match s(rt, &frame)? {
+    if code.generator {
+        YIELDS.with(|y| y.borrow_mut().push(Vec::new()));
+        let r = run_body(&code.body, rt, &frame);
+        let items = YIELDS.with(|y| y.borrow_mut().pop().unwrap());
+        r?;
+        return Ok(rt.generator(items));
+    }
+    run_body(&code.body, rt, &frame)
+}
+
+fn run_body(body: &[St], rt: &Rt, frame: &Frame) -> R<Value> {
+    for s in body {
+        match s(rt, frame)? {
             Flow::Normal => {}
             Flow::Return(v) => return Ok(v),
             _ => break,
@@ -2202,7 +2240,8 @@ impl Rt {
             return self.type_error(&format!("{} is not a constructor", self.to_str(f)?));
         };
         if let Kind::Closure(c) = &fo.kind {
-            if c.code.arrow || c.code.method && c.code.class == ClassKind::None {
+            if c.code.arrow || c.code.generator || c.code.method && c.code.class == ClassKind::None
+            {
                 return self.type_error("not a constructor");
             }
         }
@@ -2283,4 +2322,23 @@ pub fn compile_function(rt: &Rt, params: &str, body: &str) -> R<Value> {
         new_target: Value::Undefined,
     };
     make(rt, &frame)
+}
+
+/// `eval(src)` as an indirect eval: runs in the global scope.
+pub fn eval_global(rt: &Rt, src: &str) -> R<Value> {
+    let compiled = crate::parser::parse(src)
+        .map_err(|e| e.message)
+        .and_then(|p| Compiler::new(src).program(&p).map_err(|e| e.0));
+    match compiled {
+        Ok((body, nslots, vars)) => run_program(rt, &body, nslots, &vars),
+        Err(m) => {
+            let p = rt.global.lookup("SyntaxError");
+            match p {
+                Some(Prop::Method(f)) => {
+                    Err(Exc::Throw(rt.construct(&f, &[Value::Str(m.into())], &f)?))
+                }
+                _ => rt.type_error(&m),
+            }
+        }
+    }
 }

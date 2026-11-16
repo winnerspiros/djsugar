@@ -86,6 +86,7 @@ pub fn realm() -> Rt {
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),
         string_proto: p(Kind::Plain),
         regexp_proto: p(Kind::Plain),
+        generator_proto: p(Kind::Plain),
         number_proto: p(Kind::Plain),
         boolean_proto: p(Kind::Plain),
         type_error_proto: sub(),
@@ -304,6 +305,31 @@ pub fn realm() -> Rt {
     );
     crate::date::install(&rt);
     crate::coll::install(&rt);
+    iteration(&rt, &put);
+    put(
+        "Proxy",
+        rt.native("Proxy", |rt, this, a| {
+            let (Value::Obj(_), Value::Obj(_)) = (arg(a, 0), arg(a, 1)) else {
+                return rt.type_error("Proxy needs a target and a handler object");
+            };
+            if !matches!(this, Value::Obj(o) if !Rc::ptr_eq(o, &rt.global)) {
+                return rt.type_error("Proxy needs `new`");
+            }
+            let proto = arg(a, 0).as_obj().unwrap().proto.borrow().clone();
+            Ok(Value::Obj(Obj::new(
+                proto,
+                Kind::Proxy(arg(a, 0), arg(a, 1)),
+            )))
+        }),
+    );
+    put(
+        "eval",
+        rt.native("eval", |rt, _, a| match a.first() {
+            Some(Value::Str(src)) => crate::run::eval_global(rt, src),
+            Some(v) => Ok(v.clone()),
+            None => Ok(Value::Undefined),
+        }),
+    );
     let fp = rt.function_proto.clone();
     method(&rt, &fp, "call", |rt, this, a| {
         rt.call(this, arg(a, 0), a.get(1..).unwrap_or(&[]))
@@ -565,16 +591,14 @@ fn array(rt: &Rt, ctor: &Ctor) {
                     let p = rt.range_error_proto.clone();
                     return rt.throw(&p, "invalid array length");
                 };
-                return Ok(rt.array(vec![Value::Undefined; n]));
+                return Ok(rt.array(vec![Value::Hole; n]));
             }
             Ok(rt.array(a.to_vec()))
         }),
     );
     let ac = a.as_obj().unwrap();
     method(rt, ac, "isArray", |_, _, a| {
-        Ok(Value::Bool(
-            matches!(arg(a, 0), Value::Obj(o) if matches!(o.kind, Kind::Array(_))),
-        ))
+        Ok(Value::Bool(is_array(&arg(a, 0))))
     });
     method(rt, ac, "of", |rt, _, a| Ok(rt.array(a.to_vec())));
     method(rt, ac, "from", |rt, _, a| {
@@ -606,6 +630,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
         Ok(array_of(&items(rt, this)?)
             .borrow_mut()
             .pop()
+            .map(|v| v.unhole())
             .unwrap_or_default())
     });
     method(rt, &p, "shift", |rt, this, _| {
@@ -614,7 +639,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
         Ok(if v.is_empty() {
             Value::Undefined
         } else {
-            v.remove(0)
+            v.remove(0).unhole()
         })
     });
     method(rt, &p, "unshift", |rt, this, a| {
@@ -641,6 +666,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
         let removed: Vec<Value> = array_of(&o)
             .borrow_mut()
             .splice(s..s + n, a.iter().skip(2).cloned())
+            .map(|v| v.unhole())
             .collect();
         Ok(rt.array(removed))
     });
@@ -649,7 +675,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
         for x in a {
             match x {
                 Value::Obj(o) if matches!(o.kind, Kind::Array(_)) => {
-                    v.extend(array_of(o).borrow().iter().cloned())
+                    v.extend(array_of(o).borrow().iter().map(Value::unhole))
                 }
                 x => v.push(x.clone()),
             }
@@ -834,7 +860,7 @@ fn array(rt: &Rt, ctor: &Ctor) {
     }
     method(rt, &p, "sort", |rt, this, a| {
         let o = items(rt, this)?;
-        let mut v = array_of(&o).borrow().clone();
+        let mut v: Vec<Value> = array_of(&o).borrow().iter().map(Value::unhole).collect();
         let cmp = arg(a, 0);
         let mut err = None;
         // Merge sort: stable, and safe with comparators that are inconsistent.
@@ -1430,6 +1456,16 @@ fn math(rt: &Rt, put: &dyn Fn(&str, Value)) {
             })))
         });
     }
+    method(rt, &m, "clz32", |rt, _, a| {
+        Ok(Value::Num(
+            (to_int32(rt.to_num(&arg(a, 0))?) as u32).leading_zeros() as f64,
+        ))
+    });
+    method(rt, &m, "imul", |rt, _, a| {
+        Ok(Value::Num(
+            to_int32(rt.to_num(&arg(a, 0))?).wrapping_mul(to_int32(rt.to_num(&arg(a, 1))?)) as f64,
+        ))
+    });
     method(rt, &m, "atan2", |rt, _, a| {
         Ok(Value::Num(
             rt.to_num(&arg(a, 0))?.atan2(rt.to_num(&arg(a, 1))?),
@@ -1572,7 +1608,7 @@ fn stringify(
         v => v.clone(),
     };
     match &v {
-        Value::Undefined => return Ok(false),
+        Value::Undefined | Value::Hole => return Ok(false),
         Value::Null => out.push_str("null"),
         Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
         Value::Num(n) => out.push_str(&if n.is_finite() {
@@ -1597,7 +1633,7 @@ fn stringify(
                 }
             };
             if let Kind::Array(items) = &o.kind {
-                let items = items.borrow().clone();
+                let items: Vec<Value> = items.borrow().iter().map(Value::unhole).collect();
                 out.push('[');
                 for (i, x) in items.iter().enumerate() {
                     if i > 0 {
@@ -2195,5 +2231,144 @@ impl Rt {
             o.props.borrow_mut().set(&k.into(), Prop::Method(v));
         }
         Ok(Value::Obj(o))
+    }
+}
+
+fn iteration(rt: &Rt, put: &dyn Fn(&str, Value)) {
+    let symbol = rt.native("Symbol", |rt, _, a| {
+        thread_local! {
+            static NEXT: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+        }
+        let n = NEXT.with(|c| {
+            c.set(c.get() + 1);
+            c.get()
+        });
+        let desc = match a.first() {
+            Some(Value::Undefined) | None => "".into(),
+            Some(d) => rt.to_str(d)?,
+        };
+        Ok(Value::Str(format!("\0@{n}:{desc}").into()))
+    });
+    let so = symbol.as_obj().unwrap();
+    for name in [
+        "iterator",
+        "asyncIterator",
+        "hasInstance",
+        "toPrimitive",
+        "toStringTag",
+        "species",
+        "match",
+        "replace",
+        "search",
+        "split",
+        "unscopables",
+        "isConcatSpreadable",
+    ] {
+        so.props.borrow_mut().set(
+            &name.into(),
+            Prop::Method(Value::Str(format!("\0@@{name}").into())),
+        );
+    }
+    method(rt, so, "for", |rt, _, a| {
+        Ok(Value::Str(
+            format!("\0@for:{}", rt.to_str(&arg(a, 0))?).into(),
+        ))
+    });
+    put("Symbol", symbol);
+
+    let self_iter = |rt: &Rt, o: &Rc<Obj>| {
+        let f = rt.native("[Symbol.iterator]", |_, this, _| Ok(this.clone()));
+        o.props.borrow_mut().set(&ITERATOR.into(), Prop::Method(f));
+    };
+    let gp = rt.generator_proto.clone();
+    self_iter(rt, &gp);
+    method(rt, &gp, "next", |rt, this, _| {
+        let Some(Kind::Generator(rest)) = this.as_obj().map(|o| &o.kind) else {
+            return rt.type_error("next on a non-generator");
+        };
+        let v = rest.borrow_mut().next();
+        Ok(rt.iter_result(v))
+    });
+    method(rt, &gp, "return", |rt, this, a| {
+        if let Some(Kind::Generator(rest)) = this.as_obj().map(|o| &o.kind) {
+            rest.borrow_mut().by_ref().for_each(drop);
+        }
+        let r = rt.iter_result(None);
+        rt.set(&r, &"value".into(), arg(a, 0))?;
+        Ok(r)
+    });
+    // Arrays, strings, maps and sets: iterate over a snapshot of their items.
+    let list_iter = rt.native("[Symbol.iterator]", |rt, this, _| {
+        Ok(rt.generator(rt.list(this)?))
+    });
+    for p in [&rt.array_proto, &rt.string_proto] {
+        p.props
+            .borrow_mut()
+            .set(&ITERATOR.into(), Prop::Method(list_iter.clone()));
+    }
+    for n in [
+        "Map",
+        "Set",
+        "Uint8Array",
+        "Int8Array",
+        "Uint8ClampedArray",
+        "Uint16Array",
+        "Int16Array",
+        "Uint32Array",
+        "Int32Array",
+        "Float32Array",
+        "Float64Array",
+    ] {
+        let c = rt.global.lookup(n);
+        if let Some(Prop::Method(c)) = c {
+            if let Value::Obj(p) = rt.get(&c, "prototype").unwrap_or_default() {
+                p.props
+                    .borrow_mut()
+                    .set(&ITERATOR.into(), Prop::Method(list_iter.clone()));
+            }
+        }
+    }
+    for (proto, name) in [
+        (&rt.array_proto, "keys"),
+        (&rt.array_proto, "values"),
+        (&rt.array_proto, "entries"),
+    ] {
+        let which = name;
+        method(rt, proto, name, move |rt, this, _| {
+            let items = rt.list(this)?;
+            Ok(rt.generator(match which {
+                "keys" => (0..items.len()).map(|i| Value::Num(i as f64)).collect(),
+                "values" => items,
+                _ => items
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| rt.array(vec![Value::Num(i as f64), v]))
+                    .collect(),
+            }))
+        });
+    }
+}
+
+impl Rt {
+    pub fn generator(&self, items: Vec<Value>) -> Value {
+        Value::Obj(Obj::new(
+            Some(self.generator_proto.clone()),
+            Kind::Generator(RefCell::new(items.into_iter())),
+        ))
+    }
+
+    pub fn iter_result(&self, v: Option<Value>) -> Value {
+        let o = self.object();
+        o.put_name(&"value".into(), v.clone().unwrap_or_default());
+        o.put_name(&"done".into(), Value::Bool(v.is_none()));
+        Value::Obj(o)
+    }
+}
+
+fn is_array(v: &Value) -> bool {
+    match v.as_obj().map(|o| &o.kind) {
+        Some(Kind::Array(_)) => true,
+        Some(Kind::Proxy(t, _)) => is_array(t),
+        _ => false,
     }
 }

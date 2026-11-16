@@ -18,7 +18,7 @@ enum Key {
 
 fn key(v: &Value) -> Key {
     match v {
-        Value::Undefined => Key::Undefined,
+        Value::Undefined | Value::Hole => Key::Undefined,
         Value::Null => Key::Null,
         Value::Bool(b) => Key::Bool(*b),
         // SameValueZero: -0 is 0 and every NaN is one key.
@@ -375,6 +375,14 @@ pub fn install(rt: &Rt) {
         )
     });
     *abp.borrow_mut() = Some(ab.clone());
+    if let Some(Prop::Method(c)) = ab.props.borrow().get("constructor").cloned() {
+        method(rt, c.as_obj().unwrap(), "isView", |_, _, a| {
+            Ok(Value::Bool(matches!(
+                arg(a, 0).as_obj().map(|o| &o.kind),
+                Some(Kind::Typed(_))
+            )))
+        });
+    }
     getter(rt, &ab, "byteLength", |rt, this, _| {
         match this.as_obj().map(|o| &o.kind) {
             Some(Kind::Buffer(b)) => Ok(Value::Num(b.borrow().len() as f64)),
