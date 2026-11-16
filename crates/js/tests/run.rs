@@ -389,3 +389,29 @@ function handle(ch, ctrl, value, status) { for (var i = 0; i < pots.length; i++)
     }
     eprintln!("djsugar-js components {best:.2} us/call (best of 5)");
 }
+
+#[test]
+fn direct_calls() {
+    assert_eq!(
+        ev("function f(a, b) { return [a, b].join(); } f(1) + '|' + f(1, 2, 3)"),
+        "1,|1,2"
+    );
+    assert_eq!(
+        ev("function f(a) { return arguments.length; } f(1, 2, 3)"),
+        "3"
+    );
+    assert_eq!(
+        ev("function f(n) { return n ? 1 + f(n - 1) : 0; } f(100)"),
+        "100"
+    );
+    assert_eq!(ev("function f(n) { return f(n + 1); } var r; try { f(0) } catch (e) { r = e instanceof RangeError } r"), "true");
+    assert_eq!(
+        ev("function f(n) { return f(n + 1); } try { f(0) } catch (e) {} f.length"),
+        "1"
+    );
+    assert_eq!(ev("function g() { throw 5; } function f(a) { return a; } var r; try { f(g()) } catch (e) { r = e } r"), "5");
+    assert_eq!(
+        ev("var o = { k: 2, m: function (x) { return this.k * x; } }; o.m(4)"),
+        "8"
+    );
+}

@@ -65,6 +65,8 @@ pub enum ClassKind {
 }
 
 pub struct FnCode {
+    /// Parameters before the first default or rest.
+    pub length: u32,
     pub name: Option<Name>,
     nslots: Cell<usize>,
     simple_params: Vec<usize>,
@@ -114,6 +116,8 @@ struct Scope {
 pub struct Compiler<'s> {
     scopes: Vec<Scope>,
     src: &'s str,
+    /// The plain argument list of the call being compiled.
+    direct: Option<Rc<[Ex]>>,
 }
 
 const MAX_DEPTH: u32 = 300;
@@ -227,6 +231,7 @@ impl<'s> Compiler<'s> {
     pub fn new(src: &'s str) -> Self {
         Self {
             scopes: Vec::new(),
+            direct: None,
             src,
         }
     }
@@ -437,6 +442,11 @@ impl<'s> Compiler<'s> {
         let body = self.block_body(&f.body)?;
         let s = self.scopes.pop().unwrap();
         Ok(Rc::new(FnCode {
+            length: f
+                .params
+                .iter()
+                .take_while(|p| !matches!(p, Pattern::Default(..)))
+                .count() as u32,
             name: f.name.clone(),
             nslots: Cell::new(s.slots),
             simple_params: if bind.is_none() {
@@ -881,6 +891,7 @@ impl<'s> Compiler<'s> {
     }
 
     fn args(&mut self, args: &[Expr]) -> CR<Args> {
+        self.direct = None;
         if args.iter().any(|a| matches!(a, Expr::Spread(_))) {
             let parts: Vec<(bool, Ex)> = args
                 .iter()
@@ -902,11 +913,16 @@ impl<'s> Compiler<'s> {
                 Ok(ArgBuf::Heap(out))
             }));
         }
-        let parts: Vec<Ex> = args.iter().map(|a| self.expr(a)).collect::<CR<_>>()?;
+        let parts: Rc<[Ex]> = args
+            .iter()
+            .map(|a| self.expr(a))
+            .collect::<CR<Vec<_>>>()?
+            .into();
+        self.direct = Some(parts.clone());
         if parts.len() <= INLINE_ARGS {
             return Ok(Box::new(move |rt, f| {
                 let mut out: [Value; INLINE_ARGS] = Default::default();
-                for (slot, e) in out.iter_mut().zip(&parts) {
+                for (slot, e) in out.iter_mut().zip(parts.iter()) {
                     *slot = e(rt, f)?;
                 }
                 Ok(ArgBuf::Inline(out, parts.len()))
@@ -914,7 +930,7 @@ impl<'s> Compiler<'s> {
         }
         Ok(Box::new(move |rt, f| {
             let mut out = Vec::with_capacity(parts.len());
-            for e in &parts {
+            for e in parts.iter() {
                 out.push(e(rt, f)?);
             }
             Ok(ArgBuf::Heap(out))
@@ -1395,6 +1411,7 @@ impl<'s> Compiler<'s> {
                 Ok(Flow::Normal)
             });
             Rc::new(FnCode {
+                length: 0,
                 name: None,
                 nslots: Cell::new(field_scope.slots),
                 simple_params: Vec::new(),
@@ -1553,6 +1570,7 @@ impl<'s> Compiler<'s> {
 
     fn call(&mut self, callee: &Expr, args: &[Expr], optional: bool) -> CR<Ex> {
         let args = self.args(args)?;
+        let direct = self.direct.take();
         if matches!(callee, Expr::Super) {
             return Ok(Box::new(move |rt, f| {
                 let a = args(rt, f)?;
@@ -1582,8 +1600,7 @@ impl<'s> Compiler<'s> {
                     if optional && func.is_nullish() {
                         return Err(Exc::Short);
                     }
-                    let a = args(rt, f)?;
-                    call_named(rt, &func, this, &a, &name)
+                    call_site(rt, f, &func, this, &args, direct.as_deref(), &name)
                 })
             }
             Expr::Index(o, k, opt_member) if !matches!(**o, Expr::Super) => {
@@ -1633,8 +1650,15 @@ impl<'s> Compiler<'s> {
                     if optional && func.is_nullish() {
                         return Err(Exc::Short);
                     }
-                    let a = args(rt, f)?;
-                    call_named(rt, &func, Value::Undefined, &a, &name)
+                    call_site(
+                        rt,
+                        f,
+                        &func,
+                        Value::Undefined,
+                        &args,
+                        direct.as_deref(),
+                        &name,
+                    )
                 })
             }
         })
@@ -2353,25 +2377,93 @@ fn run_closure(
         }
     }
     let _g = Guard(&rt.depth);
+    let mut env = take_env(c);
+    {
+        let slots = Rc::get_mut(&mut env)
+            .expect("fresh environment")
+            .slots
+            .get_mut();
+        if code.bind.is_none() {
+            for (&s, a) in code.simple_params.iter().zip(args) {
+                slots[s] = a.clone();
+            }
+        }
+    }
+    enter(rt, fo, c, env, this, args, new_target)
+}
+
+/// A call whose arguments are evaluated straight into the callee's slots.
+fn call_site(
+    rt: &Rt,
+    f: &Frame,
+    func: &Value,
+    this: Value,
+    args: &Args,
+    direct: Option<&[Ex]>,
+    name: &str,
+) -> R<Value> {
+    if let (Some(parts), Value::Obj(fo)) = (direct, func) {
+        if let Kind::Closure(c) = &fo.kind {
+            let code = &c.code;
+            if code.bind.is_none() && code.class == ClassKind::None && !code.generator {
+                let mut env = take_env(c);
+                for (i, e) in parts.iter().enumerate() {
+                    let v = e(rt, f)?;
+                    if let Some(&s) = code.simple_params.get(i) {
+                        Rc::get_mut(&mut env)
+                            .expect("fresh environment")
+                            .slots
+                            .get_mut()[s] = v;
+                    }
+                }
+                let depth = rt.depth.get() + 1;
+                if depth > MAX_DEPTH {
+                    let p = rt.range_error_proto.clone();
+                    return rt.throw(&p, "too much recursion");
+                }
+                rt.depth.set(depth);
+                let r = enter(rt, fo, c, env, this, &[], Value::Undefined);
+                rt.depth.set(depth - 1);
+                return r;
+            }
+        }
+    }
+    let a = args(rt, f)?;
+    call_named(rt, func, this, &a, name)
+}
+
+#[inline]
+fn take_env(c: &Closure) -> Rc<Env> {
     let mut env = POOL.with(|p| p.borrow_mut().pop()).unwrap_or_else(|| {
         Rc::new(Env {
             slots: RefCell::new(Vec::new()),
             parent: None,
         })
     });
-    {
-        let e = Rc::get_mut(&mut env).expect("pooled environments are unshared");
-        e.parent = Some(c.env.clone());
-        let slots = e.slots.get_mut();
-        slots.resize(code.nslots.get(), Value::Undefined);
-        if code.bind.is_none() {
-            for (&s, a) in code.simple_params.iter().zip(args) {
-                slots[s] = a.clone();
-            }
-        }
-        if let Some(s) = code.self_slot {
-            slots[s] = Value::Obj(fo.clone());
-        }
+    let e = Rc::get_mut(&mut env).expect("pooled environments are unshared");
+    e.parent = Some(c.env.clone());
+    e.slots
+        .get_mut()
+        .resize(c.code.nslots.get(), Value::Undefined);
+    env
+}
+
+#[inline]
+fn enter(
+    rt: &Rt,
+    fo: &Rc<Obj>,
+    c: &Closure,
+    mut env: Rc<Env>,
+    this: Value,
+    args: &[Value],
+    new_target: Value,
+) -> R<Value> {
+    let code = &c.code;
+    if let Some(s) = code.self_slot {
+        Rc::get_mut(&mut env)
+            .expect("fresh environment")
+            .slots
+            .get_mut()[s] = Value::Obj(fo.clone());
     }
     let frame = match &c.lexical {
         Some((t, h, func, nt)) => Frame {

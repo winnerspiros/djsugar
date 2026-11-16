@@ -144,6 +144,13 @@ pub fn intern_rc(n: &Name) -> Name {
 pub struct Props {
     list: Vec<(Name, Prop)>,
     index: Option<HashMap<usize, usize>>,
+    /// One bit per key address bucket: a clear bit proves a key is absent.
+    bloom: u64,
+}
+
+#[inline]
+fn bloom_bit(a: usize) -> u64 {
+    1 << ((a >> 3 ^ a >> 9) & 63)
 }
 
 const INDEX_FROM: usize = 8;
@@ -178,6 +185,9 @@ impl Props {
     /// `find` for a name known to be interned: by address alone.
     #[inline]
     pub fn find_atom(&self, name: &str) -> Option<usize> {
+        if self.bloom & bloom_bit(addr(name)) == 0 {
+            return None;
+        }
         self.find_addr(addr(name))
             .filter(|&i| self.list[i].0.len() == name.len())
     }
@@ -222,6 +232,7 @@ impl Props {
                     ix.insert(addr(&name), self.list.len());
                     self.index = Some(ix);
                 }
+                self.bloom |= bloom_bit(addr(&name));
                 self.list.push((name, prop));
             }
         }
@@ -682,7 +693,12 @@ impl Rt {
 
     fn get_from(&self, o: &Rc<Obj>, receiver: &Value, name: &str) -> R<Value> {
         match o.lookup(name) {
-            None => Ok(Value::Undefined),
+            None => Ok(match (&o.kind, name) {
+                (Kind::Closure(c), "length") => Value::Num(c.code.length as f64),
+                (Kind::Closure(c), "name") => Value::Str(c.code.name.clone().unwrap_or_default()),
+                (Kind::Native(n, _), "name") => Value::Str(n.clone()),
+                _ => Value::Undefined,
+            }),
             Some(Prop::Data(v) | Prop::Method(v)) => Ok(v),
             Some(Prop::Accessor(Some(g), _)) => self.call(&g, receiver.clone(), &[]),
             Some(Prop::Accessor(None, _)) => Ok(Value::Undefined),
