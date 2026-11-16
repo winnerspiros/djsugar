@@ -158,19 +158,21 @@ impl Props {
     }
 
     pub fn find(&self, name: &str) -> Option<usize> {
-        if self.list.is_empty() {
-            return None;
+        if self.index.is_none() {
+            let a = addr(name);
+            return self
+                .list
+                .iter()
+                .position(|(n, _)| addr(n) == a && n.len() == name.len() || **n == *name);
         }
-        if let Some(i) = self.find_addr(addr(name)) {
-            if self.list[i].0.len() == name.len() {
-                return Some(i);
-            }
+        if let Some(i) = self.find_atom(name) {
+            return Some(i);
         }
         if is_interned(name) {
             return None;
         }
         let canon = interned(name)?;
-        self.find_addr(addr(&canon))
+        self.find_atom(&canon)
     }
 
     /// `find` for a name known to be interned: by address alone.
@@ -319,10 +321,8 @@ impl Obj {
     /// None means the full lookup must decide (accessors, proxies, misses,
     /// array lengths).
     #[inline]
-    pub fn get_atom(&self, name: &str, hint: &Cell<u32>) -> Option<Value> {
-        if matches!(self.kind, Kind::Proxy(..))
-            || matches!(self.kind, Kind::Array(_)) && name == "length"
-        {
+    pub fn get_atom(&self, name: &str, hint: &Cell<u32>, length: bool) -> Option<Value> {
+        if matches!(self.kind, Kind::Proxy(..)) || length && matches!(self.kind, Kind::Array(_)) {
             return None;
         }
         {

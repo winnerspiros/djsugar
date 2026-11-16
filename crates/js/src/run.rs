@@ -1058,6 +1058,14 @@ impl<'s> Compiler<'s> {
                 if matches!(**o, Expr::Super) {
                     return Ok(Box::new(move |rt, f| super_get(rt, f, &name)));
                 }
+                let base = match &**o {
+                    Expr::This => Base::This,
+                    Expr::Ident(n, _) => match self.resolve(n) {
+                        Loc::Slot(0, i) => Base::Slot(i),
+                        _ => Base::Ex,
+                    },
+                    _ => Base::Ex,
+                };
                 let o = self.expr(o)?;
                 if *optional {
                     Box::new(move |rt, f| {
@@ -1069,15 +1077,38 @@ impl<'s> Compiler<'s> {
                     })
                 } else {
                     let hint = Cell::new(0);
-                    Box::new(move |rt, f| {
-                        let v = o(rt, f)?;
-                        if let Value::Obj(ob) = &v {
-                            if let Some(x) = ob.get_atom(&name, &hint) {
-                                return Ok(x);
+                    let len = &*name == "length";
+                    match base {
+                        Base::This => Box::new(move |rt, f| {
+                            if let Value::Obj(ob) = &f.this {
+                                if let Some(x) = ob.get_atom(&name, &hint, len) {
+                                    return Ok(x);
+                                }
                             }
-                        }
-                        rt.get(&v, &name)
-                    })
+                            rt.get(&f.this, &name)
+                        }),
+                        Base::Slot(i) => Box::new(move |rt, f| {
+                            {
+                                let s = f.env.slots.borrow();
+                                if let Value::Obj(ob) = &s[i] {
+                                    if let Some(x) = ob.get_atom(&name, &hint, len) {
+                                        return Ok(x);
+                                    }
+                                }
+                            }
+                            let v = f.env.slots.borrow()[i].clone();
+                            rt.get(&v, &name)
+                        }),
+                        Base::Ex => Box::new(move |rt, f| {
+                            let v = o(rt, f)?;
+                            if let Value::Obj(ob) = &v {
+                                if let Some(x) = ob.get_atom(&name, &hint, len) {
+                                    return Ok(x);
+                                }
+                            }
+                            rt.get(&v, &name)
+                        }),
+                    }
                 }
             }
             Expr::Index(o, k, optional) => {
@@ -1535,13 +1566,14 @@ impl<'s> Compiler<'s> {
                 let name = name.clone();
                 let opt_member = *opt_member;
                 let hint = Cell::new(0);
+                let len = &*name == "length";
                 Box::new(move |rt, f| {
                     let this = o(rt, f)?;
                     if opt_member && this.is_nullish() {
                         return Err(Exc::Short);
                     }
                     let func = match &this {
-                        Value::Obj(ob) => match ob.get_atom(&name, &hint) {
+                        Value::Obj(ob) => match ob.get_atom(&name, &hint, len) {
                             Some(v) => v,
                             None => rt.get(&this, &name)?,
                         },
@@ -2023,6 +2055,13 @@ impl<'s> Compiler<'s> {
             }
         })
     }
+}
+
+#[derive(Clone, Copy)]
+enum Base {
+    This,
+    Slot(usize),
+    Ex,
 }
 
 type Cnd = Box<dyn Fn(&Rt, &Frame) -> R<bool>>;
