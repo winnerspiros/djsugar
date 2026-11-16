@@ -1,7 +1,6 @@
 //! Map, Set, WeakMap, WeakSet, ArrayBuffer, the typed arrays and DataView.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::value::*;

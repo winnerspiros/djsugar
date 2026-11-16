@@ -136,7 +136,37 @@ impl Engine {
 
 /// The shortest text that reads back as the same number, as JavaScript
 /// writes numbers.
+/// Appends `v` as JavaScript prints it.
+#[inline]
+pub fn push_number(out: &mut String, v: f64) {
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        let mut n = v.abs() as u64;
+        let mut buf = [0u8; 20];
+        let mut i = buf.len();
+        loop {
+            i -= 1;
+            buf[i] = b'0' + (n % 10) as u8;
+            n /= 10;
+            if n == 0 {
+                break;
+            }
+        }
+        if v < 0.0 {
+            out.push('-');
+        }
+        // SAFETY: only ASCII digits were written.
+        out.push_str(unsafe { std::str::from_utf8_unchecked(&buf[i..]) });
+    } else {
+        out.push_str(&number_to_string(v));
+    }
+}
+
 pub fn number_to_string(v: f64) -> String {
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        let mut s = String::with_capacity(16);
+        push_number(&mut s, v);
+        return s;
+    }
     if v.is_nan() {
         return "NaN".into();
     }

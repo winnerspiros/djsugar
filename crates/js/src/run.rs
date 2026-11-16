@@ -31,7 +31,27 @@ pub struct Frame {
 type Ex = Box<dyn Fn(&Rt, &Frame) -> R<Value>>;
 type St = Box<dyn Fn(&Rt, &Frame) -> R<Flow>>;
 type Bind = Box<dyn Fn(&Rt, &Frame, Value) -> R<()>>;
-type Args = Box<dyn Fn(&Rt, &Frame) -> R<Vec<Value>>>;
+type Args = Box<dyn Fn(&Rt, &Frame) -> R<ArgBuf>>;
+
+const INLINE_ARGS: usize = 6;
+
+/// Call arguments, kept off the heap when there are few.
+pub enum ArgBuf {
+    Inline([Value; INLINE_ARGS], usize),
+    Heap(Vec<Value>),
+}
+
+impl std::ops::Deref for ArgBuf {
+    type Target = [Value];
+    #[inline]
+    fn deref(&self) -> &[Value] {
+        match self {
+            ArgBuf::Inline(a, n) => &a[..*n],
+            ArgBuf::Heap(v) => v,
+        }
+    }
+}
+
 type Key = Box<dyn Fn(&Rt, &Frame) -> R<Name>>;
 type Binder = Box<dyn Fn(&Rt, &Frame, &[Value]) -> R<()>>;
 type Lexical = (Value, Option<Rc<Obj>>, Option<Rc<Obj>>, Value);
@@ -305,14 +325,10 @@ impl<'s> Compiler<'s> {
                 if &*n == "undefined" {
                     return Box::new(|_, _| Ok(Value::Undefined));
                 }
-                Box::new(move |rt, _| match rt.global.lookup(&n) {
-                    Some(Prop::Data(v) | Prop::Method(v)) => Ok(v),
-                    Some(Prop::Accessor(Some(g), _)) => {
-                        rt.call(&g, Value::Obj(rt.global.clone()), &[])
-                    }
-                    Some(Prop::Accessor(None, _)) => Ok(Value::Undefined),
-                    None if typeof_ => Ok(Value::Undefined),
-                    None => Err(throw_ref(rt, &n)),
+                let hint = Cell::new(0);
+                Box::new(move |rt, _| match rt.global.own_data_hinted(&n, &hint) {
+                    Some(v) => Ok(v),
+                    None => global_read(rt, &n, typeof_),
                 })
             }
         }
@@ -890,12 +906,25 @@ impl<'s> Compiler<'s> {
                         out.push(v);
                     }
                 }
-                Ok(out)
+                Ok(ArgBuf::Heap(out))
             }));
         }
         let parts: Vec<Ex> = args.iter().map(|a| self.expr(a)).collect::<CR<_>>()?;
+        if parts.len() <= INLINE_ARGS {
+            return Ok(Box::new(move |rt, f| {
+                let mut out: [Value; INLINE_ARGS] = Default::default();
+                for (slot, e) in out.iter_mut().zip(&parts) {
+                    *slot = e(rt, f)?;
+                }
+                Ok(ArgBuf::Inline(out, parts.len()))
+            }));
+        }
         Ok(Box::new(move |rt, f| {
-            parts.iter().map(|e| e(rt, f)).collect()
+            let mut out = Vec::with_capacity(parts.len());
+            for e in &parts {
+                out.push(e(rt, f)?);
+            }
+            Ok(ArgBuf::Heap(out))
         }))
     }
 
@@ -1052,7 +1081,18 @@ impl<'s> Compiler<'s> {
                         rt.get(&v, &name)
                     })
                 } else {
-                    Box::new(move |rt, f| rt.get(&o(rt, f)?, &name))
+                    let hint = Cell::new(0);
+                    Box::new(move |rt, f| {
+                        let v = o(rt, f)?;
+                        if let Value::Obj(ob) = &v {
+                            if !matches!(ob.kind, Kind::Proxy(..)) {
+                                if let Some(x) = ob.own_data_hinted(&name, &hint) {
+                                    return Ok(x);
+                                }
+                            }
+                        }
+                        rt.get(&v, &name)
+                    })
                 }
             }
             Expr::Index(o, k, optional) => {
@@ -1802,7 +1842,51 @@ impl<'s> Compiler<'s> {
         }))
     }
 
+    /// A left-leaning chain of `+`, run as one: strings build in a single
+    /// buffer instead of a new string per step.
+    fn concat(&mut self, a: &Expr, b: &Expr) -> CR<Ex> {
+        let mut ops = vec![b];
+        let mut head = a;
+        while let Expr::Binary("+", l, r) = head {
+            ops.push(r);
+            head = l;
+        }
+        ops.push(head);
+        ops.reverse();
+        let parts: Vec<Ex> = ops.into_iter().map(|e| self.expr(e)).collect::<CR<_>>()?;
+        Ok(Box::new(move |rt, f| {
+            let mut acc = parts[0](rt, f)?;
+            let mut rest = parts[1..].iter();
+            // Numbers add until a string turns up; from then on, append.
+            for p in rest.by_ref() {
+                let v = p(rt, f)?;
+                acc = match (&acc, &v) {
+                    (Value::Num(a), Value::Num(b)) => Value::Num(a + b),
+                    (Value::Str(_), Value::Str(_) | Value::Num(_))
+                    | (Value::Num(_), Value::Str(_)) => {
+                        let mut buf = SCRATCH.take();
+                        buf.clear();
+                        append(rt, &mut buf, &acc)?;
+                        append(rt, &mut buf, &v)?;
+                        for p in rest.by_ref() {
+                            let v = p(rt, f)?;
+                            append(rt, &mut buf, &v)?;
+                        }
+                        let out = Value::Str(Rc::from(buf.as_str()));
+                        SCRATCH.set(buf);
+                        return Ok(out);
+                    }
+                    _ => rt.add(&acc, &v)?,
+                };
+            }
+            Ok(acc)
+        }))
+    }
+
     fn binary(&mut self, op: &'static str, a: &Expr, b: &Expr) -> CR<Ex> {
+        if op == "+" && matches!(a, Expr::Binary("+", ..)) {
+            return self.concat(a, b);
+        }
         let x = self.expr(a)?;
         let y = self.expr(b)?;
         macro_rules! num_op {
@@ -2341,4 +2425,32 @@ pub fn eval_global(rt: &Rt, src: &str) -> R<Value> {
             }
         }
     }
+}
+
+fn global_read(rt: &Rt, n: &Name, typeof_: bool) -> R<Value> {
+    match rt.global.lookup(n) {
+        Some(Prop::Data(v) | Prop::Method(v)) => Ok(v),
+        Some(Prop::Accessor(Some(g), _)) => rt.call(&g, Value::Obj(rt.global.clone()), &[]),
+        Some(Prop::Accessor(None, _)) => Ok(Value::Undefined),
+        None if typeof_ => Ok(Value::Undefined),
+        None => Err(throw_ref(rt, n)),
+    }
+}
+
+thread_local! {
+    static SCRATCH: Cell<String> = const { Cell::new(String::new()) };
+}
+
+/// Appends a `+` operand to a string being built.
+fn append(rt: &Rt, buf: &mut String, v: &Value) -> R<()> {
+    match v {
+        Value::Str(x) => buf.push_str(x),
+        Value::Num(n) => crate::push_number(buf, *n),
+        Value::Obj(_) => {
+            let p = rt.to_primitive(v, false)?;
+            buf.push_str(&rt.to_str(&p)?);
+        }
+        _ => buf.push_str(&rt.to_str(v)?),
+    }
+    Ok(())
 }

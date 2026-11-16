@@ -22,6 +22,11 @@ fn arithmetic_and_strings() {
     assert_eq!(out("var it = { [Symbol.iterator]() { let i = 0; return { next: () => ({ value: i, done: i++ > 2 }) }; } }; var out = Array.from(it).join() + [...new Set([3, 3, 4])].join();"), "0,1,23,4");
     assert_eq!(out("var p = new Proxy([1, 2], { get: (t, k) => k === '0' ? 'x' : t[k] }); var out = p[0] + p[1] + p.length + Array.isArray(p) + ('1' in p);"), "x22truetrue");
     assert_eq!(out("var a = []; a[2] = 'c'; a[1] = 'b'; var k = ''; for (var i in a) k += i; delete a[1]; var out = k + a.length + (1 in a) + a.hasOwnProperty(2) + a[0] + [,1].length + Object.keys(new Array(3)).length;"), "123falsetrueundefined20");
+    assert_eq!(out("var o = { valueOf() { return 2; } }; var out = 1 + 2 + '3' + 4 + o + null + [5, 6] + 1 + 1;"), "3342null5,611");
+    assert_eq!(
+        out("var o = { valueOf() { return 2; } }; var out = String(1 + o + 3) + (o + o + '');"),
+        "64"
+    );
     assert_eq!(out("var g = (function* () { yield 1; yield 2; })(); var a = g.next(), b = g.next(), c = g.next(); var out = [a.value, b.value, c.done, typeof Symbol.iterator].join();"), "1,2,true,string");
     assert_eq!(out("var out = '[Channel' + (1 + 1) + ']'"), "[Channel2]");
     assert_eq!(out("var out = (0x7f & 0x0f) | (1 << 4) ^ 3 >>> 0"), "31");
@@ -277,21 +282,22 @@ function wheelTurn(channel, control, value, status, group) {
 "#).unwrap();
     let f = e.get(&Value::Obj(e.global().clone()), "wheelTurn").unwrap();
     let n = 20_000;
-    let t = std::time::Instant::now();
-    for i in 0..n {
-        let a = [
-            Value::Num((i % 4) as f64),
-            Value::Num(32.0),
-            Value::Num((60 + i % 8) as f64),
-            Value::Num(176.0),
-            Value::str("[Channel1]"),
-        ];
-        e.call(&f, Value::Undefined, &a).unwrap();
+    let mut best = f64::MAX;
+    for _ in 0..5 {
+        let t = std::time::Instant::now();
+        for i in 0..n {
+            let a = [
+                Value::Num((i % 4) as f64),
+                Value::Num(32.0),
+                Value::Num((60 + i % 8) as f64),
+                Value::Num(176.0),
+                Value::str("[Channel1]"),
+            ];
+            e.call(&f, Value::Undefined, &a).unwrap();
+        }
+        best = best.min(t.elapsed().as_secs_f64() * 1e6 / n as f64);
     }
-    eprintln!(
-        "djsugar-js {:.2} us/call",
-        t.elapsed().as_secs_f64() * 1e6 / n as f64
-    );
+    eprintln!("djsugar-js {best:.2} us/call (best of 5)");
 }
 
 #[test]

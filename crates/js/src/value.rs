@@ -1,7 +1,42 @@
 //! Values, objects and property access.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap as StdMap;
+
+pub type HashMap<K, V> = StdMap<K, V, std::hash::BuildHasherDefault<FastHash>>;
+
+/// FxHash: property names are short, and untrusted input never picks them
+/// at scale, so a fast non-keyed hash beats SipHash here.
+#[derive(Default, Clone, Copy)]
+pub struct FastHash(u64);
+
+impl std::hash::Hasher for FastHash {
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        const K: u64 = 0x51_7c_c1_b7_27_22_0a_95;
+        let mut h = self.0;
+        let (words, rest) = bytes.as_chunks::<8>();
+        for w in words {
+            h = (h.rotate_left(5) ^ u64::from_le_bytes(*w)).wrapping_mul(K);
+        }
+        for &b in rest {
+            h = (h.rotate_left(5) ^ b as u64).wrapping_mul(K);
+        }
+        self.0 = h;
+    }
+    #[inline]
+    fn write_u64(&mut self, n: u64) {
+        self.0 = (self.0.rotate_left(5) ^ n).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+    #[inline]
+    fn write_usize(&mut self, n: usize) {
+        self.write_u64(n as u64);
+    }
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
 use std::rc::Rc;
 
 use crate::number_to_string;
@@ -65,6 +100,20 @@ impl Props {
             return Some(i);
         }
         self.list.iter().position(|(n, _)| &**n == name)
+    }
+
+    /// `find`, trying the index this site found last time first.
+    #[inline]
+    pub fn find_hinted(&self, name: &str, hint: &Cell<u32>) -> Option<usize> {
+        let h = hint.get() as usize;
+        if let Some((n, _)) = self.list.get(h) {
+            if std::ptr::eq(n.as_ptr(), name.as_ptr()) && n.len() == name.len() || **n == *name {
+                return Some(h);
+            }
+        }
+        let i = self.find(name)?;
+        hint.set(i as u32);
+        Some(i)
     }
 
     pub fn get(&self, name: &str) -> Option<&Prop> {
@@ -178,6 +227,16 @@ impl Obj {
     }
 
     /// The property found along the prototype chain.
+    /// An own data property read through a site's cache.
+    #[inline]
+    pub fn own_data_hinted(&self, name: &str, hint: &Cell<u32>) -> Option<Value> {
+        let props = self.props.borrow();
+        match &props.list[props.find_hinted(name, hint)?].1 {
+            Prop::Data(v) | Prop::Method(v) => Some(v.clone()),
+            Prop::Accessor(..) => None,
+        }
+    }
+
     pub fn lookup(self: &Rc<Obj>, name: &str) -> Option<Prop> {
         let mut o = self.clone();
         loop {
@@ -674,15 +733,22 @@ impl Rt {
         if let (Value::Num(x), Value::Num(y)) = (a, b) {
             return Ok(Value::Num(x + y));
         }
-        let a = self.to_primitive(a, false)?;
-        let b = self.to_primitive(b, false)?;
+        let (a, b) = match (a, b) {
+            (Value::Str(_) | Value::Num(_), Value::Str(_) | Value::Num(_)) => {
+                (a.clone(), b.clone())
+            }
+            _ => (self.to_primitive(a, false)?, self.to_primitive(b, false)?),
+        };
         if matches!(a, Value::Str(_)) || matches!(b, Value::Str(_)) {
-            let x = self.to_str(&a)?;
-            let y = self.to_str(&b)?;
-            let mut s = String::with_capacity(x.len() + y.len());
-            s += &x;
-            s += &y;
-            return Ok(Value::Str(s.into()));
+            let mut s = String::with_capacity(24);
+            for v in [&a, &b] {
+                match v {
+                    Value::Str(x) => s.push_str(x),
+                    Value::Num(n) => crate::push_number(&mut s, *n),
+                    v => s.push_str(&self.to_str(v)?),
+                }
+            }
+            return Ok(Value::Str(Rc::from(s.as_str())));
         }
         Ok(Value::Num(self.to_num(&a)? + self.to_num(&b)?))
     }
