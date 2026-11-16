@@ -82,7 +82,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
           cache-on-failure: true
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo clippy --workspace --exclude djsugar --all-targets -- -D warnings
+      - run: cargo clippy -p djsugar --all-targets -j1 -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
       # `djsugar --list-controls` (control_list_tests in crates/app).
       # The app crate (its generated UI is one very large compile) builds on

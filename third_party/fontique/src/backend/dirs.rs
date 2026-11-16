@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use hashbrown::HashMap;
 
 use super::{
-    FallbackKey, FamilyId, FamilyInfo, FamilyNameMap, GenericFamily, GenericFamilyMap, Script,
+    FallbackKey, FamilyId, FamilyInfo, FamilyNameMap, GenericFamily, GenericFamilyMap,
     ScriptExt, scan,
 };
 

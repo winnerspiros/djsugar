@@ -13,7 +13,6 @@ ignore = [
     { id = "RUSTSEC-2026-0370", reason = "zvariant, merged into zbus 6, pulled in by slint's accessibility stack" },
     { id = "RUSTSEC-2026-0371", reason = "zbus_names, merged into zbus 6, pulled in by slint's accessibility stack" },
     { id = "RUSTSEC-2026-0372", reason = "zvariant_derive, merged into zbus 6, pulled in by slint's accessibility stack" },
-    { id = "RUSTSEC-2025-0141", reason = "bincode, unmaintained, pulled in by burn (stem separation)" },
     { id = "RUSTSEC-2026-0441", reason = "pin-utils, unmaintained, pulled in by slint (spin_on)" },
     { id = "RUSTSEC-2026-0459", reason = "bundled SQLite before 3.54: needs a crafted database and -wal pair opened locally; the fix (libsqlite3-sys 0.39) is blocked by rbox pinning =0.38 and diesel <0.39" },
 ]
@@ -34,7 +33,6 @@ allow = [
     "ISC",
     "LGPL-2.1-or-later",
     # LAME, the MP3 encoder for broadcasting.
-    "LGPL-3.0",
     "MIT",
     "MPL-2.0",
     "Unicode-3.0",
