@@ -1,16 +1,12 @@
 //! Key lock and key shifting: playing a deck at any speed and in any key,
-//! with the Signalsmith Stretch time-stretcher.
+//! with the phase-vocoder time-stretcher in `djsugar-stretch`.
 //!
 //! The deck's play position stays the position being heard. The stretcher
 //! needs input ahead of that (its latency), so its read position runs ahead
 //! by a fixed amount and is re-seeded whenever the deck jumps, with a short
 //! crossfade from the audio that would have played on.
-//!
-//! The stretcher splits each block's FFT work evenly over the 30 ms until
-//! the next one, so key-locked decks cost about the same in every audio
-//! buffer instead of spiking in the buffer where a block starts.
 
-use signalsmith_stretch::Stretch;
+use djsugar_stretch::Stretch;
 
 use crate::engine::{crossfade, read, Declick, Frames, DECLICK_SECONDS};
 

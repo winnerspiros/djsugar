@@ -18,7 +18,7 @@ flate2 = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 rustfft = "6"
 matrixmultiply = { version = "0.3", features = ["std"] }
-signalsmith-stretch = "0.1"
+djsugar-stretch = { path = "../stretch" }
 serde_json = "1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 djsugar-link = { path = "../link" }

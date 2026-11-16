@@ -17,7 +17,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 | 0: platforms | 15% (1.5/10) | P0 | 4-6 weeks | store accounts, signing keys |
 | P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | device testing |
 | Q: code quality and performance | 0% (0/9) | P0 | ongoing | no |
-| R: pure-Rust dependencies | 50% (6.5/13) | P1 | 8-12 weeks | no |
+| R: pure-Rust dependencies | 58% (7.5/13) | P1 | 8-12 weeks | no |
 | C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | hardware tests |
 | 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | UI/feature review |
 | 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | no |
@@ -163,7 +163,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | R.1 | rquickjs (QuickJS, C) | boa (pure-Rust JS engine) for legacy JS mappings | TODO |
 | R.2 | openssl-sys (pulled in by libsqlite3-sys for SQLCipher, to read encrypted Rekordbox databases) | goes with R.3: pure-Rust SQLCipher-compatible page decryption (AES-256-CBC + HMAC via RustCrypto) | TODO |
 | R.3 | libsqlite3-sys (diesel/rusqlite) | pure-Rust DB (turso/limbo or equivalent) with migration of existing library DBs; scheduled late | TODO |
-| R.4 | signalsmith-stretch (C++) | port to Rust in-tree | TODO |
+| R.4 | signalsmith-stretch (C++) | DONE: `djsugar-stretch`, own phase vocoder (peak phase-locking, rigid peak shifting for transpose, whole-spectrum resampling at onsets, no allocation after construction; realfft only). A/B against the old library on a tone+drum test signal: tonal purity equal or better in all 6 cases, pre-echo within 0.7 dB in 5 of 6 (2.2 dB behind at 0.8x slow-down), level within 0.8 dB, CPU 18-27 ms per second of audio vs 18-25 (follow-up: spread block work across buffers; close the slow-down pre-echo gap) | DONE |
 | R.5 | whisper-rs-sys (whisper.cpp) | Whisper on burn/candle (burn already a dependency) | TODO |
 | R.6 | mp3lame-sys | DONE: rusty_mp3 (pure Rust); live CBR frames with no bit reservoir, tested by decoding back to the input tone | DONE |
 | R.7 | opusic-sys | DONE: rusty-opus (pure Rust); Ogg pre-skip set from the measured encoder delay (120 samples) | DONE |
