@@ -1475,7 +1475,7 @@ impl<'a> Parser<'a> {
         let mut props = Vec::new();
         while !self.eat("}")? {
             if self.eat("...")? {
-                props.push(Prop {
+                props.push(Property {
                     kind: PropKind::Spread,
                     key: PropKey::Name("".into()),
                     value: self.assignment(true)?,
@@ -1492,14 +1492,14 @@ impl<'a> Parser<'a> {
                 };
                 let (kind, key, value) = self.method_or_key(start, false)?;
                 let prop = if let Some(value) = value {
-                    Prop {
+                    Property {
                         kind,
                         key,
                         value,
                         shorthand: false,
                     }
                 } else if self.eat(":")? {
-                    Prop {
+                    Property {
                         kind,
                         key,
                         value: self.assignment(true)?,
@@ -1517,14 +1517,14 @@ impl<'a> Parser<'a> {
                     if self.eat("=")? {
                         let d = self.assignment(true)?;
                         value = Expr::Assign("=", Box::new(Pattern::Ident(name)), Box::new(d));
-                        Prop {
+                        Property {
                             kind: PropKind::Init,
                             key,
                             value,
                             shorthand: true,
                         }
                     } else {
-                        Prop {
+                        Property {
                             kind: PropKind::Init,
                             key,
                             value,

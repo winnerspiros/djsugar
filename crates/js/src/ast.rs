@@ -61,7 +61,7 @@ pub enum PropKind {
 }
 
 #[derive(Debug, Clone)]
-pub struct Prop {
+pub struct Property {
     pub kind: PropKind,
     pub key: PropKey,
     pub value: Expr,
@@ -109,7 +109,7 @@ pub enum Expr {
     NewTarget,
     Array(Vec<Option<Expr>>),
     Spread(P<Expr>),
-    Object(Vec<Prop>),
+    Object(Vec<Property>),
     Function(Rc<Function>),
     Class(Rc<Class>),
     Unary(&'static str, P<Expr>),
