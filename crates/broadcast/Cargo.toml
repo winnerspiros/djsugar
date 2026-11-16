@@ -7,10 +7,10 @@ license.workspace = true
 
 [dependencies]
 base64 = "0.22"
-mp3lame-encoder = "0.2"
+rusty_mp3 = "1.0"
 ogg = "0.9"
 djsugar-control = { path = "../control" }
-opus = "0.4"
+rusty-opus = "1.1"
 percent-encoding = "2"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1", features = ["derive"] }

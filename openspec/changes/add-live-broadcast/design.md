@@ -56,8 +56,8 @@ DJ Sugar builds are GPL-3.0, so every encoder must be GPL-compatible:
 
 | Format | Source | Platforms |
 |---|---|---|
-| Opus (in Ogg for Icecast) | libopus, BSD | All. Needs 48 kHz: resampled by DJ Sugar's own polyphase resampler when the engine runs at 44.1 kHz |
-| MP3 | LAME, LGPL | All |
+| Opus (in Ogg for Icecast) | rusty-opus (pure Rust, BSD-3-Clause) | All. Needs 48 kHz: resampled by DJ Sugar's own polyphase resampler when the engine runs at 44.1 kHz |
+| MP3 | rusty_mp3 (pure Rust, Apache-2.0), CBR frames without a bit reservoir so each goes out as made | All |
 | AAC (LC and HE-AAC) | The operating system: AudioToolbox on macOS, Media Foundation on Windows | macOS, Windows. Not Linux: libfdk-aac can't ship in a GPL app; FFmpeg's encoder may be used when the system has FFmpeg (later) |
 | H.264 (step 3) | VideoToolbox (macOS), Media Foundation (Windows), OpenH264 (Linux, Cisco's binary fetched on first use as Firefox does, which covers the patent licence) | All |
 

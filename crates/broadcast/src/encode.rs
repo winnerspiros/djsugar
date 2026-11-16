@@ -6,9 +6,6 @@
 //! - MP3 (LAME), at the engine's rate up to 48 kHz. Its now-playing goes to
 //!   the server separately (see `server.rs`).
 
-use std::mem::MaybeUninit;
-
-use mp3lame_encoder::{Builder, FlushNoGap, InterleavedPcm};
 use ogg::{PacketWriteEndInfo, PacketWriter};
 
 use crate::resample::Resampler;
@@ -42,9 +39,12 @@ const OPUS_RATE: u32 = 48_000;
 /// Ogg pages are closed after this many packets (100 ms), so listeners
 /// don't wait for a full page.
 const PACKETS_PER_PAGE: u32 = 5;
+/// The encoder's delay at 48 kHz (2.5 ms), which players skip;
+/// `opus_delay_is_pre_skip` measures it.
+const PRE_SKIP: u16 = 120;
 
 pub struct OggOpus {
-    encoder: opus::Encoder,
+    encoder: rusty_opus::OpusEncoder,
     resampler: Option<Resampler>,
     input_rate: u32,
     /// Resampled audio waiting for a full frame.
@@ -71,12 +71,11 @@ pub struct OggOpus {
 impl OggOpus {
     pub fn new(bitrate: u32, rate: u32) -> Result<Self, String> {
         let mut encoder =
-            opus::Encoder::new(OPUS_RATE, opus::Channels::Stereo, opus::Application::Audio)
+            rusty_opus::OpusEncoder::new(OPUS_RATE as i32, 2, rusty_opus::Application::Audio)
                 .map_err(|e| e.to_string())?;
-        encoder
-            .set_bitrate(opus::Bitrate::Bits(bitrate as i32 * 1000))
-            .map_err(|e| e.to_string())?;
-        let pre_skip = encoder.get_lookahead().map_err(|e| e.to_string())?.max(0) as u16;
+        encoder.bitrate_bps = bitrate as i32 * 1000;
+        encoder.complexity = 10;
+        let pre_skip = PRE_SKIP;
         Ok(Self {
             encoder,
             resampler: Resampler::new(rate, OPUS_RATE),
@@ -162,7 +161,11 @@ impl Encoder for OggOpus {
         while self.pending.len() - used >= frame {
             let n = self
                 .encoder
-                .encode_float(&self.pending[used..used + frame], &mut self.packet)
+                .encode(
+                    &self.pending[used..used + frame],
+                    OPUS_FRAME,
+                    &mut self.packet,
+                )
                 .map_err(|e| e.to_string())?;
             used += frame;
             self.granule += OPUS_FRAME as u64;
@@ -210,56 +213,62 @@ impl Encoder for OggOpus {
 }
 
 pub struct Mp3 {
-    encoder: mp3lame_encoder::Encoder,
+    encoder: rusty_mp3::encode::Mp3Encode,
+    header: rusty_mp3::header::FrameHeader,
     resampler: Option<Resampler>,
     resampled: Vec<f32>,
-    out: Vec<u8>,
-    flushed: bool,
+    /// Samples per channel waiting for a whole frame.
+    pending: [Vec<f32>; 2],
 }
 
 impl Mp3 {
     pub fn new(bitrate: u32, rate: u32) -> Result<Self, String> {
         // MP3 goes up to 48 kHz; 88.2 and 96 kHz are halved.
         let mp3_rate = if rate > 48_000 { rate / 2 } else { rate };
-        let brate = match bitrate {
-            0..=64 => mp3lame_encoder::Bitrate::Kbps64,
-            65..=96 => mp3lame_encoder::Bitrate::Kbps96,
-            97..=128 => mp3lame_encoder::Bitrate::Kbps128,
-            129..=160 => mp3lame_encoder::Bitrate::Kbps160,
-            161..=192 => mp3lame_encoder::Bitrate::Kbps192,
-            193..=256 => mp3lame_encoder::Bitrate::Kbps256,
-            _ => mp3lame_encoder::Bitrate::Kbps320,
-        };
-        let mut b = Builder::new().ok_or("the MP3 encoder could not start")?;
-        let fail = |e: mp3lame_encoder::BuildError| e.to_string();
-        b.set_num_channels(2).map_err(fail)?;
-        b.set_sample_rate(mp3_rate).map_err(fail)?;
-        b.set_brate(brate).map_err(fail)?;
-        b.set_quality(mp3lame_encoder::Quality::Good)
-            .map_err(fail)?;
-        b.set_to_write_vbr_tag(false).map_err(fail)?;
         Ok(Self {
-            encoder: b.build().map_err(fail)?,
+            encoder: rusty_mp3::encode::Mp3Encode::new(),
+            header: rusty_mp3::encoder_header(mp3_rate, 2, bitrate.clamp(32, 320))
+                .map_err(|e| e.to_string())?,
             resampler: Resampler::new(rate, mp3_rate),
             resampled: Vec::new(),
-            out: Vec::new(),
-            flushed: false,
+            pending: [Vec::new(), Vec::new()],
         })
     }
 
-    /// The last frames, for the end of a file.
+    /// The last frames, for the end of a file: the rest of the input and the
+    /// encoder's delay, padded with silence.
     pub fn finish(&mut self) -> Result<Vec<u8>, String> {
-        self.flushed = true;
-        let mut rest: Vec<MaybeUninit<u8>> = vec![MaybeUninit::uninit(); 7200];
-        let n = self
-            .encoder
-            .flush::<FlushNoGap>(&mut rest)
-            .map_err(|e| e.to_string())?;
-        // SAFETY: the encoder wrote the first `n` bytes.
-        Ok(rest[..n]
-            .iter()
-            .map(|b| unsafe { b.assume_init() })
-            .collect())
+        let frame = self.header.version.samples_per_frame();
+        let len = (self.pending[0].len() + rusty_mp3::encode::lametag::ENCODER_DELAY)
+            .div_ceil(frame)
+            * frame;
+        for c in &mut self.pending {
+            c.resize(len, 0.0);
+        }
+        self.frames()
+    }
+
+    /// Encodes every whole frame waiting, one MP3 frame each, with no bit
+    /// reservoir between them so each can go out as soon as it's made.
+    fn frames(&mut self) -> Result<Vec<u8>, String> {
+        let frame = self.header.version.samples_per_frame();
+        let whole = self.pending[0].len() / frame * frame;
+        let mut out = Vec::new();
+        for at in (0..whole).step_by(frame) {
+            let block = [
+                &self.pending[0][at..at + frame],
+                &self.pending[1][at..at + frame],
+            ];
+            out.extend(
+                self.encoder
+                    .encode_frame(&self.header, &block, None)
+                    .map_err(|e| e.to_string())?,
+            );
+        }
+        for c in &mut self.pending {
+            c.drain(..whole);
+        }
+        Ok(out)
     }
 }
 
@@ -273,30 +282,15 @@ impl Encoder for Mp3 {
             }
             None => samples,
         };
-        self.out.clear();
-        self.out
-            .reserve(mp3lame_encoder::max_required_buffer_size(input.len() / 2));
-        let n = self
-            .encoder
-            .encode(InterleavedPcm(input), self.out.spare_capacity_mut())
-            .map_err(|e| e.to_string())?;
-        // SAFETY: the encoder wrote `n` bytes into the spare capacity.
-        unsafe { self.out.set_len(n) };
-        Ok(std::mem::take(&mut self.out))
+        for s in input.chunks_exact(2) {
+            self.pending[0].push(s[0]);
+            self.pending[1].push(s[1]);
+        }
+        self.frames()
     }
 
     fn content_type(&self) -> &'static str {
         "audio/mpeg"
-    }
-}
-
-impl Drop for Mp3 {
-    fn drop(&mut self) {
-        if self.flushed {
-            return;
-        }
-        let mut rest: Vec<MaybeUninit<u8>> = vec![MaybeUninit::uninit(); 7200];
-        let _ = self.encoder.flush::<FlushNoGap>(&mut rest);
     }
 }
 
@@ -367,5 +361,61 @@ mod tests {
             "{}",
             bytes.len()
         );
+    }
+
+    /// What goes in comes back out: as long, at the same level, with no tag
+    /// frame in a live stream.
+    #[test]
+    fn mp3_decodes_back_to_the_tone() {
+        let input = tone(44_100, 3.0);
+        let mut e = Mp3::new(192, 44_100).unwrap();
+        let mut bytes = Vec::new();
+        for chunk in input.chunks(1024) {
+            bytes.extend(e.encode(chunk).unwrap());
+        }
+        bytes.extend(e.finish().unwrap());
+        assert!(!bytes[..400]
+            .windows(4)
+            .any(|w| w == b"Info" || w == b"Xing"));
+        let mut d = rusty_mp3::Mp3Decoder::new();
+        d.push(&bytes);
+        d.flush();
+        let mut out = Vec::new();
+        while let Ok(f) = d.next_frame() {
+            assert_eq!((f.sample_rate, f.channels), (44_100, 2));
+            out.extend(f.samples);
+        }
+        let frames = out.len() as f64 / input.len() as f64;
+        assert!((0.98..1.08).contains(&frames), "{frames}");
+        let rms = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
+        let (a, b) = (rms(&input[44_100..88_200]), rms(&out[44_100..88_200]));
+        assert!((b / a - 1.0).abs() < 0.05, "{a} {b}");
+    }
+
+    /// A click encoded and decoded comes back `PRE_SKIP` samples late.
+    #[test]
+    fn opus_delay_is_pre_skip() {
+        let mut enc =
+            rusty_opus::OpusEncoder::new(OPUS_RATE as i32, 2, rusty_opus::Application::Audio)
+                .unwrap();
+        enc.bitrate_bps = 256_000;
+        let mut dec = rusty_opus::OpusDecoder::new(OPUS_RATE as i32, 2).unwrap();
+        let at = 5 * OPUS_FRAME + 100;
+        let mut input = vec![0.0f32; 10 * OPUS_FRAME * 2];
+        for c in 0..2 {
+            input[at * 2 + c] = 0.9;
+        }
+        let mut out = Vec::new();
+        let mut packet = [0u8; 4000];
+        let mut frame = vec![0.0f32; OPUS_FRAME * 2];
+        for chunk in input.chunks(OPUS_FRAME * 2) {
+            let n = enc.encode(chunk, OPUS_FRAME, &mut packet).unwrap();
+            dec.decode(&packet[..n], OPUS_FRAME, &mut frame).unwrap();
+            out.extend_from_slice(&frame);
+        }
+        let peak = (0..out.len() / 2)
+            .max_by(|&a, &b| out[a * 2].abs().total_cmp(&out[b * 2].abs()))
+            .unwrap();
+        assert_eq!(peak - at, PRE_SKIP as usize);
     }
 }
