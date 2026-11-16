@@ -84,6 +84,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    pub fn source(&self) -> &'a str {
+        self.src
+    }
+
     fn peek_char(&self) -> Option<char> {
         self.src[self.pos..].chars().next()
     }
