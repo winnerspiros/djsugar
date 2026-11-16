@@ -42,6 +42,7 @@ jobs:
         with:
           key: android-${{ matrix.crate }}
           save-if: ${{ github.ref == 'refs/heads/rust' }}
+          cache-on-failure: true
       - run: cargo install cargo-ndk --locked
       - name: cargo ndk check
         run: |

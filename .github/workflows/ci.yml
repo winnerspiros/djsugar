@@ -21,7 +21,7 @@ on:
 # A new push to a pull request cancels the run for the push before it.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   changes:
@@ -80,6 +80,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
+          cache-on-failure: true
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Includes the check that docs/supported-controls.txt matches
@@ -110,6 +111,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
+          cache-on-failure: true
       # The app crate's test build runs out of memory alongside the rest on
       # this runner, as on Linux: lighter debug info, and the app on its own.
       - run: cargo clippy --workspace --all-targets -- -D warnings
@@ -153,6 +155,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
+          cache-on-failure: true
       - run: cargo build --release -p djsugar -p djsugar-plugin-host
       # The version in Cargo.toml (what the app reports in Settings), with
       # the commit as the build, so About DJ Sugar says which build this is.
@@ -173,6 +176,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
+          cache-on-failure: true
       - run: cargo build --release -p djsugar -p djsugar-plugin-host
       # The version in Cargo.toml, as the app reports it, so the setup and
       # Apps & features name the same version.

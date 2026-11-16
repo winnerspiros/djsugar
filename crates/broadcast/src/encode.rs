@@ -282,7 +282,7 @@ impl Encoder for Mp3 {
             }
             None => samples,
         };
-        for s in input.chunks_exact(2) {
+        for s in input.as_chunks::<2>().0 {
             self.pending[0].push(s[0]);
             self.pending[1].push(s[1]);
         }
