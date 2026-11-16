@@ -8,6 +8,7 @@
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::UNIX_EPOCH;
 
 use flate2::read::ZlibDecoder;
@@ -295,13 +296,30 @@ fn store_overview(file: &Path, o: &[OverviewSlice]) {
     data.extend(o.iter().flatten());
     let write = || -> std::io::Result<()> {
         fs::create_dir_all(file.parent().unwrap())?;
-        let tmp = file.with_extension(format!("tmp{}", std::process::id()));
-        fs::write(&tmp, &data)?;
-        fs::rename(&tmp, file)
+        replace(file, &data, |d| decode_overview(d).is_some())
     };
     if let Err(e) = write() {
         eprintln!("could not keep overview {}: {e}", file.display());
     }
+}
+
+/// Writes `data` aside and renames it over `file`, so a reader never sees
+/// half of it. Where the rename fails because the file is in use (Windows,
+/// or a scanner holding it) and what's there already passes `valid`, another
+/// writer stored the same thing first and that stands.
+fn replace(file: &Path, data: &[u8], valid: impl Fn(&[u8]) -> bool) -> std::io::Result<()> {
+    static SEQ: AtomicU32 = AtomicU32::new(0);
+    let n = SEQ.fetch_add(1, Ordering::Relaxed);
+    let tmp = file.with_extension(format!("tmp{}-{n}", std::process::id()));
+    fs::write(&tmp, data)?;
+    let moved = fs::rename(&tmp, file);
+    if moved.is_err() {
+        let _ = fs::remove_file(&tmp);
+        if fs::read(file).is_ok_and(|d| valid(&d)) {
+            return Ok(());
+        }
+    }
+    moved
 }
 
 fn decode_overview(data: &[u8]) -> Option<Vec<OverviewSlice>> {
@@ -324,11 +342,12 @@ pub fn store(path: &Path, analysis: &Analysis) {
     let write = || -> std::io::Result<()> {
         fs::create_dir_all(entry.parent().unwrap())?;
         // Write aside and rename, so a reader never sees half an entry.
-        let tmp = entry.with_extension(format!("tmp{}", std::process::id()));
-        let mut z = ZlibEncoder::new(fs::File::create(&tmp)?, Compression::fast());
+        let mut z = ZlibEncoder::new(Vec::new(), Compression::fast());
         z.write_all(&encode(analysis))?;
-        z.finish()?;
-        fs::rename(&tmp, &entry)
+        replace(&entry, &z.finish()?, |d| {
+            let mut out = Vec::new();
+            ZlibDecoder::new(d).read_to_end(&mut out).is_ok() && decode(&out).is_some()
+        })
     };
     if let Err(e) = write() {
         eprintln!("could not cache analysis of {}: {e}", path.display());

@@ -569,8 +569,8 @@ fn a_full_stick_reads_back_in_an_independent_reader() {
         camelot: false,
     };
     let report = export(&tracks, &lists, &options, &mut |_| true).unwrap();
-    assert_eq!(report.tracks, 31);
     assert!(report.skipped.is_empty(), "{:?}", report.skipped);
+    assert_eq!(report.tracks, 31);
 
     let rekordbox = stick.path().join("PIONEER/rekordbox");
     let pdb = check::pdb::read(&rekordbox.join("export.pdb")).unwrap();
