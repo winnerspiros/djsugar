@@ -1091,7 +1091,6 @@ fn run_hid(
     stop: &AtomicBool,
     connected: &Mutex<Vec<ConnectedController>>,
 ) {
-    use hid::Io;
     let mapping = match Mapping::load(mapping_path) {
         Ok(m) => m,
         Err(e) => {

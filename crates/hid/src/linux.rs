@@ -9,18 +9,18 @@ use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
-use crate::hid::{DeviceInfo, Io, BUFFER};
+use crate::{DeviceInfo, BUFFER};
 
-pub(crate) struct Hid;
+pub struct Hid;
 
 impl Hid {
-    pub(crate) fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, String> {
         Ok(Self)
     }
 
     /// The devices from these vendors plugged in now, one entry per
     /// top-level collection.
-    pub(crate) fn scan(&mut self, vendors: &[u16]) -> Vec<DeviceInfo> {
+    pub fn scan(&mut self, vendors: &[u16]) -> Vec<DeviceInfo> {
         let Ok(dir) = fs::read_dir("/sys/class/hidraw") else {
             return Vec::new();
         };
@@ -73,7 +73,7 @@ impl Hid {
         out
     }
 
-    pub(crate) fn open(&self, d: &DeviceInfo) -> Result<Device, String> {
+    pub fn open(&self, d: &DeviceInfo) -> Result<Device, String> {
         let path = d.path.to_str().map_err(|e| e.to_string())?;
         OpenOptions::new()
             .read(true)
@@ -177,7 +177,7 @@ fn top_level_usages(d: &[u8]) -> Vec<(u16, u16)> {
     out
 }
 
-pub(crate) struct Device(File);
+pub struct Device(File);
 
 const IOC_READ_WRITE: libc::c_ulong = 3;
 
@@ -191,7 +191,7 @@ const GET_INPUT: libc::c_ulong = 0x0A;
 
 impl Device {
     /// Waits up to `timeout_ms` for an input report; `Ok(0)` when none came.
-    pub(crate) fn read(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, String> {
+    pub fn read(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, String> {
         let mut fd = libc::pollfd {
             fd: self.0.as_raw_fd(),
             events: libc::POLLIN,
@@ -245,23 +245,23 @@ impl Device {
     }
 }
 
-impl Io for Device {
-    fn write(&self, report: &[u8]) -> Result<(), String> {
+impl Device {
+    pub fn write(&self, report: &[u8]) -> Result<(), String> {
         (&self.0).write_all(report).map_err(|e| e.to_string())
     }
 
-    fn send_feature(&self, report: &[u8]) -> Result<(), String> {
+    pub fn send_feature(&self, report: &[u8]) -> Result<(), String> {
         let mut buf = report.to_vec();
         self.ioctl(SET_FEATURE, &mut buf)
             .map(|_| ())
             .map_err(|e| e.to_string())
     }
 
-    fn get_input(&self, id: u8) -> Option<Vec<u8>> {
+    pub fn get_input(&self, id: u8) -> Option<Vec<u8>> {
         self.get(GET_INPUT, id)
     }
 
-    fn get_feature(&self, id: u8) -> Option<Vec<u8>> {
+    pub fn get_feature(&self, id: u8) -> Option<Vec<u8>> {
         self.get(GET_FEATURE, id)
     }
 }

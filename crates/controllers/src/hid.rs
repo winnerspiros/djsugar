@@ -9,7 +9,6 @@
 //! devices, matches them to mappings, and keeps the output reports.
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
-use std::ffi::CString;
 
 /// A device an HID mapping is for: `<product protocol="hid" vendor_id=...>`.
 /// Missing fields match any device.
@@ -65,21 +64,7 @@ impl Product {
     }
 }
 
-/// An HID device plugged in, as the system describes it.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DeviceInfo {
-    /// What the system opens it by.
-    pub path: CString,
-    pub vendor_id: u16,
-    pub product_id: u16,
-    pub usage_page: u16,
-    pub usage: u16,
-    /// The USB interface, or -1 where the system doesn't say.
-    pub interface: i32,
-    /// The device's own name for itself ("Traktor Kontrol S2 MK3"), if any.
-    pub product: String,
-    pub serial: String,
-}
+pub use djsugar_hid::DeviceInfo;
 
 /// Talks to an open HID device. Reports written start with their report
 /// ID (0 for devices that don't number their reports); reports read back
@@ -192,144 +177,23 @@ pub fn match_mapping<'a>(
 }
 
 /// Finds the HID devices plugged in, and opens them.
-#[cfg(target_os = "linux")]
-pub(crate) use crate::hidraw::{Device, Hid};
+pub(crate) use djsugar_hid::{Device, Hid, BUFFER};
 
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-pub(crate) struct Hid {
-    api: hidapi::HidApi,
-}
-
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-impl Hid {
-    pub(crate) fn new() -> Result<Self, String> {
-        hidapi::HidApi::new()
-            .map(|api| Self { api })
-            .map_err(|e| e.to_string())
-    }
-
-    /// The devices from these vendors plugged in now. Only they are
-    /// listed, so keyboards, mice and the like are never looked at.
-    pub(crate) fn scan(&mut self, vendors: &[u16]) -> Vec<DeviceInfo> {
-        let _ = self.api.reset_devices();
-        for &v in vendors {
-            let _ = self.api.add_devices(v, 0);
-        }
-        self.api
-            .device_list()
-            .map(|d| DeviceInfo {
-                path: d.path().to_owned(),
-                vendor_id: d.vendor_id(),
-                product_id: d.product_id(),
-                usage_page: d.usage_page(),
-                usage: d.usage(),
-                interface: d.interface_number(),
-                product: d.product_string().unwrap_or("").trim().to_string(),
-                serial: d.serial_number().unwrap_or("").to_string(),
-            })
-            .collect()
-    }
-
-    pub(crate) fn open(&self, d: &DeviceInfo) -> Result<Device, String> {
-        let dev = self.api.open_path(&d.path).map_err(|e| e.to_string())?;
-        // Reads are polled with a timeout, not left to block.
-        let _ = dev.set_blocking_mode(false);
-        Ok(Device(dev))
-    }
-}
-
-/// The largest report read or asked for.
-pub(crate) const BUFFER: usize = 255;
-
-/// An open HID device.
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-pub(crate) struct Device(hidapi::HidDevice);
-
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-impl Device {
-    /// Waits up to `timeout_ms` for an input report; `Ok(0)` when none came.
-    pub(crate) fn read(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, String> {
-        self.0
-            .read_timeout(buf, timeout_ms)
-            .map_err(|e| e.to_string())
-    }
-}
-
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
 impl Io for Device {
     fn write(&self, report: &[u8]) -> Result<(), String> {
-        self.0.write(report).map(|_| ()).map_err(|e| e.to_string())
+        Device::write(self, report)
     }
 
     fn send_feature(&self, report: &[u8]) -> Result<(), String> {
-        self.0
-            .send_feature_report(report)
-            .map_err(|e| e.to_string())
+        Device::send_feature(self, report)
     }
 
     fn get_input(&self, id: u8) -> Option<Vec<u8>> {
-        let mut buf = vec![0u8; BUFFER + 1];
-        buf[0] = id;
-        let n = self.0.get_input_report(&mut buf).ok()?;
-        // At least the ID and one byte of data.
-        (n > 1).then(|| buf[1..n].to_vec())
+        Device::get_input(self, id)
     }
 
     fn get_feature(&self, id: u8) -> Option<Vec<u8>> {
-        let mut buf = vec![0u8; BUFFER + 1];
-        buf[0] = id;
-        let n = self.0.get_feature_report(&mut buf).ok()?;
-        (n > 1).then(|| buf[1..n].to_vec())
-    }
-}
-
-/// Android has no hidraw access for apps; USB HID goes through the
-/// platform's USB host API (roadmap C.1), so none are found for now.
-#[cfg(target_os = "android")]
-pub(crate) struct Hid;
-
-#[cfg(target_os = "android")]
-impl Hid {
-    pub(crate) fn new() -> Result<Self, String> {
-        Ok(Self)
-    }
-
-    pub(crate) fn scan(&mut self, _vendors: &[u16]) -> Vec<DeviceInfo> {
-        Vec::new()
-    }
-
-    pub(crate) fn open(&self, _d: &DeviceInfo) -> Result<Device, String> {
-        Err("USB HID controllers are not supported on Android yet".into())
-    }
-}
-
-/// Never made on Android: [`Hid::scan`] finds nothing.
-#[cfg(target_os = "android")]
-pub(crate) enum Device {}
-
-#[cfg(target_os = "android")]
-impl Device {
-    pub(crate) fn read(&self, _buf: &mut [u8], _timeout_ms: i32) -> Result<usize, String> {
-        match *self {}
-    }
-}
-
-#[cfg(target_os = "android")]
-impl Io for Device {
-    fn write(&self, _report: &[u8]) -> Result<(), String> {
-        match *self {}
-    }
-
-    fn send_feature(&self, _report: &[u8]) -> Result<(), String> {
-        match *self {}
-    }
-
-    fn get_input(&self, _id: u8) -> Option<Vec<u8>> {
-        match *self {}
-    }
-
-    fn get_feature(&self, _id: u8) -> Option<Vec<u8>> {
-        match *self {}
+        Device::get_feature(self, id)
     }
 }
 

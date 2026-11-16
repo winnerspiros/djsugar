@@ -17,7 +17,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 | 0: platforms | 15% (1.5/10) | P0 | 4-6 weeks | store accounts, signing keys |
 | P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | device testing |
 | Q: code quality and performance | 0% (0/9) | P0 | ongoing | no |
-| R: pure-Rust dependencies | 58% (7.5/13) | P1 | 8-12 weeks | no |
+| R: pure-Rust dependencies | 62% (8/13) | P1 | 8-12 weeks | no |
 | C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | hardware tests |
 | 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | UI/feature review |
 | 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | no |
@@ -167,7 +167,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | R.5 | whisper-rs-sys (whisper.cpp) | Whisper on burn/candle (burn already a dependency) | TODO |
 | R.6 | mp3lame-sys | DONE: rusty_mp3 (pure Rust); live CBR frames with no bit reservoir, tested by decoding back to the input tone | DONE |
 | R.7 | opusic-sys | DONE: rusty-opus (pure Rust); Ogg pre-skip set from the measured encoder delay (120 samples) | DONE |
-| R.8 | hidapi | Linux: own hidraw backend (DONE); macOS IOKit and Windows HID in Rust next | WIP |
+| R.8 | hidapi | DONE: `djsugar-hid` - Linux hidraw, Windows HID class driver (SetupAPI + overlapped I/O), macOS IOKit (private run-loop mode); compile- and lint-checked for all three, Linux tested on real hidraw devices; real-controller tests on Windows/macOS pending | DONE |
 | R.9 | yeslogic-fontconfig-sys | DONE: Linux/BSD fonts found by scanning the XDG font folders in Rust; generic families from well-known names; fallback by script coverage with CJK locale preference. No fontconfig at build or run time | DONE |
 | R.10 | renderdoc-sys | DONE: Rust-only FFI declarations, no C build; RenderDoc is loaded only when present | DONE |
 | R.11 | alsa-sys (libasound), wayland-sys, other OS-layer C libs | audit: talk to kernel ALSA ioctls / PipeWire protocol directly; wayland-client pure-Rust backend (no libwayland); keep only true OS ABIs (CoreAudio, WASAPI, AAudio) | TODO |
