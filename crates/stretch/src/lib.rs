@@ -49,6 +49,10 @@ pub struct Stretch {
     src_phase: Vec<f32>,
     out_mag: Vec<f32>,
     peaks: Vec<usize>,
+    job: Option<Job>,
+    /// Whether each block's work is spread over the interval after it,
+    /// playing one interval later.
+    split: bool,
     /// The last analysis, kept whole.
     analysed: Vec<Complex32>,
 }
@@ -60,6 +64,16 @@ struct Channel {
     out_phase: Vec<f32>,
     /// Magnitudes of the last analysed frame.
     mag: Vec<f32>,
+    /// The block in hand, as a spectrum and then resynthesised.
+    spec: Vec<Complex32>,
+    pending: Vec<f32>,
+}
+
+/// A block being worked on a step at a time.
+struct Job {
+    end: usize,
+    reuse: bool,
+    step: usize,
 }
 
 impl Stretch {
@@ -84,7 +98,9 @@ impl Stretch {
             .enumerate()
             .map(|(k, w)| w / (block as f32 * overlap[k % hop].max(1e-6)))
             .collect();
-        let capacity = block + hop + MAX_CHUNK;
+        // Room for a chunk, and for one more while a split block reads
+        // input from the chunk before.
+        let capacity = block + hop + 2 * MAX_CHUNK;
         let mut s = Self {
             channels,
             block,
@@ -108,6 +124,8 @@ impl Stretch {
                     phase: vec![0.0; bins],
                     out_phase: vec![0.0; bins],
                     mag: vec![0.0; bins],
+                    spec: vec![Complex32::default(); bins],
+                    pending: vec![0.0; block],
                 })
                 .collect(),
             last_end: None,
@@ -118,6 +136,8 @@ impl Stretch {
             src_phase: vec![0.0; bins],
             out_mag: vec![0.0; bins],
             peaks: Vec::with_capacity(bins),
+            job: None,
+            split: false,
             analysed: vec![Complex32::default(); bins],
         };
         s.reset();
@@ -130,10 +150,13 @@ impl Stretch {
         Self::new(channels, 4 * hop, hop)
     }
 
-    /// The same as [`Self::preset_default`]; every block's work is already
-    /// small and even.
+    /// [`Self::preset_default`] with each block's work spread evenly over
+    /// the interval after it, so every buffer costs about the same; the
+    /// output is an interval later.
     pub fn preset_default_split(channels: u32, sample_rate: u32) -> Self {
-        Self::preset_default(channels, sample_rate)
+        let mut s = Self::preset_default(channels, sample_rate);
+        s.split = true;
+        s
     }
 
     /// 100 ms blocks every 25 ms.
@@ -149,7 +172,7 @@ impl Stretch {
 
     /// Output frames between producing a block and hearing its centre.
     pub fn output_latency(&self) -> usize {
-        self.block / 2
+        self.block / 2 + if self.split { self.hop } else { 0 }
     }
 
     pub fn reset(&mut self) {
@@ -164,6 +187,10 @@ impl Stretch {
         self.taken = self.hop;
         self.last_end = None;
         self.fresh = true;
+        self.job = None;
+        for st in &mut self.state {
+            st.pending.fill(0.0);
+        }
     }
 
     /// A frequency factor: 2 is an octave up.
@@ -209,17 +236,34 @@ impl Stretch {
         for i in 0..n_out {
             if self.taken == self.hop {
                 let end = start + i * n_in / n_out;
+                let mut primed = false;
                 if self.fresh {
                     // Fill the overlap from the blocks before, so the
                     // output starts at full level.
                     let first = self.base + self.block + self.hop;
-                    for k in (1..self.block / self.hop).rev() {
+                    let back = self.block / self.hop - usize::from(!self.split);
+                    for k in (1..=back).rev() {
                         if let Some(e) = end.checked_sub(k * self.hop).filter(|&e| e >= first) {
                             self.next_block(e);
+                            primed = true;
                         }
                     }
                 }
-                self.next_block(end);
+                if !self.split {
+                    self.next_block(end);
+                } else {
+                    if !primed {
+                        self.finish_job();
+                        self.commit();
+                    }
+                    self.begin(end);
+                }
+            } else if let Some(job) = &self.job {
+                // Keep the block in hand on pace to finish with the interval.
+                let due = self.taken * 2 * self.channels / self.hop;
+                if job.step < due {
+                    self.step();
+                }
             }
             for c in 0..ch {
                 output[i * ch + c] = self.acc[c][self.taken];
@@ -236,13 +280,15 @@ impl Stretch {
         }
         let capacity = self.history[0].len();
         if self.filled + n > capacity {
-            let keep = self.block + self.hop;
-            let drop = self.filled - keep;
+            let mut drop = self.filled - (self.block + self.hop);
+            if let Some(job) = &self.job {
+                drop = drop.min(job.end - self.hop - self.block - self.base);
+            }
             for h in &mut self.history {
                 h.copy_within(drop..self.filled, 0);
             }
             self.base += drop;
-            self.filled = keep;
+            self.filled -= drop;
         }
         for (c, h) in self.history.iter_mut().enumerate() {
             let dst = &mut h[self.filled..self.filled + n];
@@ -255,127 +301,179 @@ impl Stretch {
 
     /// Analyses the block of input ending at absolute frame `end` and adds
     /// its resynthesis to the output.
+    /// Runs a whole block now and adds it to the output.
     fn next_block(&mut self, end: usize) {
-        let (block, hop, bins) = (self.block, self.hop, self.bins);
-        for a in &mut self.acc {
+        self.begin(end);
+        self.finish_job();
+        self.commit();
+    }
+
+    fn begin(&mut self, end: usize) {
+        let reuse = self.last_end == Some(end.wrapping_sub(self.hop));
+        self.job = Some(Job {
+            end,
+            reuse,
+            step: 0,
+        });
+    }
+
+    fn finish_job(&mut self) {
+        while self.job.is_some() {
+            self.step();
+        }
+    }
+
+    /// One step of the block in hand: analysing a channel, or
+    /// resynthesising it.
+    fn step(&mut self) {
+        let Some(job) = &mut self.job else { return };
+        let (end, reuse, s) = (job.end, job.reuse, job.step);
+        job.step += 1;
+        let c = s / 2;
+        if s % 2 == 0 {
+            self.analyse_channel(c, end, reuse);
+        } else {
+            self.synth_channel(c);
+        }
+        if s + 1 == 2 * self.channels {
+            self.job = None;
+            self.last_end = Some(end);
+            self.fresh = false;
+        }
+    }
+
+    /// Moves the output on a block and adds the finished block in.
+    fn commit(&mut self) {
+        let (block, hop) = (self.block, self.hop);
+        for (a, st) in self.acc.iter_mut().zip(&mut self.state) {
             a.copy_within(hop.., 0);
             a[block - hop..].fill(0.0);
+            for (a, x) in a.iter_mut().zip(&st.pending) {
+                *a += x;
+            }
+            st.pending.fill(0.0);
         }
         self.taken = 0;
-        let reuse = self.last_end == Some(end.wrapping_sub(hop));
+    }
+
+    fn analyse_channel(&mut self, c: usize, end: usize, reuse: bool) {
+        let (block, hop, bins) = (self.block, self.hop, self.bins);
         let t = self.transpose;
         let bin_step = TAU / block as f32;
-        for c in 0..self.channels {
-            if !reuse {
-                self.analyse(c, end - hop);
-                for (p, x) in self.state[c].phase.iter_mut().zip(&self.spectrum) {
-                    *p = x.arg();
-                }
-            }
-            self.analyse(c, end);
-            let st = &mut self.state[c];
-            self.analysed.copy_from_slice(&self.spectrum);
-            for k in 0..bins {
-                let x = self.spectrum[k];
-                let phase = x.arg();
-                self.mag[k] = x.norm();
-                let expected = k as f32 * bin_step * hop as f32;
-                let dev = wrap(phase - st.phase[k] - expected);
-                self.freq[k] = k as f32 * bin_step + dev / hop as f32;
-                st.phase[k] = phase;
-            }
-
-            // A sharp rise in level is an onset: phases restart from the
-            // analysis there, keeping the attack where it was.
-            let (mut rise, mut total) = (0.0, 1e-9);
-            for (m, prev) in self.mag.iter().zip(&mut st.mag) {
-                rise += (m - *prev).max(0.0);
-                total += m;
-                *prev = *m;
-            }
-            let onset = self.fresh || rise > ONSET_RISE * total;
-
-            self.peaks.clear();
-            let m = &self.mag;
-            for k in 2..bins.saturating_sub(2) {
-                if m[k] > m[k - 1] && m[k] >= m[k + 1] && m[k] > m[k - 2] && m[k] >= m[k + 2] {
-                    self.peaks.push(k);
-                }
-            }
-
-            // Each peak moves to its new frequency with the bins around it
-            // (out to halfway to the next peak) moving rigidly alongside,
-            // their phases kept relative to the peak's.
-            self.src_phase.copy_from_slice(&st.out_phase);
-            self.out_mag.fill(0.0);
-            let out = &mut st.out_phase;
-            for (n, &p) in self.peaks.iter().enumerate() {
-                let q = (p as f32 * t).round() as usize;
-                if q >= bins {
-                    break;
-                }
-                let lo = if n == 0 {
-                    0
-                } else {
-                    (self.peaks[n - 1] + p).div_ceil(2)
-                };
-                let hi = self
-                    .peaks
-                    .get(n + 1)
-                    .map_or(bins, |&next| (p + next).div_ceil(2));
-                let peak_phase = if onset {
-                    st.phase[p]
-                } else {
-                    wrap(self.src_phase[q] + self.freq[p] * t * hop as f32)
-                };
-                for k in lo..hi {
-                    let Some(j) = (k + q).checked_sub(p).filter(|&j| j < bins) else {
-                        continue;
-                    };
-                    if self.mag[k] > self.out_mag[j] {
-                        self.out_mag[j] = self.mag[k];
-                        out[j] = peak_phase + st.phase[k] - st.phase[p];
-                    }
-                }
-            }
-
-            if onset && t != 1.0 {
-                // At an onset the frame is resampled whole about its centre
-                // instead, which keeps the attack tight rather than spread
-                // over the block. Odd bins carry the half-block shift.
-                let x = &self.analysed;
-                let centred = |k: usize| if k.is_multiple_of(2) { x[k] } else { -x[k] };
-                for j in 0..bins {
-                    let src = j as f32 / t;
-                    let i = src as usize;
-                    let y = if i + 1 < bins {
-                        let f = src - i as f32;
-                        centred(i) * (1.0 - f) + centred(i + 1) * f
-                    } else {
-                        Complex32::default()
-                    };
-                    let y = if j.is_multiple_of(2) { y } else { -y };
-                    self.spectrum[j] = y;
-                    out[j] = y.arg();
-                }
-            } else {
-                for j in 0..bins {
-                    self.spectrum[j] = Complex32::from_polar(self.out_mag[j], out[j]);
-                }
-            }
-            self.spectrum[0].im = 0.0;
-            self.spectrum[bins - 1].im = 0.0;
-            let _ = self.inv.process_with_scratch(
-                &mut self.spectrum,
-                &mut self.frame,
-                &mut self.inv_scratch,
-            );
-            for ((a, x), w) in self.acc[c].iter_mut().zip(&self.frame).zip(&self.synth) {
-                *a += x * w;
+        if !reuse {
+            self.analyse(c, end - hop);
+            for (p, x) in self.state[c].phase.iter_mut().zip(&self.spectrum) {
+                *p = x.arg();
             }
         }
-        self.last_end = Some(end);
-        self.fresh = false;
+        self.analyse(c, end);
+        let st = &mut self.state[c];
+        self.analysed.copy_from_slice(&self.spectrum);
+        for k in 0..bins {
+            let x = self.spectrum[k];
+            let phase = x.arg();
+            self.mag[k] = x.norm();
+            let expected = k as f32 * bin_step * hop as f32;
+            let dev = wrap(phase - st.phase[k] - expected);
+            self.freq[k] = k as f32 * bin_step + dev / hop as f32;
+            st.phase[k] = phase;
+        }
+
+        // A sharp rise in level is an onset: phases restart from the
+        // analysis there, keeping the attack where it was.
+        let (mut rise, mut total) = (0.0, 1e-9);
+        for (m, prev) in self.mag.iter().zip(&mut st.mag) {
+            rise += (m - *prev).max(0.0);
+            total += m;
+            *prev = *m;
+        }
+        let onset = self.fresh || rise > ONSET_RISE * total;
+
+        self.peaks.clear();
+        let m = &self.mag;
+        for k in 2..bins.saturating_sub(2) {
+            if m[k] > m[k - 1] && m[k] >= m[k + 1] && m[k] > m[k - 2] && m[k] >= m[k + 2] {
+                self.peaks.push(k);
+            }
+        }
+
+        // Each peak moves to its new frequency with the bins around it
+        // (out to halfway to the next peak) moving rigidly alongside,
+        // their phases kept relative to the peak's.
+        self.src_phase.copy_from_slice(&st.out_phase);
+        self.out_mag.fill(0.0);
+        let out = &mut st.out_phase;
+        for (n, &p) in self.peaks.iter().enumerate() {
+            let q = (p as f32 * t).round() as usize;
+            if q >= bins {
+                break;
+            }
+            let lo = if n == 0 {
+                0
+            } else {
+                (self.peaks[n - 1] + p).div_ceil(2)
+            };
+            let hi = self
+                .peaks
+                .get(n + 1)
+                .map_or(bins, |&next| (p + next).div_ceil(2));
+            let peak_phase = if onset {
+                st.phase[p]
+            } else {
+                wrap(self.src_phase[q] + self.freq[p] * t * hop as f32)
+            };
+            for k in lo..hi {
+                let Some(j) = (k + q).checked_sub(p).filter(|&j| j < bins) else {
+                    continue;
+                };
+                if self.mag[k] > self.out_mag[j] {
+                    self.out_mag[j] = self.mag[k];
+                    out[j] = peak_phase + st.phase[k] - st.phase[p];
+                }
+            }
+        }
+
+        if onset && t != 1.0 {
+            // At an onset the frame is resampled whole about its centre
+            // instead, which keeps the attack tight rather than spread
+            // over the block. Odd bins carry the half-block shift.
+            let x = &self.analysed;
+            let centred = |k: usize| if k.is_multiple_of(2) { x[k] } else { -x[k] };
+            for j in 0..bins {
+                let src = j as f32 / t;
+                let i = src as usize;
+                let y = if i + 1 < bins {
+                    let f = src - i as f32;
+                    centred(i) * (1.0 - f) + centred(i + 1) * f
+                } else {
+                    Complex32::default()
+                };
+                let y = if j.is_multiple_of(2) { y } else { -y };
+                self.spectrum[j] = y;
+                out[j] = y.arg();
+            }
+        } else {
+            for j in 0..bins {
+                self.spectrum[j] = Complex32::from_polar(self.out_mag[j], out[j]);
+            }
+        }
+        self.state[c].spec.copy_from_slice(&self.spectrum);
+    }
+
+    fn synth_channel(&mut self, c: usize) {
+        let bins = self.bins;
+        let st = &mut self.state[c];
+        self.spectrum.copy_from_slice(&st.spec);
+        self.spectrum[0].im = 0.0;
+        self.spectrum[bins - 1].im = 0.0;
+        let _ = self.inv.process_with_scratch(
+            &mut self.spectrum,
+            &mut self.frame,
+            &mut self.inv_scratch,
+        );
+        for ((p, x), w) in st.pending.iter_mut().zip(&self.frame).zip(&self.synth) {
+            *p = x * w;
+        }
     }
 
     /// The windowed spectrum of the block of channel `c` ending at `end`.
@@ -520,5 +618,36 @@ mod tests {
         s.process(&[], &mut out);
         s.process(&[], &mut out);
         assert!((pitch(&out) / 440.0 - 1.0).abs() < 0.02, "{}", pitch(&out));
+    }
+
+    /// Split work plays the same audio, an interval later.
+    #[test]
+    fn split_matches_whole_blocks_an_interval_later() {
+        let input = sine(440.0, RATE as usize * 2);
+        let mut a = Stretch::preset_default(2, RATE);
+        let mut b = Stretch::preset_default_split(2, RATE);
+        a.set_transpose_factor(1.2, None);
+        b.set_transpose_factor(1.2, None);
+        let (x, y) = (run(&mut a, &input, 1.0), run(&mut b, &input, 1.0));
+        let d = b.output_latency() - a.output_latency();
+        let r = RATE as usize;
+        let err = rms(&x[r..2 * r]
+            .iter()
+            .zip(&y[r + 2 * d..])
+            .map(|(p, q)| p - q)
+            .collect::<Vec<_>>());
+        assert!(err < 1e-4, "{err}");
+    }
+
+    #[test]
+    fn split_seek_starts_without_a_fade_in() {
+        let mut s = Stretch::preset_default_split(2, RATE);
+        let input = sine(440.0, RATE as usize);
+        let seed = 3 * s.input_latency();
+        s.seek(&input[..seed * 2], 1.0);
+        let mut out = vec![0.0; 2 * 4096];
+        s.process(&input[seed * 2..(seed + 4096) * 2], &mut out);
+        let level = rms(&out[1024..]);
+        assert!((level / 0.3536 - 1.0).abs() < 0.15, "{level}");
     }
 }
