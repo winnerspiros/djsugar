@@ -83,6 +83,7 @@ pub fn realm() -> Rt {
     let sub = || Obj::new(Some(error_proto.clone()), Kind::Plain);
     let rt = Rt {
         depth: Cell::new(0),
+        fn_call: Default::default(),
         global: p(Kind::Plain),
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),
         string_proto: p(Kind::Plain),
@@ -335,6 +336,9 @@ pub fn realm() -> Rt {
     method(&rt, &fp, "call", |rt, this, a| {
         rt.call(this, arg(a, 0), a.get(1..).unwrap_or(&[]))
     });
+    if let Some(Prop::Method(Value::Obj(c))) = fp.props.borrow().get("call") {
+        let _ = rt.fn_call.set(c.clone());
+    }
     method(&rt, &fp, "apply", |rt, this, a| {
         let args = match arg(a, 1) {
             v if v.is_nullish() => Vec::new(),

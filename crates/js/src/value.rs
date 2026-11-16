@@ -388,6 +388,8 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    /// `Function.prototype.call`, recognised at call sites.
+    pub fn_call: std::cell::OnceCell<Rc<Obj>>,
     /// Script call depth, bounded to keep the native stack safe.
     pub depth: Cell<u32>,
     pub generator_proto: Rc<Obj>,

@@ -72,6 +72,8 @@ pub struct FnCode {
     simple_params: Vec<usize>,
     bind: Option<Binder>,
     body: Vec<St>,
+    /// The whole body when it is one `return expr`.
+    quick: Option<Ex>,
     arrow: bool,
     generator: bool,
     strict: bool,
@@ -439,7 +441,10 @@ impl<'s> Compiler<'s> {
                 self.declare(v);
             }
         }
-        let body = self.block_body(&f.body)?;
+        let (body, quick) = match f.body.as_slice() {
+            [Stmt::Return(Some(e))] => (Vec::new(), Some(self.expr(e)?)),
+            b => (self.block_body(b)?, None),
+        };
         let s = self.scopes.pop().unwrap();
         Ok(Rc::new(FnCode {
             length: f
@@ -456,6 +461,7 @@ impl<'s> Compiler<'s> {
             },
             bind,
             body,
+            quick,
             arrow: f.arrow,
             generator: f.generator,
             strict: f.strict,
@@ -1417,6 +1423,7 @@ impl<'s> Compiler<'s> {
                 simple_params: Vec::new(),
                 bind: None,
                 body: vec![body],
+                quick: None,
                 arrow: false,
                 generator: false,
                 strict: true,
@@ -2403,33 +2410,61 @@ fn call_site(
     name: &str,
 ) -> R<Value> {
     if let (Some(parts), Value::Obj(fo)) = (direct, func) {
-        if let Kind::Closure(c) = &fo.kind {
-            let code = &c.code;
-            if code.bind.is_none() && code.class == ClassKind::None && !code.generator {
-                let mut env = take_env(c);
-                for (i, e) in parts.iter().enumerate() {
-                    let v = e(rt, f)?;
-                    if let Some(&s) = code.simple_params.get(i) {
-                        Rc::get_mut(&mut env)
-                            .expect("fresh environment")
-                            .slots
-                            .get_mut()[s] = v;
-                    }
-                }
-                let depth = rt.depth.get() + 1;
-                if depth > MAX_DEPTH {
-                    let p = rt.range_error_proto.clone();
-                    return rt.throw(&p, "too much recursion");
-                }
-                rt.depth.set(depth);
-                let r = enter(rt, fo, c, env, this, &[], Value::Undefined);
-                rt.depth.set(depth - 1);
-                return r;
+        if let Some(r) = direct_call(rt, f, fo, this.clone(), parts) {
+            return r;
+        }
+        if let (Some(fc), Value::Obj(target), Some((t, rest))) =
+            (rt.fn_call.get(), &this, parts.split_first())
+        {
+            if Rc::ptr_eq(fo, fc) && direct_ok(target) {
+                let t = t(rt, f)?;
+                return direct_call(rt, f, target, t, rest).expect("checked by direct_ok");
             }
         }
     }
     let a = args(rt, f)?;
     call_named(rt, func, this, &a, name)
+}
+
+#[inline]
+fn direct_ok(fo: &Obj) -> bool {
+    matches!(&fo.kind, Kind::Closure(c)
+        if c.code.bind.is_none() && c.code.class == ClassKind::None && !c.code.generator)
+}
+
+/// Calls a plain script function with arguments evaluated into its slots;
+/// None when `fo` needs the general path.
+#[inline]
+fn direct_call(rt: &Rt, f: &Frame, fo: &Rc<Obj>, this: Value, parts: &[Ex]) -> Option<R<Value>> {
+    if !direct_ok(fo) {
+        return None;
+    }
+    let Kind::Closure(c) = &fo.kind else {
+        return None;
+    };
+    let code = &c.code;
+    let mut env = take_env(c);
+    for (i, e) in parts.iter().enumerate() {
+        let v = match e(rt, f) {
+            Ok(v) => v,
+            Err(x) => return Some(Err(x)),
+        };
+        if let Some(&s) = code.simple_params.get(i) {
+            Rc::get_mut(&mut env)
+                .expect("fresh environment")
+                .slots
+                .get_mut()[s] = v;
+        }
+    }
+    let depth = rt.depth.get() + 1;
+    if depth > MAX_DEPTH {
+        let p = rt.range_error_proto.clone();
+        return Some(rt.throw(&p, "too much recursion"));
+    }
+    rt.depth.set(depth);
+    let r = enter(rt, fo, c, env, this, &[], Value::Undefined);
+    rt.depth.set(depth - 1);
+    Some(r)
 }
 
 #[inline]
@@ -2496,12 +2531,12 @@ fn enter(
     }
     if code.generator {
         YIELDS.with(|y| y.borrow_mut().push(Vec::new()));
-        let r = run_body(&code.body, rt, &frame);
+        let r = run_code(code, rt, &frame);
         let items = YIELDS.with(|y| y.borrow_mut().pop().unwrap());
         r?;
         return Ok(rt.generator(items));
     }
-    let r = run_body(&code.body, rt, &frame);
+    let r = run_code(code, rt, &frame);
     recycle(frame.env);
     r
 }
@@ -2532,6 +2567,14 @@ fn recycle(mut env: Rc<Env>) {
             p.push(env);
         }
     });
+}
+
+#[inline]
+fn run_code(code: &FnCode, rt: &Rt, frame: &Frame) -> R<Value> {
+    match &code.quick {
+        Some(q) => q(rt, frame),
+        None => run_body(&code.body, rt, frame),
+    }
 }
 
 fn run_body(body: &[St], rt: &Rt, frame: &Frame) -> R<Value> {
