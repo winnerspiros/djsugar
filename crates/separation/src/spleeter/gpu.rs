@@ -9,33 +9,33 @@ use safetensors::SafeTensors;
 
 use super::{tensor, F, STEMS, T};
 
-struct Layer<B: Backend> {
-    weight: Tensor<B, 4>,
-    bias: Tensor<B, 1>,
+struct Layer {
+    weight: Tensor<4>,
+    bias: Tensor<1>,
     /// Batch norm folded to `x * scale + shift`, per channel.
-    scale: Tensor<B, 4>,
-    shift: Tensor<B, 4>,
+    scale: Tensor<4>,
+    shift: Tensor<4>,
 }
 
-struct UNet<B: Backend> {
-    enc: Vec<Layer<B>>,
-    dec: Vec<Layer<B>>,
-    out_weight: Tensor<B, 4>,
-    out_bias: Tensor<B, 1>,
+struct UNet {
+    enc: Vec<Layer>,
+    dec: Vec<Layer>,
+    out_weight: Tensor<4>,
+    out_bias: Tensor<1>,
 }
 
-fn elu<B: Backend>(x: Tensor<B, 4>) -> Tensor<B, 4> {
+fn elu(x: Tensor<4>) -> Tensor<4> {
     x.clone().clamp_min(0.0) + x.clamp_max(0.0).exp() - 1.0
 }
 
-impl<B: Backend> Layer<B> {
-    fn norm(&self, x: Tensor<B, 4>) -> Tensor<B, 4> {
+impl Layer {
+    fn norm(&self, x: Tensor<4>) -> Tensor<4> {
         x * self.scale.clone() + self.shift.clone()
     }
 
     /// 5×5 convolution, stride 2. TensorFlow's "same" padding on an even size
     /// pads 1 before and 2 after.
-    fn down(&self, x: Tensor<B, 4>) -> Tensor<B, 4> {
+    fn down(&self, x: Tensor<4>) -> Tensor<4> {
         let x = x.pad((1, 2, 1, 2), PadMode::Constant(0.0));
         conv2d(
             x,
@@ -47,7 +47,7 @@ impl<B: Backend> Layer<B> {
 
     /// 5×5 transposed convolution, stride 2, doubling the size: the full
     /// output is 2n + 3, of which "same" keeps 2n starting at 1.
-    fn up(&self, x: Tensor<B, 4>) -> Tensor<B, 4> {
+    fn up(&self, x: Tensor<4>) -> Tensor<4> {
         let [b, _, h, w] = x.dims();
         let y = conv_transpose2d(
             x,
@@ -60,9 +60,9 @@ impl<B: Backend> Layer<B> {
     }
 }
 
-impl<B: Backend> UNet<B> {
+impl UNet {
     /// The stem's estimated magnitudes for `x`, [batch, 2, T, F].
-    fn forward(&self, x: Tensor<B, 4>) -> Tensor<B, 4> {
+    fn forward(&self, x: Tensor<4>) -> Tensor<4> {
         let mut convs = Vec::with_capacity(6);
         let mut h = x.clone();
         for layer in &self.enc {
@@ -90,34 +90,34 @@ impl<B: Backend> UNet<B> {
     }
 }
 
-pub struct Net<B: Backend> {
-    nets: Vec<UNet<B>>,
-    device: B::Device,
+pub struct Net {
+    nets: Vec<UNet>,
+    device: Device,
 }
 
-impl<B: Backend> Net<B> {
+impl Net {
     /// Loads the weights file made by `scripts/models/convert_spleeter.py`.
-    pub fn load(bytes: &[u8], device: &B::Device) -> Result<Self, String> {
+    pub fn load(bytes: &[u8], device: &Device) -> Result<Self, String> {
         let st = SafeTensors::deserialize(bytes).map_err(|e| e.to_string())?;
-        let t4 = |name: &str| -> Result<Tensor<B, 4>, String> {
+        let t4 = |name: &str| -> Result<Tensor<4>, String> {
             let (d, s) = tensor(&st, name)?;
             Ok(Tensor::from_data(
                 TensorData::new(d, [s[0], s[1], s[2], s[3]]),
                 device,
             ))
         };
-        let t1 = |name: &str| -> Result<Tensor<B, 1>, String> {
+        let t1 = |name: &str| -> Result<Tensor<1>, String> {
             let (d, s) = tensor(&st, name)?;
             Ok(Tensor::from_data(TensorData::new(d, [s[0]]), device))
         };
-        let channel = |name: &str| -> Result<Tensor<B, 4>, String> {
+        let channel = |name: &str| -> Result<Tensor<4>, String> {
             let (d, s) = tensor(&st, name)?;
             Ok(Tensor::from_data(
                 TensorData::new(d, [1, s[0], 1, 1]),
                 device,
             ))
         };
-        let layer = |p: &str| -> Result<Layer<B>, String> {
+        let layer = |p: &str| -> Result<Layer, String> {
             Ok(Layer {
                 weight: t4(&format!("{p}.weight"))?,
                 bias: t1(&format!("{p}.bias"))?,
@@ -147,13 +147,13 @@ impl<B: Backend> Net<B> {
     }
 }
 
-impl<B: Backend> super::Net for Net<B> {
+impl super::Net for Net {
     fn estimate(&self, magnitudes: Vec<f32>) -> Vec<f32> {
-        let x = Tensor::<B, 4>::from_data(TensorData::new(magnitudes, [1, 2, T, F]), &self.device);
-        let estimates: Vec<Tensor<B, 4>> = self.nets.iter().map(|n| n.forward(x.clone())).collect();
+        let x = Tensor::<4>::from_data(TensorData::new(magnitudes, [1, 2, T, F]), &self.device);
+        let estimates: Vec<Tensor<4>> = self.nets.iter().map(|n| n.forward(x.clone())).collect();
         Tensor::cat(estimates, 0)
             .into_data()
-            .into_vec::<f32>()
+            .try_into_vec::<f32>()
             .expect("float estimates")
     }
 }

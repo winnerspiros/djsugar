@@ -1,7 +1,7 @@
+use burn::tensor::Device;
 use burn::{
     module::Module,
     nn::{Embedding, EmbeddingConfig},
-    prelude::Backend,
     tensor::Int,
     Tensor,
 };
@@ -38,28 +38,28 @@ impl HyperParameters {
 }
 
 #[derive(Module, Debug)]
-pub struct HTDemucs<B: Backend> {
+pub struct HTDemucs {
     // Encoders (4 layers each)
-    pub(crate) encoders: Vec<HEncLayer<B>>,
-    pub(crate) tencoders: Vec<TEncLayer<B>>,
+    pub(crate) encoders: Vec<HEncLayer>,
+    pub(crate) tencoders: Vec<TEncLayer>,
 
     // Bottleneck
-    pub(crate) crosstransformer: CrossDomainTransformer<B>,
+    pub(crate) crosstransformer: CrossDomainTransformer,
 
     // Decoders (4 layers each, reverse order)
-    pub(crate) decoders: Vec<HDecLayer<B>>,
-    pub(crate) tdecoders: Vec<TDecLayer<B>>,
+    pub(crate) decoders: Vec<HDecLayer>,
+    pub(crate) tdecoders: Vec<TDecLayer>,
 
     // Learned freq embedding (applied after encoder[0])
-    pub(crate) freq_emb: Embedding<B>,
+    pub(crate) freq_emb: Embedding,
 
     // Config (not learned)
     n_sources: usize,      // 4 or 6
     audio_channels: usize, // 2
 }
 
-impl<B: Backend> HTDemucs<B> {
-    pub(crate) fn init(hp: &HyperParameters, device: &B::Device) -> Self {
+impl HTDemucs {
+    pub(crate) fn init(hp: &HyperParameters, device: &Device) -> Self {
         let chin_freq = AUDIO_CHANNELS * 2; // 4 (CaC)
         let chin_time = AUDIO_CHANNELS; // 2 (stereo)
 
@@ -132,18 +132,18 @@ impl<B: Backend> HTDemucs<B> {
 
     pub fn forward(
         &self,
-        freq: Tensor<B, 4>,
-        time: Tensor<B, 3>,
-    ) -> crate::Result<(Tensor<B, 4>, Tensor<B, 3>)> {
+        freq: Tensor<4>,
+        time: Tensor<3>,
+    ) -> crate::Result<(Tensor<4>, Tensor<3>)> {
         self.forward_with_listener(freq, time, &mut NoOpListener)
     }
 
     pub fn forward_with_listener(
         &self,
-        freq: Tensor<B, 4>, // [1, 4, 2048, T] — CaC from STFT
-        time: Tensor<B, 3>, // [1, 2, samples] — raw stereo waveform
+        freq: Tensor<4>, // [1, 4, 2048, T] — CaC from STFT
+        time: Tensor<3>, // [1, 2, samples] — raw stereo waveform
         listener: &mut impl ForwardListener,
-    ) -> crate::Result<(Tensor<B, 4>, Tensor<B, 3>)> {
+    ) -> crate::Result<(Tensor<4>, Tensor<3>)> {
         let device = freq.device();
         let depth = self.encoders.len();
 
@@ -159,7 +159,7 @@ impl<B: Backend> HTDemucs<B> {
         });
 
         // 2. Encode freq — layer 0 first, then apply freq_emb, then save skip
-        let mut freq_skips: Vec<Tensor<B, 4>> = Vec::new();
+        let mut freq_skips: Vec<Tensor<4>> = Vec::new();
 
         freq = self.encoders[0].forward(freq);
 
@@ -173,7 +173,7 @@ impl<B: Backend> HTDemucs<B> {
         // Apply freq_emb AFTER encoder[0], BEFORE saving skip
         // Python: x = encode(x); x = x + emb; saved.append(x)
         let [_, _, fr, _] = freq.dims();
-        let frs = Tensor::<B, 1, Int>::arange(0..fr as i64, &device).unsqueeze_dim::<2>(0); // [1, Fr]
+        let frs = Tensor::<1, Int>::arange(0..fr as i64, &device).unsqueeze_dim::<2>(0); // [1, Fr]
         let emb = self.freq_emb.forward(frs); // [1, Fr, chout]
         let emb = emb
             .permute([0, 2, 1]) // [1, chout, Fr]
@@ -199,7 +199,7 @@ impl<B: Backend> HTDemucs<B> {
         }
 
         // 3. Encode time
-        let mut time_skips: Vec<Tensor<B, 3>> = Vec::new();
+        let mut time_skips: Vec<Tensor<3>> = Vec::new();
         let mut time_lengths: Vec<usize> = Vec::new(); // input lengths for decoder trimming
         for (i, enc) in self.tencoders.iter().enumerate() {
             time_lengths.push(time.dims()[2]); // save encoder input size
@@ -278,7 +278,7 @@ impl<B: Backend> HTDemucs<B> {
         Ok((freq, time))
     }
 
-    fn normalize_freq(freq: Tensor<B, 4>) -> (Tensor<B, 4>, Tensor<B, 4>, Tensor<B, 4>) {
+    fn normalize_freq(freq: Tensor<4>) -> (Tensor<4>, Tensor<4>, Tensor<4>) {
         let [b, c, f, t] = freq.dims();
         let flat = freq.clone().reshape([b, c * f * t]);
         let (freq_var, freq_mean) = flat.var_mean(1);
@@ -292,7 +292,7 @@ impl<B: Backend> HTDemucs<B> {
         (freq, freq_mean, freq_std)
     }
 
-    fn normalize_time(time: Tensor<B, 3>) -> (Tensor<B, 3>, Tensor<B, 3>, Tensor<B, 3>) {
+    fn normalize_time(time: Tensor<3>) -> (Tensor<3>, Tensor<3>, Tensor<3>) {
         let [b, ch, s] = time.dims();
         let flat = time.clone().reshape([b, ch * s]);
         let (time_var, time_mean) = flat.var_mean(1);
@@ -309,7 +309,6 @@ impl<B: Backend> HTDemucs<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
     use burn::module::Param;
     use burn::nn::attention::MultiHeadAttentionConfig;
     use burn::nn::conv::{
@@ -324,23 +323,21 @@ mod tests {
     use crate::model::conv::LayerScale;
     use crate::model::transformer::CrossDomainTransformer;
 
-    type B = NdArray<f32>;
-
     // --- Helpers (mirror conv.rs test helpers) ---
 
-    fn make_layer_scale(ch: usize) -> LayerScale<B> {
+    fn make_layer_scale(ch: usize) -> LayerScale {
         let device = Default::default();
         LayerScale {
-            scale: Param::from_tensor(Tensor::<B, 1>::ones([ch], &device)),
+            scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)),
         }
     }
 
-    fn make_dconv_layer(ch: usize, dilation: usize) -> crate::model::conv::DConvLayer<B> {
+    fn make_dconv_layer(ch: usize, dilation: usize) -> crate::model::conv::DConvLayer {
         let device = Default::default();
         let compress = ch / 4;
         let conv1 = Conv1dConfig::new(ch, compress, 3)
             .with_dilation(dilation)
-            .with_padding(PaddingConfig1d::Explicit(dilation))
+            .with_padding(PaddingConfig1d::Explicit(dilation, dilation))
             .init(&device);
         let norm1 = GroupNormConfig::new(1, compress).init(&device);
         let conv2 = Conv1dConfig::new(compress, 2 * ch, 1).init(&device);
@@ -357,16 +354,16 @@ mod tests {
         }
     }
 
-    fn make_dconv(ch: usize, depth: usize) -> crate::model::conv::DConv<B> {
+    fn make_dconv(ch: usize, depth: usize) -> crate::model::conv::DConv {
         let layers = (0..depth).map(|j| make_dconv_layer(ch, 1 << j)).collect();
         crate::model::conv::DConv { layers }
     }
 
-    fn make_henc_layer(chin: usize, chout: usize) -> HEncLayer<B> {
+    fn make_henc_layer(chin: usize, chout: usize) -> HEncLayer {
         let device = Default::default();
         let conv = Conv2dConfig::new([chin, chout], [8, 1])
             .with_stride([4, 1])
-            .with_padding(PaddingConfig2d::Explicit(2, 0))
+            .with_padding(PaddingConfig2d::Explicit(2, 0, 2, 0))
             .init(&device);
         let dconv = make_dconv(chout, 2);
         let rewrite = Conv2dConfig::new([chout, 2 * chout], [1, 1]).init(&device);
@@ -379,11 +376,11 @@ mod tests {
         }
     }
 
-    fn make_tenc_layer(chin: usize, chout: usize) -> TEncLayer<B> {
+    fn make_tenc_layer(chin: usize, chout: usize) -> TEncLayer {
         let device = Default::default();
         let conv = Conv1dConfig::new(chin, chout, 8)
             .with_stride(4)
-            .with_padding(PaddingConfig1d::Explicit(2))
+            .with_padding(PaddingConfig1d::Explicit(2, 2))
             .init(&device);
         let dconv = make_dconv(chout, 2);
         let rewrite = Conv1dConfig::new(chout, 2 * chout, 1).init(&device);
@@ -396,10 +393,10 @@ mod tests {
         }
     }
 
-    fn make_hdec_layer(chin: usize, chout: usize, last: bool) -> HDecLayer<B> {
+    fn make_hdec_layer(chin: usize, chout: usize, last: bool) -> HDecLayer {
         let device = Default::default();
         let rewrite = Conv2dConfig::new([chin, 2 * chin], [3, 3])
-            .with_padding(PaddingConfig2d::Explicit(1, 1))
+            .with_padding(PaddingConfig2d::Explicit(1, 1, 1, 1))
             .init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
@@ -416,10 +413,10 @@ mod tests {
         }
     }
 
-    fn make_tdec_layer(chin: usize, chout: usize, last: bool) -> TDecLayer<B> {
+    fn make_tdec_layer(chin: usize, chout: usize, last: bool) -> TDecLayer {
         let device = Default::default();
         let rewrite = Conv1dConfig::new(chin, 2 * chin, 3)
-            .with_padding(PaddingConfig1d::Explicit(1))
+            .with_padding(PaddingConfig1d::Explicit(1, 1))
             .init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
@@ -436,7 +433,7 @@ mod tests {
         }
     }
 
-    fn make_self_attn_layer() -> crate::model::transformer::SelfAttentionLayer<B> {
+    fn make_self_attn_layer() -> crate::model::transformer::SelfAttentionLayer {
         let device = Default::default();
         let d = 512;
         let ffn = 2048;
@@ -452,7 +449,7 @@ mod tests {
         }
     }
 
-    fn make_cross_attn_layer() -> crate::model::transformer::CrossAttentionLayer<B> {
+    fn make_cross_attn_layer() -> crate::model::transformer::CrossAttentionLayer {
         let device = Default::default();
         let d = 512;
         let ffn = 2048;
@@ -469,7 +466,7 @@ mod tests {
         }
     }
 
-    fn make_transformer_layer(is_cross: bool) -> crate::model::transformer::TransformerLayer<B> {
+    fn make_transformer_layer(is_cross: bool) -> crate::model::transformer::TransformerLayer {
         if is_cross {
             crate::model::transformer::TransformerLayer::CrossAttn(make_cross_attn_layer())
         } else {
@@ -477,7 +474,7 @@ mod tests {
         }
     }
 
-    fn make_cross_domain_transformer() -> CrossDomainTransformer<B> {
+    fn make_cross_domain_transformer() -> CrossDomainTransformer {
         let device = Default::default();
         let ch = 384;
         let d = 512;
@@ -511,7 +508,7 @@ mod tests {
 
     /// Build a full HTDemucs with small dimensions for testing.
     /// n_sources: 4 or 6
-    fn make_htdemucs(n_sources: usize) -> HTDemucs<B> {
+    fn make_htdemucs(n_sources: usize) -> HTDemucs {
         let device = Default::default();
         let audio_channels = 2;
         let cac_channels = audio_channels * 2; // 4
@@ -567,15 +564,15 @@ mod tests {
 
     #[test]
     fn normalize_freq_zero_mean_unit_var() {
-        let x = Tensor::<B, 4>::random(
+        let x = Tensor::<4>::random(
             [1, 4, 16, 32],
             Distribution::Normal(5.0, 3.0),
             &Default::default(),
         );
-        let (normed, _mean, _std) = HTDemucs::<B>::normalize_freq(x);
+        let (normed, _mean, _std) = HTDemucs::normalize_freq(x);
         let [b, c, f, t] = normed.dims();
         let flat = normed.reshape([b * c * f * t]);
-        let data: Vec<f32> = flat.to_data().to_vec().unwrap();
+        let data: Vec<f32> = flat.to_data().try_to_vec().unwrap();
 
         let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
         let var: f32 = data.iter().map(|v| (v - mean).powi(2)).sum::<f32>() / data.len() as f32;
@@ -586,13 +583,13 @@ mod tests {
 
     #[test]
     fn normalize_time_zero_mean_unit_var() {
-        let x = Tensor::<B, 3>::random(
+        let x = Tensor::<3>::random(
             [1, 2, 1000],
             Distribution::Normal(-2.0, 4.0),
             &Default::default(),
         );
-        let (normed, _mean, _std) = HTDemucs::<B>::normalize_time(x);
-        let data: Vec<f32> = normed.reshape([2000]).to_data().to_vec().unwrap();
+        let (normed, _mean, _std) = HTDemucs::normalize_time(x);
+        let data: Vec<f32> = normed.reshape([2000]).to_data().try_to_vec().unwrap();
 
         let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
         let var: f32 = data.iter().map(|v| (v - mean).powi(2)).sum::<f32>() / data.len() as f32;
@@ -603,8 +600,8 @@ mod tests {
 
     #[test]
     fn normalize_freq_preserves_shape() {
-        let x = Tensor::<B, 4>::random([1, 4, 8, 16], Distribution::Default, &Default::default());
-        let (normed, mean, std) = HTDemucs::<B>::normalize_freq(x);
+        let x = Tensor::<4>::random([1, 4, 8, 16], Distribution::Default, &Default::default());
+        let (normed, mean, std) = HTDemucs::normalize_freq(x);
         assert_eq!(normed.dims(), [1, 4, 8, 16]);
         assert_eq!(mean.dims(), [1, 1, 1, 1]);
         assert_eq!(std.dims(), [1, 1, 1, 1]);
@@ -612,8 +609,8 @@ mod tests {
 
     #[test]
     fn normalize_time_preserves_shape() {
-        let x = Tensor::<B, 3>::random([1, 2, 500], Distribution::Default, &Default::default());
-        let (normed, mean, std) = HTDemucs::<B>::normalize_time(x);
+        let x = Tensor::<3>::random([1, 2, 500], Distribution::Default, &Default::default());
+        let (normed, mean, std) = HTDemucs::normalize_time(x);
         assert_eq!(normed.dims(), [1, 2, 500]);
         assert_eq!(mean.dims(), [1, 1, 1]);
         assert_eq!(std.dims(), [1, 1, 1]);
@@ -621,15 +618,15 @@ mod tests {
 
     #[test]
     fn normalize_denormalize_roundtrip_freq() {
-        let x = Tensor::<B, 4>::random(
+        let x = Tensor::<4>::random(
             [1, 4, 8, 16],
             Distribution::Normal(3.0, 2.0),
             &Default::default(),
         );
-        let (normed, mean, std) = HTDemucs::<B>::normalize_freq(x.clone());
+        let (normed, mean, std) = HTDemucs::normalize_freq(x.clone());
         // Invert: x_recovered = normed * (std + eps) + mean
         let recovered = normed * (std + 1e-5) + mean;
-        let diff: Vec<f32> = (recovered - x).abs().to_data().to_vec().unwrap();
+        let diff: Vec<f32> = (recovered - x).abs().to_data().try_to_vec().unwrap();
         assert!(
             diff.iter().all(|&v| v < 1e-3),
             "roundtrip error too large: max = {}",
@@ -639,14 +636,14 @@ mod tests {
 
     #[test]
     fn normalize_denormalize_roundtrip_time() {
-        let x = Tensor::<B, 3>::random(
+        let x = Tensor::<3>::random(
             [1, 2, 500],
             Distribution::Normal(-1.0, 5.0),
             &Default::default(),
         );
-        let (normed, mean, std) = HTDemucs::<B>::normalize_time(x.clone());
+        let (normed, mean, std) = HTDemucs::normalize_time(x.clone());
         let recovered = normed * (std + 1e-5) + mean;
-        let diff: Vec<f32> = (recovered - x).abs().to_data().to_vec().unwrap();
+        let diff: Vec<f32> = (recovered - x).abs().to_data().try_to_vec().unwrap();
         assert!(
             diff.iter().all(|&v| v < 1e-3),
             "roundtrip error too large: max = {}",
@@ -670,12 +667,12 @@ mod tests {
         // time samples: independent, also needs to survive 4x stride-4
         let time_samples = 1024;
 
-        let freq = Tensor::<B, 4>::random(
+        let freq = Tensor::<4>::random(
             [1, audio_channels * 2, freq_bins, freq_time],
             Distribution::Default,
             &Default::default(),
         );
-        let time = Tensor::<B, 3>::random(
+        let time = Tensor::<3>::random(
             [1, audio_channels, time_samples],
             Distribution::Default,
             &Default::default(),

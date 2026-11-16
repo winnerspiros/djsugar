@@ -17,7 +17,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 | 0: platforms | 15% (1.5/10) | P0 | 4-6 weeks | store accounts, signing keys |
 | P: per-platform, per-device, per-driver tuning | 0% (0/8) | P1 | 12-20 weeks, ongoing | device testing |
 | Q: code quality and performance | 0% (0/9) | P0 | ongoing | no |
-| R: pure-Rust dependencies | 12% (1.5/13) | P1 | 8-12 weeks | no |
+| R: pure-Rust dependencies | 15% (2/13) | P1 | 8-12 weeks | no |
 | C: controllers and DVS, every platform | 0% (0/8) | P1 | 10-16 weeks | hardware tests |
 | 1: DJ Sugar features | 0% (0/19) | P1 | 8-12 weeks | UI/feature review |
 | 2: Mixxx parity | 0% (0/6) | P1 | 6-10 weeks | no |
@@ -172,7 +172,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 | R.10 | renderdoc-sys | debug-only feature, off by default | TODO |
 | R.11 | alsa-sys (libasound), wayland-sys, other OS-layer C libs | audit: talk to kernel ALSA ioctls / PipeWire protocol directly; wayland-client pure-Rust backend (no libwayland); keep only true OS ABIs (CoreAudio, WASAPI, AAudio) | TODO |
 | R.12 | rusty_link (Ableton Link, C++) | `djsugar-link`: pure-Rust implementation of the Link session protocol (discovery, clock measurement, session join, timeline sharing) | DONE (needs a live test against Ableton Live/Traktor) |
-| R.13 | burn 0.20 (brings a second wgpu, v26, via cubecl) | port separation and demucs-core to burn 0.22 (backend-erased tensors, runtime device): one wgpu (30) shared with the UI, smaller build; verify stems numerically against the current output | TODO |
+| R.13 | burn 0.20 (a second wgpu, v26, via cubecl; ndarray CPU backend with zstd-sys) | DONE: burn 0.22 with backend-erased tensors and a runtime device; one wgpu (30) shared with the UI; pure-Rust flex CPU backend (no zstd-sys); demucs-core now a workspace member, its 58 tests run in CI. Left: compare stems against the previous build on a real mix | WIP |
 
 ## Part T: mapping translator
 

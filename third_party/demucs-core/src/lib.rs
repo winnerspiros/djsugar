@@ -1,3 +1,4 @@
+use burn::tensor::Device;
 use std::borrow::Cow;
 
 use crate::dsp::cac::{cac_data_to_complex, stft_to_cac};
@@ -8,7 +9,6 @@ use crate::model::{
     htdemucs::HTDemucs,
     metadata::{ModelInfo, StemId, HTDEMUCS, HTDEMUCS_6S, HTDEMUCS_FT},
 };
-use burn::prelude::Backend;
 use burn::tensor::{Tensor, TensorData};
 pub mod dsp;
 pub mod error;
@@ -19,14 +19,14 @@ pub mod weights;
 
 pub use error::{DemucsError, Result};
 
-pub struct Demucs<B: Backend> {
+pub struct Demucs {
     opts: ModelOptions,
-    models: Vec<HTDemucs<B>>,
-    device: B::Device,
+    models: Vec<HTDemucs>,
+    device: Device,
 }
 
-impl<B: Backend> Demucs<B> {
-    pub fn from_bytes(opts: ModelOptions, bytes: &[u8], device: B::Device) -> Result<Self> {
+impl Demucs {
+    pub fn from_bytes(opts: ModelOptions, bytes: &[u8], device: Device) -> Result<Self> {
         let info = opts.model_info();
         let models = weights::load::load_model(bytes, info, &device)?;
         Ok(Self {
@@ -201,11 +201,11 @@ impl<B: Backend> Demucs<B> {
         let n_frames = left_spec.len() / bins;
 
         // CaC: each [2, F, T], stack to [4, F, T], add batch → [1, 4, F, T]
-        let left_cac = stft_to_cac::<B>(&left_spec, N_FFT, device);
-        let right_cac = stft_to_cac::<B>(&right_spec, N_FFT, device);
+        let left_cac = stft_to_cac(&left_spec, N_FFT, device);
+        let right_cac = stft_to_cac(&right_spec, N_FFT, device);
         let freq = Tensor::cat(vec![left_cac, right_cac], 0).unsqueeze_dim::<4>(0);
 
-        let time = build_time_tensor::<B>(&left_padded, &right_padded, padded_len, device);
+        let time = build_time_tensor(&left_padded, &right_padded, padded_len, device);
 
         // Run model(s) and extract per-stem outputs
         let total_stems = info.stems.len();
@@ -213,7 +213,7 @@ impl<B: Backend> Demucs<B> {
             ModelOptions::FourStem | ModelOptions::SixStem => {
                 let (freq_out, time_out) =
                     self.models[0].forward_with_listener(freq, time, listener)?;
-                let stems = extract_all_stems::<B>(
+                let stems = extract_all_stems(
                     &freq_out, &time_out, info, n_frames, padded_len, n_samples, &mut stft,
                 )
                 .await?;
@@ -236,7 +236,7 @@ impl<B: Backend> Demucs<B> {
                         time.clone(),
                         listener,
                     )?;
-                    let stem = extract_single_stem::<B>(
+                    let stem = extract_single_stem(
                         &freq_out, &time_out, i, stem_id, n_frames, padded_len, n_samples,
                         &mut stft,
                     )
@@ -292,12 +292,7 @@ fn triangular_window(length: usize) -> Vec<f32> {
 }
 
 /// Build the time-domain input tensor [1, 2, padded_time_t] from stereo audio.
-fn build_time_tensor<B: Backend>(
-    left: &[f32],
-    right: &[f32],
-    padded_len: usize,
-    device: &B::Device,
-) -> Tensor<B, 3> {
+fn build_time_tensor(left: &[f32], right: &[f32], padded_len: usize, device: &Device) -> Tensor<3> {
     let mut data = vec![0.0f32; 2 * padded_len];
     data[..left.len()].copy_from_slice(left);
     data[padded_len..padded_len + right.len()].copy_from_slice(right);
@@ -308,9 +303,9 @@ fn build_time_tensor<B: Backend>(
 ///
 /// Reads the entire freq_out and time_out tensors in 2 GPU→CPU transfers (instead
 /// of 3 per stem = 12 total), then does all CaC→complex→iSTFT work on CPU.
-async fn extract_all_stems<B: Backend>(
-    freq_out: &Tensor<B, 4>, // [1, n_sources * 4, F, padded_T]
-    time_out: &Tensor<B, 3>, // [1, n_sources * 2, padded_T]
+async fn extract_all_stems(
+    freq_out: &Tensor<4>, // [1, n_sources * 4, F, padded_T]
+    time_out: &Tensor<3>, // [1, n_sources * 2, padded_T]
     info: &ModelInfo,
     n_frames: usize,
     padded_len: usize,
@@ -337,7 +332,7 @@ async fn extract_all_stems<B: Backend>(
         .to_data_async()
         .await
         .map_err(|e| DemucsError::Tensor(format!("freq bulk read failed: {e}")))?
-        .to_vec()
+        .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("freq extraction failed: {e}")))?;
 
     let time_data: Vec<f32> = time_trimmed
@@ -345,7 +340,7 @@ async fn extract_all_stems<B: Backend>(
         .to_data_async()
         .await
         .map_err(|e| DemucsError::Tensor(format!("time bulk read failed: {e}")))?
-        .to_vec()
+        .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("time extraction failed: {e}")))?;
 
     // CPU-only: extract each stem from the flat buffers
@@ -400,9 +395,9 @@ async fn extract_all_stems<B: Backend>(
 /// Reads the stem's freq and time data in 2 GPU→CPU transfers (instead of 3),
 /// then does CaC→complex→iSTFT on CPU.
 #[allow(clippy::too_many_arguments)]
-async fn extract_single_stem<B: Backend>(
-    freq_out: &Tensor<B, 4>, // [1, n_sources * 4, F, padded_T]
-    time_out: &Tensor<B, 3>, // [1, n_sources * 2, padded_T]
+async fn extract_single_stem(
+    freq_out: &Tensor<4>, // [1, n_sources * 4, F, padded_T]
+    time_out: &Tensor<3>, // [1, n_sources * 2, padded_T]
     stem_idx: usize,
     stem_id: StemId,
     n_frames: usize,
@@ -431,7 +426,7 @@ async fn extract_single_stem<B: Backend>(
         .to_data_async()
         .await
         .map_err(|e| DemucsError::Tensor(format!("freq read failed: {e}")))?
-        .to_vec()
+        .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("freq extraction failed: {e}")))?;
 
     let time_data: Vec<f32> = time_stem
@@ -439,7 +434,7 @@ async fn extract_single_stem<B: Backend>(
         .to_data_async()
         .await
         .map_err(|e| DemucsError::Tensor(format!("time read failed: {e}")))?
-        .to_vec()
+        .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("time extraction failed: {e}")))?;
 
     // CPU: CaC → complex → iSTFT → combine

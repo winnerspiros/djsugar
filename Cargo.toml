@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/broadcast", "crates/app", "crates/android"]
+members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "third_party/demucs-core", "crates/stem-bench", "crates/phrase-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/broadcast", "crates/app", "crates/android"]
 exclude = ["third_party"]
 
 [workspace.package]
@@ -25,6 +25,15 @@ opt-level = 2
 opt-level = 2
 
 [profile.dev.package.djsugar-separation]
+opt-level = 2
+
+[profile.dev.package.demucs-core]
+opt-level = 2
+
+[profile.dev.package.burn-flex]
+opt-level = 2
+
+[profile.dev.package.gemm-f32]
 opt-level = 2
 
 [profile.dev.package.matrixmultiply]
@@ -65,6 +74,9 @@ femtovg = { path = "third_party/femtovg" }
 slint = { path = "third_party/slint" }
 i-slint-backend-selector = { path = "third_party/i-slint-backend-selector" }
 i-slint-backend-winit = { path = "third_party/i-slint-backend-winit" }
+# fp16 enabled on its aarch64 half-precision asm, which newer LLVM rejects
+# without it.
+gemm-common = { path = "third_party/gemm-common" }
 # Adds pregenerated Android bindings (same layout as aarch64 Linux), so no
 # bindgen/libclang at build time.
 rquickjs-sys = { path = "third_party/rquickjs-sys" }

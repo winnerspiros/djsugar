@@ -2,7 +2,7 @@
 //! (third_party/demucs-core). Weights are the safetensors conversion
 //! `htdemucs.safetensors` (84 MB).
 
-use burn::prelude::Backend;
+use burn::tensor::Device;
 use demucs_core::{Demucs, ModelOptions};
 
 pub use demucs_core::model::metadata::{download_url, HTDEMUCS};
@@ -10,12 +10,12 @@ pub use demucs_core::model::metadata::{download_url, HTDEMUCS};
 /// The stems in the order [`HtDemucs::separate`] returns them.
 pub const STEMS: [&str; 4] = ["drums", "bass", "other", "vocals"];
 
-pub struct HtDemucs<B: Backend> {
-    model: Demucs<B>,
+pub struct HtDemucs {
+    model: Demucs,
 }
 
-impl<B: Backend> HtDemucs<B> {
-    pub fn load(bytes: &[u8], device: &B::Device) -> Result<Self, String> {
+impl HtDemucs {
+    pub fn load(bytes: &[u8], device: &Device) -> Result<Self, String> {
         Demucs::from_bytes(ModelOptions::FourStem, bytes, device.clone())
             .map(|model| HtDemucs { model })
             .map_err(|e| e.to_string())

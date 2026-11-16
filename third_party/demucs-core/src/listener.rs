@@ -212,9 +212,7 @@ impl ForwardListener for DebugListener {
 ///
 /// Uses tensor reduction ops (min/max/mean/var) so the heavy lifting stays
 /// on-device — only 4 scalar values are copied to the host.
-pub fn tensor_stats<B: burn::prelude::Backend, const D: usize>(
-    tensor: &burn::tensor::Tensor<B, D>,
-) -> TensorStats {
+pub fn tensor_stats<const D: usize>(tensor: &burn::tensor::Tensor<D>) -> TensorStats {
     let shape = tensor.dims().to_vec();
     let n: usize = shape.iter().product();
     let flat = tensor.clone().reshape([n]);
@@ -232,15 +230,15 @@ pub fn tensor_stats<B: burn::prelude::Backend, const D: usize>(
 }
 
 /// Extract a single f32 from a 1-element Burn tensor.
-fn scalar<B: burn::prelude::Backend>(t: &burn::tensor::Tensor<B, 1>) -> f32 {
+fn scalar(t: &burn::tensor::Tensor<1>) -> f32 {
     t.to_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .expect("scalar extraction failed")[0]
 }
 
 /// Helper: compute stats only if the listener wants them.
-pub fn maybe_stats<B: burn::prelude::Backend, const D: usize>(
-    tensor: &burn::tensor::Tensor<B, D>,
+pub fn maybe_stats<const D: usize>(
+    tensor: &burn::tensor::Tensor<D>,
     listener: &impl ForwardListener,
 ) -> Option<TensorStats> {
     if listener.wants_stats() {

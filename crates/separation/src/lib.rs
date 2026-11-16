@@ -7,10 +7,17 @@ pub mod htdemucs;
 pub mod spleeter;
 pub mod stft;
 
-/// burn's GPU backend: Metal on macOS, Vulkan elsewhere.
-pub type Gpu = burn::backend::Wgpu;
-/// burn's CPU backend, multi-threaded.
-pub type Cpu = burn::backend::NdArray<f32>;
+use burn::tensor::{Device, DeviceKind};
+
+/// The best GPU: Metal on macOS, Vulkan elsewhere.
+pub fn gpu() -> Device {
+    Device::wgpu(DeviceKind::DefaultDevice)
+}
+
+/// The CPU, multi-threaded.
+pub fn cpu() -> Device {
+    Device::flex()
+}
 
 /// The sample rate both models were trained at.
 pub const SAMPLE_RATE: u32 = 44_100;

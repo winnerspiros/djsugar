@@ -1,4 +1,5 @@
-use burn::{prelude::Backend, tensor::TensorData, Tensor};
+use burn::tensor::Device;
+use burn::{tensor::TensorData, Tensor};
 use realfft::num_complex::Complex;
 
 use crate::{DemucsError, Result};
@@ -11,11 +12,7 @@ use crate::{DemucsError, Result};
 ///   has `n_fft / 2` bins (Nyquist already dropped by the forward STFT).
 /// * `n_fft` is the FFT size used to compute the STFT, which determines the number of bins.
 /// * `device` is the target device for the output tensor (e.g., CPU or GPU).
-pub fn stft_to_cac<B: Backend>(
-    spectrogram: &[Complex<f32>],
-    n_fft: usize,
-    device: &B::Device,
-) -> Tensor<B, 3> {
+pub fn stft_to_cac(spectrogram: &[Complex<f32>], n_fft: usize, device: &Device) -> Tensor<3> {
     let freq_bins = n_fft / 2; // 2048
     let num_frames = spectrogram.len() / freq_bins;
 
@@ -75,14 +72,14 @@ pub fn cac_data_to_complex(data: &[f32], freq_bins: usize, num_frames: usize) ->
 ///
 /// Returns a flat vector of `num_frames × (freq_bins + 1)` complex values, with zeroed Nyquist
 /// bins appended to each frame.
-pub async fn cac_to_stft<B: Backend>(tensor: &Tensor<B, 3>) -> Result<Vec<Complex<f32>>> {
+pub async fn cac_to_stft(tensor: &Tensor<3>) -> Result<Vec<Complex<f32>>> {
     let [_, freq_bins, num_frames] = tensor.dims();
 
     let data: Vec<f32> = tensor
         .to_data_async()
         .await
         .map_err(|e| DemucsError::Tensor(format!("cac_to_stft async read failed: {}", e)))?
-        .to_vec()
+        .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("cac_to_stft conversion failed: {}", e)))?;
 
     Ok(cac_data_to_complex(&data, freq_bins, num_frames))
@@ -91,9 +88,6 @@ pub async fn cac_to_stft<B: Backend>(tensor: &Tensor<B, 3>) -> Result<Vec<Comple
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
-
-    type B = NdArray<f32>;
 
     #[test]
     fn output_shape() {
@@ -102,7 +96,7 @@ mod tests {
         let num_frames = 3;
         let spec = vec![Complex::new(0.0, 0.0); num_frames * freq_bins];
 
-        let tensor = stft_to_cac::<B>(&spec, n_fft, &Default::default());
+        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
 
         assert_eq!(tensor.dims(), [2, 4, 3]); // [2, n_fft/2, num_frames]
     }
@@ -114,8 +108,8 @@ mod tests {
         // One frame, 2 bins (no Nyquist in input)
         let spec = vec![Complex::new(1.0, 2.0), Complex::new(3.0, 4.0)];
 
-        let tensor = stft_to_cac::<B>(&spec, n_fft, &Default::default());
-        let data: Vec<f32> = tensor.to_data().to_vec().unwrap();
+        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
+        let data: Vec<f32> = tensor.to_data().try_to_vec().unwrap();
 
         // [2, 2, 1] row-major: [real_bin0, real_bin1, imag_bin0, imag_bin1]
         assert_eq!(data, vec![1.0, 3.0, 2.0, 4.0]);
@@ -135,8 +129,8 @@ mod tests {
             Complex::new(4.0, 40.0),
         ];
 
-        let tensor = stft_to_cac::<B>(&spec, n_fft, &Default::default());
-        let data: Vec<f32> = tensor.to_data().to_vec().unwrap();
+        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
+        let data: Vec<f32> = tensor.to_data().try_to_vec().unwrap();
 
         assert_eq!(
             data,
@@ -167,8 +161,8 @@ mod tests {
         }
 
         let device = Default::default();
-        let tensor = stft_to_cac::<B>(&spec, n_fft, &device);
-        let roundtrip = pollster::block_on(cac_to_stft::<B>(&tensor)).unwrap();
+        let tensor = stft_to_cac(&spec, n_fft, &device);
+        let roundtrip = pollster::block_on(cac_to_stft(&tensor)).unwrap();
 
         // cac_to_stft returns n_fft/2+1 bins per frame (adds zero Nyquist)
         let bins_out = freq_bins + 1;

@@ -7,14 +7,9 @@ description = "HTDemucs v4 in Rust on burn, from github.com/nikhilunni/demucs-rs
 
 [features]
 default = []
-# `burn/simd` is listed explicitly: burn depends on burn-ndarray with
-# default-features = false, so burn-ndarray's own defaults (`std`, `simd`,
-# `multi-threads`) are only restored by `burn/default` — which we turn off
-# below. Without this, `demucs-core/ndarray` silently drops SIMD kernels.
-# `std` still arrives via `burn/std`. Note `multi-threads` (rayon) has no
-# passthrough on the burn facade and is NOT recoverable here; a consumer that
-# needs it must depend on burn-ndarray directly.
-ndarray = ["burn/ndarray", "burn/simd"]
+# `burn/simd` is listed explicitly: burn turns the CPU backend's own
+# defaults off.
+flex = ["burn/flex", "burn/simd"]
 wgpu = ["burn/wgpu"]
 cuda = ["burn/cuda"]
 autotune = ["burn/autotune"]
@@ -29,9 +24,14 @@ realfft = "3.5.0"
 # this crate's own `fusion`/`autotune` features (see [features]); everything
 # demucs-core needs (tensor, nn, module) lives in non-optional burn sub-crates
 # that only require `std`.
-burn = { version = "0.20.1", default-features = false, features = ["std"] }
+burn = { version = "0.22.1", default-features = false, features = ["std"] }
 safetensors = "0.5"
 half = "2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dirs = "5"
+
+[dev-dependencies]
+burn = { version = "0.22.1", default-features = false, features = ["std", "flex", "simd"] }
+pollster = "0.4"
+bytemuck = "1"

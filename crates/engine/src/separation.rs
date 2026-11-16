@@ -289,8 +289,7 @@ fn htdemucs(path: &Path, weights: &Path) -> Result<StemSource, String> {
     let rate = audio.sample_rate;
     let [l, r] = channels(&audio);
     let bytes = std::fs::read(weights).map_err(|e| format!("{}: {e}", weights.display()))?;
-    let device = Default::default();
-    let model = HtDemucs::<djsugar_separation::Gpu>::load(&bytes, &device)?;
+    let model = HtDemucs::load(&bytes, &djsugar_separation::gpu())?;
     let stems = model.separate([&l, &r])?;
     let model_rate = djsugar_separation::SAMPLE_RATE;
     let dir = crate::cache::stems_dir(path).ok_or("no cache folder")?;

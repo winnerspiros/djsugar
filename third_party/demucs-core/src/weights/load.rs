@@ -1,7 +1,7 @@
 use burn::module::Param;
 use burn::nn::conv::{Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d};
 use burn::nn::{GroupNorm, LayerNorm, Linear};
-use burn::prelude::Backend;
+use burn::tensor::Device;
 use burn::tensor::Tensor;
 
 use crate::model::conv::{
@@ -18,11 +18,11 @@ use crate::weights::WeightError;
 
 // ─── Primitive loaders ───────────────────────────────────────────────────────
 
-fn load_conv1d<B: Backend>(
-    conv: &mut Conv1d<B>,
+fn load_conv1d(
+    conv: &mut Conv1d,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
@@ -35,11 +35,11 @@ fn load_conv1d<B: Backend>(
     Ok(())
 }
 
-fn load_conv2d<B: Backend>(
-    conv: &mut Conv2d<B>,
+fn load_conv2d(
+    conv: &mut Conv2d,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     // 4D weight [out, in, kH, kW] — no transformation needed
@@ -53,11 +53,11 @@ fn load_conv2d<B: Backend>(
     Ok(())
 }
 
-fn load_conv_tr1d<B: Backend>(
-    conv: &mut ConvTranspose1d<B>,
+fn load_conv_tr1d(
+    conv: &mut ConvTranspose1d,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
@@ -70,11 +70,11 @@ fn load_conv_tr1d<B: Backend>(
     Ok(())
 }
 
-fn load_conv_tr2d<B: Backend>(
-    conv: &mut ConvTranspose2d<B>,
+fn load_conv_tr2d(
+    conv: &mut ConvTranspose2d,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     // 4D weight [in, out, kH, kW] — no transformation needed
@@ -88,11 +88,11 @@ fn load_conv_tr2d<B: Backend>(
     Ok(())
 }
 
-fn load_linear<B: Backend>(
-    linear: &mut Linear<B>,
+fn load_linear(
+    linear: &mut Linear,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // PyTorch Linear: [out_features, in_features]
     // Burn Linear:    [in_features, out_features]
@@ -108,11 +108,11 @@ fn load_linear<B: Backend>(
     Ok(())
 }
 
-fn load_layernorm<B: Backend>(
-    ln: &mut LayerNorm<B>,
+fn load_layernorm(
+    ln: &mut LayerNorm,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // PyTorch: .weight, .bias → Burn: .gamma, .beta
     let w = store.take(&format!("{}.weight", prefix))?;
@@ -126,11 +126,11 @@ fn load_layernorm<B: Backend>(
     Ok(())
 }
 
-fn load_groupnorm<B: Backend>(
-    gn: &mut GroupNorm<B>,
+fn load_groupnorm(
+    gn: &mut GroupNorm,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // PyTorch: .weight, .bias → Burn: .gamma, .beta (both Option)
     let w = store.take(&format!("{}.weight", prefix))?;
@@ -149,11 +149,11 @@ fn load_groupnorm<B: Backend>(
 
 // ─── Composite loaders ──────────────────────────────────────────────────────
 
-fn load_layer_scale<B: Backend>(
-    ls: &mut LayerScale<B>,
+fn load_layer_scale(
+    ls: &mut LayerScale,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.scale", prefix))?;
     ls.scale = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
@@ -163,11 +163,11 @@ fn load_layer_scale<B: Backend>(
 /// Load a DConvLayer from PyTorch sequential indices.
 /// PyTorch layout: `{prefix}.0` → conv1, `.1` → norm1, `.3` → conv2, `.4` → norm2, `.6` → scale
 /// (Indices 2, 5 are GELU activations with no params.)
-fn load_dconv_layer<B: Backend>(
-    layer: &mut DConvLayer<B>,
+fn load_dconv_layer(
+    layer: &mut DConvLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_conv1d(&mut layer.conv1, store, &format!("{}.0", prefix), device)?;
     load_groupnorm(&mut layer.norm1, store, &format!("{}.1", prefix), device)?;
@@ -177,11 +177,11 @@ fn load_dconv_layer<B: Backend>(
     Ok(())
 }
 
-fn load_dconv<B: Backend>(
-    dconv: &mut DConv<B>,
+fn load_dconv(
+    dconv: &mut DConv,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     for (j, layer) in dconv.layers.iter_mut().enumerate() {
         load_dconv_layer(layer, store, &format!("{}.{}", prefix, j), device)?;
@@ -189,11 +189,11 @@ fn load_dconv<B: Backend>(
     Ok(())
 }
 
-fn load_henc_layer<B: Backend>(
-    enc: &mut HEncLayer<B>,
+fn load_henc_layer(
+    enc: &mut HEncLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_conv2d(&mut enc.conv, store, &format!("{}.conv", prefix), device)?;
     load_dconv(
@@ -211,11 +211,11 @@ fn load_henc_layer<B: Backend>(
     Ok(())
 }
 
-fn load_tenc_layer<B: Backend>(
-    enc: &mut TEncLayer<B>,
+fn load_tenc_layer(
+    enc: &mut TEncLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_conv1d(&mut enc.conv, store, &format!("{}.conv", prefix), device)?;
     load_dconv(
@@ -233,11 +233,11 @@ fn load_tenc_layer<B: Backend>(
     Ok(())
 }
 
-fn load_hdec_layer<B: Backend>(
-    dec: &mut HDecLayer<B>,
+fn load_hdec_layer(
+    dec: &mut HDecLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_conv2d(
         &mut dec.rewrite,
@@ -260,11 +260,11 @@ fn load_hdec_layer<B: Backend>(
     Ok(())
 }
 
-fn load_tdec_layer<B: Backend>(
-    dec: &mut TDecLayer<B>,
+fn load_tdec_layer(
+    dec: &mut TDecLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_conv1d(
         &mut dec.rewrite,
@@ -298,11 +298,11 @@ fn load_tdec_layer<B: Backend>(
 ///   `{prefix}.out_proj.bias`   [d_model]
 ///
 /// Burn MHA has separate `.query`, `.key`, `.value`, `.output` Linear modules.
-fn load_mha<B: Backend>(
-    attn: &mut burn::nn::attention::MultiHeadAttention<B>,
+fn load_mha(
+    attn: &mut burn::nn::attention::MultiHeadAttention,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // 1. Split packed in_proj_weight [3*d, d] → Q, K, V each [d, d]
     let in_proj_w = store.take(&format!("{}.in_proj_weight", prefix))?;
@@ -362,11 +362,11 @@ fn load_mha<B: Backend>(
 
 // ─── Transformer layer loaders ──────────────────────────────────────────────
 
-fn load_self_attn_layer<B: Backend>(
-    layer: &mut SelfAttentionLayer<B>,
+fn load_self_attn_layer(
+    layer: &mut SelfAttentionLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     load_layernorm(
         &mut layer.norm1,
@@ -419,11 +419,11 @@ fn load_self_attn_layer<B: Backend>(
     Ok(())
 }
 
-fn load_cross_attn_layer<B: Backend>(
-    layer: &mut CrossAttentionLayer<B>,
+fn load_cross_attn_layer(
+    layer: &mut CrossAttentionLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // Cross-attention uses .cross_attn in PyTorch (not .self_attn)
     load_layernorm(
@@ -483,11 +483,11 @@ fn load_cross_attn_layer<B: Backend>(
     Ok(())
 }
 
-fn load_transformer_layer<B: Backend>(
-    layer: &mut TransformerLayer<B>,
+fn load_transformer_layer(
+    layer: &mut TransformerLayer,
     store: &mut TensorStore,
     prefix: &str,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     match layer {
         TransformerLayer::SelfAttn(l) => load_self_attn_layer(l, store, prefix, device),
@@ -497,10 +497,10 @@ fn load_transformer_layer<B: Backend>(
 
 // ─── CrossDomainTransformer loader ──────────────────────────────────────────
 
-fn load_cross_domain_transformer<B: Backend>(
-    ct: &mut CrossDomainTransformer<B>,
+fn load_cross_domain_transformer(
+    ct: &mut CrossDomainTransformer,
     store: &mut TensorStore,
-    device: &B::Device,
+    device: &Device,
 ) -> Result<(), WeightError> {
     // Channel upsamplers/downsamplers (only present for 4-stem / ft models)
     if let Some(ref mut up) = ct.channel_upsampler {
@@ -551,11 +551,11 @@ fn load_cross_domain_transformer<B: Backend>(
 // ─── Top-level model loader ─────────────────────────────────────────────────
 
 /// Load a single HTDemucs model from a TensorStore.
-fn load_htdemucs_from_store<B: Backend>(
+fn load_htdemucs_from_store(
     store: &mut TensorStore,
     hp: &HyperParameters,
-    device: &B::Device,
-) -> Result<HTDemucs<B>, WeightError> {
+    device: &Device,
+) -> Result<HTDemucs, WeightError> {
     let mut model = HTDemucs::init(hp, device);
 
     // Encoders: PyTorch "encoder.{i}" → our encoders[i]
@@ -591,11 +591,11 @@ fn load_htdemucs_from_store<B: Backend>(
 
 /// Load one or more HTDemucs models from safetensors bytes.
 /// Returns Vec because htdemucs_ft has 4 models in one file (one per stem).
-pub fn load_model<B: Backend>(
+pub fn load_model(
     bytes: &[u8],
     info: &ModelInfo,
-    device: &B::Device,
-) -> Result<Vec<HTDemucs<B>>, WeightError> {
+    device: &Device,
+) -> Result<Vec<HTDemucs>, WeightError> {
     let hp = HyperParameters::from_model_info(info);
     let mut models = Vec::new();
 
@@ -621,12 +621,9 @@ pub fn load_model<B: Backend>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::ndarray::NdArrayDevice;
-    use burn::backend::NdArray;
-    type B = NdArray<f32>;
 
-    fn device() -> NdArrayDevice {
-        NdArrayDevice::default()
+    fn device() -> burn::tensor::Device {
+        burn::tensor::Device::flex()
     }
 
     #[test]
@@ -645,7 +642,7 @@ mod tests {
         load_linear(&mut linear, &mut store, "layer", &device).unwrap();
 
         // Verify the weight is transposed: Burn stores [in=3, out=2]
-        let w_data: Vec<f32> = linear.weight.val().to_data().to_vec().unwrap();
+        let w_data: Vec<f32> = linear.weight.val().to_data().try_to_vec().unwrap();
         assert_eq!(w_data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
 
         // Verify bias
@@ -655,17 +652,17 @@ mod tests {
             .unwrap()
             .val()
             .to_data()
-            .to_vec()
+            .try_to_vec()
             .unwrap();
         assert_eq!(b_data, vec![0.1, 0.2]);
 
         // Verify forward pass: input [1,0,0] should give [1*1+0*2+0*3, 1*4+0*5+0*6] + bias
-        let input = burn::tensor::Tensor::<B, 2>::from_data(
+        let input = burn::tensor::Tensor::<2>::from_data(
             burn::tensor::TensorData::new(vec![1.0f32, 0.0, 0.0], [1, 3]),
             &device,
         );
         let output = linear.forward(input);
-        let out_data: Vec<f32> = output.to_data().to_vec().unwrap();
+        let out_data: Vec<f32> = output.to_data().try_to_vec().unwrap();
         assert!((out_data[0] - 1.1).abs() < 1e-5); // 1.0 + 0.1
         assert!((out_data[1] - 4.2).abs() < 1e-5); // 4.0 + 0.2
     }
@@ -680,13 +677,13 @@ mod tests {
 
         let mut store = TensorStore::from_bytes(&safetensors_bytes, "sig").unwrap();
         let device = device();
-        let mut conv: Conv1d<B> = burn::nn::conv::Conv1dConfig::new(1, 2, 3)
-            .with_padding(burn::nn::PaddingConfig1d::Explicit(1))
+        let mut conv: Conv1d = burn::nn::conv::Conv1dConfig::new(1, 2, 3)
+            .with_padding(burn::nn::PaddingConfig1d::Explicit(1, 1))
             .init(&device);
 
         load_conv1d(&mut conv, &mut store, "c", &device).unwrap();
 
-        let w_data: Vec<f32> = conv.weight.val().to_data().to_vec().unwrap();
+        let w_data: Vec<f32> = conv.weight.val().to_data().try_to_vec().unwrap();
         assert_eq!(w_data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
@@ -699,11 +696,11 @@ mod tests {
 
         let mut store = TensorStore::from_bytes(&safetensors_bytes, "sig").unwrap();
         let device = device();
-        let mut ln: LayerNorm<B> = burn::nn::LayerNormConfig::new(4).init(&device);
+        let mut ln: LayerNorm = burn::nn::LayerNormConfig::new(4).init(&device);
 
         load_layernorm(&mut ln, &mut store, "ln", &device).unwrap();
 
-        let gamma: Vec<f32> = ln.gamma.val().to_data().to_vec().unwrap();
+        let gamma: Vec<f32> = ln.gamma.val().to_data().try_to_vec().unwrap();
         assert_eq!(gamma, vec![1.0, 1.0, 1.0, 1.0]);
     }
 
@@ -738,21 +735,21 @@ mod tests {
 
         let mut store = TensorStore::from_bytes(&safetensors_bytes, "sig").unwrap();
         let device = device();
-        let mut mha: burn::nn::attention::MultiHeadAttention<B> =
+        let mut mha: burn::nn::attention::MultiHeadAttention =
             burn::nn::attention::MultiHeadAttentionConfig::new(d, n_heads).init(&device);
 
         load_mha(&mut mha, &mut store, "attn", &device).unwrap();
 
         // Verify Q weights are all 1.0 (transposed from PyTorch layout)
-        let q_w: Vec<f32> = mha.query.weight.val().to_data().to_vec().unwrap();
+        let q_w: Vec<f32> = mha.query.weight.val().to_data().try_to_vec().unwrap();
         assert!(q_w.iter().all(|&v| (v - 1.0).abs() < 1e-5));
 
         // Verify K weights are all 2.0
-        let k_w: Vec<f32> = mha.key.weight.val().to_data().to_vec().unwrap();
+        let k_w: Vec<f32> = mha.key.weight.val().to_data().try_to_vec().unwrap();
         assert!(k_w.iter().all(|&v| (v - 2.0).abs() < 1e-5));
 
         // Verify V weights are all 3.0
-        let v_w: Vec<f32> = mha.value.weight.val().to_data().to_vec().unwrap();
+        let v_w: Vec<f32> = mha.value.weight.val().to_data().try_to_vec().unwrap();
         assert!(v_w.iter().all(|&v| (v - 3.0).abs() < 1e-5));
 
         // Verify Q bias is 0.1
@@ -763,7 +760,7 @@ mod tests {
             .unwrap()
             .val()
             .to_data()
-            .to_vec()
+            .try_to_vec()
             .unwrap();
         assert!(q_b.iter().all(|&v| (v - 0.1).abs() < 1e-5));
 

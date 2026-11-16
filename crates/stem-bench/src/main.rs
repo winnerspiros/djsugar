@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use djsugar_separation::{htdemucs, spleeter, Cpu, Gpu, SAMPLE_RATE};
+use djsugar_separation::{htdemucs, spleeter, SAMPLE_RATE};
 
 struct Options {
     track: PathBuf,
@@ -171,15 +171,15 @@ fn spleeter_run(
     Ok(())
 }
 
-fn htdemucs_run<B: djsugar_separation::burn::prelude::Backend>(
+fn htdemucs_run(
     label: &str,
     weights: &[u8],
-    device: &B::Device,
+    device: &Device,
     audio: [&[f32]; 2],
     o: &Options,
 ) -> Result<(), String> {
     let t = Instant::now();
-    let model = htdemucs::HtDemucs::<B>::load(weights, device)?;
+    let model = htdemucs::HtDemucs::load(weights, device)?;
     println!("  {label}: loaded in {:.2} s", t.elapsed().as_secs_f64());
     let t = Instant::now();
     model.warm_up();
@@ -233,8 +233,8 @@ fn run() -> Result<(), String> {
         t.elapsed().as_secs_f64()
     );
     let audio = [&channels[0][..], &channels[1][..]];
-    let gpu = djsugar_separation::burn::backend::wgpu::WgpuDevice::default();
-    let cpu = djsugar_separation::burn::backend::ndarray::NdArrayDevice::Cpu;
+    let gpu = djsugar_separation::gpu();
+    let cpu = djsugar_separation::cpu();
 
     if o.spleeter {
         println!("Spleeter (instant stems):");
@@ -245,7 +245,7 @@ fn run() -> Result<(), String> {
         )?;
         if o.gpu {
             let t = Instant::now();
-            let model = spleeter::gpu::Net::<Gpu>::load(&w, &gpu)?;
+            let model = spleeter::gpu::Net::load(&w, &gpu)?;
             println!("  gpu: loaded in {:.2} s", t.elapsed().as_secs_f64());
             spleeter_run("gpu", &model, audio, &o)?;
         }
@@ -267,10 +267,10 @@ fn run() -> Result<(), String> {
             ),
         )?;
         if o.gpu {
-            htdemucs_run::<Gpu>("gpu", &w, &gpu, audio, &o)?;
+            htdemucs_run("gpu", &w, &gpu, audio, &o)?;
         }
         if o.cpu {
-            htdemucs_run::<Cpu>("cpu", &w, &cpu, audio, &o)?;
+            htdemucs_run("cpu", &w, &cpu, audio, &o)?;
         }
     }
     Ok(())
