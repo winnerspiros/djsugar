@@ -506,3 +506,16 @@ fn exceptions_through_finally() {
     );
     assert_eq!(ev("var o = null; o?.x.y === undefined"), "true");
 }
+
+#[test]
+fn return_through_finally() {
+    assert_eq!(
+        ev("function g() { return 2; } function f() { try { return 1; } finally { g(); } } f()"),
+        "1"
+    );
+    assert_eq!(
+        ev("function f() { try { return 1; } finally { return 3; } } f()"),
+        "3"
+    );
+    assert_eq!(ev("function f() { for (const x of [1, 2]) { try { return x; } finally { [5].map(y => y); } } } f()"), "1");
+}

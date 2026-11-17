@@ -407,6 +407,8 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    /// The value a `return` statement hands to its function.
+    pub ret: RefCell<Value>,
     /// Call environments no closure kept, ready for reuse.
     pub pool: RefCell<Vec<Rc<crate::run::Env>>>,
     /// The value being thrown while an `Exc::Throw` unwinds.

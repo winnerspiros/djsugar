@@ -85,6 +85,7 @@ pub fn realm() -> Rt {
         depth: Cell::new(0),
         thrown: Default::default(),
         pool: Default::default(),
+        ret: Default::default(),
         fn_call: Default::default(),
         global: p(Kind::Plain),
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),

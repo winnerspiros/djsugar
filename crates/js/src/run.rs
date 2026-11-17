@@ -10,7 +10,8 @@ use crate::value::*;
 
 pub enum Flow {
     Normal,
-    Return(Value),
+    /// The returned value waits in `Rt::ret`.
+    Return,
     Break(Option<Name>),
     Continue(Option<Name>),
 }
@@ -307,7 +308,10 @@ impl<'s> Compiler<'s> {
         if let Some(Stmt::Expr(e)) = p.body.last() {
             body.pop();
             let e = self.expr(e)?;
-            body.push(Box::new(move |rt, f| Ok(Flow::Return(e(rt, f)?))));
+            body.push(Box::new(move |rt, f| {
+                *rt.ret.borrow_mut() = e(rt, f)?;
+                Ok(Flow::Return)
+            }));
         }
         let s = self.scopes.pop().unwrap();
         Ok((body, s.slots, vars))
@@ -549,9 +553,15 @@ impl<'s> Compiler<'s> {
             Stmt::Return(e) => match e {
                 Some(e) => {
                     let e = self.expr(e)?;
-                    Box::new(move |rt, f| Ok(Flow::Return(e(rt, f)?)))
+                    Box::new(move |rt, f| {
+                        *rt.ret.borrow_mut() = e(rt, f)?;
+                        Ok(Flow::Return)
+                    })
                 }
-                None => Box::new(|_, _| Ok(Flow::Return(Value::Undefined))),
+                None => Box::new(|rt, _| {
+                    *rt.ret.borrow_mut() = Value::Undefined;
+                    Ok(Flow::Return)
+                }),
             },
             Stmt::If(c, a, b) => {
                 let c = self.cond(c)?;
@@ -769,13 +779,20 @@ impl<'s> Compiler<'s> {
                         })();
                     }
                     if let Some(fin) = &finally {
-                        let pending = matches!(r, Err(Exc::Throw)).then(|| rt.take_thrown());
+                        let pending = match r {
+                            Err(Exc::Throw) => Some(rt.take_thrown()),
+                            Ok(Flow::Return) => Some(std::mem::take(&mut *rt.ret.borrow_mut())),
+                            _ => None,
+                        };
                         match fin(rt, f)? {
                             Flow::Normal => {}
                             other => return Ok(other),
                         }
                         if let Some(v) = pending {
-                            *rt.thrown.borrow_mut() = v;
+                            match r {
+                                Err(_) => *rt.thrown.borrow_mut() = v,
+                                Ok(_) => *rt.ret.borrow_mut() = v,
+                            }
                         }
                     }
                     r
@@ -2653,7 +2670,7 @@ fn run_body(body: &[St], rt: &Rt, frame: &Frame) -> R<Value> {
     for s in body {
         match s(rt, frame)? {
             Flow::Normal => {}
-            Flow::Return(v) => return Ok(v),
+            Flow::Return => return Ok(std::mem::take(&mut *rt.ret.borrow_mut())),
             _ => break,
         }
     }
@@ -2724,7 +2741,7 @@ pub fn run_program(rt: &Rt, body: &[St], nslots: usize, vars: &[Name]) -> R<Valu
     for s in body {
         match s(rt, &frame)? {
             Flow::Normal => {}
-            Flow::Return(v) => last = v,
+            Flow::Return => last = std::mem::take(&mut *rt.ret.borrow_mut()),
             _ => break,
         }
     }
