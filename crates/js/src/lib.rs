@@ -38,6 +38,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+#[repr(transparent)]
 pub struct Engine {
     rt: Rt,
 }
@@ -100,11 +101,9 @@ impl Engine {
         name: &str,
         f: impl Fn(&Engine, &Value, &[Value]) -> Result<Value, String> + 'static,
     ) -> Value {
-        let me: *const Engine = self;
         self.rt.native(name, move |rt, this, args| {
-            // SAFETY: natives run only inside calls on the engine that made
-            // them, which therefore outlives the call.
-            let engine = unsafe { &*me };
+            // SAFETY: `Engine` is a transparent wrapper around `Rt`.
+            let engine = unsafe { &*(rt as *const Rt as *const Engine) };
             f(engine, this, args).or_else(|m| rt.throw(&rt.error_proto.clone(), &m))
         })
     }

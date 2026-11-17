@@ -415,3 +415,18 @@ fn direct_calls() {
         "8"
     );
 }
+
+#[test]
+fn natives_survive_engine_moves() {
+    let e = Engine::new();
+    let f = e.function("twice", |e, _, a| {
+        Ok(Value::Num(
+            e.to_number(&a[0]).map_err(|x| x.to_string())? * 2.0,
+        ))
+    });
+    let moved = Box::new(e);
+    let g = moved.global().clone();
+    moved.set(&Value::Obj(g), "twice", f).unwrap();
+    let v = moved.eval("twice(21)").unwrap();
+    assert_eq!(moved.to_string(&v).unwrap(), "42");
+}
