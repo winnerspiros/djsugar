@@ -2485,15 +2485,15 @@ fn call_site(
     name: &str,
 ) -> R<Value> {
     if let (Some(parts), Value::Obj(fo)) = (direct, func) {
-        if let Some(r) = direct_call(rt, f, fo, this.clone(), parts) {
-            return r;
+        if direct_ok(fo) {
+            return direct_call(rt, f, fo, this, parts);
         }
         if let (Some(fc), Value::Obj(target), Some((t, rest))) =
             (rt.fn_call.get(), &this, parts.split_first())
         {
             if Rc::ptr_eq(fo, fc) && direct_ok(target) {
                 let t = t(rt, f)?;
-                return direct_call(rt, f, target, t, rest).expect("checked by direct_ok");
+                return direct_call(rt, f, target, t, rest);
             }
         }
     }
@@ -2507,39 +2507,34 @@ fn direct_ok(fo: &Obj) -> bool {
         if c.code.bind.is_none() && c.code.class == ClassKind::None && !c.code.generator)
 }
 
-/// Calls a plain script function with arguments evaluated into its slots;
-/// None when `fo` needs the general path.
+/// Calls `fo`, which `direct_ok` accepted, evaluating `parts` straight
+/// into its parameter slots.
 #[inline]
-fn direct_call(rt: &Rt, f: &Frame, fo: &Rc<Obj>, this: Value, parts: &[Ex]) -> Option<R<Value>> {
-    if !direct_ok(fo) {
-        return None;
-    }
+fn direct_call(rt: &Rt, f: &Frame, fo: &Rc<Obj>, this: Value, parts: &[Ex]) -> R<Value> {
     let Kind::Closure(c) = &fo.kind else {
-        return None;
+        unreachable!("direct_ok accepts closures only")
     };
     let code = &c.code;
     let mut env = take_env(rt, c);
+    let slots = Rc::get_mut(&mut env)
+        .expect("fresh environment")
+        .slots
+        .get_mut();
     for (i, e) in parts.iter().enumerate() {
-        let v = match e(rt, f) {
-            Ok(v) => v,
-            Err(x) => return Some(Err(x)),
-        };
+        let v = e(rt, f)?;
         if let Some(&s) = code.simple_params.get(i) {
-            Rc::get_mut(&mut env)
-                .expect("fresh environment")
-                .slots
-                .get_mut()[s] = v;
+            slots[s] = v;
         }
     }
     let depth = rt.depth.get() + 1;
     if depth > MAX_DEPTH {
         let p = rt.range_error_proto.clone();
-        return Some(rt.throw(&p, "too much recursion"));
+        return rt.throw(&p, "too much recursion");
     }
     rt.depth.set(depth);
     let r = enter(rt, fo, c, env, this, &[], Value::Undefined);
     rt.depth.set(depth - 1);
-    Some(r)
+    r
 }
 
 #[inline]
@@ -2553,9 +2548,12 @@ fn take_env(rt: &Rt, c: &Closure) -> Rc<Env> {
     });
     let e = Rc::get_mut(&mut env).expect("pooled environments are unshared");
     e.parent = Some(c.env.clone());
-    e.slots
-        .get_mut()
-        .resize(c.code.nslots.get(), Value::Undefined);
+    let slots = e.slots.get_mut();
+    let n = c.code.nslots.get();
+    slots.reserve(n);
+    for _ in 0..n {
+        slots.push(Value::Undefined);
+    }
     env
 }
 
