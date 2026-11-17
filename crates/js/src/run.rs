@@ -256,6 +256,30 @@ impl<'s> Compiler<'s> {
         Some(i)
     }
 
+    /// A loop's lexical scope: a block of the enclosing environment, or its
+    /// own environment per iteration when closures may capture its bindings.
+    fn open_loop_scope(&mut self, fresh: bool) {
+        if fresh {
+            self.scopes.push(Scope {
+                blocks: vec![Vec::new()],
+                slots: 0,
+                global: false,
+            });
+        } else {
+            self.scope().blocks.push(Vec::new());
+        }
+    }
+
+    /// Closes `open_loop_scope`; the slot count of a per-iteration scope.
+    fn close_loop_scope(&mut self, fresh: bool) -> Option<usize> {
+        if fresh {
+            Some(self.scopes.pop().unwrap().slots)
+        } else {
+            self.scope().blocks.pop();
+            None
+        }
+    }
+
     fn resolve(&self, name: &Name) -> Loc {
         for (depth, s) in self.scopes.iter().rev().enumerate() {
             for b in s.blocks.iter().rev() {
@@ -581,7 +605,9 @@ impl<'s> Compiler<'s> {
                 })
             }
             Stmt::For(init, test, update, body) => {
-                self.scope().blocks.push(Vec::new());
+                let fresh = matches!(init, Some(ForInit::Var(k, _)) if *k != VarKind::Var)
+                    && makes_closures(s);
+                self.open_loop_scope(fresh);
                 let init: Option<St> = match init {
                     None => None,
                     Some(ForInit::Var(k, d)) => {
@@ -600,8 +626,29 @@ impl<'s> Compiler<'s> {
                 let test = test.as_ref().map(|t| self.cond(t)).transpose()?;
                 let update = update.as_ref().map(|t| self.expr(t)).transpose()?;
                 let body = self.stmt(body, &[])?;
-                self.scope().blocks.pop();
                 let labels: Rc<[Name]> = labels.into();
+                if let Some(n) = self.close_loop_scope(fresh) {
+                    return Ok(Box::new(move |rt, f| {
+                        let mut fr = iteration(f, None, n);
+                        if let Some(i) = &init {
+                            i(rt, &fr)?;
+                        }
+                        loop {
+                            if let Some(t) = &test {
+                                if !t(rt, &fr)? {
+                                    return Ok(Flow::Normal);
+                                }
+                            }
+                            if let Some(out) = loop_flow(body(rt, &fr)?, &labels) {
+                                return out;
+                            }
+                            fr = iteration(f, Some(&fr.env), n);
+                            if let Some(u) = &update {
+                                u(rt, &fr)?;
+                            }
+                        }
+                    }));
+                }
                 Box::new(move |rt, f| {
                     if let Some(i) = &init {
                         i(rt, f)?;
@@ -623,7 +670,9 @@ impl<'s> Compiler<'s> {
             }
             Stmt::ForIn(init, obj, body) | Stmt::ForOf(init, obj, body) => {
                 let of = matches!(s, Stmt::ForOf(..));
-                self.scope().blocks.push(Vec::new());
+                let fresh =
+                    matches!(init, ForInit::Var(k, _) if *k != VarKind::Var) && makes_closures(s);
+                self.open_loop_scope(fresh);
                 let target = match init {
                     ForInit::Var(k, d) => {
                         let (p, _) = &d[0];
@@ -643,9 +692,10 @@ impl<'s> Compiler<'s> {
                     ForInit::Expr(Expr::Ident(n, _)) => self.writer(n, false),
                     _ => target,
                 };
-                let obj = self.expr(obj)?;
                 let body = self.stmt(body, &[])?;
-                self.scope().blocks.pop();
+                let n = self.close_loop_scope(fresh);
+                // The iterated object is evaluated outside the loop's scope.
+                let obj = self.expr(obj)?;
                 let labels: Rc<[Name]> = labels.into();
                 Box::new(move |rt, f| {
                     let o = obj(rt, f)?;
@@ -655,8 +705,10 @@ impl<'s> Compiler<'s> {
                         for_in_keys(rt, &o).into_iter().map(Value::Str).collect()
                     };
                     for it in items {
-                        target(rt, f, it)?;
-                        if let Some(out) = loop_flow(body(rt, f)?, &labels) {
+                        let fresh_frame = n.map(|n| iteration(f, None, n));
+                        let fr = fresh_frame.as_ref().unwrap_or(f);
+                        target(rt, fr, it)?;
+                        if let Some(out) = loop_flow(body(rt, fr)?, &labels) {
                             return out;
                         }
                     }
@@ -2746,4 +2798,29 @@ fn append(rt: &Rt, buf: &mut String, v: &Value) -> R<()> {
         _ => buf.push_str(&rt.to_str(v)?),
     }
     Ok(())
+}
+
+/// A frame for one loop iteration: a new environment holding the loop's
+/// bindings, copied from the previous iteration's when given.
+fn iteration(f: &Frame, prev: Option<&Rc<Env>>, n: usize) -> Frame {
+    let slots = match prev {
+        Some(e) => e.slots.borrow().clone(),
+        None => vec![Value::Undefined; n],
+    };
+    Frame {
+        env: Rc::new(Env {
+            slots: RefCell::new(slots),
+            parent: Some(f.env.clone()),
+        }),
+        this: f.this.clone(),
+        home: f.home.clone(),
+        func: f.func.clone(),
+        new_target: f.new_target.clone(),
+    }
+}
+
+/// Whether `s` creates functions or classes, which could capture bindings.
+fn makes_closures(s: &Stmt) -> bool {
+    let text = format!("{s:?}");
+    text.contains("Function(Function {") || text.contains("Class(Class {")
 }

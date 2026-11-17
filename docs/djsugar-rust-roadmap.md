@@ -160,7 +160,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 
 | # | C/C++ dependency | Replacement | Status |
 | --- | --- | --- | --- |
-| R.1 | rquickjs (QuickJS, C) | Replaced by the in-tree interpreter `djsugar-js` (no dependencies): 141 of 149 bundled mappings load and init. Remaining: the other 8 mappings, then speed past QuickJS on the handler benchmarks (now ~10-40% more instructions) | WIP |
+| R.1 | rquickjs (QuickJS, C) | Replaced by the in-tree interpreter `djsugar-js` (no dependencies): all 149 bundled mappings load and init. Remaining: speed past QuickJS on the handler benchmarks (now ~10-40% more instructions) | WIP |
 | R.2 | openssl-sys (pulled in by libsqlite3-sys for SQLCipher, to read encrypted Rekordbox databases) | goes with R.3: pure-Rust SQLCipher-compatible page decryption (AES-256-CBC + HMAC via RustCrypto) | TODO |
 | R.3 | libsqlite3-sys (diesel/rusqlite) | pure-Rust DB (turso/limbo or equivalent) with migration of existing library DBs; scheduled late | TODO |
 | R.4 | signalsmith-stretch (C++) | DONE: `djsugar-stretch`, own phase vocoder (peak phase-locking, rigid peak shifting for transpose, whole-spectrum resampling at onsets, no allocation after construction; realfft only). A/B against the old library on a tone+drum test signal: tonal purity equal or better in all 6 cases, pre-echo within 0.7 dB in 5 of 6 (2.2 dB behind at 0.8x slow-down), level within 0.8 dB, CPU 18-27 ms per second of audio vs 18-25 ; block work spread over the interval after it (per-buffer worst case 6.0 ms -> 2.2 ms, p99 1.7 -> 1.2 ms, mean 0.2 ms) (follow-up: close the slow-down pre-echo gap) | DONE |

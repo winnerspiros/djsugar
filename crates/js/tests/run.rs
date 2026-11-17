@@ -220,7 +220,7 @@ fn bundled_mappings() {
             e.call(
                 &f,
                 Value::Undefined,
-                &[native, e.object(), Value::Bool(hid)],
+                &[native, settings(&e, &xml), Value::Bool(hid)],
             )
         });
         let mut err = r.err().map(|e| format!("prelude: {e}"));
@@ -262,8 +262,9 @@ var watchId = 0;
 native0.watch = function () { return ++watchId; };
 native0.timerStart = function () { return ++watchId; };
 native0.inputHandlerAllowed = function () { return true; };
-native0.hidGetInput = function () { return new Uint8Array(64); };
-native0.hidGetFeature = function () { return new Uint8Array(64); };
+native0.hidGetInput = function () { return new Uint8Array(256); };
+native0.hidGetFeature = function () { return []; };
+native0.get = function (g, k) { return /^num_/.test(k) ? 3 : 0; };
 "#;
 
 #[test]
@@ -429,4 +430,64 @@ fn natives_survive_engine_moves() {
     moved.set(&Value::Obj(g), "twice", f).unwrap();
     let v = moved.eval("twice(21)").unwrap();
     assert_eq!(moved.to_string(&v).unwrap(), "42");
+}
+
+/// A mapping's setting defaults, as the controller runner passes them.
+fn settings(e: &Engine, xml: &str) -> Value {
+    let o = e.object();
+    for opt in xml.split("<option").skip(1) {
+        let opt = &opt[..opt
+            .find("</option>")
+            .or_else(|| opt.find("/>"))
+            .unwrap_or(opt.len())];
+        let head = &opt[..opt.find('>').unwrap_or(opt.len())];
+        let attr = |src: &str, k: &str| {
+            src.split(&format!("{k}=\""))
+                .nth(1)
+                .and_then(|r| r.split('"').next())
+                .map(str::to_string)
+        };
+        let (Some(var), ty) = (
+            attr(head, "variable"),
+            attr(head, "type").unwrap_or_default(),
+        ) else {
+            continue;
+        };
+        let text = match attr(head, "default") {
+            Some(d) => d,
+            None => opt
+                .split("<value")
+                .skip(1)
+                .find(|v| v[..v.find('>').unwrap_or(0)].contains("default=\"true\""))
+                .or_else(|| opt.split("<value").nth(1))
+                .and_then(|v| v.split('>').nth(1))
+                .and_then(|v| v.split('<').next())
+                .unwrap_or("")
+                .trim()
+                .to_string(),
+        };
+        let v = match ty.as_str() {
+            "boolean" => Value::Bool(text == "true"),
+            "integer" | "real" => Value::Num(text.parse().unwrap_or(0.0)),
+            _ => Value::Str(text.as_str().into()),
+        };
+        e.set(&o, &var, v).unwrap();
+    }
+    o
+}
+
+#[test]
+fn loop_bindings_per_iteration() {
+    assert_eq!(ev("var fs = []; for (let i = 0; i < 3; i++) { fs.push(function () { return i; }); } fs.map(function (f) { return f(); }).join()"), "0,1,2");
+    assert_eq!(ev("var fs = []; for (const o of [0, 1]) { for (let i = 0; i < 2; i++) { fs.push(() => o + ':' + i); } } fs.map(f => f()).join()"), "0:0,0:1,1:0,1:1");
+    assert_eq!(ev("var fs = []; for (const k in { a: 1, b: 2 }) { fs.push(() => k); } fs.map(f => f()).join()"), "a,b");
+    assert_eq!(
+        ev("var s = 0; for (let i = 0; i < 4; i++) { if (i === 1) { continue; } s += i; } s"),
+        "5"
+    );
+    assert_eq!(ev("var fs = []; for (let i = 0; i < 3; i++) { fs.push(() => i); i++; } fs.map(f => f()).join()"), "1,3");
+    assert_eq!(
+        ev("var x = 1; for (let i = 0; i < 2; i++) { var g = () => x + i; } g()"),
+        "2"
+    );
 }
