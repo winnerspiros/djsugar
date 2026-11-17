@@ -83,6 +83,7 @@ pub fn realm() -> Rt {
     let sub = || Obj::new(Some(error_proto.clone()), Kind::Plain);
     let rt = Rt {
         depth: Cell::new(0),
+        thrown: Default::default(),
         fn_call: Default::default(),
         global: p(Kind::Plain),
         array_proto: p(Kind::Array(RefCell::new(Vec::new()))),
@@ -1698,7 +1699,7 @@ impl JsonParser<'_> {
         match p {
             Some(Prop::Method(f)) => {
                 let e = self.rt.construct(&f, &[Value::Str(msg.into())], &f)?;
-                Err(Exc::Throw(e))
+                self.rt.throw_value(e)
             }
             _ => self.rt.type_error(&msg),
         }
@@ -2208,7 +2209,8 @@ impl Rt {
                 let p = self.global.lookup("SyntaxError");
                 return match p {
                     Some(Prop::Method(f)) => {
-                        Err(Exc::Throw(self.construct(&f, &[Value::str(&e)], &f)?))
+                        let e = self.construct(&f, &[Value::str(&e)], &f)?;
+                        self.throw_value(e)
                     }
                     _ => self.type_error(&e),
                 };

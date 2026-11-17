@@ -138,7 +138,8 @@ impl Engine {
     fn error(&self, e: Exc) -> Error {
         match e {
             Exc::Short => Error::Thrown("optional chain escaped".into()),
-            Exc::Throw(v) => {
+            Exc::Throw => {
+                let v = self.rt.take_thrown();
                 let text = match &v {
                     Value::Obj(_) => self
                         .rt

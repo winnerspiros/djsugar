@@ -72,6 +72,8 @@ pub struct FnCode {
     simple_params: Vec<usize>,
     bind: Option<Binder>,
     body: Vec<St>,
+    /// Whether frames need the home object and function, for `super`.
+    uses_super: bool,
     /// The whole body when it is one `return expr`.
     quick: Option<Ex>,
     arrow: bool,
@@ -413,6 +415,7 @@ impl<'s> Compiler<'s> {
             }
         }
         let text = self.src.get(f.start..f.end).unwrap_or("");
+        let text_has_super = text.is_empty() || text.contains("super");
         let args_slot =
             (!f.arrow && text.contains("arguments") && !params.iter().any(|p| &**p == "arguments"))
                 .then(|| self.declare(&"arguments".into()).unwrap());
@@ -486,6 +489,7 @@ impl<'s> Compiler<'s> {
             bind,
             body,
             quick,
+            uses_super: class != ClassKind::None || default_ctor || text_has_super,
             arrow: f.arrow,
             generator: f.generator,
             strict: f.strict,
@@ -725,7 +729,10 @@ impl<'s> Compiler<'s> {
             }
             Stmt::Throw(e) => {
                 let e = self.expr(e)?;
-                Box::new(move |rt, f| Err(Exc::Throw(e(rt, f)?)))
+                Box::new(move |rt, f| {
+                    let v = e(rt, f)?;
+                    rt.throw_value(v)
+                })
             }
             Stmt::Try(body, catch, finally) => {
                 let body = self.block(body)?;
@@ -752,8 +759,8 @@ impl<'s> Compiler<'s> {
                 let finally = finally.as_ref().map(|f| self.block(f)).transpose()?;
                 Box::new(move |rt, f| {
                     let mut r = body(rt, f);
-                    if let (Err(Exc::Throw(e)), Some((b, c))) = (&r, &catch) {
-                        let e = e.clone();
+                    if let (Err(Exc::Throw), Some((b, c))) = (&r, &catch) {
+                        let e = rt.take_thrown();
                         r = (|| {
                             if let Some(b) = b {
                                 b(rt, f, e)?;
@@ -762,9 +769,13 @@ impl<'s> Compiler<'s> {
                         })();
                     }
                     if let Some(fin) = &finally {
+                        let pending = matches!(r, Err(Exc::Throw)).then(|| rt.take_thrown());
                         match fin(rt, f)? {
                             Flow::Normal => {}
                             other => return Ok(other),
+                        }
+                        if let Some(v) = pending {
+                            *rt.thrown.borrow_mut() = v;
                         }
                     }
                     r
@@ -1476,6 +1487,7 @@ impl<'s> Compiler<'s> {
                 bind: None,
                 body: vec![body],
                 quick: None,
+                uses_super: true,
                 arrow: false,
                 generator: false,
                 strict: true,
@@ -2556,8 +2568,8 @@ fn enter(
         Some((t, h, func, nt)) => Frame {
             env,
             this: t.clone(),
-            home: h.clone(),
-            func: func.clone(),
+            home: if code.uses_super { h.clone() } else { None },
+            func: if code.uses_super { func.clone() } else { None },
             new_target: nt.clone(),
         },
         None => Frame {
@@ -2567,8 +2579,12 @@ fn enter(
             } else {
                 this
             },
-            home: c.home.borrow().clone(),
-            func: Some(fo.clone()),
+            home: if code.uses_super {
+                c.home.borrow().clone()
+            } else {
+                None
+            },
+            func: code.uses_super.then(|| fo.clone()),
             new_target,
         },
     };
@@ -2734,7 +2750,8 @@ pub fn compile_function(rt: &Rt, params: &str, body: &str) -> R<Value> {
             let p = rt.global.lookup("SyntaxError");
             return match p {
                 Some(Prop::Method(f)) => {
-                    Err(Exc::Throw(rt.construct(&f, &[Value::Str(m.into())], &f)?))
+                    let e = rt.construct(&f, &[Value::Str(m.into())], &f)?;
+                    rt.throw_value(e)
                 }
                 _ => rt.type_error(&m),
             };
@@ -2764,7 +2781,8 @@ pub fn eval_global(rt: &Rt, src: &str) -> R<Value> {
             let p = rt.global.lookup("SyntaxError");
             match p {
                 Some(Prop::Method(f)) => {
-                    Err(Exc::Throw(rt.construct(&f, &[Value::Str(m.into())], &f)?))
+                    let e = rt.construct(&f, &[Value::Str(m.into())], &f)?;
+                    rt.throw_value(e)
                 }
                 _ => rt.type_error(&m),
             }

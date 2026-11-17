@@ -491,3 +491,18 @@ fn loop_bindings_per_iteration() {
         "2"
     );
 }
+
+#[test]
+fn exceptions_through_finally() {
+    assert_eq!(ev("var r; try { try { throw 1; } finally { try { throw 2; } catch (e) {} } } catch (e) { r = e; } r"), "1");
+    assert_eq!(ev("var r; try { throw new TypeError('x'); } catch (e) { r = e.message + (e instanceof TypeError); } r"), "xtrue");
+    assert_eq!(
+        ev("function f() { try { return 1; } finally { r = 2; } } var r; f() + r"),
+        "3"
+    );
+    assert_eq!(
+        ev("var r; try { [3, 1, 2].sort(function () { throw 7; }); } catch (e) { r = e; } r"),
+        "7"
+    );
+    assert_eq!(ev("var o = null; o?.x.y === undefined"), "true");
+}

@@ -59,8 +59,10 @@ pub enum Value {
 }
 
 /// What unwinds the stack: a thrown value, or a `?.` chain stopping short.
+/// The thrown value itself waits in `Rt::thrown`, which keeps results small.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Exc {
-    Throw(Value),
+    Throw,
     Short,
 }
 
@@ -388,6 +390,8 @@ impl Obj {
 pub type Logger = Box<dyn FnMut(&str)>;
 
 pub struct Rt {
+    /// The value being thrown while an `Exc::Throw` unwinds.
+    pub thrown: RefCell<Value>,
     /// `Function.prototype.call`, recognised at call sites.
     pub fn_call: std::cell::OnceCell<Rc<Obj>>,
     /// Script call depth, bounded to keep the native stack safe.
@@ -557,7 +561,17 @@ impl Rt {
     pub fn throw<T>(&self, proto: &Rc<Obj>, msg: &str) -> R<T> {
         let e = Obj::new(Some(proto.clone()), Kind::Plain);
         e.put("message", Value::str(msg));
-        Err(Exc::Throw(Value::Obj(e)))
+        self.throw_value(Value::Obj(e))
+    }
+
+    pub fn throw_value<T>(&self, v: Value) -> R<T> {
+        *self.thrown.borrow_mut() = v;
+        Err(Exc::Throw)
+    }
+
+    /// The value an `Exc::Throw` carries, taken.
+    pub fn take_thrown(&self) -> Value {
+        std::mem::take(&mut *self.thrown.borrow_mut())
     }
 
     pub fn type_error<T>(&self, msg: &str) -> R<T> {
