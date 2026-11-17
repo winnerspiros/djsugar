@@ -387,10 +387,7 @@ fn put_track(
 
     let analysis = match cache::load(source) {
         Some(a) => a,
-        None => {
-            loader::analyse_file(track, false)?;
-            cache::load(source).ok_or("couldn't analyse it")?
-        }
+        None => loader::analyse_file_keeping(track, false)?.1,
     };
     let grid = grid_for(track, &analysis);
     let finest = analysis.waveform.levels.first().map_or(0, Vec::len);

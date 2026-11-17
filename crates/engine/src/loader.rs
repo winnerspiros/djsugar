@@ -121,6 +121,11 @@ fn with_analysis(track: &Track, analysis: &Analysis, detected: bool) -> Track {
 /// The track comes back with its tempo, grid, key and detected phrases
 /// (unless it has imported ones), and without audio or waveform.
 pub fn analyse_file(track: &Track, fresh: bool) -> Result<Track, String> {
+    analyse_file_keeping(track, fresh).map(|(t, _)| t)
+}
+
+/// `analyse_file`, also handing back the analysis it used.
+pub fn analyse_file_keeping(track: &Track, fresh: bool) -> Result<(Track, Analysis), String> {
     let Source::File(path) = &track.source else {
         return Err("not a file".into());
     };
@@ -175,12 +180,13 @@ pub fn analyse_file(track: &Track, fresh: bool) -> Result<Track, String> {
         t.duration = finest as f64 / analysis.waveform.bins_per_second;
     }
     if !phrases::imported(&t) {
-        t.waveform = Arc::new(analysis.waveform);
+        t.waveform = Arc::new(std::mem::take(&mut analysis.waveform));
         let found = phrases::to_markers(&phrases::detect(&t), t.duration);
         t.info.markers = phrases::with_phrases(&t.info.markers, found);
-        t.waveform = Arc::default();
+        analysis.waveform =
+            Arc::try_unwrap(std::mem::take(&mut t.waveform)).unwrap_or_else(|w| (*w).clone());
     }
-    Ok(t)
+    Ok((t, analysis))
 }
 
 /// Whether a new analysis may replace `track`'s grid: it has none from the
