@@ -2459,7 +2459,7 @@ fn run_closure(
         }
     }
     let _g = Guard(&rt.depth);
-    let mut env = take_env(c);
+    let mut env = take_env(rt, c);
     {
         let slots = Rc::get_mut(&mut env)
             .expect("fresh environment")
@@ -2518,7 +2518,7 @@ fn direct_call(rt: &Rt, f: &Frame, fo: &Rc<Obj>, this: Value, parts: &[Ex]) -> O
         return None;
     };
     let code = &c.code;
-    let mut env = take_env(c);
+    let mut env = take_env(rt, c);
     for (i, e) in parts.iter().enumerate() {
         let v = match e(rt, f) {
             Ok(v) => v,
@@ -2543,8 +2543,9 @@ fn direct_call(rt: &Rt, f: &Frame, fo: &Rc<Obj>, this: Value, parts: &[Ex]) -> O
 }
 
 #[inline]
-fn take_env(c: &Closure) -> Rc<Env> {
-    let mut env = POOL.with(|p| p.borrow_mut().pop()).unwrap_or_else(|| {
+fn take_env(rt: &Rt, c: &Closure) -> Rc<Env> {
+    let pooled = rt.pool.borrow_mut().pop();
+    let mut env = pooled.unwrap_or_else(|| {
         Rc::new(Env {
             slots: RefCell::new(Vec::new()),
             parent: None,
@@ -2616,19 +2617,15 @@ fn enter(
         return Ok(rt.generator(items));
     }
     let r = run_code(code, rt, &frame);
-    recycle(frame.env);
+    recycle(rt, frame.env);
     r
 }
 
 /// Environments no closure kept, ready for reuse by the next call.
 const POOL_MAX: usize = 32;
 
-thread_local! {
-    static POOL: RefCell<Vec<Rc<Env>>> = const { RefCell::new(Vec::new()) };
-}
-
 #[inline]
-fn recycle(mut env: Rc<Env>) {
+fn recycle(rt: &Rt, mut env: Rc<Env>) {
     let Some(e) = Rc::get_mut(&mut env) else {
         return;
     };
@@ -2640,12 +2637,10 @@ fn recycle(mut env: Rc<Env>) {
     // environments.
     slots.clear();
     e.parent = None;
-    POOL.with(|p| {
-        let mut p = p.borrow_mut();
-        if p.len() < POOL_MAX {
-            p.push(env);
-        }
-    });
+    let mut p = rt.pool.borrow_mut();
+    if p.len() < POOL_MAX {
+        p.push(env);
+    }
 }
 
 #[inline]
