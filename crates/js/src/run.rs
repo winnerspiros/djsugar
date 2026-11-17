@@ -1882,10 +1882,21 @@ impl<'s> Compiler<'s> {
                 if let Expr::Member(o, name, false) = &**e {
                     let o = self.expr(o)?;
                     let name = name.clone();
+                    let hint = Cell::new(0);
                     return Ok(Box::new(move |rt, f| {
                         let ov = o(rt, f)?;
                         let x = v(rt, f)?;
-                        rt.set(&ov, &name, x.clone())?;
+                        if let Value::Obj(ob) = &ov {
+                            match ob.put_atom(&name, &hint, x.clone()) {
+                                Ok(()) => return Ok(x),
+                                Err(x) => {
+                                    rt.set(&ov, &name, x.clone())?;
+                                    return Ok(x);
+                                }
+                            }
+                        } else {
+                            rt.set(&ov, &name, x.clone())?;
+                        }
                         Ok(x)
                     }));
                 }

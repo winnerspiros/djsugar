@@ -330,6 +330,23 @@ impl Obj {
         }
     }
 
+    /// Overwrites an own data property named by an interned `name`; hands
+    /// `value` back when the general path must run.
+    #[inline]
+    pub fn put_atom(&self, name: &str, hint: &Cell<u32>, value: Value) -> Result<(), Value> {
+        if matches!(self.kind, Kind::Proxy(..) | Kind::Array(_) | Kind::Typed(_)) {
+            return Err(value);
+        }
+        let mut props = self.props.borrow_mut();
+        match props.find_atom_hinted(name, hint) {
+            Some(i) if !matches!(props.list[i].1, Prop::Accessor(..)) => {
+                props.list[i].1 = Prop::Data(value);
+                Ok(())
+            }
+            _ => Err(value),
+        }
+    }
+
     /// A data property found along the prototype chain, `name` interned.
     /// None means the full lookup must decide (accessors, proxies, misses,
     /// array lengths).
