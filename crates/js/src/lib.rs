@@ -109,6 +109,25 @@ impl Engine {
         })
     }
 
+    pub fn to_number(&self, v: &Value) -> Result<f64, Error> {
+        self.rt.to_num(v).map_err(|e| self.error(e))
+    }
+
+    /// The items of an array or other iterable.
+    pub fn list(&self, v: &Value) -> Result<Vec<Value>, Error> {
+        self.rt.list(v).map_err(|e| self.error(e))
+    }
+
+    /// A new `Uint8Array` holding `data`.
+    pub fn bytes(&self, data: &[u8]) -> Result<Value, Error> {
+        let ctor = self.get(&Value::Obj(self.rt.global.clone()), "Uint8Array")?;
+        let items = data.iter().map(|&b| Value::Num(b as f64)).collect();
+        let arr = self.rt.array(items);
+        self.rt
+            .construct(&ctor, &[arr], &ctor)
+            .map_err(|e| self.error(e))
+    }
+
     pub fn object(&self) -> Value {
         Value::Obj(self.rt.object())
     }

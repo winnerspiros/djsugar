@@ -84,7 +84,7 @@ fn every_bundled_hid_mapping_loads_and_takes_reports() {
         let errors: Vec<String> = c
             .errors()
             .into_iter()
-            .filter(|e| !e.starts_with("KontrolF1.shutdown(): not a function"))
+            .filter(|e| !(e.starts_with("KontrolF1.shutdown()") && e.contains("not a function")))
             .collect();
         if !errors.is_empty() {
             failures.push(format!("{name}: {errors:#?}"));

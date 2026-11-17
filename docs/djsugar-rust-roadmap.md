@@ -35,7 +35,7 @@ Timeframes are estimates for the work itself; P0 is now, P3 is later. "Input" is
 - Rust everywhere possible: app, build tooling (xtask, not shell/Python), mods and their SDK. Non-Rust only where a platform forces it (minimal Android/iOS glue) or for compatibility (JS mappings).
 
 - Base on openDJ instead of translating Mixxx: it already has the engine (cpal, symphonia,
-  signalsmith-stretch), Mixxx controller mappings (midir, hidapi, rquickjs), library with Mixxx
+  signalsmith-stretch), Mixxx controller mappings (midir, hidapi, djsugar-js), library with Mixxx
   import (rusqlite), wgpu waveforms, Slint UI, stems, plugin hosting.
 - UI: Slint (supports Android and iOS). Built binaries are GPL-3.0 because of Slint.
 - Database: rusqlite (bundled SQLite). Turso is a later drop-in candidate once it supports custom
@@ -151,7 +151,7 @@ One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, 
 | --- | --- | --- |
 | M.1 | Data mods: sample packs, skins (Slint themes/colors/assets), controller mappings, effect presets. No code. | TODO |
 | M.2 | Source mods: written in Rust, compiled to WASM (wasm32-wasip2, wasmtime/wasmi), with a `djsugar-mod` SDK crate; implementing a `MusicSource` interface (search, browse, resolve-to-audio); host gives HTTP + cache only via declared permissions. YouTube, SoundCloud, Spotify become mods instead of built-ins. | TODO |
-| M.3 | Controller mods in Rust (WASM) too; rquickjs kept only to run existing Mixxx/openDJ JS mappings, never for new code. Native plugins desktop-only (plugin-host crate). | TODO |
+| M.3 | Controller mods in Rust (WASM) too; djsugar-js kept only to run existing JS mappings, never for new code. Native plugins desktop-only (plugin-host crate). | TODO |
 | M.4 | Store policy: Play forbids downloading native code; WASM/JS interpreted in a sandbox is the allowed path. Store build ships no source mods and no built-in mod catalog URL. | TODO |
 
 ## Part R: pure-Rust dependencies
@@ -160,7 +160,7 @@ Non-Rust code in the current tree (from `cargo tree`), and its replacement. OS-l
 
 | # | C/C++ dependency | Replacement | Status |
 | --- | --- | --- | --- |
-| R.1 | rquickjs (QuickJS, C) | WIP: in-tree interpreter `djsugar-js` (goal: beat QuickJS on mapping scripts). Done: lexer, parser (all 149 bundled scripts parse). Next: scope resolution, bytecode compiler, VM with inline caches, builtins, all 149 bundled mappings as the conformance gate. Alternatives measured (QuickJS 7.2 us/call, kataan 20.9, boa 30.2) | WIP |
+| R.1 | rquickjs (QuickJS, C) | Replaced by the in-tree interpreter `djsugar-js` (no dependencies): 141 of 149 bundled mappings load and init. Remaining: the other 8 mappings, then speed past QuickJS on the handler benchmarks (now ~10-40% more instructions) | WIP |
 | R.2 | openssl-sys (pulled in by libsqlite3-sys for SQLCipher, to read encrypted Rekordbox databases) | goes with R.3: pure-Rust SQLCipher-compatible page decryption (AES-256-CBC + HMAC via RustCrypto) | TODO |
 | R.3 | libsqlite3-sys (diesel/rusqlite) | pure-Rust DB (turso/limbo or equivalent) with migration of existing library DBs; scheduled late | TODO |
 | R.4 | signalsmith-stretch (C++) | DONE: `djsugar-stretch`, own phase vocoder (peak phase-locking, rigid peak shifting for transpose, whole-spectrum resampling at onsets, no allocation after construction; realfft only). A/B against the old library on a tone+drum test signal: tonal purity equal or better in all 6 cases, pre-echo within 0.7 dB in 5 of 6 (2.2 dB behind at 0.8x slow-down), level within 0.8 dB, CPU 18-27 ms per second of audio vs 18-25 ; block work spread over the interval after it (per-buffer worst case 6.0 ms -> 2.2 ms, p99 1.7 -> 1.2 ms, mean 0.2 ms) (follow-up: close the slow-down pre-echo gap) | DONE |
