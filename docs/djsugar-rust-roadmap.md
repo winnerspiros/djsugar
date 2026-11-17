@@ -243,8 +243,8 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | # | Area | Status |
 | --- | --- | --- |
 | 2.1 | Effects: Mixxx built-in effect set, LV2 | TODO |
-| 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO |
-| 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO |
+| 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO: differential check with Mixxx as the oracle: record Mixxx's BPM/key/grid on a fixed corpus once (golden files), compare our analyzers against them in CI, list each deliberate difference |
+| 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO: record each mapping's control writes for a scripted MIDI/HID input sequence under Mixxx, replay them against `djsugar-js` and compare |
 | 2.4 | Recording, broadcasting (openDJ has both) | TODO (verify) |
 | 2.5 | Vinyl control (DVS timecode, see Part C) | TODO |
 | 2.6 | Settings and config migration from Mixxx config | TODO |
