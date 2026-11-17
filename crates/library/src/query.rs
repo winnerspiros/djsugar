@@ -804,11 +804,20 @@ impl Term {
             Test::Contains(TextField::Key, s) => t.key.to_lowercase().contains(s.as_str()),
             Test::Contains(TextField::Tag, s) => has_tag(text, None, s, false),
             Test::Contains(TextField::UserTag(g), s) => has_tag(text, Some(*g), s, false),
-            Test::Contains(f, s) => field(*f).contains(s.as_str()),
+            Test::Contains(f, s) => {
+                field(*f).contains(s.as_str())
+                    || (!text.greek.is_empty()
+                        && greeklish(field(*f)).contains(greeklish(s).as_str()))
+            }
             Test::Exactly(TextField::Key, s) => t.key.to_lowercase() == *s,
             Test::Exactly(TextField::Tag, s) => has_tag(text, None, s, true),
             Test::Exactly(TextField::UserTag(g), s) => has_tag(text, Some(*g), s, true),
-            Test::Exactly(f, s) => field(*f) == s,
+            Test::Exactly(f, s) => {
+                field(*f) == s
+                    || (!text.greek.is_empty()
+                        && !s.is_empty()
+                        && greeklish(field(*f)) == greeklish(s))
+            }
             Test::Empty(TextField::Key) => t.key.trim().is_empty(),
             Test::Empty(TextField::Tag) => text.user.is_empty(),
             Test::Empty(TextField::UserTag(g)) => !text.user.iter().any(|(t, _)| t == g),
@@ -1014,9 +1023,48 @@ fn unaccent(c: char) -> char {
     }
 }
 
+/// The order a list sorts text in: by letter whatever its case or
+/// accent ("Ólafur" with the o's, "ά" with the α's, "ς" as "σ"), Latin
+/// before Greek, then by case and accent so the order is stable.
+pub fn collate(a: &str, b: &str) -> std::cmp::Ordering {
+    let letters = |s: &str| {
+        s.chars()
+            .flat_map(char::to_lowercase)
+            .map(|c| {
+                if has_greek_char(c) {
+                    greek_base(c)
+                } else {
+                    unaccent(c)
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+    let (x, y) = (letters(a), letters(b));
+    x.cmp(&y).then_with(|| a.cmp(b))
+}
+
+/// A lowercase Greek letter without its tonos or dialytika; final sigma
+/// is sigma.
+fn greek_base(c: char) -> char {
+    match c {
+        'ά' => 'α',
+        'έ' => 'ε',
+        'ή' => 'η',
+        'ί' | 'ϊ' | 'ΐ' => 'ι',
+        'ό' => 'ο',
+        'ύ' | 'ϋ' | 'ΰ' => 'υ',
+        'ώ' => 'ω',
+        'ς' => 'σ',
+        c => c,
+    }
+}
+
+fn has_greek_char(c: char) -> bool {
+    matches!(c, '\u{0370}'..='\u{03ff}' | '\u{1f00}'..='\u{1fff}')
+}
+
 fn has_greek(s: &str) -> bool {
-    s.chars()
-        .any(|c| matches!(c, '\u{0370}'..='\u{03ff}' | '\u{1f00}'..='\u{1fff}'))
+    s.chars().any(has_greek_char)
 }
 
 /// Folded text (see [`fold`]) reduced to how Greek sounds, so the many
@@ -1242,10 +1290,45 @@ mod tests {
         assert_eq!(find(&tracks, "nikos bertis"), vec![3]);
         assert_eq!(find(&tracks, "pios"), vec![3]);
         assert_eq!(find(&tracks, "artist:nikos"), vec![3]);
+        assert_eq!(find(&tracks, "artist:basilhs"), vec![1]);
+        assert_eq!(find(&tracks, "title:psithiri"), vec![2]);
+        assert_eq!(find(&tracks, "title:=pios"), vec![3]);
+        assert_eq!(find(&tracks, "title:basilhs").len(), 0);
         // Latin-only tracks keep plain matching.
         assert_eq!(find(&tracks, "daft"), vec![4]);
         assert_eq!(greeklish("mpampis"), greeklish("bampis"));
         assert_eq!(greeklish("afto"), greeklish("auto"));
+    }
+
+    #[test]
+    fn sorts_by_letter_whatever_the_case_or_accent() {
+        let mut names = vec![
+            "zebra",
+            "Ψάρι",
+            "Ólafur",
+            "apple",
+            "Άλφα",
+            "Oscar",
+            "ωμέγα",
+            "Βήτα",
+            "Banana",
+        ];
+        names.sort_by(|a, b| collate(a, b));
+        assert_eq!(
+            names,
+            [
+                "apple",
+                "Banana",
+                "Ólafur",
+                "Oscar",
+                "zebra",
+                "Άλφα",
+                "Βήτα",
+                "Ψάρι",
+                "ωμέγα"
+            ]
+        );
+        assert!(collate("λογος", "λογοσ").is_ne());
     }
 
     #[test]

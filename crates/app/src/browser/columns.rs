@@ -570,7 +570,9 @@ pub fn compare(id: i32, a: &Track, b: &Track) -> Ordering {
             match (s.is_empty(), t.is_empty()) {
                 (true, false) => Ordering::Greater,
                 (false, true) => Ordering::Less,
-                _ => natural(&s).cmp(&natural(&t)),
+                _ => leading_number(&s)
+                    .cmp(&leading_number(&t))
+                    .then_with(|| djsugar_library::query::collate(&s, &t)),
             }
         }
     }
@@ -624,9 +626,11 @@ pub fn key_order(key: &str, camelot: bool) -> (u8, bool) {
     }
 }
 
-fn natural(s: &str) -> (u64, String) {
-    let digits: String = s.chars().take_while(|c| c.is_ascii_digit()).collect();
-    (digits.parse().unwrap_or(u64::MAX), s.to_lowercase())
+/// The number text starts with, so "9" sorts before "10"; text without
+/// one after.
+fn leading_number(s: &str) -> u64 {
+    let digits = s.len() - s.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+    s[..digits].parse().unwrap_or(u64::MAX)
 }
 
 /// Which column set a list shows: the lists', a history session's, or

@@ -5525,10 +5525,10 @@ impl Browser {
             data.sort_by(|a, b| {
                 use std::cmp::Ordering;
                 let o = match self.sort_column {
-                    columns::ARTIST => a.artist.cmp(&b.artist),
-                    columns::TITLE_ID => a.title.cmp(b.title),
-                    columns::ALBUM => a.album.cmp(b.album),
-                    columns::GENRE => a.genre.cmp(b.genre),
+                    columns::ARTIST => query::collate(&a.artist, &b.artist),
+                    columns::TITLE_ID => query::collate(a.title, b.title),
+                    columns::ALBUM => query::collate(a.album, b.album),
+                    columns::GENRE => query::collate(a.genre, b.genre),
                     columns::BPM => a.bpm.total_cmp(&b.bpm),
                     columns::KEY_ID => columns::key_order(a.key, self.camelot)
                         .cmp(&columns::key_order(b.key, self.camelot)),

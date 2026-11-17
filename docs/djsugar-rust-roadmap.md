@@ -219,7 +219,7 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | # | Feature (C++ reference on main) | Status |
 | --- | --- | --- |
 | 1.1 | Touch UI: Lite and Booth layouts, compact library, UI scale | TODO |
-| 1.2 | Library: Greek and Greeklish search, accent-insensitive collation, fast large collections | WIP: search finds Greek by Greek (any case or tonos) or Greeklish spellings (`vasilis`, `basilhs`, `8ee mou`); accents folded for Latin scripts. Next: Greek-aware sort order, field searches (`artist:`) on the Greeklish skeleton, large-library timing |
+| 1.2 | Library: Greek and Greeklish search, accent-insensitive collation, fast large collections | WIP: search finds Greek by Greek (any case or tonos) or Greeklish spellings (`vasilis`, `basilhs`, `8ee mou`); field searches (`artist:basilhs`) too; accents folded for Latin scripts; lists sort by letter whatever the case or accent, Latin then Greek (ά with α, ς as σ). Next: large-library search timing |
 | 1.3 | Import existing DJ Sugar/Mixxx library (mixxxdb.sqlite, cues, grids, crates) | TODO (openDJ has Mixxx import, verify) |
 | 1.4 | YouTube: search, load/save, 16-range parallel download, SponsorBlock cuts | TODO |
 | 1.5 | yt-dlp: bundled and self-updating on Android; iOS limits | TODO |
