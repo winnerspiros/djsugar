@@ -6,7 +6,8 @@
 //!   and tags; `"two words"` matches a phrase. Matching forgives what a DJ
 //!   doesn't type: accents (`olafur` finds "Ólafur"), punctuation (`acdc`
 //!   finds "AC/DC"), `&` for "and" and `ft`/`featuring` for "feat" (see
-//!   [`fold`]). When nothing matches, [`Query::loosened`] lets each word of
+//!   [`fold`]). Greek is found in Greek or Greeklish (`vasilis`,
+//!   `basilhs` and `Βασίλης` alike; see [`greeklish`]). When nothing matches, [`Query::loosened`] lets each word of
 //!   four letters or more be one letter off (`frahn` finds "Frahm").
 //! - `field:value` searches one field: `artist:`, `title:`, `album:`,
 //!   `genre:`, `comment:`, `grouping:`, `tag:` (every tag group), `key:`,
@@ -216,8 +217,9 @@ enum Flag {
 
 #[derive(Clone, Debug, PartialEq)]
 enum Test {
-    /// Folded text (see [`fold`]) found in any of the searchable text fields.
-    Anywhere(String),
+    /// Folded text (see [`fold`]) found in any of the searchable text
+    /// fields, or its Greeklish skeleton (see [`greeklish`]) in their Greek.
+    Anywhere(String, String),
     /// Folded text found, one letter off at most, in any of them: a plain
     /// word of a search that found nothing as typed.
     Near(String),
@@ -277,11 +279,36 @@ pub struct Indexed {
     remixer: String,
     /// Each tag's group and folded name.
     user: Vec<(i64, String)>,
+    /// The Greeklish skeleton of the plain-search fields, when one of them
+    /// is in Greek, so `vasilis`, `basilhs` and `Βασίλης` find each other.
+    greek: String,
 }
 
 impl Indexed {
     pub fn new(t: &Track) -> Self {
+        let plain = [
+            &t.artist,
+            &t.title,
+            &t.album,
+            &t.genre,
+            &t.info.comment,
+            &t.info.grouping,
+        ];
+        let greek = if plain.iter().any(|f| has_greek(f))
+            || t.info.tags.iter().any(|t| has_greek(&t.name))
+        {
+            let mut all: Vec<&str> = plain.iter().map(|s| s.as_str()).collect();
+            all.extend(t.info.tags.iter().map(|t| t.name.as_str()));
+            // Fields are kept apart so a match never spans two of them.
+            all.iter()
+                .map(|f| greeklish(&fold(f)))
+                .collect::<Vec<_>>()
+                .join("\n")
+        } else {
+            String::new()
+        };
         Indexed {
+            greek,
             artist: fold(&t.artist),
             title: fold(&t.title),
             album: fold(&t.album),
@@ -341,7 +368,7 @@ impl Query {
                 terms
                     .iter()
                     .map(|t| match &t.test {
-                        Test::Anywhere(s) if !t.negated && s.chars().count() >= 4 => {
+                        Test::Anywhere(s, _) if !t.negated && s.chars().count() >= 4 => {
                             changed = true;
                             Term {
                                 negated: false,
@@ -466,7 +493,7 @@ fn parse_test(word: &str) -> Option<Test> {
     }
     let Some((name, value)) = word.split_once(':').filter(|(n, _)| !n.contains('"')) else {
         let text = fold(&unquote(word));
-        return (!text.is_empty()).then_some(Test::Anywhere(text));
+        return (!text.is_empty()).then(|| anywhere(text));
     };
     let name = name.to_ascii_lowercase();
     let text_field = match name.as_str() {
@@ -566,9 +593,14 @@ fn parse_test(word: &str) -> Option<Test> {
             if text.is_empty() {
                 return None;
             }
-            Test::Anywhere(text)
+            anywhere(text)
         }
     })
+}
+
+fn anywhere(text: String) -> Test {
+    let skeleton = greeklish(&text);
+    Test::Anywhere(text, skeleton)
 }
 
 /// A tag group by its place (`tag2:`, or `user2:` as VirtualDJ's smart
@@ -741,17 +773,20 @@ impl Term {
         };
         let key = || Key::parse(&t.key);
         match &self.test {
-            Test::Anywhere(s) => [
-                &text.artist,
-                &text.title,
-                &text.album,
-                &text.genre,
-                &text.comment,
-                &text.grouping,
-                &text.tags,
-            ]
-            .iter()
-            .any(|f| f.contains(s.as_str())),
+            Test::Anywhere(s, skeleton) => {
+                [
+                    &text.artist,
+                    &text.title,
+                    &text.album,
+                    &text.genre,
+                    &text.comment,
+                    &text.grouping,
+                    &text.tags,
+                ]
+                .iter()
+                .any(|f| f.contains(s.as_str()))
+                    || (!text.greek.is_empty() && text.greek.contains(skeleton.as_str()))
+            }
             Test::Near(s) => {
                 let s: Vec<char> = s.chars().collect();
                 [
@@ -913,6 +948,10 @@ impl Unaccented {
             'ß' => pair('s', 's'),
             'þ' => pair('t', 'h'),
             'ĳ' => pair('i', 'j'),
+            'θ' => pair('t', 'h'),
+            'χ' => pair('c', 'h'),
+            'ψ' => pair('p', 's'),
+            'ξ' => pair('k', 's'),
             c => Unaccented {
                 first: Some(unaccent(c)),
                 second: None,
@@ -951,8 +990,73 @@ fn unaccent(c: char) -> char {
         'ŵ' => 'w',
         'ý' | 'ÿ' | 'ŷ' => 'y',
         'ź' | 'ż' | 'ž' => 'z',
+        // Greek, as Latin letters (ELOT 743 where one letter will do; the
+        // two-letter ones are in `Unaccented`), so either script finds it.
+        'α' | 'ά' => 'a',
+        'β' => 'v',
+        'γ' => 'g',
+        'δ' => 'd',
+        'ε' | 'έ' => 'e',
+        'ζ' => 'z',
+        'η' | 'ή' | 'ι' | 'ί' | 'ϊ' | 'ΐ' => 'i',
+        'κ' => 'k',
+        'λ' => 'l',
+        'μ' => 'm',
+        'ν' => 'n',
+        'ο' | 'ό' | 'ω' | 'ώ' => 'o',
+        'π' => 'p',
+        'ρ' => 'r',
+        'σ' | 'ς' => 's',
+        'τ' => 't',
+        'υ' | 'ύ' | 'ϋ' | 'ΰ' => 'y',
+        'φ' => 'f',
         c => c,
     }
+}
+
+fn has_greek(s: &str) -> bool {
+    s.chars()
+        .any(|c| matches!(c, '\u{0370}'..='\u{03ff}' | '\u{1f00}'..='\u{1fff}'))
+}
+
+/// Folded text (see [`fold`]) reduced to how Greek sounds, so the many
+/// ways Greeklish spells a letter meet: `th` and `8` (θ); `x`, `ks`, `ch`,
+/// `kh` (ξ, χ); `i`, `h`, `y`, `ei`, `oi` (ι, η, υ, ει, οι); `o` and `w`
+/// (ο, ω); `ou`, `oy` and `u` (ου); `ai` and `e`; `b`, `v`, `mp` (β, μπ); `d`, `dh`,
+/// `nt` (δ, ντ); `g`, `gh`, `gk`, `gg`; `f` and `ph`; `av`, `af`, `au`
+/// (αυ) and the same for ευ. Doubled letters count once.
+pub fn greeklish(folded: &str) -> String {
+    let c: Vec<char> = folded.chars().collect();
+    let mut out = String::with_capacity(c.len());
+    let mut i = 0;
+    while i < c.len() {
+        let next = c.get(i + 1).copied();
+        let (sound, used) = match (c[i], next) {
+            ('t', Some('h')) | ('8', _) => ('8', if c[i] == '8' { 1 } else { 2 }),
+            ('k', Some('s' | 'h')) | ('c', Some('h')) => ('x', 2),
+            ('p', Some('h')) => ('f', 2),
+            ('d', Some('h')) | ('g', Some('h')) => (c[i], 2),
+            ('m', Some('p')) => ('v', 2),
+            ('n', Some('t')) => ('d', 2),
+            ('g', Some('k' | 'g')) => ('g', 2),
+            ('o', Some('u' | 'y')) => ('u', 2),
+            ('a', Some('i')) => ('e', 2),
+            ('e' | 'o' | 'y' | 'u', Some('i')) => ('i', 2),
+            ('a' | 'e', Some('v' | 'f' | 'u' | 'y')) => {
+                out.push(c[i]);
+                ('v', 2)
+            }
+            ('h' | 'y', _) => ('i', 1),
+            ('w', _) => ('o', 1),
+            ('b', _) => ('v', 1),
+            (ch, _) => (ch, 1),
+        };
+        if !out.ends_with(sound) || !sound.is_alphabetic() {
+            out.push(sound);
+        }
+        i += used;
+    }
+    out
 }
 
 /// Whether `word` is in `text` with at most one letter wrong, missing,
@@ -1117,6 +1221,31 @@ mod tests {
             "3B",
         );
         vec![a, b, c, d]
+    }
+
+    #[test]
+    fn finds_greek_by_greek_or_greeklish() {
+        let tracks = vec![
+            track(1, "Βασίλης Καρράς", "Θεέ μου", 100.0, "1A"),
+            track(2, "Άλκηστις Πρωτοψάλτη", "Ψίθυροι", 90.0, "2A"),
+            track(3, "Νίκος Βέρτης", "Ποιος", 120.0, "3A"),
+            track(4, "Daft Punk", "Around the World", 121.0, "4A"),
+        ];
+        assert_eq!(find(&tracks, "βασιλης"), vec![1]);
+        assert_eq!(find(&tracks, "ΒΑΣΊΛΗΣ"), vec![1]);
+        assert_eq!(find(&tracks, "vasilis"), vec![1]);
+        assert_eq!(find(&tracks, "basilhs karras"), vec![1]);
+        assert_eq!(find(&tracks, "8ee mou"), vec![1]);
+        assert_eq!(find(&tracks, "thee"), vec![1]);
+        assert_eq!(find(&tracks, "psithiroi"), vec![2]);
+        assert_eq!(find(&tracks, "alkistis protopsalti"), vec![2]);
+        assert_eq!(find(&tracks, "nikos bertis"), vec![3]);
+        assert_eq!(find(&tracks, "pios"), vec![3]);
+        assert_eq!(find(&tracks, "artist:nikos"), vec![3]);
+        // Latin-only tracks keep plain matching.
+        assert_eq!(find(&tracks, "daft"), vec![4]);
+        assert_eq!(greeklish("mpampis"), greeklish("bampis"));
+        assert_eq!(greeklish("afto"), greeklish("auto"));
     }
 
     #[test]
