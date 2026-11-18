@@ -185,8 +185,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # whisper.cpp's CMake cache keeps the compiler's full path in the
+      # build cache; a new runner image moves the compiler, so each image
+      # gets its own cache.
+      - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
+        shell: bash
       - uses: Swatinem/rust-cache@v2
         with:
+          key: image-${{ env.IMAGE }}
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
           cache-on-failure: true
       - run: cargo build --release -p djsugar -p djsugar-plugin-host
