@@ -49,6 +49,7 @@ pub mod patterns;
 pub mod phrases;
 pub mod plugins;
 pub mod preview;
+mod rt_guard;
 pub mod process;
 pub mod recorder;
 pub mod sampler;

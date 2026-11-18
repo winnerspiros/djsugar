@@ -33,6 +33,7 @@ use crate::looper::{Heard, LooperIntake, Loopers};
 use crate::midi_clock::LeaderSource;
 use crate::preview::{Preview, PreviewInput};
 use crate::recorder::{self, Feed, RecordTap};
+use crate::rt_guard::{enter_audio_callback, exit_audio_callback};
 use crate::sampler::{SamplerInput, Samplers};
 use crate::stems::{Stems, MAX_STEMS};
 use crate::track::{Audio, Track};
@@ -2959,6 +2960,7 @@ impl Engine {
             }
             return;
         }
+        enter_audio_callback();
         crate::dsp::flush_denormals();
         let dt = frames as f64 / self.sample_rate;
         // Positions published below are where the decks are at the end of
@@ -4142,6 +4144,7 @@ impl Engine {
             self.meter.push(out, channels);
             self.broadcast.push(out, channels);
         }
+        exit_audio_callback();
     }
 }
 
@@ -8145,5 +8148,73 @@ mod tests {
         run(&mut engine, 0.5);
         assert!(!g("following").get_bool());
         assert_eq!(g("bpm").get(), 100.0);
+    }
+
+    #[test]
+    fn no_allocations_in_audio_callback() {
+        // Build a realistic scenario: four decks playing, effects on, mixer active.
+        let (reg, mut engine, mut input) = setup();
+
+        // Load tracks on all four decks.
+        for deck in 0..NUM_DECKS {
+            load(&mut input, deck, short_track(120.0 + deck as f64 * 5.0, 30.0));
+        }
+        run(&mut engine, 0.05); // process load commands
+
+        // Start all decks playing.
+        for deck in 0..NUM_DECKS {
+            reg.get(&format!("[Channel{}]", deck + 1), "play")
+                .unwrap()
+                .set_bool(true);
+        }
+        run(&mut engine, 0.05);
+
+        // Enable effects on all decks and the main mix.
+        for deck in 0..NUM_DECKS {
+            reg.get(
+                &format!("[QuickEffectRack1_[Channel{}]]", deck + 1),
+                "enabled",
+            )
+            .unwrap()
+            .set_bool(true);
+            reg.get(
+                &format!("[QuickEffectRack1_[Channel{}]]", deck + 1),
+                "super1",
+            )
+            .unwrap()
+            .set(0.5); // filter
+        }
+        // Main mix effect
+        reg.get("[Master]", "fx1_enabled")
+            .unwrap()
+            .set_bool(true);
+        reg.get("[Master]", "fx1_super1")
+            .unwrap()
+            .set(0.3);
+
+        // Crossfader movement
+        reg.get("[Master]", "crossfader").unwrap().set(0.0);
+        run(&mut engine, 0.05);
+        reg.get("[Master]", "crossfader").unwrap().set(1.0);
+        run(&mut engine, 0.05);
+        reg.get("[Master]", "crossfader").unwrap().set(0.5);
+
+        // Headphone mix
+        reg.get("[Master]", "headMix").unwrap().set(0.5);
+        reg.get("[Master]", "headGain").unwrap().set(1.0);
+
+        // Sampler
+        reg.get("[Sampler]", "slot1").unwrap().set(1.0); // builtin kick
+        reg.get("[Sampler]", "play1").unwrap().set_bool(true);
+        run(&mut engine, 0.05);
+
+        // Now run many buffers with the allocation guard active.
+        // Use a buffer size that matches BLOCK to avoid the recursive split path.
+        let mut buf = vec![0.0f32; crate::effects::BLOCK * 2];
+        for _ in 0..200 {
+            crate::rt_guard::assert_no_allocs_in_audio(|| {
+                engine.process(&mut buf, 2);
+            });
+        }
     }
 }
