@@ -416,6 +416,10 @@ export global LibraryEdit {
     // Saves the Collection (every track and list) or a list or folder at a
     // sidebar row as a Traktor NML file (collection.nml); asks where first.
     callback export-traktor(row: int);
+    // Writes the cues, loops and grids of the tracks under a sidebar row
+    // into their files for Serato, and its lists as crates; asks for the
+    // _Serato_ folder first.
+    callback export-serato(row: int);
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one

@@ -26,8 +26,8 @@ use djsugar_engine::{Hotcue, Source, Track, MEMORY_CUE};
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
 
-const MARKERS: &str = "Serato Markers2";
-const GRID: &str = "Serato BeatGrid";
+pub(super) const MARKERS: &str = "Serato Markers2";
+pub(super) const GRID: &str = "Serato BeatGrid";
 
 /// Adds what the track's file holds for Serato. A file without it, or one
 /// that can't be read, is left as it is.
@@ -157,7 +157,7 @@ fn base64(text: &str) -> Option<Vec<u8>> {
 /// A `GEOB` frame's name and data: after its text encoding come the MIME
 /// type (Latin-1), a file name and the name, each ending in NUL (two for
 /// UTF-16).
-fn geob(body: &[u8]) -> Option<(String, &[u8])> {
+pub(super) fn geob(body: &[u8]) -> Option<(String, &[u8])> {
     let (&encoding, rest) = body.split_first()?;
     let wide = matches!(encoding, 1 | 2);
     let mime_end = rest.iter().position(|&b| b == 0)?;

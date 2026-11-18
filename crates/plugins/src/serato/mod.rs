@@ -13,6 +13,7 @@
 //! `t` and `p` are UTF-16BE text and paths, `u` a `u32`, `s` a `u16`, `b` a
 //! flag. A crate named `House%%Deep.crate` is the crate Deep in House.
 
+pub mod export;
 pub mod tags;
 
 use std::path::{Component, Path, PathBuf};
@@ -290,19 +291,9 @@ fn crate_list(path: &Path, disk: &Path) -> Option<ImportedList> {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
+    use super::export::{field, utf16};
     use super::*;
-
-    pub fn field(name: &[u8; 4], value: &[u8]) -> Vec<u8> {
-        let mut out = name.to_vec();
-        out.extend((value.len() as u32).to_be_bytes());
-        out.extend(value);
-        out
-    }
-
-    pub fn utf16(s: &str) -> Vec<u8> {
-        s.encode_utf16().flat_map(u16::to_be_bytes).collect()
-    }
 
     fn library(dir: &Path) -> PathBuf {
         let serato = dir.join("_Serato_");

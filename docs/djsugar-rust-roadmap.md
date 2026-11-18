@@ -135,7 +135,7 @@ All in the app, both directions, no external tool: tracks, playlists/crates, cue
 | --- | --- | --- |
 | X.1 | Common library model and lossless conversion layer (Rust); dry-run preview and conflict report | TODO |
 | X.2 | Rekordbox: XML and the encrypted master.db (6/7), device exports (PDB/ANLZ on USB) | TODO |
-| X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | WIP: import of database V2, crates in their folders, and from the files cue points, saved loops, grid and its lock (MP3, AIFF, WAV, FLAC, MP4). Next: smart crates, history, export |
+| X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | WIP: import of database V2, crates in their folders, and from the files cue points, saved loops, grid and its lock (MP3, AIFF, WAV, FLAC, MP4); export from File › Export (cues, loops and grid into the files, lists as crates). Next: smart crates, history |
 | X.4 | Traktor: collection.nml with cues, grids and playlists | DONE: import, and export from File › Export or a list (tracks, tags, key, grid, cues, loops, fades, playlist tree) |
 | X.5 | Engine DJ: database and USB exports | WIP: USB export; import of m.db with cues, loops, grid, playlists, history. Next: writing the desktop database |
 | X.6 | VirtualDJ: database.xml and playlists; Mixxx (exists, extend to export); djay; iTunes/Music XML | TODO |

@@ -1616,6 +1616,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 browser.borrow_mut().poll_inbox_albums();
                 browser.borrow_mut().poll_rekordbox_xml();
                 browser.borrow_mut().poll_traktor_nml();
+                browser.borrow_mut().poll_serato_export();
                 browser.borrow_mut().poll_covers();
                 browser.borrow_mut().poll_located();
                 browser.borrow_mut().poll_cleanup();

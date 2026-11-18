@@ -99,7 +99,7 @@ impl Browser {
 
     /// The tracks under a node, and its list tree. The Collection node
     /// gives every track and every list outside History.
-    fn traktor_lists(&self, node: usize) -> (Vec<Track>, Vec<NmlList>) {
+    pub(super) fn traktor_lists(&self, node: usize) -> (Vec<Track>, Vec<NmlList>) {
         let mut tracks: Vec<Track> = Vec::new();
         let mut index: HashMap<usize, usize> = HashMap::new();
         let mut add = |b: &Browser, t: usize| -> usize {
