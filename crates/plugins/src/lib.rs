@@ -36,7 +36,6 @@ pub mod musicbrainz;
 pub mod plex;
 pub mod rekordbox;
 pub mod remote;
-pub mod serato;
 mod server;
 pub mod source;
 pub mod subsonic;
@@ -356,7 +355,6 @@ pub fn importers() -> Vec<Box<dyn LibraryImport>> {
         Box::new(mixxx::Mixxx),
         Box::new(traktor::Traktor),
         Box::new(djay::Djay),
-        Box::new(serato::Serato),
         Box::new(itunes_library::ItunesLibrary),
     ]
 }
