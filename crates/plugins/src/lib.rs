@@ -25,6 +25,7 @@ pub mod archive;
 pub mod bandcamp;
 pub mod buy;
 pub mod djay;
+pub mod engine;
 pub mod inbox;
 pub mod itunes;
 pub mod itunes_library;
@@ -348,6 +349,7 @@ pub fn builtin() -> Vec<Box<dyn Plugin>> {
 /// the DJ turns it on in Settings > Library.
 pub fn importers() -> Vec<Box<dyn LibraryImport>> {
     vec![
+        Box::new(engine::Engine),
         Box::new(virtualdj::VirtualDj),
         Box::new(rekordbox::Rekordbox),
         Box::new(mixxx::Mixxx),

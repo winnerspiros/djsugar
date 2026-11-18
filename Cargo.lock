@@ -3676,6 +3676,7 @@ version = "0.6.0"
 dependencies = [
  "chrono",
  "djsugar-engine",
+ "flate2",
  "md5",
  "plist",
  "rbox-anlz",

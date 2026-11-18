@@ -19,6 +19,9 @@ rbox-anlz = "0.3.0"
 rbox-core = "0.3.0"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 
+[dev-dependencies]
+flate2 = "1"
+
 # rekordbox's master.db is SQLCipher, built as in djsugar-export: on
 # CommonCrypto on macOS, with OpenSSL built in elsewhere.
 [target.'cfg(target_vendor = "apple")'.dependencies]
