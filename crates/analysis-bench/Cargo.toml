@@ -1,0 +1,11 @@
+[package]
+name = "analysis-bench"
+description = "Scores DJ Sugar's tempo, grid and key analysis against known answers and against Mixxx's analyzers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+djsugar-engine = { path = "../engine" }
+serde_json = "1"

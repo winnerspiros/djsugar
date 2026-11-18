@@ -261,6 +261,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "analysis-bench"
+version = "0.6.0"
+dependencies = [
+ "djsugar-engine",
+ "serde_json",
+]
+
+[[package]]
 name = "android-activity"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
