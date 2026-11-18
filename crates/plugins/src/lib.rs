@@ -32,6 +32,7 @@ pub mod itunes_library;
 pub mod jellyfin;
 pub mod links;
 pub mod mixxx;
+pub mod mixxx_export;
 pub mod musicbrainz;
 pub mod plex;
 pub mod rekordbox;

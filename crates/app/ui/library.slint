@@ -423,6 +423,9 @@ export global LibraryEdit {
     // Puts the points of the tracks under a sidebar row into VirtualDJ's
     // database, and its lists into VirtualDJ's lists; asks for the folder.
     callback export-virtualdj(row: int);
+    // Gives the tracks under a sidebar row their cues and grids in Mixxx's
+    // library, and its lists as Mixxx playlists; asks for mixxxdb.sqlite.
+    callback export-mixxx(row: int);
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one

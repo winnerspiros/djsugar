@@ -1,7 +1,8 @@
 //! Brings a Mixxx library into the collection at start, when the DJ turns it
 //! on in Settings > Library: the tracks in `mixxxdb.sqlite` with their tags,
 //! cues, saved loops and beat grids, and its playlists, crates and history.
-//! It opens the database read-only and never writes it.
+//! It opens the database read-only; File › Export › Mixxx… writes to it
+//! (see [`crate::mixxx_export`]).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -627,11 +628,11 @@ fn lists(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     /// Enough of Mixxx's schema for the importer.
-    const SCHEMA: &str = "
+    pub(crate) const SCHEMA: &str = "
         CREATE TABLE track_locations (id INTEGER PRIMARY KEY, location TEXT, filename TEXT,
             directory TEXT, filesize INTEGER, fs_deleted INTEGER, needs_verification INTEGER);
         CREATE TABLE library (id INTEGER PRIMARY KEY, artist TEXT, title TEXT, album TEXT,
