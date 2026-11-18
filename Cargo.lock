@@ -261,14 +261,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "analysis-bench"
-version = "0.6.0"
-dependencies = [
- "djsugar-engine",
- "serde_json",
-]
-
-[[package]]
 name = "android-activity"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3682,9 +3674,10 @@ dependencies = [
 name = "djsugar-plugins"
 version = "0.6.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "djsugar-engine",
- "flate2",
+ "lofty",
  "md5",
  "plist",
  "rbox-anlz",
@@ -3693,6 +3686,7 @@ dependencies = [
  "roxmltree",
  "rusqlite",
  "serde_json",
+ "tempfile",
  "ureq 3.5.1",
  "zip 9.4.2",
 ]
