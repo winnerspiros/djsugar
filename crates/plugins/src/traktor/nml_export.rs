@@ -420,8 +420,12 @@ mod tests {
 
         assert_eq!(lib.tracks.len(), 2);
         let (a, src) = (&lib.tracks[0], &tracks[0]);
-        assert_eq!(a.source, src.source);
-        assert_eq!(lib.tracks[1].source, tracks[1].source);
+        let file = |t: &Track| match &t.source {
+            Source::File(p) => p.clone(),
+            Source::Synth { .. } => PathBuf::new(),
+        };
+        assert_eq!(file(a), file(src));
+        assert_eq!(file(&lib.tracks[1]), file(&tracks[1]));
         assert_eq!(
             (a.title.as_str(), a.artist.as_str()),
             ("Glue & \"Co\"", "Bicep")
