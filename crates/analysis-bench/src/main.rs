@@ -169,7 +169,8 @@ fn score(args: &[String]) -> Result<bool, String> {
         None => HashMap::new(),
     };
 
-    let (mut ours, mut theirs) = (Totals::default(), Totals::default());
+    let (mut ours, mut tagged, mut theirs) =
+        (Totals::default(), Totals::default(), Totals::default());
     println!(
         "{:<28} {:>7} | {:>8} {:>6} {:>5} {:>4} | {:>8} {:>6} {:>5} {:>4}",
         "track", "tempo", "ours", "ms", "key", "", "mixxx", "ms", "key", ""
@@ -183,6 +184,20 @@ fn score(args: &[String]) -> Result<bool, String> {
             key: a.key,
         };
         let (tp, ph, k) = ours.add(&f, t);
+        // As the app reads it: the file's genre tag picks the tempo octave.
+        let hint = TempoHint {
+            bpm: None,
+            genre: t.genre.clone(),
+        };
+        let g = analysis::analyse(&audio, hint);
+        let (gtp, ..) = tagged.add(
+            &Found {
+                bpm: g.bpm,
+                first_beat: g.first_beat,
+                key: g.key,
+            },
+            t,
+        );
         let mut row = format!(
             "{:<28} {:>7.2} | {:>8.3} {:>6.1} {:>5} {:>4.1}",
             t.file,
@@ -205,10 +220,14 @@ fn score(args: &[String]) -> Result<bool, String> {
         if tp != Tempo::Right {
             row += "  <- tempo";
         }
+        if gtp != Tempo::Right {
+            row += &format!("  <- tempo as {:?}: {:.2}", t.genre, g.bpm);
+        }
         println!("{row}");
     }
     println!();
     println!("{}", ours.line("DJ Sugar"));
+    println!("{}", tagged.line("  tagged"));
     if theirs.tracks > 0 {
         println!("{}", theirs.line("Mixxx"));
     }

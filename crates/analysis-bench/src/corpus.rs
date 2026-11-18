@@ -18,6 +18,8 @@ pub struct Truth {
     /// Where the first beat is, in seconds; the grid repeats from there.
     pub first_beat: f64,
     pub key: Key,
+    /// The genre a DJ's file of this style would be tagged with, if any.
+    pub genre: String,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -169,11 +171,13 @@ fn bass(midi: f64, seconds: f64) -> Vec<f64> {
         .collect()
 }
 
-/// Four bars of chords for a key: i VI III VII in minor, I V vi IV in major.
+/// Four bars of chords for a key: i iv V i in minor, I V vi IV in major.
+/// The minor V is major, so its leading tone tells the key from its
+/// relative major (i VI III VII would hold the same notes as both).
 fn progression(tonic: u8, minor: bool) -> [(i32, bool); 4] {
     let t = i32::from(tonic);
     if minor {
-        [(t, true), (t + 8, false), (t + 3, false), (t + 10, false)]
+        [(t, true), (t + 5, true), (t + 7, false), (t, true)]
     } else {
         [(t, false), (t + 7, false), (t + 9, true), (t + 5, false)]
     }
@@ -348,6 +352,21 @@ fn write_wav(path: &Path, frames: &[[f32; 2]]) -> std::io::Result<()> {
     std::fs::write(path, b)
 }
 
+impl Style {
+    /// The genre tag a track in this style usually carries.
+    fn genre(self) -> &'static str {
+        match self {
+            Style::House => "House",
+            Style::Techno => "Techno",
+            Style::Breaks => "Breaks",
+            Style::HipHop => "Hip Hop",
+            Style::DrumAndBass => "Drum & Bass",
+            Style::Dembow => "Reggaeton",
+            Style::Swing | Style::AmbientIntro => "",
+        }
+    }
+}
+
 fn name(i: usize, style: Style, bpm: f64) -> String {
     format!("{i:02}-{}-{bpm}.wav", format!("{style:?}").to_lowercase())
 }
@@ -361,7 +380,9 @@ pub fn write(dir: &Path) -> Result<bool, String> {
         let file = name(i, style, bpm);
         write_wav(&dir.join(&file), &frames).map_err(|e| format!("{file}: {e}"))?;
         let key = Key { tonic, minor };
-        truth.push(json!({ "file": file, "bpm": bpm, "first_beat": first, "key": key.index() }));
+        truth.push(json!({
+            "file": file, "bpm": bpm, "first_beat": first, "key": key.index(), "genre": style.genre()
+        }));
         println!("{file}  {bpm} BPM  {}", key.camelot());
     }
     let text = serde_json::to_string_pretty(&truth).map_err(|e| e.to_string())?;
@@ -384,6 +405,7 @@ pub fn read_truth(dir: &Path) -> Result<Vec<Truth>, String> {
                 first_beat: t["first_beat"].as_f64().unwrap_or(0.0),
                 key: Key::from_index(t["key"].as_u64().unwrap_or(99) as u8)
                     .ok_or("truth without a key")?,
+                genre: t["genre"].as_str().unwrap_or_default().to_string(),
             })
         })
         .collect()
