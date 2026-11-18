@@ -120,6 +120,14 @@ jobs:
       # C/C++ dependencies (whisper.cpp) keep the compiler's path in their
       # build cache; a new runner image moves the compiler, so each image
       # gets its own cache.
+      # cpal's ASIO build unpacks Steinberg's SDK with PowerShell, which
+      # fails on newer runner images; unpack it here and point it there.
+      - run: |
+          curl -fsSL --retry 5 -o "$RUNNER_TEMP/asio.zip" https://www.steinberg.net/asiosdk
+          unzip -q -o "$RUNNER_TEMP/asio.zip" -d "$RUNNER_TEMP/asio"
+          dir=$(dirname "$(find "$RUNNER_TEMP/asio" -type d -name common | head -n1)")
+          echo "CPAL_ASIO_DIR=$(cygpath -w "$dir")" >> "$GITHUB_ENV"
+        shell: bash
       - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
         shell: bash
       - uses: Swatinem/rust-cache@v2
@@ -188,6 +196,14 @@ jobs:
       # whisper.cpp's CMake cache keeps the compiler's full path in the
       # build cache; a new runner image moves the compiler, so each image
       # gets its own cache.
+      # cpal's ASIO build unpacks Steinberg's SDK with PowerShell, which
+      # fails on newer runner images; unpack it here and point it there.
+      - run: |
+          curl -fsSL --retry 5 -o "$RUNNER_TEMP/asio.zip" https://www.steinberg.net/asiosdk
+          unzip -q -o "$RUNNER_TEMP/asio.zip" -d "$RUNNER_TEMP/asio"
+          dir=$(dirname "$(find "$RUNNER_TEMP/asio" -type d -name common | head -n1)")
+          echo "CPAL_ASIO_DIR=$(cygpath -w "$dir")" >> "$GITHUB_ENV"
+        shell: bash
       - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
         shell: bash
       - uses: Swatinem/rust-cache@v2

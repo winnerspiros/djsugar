@@ -846,7 +846,8 @@ mod tests {
             .iter()
             .filter(|l| l.parent == export as i32 && l.kind == 0)
             .collect();
-        assert_eq!(inside.len(), 5);
+        // M3U, USB, Spotify, rekordbox, Traktor, Serato, VirtualDJ, Mixcloud.
+        assert_eq!(inside.len(), 8);
         // Settings… and Quit sit in the ☰ list itself, under the menus.
         for a in [Action::Settings, Action::Quit] {
             let line = lines.iter().find(|l| l.action == a.id()).unwrap();
