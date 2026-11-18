@@ -8157,7 +8157,11 @@ mod tests {
 
         // Load tracks on all four decks.
         for deck in 0..NUM_DECKS {
-            load(&mut input, deck, short_track(120.0 + deck as f64 * 5.0, 30.0));
+            load(
+                &mut input,
+                deck,
+                short_track(120.0 + deck as f64 * 5.0, 30.0),
+            );
         }
         run(&mut engine, 0.05); // process load commands
 
@@ -8185,12 +8189,8 @@ mod tests {
             .set(0.5); // filter
         }
         // Main mix effect
-        reg.get("[Master]", "fx1_enabled")
-            .unwrap()
-            .set_bool(true);
-        reg.get("[Master]", "fx1_super1")
-            .unwrap()
-            .set(0.3);
+        reg.get("[Master]", "fx1_enabled").unwrap().set_bool(true);
+        reg.get("[Master]", "fx1_super1").unwrap().set(0.3);
 
         // Crossfader movement
         reg.get("[Master]", "crossfader").unwrap().set(0.0);

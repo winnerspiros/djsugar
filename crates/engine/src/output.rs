@@ -29,8 +29,8 @@ use cpal::{BufferSize, ErrorKind, FromSample, SampleFormat, SizedSample, Support
 use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::engine::{Engine, MIX_CHANNELS, OUTPUT_CHANNELS};
-use crate::rt_guard::{enter_audio_callback, exit_audio_callback};
 use crate::inputs::{InputFeed, AUXILIARIES, GROOVE_BOX, MICROPHONE, NUM_AUXILIARIES, NUM_INPUTS};
+use crate::rt_guard::{enter_audio_callback, exit_audio_callback};
 
 /// What an output plays, each a stereo pair of the buffer the engine
 /// renders: the mixes, or one deck or the sampler on its own (for a DAW or

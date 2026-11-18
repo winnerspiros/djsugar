@@ -140,7 +140,7 @@ All in the app, both directions, no external tool: tracks, playlists/crates, cue
 | X.5 | Engine DJ: database and USB exports | TODO |
 | X.6 | VirtualDJ: database.xml and playlists; Mixxx (exists, extend to export); djay; iTunes/Music XML | TODO |
 | X.7 | Path relinking for moved drives and other OSes; duplicate detection by audio fingerprint | TODO |
-| X.8 | Two-way sync: keep a DJ Sugar library and another app's library in step, incremental | TODO |
+| X.8 | Two-way sync: keep a DJ Sugar library and another app's library in step, incremental; USB sticks too: a Sync Manager that rewrites only what changed, cue/grid/loop edits made on players or another computer brought back (match by file name and size), play history imported from the stick | TODO |
 | X.9 | Export to USB for club players (CDJ/XDJ via X.2 formats) | TODO |
 
 ## Part M: mods
@@ -226,7 +226,7 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | 1.6 | SoundCloud search (genre, cover, play counts) | TODO |
 | 1.7 | Spotify via librespot (already Rust): login, liked, playlists, search, play as files | TODO |
 | 1.8 | Subsonic servers and custom stream URLs (openDJ has Navidrome/Jellyfin/Plex) | TODO |
-| 1.9 | Streaming hub and smart URL box | TODO |
+| 1.9 | Streaming hub and smart URL box; the next track of a list fetched in the background so a streamed track is ready before it is loaded | TODO |
 | 1.10 | FX Station: drum pads, effect scenes | TODO |
 | 1.11 | Sample library, recordings, sample editor | TODO |
 | 1.12 | Stems: Spleeter/HTDemucs on device (openDJ has demucs via burn, compare) | TODO |
@@ -243,7 +243,7 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | # | Area | Status |
 | --- | --- | --- |
 | 2.1 | Effects: Mixxx built-in effect set, LV2 | TODO |
-| 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO: differential check with Mixxx as the oracle: record Mixxx's BPM/key/grid on a fixed corpus once (golden files), compare our analyzers against them in CI, list each deliberate difference |
+| 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO: differential check with Mixxx as the oracle: score on the public GiantSteps key and tempo sets (MIREX weighting, as other DJ apps publish) and on synthetic tracks with known answers; record Mixxx's BPM/key/grid on the same corpus once (golden files), compare our analyzers against them in CI, list each deliberate difference |
 | 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO: record each mapping's control writes for a scripted MIDI/HID input sequence under Mixxx, replay them against `djsugar-js` and compare |
 | 2.4 | Recording, broadcasting (openDJ has both) | TODO (verify) |
 | 2.5 | Vinyl control (DVS timecode, see Part C) | TODO |
