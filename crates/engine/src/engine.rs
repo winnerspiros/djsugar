@@ -8149,10 +8149,11 @@ mod tests {
 
     #[test]
     fn no_allocations_in_audio_callback() {
-        // Build a realistic scenario: four decks playing, effects on, mixer active.
+        // Four decks playing through their filters and effect units, the
+        // crossfader and headphones in use: the callback must not allocate.
         let (reg, mut engine, mut input) = setup();
-
-        // Load tracks on all four decks.
+        let set =
+            |g: &str, k: &str, v: f64| reg.get(g, k).unwrap_or_else(|| panic!("{g} {k}")).set(v);
         for deck in 0..NUM_DECKS {
             load(
                 &mut input,
@@ -8160,58 +8161,27 @@ mod tests {
                 short_track(120.0 + deck as f64 * 5.0, 30.0),
             );
         }
-        run(&mut engine, 0.05); // process load commands
-
-        // Start all decks playing.
+        run(&mut engine, 0.05);
         for deck in 0..NUM_DECKS {
-            reg.get(&format!("[Channel{}]", deck + 1), "play")
-                .unwrap()
-                .set_bool(true);
+            let ch = format!("[Channel{}]", deck + 1);
+            set(&ch, "play", 1.0);
+            set(&ch, "pfl", 1.0);
+            set(&format!("[QuickEffectRack1_{ch}]"), "super1", 0.3);
+            set(
+                "[EffectRack1_EffectUnit1]",
+                &format!("group_{ch}_enable"),
+                1.0,
+            );
         }
-        run(&mut engine, 0.05);
-
-        // Enable effects on all decks and the main mix.
-        for deck in 0..NUM_DECKS {
-            reg.get(
-                &format!("[QuickEffectRack1_[Channel{}]]", deck + 1),
-                "enabled",
-            )
-            .unwrap()
-            .set_bool(true);
-            reg.get(
-                &format!("[QuickEffectRack1_[Channel{}]]", deck + 1),
-                "super1",
-            )
-            .unwrap()
-            .set(0.5); // filter
-        }
-        // Main mix effect
-        reg.get("[Master]", "fx1_enabled").unwrap().set_bool(true);
-        reg.get("[Master]", "fx1_super1").unwrap().set(0.3);
-
-        // Crossfader movement
-        reg.get("[Master]", "crossfader").unwrap().set(0.0);
-        run(&mut engine, 0.05);
-        reg.get("[Master]", "crossfader").unwrap().set(1.0);
-        run(&mut engine, 0.05);
-        reg.get("[Master]", "crossfader").unwrap().set(0.5);
-
-        // Headphone mix
-        reg.get("[Master]", "headMix").unwrap().set(0.5);
-        reg.get("[Master]", "headGain").unwrap().set(1.0);
-
-        // Sampler
-        reg.get("[Sampler]", "slot1").unwrap().set(1.0); // builtin kick
-        reg.get("[Sampler]", "play1").unwrap().set_bool(true);
-        run(&mut engine, 0.05);
-
-        // Now run many buffers with the allocation guard active.
-        // Use a buffer size that matches BLOCK to avoid the recursive split path.
+        set("[EffectRack1_EffectUnit1]", "mix", 0.5);
+        set("[EffectRack1_EffectUnit1_Effect1]", "enabled", 1.0);
+        set("[Master]", "crossfader", 0.3);
+        set("[Master]", "headMix", 0.0);
+        // Let the commands land and every lazily sized buffer grow.
+        run(&mut engine, 0.2);
         let mut buf = vec![0.0f32; crate::effects::BLOCK * 2];
         for _ in 0..200 {
-            crate::rt_guard::assert_no_alloc(|| {
-                engine.process(&mut buf, 2);
-            });
+            crate::rt_guard::assert_no_alloc(|| engine.process(&mut buf, 2));
         }
     }
 }

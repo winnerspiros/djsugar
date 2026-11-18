@@ -101,21 +101,24 @@ impl Key {
     /// Reads a key as tags and DJ software write it: Camelot ("8A"), Open
     /// Key ("1m", "1d") or notes ("Am", "F#", "Eb minor", "C maj").
     pub fn parse(text: &str) -> Option<Key> {
+        // No allocation: the engine parses a loaded track's key on the
+        // audio thread.
         let t = text.trim();
-        let lower = t.to_ascii_lowercase();
-        let digits = lower.chars().take_while(char::is_ascii_digit).count();
+        let digits = t.bytes().take_while(u8::is_ascii_digit).count();
         if digits > 0 {
-            let n: u8 = lower[..digits].parse().ok()?;
-            let rest = &lower[digits..];
-            if !(1..=12).contains(&n) || rest.len() != 1 {
+            let n: u8 = t[..digits].parse().ok()?;
+            let [letter] = t[digits..].as_bytes() else {
+                return None;
+            };
+            if !(1..=12).contains(&n) {
                 return None;
             }
-            let (camelot, minor) = match rest {
-                "a" => (n, true),
-                "b" => (n, false),
+            let (camelot, minor) = match letter.to_ascii_lowercase() {
+                b'a' => (n, true),
+                b'b' => (n, false),
                 // Open Key: 1d is C major (Camelot 8B), 1m A minor (8A).
-                "m" => ((n + 6) % 12 + 1, true),
-                "d" => ((n + 6) % 12 + 1, false),
+                b'm' => ((n + 6) % 12 + 1, true),
+                b'd' => ((n + 6) % 12 + 1, false),
                 _ => return None,
             };
             // Inverse of `camelot`: 7 is its own inverse modulo 12.
@@ -138,23 +141,19 @@ impl Key {
             'B' => 11,
             _ => return None,
         };
-        let mut rest: String = chars.as_str().to_string();
-        let mut shift = 0;
-        if let Some(c) = rest.chars().next() {
-            match c {
-                '#' | '♯' => shift = 1,
-                'b' | '♭' => shift = -1,
-                _ => {}
-            }
-            if shift != 0 {
-                rest = rest[c.len_utf8()..].to_string();
-            }
-        }
-        let rest = rest.trim().to_ascii_lowercase();
-        let minor = match rest.as_str() {
-            "" | "maj" | "major" => false,
-            "m" | "min" | "minor" => true,
-            _ => return None,
+        let rest = chars.as_str();
+        let (shift, rest) = match rest.chars().next() {
+            Some(c @ ('#' | '♯')) => (1, &rest[c.len_utf8()..]),
+            Some(c @ ('b' | '♭')) => (-1, &rest[c.len_utf8()..]),
+            _ => (0, rest),
+        };
+        let is = |w: &str| rest.trim().eq_ignore_ascii_case(w);
+        let minor = if ["", "maj", "major"].into_iter().any(is) {
+            false
+        } else if ["m", "min", "minor"].into_iter().any(is) {
+            true
+        } else {
+            return None;
         };
         Some(Key {
             tonic: (base + shift).rem_euclid(12) as u8,
