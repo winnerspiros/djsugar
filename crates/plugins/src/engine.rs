@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use djsugar_engine::beats::{BeatGrid, GridMarker};
 use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
-use djsugar_engine::{Hotcue, LibraryInfo, Marker, MarkerKind, Source, Track, MEMORY_CUE};
+use djsugar_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
 use flate2::read::ZlibDecoder;
 use rusqlite::{Connection, OpenFlags};
 
@@ -182,12 +182,7 @@ impl LibraryImport for Engine {
     }
 
     fn read(&self, database: &Path, groups: &[&str]) -> Result<ImportedLibrary, String> {
-        let library = read(
-            database,
-            groups,
-            database.parent().unwrap_or(Path::new(".")),
-            Path::exists,
-        )?;
+        let library = read(database, groups, Path::exists)?;
         eprintln!(
             "Engine library: {} tracks here, {} lists",
             library.tracks.len(),
@@ -201,7 +196,6 @@ impl LibraryImport for Engine {
 struct TrackRow {
     id: i64,
     path: String,
-    filename: String,
     title: String,
     artist: String,
     album: String,
@@ -217,34 +211,18 @@ struct TrackRow {
     rating: i64,
     color: Option<i64>,
     length: i64, // milliseconds
-    file_bytes: i64,
-    bitrate: i64,
-    file_type: String,
     date_added: String,
-    date_created: String,
     time_last_played: Option<String>,
-    is_played: bool,
     played_indicator: i64,
     album_art_id: Option<i64>,
-    is_analyzed: bool,
 }
 
 /// A row of Engine's `PerformanceData` table.
 struct PerfRow {
-    track_id: i64,
     track_data: Option<Vec<u8>>,
     beat_data: Option<Vec<u8>>,
     quick_cues: Option<Vec<u8>>,
     loops: Option<Vec<u8>>,
-}
-
-/// Engine's cue types in quickCues/loops blobs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(i32)]
-enum EngineCueType {
-    HotCue = 0,
-    Loop = 1,
-    // Main cue is encoded separately in quickCues
 }
 
 /// Qt's qCompress: 4-byte big-endian length, then zlib.
@@ -293,16 +271,6 @@ fn read_f64_be(b: &[u8], offset: &mut usize) -> Option<f64> {
     read_u64_be(b, offset).map(f64::from_bits)
 }
 
-/// Read a i32 (big-endian) from a slice.
-fn read_i32_be(b: &[u8], offset: &mut usize) -> Option<i32> {
-    read_u32_be(b, offset).map(|v| v as i32)
-}
-
-/// Read a i64 (big-endian) from a slice.
-fn read_i64_be(b: &[u8], offset: &mut usize) -> Option<i64> {
-    read_u64_be(b, offset).map(|v| v as i64)
-}
-
 /// Read a length-prefixed UTF-8 string (1-byte length).
 fn read_label(b: &[u8], offset: &mut usize) -> Option<String> {
     if *offset >= b.len() {
@@ -340,7 +308,7 @@ fn parse_beat_data(blob: &[u8]) -> Option<BeatGrid> {
             grid.push((sample, to_next));
         }
     }
-    if !(rate > 0.0) || grid.len() < 2 {
+    if rate.is_nan() || rate <= 0.0 || grid.len() < 2 {
         return None;
     }
     // Each marker's tempo runs to the next; the last keeps the one before.
@@ -545,7 +513,6 @@ fn unix_time(text: &str) -> Option<i64> {
 fn read(
     path: &Path,
     groups: &[&str],
-    db_root: &Path,
     exists: impl Fn(&Path) -> bool,
 ) -> Result<ImportedLibrary, String> {
     let db = open(path)?;
@@ -553,11 +520,15 @@ fn read(
     // Load all tracks
     let mut track_stmt = db
         .prepare(
-            "SELECT id, path, filename, title, artist, album, genre, comment, label, composer,
-                    remixer, year, bpm, bpmAnalyzed, key, rating, color, length, fileBytes,
-                    bitrate, fileType, dateAdded, dateCreated, timeLastPlayed, isPlayed,
-                    playedIndicator, albumArtId, isAnalyzed
-             FROM Track WHERE isAvailable = 1",
+            // Engine leaves unknown fields NULL and keeps dates as text or
+            // Unix time, depending on the version.
+            "SELECT id, path, IFNULL(title, ''), IFNULL(artist, ''), IFNULL(album, ''),
+                    IFNULL(genre, ''), IFNULL(comment, ''), IFNULL(label, ''),
+                    IFNULL(composer, ''), IFNULL(remixer, ''), IFNULL(year, 0),
+                    IFNULL(bpm, 0), IFNULL(bpmAnalyzed, 0), IFNULL(key, 0), IFNULL(rating, 0),
+                    color, IFNULL(length, 0), IFNULL(CAST(dateAdded AS TEXT), ''),
+                    CAST(timeLastPlayed AS TEXT), IFNULL(playedIndicator, 0), albumArtId
+             FROM Track WHERE isAvailable = 1 AND path IS NOT NULL",
         )
         .map_err(err)?;
 
@@ -566,32 +537,25 @@ fn read(
             Ok(TrackRow {
                 id: r.get(0)?,
                 path: r.get(1)?,
-                filename: r.get(2)?,
-                title: r.get(3)?,
-                artist: r.get(4)?,
-                album: r.get(5)?,
-                genre: r.get(6)?,
-                comment: r.get(7)?,
-                label: r.get(8)?,
-                composer: r.get(9)?,
-                remixer: r.get(10)?,
-                year: r.get(11)?,
-                bpm: r.get(12)?,
-                bpm_analyzed: r.get(13)?,
-                key: r.get(14)?,
-                rating: r.get(15)?,
-                color: r.get(16)?,
-                length: r.get(17)?,
-                file_bytes: r.get(18)?,
-                bitrate: r.get(19)?,
-                file_type: r.get(20)?,
-                date_added: r.get(21)?,
-                date_created: r.get(22)?,
-                time_last_played: r.get(23)?,
-                is_played: r.get(24)?,
-                played_indicator: r.get(25)?,
-                album_art_id: r.get(26)?,
-                is_analyzed: r.get(27)?,
+                title: r.get(2)?,
+                artist: r.get(3)?,
+                album: r.get(4)?,
+                genre: r.get(5)?,
+                comment: r.get(6)?,
+                label: r.get(7)?,
+                composer: r.get(8)?,
+                remixer: r.get(9)?,
+                year: r.get(10)?,
+                bpm: r.get(11)?,
+                bpm_analyzed: r.get(12)?,
+                key: r.get(13)?,
+                rating: r.get(14)?,
+                color: r.get(15)?,
+                length: r.get(16)?,
+                date_added: r.get(17)?,
+                time_last_played: r.get(18)?,
+                played_indicator: r.get(19)?,
+                album_art_id: r.get(20)?,
             })
         })
         .map_err(err)?;
@@ -609,7 +573,6 @@ fn read(
             Ok((
                 r.get::<_, i64>(0)?,
                 PerfRow {
-                    track_id: r.get(0)?,
                     track_data: r.get(1)?,
                     beat_data: r.get(2)?,
                     quick_cues: r.get(3)?,
@@ -1061,7 +1024,7 @@ mod tests {
     use std::io::Write;
 
     fn q_compress(raw: &[u8]) -> Vec<u8> {
-        let mut out = (raw.len() as u32).to_be_bytes().to_vec();
+        let out = (raw.len() as u32).to_be_bytes().to_vec();
         let mut z = ZlibEncoder::new(out, Compression::default());
         z.write_all(raw).expect("writing to memory");
         z.finish().expect("writing to memory")
