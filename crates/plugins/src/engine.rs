@@ -868,7 +868,7 @@ fn read(
 fn lists(
     db: &Connection,
     groups: &[&str],
-    tracks: &[Track],
+    _tracks: &[Track],
     library_dir: &Path,
 ) -> Result<Vec<ImportedList>, String> {
     let mut out = Vec::new();
@@ -927,7 +927,7 @@ fn lists(
         for &id in playlists.keys() {
             let mut folders = Vec::new();
             let mut current = playlists.get(&id);
-            while let Some((title, parent, _)) = current {
+            while let Some((_title, parent, _)) = current {
                 if let Some(pid) = parent {
                     if let Some((ptitle, _, _)) = playlists.get(pid) {
                         folders.push(ptitle.clone());
@@ -976,7 +976,7 @@ fn lists(
                             folders,
                             name: title.clone(),
                             kind: ImportedListKind::List,
-                            entries: make_entries(track_ids, played_ats),
+                            entries: make_entries(track_ids.clone(), played_ats.clone()),
                         });
                     }
                 }
@@ -998,7 +998,7 @@ fn lists(
                     folders,
                     name: title.clone(),
                     kind: ImportedListKind::List,
-                    entries: make_entries(track_ids, played_ats),
+                    entries: make_entries(track_ids.clone(), played_ats.clone()),
                 });
             }
         }
@@ -1069,7 +1069,7 @@ fn lists(
                         kind: ImportedListKind::History {
                             started: session_start,
                         },
-                        entries: make_entries(track_ids, played_ats),
+                        entries: make_entries(track_ids.clone(), played_ats.clone()),
                     });
                 }
                 current_session = session_id;
@@ -1087,7 +1087,7 @@ fn lists(
                 kind: ImportedListKind::History {
                     started: session_start,
                 },
-                entries: make_entries(track_ids, played_ats),
+                entries: make_entries(track_ids.clone(), played_ats.clone()),
             });
         }
     }
