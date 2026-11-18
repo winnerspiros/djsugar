@@ -413,6 +413,9 @@ export global LibraryEdit {
     // Saves the Collection (every track and list) or a list or folder at a
     // sidebar row as a rekordbox XML file; asks where first.
     callback export-rekordbox(row: int);
+    // Saves the Collection (every track and list) or a list or folder at a
+    // sidebar row as a Traktor NML file (collection.nml); asks where first.
+    callback export-traktor(row: int);
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one

@@ -60,6 +60,7 @@ mod staging;
 mod streamed;
 mod tag_chips;
 mod track_menu;
+mod traktor_nml;
 mod up_next;
 mod usb;
 mod views;
@@ -715,6 +716,7 @@ pub struct Browser {
     playlist_files: playlist_files::State,
     inbox_albums: inbox_albums::InboxAlbums,
     rekordbox_xml: rekordbox_xml::State,
+    traktor_nml: traktor_nml::State,
     phrases_seen: analysis::SeenDecks,
     /// The last stage change or merge of copies, which the track menu can
     /// take back.
@@ -1349,6 +1351,7 @@ impl Browser {
             playlist_files: Default::default(),
             inbox_albums: inbox_albums::InboxAlbums::new(),
             rekordbox_xml: Default::default(),
+            traktor_nml: Default::default(),
             phrases_seen: Default::default(),
             undo: None,
             pending_moves: HashMap::new(),
@@ -1973,6 +1976,7 @@ impl Browser {
         Self::install_spotify_export(&edit, &with);
         Self::install_playlist_files(&edit, &with);
         Self::install_rekordbox_xml(&edit, &with);
+        Self::install_traktor_nml(&edit, &with);
     }
 
     /// Saves a search as a smart list at the top level (under "Smart
@@ -4773,6 +4777,8 @@ impl Browser {
                     && matches!(kind, KIND_LIST | KIND_HISTORY | KIND_CRATE),
                 mixcloud: self.tree == MIXED_SETS,
                 rekordbox: node.is_some() && self.rekordbox_exportable(self.current_node),
+                traktor: node.is_some() && self.traktor_exportable(self.current_node),
+                traktor: node.is_some() && self.traktor_exportable(self.current_node),
             });
             let name = match self.nodes.get(self.current_node) {
                 Some(n) => n.title.clone().unwrap_or_else(|| n.name.clone()),

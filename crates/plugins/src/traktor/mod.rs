@@ -25,6 +25,8 @@ use crate::{ImportedLibrary, LibraryImport, ListGroup};
 
 pub const PLAYLISTS: &str = "playlists";
 
+pub mod nml_export;
+
 pub struct Traktor;
 
 /// Traktor's collection where Traktor keeps it, the newest version's (or
