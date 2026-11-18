@@ -81,9 +81,6 @@ const IMPORT_TAB: usize = 3;
 const HEALTH_TAB: usize = 4;
 /// The Storage tab's place in LIBRARY_TABS: the storage bar and backups.
 const STORAGE_TAB: usize = 5;
-/// Other DJ apps whose libraries DJ Sugar can't bring in yet, listed on the
-/// Import tab so the DJ sees what's coming.
-const COMING_IMPORTS: [(&str, &str); 1] = [("Serato DJ", "Tracks, cues, loops and crates.")];
 const ANALYSIS: i32 = 7;
 /// Where music comes from: the rail's sources, their sign-ins, download
 /// folders and the cache they share.
@@ -2323,13 +2320,6 @@ impl Prefs {
                     )
                 });
             }
-        }
-        items.push(item("", HEADING, "COMING SOON", ""));
-        for (title, _) in COMING_IMPORTS {
-            items.push(PrefItem {
-                value: "Coming soon".into(),
-                ..item("", BUTTON, &format!("Import from {title}"), "")
-            });
         }
         items
     }

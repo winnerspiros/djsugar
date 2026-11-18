@@ -3682,9 +3682,11 @@ dependencies = [
 name = "djsugar-plugins"
 version = "0.6.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "djsugar-engine",
  "flate2",
+ "lofty",
  "md5",
  "plist",
  "rbox-anlz",

@@ -20,6 +20,8 @@ rbox-core = "0.3.0"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 # Engine DJ's performance blobs are zlib.
 flate2 = "1"
+base64 = "0.22"
+lofty = "0.25"
 
 # rekordbox's master.db is SQLCipher, built as in djsugar-export: on
 # CommonCrypto on macOS, with OpenSSL built in elsewhere.
