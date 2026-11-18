@@ -68,6 +68,15 @@ pub fn default_database() -> Option<PathBuf> {
     let usb_roots = ["/media", "/mnt", "/run/media"];
     #[cfg(target_os = "windows")]
     let usb_roots = ["E:\\", "F:\\", "G:\\", "H:\\", "I:\\", "J:\\"];
+    #[cfg(target_os = "android")]
+    let usb_roots = ["/storage"];
+    #[cfg(not(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows",
+        target_os = "android"
+    )))]
+    let usb_roots: [&str; 0] = [];
 
     for root in usb_roots {
         let root_path = Path::new(root);
