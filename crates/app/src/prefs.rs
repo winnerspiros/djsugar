@@ -2621,12 +2621,25 @@ impl Prefs {
         // Turned on afresh, its lists come in again.
         settings::set(&settings::import_lists_mine_key(id), json!(false));
         settings::set(&settings::import_enabled_key(id), json!(true));
+        // Mixxx's settings that we have too, where the DJ hasn't set ours.
+        let brought = match w.database.clone().or_else(|| i.database()) {
+            Some(db) if id == "mixxx" => crate::mixxx_settings::bring_over(&db),
+            _ => 0,
+        };
+        if brought > 0 {
+            apply_saved(&self.registry);
+        }
         // Its settings open up on the Import tab, shown now.
         self.show_tab(IMPORT_TAB);
         (self.rescan)();
         self.library_note = format!(
-            "Bringing in {}… tracks appear in your collection when it is done.",
-            i.title()
+            "Bringing in {}… tracks appear in your collection when it is done.{}",
+            i.title(),
+            match brought {
+                0 => String::new(),
+                1 => " 1 setting came over from it.".into(),
+                n => format!(" {n} settings came over from it."),
+            }
         );
         self.import_note = self.library_note.clone();
     }

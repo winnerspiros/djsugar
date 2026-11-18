@@ -76,6 +76,7 @@ mod mixcloud;
 mod mixcloud_upload;
 mod mixer_keeper;
 mod mixer_picker;
+mod mixxx_settings;
 mod now_playing;
 mod now_playing_view;
 mod osc;

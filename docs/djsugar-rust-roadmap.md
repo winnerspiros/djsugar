@@ -247,4 +247,4 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO: record each mapping's control writes for a scripted MIDI/HID input sequence under Mixxx, replay them against `djsugar-js` and compare |
 | 2.4 | Recording, broadcasting (openDJ has both) | TODO (verify) |
 | 2.5 | Vinyl control (DVS timecode, see Part C) | TODO |
-| 2.6 | Settings and config migration from Mixxx config | TODO |
+| 2.6 | Settings and config migration from Mixxx config | WIP: finishing the Mixxx import brings over, from the `mixxx.cfg` beside its database, key notation, pitch range and CUE mode where the DJ hasn't set ours. Next: controller and audio setup (soundconfig.xml), library columns |
