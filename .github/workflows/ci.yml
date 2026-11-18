@@ -117,8 +117,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # C/C++ dependencies (whisper.cpp) keep the compiler's path in their
+      # build cache; a new runner image moves the compiler, so each image
+      # gets its own cache.
+      - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
+        shell: bash
       - uses: Swatinem/rust-cache@v2
         with:
+          key: image-${{ env.IMAGE }}
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
           cache-on-failure: true
       - run: cargo test --workspace --exclude djsugar
@@ -152,8 +158,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # C/C++ dependencies (whisper.cpp) keep the compiler's path in their
+      # build cache; a new runner image moves the compiler, so each image
+      # gets its own cache.
+      - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
+        shell: bash
       - uses: Swatinem/rust-cache@v2
         with:
+          key: image-${{ env.IMAGE }}
           save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust' }}
           cache-on-failure: true
       - run: cargo build --release -p djsugar -p djsugar-plugin-host
