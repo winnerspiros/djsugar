@@ -25,28 +25,15 @@ pub const PLAYLISTS: &str = "playlists";
 pub const SMARTLISTS: &str = "smartlists";
 pub const HISTORY: &str = "history";
 
-/// Engine's key number (0..23): C=0, Am=1, G=2, Em=3, D=4, Bm=5, A=6, F#m=7,
-/// E=8, C#m=9, B=10, G#m=11, F#=12, D#m=13, C#=14, A#m=15, Ab=16, Fm=17,
-/// Eb=18, Cm=19, Bb=20, Gm=21, F=22, Dm=23.
-fn engine_key_to_key(engine_key: i64) -> Option<djsugar_engine::key::Key> {
-    if !(0..=23).contains(&engine_key) {
+/// Engine's key number: twice the key's place round the circle of fifths
+/// from C major (Camelot 8B), plus one for minor; so 0 is C, 1 Am, 2 G.
+fn engine_key_to_key(number: i64) -> Option<djsugar_engine::key::Key> {
+    if !(0..24).contains(&number) {
         return None;
     }
-    let minor = engine_key % 2 == 1;
-    let fifths = (engine_key / 2) as u8; // 0..11
-                                         // Reverse of: fifths = (camelot_number + 4) % 12
-                                         // camelot_number = (fifths * 7 + 7) % 12 + 1 (1..12)
-                                         // major_tonic = (camelot_number - 8) * 7 mod 12
-                                         // For minor: tonic = (major_tonic + 9) % 12
-                                         // For major: tonic = major_tonic
-    let camelot = (fifths as i32 * 7 + 7).rem_euclid(12) + 1;
-    let major_tonic = (7 * (camelot - 8)).rem_euclid(12) as u8;
-    let tonic = if minor {
-        (major_tonic + 9) % 12
-    } else {
-        major_tonic
-    };
-    Some(djsugar_engine::key::Key { tonic, minor })
+    let camelot = (number / 2 + 7) % 12 + 1;
+    let letter = if number % 2 == 1 { 'A' } else { 'B' };
+    djsugar_engine::key::Key::parse(&format!("{camelot}{letter}"))
 }
 
 pub struct Engine;
@@ -1074,8 +1061,8 @@ mod tests {
         b.extend((-1f64).to_be_bytes()); // main cue again
         let cues = parse_quick_cues(&b, 44100.0);
         assert_eq!(cues.len(), 8);
-        for (slot, pos, label, color) in cues {
-            assert_eq!(slot, 0); // all slot 0 since we're testing empty
+        for (i, (slot, pos, label, color)) in cues.into_iter().enumerate() {
+            assert_eq!(slot, i);
             assert_eq!(pos, -1.0);
             assert!(label.is_empty());
             assert!(color.is_none());
