@@ -574,7 +574,7 @@ fn unix_time(text: &str) -> Option<i64> {
     let month_days = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     let is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     for m in 1..month {
-        days += month_days[m];
+        days += month_days[m as usize];
         if m == 2 && is_leap {
             days += 1;
         }
