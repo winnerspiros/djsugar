@@ -28,6 +28,7 @@ pub enum Action {
     ExportRekordboxXml,
     ExportTraktorNml,
     ExportSerato,
+    ExportVirtualDj,
     ExportMixcloud,
     RecordMix,
     MiniPlayer,
@@ -83,7 +84,7 @@ const UPDATE_CHECK: &str = "update_check";
 const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs/guide";
 
 impl Action {
-    const ALL: [Action; 34] = [
+    const ALL: [Action; 35] = [
         Action::Settings,
         Action::Quit,
         Action::Undo,
@@ -95,6 +96,7 @@ impl Action {
         Action::ExportRekordboxXml,
         Action::ExportTraktorNml,
         Action::ExportSerato,
+        Action::ExportVirtualDj,
         Action::RecordMix,
         Action::MiniPlayer,
         Action::ZoomIn,
@@ -229,6 +231,11 @@ pub const MENUS: &[Menu] = &[
                     Entry::Item {
                         action: Action::ExportSerato,
                         title: "Serato DJ…",
+                        key: None,
+                    },
+                    Entry::Item {
+                        action: Action::ExportVirtualDj,
+                        title: "VirtualDJ…",
                         key: None,
                     },
                     Entry::Separator,
@@ -597,6 +604,9 @@ pub fn run(app: &AppWindow, action: Action) {
         Action::ExportSerato => app
             .global::<LibraryEdit>()
             .invoke_export_serato(app.get_current_folder()),
+        Action::ExportVirtualDj => app
+            .global::<LibraryEdit>()
+            .invoke_export_virtualdj(app.get_current_folder()),
         // The mixed set picked in Recordings.
         Action::ExportMixcloud => crate::export_mixcloud(app),
         // [Recording],toggle_recording, as the REC button and controllers.
@@ -729,12 +739,13 @@ pub struct Exports {
     pub rekordbox: bool,
     pub traktor: bool,
     pub serato: bool,
+    pub virtualdj: bool,
 }
 
 /// Greys File › Export's items out or back in.
 pub fn set_exports(e: Exports) {
     thread_local! {
-        static LAST: std::cell::Cell<Option<[bool; 7]>> = const { std::cell::Cell::new(None) };
+        static LAST: std::cell::Cell<Option<[bool; 8]>> = const { std::cell::Cell::new(None) };
     }
     let now = [
         e.m3u,
@@ -744,6 +755,7 @@ pub fn set_exports(e: Exports) {
         e.rekordbox,
         e.traktor,
         e.serato,
+        e.virtualdj,
     ];
     if LAST.with(|l| l.replace(Some(now))) == Some(now) {
         return;
@@ -755,6 +767,7 @@ pub fn set_exports(e: Exports) {
     set_item(Action::ExportRekordboxXml, None, e.rekordbox);
     set_item(Action::ExportTraktorNml, None, e.traktor);
     set_item(Action::ExportSerato, None, e.serato);
+    set_item(Action::ExportVirtualDj, None, e.virtualdj);
 }
 
 fn default_title(action: Action) -> String {

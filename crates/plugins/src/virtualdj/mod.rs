@@ -1,7 +1,8 @@
 //! Brings a VirtualDJ library into the collection at start, when the DJ
 //! turns it on in Settings > Library: the tracks in `database.xml` (see
 //! [`database`]), and the playlists, folders and history kept next to it
-//! (see [`lists`]). It only reads VirtualDJ's files, never writes them.
+//! (see [`lists`]). Importing only reads VirtualDJ's files; File › Export
+//! › VirtualDJ… writes to them (see [`export`]).
 
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
@@ -10,6 +11,7 @@ use crate::{ImportedLibrary, ImportedList, LibraryImport, ListGroup};
 use djsugar_engine::import::ImportedListKind;
 
 pub mod database;
+pub mod export;
 pub mod lists;
 
 /// Parses one of VirtualDJ's XML files. VirtualDJ sometimes writes an

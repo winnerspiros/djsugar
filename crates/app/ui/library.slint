@@ -420,6 +420,9 @@ export global LibraryEdit {
     // into their files for Serato, and its lists as crates; asks for the
     // _Serato_ folder first.
     callback export-serato(row: int);
+    // Puts the points of the tracks under a sidebar row into VirtualDJ's
+    // database, and its lists into VirtualDJ's lists; asks for the folder.
+    callback export-virtualdj(row: int);
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one

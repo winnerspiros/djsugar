@@ -1,8 +1,8 @@
 //! Reads VirtualDJ's library, `database.xml`, so a collection built in
 //! VirtualDJ comes across with its tags, ratings, colours, beat grids, keys,
 //! hot cues, saved loops, named sections and automix points. What VirtualDJ
-//! leaves empty is filled in from the file's own tags. The file is only read, never written, as VirtualDJ asks of
-//! other apps (<https://virtualdj.com/wiki/VDJ_database.html>).
+//! leaves empty is filled in from the file's own tags. Reading never
+//! changes the file (<https://virtualdj.com/wiki/VDJ_database.html>).
 //!
 //! Each `<Song FilePath=…>` holds `<Tags>` (Author, Title, Remix, Album,
 //! Genre, Stars, Grouping, User1, User2…), `<Infos>` (SongLength,
