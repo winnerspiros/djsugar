@@ -51,6 +51,7 @@ pub mod plugins;
 pub mod preview;
 pub mod process;
 pub mod recorder;
+#[cfg(test)]
 mod rt_guard;
 pub mod sampler;
 pub mod scale;

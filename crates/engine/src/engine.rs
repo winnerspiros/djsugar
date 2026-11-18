@@ -33,7 +33,6 @@ use crate::looper::{Heard, LooperIntake, Loopers};
 use crate::midi_clock::LeaderSource;
 use crate::preview::{Preview, PreviewInput};
 use crate::recorder::{self, Feed, RecordTap};
-use crate::rt_guard::{enter_audio_callback, exit_audio_callback};
 use crate::sampler::{SamplerInput, Samplers};
 use crate::stems::{Stems, MAX_STEMS};
 use crate::track::{Audio, Track};
@@ -2960,7 +2959,6 @@ impl Engine {
             }
             return;
         }
-        enter_audio_callback();
         crate::dsp::flush_denormals();
         let dt = frames as f64 / self.sample_rate;
         // Positions published below are where the decks are at the end of
@@ -4144,7 +4142,6 @@ impl Engine {
             self.meter.push(out, channels);
             self.broadcast.push(out, channels);
         }
-        exit_audio_callback();
     }
 }
 
@@ -8212,7 +8209,7 @@ mod tests {
         // Use a buffer size that matches BLOCK to avoid the recursive split path.
         let mut buf = vec![0.0f32; crate::effects::BLOCK * 2];
         for _ in 0..200 {
-            crate::rt_guard::assert_no_allocs_in_audio(|| {
+            crate::rt_guard::assert_no_alloc(|| {
                 engine.process(&mut buf, 2);
             });
         }

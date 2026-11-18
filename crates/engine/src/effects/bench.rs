@@ -10,48 +10,12 @@
 //! cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture
 //! ```
 
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::cell::Cell;
 use std::hint::black_box;
 use std::time::Instant;
 
 use super::*;
 
-/// Counts the allocations made on each thread, so a test can check that a
-/// stretch of audio-thread code made none (tests run on several threads).
-struct Counting;
-
-thread_local! {
-    static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
-}
-
-// SAFETY: forwards to the system allocator; the counter is a plain
-// thread-local `Cell` with const initialisation, which never allocates.
-unsafe impl GlobalAlloc for Counting {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        ALLOCATIONS.with(|a| a.set(a.get() + 1));
-        // SAFETY: same contract as ours.
-        unsafe { System.alloc(layout) }
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        // SAFETY: same contract as ours.
-        unsafe { System.dealloc(ptr, layout) }
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        ALLOCATIONS.with(|a| a.set(a.get() + 1));
-        // SAFETY: same contract as ours.
-        unsafe { System.realloc(ptr, layout, new_size) }
-    }
-}
-
-#[global_allocator]
-static ALLOCATOR: Counting = Counting;
-
-fn allocations() -> usize {
-    ALLOCATIONS.with(Cell::get)
-}
+use crate::rt_guard::allocations;
 
 const SR: f32 = 48_000.0;
 /// Frames per audio callback in the rack tests: a typical small buffer.

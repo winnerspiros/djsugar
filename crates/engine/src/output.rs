@@ -30,7 +30,6 @@ use djsugar_control::{ControlHandle, ControlRegistry};
 
 use crate::engine::{Engine, MIX_CHANNELS, OUTPUT_CHANNELS};
 use crate::inputs::{InputFeed, AUXILIARIES, GROOVE_BOX, MICROPHONE, NUM_AUXILIARIES, NUM_INPUTS};
-use crate::rt_guard::{enter_audio_callback, exit_audio_callback};
 
 /// What an output plays, each a stereo pair of the buffer the engine
 /// renders: the mixes, or one deck or the sampler on its own (for a DAW or
@@ -1175,11 +1174,7 @@ impl Outputs {
                 }
                 let mix = &mut mix[..frames * width];
                 match engine.try_lock() {
-                    Ok(mut e) => {
-                        enter_audio_callback();
-                        e.process(mix, width);
-                        exit_audio_callback();
-                    }
+                    Ok(mut e) => e.process(mix, width),
                     Err(_) => mix.fill(0.0),
                 }
                 for (out, m) in data.chunks_exact_mut(channels).zip(mix.chunks_exact(width)) {
@@ -1223,9 +1218,7 @@ impl Outputs {
                     let mut next = Instant::now();
                     while running.load(Ordering::Relaxed) {
                         if let Ok(mut e) = engine.lock() {
-                            enter_audio_callback();
                             e.process(&mut buf, 2);
-                            exit_audio_callback();
                         }
                         next += period;
                         if let Some(wait) = next.checked_duration_since(Instant::now()) {
