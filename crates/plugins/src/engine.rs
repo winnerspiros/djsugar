@@ -28,7 +28,7 @@ pub const HISTORY: &str = "history";
 /// Engine's key number (0..23): C=0, Am=1, G=2, Em=3, D=4, Bm=5, A=6, F#m=7,
 /// E=8, C#m=9, B=10, G#m=11, F#=12, D#m=13, C#=14, A#m=15, Ab=16, Fm=17,
 /// Eb=18, Cm=19, Bb=20, Gm=21, F=22, Dm=23.
-fn engine_key_to_key(engine_key: i64) -> Option<djsugar_engine::Key> {
+fn engine_key_to_key(engine_key: i64) -> Option<djsugar_engine::key::Key> {
     if !(0..=23).contains(&engine_key) {
         return None;
     }
@@ -46,7 +46,7 @@ fn engine_key_to_key(engine_key: i64) -> Option<djsugar_engine::Key> {
     } else {
         major_tonic
     };
-    Some(djsugar_engine::Key { tonic, minor })
+    Some(djsugar_engine::key::Key { tonic, minor })
 }
 
 pub struct Engine;
@@ -295,12 +295,12 @@ fn read_f64_be(b: &[u8], offset: &mut usize) -> Option<f64> {
 
 /// Read a i32 (big-endian) from a slice.
 fn read_i32_be(b: &[u8], offset: &mut usize) -> Option<i32> {
-    read_u32_be(b, offset).map(i32::from_be)
+    read_u32_be(b, offset).map(|v| v as i32)
 }
 
 /// Read a i64 (big-endian) from a slice.
 fn read_i64_be(b: &[u8], offset: &mut usize) -> Option<i64> {
-    read_u64_be(b, offset).map(i64::from_be)
+    read_u64_be(b, offset).map(|v| v as i64)
 }
 
 /// Read a length-prefixed UTF-8 string (1-byte length).
@@ -318,82 +318,40 @@ fn read_label(b: &[u8], offset: &mut usize) -> Option<String> {
     Some(s)
 }
 
-/// Parse Engine's beatData blob.
-/// Format (per EngineX-OS):
-/// - sample_rate (f64, BE)
-/// - sample_count (f64, BE)
-/// - grid_set (u8)
-/// - default grid: count (u64, BE), then for each: sample (f64, LE), beat (i64, LE), beats_to_next (i32, LE), reserved (i32, LE)
-/// - adjusted grid: same structure
-/// - terminator (u8, 0)
-fn parse_beat_data(blob: &[u8], track_duration: f64) -> Option<BeatGrid> {
-    if blob.len() < 25 {
-        return None;
-    }
-    let mut offset = 0;
-    let _sample_rate = read_f64_be(blob, &mut offset)?;
-    let _sample_count = read_f64_be(blob, &mut offset)?;
-    let grid_set = blob.get(offset)?;
-    offset += 1;
-    if *grid_set == 0 {
-        return None;
-    }
-
-    // Parse default grid
-    let count = read_u64_be(blob, &mut offset)? as usize;
-    let mut markers = Vec::with_capacity(count);
-    for _ in 0..count {
-        let sample = read_f64_le(blob, &mut offset)?;
-        let beat = read_i64_le(blob, &mut offset)?;
-        let beats_to_next = read_i32_le(blob, &mut offset)?;
-        let _reserved = read_i32_le(blob, &mut offset)?;
-        let prev_sample = markers.last().map(|m| m.seconds);
-        let bpm = if beats_to_next > 0 && prev_sample.is_some() {
-            let diff = sample - prev_sample.unwrap();
-            if diff > 0.001 {
-                (beats_to_next as f64 * 60.0) / diff
-            } else {
-                0.0
-            }
-        } else {
-            0.0
-        };
-        markers.push(GridMarker {
-            seconds: sample,
-            bpm,
-        });
-    }
-
-    // Skip adjusted grid (same count)
-    let count2 = read_u64_be(blob, &mut offset)? as usize;
-    offset += count2 * (8 + 8 + 4 + 4); // sample + beat + beats_to_next + reserved
-
-    let terminator = blob.get(offset)?;
-    if *terminator != 0 {
-        return None;
-    }
-
-    if markers.len() < 2 {
-        return None;
-    }
-
-    // Filter and build grid
-    let mut filtered: Vec<GridMarker> = Vec::new();
-    for m in markers {
-        if m.seconds.is_finite()
-            && m.bpm.is_finite()
-            && m.bpm > 1.0
-            && m.seconds >= 0.0
-            && m.seconds <= track_duration
-        {
-            filtered.push(m);
+/// The grid in a (decompressed) `beatData` blob: sample rate and sample
+/// count (f64, big-endian), a grid-set flag, then the default and the
+/// adjusted grid, each a big-endian count of markers of sample (f64), beat
+/// (i64), beats to the next marker (i32) and a reserved i32, little-endian.
+/// The adjusted grid is the one Engine plays to.
+fn parse_beat_data(blob: &[u8]) -> Option<BeatGrid> {
+    let mut at = 0;
+    let rate = read_f64_be(blob, &mut at)?;
+    read_f64_be(blob, &mut at)?;
+    at += 1;
+    let mut grid = Vec::new();
+    for _ in 0..2 {
+        let count = read_u64_be(blob, &mut at)? as usize;
+        grid.clear();
+        for _ in 0..count {
+            let sample = read_f64_le(blob, &mut at)?;
+            read_i64_le(blob, &mut at)?;
+            let to_next = read_i32_le(blob, &mut at)?;
+            read_i32_le(blob, &mut at)?;
+            grid.push((sample, to_next));
         }
     }
-    filtered.sort_by(|a, b| a.seconds.total_cmp(&b.seconds));
-    if filtered.len() < 2 {
+    if !(rate > 0.0) || grid.len() < 2 {
         return None;
     }
-    Some(BeatGrid::new(filtered))
+    // Each marker's tempo runs to the next; the last keeps the one before.
+    let markers: Vec<GridMarker> = grid
+        .windows(2)
+        .map(|w| GridMarker {
+            seconds: w[0].0 / rate,
+            bpm: w[0].1 as f64 * 60.0 * rate / (w[1].0 - w[0].0),
+        })
+        .collect();
+    Some(BeatGrid::new(markers))
 }
 
 /// Read a f64 (little-endian) from a slice.
@@ -705,7 +663,7 @@ fn read(
         let grid = perf
             .and_then(|p| p.beat_data.as_deref())
             .and_then(|b| q_decompress(b).ok())
-            .and_then(|b| parse_beat_data(&b, duration))
+            .and_then(|b| parse_beat_data(&b))
             .unwrap_or_default();
 
         // Hot cues from quickCues

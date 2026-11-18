@@ -107,7 +107,7 @@ impl Key {
         let digits = t.bytes().take_while(u8::is_ascii_digit).count();
         if digits > 0 {
             let n: u8 = t[..digits].parse().ok()?;
-            let [letter] = t[digits..].as_bytes() else {
+            let [letter] = &t.as_bytes()[digits..] else {
                 return None;
             };
             if !(1..=12).contains(&n) {

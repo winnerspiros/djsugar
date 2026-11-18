@@ -135,9 +135,9 @@ All in the app, both directions, no external tool: tracks, playlists/crates, cue
 | --- | --- | --- |
 | X.1 | Common library model and lossless conversion layer (Rust); dry-run preview and conflict report | TODO |
 | X.2 | Rekordbox: XML and the encrypted master.db (6/7), device exports (PDB/ANLZ on USB) | TODO |
-|| X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | DONE (import: database V2, crates, smart crates, cues, loops, beatgrid, color, rating, history; tags: Markers2, BeatGrid, Autotags) |
+| X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | WIP: import of database V2, crates, smart crates, and from the files' tags cues, loops, grid, colour (Markers2, BeatGrid, Autotags). Next: Serato Stems, export |
 | X.4 | Traktor: collection.nml with cues, grids and playlists | TODO |
-| X.5 | Engine DJ: database and USB exports | TODO |
+| X.5 | Engine DJ: database and USB exports | WIP: USB export; import of m.db with cues, loops, grid, playlists, history. Next: writing the desktop database |
 | X.6 | VirtualDJ: database.xml and playlists; Mixxx (exists, extend to export); djay; iTunes/Music XML | TODO |
 | X.7 | Path relinking for moved drives and other OSes; duplicate detection by audio fingerprint | TODO |
 | X.8 | Two-way sync: keep a DJ Sugar library and another app's library in step, incremental; USB sticks too: a Sync Manager that rewrites only what changed, cue/grid/loop edits made on players or another computer brought back (match by file name and size), play history imported from the stick | TODO |
