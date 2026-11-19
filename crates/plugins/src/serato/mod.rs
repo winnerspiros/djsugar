@@ -12,8 +12,12 @@
 //! says what the value is: `o` fields hold more fields (`otrk` a track),
 //! `t` and `p` are UTF-16BE text and paths, `u` a `u32`, `s` a `u16`, `b` a
 //! flag. A crate named `House%%Deep.crate` is the crate Deep in House.
+//! Smart crates are in `SmartCrates` (see [`smart`]), and the sessions
+//! played in `History/Sessions` (see [`history`]).
 
 pub mod export;
+pub mod history;
+pub mod smart;
 pub mod tags;
 
 use std::path::{Component, Path, PathBuf};
@@ -25,6 +29,7 @@ use djsugar_engine::{LibraryInfo, Source, Track};
 use crate::{ImportedLibrary, ImportedList, LibraryImport, ListGroup};
 
 pub const CRATES: &str = "crates";
+pub const HISTORY: &str = "history";
 
 pub struct Serato;
 
@@ -59,24 +64,34 @@ impl LibraryImport for Serato {
     }
 
     fn list_groups(&self) -> Vec<ListGroup> {
-        vec![ListGroup {
-            id: CRATES,
-            title: "Crates",
-            detail: "Your Serato crates, in their folders.",
-            on_by_default: true,
-        }]
+        vec![
+            ListGroup {
+                id: CRATES,
+                title: "Crates",
+                detail: "Your Serato crates and smart crates, in their folders.",
+                on_by_default: true,
+            },
+            ListGroup {
+                id: HISTORY,
+                title: "History",
+                detail: "The sessions you played, with when each track started.",
+                on_by_default: true,
+            },
+        ]
     }
 
     fn preview(&self, database: &Path) -> Result<String, String> {
         let tracks = records(&load(database)?, b"otrk").count();
-        let crates = crate_files(database).len();
+        let crates = crate_files(database).len() + smart::files(database).len();
         let n = |count: usize, one: &str, many: &str| {
             format!("{count} {}", if count == 1 { one } else { many })
         };
+        let sessions = history::files(database).len();
         Ok(format!(
-            "{} and {}.",
+            "{}, {} and {}.",
             n(tracks, "track", "tracks"),
-            n(crates, "crate", "crates")
+            n(crates, "crate", "crates"),
+            n(sessions, "history session", "history sessions")
         ))
     }
 
@@ -114,14 +129,24 @@ pub fn read(
             tracks.push(t);
         }
     }
-    let lists = if groups.contains(&CRATES) {
-        crate_files(database)
+    let mut lists: Vec<ImportedList> = if groups.contains(&CRATES) {
+        let crates = crate_files(database);
+        let smart = smart::files(database);
+        crates
             .iter()
             .filter_map(|f| crate_list(f, &disk))
+            .chain(smart.iter().filter_map(|f| smart::list(f, &disk)))
             .collect()
     } else {
         Vec::new()
     };
+    if groups.contains(&HISTORY) {
+        lists.extend(
+            history::files(database)
+                .iter()
+                .filter_map(|f| history::session(f, &disk)),
+        );
+    }
     Ok(ImportedLibrary { tracks, lists })
 }
 
@@ -337,7 +362,7 @@ mod tests {
         let preview = Serato.preview(&db).unwrap();
         std::fs::remove_dir_all(&dir).ok();
 
-        assert_eq!(preview, "2 tracks and 1 crate.");
+        assert_eq!(preview, "2 tracks, 1 crate and 0 history sessions.");
         assert_eq!(lib.tracks.len(), 1);
         let t = &lib.tracks[0];
         assert!(matches!(&t.source, Source::File(p) if *p == glue));
