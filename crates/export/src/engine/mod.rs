@@ -10,6 +10,7 @@
 //! `pkg/enginedb` (<https://github.com/Cd1s/EngineX-OS>, MIT licence,
 //! Copyright (c) 2026 EngineX OS Contributors), measured on Engine OS 5.
 
+pub mod desktop;
 pub mod perf;
 
 use std::collections::HashMap;
@@ -25,7 +26,7 @@ use crate::Error;
 
 pub use perf::Performance;
 
-const SCHEMA: &str = include_str!("schema.sql");
+pub(crate) const SCHEMA: &str = include_str!("schema.sql");
 pub const LIBRARY_DIR: &str = "Engine Library";
 /// Left beside the library so a later export knows the library is
 /// DJ Sugar's to replace. Engine drops tables it doesn't know from `m.db`,

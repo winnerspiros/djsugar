@@ -30,6 +30,7 @@ pub enum Action {
     ExportSerato,
     ExportVirtualDj,
     ExportMixxx,
+    ExportEngine,
     ExportMixcloud,
     RecordMix,
     MiniPlayer,
@@ -85,7 +86,7 @@ const UPDATE_CHECK: &str = "update_check";
 const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs/guide";
 
 impl Action {
-    const ALL: [Action; 36] = [
+    const ALL: [Action; 37] = [
         Action::Settings,
         Action::Quit,
         Action::Undo,
@@ -99,6 +100,7 @@ impl Action {
         Action::ExportSerato,
         Action::ExportVirtualDj,
         Action::ExportMixxx,
+        Action::ExportEngine,
         Action::RecordMix,
         Action::MiniPlayer,
         Action::ZoomIn,
@@ -243,6 +245,11 @@ pub const MENUS: &[Menu] = &[
                     Entry::Item {
                         action: Action::ExportMixxx,
                         title: "Mixxx…",
+                        key: None,
+                    },
+                    Entry::Item {
+                        action: Action::ExportEngine,
+                        title: "Engine DJ…",
                         key: None,
                     },
                     Entry::Separator,
@@ -617,6 +624,9 @@ pub fn run(app: &AppWindow, action: Action) {
         Action::ExportMixxx => app
             .global::<LibraryEdit>()
             .invoke_export_mixxx(app.get_current_folder()),
+        Action::ExportEngine => app
+            .global::<LibraryEdit>()
+            .invoke_export_engine(app.get_current_folder()),
         // The mixed set picked in Recordings.
         Action::ExportMixcloud => crate::export_mixcloud(app),
         // [Recording],toggle_recording, as the REC button and controllers.
@@ -751,12 +761,13 @@ pub struct Exports {
     pub serato: bool,
     pub virtualdj: bool,
     pub mixxx: bool,
+    pub engine: bool,
 }
 
 /// Greys File › Export's items out or back in.
 pub fn set_exports(e: Exports) {
     thread_local! {
-        static LAST: std::cell::Cell<Option<[bool; 9]>> = const { std::cell::Cell::new(None) };
+        static LAST: std::cell::Cell<Option<[bool; 10]>> = const { std::cell::Cell::new(None) };
     }
     let now = [
         e.m3u,
@@ -768,6 +779,7 @@ pub fn set_exports(e: Exports) {
         e.serato,
         e.virtualdj,
         e.mixxx,
+        e.engine,
     ];
     if LAST.with(|l| l.replace(Some(now))) == Some(now) {
         return;
@@ -781,6 +793,7 @@ pub fn set_exports(e: Exports) {
     set_item(Action::ExportSerato, None, e.serato);
     set_item(Action::ExportVirtualDj, None, e.virtualdj);
     set_item(Action::ExportMixxx, None, e.mixxx);
+    set_item(Action::ExportEngine, None, e.engine);
 }
 
 fn default_title(action: Action) -> String {
@@ -860,8 +873,8 @@ mod tests {
             .filter(|l| l.parent == export as i32 && l.kind == 0)
             .collect();
         // M3U, USB, Spotify, rekordbox, Traktor, Serato, VirtualDJ, Mixxx,
-        // Mixcloud.
-        assert_eq!(inside.len(), 9);
+        // Engine DJ, Mixcloud.
+        assert_eq!(inside.len(), 10);
         // Settings… and Quit sit in the ☰ list itself, under the menus.
         for a in [Action::Settings, Action::Quit] {
             let line = lines.iter().find(|l| l.action == a.id()).unwrap();

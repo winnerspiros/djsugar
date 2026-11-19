@@ -37,6 +37,7 @@ mod checklist;
 mod cleanup;
 pub(crate) mod columns;
 mod cues;
+mod engine_export;
 mod favorites;
 mod filters;
 mod health;
@@ -723,6 +724,7 @@ pub struct Browser {
     serato_export: serato_export::State,
     virtualdj_export: virtualdj_export::State,
     mixxx_export: mixxx_export::State,
+    engine_export: engine_export::State,
     phrases_seen: analysis::SeenDecks,
     /// The last stage change or merge of copies, which the track menu can
     /// take back.
@@ -1361,6 +1363,7 @@ impl Browser {
             serato_export: Default::default(),
             virtualdj_export: Default::default(),
             mixxx_export: Default::default(),
+            engine_export: Default::default(),
             phrases_seen: Default::default(),
             undo: None,
             pending_moves: HashMap::new(),
@@ -1989,6 +1992,7 @@ impl Browser {
         Self::install_serato_export(&edit, &with);
         Self::install_virtualdj_export(&edit, &with);
         Self::install_mixxx_export(&edit, &with);
+        Self::install_engine_export(&edit, &with);
     }
 
     /// Saves a search as a smart list at the top level (under "Smart
@@ -4793,6 +4797,7 @@ impl Browser {
                 serato: node.is_some() && self.traktor_exportable(self.current_node),
                 virtualdj: node.is_some() && self.traktor_exportable(self.current_node),
                 mixxx: node.is_some() && self.traktor_exportable(self.current_node),
+                engine: node.is_some() && self.traktor_exportable(self.current_node),
             });
             let name = match self.nodes.get(self.current_node) {
                 Some(n) => n.title.clone().unwrap_or_else(|| n.name.clone()),
