@@ -2411,6 +2411,9 @@ fn import_tracks(
 /// tracks, as two copies in one app are that app's to sort out.
 struct SongIndex {
     songs: HashMap<(String, String), Vec<(i64, f64)>>,
+    /// Paths by lower-case file name, for copies (on a USB stick, say)
+    /// whose tags say too little: same name and size is the same file.
+    files: HashMap<String, Vec<(i64, PathBuf)>>,
 }
 
 /// How far apart two copies' durations can be and still be one song.
@@ -2419,8 +2422,9 @@ const SAME_SONG_SECONDS: f64 = 2.0;
 impl SongIndex {
     fn new(tx: &Connection, source: &str) -> Result<Self, Error> {
         let mut songs: HashMap<(String, String), Vec<(i64, f64)>> = HashMap::new();
+        let mut files: HashMap<String, Vec<(i64, PathBuf)>> = HashMap::new();
         let mut q = tx.prepare(
-            "SELECT id, artist, title, duration FROM tracks WHERE source != ?1 ORDER BY id",
+            "SELECT id, artist, title, duration, path FROM tracks WHERE source != ?1 ORDER BY id",
         )?;
         let rows = q.query_map([source], |r| {
             Ok((
@@ -2428,20 +2432,39 @@ impl SongIndex {
                 r.get::<_, String>(1)?,
                 r.get::<_, String>(2)?,
                 r.get::<_, f64>(3)?,
+                r.get::<_, String>(4)?,
             ))
         })?;
         for row in rows {
-            let (id, artist, title, duration) = row?;
+            let (id, artist, title, duration, path) = row?;
             if let Some(key) = song_key(&artist, &title) {
                 songs.entry(key).or_default().push((id, duration));
             }
+            let path = PathBuf::from(path);
+            if let Some(name) = file_key(&path) {
+                files.entry(name).or_default().push((id, path));
+            }
         }
-        Ok(SongIndex { songs })
+        Ok(SongIndex { songs, files })
     }
 
-    /// The library's copy of `t`, the first added when there are several.
+    /// The library's copy of `t`, the first added when there are several:
+    /// by its tags, or else a file of the same name and size.
     fn find(&mut self, t: &Track) -> Option<i64> {
         self.find_song(&t.artist, &t.title, t.duration)
+            .or_else(|| self.find_file(&t.source))
+    }
+
+    fn find_file(&self, source: &Source) -> Option<i64> {
+        let Source::File(path) = source else {
+            return None;
+        };
+        let size = std::fs::metadata(path).ok()?.len();
+        self.files
+            .get(&file_key(path)?)?
+            .iter()
+            .find(|(_, p)| p != path && std::fs::metadata(p).is_ok_and(|m| m.len() == size))
+            .map(|(id, _)| *id)
     }
 
     fn find_song(&self, artist: &str, title: &str, duration: f64) -> Option<i64> {
@@ -2454,6 +2477,11 @@ impl SongIndex {
             .find(|(_, d)| *d > 0.0 && (d - duration).abs() <= SAME_SONG_SECONDS)
             .map(|(id, _)| *id)
     }
+}
+
+/// A file name as compared, in lower case.
+fn file_key(path: &Path) -> Option<String> {
+    Some(path.file_name()?.to_string_lossy().to_lowercase())
 }
 
 /// An ISRC as compared: letters and digits in upper case.
@@ -3049,6 +3077,44 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(lib.tracks(|_| true).unwrap()[0].title, "Theirs");
+    }
+
+    #[test]
+    fn a_stick_copy_joins_the_file_of_the_same_name_and_size() {
+        let dir = std::env::temp_dir().join(format!("djs-stick-{}", std::process::id()));
+        let (music, stick) = (dir.join("music"), dir.join("stick"));
+        std::fs::create_dir_all(&music).unwrap();
+        std::fs::create_dir_all(&stick).unwrap();
+        for (folder, name, bytes) in [
+            (&music, "a.mp3", 10),
+            (&stick, "A.MP3", 10),
+            (&music, "b.mp3", 10),
+            (&stick, "b.mp3", 11),
+        ] {
+            std::fs::write(folder.join(name), vec![0u8; bytes]).unwrap();
+        }
+        let at = |p: PathBuf| p.to_string_lossy().into_owned();
+        let mut lib = Library::in_memory().unwrap();
+        lib.sync(&[
+            file_track(&at(music.join("a.mp3")), ""),
+            file_track(&at(music.join("b.mp3")), ""),
+        ])
+        .unwrap();
+        let untagged = |p: PathBuf| {
+            let mut t = imported_track(&at(p));
+            t.artist.clear();
+            t.title.clear();
+            t
+        };
+        let stick_lib = ImportedLibrary {
+            tracks: vec![untagged(stick.join("A.MP3")), untagged(stick.join("b.mp3"))],
+            lists: Vec::new(),
+        };
+        let report = lib
+            .preview_import("rekordbox", "rekordbox", false, false, &stick_lib)
+            .unwrap();
+        assert_eq!((report.matched, report.added), (1, 1));
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
