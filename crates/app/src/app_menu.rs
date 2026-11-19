@@ -31,6 +31,7 @@ pub enum Action {
     ExportVirtualDj,
     ExportMixxx,
     ExportEngine,
+    ExportRekordboxDb,
     ExportMixcloud,
     RecordMix,
     MiniPlayer,
@@ -86,7 +87,7 @@ const UPDATE_CHECK: &str = "update_check";
 const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs/guide";
 
 impl Action {
-    const ALL: [Action; 37] = [
+    const ALL: [Action; 38] = [
         Action::Settings,
         Action::Quit,
         Action::Undo,
@@ -101,6 +102,7 @@ impl Action {
         Action::ExportVirtualDj,
         Action::ExportMixxx,
         Action::ExportEngine,
+        Action::ExportRekordboxDb,
         Action::RecordMix,
         Action::MiniPlayer,
         Action::ZoomIn,
@@ -225,6 +227,11 @@ pub const MENUS: &[Menu] = &[
                     Entry::Item {
                         action: Action::ExportRekordboxXml,
                         title: "rekordbox XML…",
+                        key: None,
+                    },
+                    Entry::Item {
+                        action: Action::ExportRekordboxDb,
+                        title: "rekordbox library…",
                         key: None,
                     },
                     Entry::Item {
@@ -627,6 +634,9 @@ pub fn run(app: &AppWindow, action: Action) {
         Action::ExportEngine => app
             .global::<LibraryEdit>()
             .invoke_export_engine(app.get_current_folder()),
+        Action::ExportRekordboxDb => app
+            .global::<LibraryEdit>()
+            .invoke_export_rekordbox_db(app.get_current_folder()),
         // The mixed set picked in Recordings.
         Action::ExportMixcloud => crate::export_mixcloud(app),
         // [Recording],toggle_recording, as the REC button and controllers.
@@ -762,12 +772,13 @@ pub struct Exports {
     pub virtualdj: bool,
     pub mixxx: bool,
     pub engine: bool,
+    pub rekordbox_db: bool,
 }
 
 /// Greys File › Export's items out or back in.
 pub fn set_exports(e: Exports) {
     thread_local! {
-        static LAST: std::cell::Cell<Option<[bool; 10]>> = const { std::cell::Cell::new(None) };
+        static LAST: std::cell::Cell<Option<[bool; 11]>> = const { std::cell::Cell::new(None) };
     }
     let now = [
         e.m3u,
@@ -780,6 +791,7 @@ pub fn set_exports(e: Exports) {
         e.virtualdj,
         e.mixxx,
         e.engine,
+        e.rekordbox_db,
     ];
     if LAST.with(|l| l.replace(Some(now))) == Some(now) {
         return;
@@ -794,6 +806,7 @@ pub fn set_exports(e: Exports) {
     set_item(Action::ExportVirtualDj, None, e.virtualdj);
     set_item(Action::ExportMixxx, None, e.mixxx);
     set_item(Action::ExportEngine, None, e.engine);
+    set_item(Action::ExportRekordboxDb, None, e.rekordbox_db);
 }
 
 fn default_title(action: Action) -> String {
@@ -872,9 +885,9 @@ mod tests {
             .iter()
             .filter(|l| l.parent == export as i32 && l.kind == 0)
             .collect();
-        // M3U, USB, Spotify, rekordbox, Traktor, Serato, VirtualDJ, Mixxx,
-        // Engine DJ, Mixcloud.
-        assert_eq!(inside.len(), 10);
+        // M3U, USB, Spotify, rekordbox XML, rekordbox library, Traktor,
+        // Serato, VirtualDJ, Mixxx, Engine DJ, Mixcloud.
+        assert_eq!(inside.len(), 11);
         // Settings… and Quit sit in the ☰ list itself, under the menus.
         for a in [Action::Settings, Action::Quit] {
             let line = lines.iter().find(|l| l.action == a.id()).unwrap();

@@ -54,6 +54,7 @@ mod picks;
 mod playlist_files;
 mod prep;
 mod rail_order;
+mod rekordbox_db_export;
 mod rekordbox_xml;
 mod serato_export;
 mod sets;
@@ -725,6 +726,7 @@ pub struct Browser {
     virtualdj_export: virtualdj_export::State,
     mixxx_export: mixxx_export::State,
     engine_export: engine_export::State,
+    rekordbox_db_export: rekordbox_db_export::State,
     phrases_seen: analysis::SeenDecks,
     /// The last stage change or merge of copies, which the track menu can
     /// take back.
@@ -1364,6 +1366,7 @@ impl Browser {
             virtualdj_export: Default::default(),
             mixxx_export: Default::default(),
             engine_export: Default::default(),
+            rekordbox_db_export: Default::default(),
             phrases_seen: Default::default(),
             undo: None,
             pending_moves: HashMap::new(),
@@ -1993,6 +1996,7 @@ impl Browser {
         Self::install_virtualdj_export(&edit, &with);
         Self::install_mixxx_export(&edit, &with);
         Self::install_engine_export(&edit, &with);
+        Self::install_rekordbox_db_export(&edit, &with);
     }
 
     /// Saves a search as a smart list at the top level (under "Smart
@@ -4798,6 +4802,7 @@ impl Browser {
                 virtualdj: node.is_some() && self.traktor_exportable(self.current_node),
                 mixxx: node.is_some() && self.traktor_exportable(self.current_node),
                 engine: node.is_some() && self.traktor_exportable(self.current_node),
+                rekordbox_db: node.is_some() && self.traktor_exportable(self.current_node),
             });
             let name = match self.nodes.get(self.current_node) {
                 Some(n) => n.title.clone().unwrap_or_else(|| n.name.clone()),
