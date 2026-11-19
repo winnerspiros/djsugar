@@ -103,7 +103,9 @@ jobs:
       # even when that build starves the runner.
       - run: cargo test --workspace --exclude djsugar -- --test-threads=2
         timeout-minutes: 30
-      - run: cargo test -p djsugar --no-run -j1
+      # Capped below the runner's memory: past that, the build is stopped
+      # with an error here instead of the runner losing its connection.
+      - run: systemd-run --user --wait --pipe --same-dir -p MemoryMax=13G -p MemorySwapMax=8G --setenv=PATH --setenv=CARGO_PROFILE_DEV_DEBUG --setenv=CARGO_PROFILE_TEST_DEBUG --setenv=CARGO_INCREMENTAL --setenv=RUSTFLAGS --setenv=CARGO_HOME --setenv=RUSTUP_HOME --setenv=CARGO_TERM_COLOR cargo test -p djsugar --no-run -j1
         timeout-minutes: 40
       - run: cargo test -p djsugar -- --test-threads=2
         timeout-minutes: 20
