@@ -7,7 +7,6 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use djsugar_engine::Track;
 use djsugar_plugins::itunes_library_export::{self, ItunesList};
 
 use super::{Browser, Contents};
