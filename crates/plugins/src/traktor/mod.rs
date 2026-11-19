@@ -24,7 +24,9 @@ use roxmltree::{Document, Node};
 use crate::{ImportedLibrary, LibraryImport, ListGroup};
 
 pub const PLAYLISTS: &str = "playlists";
+pub const HISTORY: &str = "history";
 
+pub mod history;
 pub mod nml_export;
 
 pub struct Traktor;
@@ -75,12 +77,20 @@ impl LibraryImport for Traktor {
     }
 
     fn list_groups(&self) -> Vec<ListGroup> {
-        vec![ListGroup {
-            id: PLAYLISTS,
-            title: "Playlists",
-            detail: "Your Traktor playlists, in their folders.",
-            on_by_default: true,
-        }]
+        vec![
+            ListGroup {
+                id: PLAYLISTS,
+                title: "Playlists",
+                detail: "Your Traktor playlists, in their folders.",
+                on_by_default: true,
+            },
+            ListGroup {
+                id: HISTORY,
+                title: "History",
+                detail: "The sessions you played, from Traktor's History folder.",
+                on_by_default: true,
+            },
+        ]
     }
 
     fn preview(&self, database: &Path) -> Result<String, String> {
@@ -110,7 +120,7 @@ fn document(text: &str) -> Result<Document<'_>, String> {
     Ok(doc)
 }
 
-/// "1,204 tracks and 37 playlists."
+/// "1,204 tracks, 37 playlists and 12 history sessions."
 pub fn preview(path: &Path) -> Result<String, String> {
     let text = load(path)?;
     let doc = document(&text)?;
@@ -119,10 +129,12 @@ pub fn preview(path: &Path) -> Result<String, String> {
     let n = |count: usize, one: &str, many: &str| {
         format!("{count} {}", if count == 1 { one } else { many })
     };
+    let sessions = history::files(path).len();
     Ok(format!(
-        "{} and {}.",
+        "{}, {} and {}.",
         n(tracks, "track", "tracks"),
-        n(lists, "playlist", "playlists")
+        n(lists, "playlist", "playlists"),
+        n(sessions, "history session", "history sessions")
     ))
 }
 
@@ -147,11 +159,18 @@ pub fn read(
         }
         files.insert(key, file);
     }
-    let lists = if groups.contains(&PLAYLISTS) {
+    let mut lists = if groups.contains(&PLAYLISTS) {
         playlists(&doc, &files)
     } else {
         Vec::new()
     };
+    if groups.contains(&HISTORY) {
+        lists.extend(
+            history::files(path)
+                .iter()
+                .filter_map(|f| history::session(f, &exists)),
+        );
+    }
     Ok(ImportedLibrary { tracks, lists })
 }
 
@@ -589,7 +608,10 @@ mod tests {
     #[test]
     fn previews_and_rejects_other_files() {
         let path = write("preview");
-        assert_eq!(preview(&path).unwrap(), "3 tracks and 2 playlists.");
+        assert_eq!(
+            preview(&path).unwrap(),
+            "3 tracks, 2 playlists and 0 history sessions."
+        );
         std::fs::remove_file(&path).ok();
         assert!(document("<DJ_PLAYLISTS/>").is_err());
     }

@@ -130,7 +130,9 @@ mod tests {
         info.extend(num(41, &utf16("13/05/2020")));
         info.extend(num(43, &1_589_400_000u32.to_be_bytes()));
         d.extend(field(b"oses", &field(b"adat", &info)));
-        d.extend(track("/Music/a.mp3", 1_589_400_100, 1));
+        // A full path (on another disk), then one from the top of this one.
+        let elsewhere = dir.join("Elsewhere").join("a.mp3");
+        d.extend(track(elsewhere.to_str().unwrap(), 1_589_400_100, 1));
         d.extend(track("/Music/loaded.mp3", 1_589_400_200, 0));
         d.extend(track("Music/b.mp3", 1_589_400_300, 1));
         std::fs::write(sessions.join("5.session"), &d).unwrap();
@@ -161,7 +163,7 @@ mod tests {
         assert_eq!(
             got,
             [
-                (PathBuf::from("/Music/a.mp3"), Some(1_589_400_100)),
+                (elsewhere, Some(1_589_400_100)),
                 (dir.join("Music").join("b.mp3"), Some(1_589_400_300)),
             ]
         );

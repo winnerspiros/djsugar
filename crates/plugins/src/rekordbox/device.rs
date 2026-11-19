@@ -1,5 +1,6 @@
 //! A rekordbox USB stick or SD card for Pioneer players: its Device Library,
-//! `PIONEER/rekordbox/export.pdb` (read with rbox), and each track's
+//! `PIONEER/rekordbox/export.pdb`, or the OneLibrary newer players read,
+//! `exportLibrary.db` beside it (both read with rbox), and each track's
 //! analysis files beside it (`PIONEER/USBANLZ/…`), which hold its beat
 //! grid, hot cues, memory cues, loops and phrases. Paths on the stick are
 //! from its root, so a stick reads the same wherever it's mounted.
@@ -11,17 +12,19 @@ use std::sync::Arc;
 use djsugar_engine::import::{ImportedEntry, ImportedList, ImportedListKind};
 use djsugar_engine::{Hotcue, LibraryInfo, Source, Track, MEMORY_CUE};
 use rbox_anlz::Anlz;
-use rbox_core::PlaylistType;
+use rbox_core::{HistoryType, PlaylistType};
 use rbox_devlib::DeviceLibrary;
+use rbox_onelib::OneLibrary;
 
 use super::common::{self, Mood};
 use super::{HISTORY, PLAYLISTS};
 use crate::ImportedLibrary;
 
-/// Whether `path` is a Device Library file.
+/// Whether `path` is a stick's library: a Device Library or a OneLibrary.
 pub fn is_device(path: &Path) -> bool {
-    path.file_name()
-        .is_some_and(|n| n.eq_ignore_ascii_case("export.pdb"))
+    path.file_name().is_some_and(|n| {
+        n.eq_ignore_ascii_case("export.pdb") || n.eq_ignore_ascii_case("exportLibrary.db")
+    })
 }
 
 /// The stick's root: `export.pdb` is in `PIONEER/rekordbox`.
@@ -38,9 +41,127 @@ fn on_stick(root: &Path, path: &Path) -> PathBuf {
     root.join(path.strip_prefix("/").unwrap_or(path))
 }
 
-fn open(pdb: &Path) -> Result<DeviceLibrary, String> {
-    let dir = pdb.parent().unwrap_or(Path::new("."));
-    DeviceLibrary::new(dir).map_err(|e| format!("can't open the stick's library: {e}"))
+/// A playlist or folder on the stick.
+struct Row {
+    id: i64,
+    seq: i64,
+    name: String,
+    parent: i64,
+    list: bool,
+}
+
+/// The stick's library, in either format.
+enum Stick {
+    Pdb(Box<DeviceLibrary>),
+    One(OneLibrary),
+}
+
+impl Stick {
+    fn open(path: &Path) -> Result<Self, String> {
+        let fail = |e: &dyn std::fmt::Display| format!("can't open the stick's library: {e}");
+        if path
+            .file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("exportLibrary.db"))
+        {
+            OneLibrary::from_path(path)
+                .map(Stick::One)
+                .map_err(|e| fail(&e))
+        } else {
+            let dir = path.parent().unwrap_or(Path::new("."));
+            DeviceLibrary::new(dir)
+                .map(|d| Stick::Pdb(Box::new(d)))
+                .map_err(|e| fail(&e))
+        }
+    }
+
+    fn tracks(&mut self) -> Result<Vec<rbox_core::Track>, String> {
+        match self {
+            Stick::Pdb(d) => d.get_tracks().map_err(err),
+            Stick::One(d) => d.get_tracks().map_err(err),
+        }
+    }
+
+    fn playlists(&mut self) -> Result<Vec<Row>, String> {
+        Ok(match self {
+            Stick::Pdb(d) => d
+                .get_playlists()
+                .map_err(err)?
+                .into_iter()
+                .map(|p| Row {
+                    id: p.id,
+                    seq: i64::from(p.seq),
+                    name: p.name,
+                    parent: p.parent_id,
+                    list: p.attribute == PlaylistType::List,
+                })
+                .collect(),
+            Stick::One(d) => d
+                .get_playlists()
+                .map_err(err)?
+                .into_iter()
+                .map(|p| Row {
+                    id: p.id,
+                    seq: i64::from(p.seq),
+                    name: p.name,
+                    parent: p.parent_id,
+                    list: p.attribute == PlaylistType::List,
+                })
+                .collect(),
+        })
+    }
+
+    fn playlist(&mut self, id: i64) -> Result<Vec<i64>, String> {
+        Ok(match self {
+            Stick::Pdb(d) => d
+                .get_playlist_contents(id)
+                .map_err(err)?
+                .iter()
+                .map(|c| c.id)
+                .collect(),
+            Stick::One(d) => d
+                .get_playlist_contents(id)
+                .map_err(err)?
+                .iter()
+                .map(|c| c.id)
+                .collect(),
+        })
+    }
+
+    /// The history sessions (not the folders they're grouped in).
+    fn histories(&mut self) -> Result<Vec<(i64, String)>, String> {
+        Ok(match self {
+            Stick::Pdb(d) => d
+                .get_histories()
+                .map_err(err)?
+                .into_iter()
+                .map(|h| (h.id, h.name))
+                .collect(),
+            Stick::One(d) => d
+                .get_histories()
+                .map_err(err)?
+                .into_iter()
+                .filter(|h| h.attribute == HistoryType::List)
+                .map(|h| (h.id, h.name))
+                .collect(),
+        })
+    }
+
+    fn history(&mut self, id: i64) -> Result<Vec<i64>, String> {
+        Ok(match self {
+            Stick::Pdb(d) => d
+                .get_history_contents(id)
+                .map_err(err)?
+                .iter()
+                .map(|c| c.id)
+                .collect(),
+            Stick::One(d) => d
+                .get_history_contents(id)
+                .map_err(err)?
+                .iter()
+                .map(|c| c.id)
+                .collect(),
+        })
+    }
 }
 
 fn err(e: impl std::fmt::Display) -> String {
@@ -49,15 +170,10 @@ fn err(e: impl std::fmt::Display) -> String {
 
 /// What the stick holds, as a line for the wizard.
 pub fn preview(pdb: &Path) -> Result<String, String> {
-    let mut db = open(pdb)?;
-    let tracks = db.get_contents().map_err(err)?.len();
-    let lists = db
-        .get_playlists()
-        .map_err(err)?
-        .iter()
-        .filter(|p| p.attribute == PlaylistType::List)
-        .count();
-    let history = db.get_histories().map_err(err)?.len();
+    let mut db = Stick::open(pdb)?;
+    let tracks = db.tracks()?.len();
+    let lists = db.playlists()?.iter().filter(|p| p.list).count();
+    let history = db.histories()?.len();
     Ok(super::summary(tracks, lists, 0, history))
 }
 
@@ -69,10 +185,10 @@ pub fn read(
     exists: impl Fn(&Path) -> bool,
 ) -> Result<ImportedLibrary, String> {
     let root = root(pdb);
-    let mut db = open(pdb)?;
+    let mut db = Stick::open(pdb)?;
     let mut tracks = Vec::new();
     let mut entries: HashMap<i64, ImportedEntry> = HashMap::new();
-    for t in db.get_tracks().map_err(err)? {
+    for t in db.tracks()? {
         let Some(id) = t.id else {
             continue;
         };
@@ -99,64 +215,55 @@ pub fn read(
 }
 
 /// The playlists (in their folders) and history in `groups`.
-pub fn lists(
-    db: &mut DeviceLibrary,
+fn lists(
+    db: &mut Stick,
     groups: &[&str],
     entries: &HashMap<i64, ImportedEntry>,
 ) -> Result<Vec<ImportedList>, String> {
+    let pick = |ids: Vec<i64>| -> Vec<ImportedEntry> {
+        ids.iter()
+            .filter_map(|id| entries.get(id).cloned())
+            .collect()
+    };
     let mut out = Vec::new();
     if groups.contains(&PLAYLISTS) {
-        let all = db.get_playlists().map_err(err)?;
-        let by_id: HashMap<i64, (&str, i64)> = all
-            .iter()
-            .map(|p| (p.id, (p.name.as_str(), p.parent_id)))
-            .collect();
-        let mut order: Vec<_> = all
-            .iter()
-            .filter(|p| p.attribute == PlaylistType::List)
-            .collect();
-        // The order the stick shows them: by the path of positions.
+        let all = db.playlists()?;
+        let by_id: HashMap<i64, &Row> = all.iter().map(|p| (p.id, p)).collect();
+        // The path of positions from the top, so lists keep the stick's order.
         let place = |mut id: i64| {
             let mut path = Vec::new();
-            while let Some(p) = all.iter().find(|p| p.id == id) {
+            while let Some(p) = by_id.get(&id) {
                 path.insert(0, p.seq);
-                id = p.parent_id;
+                id = p.parent;
             }
             path
         };
-        order.sort_by_key(|p| place(p.id));
+        let mut order: Vec<&Row> = all.iter().filter(|p| p.list).collect();
+        order.sort_by_cached_key(|p| place(p.id));
         for p in order {
             let mut folders = Vec::new();
-            let mut up = p.parent_id;
-            while let Some(&(name, parent)) = by_id.get(&up) {
-                folders.insert(0, name.to_string());
-                up = parent;
+            let mut up = p.parent;
+            while let Some(f) = by_id.get(&up) {
+                folders.insert(0, f.name.clone());
+                up = f.parent;
             }
-            let contents = db.get_playlist_contents(p.id).map_err(err)?;
             out.push(ImportedList {
                 folders,
                 name: p.name.clone(),
                 kind: ImportedListKind::List,
-                entries: contents
-                    .iter()
-                    .filter_map(|c| entries.get(&c.id).cloned())
-                    .collect(),
+                entries: pick(db.playlist(p.id)?),
             });
         }
     }
     if groups.contains(&HISTORY) {
-        for h in db.get_histories().map_err(err)? {
-            let contents = db.get_history_contents(h.id).map_err(err)?;
+        for (id, name) in db.histories()? {
             out.push(ImportedList {
                 folders: Vec::new(),
-                name: h.name.clone(),
                 kind: ImportedListKind::History {
-                    started: crate::virtualdj::lists::day_start(&h.name).unwrap_or(0),
+                    started: crate::virtualdj::lists::day_start(&name).unwrap_or(0),
                 },
-                entries: contents
-                    .iter()
-                    .filter_map(|c| entries.get(&c.id).cloned())
-                    .collect(),
+                name,
+                entries: pick(db.history(id)?),
             });
         }
     }
@@ -383,5 +490,131 @@ mod tests {
             .map(|e| e.path.file_name().unwrap().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["b.mp3", "a.mp3"]);
+    }
+
+    /// A 16-bit mono WAV of clicks at 120 BPM.
+    fn click_track(path: &Path, seconds: f64) {
+        let rate = 44_100u32;
+        let beat = rate as usize / 2;
+        let samples: Vec<i16> = (0..(seconds * f64::from(rate)) as usize)
+            .map(|i| {
+                let t = i % beat;
+                if t < 2000 {
+                    let env = 1.0 - t as f64 / 2000.0;
+                    let s = (i as f64 * std::f64::consts::TAU * 80.0 / f64::from(rate)).sin();
+                    (s * env * 30_000.0) as i16
+                } else {
+                    0
+                }
+            })
+            .collect();
+        let data = (samples.len() * 2) as u32;
+        let mut wav = Vec::new();
+        wav.extend(b"RIFF");
+        wav.extend((36 + data).to_le_bytes());
+        wav.extend(b"WAVEfmt ");
+        wav.extend(16u32.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(rate.to_le_bytes());
+        wav.extend((rate * 2).to_le_bytes());
+        wav.extend(2u16.to_le_bytes());
+        wav.extend(16u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend(data.to_le_bytes());
+        for s in samples {
+            wav.extend(s.to_le_bytes());
+        }
+        std::fs::write(path, wav).unwrap();
+    }
+
+    /// A stick written by DJ Sugar's own export, in both formats, read back:
+    /// tags, hot cues (with a loop), the grid and the list in its folder.
+    #[test]
+    fn reads_back_our_own_sticks() {
+        use djsugar_export::{export, List, Options};
+
+        let base = std::env::temp_dir().join(format!("djs-ours-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (music, stick) = (base.join("music"), base.join("stick"));
+        std::fs::create_dir_all(&music).unwrap();
+        std::fs::create_dir_all(&stick).unwrap();
+        std::env::set_var("DJSUGAR_CACHE", base.join("cache"));
+        let click = music.join("click.wav");
+        click_track(&click, 4.0);
+        let mut t = djsugar_engine::scan::read_track(1, &click);
+        t.artist = "Ana".into();
+        t.title = "Café ✓".into();
+        t.rating = 4;
+        t.info.hotcues = vec![
+            Hotcue {
+                number: 0,
+                seconds: 0.5,
+                name: "Drop".into(),
+                end: None,
+                color: None,
+            },
+            Hotcue {
+                number: 3,
+                seconds: 1.0,
+                name: "Loop".into(),
+                end: Some(2.0),
+                color: None,
+            },
+        ];
+        let lists = [
+            List {
+                name: "Gigs".into(),
+                folder: true,
+                ..List::default()
+            },
+            List {
+                name: "Friday".into(),
+                parent: Some(0),
+                tracks: vec![0],
+                ..List::default()
+            },
+        ];
+        let options = Options {
+            root: stick.clone(),
+            name: "TEST".into(),
+            device_library: true,
+            one_library: true,
+            engine_dj: false,
+            camelot: false,
+        };
+        export(&[t], &lists, &options, &mut |_| true).unwrap();
+
+        let dir = stick.join("PIONEER/rekordbox");
+        for file in ["export.pdb", "exportLibrary.db"] {
+            let lib = read(&dir.join(file), &[PLAYLISTS, HISTORY], |p| p.exists())
+                .unwrap_or_else(|e| panic!("{file}: {e}"));
+            assert_eq!(lib.tracks.len(), 1, "{file}");
+            let t = &lib.tracks[0];
+            assert_eq!(
+                (t.artist.as_str(), t.title.as_str()),
+                ("Ana", "Café ✓"),
+                "{file}"
+            );
+            assert!(
+                matches!(&t.source, Source::File(f) if f.starts_with(&stick)),
+                "{file}"
+            );
+            assert!((t.bpm - 120.0).abs() < 0.5, "{file}: {}", t.bpm);
+            assert!(t.info.fixed_grid, "{file}");
+            let cues: Vec<(usize, f64, Option<f64>)> = t
+                .info
+                .hotcues
+                .iter()
+                .filter(|h| h.number < MEMORY_CUE)
+                .map(|h| (h.number, (h.seconds * 100.0).round() / 100.0, h.end))
+                .collect();
+            assert_eq!(cues, [(0, 0.5, None), (3, 1.0, Some(2.0))], "{file}");
+            assert_eq!(lib.lists.len(), 1, "{file}");
+            assert_eq!(lib.lists[0].folders, ["Gigs"], "{file}");
+            assert_eq!(lib.lists[0].name, "Friday", "{file}");
+            assert_eq!(lib.lists[0].entries.len(), 1, "{file}");
+        }
+        std::fs::remove_dir_all(&base).ok();
     }
 }

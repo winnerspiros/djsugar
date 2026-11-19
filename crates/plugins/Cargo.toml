@@ -17,6 +17,7 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 rbox-masterdb = { version = "0.3.0", default-features = false }
 rbox-anlz = "0.3.0"
 rbox-devlib = "0.3.0"
+rbox-onelib = { version = "0.3.0", default-features = false }
 rbox-core = "0.3.0"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 # Engine DJ's performance blobs are zlib.
@@ -24,10 +25,16 @@ flate2 = "1"
 base64 = "0.22"
 lofty = "0.25"
 
-# rekordbox's master.db is SQLCipher, built as in djsugar-export: on
-# CommonCrypto on macOS, with OpenSSL built in elsewhere.
+# rekordbox's master.db and OneLibrary sticks are SQLCipher, built as in
+# djsugar-export: on CommonCrypto on macOS, with OpenSSL built in elsewhere.
 [target.'cfg(target_vendor = "apple")'.dependencies]
 rbox-masterdb = { version = "0.3.0", default-features = false, features = ["bundled"] }
+rbox-onelib = { version = "0.3.0", default-features = false, features = ["bundled"] }
 
 [target.'cfg(not(target_vendor = "apple"))'.dependencies]
 rbox-masterdb = { version = "0.3.0", default-features = false, features = ["bundled-vendored-openssl"] }
+rbox-onelib = { version = "0.3.0", default-features = false, features = ["bundled-vendored-openssl"] }
+
+[dev-dependencies]
+# Sticks written by our own export, read back.
+djsugar-export = { path = "../export" }
