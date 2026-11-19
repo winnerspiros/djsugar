@@ -362,19 +362,20 @@ pub fn export(
         return Err(Error::Cancelled);
     }
     write_library(root, options, &model)?;
-    report.removed = tidy(&root.join(export_dir), root, &files)?;
+    report.removed = tidy(root, &files)?;
     Ok(report)
 }
 
 /// The files DJ Sugar's last export put on the stick, one per line from the
-/// stick's top, in the export folder. Only these are ever removed.
-const MANIFEST: &str = "djsugar-files.txt";
+/// stick's top, hidden at its top (for Pioneer and Engine DJ sticks alike).
+/// Only these are ever removed.
+const MANIFEST: &str = ".djsugar-files.txt";
 
 /// Removes what the last export put on the stick that this one didn't, and
 /// folders that leaves empty; then notes this export's files. The DJ's own
 /// files on the stick are never touched.
-fn tidy(dir: &Path, root: &Path, files: &HashSet<String>) -> Result<usize, Error> {
-    let manifest = dir.join(MANIFEST);
+fn tidy(root: &Path, files: &HashSet<String>) -> Result<usize, Error> {
+    let manifest = root.join(MANIFEST);
     let before = fs::read_to_string(&manifest).unwrap_or_default();
     let mut removed = 0;
     for old in before.lines().filter(|l| !files.contains(*l)) {
