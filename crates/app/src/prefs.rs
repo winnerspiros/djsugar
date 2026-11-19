@@ -459,6 +459,9 @@ struct WizardState {
     /// saved by its button.
     only_lists: bool,
     theirs_win: bool,
+    /// What importing would change, worked out on a thread (see
+    /// [`dry_run`]); empty until it's done.
+    dry_run: String,
 }
 
 impl WizardState {
@@ -473,6 +476,7 @@ impl WizardState {
             picker: None,
             only_lists: false,
             theirs_win: settings::import_theirs_win(importer.id()),
+            dry_run: String::new(),
         };
         w.set_database(importer, settings::import_database(importer));
         w
@@ -621,6 +625,9 @@ pub struct Prefs {
     station_notes: std::collections::HashMap<String, String>,
     tested_tx: Sender<(String, String)>,
     tested_rx: Receiver<(String, String)>,
+    /// Dry runs of an import: the importer, whose tags win, and the note.
+    dry_tx: Sender<(String, bool, String)>,
+    dry_rx: Receiver<(String, bool, String)>,
 }
 
 /// One inputs-table row's menus: its role, the devices ("" for None), and
@@ -649,6 +656,7 @@ impl Prefs {
     ) -> Rc<RefCell<Prefs>> {
         let (chosen_tx, chosen_rx) = mpsc::channel();
         let (tested_tx, tested_rx) = mpsc::channel();
+        let (dry_tx, dry_rx) = mpsc::channel();
         let (backup_tx, backup_rx) = mpsc::channel();
         let mut plugins: Vec<Box<dyn Plugin>> = crate::stores::configured()
             .into_iter()
@@ -707,6 +715,8 @@ impl Prefs {
             station_notes: Default::default(),
             tested_tx,
             tested_rx,
+            dry_tx,
+            dry_rx,
         }));
         let p = prefs.clone();
         g.on_changed(move || p.borrow_mut().shown());
@@ -751,6 +761,17 @@ impl Prefs {
         while let Ok((id, note)) = self.tested_rx.try_recv() {
             self.station_notes.insert(id, note);
             tested = true;
+        }
+        while let Ok((id, theirs, note)) = self.dry_rx.try_recv() {
+            // Only the answer for the choices still shown.
+            if let Some(w) = self
+                .wizard
+                .as_mut()
+                .filter(|w| w.importer == id && w.theirs_win == theirs)
+            {
+                w.dry_run = note;
+                tested = true;
+            }
         }
         if tested {
             self.refresh();
@@ -2559,6 +2580,9 @@ impl Prefs {
                         w.read_lists(i.as_ref());
                     }
                 }
+                if w.step == 2 {
+                    self.start_dry_run();
+                }
             } else if let Some(w) = self.wizard.take() {
                 self.finish_wizard(w);
             }
@@ -2574,6 +2598,30 @@ impl Prefs {
         if let Some(app) = self.app.upgrade() {
             app.global::<Preferences>().set_tab(tab as i32);
         }
+    }
+
+    /// Works out on a thread what the wizard's import would change.
+    fn start_dry_run(&mut self) {
+        let Some(w) = &mut self.wizard else {
+            return;
+        };
+        let Some(db) = w.database.clone() else {
+            return;
+        };
+        w.dry_run = "Working out what would change…".into();
+        let (id, theirs, groups, tx) = (
+            w.importer.clone(),
+            w.theirs_win,
+            w.picker
+                .as_ref()
+                .map_or_else(|| w.groups.clone(), Picker::groups),
+            self.dry_tx.clone(),
+        );
+        std::thread::spawn(move || {
+            let note = importer(&id)
+                .map_or_else(String::new, |i| dry_run(i.as_ref(), &db, &groups, theirs));
+            let _ = tx.send((id, theirs, note));
+        });
     }
 
     fn wizard_importer(&self) -> Option<Box<dyn LibraryImport>> {
@@ -2880,6 +2928,7 @@ impl Prefs {
             if let Some(w) = &mut self.wizard {
                 w.theirs_win = index == 0;
             }
+            self.start_dry_run();
             self.refresh();
             return;
         }
@@ -3511,6 +3560,66 @@ fn rate_dir() -> f64 {
     }
 }
 
+/// What importing `database` would change in the library, for the DJ: the
+/// import is made and rolled back, so the numbers are the real ones.
+fn dry_run(importer: &dyn LibraryImport, database: &Path, groups: &[&str], theirs: bool) -> String {
+    let Some(mut lib) = open_library() else {
+        return String::new();
+    };
+    let report = importer
+        .read(database, groups)
+        .and_then(|l| lib.preview_import(importer.id(), importer.title(), theirs, false, &l));
+    let r = match report {
+        Ok(r) => r,
+        Err(e) => return format!("Can't work out what would change: {e}"),
+    };
+    let n = |count: usize, one: &str, many: &str| {
+        format!("{count} {}", if count == 1 { one } else { many })
+    };
+    let mut note = format!(
+        "Importing now adds {}, updates {} and finds {} already here, with {}.",
+        n(r.added, "track", "tracks"),
+        n(r.updated, "track", "tracks"),
+        n(r.matched, "copy", "copies"),
+        n(r.lists, "list", "lists"),
+    );
+    let edited = r
+        .conflicts
+        .iter()
+        .filter(|c| matches!(c.field, "grid" | "cues"))
+        .count();
+    let tags = r.conflicts.len() - edited;
+    if tags > 0 {
+        note.push_str(&format!(
+            " {} set differently in {} and here; {} kept.",
+            n(tags, "tag is", "tags are"),
+            importer.title(),
+            if theirs { "theirs are" } else { "yours are" },
+        ));
+        for c in r
+            .conflicts
+            .iter()
+            .filter(|c| !matches!(c.field, "grid" | "cues"))
+            .take(3)
+        {
+            let file = Path::new(&c.path)
+                .file_name()
+                .map_or(c.path.clone(), |f| f.to_string_lossy().into_owned());
+            note.push_str(&format!(
+                " {file}: {} \"{}\" / \"{}\".",
+                c.field, c.ours, c.theirs
+            ));
+        }
+    }
+    if edited > 0 {
+        note.push_str(&format!(
+            " Your own edits to {} stay.",
+            n(edited, "grid or cue set", "grids and cue sets")
+        ));
+    }
+    note
+}
+
 /// The library, for changing its tag groups here.
 fn open_library() -> Option<djsugar_library::Library> {
     let path = settings::config_dir().map(|d| djsugar_library::default_path(&d))?;
@@ -3984,6 +4093,7 @@ fn wizard_rows(importer: &dyn LibraryImport, w: &WizardState) -> Vec<PrefItem> {
         },
         _ => vec![
             theirs_row("import_wizard_theirs", title, w.theirs_win),
+            item("", NOTE, "", &w.dry_run),
             item(
                 "",
                 NOTE,

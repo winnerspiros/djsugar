@@ -426,6 +426,22 @@ pub struct SyncReport {
     /// Streamed tracks the collection already has, which their lists now
     /// point at.
     pub filled: usize,
+    /// Where the other app and the library disagree, and which side won.
+    pub conflicts: Vec<Conflict>,
+}
+
+/// A field a track has here and in the other app, set differently.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Conflict {
+    pub path: String,
+    /// "artist", "title", "album", "genre", "rating", "colour", "comment",
+    /// "grouping"; or "grid" and "cues" for ones the DJ edited here, which
+    /// an import never replaces.
+    pub field: &'static str,
+    pub ours: String,
+    pub theirs: String,
+    /// The library's value stays (else the other app's replaces it).
+    pub kept_ours: bool,
 }
 
 /// An entry of a list: a collection track, or a streamed track standing in
@@ -933,7 +949,35 @@ impl Library {
         if self.meta(&key).as_deref() == Some(stamp) {
             return Ok(None);
         }
-        let imported = read()?;
+        let report = self.merge(source, title, theirs_win, want_streamed, &read()?, true)?;
+        self.set_meta(&key, stamp).map_err(|e| e.to_string())?;
+        Ok(Some(report))
+    }
+
+    /// What [`Library::import_with`] would do with `imported`, conflicts
+    /// and all, without changing anything: the import is made and then
+    /// rolled back.
+    pub fn preview_import(
+        &mut self,
+        source: &str,
+        title: &str,
+        theirs_win: bool,
+        want_streamed: bool,
+        imported: &ImportedLibrary,
+    ) -> Result<SyncReport, String> {
+        self.merge(source, title, theirs_win, want_streamed, imported, false)
+    }
+
+    /// Brings `imported` in, in one transaction, kept only when `commit`.
+    fn merge(
+        &mut self,
+        source: &str,
+        title: &str,
+        theirs_win: bool,
+        want_streamed: bool,
+        imported: &ImportedLibrary,
+        commit: bool,
+    ) -> Result<SyncReport, String> {
         let mut report = SyncReport::default();
         let tx = self.db.transaction().map_err(|e| e.to_string())?;
         import_tracks(&tx, source, &imported.tracks, theirs_win, &mut report)
@@ -947,9 +991,10 @@ impl Library {
             &mut report,
         )
         .map_err(|e| e.to_string())?;
-        tx.commit().map_err(|e| e.to_string())?;
-        self.set_meta(&key, stamp).map_err(|e| e.to_string())?;
-        Ok(Some(report))
+        if commit {
+            tx.commit().map_err(|e| e.to_string())?;
+        }
+        Ok(report)
     }
 
     /// Takes out what another app's import brought in: its lists, folders and
@@ -2124,6 +2169,9 @@ fn import_tracks(
            AND (grid_locked = 0 OR grid_source = ?4)",
     )?;
     let mut grid_source = tx.prepare("SELECT grid_source FROM tracks WHERE id = ?1")?;
+    let mut current = tx.prepare(
+        "SELECT artist, title, album, genre, rating, color, comment, grouping FROM tracks WHERE id = ?1",
+    )?;
     let mut user_cues =
         tx.prepare("SELECT COUNT(*) FROM cues WHERE track_id = ?1 AND source = 'user'")?;
     // Hot cues from somewhere other than this app.
@@ -2162,25 +2210,79 @@ fn import_tracks(
         let found: Option<(i64, String)> = find
             .query_row([&p], |r| Ok((r.get(0)?, r.get(1)?)))
             .optional()?;
-        // Whether the track came from another app first.
-        let (id, guest) = match found {
+        // Whether the track came from another app first, and whether it's
+        // new here.
+        let (id, guest, fresh) = match found {
             Some((id, owner)) => {
                 report.updated += 1;
-                (id, others.contains(&owner))
+                (id, others.contains(&owner), false)
             }
             None => match songs.find(t) {
                 Some(id) => {
                     alias.execute(params![p, id, source])?;
                     report.matched += 1;
-                    (id, true)
+                    (id, true, false)
                 }
                 None => {
                     insert.execute(params![p, mtime(path), now(), source])?;
                     report.added += 1;
-                    (tx.last_insert_rowid(), false)
+                    (tx.last_insert_rowid(), false, true)
                 }
             },
         };
+        let theirs_replace = theirs_win && !guest;
+        let mut conflict = |field, ours: String, theirs: String, kept_ours| {
+            report.conflicts.push(Conflict {
+                path: p.clone(),
+                field,
+                ours,
+                theirs,
+                kept_ours,
+            });
+        };
+        if !fresh {
+            let ours: [String; 8] = current.query_row([id], |r| {
+                let text = |i| r.get::<_, String>(i);
+                let int = |i| {
+                    r.get::<_, Option<i64>>(i).map(|v| {
+                        v.filter(|&v| v != 0)
+                            .map_or(String::new(), |v| v.to_string())
+                    })
+                };
+                Ok([
+                    text(0)?,
+                    text(1)?,
+                    text(2)?,
+                    text(3)?,
+                    int(4)?,
+                    int(5)?,
+                    text(6)?,
+                    text(7)?,
+                ])
+            })?;
+            let int = |v: Option<i64>| {
+                v.filter(|&v| v != 0)
+                    .map_or(String::new(), |v| v.to_string())
+            };
+            let theirs = [
+                t.artist.clone(),
+                t.title.clone(),
+                t.album.clone(),
+                t.genre.clone(),
+                int(Some(t.rating as i64)),
+                int(t.info.color.map(i64::from)),
+                t.info.comment.clone(),
+                t.info.grouping.clone(),
+            ];
+            const FIELDS: [&str; 8] = [
+                "artist", "title", "album", "genre", "rating", "colour", "comment", "grouping",
+            ];
+            for ((field, ours), theirs) in FIELDS.into_iter().zip(ours).zip(theirs) {
+                if !ours.is_empty() && !theirs.is_empty() && ours != theirs {
+                    conflict(field, ours, theirs, !theirs_replace);
+                }
+            }
+        }
         set.execute(params![
             id,
             t.artist,
@@ -2199,7 +2301,7 @@ fn import_tracks(
             t.info.remix,
             "",
             "",
-            theirs_win && !guest,
+            theirs_replace,
             "",
             guest
         ])?;
@@ -2207,6 +2309,14 @@ fn import_tracks(
         let grid = t.beat_grid();
         if t.info.fixed_grid && !grid.is_empty() {
             let from: Option<String> = grid_source.query_row([id], |r| r.get(0))?;
+            if from.as_deref() == Some("user") {
+                conflict(
+                    "grid",
+                    "edited here".into(),
+                    format!("{:.2} BPM", t.bpm),
+                    true,
+                );
+            }
             let taken = from.is_some_and(|f| f != source && others.contains(&f));
             if !(guest && taken) {
                 set_grid.execute(params![id, grid.to_text(), t.bpm, source])?;
@@ -2238,7 +2348,16 @@ fn import_tracks(
                     c.color.map(|c| c as i64)
                 ])?;
             }
-        } else if mine == 0 {
+        } else if mine > 0 {
+            if !t.info.hotcues.is_empty() {
+                conflict(
+                    "cues",
+                    format!("{mine} edited here"),
+                    t.info.hotcues.len().to_string(),
+                    true,
+                );
+            }
+        } else {
             clear_cues.execute([id])?;
             for c in &t.info.hotcues {
                 add_cue.execute(params![
@@ -2930,6 +3049,72 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(lib.tracks(|_| true).unwrap()[0].title, "Theirs");
+    }
+
+    #[test]
+    fn a_preview_reports_conflicts_and_changes_nothing() {
+        let mut lib = Library::in_memory().unwrap();
+        lib.sync(&[file_track("/m/a.mp3", "Mine")]).unwrap();
+        let mut theirs = imported_track("/m/a.mp3");
+        theirs.title = "Theirs".into();
+        let other = ImportedLibrary {
+            tracks: vec![theirs.clone(), imported_track("/m/new.mp3")],
+            lists: Vec::new(),
+        };
+        let titles = |lib: &Library| -> Vec<String> {
+            lib.tracks(|_| true)
+                .unwrap()
+                .iter()
+                .map(|t| t.title.clone())
+                .collect()
+        };
+        let before = titles(&lib);
+        let report = lib
+            .preview_import("vdj", "VirtualDJ", false, false, &other)
+            .unwrap();
+        assert_eq!((report.added, report.updated), (1, 1));
+        assert_eq!(
+            report.conflicts,
+            [Conflict {
+                path: "/m/a.mp3".into(),
+                field: "title",
+                ours: "Mine".into(),
+                theirs: "Theirs".into(),
+                kept_ours: true,
+            }]
+        );
+        assert_eq!(titles(&lib), before);
+
+        // Imported, then edited here: the next import keeps the DJ's grid
+        // and cues and says so.
+        lib.import_with("vdj", "VirtualDJ", "1", true, false, || Ok(other.clone()))
+            .unwrap();
+        let id = lib.tracks(|_| true).unwrap()[0].id;
+        let grid = BeatGrid::new(vec![GridMarker {
+            seconds: 0.5,
+            bpm: 120.0,
+        }]);
+        lib.save_grid(id, &grid, 120.0).unwrap();
+        lib.save_cues(
+            id,
+            &[Hotcue {
+                number: 1,
+                seconds: 8.0,
+                name: String::new(),
+                end: None,
+                color: None,
+            }],
+        )
+        .unwrap();
+        let report = lib
+            .preview_import("vdj", "VirtualDJ", true, false, &other)
+            .unwrap();
+        let fields: Vec<(&str, bool)> = report
+            .conflicts
+            .iter()
+            .map(|c| (c.field, c.kept_ours))
+            .collect();
+        assert_eq!(fields, [("grid", true), ("cues", true)]);
     }
 
     #[test]

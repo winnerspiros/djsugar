@@ -133,7 +133,7 @@ All in the app, both directions, no external tool: tracks, playlists/crates, cue
 
 | # | Part | Status |
 | --- | --- | --- |
-| X.1 | Common library model and lossless conversion layer (Rust); dry-run preview and conflict report | TODO |
+| X.1 | Common library model and lossless conversion layer (Rust); dry-run preview and conflict report | WIP: the import wizard shows a dry run (adds, updates, copies found, lists) and the tags that differ before importing |
 | X.2 | Rekordbox: XML and the encrypted master.db (6/7), device exports (PDB/ANLZ on USB) | WIP: import of master.db (6/7), XML and USB sticks (export.pdb and OneLibrary exportLibrary.db, with cues, loops, grid and phrases from the analysis files); XML export; USB export as Device Library (export.pdb + ANLZ) and OneLibrary; File › Export › rekordbox library… writes playlists into master.db (rekordbox 6/7, with a backup). Next: cues and grids written straight into master.db (today they go in through the XML export) |
 | X.3 | Serato: crates, ID3/MP4/FLAC GEOB markers, Serato Stems | DONE: import of database V2, crates and smart crates (as smart lists) in their folders, history sessions, and from the files cue points, saved loops, grid and its lock (MP3, AIFF, WAV, FLAC, MP4); export from File › Export (cues, loops and grid into the files, lists as crates). |
 | X.4 | Traktor: collection.nml with cues, grids and playlists | DONE: import, and export from File › Export or a list (tracks, tags, key, grid, cues, loops, fades, playlist tree) |
