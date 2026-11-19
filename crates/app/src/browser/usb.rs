@@ -272,6 +272,12 @@ fn summary(r: &Report) -> String {
         plural(r.lists, "list", "lists"),
         r.copied
     );
+    if r.removed > 0 {
+        text += &format!(
+            " Removed {} of tracks no longer on it.",
+            plural(r.removed, "file", "files")
+        );
+    }
     if r.hot_cues_dropped > 0 {
         text += &format!(
             " {} past H left out, as players have eight.",

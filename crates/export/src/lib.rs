@@ -25,6 +25,7 @@ mod onelib;
 mod pdb;
 mod wave;
 
+use std::collections::HashSet;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -95,6 +96,9 @@ pub struct Report {
     /// Hot cues past H, which players don't have.
     pub hot_cues_dropped: usize,
     pub lists: usize,
+    /// Files an earlier export put on the stick for tracks no longer on it,
+    /// removed.
+    pub removed: usize,
 }
 
 #[derive(Debug)]
@@ -300,6 +304,7 @@ pub fn export(
     let mut slots = layout::AnlzSlots::default();
     // Track index -> id on the stick.
     let mut ids: Vec<Option<i64>> = vec![None; tracks.len()];
+    let mut files: HashSet<String> = HashSet::new();
     let total = wanted.len();
     for (done, &i) in wanted.iter().enumerate() {
         let track = &tracks[i];
@@ -319,6 +324,7 @@ pub fn export(
             Ok(put) => {
                 report.copied += put.copied as usize;
                 report.hot_cues_dropped += put.hot_cues_dropped;
+                files.extend(put.files);
                 ids[i] = Some(model.tracks.len() as i64);
             }
             Err(why) => report.skipped.push((label, why)),
@@ -356,12 +362,54 @@ pub fn export(
         return Err(Error::Cancelled);
     }
     write_library(root, options, &model)?;
+    report.removed = tidy(&root.join(export_dir), root, &files)?;
     Ok(report)
+}
+
+/// The files DJ Sugar's last export put on the stick, one per line from the
+/// stick's top, in the export folder. Only these are ever removed.
+const MANIFEST: &str = "djsugar-files.txt";
+
+/// Removes what the last export put on the stick that this one didn't, and
+/// folders that leaves empty; then notes this export's files. The DJ's own
+/// files on the stick are never touched.
+fn tidy(dir: &Path, root: &Path, files: &HashSet<String>) -> Result<usize, Error> {
+    let manifest = dir.join(MANIFEST);
+    let before = fs::read_to_string(&manifest).unwrap_or_default();
+    let mut removed = 0;
+    for old in before.lines().filter(|l| !files.contains(*l)) {
+        // Only plain paths under the stick, whatever the file says.
+        let rel = Path::new(old);
+        if old.is_empty()
+            || !rel
+                .components()
+                .all(|c| matches!(c, std::path::Component::Normal(_)))
+        {
+            continue;
+        }
+        let path = root.join(rel);
+        if fs::remove_file(&path).is_ok() {
+            removed += 1;
+            let mut up = path.parent();
+            while let Some(d) = up.filter(|d| *d != root && d.starts_with(root)) {
+                if fs::remove_dir(d).is_err() {
+                    break;
+                }
+                up = d.parent();
+            }
+        }
+    }
+    let mut list: Vec<&str> = files.iter().map(String::as_str).collect();
+    list.sort_unstable();
+    fs::write(&manifest, list.join("\n") + "\n")?;
+    Ok(removed)
 }
 
 struct Put {
     copied: bool,
     hot_cues_dropped: usize,
+    /// What it put on the stick, from the stick's top (see [`MANIFEST`]).
+    files: Vec<String>,
 }
 
 /// Copies one track's audio and writes its analysis files and art.
@@ -436,6 +484,13 @@ fn put_track(
         }
     }
 
+    // Stick paths from the stick's top, for the manifest.
+    let top = |p: &str| p.trim_start_matches('/').to_string();
+    let mut files = vec![top(&stick_path)];
+    if options.pioneer() {
+        files.extend(["DAT", "EXT", "2EX"].map(|ext| top(&format!("{stem}.{ext}"))));
+    }
+
     let dest = on_stick(root, &stick_path);
     let copied = match fs::metadata(&dest) {
         Ok(m) if m.len() == size => false,
@@ -456,10 +511,9 @@ fn put_track(
             let id = model.artworks + 1;
             for copy in ['a', 'b'] {
                 for (medium, bytes) in [(false, &thumbs.small), (true, &thumbs.medium)] {
-                    let path = on_stick(
-                        root,
-                        &layout::rooted(&layout::artwork(id, copy, medium), model.export_dir),
-                    );
+                    let art = layout::rooted(&layout::artwork(id, copy, medium), model.export_dir);
+                    files.push(top(&art));
+                    let path = on_stick(root, &art);
                     fs::create_dir_all(path.parent().unwrap()).map_err(|e| err(&e))?;
                     fs::write(&path, bytes).map_err(|e| err(&e))?;
                 }
@@ -539,6 +593,7 @@ fn put_track(
     Ok(Put {
         copied,
         hot_cues_dropped,
+        files,
     })
 }
 

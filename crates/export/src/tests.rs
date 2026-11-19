@@ -384,6 +384,63 @@ fn an_engine_dj_export_reads_back() {
     assert_eq!(fs::read(db2.join("m.db")).unwrap(), b"engine's");
 }
 
+#[test]
+fn a_second_export_removes_only_what_the_first_put_there() {
+    let music = tempfile::tempdir().unwrap();
+    let stick = tempfile::tempdir().unwrap();
+    std::env::set_var("DJSUGAR_CACHE", music.path().join("cache"));
+    let tracks: Vec<Track> = ["Stays", "Goes"]
+        .iter()
+        .enumerate()
+        .map(|(i, title)| {
+            let path = music.path().join(format!("{title}.wav"));
+            click_track(&path, 2.0);
+            let mut t = scan::read_track(i + 1, &path);
+            t.title = title.to_string();
+            t
+        })
+        .collect();
+    let options = Options {
+        root: stick.path().to_path_buf(),
+        name: "TEST".into(),
+        device_library: true,
+        one_library: false,
+        engine_dj: false,
+        camelot: false,
+    };
+    let list = |tracks| {
+        vec![List {
+            name: "Set".into(),
+            tracks,
+            ..List::default()
+        }]
+    };
+    export(&tracks, &list(vec![0, 1]), &options, &mut |_| true).unwrap();
+    let mine = stick.path().join("Contents/mine.mp3");
+    std::fs::write(&mine, b"the DJ's own").unwrap();
+    let audio = |title: &str| {
+        walk(stick.path()).into_iter().any(|p| {
+            p.file_name()
+                .is_some_and(|n| n == format!("{title}.wav").as_str())
+        })
+    };
+    let analysis_files = || {
+        walk(stick.path())
+            .iter()
+            .filter(|p| p.to_string_lossy().contains("USBANLZ"))
+            .count()
+    };
+    let before = analysis_files();
+    assert!(audio("Stays") && audio("Goes"));
+
+    let report = export(&tracks, &list(vec![0]), &options, &mut |_| true).unwrap();
+    assert_eq!(report.copied, 0, "audio already there isn't copied again");
+    assert!(report.removed > 0);
+    assert!(audio("Stays") && !audio("Goes"));
+    assert!(analysis_files() < before);
+    assert!(mine.exists(), "the DJ's own files stay");
+}
+
 fn lists_one() -> Vec<List> {
     vec![List {
         name: "Only".into(),
