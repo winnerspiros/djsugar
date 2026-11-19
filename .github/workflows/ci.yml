@@ -75,6 +75,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libxkbcommon-dev libasound2-dev mesa-vulkan-drivers mold
+      - name: Fetch rekordbox demo libraries
+        # rbox's demo master.db files, for the rekordbox import and export
+        # tests (test data only; nothing from it is built in).
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/dylanljones/rbox "$RUNNER_TEMP/rbox"
+          git -C "$RUNNER_TEMP/rbox" sparse-checkout set .testdata/RBv6/demo .testdata/RBv7/demo
+          echo "RBOX_TESTDATA=$RUNNER_TEMP/rbox/.testdata" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
