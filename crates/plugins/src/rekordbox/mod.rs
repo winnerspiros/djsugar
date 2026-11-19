@@ -11,6 +11,7 @@ use crate::{ImportedLibrary, ImportedList, LibraryImport, ListGroup};
 
 pub mod common;
 mod dates;
+pub mod device;
 pub mod master_export;
 pub mod masterdb;
 mod nulls;
@@ -129,6 +130,8 @@ impl LibraryImport for Rekordbox {
     fn preview(&self, database: &Path) -> Result<String, String> {
         if is_xml(database) {
             xml::preview(database)
+        } else if device::is_device(database) {
+            device::preview(database)
         } else {
             masterdb::preview(database)
         }
@@ -137,6 +140,8 @@ impl LibraryImport for Rekordbox {
     fn lists(&self, database: &Path, groups: &[&str]) -> Result<Vec<ImportedList>, String> {
         if is_xml(database) {
             xml::lists(database, groups)
+        } else if device::is_device(database) {
+            Ok(device::read(database, groups, |_| true)?.lists)
         } else {
             masterdb::lists(database, groups)
         }
@@ -145,6 +150,8 @@ impl LibraryImport for Rekordbox {
     fn read(&self, database: &Path, groups: &[&str]) -> Result<ImportedLibrary, String> {
         let library = if is_xml(database) {
             xml::read(database, groups, Path::exists)?
+        } else if device::is_device(database) {
+            device::read(database, groups, Path::exists)?
         } else {
             masterdb::read(database, groups, Path::exists)?
         };
