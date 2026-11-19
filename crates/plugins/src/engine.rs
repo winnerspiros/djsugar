@@ -778,7 +778,11 @@ fn read(
         .unwrap_or(Path::new("."));
     let lists = lists(&db, groups, &tracks, library_dir)?;
 
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 /// Playlists, smart lists and history, with each track from `tracks`.

@@ -171,7 +171,11 @@ pub fn read(
                 .filter_map(|f| history::session(f, &exists)),
         );
     }
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 fn collection<'a>(doc: &'a Document) -> impl Iterator<Item = Node<'a, 'a>> {

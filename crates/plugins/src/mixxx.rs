@@ -250,7 +250,11 @@ pub fn read(
         tracks.push(track(row, file.clone(), &track_cues));
     }
     let lists = lists(&db, groups, &files)?;
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 struct Row {

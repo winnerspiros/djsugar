@@ -146,7 +146,11 @@ pub fn read(
         })
         .collect();
     let lists = read_lists_with(&mut db, groups, &paths, &tag_names)?;
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 /// The lists in `groups`, for the picker.

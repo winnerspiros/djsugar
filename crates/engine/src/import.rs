@@ -12,6 +12,10 @@ pub struct ImportedLibrary {
     pub tracks: Vec<Track>,
     /// Lists in the groups the DJ chose, in the app's order.
     pub lists: Vec<ImportedList>,
+    /// When a USB stick's database was written (Unix seconds). Its copies
+    /// of the library's own files then carry edits made on the players,
+    /// which come back when they are newer than the DJ's here.
+    pub written: Option<i64>,
 }
 
 /// A playlist, history session or smart list from another app.

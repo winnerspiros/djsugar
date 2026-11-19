@@ -170,7 +170,11 @@ pub fn read(
         entries.insert(id, entry);
     }
     let lists = playlists(&lib, groups, &entries);
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 fn string<'a>(d: &'a Dictionary, key: &str) -> Option<&'a str> {

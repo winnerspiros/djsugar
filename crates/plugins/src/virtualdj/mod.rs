@@ -201,6 +201,7 @@ impl LibraryImport for VirtualDj {
         Ok(ImportedLibrary {
             tracks: import.tracks.iter().map(|t| (**t).clone()).collect(),
             lists,
+            written: None,
         })
     }
 }

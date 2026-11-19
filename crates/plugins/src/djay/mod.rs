@@ -527,7 +527,11 @@ pub fn read(
     if groups.contains(&HISTORY) {
         lists.extend(lib.history(&files));
     }
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 /// A streamed track's address in its location ("tidal:track:123").

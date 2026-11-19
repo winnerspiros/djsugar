@@ -605,6 +605,16 @@ impl Library {
                 db.execute_batch(&format!("ALTER TABLE playlists ADD COLUMN {definition}"))?;
             }
         }
+        // When the DJ last edited the track's grid, cues or loops here (Unix
+        // seconds; 0 for never), against a USB stick's edits made on players.
+        let has_edited = db
+            .prepare("SELECT 1 FROM pragma_table_info('tracks') WHERE name = 'marks_edited'")?
+            .exists([])?;
+        if !has_edited {
+            db.execute_batch(
+                "ALTER TABLE tracks ADD COLUMN marks_edited INTEGER NOT NULL DEFAULT 0",
+            )?;
+        }
         db.execute_batch(LINKS_SCHEMA)?;
         db.execute_batch(MOVES_SCHEMA)?;
         db.execute_batch(ALIASES_SCHEMA)?;
@@ -980,8 +990,15 @@ impl Library {
     ) -> Result<SyncReport, String> {
         let mut report = SyncReport::default();
         let tx = self.db.transaction().map_err(|e| e.to_string())?;
-        import_tracks(&tx, source, &imported.tracks, theirs_win, &mut report)
-            .map_err(|e| e.to_string())?;
+        import_tracks(
+            &tx,
+            source,
+            &imported.tracks,
+            theirs_win,
+            imported.written,
+            &mut report,
+        )
+        .map_err(|e| e.to_string())?;
         import_lists(
             &tx,
             source,
@@ -1206,8 +1223,9 @@ impl Library {
     pub fn save_grid(&self, id: usize, grid: &BeatGrid, bpm: f64) -> Result<(), Error> {
         let Some(row) = row_id(id) else { return Ok(()) };
         self.db.execute(
-            "UPDATE tracks SET grid = ?2, bpm = ?3, grid_source = 'user' WHERE id = ?1",
-            params![row, grid.to_text(), bpm],
+            "UPDATE tracks SET grid = ?2, bpm = ?3, grid_source = 'user', marks_edited = ?4
+             WHERE id = ?1",
+            params![row, grid.to_text(), bpm, now()],
         )?;
         Ok(())
     }
@@ -1217,6 +1235,10 @@ impl Library {
         let Some(row) = row_id(id) else { return Ok(()) };
         let tx = self.db.transaction()?;
         tx.execute("DELETE FROM cues WHERE track_id = ?1", [row])?;
+        tx.execute(
+            "UPDATE tracks SET marks_edited = ?2 WHERE id = ?1",
+            params![row, now()],
+        )?;
         for c in cues {
             tx.execute(
                 "INSERT INTO cues (track_id, number, seconds, name, end_seconds, color, source)
@@ -2127,6 +2149,7 @@ fn import_tracks(
     source: &str,
     tracks: &[Track],
     theirs_win: bool,
+    written: Option<i64>,
     report: &mut SyncReport,
 ) -> Result<(), Error> {
     // The other apps brought in before this one.
@@ -2306,69 +2329,76 @@ fn import_tracks(
             guest
         ])?;
         tags::import_track_tags(tx, source, id, &t.info, theirs_win && !guest)?;
-        let grid = t.beat_grid();
-        if t.info.fixed_grid && !grid.is_empty() {
-            let from: Option<String> = grid_source.query_row([id], |r| r.get(0))?;
-            if from.as_deref() == Some("user") {
-                conflict(
-                    "grid",
-                    "edited here".into(),
-                    format!("{:.2} BPM", t.bpm),
-                    true,
-                );
-            }
-            let taken = from.is_some_and(|f| f != source && others.contains(&f));
-            if !(guest && taken) {
-                set_grid.execute(params![id, grid.to_text(), t.bpm, source])?;
-            }
-        }
-        let mine: i64 = user_cues.query_row([id], |r| r.get(0))?;
-        if guest {
+        // A USB stick's copy of one of the library's own files.
+        let back = written.filter(|_| guest && songs.find_file(&t.source) == Some(id));
+        if let Some(written) = back {
             clear_own_cues.execute(params![id, source])?;
-            let theirs: i64 =
-                other_hot_cues.query_row(params![id, source, MEMORY_CUE as i64], |r| r.get(0))?;
-            // Hot cues only when the track has none; otherwise all of them
-            // come in as memory cues, after any it has.
-            let mut next: i64 =
-                next_memory.query_row(params![id, MEMORY_CUE as i64], |r| r.get(0))?;
-            for c in &t.info.hotcues {
-                let number = if theirs == 0 && !c.is_memory() {
-                    c.number as i64
-                } else {
-                    next += 1;
-                    next - 1
-                };
-                add_cue.execute(params![
-                    id,
-                    number,
-                    c.seconds,
-                    c.name,
-                    c.end,
-                    source,
-                    c.color.map(|c| c as i64)
-                ])?;
-            }
-        } else if mine > 0 {
-            if !t.info.hotcues.is_empty() {
-                conflict(
-                    "cues",
-                    format!("{mine} edited here"),
-                    t.info.hotcues.len().to_string(),
-                    true,
-                );
-            }
+            bring_back(tx, id, t, written, &mut conflict)?;
         } else {
-            clear_cues.execute([id])?;
-            for c in &t.info.hotcues {
-                add_cue.execute(params![
-                    id,
-                    c.number as i64,
-                    c.seconds,
-                    c.name,
-                    c.end,
-                    source,
-                    c.color.map(|c| c as i64)
-                ])?;
+            let grid = t.beat_grid();
+            if t.info.fixed_grid && !grid.is_empty() {
+                let from: Option<String> = grid_source.query_row([id], |r| r.get(0))?;
+                if from.as_deref() == Some("user") {
+                    conflict(
+                        "grid",
+                        "edited here".into(),
+                        format!("{:.2} BPM", t.bpm),
+                        true,
+                    );
+                }
+                let taken = from.is_some_and(|f| f != source && others.contains(&f));
+                if !(guest && taken) {
+                    set_grid.execute(params![id, grid.to_text(), t.bpm, source])?;
+                }
+            }
+            let mine: i64 = user_cues.query_row([id], |r| r.get(0))?;
+            if guest {
+                clear_own_cues.execute(params![id, source])?;
+                let theirs: i64 = other_hot_cues
+                    .query_row(params![id, source, MEMORY_CUE as i64], |r| r.get(0))?;
+                // Hot cues only when the track has none; otherwise all of them
+                // come in as memory cues, after any it has.
+                let mut next: i64 =
+                    next_memory.query_row(params![id, MEMORY_CUE as i64], |r| r.get(0))?;
+                for c in &t.info.hotcues {
+                    let number = if theirs == 0 && !c.is_memory() {
+                        c.number as i64
+                    } else {
+                        next += 1;
+                        next - 1
+                    };
+                    add_cue.execute(params![
+                        id,
+                        number,
+                        c.seconds,
+                        c.name,
+                        c.end,
+                        source,
+                        c.color.map(|c| c as i64)
+                    ])?;
+                }
+            } else if mine > 0 {
+                if !t.info.hotcues.is_empty() {
+                    conflict(
+                        "cues",
+                        format!("{mine} edited here"),
+                        t.info.hotcues.len().to_string(),
+                        true,
+                    );
+                }
+            } else {
+                clear_cues.execute([id])?;
+                for c in &t.info.hotcues {
+                    add_cue.execute(params![
+                        id,
+                        c.number as i64,
+                        c.seconds,
+                        c.name,
+                        c.end,
+                        source,
+                        c.color.map(|c| c as i64)
+                    ])?;
+                }
             }
         }
         set_details(tx, id, &t.info, false)?;
@@ -2400,6 +2430,93 @@ fn import_tracks(
                     source
                 ])?;
             }
+        }
+    }
+    Ok(())
+}
+
+/// A USB stick's copy of one of the library's files: its grid and cues
+/// (edits made on the players) replace the library's when the stick was
+/// written after the DJ last edited them here, and are reported either way.
+fn bring_back(
+    tx: &Connection,
+    id: i64,
+    t: &Track,
+    written: i64,
+    conflict: &mut impl FnMut(&'static str, String, String, bool),
+) -> Result<(), Error> {
+    let (edited, grid): (i64, Option<String>) = tx.query_row(
+        "SELECT marks_edited, grid FROM tracks WHERE id = ?1",
+        [id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let newer = written > edited;
+    let theirs = t.beat_grid();
+    let ours = grid.map(|g| BeatGrid::from_text(&g)).unwrap_or_default();
+    let same_grid =
+        ours.markers().len() == theirs.markers().len()
+            && ours.markers().iter().zip(theirs.markers()).all(|(a, b)| {
+                (a.seconds - b.seconds).abs() < 0.005 && (a.bpm - b.bpm).abs() < 0.01
+            });
+    if t.info.fixed_grid && !theirs.is_empty() && !same_grid {
+        conflict(
+            "grid",
+            "edited here".into(),
+            format!("{:.2} BPM", t.bpm),
+            !newer,
+        );
+        if newer {
+            tx.execute(
+                "UPDATE tracks SET grid = ?2, bpm = ?3, grid_source = 'user', marks_edited = ?4
+                 WHERE id = ?1",
+                params![id, theirs.to_text(), t.bpm, written],
+            )?;
+        }
+    }
+    // Cues as compared: to the hundredth of a second, in order.
+    let key = |n: i64, s: f64, e: Option<f64>| {
+        let c = |v: f64| (v * 100.0).round() as i64;
+        (n, c(s), e.map(c))
+    };
+    let mut ours: Vec<_> = tx
+        .prepare("SELECT number, seconds, end_seconds FROM cues WHERE track_id = ?1")?
+        .query_map([id], |r| Ok(key(r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    let mut stick: Vec<_> = t
+        .info
+        .hotcues
+        .iter()
+        .map(|c| key(c.number as i64, c.seconds, c.end))
+        .collect();
+    ours.sort_unstable();
+    stick.sort_unstable();
+    if ours != stick && !stick.is_empty() {
+        conflict(
+            "cues",
+            ours.len().to_string(),
+            stick.len().to_string(),
+            !newer,
+        );
+        if newer {
+            tx.execute("DELETE FROM cues WHERE track_id = ?1", [id])?;
+            let mut add = tx.prepare(
+                "INSERT INTO cues (track_id, number, seconds, name, end_seconds, color, source)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'user')",
+            )?;
+            for c in &t.info.hotcues {
+                add.execute(params![
+                    id,
+                    c.number as i64,
+                    c.seconds,
+                    c.name,
+                    c.end,
+                    c.color.map(i64::from)
+                ])?;
+            }
+            tx.execute(
+                "UPDATE tracks SET marks_edited = ?2 WHERE id = ?1",
+                params![id, written],
+            )?;
         }
     }
     Ok(())
@@ -2856,6 +2973,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: other.clone(),
                 lists: Vec::new(),
+                written: None,
             })
         };
         let report = lib.import("other", "Other", "1", read).unwrap().unwrap();
@@ -2947,6 +3065,7 @@ mod tests {
                     kind: ImportedListKind::List,
                     entries: Vec::new(),
                 }],
+                written: None,
             })
         };
         lib.import("vdj", "VirtualDJ", "1", read).unwrap().unwrap();
@@ -2999,6 +3118,7 @@ mod tests {
                     kind: ImportedListKind::List,
                     entries: Vec::new(),
                 }],
+                written: None,
             })
         };
         lib.import("vdj", "VirtualDJ", "1", read).unwrap().unwrap();
@@ -3035,6 +3155,7 @@ mod tests {
                     kind: ImportedListKind::List,
                     entries: Vec::new(),
                 }],
+                written: None,
             })
         };
         lib.import("vdj", "VirtualDJ", "1", read).unwrap().unwrap();
@@ -3046,6 +3167,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: Vec::new(),
                 lists: Vec::new(),
+                written: None,
             })
         })
         .unwrap();
@@ -3065,6 +3187,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: vec![theirs.clone()],
                 lists: Vec::new(),
+                written: None,
             })
         };
         lib.import_with("vdj", "VirtualDJ", "1", false, false, read)
@@ -3109,11 +3232,75 @@ mod tests {
         let stick_lib = ImportedLibrary {
             tracks: vec![untagged(stick.join("A.MP3")), untagged(stick.join("b.mp3"))],
             lists: Vec::new(),
+            written: None,
         };
         let report = lib
             .preview_import("rekordbox", "rekordbox", false, false, &stick_lib)
             .unwrap();
         assert_eq!((report.matched, report.added), (1, 1));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn edits_made_on_the_players_come_back_when_newer() {
+        let dir = std::env::temp_dir().join(format!("djs-back-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("stick")).unwrap();
+        let (file, copy) = (dir.join("a.mp3"), dir.join("stick").join("a.mp3"));
+        std::fs::write(&file, [0u8; 10]).unwrap();
+        std::fs::write(&copy, [0u8; 10]).unwrap();
+        let cue = |number, seconds| Hotcue {
+            number,
+            seconds,
+            name: String::new(),
+            end: None,
+            color: None,
+        };
+        let mut lib = Library::in_memory().unwrap();
+        lib.sync(&[file_track(&file.to_string_lossy(), "A")])
+            .unwrap();
+        let id = lib.tracks(|_| true).unwrap()[0].id;
+        lib.save_cues(id, &[cue(0, 8.0)]).unwrap();
+        let cues = |lib: &Library| -> Vec<f64> {
+            lib.tracks(|_| true).unwrap()[0]
+                .info
+                .hotcues
+                .iter()
+                .map(|c| c.seconds)
+                .collect()
+        };
+        let stick = |cues: Vec<Hotcue>, written| {
+            let mut t = file_track(&copy.to_string_lossy(), "A");
+            t.info.hotcues = cues;
+            ImportedLibrary {
+                tracks: vec![t],
+                lists: Vec::new(),
+                written: Some(written),
+            }
+        };
+        let import = |lib: &mut Library, l: ImportedLibrary| {
+            let stamp = format!("{:?}", l.written);
+            lib.import_with("rekordbox", "rekordbox", &stamp, false, false, || Ok(l))
+                .unwrap()
+                .unwrap()
+        };
+        let later = now() + 100;
+
+        // The cues it was given: nothing to bring back, nothing doubled.
+        let r = import(&mut lib, stick(vec![cue(0, 8.0)], later));
+        assert!(r.conflicts.is_empty());
+        assert_eq!(cues(&lib), [8.0]);
+
+        // Moved on a player after the last edit here: it comes back.
+        let r = import(&mut lib, stick(vec![cue(0, 9.0), cue(1, 16.0)], later + 1));
+        assert_eq!(r.conflicts.len(), 1);
+        assert!(!r.conflicts[0].kept_ours);
+        assert_eq!(cues(&lib), [9.0, 16.0]);
+
+        // An older stick than the DJ's edit here: the edit stays.
+        lib.save_cues(id, &[cue(0, 4.0)]).unwrap();
+        let r = import(&mut lib, stick(vec![cue(0, 9.0)], 1));
+        assert!(r.conflicts[0].kept_ours);
+        assert_eq!(cues(&lib), [4.0]);
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -3126,6 +3313,7 @@ mod tests {
         let other = ImportedLibrary {
             tracks: vec![theirs.clone(), imported_track("/m/new.mp3")],
             lists: Vec::new(),
+            written: None,
         };
         let titles = |lib: &Library| -> Vec<String> {
             lib.tracks(|_| true)
@@ -3194,6 +3382,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: vec![vdj.clone()],
                 lists: Vec::new(),
+                written: None,
             })
         })
         .unwrap();
@@ -3218,6 +3407,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: vec![rb.clone(), other.clone()],
                 lists: vec![list.clone()],
+                written: None,
             })
         };
         let report = lib.import("rb", "rekordbox", "1", read).unwrap().unwrap();
@@ -3293,6 +3483,7 @@ mod tests {
                     list("Gone", vec![ImportedEntry::new("/m/gone.mp3", None)]),
                     list("Empty on purpose", Vec::new()),
                 ],
+                written: None,
             })
         };
         let report = lib.import("vdj", "VirtualDJ", "1", read).unwrap().unwrap();
@@ -3409,6 +3600,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: vec![b.clone()],
                 lists: lists.clone(),
+                written: None,
             })
         };
         let report = lib.import("vdj", "VirtualDJ", "1", read).unwrap().unwrap();
@@ -3467,6 +3659,7 @@ mod tests {
             Ok(ImportedLibrary {
                 tracks: vec![b.clone()],
                 lists: lists[..1].to_vec(),
+                written: None,
             })
         };
         lib.import("vdj", "VirtualDJ", "2", fewer).unwrap().unwrap();
@@ -3612,6 +3805,7 @@ mod tests {
             "virtualdj",
             &[imported],
             true,
+            None,
             &mut SyncReport::default(),
         )
         .unwrap();
@@ -3976,6 +4170,7 @@ mod tests {
                             entries: vec![streamed("99")],
                         },
                     ],
+                    written: None,
                 })
             }
         };

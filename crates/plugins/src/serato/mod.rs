@@ -147,7 +147,11 @@ pub fn read(
                 .filter_map(|f| history::session(f, &disk)),
         );
     }
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 fn load(path: &Path) -> Result<Vec<u8>, String> {

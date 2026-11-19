@@ -60,7 +60,11 @@ pub fn read(
     } else {
         Vec::new()
     };
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: None,
+    })
 }
 
 pub fn lists(path: &Path, groups: &[&str]) -> Result<Vec<ImportedList>, String> {

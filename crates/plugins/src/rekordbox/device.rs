@@ -211,7 +211,15 @@ pub fn read(
         tracks.push(track);
     }
     let lists = lists(&mut db, groups, &entries)?;
-    Ok(ImportedLibrary { tracks, lists })
+    Ok(ImportedLibrary {
+        tracks,
+        lists,
+        written: std::fs::metadata(pdb)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64),
+    })
 }
 
 /// The playlists (in their folders) and history in `groups`.

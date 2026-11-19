@@ -3611,10 +3611,21 @@ fn dry_run(importer: &dyn LibraryImport, database: &Path, groups: &[&str], their
             ));
         }
     }
-    if edited > 0 {
+    let back = r
+        .conflicts
+        .iter()
+        .filter(|c| matches!(c.field, "grid" | "cues") && !c.kept_ours)
+        .count();
+    if edited > back {
         note.push_str(&format!(
             " Your own edits to {} stay.",
-            n(edited, "grid or cue set", "grids and cue sets")
+            n(edited - back, "grid or cue set", "grids and cue sets")
+        ));
+    }
+    if back > 0 {
+        note.push_str(&format!(
+            " {} edited on the players since come back.",
+            n(back, "grid or cue set", "grids and cue sets")
         ));
     }
     note
