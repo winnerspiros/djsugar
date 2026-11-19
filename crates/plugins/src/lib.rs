@@ -29,6 +29,7 @@ pub mod engine;
 pub mod inbox;
 pub mod itunes;
 pub mod itunes_library;
+pub mod itunes_library_export;
 pub mod jellyfin;
 pub mod links;
 pub mod mixxx;

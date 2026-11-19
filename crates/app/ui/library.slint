@@ -432,6 +432,8 @@ export global LibraryEdit {
     // Puts a sidebar row's lists into rekordbox's own library as playlists;
     // asks for master.db.
     callback export-rekordbox-db(row: int);
+    // Saves a sidebar row's tracks and lists as an iTunes Library XML.
+    callback export-itunes(row: int);
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one
