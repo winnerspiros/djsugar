@@ -99,10 +99,12 @@ jobs:
       # rebuilt.
       - run: cargo test --workspace --exclude djsugar --no-run -j2
         timeout-minutes: 40
-      - run: cargo test -p djsugar --no-run -j1
-        timeout-minutes: 40
+      # Before the app's build, the heaviest step, so these results come in
+      # even when that build starves the runner.
       - run: cargo test --workspace --exclude djsugar -- --test-threads=2
         timeout-minutes: 30
+      - run: cargo test -p djsugar --no-run -j1
+        timeout-minutes: 40
       - run: cargo test -p djsugar -- --test-threads=2
         timeout-minutes: 20
 
