@@ -8,11 +8,10 @@ version = "0.6.0"
 edition = "2021"
 license = "GPL-2.0-or-later"
 
-# Lints for every crate (each has `lints.workspace = true`): only ones the
+# Lints for every crate (each has `lints.workspace = true`; not `todo`, which Slint's generated code uses): only ones the
 # code already passes. Candidates for later: docs/dev/clippy-pedantic-triage.md.
 [workspace.lints.clippy]
 dbg_macro = "deny"
-todo = "deny"
 
 # What releases ship: whole-program optimisation and one codegen unit.
 # Panics still unwind; stem separation and word timing recover from them.
