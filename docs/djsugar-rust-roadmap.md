@@ -234,7 +234,7 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | 1.14 | DDJ-FLX4 over USB and Bluetooth MIDI, auto-detect | TODO |
 | 1.15 | Android USB audio interfaces from user space, MIDI learn, no root | TODO |
 | 1.16 | Rekordbox USB drives: read playlists, back up (openDJ has rbox crates) | DONE: rekordbox USB sticks (export.pdb and OneLibrary) read with playlists, cues, grids and history, and written by File › Export |
-| 1.17 | Latency calibration with the microphone | TODO |
+| 1.17 | Latency calibration with the microphone | WIP: Settings › Decks › Round trip plays a noise burst and times it back into the microphone or timecode input (`engine/src/round_trip.rs`); the Looper lines input takes up by it; not yet used by recordings, timecode or the output's own latency |
 | 1.18 | Android controller hotplug | TODO |
 | 1.19 | Rane SL3 DVS (see C.5, C.6) | TODO |
 
