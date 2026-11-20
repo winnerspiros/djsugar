@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
 [dependencies]
 djsugar-engine = { path = "../engine" }
 djsugar-separation = { path = "../separation" }

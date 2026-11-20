@@ -5,6 +5,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 getrandom = "0.3"
 socket2 = { version = "0.6", features = ["all"] }

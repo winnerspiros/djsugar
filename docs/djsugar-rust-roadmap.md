@@ -88,7 +88,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | # | Item | Status |
 | --- | --- | --- |
 | Q.1 | Release profile (LTO, codegen-units 1, panic abort, strip), size/startup tracking | WIP: `dist` profile (fat LTO, 1 codegen unit, stripped) used by release builds; panics keep unwinding (stems and word timing recover from them); size/startup tracking next |
-| Q.2 | Workspace lint table, clippy pedantic triage, `cargo deny` + machete in CI | TODO |
+| Q.2 | Workspace lint table, clippy pedantic triage, `cargo deny` + machete in CI | DONE: workspace lint table every crate inherits (dbg! and todo! denied), cargo deny and cargo machete in the dependencies job, pedantic candidates listed in docs/dev/clippy-pedantic-triage.md |
 | Q.3 | Audio-callback no-alloc/no-lock guard (assert_no_alloc) + audit of engine thread | TODO |
 | Q.4 | criterion benchmark suite + CI regression check | TODO |
 | Q.5 | unsafe audit: justify, wrap or remove each block; Miri on pure crates | TODO |

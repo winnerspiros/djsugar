@@ -6,6 +6,10 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
+
 [lib]
 name = "djsugar_android"
 crate-type = ["cdylib"]

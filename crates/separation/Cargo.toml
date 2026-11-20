@@ -5,6 +5,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 demucs-core = { path = "../../third_party/demucs-core", features = ["flex", "wgpu", "fusion", "autotune"] }
 burn = { version = "0.22.1", default-features = false, features = ["std", "flex", "wgpu", "fusion", "autotune"] }
@@ -15,6 +18,10 @@ matrixmultiply = { version = "0.3", features = ["std"] }
 safetensors = "0.7"
 half = "2"
 pollster = "0.4"
+
+[package.metadata.cargo-machete]
+# Listed only to turn on its SIMD and threads; burn uses it.
+ignored = ["burn-flex"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
 burn = { version = "0.22.1", default-features = false, features = ["metal"] }

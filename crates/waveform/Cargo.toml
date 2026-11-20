@@ -5,6 +5,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 # Must stay on the same major version as Slint's `unstable-wgpu-30` feature so
 # both render with the same wgpu::Device.
