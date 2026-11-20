@@ -62,6 +62,9 @@ jobs:
           # doesn't compile everything again.
           cache-on-failure: true
       - run: |
+          # whisper.cpp's Metal code checks the macOS version with
+          # @available, whose helper lives in clang's runtime library.
+          export RUSTFLAGS="-C link-arg=$(clang --print-resource-dir)/lib/darwin/libclang_rt.osx.a"
           cargo build --profile dist -p djsugar -p djsugar-plugin-host --target aarch64-apple-darwin
           cargo build --profile dist -p djsugar -p djsugar-plugin-host --target x86_64-apple-darwin
           mkdir -p dist
