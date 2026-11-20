@@ -220,20 +220,20 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | --- | --- | --- |
 | 1.1 | Touch UI: Lite and Booth layouts, compact library, UI scale | TODO |
 | 1.2 | Library: Greek and Greeklish search, accent-insensitive collation, fast large collections | WIP: search finds Greek by Greek (any case or tonos) or Greeklish spellings (`vasilis`, `basilhs`, `8ee mou`); field searches (`artist:basilhs`) too; accents folded for Latin scripts; lists sort by letter whatever the case or accent, Latin then Greek (ά with α, ς as σ). Next: large-library search timing |
-| 1.3 | Import existing DJ Sugar/Mixxx library (mixxxdb.sqlite, cues, grids, crates) | TODO (openDJ has Mixxx import, verify) |
+| 1.3 | Import existing DJ Sugar/Mixxx library (mixxxdb.sqlite, cues, grids, crates) | WIP: Settings › Library brings in `mixxxdb.sqlite` (tracks, tags, cues, loops, grids, playlists, crates, history) read-only, and File › Export › Mixxx writes back; settings migration is 2.6 |
 | 1.4 | YouTube: search, load/save, 16-range parallel download, SponsorBlock cuts | TODO |
 | 1.5 | yt-dlp: bundled and self-updating on Android; iOS limits | TODO |
-| 1.6 | SoundCloud search (genre, cover, play counts) | TODO |
-| 1.7 | Spotify via librespot (already Rust): login, liked, playlists, search, play as files | TODO |
-| 1.8 | Subsonic servers and custom stream URLs (openDJ has Navidrome/Jellyfin/Plex) | TODO |
+| 1.6 | SoundCloud search (genre, cover, play counts) | WIP: sign in and list likes, uploads and playlists (`app/src/soundcloud.rs`); no search by genre or play counts yet; streams are not mixed, per SoundCloud's terms |
+| 1.7 | Spotify via librespot (already Rust): login, liked, playlists, search, play as files | WIP: sign in, playlists and liked songs listed, lists and history sent back as Spotify playlists (`app/src/spotify.rs`); nothing plays from Spotify (no librespot), tracks play only when the collection has them |
+| 1.8 | Subsonic servers and custom stream URLs (openDJ has Navidrome/Jellyfin/Plex) | WIP: Subsonic (Navidrome, Gonic, Airsonic and others), Jellyfin/Emby and Plex as sources: search, playlists, download into the collection (`plugins/src/{subsonic,jellyfin,plex}.rs`); custom stream URLs not yet |
 | 1.9 | Streaming hub and smart URL box; the next track of a list fetched in the background so a streamed track is ready before it is loaded | TODO |
 | 1.10 | FX Station: drum pads, effect scenes | TODO |
-| 1.11 | Sample library, recordings, sample editor | TODO |
-| 1.12 | Stems: Spleeter/HTDemucs on device (openDJ has demucs via burn, compare) | TODO |
+| 1.11 | Sample library, recordings, sample editor | WIP: sample packs on the sampler's 16 pads (`app/src/sampler.rs`), and recordings of the mix; no sample editor |
+| 1.12 | Stems: Spleeter/HTDemucs on device (openDJ has demucs via burn, compare) | WIP: STEM files and Demucs separation on device (`engine/src/stems.rs`, `djsugar-separation`), per-stem volume and mute, stem level waveforms; stem FX not yet |
 | 1.13 | Smart Auto DJ: energy, key, phrase scoring, beat-matched mix-in | TODO |
 | 1.14 | DDJ-FLX4 over USB and Bluetooth MIDI, auto-detect | TODO |
 | 1.15 | Android USB audio interfaces from user space, MIDI learn, no root | TODO |
-| 1.16 | Rekordbox USB drives: read playlists, back up (openDJ has rbox crates) | TODO |
+| 1.16 | Rekordbox USB drives: read playlists, back up (openDJ has rbox crates) | DONE: rekordbox USB sticks (export.pdb and OneLibrary) read with playlists, cues, grids and history, and written by File › Export |
 | 1.17 | Latency calibration with the microphone | TODO |
 | 1.18 | Android controller hotplug | TODO |
 | 1.19 | Rane SL3 DVS (see C.5, C.6) | TODO |
@@ -245,6 +245,6 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | 2.1 | Effects: Mixxx built-in effect set, LV2 | TODO |
 | 2.2 | Key detection and BPM accuracy vs Mixxx analyzers | TODO: differential check with Mixxx as the oracle: score on the public GiantSteps key and tempo sets (MIREX weighting, as other DJ apps publish) and on synthetic tracks with known answers; record Mixxx's BPM/key/grid on the same corpus once (golden files), compare our analyzers against them in CI, list each deliberate difference |
 | 2.3 | Controller mapping coverage (MIDI + HID test suite from Mixxx) | TODO: record each mapping's control writes for a scripted MIDI/HID input sequence under Mixxx, replay them against `djsugar-js` and compare |
-| 2.4 | Recording, broadcasting (openDJ has both) | TODO (verify) |
-| 2.5 | Vinyl control (DVS timecode, see Part C) | TODO |
+| 2.4 | Recording, broadcasting (openDJ has both) | WIP: recording to WAV or FLAC with a control log (`engine/src/recorder.rs`), and Icecast/Shoutcast broadcasting (`djsugar-broadcast`); not yet checked against Mixxx side by side |
+| 2.5 | Vinyl control (DVS timecode, see Part C) | WIP: see C.5 |
 | 2.6 | Settings and config migration from Mixxx config | WIP: finishing the Mixxx import brings over, from the `mixxx.cfg` beside its database, key notation, pitch range and CUE mode where the DJ hasn't set ours. Next: controller and audio setup (soundconfig.xml), library columns |
