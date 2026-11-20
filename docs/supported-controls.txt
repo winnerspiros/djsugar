@@ -3902,6 +3902,8 @@
 [Master],headGain
 [Master],headMix
 [Master],headSplit
+[Master],input_latency
+[Master],latency_measure
 [Master],loudness_integrated
 [Master],loudness_momentary
 [Master],loudness_range

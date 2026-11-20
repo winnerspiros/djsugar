@@ -823,6 +823,14 @@ pub(crate) struct MasterControls {
     /// loudness meter take: 0 the main mix, 1 to 8 Auxiliary input 1 to 8
     /// as it comes in (a hardware mixer's record out).
     pub(crate) record_source: ControlHandle,
+    /// `[Master] latency_measure`: set to an input (as in
+    /// `[ChannelN],vinylcontrol_input`) to play a short noise burst out of
+    /// the main output and time it coming back in; the engine sets it back
+    /// to 0 when the burst starts.
+    pub(crate) latency_measure: ControlHandle,
+    /// `[Master] input_latency`: seconds the last measurement found from the
+    /// main output back into the input, or -1 if the input never heard it.
+    pub(crate) input_latency: ControlHandle,
 }
 
 pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
@@ -909,6 +917,15 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
             crate::inputs::NUM_AUXILIARIES as f64,
             Behavior::Free,
         ),
+        latency_measure: reg.create(
+            "[Master]",
+            "latency_measure",
+            0.0,
+            0.0,
+            crate::inputs::NUM_INPUTS as f64,
+            Behavior::Free,
+        ),
+        input_latency: reg.create("[Master]", "input_latency", 0.0, -1.0, 10.0, Behavior::Free),
         vu_l: reg.indicator("[Master]", "VuMeterL", 1.0),
         vu_r: reg.indicator("[Master]", "VuMeterR", 1.0),
         // The ReplayGain switch lives in the [ReplayGain] group too.

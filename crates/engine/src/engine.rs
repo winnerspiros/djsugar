@@ -43,6 +43,12 @@ pub enum Command {
     /// Puts a track on a deck. Its audio may still be decoding, and its tempo
     /// and first beat may be unknown until [`Command::Analysed`] follows.
     Load { deck: usize, track: Arc<Track> },
+    /// The buffer of [`Returned::LatencyHeard`] back, with the delay found
+    /// in frames.
+    LatencyMeasured {
+        heard: Box<[f32]>,
+        frames: Option<usize>,
+    },
     /// The same track (same audio) with its analysis done: tempo, first beat
     /// and exact length. Ignored if the deck has moved on to another track.
     Analysed { deck: usize, track: Arc<Track> },
@@ -56,6 +62,9 @@ pub enum Returned {
     Done(Arc<Track>),
     /// A track ejected from `deck` (`[ChannelN],eject`).
     Ejected { deck: usize, track: Arc<Track> },
+    /// What an input heard while a latency probe played, to be timed off
+    /// the audio thread and handed back with [`Command::LatencyMeasured`].
+    LatencyHeard { heard: Box<[f32]>, rate: u32 },
     /// A timecode record's position table to build, off the audio thread
     /// (`djsugar_timecode::FORMATS[n]`).
     PrepareTimecode(usize),
@@ -1656,6 +1665,12 @@ pub struct Engine {
     looper_seen: [bool; NUM_DECKS],
     last_main: Vec<[f32; 2]>,
     last_main_len: usize,
+    /// The latency probe (`[Master],latency_measure`), made ahead of time.
+    probe: Box<[f32]>,
+    /// Where the input's sound goes while measuring; away while being timed.
+    heard: Option<Box<[f32]>>,
+    /// The input being measured, 0-based, and how many frames are in.
+    measuring: Option<(usize, usize)>,
     looper_supply: Option<crate::looper::LooperSupply>,
     commands: rtrb::Consumer<Command>,
     returned: rtrb::Producer<Returned>,
@@ -1967,6 +1982,11 @@ impl Engine {
                 looper_seen: [false; NUM_DECKS],
                 last_main: vec![[0.0; 2]; BLOCK],
                 last_main_len: 0,
+                probe: crate::round_trip::probe(sample_rate as u32).into(),
+                heard: Some(
+                    vec![0.0; (crate::round_trip::LISTEN_SECONDS * sample_rate) as usize].into(),
+                ),
+                measuring: None,
                 looper_supply: Some(looper_supply),
                 commands,
                 returned,
@@ -2049,6 +2069,11 @@ impl Engine {
     fn apply_commands(&mut self) {
         while let Ok(cmd) = self.commands.pop() {
             match cmd {
+                Command::LatencyMeasured { heard, frames } => {
+                    self.heard = Some(heard);
+                    let seconds = frames.map_or(-1.0, |f| f as f64 / self.sample_rate);
+                    self.master.input_latency.set(seconds);
+                }
                 Command::Load { deck, track } => {
                     // The tempo a playing deck follows from this one, kept
                     // below so that deck doesn't jump to the new track's.
@@ -2257,6 +2282,53 @@ impl Engine {
                     let _ = self.returned.push(Returned::Ejected { deck, track });
                 }
             }
+        }
+    }
+
+    /// Plays the latency probe out of the main pair and keeps what the
+    /// input hears (`[Master],latency_measure`). The probe is left out of
+    /// recordings and the broadcast, which take the mix before this.
+    fn measure_latency(&mut self, out: &mut [f32], channels: usize, frames: usize) {
+        let asked = self.master.latency_measure.get().round() as usize;
+        if asked > 0 {
+            self.master.latency_measure.set(0.0);
+            if asked <= NUM_INPUTS && self.measuring.is_none() && self.heard.is_some() {
+                self.measuring = Some((asked - 1, 0));
+            }
+        }
+        let Some((input, at)) = self.measuring else {
+            return;
+        };
+        let Some(heard) = self.heard.as_mut() else {
+            return;
+        };
+        let raw = &self.inputs[input].raw;
+        let take = frames
+            .min(heard.len() - at)
+            .min(self.inputs[input].raw_frames);
+        for (h, f) in heard[at..at + take].iter_mut().zip(raw) {
+            *h = 0.5 * (f[0] + f[1]);
+        }
+        for f in 0..frames {
+            let s = self.probe.get(at + f).copied().unwrap_or(0.0);
+            for o in &mut out[f * channels..(f * channels + 2.min(channels))] {
+                *o += s;
+            }
+        }
+        let at = at + frames;
+        if at >= heard.len() {
+            self.measuring = None;
+            if let Some(h) = self.heard.take() {
+                let rate = self.sample_rate as u32;
+                if let Err(rtrb::PushError::Full(Returned::LatencyHeard { heard, .. })) = self
+                    .returned
+                    .push(Returned::LatencyHeard { heard: h, rate })
+                {
+                    self.heard = Some(heard);
+                }
+            }
+        } else {
+            self.measuring = Some((input, at));
         }
     }
 
@@ -4180,6 +4252,7 @@ impl Engine {
             ];
         }
         self.last_main_len = frames;
+        self.measure_latency(out, channels, frames);
         // What is recorded and sent on air: one Auxiliary input as it comes
         // in (a hardware mixer's record out), or else the main mix, which
         // with an external mixer is only the inputs (see above).
@@ -7466,6 +7539,46 @@ mod tests {
         let live = reg.get("[Channel1]", "live_input").unwrap();
         live.set((AUXILIARY_8 + 1) as f64);
         assert_eq!(live.get(), (AUXILIARY_8 + 1) as f64);
+    }
+
+    #[test]
+    fn latency_is_timed_through_a_loopback() {
+        let (reg, mut engine, mut input) = setup();
+        let m = |k: &str| reg.get("[Master]", k).unwrap();
+        let (feed, mut tx) = mic_feed();
+        engine.set_input(AUXILIARY, Some(feed));
+        m("latency_measure").set((AUXILIARY + 1) as f64);
+        // The output comes back into the input this many frames later.
+        let late = 3_000;
+        let mut wire = std::collections::VecDeque::from(vec![0.0f32; late]);
+        let mut buf = vec![0.0f32; 512 * 2];
+        for _ in 0..(1.5 * SR / 512.0) as usize {
+            engine.process(&mut buf, 2);
+            for f in buf.chunks(2) {
+                wire.push_back(f[0]);
+            }
+            for _ in 0..512 {
+                let s = wire.pop_front().unwrap() * 0.3;
+                let _ = tx.push(s);
+                let _ = tx.push(s);
+            }
+            for r in input.collect_garbage() {
+                if let Returned::LatencyHeard { heard, rate } = r {
+                    let frames = crate::round_trip::delay(&crate::round_trip::probe(rate), &heard);
+                    input
+                        .send(Command::LatencyMeasured { heard, frames })
+                        .ok()
+                        .unwrap();
+                }
+            }
+        }
+        assert_eq!(m("latency_measure").get(), 0.0);
+        let found = m("input_latency").get() * SR;
+        // The loopback, plus the buffer the input waits in the engine.
+        assert!(
+            found >= late as f64 && found <= (late + 1024) as f64,
+            "{found}"
+        );
     }
 
     #[test]

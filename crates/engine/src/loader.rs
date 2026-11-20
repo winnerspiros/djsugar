@@ -276,6 +276,10 @@ impl Shared {
                         Self::send_locked(input, Command::Regrid { deck, track: t }, loaded);
                     }
                 }
+                Returned::LatencyHeard { heard, rate } => {
+                    let frames = crate::round_trip::delay(&crate::round_trip::probe(rate), &heard);
+                    Self::send_locked(input, Command::LatencyMeasured { heard, frames }, loaded);
+                }
                 Returned::PrepareTimecode(n) => {
                     std::thread::spawn(move || djsugar_timecode::FORMATS[n].prepare());
                 }
