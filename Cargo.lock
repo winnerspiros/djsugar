@@ -3758,6 +3758,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "djsugar-timecode"
+version = "0.6.0"
+
+[[package]]
 name = "djsugar-waveform"
 version = "0.6.0"
 dependencies = [
