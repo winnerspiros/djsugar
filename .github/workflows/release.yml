@@ -162,8 +162,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # C/C++ dependencies (whisper.cpp) keep the compiler's path in their
+      # build cache; a new runner image moves the compiler, so each image
+      # gets its own cache.
+      - run: echo "IMAGE=$ImageVersion" >> "$GITHUB_ENV"
+        shell: bash
       - uses: Swatinem/rust-cache@v2
         with:
+          key: ${{ matrix.arch }}-image-${{ env.IMAGE }}
           cache-on-failure: true
       # cpal's ASIO build unpacks Steinberg's SDK with PowerShell, which
       # fails on newer runner images; unpack it here and point it there.
