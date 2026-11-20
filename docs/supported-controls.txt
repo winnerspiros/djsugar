@@ -471,6 +471,11 @@
 [Channel1],sync_leader
 [Channel1],track_loaded
 [Channel1],vinyl_mode
+[Channel1],vinylcontrol_enabled
+[Channel1],vinylcontrol_format
+[Channel1],vinylcontrol_input
+[Channel1],vinylcontrol_mode
+[Channel1],vinylcontrol_status
 [Channel1],volume
 [Channel1],vu_meter
 [Channel1],vu_meter_left
@@ -788,6 +793,11 @@
 [Channel2],sync_leader
 [Channel2],track_loaded
 [Channel2],vinyl_mode
+[Channel2],vinylcontrol_enabled
+[Channel2],vinylcontrol_format
+[Channel2],vinylcontrol_input
+[Channel2],vinylcontrol_mode
+[Channel2],vinylcontrol_status
 [Channel2],volume
 [Channel2],vu_meter
 [Channel2],vu_meter_left
@@ -1105,6 +1115,11 @@
 [Channel3],sync_leader
 [Channel3],track_loaded
 [Channel3],vinyl_mode
+[Channel3],vinylcontrol_enabled
+[Channel3],vinylcontrol_format
+[Channel3],vinylcontrol_input
+[Channel3],vinylcontrol_mode
+[Channel3],vinylcontrol_status
 [Channel3],volume
 [Channel3],vu_meter
 [Channel3],vu_meter_left
@@ -1422,6 +1437,11 @@
 [Channel4],sync_leader
 [Channel4],track_loaded
 [Channel4],vinyl_mode
+[Channel4],vinylcontrol_enabled
+[Channel4],vinylcontrol_format
+[Channel4],vinylcontrol_input
+[Channel4],vinylcontrol_mode
+[Channel4],vinylcontrol_status
 [Channel4],volume
 [Channel4],vu_meter
 [Channel4],vu_meter_left
