@@ -182,6 +182,7 @@ jobs:
           echo "CMAKE_GENERATOR=Ninja" >> "$GITHUB_ENV"
           echo "CC_aarch64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
           echo "CXX_aarch64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
+          echo "CXXFLAGS_aarch64_pc_windows_msvc=/EHsc" >> "$GITHUB_ENV"
         shell: bash
       - run: cargo build --profile dist -p djsugar -p djsugar-plugin-host
       - run: scripts/bundle-windows.ps1 target/dist/djsugar.exe "${{ needs.version.outputs.version }}" ${{ matrix.arch }}
