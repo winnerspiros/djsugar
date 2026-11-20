@@ -1004,7 +1004,8 @@ mod tests {
         );
         assert_eq!(state.get() as u8, PLAYING);
         let bar3 = 2 * BAR_FRAMES - (BAR_FRAMES + BUF * 6);
-        for k in [100, 4_000, 8_000, 12_000] {
+        // Past the tail of bar 2 still coming in (and heard through).
+        for k in [2_000, 4_000, 8_000, 12_000] {
             let expected = k as f32 / BAR_FRAMES as f32;
             assert!(
                 (out[bar3 + k] - expected).abs() < 0.01,
