@@ -3582,6 +3582,7 @@ dependencies = [
  "djsugar-plugin-host",
  "djsugar-separation",
  "djsugar-stretch",
+ "djsugar-timecode",
  "flacenc",
  "flate2",
  "image",

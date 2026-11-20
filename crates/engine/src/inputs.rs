@@ -417,6 +417,8 @@ pub(crate) struct Input {
     pub(crate) buf: Vec<[f32; 2]>,
     /// This buffer's audio as it came in, for a deck playing the input.
     pub(crate) raw: Vec<[f32; 2]>,
+    /// Frames of `raw` from the last buffer.
+    pub(crate) raw_frames: usize,
     /// The fader level at the start and end of this buffer: 0 while the
     /// input is off or muted.
     pub(crate) level_ramp: (f32, f32),
@@ -491,6 +493,7 @@ impl Input {
             peak_db: (PEAK_DB_FLOOR, 0.0),
             buf: vec![[0.0; 2]; 4096],
             raw: vec![[0.0; 2]; 4096],
+            raw_frames: 0,
             level_ramp: (0.0, 0.0),
             pfl: false,
             in_mixer: false,
@@ -645,6 +648,7 @@ impl Input {
         };
 
         self.raw[..frames].copy_from_slice(buf);
+        self.raw_frames = frames;
         let on = self.c.on.get_bool();
         let (on, live) = match routing {
             Routing::Main => (on && !self.c.mute.get_bool(), on),

@@ -106,15 +106,64 @@ impl Format {
         rest | low
     }
 
-    /// Where on the record each register value sits, in cycles; built once
-    /// per format, on first use.
-    fn places(&'static self) -> &'static [u32] {
+    /// What the record sends when played from `start` cycles in at `speed`
+    /// for `seconds`, with hiss of `noise` peak: for tests, and to check a
+    /// setup without a turntable.
+    pub fn signal(
+        &self,
+        start: f64,
+        speed: f64,
+        rate: u32,
+        seconds: f64,
+        noise: f32,
+    ) -> Vec<[f32; 2]> {
+        let rate = f64::from(rate);
+        let mut codes = vec![self.seed];
+        for _ in 0..self.length {
+            codes.push(self.next(*codes.last().expect("the seed")));
+        }
+        let mut seed = 1u32;
+        let mut hiss = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            (seed as f32 / u32::MAX as f32 - 0.5) * 2.0 * noise
+        };
+        (0..(seconds * rate) as usize)
+            .map(|n| {
+                let phase = start + speed * self.carrier_hz * n as f64 / rate;
+                // A cycle's loudness changes away from where it is read.
+                let cycle = (phase + 0.75).floor().max(0.0) as usize;
+                let one = codes.get(cycle).is_some_and(|c| c >> (self.bits - 1) == 1);
+                let amp = if one { 1.0 } else { 0.7 };
+                let t = std::f64::consts::TAU * phase;
+                [
+                    (amp * t.sin()) as f32 + hiss(),
+                    (amp * t.cos()) as f32 + hiss(),
+                ]
+            })
+            .collect()
+    }
+
+    fn table(&self) -> &'static OnceLock<Vec<u32>> {
         static TABLES: [OnceLock<Vec<u32>>; 7] = [const { OnceLock::new() }; 7];
         let i = FORMATS
             .iter()
             .position(|f| std::ptr::eq(f, self))
             .expect("a listed format");
-        TABLES[i].get_or_init(|| {
+        &TABLES[i]
+    }
+
+    /// Whether [`Format::prepare`] has run, so decoders can tell positions.
+    pub fn ready(&self) -> bool {
+        self.table().get().is_some()
+    }
+
+    /// Builds the table of where each code sits on the record (up to 32 MB,
+    /// a fraction of a second), off the audio thread. Until then decoders
+    /// read the speed only.
+    pub fn prepare(&self) -> &'static [u32] {
+        self.table().get_or_init(|| {
             let mut places = vec![u32::MAX; 1 << self.bits];
             let mut code = self.seed;
             for at in 0..self.length {
@@ -150,6 +199,17 @@ pub struct Decoder {
 }
 
 impl Decoder {
+    /// The record or CD this reads.
+    pub fn format(&self) -> &'static Format {
+        self.format
+    }
+
+    /// Whether the position is known, not only the speed.
+    pub fn locked(&self) -> bool {
+        self.at.is_some()
+    }
+
+    /// Never allocates, so the audio thread can make one.
     pub fn new(format: &'static Format, sample_rate: u32) -> Self {
         Self {
             format,
@@ -208,7 +268,7 @@ impl Decoder {
             // Trusted: step along, even past a misread bit.
             Some(at) if self.run < TRUST => Some(at + if self.forward { 1.0 } else { -1.0 }),
             _ if self.run < TRUST => None,
-            _ => match f.places()[code as usize] {
+            _ => match f.table().get().map_or(u32::MAX, |t| t[code as usize]) {
                 u32::MAX => None,
                 place if self.forward => Some(f64::from(place)),
                 // Read backwards, the register's oldest bit is the cycle
@@ -244,46 +304,8 @@ impl Decoder {
 mod tests {
     use super::*;
 
-    /// A control record's signal, played from `start` cycles at `speed`.
-    fn signal(
-        f: &'static Format,
-        start: f64,
-        speed: f64,
-        seconds: f64,
-        noise: f32,
-    ) -> Vec<[f32; 2]> {
-        let rate = 44_100.0;
-        let mut codes = vec![f.seed];
-        for _ in 0..f.length {
-            codes.push(f.next(*codes.last().unwrap()));
-        }
-        let mut seed = 1u32;
-        let mut hiss = move || {
-            seed ^= seed << 13;
-            seed ^= seed >> 17;
-            seed ^= seed << 5;
-            (seed as f32 / u32::MAX as f32 - 0.5) * 2.0 * noise
-        };
-        (0..(seconds * rate) as usize)
-            .map(|n| {
-                let phase = start + speed * f.carrier_hz * n as f64 / rate;
-                // A cycle's loudness changes away from where it is read.
-                let cycle = (phase + 0.75).floor() as usize;
-                let amp = if codes[cycle] >> (f.bits - 1) == 1 {
-                    1.0
-                } else {
-                    0.7
-                };
-                let t = std::f64::consts::TAU * phase;
-                [
-                    (amp * t.sin()) as f32 + hiss(),
-                    (amp * t.cos()) as f32 + hiss(),
-                ]
-            })
-            .collect()
-    }
-
     fn decode(f: &'static Format, samples: &[[f32; 2]]) -> Decoder {
+        f.prepare();
         let mut d = Decoder::new(f, 44_100);
         for block in samples.chunks(256) {
             d.process(block);
@@ -294,7 +316,7 @@ mod tests {
     #[test]
     fn every_format_names_each_place_once() {
         for f in &FORMATS {
-            let places = f.places();
+            let places = f.prepare();
             let named = places.iter().filter(|&&p| p != u32::MAX).count();
             assert_eq!(named, f.length as usize, "{} repeats a code", f.name);
         }
@@ -316,7 +338,7 @@ mod tests {
         for f in &FORMATS {
             let start = 5_000.0;
             let seconds = 0.5;
-            let d = decode(f, &signal(f, start, 1.0, seconds, 0.0));
+            let d = decode(f, &f.signal(start, 1.0, 44_100, seconds, 0.0));
             assert!(
                 (d.pitch() - 1.0).abs() < 0.01,
                 "{}: pitch {}",
@@ -341,7 +363,7 @@ mod tests {
         for speed in [-1.0, -0.5, 0.92, 1.08] {
             let start = 300_000.0;
             let seconds = 0.6;
-            let d = decode(f, &signal(f, start, speed, seconds, 0.0));
+            let d = decode(f, &f.signal(start, speed, 44_100, seconds, 0.0));
             assert!(
                 (d.pitch() - speed).abs() < 0.01,
                 "speed {speed}: pitch {}",
@@ -359,7 +381,7 @@ mod tests {
     #[test]
     fn hiss_does_not_lose_the_place() {
         let f = &FORMATS[3];
-        let d = decode(f, &signal(f, 1_000_000.0, 1.0, 0.5, 0.05));
+        let d = decode(f, &f.signal(1_000_000.0, 1.0, 44_100, 0.5, 0.05));
         let want = (1_000_000.0 + 0.5 * f.carrier_hz) / f.carrier_hz;
         assert!((d.position().expect("a position") - want).abs() < 2.0 / f.carrier_hz);
     }

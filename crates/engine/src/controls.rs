@@ -195,6 +195,16 @@ pub(crate) struct DeckControls {
     /// Speed while scratch2_enable is on, in multiples of normal speed.
     pub(crate) scratch2: ControlHandle,
     pub(crate) scratch2_enable: ControlHandle,
+    /// Timecode vinyl or CD drives the deck (DVS).
+    pub(crate) vinylcontrol_enabled: ControlHandle,
+    /// 0 absolute (the needle's place is the track's), 1 relative (speed only).
+    pub(crate) vinylcontrol_mode: ControlHandle,
+    /// The input the turntable is plugged into, 1-based; 0 for none.
+    pub(crate) vinylcontrol_input: ControlHandle,
+    /// Which record or CD, by its place in `djsugar_timecode::FORMATS`.
+    pub(crate) vinylcontrol_format: ControlHandle,
+    /// Set by the engine: 0 off or no signal, 1 speed only, 2 place known.
+    pub(crate) vinylcontrol_status: ControlHandle,
     /// Holding the scrolling waveform: while `scrub_enable` is on the deck glides
     /// to `scrub_position` (0..1 through the track), playing what it passes.
     pub(crate) scrub_enable: ControlHandle,
@@ -487,6 +497,32 @@ impl DeckControls {
             ),
             scratch2: reg.create(g, "scratch2", 0.0, -100.0, 100.0, Behavior::Free),
             scratch2_enable: reg.toggle(g, "scratch2_enable"),
+            vinylcontrol_enabled: reg.toggle(g, "vinylcontrol_enabled"),
+            vinylcontrol_mode: reg.create(g, "vinylcontrol_mode", 0.0, 0.0, 1.0, Behavior::Free),
+            vinylcontrol_input: reg.create(
+                g,
+                "vinylcontrol_input",
+                0.0,
+                0.0,
+                crate::inputs::NUM_INPUTS as f64,
+                Behavior::Free,
+            ),
+            vinylcontrol_format: reg.create(
+                g,
+                "vinylcontrol_format",
+                0.0,
+                0.0,
+                (djsugar_timecode::FORMATS.len() - 1) as f64,
+                Behavior::Free,
+            ),
+            vinylcontrol_status: reg.create(
+                g,
+                "vinylcontrol_status",
+                0.0,
+                0.0,
+                2.0,
+                Behavior::Free,
+            ),
             scrub_enable: reg.toggle(g, "scrub_enable"),
             scrub_position: reg.create(g, "scrub_position", 0.0, 0.0, 1.0, Behavior::Linear),
             seek_hold: reg.toggle(g, "seek_hold"),

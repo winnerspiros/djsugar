@@ -56,6 +56,9 @@ pub enum Returned {
     Done(Arc<Track>),
     /// A track ejected from `deck` (`[ChannelN],eject`).
     Ejected { deck: usize, track: Arc<Track> },
+    /// A timecode record's position table to build, off the audio thread
+    /// (`djsugar_timecode::FORMATS[n]`).
+    PrepareTimecode(usize),
     /// A beat grid change asked for on `deck`, at `seconds` into `track`.
     GridEdit {
         deck: usize,
@@ -1640,6 +1643,10 @@ pub struct Engine {
     /// Each deck's `live_input` and Groove Box switch as last seen, to tell
     /// which one the DJ picked last.
     live_seen: [usize; NUM_DECKS],
+    /// Each deck's timecode reader while `vinylcontrol_enabled` is on.
+    timecode: [Option<djsugar_timecode::Decoder>; NUM_DECKS],
+    /// Timecode formats whose tables have been asked for, one bit each.
+    timecode_asked: u32,
     groove_seen: [bool; NUM_DECKS],
     /// Each deck's Looper (playing only while `[LooperN],enabled` and it
     /// has its memory), its sound for this buffer, whether it was on last
@@ -1952,6 +1959,8 @@ impl Engine {
                 duck_buf: vec![vec![1.0; BLOCK]; NUM_DECKS],
                 duck_env: [0.0; NUM_DECKS],
                 live_seen: [0; NUM_DECKS],
+                timecode: Default::default(),
+                timecode_asked: 0,
                 groove_seen: [false; NUM_DECKS],
                 loopers,
                 looper_buf: vec![vec![[0.0; 2]; BLOCK]; NUM_DECKS],
@@ -2248,6 +2257,56 @@ impl Engine {
                     let _ = self.returned.push(Returned::Ejected { deck, track });
                 }
             }
+        }
+    }
+
+    /// Lets timecode vinyl or CD on a deck's input drive it (DVS): its
+    /// speed as a scratch, and in absolute mode its place in the track. The
+    /// last buffer of the input is read, a few milliseconds behind.
+    fn vinyl_control(&mut self) {
+        let rate = self.sample_rate as u32;
+        for (deck, d) in self.decks.iter_mut().enumerate() {
+            let input = d.c.vinylcontrol_input.get().round() as usize;
+            if !d.c.vinylcontrol_enabled.get_bool() || input == 0 || input > NUM_INPUTS {
+                if self.timecode[deck].take().is_some() {
+                    d.c.scratch2_enable.set_bool(false);
+                    d.c.scratch2.set(0.0);
+                    d.c.vinylcontrol_status.set(0.0);
+                }
+                continue;
+            }
+            let formats = &djsugar_timecode::FORMATS;
+            let n =
+                (d.c.vinylcontrol_format.get().round().max(0.0) as usize).min(formats.len() - 1);
+            let format = &formats[n];
+            let decoder = match &mut self.timecode[deck] {
+                Some(t) if std::ptr::eq(t.format(), format) => t,
+                slot => slot.insert(djsugar_timecode::Decoder::new(format, rate)),
+            };
+            if !format.ready() && self.timecode_asked & 1 << n == 0 {
+                self.timecode_asked |= 1 << n;
+                let _ = self.returned.push(Returned::PrepareTimecode(n));
+            }
+            let inp = &self.inputs[input - 1];
+            decoder.process(&inp.raw[..inp.raw_frames]);
+            let pitch = decoder.pitch();
+            d.c.scratch2_enable.set_bool(true);
+            d.c.scratch2.set(pitch);
+            let absolute = d.c.vinylcontrol_mode.get() < 0.5;
+            let place = decoder
+                .position()
+                .filter(|_| absolute && pitch.abs() > 0.05);
+            if let Some(seconds) = place.filter(|s| (s - d.seconds()).abs() > 0.05) {
+                d.set_seconds(seconds);
+            }
+            let status = if decoder.locked() {
+                2.0
+            } else if pitch != 0.0 {
+                1.0
+            } else {
+                0.0
+            };
+            d.c.vinylcontrol_status.set(status);
         }
     }
 
@@ -2967,6 +3026,7 @@ impl Engine {
         self.apply_commands();
         self.eject();
         self.live_inputs();
+        self.vinyl_control();
         for d in &mut self.decks {
             d.change_rate_range();
         }
@@ -7406,6 +7466,60 @@ mod tests {
         let live = reg.get("[Channel1]", "live_input").unwrap();
         live.set((AUXILIARY_8 + 1) as f64);
         assert_eq!(live.get(), (AUXILIARY_8 + 1) as f64);
+    }
+
+    #[test]
+    fn timecode_vinyl_drives_a_deck() {
+        let (reg, mut engine, mut input) = setup();
+        let ch = |k: &str| reg.get("[Channel1]", k).unwrap();
+        let (feed, mut tx) = mic_feed();
+        engine.set_input(AUXILIARY, Some(feed));
+        load(&mut input, 0, long_tone_track(440.0, "A", 30.0));
+        let format = &djsugar_timecode::FORMATS[0];
+        format.prepare();
+        ch("vinylcontrol_input").set((AUXILIARY + 1) as f64);
+        ch("vinylcontrol_enabled").set_bool(true);
+        // Plays `seconds` of the record from `start` seconds in at `speed`.
+        let mut spin = |engine: &mut Engine, start: f64, speed: f64, seconds: f64| {
+            let record = format.signal(start * format.carrier_hz, speed, SR as u32, seconds, 0.0);
+            let mut buf = vec![0.0f32; 512 * 2];
+            for block in record.chunks(512) {
+                for [l, r] in block {
+                    let _ = tx.push(*l);
+                    let _ = tx.push(*r);
+                }
+                engine.process(&mut buf, 2);
+            }
+        };
+        let at = |reg: &ControlRegistry| {
+            let c = |k: &str| reg.get("[Channel1]", k).unwrap().get();
+            c("playposition") * c("duration")
+        };
+        // Relative: the record's speed only, half speed backwards here.
+        ch("vinylcontrol_mode").set(1.0);
+        spin(&mut engine, 0.0, 1.0, 1.0);
+        let from = at(&reg);
+        spin(&mut engine, 1.0, -0.5, 1.0);
+        assert!(
+            (ch("scratch2").get() + 0.5).abs() < 0.02,
+            "{}",
+            ch("scratch2").get()
+        );
+        assert!(
+            (at(&reg) - (from - 0.5)).abs() < 0.1,
+            "{} from {from}",
+            at(&reg)
+        );
+        // Absolute: the needle dropped 20 seconds in puts the deck there.
+        ch("vinylcontrol_mode").set(0.0);
+        spin(&mut engine, 20.0, 1.0, 0.5);
+        assert_eq!(ch("vinylcontrol_status").get(), 2.0);
+        assert!((at(&reg) - 20.5).abs() < 0.05, "{}", at(&reg));
+        // Off again: the deck is the DJ's.
+        ch("vinylcontrol_enabled").set_bool(false);
+        spin(&mut engine, 20.5, 1.0, 0.1);
+        assert!(!ch("scratch2_enable").get_bool());
+        assert_eq!(ch("vinylcontrol_status").get(), 0.0);
     }
 
     /// Runs the engine for `seconds` with a 500 Hz tone coming into

@@ -276,6 +276,9 @@ impl Shared {
                         Self::send_locked(input, Command::Regrid { deck, track: t }, loaded);
                     }
                 }
+                Returned::PrepareTimecode(n) => {
+                    std::thread::spawn(move || djsugar_timecode::FORMATS[n].prepare());
+                }
                 Returned::Done(_) => {}
             }
         }

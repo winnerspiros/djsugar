@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 djsugar-control = { path = "../control" }
+djsugar-timecode = { path = "../timecode" }
 djsugar-separation = { path = "../separation" }
 # Plugins run in a helper process; the engine only needs the client side.
 djsugar-plugin-host = { path = "../plugin-host", default-features = false }
