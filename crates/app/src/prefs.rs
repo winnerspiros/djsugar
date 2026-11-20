@@ -709,6 +709,8 @@ pub struct Prefs {
     /// Dry runs of an import: the importer, whose tags win, and the note.
     dry_tx: Sender<(String, bool, String)>,
     dry_rx: Receiver<(String, bool, String)>,
+    /// When the round trip measurement started, while it listens.
+    latency_since: Option<std::time::Instant>,
 }
 
 /// One inputs-table row's menus: its role, the devices ("" for None), and
@@ -798,6 +800,7 @@ impl Prefs {
             tested_rx,
             dry_tx,
             dry_rx,
+            latency_since: None,
         }));
         let p = prefs.clone();
         g.on_changed(move || p.borrow_mut().shown());
@@ -853,6 +856,13 @@ impl Prefs {
                 w.dry_run = note;
                 tested = true;
             }
+        }
+        if self
+            .latency_since
+            .is_some_and(|t| t.elapsed() > std::time::Duration::from_millis(1500))
+        {
+            self.latency_since = None;
+            tested = true;
         }
         if tested {
             self.refresh();
@@ -1474,6 +1484,7 @@ impl Prefs {
                 }
                 if shows(0) {
                     items.extend(dvs_items());
+                    items.extend(self.latency_items());
                 }
                 if shows(1) {
                     let camelot = app.global::<KeyNotation>().get_camelot();
@@ -3372,6 +3383,16 @@ impl Prefs {
     }
 
     fn pressed(&mut self, id: &str) {
+        if id == "latency_measure" {
+            let input = (0..NUM_DECKS)
+                .map(|d| dvs(d)[3].1)
+                .find(|&input| input > 0.0)
+                .unwrap_or((inputs::MICROPHONE + 1) as f64);
+            self.set("[Master]", "latency_measure", input);
+            self.latency_since = Some(std::time::Instant::now());
+            self.refresh();
+            return;
+        }
         if crate::midi_clock::pressed(id) {
             self.refresh();
             return;
@@ -3627,6 +3648,35 @@ impl Prefs {
             _ => return,
         }
         self.refresh();
+    }
+
+    /// Settings › Decks: timing the sound from the speakers back in.
+    fn latency_items(&self) -> Vec<PrefItem> {
+        let found = self
+            .registry
+            .get("[Master]", "input_latency")
+            .map_or(0.0, |c| c.get());
+        let note = if self.latency_since.is_some() {
+            "Listening…".to_string()
+        } else if found < 0.0 {
+            "The input didn't hear it. Turn the speakers up or bring the microphone closer.".into()
+        } else if found == 0.0 {
+            "Not measured yet.".into()
+        } else {
+            format!("{:.1} ms from the speakers back in.", found * 1000.0)
+        };
+        vec![PrefItem {
+            action: "Measure".into(),
+            ..item(
+                "latency_measure",
+                BUTTON,
+                "Round trip",
+                &format!(
+                    "Plays a short hiss from the speakers and times it coming into the first \
+                     timecode input, or the microphone. {note}"
+                ),
+            )
+        }]
     }
 
     fn set(&self, group: &str, key: &str, value: f64) {
