@@ -296,6 +296,21 @@ mod tests {
     }
 
     #[test]
+    fn broken_archives_are_turned_down() {
+        let root = obj(
+            "ADCMediaItemUserData",
+            vec![
+                ("uuid", Value::Str("abc".into())),
+                ("playCount", Value::Int(3)),
+                ("where", Value::Url("file:///Music/a.mp3".into())),
+            ],
+        );
+        crate::garble::check(&[write(&root)], |b| {
+            let _ = parse(b);
+        });
+    }
+
+    #[test]
     fn uuids() {
         assert_eq!(
             uuid_text(&[

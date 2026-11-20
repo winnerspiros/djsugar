@@ -121,8 +121,8 @@ mod tests {
         );
         assert_eq!(path(b"bookjunk"), None);
         assert_eq!(path(b"not a bookmark"), None);
-        for cut in 0..b.len() {
-            let _ = path(&b[..cut]);
-        }
+        crate::garble::check(&[b], |b| {
+            let _ = path(b);
+        });
     }
 }

@@ -26,6 +26,8 @@ pub mod bandcamp;
 pub mod buy;
 pub mod djay;
 pub mod engine;
+#[cfg(test)]
+mod garble;
 pub mod inbox;
 pub mod itunes;
 pub mod itunes_library;

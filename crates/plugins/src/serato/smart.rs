@@ -188,6 +188,17 @@ mod tests {
     }
 
     #[test]
+    fn broken_smart_crates_are_turned_down() {
+        let rules = [
+            rule("cond_aft_time", 25, &put(b"trtt", &utf16("5/13/2020"))),
+            rule("cond_greq_uint", 15, &put(b"urpt", &124u32.to_be_bytes())),
+        ];
+        crate::garble::check(&[scrate(true, &rules, &["a.mp3"])], |b| {
+            let _ = query(b);
+        });
+    }
+
+    #[test]
     fn rules_as_a_search() {
         let rules = [
             rule("cond_aft_time", 25, &put(b"trtt", &utf16("5/13/2020"))),

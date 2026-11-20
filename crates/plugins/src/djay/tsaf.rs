@@ -427,6 +427,24 @@ mod tests {
     }
 
     #[test]
+    fn broken_blobs_are_turned_down() {
+        let root = obj(
+            "ADCMediaItemUserData",
+            vec![
+                ("uuid", Value::Str("abc".into())),
+                (
+                    "cuePoints",
+                    Value::Arr(vec![obj("ADCCuePoint", vec![("time", Value::F32(1.5))])]),
+                ),
+                ("url", Value::Url("file:///a.mp3".into())),
+            ],
+        );
+        crate::garble::check(&[Writer::blob(&root)], |b| {
+            let _ = parse(b);
+        });
+    }
+
+    #[test]
     fn rejects_damage() {
         assert!(parse(b"TSAX").is_err());
         let blob = Writer::blob(&obj("A", vec![("x", Value::F32(1.0))]));

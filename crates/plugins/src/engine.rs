@@ -222,14 +222,22 @@ struct PerfRow {
 }
 
 /// Qt's qCompress: 4-byte big-endian length, then zlib.
+/// More than any track's grid, cues, loops or waveform need.
+const MAX_BLOB: usize = 64 << 20;
+
 fn q_decompress(blob: &[u8]) -> Result<Vec<u8>, String> {
     if blob.len() < 4 {
         return Err("blob too short for qCompress header".into());
     }
     let len = u32::from_be_bytes(blob[..4].try_into().unwrap()) as usize;
-    let mut decoder = ZlibDecoder::new(&blob[4..]);
-    let mut out = Vec::with_capacity(len);
-    decoder
+    if len > MAX_BLOB {
+        return Err(format!("blob says it holds {len} bytes"));
+    }
+    // The header is the file's word only: read no more than it says (and
+    // one byte to catch a longer stream), growing as the data comes.
+    let mut out = Vec::new();
+    ZlibDecoder::new(&blob[4..])
+        .take(len as u64 + 1)
         .read_to_end(&mut out)
         .map_err(|e| format!("zlib decompress failed: {e}"))?;
     if out.len() != len {
@@ -1048,6 +1056,36 @@ mod tests {
         // Engine key 23 = D minor -> DJ Sugar Dm
         let k = engine_key_to_key(23).unwrap();
         assert_eq!(k.name(), "Dm");
+    }
+
+    #[test]
+    fn broken_blobs_are_turned_down() {
+        let mut cues = Vec::new();
+        cues.extend(8u64.to_be_bytes());
+        for n in 0..8 {
+            cues.extend([4, b'D', b'r', b'o', b'p']);
+            cues.extend((n as f64 * 44_100.0).to_be_bytes());
+            cues.extend([0xff, 0x20, 0x40, 0x60]);
+        }
+        cues.extend(0f64.to_be_bytes());
+        cues.push(0);
+        cues.extend(0f64.to_be_bytes());
+        let raw = [cues.clone(), vec![0; 64]];
+        let good: Vec<Vec<u8>> = raw
+            .iter()
+            .flat_map(|r| [r.clone(), q_compress(r)])
+            .collect();
+        crate::garble::check(&good, |b| {
+            let _ = q_decompress(b);
+            let _ = parse_beat_data(b);
+            let _ = parse_quick_cues(b, 44_100.0);
+            let _ = parse_loops(b, 44_100.0);
+            let _ = parse_track_data(b);
+        });
+        // A header that claims 4 GB.
+        let mut huge = q_compress(b"x");
+        huge[..4].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(q_decompress(&huge).is_err());
     }
 
     #[test]

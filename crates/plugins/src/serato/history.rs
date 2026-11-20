@@ -121,6 +121,20 @@ mod tests {
     }
 
     #[test]
+    fn broken_sessions_are_turned_down() {
+        let mut info = num(41, &utf16("13/05/2020"));
+        info.extend(num(43, &1_589_400_000u32.to_be_bytes()));
+        let mut d = field(b"oses", &field(b"adat", &info));
+        d.extend(track("Music/a.mp3", 1_589_400_100, 1));
+        let file = std::env::temp_dir().join(format!("djs-garble-{}.session", std::process::id()));
+        crate::garble::check(&[d], |b| {
+            std::fs::write(&file, b).unwrap();
+            let _ = session(&file, Path::new("/"));
+        });
+        std::fs::remove_file(&file).ok();
+    }
+
+    #[test]
     fn reads_a_session() {
         let dir = std::env::temp_dir().join(format!("djs-session-{}", std::process::id()));
         let sessions = dir.join("_Serato_/History/Sessions");

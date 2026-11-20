@@ -338,6 +338,21 @@ mod tests {
     }
 
     #[test]
+    fn broken_markers_are_turned_down() {
+        let mut beat = vec![1, 0, 0, 0, 0, 2];
+        for (at, tail) in [(0.5f32, 64u32.to_be_bytes()), (30.0, 128f32.to_be_bytes())] {
+            beat.extend(at.to_be_bytes());
+            beat.extend(tail);
+        }
+        beat.push(0);
+        crate::garble::check(&[markers2(), beat], |b| {
+            let _ = markers(b);
+            let _ = grid(b);
+            let _ = geob(b);
+        });
+    }
+
+    #[test]
     fn reads_cues_loops_and_lock() {
         let m = markers(&markers2()).unwrap();
         assert!(m.locked);
