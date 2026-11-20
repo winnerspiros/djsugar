@@ -156,6 +156,9 @@ jobs:
           - { arch: x64, runner: windows-latest }
           - { arch: arm64, runner: windows-11-arm }
     runs-on: ${{ matrix.runner }}
+    env:
+      # whisper.cpp builds for ARM only with clang, not MSVC.
+      CMAKE_GENERATOR_TOOLSET: ${{ matrix.arch == 'arm64' && 'ClangCL' || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
