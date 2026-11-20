@@ -1622,6 +1622,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 browser.borrow_mut().poll_engine_export();
                 browser.borrow_mut().poll_rekordbox_db_export();
                 browser.borrow_mut().poll_itunes_xml();
+                browser.borrow_mut().poll_sync_export();
                 browser.borrow_mut().poll_covers();
                 browser.borrow_mut().poll_located();
                 browser.borrow_mut().poll_cleanup();

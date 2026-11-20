@@ -5,7 +5,7 @@
 //! The work is done by `djsugar_export::engine::desktop`, on the dialog's
 //! thread. (Sticks for Engine players come from Export to USB.)
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use djsugar_engine::Track;
@@ -17,7 +17,7 @@ use crate::LibraryEdit;
 
 /// What the export said when it finished: the list it was for (None for
 /// the collection), and a line for the DJ or why it failed.
-type Done = (Option<i64>, Result<String, String>);
+type Done = (Option<i64>, Option<PathBuf>, Result<String, String>);
 
 pub(super) struct State {
     tx: Sender<Done>,
@@ -64,15 +64,21 @@ impl Browser {
             "Close Engine DJ, then choose its library, m.db (Music › Engine Library › Database2), for \"{}\"",
             self.node_title(node)
         );
+        // The whole Collection: where it went is kept for Sync.
+        let whole = matches!(self.nodes[node].contents, super::Contents::All);
         let tx = self.engine_export.tx.clone();
         crate::prefs::choose_file(&prompt, move |dir| {
-            let _ = tx.send((list, run(&dir, &tracks, &lists)));
+            let result = run(&dir, &tracks, &lists);
+            let _ = tx.send((list, whole.then_some(dir), result));
         });
     }
 
     /// Shows how exports the dialogs answered went.
     pub fn poll_engine_export(&mut self) {
-        while let Ok((list, result)) = self.engine_export.rx.try_recv() {
+        while let Ok((list, target, result)) = self.engine_export.rx.try_recv() {
+            if let (Some(t), Ok(_)) = (&target, &result) {
+                super::sync_export::remember("engine", t);
+            }
             let note = result.unwrap_or_else(|e| {
                 eprintln!("Engine DJ export failed: {e}");
                 format!("Couldn't export to Engine DJ: {e}")
@@ -86,7 +92,7 @@ impl Browser {
 
 /// Writes the cues, grids and playlists; a line for the DJ saying what was
 /// done.
-fn run(database: &Path, tracks: &[Track], lists: &[NmlList]) -> Result<String, String> {
+pub(super) fn run(database: &Path, tracks: &[Track], lists: &[NmlList]) -> Result<String, String> {
     if database.file_name().is_some_and(|n| n != "m.db") {
         return Err("pick Engine DJ's library file, m.db".into());
     }

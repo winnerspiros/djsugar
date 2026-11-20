@@ -17,7 +17,7 @@ use crate::LibraryEdit;
 
 /// What the export said when it finished: the list it was for (None for
 /// the collection), and a line for the DJ or why it failed.
-type Done = (Option<i64>, Result<String, String>);
+type Done = (Option<i64>, Option<PathBuf>, Result<String, String>);
 
 pub(super) struct State {
     tx: Sender<Done>,
@@ -64,15 +64,21 @@ impl Browser {
             "Choose your _Serato_ folder (in Music) for \"{}\": cues, loops and grids go into the files",
             self.node_title(node)
         );
+        // The whole Collection: where it went is kept for Sync.
+        let whole = matches!(self.nodes[node].contents, super::Contents::All);
         let tx = self.serato_export.tx.clone();
         crate::prefs::choose_folder(&prompt, move |dir| {
-            let _ = tx.send((list, run(&dir, &tracks, &lists)));
+            let result = run(&dir, &tracks, &lists);
+            let _ = tx.send((list, whole.then_some(dir), result));
         });
     }
 
     /// Shows how exports the dialogs answered went.
     pub fn poll_serato_export(&mut self) {
-        while let Ok((list, result)) = self.serato_export.rx.try_recv() {
+        while let Ok((list, target, result)) = self.serato_export.rx.try_recv() {
+            if let (Some(t), Ok(_)) = (&target, &result) {
+                super::sync_export::remember("serato", t);
+            }
             let note = result.unwrap_or_else(|e| {
                 eprintln!("Serato export failed: {e}");
                 format!("Couldn't export to Serato: {e}")
@@ -85,7 +91,7 @@ impl Browser {
 }
 
 /// Writes the tags and crates; a line for the DJ saying what was done.
-fn run(serato: &Path, tracks: &[Track], lists: &[NmlList]) -> Result<String, String> {
+pub(super) fn run(serato: &Path, tracks: &[Track], lists: &[NmlList]) -> Result<String, String> {
     if serato.file_name().is_some_and(|n| n != "_Serato_") {
         return Err("pick the folder named _Serato_".into());
     }

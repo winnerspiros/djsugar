@@ -33,6 +33,7 @@ pub enum Action {
     ExportEngine,
     ExportRekordboxDb,
     ExportItunes,
+    ExportSync,
     ExportMixcloud,
     RecordMix,
     MiniPlayer,
@@ -88,7 +89,7 @@ const UPDATE_CHECK: &str = "update_check";
 const USER_GUIDE: &str = "https://github.com/winnerspiros/djsugar/tree/rust/docs/guide";
 
 impl Action {
-    const ALL: [Action; 39] = [
+    const ALL: [Action; 40] = [
         Action::Settings,
         Action::Quit,
         Action::Undo,
@@ -105,6 +106,7 @@ impl Action {
         Action::ExportEngine,
         Action::ExportRekordboxDb,
         Action::ExportItunes,
+        Action::ExportSync,
         Action::RecordMix,
         Action::MiniPlayer,
         Action::ZoomIn,
@@ -264,6 +266,11 @@ pub const MENUS: &[Menu] = &[
                     Entry::Item {
                         action: Action::ExportItunes,
                         title: "iTunes XML…",
+                        key: None,
+                    },
+                    Entry::Item {
+                        action: Action::ExportSync,
+                        title: "Sync to other apps (close them first)",
                         key: None,
                     },
                     Entry::Separator,
@@ -647,6 +654,7 @@ pub fn run(app: &AppWindow, action: Action) {
         Action::ExportItunes => app
             .global::<LibraryEdit>()
             .invoke_export_itunes(app.get_current_folder()),
+        Action::ExportSync => app.global::<LibraryEdit>().invoke_export_sync(),
         // The mixed set picked in Recordings.
         Action::ExportMixcloud => crate::export_mixcloud(app),
         // [Recording],toggle_recording, as the REC button and controllers.

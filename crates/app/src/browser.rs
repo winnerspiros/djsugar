@@ -63,6 +63,7 @@ mod side_tabs;
 mod spotify_export;
 mod staging;
 mod streamed;
+mod sync_export;
 mod tag_chips;
 mod track_menu;
 mod traktor_nml;
@@ -729,6 +730,7 @@ pub struct Browser {
     engine_export: engine_export::State,
     rekordbox_db_export: rekordbox_db_export::State,
     itunes_xml: itunes_xml::State,
+    sync_export: sync_export::State,
     phrases_seen: analysis::SeenDecks,
     /// The last stage change or merge of copies, which the track menu can
     /// take back.
@@ -1370,6 +1372,7 @@ impl Browser {
             engine_export: Default::default(),
             rekordbox_db_export: Default::default(),
             itunes_xml: Default::default(),
+            sync_export: Default::default(),
             phrases_seen: Default::default(),
             undo: None,
             pending_moves: HashMap::new(),
@@ -2001,6 +2004,7 @@ impl Browser {
         Self::install_engine_export(&edit, &with);
         Self::install_rekordbox_db_export(&edit, &with);
         Self::install_itunes_xml(&edit, &with);
+        Self::install_sync_export(&edit, &with);
     }
 
     /// Saves a search as a smart list at the top level (under "Smart
@@ -5674,7 +5678,7 @@ impl Browser {
             let have = data.iter().filter(|r| r.local.is_some()).count();
             summary = format!("{summary} · {have} in your collection");
         }
-        if let Some(note) = self.export_note() {
+        if let Some(note) = self.export_note().or_else(|| self.sync_note()) {
             summary = format!("{summary} · {note}");
         }
         if self.tree == FILES && self.files.reading && !data.is_empty() {

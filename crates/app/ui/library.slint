@@ -434,6 +434,8 @@ export global LibraryEdit {
     callback export-rekordbox-db(row: int);
     // Saves a sidebar row's tracks and lists as an iTunes Library XML.
     callback export-itunes(row: int);
+    // Exports the Collection again to each app it was exported to.
+    callback export-sync();
     // Makes a playlist from an M3U, M3U8, PLS or XSPF file the DJ picks.
     callback import-playlist-file();
     // Prepares high-quality stems for the rows `first` to `last`, one
