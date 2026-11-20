@@ -39,11 +39,43 @@ jobs:
           fi
           echo "version=$cargo" >> "$GITHUB_OUTPUT"
 
+  macos-build:
+    # Each chip builds on its own runner at once; `macos` joins them into one
+    # app. Fat LTO on one runner after the other took over two hours.
+    needs: version
+    strategy:
+      matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+      - run: |
+          # whisper.cpp's Metal code checks the macOS version with
+          # @available, whose helper lives in clang's runtime library.
+          export RUSTFLAGS="-C link-arg=$(clang --print-resource-dir)/lib/darwin/libclang_rt.osx.a"
+          cargo build --profile dist -p djsugar -p djsugar-plugin-host --target ${{ matrix.target }}
+          mkdir -p out
+          cp target/${{ matrix.target }}/dist/djsugar target/${{ matrix.target }}/dist/djsugar-plugin-host out/
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos-${{ matrix.target }}
+          path: out/
+          retention-days: 1
+
   macos:
     # One app for both Apple Silicon and Intel Macs.
     # Signed with the project's Developer ID and notarized when the secrets below
     # are set (see docs/macos-signing.md); otherwise ad-hoc signed as before.
-    needs: version
+    needs: [version, macos-build]
     runs-on: macos-15
     env:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -53,29 +85,15 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8
         with:
-          targets: aarch64-apple-darwin, x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-        with:
-          # Keep the build cache when signing or notarizing fails, so a re-run
-          # doesn't compile everything again.
-          cache-on-failure: true
+          pattern: macos-*
       - run: |
-          # whisper.cpp's Metal code checks the macOS version with
-          # @available, whose helper lives in clang's runtime library.
-          export RUSTFLAGS="-C link-arg=$(clang --print-resource-dir)/lib/darwin/libclang_rt.osx.a"
-          cargo build --profile dist -p djsugar -p djsugar-plugin-host --target aarch64-apple-darwin
-          cargo build --profile dist -p djsugar -p djsugar-plugin-host --target x86_64-apple-darwin
           mkdir -p dist
-          lipo -create -output dist/djsugar \
-            target/aarch64-apple-darwin/dist/djsugar \
-            target/x86_64-apple-darwin/dist/djsugar
-          lipo -create -output dist/djsugar-plugin-host \
-            target/aarch64-apple-darwin/dist/djsugar-plugin-host \
-            target/x86_64-apple-darwin/dist/djsugar-plugin-host
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
+          for bin in djsugar djsugar-plugin-host; do
+            lipo -create -output dist/$bin macos-aarch64-apple-darwin/$bin macos-x86_64-apple-darwin/$bin
+            chmod +x dist/$bin
+          done
       - name: Import signing certificate
         if: env.MACOS_CERTIFICATE != ''
         run: |
@@ -213,6 +231,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
+          pattern: release-*
           path: dist
           merge-multiple: true
       - uses: softprops/action-gh-release@v3
