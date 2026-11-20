@@ -162,6 +162,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+      # cpal's ASIO build unpacks Steinberg's SDK with PowerShell, which
+      # fails on newer runner images; unpack it here and point it there.
+      - run: |
+          curl -fsSL --retry 5 -o "$RUNNER_TEMP/asio.zip" https://www.steinberg.net/asiosdk
+          unzip -q -o "$RUNNER_TEMP/asio.zip" -d "$RUNNER_TEMP/asio"
+          dir=$(dirname "$(find "$RUNNER_TEMP/asio" -type d -name common | head -n1)")
+          echo "CPAL_ASIO_DIR=$(cygpath -w "$dir")" >> "$GITHUB_ENV"
+        shell: bash
       - run: cargo build --profile dist -p djsugar -p djsugar-plugin-host
       - run: scripts/bundle-windows.ps1 target/dist/djsugar.exe "${{ needs.version.outputs.version }}" ${{ matrix.arch }}
         shell: pwsh
