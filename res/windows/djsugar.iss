@@ -1,9 +1,13 @@
 ; Inno Setup script for DJ Sugar's Windows setup. scripts/bundle-windows.ps1
-; runs it with /DVersion=... /DSource=<folder with DJSugar.exe> /DOutput=dist.
+; runs it with /DVersion=... /DArch=x64|arm64 /DSource=<folder with DJSugar.exe> /DOutput=dist.
 ; Installs for the current user only, so it needs no administrator.
 
 #ifndef Version
   #define Version "0.0.0"
+#endif
+; x64, or arm64 for Windows on Arm.
+#ifndef Arch
+  #define Arch "x64"
 #endif
 
 [Setup]
@@ -21,14 +25,19 @@ DefaultDirName={autopf}\DJ Sugar
 DefaultGroupName=DJ Sugar
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
+#if Arch == "arm64"
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+#else
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#endif
 MinVersion=10.0
 LicenseFile={#Source}\LICENSE-GPL3.txt
 SetupIconFile=djsugar.ico
 UninstallDisplayIcon={app}\DJSugar.exe
 OutputDir={#Output}
-OutputBaseFilename=DJSugar-{#Version}-windows-x64-setup
+OutputBaseFilename=DJSugar-{#Version}-windows-{#Arch}-setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

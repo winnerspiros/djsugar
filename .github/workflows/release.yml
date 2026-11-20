@@ -104,11 +104,22 @@ jobs:
           rm dist/djsugar-macos.zip
           (cd dist && ditto -c -k --keepParent DJSugar.app djsugar-macos.zip)
       - run: |
-          mv dist/djsugar-macos.zip "dist/DJSugar-${{ needs.version.outputs.version }}-macos.zip"
+          v="${{ needs.version.outputs.version }}"
+          mv dist/djsugar-macos.zip "dist/DJSugar-$v-macos.zip"
+          # A disk image too, with Applications beside the app to drag it to.
+          mkdir dist/dmg
+          ditto dist/DJSugar.app dist/dmg/DJSugar.app
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "DJ Sugar" -srcfolder dist/dmg -ov -format UDZO "dist/DJSugar-$v-macos.dmg"
+          if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
+            codesign --sign "$MACOS_SIGN_IDENTITY" --timestamp "dist/DJSugar-$v-macos.dmg"
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: release-macos
-          path: dist/DJSugar-*-macos.zip
+          path: |
+            dist/DJSugar-*-macos.zip
+            dist/DJSugar-*-macos.dmg
 
   linux:
     # Built on the oldest supported Ubuntu, so the binary runs on any distro
@@ -134,10 +145,17 @@ jobs:
             dist/*.rpm
 
   windows:
-    # A setup .exe (per-user, no admin) and a portable zip, for x64 PCs.
-    # Unsigned until a code signing certificate is set up (docs/windows.md).
+    # A setup .exe (per-user, no admin) and a portable zip, for x64 PCs and
+    # for Windows on Arm (built natively, as the ASIO and audio C code need
+    # the ARM64 compiler). Unsigned until a code signing certificate is set
+    # up (docs/windows.md).
     needs: version
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - { arch: x64, runner: windows-latest }
+          - { arch: arm64, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -145,11 +163,11 @@ jobs:
         with:
           cache-on-failure: true
       - run: cargo build --profile dist -p djsugar -p djsugar-plugin-host
-      - run: scripts/bundle-windows.ps1 target/dist/djsugar.exe "${{ needs.version.outputs.version }}"
+      - run: scripts/bundle-windows.ps1 target/dist/djsugar.exe "${{ needs.version.outputs.version }}" ${{ matrix.arch }}
         shell: pwsh
       - uses: actions/upload-artifact@v7
         with:
-          name: release-windows
+          name: release-windows-${{ matrix.arch }}
           path: |
             dist/*.zip
             dist/*-setup.exe

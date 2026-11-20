@@ -108,7 +108,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | 0.4 | Android storage and permissions (music folders, SAF) | TODO |
 | 0.5 | iOS arm64 build and unsigned IPA | TODO |
 | 0.6 | iOS audio (CoreAudio via cpal), file access | TODO |
-| 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | TODO |
+| 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | WIP: releases build AppImage, .deb, .rpm and tarball on Linux, a .dmg and zip on macOS, and setup .exe and zip for Windows x64 and ARM64 (built on Arm runners); .msi not made (the setup .exe installs per user without admin); ARM64 and .dmg not yet run on GitHub |
 | 0.8 | Store builds: cargo feature `store` drops YouTube/SoundCloud download and librespot (Play/F-Droid policy); full build ships on GitHub releases; About screen links source (GPL) | TODO |
 | 0.9 | Mixcloud sign-in server: Rust token-swap service (holds client secret); app reads its URL from `DJSUGAR_MIXCLOUD_SIGN_IN` until hosted | TODO |
 

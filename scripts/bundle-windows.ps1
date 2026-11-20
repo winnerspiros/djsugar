@@ -1,13 +1,15 @@
-# Packages a compiled DJ Sugar for Windows as dist/djsugar-VERSION-windows-x64.zip
+# Packages a compiled DJ Sugar for Windows as dist/djsugar-VERSION-windows-ARCH.zip
 # (portable: unzip anywhere and run DJSugar.exe) and
-# dist/DJSugar-VERSION-windows-x64-setup.exe (per-user install, no admin).
-# Usage: scripts/bundle-windows.ps1 BINARY VERSION
+# dist/DJSugar-VERSION-windows-ARCH-setup.exe (per-user install, no admin).
+# Usage: scripts/bundle-windows.ps1 BINARY VERSION [ARCH], ARCH x64 (the
+# default) or arm64.
 # Needs Inno Setup 6 (installed with Chocolatey when missing). When
 # SIGN_COMMAND is set, it runs with the file to sign appended, for
 # DJSugar.exe and then for the setup.
 param(
   [Parameter(Mandatory)] [string] $Binary,
-  [Parameter(Mandatory)] [string] $Version
+  [Parameter(Mandatory)] [string] $Version,
+  [ValidateSet("x64", "arm64")] [string] $Arch = "x64"
 )
 $ErrorActionPreference = "Stop"
 
@@ -40,7 +42,7 @@ Copy-Item res/windows/LICENSE-GPL3.txt "$stage/"
 Sign "$stage/DJSugar.exe"
 if (Test-Path "$stage/djsugar-plugin-host.exe") { Sign "$stage/djsugar-plugin-host.exe" }
 
-$zip = "dist/djsugar-$Version-windows-x64.zip"
+$zip = "dist/djsugar-$Version-windows-$Arch.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path $stage -DestinationPath $zip
 
@@ -50,7 +52,7 @@ if (-not (Test-Path $iscc)) {
 }
 $source = (Resolve-Path $stage).Path
 $output = (Resolve-Path dist).Path
-& $iscc /Q "/DVersion=$Version" "/DSource=$source" "/DOutput=$output" res/windows/djsugar.iss
+& $iscc /Q "/DVersion=$Version" "/DArch=$Arch" "/DSource=$source" "/DOutput=$output" res/windows/djsugar.iss
 if ($LASTEXITCODE) { throw "Inno Setup failed" }
-Sign "dist/DJSugar-$Version-windows-x64-setup.exe"
+Sign "dist/DJSugar-$Version-windows-$Arch-setup.exe"
 Remove-Item -Recurse -Force $stage
