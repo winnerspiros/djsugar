@@ -3747,6 +3747,8 @@ impl Engine {
                     .then(|| &self.last_main[..self.last_main_len]);
                 let play = self.decks[i].c.play.get_bool();
                 let heard = Heard { input, mix };
+                let latency = self.master.input_latency.get().max(0.0);
+                l.late = (latency * self.sample_rate) as u64;
                 if l.render(play, source, heard, &mut looper_buf[i][..frames]) {
                     self.decks[i].c.play.set_bool(true);
                 }

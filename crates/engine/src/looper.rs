@@ -250,6 +250,10 @@ pub struct Looper {
     layers: [Layer; LAYERS],
     clock: Clock,
     rate: f64,
+    /// Frames an input comes in behind the sound the player played along
+    /// to (`[Master],input_latency`): bar lines are stamped that much later
+    /// in the ring when recording an input, so the take lands on the beat.
+    pub late: u64,
     /// The ring frame of the next buffer's first frame, and of the last
     /// buffer's; the ring holds audio for frames before `written`.
     t: u64,
@@ -282,6 +286,7 @@ impl Looper {
             layers: [Layer::default(); LAYERS],
             clock: Clock::default(),
             rate,
+            late: 0,
             t: 0,
             t_last: 0,
             written: 0,
@@ -449,7 +454,8 @@ impl Looper {
             // A hair of tolerance, so rounding doesn't put a bar line a frame late.
             let bar = ((b + 1e-7) / BAR).floor();
             if b > self.last_beat && bar > ((self.last_beat + 1e-7) / BAR).floor() {
-                let at = self.t + f as u64;
+                let late = if heard.input.is_some() { self.late } else { 0 };
+                let at = self.t + f as u64 + late;
                 self.on_bar(bar * BAR, at);
             }
             self.last_beat = b;
@@ -958,6 +964,45 @@ mod tests {
         assert_eq!(state.get() as u8, PLAYING);
         assert_eq!(l.c.layers[0].bars.get(), 1.0);
         // Bar 3 plays the ramp back from its first beat, lined up with the bar.
+        let bar3 = 2 * BAR_FRAMES - (BAR_FRAMES + BUF * 6);
+        for k in [100, 4_000, 8_000, 12_000] {
+            let expected = k as f32 / BAR_FRAMES as f32;
+            assert!(
+                (out[bar3 + k] - expected).abs() < 0.01,
+                "frame {k}: {} vs {expected}",
+                out[bar3 + k]
+            );
+        }
+    }
+
+    #[test]
+    fn an_input_heard_late_is_recorded_on_the_beat() {
+        const LATE: usize = 1_000;
+        let (_reg, mut l) = looper();
+        l.late = LATE as u64;
+        l.c.length.set(1.0);
+        let (tap, state) = (l.c.layers[0].tap.clone(), l.c.layers[0].state.clone());
+        press(&tap);
+        run(&mut l, true, 0, 1, |_| 0.0);
+        release(&tap);
+        // The player plays bar 2's ramp on time; it reaches the input late.
+        let ramp = |f: usize| {
+            let f = f.wrapping_sub(LATE);
+            if (BAR_FRAMES..2 * BAR_FRAMES).contains(&f) {
+                (f - BAR_FRAMES) as f32 / BAR_FRAMES as f32
+            } else {
+                0.0
+            }
+        };
+        run(&mut l, true, BUF, BAR_FRAMES / BUF + 5, ramp);
+        let out = run(
+            &mut l,
+            true,
+            BAR_FRAMES + BUF * 6,
+            (2 * BAR_FRAMES) / BUF,
+            ramp,
+        );
+        assert_eq!(state.get() as u8, PLAYING);
         let bar3 = 2 * BAR_FRAMES - (BAR_FRAMES + BUF * 6);
         for k in [100, 4_000, 8_000, 12_000] {
             let expected = k as f32 / BAR_FRAMES as f32;
