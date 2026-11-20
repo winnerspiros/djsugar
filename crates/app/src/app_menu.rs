@@ -907,8 +907,8 @@ mod tests {
             .filter(|l| l.parent == export as i32 && l.kind == 0)
             .collect();
         // M3U, USB, Spotify, rekordbox XML, rekordbox library, Traktor,
-        // Serato, VirtualDJ, Mixxx, Engine DJ, iTunes XML, Mixcloud.
-        assert_eq!(inside.len(), 12);
+        // Serato, VirtualDJ, Mixxx, Engine DJ, iTunes XML, Sync, Mixcloud.
+        assert_eq!(inside.len(), 13);
         // Settings… and Quit sit in the ☰ list itself, under the menus.
         for a in [Action::Settings, Action::Quit] {
             let line = lines.iter().find(|l| l.action == a.id()).unwrap();
