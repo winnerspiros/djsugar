@@ -31,6 +31,8 @@ pub mod groove_pads;
 pub mod growing;
 pub mod import;
 pub mod inputs;
+/// Timecode vinyl and CD (DVS), for the settings that pick a record.
+pub use djsugar_timecode as timecode;
 pub mod key;
 pub mod keynet;
 mod keyshift;

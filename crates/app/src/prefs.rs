@@ -33,7 +33,8 @@ use crate::osc;
 use djsugar_control::ControlRegistry;
 use djsugar_controllers::routing::{self, DeckChoice};
 use djsugar_controllers::{is_system_port, own, Controllers, MappingChoice, Port};
-use djsugar_engine::inputs::{DEFAULT_DUCK_STRENGTH, DUCK_AUTO};
+use djsugar_engine::inputs::{self, DEFAULT_DUCK_STRENGTH, DUCK_AUTO};
+use djsugar_engine::timecode;
 use djsugar_engine::{
     analysis, beatthis, cache, channel_names, deck_group, deck_outputs_split, engine,
     input_devices, key, meter, separation, AudioSetup, InputRole, InputRoute, RecordFormat,
@@ -242,6 +243,9 @@ pub fn apply_saved(registry: &ControlRegistry) {
         set(&g, "rate_dir", rate_dir());
         set(&g, "quantize", f(settings::flag("quantize", true)));
         set(&g, "vinyl_mode", f(settings::flag("vinyl_mode", true)));
+        for (key, value) in dvs(d) {
+            set(&g, key, value);
+        }
         if settings::flag("keylock_default", true) {
             set(&g, "keylock", 1.0);
         }
@@ -425,6 +429,83 @@ pub fn key_match_range() -> u8 {
 fn key_detector() -> key::Detector {
     let id = settings::number("key_detector", 0.0) as u8;
     key::Detector::from_id(id).unwrap_or_default()
+}
+
+/// The inputs a turntable or CD player can come in on, for timecode, after
+/// "None".
+const DVS_INPUTS: [(usize, &str); 9] = [
+    (inputs::MICROPHONE, "Microphone"),
+    (inputs::AUXILIARY, "Auxiliary 1"),
+    (inputs::AUXILIARY_2, "Auxiliary 2"),
+    (inputs::AUXILIARY_3, "Auxiliary 3"),
+    (inputs::AUXILIARY_4, "Auxiliary 4"),
+    (inputs::AUXILIARY_5, "Auxiliary 5"),
+    (inputs::AUXILIARY_6, "Auxiliary 6"),
+    (inputs::AUXILIARY_7, "Auxiliary 7"),
+    (inputs::AUXILIARY_8, "Auxiliary 8"),
+];
+
+/// A deck's timecode controls from the settings: the record (0 off), how
+/// it drives the deck, and its input.
+fn dvs(deck: usize) -> [(&'static str, f64); 4] {
+    let format = settings::number("dvs_format", 0.0) as usize;
+    let input = settings::number(&format!("dvs_input:{deck}"), 0.0) as usize;
+    let input = input.checked_sub(1).and_then(|i| DVS_INPUTS.get(i));
+    [
+        ("vinylcontrol_enabled", f(format > 0 && input.is_some())),
+        ("vinylcontrol_format", format.saturating_sub(1) as f64),
+        ("vinylcontrol_mode", settings::number("dvs_mode", 0.0)),
+        (
+            "vinylcontrol_input",
+            input.map_or(0.0, |&(i, _)| (i + 1) as f64),
+        ),
+    ]
+}
+
+/// Settings › Decks › Timecode vinyl.
+fn dvs_items() -> Vec<PrefItem> {
+    let records: Vec<&str> = std::iter::once("Off")
+        .chain(timecode::FORMATS.iter().map(|f| f.name))
+        .collect();
+    let ins: Vec<&str> = std::iter::once("None")
+        .chain(DVS_INPUTS.iter().map(|i| i.1))
+        .collect();
+    let mut items = vec![
+        item("dvs", HEADING, "TIMECODE VINYL (DVS)", ""),
+        PrefItem {
+            choices: strings(&records),
+            chosen: settings::number("dvs_format", 0.0) as i32,
+            ..item(
+                "dvs_format",
+                MENU,
+                "Control record",
+                "Play the decks from turntables or CD players with a timecode record or CD. \
+                 Plug each into an input and pick it below.",
+            )
+        },
+        PrefItem {
+            choices: strings(&["Absolute", "Relative"]),
+            chosen: settings::number("dvs_mode", 0.0) as i32,
+            ..item(
+                "dvs_mode",
+                SEGMENTED,
+                "Mode",
+                "Absolute: where the needle sits is where the track plays. \
+                 Relative: only the record's speed and direction count, so the needle can skip.",
+            )
+        },
+    ];
+    items.extend((0..NUM_DECKS).map(|d| PrefItem {
+        choices: strings(&ins),
+        chosen: settings::number(&format!("dvs_input:{d}"), 0.0) as i32,
+        ..item(
+            &format!("dvs_input:{d}"),
+            MENU,
+            &format!("Deck {} input", d + 1),
+            "",
+        )
+    }));
+    items
 }
 
 fn f(on: bool) -> f64 {
@@ -1390,6 +1471,9 @@ impl Prefs {
                     items.extend(AUTO_RESETS.map(|(id, title, detail)| {
                         switch(id, title, detail, settings::flag(id, true))
                     }));
+                }
+                if shows(0) {
+                    items.extend(dvs_items());
                 }
                 if shows(1) {
                     let camelot = app.global::<KeyNotation>().get_camelot();
@@ -3049,6 +3133,14 @@ impl Prefs {
                 key::set_notation(n);
                 if let Some(app) = self.app.upgrade() {
                     app.global::<KeyNotation>().set_camelot(n.wheel());
+                }
+            }
+            id if id == "dvs_format" || id == "dvs_mode" || id.starts_with("dvs_input:") => {
+                settings::set(id, json!(index));
+                for d in 0..NUM_DECKS {
+                    for (key, value) in dvs(d) {
+                        self.set(&deck_group(d), key, value);
+                    }
                 }
             }
             "cue_mode" => {
