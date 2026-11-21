@@ -258,6 +258,7 @@ component Chip inherits Rectangle {
 }
 
 export component SugarDeck inherits Rectangle {
+    clip: true;
     in property <int> deck;
     in property <DeckInfo> info;
     in property <image> overview;
@@ -271,7 +272,7 @@ export component SugarDeck inherits Rectangle {
     property <bool> playing: Controls.value(Controls.resolve(group, "play"), Controls.tick) > 0;
     // The one unit everything is sized from.
     property <length> u: clamp(self.height / 26, 8px, 15px);
-    property <length> platter: min(self.height - 2 * u, self.width * 0.42);
+    property <length> platter: self.height - 2 * u;
     property <bool> drop-here: drop.has-drag;
     background: Theme.panel;
     drop := DropArea {
@@ -391,7 +392,7 @@ component Channel inherits VerticalLayout {
 export component SugarMixer inherits Rectangle {
     property <length> knob: clamp(self.height / 14, 14px, 22px);
     background: Theme.panel;
-    width: 236px;
+    clip: true;
     VerticalLayout {
         padding: 8px;
         spacing: 6px;

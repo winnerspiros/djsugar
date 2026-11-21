@@ -2117,10 +2117,17 @@ export component AppWindow inherits Window {
                     // their contents, a changing time or title would nudge the
                     // mixer sideways every frame.
                     // On a phone, one page at a time (A, Mix, B), picked below.
-                    deck-a := SugarDeck { deck: 0; info: decks[0]; spin: spin-1; overview: overview-1; horizontal-stretch: 1; min-width: sugar-narrow ? 0px : 300px; preferred-width: 400px; max-width: sugar-narrow && sugar-page != 0 ? 0px : 100000px; }
-                    if !external-mixer && (!sugar-narrow || sugar-page == 1): SugarMixer { horizontal-stretch: sugar-narrow ? 1 : 0; }
-                    if external-mixer && (!sugar-narrow || sugar-page == 1): ExternalMixer { }
-                    deck-b := SugarDeck { deck: 1; info: decks[1]; spin: spin-2; overview: overview-2; mirrored: true; horizontal-stretch: 1; min-width: sugar-narrow ? 0px : 300px; preferred-width: 400px; max-width: sugar-narrow && sugar-page != 2 ? 0px : 100000px; }
+                    // Placed by hand rather than by a layout, so the page
+                    // switch can't feed back into the window's size.
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        property <length> mix: sugar-narrow ? self.width : 236px;
+                        property <length> side: sugar-narrow ? self.width : (self.width - mix - 2px) / 2;
+                        deck-a := SugarDeck { deck: 0; info: decks[0]; spin: spin-1; overview: overview-1; x: sugar-narrow ? (sugar-page == 0 ? 0px : -parent.width * 2) : 0px; width: side; height: parent.height; }
+                        if !external-mixer: SugarMixer { x: sugar-narrow ? (sugar-page == 1 ? 0px : -parent.width * 2) : side + 1px; width: mix; height: parent.height; }
+                        if external-mixer: ExternalMixer { x: sugar-narrow ? (sugar-page == 1 ? 0px : -parent.width * 2) : side + 1px; width: mix; height: parent.height; }
+                        deck-b := SugarDeck { deck: 1; info: decks[1]; spin: spin-2; overview: overview-2; mirrored: true; x: sugar-narrow ? (sugar-page == 2 ? 0px : -parent.width * 2) : side + mix + 2px; width: side; height: parent.height; }
+                    }
                 }
 
                 if sugar-narrow && !library-expanded && layout == 0: HorizontalLayout {
