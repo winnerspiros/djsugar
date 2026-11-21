@@ -96,7 +96,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | Q.7 | SIMD pass on hot DSP (EQ, filters, mixing, waveform summaries) after profiling | TODO |
 | Q.8 | Fuzzing for decoders, tags, playlist and library import parsers | TODO |
 | Q.9 | PGO build for release engine | TODO |
-| Q.10 | App size budget per platform: every build reports its size in CI and fails past a budget set from the stripped baseline; then trim (dependency diet Q.6, feature-gated models, assets in compact formats) | WIP: Android builds with its own `android` profile (thin LTO, as fat LTO ran CI runners out of memory; stripped; other crates built for size, audio and analysis crates for speed) and compressed libraries; the APK job reports APK and library size. Before: 312 MB APK (302 MB library, 125 MB of it symbols). Next: budget gate, per-crate size breakdown (cargo-bloat), models downloaded on first use instead of bundled |
+| Q.10 | App size budget per platform: every build reports its size in CI and fails past a budget set from the stripped baseline; then trim (dependency diet Q.6, feature-gated models, assets in compact formats) | WIP: Android builds with its own `android` profile (thin LTO, as fat LTO ran CI runners out of memory; stripped; other crates built for size, audio and analysis crates for speed) and compressed libraries; the APK job reports APK and library size. Before: 312 MB APK (302 MB library, 125 MB of it symbols); now 61 MB APK (155 MB library unpacked), built in 22 min. Next: budget gate, per-crate size breakdown (cargo-bloat), models downloaded on first use instead of bundled |
 
 ## Part 0: platforms
 
@@ -168,7 +168,7 @@ DJ Sugar's own identity: modern and clean, neon glaze pink, sugary. Not a port o
 | --- | --- | --- |
 | D.1 | Logo: bitten neon pink donut with record grooves, gloss and sprinkles; app icons on every platform | WIP: in the app and the macOS, Linux and Windows icons; Android launcher icon not done |
 | D.2 | Sugar look: palette from the logo (glaze pink, plum black, sprinkle cyan/lemon/lime for decks), rounded candy controls, glow on what is live; shipped as the `sugar.look` mod | WIP: colours in the mod; shapes, glow and typography next |
-| D.3 | Sugar layout, one scalable design: full-width waveforms on top; deck, slim mixer, deck with the coloured position ring on the platter (signature); pad modes Cues/Loops/Roll/Stems/Samples; library dock with sidebar (collection, crates, other apps with sync state, streaming) and inspector; everything sized from one unit following the window; panels drop out progressively; phone pages A / Mix / B / Library | TODO: mockups approved (sketches 001-004) |
+| D.3 | Sugar layout, one scalable design (the current top bar overflows on phones: wordmark runs into the FX button): full-width waveforms on top; deck, slim mixer, deck with the coloured position ring on the platter (signature); pad modes Cues/Loops/Roll/Stems/Samples; library dock with sidebar (collection, crates, other apps with sync state, streaming) and inspector; everything sized from one unit following the window; panels drop out progressively; phone pages A / Mix / B / Library | TODO: mockups approved (sketches 001-004) |
 | D.4 | No menu bar: command search (Ctrl K) over tracks, actions and settings; Perform / Prepare / Stems mode switch | TODO |
 | D.5 | "Fits what's playing" filters (key and BPM chips) | TODO |
 | D.6 | Touch: gestures for jog, pitch, pads and library on phones and tablets | TODO |
