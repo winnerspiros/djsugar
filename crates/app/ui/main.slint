@@ -802,385 +802,6 @@ component OnAirButton inherits Rectangle {
     }
 }
 
-// Opens the settings: the gear at the right of the top bar.
-// A small picture of a layout, after djay's: 0 two decks side by side,
-// 1 Player (a cover beside two lines), 2 four decks, 3 Automix (a play arrow
-// between lines), 4 Prep (one deck with beat lines over it).
-component LayoutIcon inherits Rectangle {
-    in property <int> kind;
-    in property <color> tint: Theme.text;
-    width: 22px;
-    height: 16px;
-    if kind != 3: Rectangle {
-        border-width: 1.5px;
-        border-color: tint;
-        border-radius: 2px;
-    }
-    if kind == 0: HorizontalLayout {
-        padding: 3.5px;
-        spacing: 2px;
-        Rectangle { background: tint; border-radius: 1px; }
-        Rectangle { background: tint; border-radius: 1px; }
-    }
-    if kind == 1: HorizontalLayout {
-        padding: 3.5px;
-        spacing: 2px;
-        Rectangle { width: 6px; background: tint; border-radius: 1px; }
-        VerticalLayout {
-            alignment: center;
-            spacing: 2px;
-            Rectangle { height: 1.5px; background: tint; }
-            Rectangle { height: 1.5px; width: 60%; background: tint; }
-        }
-    }
-    // 2-Deck Basic: two short decks over the pad bar.
-    if kind == 5: VerticalLayout {
-        padding: 3.5px;
-        spacing: 2px;
-        HorizontalLayout {
-            spacing: 2px;
-            vertical-stretch: 1;
-            Rectangle { background: tint; border-radius: 1px; }
-            Rectangle { background: tint; border-radius: 1px; }
-        }
-        Rectangle { height: 1.5px; background: tint; }
-    }
-    if kind == 2: HorizontalLayout {
-        padding: 3.5px;
-        spacing: 1.5px;
-        for _ in 4: Rectangle { background: tint; border-radius: 0.5px; }
-    }
-    if kind == 4: Path {
-        width: 22px;
-        height: 16px;
-        viewbox-width: 22;
-        viewbox-height: 16;
-        stroke: tint;
-        stroke-width: 1.5px;
-        commands: "M 7 4 L 7 12 M 11 4 L 11 12 M 15 4 L 15 12";
-    }
-    if kind == 3: Path {
-        width: 22px;
-        height: 16px;
-        viewbox-width: 22;
-        viewbox-height: 16;
-        stroke: tint;
-        stroke-width: 1.5px;
-        commands: "M 2 2 L 20 2 M 2 14 L 20 14 M 2 8 L 7 8 M 15 8 L 20 8";
-    }
-    if kind == 3: Path {
-        width: 22px;
-        height: 16px;
-        viewbox-width: 22;
-        viewbox-height: 16;
-        fill: tint;
-        commands: "M 8.5 4.5 L 14 8 L 8.5 11.5 Z";
-    }
-}
-
-// One layout in the layout menu; ones still to come are greyed out.
-component LayoutItem inherits Rectangle {
-    in property <int> kind;
-    in property <string> text;
-    in property <bool> current;
-    in property <bool> enabled: true;
-    callback picked();
-    height: 32px;
-    border-radius: 6px;
-    background: enabled && ta.has-hover ? Theme.panel-raised.brighter(0.3) : transparent;
-    property <color> tint: !enabled ? Theme.text-dim.with-alpha(0.5) : current ? Theme.accent : Theme.text;
-    HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 10px;
-        spacing: 10px;
-        VerticalLayout { alignment: center; LayoutIcon { kind: kind; tint: tint; } }
-        Text { text: root.text; color: tint; font-size: 13px; font-weight: 500; vertical-alignment: center; horizontal-stretch: 1; }
-        if !enabled: Text { text: "Soon"; color: Theme.text-dim.with-alpha(0.5); font-size: 10px; vertical-alignment: center; }
-        if current: Text { text: "✓"; color: Theme.lilac-text; font-size: 13px; vertical-alignment: center; }
-    }
-    ta := TouchArea {
-        mouse-cursor: enabled ? pointer : default;
-        clicked => {
-            if enabled {
-                root.picked();
-            }
-        }
-    }
-}
-
-// Dark, Light or Auto (Match system): three segments at the foot of the
-// layout menu, the one in use lit.
-component AppearanceRow inherits Rectangle {
-    property <[string]> names: ["Dark", "Light", "Auto"];
-    height: 28px;
-    border-radius: 7px;
-    background: Theme.n-ffffff0d;
-    HorizontalLayout {
-        padding: 2px;
-        spacing: 2px;
-        for name[i] in names: Rectangle {
-            property <bool> on: LayoutsUi.appearance == i;
-            border-radius: 5px;
-            background: on ? Theme.accent.with-alpha(0.18) : ta.has-hover ? Theme.n-ffffff0d : transparent;
-            border-width: on ? 1px : 0px;
-            border-color: Theme.accent;
-            Text { text: name; color: on ? Theme.lilac-text : ta.has-hover ? Theme.text : Theme.text-dim; font-size: 12px; font-weight: on ? 600 : 500; }
-            ta := TouchArea {
-                mouse-cursor: pointer;
-                clicked => { LayoutsUi.appearance-picked(i); }
-            }
-        }
-    }
-}
-
-// The layout menu's pencil, and the lit one on its chooser.
-component LayoutPencil inherits Rectangle {
-    in property <bool> lit;
-    callback clicked();
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-    background: lit ? Theme.accent.with-alpha(0.18) : ta.has-hover ? Theme.panel-raised.brighter(0.3) : transparent;
-    Path {
-        width: 14px;
-        height: 14px;
-        viewbox-width: 16;
-        viewbox-height: 16;
-        fill: transparent;
-        stroke: lit ? Theme.accent : ta.has-hover ? Theme.text : Theme.text-dim;
-        stroke-width: 1.4px;
-        stroke-line-join: round;
-        commands: "M 10.5 2.5 L 13.5 5.5 L 5.5 13.5 L 2 14 L 2.5 10.5 Z M 9 4 L 12 7";
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}
-
-// An on/off switch, as on the side panel tabs' chooser.
-component LayoutSwitch inherits Rectangle {
-    in property <bool> on;
-    callback toggled();
-    width: 34px;
-    height: 20px;
-    border-radius: 10px;
-    background: on ? Theme.accent : Theme.n-48484a;
-    Rectangle {
-        x: on ? 16px : 2px;
-        width: 16px;
-        height: 16px;
-        border-radius: 8px;
-        // The knob stays white in Light too, as macOS draws it.
-        background: #ffffff;
-    }
-    TouchArea { mouse-cursor: pointer; clicked => { toggled(); } }
-}
-
-// The layout menu's chooser: every layout with a switch for whether the
-// menu offers it, and a grip to drag it up or down, as the side panel
-// tabs' and the rail's choosers have. The layout in use, and the last one
-// on, stay on.
-component LayoutChooser inherits Rectangle {
-    callback done();
-    property <int> n: LayoutsUi.all.length;
-    property <length> row-h: 40px;
-    // The row being dragged, how far, and where it would land.
-    property <int> drag-from: -1;
-    property <length> drag-dy;
-    property <length> drag-start;
-    property <int> drag-to: drag-from < 0 ? -1 : max(0, min(n - 1, drag-from + round(drag-dy / row-h)));
-    property <LayoutEntry> dragged;
-    height: list.preferred-height;
-    Rectangle {
-        background: Theme.n-2a2a2d;
-        border-radius: 12px;
-        border-width: 1px;
-        border-color: Theme.border;
-        drop-shadow-blur: 16px;
-        drop-shadow-color: Theme.s-00000080;
-    }
-    list := VerticalLayout {
-        padding: 8px;
-        spacing: 2px;
-        HorizontalLayout {
-            height: 28px;
-            padding-left: 6px;
-            Text { text: "LAYOUTS"; color: Theme.text-dim; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; vertical-alignment: center; horizontal-stretch: 1; }
-            VerticalLayout { alignment: center; LayoutPencil { lit: true; clicked => { root.done(); } } }
-        }
-        Rectangle {
-            height: n * row-h;
-            for e[pos] in LayoutsUi.all: Rectangle {
-                // Rows between where the dragged one was and where it would
-                // go step aside for it.
-                property <length> shift: drag-from < 0 || pos == drag-from ? 0px
-                    : drag-from < drag-to && pos > drag-from && pos <= drag-to ? -row-h
-                    : drag-from > drag-to && pos < drag-from && pos >= drag-to ? row-h : 0px;
-                // The dragged row stays put, unseen, so its grip keeps the mouse.
-                opacity: pos == drag-from ? 0 : 1;
-                x: 0;
-                y: pos * row-h + shift;
-                width: parent.width;
-                height: row-h;
-                animate y { duration: 100ms; }
-                HorizontalLayout {
-                    padding-left: 4px;
-                    padding-right: 6px;
-                    spacing: 8px;
-                    Rectangle {
-                        width: 14px;
-                        DragGrip { dot-color: grip.has-hover ? Theme.text : Theme.text-dim; }
-                        grip := TouchArea {
-                            mouse-cursor: drag-from >= 0 ? MouseCursor.grabbing : MouseCursor.grab;
-                            pointer-event(ev) => {
-                                if ev.button == PointerEventButton.left && ev.kind == PointerEventKind.down {
-                                    drag-from = pos;
-                                    dragged = e;
-                                    drag-start = self.absolute-position.y + self.mouse-y;
-                                    drag-dy = 0px;
-                                }
-                                if ev.button == PointerEventButton.left && ev.kind == PointerEventKind.up && drag-from >= 0 {
-                                    if drag-to != drag-from {
-                                        LayoutsUi.moved(e.layout, drag-to - drag-from);
-                                    }
-                                    drag-from = -1;
-                                    drag-dy = 0px;
-                                }
-                            }
-                            moved => {
-                                if drag-from >= 0 {
-                                    drag-dy = self.absolute-position.y + self.mouse-y - drag-start;
-                                }
-                            }
-                        }
-                    }
-                    VerticalLayout { alignment: center; LayoutIcon { kind: e.layout == 3 ? 4 : e.layout == 4 ? 5 : e.layout; tint: e.on ? Theme.text : Theme.text-dim; } }
-                    Text { text: e.name; color: e.on ? Theme.text : Theme.text-dim; font-size: 15px; vertical-alignment: center; horizontal-stretch: 1; }
-                    VerticalLayout {
-                        alignment: center;
-                        LayoutSwitch {
-                            on: e.on;
-                            opacity: e.locked ? 0.45 : 1;
-                            toggled => {
-                                if !e.locked {
-                                    LayoutsUi.toggled(e.layout);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // The row being dragged, over the others.
-            if drag-from >= 0: Rectangle {
-                y: max(0px, min(parent.height - row-h, drag-from * row-h + drag-dy));
-                width: parent.width;
-                height: row-h;
-                border-radius: 8px;
-                background: Theme.n-36363b;
-                drop-shadow-blur: 10px;
-                drop-shadow-color: Theme.s-00000080;
-                HorizontalLayout {
-                    padding-left: 4px;
-                    padding-right: 6px;
-                    spacing: 8px;
-                    Rectangle { width: 14px; DragGrip { dot-color: Theme.text; } }
-                    VerticalLayout { alignment: center; LayoutIcon { kind: dragged.layout == 3 ? 4 : dragged.layout == 4 ? 5 : dragged.layout; } }
-                    Text { text: dragged.name; color: Theme.text; font-size: 15px; vertical-alignment: center; horizontal-stretch: 1; }
-                    VerticalLayout { alignment: center; LayoutSwitch { on: dragged.on; } }
-                }
-            }
-        }
-        Rectangle { height: 9px; Rectangle { height: 1px; background: Theme.border; } }
-        Rectangle {
-            height: 32px;
-            border-radius: 8px;
-            background: rta.has-hover ? Theme.n-ffffff0d : transparent;
-            Text { x: 6px; text: "Reset to default"; color: rta.has-hover ? Theme.text : Theme.text-dim; font-size: 13px; vertical-alignment: center; }
-            rta := TouchArea { mouse-cursor: pointer; clicked => { LayoutsUi.reset(); } }
-        }
-    }
-}
-
-// The layout button: the current layout's icon and name, opening a menu of
-// the DJ's layouts (LayoutsUi.menu), and its pencil the chooser that picks
-// them. 0 is 2-Deck, 1 Player, 2 4-Deck,
-// 3 Prep and 4 2-Deck Basic (the stored values); Player is the Automix layout.
-component LayoutPill inherits Rectangle {
-    in-out property <int> layout;
-    callback changed-to(layout: int);
-    background: ta.has-hover ? Theme.n-3a3a3d : Theme.panel-raised;
-    border-radius: 10px;
-    height: 36px;
-    y: 8px;
-    horizontal-stretch: 0;
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 14px;
-        spacing: 8px;
-        VerticalLayout { alignment: center; LayoutIcon { kind: layout == 3 ? 4 : layout == 4 ? 5 : layout; } }
-        Text { text: layout == 1 ? "Player" : layout == 2 ? "4-Deck" : layout == 3 ? "Prep" : layout == 4 ? "2-Deck Basic" : "2-Deck"; color: Theme.text; font-size: 13px; font-weight: 600; vertical-alignment: center; }
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { menu.show(); }
-    }
-    menu := PopupWindow {
-        y: root.height + 6px;
-        width: 180px;
-        Rectangle {
-            background: Theme.panel-raised;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Theme.border;
-            drop-shadow-blur: 12px;
-            drop-shadow-color: Theme.s-00000080;
-        }
-        VerticalLayout {
-            padding: 6px;
-            spacing: 2px;
-            HorizontalLayout {
-                height: 22px;
-                padding-left: 10px;
-                Text { text: "LAYOUT"; color: Theme.text-dim; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; vertical-alignment: center; horizontal-stretch: 1; }
-                // The pencil: opens the chooser, where the DJ picks what
-                // this menu offers.
-                LayoutPencil {
-                    clicked => {
-                        menu.close();
-                        chooser.show();
-                    }
-                }
-            }
-            // The DJ's layouts (switched on in the menu's chooser), in their order.
-            for e in LayoutsUi.menu: LayoutItem {
-                kind: e.layout == 3 ? 4 : e.layout == 4 ? 5 : e.layout;
-                text: e.name;
-                current: layout == e.layout;
-                picked => {
-                    layout = e.layout;
-                    changed-to(e.layout);
-                }
-            }
-            Rectangle { height: 9px; Rectangle { height: 1px; background: Theme.border; } }
-            // Dark, Light or Auto (Match system), as in Settings › Appearance.
-            AppearanceRow {}
-        }
-    }
-    chooser := PopupWindow {
-        y: root.height + 6px;
-        width: 240px;
-        height: chooser-view.preferred-height;
-        close-policy: close-on-click-outside;
-        chooser-view := LayoutChooser {
-            done => {
-                chooser.close();
-                menu.show();
-            }
-        }
-    }
-}
-
 // Shows or hides the large scrolling waveforms above the decks: a
 // waveform icon, lit while they show. Hidden, the room goes to the browser.
 // The arrow at its right end, as on MIC, opens their heights.
@@ -1458,6 +1079,23 @@ component ModeSwitch inherits Rectangle {
                 }
             }
         }
+        // Perform with four decks instead of two.
+        if layout != 3 && layout != 1: Rectangle {
+            property <bool> four: layout == 2;
+            border-radius: 13px;
+            width: 30px;
+            background: four ? Theme.accent.transparentize(0.6) : f.has-hover ? Theme.panel-raised : transparent;
+            border-width: 1px;
+            border-color: four ? Theme.accent : Theme.border;
+            Text { text: "4"; color: four ? Theme.text : Theme.text-dim; font-size: 13px; font-weight: 800; }
+            f := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    layout = parent.four ? 0 : 2;
+                    changed-to(layout);
+                }
+            }
+        }
     }
 }
 
@@ -1614,7 +1252,10 @@ export component AppWindow inherits Window {
     // The Player layout: one bar, no waveforms or FX bar.
     property <bool> player: layout == 1;
     // Sugar layout on a phone-width window: one page at a time.
-    property <bool> sugar-narrow: self.width < 760px;
+    // The window's width, copied when it changes rather than bound, so
+    // what folds away by it can't feed back into the window's own size.
+    property <length> win-width: 1680px;
+    property <bool> sugar-narrow: win-width < 760px;
     property <int> sugar-page: 0;
     property <bool> recording: Controls.value(Controls.resolve("[Recording]", "status"), Controls.tick) > 1;
     // The compact row shows in 2-Deck Basic, 4-Deck and Prep while the footer
@@ -1683,6 +1324,7 @@ export component AppWindow inherits Window {
         keys.focus();
         LibraryEdit.window-height = root.height;
         LibraryEdit.window-width = root.width;
+        win-width = root.width;
         LibraryEdit.top-search = player;
     }
     changed layout => {
@@ -1702,7 +1344,10 @@ export component AppWindow inherits Window {
     }
     // For the track menu, which moves up to fit in the window.
     changed height => { LibraryEdit.window-height = root.height; }
-    changed width => { LibraryEdit.window-width = root.width; }
+    changed width => {
+        LibraryEdit.window-width = root.width;
+        win-width = root.width;
+    }
 
     // Back to the shortcuts when settings close, so ⌘, opens them again.
     property <bool> settings-open: Preferences.open;
@@ -2010,9 +1655,9 @@ export component AppWindow inherits Window {
                         alignment: center;
                         Image { source: @image-url("icons/djsugar-mark.svg"); width: 26px; height: 26px; }
                     }
-                    if root.width > 1100px: Text { text: "sugar"; color: Theme.accent; font-family: Theme.brand-font; font-size: 19px; vertical-alignment: center; }
+                    if win-width > 1100px: Text { text: "sugar"; color: Theme.accent; font-family: Theme.brand-font; font-size: 19px; vertical-alignment: center; }
                     if AppMenu.shown: AppMenuButton { }
-                    ModeSwitch { layout <=> root.layout; compact: root.width < 900px; changed-to(l) => { layout-changed(l); } }
+                    ModeSwitch { layout <=> root.layout; compact: win-width < 900px; changed-to(l) => { layout-changed(l); } }
                     search-area := Rectangle {
                         horizontal-stretch: 1;
                         property <length> room: self.width - 20px;
@@ -2021,11 +1666,15 @@ export component AppWindow inherits Window {
                             x: 10px + clamp(root.width / 2 - search-area.absolute-position.x - 10px - self.width / 2, 0px, room - self.width);
                         }
                     }
-                    if root.width > 900px: RemoteButton { }
-                    if !player && root.width > 1000px: MicButton { }
+                    if !player && layout != 3 && win-width > 760px: WaveformsButton { on <=> root.waveforms-visible; fits: wave-fits; changed-to(on) => { waveforms-visible-changed(on); } }
+                    if !player && layout != 3 && win-width > 760px: FxButton { on <=> root.fx-bar-visible; changed-to(on) => { fx-bar-visible-changed(on); } }
+                    if layout == 2 || layout == 4: PadsButton { on <=> root.pads-visible; changed-to(on) => { pads-visible-changed(on); } }
+                    if layout == 4: JogsButton { on <=> root.jogs-visible; changed-to(on) => { jogs-visible-changed(on); } }
+                    if win-width > 900px: RemoteButton { }
+                    if !player && win-width > 1000px: MicButton { }
                     if BroadcastState.shown || Controls.value(Controls.resolve("[Shoutcast]", "enabled"), Controls.tick) > 0: OnAirButton { }
-                    if (!player && root.width > 1000px) || recording: RecordButton { }
-                    if !player && root.width > 860px: MasterPill { clock: clock; }
+                    if (!player && win-width > 1000px) || recording: RecordButton { }
+                    if !player && win-width > 860px: MasterPill { clock: clock; }
                 }
             }
 

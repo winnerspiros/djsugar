@@ -23,10 +23,10 @@ use serde_json::Value;
 
 use crate::inbox::safe_name;
 use crate::source::{
-    DOWNLOAD_FOLDER, DownloadUpdate, Found, Progress, SearchSource, Snapshot, SourceInfo,
-    SourceQuery,
+    DownloadUpdate, Found, Progress, SearchSource, Snapshot, SourceInfo, SourceQuery,
+    DOWNLOAD_FOLDER,
 };
-use crate::{Manifest, Plugin, PluginError, Setting, SettingKind, USER_AGENT, encode};
+use crate::{encode, Manifest, Plugin, PluginError, Setting, SettingKind, USER_AGENT};
 
 const MANIFEST: Manifest = Manifest {
     id: "youtube",
