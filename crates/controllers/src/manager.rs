@@ -1204,6 +1204,31 @@ fn stand_in_devices() -> Vec<StandIn> {
 mod tests {
     use super::*;
 
+    /// Every bundled mapping parses, and binds something.
+    #[test]
+    fn every_bundled_mapping_reads() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../res/controllers");
+        let mut broken = Vec::new();
+        let mut n = 0;
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let p = e.path();
+            let ext = p.extension().and_then(|x| x.to_str()).unwrap_or("");
+            if ext != "xml" {
+                continue;
+            }
+            n += 1;
+            match load_mapping(&p, None) {
+                Ok(m) if m.inputs.is_empty() && m.outputs.is_empty() && m.scripts.is_empty() => {
+                    broken.push(format!("{}: binds nothing", p.display()))
+                }
+                Ok(_) => {}
+                Err(e) => broken.push(format!("{}: {e}", p.display())),
+            }
+        }
+        assert!(n > 100, "{n} mappings found");
+        assert!(broken.is_empty(), "{}", broken.join("\n"));
+    }
+
     #[test]
     fn only_devices_with_nothing_else_to_do_play_instruments() {
         let off = MappingChoice::Off;
