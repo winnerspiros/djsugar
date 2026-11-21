@@ -162,7 +162,13 @@ Everything is a mod, and what DJ Sugar ships has no private path: its look, layo
 
 ## Part D: design (our own look, every screen)
 
-DJ Sugar's own identity: modern and clean, neon glaze pink, sugary. Not a port of openDJ or Mixxx screens. Mockups in throwaway HTML first, then Slint, checked on desktop, DeX-size and phone screenshots (CI emulator) before calling anything done.
+DJ Sugar's own identity: modern and clean, neon glaze pink, sugary. Not a port of openDJ or Mixxx screens.
+
+The whole app is redesigned, not reskinned: every screen is rebuilt in our own code and the openDJ-derived screens are deleted once their Sugar replacement is in. Ideas taken from the three sources (no code copied; AGPL/GPL code is never copied):
+
+- OpenFadeR: big BPM in the middle of a ring platter; numbered hot cue list with times beside the pads; coloured phrase strip under the overview; library with a left nav (playlists, cue bank, stages, history, tags, library health), a preview waveform column, a right-hand tool rail and a now-selected track card; status bar with analysis progress.
+- DJ Sugar (Mixxx fork, QML): panels that slide with spring animations instead of jumping; XY touch FX pad as a floating overlay; FX Station (Scene, Isolate, X-Pad, Release, 17 scene effects); microphone unit with ducking; one-tap track menu for playlists; Greeklish search.
+- openDJ (current base): the data, actions and controls stay; only its screens go. Mockups in throwaway HTML first, then Slint, checked on desktop, DeX-size and phone screenshots (CI emulator) before calling anything done.
 
 | # | Part | Status |
 | --- | --- | --- |
@@ -172,6 +178,12 @@ DJ Sugar's own identity: modern and clean, neon glaze pink, sugary. Not a port o
 | D.4 | No menu bar: command search (Ctrl K) over tracks, actions and settings; Perform / Prepare / Stems mode switch | TODO |
 | D.5 | "Fits what's playing" filters (key and BPM chips) | TODO |
 | D.6 | Touch: gestures for jog, pitch, pads and library on phones and tablets | TODO |
+| D.8 | Shell: Sugar bar (logo, Perform / Prepare / Listen, search over everything in every mode, live controls fold away when narrow); no menu bar once command search covers File/Edit | WIP: bar in CI; File/Edit menu still there |
+| D.9 | Sugar deck row: ring platter, candy transport, cue pads, slim mixer, phone pages | WIP: in CI, desktop and phone screenshots pending |
+| D.10 | Library rebuilt: left nav, track list with preview waveforms and key/BPM chips, track card and inspector, right tool rail, status bar | TODO |
+| D.11 | FX: FX Station (scenes, isolate, X-Pad, release) and XY touch pad overlay, Sugar style | TODO |
+| D.12 | Settings, dialogs and menus as Sugar sheets; old screens deleted | TODO |
+| D.13 | Motion: spring-animated panel changes (decks, mixer, library expand) | TODO |
 | D.7 | Motion and feel: 60/120 Hz animations, no UI frame over 8 ms, measured | TODO |
 
 ## Part R: pure-Rust dependencies
