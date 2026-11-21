@@ -35,9 +35,9 @@ mod log {
         // SAFETY: `fds` has room for the two ends pipe() writes.
         if unsafe { pipe(fds.as_mut_ptr()) } == 0 {
             // SAFETY: the write end replaces fds 1 and 2; both stay open.
-            unsafe {
-                dup2(fds[1], 1);
-                dup2(fds[1], 2);
+            let (out, err) = unsafe { (dup2(fds[1], 1), dup2(fds[1], 2)) };
+            if out < 0 || err < 0 {
+                write(ERROR, "could not send stdout and stderr to the log");
             }
             // SAFETY: the read end is owned by this File alone from here.
             let read = unsafe { std::fs::File::from_raw_fd(fds[0]) };
@@ -60,6 +60,16 @@ mod log {
 fn android_main(app: winit::platform::android::activity::AndroidApp) {
     log::install();
     log::write(log::INFO, "DJ Sugar starting");
+    eprintln!("stderr reaches the log");
+    // Until the first frame: shows where a slow or stuck start is.
+    let _ = std::thread::Builder::new()
+        .name("heartbeat".into())
+        .spawn(|| {
+            for n in 1..=30 {
+                std::thread::sleep(std::time::Duration::from_secs(10));
+                log::write(log::INFO, &format!("still running, {}s", n * 10));
+            }
+        });
     // No HOME on Android: settings, the library and downloads go in the
     // app's own storage.
     if let Some(dir) = app.internal_data_path() {
