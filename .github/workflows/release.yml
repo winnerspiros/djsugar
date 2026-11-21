@@ -45,8 +45,13 @@ jobs:
     needs: version
     strategy:
       matrix:
-        target: [aarch64-apple-darwin, x86_64-apple-darwin]
-    runs-on: macos-15
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          # Native: cross-building Intel on Apple Silicon took over three hours.
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
