@@ -4379,7 +4379,7 @@ component TrackList inherits Rectangle {
             }
         }
     }
-    property <length> row-height: 32px;
+    property <length> row-height: 36px;
     // Which rows are in view, for their mini waveforms.
     property <int> first-shown: max(0, floor(-lv.content-y / row-height));
     property <int> shown-count: ceil(lv.visible-height / row-height) + 1;
@@ -4780,9 +4780,9 @@ component TrackList inherits Rectangle {
                 width: list-width;
                 height: row-height;
                 property <bool> selected: LibraryEdit.picks[i];
-                border-radius: 4px;
-                // Rows alternate darker and lighter.
-                background: selected ? (focused ? Theme.selection : Theme.selection-idle) : rta.has-hover ? Theme.n-2a2a2e : r.has-color && ColumnUi.color-mode == 2 ? (mod(i, 2) == 1 ? Theme.row-alt : Theme.row).mix(r.color, 0.86) : mod(i, 2) == 1 ? Theme.row-alt : Theme.row;
+                border-radius: 9px;
+                // Flat rows; the hovered one lifts, the picked ones glow.
+                background: selected ? (focused ? Theme.selection : Theme.selection-idle) : rta.has-hover ? Theme.n-2a2a2e : r.has-color && ColumnUi.color-mode == 2 ? Theme.row.mix(r.color, 0.86) : Theme.row;
                 DragArea {
                     // Picked rows go together (the browser knows which); any
                     // other row goes alone.
@@ -4953,13 +4953,22 @@ component TrackList inherits Rectangle {
                             width: 100%;
                             spacing: 3px;
                             alignment: col.right ? end : start;
-                            // The key keeps its room; a narrow column clips the mark.
-                            Text {
-                                min-width: self.preferred-width;
-                                text: c < r.cells.length ? r.cells[c] : "";
-                                color: selected ? Theme.on-row-selection : r.key-match ? Theme.lilac-text : Theme.text;
-                                font-size: 15px;
-                                vertical-alignment: center;
+                            // The key as a chip, lit when it fits what's playing;
+                            // it keeps its room, a narrow column clips the mark.
+                            if c < r.cells.length && r.cells[c] != "": Rectangle {
+                                y: (row-height - self.height) / 2;
+                                height: 22px;
+                                min-width: key-text.preferred-width + 14px;
+                                border-radius: 11px;
+                                background: r.key-match ? Theme.accent.transparentize(selected ? 0.4 : 0.72) : Theme.control;
+                                border-width: 1px;
+                                border-color: r.key-match ? Theme.accent.transparentize(0.3) : Theme.border;
+                                key-text := Text {
+                                    text: r.cells[c];
+                                    color: selected ? Theme.on-row-selection : r.key-match ? Theme.text : Theme.key;
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                }
                             }
                             if r.key-shift != 0: Text {
                                 overflow: clip;
