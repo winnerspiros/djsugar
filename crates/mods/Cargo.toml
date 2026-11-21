@@ -1,0 +1,13 @@
+[package]
+name = "djsugar-mods"
+description = "DJ Sugar's mod system: everything the app ships and everything a DJ adds, loaded the same way"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "1"

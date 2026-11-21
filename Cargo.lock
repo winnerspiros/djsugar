@@ -3677,6 +3677,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "djsugar-mods"
+version = "0.6.0"
+dependencies = [
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "djsugar-osc"
 version = "0.6.0"
 dependencies = [
