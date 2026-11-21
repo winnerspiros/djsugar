@@ -40,6 +40,14 @@ adb exec-out screencap -p > launch/screen-main.png
 if ! adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | grep -q org.djsugar.app; then
   echo "::error::Back closed DJ Sugar instead of the welcome"; exit 1
 fi
+# Each phone page, by its tab along the bottom (four equal tabs, 2340 wide
+# in landscape, their middle 45 pixels up): Mix, then Library.
+adb shell input tap 877 1035
+sleep 2
+adb exec-out screencap -p > launch/screen-mix.png
+adb shell input tap 2047 1035
+sleep 2
+adb exec-out screencap -p > launch/screen-library.png
 grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
 if grep -qE "DJ Sugar (stopped|crashed)" launch/logcat.txt; then
   echo "::error::DJ Sugar stopped on start (see above)"; exit 1
