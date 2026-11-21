@@ -75,3 +75,31 @@ jobs:
         with:
           name: djsugar-android-apk
           path: dist/*.apk
+
+  launch:
+    # Starts the APK on an emulator and fails unless it draws: a screenshot
+    # and the log are attached to the run either way.
+    needs: apk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: djsugar-android-apk
+          path: apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: scripts/android-launch-check.sh apk
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: android-launch
+          path: launch/
