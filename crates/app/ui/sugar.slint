@@ -1,0 +1,440 @@
+// DJ Sugar's own deck row: two Sugar decks either side of a slim mixer.
+//
+// Each deck is a platter with the playing position as a glowing ring round
+// its rim (the signature), the cover or initials in its middle and a spinning
+// marker; beside it the track, big remaining time, BPM and key chips, candy
+// transport buttons and eight cue pads. Everything is sized from one unit,
+// `u`, that follows the deck's height, so the same design fits a desktop,
+// DeX and a phone. Colours all come from Theme, so look mods restyle it.
+
+import { Theme } from "theme.slint";
+import { Controls, ControlFader, Crossfader, CueHeadphones, StereoMeter } from "controls.slint";
+import { DeckInfo } from "deck.slint";
+import { Knob, ModeMenu, SideKnob } from "mixer.slint";
+import { TrackDrag } from "library.slint";
+
+// An arc on a 100x100 viewbox, clockwise from the top, `at` of the way round.
+component Ring inherits Path {
+    in property <float> at;
+    in property <float> r: 46;
+    property <angle> to: max(0.001, min(at, 0.9995)) * 360deg;
+    viewbox-width: 100;
+    viewbox-height: 100;
+    stroke-line-cap: round;
+    MoveTo { x: 50; y: 50 - r; }
+    ArcTo {
+        radius-x: r;
+        radius-y: r;
+        sweep: true;
+        large-arc: to > 180deg;
+        x: 50 + r * sin(to);
+        y: 50 - r * cos(to);
+    }
+}
+
+// The platter: drag its rim to bend the pitch, scroll to nudge.
+component Platter inherits Rectangle {
+    in property <string> group;
+    in property <DeckInfo> info;
+    in property <angle> spin;
+    in property <color> tint;
+    in property <bool> playing;
+    property <int> jog-index: Controls.resolve(group, "jog");
+    property <int> bend-index: Controls.resolve(group, "jog_bend");
+    property <bool> bending;
+    property <angle> bend-angle;
+    property <length> d: min(self.width, self.height);
+    // Soft glow under the ring while it plays.
+    if playing: Rectangle {
+        width: d;
+        height: d;
+        border-radius: d / 2;
+        drop-shadow-blur: d / 9;
+        drop-shadow-color: tint.transparentize(0.45);
+        background: Theme.background;
+    }
+    Rectangle {
+        width: d;
+        height: d;
+        border-radius: d / 2;
+        background: @radial-gradient(circle, Theme.panel-raised 0%, Theme.well 70%);
+        border-width: 1px;
+        border-color: Theme.border;
+    }
+    // Grooves.
+    for g in [0.84, 0.74, 0.64]: Rectangle {
+        width: d * g;
+        height: d * g;
+        border-radius: self.width / 2;
+        border-width: 1px;
+        border-color: Theme.separator;
+    }
+    Ring { width: d; height: d; at: 1; stroke: Theme.separator; stroke-width: max(3px, d / 26); }
+    if info.loaded && (info.progress > 0.002 || info.end-flash-ring): Ring {
+        width: d;
+        height: d;
+        at: info.end-flash-ring ? 1 : info.progress;
+        stroke: tint;
+        stroke-width: max(3px, d / 26);
+    }
+    if info.loaded: Path {
+        width: d;
+        height: d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: Theme.text;
+        stroke-width: max(2px, d / 50);
+        stroke-line-cap: round;
+        MoveTo { x: 50 + 30 * sin(spin); y: 50 - 30 * cos(spin); }
+        LineTo { x: 50 + 40 * sin(spin); y: 50 - 40 * cos(spin); }
+    }
+    // Label: the cover, else the initials on the deck colour.
+    Rectangle {
+        width: d * 0.5;
+        height: d * 0.5;
+        border-radius: self.width / 2;
+        clip: true;
+        background: info.loaded ? tint : Theme.panel-raised;
+        if info.has-cover: Image { width: parent.width; height: parent.height; source: info.cover; image-fit: cover; }
+        if info.loaded && !info.has-cover: Text {
+            text: info.initials;
+            color: Theme.on-selection;
+            font-size: d / 7;
+            font-weight: 800;
+        }
+        if !info.loaded: Image {
+            width: parent.width * 0.62;
+            height: self.width;
+            source: @image-url("icons/djsugar-mark.svg");
+            opacity: 0.35;
+        }
+    }
+    Rectangle {
+        width: d * 0.06;
+        height: d * 0.06;
+        border-radius: self.width / 2;
+        background: Theme.well;
+    }
+    TouchArea {
+        mouse-cursor: bending ? MouseCursor.grabbing : MouseCursor.grab;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                bending = info.loaded;
+                bend-angle = atan2((self.mouse-y - root.height / 2) / 1px, (self.mouse-x - root.width / 2) / 1px);
+            } else if e.kind == PointerEventKind.up || e.kind == PointerEventKind.cancel {
+                bending = false;
+            }
+        }
+        moved => {
+            if !bending {
+                return;
+            }
+            let a = atan2((self.mouse-y - root.height / 2) / 1px, (self.mouse-x - root.width / 2) / 1px);
+            let step = a - bend-angle > 180deg ? a - bend-angle - 360deg
+                : a - bend-angle < -180deg ? a - bend-angle + 360deg
+                : a - bend-angle;
+            bend-angle = a;
+            Controls.set-value(bend-index, Controls.value(bend-index, Controls.tick) + step / 1deg * 2);
+        }
+        scroll-event(e) => {
+            if !info.loaded || e.delta-y == 0 {
+                return reject;
+            }
+            Controls.set-value(jog-index, Controls.value(jog-index, Controls.tick) + e.delta-y / 1px * 0.1);
+            accept
+        }
+    }
+}
+
+// A rounded candy button. `kind` 0 toggles, 1 holds while pressed.
+component Candy inherits Rectangle {
+    in property <string> group;
+    in property <string> key;
+    in property <string> text;
+    in property <color> tint;
+    in property <bool> momentary;
+    in property <bool> big;
+    in property <length> u;
+    property <int> index: Controls.resolve(group, key);
+    property <bool> lit: Controls.value(index, Controls.tick) > 0;
+    border-radius: self.height / 2;
+    background: lit ? tint : touch.pressed ? Theme.control-pressed : touch.has-hover ? Theme.panel-raised : Theme.control;
+    border-width: 1.5px;
+    border-color: lit ? tint : tint.transparentize(0.55);
+    drop-shadow-blur: lit ? u * 1.2 : 0;
+    drop-shadow-color: tint.transparentize(0.5);
+    animate background, drop-shadow-blur { duration: 90ms; }
+    Text {
+        text: root.text;
+        color: lit ? Theme.on-selection : tint;
+        font-size: big ? u * 1.5 : u * 1.05;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if !momentary || (e.button != PointerEventButton.left && e.kind != PointerEventKind.cancel) {
+                return;
+            }
+            if e.kind == PointerEventKind.down {
+                Controls.set-value(index, 1);
+            } else if e.kind == PointerEventKind.up || e.kind == PointerEventKind.cancel {
+                Controls.set-value(index, 0);
+            }
+        }
+        clicked => {
+            if !momentary {
+                Controls.set-value(index, lit ? 0 : 1);
+            }
+        }
+    }
+}
+
+// One cue pad: press to jump (or set), shift-press to clear.
+component Pad inherits Rectangle {
+    in property <string> group;
+    in property <int> number;
+    in property <color> tint;
+    in property <length> u;
+    property <int> index: Controls.resolve(group, "hotcue_" + number + "_activate");
+    property <int> clear-index: Controls.resolve(group, "hotcue_" + number + "_clear");
+    property <bool> set: Controls.value(Controls.resolve(group, "hotcue_" + number + "_enabled"), Controls.tick) > 0;
+    property <bool> clearing;
+    border-radius: u * 0.7;
+    background: set ? (touch.pressed ? tint : tint.transparentize(0.78)) : touch.pressed ? Theme.control-pressed : Theme.control;
+    border-width: 1px;
+    border-color: set ? tint.transparentize(0.3) : Theme.border;
+    drop-shadow-blur: set && touch.pressed ? u : 0;
+    drop-shadow-color: tint.transparentize(0.4);
+    Text {
+        text: number;
+        color: set ? (touch.pressed ? Theme.on-selection : tint) : Theme.text-dim;
+        font-size: u * 1.05;
+        font-weight: 700;
+    }
+    touch := TouchArea {
+        pointer-event(e) => {
+            if e.button != PointerEventButton.left && e.kind != PointerEventKind.cancel {
+                return;
+            }
+            if e.kind == PointerEventKind.down {
+                if e.modifiers.shift {
+                    clearing = true;
+                    if set {
+                        Controls.set-value(clear-index, 1);
+                    }
+                } else {
+                    Controls.set-value(index, 1);
+                }
+            } else if e.kind == PointerEventKind.up || e.kind == PointerEventKind.cancel {
+                if clearing {
+                    clearing = false;
+                    Controls.set-value(clear-index, 0);
+                } else {
+                    Controls.set-value(index, 0);
+                }
+            }
+        }
+    }
+}
+
+component Chip inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Theme.text;
+    in property <length> u;
+    height: u * 2;
+    width: label.preferred-width + u * 1.6;
+    border-radius: self.height / 2;
+    background: Theme.control;
+    border-width: 1px;
+    border-color: Theme.border;
+    label := Text {
+        text: root.text;
+        color: tint;
+        font-size: u * 1.05;
+        font-weight: 700;
+    }
+}
+
+export component SugarDeck inherits Rectangle {
+    in property <int> deck;
+    in property <DeckInfo> info;
+    in property <image> overview;
+    in property <angle> spin;
+    in property <bool> mirrored;
+    // Where the overview is drawn, for the renderer (as the other decks).
+    out property <length> overview-width: ov.width;
+    out property <length> overview-height: ov.height;
+    property <string> group: "[Channel" + (deck + 1) + "]";
+    property <color> tint: Theme.deck-color(deck);
+    property <bool> playing: Controls.value(Controls.resolve(group, "play"), Controls.tick) > 0;
+    // The one unit everything is sized from.
+    property <length> u: clamp(self.height / 26, 8px, 15px);
+    property <length> platter: min(self.height - 2 * u, self.width * 0.42);
+    property <bool> drop-here: drop.has-drag;
+    background: Theme.panel;
+    drop := DropArea {
+        can-drop(e) => { TrackDrag.accepts(e.data) ? DragAction.copy : DragAction.none }
+        dropped(e) => {
+            TrackDrag.drop(deck, e.data);
+            TrackDrag.active = false;
+            DragAction.copy
+        }
+    }
+    HorizontalLayout {
+        padding: u;
+        spacing: u * 1.2;
+        if !mirrored: Platter { width: platter; group: group; info: info; spin: spin; tint: tint; playing: playing; }
+        VerticalLayout {
+            spacing: u * 0.7;
+            horizontal-stretch: 1;
+            HorizontalLayout {
+                spacing: u * 0.6;
+                alignment: mirrored ? end : start;
+                Rectangle {
+                    width: u * 2;
+                    height: u * 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: u * 0.6;
+                    background: tint;
+                    Text { text: ["A", "B", "C", "D"][deck]; color: Theme.on-selection; font-size: u * 1.1; font-weight: 800; }
+                }
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    Text {
+                        text: info.loaded ? info.title : "Drop a track here";
+                        color: info.loaded ? Theme.text : Theme.text-dim;
+                        font-size: u * 1.35;
+                        font-weight: 700;
+                        overflow: elide;
+                        horizontal-alignment: mirrored ? right : left;
+                    }
+                    Text {
+                        text: info.artist;
+                        color: Theme.text-dim;
+                        font-size: u * 1.05;
+                        overflow: elide;
+                        horizontal-alignment: mirrored ? right : left;
+                    }
+                }
+            }
+            ov := Rectangle {
+                height: u * 2.6;
+                border-radius: u * 0.5;
+                clip: true;
+                background: Theme.wave-well;
+                Image { width: parent.width; height: parent.height; source: overview; image-fit: fill; }
+                if info.loaded: Rectangle {
+                    x: parent.width * info.progress - 1px;
+                    width: 2px;
+                    background: Theme.text;
+                }
+            }
+            HorizontalLayout {
+                spacing: u * 0.5;
+                alignment: mirrored ? end : start;
+                Text {
+                    text: info.loaded ? "-" + info.remaining : "--:--";
+                    color: info.end-flash-time ? tint : Theme.text;
+                    font-size: u * 2.2;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                Rectangle { width: u * 0.4; }
+                Chip { u: u; text: info.loaded ? info.bpm : "BPM"; tint: Theme.text; y: (parent.height - self.height) / 2; }
+                Chip { u: u; text: info.loaded ? info.key : "Key"; tint: Theme.key; y: (parent.height - self.height) / 2; }
+            }
+            GridLayout {
+                spacing: u * 0.45;
+                vertical-stretch: 1;
+                Row {
+                    for n in 4: Pad { u: u; group: group; number: n + 1; tint: tint; }
+                }
+                Row {
+                    for n in 4: Pad { u: u; group: group; number: n + 5; tint: tint; }
+                }
+            }
+            HorizontalLayout {
+                spacing: u * 0.6;
+                height: u * 3.2;
+                Candy { u: u; group: group; key: "cue_default"; text: "CUE"; tint: tint; momentary: true; horizontal-stretch: 1; }
+                Candy { u: u; group: group; key: "play"; text: playing ? "❚❚" : "▶"; tint: tint; big: true; horizontal-stretch: 1.4; }
+                Candy { u: u; group: group; key: "sync_enabled"; text: "SYNC"; tint: tint; horizontal-stretch: 1; }
+            }
+        }
+        if mirrored: Platter { width: platter; group: group; info: info; spin: spin; tint: tint; playing: playing; }
+    }
+    if drop-here || TrackDrag.active: Rectangle {
+        border-radius: u;
+        border-width: drop-here ? 3px : 2px;
+        border-color: drop-here ? tint : tint.transparentize(0.55);
+        background: drop-here ? tint.transparentize(0.9) : transparent;
+    }
+}
+
+component Channel inherits VerticalLayout {
+    in property <string> group;
+    in property <color> tint;
+    in property <length> knob;
+    spacing: 4px;
+    Knob { group: group; key: "pregain"; size: knob; }
+    HorizontalLayout {
+        alignment: center;
+        vertical-stretch: 1;
+        ControlFader { group: group; key: "volume"; tint: tint; ticks: 7; width: 30px; }
+    }
+}
+
+// The slim mixer: EQ and filter knobs down the outsides, gain and fader per
+// channel, headphone cue and meters between, the crossfader along the bottom.
+export component SugarMixer inherits Rectangle {
+    property <length> knob: clamp(self.height / 14, 14px, 22px);
+    background: Theme.panel;
+    width: 236px;
+    VerticalLayout {
+        padding: 8px;
+        spacing: 6px;
+        HorizontalLayout {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: space-between;
+                width: 44px;
+                for place in 4: SideKnob { deck: 0; place: place; size: knob; }
+            }
+            HorizontalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 4px;
+                Channel { group: "[Channel1]"; tint: Theme.deck1; knob: knob; }
+                VerticalLayout {
+                    spacing: 4px;
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 4px;
+                        CueHeadphones { group: "[Channel1]"; tint: Theme.deck1; }
+                        CueHeadphones { group: "[Channel2]"; tint: Theme.deck2; }
+                    }
+                    ModeMenu { height: 16px; }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 4px;
+                        vertical-stretch: 1;
+                        StereoMeter { group: "[Channel1]"; }
+                        StereoMeter { group: "[Channel2]"; }
+                    }
+                }
+                Channel { group: "[Channel2]"; tint: Theme.deck2; knob: knob; }
+            }
+            VerticalLayout {
+                alignment: space-between;
+                width: 44px;
+                for place in 4: SideKnob { deck: 1; place: place; size: knob; }
+            }
+        }
+        Rectangle {
+            height: 24px;
+            Crossfader { x: 10px; width: parent.width - 20px; height: 24px; }
+        }
+    }
+}

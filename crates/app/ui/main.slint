@@ -1,5 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Theme, KeyNotation, CloseIcon } from "theme.slint";
+import { SugarDeck, SugarMixer } from "sugar.slint";
 import { TourMark } from "tourmark.slint";
 import { Controls, ControlButton, VuMeter, ControlKnob, HoverTipView, HoverTip } from "controls.slint";
 import { Deck, DeckInfo, GridMenu, PadsUi, KeyItem, EffectList, FxRow, DeckActions, PhraseView, PhraseTip, BeatCounter, BeatCount, GrooveUi, GrooveKit, GrooveGenre, GrooveName } from "deck.slint";
@@ -1576,6 +1577,9 @@ export component AppWindow inherits Window {
     property <bool> prep: layout == 3 && !library-expanded;
     // The Player layout: one bar, no waveforms or FX bar.
     property <bool> player: layout == 1;
+    // Sugar layout on a phone-width window: one page at a time.
+    property <bool> sugar-narrow: self.width < 760px;
+    property <int> sugar-page: 0;
     property <bool> recording: Controls.value(Controls.resolve("[Recording]", "status"), Controls.tick) > 1;
     // The compact row shows in 2-Deck Basic, 4-Deck and Prep while the footer
     // button has the library expanded (then with no waveforms).
@@ -2112,10 +2116,23 @@ export component AppWindow inherits Window {
                     // The decks share the room equally whatever they show: sized by
                     // their contents, a changing time or title would nudge the
                     // mixer sideways every frame.
-                    deck-a := Deck { deck: 0; info: decks[0]; spin: spin-1; overview: overview-1; horizontal-stretch: 1; min-width: 400px; preferred-width: 400px; }
-                    if !external-mixer: Mixer { }
-                    if external-mixer: ExternalMixer { }
-                    deck-b := Deck { deck: 1; info: decks[1]; spin: spin-2; overview: overview-2; mirrored: true; horizontal-stretch: 1; min-width: 400px; preferred-width: 400px; }
+                    // On a phone, one page at a time (A, Mix, B), picked below.
+                    deck-a := SugarDeck { deck: 0; info: decks[0]; spin: spin-1; overview: overview-1; horizontal-stretch: 1; min-width: sugar-narrow ? 0px : 300px; preferred-width: 400px; max-width: sugar-narrow && sugar-page != 0 ? 0px : 100000px; }
+                    if !external-mixer && (!sugar-narrow || sugar-page == 1): SugarMixer { horizontal-stretch: sugar-narrow ? 1 : 0; }
+                    if external-mixer && (!sugar-narrow || sugar-page == 1): ExternalMixer { }
+                    deck-b := SugarDeck { deck: 1; info: decks[1]; spin: spin-2; overview: overview-2; mirrored: true; horizontal-stretch: 1; min-width: sugar-narrow ? 0px : 300px; preferred-width: 400px; max-width: sugar-narrow && sugar-page != 2 ? 0px : 100000px; }
+                }
+
+                if sugar-narrow && !library-expanded && layout == 0: HorizontalLayout {
+                    height: 34px;
+                    padding: 4px;
+                    spacing: 4px;
+                    for name[i] in ["A", "Mix", "B"]: Rectangle {
+                        border-radius: 13px;
+                        background: sugar-page == i ? (i == 1 ? Theme.accent : Theme.deck-color(i == 0 ? 0 : 1)) : Theme.control;
+                        Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
+                        TouchArea { clicked => { sugar-page = i; } }
+                    }
                 }
 
                 // 2-Deck Basic: the lighter decks either side of the slim mixer, each

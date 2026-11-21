@@ -37,8 +37,11 @@ for part in controllers mods; do
   cp -R "res/$part" "$out/assets/$part"
   (cd "$out/assets/$part" && find . -type f ! -name index.txt | sed 's|^\./||' | sort > index.txt)
 done
+# Launcher icon, one size per screen density.
+rm -rf "$out/res.zip"
+"$tools/aapt2" compile --dir res/android/res -o "$out/res.zip"
 "$tools/aapt2" link -o "$out/base.apk" --manifest "$out/AndroidManifest.xml" -I "$platform" \
-  -A "$out/assets"
+  -A "$out/assets" "$out/res.zip"
 # Native libraries compressed: the download is far smaller, and Android
 # unpacks them once on install.
 (cd "$out" && zip -q -9 -r base.apk lib)
