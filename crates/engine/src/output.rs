@@ -421,6 +421,44 @@ fn host_of(name: &str) -> (cpal::Host, &str) {
     (cpal::default_host(), name)
 }
 
+/// Words in the sound card names of DJ controllers with audio built in.
+/// Nearly all of them play the master on outputs 1-2 and the headphones on
+/// 3-4.
+const CONTROLLER_CARDS: [&str; 16] = [
+    "ddj",
+    "xdj",
+    "mixtrack",
+    "kontrol",
+    "inpulse",
+    "djcontrol",
+    "rane",
+    "ns4fx",
+    "ns6ii",
+    "party mix",
+    "mc4000",
+    "mc6000",
+    "mc7000",
+    "beatmix",
+    "mixon",
+    "dj-505",
+];
+
+/// A DJ controller's own sound card among `devices`, and the routes it
+/// plays: the master on its first pair, the headphones on its second.
+/// `None` without one (or with one that has only two outputs).
+pub fn controller_routes(devices: &[OutputDevice]) -> Option<Vec<Route>> {
+    let card = devices.iter().find(|d| {
+        let name = d.name.to_lowercase();
+        d.channels >= 4 && CONTROLLER_CARDS.iter().any(|w| name.contains(w))
+    })?;
+    let route = |role, pair| Route {
+        role,
+        device: card.name.clone(),
+        pair,
+    };
+    Some(vec![route(Role::Master, 0), route(Role::Headphones, 1)])
+}
+
 /// The output devices, for choosing between them.
 pub fn output_devices() -> Vec<OutputDevice> {
     if no_audio() {
@@ -1763,6 +1801,26 @@ mod tests {
             device: device.into(),
             pair,
         }
+    }
+
+    #[test]
+    fn a_controllers_sound_card_takes_master_and_headphones() {
+        let dev = |name: &str, channels| OutputDevice {
+            name: name.into(),
+            channels,
+        };
+        let devices = [dev("Speakers (Realtek)", 2), dev("DDJ-FLX4", 4)];
+        let routes = controller_routes(&devices).unwrap();
+        assert_eq!(
+            routes,
+            [
+                route(Role::Master, "DDJ-FLX4", 0),
+                route(Role::Headphones, "DDJ-FLX4", 1)
+            ]
+        );
+        // Without headphone outputs, or without a controller, nothing.
+        assert_eq!(controller_routes(&[dev("DDJ-200", 2)]), None);
+        assert_eq!(controller_routes(&[dev("Scarlett 4i4", 4)]), None);
     }
 
     #[test]

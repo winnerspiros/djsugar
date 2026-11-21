@@ -88,8 +88,9 @@ pub use effects::{
     MAX_PARAMETERS, MAX_PLUGINS, PLUGIN_BASE, SCOPE_BINS,
 };
 pub use output::{
-    channel_names, deck_outputs_split, default_output_device, input_devices, output_devices,
-    AudioSetup, InputRole, InputRoute, OutputDevice, Role, Route, BUFFER_SIZES, SAMPLE_RATES,
+    channel_names, controller_routes, deck_outputs_split, default_output_device, input_devices,
+    output_devices, AudioSetup, InputRole, InputRoute, OutputDevice, Role, Route, BUFFER_SIZES,
+    SAMPLE_RATES,
 };
 pub use recorder::{RecordFormat, RecordSettings, Recorder};
 pub use synth::sample_library;

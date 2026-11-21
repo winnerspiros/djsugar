@@ -115,6 +115,70 @@ mod waveform_height;
 mod waveform_zoom;
 mod waves;
 
+/// A DJ controller with its own sound card, plugged in while the master
+/// still plays on the computer's default output, takes the master and the
+/// headphones (see [`djsugar_engine::controller_routes`]). Once per
+/// controller: if the DJ routes it otherwise, that stays.
+fn route_controller_cards(
+    engine: &Rc<AudioEngine>,
+    devices: Rc<RefCell<Vec<djsugar_engine::OutputDevice>>>,
+    show: Rc<dyn Fn()>,
+) {
+    let (tx, rx) = std::sync::mpsc::channel();
+    // Listing devices can take a while on some systems: off the UI thread.
+    let spawned = std::thread::Builder::new()
+        .name("audio-devices".into())
+        .spawn(move || loop {
+            if tx.send(output_devices()).is_err() {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        });
+    if spawned.is_err() {
+        return;
+    }
+    let engine = engine.clone();
+    let timer = slint::Timer::default();
+    timer.start(
+        slint::TimerMode::Repeated,
+        std::time::Duration::from_millis(500),
+        move || {
+            let Some(found) = rx.try_iter().last() else {
+                return;
+            };
+            *devices.borrow_mut() = found.clone();
+            let Some(routes) = djsugar_engine::controller_routes(&found) else {
+                return;
+            };
+            let card = routes[0].device.clone();
+            let key = format!("auto_routed:{card}");
+            let mut setup = settings::audio_setup();
+            let on_default = setup
+                .routes
+                .iter()
+                .filter(|r| matches!(r.role, Role::Master | Role::Headphones))
+                .all(|r| r.device.is_empty());
+            if settings::flag(&key, false) || setup.external_mixer || !on_default {
+                return;
+            }
+            settings::set(&key, serde_json::json!(true));
+            setup
+                .routes
+                .retain(|r| !matches!(r.role, Role::Master | Role::Headphones));
+            setup.routes.splice(0..0, routes);
+            settings::set_audio_setup(&setup);
+            engine.set_outputs(&setup);
+            engine.alert(format!(
+                "Playing through {card}: the master on outputs 1-2, headphones on 3-4. \
+                 Settings › Audio changes it."
+            ));
+            show();
+        },
+    );
+    // The timer runs as long as the app does.
+    std::mem::forget(timer);
+}
+
 /// Fills the master and headphone output menus and switches devices when
 /// one is picked. The menus list the devices present when they open.
 /// The settings page's output table: shows the routes in use and applies
@@ -281,6 +345,7 @@ fn install_audio_settings(app: &AppWindow, engine: Rc<AudioEngine>) {
     };
     show();
     let show = Rc::new(show);
+    route_controller_cards(&engine, devices.clone(), show.clone());
     let g = app.global::<AudioSettings>();
     g.on_refresh({
         let devices = devices.clone();
