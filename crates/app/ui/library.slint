@@ -2025,12 +2025,30 @@ component RailButton inherits Rectangle {
     in property <bool> selected;
     in property <string> tip;
     in property <string> tip-body;
+    // Wide windows name each source beside its icon.
+    in property <bool> labelled;
     property <bool> tip-mine;
     callback clicked();
     height: 42px;
-    border-radius: 8px;
-    background: selected ? Theme.n-3a3a3d : (ta.has-hover ? Theme.n-262629 : transparent);
-    @children
+    border-radius: labelled ? 21px : 8px;
+    background: selected ? (labelled ? Theme.accent.transparentize(0.82) : Theme.n-3a3a3d) : (ta.has-hover ? Theme.n-262629 : transparent);
+    border-width: selected && labelled ? 1px : 0px;
+    border-color: Theme.accent.transparentize(0.4);
+    HorizontalLayout {
+        Rectangle {
+            width: 42px;
+            @children
+        }
+        if labelled: Text {
+            text: tip;
+            color: selected ? Theme.text : Theme.text-dim;
+            font-size: 14px;
+            font-weight: selected ? 700 : 500;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
     ta := TouchArea {
         clicked => {
             if tip-mine {
@@ -2296,7 +2314,10 @@ component SourceRail inherits Rectangle {
         "Search and browse Mixcloud.",
         "The Groove Box, instrument plugins and inputs, to drag onto a deck."
     ];
-    width: 52px;
+    // Labelled on a wide window; icons only where room is short.
+    property <bool> labelled: LibraryEdit.window-width >= 1360px;
+    width: labelled ? 196px : 52px;
+    animate width { duration: 160ms; easing: ease-out; }
     background: Theme.browser;
     // On a short window the sources scroll under the "•••", which stays in
     // view; they would otherwise set how short the whole window can be.
@@ -2320,6 +2341,8 @@ component SourceRail inherits Rectangle {
                     height: HealthUi.rail-shown ? 96px : 48px;
                     RailButton {
                         y: 0;
+                        width: parent.width;
+                        labelled: labelled;
                         selected: 0 == source && !HealthUi.view;
                         tip: names[0];
                         tip-body: tips[0];
@@ -2328,6 +2351,8 @@ component SourceRail inherits Rectangle {
                     }
                     if HealthUi.rail-shown: RailButton {
                         y: 48px;
+                        width: parent.width;
+                        labelled: labelled;
                         selected: source == 0 && HealthUi.view;
                         tip: "Collection Health";
                         tip-body: "Checks your collection for duplicates, missing files and poor tags.";
@@ -2342,6 +2367,8 @@ component SourceRail inherits Rectangle {
                     visible: shown[i];
                     RailButton {
                         y: 0;
+                        width: parent.width;
+                        labelled: labelled;
                         selected: i == source;
                         tip: i < names.length ? names[i] : SourceUi.sources[i - names.length].name;
                         tip-body: i < names.length ? tips[i] : "From an add-on.";
@@ -2349,11 +2376,23 @@ component SourceRail inherits Rectangle {
                         clicked => { source = i; picked(i); }
                     }
                 }
+                if labelled: Text {
+                    height: 30px;
+                    text: "STREAMING & STORES";
+                    color: Theme.text-dim;
+                    font-size: 10px;
+                    font-weight: 700;
+                    letter-spacing: 1.2px;
+                    vertical-alignment: bottom;
+                    x: 12px;
+                }
                 for i in RailOrder.external: Rectangle {
                     height: shown[i] ? 48px : 0px;
                     visible: shown[i];
                     RailButton {
                         y: 0;
+                        width: parent.width;
+                        labelled: labelled;
                         selected: i == source;
                         tip: i < names.length ? names[i] : SourceUi.sources[i - names.length].name;
                         tip-body: i < names.length ? tips[i] : "From an add-on.";

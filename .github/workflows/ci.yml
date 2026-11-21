@@ -201,6 +201,22 @@ jobs:
         with:
           name: djsugar-macos
           path: dist/djsugar-macos.zip
+      # The desktop layout as it opens: a screenshot behind the welcome
+      # and one after Escape, to look at with each change to the design.
+      - name: Desktop screenshots
+        run: |
+          mkdir -p shots
+          target/release/djsugar > shots/log.txt 2>&1 &
+          sleep 25
+          screencapture -x shots/desktop.png
+          osascript -e 'tell application "System Events" to key code 53' || true
+          sleep 3
+          screencapture -x shots/desktop-main.png
+          kill %1 || true
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-screens
+          path: shots/
 
   windows-app:
     if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
