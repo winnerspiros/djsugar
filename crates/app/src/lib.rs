@@ -617,6 +617,11 @@ fn fit_to_screen(app: &AppWindow) {
     });
 }
 
+/// Set by the Android entry point when the DJ allows reading audio files.
+#[cfg(target_os = "android")]
+pub static MUSIC_ACCESS_GRANTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::args().nth(1).as_deref() == Some("--list-controls") {
         list_controls();
@@ -1264,6 +1269,25 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 app.global::<Preferences>().invoke_pressed("rescan".into());
             }
         });
+    }
+    // Android: once the DJ allows reading audio files, the collection is
+    // brought up to date with the phone's music.
+    #[cfg(target_os = "android")]
+    {
+        let weak = app.as_weak();
+        let timer = slint::Timer::default();
+        timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_secs(1),
+            move || {
+                if MUSIC_ACCESS_GRANTED.swap(false, std::sync::atomic::Ordering::Relaxed) {
+                    if let Some(app) = weak.upgrade() {
+                        app.global::<Preferences>().invoke_pressed("rescan".into());
+                    }
+                }
+            },
+        );
+        std::mem::forget(timer);
     }
     // OSC for tablets, visuals and show software: Settings › Controllers.
     osc::install(&registry, engine.loaded_tracks(), engine.visual_positions());

@@ -762,7 +762,17 @@ pub fn music_folders() -> Vec<PathBuf> {
         return paths(MUSIC_FOLDERS);
     }
     // Before there could be several, there was one.
-    path_of("music_folder").into_iter().collect()
+    let saved: Vec<PathBuf> = path_of("music_folder").into_iter().collect();
+    // On Android: the phone's own Music and Download folders until the DJ
+    // picks others.
+    #[cfg(target_os = "android")]
+    if saved.is_empty() {
+        return ["Music", "Download"]
+            .iter()
+            .map(|d| PathBuf::from("/storage/emulated/0").join(d))
+            .collect();
+    }
+    saved
 }
 
 pub const MUSIC_FOLDERS: &str = "music_folders";

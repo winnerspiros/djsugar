@@ -5,6 +5,17 @@
 set -uo pipefail
 mkdir -p launch
 adb install -r "$(ls "$1"/*.apk | head -1)" || exit 1
+# A track in the phone's Music folder, and the permission to read it.
+python3 - <<'E'
+import math, struct, wave
+with wave.open("launch-tone.wav", "wb") as w:
+    w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100)
+    w.writeframes(b"".join(struct.pack("<hh", s, s) for s in
+        (int(8000 * math.sin(i * 440 * 6.283 / 44100)) for i in range(44100 * 5))))
+E
+adb shell mkdir -p /sdcard/Music
+adb push launch-tone.wav /sdcard/Music/launch-tone.wav
+adb shell pm grant org.djsugar.app android.permission.READ_MEDIA_AUDIO || true
 adb logcat -c
 adb shell am start -n org.djsugar.app/android.app.NativeActivity
 drawn=""
@@ -20,6 +31,8 @@ grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
 if grep -qE "DJ Sugar (stopped|crashed)" launch/logcat.txt; then
   echo "::error::DJ Sugar stopped on start (see above)"; exit 1
 fi
+grep -q "DJSugar *: allowed to read audio files" launch/logcat.txt \
+  || echo "::warning::no sign the app may read audio files"
 if grep -q "controller mappings not found" launch/logcat.txt; then
   echo "::error::the controller mappings did not load"; exit 1
 fi

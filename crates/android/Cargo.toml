@@ -17,3 +17,4 @@ crate-type = ["cdylib"]
 [target.'cfg(target_os = "android")'.dependencies]
 djsugar = { path = "../app", package = "djsugar" }
 slint = { version = "~1.18", features = ["backend-android-activity-06"] }
+jni = "0.21"

@@ -79,6 +79,7 @@ fn android_main(app: slint::android::AndroidApp) {
         std::env::set_var("XDG_DATA_HOME", dir.join("data"));
     }
     unpack_controllers(&app);
+    ask_for_music(&app);
     if let Err(e) = slint::android::init(app) {
         log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
         return;
@@ -132,4 +133,80 @@ fn unpack_controllers(app: &slint::android::AndroidApp) {
         );
     }
     std::env::set_var("DJSUGAR_CONTROLLERS", &dir);
+}
+
+/// Asks the DJ to let the app read audio files (the phone's music), then
+/// waits for the answer and tells the app, which rescans.
+#[cfg(target_os = "android")]
+fn ask_for_music(app: &slint::android::AndroidApp) {
+    use jni::objects::{JObject, JValue};
+    let (vm, activity) = (app.vm_as_ptr(), app.activity_as_ptr());
+    // Raw pointers aren't Send; both live as long as the process.
+    let (vm, activity) = (vm as usize, activity as usize);
+    let _ = std::thread::Builder::new()
+        .name("permissions".into())
+        .spawn(move || {
+            let run = || -> jni::errors::Result<()> {
+                // SAFETY: the pointers come from the running activity.
+                let vm = unsafe { jni::JavaVM::from_raw(vm as *mut _) }?;
+                let mut env = vm.attach_current_thread()?;
+                let activity = unsafe { JObject::from_raw(activity as jni::sys::jobject) };
+                // READ_MEDIA_AUDIO from Android 13, READ_EXTERNAL_STORAGE before.
+                let names = [
+                    "android.permission.READ_MEDIA_AUDIO",
+                    "android.permission.READ_EXTERNAL_STORAGE",
+                ];
+                let mut granted = |env: &mut jni::JNIEnv| -> jni::errors::Result<bool> {
+                    for name in names {
+                        let s = env.new_string(name)?;
+                        let r = env
+                            .call_method(
+                                &activity,
+                                "checkSelfPermission",
+                                "(Ljava/lang/String;)I",
+                                &[JValue::Object(&s)],
+                            )?
+                            .i()?;
+                        if r == 0 {
+                            return Ok(true);
+                        }
+                    }
+                    Ok(false)
+                };
+                if granted(&mut env)? {
+                    log::write(log::INFO, "allowed to read audio files");
+                    djsugar::MUSIC_ACCESS_GRANTED.store(true, std::sync::atomic::Ordering::Relaxed);
+                    return Ok(());
+                }
+                let list =
+                    env.new_object_array(names.len() as i32, "java/lang/String", JObject::null())?;
+                for (i, name) in names.iter().enumerate() {
+                    let s = env.new_string(name)?;
+                    env.set_object_array_element(&list, i as i32, s)?;
+                }
+                env.call_method(
+                    &activity,
+                    "requestPermissions",
+                    "([Ljava/lang/String;I)V",
+                    &[JValue::Object(&list), JValue::Int(1)],
+                )?;
+                // Up to ten minutes for the answer.
+                for _ in 0..600 {
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    if granted(&mut env)? {
+                        log::write(log::INFO, "allowed to read audio files");
+                        djsugar::MUSIC_ACCESS_GRANTED
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
+                        return Ok(());
+                    }
+                }
+                Ok(())
+            };
+            if let Err(e) = run() {
+                log::write(
+                    log::ERROR,
+                    &format!("couldn't ask to read audio files: {e}"),
+                );
+            }
+        });
 }
