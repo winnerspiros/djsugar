@@ -21,7 +21,7 @@ rm -rf "$out" && mkdir -p "$out/lib/arm64-v8a" "$root/dist"
 cd "$root"
 # PROFILE=release for a quicker build than the dist profile's fat LTO.
 profile="${PROFILE:-dist}"
-cargo ndk -t arm64-v8a -P 26 build --profile "$profile" -p djsugar-android --locked
+cargo ndk -t arm64-v8a -P 29 build --profile "$profile" -p djsugar-android --locked
 cp "target/aarch64-linux-android/$profile/libdjsugar_android.so" "$out/lib/arm64-v8a/"
 # The C++ runtime whisper.cpp and other C++ dependencies link against.
 cp "$(find "$ANDROID_NDK_HOME" -path '*aarch64-linux-android/libc++_shared.so' | head -1)" \
