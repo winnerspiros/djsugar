@@ -96,6 +96,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | Q.7 | SIMD pass on hot DSP (EQ, filters, mixing, waveform summaries) after profiling | TODO |
 | Q.8 | Fuzzing for decoders, tags, playlist and library import parsers | TODO |
 | Q.9 | PGO build for release engine | TODO |
+| Q.10 | App size budget per platform: every build reports its size in CI and fails past a budget set from the stripped baseline; then trim (dependency diet Q.6, feature-gated models, assets in compact formats) | WIP: Android builds with its own `android` profile (fat LTO, one codegen unit, stripped, other crates built for size, audio and analysis crates for speed) and compressed libraries; the APK job reports APK and library size. Before: 312 MB APK (302 MB library, 125 MB of it symbols). Next: budget gate, per-crate size breakdown (cargo-bloat), models downloaded on first use instead of bundled |
 
 ## Part 0: platforms
 
@@ -103,9 +104,9 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | --- | --- | --- |
 | 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | DONE |
 | 0.1 | CI: Linux, Windows, macOS desktop builds on `rust` | DONE: every push builds and tests on Linux and Windows and builds the app on Windows and macOS |
-| 0.2 | Android arm64 build: all crates check in CI (cargo-ndk), winit + FemtoVG wgpu backend, `djsugar-android` cdylib with `android_main`; the Android workflow packages a signed arm64 APK (Android 10+, `scripts/package-android.sh`, no Gradle) | WIP: not yet started on a phone |
+| 0.2 | Android arm64 build: all crates check in CI (cargo-ndk), Slint's android-activity backend, `djsugar-android` cdylib; the Android workflow packages a signed arm64 APK (Android 10+, `scripts/package-android.sh`, no Gradle) and starts it on an emulator, failing unless the first frame is drawn and the mods load (screenshot and logcat kept) | WIP: starts on the emulator and on the owner's phone; sound, controllers and touch use not yet checked on a phone |
 | 0.3 | Android audio: cpal AAudio backend, low-latency stream, Oboe parity | TODO |
-| 0.4 | Android storage and permissions (music folders, SAF) | TODO |
+| 0.4 | Android storage and permissions (music folders, SAF) | WIP: Music and Download scanned after asking for audio access; SAF folder picking not done |
 | 0.5 | iOS arm64 build and unsigned IPA | TODO |
 | 0.6 | iOS audio (CoreAudio via cpal), file access | TODO |
 | 0.7 | Windows ARM64, AppImage, .deb, .dmg, .msi packaging | WIP: releases build AppImage, .deb, .rpm and tarball on Linux, a .dmg and zip on macOS, and setup .exe and zip for Windows x64 and ARM64 (built on Arm runners); .msi not made (the setup .exe installs per user without admin); ARM64 and .dmg not yet run on GitHub |
@@ -145,14 +146,33 @@ All in the app, both directions, no external tool: tracks, playlists/crates, cue
 
 ## Part M: mods
 
-One install mechanism for user add-ons: zip with `mod.toml` (id, version, kind, permissions), installed from file or URL, listed/toggled in Settings > Mods.
+Everything is a mod, and what DJ Sugar ships has no private path: its look, layouts, pad modes, panels, mappings, effects, importers/exporters and music sources load exactly like a DJ's mod and can be replaced by one. A mod is a folder (or zip) with `mod.toml` (id, version, requires, after, contributes); `contributes` fills named slots, the last mod in load order wins, and the app can show which mod set what. App mods ship in `res/mods`; the DJ's live in `mods` in the settings folder and replace shipped mods of the same id.
 
 | # | Part | Status |
 | --- | --- | --- |
+| M.0 | Core: `djsugar-mods` crate (manifest, versions and requirements, deterministic load order, slot merge with provenance, problems reported, change fingerprint); loaded in the app on every platform and reloaded live within a second | WIP: crate with tests; app loads shipped and user mods, re-applies on change and on Dark/Light switch; packaged on Linux, macOS, Windows and Android; app side in CI |
+| M.0b | Look mods: every `Theme` property settable as `theme.<name>`, `theme.dark.<name>`, `theme.light.<name>` (setters generated from theme.slint at build time, so new properties are moddable at once); DJ Sugar's pink look ships as `sugar.look` | WIP: in CI |
+| M.0c | Settings > Mods: list in load order, turn on/off, problems with reasons, "set by" shown next to settings, open mods folder, install from zip/URL | TODO |
+| M.0d | Built-ins moved into mods one by one: layout (D.3), pad modes, panels, mappings, effect presets, import/export formats, library sources; a test fails if a feature is reachable only from code | TODO |
+| M.0e | Action registry: every command (menus, keys, controllers, command search) is a named action mods can add, rebind and call | TODO |
 | M.1 | Data mods: sample packs, skins (Slint themes/colors/assets), controller mappings, effect presets. No code. | TODO |
 | M.2 | Source mods: written in Rust, compiled to WASM (wasm32-wasip2, wasmtime/wasmi), with a `djsugar-mod` SDK crate; implementing a `MusicSource` interface (search, browse, resolve-to-audio); host gives HTTP + cache only via declared permissions. YouTube, SoundCloud, Spotify become mods instead of built-ins. | TODO |
 | M.3 | Controller mods in Rust (WASM) too; djsugar-js kept only to run existing JS mappings, never for new code. Native plugins desktop-only (plugin-host crate). | TODO |
 | M.4 | Store policy: Play forbids downloading native code; WASM/JS interpreted in a sandbox is the allowed path. Store build ships no source mods and no built-in mod catalog URL. | TODO |
+
+## Part D: design (our own look, every screen)
+
+DJ Sugar's own identity: modern and clean, neon glaze pink, sugary. Not a port of openDJ or Mixxx screens. Mockups in throwaway HTML first, then Slint, checked on desktop, DeX-size and phone screenshots (CI emulator) before calling anything done.
+
+| # | Part | Status |
+| --- | --- | --- |
+| D.1 | Logo: bitten neon pink donut with record grooves, gloss and sprinkles; app icons on every platform | WIP: in the app and the macOS, Linux and Windows icons; Android launcher icon not done |
+| D.2 | Sugar look: palette from the logo (glaze pink, plum black, sprinkle cyan/lemon/lime for decks), rounded candy controls, glow on what is live; shipped as the `sugar.look` mod | WIP: colours in the mod; shapes, glow and typography next |
+| D.3 | Sugar layout, one scalable design: full-width waveforms on top; deck, slim mixer, deck with the coloured position ring on the platter (signature); pad modes Cues/Loops/Roll/Stems/Samples; library dock with sidebar (collection, crates, other apps with sync state, streaming) and inspector; everything sized from one unit following the window; panels drop out progressively; phone pages A / Mix / B / Library | TODO: mockups approved (sketches 001-004) |
+| D.4 | No menu bar: command search (Ctrl K) over tracks, actions and settings; Perform / Prepare / Stems mode switch | TODO |
+| D.5 | "Fits what's playing" filters (key and BPM chips) | TODO |
+| D.6 | Touch: gestures for jog, pitch, pads and library on phones and tablets | TODO |
+| D.7 | Motion and feel: 60/120 Hz animations, no UI frame over 8 ms, measured | TODO |
 
 ## Part R: pure-Rust dependencies
 
