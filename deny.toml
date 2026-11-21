@@ -5,15 +5,9 @@
 all-features = true
 
 [advisories]
-# Fail on vulnerabilities. These unmaintained crates come in through other
-# dependencies and have no known vulnerability.
+# Fail on vulnerabilities and unmaintained direct dependencies. Each ignore
+# says why it can't be fixed yet; remove it as soon as it can.
 ignore = [
-    { id = "RUSTSEC-2024-0436", reason = "paste, unmaintained, pulled in by other crates" },
-    { id = "RUSTSEC-2026-0192", reason = "ttf-parser, unmaintained, pulled in by the font stack" },
-    { id = "RUSTSEC-2026-0370", reason = "zvariant, merged into zbus 6, pulled in by slint's accessibility stack" },
-    { id = "RUSTSEC-2026-0371", reason = "zbus_names, merged into zbus 6, pulled in by slint's accessibility stack" },
-    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive, merged into zbus 6, pulled in by slint's accessibility stack" },
-    { id = "RUSTSEC-2026-0441", reason = "pin-utils, unmaintained, pulled in by slint (spin_on)" },
     { id = "RUSTSEC-2026-0543", reason = "chrono, unmaintained with no successor; a required dependency of slint core" },
     { id = "RUSTSEC-2026-0459", reason = "bundled SQLite before 3.54: needs a crafted database and -wal pair opened locally; the fix (libsqlite3-sys 0.39) is blocked by rbox pinning =0.38 and diesel <0.39" },
 ]
