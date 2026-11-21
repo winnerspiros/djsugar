@@ -1788,21 +1788,9 @@ export component AppWindow inherits Window {
                         property <length> mix: sugar-narrow ? self.width : 236px;
                         property <length> side: sugar-narrow ? self.width : (self.width - mix - 2px) / 2;
                         deck-a := SugarDeck { deck: 0; info: decks[0]; spin: spin-1; overview: overview-1; x: sugar-narrow ? (sugar-page == 0 ? 0px : -parent.width * 2) : 0px; width: side; height: parent.height; }
-                        if !external-mixer: SugarMixer { x: sugar-narrow ? (sugar-page == 1 ? 0px : -parent.width * 2) : side + 1px; width: mix; height: parent.height; }
+                        if !external-mixer: SugarMixer { x: sugar-narrow ? (sugar-page == 1 ? (parent.width - self.width) / 2 : -parent.width * 2) : side + 1px; width: sugar-narrow ? min(mix, 420px) : mix; height: parent.height; }
                         if external-mixer: ExternalMixer { x: sugar-narrow ? (sugar-page == 1 ? 0px : -parent.width * 2) : side + 1px; width: mix; height: parent.height; }
                         deck-b := SugarDeck { deck: 1; info: decks[1]; spin: spin-2; overview: overview-2; mirrored: true; x: sugar-narrow ? (sugar-page == 2 ? 0px : -parent.width * 2) : side + mix + 2px; width: side; height: parent.height; }
-                    }
-                }
-
-                if phone && !library-expanded: HorizontalLayout {
-                    height: 34px;
-                    padding: 4px;
-                    spacing: 4px;
-                    for name[i] in ["A", "Mix", "B", "Library"]: Rectangle {
-                        border-radius: 13px;
-                        background: sugar-page == i ? (i == 0 ? Theme.deck-color(0) : i == 2 ? Theme.deck-color(1) : Theme.accent) : Theme.control;
-                        Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
-                        TouchArea { clicked => { sugar-page = i; } }
                     }
                 }
 
@@ -2003,6 +1991,19 @@ export component AppWindow inherits Window {
                         icon: "M 6 5 L 18 5 M 6 10 L 18 10 M 6 15 L 18 15 M 2 5 L 3 5 M 2 10 L 3 10 M 2 15 L 3 15";
                         clicked => { side-panel-visible = !side-panel-visible; }
                     }
+                }
+            }
+
+            // The phone pages' tabs, along the bottom on every page.
+            if phone && !library-expanded: HorizontalLayout {
+                height: 34px;
+                padding: 4px;
+                spacing: 4px;
+                for name[i] in ["A", "Mix", "B", "Library"]: Rectangle {
+                    border-radius: 13px;
+                    background: sugar-page == i ? (i == 0 ? Theme.deck-color(0) : i == 2 ? Theme.deck-color(1) : Theme.accent) : Theme.control;
+                    Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
+                    TouchArea { clicked => { sugar-page = i; } }
                 }
             }
 
