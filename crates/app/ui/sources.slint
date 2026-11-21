@@ -656,7 +656,7 @@ export component SourceResults inherits Rectangle {
                     : hint != "" ? hint : "Search";
                 accepted => { go(); }
                 key-pressed(e) => {
-                    if e.text == Key.Escape && self.text != "" {
+                    if (e.text == Key.Escape || e.text == Key.Back) && self.text != "" {
                         self.text = "";
                         return accept;
                     }

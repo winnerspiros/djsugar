@@ -3219,7 +3219,7 @@ component FolderTree inherits Rectangle {
                                     single-line: true;
                                     accepted => { finish-naming(true); }
                                     key-pressed(e) => {
-                                        if e.text == Key.Escape {
+                                        if (e.text == Key.Escape || e.text == Key.Back) {
                                             finish-naming(false);
                                             return accept;
                                         }
@@ -3986,7 +3986,7 @@ component ReviewCard inherits Rectangle {
     keys := FocusScope {
         init => { self.focus(); }
         key-pressed(e) => {
-            if e.text == Key.Escape { HealthUi.review-key("close"); return accept; }
+            if (e.text == Key.Escape || e.text == Key.Back) { HealthUi.review-key("close"); return accept; }
             if (e.modifiers.control || e.modifiers.meta) && (e.text == "z" || e.text == "Z") {
                 LibraryEdit.undo-stage();
                 return accept;
@@ -4591,7 +4591,7 @@ component TrackList inherits Rectangle {
                             return accept;
                         }
                     }
-                    if e.text == Key.Escape {
+                    if (e.text == Key.Escape || e.text == Key.Back) {
                         if search-text != "" {
                             search-text = "";
                             search("");

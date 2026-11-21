@@ -1520,7 +1520,9 @@ export component AppWindow inherits Window {
                 AppMenu.activated(AppMenu.quit-action);
                 return accept;
             }
-            if MapMode.active && e.text == Key.Escape {
+            // Android's Back does what Escape does: closes what's on top.
+            // Unhandled, Android closes the app.
+            if MapMode.active && (e.text == Key.Escape || e.text == Key.Back) {
                 MapMode.done();
                 return accept;
             }
@@ -1534,28 +1536,28 @@ export component AppWindow inherits Window {
                 LibraryEdit.undo-stage();
                 return accept;
             }
-            if e.text == Key.Escape && UsbExport.open && !UsbExport.running {
+            if (e.text == Key.Escape || e.text == Key.Back) && UsbExport.open && !UsbExport.running {
                 UsbExport.open = false;
                 return accept;
             }
-            if e.text == Key.Escape && Tour.mode == 1 && !ImportWizard.open && !ControllerEditor.open && !Preferences.open {
+            if (e.text == Key.Escape || e.text == Key.Back) && Tour.mode == 1 && !ImportWizard.open && !ControllerEditor.open && !Preferences.open {
                 Tour.end();
                 return accept;
             }
-            if e.text == Key.Escape && ControllerEditor.dialog != 0 {
+            if (e.text == Key.Escape || e.text == Key.Back) && ControllerEditor.dialog != 0 {
                 ControllerEditor.dialog-done(false);
                 return accept;
             }
-            if e.text == Key.Escape && ControllerEditor.open {
+            if (e.text == Key.Escape || e.text == Key.Back) && ControllerEditor.open {
                 ControllerEditor.open = false;
                 return accept;
             }
-            if e.text == Key.Escape && Preferences.open {
+            if (e.text == Key.Escape || e.text == Key.Back) && Preferences.open {
                 Preferences.open = false;
                 return accept;
             }
             // Esc finishes editing beat grids (the waveforms' pencils).
-            if e.text == Key.Escape && !Preferences.open && grid-editing() {
+            if (e.text == Key.Escape || e.text == Key.Back) && !Preferences.open && grid-editing() {
                 Controls.set-value(Controls.resolve("[Channel1]", "beats_edit"), 0);
                 Controls.set-value(Controls.resolve("[Channel2]", "beats_edit"), 0);
                 Controls.set-value(Controls.resolve("[Channel3]", "beats_edit"), 0);
@@ -1563,7 +1565,7 @@ export component AppWindow inherits Window {
                 return accept;
             }
             // Esc clears the library search, as in the search box itself.
-            if e.text == Key.Escape && StoreUi.search-text != "" && !Preferences.open && !ImportWizard.open && !UsbExport.open {
+            if (e.text == Key.Escape || e.text == Key.Back) && StoreUi.search-text != "" && !Preferences.open && !ImportWizard.open && !UsbExport.open {
                 StoreUi.search-text = "";
                 QuickSearch.text = "";
                 QuickSearch.open = false;

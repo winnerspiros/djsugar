@@ -37,6 +37,9 @@ adb exec-out screencap > launch/screen.raw
 adb shell input keyevent 4
 sleep 3
 adb exec-out screencap -p > launch/screen-main.png
+if ! adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | grep -q org.djsugar.app; then
+  echo "::error::Back closed DJ Sugar instead of the welcome"; exit 1
+fi
 grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
 if grep -qE "DJ Sugar (stopped|crashed)" launch/logcat.txt; then
   echo "::error::DJ Sugar stopped on start (see above)"; exit 1

@@ -5273,7 +5273,7 @@ component MixerStrip inherits Rectangle {
                         root.renaming = false;
                     }
                     key-pressed(e) => {
-                        if e.text == Key.Escape {
+                        if (e.text == Key.Escape || e.text == Key.Back) {
                             root.renaming = false;
                             return accept;
                         }

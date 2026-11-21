@@ -857,7 +857,7 @@ export component TopSearch inherits Rectangle {
             }
         }
         key-pressed(e) => {
-            if e.text == Key.Escape {
+            if (e.text == Key.Escape || e.text == Key.Back) {
                 if QuickSearch.text != "" {
                     QuickSearch.clear();
                     return accept;

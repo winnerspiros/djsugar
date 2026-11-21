@@ -321,7 +321,7 @@ component KeyButton inherits Rectangle {
     }
     keys := FocusScope {
         key-pressed(e) => {
-            if e.text == Key.Escape {
+            if (e.text == Key.Escape || e.text == Key.Back) {
                 Preferences.refocus += 1;
                 return accept;
             }

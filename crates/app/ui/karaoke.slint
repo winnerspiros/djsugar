@@ -49,7 +49,7 @@ export component KaraokeWindow inherits Window {
 
     keys := FocusScope {
         key-pressed(e) => {
-            if e.text == Key.Escape {
+            if (e.text == Key.Escape || e.text == Key.Back) {
                 root.leave-full-screen();
                 return accept;
             }
