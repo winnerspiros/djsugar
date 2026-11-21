@@ -23,7 +23,8 @@ pub fn install() {
         return;
     };
     let _ = std::fs::create_dir_all(&dir);
-    if !std::io::stderr().is_terminal() {
+    // On Android stderr already goes to the system log (logcat).
+    if !std::io::stderr().is_terminal() && !cfg!(target_os = "android") {
         redirect_stderr(&dir);
     }
     eprintln!("DJ Sugar {VERSION} on {}", platform());

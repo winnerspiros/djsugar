@@ -661,9 +661,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     // this, for the dock icon and name.
     let _ = slint::set_xdg_app_id("io.github.winnerspiros.DJSugar");
     // San Francisco on macOS; registered before any window.
+    eprintln!("startup: settings read");
     let ui_family = ui_font::install();
+    eprintln!("startup: fonts ready");
 
     let registry = ControlRegistry::new();
+    eprintln!("startup: starting the audio engine");
     let engine = Rc::new(AudioEngine::start(
         registry.clone(),
         &settings::audio_setup(),
@@ -674,6 +677,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let broadcast = broadcast::Broadcast::start(&registry, &engine);
     // The saved library, with the tracks it had last time; the built-in
     // samples until there is anything in it.
+    eprintln!("startup: audio engine running");
     let library_path = settings::config_dir().map(|d| djsugar_library::default_path(&d));
     let db = library_path
         .as_deref()
