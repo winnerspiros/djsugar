@@ -63,12 +63,10 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     // No HOME on Android: settings, the library and downloads go in the
     // app's own storage.
     if let Some(dir) = app.internal_data_path() {
-        // SAFETY: set before any other thread of the app starts.
-        unsafe {
-            std::env::set_var("HOME", &dir);
-            std::env::set_var("XDG_CONFIG_HOME", dir.join("config"));
-            std::env::set_var("XDG_DATA_HOME", dir.join("data"));
-        }
+        // Before any other thread of the app starts.
+        std::env::set_var("HOME", &dir);
+        std::env::set_var("XDG_CONFIG_HOME", dir.join("config"));
+        std::env::set_var("XDG_DATA_HOME", dir.join("data"));
     }
     let _ = djsugar::ANDROID_APP.set(app);
     if let Err(e) = djsugar::run() {
