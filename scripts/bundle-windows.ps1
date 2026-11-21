@@ -33,6 +33,7 @@ if (Test-Path $helper) {
   Write-Warning "no $helper, so this build can't run audio plugins"
 }
 Copy-Item -Recurse res/controllers "$stage/controllers"
+Copy-Item -Recurse res/mods "$stage/mods"
 # The guided tour's demo tracks, once they are in the repository.
 if (Test-Path res/demo) { Copy-Item -Recurse res/demo "$stage/demo" }
 Copy-Item README.md, NOTICE "$stage/"

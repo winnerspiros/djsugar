@@ -19,6 +19,7 @@ souvlaki = { version = "0.9", default-features = false, features = ["use_zbus"] 
 djsugar-broadcast = { path = "../broadcast" }
 djsugar-control = { path = "../control" }
 djsugar-controllers = { path = "../controllers" }
+djsugar-mods = { path = "../mods" }
 djsugar-script = { path = "../script" }
 djsugar-engine = { path = "../engine" }
 rtrb = "0.4"

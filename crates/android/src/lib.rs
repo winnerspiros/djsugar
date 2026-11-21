@@ -78,7 +78,8 @@ fn android_main(app: slint::android::AndroidApp) {
         std::env::set_var("XDG_CONFIG_HOME", dir.join("config"));
         std::env::set_var("XDG_DATA_HOME", dir.join("data"));
     }
-    unpack_controllers(&app);
+    unpack(&app, "controllers", "DJSUGAR_CONTROLLERS");
+    unpack(&app, "mods", "DJSUGAR_MODS");
     ask_for_music(&app);
     if let Err(e) = slint::android::init(app) {
         log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
@@ -89,27 +90,27 @@ fn android_main(app: slint::android::AndroidApp) {
     }
 }
 
-/// Copies the controller mappings out of the APK into the app's storage,
-/// once per version, and points the app at them (`DJSUGAR_CONTROLLERS`).
+/// Copies a folder shipped in the APK (`controllers`, `mods`) into the
+/// app's storage, once per version, and points the app at it with `var`.
 #[cfg(target_os = "android")]
-fn unpack_controllers(app: &slint::android::AndroidApp) {
+fn unpack(app: &slint::android::AndroidApp, part: &str, var: &str) {
     use std::io::Read;
     let Some(base) = app.internal_data_path() else {
         return;
     };
-    let dir = base.join("controllers");
+    let dir = base.join(part);
     let stamp = dir.join(".version");
     let version = env!("CARGO_PKG_VERSION");
     let assets = app.asset_manager();
     let read = |name: &str| -> Option<Vec<u8>> {
-        let name = std::ffi::CString::new(format!("controllers/{name}")).ok()?;
+        let name = std::ffi::CString::new(format!("{part}/{name}")).ok()?;
         let mut bytes = Vec::new();
         assets.open(&name)?.read_to_end(&mut bytes).ok()?;
         Some(bytes)
     };
     if std::fs::read_to_string(&stamp).ok().as_deref() != Some(version) {
         let Some(index) = read("index.txt") else {
-            log::write(log::ERROR, "controller mappings missing from the APK");
+            log::write(log::ERROR, &format!("{part} missing from the APK"));
             return;
         };
         let _ = std::fs::remove_dir_all(&dir);
@@ -127,12 +128,9 @@ fn unpack_controllers(app: &slint::android::AndroidApp) {
             copied += usize::from(ok);
         }
         let _ = std::fs::write(&stamp, version);
-        log::write(
-            log::INFO,
-            &format!("controller mappings unpacked: {copied} files"),
-        );
+        log::write(log::INFO, &format!("{part} unpacked: {copied} files"));
     }
-    std::env::set_var("DJSUGAR_CONTROLLERS", &dir);
+    std::env::set_var(var, &dir);
 }
 
 /// Asks the DJ to let the app read audio files (the phone's music), then

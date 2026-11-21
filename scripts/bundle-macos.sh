@@ -22,6 +22,7 @@ else
   echo "warning: no $helper, so this build can't run audio plugins" >&2
 fi
 cp -R res/controllers "$app/Resources/controllers"
+cp -R res/mods "$app/Resources/mods"
 # The guided tour's demo tracks, once they are in the repository.
 if [ -d res/demo ]; then cp -R res/demo "$app/Resources/demo"; fi
 

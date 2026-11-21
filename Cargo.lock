@@ -3512,6 +3512,7 @@ dependencies = [
  "djsugar-engine",
  "djsugar-export",
  "djsugar-library",
+ "djsugar-mods",
  "djsugar-osc",
  "djsugar-plugins",
  "djsugar-remote",

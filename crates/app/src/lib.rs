@@ -77,6 +77,7 @@ mod mixcloud_upload;
 mod mixer_keeper;
 mod mixer_picker;
 mod mixxx_settings;
+mod mods;
 mod now_playing;
 mod now_playing_view;
 mod osc;
@@ -1867,6 +1868,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         timer
     };
 
+    mods::install(&app);
     app.show()?;
     fit_to_screen(&app);
     // Once, when the first frame is on screen (the Android launch check

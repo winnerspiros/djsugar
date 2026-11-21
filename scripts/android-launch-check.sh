@@ -36,6 +36,8 @@ grep -q "DJSugar *: allowed to read audio files" launch/logcat.txt \
 if grep -q "controller mappings not found" launch/logcat.txt; then
   echo "::error::the controller mappings did not load"; exit 1
 fi
+grep -q "mods: .* in use" launch/logcat.txt || { echo "::error::the mods did not load"; exit 1; }
+grep -E "mods: .* left out" launch/logcat.txt && { echo "::error::a shipped mod was left out"; exit 1; }
 [ -n "$drawn" ] || { echo "::error::no frame drawn in three minutes"; exit 1; }
 # screencap's raw form: width, height, format (and on newer Android a colour
 # space), then RGBA pixels.

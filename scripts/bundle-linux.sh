@@ -30,6 +30,7 @@ else
   echo "warning: no $helper, so this build can't run audio plugins" >&2
 fi
 cp -R res/controllers "$appdir/usr/share/djsugar/controllers"
+cp -R res/mods "$appdir/usr/share/djsugar/mods"
 # The guided tour's demo tracks, once they are in the repository.
 if [ -d res/demo ]; then cp -R res/demo "$appdir/usr/share/djsugar/demo"; fi
 # Lets HID controllers (Traktor Kontrol) open without root; see the guide.

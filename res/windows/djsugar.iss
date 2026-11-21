@@ -53,6 +53,7 @@ Source: "{#Source}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cre
 [InstallDelete]
 ; Mappings removed from a newer version shouldn't linger.
 Type: filesandordirs; Name: "{app}\controllers"
+Type: filesandordirs; Name: "{app}\mods"
 
 [Icons]
 Name: "{autoprograms}\DJ Sugar"; Filename: "{app}\DJSugar.exe"

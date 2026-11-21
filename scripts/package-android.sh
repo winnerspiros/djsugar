@@ -31,11 +31,13 @@ cp "$(find "$ANDROID_NDK_HOME" -path '*aarch64-linux-android/libc++_shared.so' |
 
 sed "s/android:versionName=\"[^\"]*\"/android:versionName=\"$version\"/" \
   res/android/AndroidManifest.xml > "$out/AndroidManifest.xml"
-# Controller mappings as assets, with a list of them: Android can't list
+# Controller mappings and the app's own mods as assets, with a list of them: Android can't list
 # folders inside the APK. The app copies them out on start.
 mkdir -p "$out/assets"
-cp -R res/controllers "$out/assets/controllers"
-(cd "$out/assets/controllers" && find . -type f ! -name index.txt | sed 's|^\./||' | sort > index.txt)
+for part in controllers mods; do
+  cp -R "res/$part" "$out/assets/$part"
+  (cd "$out/assets/$part" && find . -type f ! -name index.txt | sed 's|^\./||' | sort > index.txt)
+done
 "$tools/aapt2" link -o "$out/base.apk" --manifest "$out/AndroidManifest.xml" -I "$platform" \
   -A "$out/assets"
 # Native libraries stored uncompressed, so they load straight from the APK.
