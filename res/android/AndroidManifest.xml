@@ -22,7 +22,7 @@
     <application
         android:label="DJ Sugar"
         android:hasCode="false"
-        android:extractNativeLibs="false"
+        android:extractNativeLibs="true"
         android:appCategory="audio"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
         <activity

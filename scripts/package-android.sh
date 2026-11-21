@@ -21,8 +21,7 @@ export ANDROID_JAR="$platform"
 rm -rf "$out" && mkdir -p "$out/lib/arm64-v8a" "$root/dist"
 
 cd "$root"
-# PROFILE=release for a quicker build than the dist profile's fat LTO.
-profile="${PROFILE:-dist}"
+profile="${PROFILE:-android}"
 cargo ndk -t arm64-v8a -P 29 build --profile "$profile" -p djsugar-android --locked
 cp "target/aarch64-linux-android/$profile/libdjsugar_android.so" "$out/lib/arm64-v8a/"
 # The C++ runtime whisper.cpp and other C++ dependencies link against.
@@ -40,8 +39,9 @@ for part in controllers mods; do
 done
 "$tools/aapt2" link -o "$out/base.apk" --manifest "$out/AndroidManifest.xml" -I "$platform" \
   -A "$out/assets"
-# Native libraries stored uncompressed, so they load straight from the APK.
-(cd "$out" && zip -q -0 -r base.apk lib)
+# Native libraries compressed: the download is far smaller, and Android
+# unpacks them once on install.
+(cd "$out" && zip -q -9 -r base.apk lib)
 "$tools/zipalign" -f -P 16 4 "$out/base.apk" "$out/aligned.apk"
 
 if [ -n "${ANDROID_KEYSTORE:-}" ]; then

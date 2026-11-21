@@ -22,6 +22,74 @@ codegen-units = 1
 strip = "symbols"
 
 # Decoding, analysis and synthesis are far too slow unoptimised, even in tests.
+# Phones: as small as it can be without slowing the audio. Link-time
+# optimisation across every crate drops unused code, symbols are stripped,
+# other people's code is built for size, and the audio and analysis code
+# stays built for speed. Unwinding stays: model crashes are caught.
+[profile.android]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = true
+debug = false
+
+[profile.android.package."*"]
+opt-level = "s"
+
+[profile.android.package.djsugar-engine]
+opt-level = 3
+
+[profile.android.package.djsugar-stretch]
+opt-level = 3
+
+[profile.android.package.djsugar-separation]
+opt-level = 3
+
+[profile.android.package.djsugar-js]
+opt-level = 3
+
+[profile.android.package.symphonia-core]
+opt-level = 3
+
+[profile.android.package.symphonia-bundle-mp3]
+opt-level = 3
+
+[profile.android.package.symphonia-bundle-flac]
+opt-level = 3
+
+[profile.android.package.rubato]
+opt-level = 3
+
+[profile.android.package.demucs-core]
+opt-level = 3
+
+[profile.android.package.burn-flex]
+opt-level = 3
+
+[profile.android.package.gemm-f32]
+opt-level = 3
+
+[profile.android.package.matrixmultiply]
+opt-level = 3
+
+[profile.android.package.rten]
+opt-level = 3
+
+[profile.android.package.rten-tensor]
+opt-level = 3
+
+[profile.android.package.rten-simd]
+opt-level = 3
+
+[profile.android.package.rten-vecmath]
+opt-level = 3
+
+[profile.android.package.rten-gemm]
+opt-level = 3
+
+[profile.android.package.beat-this]
+opt-level = 3
+
 [profile.dev.package.djsugar-engine]
 opt-level = 2
 

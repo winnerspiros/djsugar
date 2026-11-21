@@ -22,7 +22,6 @@ fn theme_props() {
         let kind = match ty {
             "color" => "Color",
             "length" => "Length",
-            "float" => "Float",
             "bool" => "Bool",
             "string" => "Text",
             _ => continue,
@@ -41,7 +40,8 @@ fn theme_props() {
     out += "        _ => return None,\n    })\n}\n\npub fn set(t: &crate::Theme<'_>, name: &str, p: &Prop) -> bool {\n    match (name, p) {\n";
     for (n, k) in &props {
         let f = n.replace('-', "_");
-        out += &format!("        (\"{n}\", Prop::{k}(v)) => t.set_{f}(v.clone()),\n");
+        let v = if *k == "Text" { "v.clone()" } else { "*v" };
+        out += &format!("        (\"{n}\", Prop::{k}(v)) => t.set_{f}({v}),\n");
     }
     out += "        _ => return false,\n    }\n    true\n}\n";
     let dir = std::env::var("OUT_DIR").expect("OUT_DIR");

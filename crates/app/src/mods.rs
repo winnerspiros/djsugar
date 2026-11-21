@@ -20,7 +20,6 @@ use crate::{AppWindow, Theme};
 pub enum Kind {
     Color,
     Length,
-    Float,
     Bool,
     Text,
 }
@@ -29,7 +28,6 @@ pub enum Kind {
 pub enum Prop {
     Color(slint::Color),
     Length(f32),
-    Float(f32),
     Bool(bool),
     Text(slint::SharedString),
 }
@@ -109,7 +107,6 @@ fn convert(kind: Kind, v: &Value) -> Option<Prop> {
     Some(match kind {
         Kind::Color => Prop::Color(parse_color(v.text()?)?),
         Kind::Length => Prop::Length(v.number()? as f32),
-        Kind::Float => Prop::Float(v.number()? as f32),
         Kind::Bool => Prop::Bool(v.flag()?),
         Kind::Text => Prop::Text(v.text()?.into()),
     })
@@ -224,7 +221,7 @@ pub fn install(app: &AppWindow) {
             let theme = app.global::<Theme>();
             ticks = ticks.wrapping_add(1);
             let mut again = theme.get_light() != light;
-            if ticks % 4 == 0 {
+            if ticks.is_multiple_of(4) {
                 let now = djsugar_mods::fingerprint(&folders());
                 if now != stamp {
                     stamp = now;
