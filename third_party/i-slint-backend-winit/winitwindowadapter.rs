@@ -577,7 +577,7 @@ impl WinitWindowAdapter {
             WinitWindowOrNone::None(attributes) => attributes.borrow().clone(),
         };
 
-        #[cfg(all(unix, not(target_vendor = "apple")))]
+        #[cfg(all(unix, not(target_vendor = "apple"), not(target_os = "android")))]
         {
             if let Some(xdg_app_id) = WindowInner::from_pub(self.window()).xdg_app_id() {
                 #[cfg(all(feature = "wayland", not(target_os = "android")))]

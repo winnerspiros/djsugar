@@ -5,6 +5,8 @@ edition = "2021"
 license = "Apache-2.0"
 description = "HTDemucs v4 in Rust on burn, from github.com/nikhilunni/demucs-rs (see DJSUGAR.md)"
 
+[lints]
+workspace = true
 [features]
 default = []
 # `burn/simd` is listed explicitly: burn turns the CPU backend's own
