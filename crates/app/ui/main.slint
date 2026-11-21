@@ -1425,6 +1425,42 @@ component MasterPill inherits Rectangle {
     }
 }
 
+// Perform (the decks), Prepare (one deck for getting tracks ready) and
+// Listen (a music player): the app's three modes, as one segmented switch.
+component ModeSwitch inherits Rectangle {
+    in-out property <int> layout;
+    in property <bool> compact;
+    callback changed-to(layout: int);
+    height: 32px;
+    width: row.preferred-width + 6px;
+    y: 10px;
+    border-radius: 16px;
+    background: Theme.control;
+    border-width: 1px;
+    border-color: Theme.border;
+    row := HorizontalLayout {
+        padding: 3px;
+        spacing: 2px;
+        for m in [{ name: "Perform", short: "Mix", l: 0 }, { name: "Prepare", short: "Prep", l: 3 }, { name: "Listen", short: "Play", l: 1 }]: Rectangle {
+            property <bool> on: m.l == 0 ? (layout != 3 && layout != 1) : layout == m.l;
+            border-radius: 13px;
+            width: label.preferred-width + 22px;
+            background: on ? Theme.accent : t.has-hover ? Theme.panel-raised : transparent;
+            animate background { duration: 120ms; }
+            label := Text { text: compact ? m.short : m.name; color: on ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
+            t := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    if !parent.on {
+                        layout = m.l;
+                        changed-to(m.l);
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "DJ Sugar";
     icon: @image-url("icons/djsugar.svg");
@@ -1631,11 +1667,7 @@ export component AppWindow inherits Window {
     // Edit › Find, and ⌘F (Ctrl+F on Linux and Windows): the library
     // search, or the top bar's in Player.
     public function find() {
-        if player {
-            QuickSearch.focus-box();
-        } else {
-            focus-search();
-        }
+        QuickSearch.focus-box();
     }
 
     // Text fields and other std widgets follow the appearance.
@@ -1968,37 +2000,20 @@ export component AppWindow inherits Window {
                     }
                     double-clicked => { zoom-window(); }
                 }
-                // The logo and name, centred on the window whatever the pills'
-                // widths; in Player, the search box takes their place.
-                if !player: HorizontalLayout {
-                    alignment: center;
-                    spacing: 8px;
+                // The Sugar bar: logo, the mode switch, the search over
+                // everything in the middle, the live controls on the right.
+                HorizontalLayout {
+                    padding-left: 10px + traffic-light-inset;
+                    padding-right: 8px;
+                    spacing: 10px;
                     VerticalLayout {
                         alignment: center;
-                        Image { source: @image-url("icons/djsugar-mark.svg"); width: 24px; height: 24px; }
+                        Image { source: @image-url("icons/djsugar-mark.svg"); width: 26px; height: 26px; }
                     }
-                    Text { text: "DJ Sugar"; color: Theme.text; font-family: Theme.brand-font; font-size: 21px; vertical-alignment: center; }
-                }
-                HorizontalLayout {
-                    padding-left: 4px + traffic-light-inset;
-                    padding-right: 4px;
-                    spacing: 10px;
-                    // File and Edit, on Windows and Linux (macOS has its
-                    // menu bar).
+                    if root.width > 1100px: Text { text: "sugar"; color: Theme.accent; font-family: Theme.brand-font; font-size: 19px; vertical-alignment: center; }
                     if AppMenu.shown: AppMenuButton { }
-                    LayoutPill { layout <=> root.layout; changed-to(l) => { layout-changed(l); } }
-                    // Prep always shows its waveform and never the FX bar,
-                    // so neither button is offered there.
-                    if !player && layout != 3: WaveformsButton { on <=> root.waveforms-visible; fits: wave-fits; changed-to(on) => { waveforms-visible-changed(on); } }
-                    if !player && layout != 3: FxButton { on <=> root.fx-bar-visible; changed-to(on) => { fx-bar-visible-changed(on); } }
-                    if layout == 2 || layout == 4: PadsButton { on <=> root.pads-visible; changed-to(on) => { pads-visible-changed(on); } }
-                    if layout == 4: JogsButton { on <=> root.jogs-visible; changed-to(on) => { jogs-visible-changed(on); } }
-                    if !player: Rectangle { horizontal-stretch: 1; }
-                    // Between the pills, centred on the window (as the
-                    // Player bar below is) while there is room, else
-                    // pushed aside by the wider group of pills.
-                    if player: HomeButton { }
-                    if player: search-area := Rectangle {
+                    ModeSwitch { layout <=> root.layout; compact: root.width < 900px; changed-to(l) => { layout-changed(l); } }
+                    search-area := Rectangle {
                         horizontal-stretch: 1;
                         property <length> room: self.width - 20px;
                         TopSearch {
@@ -2006,16 +2021,11 @@ export component AppWindow inherits Window {
                             x: 10px + clamp(root.width / 2 - search-area.absolute-position.x - 10px - self.width / 2, 0px, room - self.width);
                         }
                     }
-                    RemoteButton { }
-                    // Player keeps the top bar for search: no MIC button,
-                    // REC (File › Record Mix) only while recording, and no
-                    // MASTER, as the bar's volume is the master volume.
-                    if !player: MicButton { }
-                    // Only for DJs who broadcast; on air from a controller
-                    // shows it too.
+                    if root.width > 900px: RemoteButton { }
+                    if !player && root.width > 700px: MicButton { }
                     if BroadcastState.shown || Controls.value(Controls.resolve("[Shoutcast]", "enabled"), Controls.tick) > 0: OnAirButton { }
-                    if !player || recording: RecordButton { }
-                    if !player: MasterPill { clock: clock; }
+                    if (!player && root.width > 700px) || recording: RecordButton { }
+                    if !player && root.width > 560px: MasterPill { clock: clock; }
                 }
             }
 
@@ -2461,13 +2471,13 @@ export component AppWindow inherits Window {
 
         // Player's search results, under the box in the top bar. A click
         // anywhere else closes them; the wheel scrolls only the results.
-        if player && QuickSearch.open && QuickSearch.text != "": TouchArea {
+        if QuickSearch.open && QuickSearch.text != "": TouchArea {
             y: 52px;
             height: root.height - 52px;
             clicked => { QuickSearch.open = false; }
             scroll-event(e) => { accept }
         }
-        if player && QuickSearch.open && QuickSearch.text != "": QuickResults {
+        if QuickSearch.open && QuickSearch.text != "": QuickResults {
             x: (root.width - self.width) / 2;
             y: 48px;
             max-list-height: root.height - 48px - 60px;
