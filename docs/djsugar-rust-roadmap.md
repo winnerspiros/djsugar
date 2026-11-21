@@ -103,7 +103,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | --- | --- | --- |
 | 0.0 | Rebrand: crate names, app id, binary name, env vars, data dirs, icons, .github workflows/templates, packaging (flatpak id), openspec | DONE |
 | 0.1 | CI: Linux, Windows, macOS desktop builds on `rust` | DONE: every push builds and tests on Linux and Windows and builds the app on Windows and macOS |
-| 0.2 | Android arm64 build: all crates check in CI (cargo-ndk), winit + FemtoVG wgpu backend, `djsugar-android` cdylib with `android_main`; APK packaging next | WIP |
+| 0.2 | Android arm64 build: all crates check in CI (cargo-ndk), winit + FemtoVG wgpu backend, `djsugar-android` cdylib with `android_main`; the Android workflow packages a signed arm64 APK (Android 10+, `scripts/package-android.sh`, no Gradle) | WIP: not yet started on a phone |
 | 0.3 | Android audio: cpal AAudio backend, low-latency stream, Oboe parity | TODO |
 | 0.4 | Android storage and permissions (music folders, SAF) | TODO |
 | 0.5 | iOS arm64 build and unsigned IPA | TODO |
