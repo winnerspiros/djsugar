@@ -1994,19 +1994,6 @@ export component AppWindow inherits Window {
                 }
             }
 
-            // The phone pages' tabs, along the bottom on every page.
-            if phone && !library-expanded: HorizontalLayout {
-                height: 34px;
-                padding: 4px;
-                spacing: 4px;
-                for name[i] in ["A", "Mix", "B", "Library"]: Rectangle {
-                    border-radius: 13px;
-                    background: sugar-page == i ? (i == 0 ? Theme.deck-color(0) : i == 2 ? Theme.deck-color(1) : Theme.accent) : Theme.control;
-                    Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
-                    TouchArea { clicked => { sugar-page = i; } }
-                }
-            }
-
             // Player: one bar along the bottom, as in music players: what is
             // playing, the transport and the queue button.
             Rectangle { height: player ? 1px : 0px; }
@@ -2128,6 +2115,25 @@ export component AppWindow inherits Window {
 
         // Player's search results, under the box in the top bar. A click
         // anywhere else closes them; the wheel scrolls only the results.
+        // The phone pages' tabs, pinned to the bottom edge on every page.
+        if phone && !library-expanded: Rectangle {
+            y: root.height - 34px;
+            height: 34px;
+            width: root.width;
+            background: Theme.panel;
+            HorizontalLayout {
+                
+                padding: 4px;
+                spacing: 4px;
+                for name[i] in ["A", "Mix", "B", "Library"]: Rectangle {
+                    border-radius: 13px;
+                    background: sugar-page == i ? (i == 0 ? Theme.deck-color(0) : i == 2 ? Theme.deck-color(1) : Theme.accent) : Theme.control;
+                    Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
+                    TouchArea { clicked => { sugar-page = i; } }
+                }
+            }
+        }
+
         if QuickSearch.open && QuickSearch.text != "": TouchArea {
             y: 52px;
             height: root.height - 52px;
