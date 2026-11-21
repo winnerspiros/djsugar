@@ -197,7 +197,7 @@ Target: every controller that has a mapping anywhere works on Linux, Windows, ma
 | C.5 | DVS timecode decoder in Rust: Serato CV02 (Control Vinyl/CD), Traktor MK1/MK2, Mixvibes, with pitch, direction, absolute position, needle drop, relative/absolute modes, per-deck calibration | WIP: `djsugar-timecode` decodes Serato CV02 (both sides and CD), Traktor MK1 (both sides) and MixVibes (V2, 7-inch): pitch, direction and absolute position, tested on generated signals forwards, backwards, off pitch and with hiss; Settings › Decks › Timecode vinyl picks the record, the mode and each deck's input, and the decks follow it through `[ChannelN],vinylcontrol_enabled`, `_mode` (absolute or relative), `_input`, `_format` and `_status`; not yet checked against recordings of real records, no MK2 or calibration |
 | C.6 | DVS interfaces: Rane SL1/SL2/SL3/SL4, Rane Seventy/Seventy-Two/Twelve, Pioneer DJM/Serato-certified mixers, Traktor Audio 6/10 and similar; class-compliant multichannel, phono/line switching | TODO |
 | C.7 | Rane Twelve/One style motorized/MIDI platters, jog displays (HID screens on S4 MK3, DDJ-REV7 etc.) | TODO |
-| C.8 | Controller-without-mapping fallback: MIDI learn wizard builds a Rust mapping mod | TODO |
+| C.8 | Controller-without-mapping fallback: MIDI learn wizard builds a Rust mapping mod | DONE: Map mode (click a control on screen, move one on the controller; `app/src/map_mode.rs`) and the Quick map wizard (walks deck 1's usual controls, copies them to the other decks from one press each; `controllers/src/quick.rs`) build the DJ's own mapping, with undo |
 
 ## Part L: lighting and visuals (later)
 
