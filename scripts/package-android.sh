@@ -16,6 +16,8 @@ out="$root/target/android-apk"
 tools="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
 platform="$ANDROID_HOME/platforms/android-35/android.jar"
 [ -f "$platform" ] || yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" >/dev/null
+# Slint's Android backend compiles a Java helper against the same platform.
+export ANDROID_JAR="$platform"
 rm -rf "$out" && mkdir -p "$out/lib/arm64-v8a" "$root/dist"
 
 cd "$root"
