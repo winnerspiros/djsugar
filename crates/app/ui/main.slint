@@ -1252,11 +1252,18 @@ export component AppWindow inherits Window {
     // The Player layout: one bar, no waveforms or FX bar.
     property <bool> player: layout == 1;
     // Sugar layout on a phone-width window: one page at a time.
-    // The window's width, copied when it changes rather than bound, so
-    // what folds away by it can't feed back into the window's own size.
-    property <length> win-width: 1680px;
+    // The window's size as `changed width`/`changed height` pass it on
+    // (LibraryEdit), not bound, so what folds away by it can't feed back
+    // into the window's own size.
+    property <length> win-width: LibraryEdit.window-width;
+    property <length> win-height: LibraryEdit.window-height;
     property <bool> sugar-narrow: win-width < 760px;
+    // A, Mix, B, Library: on a phone one at a time, each the full height.
     property <int> sugar-page: 0;
+    property <bool> phone: sugar-narrow && layout == 0;
+    property <bool> phone-library: phone && sugar-page == 3;
+    // What the bar (52), its line and the page tabs (34) leave.
+    property <length> phone-page-height: win-height - 52px - 1px - 34px;
     property <bool> recording: Controls.value(Controls.resolve("[Recording]", "status"), Controls.tick) > 1;
     // The compact row shows in 2-Deck Basic, 4-Deck and Prep while the footer
     // button has the library expanded (then with no waveforms).
@@ -1324,7 +1331,6 @@ export component AppWindow inherits Window {
         keys.focus();
         LibraryEdit.window-height = root.height;
         LibraryEdit.window-width = root.width;
-        win-width = root.width;
         LibraryEdit.top-search = player;
     }
     changed layout => {
@@ -1344,10 +1350,7 @@ export component AppWindow inherits Window {
     }
     // For the track menu, which moves up to fit in the window.
     changed height => { LibraryEdit.window-height = root.height; }
-    changed width => {
-        LibraryEdit.window-width = root.width;
-        win-width = root.width;
-    }
+    changed width => { LibraryEdit.window-width = root.width; }
 
     // Back to the shortcuts when settings close, so ⌘, opens them again.
     property <bool> settings-open: Preferences.open;
@@ -1691,8 +1694,8 @@ export component AppWindow inherits Window {
                 // would freeze the GPU-updated waveform images. Folded away while
                 // the library is expanded or the top bar button hides them
                 // (Prep has no such button: its waveform always shows).
-                height: library-expanded || !(waveforms-visible || prep) || player ? 0px : wave-grip.dragging ? wave-grip.drag-height : WaveHeight.sliding ? slide-height : strip-heights[wave-level - 1];
-                visible: !library-expanded && (waveforms-visible || prep) && !player;
+                height: library-expanded || !(waveforms-visible || prep) || player || phone ? 0px : wave-grip.dragging ? wave-grip.drag-height : WaveHeight.sliding ? slide-height : strip-heights[wave-level - 1];
+                visible: !library-expanded && (waveforms-visible || prep) && !player && !phone;
                 background: Theme.well;
                 // Thin grey lines above, between and below the waveforms.
                 if prep: VerticalLayout {
@@ -1772,7 +1775,7 @@ export component AppWindow inherits Window {
                     spacing: 1px;
                     // As tall as 2-Deck Basic with its pad bar, so switching between
                     // them leaves the library where it is.
-                    height: library-expanded || layout != 0 ? 0px : LiteUi.deck-height + 1px + LiteUi.bar-height;
+                    height: library-expanded || layout != 0 || phone-library ? 0px : phone ? phone-page-height : LiteUi.deck-height + 1px + LiteUi.bar-height;
                     visible: !library-expanded && layout == 0;
                     // The decks share the room equally whatever they show: sized by
                     // their contents, a changing time or title would nudge the
@@ -1791,13 +1794,13 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                if sugar-narrow && !library-expanded && layout == 0: HorizontalLayout {
+                if phone && !library-expanded: HorizontalLayout {
                     height: 34px;
                     padding: 4px;
                     spacing: 4px;
-                    for name[i] in ["A", "Mix", "B"]: Rectangle {
+                    for name[i] in ["A", "Mix", "B", "Library"]: Rectangle {
                         border-radius: 13px;
-                        background: sugar-page == i ? (i == 1 ? Theme.accent : Theme.deck-color(i == 0 ? 0 : 1)) : Theme.control;
+                        background: sugar-page == i ? (i == 0 ? Theme.deck-color(0) : i == 2 ? Theme.deck-color(1) : Theme.accent) : Theme.control;
                         Text { text: name; color: sugar-page == i ? Theme.on-selection : Theme.text-dim; font-size: 13px; font-weight: 700; }
                         TouchArea { clicked => { sugar-page = i; } }
                     }
@@ -1898,14 +1901,16 @@ export component AppWindow inherits Window {
             // bar hides it.
             FxBar {
                 four: four;
-                height: library-expanded || !fx-bar-visible || player || prep ? 0px : four ? 96px : 68px;
-                visible: !library-expanded && fx-bar-visible && !player && !prep;
+                height: library-expanded || !fx-bar-visible || player || prep || phone ? 0px : four ? 96px : 68px;
+                visible: !library-expanded && fx-bar-visible && !player && !prep && !phone;
             }
 
-            Rectangle { height: !library-expanded && fx-bar-visible && !player && !prep ? 1px : 0px; }
+            Rectangle { height: !library-expanded && fx-bar-visible && !player && !prep && !phone ? 1px : 0px; }
 
             browser := Browser {
                 vertical-stretch: 1;
+                max-height: phone && !phone-library ? 0px : 100000px;
+                visible: !phone || phone-library;
                 folders: folders;
                 current-folder: current-folder;
                 folders-focused <=> folders-focused;
@@ -1959,8 +1964,8 @@ export component AppWindow inherits Window {
             // Player has its bar instead, so only while analysis runs.
             Rectangle { height: !player || LibraryEdit.analysis-status != "" ? 1px : 0px; }
             Rectangle {
-                height: !player || LibraryEdit.analysis-status != "" ? 36px : 0px;
-                visible: !player || LibraryEdit.analysis-status != "";
+                height: (!player || LibraryEdit.analysis-status != "") && (!phone || phone-library) ? 36px : 0px;
+                visible: (!player || LibraryEdit.analysis-status != "") && (!phone || phone-library);
                 background: Theme.panel;
                 HorizontalLayout {
                     padding-left: 8px;
