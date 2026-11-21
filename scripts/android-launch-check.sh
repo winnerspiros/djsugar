@@ -20,6 +20,9 @@ grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
 if grep -qE "DJ Sugar (stopped|crashed)" launch/logcat.txt; then
   echo "::error::DJ Sugar stopped on start (see above)"; exit 1
 fi
+if grep -q "controller mappings not found" launch/logcat.txt; then
+  echo "::error::the controller mappings did not load"; exit 1
+fi
 [ -n "$drawn" ] || { echo "::error::no frame drawn in three minutes"; exit 1; }
 # screencap's raw form: width, height, format (and on newer Android a colour
 # space), then RGBA pixels.

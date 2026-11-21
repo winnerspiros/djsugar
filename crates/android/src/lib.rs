@@ -78,6 +78,7 @@ fn android_main(app: slint::android::AndroidApp) {
         std::env::set_var("XDG_CONFIG_HOME", dir.join("config"));
         std::env::set_var("XDG_DATA_HOME", dir.join("data"));
     }
+    unpack_controllers(&app);
     if let Err(e) = slint::android::init(app) {
         log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
         return;
@@ -85,4 +86,50 @@ fn android_main(app: slint::android::AndroidApp) {
     if let Err(e) = djsugar::run() {
         log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
     }
+}
+
+/// Copies the controller mappings out of the APK into the app's storage,
+/// once per version, and points the app at them (`DJSUGAR_CONTROLLERS`).
+#[cfg(target_os = "android")]
+fn unpack_controllers(app: &slint::android::AndroidApp) {
+    use std::io::Read;
+    let Some(base) = app.internal_data_path() else {
+        return;
+    };
+    let dir = base.join("controllers");
+    let stamp = dir.join(".version");
+    let version = env!("CARGO_PKG_VERSION");
+    let assets = app.asset_manager();
+    let read = |name: &str| -> Option<Vec<u8>> {
+        let name = std::ffi::CString::new(format!("controllers/{name}")).ok()?;
+        let mut bytes = Vec::new();
+        assets.open(&name)?.read_to_end(&mut bytes).ok()?;
+        Some(bytes)
+    };
+    if std::fs::read_to_string(&stamp).ok().as_deref() != Some(version) {
+        let Some(index) = read("index.txt") else {
+            log::write(log::ERROR, "controller mappings missing from the APK");
+            return;
+        };
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut copied = 0;
+        for name in String::from_utf8_lossy(&index)
+            .lines()
+            .filter(|l| !l.is_empty())
+        {
+            let path = dir.join(name);
+            let ok = read(name).is_some_and(|bytes| {
+                path.parent()
+                    .is_some_and(|p| std::fs::create_dir_all(p).is_ok())
+                    && std::fs::write(&path, bytes).is_ok()
+            });
+            copied += usize::from(ok);
+        }
+        let _ = std::fs::write(&stamp, version);
+        log::write(
+            log::INFO,
+            &format!("controller mappings unpacked: {copied} files"),
+        );
+    }
+    std::env::set_var("DJSUGAR_CONTROLLERS", &dir);
 }
