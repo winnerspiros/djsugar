@@ -2022,10 +2022,10 @@ export component AppWindow inherits Window {
                         }
                     }
                     if root.width > 900px: RemoteButton { }
-                    if !player && root.width > 700px: MicButton { }
+                    if !player && root.width > 1000px: MicButton { }
                     if BroadcastState.shown || Controls.value(Controls.resolve("[Shoutcast]", "enabled"), Controls.tick) > 0: OnAirButton { }
-                    if (!player && root.width > 700px) || recording: RecordButton { }
-                    if !player && root.width > 560px: MasterPill { clock: clock; }
+                    if (!player && root.width > 1000px) || recording: RecordButton { }
+                    if !player && root.width > 860px: MasterPill { clock: clock; }
                 }
             }
 

@@ -16,6 +16,12 @@ E
 adb shell mkdir -p /sdcard/Music
 adb push launch-tone.wav /sdcard/Music/launch-tone.wav
 adb shell pm grant org.djsugar.app android.permission.READ_MEDIA_AUDIO || true
+# A real phone's screen (2340x1080 at 420 dpi, landscape), not the
+# emulator's tiny default.
+adb shell wm size 1080x2340
+adb shell wm density 420
+adb shell settings put system accelerometer_rotation 0
+adb shell settings put system user_rotation 1
 adb logcat -c
 adb shell am start -n org.djsugar.app/android.app.NativeActivity
 drawn=""
@@ -27,6 +33,10 @@ done
 adb logcat -d > launch/logcat.txt
 adb exec-out screencap -p > launch/screen.png
 adb exec-out screencap > launch/screen.raw
+# The main screen behind the welcome: Back closes it.
+adb shell input keyevent 4
+sleep 3
+adb exec-out screencap -p > launch/screen-main.png
 grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
 if grep -qE "DJ Sugar (stopped|crashed)" launch/logcat.txt; then
   echo "::error::DJ Sugar stopped on start (see above)"; exit 1
