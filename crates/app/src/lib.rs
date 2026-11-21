@@ -623,6 +623,20 @@ pub static ANDROID_APP: std::sync::OnceLock<
     slint::winit_030::winit::platform::android::activity::AndroidApp,
 > = std::sync::OnceLock::new();
 
+/// `backend` running in the Android activity's event loop.
+#[cfg(target_os = "android")]
+fn android_backend(backend: slint::BackendSelector) -> slint::BackendSelector {
+    match ANDROID_APP.get() {
+        Some(app) => {
+            use slint::winit_030::winit::platform::android::EventLoopBuilderExtAndroid;
+            let mut events = slint::winit_030::winit::event_loop::EventLoop::with_user_event();
+            events.with_android_app(app.clone());
+            backend.with_winit_event_loop_builder(events)
+        }
+        None => backend,
+    }
+}
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::args().nth(1).as_deref() == Some("--list-controls") {
         list_controls();
@@ -649,15 +663,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let backend =
         slint::BackendSelector::new().require_wgpu_30(slint::wgpu_30::WGPUConfiguration::default());
     #[cfg(target_os = "android")]
-    let backend = match ANDROID_APP.get() {
-        Some(app) => {
-            use slint::winit_030::winit::platform::android::EventLoopBuilderExtAndroid;
-            let mut events = slint::winit_030::winit::event_loop::EventLoop::with_user_event();
-            events.with_android_app(app.clone());
-            backend.with_winit_event_loop_builder(events)
-        }
-        None => backend,
-    };
+    let backend = android_backend(backend);
     // On macOS the app draws under a hidden title bar: only
     // the traffic lights stay, over the top bar.
     #[cfg(target_os = "macos")]
@@ -668,6 +674,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             .with_title_hidden(true)
             .with_fullsize_content_view(true)
     });
+    // Android phones without a GPU wgpu takes (and emulators) draw with
+    // OpenGL ES instead.
+    #[cfg(target_os = "android")]
+    if let Err(e) = backend.select() {
+        eprintln!("no wgpu GPU ({e}); drawing with OpenGL ES");
+        android_backend(slint::BackendSelector::new().renderer_name("femtovg".into())).select()?;
+    }
+    #[cfg(not(target_os = "android"))]
     backend.select()?;
     // Wayland and X11 match the window to io.github.winnerspiros.DJSugar.desktop by
     // this, for the dock icon and name.

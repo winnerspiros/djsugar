@@ -11,6 +11,10 @@ adb logcat -d > launch/logcat.txt
 adb exec-out screencap -p > launch/screen.png
 alive=$(adb shell pidof org.djsugar.app || true)
 grep -E "DJSugar|AndroidRuntime|F libc|DEBUG" launch/logcat.txt | tail -80
+if grep -qE "DJSugar *: DJ Sugar (stopped|crashed)" launch/logcat.txt; then
+  echo "::error::DJ Sugar stopped on start (see above)"; exit 1
+fi
+grep -q "DJSugar *: DJ Sugar starting" launch/logcat.txt || { echo "::error::DJ Sugar never started"; exit 1; }
 if [ -z "$alive" ]; then echo "::error::DJ Sugar is not running"; exit 1; fi
 # A black screen: every pixel of the screenshot is the same.
 python3 - <<'E' || exit 1
