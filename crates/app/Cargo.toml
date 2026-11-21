@@ -88,6 +88,6 @@ winresource = { version = "0.1", default-features = false }
 [dev-dependencies]
 hound = "3"
 
-# OpenGL ES drawing on Android, for phones where wgpu finds no GPU.
+# Slint's Android backend: the activity's lifecycle and drawing (Skia).
 [target.'cfg(target_os = "android")'.dependencies]
-slint = { version = "~1.18", features = ["renderer-femtovg"] }
+slint = { version = "~1.18", features = ["backend-android-activity-06"] }

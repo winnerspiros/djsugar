@@ -57,7 +57,7 @@ mod log {
 
 #[cfg(target_os = "android")]
 #[no_mangle]
-fn android_main(app: winit::platform::android::activity::AndroidApp) {
+fn android_main(app: slint::android::AndroidApp) {
     log::install();
     log::write(log::INFO, "DJ Sugar starting");
     eprintln!("stderr reaches the log");
@@ -78,7 +78,10 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
         std::env::set_var("XDG_CONFIG_HOME", dir.join("config"));
         std::env::set_var("XDG_DATA_HOME", dir.join("data"));
     }
-    let _ = djsugar::ANDROID_APP.set(app);
+    if let Err(e) = slint::android::init(app) {
+        log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
+        return;
+    }
     if let Err(e) = djsugar::run() {
         log::write(log::ERROR, &format!("DJ Sugar stopped: {e}"));
     }
