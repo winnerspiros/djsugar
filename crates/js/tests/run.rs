@@ -272,7 +272,10 @@ fn bundled_mappings() {
         std::fs::write(&doc, &list).unwrap();
     }
     assert_eq!(
-        std::fs::read_to_string(&doc).unwrap_or_default(),
+        // Windows checkouts may turn the line ends into CRLF.
+        std::fs::read_to_string(&doc)
+            .unwrap_or_default()
+            .replace("\r\n", "\n"),
         list,
         "docs/controller-status.txt is out of date; rerun with DJSUGAR_BLESS=1"
     );
