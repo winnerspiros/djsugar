@@ -2,7 +2,9 @@
 /// getter and setter by name, so mods can set any of them (see mods.rs)
 /// and new ones are moddable as soon as they are added.
 fn theme_props() {
-    let src = std::fs::read_to_string("ui/theme.slint").expect("read theme.slint").replace("\r\n", "\n");
+    let src = std::fs::read_to_string("ui/theme.slint")
+        .expect("read theme.slint")
+        .replace("\r\n", "\n");
     let start = src.find("export global Theme {").expect("Theme global");
     let end = start + src[start..].find("\n}\n").expect("end of Theme");
     let mut props = Vec::new();
