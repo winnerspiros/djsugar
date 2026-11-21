@@ -681,8 +681,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("no wgpu GPU ({e}); drawing with OpenGL ES");
         android_backend(slint::BackendSelector::new().renderer_name("femtovg".into())).select()?;
     }
+    #[cfg(target_os = "android")]
+    eprintln!("startup: renderer ready");
     #[cfg(not(target_os = "android"))]
     backend.select()?;
+    eprintln!("startup: renderer ready");
     // Wayland and X11 match the window to io.github.winnerspiros.DJSugar.desktop by
     // this, for the dock icon and name.
     let _ = slint::set_xdg_app_id("io.github.winnerspiros.DJSugar");
@@ -726,7 +729,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let samples = saved.is_empty();
     let library = if samples { sample_library() } else { saved };
+    eprintln!("startup: engine and library ready");
     let app = AppWindow::new()?;
+    eprintln!("startup: window made");
     {
         use slint::winit_030::{EventResult, WinitWindowAccessor};
         #[cfg(target_os = "macos")]
@@ -1865,6 +1870,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     app.show()?;
     fit_to_screen(&app);
+    // Once, when the first frame is on screen (the Android launch check
+    // waits for this line).
+    let started = std::time::Instant::now();
+    app.window()
+        .set_rendering_notifier(move |state, _| {
+            if matches!(state, slint::RenderingState::AfterRendering) {
+                static ONCE: std::sync::Once = std::sync::Once::new();
+                ONCE.call_once(|| {
+                    eprintln!("startup: first frame drawn ({:.1?})", started.elapsed())
+                });
+            }
+        })
+        .ok();
     app.run()?;
     // Keeps each plugin's sound (tweaks made in its window) for next time:
     // the engine isn't always dropped on the way out.
