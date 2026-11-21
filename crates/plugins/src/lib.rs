@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 pub use djsugar_engine::import::{ImportedLibrary, ImportedList, ListGroup};
 
 pub mod archive;
+pub mod audius;
 pub mod bandcamp;
 pub mod buy;
 pub mod djay;
@@ -46,6 +47,7 @@ pub mod source;
 pub mod subsonic;
 pub mod traktor;
 pub mod virtualdj;
+pub mod youtube;
 
 /// What a plugin is and which web hosts it talks to, as Settings shows it.
 #[derive(Clone, Debug, PartialEq)]
@@ -330,13 +332,15 @@ pub trait LibraryImport: Send {
     fn read(&self, database: &Path, groups: &[&str]) -> Result<ImportedLibrary, String>;
 }
 
-/// The plugins that come with the app: Bandcamp, the Internet Archive, the
-/// DJ's own music servers (Plex, Navidrome, Jellyfin), the iTunes Store, then
+/// The plugins that come with the app: Bandcamp, Audius, the Internet Archive, YouTube,
+/// the DJ's own music servers (Plex, Navidrome, Jellyfin), the iTunes Store, then
 /// the stores we link to.
 pub fn builtin() -> Vec<Box<dyn Plugin>> {
     let mut out: Vec<Box<dyn Plugin>> = vec![
         Box::new(bandcamp::Bandcamp::new()),
+        Box::new(audius::Audius::new()),
         Box::new(archive::InternetArchive::new()),
+        Box::new(youtube::YouTube::new()),
         Box::new(plex::Plex::new()),
         Box::new(subsonic::Navidrome::new()),
         Box::new(jellyfin::Jellyfin::new()),
