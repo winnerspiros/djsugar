@@ -22,14 +22,14 @@ codegen-units = 1
 strip = "symbols"
 
 # Decoding, analysis and synthesis are far too slow unoptimised, even in tests.
-# Phones: as small as it can be without slowing the audio. Link-time
-# optimisation across every crate drops unused code, symbols are stripped,
-# other people's code is built for size, and the audio and analysis code
-# stays built for speed. Unwinding stays: model crashes are caught.
+# Phones: as small as it can be without slowing the audio. Thin link-time
+# optimisation across every crate drops unused code (fat LTO runs CI runners
+# out of memory on a crate graph this size), symbols are stripped, other
+# people's code is built for size, and the audio and analysis code stays
+# built for speed. Unwinding stays: model crashes are caught.
 [profile.android]
 inherits = "release"
-lto = "fat"
-codegen-units = 1
+lto = "thin"
 strip = true
 debug = false
 

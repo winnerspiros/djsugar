@@ -96,7 +96,7 @@ no tuned release profile, no workspace lint table. Part Q tracks closing these g
 | Q.7 | SIMD pass on hot DSP (EQ, filters, mixing, waveform summaries) after profiling | TODO |
 | Q.8 | Fuzzing for decoders, tags, playlist and library import parsers | TODO |
 | Q.9 | PGO build for release engine | TODO |
-| Q.10 | App size budget per platform: every build reports its size in CI and fails past a budget set from the stripped baseline; then trim (dependency diet Q.6, feature-gated models, assets in compact formats) | WIP: Android builds with its own `android` profile (fat LTO, one codegen unit, stripped, other crates built for size, audio and analysis crates for speed) and compressed libraries; the APK job reports APK and library size. Before: 312 MB APK (302 MB library, 125 MB of it symbols). Next: budget gate, per-crate size breakdown (cargo-bloat), models downloaded on first use instead of bundled |
+| Q.10 | App size budget per platform: every build reports its size in CI and fails past a budget set from the stripped baseline; then trim (dependency diet Q.6, feature-gated models, assets in compact formats) | WIP: Android builds with its own `android` profile (thin LTO, as fat LTO ran CI runners out of memory; stripped; other crates built for size, audio and analysis crates for speed) and compressed libraries; the APK job reports APK and library size. Before: 312 MB APK (302 MB library, 125 MB of it symbols). Next: budget gate, per-crate size breakdown (cargo-bloat), models downloaded on first use instead of bundled |
 
 ## Part 0: platforms
 
