@@ -40,12 +40,15 @@ adb exec-out screencap -p > launch/screen-main.png
 if ! adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | grep -q org.djsugar.app; then
   echo "::error::Back closed DJ Sugar instead of the welcome"; exit 1
 fi
-# Each phone page, by its tab along the bottom (four equal tabs, 2340 wide
-# in landscape, their middle 45 pixels up): Mix, then Library.
-adb shell input tap 877 1035
+# Each phone page, by its tab along the bottom: four equal tabs across the
+# screen (landscape: the longer side across), their middle 45 pixels up.
+size=$(adb shell wm size | tail -1 | grep -oE '[0-9]+x[0-9]+')
+a=${size%x*}; b=${size#*x}
+w=$(( a > b ? a : b )); h=$(( a > b ? b : a ))
+adb shell input tap $(( w * 3 / 8 )) $(( h - 45 ))
 sleep 2
 adb exec-out screencap -p > launch/screen-mix.png
-adb shell input tap 2047 1035
+adb shell input tap $(( w * 7 / 8 )) $(( h - 45 ))
 sleep 2
 adb exec-out screencap -p > launch/screen-library.png
 grep -E "DJSugar|AndroidRuntime|F libc|F DEBUG" launch/logcat.txt | tail -80
