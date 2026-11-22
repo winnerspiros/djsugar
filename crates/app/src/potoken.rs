@@ -1,25 +1,17 @@
-//! Mints YouTube PO tokens on Android with no Java of our own: a Rust thread runs
-//! an Android message loop, owns a hidden web view and reads results from its title.
+//! Mints YouTube PO tokens on Android with no Java of our own: a hidden web view on
+//! the main thread runs the attestation script and Rust reads results from its title.
 
-use std::io::{PipeReader, PipeWriter, Read, Write};
-use std::os::fd::{AsRawFd, BorrowedFd};
-use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
+use std::sync::mpsc::sync_channel;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
 use jni::objects::{JObject, JString, JValue};
 use jni::refs::Global;
 use jni::{Env, JavaVM, jni_sig, jni_str};
-use ndk::looper::{FdEvent, ThreadLooper};
 use sugar_net::botguard;
 use sugar_net::youtube::PoTokens;
 
-type Job = Box<dyn FnOnce(&mut Env<'_>, &JObject<'_>) + Send>;
-
-struct Web {
-    jobs: Sender<Job>,
-    wake: PipeWriter,
-}
+type View = Global<JObject<'static>>;
 
 /// Minting state: when the integrity token runs out, the page is set up again.
 struct Mint {
@@ -27,7 +19,7 @@ struct Mint {
     seq: u32,
 }
 
-static WEB: OnceLock<std::result::Result<Mutex<Web>, String>> = OnceLock::new();
+static VIEW: OnceLock<View> = OnceLock::new();
 static MINT: Mutex<Mint> = Mutex::new(Mint { expires: None, seq: 0 });
 const CHUNK: usize = 1000;
 
@@ -163,100 +155,56 @@ fn wait_title(done: impl Fn(&str) -> bool, limit: Duration) -> Result<String, St
     }
 }
 
-/// Runs `f` on the web view's thread and waits for its answer.
+/// Runs `f` on the main thread, where the web view lives, and waits for the answer.
+/// The engine binds to the thread that makes the first view, and the system
+/// talks to it from the main thread on rotation, so no other thread will do.
 fn on_web<T: Send + 'static>(
     f: impl FnOnce(&mut Env<'_>, &JObject<'_>) -> jni::errors::Result<T> + Send + 'static,
 ) -> Result<T, String> {
-    let web = WEB.get_or_init(|| start().map(Mutex::new)).as_ref().map_err(Clone::clone)?;
+    let app = crate::android::app().ok_or("no activity")?;
+    let (vm, activity) = (app.vm_as_ptr() as usize, app.activity_as_ptr() as usize);
     let (tx, rx) = sync_channel(1);
-    {
-        let mut w = lock(web);
-        let job: Job = Box::new(move |env, view| {
+    app.run_on_java_main_thread(Box::new(move || {
+        #[allow(unsafe_code, reason = "the pointer is the process VM, valid for its lifetime")]
+        let vm = unsafe { JavaVM::from_raw(vm as *mut _) };
+        let r = vm.attach_current_thread(|env| -> jni::errors::Result<T> {
+            let view = match VIEW.get() {
+                Some(v) => v,
+                None => {
+                    let v = make_view(env, activity)?;
+                    VIEW.get_or_init(|| v)
+                }
+            };
             let r = f(env, view);
             if r.is_err() {
                 env.exception_clear();
             }
-            let _ = tx.send(r.map_err(|e| e.to_string()));
+            r
         });
-        w.jobs.send(job).map_err(|_| "web thread gone")?;
-        w.wake.write_all(&[1]).map_err(|e| e.to_string())?;
-    }
-    rx.recv_timeout(Duration::from_secs(20)).map_err(|_| "web thread stalled".to_owned())?
+        let _ = tx.send(r.map_err(|e| e.to_string()));
+    }));
+    rx.recv_timeout(Duration::from_secs(20)).map_err(|_| "main thread did not answer".to_owned())?
 }
 
-/// Starts the web view thread: an Android message loop that also wakes for our jobs.
-fn start() -> Result<Web, String> {
-    let app = crate::android::app().ok_or("no activity")?;
-    let (vm, activity) = (app.vm_as_ptr() as usize, app.activity_as_ptr() as usize);
-    let (reader, wake) = std::io::pipe().map_err(|e| e.to_string())?;
-    let (jobs, rx) = channel();
-    let (ready_tx, ready) = sync_channel(1);
-    std::thread::Builder::new()
-        .name("webview".into())
-        .spawn(move || serve(vm, activity, reader, rx, &ready_tx))
-        .map_err(|e| e.to_string())?;
-    ready.recv_timeout(Duration::from_secs(20)).map_err(|_| "web view never came up".to_owned())??;
-    Ok(Web { jobs, wake })
-}
-
-fn serve(
-    vm: usize,
-    activity: usize,
-    mut reader: PipeReader,
-    rx: Receiver<Job>,
-    ready: &SyncSender<Result<(), String>>,
-) {
-    #[allow(unsafe_code, reason = "the pointer is the process VM, valid for its lifetime")]
-    let vm = unsafe { JavaVM::from_raw(vm as *mut _) };
-    let res = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
-        env.call_static_method(jni_str!("android/os/Looper"), jni_str!("prepare"), jni_sig!("()V"), &[])?;
-        #[allow(unsafe_code, reason = "the activity outlives the app's threads")]
-        let activity = unsafe { JObject::from_raw(env, activity as *mut _) };
-        let view = env.new_object(
-            jni_str!("android/webkit/WebView"),
-            jni_sig!("(Landroid/content/Context;)V"),
-            &[JValue::Object(&activity)],
-        )?;
-        let settings =
-            env.call_method(&view, jni_str!("getSettings"), jni_sig!("()Landroid/webkit/WebSettings;"), &[])?.l()?;
-        env.call_method(&settings, jni_str!("setJavaScriptEnabled"), jni_sig!("(Z)V"), &[JValue::Bool(true)])?;
-        // The page needs nothing from the network; the service calls go through Rust.
-        env.call_method(&settings, jni_str!("setBlockNetworkLoads"), jni_sig!("(Z)V"), &[JValue::Bool(true)])?;
-        let ua = env.new_string(botguard::USER_AGENT)?;
-        env.call_method(
-            &settings,
-            jni_str!("setUserAgentString"),
-            jni_sig!("(Ljava/lang/String;)V"),
-            &[JValue::Object(&ua)],
-        )?;
-        let view: Global<JObject<'static>> = env.new_global_ref(view)?;
-        let Some(looper) = ThreadLooper::for_thread() else {
-            let _ = ready.send(Err("no looper on the web view thread".into()));
-            return Ok(());
-        };
-        #[allow(unsafe_code, reason = "the reader moves into the callback, so the fd outlives the registration")]
-        let fd = unsafe { BorrowedFd::borrow_raw(reader.as_raw_fd()) };
-        let jvm = vm.clone();
-        let added = looper.add_fd_with_callback(fd, FdEvent::INPUT, move |_, _| {
-            let mut sink = [0u8; 64];
-            let _ = reader.read(&mut sink);
-            while let Ok(job) = rx.try_recv() {
-                let _ = jvm.attach_current_thread(|env| -> jni::errors::Result<()> {
-                    job(env, &view);
-                    Ok(())
-                });
-            }
-            true
-        });
-        if added.is_err() {
-            let _ = ready.send(Err("could not watch the job pipe".into()));
-            return Ok(());
-        }
-        let _ = ready.send(Ok(()));
-        env.call_static_method(jni_str!("android/os/Looper"), jni_str!("loop"), jni_sig!("()V"), &[])?;
-        Ok(())
-    });
-    if let Err(e) = res {
-        let _ = ready.send(Err(format!("web view: {e}")));
-    }
+fn make_view(env: &mut Env<'_>, activity: usize) -> jni::errors::Result<View> {
+    #[allow(unsafe_code, reason = "the activity outlives every main thread task")]
+    let activity = unsafe { JObject::from_raw(env, activity as *mut _) };
+    let view = env.new_object(
+        jni_str!("android/webkit/WebView"),
+        jni_sig!("(Landroid/content/Context;)V"),
+        &[JValue::Object(&activity)],
+    )?;
+    let settings =
+        env.call_method(&view, jni_str!("getSettings"), jni_sig!("()Landroid/webkit/WebSettings;"), &[])?.l()?;
+    env.call_method(&settings, jni_str!("setJavaScriptEnabled"), jni_sig!("(Z)V"), &[JValue::Bool(true)])?;
+    // The page needs nothing from the network; the service calls go through Rust.
+    env.call_method(&settings, jni_str!("setBlockNetworkLoads"), jni_sig!("(Z)V"), &[JValue::Bool(true)])?;
+    let ua = env.new_string(botguard::USER_AGENT)?;
+    env.call_method(
+        &settings,
+        jni_str!("setUserAgentString"),
+        jni_sig!("(Ljava/lang/String;)V"),
+        &[JValue::Object(&ua)],
+    )?;
+    env.new_global_ref(view)
 }
