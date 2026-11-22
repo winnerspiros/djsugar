@@ -89,6 +89,10 @@ impl Ui {
         self.state.key(key);
     }
 
+    pub fn rescan(&mut self) {
+        self.state.scan();
+    }
+
     pub fn wheel(&mut self, x: f32, y: f32, dy: f32) {
         self.state.wheel(x / self.scale, y / self.scale, dy);
     }
@@ -123,6 +127,7 @@ pub mod native {
         ui: Ui,
         gpu: Option<Gpu>,
         cursor: (f32, f32),
+        started: bool,
     }
 
     impl Native {
@@ -146,6 +151,10 @@ pub mod native {
             if self.gpu.is_some() {
                 return;
             }
+            if self.started {
+                self.ui.rescan();
+            }
+            self.started = true;
             let attrs = Window::default_attributes()
                 .with_title("DJ Sugar")
                 .with_min_inner_size(winit::dpi::LogicalSize::new(320.0, 320.0));
@@ -226,7 +235,7 @@ pub mod native {
     }
 
     pub fn run(event_loop: EventLoop<()>, read: Reader) {
-        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0) };
+        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), started: false };
         event_loop.run_app(&mut app).unwrap_or_else(|e| fail(&e));
     }
 }
@@ -249,10 +258,36 @@ mod android {
         Some(bytes)
     }
 
+    #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
+    fn request_audio(app: &AndroidApp) -> jni::errors::Result<()> {
+        use jni::objects::{JObject, JValue};
+        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) }?;
+        let mut env = vm.attach_current_thread()?;
+        let activity = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
+        let sdk = env.get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?.i()?;
+        let name =
+            if sdk >= 33 { "android.permission.READ_MEDIA_AUDIO" } else { "android.permission.READ_EXTERNAL_STORAGE" };
+        let perm = env.new_string(name)?;
+        let state = env
+            .call_method(&activity, "checkSelfPermission", "(Ljava/lang/String;)I", &[JValue::Object(&perm)])?
+            .i()?;
+        if state != 0 {
+            let list = env.new_object_array(1, "java/lang/String", &perm)?;
+            env.call_method(
+                &activity,
+                "requestPermissions",
+                "([Ljava/lang/String;I)V",
+                &[JValue::Object(&list), JValue::Int(1)],
+            )?;
+        }
+        Ok(())
+    }
+
     #[allow(unsafe_code, reason = "the activity glue looks this symbol up by name")]
     #[unsafe(no_mangle)]
     fn android_main(app: AndroidApp) {
         let _ = APP.set(app.clone());
+        let _ = request_audio(&app);
         let event_loop =
             winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));
         crate::native::run(event_loop, read);
