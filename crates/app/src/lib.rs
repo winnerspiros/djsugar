@@ -1,4 +1,5 @@
 mod library;
+mod lyrics;
 mod screen;
 mod state;
 

@@ -30,7 +30,7 @@ const fn fade(c: u32, a: u32) -> u32 {
 }
 
 const MENU: [&str; 9] = ["File", "Edit", "View", "Deck", "Library", "Mix", "Tools", "Window", "Help"];
-const KNOBS: [&str; 4] = ["HI", "MID", "LOW", "FX"];
+const KNOBS: [&str; 4] = ["HI", "MID", "LOW", "FILT"];
 const MENU_H: f32 = 24.0;
 const PAD: f32 = 6.0;
 const GAP: f32 = 6.0;
@@ -130,7 +130,7 @@ pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]
             M::DeckB => deck(p, s, r, 1),
             M::Mixer => mixer(p, s, r),
             M::Library => library(p, s, r),
-            M::Side => lyrics(p, r),
+            M::Side => lyrics(p, s, r),
             M::Ring => ring(p, s, r),
         }
     }
@@ -485,9 +485,28 @@ fn library(p: &mut Painter, s: &mut State, r: Rect) {
     hit(s, r.x, r.y, r.w, r.h, Target::Library);
 }
 
-fn lyrics(p: &mut Painter, r: Rect) {
+fn lyrics(p: &mut Painter, s: &State, r: Rect) {
     p.text(r.x + 12.0, r.y + 20.0, HEADER, "LYRICS");
-    p.text_in(r.x + 12.0, r.y + 48.0, r.w - 24.0, LYRIC, "No synced lyrics for this track");
+    let playing = (0..2).find(|&d| {
+        s.telemetry.decks[d].playing && s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty())
+    });
+    let Some(d) =
+        playing.or_else(|| (0..2).find(|&d| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty())))
+    else {
+        p.text_in(r.x + 12.0, r.y + 48.0, r.w - 24.0, LYRIC, "No synced lyrics for this track");
+        return;
+    };
+    let Some(l) = &s.decks[d].loaded else { return };
+    let now = s.decks[d].seconds(s.telemetry.decks[d].position);
+    let cur = l.lyrics.current(now);
+    let line_h = 22.0;
+    let rows = ((r.h - 40.0) / line_h).max(1.0) as usize;
+    let first = cur.unwrap_or(0).saturating_sub(rows / 3);
+    for (n, (_, text)) in l.lyrics.lines.iter().enumerate().skip(first).take(rows) {
+        let y = r.y + 46.0 + (n - first) as f32 * line_h;
+        let style = if Some(n) == cur { Style::new(14.0, Weight::Bold, DECK[d]) } else { LYRIC };
+        p.text_in(r.x + 12.0, y, r.w - 24.0, style, text);
+    }
 }
 
 fn ring(p: &mut Painter, s: &mut State, r: Rect) {
