@@ -174,11 +174,16 @@ fn waves(p: &mut Painter, s: &mut State, r: Rect) {
             let scale = 1.0 + deck.rate * 0.08;
             for b in 0..bars {
                 let i = centre + ((b as f32 - bars as f32 * 0.5) * scale) as isize;
-                let Some(&v) = usize::try_from(i).ok().and_then(|i| l.detail.get(i)) else { continue };
+                let Some(&[v, lo, md, hi]) = usize::try_from(i).ok().and_then(|i| l.detail.get(i)) else { continue };
                 let a = f32::from(v) / 255.0 * main.h * 0.48;
-                let past = (b as f32) < bars as f32 * 0.5;
-                let c = if past { fade(DECK[d], 0x60) } else { DECK[d] };
-                p.rect(main.x + b as f32 * 2.0, mid - a, 1.4, a * 2.0 + 0.5, 0.0, c);
+                let sum = (u32::from(lo) + u32::from(md) + u32::from(hi)).max(1);
+                let ch = |x: u8| (u32::from(x) * 255 / sum * 2).min(255);
+                let alpha = if (b as f32) < bars as f32 * 0.5 { 0x70 } else { 0xff };
+                let c = ch(lo) | (ch(md) << 8) | (ch(hi) << 16) | (alpha << 24);
+                let x = main.x + b as f32 * 2.0;
+                p.rect(x, mid - a, 1.4, a * 2.0 + 0.5, 0.0, c);
+                let ah = f32::from(hi) / 255.0 * main.h * 0.48;
+                p.rect(x, mid - ah, 1.4, ah * 2.0 + 0.5, 0.0, fade(TEXT, alpha / 3))
             }
             let n = l.overview.len().max(1);
             let step = over.w / n as f32;

@@ -55,7 +55,7 @@ pub struct Loaded {
     pub entry: Entry,
     pub track: Arc<Track>,
     pub overview: Box<[u8]>,
-    pub detail: Box<[u8]>,
+    pub detail: Box<[[u8; 4]]>,
     pub grid: Option<sugar_analysis::Grid>,
 }
 
@@ -139,6 +139,29 @@ impl std::fmt::Debug for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("State").field("focus", &self.focus).finish()
     }
+}
+
+fn bands(t: &Track, per: usize) -> Box<[[u8; 4]]> {
+    let k = |hz: f32| 1.0 - (-std::f32::consts::TAU * hz / t.rate as f32).exp();
+    let (kl, kh) = (k(220.0), k(2500.0));
+    let (mut lo, mut lohi) = (0.0f32, 0.0f32);
+    t.frames
+        .chunks(per)
+        .map(|c| {
+            let mut m = [0.0f32; 4];
+            for s in c {
+                let x = (s[0] + s[1]) * 0.5;
+                lo += kl * (x - lo);
+                lohi += kh * (x - lohi);
+                let (l, mid, h) = (lo, lohi - lo, x - lohi);
+                m[0] = m[0].max(x.abs());
+                m[1] = m[1].max(l.abs());
+                m[2] = m[2].max(mid.abs());
+                m[3] = m[3].max(h.abs());
+            }
+            m.map(|v| (v.min(1.0) * 255.0) as u8)
+        })
+        .collect()
 }
 
 fn peaks(t: &Track, bins: usize, per: usize) -> Box<[u8]> {
@@ -235,7 +258,7 @@ impl State {
             };
             let loaded = bytes.and_then(|b| sugar_decode::bytes(b, entry.extension()).ok()).map(|t| {
                 let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
-                let detail = if detail { peaks(&t, 0, DETAIL_FRAMES) } else { Box::default() };
+                let detail = if detail { bands(&t, DETAIL_FRAMES) } else { Box::default() };
                 let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
                 Loaded { entry, track: Arc::new(t), overview, detail, grid }
             });
