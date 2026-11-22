@@ -6,7 +6,6 @@ pub enum Mode {
     Major,
 }
 
-/// A musical key, held as its Camelot position (1..=12) and mode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Key {
     pub camelot: u8,
@@ -20,13 +19,11 @@ impl Key {
             .then_some(Self { camelot, mode })
     }
 
-    /// Steps around the Camelot wheel between the two keys, ignoring mode (0..=6).
     fn wheel_distance(self, other: Key) -> u8 {
         let d = (i16::from(self.camelot) - i16::from(other.camelot)).rem_euclid(12) as u8;
         d.min(12 - d)
     }
 
-    /// How well `other` mixes after `self`: 1.0 same key, lower is worse, 0.0 clashing.
     pub fn fit(self, other: Key) -> f32 {
         match (self.wheel_distance(other), self.mode == other.mode) {
             (0, true) => 1.0,
@@ -37,7 +34,6 @@ impl Key {
         }
     }
 
-    /// The key after shifting pitch by `semitones` (one semitone is 7 Camelot steps).
     pub fn transpose(self, semitones: i32) -> Key {
         let c = (i32::from(self.camelot) - 1 + semitones * 7).rem_euclid(12) + 1;
         Key {

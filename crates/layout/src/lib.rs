@@ -1,9 +1,3 @@
-//! Fluid layout: a tree of modules, each with a minimum size, a growth weight and a priority.
-//! [`solve`] places them in any rectangle. A group lays its children along whichever axis fits
-//! (wide windows get a row, tall ones a column). When even that does not fit, the group hides
-//! its lowest-priority modules until the rest fit at their minimum sizes. There are no fixed
-//! breakpoints: the same tree gives a phone in portrait and a 4K desktop.
-
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Size {
     pub w: f32,
@@ -40,8 +34,6 @@ impl Rect {
 pub enum Axis {
     Row,
     Column,
-    /// Row when the rectangle is wider than `ratio` times its height, else column; the other
-    /// axis is tried when the first does not fit.
     Auto,
 }
 
@@ -50,11 +42,8 @@ pub enum Node {
     Module {
         id: u32,
         min: Size,
-        /// Share of the spare space along the group's axis.
         grow: f32,
-        /// Upper bound along the group's axis.
         max: f32,
-        /// Higher stays visible longer.
         priority: u8,
     },
     Group {
@@ -101,7 +90,6 @@ impl Node {
         }
     }
 
-    /// Smallest size this node can take with every child it keeps, given its hidden set.
     fn min_size(&self, hidden: &[u32]) -> Option<Size> {
         match self {
             Node::Module { id, min, .. } => (!hidden.contains(id)).then_some(*min),
@@ -127,7 +115,6 @@ impl Node {
                 Some(match axis {
                     Axis::Row => row,
                     Axis::Column => col,
-                    // Either arrangement may be chosen; report the one with the smaller area.
                     Axis::Auto => {
                         if row.w * row.h <= col.w * col.h {
                             row
@@ -152,15 +139,11 @@ impl Node {
     }
 }
 
-/// Aspect ratio above which an [`Axis::Auto`] group starts as a row.
 pub const AUTO_ROW_RATIO: f32 = 1.2;
 
-/// Places `root` in `area`. Returns the visible modules and their rectangles; hidden modules are
-/// absent. Rectangles never overlap and never leave `area`.
 pub fn solve(root: &Node, area: Rect) -> Vec<(u32, Rect)> {
     let mut order = Vec::new();
     root.ids(&mut order, u8::MAX);
-    // Lowest priority first; later ids lose ties so the tree order is the tie-break.
     order.sort_by_key(|&(p, id)| (p, std::cmp::Reverse(id)));
     let mut hidden = Vec::new();
     for &(_, id) in order.iter() {
@@ -245,8 +228,6 @@ fn place_line(
     if spare < -0.01 {
         return false;
     }
-    // Hand out spare space by weight; children that reach their maximum drop out and the rest
-    // share what is left.
     let mut open: Vec<usize> = (0..kids.len())
         .filter(|&i| kids[i].0.grow() > 0.0)
         .collect();
@@ -265,7 +246,6 @@ fn place_line(
             break;
         }
     }
-    // Space nobody could take centres the line.
     let mut pos = (if row { area.x } else { area.y }) + spare.max(0.0) / 2.0;
     for ((node, _), len) in kids.iter().zip(sizes) {
         let r = if row {

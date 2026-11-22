@@ -4,9 +4,7 @@ DJ software written in Rust for Android, Linux, Windows and macOS. This is a new
 written from scratch.
 
 - Design and plan: [docs/DESIGN.md](docs/DESIGN.md)
-- Screen mockup: [docs/mockup/index.html](docs/mockup/index.html). Open it in a browser and
-  resize the window to see the layout adapt; renders at seven screen sizes are in
-  docs/mockup/*.png.
+- Target screens at seven window sizes: [docs/screens](docs/screens)
 
 ## Crates
 

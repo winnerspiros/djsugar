@@ -1,5 +1,3 @@
-//! Musical time, tempo and key types shared by every DJ Sugar crate.
-
 mod key;
 mod time;
 

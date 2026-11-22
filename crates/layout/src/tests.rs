@@ -1,6 +1,5 @@
 use super::*;
 
-// Module ids of the main screen in docs/mockup.
 const BAR: u32 = 1;
 const DECK_A: u32 = 2;
 const HUB: u32 = 3;
@@ -10,7 +9,6 @@ const NEXT: u32 = 6;
 const FX_A: u32 = 7;
 const FX_B: u32 = 8;
 
-/// The mockup's main screen as a layout tree (sizes in logical pixels).
 fn main_screen() -> Node {
     Node::group(
         Axis::Column,
@@ -143,7 +141,6 @@ fn wide_is_a_row_tall_is_a_column() {
 
 #[test]
 fn low_priority_goes_first() {
-    // 780x360 fits everything once the FX rows (priority 40) are hidden.
     let ids = |w, h| {
         solve(
             &main_screen(),
@@ -159,7 +156,6 @@ fn low_priority_goes_first() {
         .collect::<Vec<u32>>()
     };
     assert_eq!(ids(780.0, 360.0), [BAR, DECK_A, HUB, DECK_B, LANE, NEXT]);
-    // 30 px shorter, Up next (60) goes too; the lane (120) stays.
     let ids = ids(700.0, 330.0);
     assert_eq!(ids, [BAR, DECK_A, HUB, DECK_B, LANE]);
     assert!(ids.contains(&DECK_A) && ids.contains(&HUB));
