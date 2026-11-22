@@ -51,8 +51,16 @@ or any other DJ application. Ideas are studied; code, layouts and look are our o
   around a full mixer (trim, three-band EQ, filter, meters, channel faders, crossfader,
   headphone cue), and the library below with sources, track table and Up next. Small
   landscape screens drop the library and FX rows behind a button and enlarge touch targets.
+  A classic menu bar (File, Edit, View, Deck, Library, Mix, Tools, Window, Help) sits on top
+  on every platform; on macOS it moves to the system menu bar, on phones it folds into one
+  button. Every action is in the menus, so nothing is only reachable by gesture.
   Portrait is the vinyl face: one platter ring holding both waveforms, the mixer in its hub,
   decks under it.
+- Lyrics. Synced lyrics for every track, local or streaming: the current line rides on the
+  waveform, the full text scrolls in a side panel, and a fullscreen karaoke view can go to a
+  second screen. Sources: embedded tags, .lrc files beside the track, online lyric services,
+  and transcription from the vocal stem when nothing else exists. Lyrics are searchable, so
+  a track can be found by a line from it.
 - Set memory. Every set is recorded as events: loads, cues, faders, effects. Any set can be
   replayed, edited, rendered to audio, or turned into a playlist.
 - Phone-first touch. One-thumb controls in portrait, two-thumb in landscape. Every hit target
@@ -63,7 +71,30 @@ mapping, our own JavaScript engine for Mixxx mappings (crates/js, written by us)
 importers and exporters for other apps' libraries once they have been checked for third-party
 code.
 
-## 4. Architecture (Rust only)
+## 4. Feature scope: everything Mixxx has, plus DJ Sugar's additions
+
+Mixxx is the baseline; every feature it ships is in scope:
+- Decks: 2 or 4 decks, samplers (up to 64), preview deck, microphone and auxiliary inputs.
+- Playback: key lock, pitch and key shift, sync with leader/follower, quantize, slip mode,
+  reverse, censor, braking and spinback, beat jump, rate ranges, nudge and scratching.
+- Cues and loops: main cue, 36 hot cues with colours and labels, intro and outro markers,
+  saved loops, manual and beat loops, loop roll, loop move and resize.
+- Mixer: EQ (several EQ types), filter, gain, kill switches, headphone cue and split cue,
+  crossfader curves, talkover with ducking.
+- Effects: chained effect units, every built-in effect, LV2 and other plugin hosts, presets.
+- Library: tracks, playlists, crates, history, auto DJ, smart search syntax, cover art,
+  metadata editing, file tag sync, browse folders, external library import.
+- Analysis: BPM and beat grid, key, ReplayGain, waveform, intro and outro detection.
+- Hardware: MIDI and HID controllers with scripted mappings, MIDI learning, vinyl control
+  (timecode), multi-device audio routing, keyboard shortcuts.
+- Output: recording, live broadcasting, multiple outputs, master and booth.
+- Look: skins, themes, waveform types, 2 and 4 deck layouts.
+
+DJ Sugar additions carried over: YouTube, SoundCloud and Spotify search and loading with fast
+parallel downloads and SponsorBlock; the sample library (195 samples, loudness-matched) with
+the sample picker and pad banks; DDJ-FLX4 over USB and BLE MIDI; touch-first Android.
+
+## 5. Architecture (Rust only)
 
 ```
 crates/
@@ -76,6 +107,7 @@ crates/
   stems      real-time source separation, cached per track
   library    track database, smart crates, history, import/export adapters
   sources    YouTube, SoundCloud, Spotify, local folders
+  lyrics     synced lyrics: tags, .lrc, online, transcription
   control    MIDI, HID, BLE MIDI; mapping runtime on crates/js
   layout     constraint solver for the fluid layout
   ui         renderer (wgpu), widgets, theme, text, input
@@ -96,14 +128,14 @@ Decisions:
 - Tests: an allocation guard on the audio callback, golden-file tests for DSP, layout solver
   property tests across sizes from 320x480 to 3840x2160, and screenshot tests per form factor.
 
-## 5. Order of work
+## 6. Order of work
 
 1. core, layout solver and the ui skeleton: one window that renders the mockup's structure
    fluidly at every size on desktop and Android.
 2. engine, io, decode: two decks, mixer, time-stretch; allocation guard in CI.
-3. analysis, then library with local folders and the command bar.
+3. analysis, then library with local folders, the menu bar and the command bar.
 4. Mix lane and Up next.
-5. sources (port DJ Sugar's streaming), control (port crates/js and mappings).
+5. sources (streaming), samples, lyrics, control (crates/js and mappings).
 6. stems, Sandbox, transition planner, set memory.
 7. Importers and exporters, USB export, recording and broadcast.
 8. Video, lighting, Automix (Automix only after its design has been agreed).
