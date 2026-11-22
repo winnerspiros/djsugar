@@ -101,6 +101,26 @@ impl Store {
     }
 }
 
+/// Sample assigned to every pad of both decks, one line per deck.
+pub fn save_pads<const N: usize>(pads: &[[usize; N]; 2]) {
+    let Some(d) = dir() else { return };
+    let text: String =
+        pads.iter().map(|row| row.iter().map(usize::to_string).collect::<Vec<_>>().join(",") + "\n").collect();
+    let _ = std::fs::create_dir_all(&d);
+    let _ = std::fs::write(d.join("pads.txt"), text);
+}
+
+pub fn load_pads<const N: usize>() -> Option<[[usize; N]; 2]> {
+    let text = std::fs::read_to_string(dir()?.join("pads.txt")).ok()?;
+    let mut out = [[0; N]; 2];
+    for (row, line) in out.iter_mut().zip(text.lines()) {
+        for (slot, v) in row.iter_mut().zip(line.split(',')) {
+            *slot = v.parse().ok()?;
+        }
+    }
+    Some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

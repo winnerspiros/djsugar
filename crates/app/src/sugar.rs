@@ -122,6 +122,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     }
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
+    picker(p, s, w, h);
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
@@ -551,7 +552,8 @@ fn controls(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let side = if r.w >= 200.0 { (r.w * 0.34).clamp(76.0, 104.0) } else { 0.0 };
     let pw = r.w - if side > 0.0 { side + 4.0 } else { 0.0 };
     let bar = 22.0;
-    let modes = [("HOT", Mode::Cues), ("LOOP", Mode::Loops), ("SMPL", Mode::Samples), ("FX", Mode::Fx)];
+    let bank = ["SMPL A", "SMPL B", "SMPL C", "SMPL D"][s.bank[d] % 4];
+    let modes = [("HOT", Mode::Cues), ("LOOP", Mode::Loops), (bank, Mode::Samples), ("FX", Mode::Fx)];
     let mw = pw / 4.0 - 2.0;
     for (n, (label, m)) in modes.into_iter().enumerate() {
         let b = Rect::new(r.x + n as f32 * (mw + 2.0), r.y, mw, bar);
@@ -1045,4 +1047,63 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
         p.outlined(px - 10.0, py - 10.0, 20.0, 20.0, 10.0, 0, 1.5, fade(ACCENT, 0x80));
     }
     hit(s, xr, Target::Xy);
+}
+
+/// Sample picker over everything: tap a sound to hear it on the pad.
+fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some((d, pad)) = s.picker else { return };
+    p.layer();
+    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0xb0));
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::PickerClose);
+    let r = Rect::new(20.0, 20.0, w - 40.0, h - 40.0);
+    p.outlined(r.x, r.y, r.w, r.h, 10.0, SURFACE, 1.5, DECK[d]);
+    hit(s, r, Target::Picker);
+    let bank = ["A", "B", "C", "D"][s.bank[d] % 4];
+    let head = format!("DECK {} SAMPLE PAD {bank}{}", d + 1, pad + 1);
+    p.text(r.x + 12.0, r.y + 22.0, TAB, &head);
+    let current = s.pads[d][s.bank[d] * 8 + pad];
+    let name = crate::state::sample_name(s, current);
+    let cs = Style { colour: DECK[d], ..TAB };
+    p.text(r.x + 24.0 + p.text_width(TAB, &head), r.y + 22.0, cs, &name);
+    let done = Rect::new(r.x + r.w - 82.0, r.y + 6.0, 72.0, 24.0);
+    button(p, s, done, "DONE", true, DECK[d], Target::PickerClose);
+    let list = Rect::new(r.x + 8.0, r.y + 38.0, r.w - 16.0, r.h - 46.0);
+    let cols = ((list.w / 150.0) as usize).max(2);
+    let cell = (list.w / cols as f32, 30.0);
+    s.picker_grid = crate::state::Picker { cols, cell };
+    hit(s, list, Target::Picker);
+    let first = (s.picker_scroll / cell.1) as usize * cols;
+    let rows = (list.h / cell.1) as usize + 2;
+    for i in first..(first + rows * cols).min(crate::state::SAMPLES.len()) {
+        let (c, row) = (i % cols, i / cols);
+        let b = Rect::new(
+            list.x + c as f32 * cell.0,
+            list.y + row as f32 * cell.1 - s.picker_scroll,
+            cell.0 - 4.0,
+            cell.1 - 4.0,
+        );
+        if b.y < list.y - 1.0 || b.y + b.h > list.y + list.h + 1.0 {
+            continue;
+        }
+        let on = i == current;
+        p.gradient(
+            b.x,
+            b.y,
+            b.w,
+            b.h,
+            6.0,
+            if on { fade(DECK[d], 0x60) } else { rgb(0x1a1c23) },
+            if on { fade(DECK[d], 0x30) } else { rgb(0x111318) },
+            1.0,
+            if on { DECK[d] } else { rgb(0x2a2c33) },
+        );
+        let label = crate::state::sample_name(s, i);
+        p.text_in(
+            b.x + 8.0,
+            b.y + b.h * 0.5 + 4.0,
+            b.w - 12.0,
+            Style { colour: if on { TEXT } else { GREY }, ..SMALL },
+            &label,
+        );
+    }
 }

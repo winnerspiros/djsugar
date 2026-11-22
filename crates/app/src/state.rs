@@ -56,6 +56,8 @@ pub enum Target {
     Grid(usize),
     Sort(library::Column),
     XfadeStep(i8),
+    Picker,
+    PickerClose,
     Scene(usize),
     Xy,
     StationTime,
@@ -90,6 +92,13 @@ pub enum View {
     Lib,
     Wave,
     Fx,
+}
+
+/// Layout of the sample picker grid: columns and cell size.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Picker {
+    pub cols: usize,
+    pub cell: (f32, f32),
 }
 
 /// FX station settings shown on its page.
@@ -138,8 +147,10 @@ pub fn sample_name(s: &State, i: usize) -> String {
     s.entries.get(i).map_or_else(String::new, |e| short(&e.title).to_string())
 }
 
+pub const BANKS: usize = 4;
+
 pub fn pad_name(s: &State, d: usize, i: usize) -> String {
-    sample_name(s, s.pads[d % 2][i])
+    sample_name(s, s.pads[d % 2][s.bank[d % 2] * 8 + i])
 }
 
 pub fn beats_label(b: f64) -> String {
@@ -301,7 +312,12 @@ pub struct State {
     pub decks: [DeckUi; DECKS],
     pub crossfader: f32,
     pub samples: Vec<Option<Arc<Track>>>,
-    pub pads: [[usize; 8]; 2],
+    pub pads: [[usize; 8 * BANKS]; 2],
+    pub bank: [usize; 2],
+    /// Sample picker open for (deck, pad), its scroll and grid geometry.
+    pub picker: Option<(usize, usize)>,
+    pub picker_scroll: f32,
+    pub picker_grid: Picker,
     pub entries: Vec<Entry>,
     pub shown: Vec<u32>,
     pub query: String,
@@ -380,7 +396,7 @@ fn peaks(t: &Track, bins: usize, per: usize) -> Box<[u8]> {
 
 impl State {
     pub fn new(control: Option<Control>, read: Reader, status: Option<String>, out_rate: u32) -> Self {
-        let mut pads = [[0; 8]; 2];
+        let mut pads = [[0; 8 * BANKS]; 2];
         for (i, p) in pads.iter_mut().flatten().enumerate() {
             *p = i.min(SAMPLES.len().saturating_sub(1));
         }
@@ -390,7 +406,11 @@ impl State {
             decks: std::array::from_fn(|_| DeckUi::new()),
             crossfader: 0.0,
             samples: vec![None; SAMPLES.len()],
-            pads,
+            pads: crate::store::load_pads().unwrap_or(pads),
+            bank: [0; 2],
+            picker: None,
+            picker_scroll: 0.0,
+            picker_grid: Picker::default(),
             entries: library::samples(),
             shown: (0..SAMPLES.len() as u32).collect(),
             query: String::new(),
@@ -449,6 +469,15 @@ impl State {
             && self.decks[d].cues[p].is_some()
         {
             self.cue_menu = Some((d, p, g.start.0, g.start.1));
+        }
+        if self.picker.is_none()
+            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Pad(d, p)) = g.target
+            && self.decks[d].mode == Mode::Samples
+        {
+            self.picker = Some((d, p));
+            let at = self.pads[d][self.bank[d] * 8 + p];
+            self.picker_scroll = (at / self.picker_grid.cols.max(1)) as f32 * self.picker_grid.cell.1;
         }
         while let Ok((job, loaded)) = self.jobs.1.try_recv() {
             match (job, loaded) {
@@ -794,7 +823,7 @@ impl State {
     }
 
     fn pad(&mut self, deck: usize, pad: usize) {
-        self.sample(self.pads[deck % 2][pad]);
+        self.sample(self.pads[deck % 2][self.bank[deck % 2] * 8 + pad]);
     }
 
     fn sample(&mut self, i: usize) {
@@ -1020,7 +1049,13 @@ impl State {
                     Mode::Fx => self.fx(d, p),
                 }
             }
-            Target::Mode(d, m) => self.decks[d].mode = m,
+            Target::Mode(d, m) => {
+                if m == Mode::Samples && self.decks[d].mode == m {
+                    self.bank[d] = (self.bank[d] + 1) % BANKS;
+                }
+                self.decks[d].mode = m;
+            }
+            Target::PickerClose => self.picker = None,
             Target::Sync(d) => self.sync(d),
             Target::AutoDj => self.toggle_auto(),
             Target::Jog(d) => {
@@ -1198,6 +1233,19 @@ impl State {
                     }
                 }
             }
+            Some(Target::Picker) if !d.moved => {
+                let g = self.picker_grid;
+                if let (Some((deck, pad)), Some(r)) = (self.picker, self.rect_of(Target::Picker)) {
+                    let col = ((d.last.0 - r.x) / g.cell.0) as usize;
+                    let row = ((y - r.y + self.picker_scroll) / g.cell.1) as usize;
+                    let i = row * g.cols + col;
+                    if col < g.cols && i < SAMPLES.len() {
+                        self.pads[deck][self.bank[deck] * 8 + pad] = i;
+                        self.sample(i);
+                        crate::store::save_pads(&self.pads);
+                    }
+                }
+            }
             Some(Target::Xy) => {
                 self.station.on = false;
                 self.send(Command::Station(Set::On(false)));
@@ -1211,6 +1259,10 @@ impl State {
     }
 
     pub fn wheel(&mut self, x: f32, y: f32, dy: f32) {
+        if self.picker.is_some() {
+            self.drag(Target::Picker, x, y, (0.0, dy));
+            return;
+        }
         if self.library.hit(x, y) {
             self.scroll_by(-dy);
         }
@@ -1281,6 +1333,12 @@ impl State {
                 self.send(Command::Gain(d, knob_gain(v)));
             }
             Target::Library => self.scroll_by(-delta.1),
+            Target::Picker => {
+                let g = self.picker_grid;
+                let rows = SAMPLES.len().div_ceil(g.cols.max(1)) as f32;
+                let max = (rows * g.cell.1 - r.h).max(0.0);
+                self.picker_scroll = (self.picker_scroll - delta.1).clamp(0.0, max);
+            }
             Target::Xy => {
                 let xy = (((x - r.x) / r.w).clamp(0.0, 1.0), (1.0 - (y - r.y) / r.h).clamp(0.0, 1.0));
                 self.station.xy = xy;
