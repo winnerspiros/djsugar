@@ -1,5 +1,5 @@
 # OpenDJ UI Specification (Screen-by-Screen)
-\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
+Status: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint UI files) and supporting Rust logic. Every screen, region, panel, control, popup, menu, gesture, color/size token is documented.
 

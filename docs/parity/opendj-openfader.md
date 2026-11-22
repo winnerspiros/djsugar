@@ -1,5 +1,5 @@
 # OpenDJ and OpenFadeR Feature Parity List
-\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
+Status: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 This document enumerates every feature, quality-of-life detail, and capability of OpenDJ and OpenFadeR based on source code analysis, READMEs, changelogs, and documentation. Items are grouped by category. Each item cites its source file or URL.
 

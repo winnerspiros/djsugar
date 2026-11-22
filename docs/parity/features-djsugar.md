@@ -1,5 +1,5 @@
 # DJ Sugar (Mixxx Fork) Feature Parity List
-\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
+Status: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 Exhaustive inventory of every non-UI feature, control, preference, effect, library capability, and DJ-Sugar-specific addition. Source: `/home/ubuntu/djsugar` (C++/Qt, read-only fork). Target: Rust rewrite.
 

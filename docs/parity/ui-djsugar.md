@@ -1,5 +1,5 @@
 # DJ Sugar Mixxx Fork - Android & Desktop UI Specification
-\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
+Status: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 Source: /home/ubuntu/djsugar/res/qml (94 files, ~12.7k lines)
 Android overrides: res/qml/+android, res/qml/Deck/+android, res/qml/Library/+android, res/qml/Effects/+android, res/qml/Settings/+android, res/qml/Theme/+android
