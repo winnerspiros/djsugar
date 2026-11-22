@@ -1,0 +1,13 @@
+[package]
+name = "sugar-engine"
+description = "Real-time decks, mixer and command rings."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+rtrb = "0.3"
+triple_buffer = "8"
+
+[lints]
+workspace = true
