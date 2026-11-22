@@ -5,7 +5,11 @@
 set -uo pipefail
 REF=$1 OURS=$2 OUT=$3
 mkdir -p "$OUT/tour"
-RPKG=org.mixxx RACT=org.mixxx/.MainActivity
+# The reference identity comes from its own manifest.
+BADGE=$("$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2" dump badging "$REF")
+RPKG=$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+RACT=$RPKG/$(echo "$BADGE" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p")
+echo "reference: $RACT"
 OPKG=app.djsugar OACT=app.djsugar/android.app.NativeActivity
 shot() { sleep "${2:-3}"; adb exec-out screencap -p > "$OUT/$1"; }
 rotate() {
