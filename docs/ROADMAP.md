@@ -61,7 +61,7 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - Acceptance: every control works by touch, mouse and keyboard
 
 ## M4 Analysis and library
-- [~] BPM and beat grid done; key, ReplayGain, phrases, energy, intro and outro, waveform pyramid
+- [~] BPM, beat grid and key (Camelot) done; ReplayGain, phrases, energy, intro and outro, waveform pyramid
 - [ ] Accuracy against Mixxx as oracle on GiantSteps and synthetic sets
 - [~] Library: folder scan done;  playlists, crates, smart crates, history, tags, ratings, colours
 - [~] Search: words, negation, Greek and Greeklish, accent folding done; field syntax open

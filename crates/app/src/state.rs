@@ -61,6 +61,7 @@ pub struct Loaded {
     pub overview: Box<[u8]>,
     pub detail: Box<[[u8; 4]]>,
     pub grid: Option<sugar_analysis::Grid>,
+    pub key: Option<sugar_analysis::Key>,
     pub lyrics: crate::lyrics::Lyrics,
 }
 
@@ -268,13 +269,14 @@ impl State {
                 let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
                 let detail = if detail { bands(&t, DETAIL_FRAMES) } else { Box::default() };
                 let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
+                let key = if detail.is_empty() { None } else { sugar_analysis::key(t.rate, &t.frames) };
                 let lyrics = match &entry.source {
                     Source::File(p) => std::fs::read_to_string(p.with_extension("lrc"))
                         .map(|t| crate::lyrics::Lyrics::parse(&t))
                         .unwrap_or_default(),
                     Source::Sample(_) => crate::lyrics::Lyrics::default(),
                 };
-                Loaded { entry, track: Arc::new(t), overview, detail, grid, lyrics }
+                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics }
             });
             let _ = tx.send((job, loaded));
         });

@@ -276,6 +276,10 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         .as_ref()
         .and_then(|l| l.grid)
         .map_or(String::new(), |g| format!("{:.1} BPM  ", g.bpm * (1.0 + rate / 100.0)));
+    let bpm = match ui.loaded.as_ref().and_then(|l| l.key) {
+        Some(k) => format!("{bpm}{}  ", k.camelot()),
+        None => bpm,
+    };
     let sub = format!("{bpm}{rate:+.1}%   {sub}");
     p.text_in(x, r.y + 42.0, right - x, SUB, &sub);
 
