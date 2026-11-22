@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/layout"]
+members = ["crates/app", "crates/core", "crates/layout", "crates/ui"]
 
 [workspace.package]
 edition = "2024"
@@ -13,6 +13,9 @@ missing_debug_implementations = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+[profile.dev.package."*"]
+opt-level = 2
 
 [profile.release]
 lto = "fat"

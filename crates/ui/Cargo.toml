@@ -1,0 +1,13 @@
+[package]
+name = "sugar-ui"
+description = "GPU renderer and widgets."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+bytemuck = { version = "1.25", features = ["derive"] }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "dx12", "metal", "gles", "vulkan", "wgsl"] }
+
+[lints]
+workspace = true

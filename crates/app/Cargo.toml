@@ -1,0 +1,14 @@
+[package]
+name = "djsugar"
+description = "DJ Sugar."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+sugar-layout = { path = "../layout" }
+sugar-ui = { path = "../ui" }
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
+
+[lints]
+workspace = true
