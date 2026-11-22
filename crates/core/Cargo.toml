@@ -1,0 +1,9 @@
+[package]
+name = "sugar-core"
+description = "Musical time, tempo and key types."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true

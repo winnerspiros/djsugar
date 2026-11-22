@@ -1,0 +1,9 @@
+[package]
+name = "sugar-layout"
+description = "Fluid layout solver."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
