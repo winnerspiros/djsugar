@@ -11,7 +11,9 @@ RPKG=$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
 RACT=$RPKG/$(echo "$BADGE" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p")
 echo "reference: $RACT"
 OPKG=app.djsugar OACT=app.djsugar/android.app.NativeActivity
-shot() { sleep "${2:-3}"; adb exec-out screencap -p > "$OUT/$1"; }
+# System pop-ups (full screen tip, a busy launcher) must not cover the shots.
+quiet() { adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1; }
+shot() { sleep "${2:-3}"; quiet; sleep 1; adb exec-out screencap -p > "$OUT/$1"; }
 rotate() {
   adb shell settings put system accelerometer_rotation 0
   adb shell settings put system user_rotation "$1"
@@ -43,6 +45,9 @@ size() { adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*'; }
 adb shell mkdir -p /sdcard/Music
 for f in platform/android/twin-media/*; do [ -f "$f" ] && adb push "$f" /sdcard/Music/ > /dev/null; done
 
+adb shell settings put secure immersive_mode_confirmations confirmed
+adb shell settings put global hide_error_dialogs 1
+adb shell settings put global anr_show_background 0
 adb install -r -g "$REF" || { echo "::error::reference install failed"; exit 1; }
 adb install -r -g "$OURS" || { echo "::error::our install failed"; exit 1; }
 adb shell appops set $RPKG MANAGE_EXTERNAL_STORAGE allow 2>/dev/null || true
