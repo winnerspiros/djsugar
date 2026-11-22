@@ -323,15 +323,17 @@ impl<'w> Renderer<'w> {
             multiview_mask: None,
         });
         pass.set_bind_group(0, &self.bind_group, &[]);
-        if !quads.is_empty() {
-            pass.set_pipeline(&self.pipeline);
-            pass.set_vertex_buffer(0, self.instances.slice(..quad_bytes));
-            pass.draw(0..4, 0..quads.len() as u32);
-        }
-        if !glyphs.is_empty() {
-            pass.set_pipeline(&self.glyph_pipeline);
-            pass.set_vertex_buffer(0, self.glyphs.slice(..glyph_bytes));
-            pass.draw(0..4, 0..glyphs.len() as u32);
+        for (q, g) in painter.spans() {
+            if !q.is_empty() {
+                pass.set_pipeline(&self.pipeline);
+                pass.set_vertex_buffer(0, self.instances.slice(..quad_bytes));
+                pass.draw(0..4, q);
+            }
+            if !g.is_empty() {
+                pass.set_pipeline(&self.glyph_pipeline);
+                pass.set_vertex_buffer(0, self.glyphs.slice(..glyph_bytes));
+                pass.draw(0..4, g);
+            }
         }
     }
 }

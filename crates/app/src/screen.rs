@@ -1,35 +1,40 @@
 use sugar_layout::{Axis, Id, Node, Rect, Size};
 use sugar_ui::{Painter, Style, Weight, rgb};
 
+use crate::state::{DETAIL_FRAMES, DeckUi, Hit, SAMPLES, State, Target};
+
 pub const BACKGROUND: u32 = rgb(0x000000);
 const PANEL: u32 = rgb(0x000000);
-const RAISED: u32 = rgb(0x0d0d0f);
-const LINE: u32 = rgb(0x1f1f24);
-const DECK_A: u32 = rgb(0xff2e93);
-const DECK_B: u32 = rgb(0x3fe0ff);
+const RAISED: u32 = rgb(0x111114);
+const LINE: u32 = rgb(0x222228);
+const DECK: [u32; 2] = [rgb(0xff2e93), rgb(0x3fe0ff)];
 const ACCENT: u32 = rgb(0xffe45c);
-const TEXT: u32 = rgb(0xf6ecf3);
-const DIM: u32 = rgb(0x9c8796);
-const CAP: u32 = rgb(0xdddddd);
+const TEXT: u32 = rgb(0xf2f2f5);
+const DIM: u32 = rgb(0x8a8a96);
+const PLAY: u32 = rgb(0x39ff88);
 
 const MENU_ITEM: Style = Style::new(12.5, Weight::Regular, TEXT);
-const BRAND: Style = Style::new(14.0, Weight::Bold, DECK_A);
-const HINT: Style = Style::new(13.0, Weight::Regular, DIM);
-const HEADER: Style = Style::new(11.0, Weight::Semibold, DIM);
+const BRAND: Style = Style::new(14.0, Weight::Bold, DECK[0]);
+const HINT: Style = Style::new(12.5, Weight::Regular, DIM);
+const HEADER: Style = Style::new(10.5, Weight::Semibold, DIM);
 const TITLE: Style = Style::new(15.0, Weight::Semibold, TEXT);
 const SUB: Style = Style::new(12.0, Weight::Regular, DIM);
-const INFO: Style = Style::new(13.0, Weight::Semibold, ACCENT);
-const PAD_LABEL: Style = Style::new(11.0, Weight::Semibold, DIM);
-const KNOB_LABEL: Style = Style::new(9.5, Weight::Semibold, DIM);
+const TIME: Style = Style::new(13.0, Weight::Semibold, ACCENT);
+const LABEL: Style = Style::new(10.5, Weight::Semibold, DIM);
+const BUTTON: Style = Style::new(11.5, Weight::Bold, TEXT);
 const CELL: Style = Style::new(13.0, Weight::Regular, TEXT);
-const KEY_CELL: Style = Style::new(13.0, Weight::Semibold, ACCENT);
 const LYRIC: Style = Style::new(13.0, Weight::Regular, DIM);
-const LYRIC_NOW: Style = Style::new(15.0, Weight::Bold, TEXT);
+
+const fn fade(c: u32, a: u32) -> u32 {
+    c & 0x00ff_ffff | a << 24
+}
 
 const MENU: [&str; 9] = ["File", "Edit", "View", "Deck", "Library", "Mix", "Tools", "Window", "Help"];
+const KNOBS: [&str; 4] = ["HI", "MID", "LOW", "FX"];
 const MENU_H: f32 = 24.0;
 const PAD: f32 = 6.0;
 const GAP: f32 = 6.0;
+pub const ROW_H: f32 = 22.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -57,22 +62,22 @@ pub fn tree() -> Node {
         u8::MAX,
         vec![
             module(M::Top, 280.0, 34.0, 0.0, open, 250),
-            module(M::Waves, 280.0, 80.0, 0.35, open, 200),
+            module(M::Waves, 280.0, 76.0, 0.4, open, 235),
             Node::group(
                 Axis::Row,
                 GAP,
                 240,
                 vec![
-                    module(M::DeckA, 150.0, 170.0, 1.0, open, 240),
-                    module(M::Mixer, 150.0, 170.0, 0.5, 340.0, 230),
-                    module(M::DeckB, 150.0, 170.0, 1.0, open, 240),
+                    module(M::DeckA, 170.0, 180.0, 1.0, open, 240),
+                    module(M::Mixer, 170.0, 180.0, 0.5, 300.0, 230),
+                    module(M::DeckB, 170.0, 180.0, 1.0, open, 240),
                 ],
             ),
             Node::group(
                 Axis::Row,
                 GAP,
                 100,
-                vec![module(M::Library, 240.0, 120.0, 1.0, open, 100), module(M::Side, 200.0, 120.0, 0.0, 280.0, 50)],
+                vec![module(M::Library, 240.0, 110.0, 1.0, open, 100), module(M::Side, 200.0, 110.0, 0.0, 280.0, 50)],
             ),
         ],
     )
@@ -82,8 +87,14 @@ pub fn inset(window: Rect) -> Rect {
     Rect::new(PAD, MENU_H + PAD, (window.w - 2.0 * PAD).max(0.0), (window.h - MENU_H - 2.0 * PAD).max(0.0))
 }
 
-pub fn paint(p: &mut Painter, window: Rect, placed: &[(Id, Rect)]) {
+fn hit(s: &mut State, x: f32, y: f32, w: f32, h: f32, target: Target) {
+    s.hits.push(Hit { rect: Rect::new(x, y, w, h), target });
+}
+
+pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]) {
+    s.hits.clear();
     p.rect(0.0, 0.0, window.w, MENU_H, 0.0, PANEL);
+    p.rect(0.0, MENU_H - 1.0, window.w, 1.0, 0.0, LINE);
     let mut x = 10.0;
     for item in MENU {
         x += p.text(x, 16.5, MENU_ITEM, item) + 18.0;
@@ -91,108 +102,276 @@ pub fn paint(p: &mut Painter, window: Rect, placed: &[(Id, Rect)]) {
     for &(id, r) in placed {
         p.outlined(r.x, r.y, r.w, r.h, 8.0, PANEL, 1.0, LINE);
         match ALL[usize::from(id)] {
-            M::Top => top(p, r),
-            M::Waves => waves(p, r),
-            M::DeckA => deck(p, r, DECK_A, ["A", "Nightdrive", "Kessler & Ama", "124.0  8A"]),
-            M::DeckB => deck(p, r, DECK_B, ["B", "Copper Sun", "Diaz / Mbeki", "124.0  8B"]),
-            M::Mixer => mixer(p, r),
-            M::Library => library(p, r),
+            M::Top => top(p, s, r),
+            M::Waves => waves(p, s, r),
+            M::DeckA => deck(p, s, r, 0),
+            M::DeckB => deck(p, s, r, 1),
+            M::Mixer => mixer(p, s, r),
+            M::Library => library(p, s, r),
             M::Side => lyrics(p, r),
         }
     }
+    if let Some(d) = s.browser {
+        p.layer();
+        let r = screen_body(window);
+        p.outlined(r.x, r.y, r.w, r.h, 10.0, PANEL, 1.5, DECK[d]);
+        let head = Style::new(14.0, Weight::Bold, DECK[d]);
+        p.text(r.x + 14.0, r.y + 24.0, head, ["Load to deck A", "Load to deck B"][d]);
+        let close = "Close";
+        let cw = p.text_width(BUTTON, close) + 24.0;
+        p.outlined(r.x + r.w - cw - 10.0, r.y + 8.0, cw, 24.0, 6.0, RAISED, 1.0, LINE);
+        p.text(r.x + r.w - cw + 2.0, r.y + 24.0, BUTTON, close);
+        let list = Rect::new(r.x, r.y + 34.0, r.w, r.h - 34.0);
+        s.hits.push(Hit { rect: r, target: Target::CloseBrowser });
+        library(p, s, list);
+        hit(s, r.x + r.w - cw - 10.0, r.y + 4.0, cw, 32.0, Target::CloseBrowser);
+    }
 }
 
-fn top(p: &mut Painter, r: Rect) {
+fn screen_body(window: Rect) -> Rect {
+    Rect::new(PAD, MENU_H + PAD, window.w - 2.0 * PAD, window.h - MENU_H - 2.0 * PAD)
+}
+
+fn top(p: &mut Painter, s: &State, r: Rect) {
     let x = r.x + 28.0 + p.text(r.x + 12.0, r.y + 22.0, BRAND, "DJ Sugar");
-    p.text_in(x, r.y + 22.0, r.x + r.w - x - 12.0, HINT, "Search tracks, streaming, or type a command");
+    let hint = s.status.as_deref().unwrap_or("Search tracks, streaming, or type a command");
+    p.text_in(x, r.y + 22.0, r.x + r.w - x - 12.0, HINT, hint);
 }
 
-fn waves(p: &mut Painter, r: Rect) {
+fn stem(file: &str) -> &str {
+    file.rsplit_once('.').map_or(file, |(s, _)| s)
+}
+
+fn clock(secs: f64) -> String {
+    let s = secs.max(0.0);
+    format!("{}:{:04.1}", (s / 60.0) as u32, s % 60.0)
+}
+
+fn waves(p: &mut Painter, s: &mut State, r: Rect) {
     let h = (r.h - 3.0 * PAD) * 0.5;
-    p.rect(r.x + PAD, r.y + PAD, r.w - 2.0 * PAD, h, 4.0, RAISED);
-    p.rect(r.x + PAD, r.y + 2.0 * PAD + h, r.w - 2.0 * PAD, h, 4.0, RAISED);
-    p.rect(r.x + r.w * 0.5 - 1.0, r.y + PAD, 2.0, r.h - 2.0 * PAD, 1.0, TEXT);
+    for d in 0..2 {
+        let y = r.y + PAD + d as f32 * (h + PAD);
+        let ov = (h * 0.22).clamp(8.0, 18.0);
+        let main = Rect::new(r.x + PAD, y, r.w - 2.0 * PAD, h - ov - 3.0);
+        let over = Rect::new(r.x + PAD, y + h - ov, r.w - 2.0 * PAD, ov);
+        p.rect(main.x, main.y, main.w, main.h, 4.0, RAISED);
+        p.rect(over.x, over.y, over.w, over.h, 3.0, RAISED);
+        let deck = &s.decks[d];
+        let pos = s.telemetry.decks[d].position;
+        if let Some(l) = &deck.loaded {
+            let mid = main.y + main.h * 0.5;
+            let bars = (main.w / 2.0) as usize;
+            let centre = (pos / DETAIL_FRAMES as f64) as isize;
+            let scale = 1.0 + deck.rate * 0.08;
+            for b in 0..bars {
+                let i = centre + ((b as f32 - bars as f32 * 0.5) * scale) as isize;
+                let Some(&v) = usize::try_from(i).ok().and_then(|i| l.detail.get(i)) else { continue };
+                let a = f32::from(v) / 255.0 * main.h * 0.48;
+                let past = (b as f32) < bars as f32 * 0.5;
+                let c = if past { fade(DECK[d], 0x60) } else { DECK[d] };
+                p.rect(main.x + b as f32 * 2.0, mid - a, 1.4, a * 2.0 + 0.5, 0.0, c);
+            }
+            let n = l.overview.len().max(1);
+            let step = over.w / n as f32;
+            let played = (pos / deck.length().max(1.0)) as f32;
+            for (i, &v) in l.overview.iter().enumerate().step_by((n / over.w.max(1.0) as usize).max(1)) {
+                let a = f32::from(v) / 255.0 * over.h * 0.5;
+                let x = over.x + i as f32 * step;
+                let c = if (i as f32) < played * n as f32 { DIM } else { DECK[d] };
+                p.rect(x, over.y + over.h * 0.5 - a, step.max(1.0), a * 2.0 + 0.5, 0.0, c);
+            }
+            p.rect(over.x + over.w * played - 1.0, over.y, 2.0, over.h, 1.0, TEXT);
+            hit(s, over.x, over.y, over.w, over.h, Target::Overview(d));
+        } else {
+            let msg = if deck.loading { "Loading..." } else { "Empty deck: tap a track in the library" };
+            p.text(main.x + 10.0, main.y + main.h * 0.5 + 4.0, SUB, msg);
+        }
+        p.rect(main.x + main.w * 0.5 - 1.0, main.y, 2.0, main.h, 1.0, TEXT);
+    }
 }
 
-fn deck(p: &mut Painter, r: Rect, colour: u32, [name, title, artist, info]: [&str; 4]) {
+fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let colour = DECK[d];
+    let t = s.telemetry.decks[d];
+    let ui: &DeckUi = &s.decks[d];
     let right = r.x + r.w - 12.0;
-    let iw = p.text_width(INFO, info);
-    p.text(right - iw, r.y + 26.0, INFO, info);
-    let x = r.x + 22.0 + p.text(r.x + 12.0, r.y + 26.0, Style::new(18.0, Weight::Bold, colour), name);
-    p.text_in(x, r.y + 26.0, right - iw - 12.0 - x, TITLE, title);
-    p.text_in(x, r.y + 44.0, right - x, SUB, artist);
+    let remain = ui.seconds(ui.length() - t.position);
+    let info = if ui.loaded.is_some() { format!("-{}", clock(remain)) } else { String::new() };
+    let iw = p.text_width(TIME, &info);
+    p.text(right - iw, r.y + 24.0, TIME, &info);
+    let x = r.x + 22.0 + p.text(r.x + 12.0, r.y + 24.0, Style::new(18.0, Weight::Bold, colour), ["A", "B"][d]);
+    let (title, sub) = match &ui.loaded {
+        Some(l) => {
+            let (dir, file) = l.name.rsplit_once('/').unwrap_or(("samples", l.name));
+            (stem(file).replace(['-', '_'], " "), dir.to_string())
+        }
+        None => ("No track".into(), String::new()),
+    };
+    p.text_in(x, r.y + 24.0, right - iw - 12.0 - x, TITLE, &title);
+    let rate = f64::from(ui.rate) * 8.0;
+    let sub = format!("{sub}   {rate:+.1}%{}", if ui.key_lock { "  KEY" } else { "" });
+    p.text_in(x, r.y + 42.0, right - x, SUB, &sub);
 
-    let jog = (r.h * 0.55).min(r.w * 0.4).min(r.h - 64.0);
-    p.outlined(r.x + 2.0 * PAD, r.y + r.h - jog - 2.0 * PAD, jog, jog, jog * 0.5, RAISED, 2.0, colour);
-    let px = r.x + jog + 4.0 * PAD;
-    let pw = r.w - jog - 6.0 * PAD;
-    if pw < 40.0 {
+    hit(s, r.x, r.y, r.w, 50.0, Target::Browse(d));
+    let ui = &s.decks[d];
+    let fader_w = 22.0;
+    let fx = if d == 0 { r.x + PAD } else { r.x + r.w - PAD - fader_w };
+    let body = Rect::new(r.x + PAD, r.y + 54.0, r.w - 2.0 * PAD, r.h - 54.0 - PAD);
+    let fy = body.y;
+    let fh = body.h;
+    p.rect(fx + fader_w * 0.5 - 2.0, fy + 4.0, 4.0, fh - 8.0, 2.0, RAISED);
+    p.rect(fx, fy + fh * 0.5 - 0.5, fader_w, 1.0, 0.0, LINE);
+    let cap = fy + (1.0 - (ui.rate + 1.0) * 0.5) * (fh - 14.0);
+    p.rect(fx, cap, fader_w, 14.0, 3.0, if ui.rate == 0.0 { DIM } else { ACCENT });
+    hit(s, fx - 4.0, fy, fader_w + 8.0, fh, Target::Rate(d));
+
+    let inner_x = if d == 0 { fx + fader_w + PAD } else { body.x };
+    let inner_w = body.w - fader_w - PAD;
+    let btn_h = 34.0f32.min(body.h * 0.22);
+    let jog = (body.h - btn_h - PAD).min(inner_w * 0.48).max(40.0);
+    let jx = inner_x;
+    let jy = body.y;
+    p.outlined(jx, jy, jog, jog, jog * 0.5, RAISED, 2.0, if t.playing { colour } else { LINE });
+    p.outlined(jx + jog * 0.3, jy + jog * 0.3, jog * 0.4, jog * 0.4, jog * 0.2, PANEL, 1.0, LINE);
+    let secs = s.decks[d].seconds(t.position);
+    let angle = (secs / 1.8 * std::f64::consts::TAU) as f32;
+    let (sn, cs) = angle.sin_cos();
+    let (cx, cy, rr) = (jx + jog * 0.5, jy + jog * 0.5, jog * 0.42);
+    p.rect(cx + sn * rr - 3.0, cy - cs * rr - 3.0, 6.0, 6.0, 3.0, colour);
+    hit(s, jx, jy, jog, jog, Target::Jog(d));
+
+    let by = body.y + body.h - btn_h;
+    let bw = (jog - PAD) * 0.5;
+    let playing = t.playing;
+    p.outlined(
+        jx,
+        by,
+        bw,
+        btn_h,
+        6.0,
+        if playing { fade(PLAY, 0x20) } else { RAISED },
+        1.5,
+        if playing { PLAY } else { LINE },
+    );
+    p.text(jx + bw * 0.5 - p.text_width(BUTTON, "PLAY") * 0.5, by + btn_h * 0.5 + 4.0, BUTTON, "PLAY");
+    hit(s, jx, by, bw, btn_h, Target::Play(d));
+    p.outlined(jx + bw + PAD, by, bw, btn_h, 6.0, RAISED, 1.5, ACCENT);
+    p.text(jx + bw + PAD + bw * 0.5 - p.text_width(BUTTON, "CUE") * 0.5, by + btn_h * 0.5 + 4.0, BUTTON, "CUE");
+    hit(s, jx + bw + PAD, by, bw, btn_h, Target::Cue(d));
+
+    let px = jx + jog + PAD;
+    let pw = inner_x + inner_w - px;
+    if pw < 60.0 {
         return;
     }
-    let ph = (r.h * 0.45 - PAD) * 0.5;
+    let key_h = 24.0;
+    let kl = s.decks[d].key_lock;
+    p.outlined(
+        px,
+        body.y,
+        pw,
+        key_h,
+        5.0,
+        if kl { fade(ACCENT, 0x30) } else { RAISED },
+        1.0,
+        if kl { ACCENT } else { LINE },
+    );
+    p.text(px + 8.0, body.y + 16.0, LABEL, "KEY LOCK");
+    hit(s, px, body.y, pw, key_h, Target::KeyLock(d));
+    let gy = body.y + key_h + PAD;
+    let gh = body.y + body.h - gy;
     let cw = (pw - 3.0 * PAD) * 0.25;
-    for (i, label) in ["1", "2", "3", "4", "5", "6", "7", "8"].into_iter().enumerate() {
+    let ch = (gh - PAD) * 0.5;
+    for i in 0..8 {
         let x = px + (i % 4) as f32 * (cw + PAD);
-        let y = r.y + r.h - 2.0 * PAD - (2 - i / 4) as f32 * (ph + PAD) + PAD;
-        p.outlined(x, y, cw, ph, 6.0, RAISED, 1.0, if i == 0 { colour } else { LINE });
-        p.text(x + 6.0, y + ph - 6.0, PAD_LABEL, label);
+        let y = gy + (i / 4) as f32 * (ch + PAD);
+        p.outlined(x, y, cw, ch, 6.0, RAISED, 1.0, fade(colour, 0x80));
+        let name = stem(SAMPLES[s.pads[d][i]].rsplit('/').next().unwrap_or(""));
+        let name = name
+            .split_once(['-', '_'])
+            .map_or(name, |(n, rest)| if n.chars().all(|c| c.is_ascii_digit()) { rest } else { name });
+        p.text_in(x + 5.0, y + ch - 6.0, cw - 8.0, LABEL, name);
+        hit(s, x, y, cw, ch, Target::Pad(d, i));
     }
 }
 
-fn mixer(p: &mut Painter, r: Rect) {
+fn knob(p: &mut Painter, x: f32, y: f32, k: f32, v: f32, colour: u32) {
+    p.outlined(x, y, k, k, k * 0.5, RAISED, 1.5, LINE);
+    let a = (v - 0.5) * 1.5 * std::f32::consts::PI;
+    let (s, c) = a.sin_cos();
+    let (cx, cy, r) = (x + k * 0.5, y + k * 0.5, k * 0.34);
+    let lit = if (v - 0.5).abs() < 0.01 { DIM } else { colour };
+    p.rect(cx + s * r - 2.5, cy - c * r - 2.5, 5.0, 5.0, 2.5, lit);
+}
+
+fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let cx = r.x + r.w * 0.5;
-    let k = (r.w * 0.12).min(28.0);
-    for (side, colour) in [(0.25, DECK_A), (0.75, DECK_B)] {
-        let x = r.x + r.w * side;
-        for n in 0..4 {
-            let y = r.y + 2.0 * PAD + n as f32 * (k + PAD);
-            p.outlined(x - k * 0.5, y, k, k, k * 0.5, RAISED, 2.0, colour);
+    let k = ((r.h - 120.0) / 4.0 - PAD).clamp(18.0, (r.w * 0.2).min(34.0));
+    let top = r.y + PAD * 2.0;
+    for d in 0..2 {
+        let x = r.x + r.w * [0.22, 0.78][d] - k * 0.5;
+        for (n, &label) in KNOBS.iter().enumerate() {
+            let y = top + n as f32 * (k + PAD);
+            knob(p, x, y, k, s.decks[d].knobs[n], DECK[d]);
+            hit(s, x - 4.0, y - 2.0, k + 8.0, k + 4.0, Target::Knob(d, n));
+            if d == 0 {
+                p.text(cx - p.text_width(LABEL, label) * 0.5, y + k * 0.5 + 4.0, LABEL, label);
+            }
         }
-        let top = r.y + 2.0 * PAD + 4.0 * (k + PAD);
-        let h = (r.h - (top - r.y) - 50.0).max(10.0);
-        p.rect(x - 3.0, top, 6.0, h, 3.0, RAISED);
-        p.rect(x - 12.0, top + h * 0.3, 24.0, 12.0, 3.0, CAP);
+        let ft = top + 4.0 * (k + PAD);
+        let fh = (r.y + r.h - 44.0 - ft).max(20.0);
+        let fx = r.x + r.w * [0.22, 0.78][d];
+        p.rect(fx - 2.0, ft, 4.0, fh, 2.0, RAISED);
+        let v = s.decks[d].volume;
+        p.rect(fx - 13.0, ft + (1.0 - v) * (fh - 12.0), 26.0, 12.0, 3.0, TEXT);
+        hit(s, fx - 18.0, ft, 36.0, fh, Target::Volume(d));
+        let peak = s.telemetry.decks[d].peak.min(1.0);
+        let mx = fx + [18.0, -22.0][d];
+        p.rect(mx, ft, 4.0, fh, 2.0, RAISED);
+        let lit = fh * peak;
+        p.rect(mx, ft + fh - lit, 4.0, lit, 2.0, if peak > 0.95 { DECK[0] } else { PLAY });
     }
-    for (n, label) in ["TRIM", "HI", "MID", "LOW"].into_iter().enumerate() {
-        let y = r.y + 2.0 * PAD + n as f32 * (k + PAD) + k * 0.5 + 3.5;
-        p.text(cx - p.text_width(KNOB_LABEL, label) * 0.5, y, KNOB_LABEL, label);
-    }
-    let y = r.y + r.h - 26.0;
-    p.rect(r.x + 3.0 * PAD, y, r.w - 6.0 * PAD, 6.0, 3.0, RAISED);
-    p.rect(cx - 7.0, y - 8.0, 14.0, 22.0, 3.0, ACCENT);
+    let y = r.y + r.h - 28.0;
+    let w = r.w - 6.0 * PAD;
+    p.rect(r.x + 3.0 * PAD, y + 5.0, w, 4.0, 2.0, RAISED);
+    let xf = r.x + 3.0 * PAD + (s.crossfader + 1.0) * 0.5 * (w - 16.0);
+    p.rect(xf, y - 4.0, 16.0, 22.0, 3.0, ACCENT);
+    hit(s, r.x + 2.0 * PAD, y - 8.0, w + 2.0 * PAD, 30.0, Target::Crossfader);
 }
 
-const COLUMNS: [(&str, f32); 7] =
-    [("#", 0.0), ("TITLE", 0.05), ("ARTIST", 0.38), ("BPM", 0.62), ("KEY", 0.72), ("TIME", 0.82), ("", 1.0)];
-const TRACKS: [[&str; 6]; 4] = [
-    ["1", "Paper Lanterns", "Oksana Vey", "122", "8A", "5:48"],
-    ["2", "Low Tide Static", "Marrow Club", "126", "9A", "6:40"],
-    ["3", "Halflight", "Tomi Reyes", "125", "9B", "5:31"],
-    ["4", "Rooftop 4AM", "Kessler & Ama", "124", "8A", "6:44"],
-];
-
-fn library(p: &mut Painter, r: Rect) {
+fn library(p: &mut Painter, s: &mut State, r: Rect) {
+    s.library = r;
+    s.row_h = ROW_H;
     let inner = r.w - 24.0;
-    let x = |i: usize| r.x + 12.0 + inner * COLUMNS[i].1;
-    for (i, (name, _)) in COLUMNS[..6].iter().enumerate() {
-        p.text(x(i), r.y + 22.0, HEADER, name);
+    let cols = [(0.0, "#"), (0.07, "NAME"), (0.62, "FOLDER")];
+    for (f, name) in cols {
+        p.text(r.x + 12.0 + inner * f, r.y + 20.0, HEADER, name);
     }
-    for (row, track) in TRACKS.iter().enumerate() {
-        let y = r.y + 46.0 + row as f32 * 22.0;
-        if y > r.y + r.h - 8.0 {
-            break;
+    p.rect(r.x + 8.0, r.y + 28.0, r.w - 16.0, 1.0, 0.0, LINE);
+    let first = (s.scroll / ROW_H) as usize;
+    let rows = ((r.h - 34.0) / ROW_H) as usize;
+    for (n, i) in (first..SAMPLES.len()).take(rows).enumerate() {
+        let y = r.y + 30.0 + n as f32 * ROW_H - (s.scroll % ROW_H);
+        if y < r.y + 29.0 {
+            continue;
         }
-        for (i, value) in track.iter().enumerate() {
-            p.text_in(x(i), y, x(i + 1) - x(i) - 8.0, if i == 4 { KEY_CELL } else { CELL }, value);
+        let path = SAMPLES[i];
+        let loaded = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.name == path));
+        if let Some(d) = loaded {
+            p.rect(r.x + 6.0, y, r.w - 12.0, ROW_H, 4.0, fade(DECK[d.min(1)], 0x28));
         }
+        let (dir, file) = path.rsplit_once('/').unwrap_or(("samples", path));
+        let base = y + ROW_H - 7.0;
+        p.text(r.x + 12.0, base, LABEL, &(i + 1).to_string());
+        p.text_in(r.x + 12.0 + inner * 0.07, base, inner * 0.54, CELL, stem(file));
+        p.text_in(r.x + 12.0 + inner * 0.62, base, inner * 0.38, SUB, dir);
     }
+    hit(s, r.x, r.y, r.w, r.h, Target::Library);
 }
 
 fn lyrics(p: &mut Painter, r: Rect) {
-    let w = r.w - 24.0;
-    p.text(r.x + 12.0, r.y + 22.0, HEADER, "LYRICS");
-    p.text_in(r.x + 12.0, r.y + 50.0, w, LYRIC, "headlights on the overpass");
-    p.text_in(r.x + 12.0, r.y + 76.0, w, LYRIC_NOW, "we drive until the city sleeps");
+    p.text(r.x + 12.0, r.y + 20.0, HEADER, "LYRICS");
+    p.text_in(r.x + 12.0, r.y + 48.0, r.w - 24.0, LYRIC, "No synced lyrics for this track");
 }
 
 #[cfg(test)]

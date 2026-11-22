@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::biquad::{Biquad, Kind};
 use crate::{Command, DECKS, Deck, DeckState, Telemetry, Track};
 
+pub const VOICES: usize = 16;
 const LOW_HZ: f32 = 250.0;
 const HIGH_HZ: f32 = 3000.0;
 const Q: f32 = std::f32::consts::FRAC_1_SQRT_2;
@@ -59,6 +60,15 @@ pub struct Mixer {
     main: f32,
     scratch: Vec<[f32; 2]>,
     main_peak: [f32; 2],
+    voices: [Option<Voice>; VOICES],
+    pending: Option<Arc<Track>>,
+}
+
+#[derive(Debug)]
+struct Voice {
+    track: Arc<Track>,
+    position: f64,
+    gain: f32,
 }
 
 impl Mixer {
@@ -70,6 +80,8 @@ impl Mixer {
             main: 1.0,
             scratch: vec![[0.0; 2]; max_block],
             main_peak: [0.0; 2],
+            voices: std::array::from_fn(|_| None),
+            pending: None,
         }
     }
 
@@ -114,6 +126,23 @@ impl Mixer {
                 c.filter = f.clamp(-1.0, 1.0);
                 c.tune(rate);
             }
+            Command::Sample(track, gain) => {
+                let free = self.voices.iter().position(Option::is_none);
+                let slot = free.unwrap_or_else(|| {
+                    let oldest = self.voices.iter().enumerate();
+                    oldest.max_by(|a, b| voice_pos(a.1).total_cmp(&voice_pos(b.1))).map_or(0, |v| v.0)
+                });
+                let old = self.voices[slot].replace(Voice { track, position: 0.0, gain });
+                return old.map(|v| v.track);
+            }
+            Command::StopSamples => {
+                for v in &mut self.voices {
+                    if let Some(v) = v.take() {
+                        self.pending = Some(v.track);
+                        break;
+                    }
+                }
+            }
             Command::Crossfader(x) => self.crossfader = x.clamp(-1.0, 1.0),
             Command::Main(v) => self.main = v.max(0.0),
         }
@@ -128,8 +157,11 @@ impl Mixer {
         }
     }
 
-    pub fn render(&mut self, out: &mut [f32]) {
+    pub fn render(&mut self, out: &mut [f32], retired: &mut rtrb::Producer<Arc<Track>>) {
         out.fill(0.0);
+        if let Some(t) = self.pending.take() {
+            let _ = retired.push(t);
+        }
         let mut done = 0;
         let total = out.len() / 2;
         while done < total {
@@ -161,6 +193,23 @@ impl Mixer {
             }
             done += n;
         }
+        for slot in &mut self.voices {
+            let Some(v) = slot else { continue };
+            let step = f64::from(v.track.rate) / f64::from(self.rate);
+            let f = &v.track.frames;
+            for o in out.as_chunks_mut::<2>().0 {
+                let i = v.position as usize;
+                let Some(s) = f.get(i) else { break };
+                o[0] += s[0] * v.gain;
+                o[1] += s[1] * v.gain;
+                v.position += step;
+            }
+            if v.position as usize >= f.len()
+                && let Some(v) = slot.take()
+            {
+                let _ = retired.push(v.track);
+            }
+        }
         let mut pk = [0.0f32; 2];
         for f in out.as_chunks_mut::<2>().0 {
             for k in 0..2 {
@@ -182,4 +231,8 @@ impl Mixer {
             main_peak: self.main_peak,
         }
     }
+}
+
+fn voice_pos(v: &Option<Voice>) -> f64 {
+    v.as_ref().map_or(0.0, |v| v.position)
 }

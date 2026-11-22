@@ -54,7 +54,11 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
     app.event(Event::Resize { width, height, scale });
     let mut dirty = true;
     loop {
-        let mut event = Some(conn.wait_for_event().map_err(Error::from)?);
+        let mut event = if dirty || app.animating() {
+            conn.poll_for_event().map_err(Error::from)?
+        } else {
+            Some(conn.wait_for_event().map_err(Error::from)?)
+        };
         while let Some(e) = event {
             let mapped = match e {
                 XEvent::Expose(e) if e.count == 0 => Some(Event::Redraw),
@@ -84,8 +88,12 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
             }
             event = conn.poll_for_event().map_err(Error::from)?;
         }
-        if dirty {
+        let animating = app.animating();
+        if dirty || animating {
             dirty = false;
+            if animating {
+                std::thread::sleep(std::time::Duration::from_millis(8));
+            }
             let mut result = Ok(());
             app.draw(&mut |f: Frame<'_>| result = put(&conn, window, gc, depth, &f, max_request));
             result?;

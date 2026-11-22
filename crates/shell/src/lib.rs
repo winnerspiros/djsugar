@@ -21,6 +21,7 @@ pub struct Frame<'a> {
 
 pub trait App {
     fn event(&mut self, event: Event) -> bool;
+    fn animating(&self) -> bool;
     fn draw(&mut self, present: &mut dyn FnMut(Frame<'_>));
 }
 

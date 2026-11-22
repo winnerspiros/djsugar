@@ -1,7 +1,11 @@
 mod screen;
+mod state;
 
 use sugar_layout::{Id, Layout, Rect};
 use sugar_ui::{Fonts, Painter};
+
+pub use state::Reader;
+use state::State;
 
 static FONT: &[u8] = include_bytes!("../../../res/fonts/Inter.ttf");
 
@@ -10,28 +14,67 @@ pub struct Ui {
     layout: Layout,
     placed: Vec<(Id, Rect)>,
     painter: Painter,
+    state: State,
+    window: Rect,
+    scale: f32,
+    _output: Option<sugar_io::Output>,
 }
 
-impl Default for Ui {
-    fn default() -> Self {
+impl Ui {
+    pub fn new(read: Reader) -> Self {
+        let mut engine = None;
+        let output = sugar_io::open(|f| {
+            let (control, e) = sugar_engine::new(f.rate, f.burst.max(256) * 4);
+            engine = Some(control);
+            e
+        });
+        let (output, status) = match output {
+            Ok(o) if o.silent => (Some(o), Some("No audio output on this platform yet: playback is silent".into())),
+            Ok(o) => (Some(o), None),
+            Err(e) => (None, Some(format!("Audio unavailable: {e}"))),
+        };
         Self {
             layout: Layout::new(&screen::tree()),
             placed: Vec::with_capacity(sugar_layout::MAX_MODULES),
             painter: Painter::new(Fonts::new(FONT)),
+            state: State::new(engine, read, status),
+            window: Rect::new(0.0, 0.0, 1.0, 1.0),
+            scale: 1.0,
+            _output: output,
         }
     }
-}
 
-impl Ui {
-    pub fn relayout(&mut self, width: u32, height: u32, scale: f32) {
-        let logical = Rect::new(0.0, 0.0, width as f32 / scale, height as f32 / scale);
-        self.layout.solve(screen::inset(logical), &mut self.placed);
-        self.painter.begin(scale);
-        screen::paint(&mut self.painter, logical, &self.placed);
+    pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
+        self.scale = scale.max(0.5);
+        self.window = Rect::new(0.0, 0.0, width as f32 / self.scale, height as f32 / self.scale);
+        self.layout.solve(screen::inset(self.window), &mut self.placed);
+    }
+
+    pub fn animating(&self) -> bool {
+        self.state.animating()
     }
 
     pub fn render(&mut self, renderer: &mut sugar_ui::Renderer<'_>) {
+        self.state.tick();
+        self.painter.begin(self.scale);
+        screen::paint(&mut self.painter, &mut self.state, self.window, &self.placed);
         renderer.render(&mut self.painter, screen::BACKGROUND);
+    }
+
+    pub fn pointer_down(&mut self, id: u64, x: f32, y: f32) {
+        self.state.pointer_down(id, x / self.scale, y / self.scale);
+    }
+
+    pub fn pointer_move(&mut self, id: u64, x: f32, y: f32) {
+        self.state.pointer_move(id, x / self.scale, y / self.scale);
+    }
+
+    pub fn pointer_up(&mut self, id: u64, y: f32) {
+        self.state.pointer_up(id, y / self.scale);
+    }
+
+    pub fn wheel(&mut self, x: f32, y: f32, dy: f32) {
+        self.state.wheel(x / self.scale, y / self.scale, dy);
     }
 }
 
@@ -46,30 +89,38 @@ pub mod native {
 
     use sugar_ui::Renderer;
     use winit::application::ApplicationHandler;
-    use winit::event::WindowEvent;
+    use winit::event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent};
     use winit::event_loop::{ActiveEventLoop, EventLoop};
     use winit::window::{Window, WindowId};
 
-    use crate::{Ui, fail};
+    use crate::{Reader, Ui, fail};
+
+    const MOUSE: u64 = u64::MAX;
 
     struct Gpu {
         window: Arc<Window>,
         renderer: Renderer<'static>,
     }
 
-    #[derive(Default)]
     struct Native {
         ui: Ui,
         gpu: Option<Gpu>,
+        cursor: (f32, f32),
     }
 
     impl Native {
-        fn relayout(&mut self) {
+        fn resize(&mut self) {
             let Some(gpu) = &mut self.gpu else { return };
             let size = gpu.window.inner_size();
             gpu.renderer.resize(size.width, size.height);
-            self.ui.relayout(size.width, size.height, gpu.window.scale_factor() as f32);
+            self.ui.resize(size.width, size.height, gpu.window.scale_factor() as f32);
             gpu.window.request_redraw();
+        }
+
+        fn redraw(&self) {
+            if let Some(gpu) = &self.gpu {
+                gpu.window.request_redraw();
+            }
         }
     }
 
@@ -85,7 +136,7 @@ pub mod native {
             let size = window.inner_size();
             let renderer = Renderer::new(window.clone(), size.width, size.height).unwrap_or_else(|e| fail(&e));
             self.gpu = Some(Gpu { window, renderer });
-            self.relayout();
+            self.resize();
         }
 
         fn suspended(&mut self, _: &ActiveEventLoop) {
@@ -97,29 +148,88 @@ pub mod native {
         fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
-                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => self.relayout(),
+                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => self.resize(),
                 WindowEvent::RedrawRequested => {
                     if let Some(gpu) = &mut self.gpu {
                         gpu.window.pre_present_notify();
                         self.ui.render(&mut gpu.renderer);
+                        if self.ui.animating() {
+                            gpu.window.request_redraw();
+                        }
                     }
+                }
+                WindowEvent::CursorMoved { position, .. } => {
+                    self.cursor = (position.x as f32, position.y as f32);
+                    self.ui.pointer_move(MOUSE, self.cursor.0, self.cursor.1);
+                    self.redraw();
+                }
+                WindowEvent::MouseInput { state, .. } => {
+                    let (x, y) = self.cursor;
+                    match state {
+                        ElementState::Pressed => self.ui.pointer_down(MOUSE, x, y),
+                        ElementState::Released => self.ui.pointer_up(MOUSE, y),
+                    }
+                    self.redraw();
+                }
+                WindowEvent::MouseWheel { delta, .. } => {
+                    let dy = match delta {
+                        MouseScrollDelta::LineDelta(_, y) => y * 44.0,
+                        MouseScrollDelta::PixelDelta(p) => p.y as f32,
+                    };
+                    self.ui.wheel(self.cursor.0, self.cursor.1, dy);
+                    self.redraw();
+                }
+                WindowEvent::Touch(t) => {
+                    let (x, y) = (t.location.x as f32, t.location.y as f32);
+                    match t.phase {
+                        TouchPhase::Started => self.ui.pointer_down(t.id, x, y),
+                        TouchPhase::Moved => self.ui.pointer_move(t.id, x, y),
+                        TouchPhase::Ended | TouchPhase::Cancelled => self.ui.pointer_up(t.id, y),
+                    }
+                    self.redraw();
                 }
                 _ => {}
             }
         }
     }
 
-    pub fn run(event_loop: EventLoop<()>) {
-        event_loop.run_app(&mut Native::default()).unwrap_or_else(|e| fail(&e));
+    pub fn run(event_loop: EventLoop<()>, read: Reader) {
+        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0) };
+        event_loop.run_app(&mut app).unwrap_or_else(|e| fail(&e));
     }
 }
 
 #[cfg(target_os = "android")]
-#[allow(unsafe_code)]
-#[unsafe(no_mangle)]
-fn android_main(app: winit::platform::android::activity::AndroidApp) {
-    use winit::platform::android::EventLoopBuilderExtAndroid;
+mod android {
+    use std::io::Read;
+    use std::sync::OnceLock;
 
-    let event_loop = winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| fail(&e));
-    native::run(event_loop);
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+    use winit::platform::android::activity::AndroidApp;
+
+    static APP: OnceLock<AndroidApp> = OnceLock::new();
+
+    fn read(name: &str) -> Option<Vec<u8>> {
+        let path = std::ffi::CString::new(format!("samples/{name}")).ok()?;
+        let mut asset = APP.get()?.asset_manager().open(&path)?;
+        let mut bytes = Vec::with_capacity(asset.length());
+        asset.read_to_end(&mut bytes).ok()?;
+        Some(bytes)
+    }
+
+    #[allow(unsafe_code, reason = "the activity glue looks this symbol up by name")]
+    #[unsafe(no_mangle)]
+    fn android_main(app: AndroidApp) {
+        let _ = APP.set(app.clone());
+        let event_loop =
+            winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));
+        crate::native::run(event_loop, read);
+    }
+}
+
+pub fn read_dir_sample(name: &str) -> Option<Vec<u8>> {
+    let root = std::env::var_os("DJSUGAR_RES")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../res"));
+    std::fs::read(root.join("samples").join(name)).ok()
 }

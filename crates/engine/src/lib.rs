@@ -5,7 +5,7 @@ mod mixer;
 use std::sync::Arc;
 
 pub use deck::{Deck, Track};
-pub use mixer::{Channel, Mixer};
+pub use mixer::{Channel, Mixer, VOICES};
 
 pub const DECKS: usize = 4;
 
@@ -23,6 +23,8 @@ pub enum Command {
     Eq(usize, [f32; 3]),
     Kill(usize, [bool; 3]),
     Filter(usize, f32),
+    Sample(Arc<Track>, f32),
+    StopSamples,
     Crossfader(f32),
     Main(f32),
 }
@@ -71,7 +73,7 @@ pub struct Engine {
 pub fn new(sample_rate: u32, max_block: usize) -> (Control, Engine) {
     let (cp, cc) = rtrb::RingBuffer::new(1024);
     let (tp, tc) = triple_buffer::triple_buffer(&Telemetry::default());
-    let (rp, rc) = rtrb::RingBuffer::new(DECKS * 4);
+    let (rp, rc) = rtrb::RingBuffer::new(DECKS * 4 + mixer::VOICES * 2);
     (
         Control { commands: cp, telemetry: tc, retired: rc, last: Telemetry::default() },
         Engine { mixer: Mixer::new(sample_rate as f32, max_block), commands: cc, telemetry: tp, retired: rp },
@@ -85,7 +87,7 @@ impl Engine {
                 let _ = self.retired.push(old);
             }
         }
-        self.mixer.render(out);
+        self.mixer.render(out, &mut self.retired);
         self.telemetry.write(self.mixer.telemetry());
     }
 }

@@ -11,6 +11,9 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 sugar-layout = { path = "../layout" }
 sugar-ui = { path = "../ui" }
+sugar-engine = { path = "../engine" }
+sugar-decode = { path = "../decode" }
+sugar-io = { path = "../io" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sugar-shell = { path = "../shell" }

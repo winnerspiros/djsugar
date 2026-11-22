@@ -290,6 +290,9 @@ dependencies = [
 name = "djsugar"
 version = "0.1.0"
 dependencies = [
+ "sugar-decode",
+ "sugar-engine",
+ "sugar-io",
  "sugar-layout",
  "sugar-shell",
  "sugar-ui",

@@ -19,6 +19,10 @@ impl Rect {
         Self { x, y, w, h }
     }
 
+    pub fn hit(&self, x: f32, y: f32) -> bool {
+        x >= self.x && y >= self.y && x < self.x + self.w && y < self.y + self.h
+    }
+
     pub fn contains(&self, o: &Rect) -> bool {
         o.x >= self.x - EPS
             && o.y >= self.y - EPS

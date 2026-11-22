@@ -133,3 +133,16 @@ fn key_shift_moves_pitch_by_semitones() {
     let hz = pitch_hz(&long, 48000.0);
     assert!((hz - 880.0).abs() < 15.0, "{hz}");
 }
+
+#[test]
+fn samples_play_once_and_are_freed() {
+    let (mut c, mut e) = new(48000, 256);
+    let t = sine(48000, 440.0, 0.01);
+    c.send(Command::Sample(t.clone(), 1.0));
+    let mut out = vec![0.0; 2048];
+    e.process(&mut out);
+    assert!(rms(&out[..960]) > 0.3);
+    assert!(rms(&out[1000..]) == 0.0);
+    c.poll();
+    assert_eq!(Arc::strong_count(&t), 1);
+}

@@ -45,18 +45,20 @@ pub struct Glyph {
 pub struct Painter {
     quads: Vec<Quad>,
     glyphs: Vec<Glyph>,
+    layers: Vec<(u32, u32)>,
     scale: f32,
     pub fonts: Fonts,
 }
 
 impl Painter {
     pub fn new(fonts: Fonts) -> Self {
-        Self { quads: Vec::new(), glyphs: Vec::new(), scale: 1.0, fonts }
+        Self { quads: Vec::new(), glyphs: Vec::new(), layers: Vec::new(), scale: 1.0, fonts }
     }
 
     pub fn begin(&mut self, scale: f32) {
         self.quads.clear();
         self.glyphs.clear();
+        self.layers.clear();
         self.scale = scale;
     }
 
@@ -76,6 +78,16 @@ impl Painter {
 
     pub fn text_width(&self, style: Style, text: &str) -> f32 {
         self.fonts.width(text, style.px, style.weight)
+    }
+
+    pub fn layer(&mut self) {
+        self.layers.push((self.quads.len() as u32, self.glyphs.len() as u32));
+    }
+
+    pub(crate) fn spans(&self) -> impl Iterator<Item = (std::ops::Range<u32>, std::ops::Range<u32>)> + '_ {
+        let ends = self.layers.iter().copied().chain([(self.quads.len() as u32, self.glyphs.len() as u32)]);
+        let starts = [(0, 0)].into_iter().chain(self.layers.iter().copied());
+        starts.zip(ends).map(|(a, b)| (a.0..b.0, a.1..b.1))
     }
 
     pub fn glyphs(&self) -> &[Glyph] {
