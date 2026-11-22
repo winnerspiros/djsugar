@@ -2,10 +2,10 @@ use super::*;
 
 const BAR: u32 = 1;
 const DECK_A: u32 = 2;
-const HUB: u32 = 3;
+const MIXER: u32 = 3;
 const DECK_B: u32 = 4;
-const LANE: u32 = 5;
-const NEXT: u32 = 6;
+const WAVES: u32 = 5;
+const LIBRARY: u32 = 6;
 const FX_A: u32 = 7;
 const FX_B: u32 = 8;
 
@@ -16,6 +16,7 @@ fn main_screen() -> Node {
         u8::MAX,
         vec![
             Node::module(BAR, 280.0, 40.0, 0.0, 250),
+            Node::module(WAVES, 280.0, 56.0, 0.3, 120),
             Node::group(
                 Axis::Auto,
                 12.0,
@@ -30,7 +31,7 @@ fn main_screen() -> Node {
                             Node::module(FX_A, 150.0, 28.0, 0.0, 40),
                         ],
                     ),
-                    Node::module(HUB, 160.0, 160.0, 1.5, 220),
+                    Node::module(MIXER, 160.0, 160.0, 1.5, 220),
                     Node::group(
                         Axis::Column,
                         6.0,
@@ -42,8 +43,7 @@ fn main_screen() -> Node {
                     ),
                 ],
             ),
-            Node::module(LANE, 280.0, 56.0, 0.3, 120),
-            Node::module(NEXT, 280.0, 72.0, 0.6, 60),
+            Node::module(LIBRARY, 280.0, 72.0, 0.6, 60),
         ],
     )
 }
@@ -89,7 +89,7 @@ fn every_screen_size_is_valid_and_keeps_the_decks() {
         let placed = solve(&main_screen(), area);
         check(area, &placed);
         let ids: Vec<u32> = placed.iter().map(|p| p.0).collect();
-        for must in [BAR, DECK_A, HUB, DECK_B] {
+        for must in [BAR, DECK_A, MIXER, DECK_B] {
             assert!(ids.contains(&must), "{must} missing at {w}x{h}: {ids:?}");
         }
     }
@@ -126,7 +126,9 @@ fn wide_is_a_row_tall_is_a_column() {
             h: 900.0,
         },
     );
-    assert!(get(&wide, DECK_A).x < get(&wide, HUB).x && get(&wide, HUB).x < get(&wide, DECK_B).x);
+    assert!(
+        get(&wide, DECK_A).x < get(&wide, MIXER).x && get(&wide, MIXER).x < get(&wide, DECK_B).x
+    );
     let tall = solve(
         &main_screen(),
         Rect {
@@ -136,7 +138,7 @@ fn wide_is_a_row_tall_is_a_column() {
             h: 915.0,
         },
     );
-    assert!(get(&tall, DECK_A).y < get(&tall, HUB).y);
+    assert!(get(&tall, DECK_A).y < get(&tall, MIXER).y);
 }
 
 #[test]
@@ -155,10 +157,13 @@ fn low_priority_goes_first() {
         .map(|p| p.0)
         .collect::<Vec<u32>>()
     };
-    assert_eq!(ids(780.0, 360.0), [BAR, DECK_A, HUB, DECK_B, LANE, NEXT]);
+    assert_eq!(
+        ids(780.0, 360.0),
+        [BAR, WAVES, DECK_A, MIXER, DECK_B, LIBRARY]
+    );
     let ids = ids(700.0, 330.0);
-    assert_eq!(ids, [BAR, DECK_A, HUB, DECK_B, LANE]);
-    assert!(ids.contains(&DECK_A) && ids.contains(&HUB));
+    assert_eq!(ids, [BAR, WAVES, DECK_A, MIXER, DECK_B]);
+    assert!(ids.contains(&DECK_A) && ids.contains(&MIXER));
 }
 
 #[test]

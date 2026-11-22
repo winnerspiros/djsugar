@@ -45,8 +45,14 @@ or any other DJ application. Ideas are studied; code, layouts and look are our o
   "load to B", "loop 8", "echo out", "export USB".
 - Up next. Suggestions ranked by key fit, tempo, energy direction, play history and genre.
   Each one says why it was picked. Streaming results appear alongside local ones.
-- Hub mixer. The mixer lives in a circular hub between the decks. EQ and filter are arcs,
-  the crossfader is a curved slider, and the phase of both tracks sits in the centre.
+- Two faces, one state. Landscape (phone, tablet, desktop) is a full professional layout:
+  stacked scrolling waveforms across the top, two complete decks (jog, pitch, hot cue / roll /
+  slicer / sampler / stems / key pad modes, loops, stem mutes, FX unit with band and release)
+  around a full mixer (trim, three-band EQ, filter, meters, channel faders, crossfader,
+  headphone cue), and the library below with sources, track table and Up next. Small
+  landscape screens drop the library and FX rows behind a button and enlarge touch targets.
+  Portrait is the vinyl face: one platter ring holding both waveforms, the mixer in its hub,
+  decks under it.
 - Set memory. Every set is recorded as events: loads, cues, faders, effects. Any set can be
   replayed, edited, rendered to audio, or turned into a playlist.
 - Phone-first touch. One-thumb controls in portrait, two-thumb in landscape. Every hit target
