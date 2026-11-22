@@ -13,13 +13,15 @@ struct Img {
 }
 
 fn load(p: &Path) -> Option<Img> {
-    let dec = png::Decoder::new(std::io::BufReader::new(File::open(p).ok()?));
+    let mut dec = png::Decoder::new(std::io::BufReader::new(File::open(p).ok()?));
+    // Palette, grey and 16 bit shots all become 8 bit samples.
+    dec.set_transformations(png::Transformations::normalize_to_color8());
     let mut r = dec.read_info().ok()?;
     let mut buf = vec![0; r.output_buffer_size()?];
     let info = r.next_frame(&mut buf).ok()?;
     let n = info.color_type.samples();
     let px = buf[..info.buffer_size()].chunks(n).map(|c| if n >= 3 { [c[0], c[1], c[2]] } else { [c[0]; 3] }).collect();
-    Some(Img { w: info.width as usize, h: info.height as usize, px })
+    (info.width > 0 && info.height > 0).then_some(Img { w: info.width as usize, h: info.height as usize, px })
 }
 
 /// Nearest sample at the same relative position, so different sizes still compare.
