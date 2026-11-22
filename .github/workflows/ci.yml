@@ -203,6 +203,48 @@ jobs:
           name: djsugar-emulator
           path: emu
 
+  twin:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Reference APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download v2.7-alpha-377f8c3e68 -R ${{ github.repository }} -p android-build-release-signed.apk -O ref.apk
+      - name: x86_64 APK for the emulator
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME
+          export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+          TARGET=x86_64-linux-android ABI=x86_64 KEYSTORE=$RUNNER_TEMP/k.keystore bash platform/android/build.sh
+      - name: Both apps through the same screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: bash platform/android/twin.sh ref.apk target/djsugar.apk twin
+      - name: Scores
+        if: always()
+        run: |
+          cargo run -q --release -p djsugar --example twin -- twin | tee twin/scores.txt
+          { echo '### Twin: reference against ours'; echo '```'; cat twin/scores.txt; echo '```'; } >> $GITHUB_STEP_SUMMARY
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-twin
+          path: twin
+
   coverage:
     needs: check
     runs-on: ubuntu-latest
