@@ -102,7 +102,7 @@ Rectangle with border (deckColor accent, deckBgColor background)
 | Orientation Toggle | orientation | [ChannelN]/[AuxiliaryN] | OrientationToggleButton | 56x26 | 3 positions | color: crossfaderOrientationColor |
 
 ### 2.4 Spinny (Vinyl Emulation)
-- **Desktop (Spinny.qml)**: 140px diameter circle, 45° rotated, center tick mark, tempo display inside (BPM + pitch %)
+- **Desktop (Spinny.qml)**: 140px diameter circle, 45 deg rotated, center tick mark, tempo display inside (BPM + pitch %)
 - **Android (Deck/+android/Spinny.qml)**: Adaptive size (80-140px), vinyl groove rings (2), accentColor border, center tempo box (44% height, 62% width)
 - **TouchSpinny.qml**: Touch handler with scratch_enable + scratch_position controls, ghost indicator for slip mode
 - Binds: track_samples, track_samplerate, vinylcontrol_speed_type, track_loaded, slip_enabled, scratch_position_enable, scratch_position

@@ -183,7 +183,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
   - Cut / Retype / Move phrase buttons
   - Phrase editor: start/end time, type dropdown, character dropdown
 - **Grid Tools** (`GridTools`):
-  - BPM display + edit, ×2 / ÷2 buttons
+  - BPM display + edit, x2 / ÷2 buttons
   - Shift grid: <- / to (nudge), Tap button
   - Range: WHOLE / FROM HERE selector
   - Analysis Lock: lock icon (prevents re-analysis)
@@ -221,7 +221,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 ```
 
 ### 5.2 Video Output Window (`VideoWindow`)
-- **Window**: 960×540 preferred, separate monitor/projector
+- **Window**: 960x540 preferred, separate monitor/projector
 - **Content**: `VideoOutput` — master frame + overlay (text/image)
 - **Double-click** to toggle fullscreen
 - **Overlay**: mode 0=Text (centered, sized), 1=Image (contain, centered)
@@ -246,7 +246,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 ```
 
 ### 6.2 Stage Simulator (`Stage` component)
-- **3 rows**: Moving heads (back, 38px), Strobes (middle, 30px×18px), Pars (front, 46px)
+- **3 rows**: Moving heads (back, 38px), Strobes (middle, 30pxx18px), Pars (front, 46px)
 - **Fixtures**: positioned evenly per row, colored by live DMX values
 - **Glow**: drop-shadow with fixture color
 - **Conflict**: red border if DMX address overlap
@@ -279,14 +279,14 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 - **Scroll**: drag waveform, scrollbar, keyboard, touch swipe
 
 ### 7.3 Deck Controls (`ui/deck-controls.slint`)
-- **TempoColumn**: tempo fader (vertical), range chip (±6/10/16/25/50/100%), key lock, sync, master tempo
+- **TempoColumn**: tempo fader (vertical), range chip (+-6/10/16/25/50/100%), key lock, sync, master tempo
 - **LoopBlock**: In/Out, size, halve/double, move <-/->, reloop
 - **RingColumn**: jog wheel (`JogWheel` touch-sensitive), play/pause center, cue button
 - **RingButton**: circular buttons for transport, cue, hot cues
 - **PadGrid** (`ui/pads.slint`): 8 pads, modes 0-11+ (Hot Cue, Pad FX, Slicer, Sampler, Sequencer, Stems, Plugin)
 
 ### 7.4 Deck Panel (`ui/deck-panel.slint`) — Touch Profile
-- **Enlarged**: all controls ≥44px (`Theme.touch-target`)
+- **Enlarged**: all controls >=44px (`Theme.touch-target`)
 - **Bottom bar**: transport, tempo, loop, pads, jog
 - **Gesture-friendly**: swipe waveform, pinch zoom, long-press menus
 
@@ -330,7 +330,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 ## 10. Popups & Dialogs
 
 ### 10.1 Device Window (`ui/device.slint` to `DeviceWindow`)
-- **DialogFrame**: 900×780 (desktop), full-screen (touch)
+- **DialogFrame**: 900x780 (desktop), full-screen (touch)
 - **Tabs** (SegmentedChips/Dropdown): DEVICES, EXPORT, SYNC MANAGER, BACKUPS
 - **Progress bar** at bottom when busy
 
@@ -377,10 +377,10 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 - **Preferences to Decks & Controllers** to `PrefsController` to "Get mappings" chip to `GetMappings` (`ui/catalog.slint`)
 
 ### 10.10 Artwork Picker (`ui/artwork.slint` to `ArtworkPicker`)
-- **DialogFrame**: 584×480
+- **DialogFrame**: 584x480
 - **Grid**: 4 columns, `ArtCandidate` (thumb, source, size)
 - **Click** to choose, downloads and saves
-- **Status**: "Asking MusicBrainz…", "No artwork found"
+- **Status**: "Asking MusicBrainz...", "No artwork found"
 
 ### 10.11 Preferences (`ui/prefs-view.slint` + `ui/prefs-controller.slint` + `ui/prefs-keyboard.slint`)
 - **Root**: `PrefRows` from `prefs-state.slint` (Rust-owned)
@@ -490,8 +490,8 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 | Shift+1-8 | Set hot cue 1-8 |
 | Q/A/Z | Tempo -/+ (Deck 1/2/3) |
 | W/S/X | Tempo -/+ large (Deck 1/2/3) |
-| Left/Right | Seek ±5s |
-| Shift+Left/Right | Seek ±30s |
+| Left/Right | Seek +-5s |
+| Shift+Left/Right | Seek +-30s |
 | Up/Down | Browse library |
 | Enter | Load selected track |
 | Delete | Remove from playlist |
@@ -539,12 +539,12 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 30. EXPORT mode: Player layout selector (1/2/DUAL/SIMPLE PLAYER)
 31. EXPORT sub-panels: GRID, CUES, DOCK tabs
 32. Grid panel: PhraseTools (cut/retype/move phrases, type/character tags)
-33. Grid panel: GridTools (BPM edit, ×2/÷2, shift nudge, tap, range, lock, undo/redo, metro)
+33. Grid panel: GridTools (BPM edit, x2/÷2, shift nudge, tap, range, lock, undo/redo, metro)
 34. Cues panel: cue list with time/len/name/comment/color, play modes, color palette
 35. Dock panel: palette columns (TAG LIST + 3 playlists), drag-drop
 36. VIDEO mode: master output 16:9, deck thumbs with weight, video library list
 37. VIDEO controls: transition FADE/CUT, follow fader, overlay TEXT/IMAGE, opacity/size
-38. VIDEO: output window (960×540), fullscreen toggle, overlay rendering
+38. VIDEO: output window (960x540), fullscreen toggle, overlay rendering
 39. LIGHTING mode: stage simulator (3 rows: moving heads, strobes, pars)
 40. LIGHTING: fixture patch list (name, profile, universe@address, color, conflict)
 41. LIGHTING controls: protocol OFF/ART-NET/SACN/BOTH, IP, palette, mode, strobe, master
@@ -566,7 +566,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 57. Sampler: master gain, multi mode, capture (on/beats), release FX (effect/beat)
 58. Sampler: presets (factory/user), save/load/step
 59. Groove Box: Drum Swap 8 slots/deck, sequencer, kits
-60. DeviceWindow: DialogFrame 900×780, tabs (DEVICES, EXPORT, SYNC, BACKUPS)
+60. DeviceWindow: DialogFrame 900x780, tabs (DEVICES, EXPORT, SYNC, BACKUPS)
 61. DEVICES tab: device list (name, icon, formats, status, capacity), Format/Backup/Restore/Eject
 62. DEVICES tab: DeviceFormat options (Pioneer Device Library, OneLibrary, Engine DJ)
 63. DEVICES tab: DevicePreview before write (add/update/blocked sections with lists)
@@ -576,7 +576,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 67. DevicePreview: DialogFrame 640px, sections with SHOW/HIDE lists, START/CANCEL
 68. DeviceSyncAsk: DialogFrame 460px, "device plugged in: sync N playlists?", SYNC/NOT NOW
 69. DeviceReview: full-screen overlay during write, progress + cancel, review rows (compare)
-70. ArtworkPicker: DialogFrame 584×480, 4-col grid of candidates (thumb, source, size), click to choose
+70. ArtworkPicker: DialogFrame 584x480, 4-col grid of candidates (thumb, source, size), click to choose
 71. Preferences: PrefRows (Rust-owned), Controller page (Get mappings to Catalog), Keyboard page
 72. Catalog: RepoBar (repos list, add/remove/refresh), GetPlugins, GetThemes, GetMappings
 73. GetPlugins: name, version, installed, description, repo, native, action (INSTALL/UPDATE/INSTALLED)
@@ -648,7 +648,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 137. Accessibility: roles, labels, keyboard nav
 138. High DPI scaling (Slint auto)
 139. Adaptive layout (desktop/touch/stage) via single `layout-profile` token
-140. Touch targets ≥44px enforced in touch profile
+140. Touch targets >=44px enforced in touch profile
 
 ---
 

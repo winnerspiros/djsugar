@@ -17,7 +17,7 @@ This document enumerates every feature, quality-of-life detail, and capability o
 | 8 | Tempo fader with range selector | crates/app/ui/deck.slint (ControlFader, tempo-range) | ui/deck-controls.slint (TempoColumn) |
 | 9 | Tempo reset (double-click) | crates/app/ui/deck.slint | ui/deck-controls.slint (TouchArea double-clicked) |
 | 10 | Key lock (master tempo) | crates/app/ui/deck.slint | ui/deck-controls.slint (Chip "Key lock") |
-| 11 | Key shift (±6 semitones, menu to ±6) | crates/app/ui/deck.slint (KeyItem, key-menu) | ui/deck-header.slint (SyncCluster key step) |
+| 11 | Key shift (+-6 semitones, menu to +-6) | crates/app/ui/deck.slint (KeyItem, key-menu) | ui/deck-header.slint (SyncCluster key step) |
 | 12 | Key sync (match other deck's key) | crates/app/ui/deck.slint | ui/deck-header.slint (Chip "KEY SYNC") |
 | 13 | Beat sync (SYNC button) | crates/app/ui/deck.slint (SyncButton) | ui/deck-header.slint (Chip "SYNC") |
 | 14 | Master tempo (MASTER button) | crates/app/ui/deck.slint | ui/deck-header.slint (Chip "MASTER") |
@@ -33,12 +33,12 @@ This document enumerates every feature, quality-of-life detail, and capability o
 | 24 | Cue/loop list side panel | crates/app/ui/cues.slint (CuesPanel) | ui/exportmode-cues.slint (SubPanel) |
 | 25 | Cue comments (editable) | crates/app/ui/cues.slint (NameEdit) | ui/exportmode-cues.slint (TextField comment) |
 | 26 | Cue color picker (right-click menu) | crates/app/ui/cues.slint (CueNumber menu) | ui/exportmode-cues.slint (PopupWindow palette) |
-| 27 | Delete cue mode (× button on pads) | crates/app/ui/deck.slint | ui/pads.slint (delete-mode) |
+| 27 | Delete cue mode (x button on pads) | crates/app/ui/deck.slint | ui/pads.slint (delete-mode) |
 | 28 | Memory cue button | crates/app/ui/cues.slint (add-memory) | ui/exportmode-cues.slint (CueRow) |
 | 29 | Save loop as memory cue | crates/app/ui/cues.slint (save-loop) | ui/exportmode-cues.slint (CueRow len click) |
 | 30 | Phrase detection & display | crates/app/ui/deck.slint (PhraseTip) | ui/deck-wave.slint (phrase strip) |
 | 31 | Phrase editing (cut, move, rename) | — | ui/exportmode-grid.slint (PhraseTools) |
-| 32 | Beat grid editing (BPM, shift, ×2/÷2, tap) | crates/app/ui/deck.slint (GridMenuItem) | ui/exportmode-grid.slint (GridTools) |
+| 32 | Beat grid editing (BPM, shift, x2/÷2, tap) | crates/app/ui/deck.slint (GridMenuItem) | ui/exportmode-grid.slint (GridTools) |
 | 33 | Analysis Lock (prevent re-analysis) | — | ui/exportmode-grid.slint (IconButton lock) |
 | 34 | Grid range (whole track / from here) | — | ui/exportmode-grid.slint (WHOLE / FROM HERE) |
 | 35 | Grid undo/redo | — | ui/exportmode-grid.slint (UNDO/REDO) |
@@ -323,7 +323,7 @@ This document enumerates every feature, quality-of-life detail, and capability o
 | 259 | Export mode (player layouts for export) | — | ui/exportmode.slint |
 | 260 | Mix Point Link (phrase-aware mix points) | — | ui/mixpoint.slint |
 | 261 | Phrase Edit (cut, retype, move phrases) | — | ui/exportmode-grid.slint (PhraseTools) |
-| 262 | Grid Edit (BPM, shift, tap, ×2/÷2, range) | crates/app/ui/deck.slint | ui/exportmode-grid.slint (GridTools) |
+| 262 | Grid Edit (BPM, shift, tap, x2/÷2, range) | crates/app/ui/deck.slint | ui/exportmode-grid.slint (GridTools) |
 | 263 | Analysis Lock | — | ui/exportmode-grid.slint (lock icon) |
 | 264 | Metronome (grid-aligned click) | — | ui/exportmode-grid.slint (METRO) |
 | 265 | Resource monitor (RAM/VRAM chips) | — | ui/resources.slint |
@@ -376,7 +376,7 @@ This document enumerates every feature, quality-of-life detail, and capability o
 11. **Recording + loudness meter + Icecast/Shoutcast + OBS overlay** — broadcast/recording
 12. **Ableton Link** — sync with other apps/hardware
 13. **GPU waveforms with 3-band color + zoom + overview** — visual beatmatching
-14. **Beat grid editing (tap, shift, ×2/÷2, range, undo/redo)** — grid correction
+14. **Beat grid editing (tap, shift, x2/÷2, range, undo/redo)** — grid correction
 15. **Phrase detection + editing (cut, move, rename)** — structural mixing
 16. **Mix Point Link (MIX OUT/IN with waveform alignment)** — precise transitions
 17. **Sampler (16 slots, packs, drag-drop, preview)** — live remixing

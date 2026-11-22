@@ -101,7 +101,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 ### 3.1 Deck Header (`DeckInfo` struct to rendered in `Deck`)
 | Element | Description |
 |---------|-------------|
-| Cover art | 80×80px, rounded 8px, click to load track, drag from library |
+| Cover art | 80x80px, rounded 8px, click to load track, drag from library |
 | Title | Track title, ellipsis, font-size 15px, weight 600 |
 | Artist | Track artist, dim color, font-size 12px |
 | BPM | "126 BPM", click for grid menu, font-mono 13px |
@@ -110,13 +110,13 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 | Key shift badge | "-1" when shifted, click for menu |
 | Grid source badge | "Detected" / "Edited" / "From VirtualDJ" |
 | Grid unsure warning | Yellow warn when grid confidence low |
-| Stem status | "Stems: Vocal, Drums, Bass" + "Preparing HQ…" spinner |
+| Stem status | "Stems: Vocal, Drums, Bass" + "Preparing HQ..." spinner |
 | Progress bar | Thin line under header, 0..1, shows automix region (lilac) |
 | Track end warning | Remaining time blinks red, jog ring flashes deck color |
 
 ### 3.2 Tempo Column (outer edge)
 - **Tempo fader** (`ControlFader`): vertical, 100px travel, tick marks every 10%
-  - Range selector: ±6% / ±10% / ±16% / ±25% / ±50% / ±100% (dropdown)
+  - Range selector: +-6% / +-10% / +-16% / +-25% / +-50% / +-100% (dropdown)
   - Double-click to reset to 0%
   - Hardware pickup: ghost line shows hardware position
 - **Tempo display**: large BPM value, decimal places per `Theme.tempo-decimals` (0/1/2)
@@ -125,7 +125,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 - **Key lock sync**: when both decks have key lock, sync matches key too
 
 ### 3.3 Pads (8 hot cues)
-- **Pad grid**: 2×4 or 4×2 depending on deck mirroring
+- **Pad grid**: 2x4 or 4x2 depending on deck mirroring
 - **Pad states**: empty (+), hot cue (colored), loop (colored + loop icon), playing (pulse)
 - **Right-click pad** to context menu:
   - Choose Sample (sampler mode)
@@ -135,12 +135,12 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
   - Level
   - Sample pack submenu
 - **Pad modes** (12+): Hot Cue, Pad FX, Slicer, Sampler, Sequencer Call, Stems, Plugin...
-- **Delete mode**: × button on each pad, click to clear
+- **Delete mode**: x button on each pad, click to clear
 
 ### 3.4 Loop Controls
 - **Loop In / Out buttons**: set loop start/end at playhead
 - **Loop size display**: "4 bars" / "1/2 beat" etc.
-- **Halve / Double buttons**: ÷2 / ×2 loop length
+- **Halve / Double buttons**: ÷2 / x2 loop length
 - **Move loop <-/->**: shift loop by its length
 - **Saved loops**: appear in Cues panel as memory cues (pad = -1)
 
@@ -333,7 +333,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 ### 8.4 Artwork Picker (`sources.slint` / artwork logic)
 - **Grid** of `ArtCandidate` thumbnails (source + size)
 - **Click** to choose, downloads and saves
-- **Status**: "Asking MusicBrainz…", "No artwork found"
+- **Status**: "Asking MusicBrainz...", "No artwork found"
 
 ### 8.5 USB Export Dialog (`usb_export.slint`)
 - **What**: playlist/folder name + track count
@@ -343,7 +343,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 - **Result**: success/fail with details
 
 ### 8.6 Mini Player Window (`mini.slint`)
-- **Window**: no frame, always-on-top, square (min 200×200, pref 300×300)
+- **Window**: no frame, always-on-top, square (min 200x200, pref 300x300)
 - **Drag**: click art to move window
 - **Resize**: corner grip to resize (stays square)
 - **Art**: fills window, gradient tint from cover colors
@@ -352,7 +352,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 - **Callbacks**: play-pause, previous, next, seek, expand, start-move, start-resize
 
 ### 8.7 Karaoke Window (`karaoke.slint`)
-- **Window**: 1280×720 pref, min 480×270, black background (`#08080a`)
+- **Window**: 1280x720 pref, min 480x270, black background (`#08080a`)
 - **Title/artist** top small
 - **State 0**: "DJ Sugar Karaoke" + "Lyrics show here"
 - **State 1**: "No lyrics for this track" (lilac)
@@ -401,7 +401,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 - **Loop brace**: lilac bracket over loop region
 - **Automix region**: lilac highlight on overview
 - **Playhead**: white line with time label
-- **Zoom**: mouse wheel / pinch / zoom buttons (±)
+- **Zoom**: mouse wheel / pinch / zoom buttons (+-)
 - **Scroll**: drag waveform / scrollbar / keyboard
 
 ### 10.2 Deck Waveform (`deck.slint` overview + enlarged)
@@ -474,8 +474,8 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 | A/S | Deck A tempo -/+ (large) |
 | Z/X | Deck B tempo -/+ (small) |
 | / | Deck B tempo -/+ (large) |
-| Left/Right | Seek ±5s (focused deck) |
-| Shift+Left/Right | Seek ±30s |
+| Left/Right | Seek +-5s (focused deck) |
+| Shift+Left/Right | Seek +-30s |
 | Up/Down | Browse library |
 | Enter | Load selected track to deck |
 | Delete | Remove track from playlist |
@@ -510,7 +510,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 18. Tempo column: Sync button with long-press menu
 19. Pads: 8 hot cues, colored, right-click menu (load, rename, play mode, level, pack)
 20. Pad modes: 12+ (Hot Cue, Pad FX, Slicer, Sampler, Sequencer, Stems, Plugin)
-21. Delete mode: × on pads to clear
+21. Delete mode: x on pads to clear
 22. Loop controls: In/Out, size display, halve/double, move
 23. Saved loops appear in Cues panel as memory cues
 24. Jog wheel: touch-sensitive, vinyl/CDJ modes, countdown display
@@ -593,7 +593,7 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 100. VideoWindow: 16:9 output, overlay (text/image), fullscreen toggle
 101. LightingView: fixture stage (3 rows), patch list, protocol (Art-Net/sACN), scenes
 102. ExportMode: Player layouts (1/2/DUAL PLAYER, Simple), Grid/Cues/Dock sub-panels
-103. ExportMode Grid: phrase tools (cut, retype, move), grid tools (BPM, shift, tap, ×2/÷2, range, lock, undo/redo, metro)
+103. ExportMode Grid: phrase tools (cut, retype, move), grid tools (BPM, shift, tap, x2/÷2, range, lock, undo/redo, metro)
 104. ExportMode Cues: cue list with comments, color palette, play modes
 105. ExportMode Dock: palette columns (tag lists), drag-drop, rename
 106. TouchWorkspace: enlarged controls (44px), gesture-friendly, bottom bar
@@ -631,11 +631,11 @@ Based on source code at `/home/ubuntu/djsugar-rust/crates/app/ui/*.slint` (Slint
 124. Edit mode: timeline cut/copy/paste
 125. Mix Point Link: phrase-aware mix points
 126. Phrase Edit: cut, retype, move phrases
-127. Grid Edit: BPM, shift, tap, ×2/÷2, range, lock, undo/redo, metronome
+127. Grid Edit: BPM, shift, tap, x2/÷2, range, lock, undo/redo, metronome
 128. USB Export: Pioneer/Engine DJ formats, Sync Manager, Cue sync, Device backup
 129. Collection backup: with/without music, restore
 130. Diagnostics report generation
-131. Touch targets ≥44px in touch profile
+131. Touch targets >=44px in touch profile
 132. Adaptive layout (desktop/touch/stage profiles)
 133. Right-to-left language support (Slint built-in)
 134. Accessibility: roles, labels, keyboard navigation

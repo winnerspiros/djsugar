@@ -45,25 +45,25 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 
 ### 1.4 Rate Control (src/engine/controls/ratecontrol.cpp)
 - **Items**: `rate`, `rate_perm_down`, `rate_perm_down_small`, `rate_perm_up`, `rate_perm_up_small`, `rate_temp_down`, `rate_temp_down_small`, `rate_temp_up`, `rate_temp_up_small`, `rate_range`, `rate_engine`, `sync`, `quantize`, `keylock`, `keylock_disable_on_sync`
-- Rate range: ±8%, ±16%, ±25%, ±50%, ±100%
+- Rate range: +-8%, +-16%, +-25%, +-50%, +-100%
 - Keylock algorithm: elastique/rubberband
 
 ### 1.5 Cue Control (src/engine/controls/cuecontrol.cpp)
 - **Items**: `cue_default`, `cue_goto`, `cue_jump`, `cue_play`, `cue_preview`, `cue_set`, `cue_cdj`, `cue_mode` (CDJ/Serato/Traktor)
 - Hotcues: 8 per deck, colored, quantized trigger
 - Loop cues: auto-loop on cue point
-- Beatjump: ±1/2/4/8/16/32 beats, quantized
+- Beatjump: +-1/2/4/8/16/32 beats, quantized
 
 ### 1.6 Looping Control (src/engine/controls/loopingcontrol.cpp)
 - **Items**: `loop_enabled`, `loop_end_position`, `loop_halve`, `loop_double`, `loop_in`, `loop_out`, `loop_move`, `loop_move_X`, `loop_scale`, `loop_start_position`, `quantize_loop`
 - Auto-loop sizes: 1/2/4/8/16/32 beats
-- Loop move: ±1/2/4/8 beats
+- Loop move: +-1/2/4/8 beats
 - Loop resize: drag endpoints
 
 ### 1.7 Key Control (src/engine/controls/keycontrol.cpp)
 - **Items**: `key`, `key_lock`, `key_shift`, `key_sync`, `keylock_mode` (standard/elastique/rubberband)
 - Camelot notation, harmonic mixing wheel
-- Key shift: ±12 semitones
+- Key shift: +-12 semitones
 
 ### 1.8 Quantize Control (src/engine/controls/quantizecontrol.cpp)
 - **Items**: `quantize`, `quantize_beats`, `quantize_mode` (beat/bar/phrase)
@@ -131,7 +131,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 ### 2.3 Effect Presets & Chains
 - Effect chain presets (save/load/share)
 - Quick effect per deck (single knob macro)
-- Pad FX: 4 banks × 8 pads, X-Pad instruments
+- Pad FX: 4 banks x 8 pads, X-Pad instruments
 - Effect button/knob parameter slots (MIDI learnable)
 
 ---
@@ -244,7 +244,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 - **bundledsamples.cpp**: 17 built-in DJ Sugar samples (kick, snare, clap, hats, 808, crash, airhorn, riser, downlifter, sub_drop, noise_sweep, vinyl_stop, siren)
 - **sampleeditor.cpp**: Trim, normalize, fade, loop points
 - **samplerecorder.cpp**: Record from deck output / mic / line-in
-- Sample banks: 4 banks × 16 pads
+- Sample banks: 4 banks x 16 pads
 - Format support: WAV, FLAC, OGG, MP3, OPUS
 - Auto-normalize to -14 LUFS on import
 
@@ -342,7 +342,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 - Waveform data request
 
 ### 4.3 Sampler (sampler.cpp/h + samplerbank.cpp/h)
-- 4 banks × 16 slots = 64 samples
+- 4 banks x 16 slots = 64 samples
 - **SampleBank**: Load/save bank, per-slot volume, mute, play mode (one-shot/gate/loop), reverse, pitch
 - **SampleRecorder**: Record to slot (deck out / mic / line-in / mix)
 - Sync modes: off, sync to deck, sync to master
@@ -765,7 +765,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 | 48 | Leading Deck Phrases | waveform/ | Show next deck's phrases on current deck |
 | 49 | 3-Band Waveform Layering | waveform/ | Layer/scale bands like rekordbox |
 | 50 | Beat Grid Steady Scrolling | waveform/ | Stem waveforms keep shape while scrolling |
-| 51 | Opus Sample Encoding | samples/ | Opus where ≥10% smaller than original |
+| 51 | Opus Sample Encoding | samples/ | Opus where >=10% smaller than original |
 | 52 | Vorbis Sample Support | samples/ | OGG Vorbis sample import |
 | 53 | Sample Normalization | samples/ | Auto-normalize to -14 LUFS on import |
 | 54 | FX Station X-Pad | effects/ | App samples for bank 1, edit icon per pad, shared picker |
@@ -895,7 +895,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 | LinkwitzRiley8EQ | `band1`..`band8`, `enabled` |
 | LoudnessContour | `amount`, `frequency`, `enabled` |
 | MoogLadder4Filter | `cutoff`, `resonance`, `drive`, `mix`, `enabled` |
-| ParametricEQ | `band1_freq`, `band1_gain`, `band1_q`, `band1_type`... (×4), `enabled` |
+| ParametricEQ | `band1_freq`, `band1_gain`, `band1_q`, `band1_type`... (x4), `enabled` |
 | Phase | `rate`, `depth`, `feedback`, `stages`, `mix`, `enabled` |
 | PitchShift | `semitones`, `cents`, `formants`, `mix`, `enabled` |
 | ProCompressor | `threshold`, `ratio`, `attack`, `release`, `knee`, `makeup`, `lookahead`, `enabled` |
@@ -946,7 +946,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 
 ### BPM/Rate/Cue/Loop/Key/Quantize/Vinyl Controls (40)
 26. BPM tap tempo
-27. BPM range ±8/16/25/50/100%
+27. BPM range +-8/16/25/50/100%
 28. BPM sync modes
 29. Rate permanent/temp up/down (small/large)
 30. Rate engine (internal rate)
@@ -960,12 +960,12 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 38. Beatjump sizes (1/2/4/8/16/32)
 39. Loop enable/disable
 40. Loop in/out set
-41. Loop move (±1/2/4/8 beats)
+41. Loop move (+-1/2/4/8 beats)
 42. Loop scale (resize)
 43. Loop halve/double
 44. Quantize loop
 45. Key lock toggle
-46. Key shift ±12 semitones
+46. Key shift +-12 semitones
 47. Key sync
 48. Key notation (Camelot/Classical)
 49. Quantize mode (beat/bar/phrase)
@@ -977,7 +977,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 55. Vinyl lead-in time
 56. Clock control
 
-### Effects — Builtin (31 effects × ~5 params = 155+)
+### Effects — Builtin (31 effects x ~5 params = 155+)
 57-87. AutoGainControl (4)
 88-92. AutoPan (5)
 93-96. Backspin (4)
@@ -1023,7 +1023,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 284. EffectSlot 4 units per deck
 285. Quick effect per deck
 286. PadFXController X-Pad instruments
-287. Pad FX banks (4×8)
+287. Pad FX banks (4x8)
 288. VisibleEffectsList customizable rack
 289. Effect button parameter slots
 290. Effect knob parameter slots
@@ -1059,7 +1059,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 318. Watch folders recursive
 319. Import on startup
 
-### Import Sources (8 sources × ~5 features = 40)
+### Import Sources (8 sources x ~5 features = 40)
 320-324. Rekordbox XML/database import
 325-328. Rekordbox USB drive backup
 329-330. Rekordbox playlist copy
@@ -1159,7 +1159,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 ### Mixer (15)
 435. PlayerManager 4 decks + sampler + preview + aux
 436. BaseTrackPlayer play/pause/cue/stop/seek/rate/keylock
-437. Sampler 4 banks × 16 slots
+437. Sampler 4 banks x 16 slots
 438. SampleBank load/save/per-slot config
 439. SampleRecorder (deck/mic/line-in/mix)
 440. Sampler sync modes
@@ -1292,7 +1292,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 555. Phase DJ DVS
 556. Generic (MIDI Fighter, Launchpad, APC, MPD)
 
-### Preferences Dialogs (20 dialogs × ~5 settings = 100+)
+### Preferences Dialogs (20 dialogs x ~5 settings = 100+)
 557-576. Sound (backend, devices, sample rate, buffer, latency, dither, exclusive, auto-switch)
 577-580. Sound Calibrate (latency wizard)
 581-585. Interface (language, theme, font, DPI, animations, tooltips)
@@ -1312,7 +1312,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 701-706. Colors (palette editor, deck/waveform/cue/stem colors)
 707-710. Modplug (module player settings)
 
-### DJ-Sugar Specific Preference Groups (6 groups × ~5 = 30)
+### DJ-Sugar Specific Preference Groups (6 groups x ~5 = 30)
 711-716. YouTube (API key, Invidious, quality, cache, SponsorBlock, lyrics)
 717-721. SoundCloud (client ID, quality, cache, prefetch)
 722-727. Spotify (client ID/secret, cache, quality, offline, web login)

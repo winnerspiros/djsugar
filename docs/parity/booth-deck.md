@@ -1,6 +1,6 @@
 # Booth Skin DECK Side - Visual & Behaviour Specification
 
-This document specifies the DJ Sugar Booth skin DECK side for reimplementation in a Rust immediate‑mode GPU painter. Every colour is resolved to hex with opacity. Geometry is expressed as formulas of parent width/height using the original Layout.preferred*, anchors, margins, spacing, Math.round/min/max exactly as written. Canvas/Shape drawing code is noted exactly (paths, angles). Controls list their Mixxx group/key, click/drag/long‑press behaviour, and drag sensitivity.
+This document specifies the DJ Sugar Booth skin DECK side for reimplementation in a Rust immediate-mode GPU painter. Every colour is resolved to hex with opacity. Geometry is expressed as formulas of parent width/height using the original Layout.preferred*, anchors, margins, spacing, Math.round/min/max exactly as written. Canvas/Shape drawing code is noted exactly (paths, angles). Controls list their Mixxx group/key, click/drag/long-press behaviour, and drag sensitivity.
 
 ## 1. Theme Colours (resolved)
 
@@ -41,7 +41,7 @@ This document specifies the DJ Sugar Booth skin DECK side for reimplementation i
 | gainKnobColor | #01dcfc | = blue |
 | green | #85c85b | |
 | knobBackgroundColor | #262626 | |
-| libraryDeck1Background | #1f6fd1 | Deck 1 cyan‑blue |
+| libraryDeck1Background | #1f6fd1 | Deck 1 cyan-blue |
 | libraryDeck2Background | #e8650f | Deck 2 orange |
 | lightGray | #747474 | |
 | lightGray2 | #b0b0b0 | |
@@ -197,7 +197,7 @@ Root: `Rectangle` (id: `root`)
     - Size text: `pixelSize: round(unit * 1.8)`, `bold`, color `looping ? #000000 : #e8650f` (libDeck2Bg), text: `size >= 1 ? round(size) : "1/" + round(1/size)`
     - Subtext: `pixelSize: round(unit * 0.8)`, `bold`, color `looping ? #000000 : #939393`, text: `looping ? "EXIT" : "BEATS"`
   - TapHandler `loopTap`: onTapped to `looping ? reloopToggle.trigger() : loopActivate.trigger()`
-- RowLayout (½ / ×2): `prefHeight: round(unit * 2.4)`, spacing 3, two `SmallButton` (label "½", "×2"), onPressed trigger `loopHalve` / `loopDouble`
+- RowLayout (1/2 / x2): `prefHeight: round(unit * 2.4)`, spacing 3, two `SmallButton` (label "1/2", "x2"), onPressed trigger `loopHalve` / `loopDouble`
 - RowLayout (IN / OUT): `prefHeight: round(unit * 2.4)`, spacing 3, two `SmallButton` (label "IN", "OUT"), `on` bound to `loopIn/Out.value > 0`, onPressed=1, onReleased=0
 - Spacer `Item fillHeight: true`
 - GRID Button (`SmallButton`): `fillWidth`, `prefHeight: round(unit * 2.2)`, label "GRID", onPressed opens `BeatgridPopup` if loaded
@@ -232,7 +232,7 @@ Root: `Rectangle` (id: `root`)
   - Center Column:
     - Row: BPM whole `pixelSize: round(size * 0.17)`, color `syncLeader ? #fca001 : #d9d9d9`, text `loaded ? floor(bpm) : "--"`
     - BPM fraction: `pixelSize: round(size * 0.09)`, same color, text `loaded ? "." + pad(floor((bpm%1)*100),2) : ".--"`
-    - Rate text: `pixelSize: round(size * 0.075)`, color `#939393`, text `(rateRatio-1)*100` with sign + " %  ±" + `round(rateRange*100)`
+    - Rate text: `pixelSize: round(size * 0.075)`, color `#939393`, text `(rateRatio-1)*100` with sign + " %  +-" + `round(rateRange*100)`
 - Bottom Column (Quantize / MT):
   - Anchored bottom, left if mirrored else right, spacing 3
   - Q Button (`SmallButton`): `height: round(unit*2)`, `width: round(unit*2.6)`, label "Q", `on: quantize>0`, onPressed toggles
@@ -296,7 +296,7 @@ Root: `Rectangle` (id: `root`)
   - Deck number: `color: playing ? #fca001 : #d9d9d9`, `bold`, `pixelSize: round(unit * 1.0)`, text `playing ? "((N))" : "N"`
 - Track Title (Text): left of deckLabel.right + 10, right of keyLabel.left - 8, verticalCenter, elideRight, `pixelSize: round(unit * 1.45)`
   - If downloading: `#ff99ca`, text `Downloading XX% · title`
-  - Else if loaded: `#d9d9d9`, text `♪ title`
+  - Else if loaded: `#d9d9d9`, text `note title`
   - Else empty
 - Key Label (Text): right margin 8, verticalCenter, `color: #d9d9d9`, `pixelSize: round(unit * 1.3)`, text `loaded ? keyText : ""`
 - Download gradient bar (bottom of titleBar, visible when downloading): height 3, gradient horizontal `#3a60be` to `#ff99ca` to `#01dcfc`, animated width
@@ -632,10 +632,10 @@ Root: `Item` (id: `root`)
 center = w/2
 lineWidth = max(2, w/11)
 radius = center - lineWidth
-start = PI * 0.75          // -135° (bottom-left)
-end   = PI * 2.25          // +135° (bottom-right)
+start = PI * 0.75          // -135 deg (bottom-left)
+end   = PI * 2.25          // +135 deg (bottom-right)
 at    = start + clamp(value) * (end - start)
-from  = bipolar ? PI * 1.5 : start   // -90° (top) if bipolar
+from  = bipolar ? PI * 1.5 : start   // -90 deg (top) if bipolar
 
 // Background track
 strokeStyle = #626262
@@ -666,7 +666,7 @@ stroke()
 - `Skin.Triangle`: centered, `horizontalCenterOffset: round(width * 0.1)`, `color: #85c85b`, `height: round(parent.height * 0.36)`, `width: round(height * 0.9)`, points right
 
 ### BoothBeatFx Prev/Next Triangles
-- `Skin.Triangle`: height 11, width 8, centered in 24×prefHeight button, pointsLeft/Right
+- `Skin.Triangle`: height 11, width 8, centered in 24xprefHeight button, pointsLeft/Right
 
 ### BoothBeatFx Slot Boxes
 - Simple Rectangle with border, fill, centered number text
