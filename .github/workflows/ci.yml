@@ -166,9 +166,58 @@ jobs:
           name: djsugar-android
           path: target/djsugar.apk
 
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Software Vulkan
+        run: sudo apt-get update -q && sudo apt-get install -yq mesa-vulkan-drivers
+      - name: Every view at every size, typing and focus loss
+        run: cargo run --release --locked -p djsugar --example shots -- shots
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-screens
+          path: shots
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: x86_64 APK for the emulator
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME
+          export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+          TARGET=x86_64-linux-android ABI=x86_64 KEYSTORE=$RUNNER_TEMP/k.keystore bash platform/android/build.sh
+      - name: Launch, rotate, tap, type, background and resume
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: bash platform/android/smoke.sh target/djsugar.apk emu
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-emulator
+          path: emu
+
   release:
     if: github.event_name == 'push'
-    needs: [android, linux, deps, hygiene]
+    needs: [android, linux, deps, hygiene, ui, emulator]
     runs-on: ubuntu-latest
     permissions:
       contents: write

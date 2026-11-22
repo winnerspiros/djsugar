@@ -28,5 +28,8 @@ winit = { version = "0.30", default-features = false, features = ["rwh_06"] }
 winit = { version = "0.30", default-features = false, features = ["rwh_06", "android-native-activity"] }
 jni = { version = "0.22", default-features = false }
 
+[dev-dependencies]
+png = { version = "0.18", default-features = false }
+
 [lints]
 workspace = true

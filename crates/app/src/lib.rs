@@ -2,12 +2,10 @@ mod hub;
 mod library;
 mod lyrics;
 mod record;
-mod screen;
 mod state;
 mod store;
 mod sugar;
 
-use sugar_layout::{Id, Layout, Rect};
 use sugar_ui::{Fonts, Painter};
 
 use state::State;
@@ -17,12 +15,9 @@ static FONT: &[u8] = include_bytes!("../../../res/fonts/Inter.ttf");
 
 #[derive(Debug)]
 pub struct Ui {
-    layout: Layout,
-    portrait: Layout,
-    placed: Vec<(Id, Rect)>,
     painter: Painter,
     state: State,
-    window: Rect,
+    size: (f32, f32),
     scale: f32,
     _output: Option<sugar_io::Output>,
 }
@@ -44,23 +39,12 @@ impl Ui {
         };
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
-        Self {
-            layout: Layout::new(&screen::tree()),
-            portrait: Layout::new(&screen::portrait()),
-            placed: Vec::with_capacity(sugar_layout::MAX_MODULES),
-            painter: Painter::new(Fonts::new(FONT)),
-            state,
-            window: Rect::new(0.0, 0.0, 1.0, 1.0),
-            scale: 1.0,
-            _output: output,
-        }
+        Self { painter: Painter::new(Fonts::new(FONT)), state, size: (1.0, 1.0), scale: 1.0, _output: output }
     }
 
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
         self.scale = scale.max(0.5);
-        self.window = Rect::new(0.0, 0.0, width as f32 / self.scale, height as f32 / self.scale);
-        let layout = if self.window.h > self.window.w * 1.1 { &mut self.portrait } else { &mut self.layout };
-        layout.solve(screen::inset(self.window), &mut self.placed);
+        self.size = (width as f32 / self.scale, height as f32 / self.scale);
     }
 
     pub fn animating(&self) -> bool {
@@ -70,8 +54,8 @@ impl Ui {
     pub fn render(&mut self, renderer: &mut sugar_ui::Renderer<'_>) {
         self.state.tick();
         self.painter.begin(self.scale);
-        screen::paint(&mut self.painter, &mut self.state, self.window, &self.placed);
-        renderer.render(&mut self.painter, screen::BACKGROUND);
+        sugar::paint(&mut self.painter, &mut self.state, self.size.0, self.size.1);
+        renderer.render(&mut self.painter, 0);
     }
 
     pub fn pointer_down(&mut self, id: u64, x: f32, y: f32) {
@@ -100,6 +84,29 @@ impl Ui {
         self.state.typing()
     }
 
+    /// Every control on screen as its target name and x, y, w, h, for scripted tests.
+    pub fn targets(&self) -> Vec<(String, [f32; 4])> {
+        self.state.hits.iter().map(|h| (format!("{:?}", h.target), [h.rect.x, h.rect.y, h.rect.w, h.rect.h])).collect()
+    }
+
+    /// Taps the topmost control named `name`; false when none is on screen.
+    pub fn tap(&mut self, name: &str) -> bool {
+        let Some(h) = self.state.hits.iter().rev().find(|h| format!("{:?}", h.target) == name) else { return false };
+        let (x, y) = (h.rect.x + h.rect.w * 0.5, h.rect.y + h.rect.h * 0.5);
+        self.state.pointer_down(0, x, y);
+        self.state.pointer_up(0, y);
+        true
+    }
+
+    /// The streaming search text.
+    pub fn query(&self) -> &str {
+        &self.state.hub.query
+    }
+
+    pub fn release_all(&mut self) {
+        self.state.release_all();
+    }
+
     pub fn rescan(&mut self) {
         self.state.scan();
     }
@@ -120,7 +127,7 @@ pub mod native {
 
     use sugar_ui::Renderer;
     use winit::application::ApplicationHandler;
-    use winit::event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent};
+    use winit::event::{ElementState, Ime, MouseScrollDelta, TouchPhase, WindowEvent};
     use winit::event_loop::{ActiveEventLoop, EventLoop};
     use winit::keyboard::{Key as WKey, NamedKey};
     use winit::window::{Window, WindowId};
@@ -140,6 +147,7 @@ pub mod native {
         cursor: (f32, f32),
         shift: bool,
         started: bool,
+        ime: bool,
     }
 
     impl Native {
@@ -151,10 +159,14 @@ pub mod native {
             gpu.window.request_redraw();
         }
 
-        fn redraw(&self) {
-            if let Some(gpu) = &self.gpu {
-                gpu.window.request_redraw();
+        fn redraw(&mut self) {
+            let Some(gpu) = &self.gpu else { return };
+            let typing = self.ui.typing();
+            if typing != self.ime {
+                self.ime = typing;
+                gpu.window.set_ime_allowed(typing);
             }
+            gpu.window.request_redraw();
         }
     }
 
@@ -174,10 +186,13 @@ pub mod native {
             let size = window.inner_size();
             let renderer = Renderer::new(window.clone(), size.width, size.height).unwrap_or_else(|e| fail(&e));
             self.gpu = Some(Gpu { window, renderer });
+            self.ime = false;
             self.resize();
+            self.redraw();
         }
 
         fn suspended(&mut self, _: &ActiveEventLoop) {
+            self.ui.release_all();
             if cfg!(target_os = "android") {
                 self.gpu = None;
             }
@@ -207,6 +222,14 @@ pub mod native {
                         ElementState::Pressed => self.ui.pointer_down(MOUSE, x, y),
                         ElementState::Released => self.ui.pointer_up(MOUSE, y),
                     }
+                    self.redraw();
+                }
+                WindowEvent::Focused(false) => {
+                    self.ui.release_all();
+                    self.redraw();
+                }
+                WindowEvent::Ime(Ime::Commit(t)) => {
+                    self.ui.text(&t);
                     self.redraw();
                 }
                 WindowEvent::ModifiersChanged(m) => self.shift = m.state().shift_key(),
@@ -252,7 +275,8 @@ pub mod native {
     }
 
     pub fn run(event_loop: EventLoop<()>, read: Reader) {
-        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), shift: false, started: false };
+        let mut app =
+            Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), shift: false, started: false, ime: false };
         event_loop.run_app(&mut app).unwrap_or_else(|e| fail(&e));
     }
 }

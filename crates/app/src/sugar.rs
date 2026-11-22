@@ -72,9 +72,12 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour
 }
 
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    s.hits.clear();
     p.rect(0.0, 0.0, w, h, 0.0, rgb(0x1e1e20));
-    toolbar(p, s, Rect::new(0.0, 0.0, w, TOOLBAR));
-    let mut y = TOOLBAR;
+    let tall = h > w * 1.1;
+    let bar = if w < 720.0 || (tall && w < 1100.0) { TOOLBAR * 3.0 } else { TOOLBAR };
+    toolbar(p, s, Rect::new(0.0, 0.0, w, bar));
+    let mut y = bar;
     if s.show_fx {
         effects(p, s, Rect::new(0.0, y, w, ROW));
         y += ROW;
@@ -85,6 +88,21 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     }
     let rest = h - y;
     match s.view {
+        View::Dj if tall => {
+            let wh = (rest * 0.13).round().clamp(56.0, 120.0);
+            waveforms(p, s, Rect::new(0.0, y, w, wh));
+            let y = y + wh + 2.0;
+            let lower = h - y;
+            let mh = (lower * 0.24).clamp(170.0, 240.0);
+            let dh = ((lower - mh) * 0.5).min(340.0).floor();
+            deck(p, s, Rect::new(0.0, y, w, dh), 0);
+            mixer(p, s, Rect::new(0.0, y + dh, w, mh));
+            deck(p, s, Rect::new(0.0, y + dh + mh, w, dh), 1);
+            let used = 2.0 * dh + mh;
+            if lower - used > 80.0 {
+                library(p, s, Rect::new(0.0, y + used + 2.0, w, lower - used - 2.0));
+            }
+        }
         View::Dj => {
             let wh = (rest * 0.22).round().clamp(56.0, 96.0);
             waveforms(p, s, Rect::new(0.0, y, w, wh));
@@ -96,21 +114,21 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             mixer(p, s, Rect::new(dw, y, w - 2.0 * dw, dh));
             deck(p, s, Rect::new(w - dw, y, dw, dh), 1);
             if lower - dh > 60.0 {
-                crate::screen::library(p, s, Rect::new(0.0, y + dh + 2.0, w, lower - dh - 2.0));
+                library(p, s, Rect::new(0.0, y + dh + 2.0, w, lower - dh - 2.0));
             }
         }
         View::Wave => {
             let bar = (rest * 0.38).round().clamp(86.0, 115.0);
-            waveforms(p, s, Rect::new(0.0, y, w, rest - bar));
-            for d in 0..2 {
-                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, h - bar, w * 0.5, bar), d);
+            let lyr = if tall { (rest * 0.3).round() } else { 0.0 };
+            waveforms(p, s, Rect::new(0.0, y, w, rest - bar - lyr));
+            if lyr > 0.0 {
+                lyrics(p, s, Rect::new(0.0, y + rest - bar - lyr, w, lyr));
             }
+            minis(p, s, Rect::new(0.0, h - bar, w, bar));
         }
         View::Lib => {
-            for d in 0..2 {
-                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, y, w * 0.5, 96.0), d);
-            }
-            crate::screen::library(p, s, Rect::new(0.0, y + 98.0, w, rest - 98.0));
+            let m = minis(p, s, Rect::new(0.0, y, w, 96.0));
+            library(p, s, Rect::new(0.0, y + m + 2.0, w, rest - m - 2.0));
         }
         View::Fx => {
             let wh = (rest * 0.2).round().clamp(48.0, 90.0);
@@ -118,17 +136,20 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             station(p, s, Rect::new(0.0, y + wh + 2.0, w, rest - wh - 2.0));
         }
         View::Stream => {
-            for d in 0..2 {
-                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, y, w * 0.5, 96.0), d);
-            }
-            hub(p, s, Rect::new(0.0, y + 98.0, w, rest - 98.0));
+            let m = minis(p, s, Rect::new(0.0, y, w, 96.0));
+            hub(p, s, Rect::new(0.0, y + m + 2.0, w, rest - m - 2.0));
         }
         View::Ctl => {
             let wh = (rest * 0.42).round();
             waveforms(p, s, Rect::new(0.0, y, w, wh));
-            crate::screen::library(p, s, Rect::new(0.0, y + wh + 2.0, w, rest - wh - 2.0));
+            let lw = if tall { 0.0 } else { (w * 0.3).clamp(220.0, 380.0) };
+            library(p, s, Rect::new(0.0, y + wh + 2.0, w - lw, rest - wh - 2.0));
+            if lw > 0.0 {
+                lyrics(p, s, Rect::new(w - lw, y + wh + 2.0, lw, rest - wh - 2.0));
+            }
         }
     }
+    browser(p, s, w, h, bar);
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
@@ -138,6 +159,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, EDGE);
+    let two = r.h > TOOLBAR;
     let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
     let views = [
         ("DJ", View::Dj),
@@ -147,11 +169,16 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         ("STREAM", View::Stream),
         ("CTL", View::Ctl),
     ];
-    let compact = r.w < 760.0;
-    let tw = if compact { 44.0 } else { 58.0 };
-    p.outlined(x, r.y + 4.0, tw * views.len() as f32, r.h - 8.0, 6.0, DEEP, 1.0, EDGE);
+    let tw = if two {
+        ((r.w - x - 6.0) / views.len() as f32).min(64.0)
+    } else if r.w < 760.0 {
+        44.0
+    } else {
+        58.0
+    };
+    p.outlined(x, r.y + 4.0, tw * views.len() as f32, TOOLBAR - 8.0, 6.0, DEEP, 1.0, EDGE);
     for (n, (label, v)) in views.into_iter().enumerate() {
-        let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, r.h - 8.0);
+        let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, TOOLBAR - 8.0);
         if s.view == v {
             p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 2.0, ACCENT);
         }
@@ -160,6 +187,13 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, b, Target::View(v));
     }
     x += tw * views.len() as f32 + 8.0;
+    let r = if two {
+        x = r.x + 6.0;
+        p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, EDGE);
+        Rect::new(r.x, r.y + TOOLBAR, r.w, TOOLBAR)
+    } else {
+        r
+    };
     let h = r.h - 8.0;
     let rec = s.recorder.as_ref().map(|r| {
         let t = r.frames / u64::from(s.out_rate.max(1));
@@ -182,14 +216,21 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         } else {
             46.0
         };
+        let bw = if two { (r.w - 32.0) / 6.0 } else { bw };
         let colour = if matches!(t, Target::Record) { RED } else { ACCENT };
-        if x + bw > r.w - 140.0 {
-            break;
+        if !two && x + bw > r.w - 110.0 {
+            continue;
         }
         button(p, s, Rect::new(x, r.y + 4.0, bw, h), label, on, colour, t);
         x += bw + 4.0;
     }
-    let sx = (r.w - 300.0).max(x + 4.0);
+    let r = if two {
+        p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, EDGE);
+        Rect::new(r.x, r.y + TOOLBAR, r.w, TOOLBAR)
+    } else {
+        r
+    };
+    let sx = if two { r.x + 6.0 } else { (r.w - 300.0).max(x + 2.0) };
     let sw = r.w - sx - 8.0;
     p.outlined(
         sx,
@@ -491,7 +532,7 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let pc = (h * 0.5 - 2.0).clamp(26.0, 60.0);
     let pw = pc.max(44.0);
     transport(p, s, Rect::new(body.x, y, pw, h), d);
-    let spinny = h >= 90.0 && body.w >= 360.0;
+    let spinny = h >= 80.0 && body.w >= 300.0;
     let sw = if spinny { h.min(body.w * 0.3) } else { 0.0 };
     let cx = body.x + pw + 4.0;
     let cw = body.w - pw - 4.0 - if spinny { sw + 4.0 } else { 0.0 };
@@ -1362,4 +1403,64 @@ fn skin_handle(p: &mut Painter, r: Rect, line: u32) {
 fn groove(p: &mut Painter, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, r.w.min(r.h) * 0.5, rgb(0x0c0c0c));
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(rgb(0xffffff), 0x10));
+}
+
+/// Both decks' summaries side by side, or stacked when a column is too narrow; returns the height used.
+fn minis(p: &mut Painter, s: &mut State, r: Rect) -> f32 {
+    if r.w >= 560.0 {
+        for d in 0..2 {
+            mini_deck(p, s, Rect::new(r.x + d as f32 * r.w * 0.5, r.y, r.w * 0.5, r.h), d);
+        }
+        return r.h;
+    }
+    let h = (r.h * 0.5).max(52.0);
+    for d in 0..2 {
+        mini_deck(p, s, Rect::new(r.x, r.y + d as f32 * h, r.w, h), d);
+    }
+    2.0 * h
+}
+
+/// Synced lyrics of the playing deck, the current line in the deck colour.
+fn lyrics(p: &mut Painter, s: &State, r: Rect) {
+    section(p, r, INK);
+    p.text(r.x + 12.0, r.y + 20.0, SMALL, "LYRICS");
+    let has = |d: usize| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty());
+    let Some(d) = (0..2).find(|&d| s.telemetry.decks[d].playing && has(d)).or_else(|| (0..2).find(|&d| has(d))) else {
+        p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No synced lyrics for the loaded tracks");
+        return;
+    };
+    let Some(l) = &s.decks[d].loaded else { return };
+    let cur = l.lyrics.current(s.decks[d].seconds(s.telemetry.decks[d].position));
+    let line_h = 22.0;
+    let rows = ((r.h - 36.0) / line_h).max(1.0) as usize;
+    let first = cur.unwrap_or(0).saturating_sub(rows / 3);
+    for (n, (_, text)) in l.lyrics.lines.iter().enumerate().skip(first).take(rows) {
+        let y = r.y + 44.0 + (n - first) as f32 * line_h;
+        let style = if Some(n) == cur { Style::new(14.0, Weight::Bold, DECK[d]) } else { Style { px: 12.5, ..ARTIST } };
+        p.text_in(r.x + 12.0, y, r.w - 24.0, style, text);
+    }
+}
+
+/// The track picker a LOAD button opens: the library over everything below the toolbar.
+fn browser(p: &mut Painter, s: &mut State, w: f32, h: f32, top: f32) {
+    let Some(d) = s.browser else { return };
+    p.layer();
+    let r = Rect::new(4.0, top + 4.0, w - 8.0, h - top - 8.0);
+    hit(s, r, Target::CloseBrowser);
+    section(p, r, INK);
+    p.outlined(r.x, r.y, r.w, r.h, 0.0, 0, 1.5, DECK[d]);
+    let head = Style::new(14.0, Weight::Bold, DECK[d]);
+    let x = r.x + 24.0 + p.text(r.x + 12.0, r.y + 25.0, head, ["Load to deck 1", "Load to deck 2"][d]);
+    let (q, st) = if s.query.is_empty() {
+        ("Type to search", Style { colour: DARK, ..TITLE })
+    } else {
+        (s.query.as_str(), TITLE)
+    };
+    let q = q.to_string();
+    let tw = p.text_in(x, r.y + 25.0, r.w - x - 90.0, st, &q);
+    if !s.query.is_empty() {
+        p.rect(x + tw + 2.0, r.y + 12.0, 1.5, 17.0, 0.0, ACCENT);
+    }
+    button(p, s, Rect::new(r.x + r.w - 78.0, r.y + 7.0, 70.0, 26.0), "CLOSE", false, ACCENT, Target::CloseBrowser);
+    library(p, s, Rect::new(r.x + 1.0, r.y + 40.0, r.w - 2.0, r.h - 41.0));
 }

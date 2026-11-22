@@ -1097,12 +1097,23 @@ impl State {
             resume,
             at: std::time::Instant::now(),
         });
+        self.search_focus = target == Some(Target::SearchFocus);
+        self.hub.focus = target == Some(Target::HubFocus);
         if let Some(t) = target {
-            if t != Target::SearchFocus {
-                self.search_focus = false;
-            }
             self.press(t, x, y);
         }
+    }
+
+    /// Lets go of every finger and the mouse, as when the window loses focus.
+    pub fn release_all(&mut self) {
+        for d in &mut self.drags {
+            d.moved = true;
+        }
+        while let Some(d) = self.drags.last() {
+            let (id, y) = (d.id, d.last.1);
+            self.release(id, y);
+        }
+        self.remember();
     }
 
     pub fn pointer_target(&mut self, t: Target) {
@@ -1165,8 +1176,8 @@ impl State {
             Target::CueMenuClose => self.cue_menu = None,
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
-            Target::SearchFocus => self.search_focus = true,
-            Target::HubFocus => self.hub.focus = true,
+            Target::SearchFocus => {}
+            Target::HubFocus => {}
             Target::HubSearch => {
                 self.hub.focus = false;
                 self.hub.search();
