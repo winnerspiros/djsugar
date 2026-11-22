@@ -1,26 +1,26 @@
 use sugar_layout::Rect;
-use sugar_ui::{Material, Painter, Style, Weight, rgb};
+use sugar_ui::{Painter, Style, Weight, rgb};
 
 use crate::state::{
     DETAIL_FRAMES, FX_PADS, GridOp, Hit, JUMP_BEATS, LOOP_BEATS, Mode, State, Target, View, beats_label,
 };
 use sugar_engine::station::Scene;
 
-const INK: u32 = rgb(0x0e0e11);
-const SURFACE: u32 = rgb(0x18181c);
-const DEEP: u32 = rgb(0x0a0a0c);
-const EDGE: u32 = rgb(0x2a2a30);
-const RAISED: u32 = rgb(0x1f1f24);
-const ACCENT: u32 = rgb(0xff4fa8);
-const ACTIVE: u32 = rgb(0x7c5cff);
+const INK: u32 = rgb(0x0e0e0e);
+const SURFACE: u32 = rgb(0x181b22);
+const DEEP: u32 = rgb(0x0c0c0c);
+const EDGE: u32 = rgb(0x2e2e2e);
+const RAISED: u32 = rgb(0x2b2b2b);
+const CYAN: u32 = rgb(0x01dcfc);
+const ACCENT: u32 = rgb(0x3a60be);
 const TEXT: u32 = rgb(0xe8e8e8);
-const GREY: u32 = rgb(0x8c8c94);
+const GREY: u32 = rgb(0xb0b0b0);
 const DARK: u32 = rgb(0x555555);
 const GREEN: u32 = rgb(0x00e676);
 const RED: u32 = rgb(0xff6b6b);
 const AMBER: u32 = rgb(0xffd54f);
 pub const CUES: [u32; 8] = [
-    rgb(0xff4fa8),
+    rgb(0xe63380),
     rgb(0xff3b30),
     rgb(0xff9500),
     rgb(0xffd60a),
@@ -29,9 +29,9 @@ pub const CUES: [u32; 8] = [
     rgb(0x2f7bff),
     rgb(0xaf52de),
 ];
-pub const DECK: [u32; 2] = [rgb(0x1f6fd1), rgb(0xe8650f)];
+pub const DECK: [u32; 2] = [rgb(0x00b0ff), rgb(0xff6d00)];
 
-const LOGO: Style = Style::new(16.0, Weight::Bold, ACCENT);
+const LOGO: Style = Style::new(16.0, Weight::Bold, rgb(0xe63380));
 const TAB: Style = Style::new(11.0, Weight::Bold, TEXT);
 const TITLE: Style = Style::new(14.0, Weight::Semibold, TEXT);
 const ARTIST: Style = Style::new(10.0, Weight::Regular, GREY);
@@ -53,13 +53,18 @@ fn hit(s: &mut State, r: Rect, target: Target) {
 
 fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
     let down = s.pressed(target);
-    let rad = 4.0f32.min(r.h * 0.5);
-    let (fill, edge, ink) = match (on, down) {
-        (true, _) => (fade(colour, 0x38), fade(colour, 0xd0), colour),
-        (false, true) => (rgb(0x2c2c33), rgb(0x3a3a42), TEXT),
-        (false, false) => (RAISED, EDGE, GREY),
+    skin_button(p, r, down);
+    if on {
+        p.rect(r.x + 2.0, r.y + 2.0, r.w - 4.0, r.h - 4.0, 1.0, fade(colour, 0x30));
+        p.rect(r.x + 4.0, r.y + r.h - 4.0, r.w - 8.0, 2.0, 1.0, colour);
+    }
+    let ink = if on {
+        colour
+    } else if down {
+        TEXT
+    } else {
+        GREY
     };
-    p.outlined(r.x, r.y, r.w, r.h, rad, fill, 1.0, edge);
     let style = Style::new(if r.h < 26.0 { 9.0 } else { 10.5 }, Weight::Semibold, ink);
     let tw = p.text_width(style, label).min(r.w - 4.0);
     p.text_in(r.x + (r.w - tw) * 0.5, r.y + r.h * 0.5 + style.px * 0.36, r.w - 4.0, style, label);
@@ -67,7 +72,7 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour
 }
 
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
-    p.rect(0.0, 0.0, w, h, 0.0, DEEP);
+    p.rect(0.0, 0.0, w, h, 0.0, rgb(0x1e1e20));
     toolbar(p, s, Rect::new(0.0, 0.0, w, TOOLBAR));
     let mut y = TOOLBAR;
     if s.show_fx {
@@ -148,8 +153,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     for (n, (label, v)) in views.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, r.h - 8.0);
         if s.view == v {
-            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 4.0, rgb(0x2e2e36));
-            p.rect(b.x + 8.0, b.y + b.h - 4.0, b.w - 16.0, 2.0, 1.0, ACCENT);
+            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 2.0, ACCENT);
         }
         let ink = Style { colour: if s.view == v { TEXT } else { GREY }, ..TAB };
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
@@ -532,9 +536,9 @@ fn transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 fn tools(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let tools: [(&str, bool, u32, Target); 4] = [
-        ("REV", s.decks[d].reverse, ACTIVE, Target::Reverse(d)),
-        ("SLIP", s.decks[d].slip, ACTIVE, Target::Slip(d)),
-        ("Q", s.decks[d].quantize, ACTIVE, Target::Quantize(d)),
+        ("REV", s.decks[d].reverse, ACCENT, Target::Reverse(d)),
+        ("SLIP", s.decks[d].slip, ACCENT, Target::Slip(d)),
+        ("Q", s.decks[d].quantize, ACCENT, Target::Quantize(d)),
         ("EJECT", false, RED, Target::Eject(d)),
     ];
     let weights = [1.0, 1.1, 0.7, 1.3];
@@ -572,27 +576,22 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let (label, on, colour) = match mode {
             Mode::Cues => ((i + 1).to_string(), s.decks[d].cues[i].is_some(), cue_colour(s, d, i)),
             Mode::Loops => (beats_label(LOOP_BEATS[i]), s.decks[d].looping == Some(i), GREEN),
-            Mode::Samples => (crate::state::pad_name(s, d, i), false, ACTIVE),
+            Mode::Samples => (crate::state::pad_name(s, d, i), false, ACCENT),
             Mode::Fx => (FX_PADS[i].to_string(), s.decks[d].echo == Some(i), AMBER),
         };
         let down = s.pressed(Target::Pad(d, i));
-        let fill = match (on, down) {
-            (true, true) => colour,
-            (true, false) => fade(colour, 0x30),
-            (false, true) => rgb(0x2c2c33),
-            (false, false) => RAISED,
-        };
-        p.rect(b.x, b.y, b.w, b.h, 3.0, fill);
+        skin_button(p, b, down);
         if on {
-            p.rect(b.x, b.y, 3.0, b.h, 1.5, colour);
+            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 1.0, fade(colour, if down { 0xc0 } else { 0x48 }));
+            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, 3.0, 1.0, colour);
         }
         let ink = Style {
             colour: if on && down {
                 rgb(0x000000)
             } else if on {
-                colour
+                TEXT
             } else {
-                DARK
+                rgb(0x626262)
             },
             ..PAD_TEXT
         };
@@ -658,7 +657,7 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 }
 
 fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.gradient(r.x, r.y, r.w, r.h, 6.0, rgb(0x191b22), rgb(0x0e0f13), 1.0, rgb(0x2b2e37));
+    section(p, r, rgb(0x181818));
     let bh = 22.0;
     button(p, s, Rect::new(r.x + 3.0, r.y + 3.0, r.w - 6.0, bh), "SYNC", false, ACCENT, Target::Sync(d));
     let kl = s.decks[d].key_lock;
@@ -674,7 +673,7 @@ fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         Rect::new(r.x + 3.0, bottom - 2.0 * bh - 3.0, r.w - 6.0, bh),
         &key,
         kl || st != 0,
-        ACTIVE,
+        ACCENT,
         Target::KeyLock(d),
     );
     let ft = r.y + bh + 10.0;
@@ -683,63 +682,54 @@ fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         return;
     }
     let cx = r.x + r.w * 0.5;
-    p.rect(cx - 1.5, ft, 3.0, fh, 1.5, DEEP);
-    p.rect(cx - 8.0, ft + fh * 0.5, 16.0, 1.0, 0.0, DARK);
+    groove(p, Rect::new(cx - 2.0, ft, 4.0, fh));
+    for t in 0..=8 {
+        let ty = ft + fh * t as f32 / 8.0;
+        let half = if t == 4 { 9.0 } else { 5.0 };
+        p.rect(cx - 6.0 - half, ty, half, 1.0, 0.0, rgb(0x3f3f3f));
+    }
     let v = s.decks[d].rate;
-    let y = ft + (1.0 - (v + 1.0) * 0.5) * (fh - 10.0);
-    p.rect(r.x + 6.0, y, r.w - 12.0, 10.0, 3.0, if v == 0.0 { TEXT } else { ACCENT });
+    let y = ft + (1.0 - (v + 1.0) * 0.5) * (fh - 12.0);
+    let mid = ft + fh * 0.5;
+    p.rect(cx - 1.0, y.min(mid), 2.0, (y + 6.0 - mid).abs(), 1.0, CYAN);
+    skin_handle(p, Rect::new(r.x + 5.0, y, r.w - 10.0, 12.0), if v == 0.0 { rgb(0xffffff) } else { CYAN });
     hit(s, Rect::new(r.x, ft, r.w, fh), Target::Rate(d));
 }
 
+/// DJ Sugar's Android spinny: a dark disc ringed in the deck colour, a turning
+/// marker, and the tempo in a pill at the centre.
 fn platter(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let k = r.w.min(r.h);
+    let k = r.w.min(r.h).min(140.0);
     let (cx, cy) = (r.x + r.w * 0.5, r.y + r.h * 0.5);
     let rad = k * 0.5;
     let t = s.telemetry.decks[d];
     let deck = &s.decks[d];
-    if t.playing {
-        p.glow(cx - rad, cy - rad, k, k, rad, k / 9.0, fade(DECK[d], 0x70));
+    let loaded = deck.loaded.is_some();
+    p.outlined(cx - rad, cy - rad, k, k, rad, rgb(0x181a20), 2.5, if loaded { DECK[d] } else { rgb(0x353842) });
+    for (inset, w, c) in [(6.0, 1.5, rgb(0x282b35)), (14.0, 1.0, rgb(0x232630))] {
+        let ir = rad - inset;
+        p.outlined(cx - ir, cy - ir, ir * 2.0, ir * 2.0, ir, 0, w, c);
     }
-    p.glow(cx - rad, cy - rad + 4.0, k, k, rad, 8.0, fade(rgb(0x000000), 0xd0));
-    p.disc(cx, cy, rad, rgb(0x1c1d22), rgb(0x0c0c0f));
-    p.texture(Material::Vinyl);
-    for g in [0.84, 0.74, 0.64] {
-        let gr = rad * g;
-        p.outlined(cx - gr, cy - gr, gr * 2.0, gr * 2.0, gr, 0, 1.0, rgb(0x1c1e25));
-    }
-    let ring = (k / 26.0).max(3.0);
-    p.arc(cx, cy, rad - 1.0, ring, 0.0, 1.0, rgb(0x1f2128));
-    if deck.loaded.is_some() {
-        let progress = (t.position / deck.length().max(1.0)) as f32;
-        p.arc(cx, cy, rad - 1.0, ring, 0.0, progress, DECK[d]);
+    if loaded {
         let spin = (deck.seconds(t.position) / 1.8).fract() as f32 * std::f32::consts::TAU;
         let (sn, cs) = spin.sin_cos();
         p.line(
-            (cx + sn * rad * 0.6, cy - cs * rad * 0.6),
-            (cx + sn * rad * 0.8, cy - cs * rad * 0.8),
-            (k / 50.0).max(2.0),
-            TEXT,
+            (cx + sn * rad * 0.62, cy - cs * rad * 0.62),
+            (cx + sn * (rad - 8.0), cy - cs * (rad - 8.0)),
+            3.0,
+            DECK[d],
         );
-        p.disc(cx, cy, rad * 0.5, fade(DECK[d], 0xff), fade(DECK[d], 0x90));
-        let initials: String = deck
-            .loaded
-            .as_ref()
-            .map(|l| {
-                l.entry
-                    .title
-                    .split_whitespace()
-                    .take(2)
-                    .filter_map(|w| w.chars().next())
-                    .flat_map(char::to_uppercase)
-                    .collect()
-            })
-            .unwrap_or_default();
-        let st = Style::new(k / 7.0, Weight::Bold, rgb(0x0a0b10));
-        p.text(cx - p.text_width(st, &initials) * 0.5, cy + k / 20.0, st, &initials);
-    } else {
-        p.disc(cx, cy, rad * 0.5, rgb(0x1d2028), rgb(0x14161c));
-        p.disc(cx, cy, rad * 0.03 + 1.0, rgb(0x0b0c10), rgb(0x0b0c10));
     }
+    let (pw, ph) = ((k * 0.62).round(), (k * 0.44).round());
+    p.outlined(cx - pw * 0.5, cy - ph * 0.5, pw, ph, ph * 0.5, rgb(0x0c0d10), 1.0, rgb(0x282a32));
+    let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+    let top = bpm.map_or_else(|| "--.-- BPM".to_string(), |b| format!("{b:.2} BPM"));
+    let st =
+        Style::new((ph * 0.3).max(8.0).min(pw / 6.5), Weight::Bold, if bpm.is_some() { TEXT } else { rgb(0x78909c) });
+    p.text(cx - p.text_width(st, &top) * 0.5, cy - 1.0, st, &top);
+    let pct = format!("{:+.2}%", deck.rate * 8.0);
+    let sm = Style::new((ph * 0.22).max(8.0), Weight::Semibold, DECK[d]);
+    p.text(cx - p.text_width(sm, &pct) * 0.5, cy + ph * 0.3, sm, &pct);
     hit(s, Rect::new(cx - rad, cy - rad, k, k), Target::Jog(d));
 }
 
@@ -761,15 +751,13 @@ fn knob(p: &mut Painter, s: &mut State, r: Rect, v: f32, colour: u32, label: &st
     let (cx, cy) = (r.x + r.w * 0.5, r.y + k * 0.5);
     let rad = k * 0.5;
     let thick = (k * 0.09).max(2.0);
-    p.arc(cx, cy, rad, thick, 0.625, 0.75, rgb(0x22242b));
+    p.arc(cx, cy, rad, thick, 0.625, 0.75, rgb(0x0c0c0c));
     let (a, b) = if v >= 0.5 { (0.5, v) } else { (v, 0.5) };
     if (v - 0.5).abs() >= 0.01 {
         p.arc(cx, cy, rad, thick, 0.625 + a * 0.75, (b - a) * 0.75, colour);
     }
     let body = rad - thick - 2.0;
-    p.glow(cx - body, cy - body + 2.0, body * 2.0, body * 2.0, body, 3.0, fade(rgb(0x000000), 0xa0));
-    p.disc(cx, cy, body, rgb(0x4a4e5a), rgb(0x1a1c22));
-    p.texture(Material::Knurled);
+    skin_knob(p, cx, cy, body);
     let ang = (0.625 + v * 0.75) * std::f32::consts::TAU;
     let (sn, cs) = ang.sin_cos();
     p.line((cx + sn * body * 0.25, cy - cs * body * 0.25), (cx + sn * body * 0.85, cy - cs * body * 0.85), 2.0, TEXT);
@@ -817,22 +805,21 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
             p.rect(mx, ft + fh - (seg as f32 + 1.0) * 4.0 + 1.0, 4.0, 3.0, 0.0, c);
         }
         let fx = ch.x + (ch.w - 6.0) * 0.5;
-        p.rect(fx - 1.5, ft, 3.0, fh, 1.5, DEEP);
+        groove(p, Rect::new(fx - 2.0, ft, 4.0, fh));
         let v = s.decks[d].volume;
         let cap = ft + (1.0 - v) * (fh - 14.0);
-        p.glow(fx - 11.0, cap + 2.0, 22.0, 14.0, 3.0, 4.0, fade(rgb(0x000000), 0xc0));
-        p.gradient(fx - 11.0, cap, 22.0, 14.0, 3.0, rgb(0xf4f4f4), rgb(0x9a9aa4), 0.0, 0);
-        p.rect(fx - 9.0, cap + 6.5, 18.0, 1.0, 0.0, DECK[d]);
+        p.rect(fx - 1.0, cap + 7.0, 2.0, ft + fh - cap - 7.0, 1.0, CYAN);
+        skin_handle(p, Rect::new(fx - 13.0, cap, 26.0, 14.0), rgb(0xffffff));
         hit(s, Rect::new(ch.x, ft, ch.w, fh), Target::Volume(d));
         let on = s.decks[d].pfl;
         button(p, s, Rect::new(ch.x, ch.y + ch.h - pfl, ch.w, pfl), "PFL", on, ACCENT, Target::Pfl(d));
     }
     let y = r.y + r.h - xf;
     let w = r.w - 24.0;
-    p.rect(r.x + 12.0, y + xf * 0.5 - 2.0, w, 4.0, 2.0, DEEP);
+    groove(p, Rect::new(r.x + 12.0, y + xf * 0.5 - 2.0, w, 4.0));
+    p.rect(r.x + 12.0 + w * 0.5, y + xf * 0.5 - 6.0, 1.0, 12.0, 0.0, rgb(0x747474));
     let t = r.x + 12.0 + (s.crossfader + 1.0) * 0.5 * (w - 14.0);
-    p.glow(t, y + 6.0, 14.0, xf - 12.0, 3.0, 8.0, fade(ACCENT, 0x80));
-    p.gradient(t, y + 6.0, 14.0, xf - 12.0, 3.0, rgb(0xff8cc6), rgb(0xd62f86), 0.0, 0);
+    skin_handle(p, Rect::new(t, y + 5.0, 14.0, xf - 10.0), rgb(0xffffff));
     hit(s, Rect::new(r.x + 6.0, y, r.w - 12.0, xf), Target::Crossfader);
 }
 
@@ -1229,8 +1216,8 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 
 /// Hardware style panel: brushed metal, lit bevel, a thin deck coloured top line.
 fn panel(p: &mut Painter, r: Rect, colour: u32) {
-    p.outlined(r.x, r.y, r.w, r.h, 6.0, INK, 1.0, rgb(0x202026));
-    p.rect(r.x + 1.0, r.y + 1.0, r.w - 2.0, 2.0, 1.0, fade(colour, 0xb0));
+    section(p, r, rgb(0x1e1e20));
+    p.outlined(r.x, r.y, r.w, r.h, 0.0, 0, 1.0, fade(colour, 0x44));
 }
 
 pub const HUB_ROW: f32 = 44.0;
@@ -1325,4 +1312,54 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             }
         }
     }
+}
+
+/// DJ Sugar's `button.svg`: a half black rim, a #282828 to #202020 face, a faint
+/// lit top edge and a shaded bottom one; `button_pressed.svg` darkens the face.
+fn skin_button(p: &mut Painter, r: Rect, down: bool) {
+    p.rect(r.x, r.y, r.w, r.h, 3.0, fade(rgb(0x000000), 0x80));
+    let (top, bottom) = if down { (rgb(0x181818), rgb(0x202020)) } else { (rgb(0x282828), rgb(0x202020)) };
+    p.gradient(r.x + 2.0, r.y + 2.0, r.w - 4.0, r.h - 4.0, 1.0, top, bottom, 0.0, 0);
+    p.rect(r.x + 3.0, r.y + 2.0, r.w - 6.0, 1.0, 0.0, fade(rgb(0xffffff), if down { 0x08 } else { 0x10 }));
+    p.rect(r.x + 3.0, r.y + r.h - 3.0, r.w - 6.0, 1.0, 0.0, fade(rgb(0x000000), 0x40));
+}
+
+/// DJ Sugar's `section.svg`: a black frame lit along the top, shaded along the bottom.
+fn section(p: &mut Painter, r: Rect, fill: u32) {
+    p.outlined(r.x, r.y, r.w, r.h, 0.0, fill, 1.0, rgb(0x000000));
+    p.rect(r.x + 1.0, r.y + 1.0, r.w - 2.0, 2.0, 0.0, fade(rgb(0xffffff), 0x10));
+    p.rect(r.x + 1.0, r.y + r.h - 3.0, r.w - 2.0, 2.0, 0.0, fade(rgb(0x000000), 0x20));
+    p.rect(r.x + 1.0, r.y + 1.0, 2.0, r.h - 2.0, 0.0, fade(rgb(0xffffff), 0x08));
+    p.rect(r.x + r.w - 3.0, r.y + 1.0, 2.0, r.h - 2.0, 0.0, fade(rgb(0xffffff), 0x08));
+}
+
+/// DJ Sugar's `knob.svg`: shadow, a #303030 to #181818 body inside a lit rim,
+/// then a #404040 to #282828 cap.
+fn skin_knob(p: &mut Painter, cx: f32, cy: f32, rad: f32) {
+    p.disc(cx, cy, rad, fade(rgb(0x000000), 0x80), fade(rgb(0x000000), 0x80));
+    p.outlined(cx - rad * 0.95, cy - rad * 0.95, rad * 1.9, rad * 1.9, rad * 0.95, 0, 1.0, fade(rgb(0xffffff), 0x10));
+    let b = rad * 0.9;
+    p.gradient(cx - b, cy - b, b * 2.0, b * 2.0, b, rgb(0x303030), rgb(0x181818), 0.0, 0);
+    let c = rad * 0.71;
+    p.outlined(cx - c - 1.0, cy - c - 1.0, c * 2.0 + 2.0, c * 2.0 + 2.0, c + 1.0, 0, 1.0, fade(rgb(0x000000), 0x40));
+    p.gradient(cx - c, cy - c, c * 2.0, c * 2.0, c, rgb(0x404040), rgb(0x282828), 0.0, 0);
+    p.outlined(cx - c, cy - c, c * 2.0, c * 2.0, c, 0, 1.0, fade(rgb(0xffffff), 0x14));
+}
+
+/// DJ Sugar's `slider_handle.svg`: a #282828 to #202020 cap with a lit edge and a centre line.
+fn skin_handle(p: &mut Painter, r: Rect, line: u32) {
+    p.glow(r.x, r.y + 2.0, r.w, r.h, 2.0, 3.0, fade(rgb(0x000000), 0xc0));
+    p.gradient(r.x, r.y, r.w, r.h, 2.0, rgb(0x383838), rgb(0x202020), 1.0, rgb(0x000000));
+    p.rect(r.x + 1.0, r.y + 1.0, r.w - 2.0, 1.0, 0.0, fade(rgb(0xffffff), 0x40));
+    if r.w > r.h {
+        p.rect(r.x + 2.0, r.y + r.h * 0.5 - 0.5, r.w - 4.0, 1.0, 0.0, line);
+    } else {
+        p.rect(r.x + r.w * 0.5 - 0.5, r.y + 2.0, 1.0, r.h - 4.0, 0.0, line);
+    }
+}
+
+/// A sunken groove, as DJ Sugar's slider backgrounds.
+fn groove(p: &mut Painter, r: Rect) {
+    p.rect(r.x, r.y, r.w, r.h, r.w.min(r.h) * 0.5, rgb(0x0c0c0c));
+    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(rgb(0xffffff), 0x10));
 }
