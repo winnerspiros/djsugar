@@ -1051,3 +1051,247 @@ split-debuginfo = "packed"
 ---
 
 *Generated for DJ Sugar (djsugar-next) — Snapdragon 8 Gen 2 / Samsung S23 Ultra primary target.*
+
+---
+
+## iOS / iPadOS Performance Optimization
+
+### Compiler Flags (iOS Targets)
+
+**Target-CPU per Apple SoC:**
+| Device | SoC | Rustc Target-CPU | Baseline Features |
+|--------|-----|------------------|-------------------|
+| iPhone 14 Pro / 15 Pro / 15 Pro Max | A16 / A17 Pro | `apple-a16` / `apple-a17` (rustc 1.85+) | NEON, dotprod, fp16, AES, SHA2, CRC, RDM, RCPC |
+| iPhone 13 / 14 / SE3 | A15 | `apple-a15` | Same |
+| iPhone 12 | A14 | `apple-a14` | Same |
+| All ARM64 iOS (fallback) | — | — | `+neon,+fp-armv8,+dotprod,+fp16,+aes,+sha2,+crc,+rcpc,+rdm` |
+
+**`.cargo/config.toml` — iOS additions:**
+```toml
+[target.aarch64-apple-ios]
+rustflags = [
+  "-C", "target-cpu=apple-a16",  # or baseline features
+  "-C", "lto=fat",
+  "-C", "codegen-units=1",
+  "-C", "panic=abort",
+  "-C", "strip=symbols",
+  "-C", "link-arg=-Wl,-dead_strip",
+  "-C", "link-arg=-Wl,-no_uuid",
+]
+
+[target.aarch64-apple-ios-sim]
+rustflags = [
+  "-C", "target-cpu=native",  # Apple Silicon host
+  "-C", "lto=fat",
+  "-C", "codegen-units=1",
+  "-C", "panic=abort",
+  "-C", "strip=symbols",
+  "-C", "link-arg=-Wl,-dead_strip",
+]
+```
+
+**PGO on iOS:** `cargo-pgo` works cross-target. Profile on device/simulator via `cargo-dinghy` or TestFlight build. Instrument → run DJ workload (mixing, stems, UI) → optimize.
+
+### Audio Thread: Realtime Priority + Audio Workgroups
+
+**iOS/macOS (QoS + os_workgroup):**
+```rust
+// 1. Set thread QoS to User Interactive (highest)
+unsafe { pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0) };
+
+// 2. Get device workgroup from RemoteIO AudioUnit
+let mut workgroup: os_workgroup_t = std::ptr::null_mut();
+let mut size = std::mem::size_of::<os_workgroup_t>();
+AudioUnitGetProperty(
+    remote_io_unit,
+    kAudioOutputUnitProperty_OSWorkgroup,
+    kAudioUnitScope_Global,
+    0,
+    &mut workgroup as *mut _ as *mut _,
+    &mut size,
+);
+
+// 3. In aux DSP thread: join workgroup
+let mut token = os_workgroup_join_token_s::default();
+os_workgroup_join(workgroup, &mut token);
+// ... DSP work ...
+os_workgroup_leave(workgroup, &mut token);
+```
+
+**Key APIs (iOS 14+):**
+- `kAudioOutputUnitProperty_OSWorkgroup` → `os_workgroup_t`
+- `os_workgroup_join` / `os_workgroup_leave` (libc)
+- `pthread_set_qos_class_self_np` with `QOS_CLASS_USER_INTERACTIVE`
+- `AVAudioEngine` / `AVAudioSinkNode` for Swift-friendly path; same workgroup via `AUAudioUnit.osWorkgroup`
+
+**Measured gains:** Workgroup-joined threads stay on P-cores, 10× fewer xruns at 1ms buffer (JUCE forum reports).
+
+### Buffer Sizes & Latency Targets (iOS)
+
+| API | Buffer Frames | Sample Rate | Latency (ms) | Notes |
+|-----|---------------|-------------|--------------|-------|
+| **RemoteIO / AVAudioEngine** | 128–512 (IOBufferDuration × SR) | 44.1/48kHz | **2.7–11.6ms** | `AVAudioSession.setPreferredIOBufferDuration(0.005)` → ~5ms |
+| **AAudio (Android)** | 2 × burst | 48kHz | 4–5ms | Reference |
+
+**iOS config snippet:**
+```rust
+pub struct AudioConfig {
+    pub sample_rate: u32,
+    pub buffer_frames: u32,
+    pub num_channels: u32,
+}
+
+impl AudioConfig {
+    pub fn for_platform() -> Self {
+        #[cfg(target_os = "ios")]
+        {
+            // Query at runtime after AVAudioSession activation
+            AudioConfig { sample_rate: 48000, buffer_frames: 256, num_channels: 2 }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            AudioConfig { sample_rate: 48000, buffer_frames: 256, num_channels: 2 }
+        }
+        #[cfg(target_os = "android")]
+        {
+            AudioConfig { sample_rate: 48000, buffer_frames: 240, num_channels: 2 }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            AudioConfig { sample_rate: 48000, buffer_frames: 256, num_channels: 2 }
+        }
+        #[cfg(target_os = "windows")]
+        {
+            AudioConfig { sample_rate: 48000, buffer_frames: 256, num_channels: 2 }
+        }
+    }
+}
+```
+
+### Thermal Management (iOS 11+)
+
+| API | Type | Values | Action Threshold |
+|-----|------|--------|------------------|
+| `ProcessInfo.thermalState` | Property (poll) | `.nominal` (0), `.fair` (1), `.serious` (2), `.critical` (3) | ≥ `.serious`: reduce quality |
+| `ProcessInfoThermalStateDidChangeNotification` | Notification (push) | Same enum | Immediate reaction |
+
+**Rust integration:**
+```rust
+use objc2_foundation::{ProcessInfo, NSNotificationCenter, MainThreadMarker, ns_string};
+
+fn current_thermal_state() -> u8 {
+    unsafe { ProcessInfo::processInfo().thermalState() as u8 }
+}
+
+// Background monitor thread (poll 2s)
+std::thread::spawn(|| loop {
+    std::thread::sleep(Duration::from_secs(2));
+    match current_thermal_state() {
+        2 => reduce_quality(QualityLevel::Medium),   // .serious
+        3 => reduce_quality(QualityLevel::Low),      // .critical
+        _ => {}
+    }
+});
+
+// Or notification observer (main thread)
+let mtm = MainThreadMarker::new().unwrap();
+let nc = NSNotificationCenter::defaultCenter();
+unsafe {
+    nc.addObserverForName(
+        Some(ns_string!("ProcessInfoThermalStateDidChangeNotification")),
+        None, None, mtm.queue(),
+        |_| { /* react immediately */ }
+    );
+}
+```
+
+**Quality reduction actions:**
+- Lower FFT size (2048 → 1024)
+- Disable stem separation inference
+- Reduce UI frame rate (60 → 30 fps)
+- Decrease oversampling factor
+
+### Startup Time (iOS)
+
+**Additional constraints vs Android:**
+- Codesign + entitlements verification at launch (~50–100ms)
+- `UIApplicationMain` initialization (Objective-C runtime)
+- Metal device creation (`MTLCreateSystemDefaultDevice`)
+- AVAudioSession activation (first audio callback)
+
+**Target:** <800ms cold start (includes codesign verify).
+
+**Optimizations:**
+| Technique | Gain | iOS-Specific Notes |
+|-----------|------|-------------------|
+| `lto=fat` + `codegen-units=1` | 20–30% | Required for size + speed |
+| `strip=symbols` + `panic=abort` | 10–20% | Standard |
+| Lazy init (audio engine, library index) | 50–80% perceived | Defer until after first UI frame |
+| Pre-warm mmap on background thread | Parallel I/O | Start in `applicationDidFinishLaunching` |
+| `cargo-pgo` profile includes startup | 10–15% | Profile on device via TestFlight |
+| Split debug info (`split-debuginfo=packed`) | Faster link | Xcode 15+ |
+
+**main.rs pattern:**
+```rust
+use once_cell::sync::Lazy;
+
+static AUDIO_ENGINE: Lazy<Arc<AudioEngine>> = Lazy::new(|| Arc::new(AudioEngine::new()));
+static LIBRARY_INDEX: Lazy<LibraryIndex> = Lazy::new(LibraryIndex::new_empty);
+
+#[cfg(target_os = "ios")]
+fn main() {
+    // Minimal work before first frame
+    let app = App::new();
+    app.run();  // Shows UI immediately via UIApplicationMain
+    
+    // Background warmup (spawned from AppDelegate equivalent)
+    std::thread::spawn(|| {
+        let _ = AUDIO_ENGINE.warmup();
+        LIBRARY_INDEX.build_incremental(|p| send_to_ui(p));
+    });
+}
+```
+
+### GPU: Metal TBDR Optimization (Apple GPU)
+
+| Technique | Effect | wgpu Support |
+|-----------|--------|--------------|
+| **Transient attachments** (`MTLStorageMode::Memoryless`) | Keeps G-buffer in tile memory, no DRAM round-trip | `wgpu-tiled` fork or `store_op = StoreOp::Discard` |
+| **Multi-subpass render passes** | Depth/normal/color stay on-chip | `wgpu-tiled` / WebGPU extension |
+| **FP16 storage** (`RG16F`, `R11G11B10F`) | Half bandwidth, half power | Standard wgpu: `TextureFormat::Rg16Float` |
+| **Fused passes (compute + fragment)** | Eliminate intermediate buffer | Manual via `ComputePass` + `RenderPass` |
+| **PresentMode::AutoNoVsync** | Lowest latency for redraw-on-demand | Standard wgpu |
+
+**Mobile shader tips (WGSL):**
+```wgsl
+// Use FP16 where precision allows
+@group(0) @binding(0) var<storage, read> positions: array<vec2<f16>>;
+@group(0) @binding(1) var<storage, read> colors: array<vec4<f16>>;
+
+// Discard intermediates (tile memory only)
+@fragment fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f16> {
+    // ...
+}
+```
+
+### App Store Compliance (Performance-Related)
+
+| Guideline | Requirement | Verification |
+|-----------|-------------|--------------|
+| **2.4.2** | No excessive battery/heat/background abuse | Profile with `Instruments` → Energy Log |
+| **2.5.2** | No downloaded executable code | Binary audit: `otool -L`, `codesign -dvvv` |
+| **2.5.4** | Background audio mode only for actual playback | `UIBackgroundModes:audio` + RemoteIO callback running in background |
+
+### Verification Checklist (iOS Additions)
+
+| Category | Done? | Verification |
+|----------|-------|--------------|
+| target-cpu=apple-a16 (or baseline features) | ☐ | `cargo build --release --target aarch64-apple-ios && cargo asm` |
+| Audio thread QoS = UserInteractive | ☐ | `pthread_get_qos_class_self_np` |
+| Audio workgroup joined (aux threads) | ☐ | `os_workgroup_join` returns 0 |
+| IOBufferDuration ≤ 5ms (256 frames @ 48kHz) | ☐ | `AVAudioSession.ioBufferDuration` |
+| Thermal monitor (ProcessInfo.thermalState) | ☐ | Simulate via `Instruments` → Thermal State |
+| Metal transient attachments / FP16 textures | ☐ | `Instruments` → GPU / Metal System Trace |
+| Background audio works (RemoteIO callback fires) | ☐ | Test: lock screen, audio continues |
+| No JIT / no downloaded code | ☐ | `codesign -dvvv`, binary scan for `wasmtime`/`dlopen` |
+| Startup < 800ms cold (device) | ☐ | `time xcrun simctl launch booted <bundle-id>` |

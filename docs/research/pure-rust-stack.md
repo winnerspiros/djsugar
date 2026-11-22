@@ -564,3 +564,168 @@ Crates below have very few downloads or appeared in the last weeks. Do not adopt
 | oxitext | 841 | review; harfrust + swash are established |
 | oxiaudio-decode | 723 | reject; use symphonia |
 | rustls-pure | 1224 | review before use |
+
+---
+
+## iOS / iPadOS Pure-Rust Stack
+
+### Target Triples
+| Target | Description |
+|--------|-------------|
+| `aarch64-apple-ios` | Physical iOS/iPadOS devices (ARM64) |
+| `aarch64-apple-ios-sim` | Simulator on Apple Silicon Macs (ARM64) |
+| `x86_64-apple-ios` | Simulator on Intel Macs (deprecated, Xcode 15+) |
+
+All three required for universal device + simulator coverage. Add via `rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios`.
+
+### Windowing / App Shell
+| Layer | Crate | Version | Downloads | Notes |
+|-------|-------|---------|-----------|-------|
+| **UIKit bindings** | `objc2-ui-kit` | 0.3.2 | 67.3M | Pure Rust, generated from SDK. Covers `UIApplication`, `UIWindow`, `UIView`, `UIViewController`, `CAMetalLayer`, touch input. |
+| **Winit iOS** | `winit` (uikit backend) | 0.31+ | 68.5M | Uses `winit-uikit` internally. Creates `UIApplicationMain` equivalent. Requires Xcode for bundle/signing. No pure-Rust `UIApplicationMain` replacement yet. |
+| **App lifecycle** | `objc2-foundation` + `objc2-ui-kit` | 0.6.5 / 0.3.2 | 11.5M / 67.3M | Manual `UIApplicationMain` via `objc2::msg_send!` for custom entry point. See `winit-uikit` source for pattern. |
+
+**Status:** No fully xcodebuild-free windowing exists. `winit` + `cargo-bundle` or `cargo-mobile2` + Xcode project generation is the practical path. `cargo-dinghy` runs tests on device/simulator via `pymobiledevice3`.
+
+### GPU: Metal via wgpu
+| Layer | Crate | Version | Notes |
+|-------|-------|---------|-------|
+| **wgpu Metal backend** | `wgpu` | 24+ | Pure Rust Metal backend (`wgpu-core` + `wgpu-hal` metal). No C dependencies. Uses `objc2-metal` for `CAMetalLayer`/`MTLDevice` interop. |
+| **Metal bindings** | `objc2-metal` | 0.3.2 | Part of objc2 workspace. Pure Rust. Required for `CAMetalLayer` from `winit`/`objc2-ui-kit`. |
+
+**Config:** `wgpu::Instance::new(InstanceDescriptor { backends: Backends::METAL, .. })`. Present via `CAMetalLayer` from `UIView`/`UIWindow`.
+
+### Audio I/O (Low Latency)
+| Layer | Crate | Version | Downloads | Notes |
+|-------|-------|---------|-----------|-------|
+| **AVAudioSession** | `objc2-avf-audio` | 0.3.2 | 6.5M | Pure Rust bindings to AVFAudio. `AVAudioSession` category `.playAndRecord` + `.allowBluetooth` + `.mixWithOthers`. `setPreferredIOBufferDuration` (e.g., 0.005s = 5ms). |
+| **AudioUnit RemoteIO** | `objc2-audio-toolbox` | 0.3.2 | 11.1M | Pure Rust. `kAudioUnitSubType_RemoteIO`. Render callback on Core Audio realtime thread. IO buffer duration = `AVAudioSession.sharedInstance().ioBufferDuration`. |
+| **Realtime thread + Workgroup** | `objc2-audio-toolbox` + `libc` | — | — | Get `os_workgroup_t` from RemoteIO via `kAudioOutputUnitProperty_OSWorkgroup`. Join aux threads with `os_workgroup_join` / `os_workgroup_leave` (iOS 14+). Requires `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE)` on audio thread. |
+
+**Buffer duration:** Query `AVAudioSession.iosBufferDuration` after activation. Typical 5–10ms (256–512 frames @ 48kHz). Set preferred *before* `setActive(true)`.
+
+**Workgroup pattern (iOS 14+):**
+```rust
+// In render callback (on Core Audio thread):
+let workgroup = get_workgroup_from_remoteio(); // AudioUnitGetProperty(kAudioOutputUnitProperty_OSWorkgroup)
+os_workgroup_join(workgroup, &mut token);
+// ... DSP on aux thread ...
+os_workgroup_leave(workgroup, &mut token);
+```
+
+### MIDI (Core MIDI + BLE MIDI)
+| Layer | Crate | Version | Downloads | Notes |
+|-------|-------|---------|-----------|-------|
+| **Core MIDI** | `objc2-core-midi` | 0.3.2 | 1.0M | Pure Rust. `MIDIClientCreate`, `MIDISourceCreate`, `MIDIDestinationCreate`, `MIDIReceived`/`MIDISend`. MIDI 2.0 UMP support via `MIDIUMP*` APIs. |
+| **Core Bluetooth** | `objc2-core-bluetooth` | 0.3.2 | 15K | Pure Rust. `CBCentralManager`, `CBPeripheralManager`. BLE MIDI service UUID `03B80E5A-EDE8-4B33-A751-6CE34EC4C700`. |
+| **BLE MIDI Bridge** | `objc2-core-midi` (feature `MIDIBluetoothConnection`) | 0.3.2 | — | `MIDIBluetoothDriverActivateAllConnections()` promotes connected CB peripherals to Core MIDI endpoints. Flow: scan → connect via CoreBluetooth → activate → Core MIDI owns connection. |
+
+### Build / Packaging (xcodebuild-free options)
+| Tool | Approach | Status | Notes |
+|------|----------|--------|-------|
+| **cargo-bundle** | `cargo bundle --target aarch64-apple-ios` | Experimental iOS | Generates `.app` bundle. Requires Xcode for codesign/simulator launch. |
+| **cargo-xcodebuild** | Generates `.xcodeproj`, builds via `xcodebuild` | Mature | `cargo install cargo-xcodebuild`. `Cargo.toml` `[package.metadata.ios] build_targets = ["aarch64-apple-ios", "aarch64-apple-ios-sim"]`. |
+| **cargo-mobile2** (Tauri) | `cargo mobile init` → `cargo apple run` | Active | Generates Xcode project, handles signing, runs on device/sim. `cargo install --git https://github.com/tauri-apps/cargo-mobile2`. |
+| **cargo-dinghy** | Test runner for device/sim | Active | `cargo install cargo-dinghy`. Uses `pymobiledevice3` for device deploy. No bundle generation. |
+| **Manual + xcodegen** | `cargo build --target ... --crate-type staticlib` → `xcodegen` → `xcodebuild` | Full control | Used by `horizon-ios`, `rageEMU`. Lipo fat simulator binary (`x86_64` + `arm64`). |
+
+**Minimal Cargo.toml for iOS:**
+```toml
+[lib]
+crate-type = ["staticlib", "cdylib"]
+
+[package.metadata.ios]
+build_targets = ["aarch64-apple-ios", "aarch64-apple-ios-sim", "x86_64-apple-ios"]
+bundle_id = "com.example.djsugar"
+info_plist = "ios/Info.plist"  # custom, includes UIBackgroundModes = ["audio"]
+```
+
+**`ios/Info.plist` keys for DJ app:**
+```xml
+<key>UIBackgroundModes</key><array><string>audio</string></array>
+<key>NSMicrophoneUsageDescription</key><string>DJ mixing requires audio input</string>
+<key>NSBluetoothAlwaysUsageDescription</key><string>BLE MIDI controllers</string>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+```
+
+### App Store Constraints (Hard Requirements)
+| Constraint | Rule | Mitigation |
+|------------|------|------------|
+| **No JIT** | `dynamic-codesigning` entitlement only for Apple processes | Rust AOT compilation satisfies this. No `wasmtime`/`wasmer` JIT. |
+| **No downloaded executable code** | Guideline 2.5.2: self-contained bundle | All logic in signed binary. Remote config = data only (JSON), not code. |
+| **Background audio** | Guideline 2.5.4: `UIBackgroundModes:audio` requires audible playback | Declare `audio` background mode; implement background mixing via RemoteIO callback. |
+| **Private APIs** | Guideline 2.5.1: public APIs only | `objc2` crates bind public SDK headers only. No `dlopen` of private frameworks. |
+| **W^X / Code signing** | All executable pages must be signed | Static binary + Apple codesign. No `mmap(PROT_EXEC)` at runtime. |
+
+### Target-CPU / Rustflags for Apple Silicon (A-series)
+| Device | SoC | Target-CPU / Features | Rustflags |
+|--------|-----|----------------------|-----------|
+| iPhone 14 Pro / 15 Pro / 15 Pro Max | A16 / A17 Pro | `apple-a16` / `apple-a17` (rustc 1.85+) | `-C target-cpu=apple-a16` |
+| iPhone 13 / 14 / SE3 | A15 | `apple-a15` | `-C target-cpu=apple-a15` |
+| iPhone 12 | A14 | `apple-a14` | `-C target-cpu=apple-a14` |
+| Baseline (all ARM64 iOS) | — | `+neon,+fp-armv8,+dotprod,+fp16,+aes,+sha2,+crc,+rcpc,+rdm` | `-C target-feature=+neon,+fp-armv8,+dotprod,+fp16,+aes,+sha2,+crc,+rcpc,+rdm` |
+
+**`.cargo/config.toml` snippet:**
+```toml
+[target.aarch64-apple-ios]
+rustflags = [
+  "-C", "target-cpu=apple-a16",  # or baseline features above
+  "-C", "link-arg=-Wl,-dead_strip",
+  "-C", "link-arg=-Wl,-no_uuid",
+]
+
+[target.aarch64-apple-ios-sim]
+rustflags = [
+  "-C", "target-cpu=native",  # matches host Mac (Apple Silicon)
+  "-C", "link-arg=-Wl,-dead_strip",
+]
+```
+
+### Thermal State API (iOS 11+)
+| API | Access | Values | Usage |
+|-----|--------|--------|-------|
+| `ProcessInfo.thermalState` | `objc2-foundation` → `ProcessInfo` | `.nominal`, `.fair`, `.serious`, `.critical` | Poll on background thread (1–5s). On `.serious`/`.critical`: reduce quality (lower FFT size, disable stems, drop UI frame rate). |
+| `thermalStateDidChangeNotification` | `NotificationCenter` | Same enum | Observer for immediate reaction. |
+
+**Rust access via objc2:**
+```rust
+use objc2_foundation::{ProcessInfo, NSNotificationCenter, MainThreadMarker};
+
+fn thermal_state() -> u8 {
+    // 0=nominal, 1=fair, 2=serious, 3=critical
+    unsafe { ProcessInfo::processInfo().thermalState() as u8 }
+}
+
+// Observe changes (on main thread):
+let mtm = MainThreadMarker::new().unwrap();
+let nc = NSNotificationCenter::defaultCenter();
+unsafe {
+    nc.addObserverForName(
+        Some(ns_string!("ProcessInfoThermalStateDidChangeNotification")),
+        None,
+        None,
+        mtm.queue(),
+        |_| { /* react */ }
+    );
+}
+```
+
+**Note:** `pmset -g therm` is macOS-only; iOS sandbox forbids process spawn. Use `ProcessInfo.thermalState` only.
+
+### Verification Commands (iOS)
+```bash
+# 1. Verify targets installed
+rustup target list --installed | grep apple-ios
+
+# 2. Build for device (requires Xcode SDK)
+cargo build --release --target aarch64-apple-ios
+
+# 3. Build for simulator (Apple Silicon Mac)
+cargo build --release --target aarch64-apple-ios-sim
+
+# 4. Check for forbidden -sys crates in iOS build
+cargo tree --target aarch64-apple-ios --edges features | grep -E "\-sys\b" | grep -vE "windows-sys|objc2|raw-window-handle|wgpu-types|naga|miniz_oxide" && exit 1 || echo "PURE RUST VERIFIED (iOS)"
+
+# 5. Verify bundle size
+cargo bundle --release --target aarch64-apple-ios 2>/dev/null | tail -5
+```
