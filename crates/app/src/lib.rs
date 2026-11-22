@@ -214,7 +214,12 @@ pub mod native {
             self.started = true;
             let attrs = Window::default_attributes()
                 .with_title("DJ Sugar")
-                .with_min_inner_size(winit::dpi::LogicalSize::new(320.0, 320.0));
+                .with_min_inner_size(winit::dpi::LogicalSize::new(320.0, 320.0))
+                .with_fullscreen(
+                    std::env::args()
+                        .any(|a| a == "-f" || a == "--full-screen")
+                        .then_some(winit::window::Fullscreen::Borderless(None)),
+                );
             let window = Arc::new(event_loop.create_window(attrs).unwrap_or_else(|e| fail(&e)));
             let size = window.inner_size();
             crate::stage("window");

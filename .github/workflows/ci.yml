@@ -247,6 +247,31 @@ jobs:
           name: djsugar-twin
           path: twin
 
+  twin-linux:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p djsugar
+      - name: Reference build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v2.7-alpha-377f8c3e68 -R ${{ github.repository }} -p '*x86_64.AppImage' -O ref.AppImage
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb imagemagick mesa-vulkan-drivers libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-randr0 libxcb-render-util0 libxcb-image0 libfuse2
+      - run: bash platform/linux/twin.sh ref.AppImage target/release/djsugar twin
+      - if: always()
+        run: cat twin/scores.txt >> $GITHUB_STEP_SUMMARY || true
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-twin-linux
+          path: twin
+
   coverage:
     needs: check
     runs-on: ubuntu-latest
