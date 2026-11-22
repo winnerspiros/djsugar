@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "third_party/demucs-core", "crates/stem-bench", "crates/phrase-bench", "crates/analysis-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/stretch", "crates/hid", "crates/timecode", "crates/mods", "crates/js", "crates/broadcast", "crates/stream", "crates/app", "crates/android"]
+members = ["crates/control", "crates/engine", "crates/controllers", "crates/waveform", "crates/library", "crates/export", "crates/plugins", "crates/plugin-host", "crates/plugin-host/test-plugin", "crates/plugin-host/test-vst3", "crates/separation", "third_party/demucs-core", "crates/stem-bench", "crates/phrase-bench", "crates/analysis-bench", "crates/script", "crates/remote", "crates/osc", "crates/link", "crates/stretch", "crates/hid", "crates/timecode", "crates/mods", "crates/js", "crates/broadcast", "crates/app", "crates/android"]
 exclude = ["third_party"]
 
 [workspace.package]

@@ -3768,15 +3768,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "djsugar-stream"
-version = "0.6.0"
-dependencies = [
- "md5",
- "serde_json",
- "ureq 3.5.1",
-]
-
-[[package]]
 name = "djsugar-stretch"
 version = "0.6.0"
 dependencies = [
