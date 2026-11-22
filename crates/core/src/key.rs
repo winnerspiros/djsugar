@@ -14,9 +14,7 @@ pub struct Key {
 
 impl Key {
     pub fn new(camelot: u8, mode: Mode) -> Option<Self> {
-        (1..=12)
-            .contains(&camelot)
-            .then_some(Self { camelot, mode })
+        (1..=12).contains(&camelot).then_some(Self { camelot, mode })
     }
 
     fn wheel_distance(self, other: Key) -> u8 {
@@ -36,10 +34,7 @@ impl Key {
 
     pub fn transpose(self, semitones: i32) -> Key {
         let c = (i32::from(self.camelot) - 1 + semitones * 7).rem_euclid(12) + 1;
-        Key {
-            camelot: c as u8,
-            mode: self.mode,
-        }
+        Key { camelot: c as u8, mode: self.mode }
     }
 }
 

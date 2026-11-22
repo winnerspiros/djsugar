@@ -47,39 +47,17 @@ pub const AUTO_ROW_RATIO: f32 = 1.2;
 
 #[derive(Clone, Debug)]
 pub enum Node {
-    Module {
-        id: Id,
-        min: Size,
-        grow: f32,
-        max: f32,
-        priority: u8,
-    },
-    Group {
-        axis: Axis,
-        gap: f32,
-        priority: u8,
-        children: Vec<Node>,
-    },
+    Module { id: Id, min: Size, grow: f32, max: f32, priority: u8 },
+    Group { axis: Axis, gap: f32, priority: u8, children: Vec<Node> },
 }
 
 impl Node {
     pub fn module(id: Id, min_w: f32, min_h: f32, grow: f32, priority: u8) -> Self {
-        Node::Module {
-            id,
-            min: Size { w: min_w, h: min_h },
-            grow,
-            max: f32::INFINITY,
-            priority,
-        }
+        Node::Module { id, min: Size { w: min_w, h: min_h }, grow, max: f32::INFINITY, priority }
     }
 
     pub fn group(axis: Axis, gap: f32, priority: u8, children: Vec<Node>) -> Self {
-        Node::Group {
-            axis,
-            gap,
-            priority,
-            children,
-        }
+        Node::Group { axis, gap, priority, children }
     }
 }
 
@@ -150,8 +128,7 @@ impl Layout {
             self.mins[i] = match self.nodes[i].kind {
                 Kind::Module { id, min, .. } => (hidden & (1 << id) == 0).then_some(min),
                 Kind::Group { axis, gap } => {
-                    let (mut n, mut sw, mut sh, mut mw, mut mh) =
-                        (0u32, 0.0f32, 0.0f32, 0.0f32, 0.0f32);
+                    let (mut n, mut sw, mut sh, mut mw, mut mh) = (0u32, 0.0f32, 0.0f32, 0.0f32, 0.0f32);
                     let mut c = i + 1;
                     while c < self.next(i) {
                         if let Some(m) = self.mins[c] {
@@ -165,14 +142,8 @@ impl Layout {
                     }
                     (n > 0).then(|| {
                         let gaps = gap * (n - 1) as f32;
-                        let row = Size {
-                            w: sw + gaps,
-                            h: mh,
-                        };
-                        let col = Size {
-                            w: mw,
-                            h: sh + gaps,
-                        };
+                        let row = Size { w: sw + gaps, h: mh };
+                        let col = Size { w: mw, h: sh + gaps };
                         match axis {
                             Axis::Row => row,
                             Axis::Column => col,
@@ -204,30 +175,15 @@ impl Layout {
                 if self.line(i, first, gap, area, out) {
                     return true;
                 }
-                let other = if first == Axis::Row {
-                    Axis::Column
-                } else {
-                    Axis::Row
-                };
+                let other = if first == Axis::Row { Axis::Column } else { Axis::Row };
                 axis == Axis::Auto && self.line(i, other, gap, area, out)
             }
         }
     }
 
-    fn line(
-        &mut self,
-        i: usize,
-        axis: Axis,
-        gap: f32,
-        area: Rect,
-        out: &mut Vec<(Id, Rect)>,
-    ) -> bool {
+    fn line(&mut self, i: usize, axis: Axis, gap: f32, area: Rect, out: &mut Vec<(Id, Rect)>) -> bool {
         let row = axis == Axis::Row;
-        let (main, cross) = if row {
-            (area.w, area.h)
-        } else {
-            (area.h, area.w)
-        };
+        let (main, cross) = if row { (area.w, area.h) } else { (area.h, area.w) };
         let end = self.next(i);
         let base = self.scratch.len();
         let mut used = 0.0;
@@ -291,11 +247,7 @@ impl Layout {
             if self.mins[c].is_some() {
                 let len = self.scratch[k];
                 k += 1;
-                let r = if row {
-                    Rect::new(pos, area.y, len, area.h)
-                } else {
-                    Rect::new(area.x, pos, area.w, len)
-                };
+                let r = if row { Rect::new(pos, area.y, len, area.h) } else { Rect::new(area.x, pos, area.w, len) };
                 if !self.place(c, r, out) {
                     ok = false;
                     break;
@@ -315,43 +267,14 @@ impl Layout {
 fn flatten(node: &Node, inherited: u8, nodes: &mut Vec<Flat>, prio: &mut Vec<(u8, Id)>) -> f32 {
     let at = nodes.len();
     match node {
-        Node::Module {
-            id,
-            min,
-            grow,
-            max,
-            priority,
-        } => {
-            nodes.push(Flat {
-                kind: Kind::Module {
-                    id: *id,
-                    min: *min,
-                    max: *max,
-                },
-                grow: *grow,
-                end: 0,
-            });
+        Node::Module { id, min, grow, max, priority } => {
+            nodes.push(Flat { kind: Kind::Module { id: *id, min: *min, max: *max }, grow: *grow, end: 0 });
             prio.push(((*priority).min(inherited), *id));
         }
-        Node::Group {
-            axis,
-            gap,
-            priority,
-            children,
-        } => {
-            nodes.push(Flat {
-                kind: Kind::Group {
-                    axis: *axis,
-                    gap: *gap,
-                },
-                grow: 0.0,
-                end: 0,
-            });
+        Node::Group { axis, gap, priority, children } => {
+            nodes.push(Flat { kind: Kind::Group { axis: *axis, gap: *gap }, grow: 0.0, end: 0 });
             let p = (*priority).min(inherited);
-            nodes[at].grow = children
-                .iter()
-                .map(|c| flatten(c, p, nodes, prio))
-                .fold(1.0, f32::max);
+            nodes[at].grow = children.iter().map(|c| flatten(c, p, nodes, prio)).fold(1.0, f32::max);
         }
     }
     nodes[at].end = nodes.len() as u32;

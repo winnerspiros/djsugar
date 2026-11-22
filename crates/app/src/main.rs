@@ -3,7 +3,7 @@ mod screen;
 use std::sync::Arc;
 
 use sugar_layout::{Id, Layout, Rect};
-use sugar_ui::{Painter, Renderer};
+use sugar_ui::{Fonts, Painter, Renderer};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
@@ -27,12 +27,7 @@ impl App {
         let size = gpu.window.inner_size();
         let scale = gpu.window.scale_factor() as f32;
         gpu.renderer.resize(size.width, size.height);
-        let logical = Rect::new(
-            0.0,
-            0.0,
-            size.width as f32 / scale,
-            size.height as f32 / scale,
-        );
+        let logical = Rect::new(0.0, 0.0, size.width as f32 / scale, size.height as f32 / scale);
         let body = screen::inset(logical);
         self.layout.solve(body, &mut self.placed);
         self.painter.begin(scale);
@@ -70,8 +65,7 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 if let Some(gpu) = &mut self.gpu {
                     gpu.window.pre_present_notify();
-                    gpu.renderer
-                        .render(self.painter.quads(), screen::BACKGROUND);
+                    gpu.renderer.render(&mut self.painter, screen::BACKGROUND);
                 }
             }
             _ => {}
@@ -96,7 +90,7 @@ fn main() {
         gpu: None,
         layout: Layout::new(&screen::tree()),
         placed: Vec::with_capacity(sugar_layout::MAX_MODULES),
-        painter: Painter::default(),
+        painter: Painter::new(Fonts::new(include_bytes!("../../../res/fonts/Inter.ttf"))),
     };
     if let Err(e) = event_loop.run_app(&mut app) {
         eprintln!("djsugar: {e}");

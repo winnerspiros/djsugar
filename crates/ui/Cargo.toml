@@ -6,6 +6,7 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
+ttf-parser = { version = "0.25", default-features = false, features = ["std", "opentype-layout", "variable-fonts"] }
 bytemuck = { version = "1.25", features = ["derive"] }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "dx12", "metal", "gles", "vulkan", "wgsl"] }
 

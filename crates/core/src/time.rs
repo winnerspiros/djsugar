@@ -64,18 +64,11 @@ mod tests {
 
     #[test]
     fn grid_round_trip_and_phase() {
-        let g = Grid {
-            first_beat_seconds: 0.25,
-            bpm: Bpm(120.0),
-        };
+        let g = Grid { first_beat_seconds: 0.25, bpm: Bpm(120.0) };
         assert!((g.seconds_at(g.beat_at(10.0)) - 10.0).abs() < 1e-9);
-        let h = Grid {
-            first_beat_seconds: 0.5,
-            bpm: Bpm(120.0),
-        };
+        let h = Grid { first_beat_seconds: 0.5, bpm: Bpm(120.0) };
         assert!(
-            (g.phase_offset(10.0, &h, 10.0) - 0.5).abs() < 1e-9
-                || (g.phase_offset(10.0, &h, 10.0) + 0.5).abs() < 1e-9
+            (g.phase_offset(10.0, &h, 10.0) - 0.5).abs() < 1e-9 || (g.phase_offset(10.0, &h, 10.0) + 0.5).abs() < 1e-9
         );
         assert!(g.phase_offset(10.0, &h, 10.25).abs() < 1e-9);
     }
