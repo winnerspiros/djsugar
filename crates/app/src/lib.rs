@@ -204,6 +204,7 @@ pub mod native {
 
     impl ApplicationHandler for Native {
         fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+            crate::stage("resumed");
             if self.gpu.is_some() {
                 return;
             }
@@ -226,6 +227,7 @@ pub mod native {
         }
 
         fn suspended(&mut self, _: &ActiveEventLoop) {
+            crate::stage("suspended");
             self.ui.release_all();
             if cfg!(target_os = "android") {
                 self.drawn = false;

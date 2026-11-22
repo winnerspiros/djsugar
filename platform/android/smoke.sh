@@ -19,7 +19,14 @@ collect() {
     echo '```'
   } >> "$SUM"
 }
-fail() { echo "::error::$*"; collect; exit 1; }
+fail() {
+  echo "::error::$*"
+  pid=$(adb shell pidof $PKG)
+  [ -n "$pid" ] && adb shell debuggerd -b "$pid" > "$OUT/stacks.txt" 2>&1
+  [ -s "$OUT/stacks.txt" ] && { echo '### Thread stacks at failure'; echo '```'; grep -E '^"|#0[0-9] ' "$OUT/stacks.txt" | head -120; echo '```'; } >> "$SUM"
+  collect
+  exit 1
+}
 shot() { sleep 2; adb exec-out screencap -p > "$OUT/$1.png"; }
 frozen() {
   adb shell dumpsys window | grep -q "Application Not Responding: $PKG" && return 0
