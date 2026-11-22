@@ -1,7 +1,7 @@
 use sugar_layout::{Axis, Id, Node, Rect, Size};
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, DeckUi, Hit, SAMPLES, State, Target};
+use crate::state::{DETAIL_FRAMES, DeckUi, Hit, LOOP_BEATS, Mode, SAMPLES, State, Target};
 
 pub const BACKGROUND: u32 = rgb(0x000000);
 const PANEL: u32 = rgb(0x000000);
@@ -181,12 +181,40 @@ fn waves(p: &mut Painter, s: &mut State, r: Rect) {
                 p.rect(x, over.y + over.h * 0.5 - a, step.max(1.0), a * 2.0 + 0.5, 0.0, c);
             }
             p.rect(over.x + over.w * played - 1.0, over.y, 2.0, over.h, 1.0, TEXT);
-            hit(s, over.x, over.y, over.w, over.h, Target::Overview(d));
         } else {
             let msg = if deck.loading { "Loading..." } else { "Empty deck: tap a track in the library" };
             p.text(main.x + 10.0, main.y + main.h * 0.5 + 4.0, SUB, msg);
         }
+        if let Some(l) = &deck.loaded
+            && let Some(g) = l.grid
+        {
+            let beat = g.beat_frames(l.track.rate);
+            let per_px = DETAIL_FRAMES as f64 * 0.5 * f64::from(1.0 + deck.rate * 0.08);
+            let left = pos - per_px * f64::from(main.w) * 0.5;
+            if let Some((a, b)) = deck.loop_range {
+                let x0 = (((a - left) / per_px) as f32).clamp(0.0, main.w);
+                let x1 = (((b - left) / per_px) as f32).clamp(0.0, main.w);
+                p.rect(main.x + x0, main.y, x1 - x0, main.h, 0.0, fade(ACCENT, 0x30));
+            }
+            let mut n = ((left - g.first_beat) / beat).ceil();
+            loop {
+                let f = g.first_beat + n * beat;
+                let x = ((f - left) / per_px) as f32;
+                if x > main.w {
+                    break;
+                }
+                n += 1.0;
+                if f < 0.0 {
+                    continue;
+                }
+                let bar = (n - 1.0).rem_euclid(4.0) == 0.0;
+                p.rect(main.x + x, main.y, 1.0, main.h, 0.0, if bar { fade(TEXT, 0x50) } else { fade(TEXT, 0x20) });
+            }
+        }
         p.rect(main.x + main.w * 0.5 - 1.0, main.y, 2.0, main.h, 1.0, TEXT);
+        if s.decks[d].loaded.is_some() {
+            hit(s, over.x, over.y, over.w, over.h, Target::Overview(d));
+        }
     }
 }
 
@@ -209,7 +237,12 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     };
     p.text_in(x, r.y + 24.0, right - iw - 12.0 - x, TITLE, &title);
     let rate = f64::from(ui.rate) * 8.0;
-    let sub = format!("{sub}   {rate:+.1}%{}", if ui.key_lock { "  KEY" } else { "" });
+    let bpm = ui
+        .loaded
+        .as_ref()
+        .and_then(|l| l.grid)
+        .map_or(String::new(), |g| format!("{:.1} BPM  ", g.bpm * (1.0 + rate / 100.0)));
+    let sub = format!("{bpm}{rate:+.1}%   {sub}");
     p.text_in(x, r.y + 42.0, right - x, SUB, &sub);
 
     hit(s, r.x, r.y, r.w, 50.0, Target::Browse(d));
@@ -266,31 +299,47 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     }
     let key_h = 24.0;
     let kl = s.decks[d].key_lock;
-    p.outlined(
-        px,
-        body.y,
-        pw,
-        key_h,
-        5.0,
-        if kl { fade(ACCENT, 0x30) } else { RAISED },
-        1.0,
-        if kl { ACCENT } else { LINE },
-    );
-    p.text(px + 8.0, body.y + 16.0, LABEL, "KEY LOCK");
-    hit(s, px, body.y, pw, key_h, Target::KeyLock(d));
+    let tabs = [("KEY", None), ("CUE", Some(Mode::Cues)), ("LOOP", Some(Mode::Loops)), ("SMP", Some(Mode::Samples))];
+    let tw = (pw - 3.0 * 4.0) / 4.0;
+    for (n, (label, mode)) in tabs.into_iter().enumerate() {
+        let x = px + n as f32 * (tw + 4.0);
+        let on = mode.map_or(kl, |m| s.decks[d].mode == m);
+        let edge = if on { if mode.is_none() { ACCENT } else { colour } } else { LINE };
+        p.outlined(x, body.y, tw, key_h, 5.0, if on { fade(edge, 0x30) } else { RAISED }, 1.0, edge);
+        p.text(x + tw * 0.5 - p.text_width(LABEL, label) * 0.5, body.y + 16.0, LABEL, label);
+        hit(s, x, body.y, tw, key_h, mode.map_or(Target::KeyLock(d), |m| Target::Mode(d, m)));
+    }
     let gy = body.y + key_h + PAD;
     let gh = body.y + body.h - gy;
     let cw = (pw - 3.0 * PAD) * 0.25;
     let ch = (gh - PAD) * 0.5;
+    let rate = s.decks[d].loaded.as_ref().map_or(48_000, |l| l.track.rate);
     for i in 0..8 {
         let x = px + (i % 4) as f32 * (cw + PAD);
         let y = gy + (i / 4) as f32 * (ch + PAD);
-        p.outlined(x, y, cw, ch, 6.0, RAISED, 1.0, fade(colour, 0x80));
-        let name = stem(SAMPLES[s.pads[d][i]].rsplit('/').next().unwrap_or(""));
-        let name = name
-            .split_once(['-', '_'])
-            .map_or(name, |(n, rest)| if n.chars().all(|c| c.is_ascii_digit()) { rest } else { name });
-        p.text_in(x + 5.0, y + ch - 6.0, cw - 8.0, LABEL, name);
+        let (label, lit) = match s.decks[d].mode {
+            Mode::Cues => match s.decks[d].cues[i] {
+                Some(at) => (clock(at / f64::from(rate)), true),
+                None => (format!("{}", i + 1), false),
+            },
+            Mode::Loops => {
+                let b = LOOP_BEATS[i];
+                (
+                    if b < 1.0 { format!("1/{}", (1.0 / b) as u32) } else { format!("{b}") },
+                    s.decks[d].looping == Some(i),
+                )
+            }
+            Mode::Samples => {
+                let name = stem(SAMPLES[s.pads[d][i]].rsplit('/').next().unwrap_or(""));
+                let short = name
+                    .split_once(['-', '_'])
+                    .map_or(name, |(n, rest)| if n.chars().all(|c| c.is_ascii_digit()) { rest } else { name });
+                (short.to_string(), false)
+            }
+        };
+        let fill = if lit { fade(colour, 0x60) } else { RAISED };
+        p.outlined(x, y, cw, ch, 6.0, fill, 1.0, fade(colour, if lit { 0xff } else { 0x70 }));
+        p.text_in(x + 5.0, y + ch - 6.0, cw - 8.0, if lit { BUTTON } else { LABEL }, &label);
         hit(s, x, y, cw, ch, Target::Pad(d, i));
     }
 }

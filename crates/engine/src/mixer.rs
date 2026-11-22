@@ -91,6 +91,7 @@ impl Mixer {
             Command::Load(i, t) => {
                 let c = self.channels.get_mut(i)?;
                 c.deck.position = 0.0;
+                c.deck.looping = None;
                 c.deck.invalidate();
                 c.deck.playing = false;
                 return c.deck.track.replace(t);
@@ -105,6 +106,9 @@ impl Mixer {
                 let d = &mut self.channels.get_mut(i)?.deck;
                 d.key_lock = on;
                 d.invalidate();
+            }
+            Command::Loop(i, l) => {
+                self.channels.get_mut(i)?.deck.looping = l.filter(|(a, b)| b - a >= 1.0);
             }
             Command::Key(i, semitones) => self.channels.get_mut(i)?.deck.semitones = semitones,
             Command::Rate(i, r) => self.channels.get_mut(i)?.deck.rate = r,

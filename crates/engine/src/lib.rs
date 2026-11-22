@@ -17,6 +17,7 @@ pub enum Command {
     Rate(usize, f64),
     Nudge(usize, f64),
     KeyLock(usize, bool),
+    Loop(usize, Option<(f64, f64)>),
     Key(usize, f32),
     Gain(usize, f32),
     Volume(usize, f32),

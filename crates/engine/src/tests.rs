@@ -146,3 +146,22 @@ fn samples_play_once_and_are_freed() {
     c.poll();
     assert_eq!(Arc::strong_count(&t), 1);
 }
+
+#[test]
+fn loops_wrap_without_drift() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 2.0)));
+    c.send(Command::Loop(0, Some((1000.0, 1300.0))));
+    c.send(Command::Seek(0, 1000.0));
+    c.send(Command::Play(0, true));
+    let mut out = vec![0.0; 1024];
+    for _ in 0..100 {
+        e.process(&mut out);
+    }
+    let p = c.poll().decks[0].position;
+    let want = 1000.0 + (100.0 * 512.0) % 300.0;
+    assert!((p - want).abs() < 1e-6, "{p} vs {want}");
+    c.send(Command::Loop(0, None));
+    e.process(&mut out);
+    assert!(c.poll().decks[0].position > p);
+}

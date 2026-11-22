@@ -1,0 +1,9 @@
+[package]
+name = "sugar-analysis"
+description = "Tempo and beat-grid detection."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true

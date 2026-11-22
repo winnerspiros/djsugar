@@ -23,12 +23,23 @@ pub enum Target {
     Knob(usize, usize),
     Crossfader,
     Pad(usize, usize),
+    Mode(usize, Mode),
     Jog(usize),
     Overview(usize),
     Library,
     Browse(usize),
     CloseBrowser,
 }
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Mode {
+    #[default]
+    Cues,
+    Loops,
+    Samples,
+}
+
+pub const LOOP_BEATS: [f64; 8] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
 
 #[derive(Debug)]
 pub struct Hit {
@@ -42,6 +53,7 @@ pub struct Loaded {
     pub track: Arc<Track>,
     pub overview: Box<[u8]>,
     pub detail: Box<[u8]>,
+    pub grid: Option<sugar_analysis::Grid>,
 }
 
 #[derive(Debug, Default)]
@@ -53,6 +65,10 @@ pub struct DeckUi {
     pub knobs: [f32; 4],
     pub key_lock: bool,
     pub cue: f64,
+    pub mode: Mode,
+    pub cues: [Option<f64>; 8],
+    pub looping: Option<usize>,
+    pub loop_range: Option<(f64, f64)>,
 }
 
 impl DeckUi {
@@ -165,6 +181,9 @@ impl State {
                     self.decks[d].loaded = Some(l);
                     self.decks[d].loading = false;
                     self.decks[d].cue = 0.0;
+                    self.decks[d].cues = [None; 8];
+                    self.decks[d].looping = None;
+                    self.decks[d].loop_range = None;
                 }
                 (Job::Deck(d), None) => self.decks[d].loading = false,
                 (Job::Sample(i, play), Some(l)) => {
@@ -191,7 +210,8 @@ impl State {
                 .map(|t| {
                     let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
                     let detail = if detail { peaks(&t, 0, DETAIL_FRAMES) } else { Box::default() };
-                    Loaded { name, track: Arc::new(t), overview, detail }
+                    let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
+                    Loaded { name, track: Arc::new(t), overview, detail, grid }
                 });
             let _ = tx.send((job, loaded));
         });
@@ -208,6 +228,44 @@ impl State {
             Some(t) => self.send(Command::Sample(t, 0.9)),
             None => self.load(Job::Sample(i, true), i),
         }
+    }
+
+    fn hotcue(&mut self, d: usize, p: usize) {
+        let Some(l) = &self.decks[d].loaded else { return };
+        let rate = l.track.rate;
+        let grid = l.grid;
+        match self.decks[d].cues[p] {
+            Some(at) => {
+                self.send(Command::Seek(d, at));
+                self.send(Command::Play(d, true));
+                self.telemetry.decks[d].position = at;
+            }
+            None => {
+                let pos = self.telemetry.decks[d].position;
+                let at = grid.map_or(pos, |g| g.snap(rate, pos)).max(0.0);
+                self.decks[d].cues[p] = Some(at);
+            }
+        }
+    }
+
+    fn auto_loop(&mut self, d: usize, p: usize) {
+        let Some(l) = &self.decks[d].loaded else { return };
+        if self.decks[d].looping == Some(p) {
+            self.decks[d].looping = None;
+            self.decks[d].loop_range = None;
+            self.send(Command::Loop(d, None));
+            return;
+        }
+        let rate = l.track.rate;
+        let g = l.grid.unwrap_or(sugar_analysis::Grid { bpm: 120.0, first_beat: 0.0 });
+        let beat = g.beat_frames(rate);
+        let pos = self.telemetry.decks[d].position;
+        let start = g.first_beat + ((pos - g.first_beat) / beat).floor() * beat;
+        let start = start.max(0.0);
+        let range = (start, start + beat * LOOP_BEATS[p]);
+        self.decks[d].looping = Some(p);
+        self.decks[d].loop_range = Some(range);
+        self.send(Command::Loop(d, Some(range)));
     }
 
     fn hit(&self, x: f32, y: f32) -> Option<Target> {
@@ -246,8 +304,13 @@ impl State {
             }
             Target::Pad(d, p) => {
                 self.focus = d;
-                self.pad(d, p);
+                match self.decks[d].mode {
+                    Mode::Cues => self.hotcue(d, p),
+                    Mode::Loops => self.auto_loop(d, p),
+                    Mode::Samples => self.pad(d, p),
+                }
             }
+            Target::Mode(d, m) => self.decks[d].mode = m,
             Target::Jog(d) => {
                 self.focus = d;
                 self.send(Command::Play(d, false));

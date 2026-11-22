@@ -23,6 +23,7 @@ pub struct Deck {
     pub nudge: f64,
     pub key_lock: bool,
     pub semitones: f32,
+    pub looping: Option<(f64, f64)>,
     stretch: Stretch,
     primed: bool,
 }
@@ -37,6 +38,7 @@ impl Deck {
             nudge: 0.0,
             key_lock: false,
             semitones: 0.0,
+            looping: None,
             stretch: Stretch::standard(2, out_rate),
             primed: false,
         }
@@ -79,6 +81,11 @@ impl Deck {
                 o[c] = ((c3 * x + c2) * x + c1) * x + c0;
             }
             pos += step;
+            if let Some((a, b)) = self.looping
+                && pos >= b
+            {
+                pos = a + (pos - b) % (b - a);
+            }
         }
         self.position = pos;
         if pos as isize > last {
@@ -109,6 +116,13 @@ impl Deck {
         let end = (next.max(0.0) as usize).min(len);
         self.stretch.process(t.frames[start..end.max(start)].as_flattened(), out.as_flattened_mut());
         self.position = next;
+        if let Some((a, b)) = self.looping
+            && next >= b
+        {
+            self.position = a + (next - b) % (b - a);
+            self.primed = false;
+            return;
+        }
         if end >= len {
             self.playing = false;
             self.position = len.saturating_sub(1) as f64;
