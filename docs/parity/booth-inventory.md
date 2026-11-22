@@ -90,7 +90,7 @@ Reference: `/home/ubuntu/djsugar/res/qml/Skins/Booth/*.qml`, shared `/home/ubunt
 **Title Bar (144-260)**
 - YouTube download progress bar (Behavior on width, 140ms OutCubic)
 - Deck label: "DECK" + `playing?((N)):N`, color `playing?warningColor:#ff6b6b : buttonActiveColor(#ffffff)`
-- Track title: `loaded? "♪ "+title : ""`, color `buttonActiveColor`, elide right
+- Track title: `loaded? "? "+title : ""`, color `buttonActiveColor`, elide right
 - Key label: `loaded? keyText : ""`, color `buttonActiveColor`, font `unit*1.3`
 - Download gradient bar (Behavior 140ms OutCubic)
 
@@ -157,7 +157,7 @@ Reference: `/home/ubuntu/djsugar/res/qml/Skins/Booth/*.qml`, shared `/home/ubunt
 - Tempo fader (884-892): `BoothFader`, inverted, centerMark, color `deckColor`, width `unit*2.6`
 
 **Animations/Live**
-- TouchSpinny: continuous rotation from `spinnyPosition.playPosition`, `roundsPerSecond = rpm/60*2π/π`
+- TouchSpinny: continuous rotation from `spinnyPosition.playPosition`, `roundsPerSecond = rpm/60*2?/?`
 - Ghost indicator (slip): opacity 0/1, rotation from `slipPosition`
 - Indicator fade: `Transition { PropertyAnimation { property: opacity; duration: 150 } }` (Spinny.qml:148-159)
 - Scratch: PointHandler, angular delta -> `scratch_position`
@@ -199,7 +199,7 @@ Reference: `/home/ubuntu/djsugar/res/qml/Skins/Booth/*.qml`, shared `/home/ubunt
   - Label: font `compact?9:10`, sectionLabel (TRACK, PLAYLIST, CRATE, HISTORY, FOLDER, REKORDBOX, ENGINE DJ, REC)
 - Level list (entries): visible `showLevel`, width to trackList, bg `darkGray4`
   - Header "ALL TRACKS" when `levelHasAll`: height `compact?40:46`, active `activeColor`
-  - Rows: height `compact?40:46`, alt bg `#0c0d0f`/`#16181b`, cursor `activeColor`, label font `compact?15:17`, arrow `›` for children/drives
+  - Rows: height `compact?40:46`, alt bg `#0c0d0f`/`#16181b`, cursor `activeColor`, label font `compact?15:17`, arrow `?` for children/drives
 - TrackList: `LibraryComponent.TrackList`, columns from BoothSourceTree (cover 40px, TITLE fill 3, ARTIST fill 2, BPM 66, KEY 58, ADDED 96), visible `!showLevel`
 - Info panel (right): visible `!compact && w>900`, width 210
   - Cover art square, title 15px bold, artist 13px dim, BPM/KEY/ADDED rows 22px
@@ -607,131 +607,131 @@ enum View { Ctl, Dj, Lib, Wave, Fx, Stream }
 
 ### CRITICAL (Core Feel)
 
-1. **No spring animations anywhere** — QML uses `SpringAnimation` on splitter heights, panel heights, item x/y (MainWindow:404,443,527,565,608; Deck:707,722,793,808). Rust has zero spring physics. Reference: MainWindow.qml:404-405, Deck.qml:707-709. Rust: sugar.rs has no animation system.
+1. **No spring animations anywhere** - QML uses `SpringAnimation` on splitter heights, panel heights, item x/y (MainWindow:404,443,527,565,608; Deck:707,722,793,808). Rust has zero spring physics. Reference: MainWindow.qml:404-405, Deck.qml:707-709. Rust: sugar.rs has no animation system.
 
-2. **No fade transitions** — QML uses `FadeBehavior on visible` (Deck:447,463,852; MainWindow:286,304,340,515). Rust: popups/overlays appear instantly. Reference: Deck.qml:447. Rust: no fade in booth.rs or sugar.rs.
+2. **No fade transitions** - QML uses `FadeBehavior on visible` (Deck:447,463,852; MainWindow:286,304,340,515). Rust: popups/overlays appear instantly. Reference: Deck.qml:447. Rust: no fade in booth.rs or sugar.rs.
 
-3. **No spinning platters (TouchSpinny)** — QML Spinny.qml:124-136 rotates continuously from `spinnyPosition.playPosition`, ghost indicator for slip (89-108). Rust: booth.rs jog draws static platter, no rotation. Reference: Spinny.qml:124-136. Rust: booth.rs:354+ draws static circles.
+3. **No spinning platters (TouchSpinny)** - QML Spinny.qml:124-136 rotates continuously from `spinnyPosition.playPosition`, ghost indicator for slip (89-108). Rust: booth.rs jog draws static platter, no rotation. Reference: Spinny.qml:124-136. Rust: booth.rs:354+ draws static circles.
 
-4. **No VU meter decay/animation** — QML BoothMixer.qml:20-49 updates at 33ms, peak flashes warningColor. Rust: no VU meters anywhere. Reference: BoothMixer.qml:20-49. Rust: no mixer VU in booth.rs mixer().
+4. **No VU meter decay/animation** - QML BoothMixer.qml:20-49 updates at 33ms, peak flashes warningColor. Rust: no VU meters anywhere. Reference: BoothMixer.qml:20-49. Rust: no mixer VU in booth.rs mixer().
 
-5. **No waveform scrolling smoothing** — QML WaveformDisplay playposition updates at 33ms, overview marker moves. Rust: sugar.rs scrolling() draws immediate position, no interpolation. Reference: WaveformOverview.qml:53-59. Rust: sugar.rs:286-354.
+5. **No waveform scrolling smoothing** - QML WaveformDisplay playposition updates at 33ms, overview marker moves. Rust: sugar.rs scrolling() draws immediate position, no interpolation. Reference: WaveformOverview.qml:53-59. Rust: sugar.rs:286-354.
 
-6. **No beat indicator flashes** — QML FxStation beatControl (33ms) flashes section titles. Rust: station() has no beat flash. Reference: FxStation.qml:197-203. Rust: sugar.rs station().
+6. **No beat indicator flashes** - QML FxStation beatControl (33ms) flashes section titles. Rust: station() has no beat flash. Reference: FxStation.qml:197-203. Rust: sugar.rs station().
 
-7. **No pressed glow/animated press** — QML buttons (Tab, FxButton, SmallButton, Pad) all have pressed states with color changes. Rust: hit() registers press but paint uses `s.pressed(t)` for instant color only, no animation. Reference: BoothDeckPanel.qml:135-140 (Chip), BoothPerformanceDeck.qml:143-146 (Pad). Rust: booth.rs:203-218.
+7. **No pressed glow/animated press** - QML buttons (Tab, FxButton, SmallButton, Pad) all have pressed states with color changes. Rust: hit() registers press but paint uses `s.pressed(t)` for instant color only, no animation. Reference: BoothDeckPanel.qml:135-140 (Chip), BoothPerformanceDeck.qml:143-146 (Pad). Rust: booth.rs:203-218.
 
 ### HIGH (Major Features Missing)
 
-8. **No BEAT FX panel/overlay** — QML has BoothBeatFx (docked tablet, overlay phone) with focused slot, mix/meta sliders, CH SELECT, ON/OFF. Rust: only toolbar "DECK FX" toggle shows effects row (sugar.rs:245-262), no BeatFx panel. Reference: BoothBeatFx.qml:1-315. Rust: sugar.rs:245-262.
+8. **No BEAT FX panel/overlay** - QML has BoothBeatFx (docked tablet, overlay phone) with focused slot, mix/meta sliders, CH SELECT, ON/OFF. Rust: only toolbar "DECK FX" toggle shows effects row (sugar.rs:245-262), no BeatFx panel. Reference: BoothBeatFx.qml:1-315. Rust: sugar.rs:245-262.
 
-9. **No FX Station** — QML FxStation.qml (1296 lines) with Scene/Isolate/X-Pad/Release, beat-sync, param knobs. Rust: station() stub only. Reference: FxStation.qml. Rust: sugar.rs:121-124 calls station().
+9. **No FX Station** - QML FxStation.qml (1296 lines) with Scene/Isolate/X-Pad/Release, beat-sync, param knobs. Rust: station() stub only. Reference: FxStation.qml. Rust: sugar.rs:121-124 calls station().
 
-10. **No XY Pad** — QML XYPad.qml (563 lines) with filter/mix surface, deck routing, hold/snap. Rust: View::Xy enum exists (state.rs:66) but no paint function. Reference: XYPad.qml. Rust: state.rs:66, sugar.rs no xy().
+10. **No XY Pad** - QML XYPad.qml (563 lines) with filter/mix surface, deck routing, hold/snap. Rust: View::Xy enum exists (state.rs:66) but no paint function. Reference: XYPad.qml. Rust: state.rs:66, sugar.rs no xy().
 
-11. **No STEMS UI** — QML StemsOverlay.qml with queue popup + toast animations. Rust: State has stems fields but no UI. Reference: StemsOverlay.qml. Rust: state.rs:131-139 Station struct only.
+11. **No STEMS UI** - QML StemsOverlay.qml with queue popup + toast animations. Rust: State has stems fields but no UI. Reference: StemsOverlay.qml. Rust: state.rs:131-139 Station struct only.
 
-12. **No SPLIT (headphone splitter) toggle** — QML Top bar SPLIT tab controls `[Master]headSplit`. Rust: no headSplit control. Reference: MainWindow.qml:564-568. Rust: toolbar items lack SPLIT.
+12. **No SPLIT (headphone splitter) toggle** - QML Top bar SPLIT tab controls `[Master]headSplit`. Rust: no headSplit control. Reference: MainWindow.qml:564-568. Rust: toolbar items lack SPLIT.
 
-13. **No REC with timer** — QML MobileRecordButton shows timer when recording. Rust: REC button shows "REC ON" but no timer. Reference: MainWindow.qml:571-578. Rust: sugar.rs:186-190.
+13. **No REC with timer** - QML MobileRecordButton shows timer when recording. Rust: REC button shows "REC ON" but no timer. Reference: MainWindow.qml:571-578. Rust: sugar.rs:186-190.
 
-14. **No DECK INFO column (key, barsLeft, quantize, slip)** — QML DeckInfo component shows these beside waveforms. Rust: waveforms() draws only scrolling waveforms. Reference: MainWindow.qml:306-478. Rust: sugar.rs:279-283.
+14. **No DECK INFO column (key, barsLeft, quantize, slip)** - QML DeckInfo component shows these beside waveforms. Rust: waveforms() draws only scrolling waveforms. Reference: MainWindow.qml:306-478. Rust: sugar.rs:279-283.
 
-15. **No BROWSE view separate from LIB** — QML has viewMode=2 (BoothBrowse) with section column, level navigation, info panel, controller browsing. Rust: View::Lib only. Reference: BoothBrowse.qml. Rust: state.rs:100 View::Lib.
+15. **No BROWSE view separate from LIB** - QML has viewMode=2 (BoothBrowse) with section column, level navigation, info panel, controller browsing. Rust: View::Lib only. Reference: BoothBrowse.qml. Rust: state.rs:100 View::Lib.
 
-16. **No LOAD 1/2 deck-targeted browsing** — QML loadTarget property, LOAD tabs open browser for specific deck. Rust: LOAD 1/2 buttons set browser target but no dedicated browse view. Reference: MainWindow.qml:139-147, 544-555. Rust: sugar.rs:191-193.
+16. **No LOAD 1/2 deck-targeted browsing** - QML loadTarget property, LOAD tabs open browser for specific deck. Rust: LOAD 1/2 buttons set browser target but no dedicated browse view. Reference: MainWindow.qml:139-147, 544-555. Rust: sugar.rs:191-193.
 
-17. **No controller browsing integration** — QML LibraryComponent.Control handles sidebar focus, knob navigation, load buttons. Rust: no controller library control. Reference: BoothBrowse.qml:271-317. Rust: library.rs has no controller handling.
+17. **No controller browsing integration** - QML LibraryComponent.Control handles sidebar focus, knob navigation, load buttons. Rust: no controller library control. Reference: BoothBrowse.qml:271-317. Rust: library.rs has no controller handling.
 
-18. **No gradient rail on section column** — QML BoothBrowse.qml:534-542 indigo-violet gradient. Rust: sidebar is flat. Reference: BoothBrowse.qml:534-542. Rust: library.rs.
+18. **No gradient rail on section column** - QML BoothBrowse.qml:534-542 indigo-violet gradient. Rust: sidebar is flat. Reference: BoothBrowse.qml:534-542. Rust: library.rs.
 
-19. **No info panel on browse (cover, title, artist, BPM, KEY, ADDED)** — QML BoothBrowse.qml:744-839. Rust: library() no right panel. Reference: BoothBrowse.qml:744-839.
+19. **No info panel on browse (cover, title, artist, BPM, KEY, ADDED)** - QML BoothBrowse.qml:744-839. Rust: library() no right panel. Reference: BoothBrowse.qml:744-839.
 
-20. **No stem pad mode** — QML BoothPerformanceDeck padMode="stem" shows 4 stems x2 (MUTE/FX) with colors. Rust: Mode enum lacks Stem. Reference: BoothPerformanceDeck.qml:356-407, 441-458. Rust: state.rs:189-196 Mode enum.
+20. **No stem pad mode** - QML BoothPerformanceDeck padMode="stem" shows 4 stems x2 (MUTE/FX) with colors. Rust: Mode enum lacks Stem. Reference: BoothPerformanceDeck.qml:356-407, 441-458. Rust: state.rs:189-196 Mode enum.
 
-21. **No sampler pad mode per deck** — QML BoothPerformanceDeck padMode="sampler" shows 8 SamplerPad per deck side. Rust: Mode::Samples shows global 16 samplers in toolbar row. Reference: BoothPerformanceDeck.qml:460-479. Rust: sugar.rs:264-277 samplers().
+21. **No sampler pad mode per deck** - QML BoothPerformanceDeck padMode="sampler" shows 8 SamplerPad per deck side. Rust: Mode::Samples shows global 16 samplers in toolbar row. Reference: BoothPerformanceDeck.qml:460-479. Rust: sugar.rs:264-277 samplers().
 
-22. **No beatjump pad mode** — QML beatjump shows left/right triangles, 8 sizes. Rust: no beatjump. Reference: BoothPerformanceDeck.qml:174-180, 274-290.
+22. **No beatjump pad mode** - QML beatjump shows left/right triangles, 8 sizes. Rust: no beatjump. Reference: BoothPerformanceDeck.qml:174-180, 274-290.
 
-23. **No beatloop pad mode** — QML beatloop shows 8 loop sizes, lit when active. Rust: Mode::Loops only shows fixed LOOP_BEATS. Reference: BoothPerformanceDeck.qml:179, 191.
+23. **No beatloop pad mode** - QML beatloop shows 8 loop sizes, lit when active. Rust: Mode::Loops only shows fixed LOOP_BEATS. Reference: BoothPerformanceDeck.qml:179, 191.
 
-24. **No GRID button on deck (beatgrid popup)** — QML BoothDeckPanel BPM tap + BoothPerformanceDeck GRID button open BeatgridPopup. Rust: Target::Grid exists but no button in transport. Reference: BoothDeckPanel.qml:463-471, BoothPerformanceDeck.qml:660-675. Rust: booth.rs:306.
+24. **No GRID button on deck (beatgrid popup)** - QML BoothDeckPanel BPM tap + BoothPerformanceDeck GRID button open BeatgridPopup. Rust: Target::Grid exists but no button in transport. Reference: BoothDeckPanel.qml:463-471, BoothPerformanceDeck.qml:660-675. Rust: booth.rs:306.
 
-25. **No SLIP button on deck** — QML BoothPerformanceDeck SLIP button. Rust: Target::Slip exists but no button. Reference: BoothPerformanceDeck.qml:676-682. Rust: booth.rs:307.
+25. **No SLIP button on deck** - QML BoothPerformanceDeck SLIP button. Rust: Target::Slip exists but no button. Reference: BoothPerformanceDeck.qml:676-682. Rust: booth.rs:307.
 
 ### MEDIUM (Polish & Parity)
 
-26. **No Q (quantize) / MT (master tempo) buttons on jog** — QML BoothPerformanceDeck:860-879. Rust: missing.
+26. **No Q (quantize) / MT (master tempo) buttons on jog** - QML BoothPerformanceDeck:860-879. Rust: missing.
 
-27. **No headphones knobs (MIXING/LEVEL) in DJ view bottom bar** — QML BoothDjView:64-94. Rust: bottom() only has AUTO DJ, crossfader, REC.
+27. **No headphones knobs (MIXING/LEVEL) in DJ view bottom bar** - QML BoothDjView:64-94. Rust: bottom() only has AUTO DJ, crossfader, REC.
 
-28. **No MASTER knob in DJ view bottom bar** — QML BoothDjView:105-119. Rust: missing.
+28. **No MASTER knob in DJ view bottom bar** - QML BoothDjView:105-119. Rust: missing.
 
-29. **No SYNC leader (MASTER) hold on SYNC button** — QML BoothDeckPanel Chip SYNC onPressAndHold, BoothPerformanceDeck SmallButton SYNC onPressAndHold. Rust: booth.rs:312 Target::Sync only toggles.
+29. **No SYNC leader (MASTER) hold on SYNC button** - QML BoothDeckPanel Chip SYNC onPressAndHold, BoothPerformanceDeck SmallButton SYNC onPressAndHold. Rust: booth.rs:312 Target::Sync only toggles.
 
-30. **No tempo fader center mark** — QML BoothFader centerMark:true for tempo. Rust: fader() supports centre but booth.rs:187 doesn't pass true for tempo.
+30. **No tempo fader center mark** - QML BoothFader centerMark:true for tempo. Rust: fader() supports centre but booth.rs:187 doesn't pass true for tempo.
 
-31. **No YouTube download progress bars on deck title** — QML BoothDeckPanel:166-175, 244-258 animated bars. Rust: no YouTube integration.
+31. **No YouTube download progress bars on deck title** - QML BoothDeckPanel:166-175, 244-258 animated bars. Rust: no YouTube integration.
 
-32. **No track key display on deck title bar** — QML BoothDeckPanel keyLabel. Rust: minis() shows key but not on deck panel.
+32. **No track key display on deck title bar** - QML BoothDeckPanel keyLabel. Rust: minis() shows key but not on deck panel.
 
-33. **No remaining/elapsed time tap toggle** — QML BoothDeckPanel time MouseArea toggles showElapsed. Rust: no time display on deck panel.
+33. **No remaining/elapsed time tap toggle** - QML BoothDeckPanel time MouseArea toggles showElapsed. Rust: no time display on deck panel.
 
-34. **No tempo range display** — QML BoothDeckPanel rangeText shows rateRange%. Rust: missing.
+34. **No tempo range display** - QML BoothDeckPanel rangeText shows rateRange%. Rust: missing.
 
-35. **No pitch value display** — QML BoothDeckPanel pitch text with ±. Rust: missing.
+35. **No pitch value display** - QML BoothDeckPanel pitch text with +-. Rust: missing.
 
-36. **No BPM MASTER badge** — QML DeckInfo/BoothDeckPanel show MASTER when sync_leader. Rust: no sync leader display.
+36. **No BPM MASTER badge** - QML DeckInfo/BoothDeckPanel show MASTER when sync_leader. Rust: no sync leader display.
 
-37. **No loop IN/OUT armed states** — QML BoothPerformanceDeck IN/OUT buttons show armed. Rust: booth.rs:302-303 has armed but no visual distinction.
+37. **No loop IN/OUT armed states** - QML BoothPerformanceDeck IN/OUT buttons show armed. Rust: booth.rs:302-303 has armed but no visual distinction.
 
-38. **No hotcue color letters on pads** — QML Pad component draws colored square with letter. Rust: booth.rs:220-227 draws letter but square only when lit.
+38. **No hotcue color letters on pads** - QML Pad component draws colored square with letter. Rust: booth.rs:220-227 draws letter but square only when lit.
 
-39. **No hotcue time display on pad** — QML Pad shows time when hotcue set. Rust: booth.rs:228-236 shows time but only when lit and wide enough.
+39. **No hotcue time display on pad** - QML Pad shows time when hotcue set. Rust: booth.rs:228-236 shows time but only when lit and wide enough.
 
-40. **No beatjump triangles on pads** — QML Pad beatjump mode shows triangles. Rust: missing.
+40. **No beatjump triangles on pads** - QML Pad beatjump mode shows triangles. Rust: missing.
 
-41. **No stem colors (blue/accent/yellow/activeColor)** — QML StemPad uses 4 stem colors. Rust: no stem mode.
+41. **No stem colors (blue/accent/yellow/activeColor)** - QML StemPad uses 4 stem colors. Rust: no stem mode.
 
-42. **No sampler pad play/cue hold repeat** — QML SamplerPad TapHandler onPressedChanged cues while held. Rust: samplers are buttons only.
+42. **No sampler pad play/cue hold repeat** - QML SamplerPad TapHandler onPressedChanged cues while held. Rust: samplers are buttons only.
 
-43. **No mixer FILTER knob opacity when off** — QML BoothMixer FILTER opacity 0.4 when quickEffect off. Rust: mixer() draws all knobs same.
+43. **No mixer FILTER knob opacity when off** - QML BoothMixer FILTER opacity 0.4 when quickEffect off. Rust: mixer() draws all knobs same.
 
-44. **No mixer CUE button with pfl state** — QML BoothMixer CUE button border/bg change on pfl. Rust: mixer() no CUE button.
+44. **No mixer CUE button with pfl state** - QML BoothMixer CUE button border/bg change on pfl. Rust: mixer() no CUE button.
 
-45. **No level meter peak flash** — QML LevelMeter peakControl flashes warningColor. Rust: no VU meters.
+45. **No level meter peak flash** - QML LevelMeter peakControl flashes warningColor. Rust: no VU meters.
 
-46. **No FX Station beat-sync (tap, nudge, auto, quantize)** — QML FxStation has full tempo control row. Rust: station() missing.
+46. **No FX Station beat-sync (tap, nudge, auto, quantize)** - QML FxStation has full tempo control row. Rust: station() missing.
 
-47. **No FX Station parameter knobs per effect type** — QML SceneSection has param1/param2 knobs with labels per effect. Rust: missing.
+47. **No FX Station parameter knobs per effect type** - QML SceneSection has param1/param2 knobs with labels per effect. Rust: missing.
 
-48. **No XY Pad hold/snap modes** — QML XYPad has holdMode, SNAP/GRID buttons, state save/restore. Rust: missing.
+48. **No XY Pad hold/snap modes** - QML XYPad has holdMode, SNAP/GRID buttons, state save/restore. Rust: missing.
 
-49. **No storage access popup for USB drives** — QML BoothBrowse storageAccessPopup. Rust: missing.
+49. **No storage access popup for USB drives** - QML BoothBrowse storageAccessPopup. Rust: missing.
 
-50. **No native menu bar (File/Edit/View)** — QML MainMenuBar.qml. Rust: no menu bar.
+50. **No native menu bar (File/Edit/View)** - QML MainMenuBar.qml. Rust: no menu bar.
 
 ### LOW (Details)
 
-51. **Colors differ** — midGray values, warningColor, library* colors missing. Reference: Theme/+android/Theme.qml. Rust: sugar.rs:7-28.
+51. **Colors differ** - midGray values, warningColor, library* colors missing. Reference: Theme/+android/Theme.qml. Rust: sugar.rs:7-28.
 
-52. **Fonts differ** — QML uses Open Sans, Rust uses Inter. Sizing formulas differ.
+52. **Fonts differ** - QML uses Open Sans, Rust uses Inter. Sizing formulas differ.
 
-53. **No compact/normal breakpoints** — QML `compact = height < 520` used everywhere. Rust: `compact = r.h < 520.0` only in dj().
+53. **No compact/normal breakpoints** - QML `compact = height < 520` used everywhere. Rust: `compact = r.h < 520.0` only in dj().
 
-54. **No landscape/portrait specific layouts** — QML MainWindow adjusts top bar tabs, DJ view stacks. Rust: sugar.rs:73 `tall = h > w*1.1` but limited.
+54. **No landscape/portrait specific layouts** - QML MainWindow adjusts top bar tabs, DJ view stacks. Rust: sugar.rs:73 `tall = h > w*1.1` but limited.
 
-55. **No cutout insets handling** — QML Skin.CutoutInsets for camera notches. Rust: missing.
+55. **No cutout insets handling** - QML Skin.CutoutInsets for camera notches. Rust: missing.
 
-56. **No scrollbar styling** — QML ScrollBar custom colors (libraryScrollHandle*). Rust: no scrollbars.
+56. **No scrollbar styling** - QML ScrollBar custom colors (libraryScrollHandle*). Rust: no scrollbars.
 
-57. **No tooltip/long-press context menus on all controls** — QML TapHandler pressAndHold on pads, chips, etc. Rust: only LONG_PRESS_MS constant.
+57. **No tooltip/long-press context menus on all controls** - QML TapHandler pressAndHold on pads, chips, etc. Rust: only LONG_PRESS_MS constant.
 
-58. **No keyboard shortcuts / accelerator keys** — QML MenuItem shortcuts. Rust: none.
+58. **No keyboard shortcuts / accelerator keys** - QML MenuItem shortcuts. Rust: none.
 
-59. **No high-DPI scale factor handling** — QML main.cpp QT_SCALE_FACTOR logic. Rust: scale passed to resize().
+59. **No high-DPI scale factor handling** - QML main.cpp QT_SCALE_FACTOR logic. Rust: scale passed to resize().
 
-60. **No skin theme injection** — QML skinTheme property applied to shared components. Rust: hardcoded colors.
+60. **No skin theme injection** - QML skinTheme property applied to shared components. Rust: hardcoded colors.
 
 ---
 
