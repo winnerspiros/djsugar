@@ -40,7 +40,11 @@ pub enum Mode {
     Cues,
     Loops,
     Samples,
+    Fx,
 }
+
+pub const ECHO_BEATS: [f64; 5] = [0.25, 0.5, 0.75, 1.0, 2.0];
+pub const FX_PADS: [&str; 8] = ["1/4", "1/2", "3/4", "1", "2", "OUT", "BRK", "REV"];
 
 pub const LOOP_BEATS: [f64; 8] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
 
@@ -72,6 +76,7 @@ pub struct DeckUi {
     pub cues: [Option<f64>; 8],
     pub looping: Option<usize>,
     pub loop_range: Option<(f64, f64)>,
+    pub echo: Option<usize>,
 }
 
 impl DeckUi {
@@ -133,6 +138,7 @@ pub struct State {
     read: Reader,
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
+    pub out_rate: u32,
 }
 
 impl std::fmt::Debug for State {
@@ -176,7 +182,7 @@ fn peaks(t: &Track, bins: usize, per: usize) -> Box<[u8]> {
 }
 
 impl State {
-    pub fn new(control: Option<Control>, read: Reader, status: Option<String>) -> Self {
+    pub fn new(control: Option<Control>, read: Reader, status: Option<String>, out_rate: u32) -> Self {
         let mut pads = [[0; 8]; 2];
         for (i, p) in pads.iter_mut().flatten().enumerate() {
             *p = i.min(SAMPLES.len().saturating_sub(1));
@@ -201,6 +207,7 @@ impl State {
             read,
             jobs: channel(),
             status,
+            out_rate,
         }
     }
 
@@ -349,6 +356,32 @@ impl State {
         }
     }
 
+    fn fx(&mut self, d: usize, p: usize) {
+        let Some(l) = &self.decks[d].loaded else { return };
+        let rate = l.track.rate;
+        let speed = 1.0 + f64::from(self.decks[d].rate) * RATE_RANGE;
+        let beat = l.grid.map_or(0.5 * f64::from(rate), |g| g.beat_frames(rate)) / speed;
+        let out_beat = beat * f64::from(self.out_rate) / f64::from(rate);
+        match p {
+            0..5 if self.decks[d].echo == Some(p) => {
+                self.decks[d].echo = None;
+                self.send(Command::Echo(d, 0.0, out_beat));
+            }
+            0..5 => {
+                self.decks[d].echo = Some(p);
+                self.send(Command::Echo(d, 0.6, out_beat * ECHO_BEATS[p]));
+            }
+            5 => {
+                self.decks[d].echo = Some(3);
+                self.send(Command::Echo(d, 0.75, out_beat));
+                self.send(Command::Play(d, false));
+                self.telemetry.decks[d].playing = false;
+            }
+            6 => self.send(Command::Brake(d, 1.2)),
+            _ => self.send(Command::Spin(d, 0.8)),
+        }
+    }
+
     fn sync(&mut self, d: usize) {
         let o = 1 - d.min(1);
         let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
@@ -437,6 +470,7 @@ impl State {
                     Mode::Cues => self.hotcue(d, p),
                     Mode::Loops => self.auto_loop(d, p),
                     Mode::Samples => self.pad(d, p),
+                    Mode::Fx => self.fx(d, p),
                 }
             }
             Target::Mode(d, m) => self.decks[d].mode = m,

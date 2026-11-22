@@ -24,6 +24,8 @@ pub struct Deck {
     pub key_lock: bool,
     pub semitones: f32,
     pub looping: Option<(f64, f64)>,
+    pub velocity: f64,
+    pub brake: f64,
     stretch: Stretch,
     primed: bool,
 }
@@ -39,6 +41,8 @@ impl Deck {
             key_lock: false,
             semitones: 0.0,
             looping: None,
+            velocity: 1.0,
+            brake: 0.0,
             stretch: Stretch::standard(2, out_rate),
             primed: false,
         }
@@ -59,6 +63,11 @@ impl Deck {
         }
         let speed = 1.0 + self.rate + self.nudge;
         let step = speed * f64::from(t.rate) / f64::from(out_rate);
+        if self.brake != 0.0 {
+            let t = t.clone();
+            self.render_brake(&t, step, out);
+            return;
+        }
         if self.key_lock || self.semitones != 0.0 {
             let t = t.clone();
             self.render_stretched(&t, step, out_rate, out);
@@ -126,6 +135,33 @@ impl Deck {
         if end >= len {
             self.playing = false;
             self.position = len.saturating_sub(1) as f64;
+        }
+    }
+}
+
+impl Deck {
+    fn render_brake(&mut self, t: &Track, step: f64, out: &mut [[f32; 2]]) {
+        let f = &t.frames;
+        let mut pos = self.position;
+        for o in out.iter_mut() {
+            let stopped = self.velocity.abs() <= self.brake || pos < 0.0;
+            if stopped {
+                *o = [0.0; 2];
+                continue;
+            }
+            let i = pos as usize;
+            let x = (pos - i as f64) as f32;
+            let (a, b) = (f.get(i).copied().unwrap_or_default(), f.get(i + 1).copied().unwrap_or_default());
+            *o = [a[0] + (b[0] - a[0]) * x, a[1] + (b[1] - a[1]) * x];
+            pos += step * self.velocity;
+            self.velocity -= self.brake * self.velocity.signum();
+        }
+        self.position = pos.max(0.0);
+        if self.velocity.abs() <= self.brake || pos < 0.0 {
+            self.playing = false;
+            self.velocity = 1.0;
+            self.brake = 0.0;
+            self.primed = false;
         }
     }
 }

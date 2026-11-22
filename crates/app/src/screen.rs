@@ -1,7 +1,7 @@
 use sugar_layout::{Axis, Id, Node, Rect, Size};
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, DeckUi, Hit, LOOP_BEATS, Mode, State, Target};
+use crate::state::{DETAIL_FRAMES, DeckUi, FX_PADS, Hit, LOOP_BEATS, Mode, State, Target};
 
 pub const BACKGROUND: u32 = rgb(0x000000);
 const PANEL: u32 = rgb(0x000000);
@@ -352,14 +352,15 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         ("CUE", Some(Mode::Cues)),
         ("LOOP", Some(Mode::Loops)),
         ("SMP", Some(Mode::Samples)),
+        ("FX", Some(Mode::Fx)),
     ];
-    let short = pw < 230.0;
-    let tw = (pw - 4.0 * 4.0) / 5.0;
+    let short = pw < 280.0;
+    let tw = (pw - 5.0 * 4.0) / 6.0;
     for (n, (label, mode)) in tabs.into_iter().enumerate() {
         let x = px + n as f32 * (tw + 4.0);
         let on = mode.map_or(n == 1 && kl, |m| s.decks[d].mode == m);
         let edge = if on { if mode.is_none() { ACCENT } else { colour } } else { LINE };
-        let label = if short { ["SYN", "KEY", "CUE", "LP", "SMP"][n] } else { label };
+        let label = if short { ["SYN", "KEY", "CUE", "LP", "SMP", "FX"][n] } else { label };
         p.outlined(x, py, tw, key_h, 5.0, if on { fade(edge, 0x30) } else { RAISED }, 1.0, edge);
         p.text(x + tw * 0.5 - p.text_width(LABEL, label) * 0.5, py + 16.0, LABEL, label);
         let t = match (n, mode) {
@@ -389,6 +390,7 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                     s.decks[d].looping == Some(i),
                 )
             }
+            Mode::Fx => (FX_PADS[i].to_string(), s.decks[d].echo == Some(i)),
             Mode::Samples => {
                 let name = &*s.entries[s.pads[d][i]].title;
                 let short = name
@@ -400,6 +402,9 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let fill = if lit { fade(colour, 0x60) } else { RAISED };
         p.outlined(x, y, cw, ch, 6.0, fill, 1.0, fade(colour, if lit { 0xff } else { 0x70 }));
         p.text_in(x + 5.0, y + ch - 6.0, cw - 8.0, if lit { BUTTON } else { LABEL }, &label);
+        if s.decks[d].mode == Mode::Fx && i < 6 {
+            p.text(x + 5.0, y + 14.0, LABEL, "ECHO");
+        }
         hit(s, x, y, cw, ch, Target::Pad(d, i));
     }
 }

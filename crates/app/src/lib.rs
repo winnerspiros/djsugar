@@ -25,7 +25,9 @@ pub struct Ui {
 impl Ui {
     pub fn new(read: Reader) -> Self {
         let mut engine = None;
+        let mut out_rate = 48_000;
         let output = sugar_io::open(|f| {
+            out_rate = f.rate;
             let (control, e) = sugar_engine::new(f.rate, f.burst.max(256) * 4);
             engine = Some(control);
             e
@@ -35,7 +37,7 @@ impl Ui {
             Ok(o) => (Some(o), None),
             Err(e) => (None, Some(format!("Audio unavailable: {e}"))),
         };
-        let mut state = State::new(engine, read, status);
+        let mut state = State::new(engine, read, status, out_rate);
         state.scan();
         Self {
             layout: Layout::new(&screen::tree()),

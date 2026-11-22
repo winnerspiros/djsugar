@@ -8,6 +8,38 @@ const LOW_HZ: f32 = 250.0;
 const HIGH_HZ: f32 = 3000.0;
 const Q: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
+const ECHO_SECONDS: usize = 4;
+
+#[derive(Debug)]
+struct Echo {
+    buf: Box<[[f32; 2]]>,
+    at: usize,
+    time: usize,
+    mix: f32,
+    feedback: f32,
+}
+
+impl Echo {
+    fn new(rate: u32) -> Self {
+        let len = rate as usize * ECHO_SECONDS;
+        Self { buf: vec![[0.0; 2]; len].into_boxed_slice(), at: 0, time: len / 8, mix: 0.0, feedback: 0.55 }
+    }
+
+    fn active(&self) -> bool {
+        self.mix > 0.0
+    }
+
+    #[inline]
+    fn run(&mut self, s: [f32; 2]) -> [f32; 2] {
+        let len = self.buf.len();
+        let d = self.buf[(self.at + len - self.time) % len];
+        let fb = self.feedback;
+        self.buf[self.at] = [s[0] + d[1] * fb, s[1] + d[0] * fb];
+        self.at = (self.at + 1) % len;
+        [s[0] + d[0] * self.mix, s[1] + d[1] * self.mix]
+    }
+}
+
 #[derive(Debug)]
 pub struct Channel {
     pub deck: Deck,
@@ -18,6 +50,7 @@ pub struct Channel {
     filter: f32,
     bands: [Biquad; 3],
     filt: Biquad,
+    echo: Echo,
     peak: f32,
 }
 
@@ -32,6 +65,7 @@ impl Channel {
             filter: 0.0,
             bands: [Biquad::identity(); 3],
             filt: Biquad::identity(),
+            echo: Echo::new(rate),
             peak: 0.0,
         }
     }
@@ -110,6 +144,25 @@ impl Mixer {
             Command::Loop(i, l) => {
                 self.channels.get_mut(i)?.deck.looping = l.filter(|(a, b)| b - a >= 1.0);
             }
+            Command::Echo(i, mix, frames) => {
+                let e = &mut self.channels.get_mut(i)?.echo;
+                e.mix = mix.clamp(0.0, 1.0);
+                e.time = (frames as usize).clamp(1, e.buf.len() - 1);
+                if e.mix == 0.0 {
+                    e.buf.fill([0.0; 2]);
+                }
+            }
+            Command::Brake(i, seconds) => {
+                let d = &mut self.channels.get_mut(i)?.deck;
+                d.velocity = 1.0;
+                d.brake = 1.0 / (f64::from(seconds.max(0.05)) * f64::from(rate));
+            }
+            Command::Spin(i, seconds) => {
+                let d = &mut self.channels.get_mut(i)?.deck;
+                d.velocity = -3.0;
+                d.brake = 3.0 / (f64::from(seconds.max(0.05)) * f64::from(rate));
+                d.playing = true;
+            }
             Command::Key(i, semitones) => self.channels.get_mut(i)?.deck.semitones = semitones,
             Command::Rate(i, r) => self.channels.get_mut(i)?.deck.rate = r,
             Command::Nudge(i, n) => self.channels.get_mut(i)?.deck.nudge = n,
@@ -175,22 +228,33 @@ impl Mixer {
                 let xf = self.side_gain(i);
                 let (rate, buf) = (self.rate, &mut self.scratch[..n]);
                 let c = &mut self.channels[i];
-                if !c.deck.playing {
+                let echo = c.echo.active();
+                if !c.deck.playing && !echo {
                     c.peak = 0.0;
                     continue;
                 }
-                c.deck.render(rate, buf);
+                if c.deck.playing {
+                    c.deck.render(rate, buf);
+                } else {
+                    buf.fill([0.0; 2]);
+                }
                 let g = c.gain * c.volume * xf;
                 let mut peak = 0.0f32;
                 for (f, o) in buf.iter_mut().zip(dst.as_chunks_mut::<2>().0) {
-                    for k in 0..2 {
-                        let mut s = f[k];
+                    let mut s = *f;
+                    for (k, v) in s.iter_mut().enumerate() {
                         for b in &mut c.bands {
-                            s = b.run(k, s);
+                            *v = b.run(k, *v);
                         }
-                        s = c.filt.run(k, s) * g;
-                        peak = peak.max(s.abs());
-                        o[k] += s;
+                        *v = c.filt.run(k, *v);
+                    }
+                    if echo {
+                        s = c.echo.run(s);
+                    }
+                    for k in 0..2 {
+                        let v = s[k] * g;
+                        peak = peak.max(v.abs());
+                        o[k] += v;
                     }
                 }
                 c.peak = peak;

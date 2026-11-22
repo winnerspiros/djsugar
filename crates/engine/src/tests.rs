@@ -165,3 +165,52 @@ fn loops_wrap_without_drift() {
     e.process(&mut out);
     assert!(c.poll().decks[0].position > p);
 }
+
+#[test]
+fn echo_tail_rings_after_stop() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 1.0)));
+    c.send(Command::Echo(0, 0.8, 4800.0));
+    c.send(Command::Play(0, true));
+    let mut out = vec![0.0; 1024];
+    for _ in 0..20 {
+        e.process(&mut out);
+    }
+    c.send(Command::Play(0, false));
+    e.process(&mut out);
+    e.process(&mut out);
+    assert!(rms(&out) > 0.05, "{}", rms(&out));
+}
+
+#[test]
+fn brake_slows_to_a_stop() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 4.0)));
+    c.send(Command::Play(0, true));
+    let mut out = vec![0.0; 1024];
+    e.process(&mut out);
+    let start = c.poll().decks[0].position;
+    c.send(Command::Brake(0, 0.5));
+    for _ in 0..60 {
+        e.process(&mut out);
+    }
+    let s = c.poll().decks[0];
+    assert!(!s.playing);
+    let travelled = s.position - start;
+    assert!((travelled - 12000.0).abs() < 600.0, "{travelled}");
+}
+
+#[test]
+fn spin_runs_backwards_then_stops() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 4.0)));
+    c.send(Command::Seek(0, 96000.0));
+    c.send(Command::Spin(0, 0.5));
+    let mut out = vec![0.0; 1024];
+    for _ in 0..60 {
+        e.process(&mut out);
+    }
+    let s = c.poll().decks[0];
+    assert!(!s.playing);
+    assert!(s.position < 96000.0 - 30000.0, "{}", s.position);
+}
