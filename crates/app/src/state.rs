@@ -5,6 +5,7 @@ use sugar_engine::{Command, Control, DECKS, Telemetry, Track};
 use sugar_layout::Rect;
 
 use crate::library::{self, Entry, Source};
+use sugar_engine::station::{Release, Scene, Set};
 
 include!(concat!(env!("OUT_DIR"), "/samples.rs"));
 
@@ -55,6 +56,11 @@ pub enum Target {
     Grid(usize),
     Sort(library::Column),
     XfadeStep(i8),
+    Scene(usize),
+    Xy,
+    StationTime,
+    Iso(usize),
+    Release(usize),
     Record,
     SearchFocus,
     LoadSelected(usize),
@@ -83,6 +89,33 @@ pub enum View {
     Dj,
     Lib,
     Wave,
+    Fx,
+}
+
+/// FX station settings shown on its page.
+#[derive(Clone, Copy, Debug)]
+pub struct Station {
+    pub scene: Scene,
+    pub on: bool,
+    pub xy: (f32, f32),
+    pub time: f32,
+    pub iso: [f32; 3],
+    pub release: Release,
+    pub bpm: f64,
+}
+
+impl Default for Station {
+    fn default() -> Self {
+        Self {
+            scene: Scene::Echo,
+            on: false,
+            xy: (0.5, 0.5),
+            time: 0.5,
+            iso: [0.0; 3],
+            release: Release::Brake,
+            bpm: 0.0,
+        }
+    }
 }
 
 fn recordings_dir() -> Option<std::path::PathBuf> {
@@ -288,6 +321,7 @@ pub struct State {
     pub show_fx: bool,
     pub show_samplers: bool,
     pub search_focus: bool,
+    pub station: Station,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
     pub grid_menu: Option<usize>,
     pub meta: Vec<Option<library::Meta>>,
@@ -376,6 +410,7 @@ impl State {
             show_fx: false,
             show_samplers: false,
             search_focus: false,
+            station: Station::default(),
             cue_menu: None,
             grid_menu: None,
             meta: Vec::new(),
@@ -402,6 +437,11 @@ impl State {
     }
 
     pub fn tick(&mut self) {
+        let bpm = self.master_bpm();
+        if (bpm - self.station.bpm).abs() > 0.01 {
+            self.station.bpm = bpm;
+            self.send(Command::Station(Set::Bpm(bpm)));
+        }
         if self.cue_menu.is_none()
             && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
             && let Some(Target::Pad(d, p)) = g.target
@@ -997,6 +1037,15 @@ impl State {
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
             Target::SearchFocus => self.search_focus = true,
+            Target::Scene(i) => {
+                self.station.scene = Scene::ALL[i.min(Scene::ALL.len() - 1)];
+                self.send(Command::Station(Set::Scene(self.station.scene)));
+            }
+            Target::Release(i) => {
+                self.station.release = [Release::Brake, Release::Echo, Release::BackSpin][i.min(2)];
+                self.station.iso = [0.0; 3];
+                self.send(Command::Station(Set::Release(self.station.release)));
+            }
             Target::Record => {
                 if let Some(rec) = self.recorder.take() {
                     self.status = Some(format!("Recording saved: {}", rec.path.display()));
@@ -1149,6 +1198,10 @@ impl State {
                     }
                 }
             }
+            Some(Target::Xy) => {
+                self.station.on = false;
+                self.send(Command::Station(Set::On(false)));
+            }
             Some(Target::Jog(deck)) if d.resume => {
                 self.send(Command::Play(deck, true));
                 self.telemetry.decks[deck].playing = true;
@@ -1228,8 +1281,34 @@ impl State {
                 self.send(Command::Gain(d, knob_gain(v)));
             }
             Target::Library => self.scroll_by(-delta.1),
+            Target::Xy => {
+                let xy = (((x - r.x) / r.w).clamp(0.0, 1.0), (1.0 - (y - r.y) / r.h).clamp(0.0, 1.0));
+                self.station.xy = xy;
+                self.send(Command::Station(Set::Dial(xy.0)));
+                self.send(Command::Station(Set::Params(self.station.time, xy.1)));
+                if !self.station.on {
+                    self.station.on = true;
+                    self.send(Command::Station(Set::On(true)));
+                }
+            }
+            Target::StationTime => {
+                self.station.time = (self.station.time - delta.1 / 160.0).clamp(0.0, 1.0);
+                self.send(Command::Station(Set::Params(self.station.time, self.station.xy.1)));
+            }
+            Target::Iso(k) => {
+                let v = (self.station.iso[k] - delta.1 / 80.0).clamp(-1.0, 1.0);
+                self.station.iso[k] = if v.abs() < 0.04 { 0.0 } else { v };
+                self.send(Command::Station(Set::Isolate(self.station.iso)));
+            }
             _ => {}
         }
+    }
+
+    /// Tempo the FX station follows: the playing deck, the focused one otherwise.
+    fn master_bpm(&self) -> f64 {
+        let pick = (0..2).find(|&d| self.telemetry.decks[d].playing).unwrap_or(self.focus.min(1));
+        let deck = &self.decks[pick];
+        deck.loaded.as_ref().and_then(|l| l.grid).map_or(120.0, |g| g.bpm * (1.0 + f64::from(deck.rate) * RATE_RANGE))
     }
 }
 

@@ -4,6 +4,7 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 use crate::state::{
     DETAIL_FRAMES, FX_PADS, GridOp, Hit, JUMP_BEATS, LOOP_BEATS, Mode, State, Target, View, beats_label,
 };
+use sugar_engine::station::Scene;
 
 const INK: u32 = rgb(0x0a0b10);
 const SURFACE: u32 = rgb(0x14161c);
@@ -108,6 +109,11 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             }
             crate::screen::library(p, s, Rect::new(0.0, y + 98.0, w, rest - 98.0));
         }
+        View::Fx => {
+            let wh = (rest * 0.2).round().clamp(48.0, 90.0);
+            waveforms(p, s, Rect::new(0.0, y, w, wh));
+            station(p, s, Rect::new(0.0, y + wh + 2.0, w, rest - wh - 2.0));
+        }
         View::Ctl => {
             let wh = (rest * 0.42).round();
             waveforms(p, s, Rect::new(0.0, y, w, wh));
@@ -122,10 +128,10 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     p.gradient(r.x, r.y, r.w, r.h, 0.0, rgb(0x141520), rgb(0x0a0b10), 0.0, 0);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(ACCENT, 0x40));
     let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
-    let views = [("DJ", View::Dj), ("WAVE", View::Wave), ("LIB", View::Lib), ("CTL", View::Ctl)];
+    let views = [("DJ", View::Dj), ("WAVE", View::Wave), ("LIB", View::Lib), ("FX", View::Fx), ("CTL", View::Ctl)];
     let compact = r.w < 760.0;
     let tw = if compact { 40.0 } else { 54.0 };
-    p.outlined(x, r.y + 4.0, tw * 4.0, r.h - 8.0, 6.0, DEEP, 1.0, EDGE);
+    p.outlined(x, r.y + 4.0, tw * views.len() as f32, r.h - 8.0, 6.0, DEEP, 1.0, EDGE);
     for (n, (label, v)) in views.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, r.h - 8.0);
         if s.view == v {
@@ -135,7 +141,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
         hit(s, b, Target::View(v));
     }
-    x += tw * 4.0 + 8.0;
+    x += tw * views.len() as f32 + 8.0;
     let h = r.h - 8.0;
     let rec = s.recorder.as_ref().map(|r| {
         let t = r.frames / u64::from(s.out_rate.max(1));
@@ -145,7 +151,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     let items: [(&str, bool, Target); 6] = [
         ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
         ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
-        ("FX", s.show_fx, Target::ToggleFx),
+        ("DECK FX", s.show_fx, Target::ToggleFx),
         ("SMPL", s.show_samplers, Target::ToggleSamplers),
         ("AUTO", s.auto.is_some(), Target::AutoDj),
         (rec_label, s.recorder.is_some(), Target::Record),
@@ -943,4 +949,100 @@ pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
         p.text(b.x + (b.w - p.text_width(TAB, label)) * 0.5, b.y + b.h * 0.5 + 4.0, TAB, label);
         hit(s, b, Target::LoadSelected(d));
     }
+}
+
+/// Length the TIME knob picks for the scene, as the page shows it.
+fn station_time(scene: Scene, v: f32) -> String {
+    const ECHO: [&str; 6] = ["1/8", "1/4", "3/8", "1/2", "3/4", "1"];
+    const SWEEP: [&str; 6] = ["1", "2", "4", "8", "16", "32"];
+    const SLICE: [&str; 5] = ["1/16", "1/8", "1/4", "1/2", "1"];
+    let at = |n: usize| ((v * n as f32) as usize).min(n - 1);
+    match scene {
+        Scene::Flanger | Scene::Phaser => format!("{} BEATS", SWEEP[at(6)]),
+        Scene::Roll | Scene::Gater => format!("{} BEAT", SLICE[at(5)]),
+        Scene::Pitch => format!("{:.0} ST", 1.0 + 23.0 * v),
+        Scene::Noise | Scene::Drive | Scene::Filter => format!("{:.0}%", v * 100.0),
+        Scene::ReverbUp | Scene::ReverbDown => format!("SIZE {:.0}", v * 100.0),
+        _ => format!("{} BEAT", ECHO[at(6)]),
+    }
+}
+
+/// The FX station page: scenes, the XY pad, time, isolator and release.
+fn station(p: &mut Painter, s: &mut State, r: Rect) {
+    const VIOLET: u32 = rgb(0xb04cff);
+    let pad = 8.0;
+    let r = Rect::new(r.x + pad, r.y + pad, r.w - pad * 2.0, r.h - pad * 2.0);
+    let st = s.station;
+    // Scenes, four by four
+    let gw = (r.w * 0.34).min(420.0);
+    let (cols, rows) = (4.0, 4.0);
+    let (bw, bh) = ((gw - 3.0 * 5.0) / cols, ((r.h - 3.0 * 5.0) / rows).min(56.0));
+    for (i, sc) in Scene::ALL.iter().enumerate() {
+        let (c, rr) = ((i % 4) as f32, (i / 4) as f32);
+        let b = Rect::new(r.x + c * (bw + 5.0), r.y + rr * (bh + 5.0), bw, bh);
+        let colour = if i < 6 {
+            ACCENT
+        } else if i < 9 {
+            VIOLET
+        } else {
+            DECK[0]
+        };
+        button(p, s, b, sc.name(), st.scene == *sc, colour, Target::Scene(i));
+    }
+    // Right column
+    let cw = (r.w * 0.26).clamp(170.0, 280.0);
+    let cx = r.x + r.w - cw;
+    p.outlined(cx, r.y, cw, r.h, 8.0, SURFACE, 1.0, EDGE);
+    let head = Style::new(13.0, Weight::Bold, TEXT);
+    p.text(cx + 10.0, r.y + 20.0, head, "FX STATION");
+    let bpm = format!("{:.1} BPM", st.bpm);
+    let bs = Style::new(12.0, Weight::Bold, AMBER);
+    p.text(cx + cw - 10.0 - p.text_width(bs, &bpm), r.y + 20.0, bs, &bpm);
+    let k = ((cw - 20.0) / 3.0).min((r.h - 120.0) / 2.0).clamp(36.0, 70.0);
+    let time = station_time(st.scene, st.time);
+    knob(p, s, Rect::new(cx + 10.0, r.y + 30.0, k, k + 12.0), st.time, AMBER, "TIME", Target::StationTime);
+    let ts = Style::new(15.0, Weight::Bold, AMBER);
+    p.text(cx + 20.0 + k, r.y + 30.0 + k * 0.5 + 5.0, ts, &time);
+    let iso_y = r.y + 30.0 + k + 18.0;
+    p.text(cx + 10.0, iso_y + 10.0, SMALL, "ISOLATE");
+    for (n, label) in ["LOW", "MID", "HIGH"].into_iter().enumerate() {
+        let kr = Rect::new(cx + 10.0 + n as f32 * (cw - 20.0) / 3.0, iso_y + 16.0, k, k + 12.0);
+        knob(p, s, kr, (st.iso[n] + 1.0) * 0.5, RED, label, Target::Iso(n));
+    }
+    let ry = iso_y + 16.0 + k + 18.0;
+    let rh = ((r.y + r.h - ry - 22.0) / 1.0).clamp(24.0, 44.0);
+    p.text(cx + 10.0, ry + 10.0, SMALL, "RELEASE");
+    let rw = (cw - 20.0 - 10.0) / 3.0;
+    for (n, label) in ["BRAKE", "ECHO", "SPIN"].into_iter().enumerate() {
+        let b = Rect::new(cx + 10.0 + n as f32 * (rw + 5.0), ry + 16.0, rw, rh);
+        button(p, s, b, label, false, GREEN, Target::Release(n));
+    }
+    // XY pad in between
+    let xr = Rect::new(r.x + gw + 10.0, r.y, cx - (r.x + gw) - 20.0, r.h);
+    let live = s.pressed(Target::Xy);
+    if live {
+        p.glow(xr.x, xr.y, xr.w, xr.h, 10.0, 12.0, fade(ACCENT, 0x60));
+    }
+    p.gradient(xr.x, xr.y, xr.w, xr.h, 10.0, rgb(0x10121a), rgb(0x07080c), 1.0, if live { ACCENT } else { EDGE });
+    for n in 1..4 {
+        let f = n as f32 / 4.0;
+        p.rect(xr.x + xr.w * f, xr.y + 6.0, 1.0, xr.h - 12.0, 0.0, rgb(0x1a1c24));
+        p.rect(xr.x + 6.0, xr.y + xr.h * f, xr.w - 12.0, 1.0, 0.0, rgb(0x1a1c24));
+    }
+    let label = Style::new(11.0, Weight::Bold, DARK);
+    p.text(xr.x + 10.0, xr.y + xr.h - 10.0, label, "AMOUNT");
+    p.text(xr.x + 10.0, xr.y + 18.0, label, "DEPTH");
+    let name = Style::new(20.0, Weight::Bold, if live { TEXT } else { fade(TEXT, 0x50) });
+    let sn = st.scene.name();
+    p.text(xr.x + (xr.w - p.text_width(name, sn)) * 0.5, xr.y + xr.h * 0.5 + 7.0, name, sn);
+    let (px, py) = (xr.x + st.xy.0 * xr.w, xr.y + (1.0 - st.xy.1) * xr.h);
+    if live {
+        p.rect(px, xr.y + 4.0, 1.0, xr.h - 8.0, 0.0, fade(ACCENT, 0x80));
+        p.rect(xr.x + 4.0, py, xr.w - 8.0, 1.0, 0.0, fade(ACCENT, 0x80));
+        p.glow(px - 14.0, py - 14.0, 28.0, 28.0, 14.0, 10.0, fade(ACCENT, 0xa0));
+        p.disc(px, py, 12.0, rgb(0xffc2e2), ACCENT);
+    } else {
+        p.outlined(px - 10.0, py - 10.0, 20.0, 20.0, 10.0, 0, 1.5, fade(ACCENT, 0x80));
+    }
+    hit(s, xr, Target::Xy);
 }

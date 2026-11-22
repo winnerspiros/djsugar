@@ -1,6 +1,7 @@
 mod biquad;
 mod deck;
 mod mixer;
+pub mod station;
 
 use std::sync::Arc;
 
@@ -35,6 +36,7 @@ pub enum Command {
     Crossfader(f32),
     Main(f32),
     Record(bool),
+    Station(station::Set),
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

@@ -96,6 +96,7 @@ pub struct Mixer {
     main_peak: [f32; 2],
     voices: [Option<Voice>; VOICES],
     pending: Option<Arc<Track>>,
+    station: crate::station::Station,
 }
 
 #[derive(Debug)]
@@ -116,6 +117,7 @@ impl Mixer {
             main_peak: [0.0; 2],
             voices: std::array::from_fn(|_| None),
             pending: None,
+            station: crate::station::Station::new(rate),
         }
     }
 
@@ -223,6 +225,7 @@ impl Mixer {
             Command::Crossfader(x) => self.crossfader = x.clamp(-1.0, 1.0),
             Command::Main(v) => self.main = v.max(0.0),
             Command::Record(_) => {}
+            Command::Station(s) => self.station.set(s),
         }
         None
     }
@@ -299,6 +302,7 @@ impl Mixer {
                 let _ = retired.push(v.track);
             }
         }
+        self.station.run(out);
         let mut pk = [0.0f32; 2];
         for f in out.as_chunks_mut::<2>().0 {
             for k in 0..2 {
