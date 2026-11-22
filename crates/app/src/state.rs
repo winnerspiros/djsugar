@@ -26,6 +26,7 @@ pub enum Target {
     Crossfader,
     Pad(usize, usize),
     Mode(usize, Mode),
+    Sync(usize),
     Jog(usize),
     Overview(usize),
     Library,
@@ -285,11 +286,12 @@ impl State {
                     self.load_deck(deck, first as usize);
                 }
             }
-            Key::Play(d) => {
+            Key::Play(d) if self.decks[d].loaded.is_some() => {
                 let on = !self.telemetry.decks[d].playing;
                 self.send(Command::Play(d, on));
                 self.telemetry.decks[d].playing = on;
             }
+            Key::Play(_) => {}
         }
     }
 
@@ -324,6 +326,34 @@ impl State {
         }
     }
 
+    fn sync(&mut self, d: usize) {
+        let o = 1 - d.min(1);
+        let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
+        let (Some(g), Some(og)) = (me.grid, other.grid) else { return };
+        let (rate, orate) = (me.track.rate, other.track.rate);
+        let other_speed = 1.0 + f64::from(self.decks[o].rate) * RATE_RANGE;
+        let mut target = og.bpm * other_speed;
+        while target / g.bpm > 1.5 {
+            target /= 2.0;
+        }
+        while target / g.bpm < 0.67 {
+            target *= 2.0;
+        }
+        let r = ((target / g.bpm - 1.0) / RATE_RANGE).clamp(-1.0, 1.0);
+        self.decks[d].rate = r as f32;
+        self.send(Command::Rate(d, r * RATE_RANGE));
+        if self.telemetry.decks[o].playing {
+            let op = self.telemetry.decks[o].position;
+            let phase = ((op - og.first_beat) / og.beat_frames(orate)).rem_euclid(1.0);
+            let beat = g.beat_frames(rate);
+            let pos = self.telemetry.decks[d].position;
+            let base = g.first_beat + ((pos - g.first_beat) / beat).floor() * beat;
+            let to = (base + phase * beat).max(0.0);
+            self.send(Command::Seek(d, to));
+            self.telemetry.decks[d].position = to;
+        }
+    }
+
     fn auto_loop(&mut self, d: usize, p: usize) {
         let Some(l) = &self.decks[d].loaded else { return };
         if self.decks[d].looping == Some(p) {
@@ -355,7 +385,7 @@ impl State {
         self.drags.push(Drag { id, target, start: (x, y), last: (x, y), moved: false, resume });
         let Some(t) = target else { return };
         match t {
-            Target::Play(d) => {
+            Target::Play(d) if self.decks[d].loaded.is_some() => {
                 let on = !self.telemetry.decks[d].playing;
                 self.focus = d;
                 self.send(Command::Play(d, on));
@@ -387,6 +417,7 @@ impl State {
                 }
             }
             Target::Mode(d, m) => self.decks[d].mode = m,
+            Target::Sync(d) => self.sync(d),
             Target::Jog(d) => {
                 self.focus = d;
                 self.send(Command::Play(d, false));

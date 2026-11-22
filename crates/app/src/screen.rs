@@ -305,15 +305,26 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     }
     let key_h = 24.0;
     let kl = s.decks[d].key_lock;
-    let tabs = [("KEY", None), ("CUE", Some(Mode::Cues)), ("LOOP", Some(Mode::Loops)), ("SMP", Some(Mode::Samples))];
-    let tw = (pw - 3.0 * 4.0) / 4.0;
+    let tabs = [
+        ("SYNC", None),
+        ("KEY", None),
+        ("CUE", Some(Mode::Cues)),
+        ("LOOP", Some(Mode::Loops)),
+        ("SMP", Some(Mode::Samples)),
+    ];
+    let tw = (pw - 4.0 * 4.0) / 5.0;
     for (n, (label, mode)) in tabs.into_iter().enumerate() {
         let x = px + n as f32 * (tw + 4.0);
-        let on = mode.map_or(kl, |m| s.decks[d].mode == m);
+        let on = mode.map_or(n == 1 && kl, |m| s.decks[d].mode == m);
         let edge = if on { if mode.is_none() { ACCENT } else { colour } } else { LINE };
         p.outlined(x, body.y, tw, key_h, 5.0, if on { fade(edge, 0x30) } else { RAISED }, 1.0, edge);
         p.text(x + tw * 0.5 - p.text_width(LABEL, label) * 0.5, body.y + 16.0, LABEL, label);
-        hit(s, x, body.y, tw, key_h, mode.map_or(Target::KeyLock(d), |m| Target::Mode(d, m)));
+        let t = match (n, mode) {
+            (0, _) => Target::Sync(d),
+            (_, None) => Target::KeyLock(d),
+            (_, Some(m)) => Target::Mode(d, m),
+        };
+        hit(s, x, body.y, tw, key_h, t);
     }
     let gy = body.y + key_h + PAD;
     let gh = body.y + body.h - gy;
