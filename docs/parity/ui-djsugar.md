@@ -1,1318 +1,841 @@
-# DJ Sugar Android QML UI Parity Specification
+# DJ Sugar Mixxx Fork - Android & Desktop UI Specification
+\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
 
-This document exhaustively specifies the DJ Sugar Android QML interface for reproduction in Rust. It covers the Android variant first, then notes desktop differences. All file references are relative to `/home/ubuntu/djsugar/res/qml/`.
+Source: /home/ubuntu/djsugar/res/qml (94 files, ~12.7k lines)
+Android overrides: res/qml/+android, res/qml/Deck/+android, res/qml/Library/+android, res/qml/Effects/+android, res/qml/Settings/+android, res/qml/Theme/+android
 
 ---
 
 ## 1. Overall Screen Structure
 
-### 1.1 Application Entry Points
+### 1.1 Application Entry (main.qml)
+- ApplicationWindow with design size 1792x1008 (desktop), fullscreen on mobile
+- `isMobile` property: Qt.platform.os === "android" || Qt.platform.os === "ios"
+- Background: Theme.backgroundColor (#1e1e20)
+- MenuBar loaded from MainMenuBar.qml on macOS or when not fullscreen
+- Skin switching support via Settings to Interface
+- Window centering and clamping on desktop screens
 
-**main.qml** (lines 1-269)
-- Root: `ApplicationWindow` with id `root`
-- Design resolution: 1792×1008 (landscape), 1008×1792 (portrait)
-- Mobile detection: `isMobile = Qt.platform.os === "android" || Qt.platform.os === "ios"`
-- On mobile: fullscreen, size = `Screen.width` × `Screen.height`
-- On desktop: windowed, centered on screen, min 680×300
-- Property `skinItem` points to loaded skin's MainWindow
-- Function `applySkinTheme()` preserves/restores Theme singleton values when switching skins
-- Timer `clampTimer` (400ms, 3 passes) clamps window to screen on desktop
+### 1.2 Main Window (MainWindow.qml) - Desktop
+Root Column with anchors.fill: parent
+- **Toolbar** (height: 36, color: Theme.toolbarBackgroundColor #2e2e2e)
+  - RowLayout with buttons: 4 Decks, Library, Effects, XY, Aux, Sampler, Edit, Develop, Preferences (gear icon)
+  - Preferences button: press-and-hold opens native PreferencesDialog
+- **SplitView** (vertical, fills remaining height)
+  - **Top section (Waveforms)**: Item with SplitView.fillHeight: !library.active
+    - 2-deck mode: deck1waveform (top half), deck2waveform (bottom half) — each height = parent.height / 2
+    - 4-deck mode: deck3waveform (top 1/4), deck1waveform (2/4), deck2waveform (3/4), deck4waveform (bottom 1/4)
+    - Side gradient fades on left/right edges (125px wide)
+  - **SplitHandle**: 3 dots, color Theme.libraryPanelSplitterHandle (#5f5f5f), active #7a7a7a
+  - **Bottom section (Mixer + Decks + Library)**: SplitView.fillHeight: library.active
+    - **Deck1** (left of mixer): group [Channel1], height = mixer.height (or mixer.height/2 in 4-deck), minimized when maximizeLibrary
+    - **Mixer** (center): groups [Channel1]-[Channel4], show4decks binding, visible when !maximizeLibrary
+    - **Deck2** (right of mixer): group [Channel2], same height logic
+    - **Deck3** (below deck1, 4-deck only): group [Channel3]
+    - **Deck4** (below deck2, 4-deck only): group [Channel4]
+    - **Library** (Loader): active when maximizeLibrary || height - mixer.height >= 400, anchors.bottom to parent.bottom, top to mixer.bottom
 
-**OrientationToggleButton.qml** (71 lines)
-- Horizontal `Fader` (slider) with range 0–2, step 1, snap on release
-- Binds to Mixxx control via `ControlProxy` (group/key from required properties)
-- Track height 2px, handle 3px wide, color from required `color` property
-- Used for portrait/landscape/auto orientation switching
+### 1.3 Main Window (+android/MainWindow.qml) - Android
+Root Item with viewMode property (1=dj, 3=wave, 2=lib, 0=ctl)
+- **Top Bar** (RowLayout, height: 40): view mode buttons (DJ, Wave, Lib, Ctl) — hidden items configurable via Settings
+- **Content Stack** (Loader per view mode):
+  - **View 1 (DJ)**: Deck cards (WaveDeckBar) + Mini mixer + Transport controls
+  - **View 2 (CTL)**: Controller learning UI (LearnController)
+  - **View 3 (WAVE)**: Full-screen waveform display
+  - **View 4 (LIB)**: Full-screen library
+- **Bottom Bar** (RowLayout, height: 48): Play/Pause, Sync, Cue, Load, FX, Sampler, Settings
+- **Popups**: QuickLoadDrawer, BeatgridPopup, XYPad overlay, FX Station, Settings popup
 
-### 1.2 Main Window Layout (MainWindow.qml, 749 lines)
-
-Root `Item` with required `ApplicationWindow applicationWindow`.
-
-**Top Toolbar** (lines 112-238, height 36px)
-- Background: `Theme.toolbarBackgroundColor` (#2e2e2e desktop, #0a0b10 Android)
-- `RowLayout` filling width
-- Buttons (left to right):
-  1. **4 Decks** (`show4DecksButton`): checkable, visible when height > 515, toggles 4-deck mode
-  2. **Library** (`maximizeLibraryButton`): checkable, bound to `[Skin]show_maximized_library`
-  3. **Effects** (`showEffectsButton`): checkable
-  4. **XY** (`showXyPadButton`): checkable, toggles `xyPadOverlay.visible`
-  5. **Aux** (`showAuxButton`): checkable
-  6. **Sampler** (`showSamplersButton`): checkable
-  7. Spacer (`Item` with `Layout.fillWidth: true`)
-  8. **Edit** (`editDeckButton`): checkable, enables deck edit mode
-  9. **Develop** (`showDevToolsButton`): checkable, opens `DeveloperToolsWindow` (640×480)
-  10. **Preferences** (`showPreferencesButton`): icon gear.svg 16×16, click opens `settingsPopup`, press-and-hold opens native `Mixxx.PreferencesDialog`
-
-**Main Content Area** (SplitView, vertical, lines 239-705)
-- Splitter handle: 3px default, 6px on hover/press, color `Theme.libraryPanelSplitterHandle` / `HandleActive`
-- **Upper pane (waveforms)**: `Item id: waveforms`
-  - Visible when `!root.maximizeLibrary`
-  - 2-deck mode: two `WaveformDisplay` (Channel1 top, Channel2 bottom), each 50% height
-  - 4-deck mode: four `WaveformDisplay` (Channel3 top, Channel1, Channel2, Channel4 bottom), each 25% height
-  - Side fade gradients (125px wide) on left/right edges using `Theme.darkGray`
-- **Lower pane (decks + mixer + library)**: `Item` with `SplitView.fillHeight: library.active`
-  - **Decks area** (left of mixer, right of mixer):
-    - 2-deck: Deck1 left, Deck2 right, each full mixer height
-    - 4-deck: Deck1/Deck3 stacked left, Deck2/Deck4 stacked right, each half mixer height
-    - When `maximizeLibrary`: decks collapse to 80px height, anchored to horizontal center (Deck1/3 left half, Deck2/4 right half)
-    - Focus state: clicking a deck sets `root.focusedDeck`; on narrow screens (<1400px) focused deck expands, mixer shifts
-  - **Mixer** (center): `Mixer` component, width 190px, shows 2 or 4 `MixerColumn` + crossfader
-  - **Library** (bottom): `Loader` with `Skin.Library`, active when `maximizeLibrary || (height - mixer.height >= 400)`
-    - Anchors: top = mixer.bottom (or deck3/4.bottom in 4-deck maximize), bottom = parent.bottom
-    - Hidden when `maximizeLibrary && height - mixer.height < 400`
-
-**Floating Overlays**
-- `Settings` popup (`settingsPopup`): modal, centered, max 1400×840, Gaussian blur overlay on desktop
-- `XYPad` overlay (`xyPadOverlay`): z=90, centered, max 680×380, closes on `closeRequested`
+### 1.4 Orientation Toggle (OrientationToggleButton.qml)
+- Horizontal Fader (slider) binding to [ChannelN],orientation or [AuxiliaryN],orientation
+- Range 0-2 (Left, Center, Right), stepSize 1, snapOnRelease
+- Visual: 2px line background, 3px wide handle with 150ms animation
+- Color: Theme.crossfaderOrientationColor (#747474)
+- Size: implicitWidth 56, implicitHeight 26
 
 ---
 
-## 2. Theme / Colours (Theme/Theme.qml + Theme/+android/Theme.qml)
+## 2. Deck Component (Deck.qml)
 
-### 2.1 Desktop Theme (Sugar Classic)
+### 2.1 Deck Structure (Desktop)
+Item with dynamic layout model (itemModel) defining regions:
+- **Column: Info** (top)
+- **Row: Main Controls** (middle)
+  - Column: Play + Cue buttons
+  - Column: Toolbar + Row [HotcueAndStem (minWidth 520), BeatJump (minWidth 650), Loop]
+- **Column: Tempo** (right side)
+  - Pitch down/up buttons, Key display with keylock toggle, Rate fader
+- **Column: FX Assign** (far right)
+  - 4 effect unit assignment buttons + master mix toggle
 
-| Property | Hex | Role |
-|---|---|---|
-| accentColor | #3a60be | Primary brand blue |
-| backgroundColor | #1e1e20 | Window background |
-| blue | #01dcfc | Cyan accent |
-| buttonActiveColor | #D9D9D9 | White |
-| buttonDisableColor | #747474 | Light gray |
-| buttonFontPixelSize | 10 | Button text size |
-| buttonNormalColor | #696969 | Mid gray |
-| crossfaderBarColor | #01dcfc | Cyan |
-| crossfaderOrientationColor | #747474 | Light gray |
-| darkGray | #0f0f0f | Near black |
-| darkGray2 | #2e2e2e | Toolbar/surface |
-| darkGray3 | #3F3F3F | Elevated surface |
-| darkGray4 | #202020 | Deep surface |
-| deckActiveColor | #D9D9D9 | White |
-| deckBackgroundColor | #0f0f0f | Deck background |
-| deckBeatjumpBackgroundColor | #626262 | Mid gray 3 |
-| deckBeatjumpLabelColor | #3F3F3F | Dark gray 3 |
-| deckEmptyCoverArt | #3F3F3F | Dark gray 3 |
-| deckInfoBarBackgroundColor | #0e0e0e | Near black |
-| deckLineColor | #2e2e2e | Dark gray 2 |
-| deckLoopBackgroundColor | #626262 | Mid gray 3 |
-| deckLoopLabelColor | #3F3F3F | Dark gray 3 |
-| deckTextColor | #b0b0b0 | Light gray 2 |
-| effectColor | #fca001 | Yellow |
-| effectUnitColor | #ea2a4e | Red |
-| embeddedBackgroundColor | #a0000000 | Semi-transparent black |
-| eqFxColor | #ea2a4e | Red |
-| eqHighColor | #D9D9D9 | White |
-| eqLowColor | #D9D9D9 | White |
-| eqMidColor | #D9D9D9 | White |
-| fontFamily | "Open Sans" | UI font |
-| gainKnobColor | #01dcfc | Cyan |
-| green | #85c85b | Green |
-| knobBackgroundColor | #262626 | Knob track |
-| libraryPanelSplitterBackground | #1e1e1e | Splitter track |
-| libraryPanelSplitterHandle | #5f5f5f | Splitter handle |
-| libraryPanelSplitterHandleActive | #7a7a7a | Splitter handle active |
-| lightGray | #747474 | Disabled/muted |
-| lightGray2 | #b0b0b0 | Secondary text |
-| lightGray3 | #939393 | Tertiary text |
-| midGray | #696969 | Button normal |
-| midGray2 | #676767 | |
-| midGray3 | #626262 | |
-| panelSplitterBackground | #1e1e20 | |
-| panelSplitterHandle | #696969 | |
-| panelSplitterHandleActive | #b0b0b0 | |
-| pflActiveButtonColor | #01dcfc | Cyan |
-| red | #ea2a4e | Red |
-| samplerColor | #01dcfc | Cyan |
-| sunkenBackgroundColor | #0C0C0C | List backgrounds |
-| textColor | #b0b0b0 | Primary text |
-| textFontPixelSize | 14 | Body text size |
-| toolbarActiveColor | #D9D9D9 | White |
-| toolbarBackgroundColor | #2e2e2e | Toolbar bg |
-| volumeSliderBarColor | #01dcfc | Cyan |
-| warningColor | #7D3B3B | Dark red |
-| waveformBeatColor | #747474 | Light gray |
-| waveformCursorColor | #D9D9D9 | White |
-| waveformMarkerDefault | #ff7a01 | Orange |
-| waveformMarkerIntroOutroColor | #2c5c9a | Blue |
-| waveformMarkerLabel | rgba(255,255,255,0.8) | White 80% |
-| waveformMarkerLoopColor | #00b400 | Green |
-| waveformMarkerLoopColorDisabled | #FFFFFF | White |
-| waveformPostrollColor | #747474 | Light gray |
-| waveformPrerollColor | #747474 | Light gray |
-| white | #D9D9D9 | White |
-| yellow | #fca001 | Yellow |
+### 2.2 Deck Structure (Android: Deck/+android/InfoBar.qml)
+Rectangle with border (deckColor accent, deckBgColor background)
+- **Deck Badge**: "DECK 1" / "DECK 2" / "DECK 3" / "DECK 4" pill (accentDim bg, accent border)
+- **Cover Art Thumbnail**: 36x36 (minimized: 22x22)
+- **Track Info Column**: Title (bold), Artist (secondary)
+- **Progress Bar**: Elapsed / Remaining time toggle, progress fill with deckColor
+- **BPM + Key Display**: BPM large, Key with color from pitchKey.colorsMap (24 colors)
+- **Transport Row**: Reverse, Beatgrid, Eject, Play (green triangle), Cue (orange), Sync
+- **Pad Switcher** (narrow decks): Pads / Loops / Stems tabs
+- **Mini Waveform Overview** (WaveDeckBar): 2 deck cards side by side
 
-### 2.2 Android Theme (Theme/+android/Theme.qml — Sugar Night OLED)
+### 2.3 Deck Controls & Mixxx Bindings
 
-| Property | Hex | Role |
-|---|---|---|
-| accentColor | #ff4fa8 | Hot pink — brand |
-| activeColor | #7c5cff | Electric violet — pressed |
-| backgroundColor | #000000 | True OLED black |
-| blue | #ff4fa8 | Brand pink (replaces cyan) |
-| buttonActiveColor | #ffffff | White |
-| buttonDisableColor | #444444 | Dark gray |
-| buttonFontPixelSize | 10 | |
-| buttonNormalColor | #888888 | Medium gray |
-| crossfaderBarColor | #ff4fa8 | Hot pink |
-| crossfaderOrientationColor | #666666 | |
-| darkGray | #000000 | Black |
-| darkGray2 | #0a0b10 | Indigo ink |
-| darkGray3 | #14161c | Indigo surface |
-| darkGray4 | #0d0e13 | Indigo deep |
-| deckActiveColor | #ffffff | |
-| deckBackgroundColor | #000000 | |
-| deckBeatjumpBackgroundColor | #14161c | |
-| deckBeatjumpLabelColor | #666666 | |
-| deckEmptyCoverArt | #14161c | |
-| deckInfoBarBackgroundColor | #000000 | |
-| deckLineColor | #0a0b10 | |
-| deckLoopBackgroundColor | #14161c | |
-| deckLoopLabelColor | #666666 | |
-| deckTextColor | #e0e0e0 | |
-| effectColor | #ff4fa8 | Hot pink |
-| effectUnitColor | #ff4fa8 | Hot pink |
-| embeddedBackgroundColor | #E0000000 | |
-| eqFxColor | #ff4fa8 | |
-| eqHighColor | #ffffff | |
-| eqLowColor | #ffffff | |
-| eqMidColor | #ffffff | |
-| fontFamily | "Open Sans" | |
-| gainKnobColor | #ff4fa8 | |
-| green | #00e676 | Bright green |
-| knobBackgroundColor | #0d0e13 | |
-| libraryPanelSplitterBackground | #000000 | |
-| libraryPanelSplitterHandle | #333333 | |
-| libraryPanelSplitterHandleActive | #ff4fa8 | Hot pink |
-| lightGray | #888888 | |
-| lightGray2 | #bbbbbb | |
-| lightGray3 | #999999 | |
-| midGray | #555555 | |
-| midGray2 | #444444 | |
-| midGray3 | #333333 | |
-| panelSplitterBackground | #000000 | |
-| panelSplitterHandle | #555555 | |
-| panelSplitterHandleActive | #bbbbbb | |
-| pflActiveButtonColor | #ff4fa8 | Hot pink |
-| red | #ff6b6b | Warm coral |
-| samplerColor | #ff4fa8 | Hot pink |
-| sunkenBackgroundColor | #000000 | |
-| textColor | #e8e8e8 | |
-| textFontPixelSize | 14 | |
-| toolbarActiveColor | #ffffff | |
-| toolbarBackgroundColor | #0a0b10 | Indigo ink |
-| volumeSliderBarColor | #ff4fa8 | Hot pink |
-| warningColor | #ff6b6b | Warm coral |
-| waveformBeatColor | #222222 | Very dark |
-| waveformCursorColor | #ffffff | |
-| waveformMarkerDefault | #ff4fa8 | Hot pink |
-| waveformMarkerIntroOutroColor | #ff99ca | Light pink |
-| waveformMarkerLabel | #ffffff | |
-| waveformMarkerLoopColor | #00e676 | Bright green |
-| waveformMarkerLoopColorDisabled | #ffffff | |
-| waveformPostrollColor | #1a1c22 | |
-| waveformPrerollColor | #1a1c22 | |
-| white | #eeeeee | |
-| yellow | #ffd54f | Amber |
+| Control | Mixxx Key | Group | Type | Size/Position | States | Colors |
+|---------|-----------|-------|------|---------------|--------|--------|
+| PlayButton | cue_gotoandplay | [ChannelN] | ControlButton | 40x40 (desktop), 48x48 (Android) | highlight when playing | active: samplerColor (#3a60be) |
+| CueButton | cue_default | [ChannelN] | ControlButton | 40x40 | right-click sets cue | active: samplerColor |
+| SyncButton | sync_enabled | [ChannelN] | ControlButton | 40x40 | toggleable | active: deckActiveColor |
+| PitchDown | pitch_down | [ChannelN] | ControlButton | 20x22 | triangle left | fill #626262 |
+| PitchUp | pitch_up | [ChannelN] | ControlButton | 20x22 | triangle right | fill #626262 |
+| Keylock | keylock | [ChannelN] | ControlButton | fillWidth x 22 | toggleable | key colors from colorsMap |
+| Rate Fader | rate | [ChannelN] | Fader | vertical, full height | live, snapOnRelease | bar: bpmSliderBarColor (#01dcfc) |
+| Gain Knob | pregain | [ChannelN] | ControlKnob | 40x40 (desktop), 35x35 (Android) | arcStart Minimum | color: gainKnobColor (#3a60be) |
+| EQ High | parameter3 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 | arcStart Minimum | color: eqHighColor (white) |
+| EQ Mid | parameter2 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 | arcStart Minimum | color: eqMidColor (white) |
+| EQ Low | parameter1 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 | arcStart Minimum | color: eqLowColor (white) |
+| Filter Knob | super1 | [QuickEffectRack1_[ChannelN]] | ControlKnob | 48x48 | arcStart Minimum | color: gainKnobColor |
+| Filter Toggle | super1_enabled | [QuickEffectRack1_[ChannelN]] | ControlButton | 26x26 | toggleable | active: eqFxColor |
+| PFL Button | pfl | [ChannelN] | ControlButton | 26x26 | toggleable | active: pflActiveButtonColor (#3a60be) |
+| Volume Fader | volume | [ChannelN] | Fader | width 42, height = deck height | vertical | bar: volumeSliderBarColor (#3a60be) |
+| Crossfader | crossfader | [Master] | Fader | horizontal, width 190 | | bar: crossfaderBarColor |
+| Orientation Toggle | orientation | [ChannelN]/[AuxiliaryN] | OrientationToggleButton | 56x26 | 3 positions | color: crossfaderOrientationColor |
 
-**Android-only library colours** (lines 93-120):
-- libraryScrollHandle: #333333
-- libraryScrollHandleHovered: #7c5cff
-- libraryScrollHandlePressed: #ff4fa8
-- libraryScrollTrack: #000000
-- libraryActionBackground: #0a0b10
-- libraryActionDisabledBackground: #0d0e13
-- libraryActionText: #eeeeee
-- libraryActionDisabledText: #666666
-- libraryDeck1Background: #1f6fd1 (cyan-blue)
-- libraryDeck1Pressed: #4aa3f5
-- libraryDeck2Background: #e8650f (orange)
-- libraryDeck2Pressed: #ff9a52
-- libraryConfirmBackground: #ff4fa8 (accent)
-- librarySuccessColor: #00e676
-- librarySourceBarBackground: #000000
-- librarySourceBarBorder: #0a0b10
-- librarySourceTabBackground: #0d0e13
-- librarySourceTabText: #888888
-- libraryLocalTabColor: #ff4fa8
-- libraryLocalTabBackground: #1a1c22
-- libraryStreamingTabColor: #ff4fa8
-- libraryStreamingTabText: #ff99ca
-- libraryStreamingTabBackground: #1a1c22
-- libraryKeyMatchColor: #00e676
-- libraryKeyMatchBackground: #00e67633 (20% alpha)
-- libraryKeyHarmonicColor: #7c5cff
-- libraryKeyHarmonicText: #d0c8ff
+### 2.4 Spinny (Vinyl Emulation)
+- **Desktop (Spinny.qml)**: 140px diameter circle, 45° rotated, center tick mark, tempo display inside (BPM + pitch %)
+- **Android (Deck/+android/Spinny.qml)**: Adaptive size (80-140px), vinyl groove rings (2), accentColor border, center tempo box (44% height, 62% width)
+- **TouchSpinny.qml**: Touch handler with scratch_enable + scratch_position controls, ghost indicator for slip mode
+- Binds: track_samples, track_samplerate, vinylcontrol_speed_type, track_loaded, slip_enabled, scratch_position_enable, scratch_position
+
+### 2.5 Waveform Overview (Deck/WaveformOverview.qml)
+- Rectangle 50px height, radius 5, color deckBackgroundColor
+- Contains Skin.WaveformOverview (Mixxx.WaveformOverview) filling parent
+- Shows: cue markers (red), intro/outro (blue), loops (green), play position (white)
+- Interactive: click/drag to seek (playposition control)
+
+### 2.6 InfoBar (Deck/InfoBar.qml) - Desktop
+Rectangle with horizontal gradient (track color darker to deckInfoBarBackgroundColor #0e0e0e)
+- Cover art circle (left, 4px radius)
+- DelegateChooser cells: title, year, time, artist, rating
+- YouTube download progress bar (bottom 3px, gradient #e63380 to #ff99ca to #00e5ff)
+- Minimized mode: height reduces, cover art hidden
+
+### 2.7 Toolbar (Deck/Toolbar.qml)
+Row with: Reverse (triangle left), Beatgrid button (text "Beatgrid", visible width>165), Eject (triangle up + line)
+- Button colors: trackLoaded ? buttonActiveColor (white) : buttonDisableColor (lightGray)
+
+### 2.8 BeatJump (Deck/BeatJump.qml)
+- Label "Beatjump" (deckBeatjumpLabelColor #626262)
+- BeatSizeSpinBoxBehavior: beatjump_size control, halve/double keys
+- Backward/Forward buttons with custom Shape double-triangle icons
+- Background: deckBeatjumpBackgroundColor (#696969)
+
+### 2.9 Loop (Deck/Loop.qml)
+- Label "Loop" (deckLoopLabelColor #626262)
+- BeatSizeSpinBoxBehavior: beatloop_size (1/32 to 512 beats)
+- In / Out / Recall-Exit buttons (toggleable when loop enabled)
+- Loop halve/double buttons
+- Background: deckLoopBackgroundColor (#626262)
+
+### 2.10 TempoColumn (Deck/TempoColumn.qml)
+- Pitch Down/Up buttons (Shape triangles)
+- Key display: keylock toggle button with key text (1d, 8d, 3d... 3m) and color from colorsMap (24 colors)
+- Rate fader (vertical Fader) with rate control
+
+### 2.11 HotcueAndStem (Deck/HotcueAndStem.qml) - Desktop
+Tabbed interface (Hotcue / Stems)
+- **Hotcue tab**: 4x2 GridLayout (8 hotcues), each Skin.Hotcue with color, label, activate on press
+- **Stem tab**: 4 stem buttons (Drums, Bass, Vocals, Other) with mute/solo, stem_name + mute_control + solo_control
+- States: inactive (no track), hotcue (default or no stems), stem (when stems exist and selected)
+- Colors: background #0E0E0E, hotcue border white when set, darkGray3/darkGray4 when empty
+
+### 2.12 HotcueAndStem (Deck/+android/HotcueAndStem.qml) - Android
+- 3-mode pad switcher: Hotcue (0), Loop (1), Stems (2) — visible when deck width < 520
+- **Hotcue**: 4x2 grid, adaptive margins/spacing (narrow: 4px/3px, wide: 16px/6px)
+- **Loop**: 4 loop buttons with beatloop_size spinbox
+- **Stems**: 4 stem buttons with solo logic (soloStem function)
+- Background #0E0E0E, tab buttons at right (Hotcue/Stem icons)
+
+### 2.13 BeatgridPopup (Deck/BeatgridPopup.qml)
+Popup anchored center, width min(440, parent-20), modal, dim=false
+- Header: "Beatgrid – Deck N" + BPM display + close X
+- Grid buttons (4 columns): Align, 1/2x, 2x, Shift Left, Shift Right, Reset
+- Each binds to [ChannelN],beats_* controls
+- Enabled only when track loaded and not bpmlock
+- Clear button (not in this popup — in HotcuePopup)
+
+### 2.14 FXAssign (Deck/FXAssign.qml)
+Row of 4 effect unit assignment buttons + Main mix toggle
+- Binds: [EffectRack1_EffectUnitN],group_[ChannelN]_enable
+- OrientationToggleButton for crossfader orientation (Aux units)
 
 ---
 
-## 3. Deck Layout (Deck.qml, 924 lines)
+## 3. Mixer Component (Mixer.qml)
 
-Deck is a dynamic, editable layout driven by `itemModel` (array of component descriptors). Default model (lines 63-119):
+### 3.1 Structure
+Column with EqColumn + MixerColumn per deck (2 or 4 decks)
+- **EqColumn** (width 42): 3-band EQ knobs (High/Mid/Low) + filter knob
+- **MixerColumn** (width 42): Volume fader + Gain knob + PFL button
+- 2-deck state: decks 1/2 centered
+- 4-deck state: decks 1/3 left, decks 2/4 right
+- Animated transitions (AnchorAnimation 200ms, SpringAnimation 500ms on height)
 
-```
-Column (id: column)
-  Row (id: row)
-    Column (left deck controls)
-      Info (track title, artist, BPM, key, cover art)
-      Row
-        Column (transport)
-          Play button
-          Cue button
-        Column (center)
-          Toolbar (4 Decks, Library, Effects, XY, Aux, Sampler, Edit, Develop, Preferences)
-          Row
-            HotcueAndStem (minWidth 520)
-            Beatjump (minWidth 650)
-            Loop
-    Column (right side)
-      WaveformOverview (full width)
-      WaveformDisplay (full width, main waveform)
-```
+### 3.2 Mixer Controls
 
-### 3.1 Deck Components (Deck/ directory)
-
-Each component type is a QML file under `Deck/` loaded via `DelegateChooser` (Qt.labs.qmlmodels / QtQml.Models).
-
-**Info** (`Deck/Info.qml` - not read but referenced)
-- Shows track title, artist, BPM, key, cover art
-
-**Play** (`Deck/Play.qml`)
-- Large play/pause button, binds to `[ChannelN],play`
-
-**Cue** (`Deck/Cue.qml`)
-- Cue button, binds to `[ChannelN],cue_default`
-
-**Toolbar** (`Deck/Toolbar.qml`)
-- Row of toggle buttons matching main toolbar (4 Decks, Library, Effects, XY, Aux, Sampler)
-
-**HotcueAndStem** (`Deck/HotcueAndStem.qml`)
-- 8 hotcue buttons (HotcueButton.qml) + stem separation button
-- Hotcue buttons: numbered 1-8, color from hotcue color, long-press opens HotcuePopup
-- Stem button: triggers stem separation for current track
-
-**Beatjump** (`Deck/Beatjump.qml`)
-- Forward/backward beat jump buttons (1, 2, 4, 8, 16, 32 beats)
-- Binds to `[ChannelN],beatjump_X_forward/backward`
-
-**Loop** (`Deck/Loop.qml`)
-- Loop in/out, reloop, loop halve/double, beatloop sizes (1/2, 1, 2, 4, 8, 16, 32 beats)
-- Binds to `[ChannelN],loop_in/out/reloop_toggle/beatloop_X_toggle/loop_halve/loop_double`
-
-**WaveformOverview** (`WaveformOverview.qml` / `Mixxx/Controls/WaveformOverview.qml`)
-- Full-width overview waveform with markers (hotcues, loops, intro/outro, cues)
-- Toggles with passthrough control (shows cover art when passthrough active)
-
-**WaveformDisplay** (`WaveformDisplay.qml` / `Mixxx/Controls/WaveformDisplay.qml`)
-- Main zoomed waveform, supports multiple renderers:
-  - Simple, Filtered (3-band), Stacked, HSV, RGB
-  - Markers: end-of-track warning, preroll, loop range (green), intro/outro ranges (blue)
-  - Zoom control via `Mixxx.Config.waveformDefaultZoom`
-  - Smoothed zoom animation (500ms)
-
-### 3.2 Deck Properties & States
-
-- `group`: required string (e.g. "[Channel1]")
-- `editMode`: bool (from toolbar Edit button)
-- `minimized`: bool (when library maximized)
-- `height`: 80px minimized, full mixer height otherwise
-- SpringAnimation on height (damping 0.2, duration 500ms, spring 2)
-- `toggleFocus` signal emitted on deck click
-- Focus states (MainWindow lines 453-508): on narrow screens (<1400px), focused deck expands, mixer shifts to side
-
-### 3.3 Deck Controls Binding Summary
-
-| Control | Mixxx Key | Group |
-|---|---|---|
-| Play | play | [ChannelN] |
-| Cue | cue_default | [ChannelN] |
-| Sync | sync_enabled | [ChannelN] |
-| Quantize | quantize | [ChannelN] |
-| Slip | slip_enabled | [ChannelN] |
-| Keylock | keylock | [ChannelN] |
-| Rate/tempo | rate | [ChannelN] |
-| Rate temp up/down | rate_temp_up/down | [ChannelN] |
-| Beatjump | beatjump_X_forward/backward | [ChannelN] |
-| Loop in/out | loop_in/out | [ChannelN] |
-| Reloop | reloop_toggle | [ChannelN] |
-| Beatloop | beatloop_X_toggle | [ChannelN] |
-| Loop halve/double | loop_halve/double | [ChannelN] |
-| Hotcue X | hotcue_X_activate | [ChannelN] |
-| Hotcue X color | hotcue_X_color | [ChannelN] |
-| Volume fader | volume | [ChannelN] |
-| Gain/trim | pregain | [ChannelN] |
-| EQ High/Mid/Low | parameter3/2/1 | [EqualizerRack1_[ChannelN]_Effect1] |
-| Filter | super1 | [QuickEffectRack1_[ChannelN]] |
-| PFL | pfl | [ChannelN] |
-| Crossfader | crossfader | [Master] |
+| Control | Mixxx Key | Group | Type | Size |
+|---------|-----------|-------|------|------|
+| EQ High | parameter3 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 |
+| EQ Mid | parameter2 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 |
+| EQ Low | parameter1 | [EqualizerRack1_[ChannelN]_Effect1] | ControlKnob | 42x42 |
+| Filter | super1 | [QuickEffectRack1_[ChannelN]] | ControlKnob | 48x48 |
+| Gain | pregain | [ChannelN] | ControlKnob | 42x42 |
+| Volume | volume | [ChannelN] | Fader | 42x(full height) |
+| PFL | pfl | [ChannelN] | ControlButton | 26x26, toggleable |
 
 ---
 
-## 4. Mixer (Mixer.qml, 302 lines)
+## 4. Library Component (Library.qml)
 
-- Width: 190px fixed
-- Height: EQ section (42px × deck count) + channel strips + crossfader
-- **EQ Section** (top): `EqColumn` per deck (42px wide)
-  - 3 EQ knobs (High/Mid/Low) + Quick FX knob + effect selector ComboBox
-  - Colors: High=white, Mid=white, Low=white, FX=red (desktop) / hot pink (Android)
-- **Channel Strips** (middle): `MixerColumn` per deck
-  - Gain knob (40×40, cyan/blue) at top
-  - VU meters (left/right, 4px wide) flanking volume fader
-  - Volume fader (full height, bar color = volumeSliderBarColor)
-  - PFL button at bottom (toggleable, active color = pflActiveButtonColor)
-- **Crossfader** (bottom): horizontal fader, full width
-  - Background: `Theme.imgCrossfaderBackground`
-  - Handle: `Theme.imgCrossfaderHandle`
-  - Orientation toggle: `OrientationToggleButton` (3-position: left/center/right)
-- 4-deck mode: EQ columns and channel strips rearrange in 2×2 grid via states
+### 4.1 Desktop Structure
+Item with:
+- **SearchField** (TextField, top): placeholder "Search...", debounce 300ms, Enter/Down focuses track list, Escape clears
+- **SuggestionsStrip** (Skin.SuggestionsStrip): "Up Next" cards, tap to load, long-press to queue in AutoDJ
+- **SplitView** (horizontal):
+  - **Left**: SourceTree (LibraryComponent.SourceTree) — sidebar with playlists, crates, drives
+  - **Right**: TrackList (Browser.qml to TrackList.qml) — table view of tracks
 
----
+### 4.2 Android Library (Library/+android/)
+- **Browser.qml**: SourceTree with storage access handling for USB drives (Rekordbox, Engine DJ, computer)
+- **SourceTree.qml**: Default columns = Cover Art (46px) + Title (fillSpan 3) + Artist + BPM + Key + Duration + Year + Rating
+- **TrackList.qml**: HorizontalHeaderView with sortable columns, TouchSpinny not used here
+- **Track.qml**: Item with TapHandler (left/right click), DragHandler disabled (TrackDrag handles drag), capabilities bitmask
+- **Control.qml**: Focus management (sidebar vs library view), hardware knob mappings (MoveVertical, SelectTrackKnob, GoToItem, LoadSelectedIntoFirstStopped)
 
-## 5. Library (Library/ + Library/+android/)
+### 4.3 Library Columns (SourceTree.qml defaultColumns)
+1. Cover Art (columnIdx: Album, preferredWidth 100, autoHideWidth 750) — Image delegate
+2. Title (columnIdx: Title, fillSpan 3, label "Title") — DefaultDelegate
+3. Artist (columnIdx: Artist, preferredWidth 100)
+4. BPM (columnIdx: BPM, preferredWidth 50)
+5. Key (columnIdx: Key, preferredWidth 50)
+6. Duration (columnIdx: Duration, preferredWidth 60)
+7. Year (columnIdx: Year, preferredWidth 50)
+8. Rating (columnIdx: Rating, preferredWidth 50)
+9. Position (for playlists, inserted after cover, preferredWidth 46)
 
-### 5.1 Library.qml (not fully read, but Loader in MainWindow loads it)
-- Fills available space below mixer
-- Contains sidebar (SourceTree) + track list (TrackList) + search/filter
-
-### 5.2 SourceTree (Library/SourceTree.qml + Library/+android/SourceTree.qml)
-
-**Desktop** (Library/SourceTree.qml, 353 lines):
-- `Mixxx.LibrarySourceTree` with default columns:
-  1. Cover art (100px, hidden <750px)
-  2. Title (fillSpan 3)
-  3. Artist (fillSpan 2)
-  4. Album (fillSpan 1, hidden <690px)
-  5. Year (80px, hidden <750px)
-  6. BPM (60px)
-  7. Key (70px)
-  8. File Type (70px, hidden <900px)
-  9. Bitrate (70px, hidden <1200px)
-- `playlistColumns()` adds position column after cover for playlists
-- Sections: All Tracks, Playlists, Crates, Recordings, History, Streaming, Rekordbox, Engine DJ, Computer (drives)
-
-**Android** (Library/+android/SourceTree.qml, 152 lines):
-- Same columns but cover art height 30px (vs commented out waveform preview)
-- Uses `LibraryComponent.Cell` delegate
-
-### 5.3 TrackList (Library/TrackList.qml + Library/+android/TrackList.qml)
-
-**Desktop** (Library/TrackList.qml, 470 lines):
-- `HorizontalHeaderView` with clickable column headers for sorting
-- `TableView` with `ItemSelectionModel`
-- Columns: same as SourceTree defaultColumns
-- Sorting: click header to toggle Asc/Desc
-- Selection: single row, keyboard navigation (MoveVertical, SelectNext/PrevTrack)
-- Drag: `LibraryComponent.TrackDrag` for touch drag-to-deck/playlist
-
-**Android** (Library/+android/TrackList.qml, 953 lines):
-- `HorizontalHeaderView` with sorting
-- `TableView` with `SelectionModel`
-- Row delegate: `LibraryComponent.Cell` (alternating row colors: sunkenBackgroundColor / backgroundColor)
-- Highlighted border (2px accentColor) when `highlighted` property true
-- `moveSelectionVertical(offset)` batches rapid knob turns
-- `applyDefaultSort()`: playlist order if position column exists, else date added newest first
-- Columns: Cover (38px), Title (fillSpan 3), Artist, Album, Year, BPM, Key, File Type, Bitrate
-- Auto-hide columns at narrow widths (autoHideWidth property)
-
-### 5.4 Cell (Library/Cell.qml + Library/+android/Cell.qml)
-
-**Desktop**: Simple rectangle with right border (darkGray2)
-**Android** (Library/+android/Cell.qml, 23 lines):
-```qml
-Rectangle {
-    color: selected ? Theme.accentColor : (row % 2 == 0 ? Theme.sunkenBackgroundColor : Theme.backgroundColor)
-    Rectangle { id: border; color: Theme.darkGray2; width: 1; anchors { bottom: parent.bottom; right: parent.right; top: parent.top } }
-}
-```
-
-### 5.5 Track (Library/Track.qml, 153 lines)
-- `DragHandler` + `TapHandler` (left/right click, long press)
-- Context menu (`TrackMenu.qml`) on right-click/long-press
-- Menu items:
-  - Load to → Deck 1-4, Sampler, Preview Deck
-  - Add to playlists
-  - Add to crates
-  - Analyze (local tracks)
-  - Download (streaming tracks)
-  - Playlists browser (checkable, shows count)
-
-### 5.6 TrackDrag (Library/TrackDrag.qml, 205 lines)
-- Touch drag: hold → move → ghost pill follows finger
-- Ghost shows track label, drops on deck/sampler/playlist
-- Streaming tracks: download first, then load
-- `held` signal opens TrackMenu if no movement >12px
-
-### 5.7 TrackMenu (Library/TrackMenu.qml, 157 lines)
-- Popup centered, 360px max width, modal with dim overlay
-- Header: track title
-- Row: Deck 1 (cyan-blue) / Deck 2 (orange) load buttons
-- Analyze/Download button
-- Playlists section: `PlaylistBrowser` with search, checkable rows
-- Tap row to add/remove, menu stays open
-
-### 5.8 PlaylistBrowser (Library/PlaylistBrowser.qml, 213 lines)
-- ColumnLayout with search field (visible when >6 playlists)
-- ListView in sunkenBackgroundColor rounded rectangle
-- Delegate: 48px rows, accent bar on left when checked
-- Locked playlists at 45% opacity
-- Search filters client-side
-
-### 5.9 Library Control (Library/Control.qml + Library/+android/Control.qml)
-
-**Desktop** (Library/Control.qml, 161 lines):
-- `FocusedWidgetControl` (Sidebar / LibraryView)
-- ControlProxy bindings for hardware controllers:
-  - `[Library]GoToItem` → load selected to next deck
-  - `[Playlist]LoadSelectedIntoFirstStopped` → load selected
-  - `[Playlist]SelectTrackKnob` / `SelectPrevTrack` / `SelectNextTrack` → move vertical
-  - `[Library]MoveVertical/Up/Down` → move vertical
-  - Instantiates `ControlLoadSelectedTrackHandler` per deck
-
-**Android** (Library/+android/Control.qml, 233 lines):
-- Same FocusedWidgetControl
-- Additional signals: `moveSidebar`, `activateSidebarItem`, `collapseSidebarItem`
-- `[Library]GoToItem`: if sidebar focused → activate, else → load to next deck
-- Hardware browse knob: `MoveVertical` on track list, `MoveSidebar` on sidebar
-- `[Library]MoveUp/Down` also handled
-
-### 5.10 Streaming Hub (Library/Streaming/StreamingHub.qml, 272 lines)
-
-- Tab bar (height 26px) with 5 platforms:
-  1. **Navidrome·URL·Radio** (cyan #00e5ff, icon ic_library_navidrome.svg)
-  2. **Audius** (purple #ea80fc, triangle icon)
-  3. **YouTube** (red #ff0000, drawn play triangle)
-  4. **SoundCloud** (orange #ff8800, cloud icon)
-  5. **Spotify** (green #1db954, icon)
-- Each tab: `Skin.Button` full height, width varies (196/96/96/96/96)
-- Content: `Loader` per platform (WebView, OnlineStreamView, YouTubeView, SoundCloudView, SpotifyView)
-- `StreamingControl` handles controller input:
-  - `MoveTab` (browse press) → cycle platforms
-  - `MoveResult` (browse turn) → navigate results
-  - `LoadResult` (load press) → load highlighted track
-  - Disables library Control while hub visible
-
-### 5.11 Search / Suggestions
-- Library search: `TextInput` in Settings sidebar (searchSetting, line 56-93)
-- Filters `sectionProperties` model in real-time
-- PlaylistBrowser search: `TextField` filters playlists client-side
-- Streaming hub: each platform handles its own search
+### 4.4 Search & Suggestions
+- SearchField: onTextChanged to searchDebounce (300ms) to applySearch() to sidebar.tracklist.search(text)
+- SuggestionsStrip: pinned top, shows "Up Next" recommendations
+- Focus shortcut: Ctrl+F / menu item to focusSearch()
 
 ---
 
-## 6. Popups, Drawers, Menus, Overlays
+## 5. Popups, Drawers & Menus
 
-### 6.1 HotcuePopup (HotcuePopup.qml, 100 lines)
-- Popup, modal, dim=false, close on escape/outside
-- Background: BorderImage with `Theme.imgPopupBackground` (button.svg), borders 20/10
-- Grid 4 columns, spacing 2
-- Repeater over `Mixxx.Config.hotcueColorPalette` (color rectangles 24×24)
-- Click color → `hotcue.setColor()`, close
-- Bottom row: Clear button (left, calls `hotcue.clear=1/0`), Close button (right, "X")
+### 5.1 HotcuePopup (HotcuePopup.qml)
+Popup, modal, closeOnEscape|CloseOnPressOutside
+- 4xN Grid of color squares (from Mixxx.Config.hotcueColorPalette)
+- Each: 24x24, click to hotcue.setColor(color) + close
+- Clear button: "Clear", onPressed cueDefault=1, onReleased cueDefault=0
+- Close X button top-right
 
-### 6.2 BeatgridPopup (not found as separate file — likely inline in Deck)
-- BeatCounter (BeatCounter.qml, 41 lines): Row of 4 rectangles (14×7px, spacing 3)
-  - Beat 1 (downbeat): border #ff1744, fill #ff1744
-  - Beats 2-4: border #00b0ff, fill #00b0ff when active
-  - Inactive: #a0101418
-  - Binds to `[ChannelN],beat_in_bar` (1-4, 0=no beatgrid)
+### 5.2 BeatgridPopup (Deck/BeatgridPopup.qml) — detailed in 2.13
 
-### 6.3 QuickLoadDrawer (QuickLoadDrawer.qml, 206 lines)
-- Popup, modal, dim=true, close on escape/outside
-- Background: #12151c, border 2px deck color (Deck1=#00b0ff, Deck2=#ff6d00), radius 8
-- Header (50px): deck pill (80×32, deck bg color), title "Load track into DECK N", switch deck button, source tabs (LOCAL MUSIC / STREAMING)
-- Content: `Library` component (local) or `StreamingHub` (streaming)
-- Target deck: `[Channel1]` or `[Channel2]` (switchable)
+### 5.3 QuickLoadDrawer (QuickLoadDrawer.qml)
+Popup, modal, dim=true, background #12151c with deckColor border (deck1: #00b0ff, deck2: #ff6d00)
+- **Header** (50px): Deck target pill (DECK 1/2), switch deck button, source tabs (LOCAL MUSIC / STREAMING)
+- **Content** (TabView):
+  - Tab 0: Local Library (Library component with search)
+  - Tab 1: Streaming Hub (StreamingHub with SoundCloud, YouTube, Spotify, Subsonic, Custom URL)
+- Deck target: property targetDeck, defaults to [Channel1]
 
-### 6.4 SamplePicker (SamplePicker.qml, 650 lines)
-- Item (not Popup), used by Settings and FX Station X-Pad
-- `samples` array from `Mixxx.PlayerManager.bundledSamples()`
-- Pill buttons for each sample (40px high, rounded, accent border)
-- Play icon on pill, preview via PreviewDeck or main mix
-- Import/record: `adopt(path)` adds to list and selects
-- Trim popup for editing samples
-- Delete confirmation
+### 5.4 SamplePicker (SamplePicker.qml)
+Item (not Popup) — used by Settings > Pads & FX and FX Station X-Pad
+- `samples` array from Mixxx.PlayerManager.bundledSamples()
+- `previewGroup` for preview deck, otherwise uses main mix with trim
+- PillButton components for each sample (accent color, play icon, filled state)
+- Trim popup for importing/recording new samples
+- Signals: picked(path), adopt(path), preview()
 
-### 6.5 FxStation (FxStation.qml, 1296 lines)
-- Rectangle, color #0b0e13, fills parent
-- Modes: `strip` (height<560 && width>=900), `compact` (height<560 || width<760), else full
-- Tabs (compact): Scene / Isolate / X-Pad / Release (tab property 0-3)
-- **Scene** (17 effects): BPF ECHO, ECHO, NOISE, SPIRAL UP, REVERB UP, HPF ECHO, LPF ECHO, CRUSH ECHO, SPIRAL DOWN, REVERB DOWN, FLANGER, PHASER, FILTER, ROLL, GATER, PITCH, DRIVE
-  - 4×4 grid of FxButtons, editable (edit icon swaps effect)
-  - Tempo sync knob, amount knob
-- **Isolate**: Low/Mid/High kill knobs + mode selector
-- **X-Pad**: XYPad for sample triggering (SamplePicker integration)
-- **Release**: 3 effects (VINYL BRAKE, ECHO, BACK SPIN), editable
-- Header: title, tempo display, close button
-- Effect assignment: buttons route FX Station to decks
+### 5.5 FxStation (FxStation.qml)
+Rectangle #0b0e13, signal closeRequested
+- **Layout modes**:
+  - Strip: height<560 && width>=900 && height>=220 (single row, replaces library)
+  - Compact: !strip && (height<560 || width<760) (tabs, one section at a time)
+  - Full: otherwise (two rows, all sections visible)
+- **Sections** (each a RowLayout of FxButtons):
+  - Scene (17 effects): BPF ECHO, ECHO, NOISE, SPIRAL UP, REVERB UP, HPF ECHO, LPF ECHO, CRUSH ECHO, SPIRAL DOWN, REVERB DOWN, FLANGER, PHASER, FILTER, ROLL, GATER, PITCH, DRIVE
+  - Isolate (3 bands): Low, Mid, High — each with dial
+  - X-Pad: XYPad component (embedded)
+  - Release (3 effects): VINYL BRAKE, ECHO, BACK SPIN
+- **FxButton**: Rectangle 4px radius, border 1px #323a48 (active: 2px accentColor), text centered, edit icon on hold
+- Controls: [FxStation],scene_on, scene_type, scene_dial, scene_param1, scene_param2, isolate_mode, isolate_low/mid/high, xpad_x, xpad_y, release_on, release_type
 
-### 6.6 XYPad (XYPad.qml, 563 lines)
-- Rectangle, #e60a0d14 (dark semi-transparent), radius 12, border accentColor 40% alpha
-- Touch surface: drag maps X→filter (LPF←→HPF, 0.5 neutral), Y→mix (dry→wet)
-- Target deck selector (Deck 1/2 pills)
-- Modes: Snap (return to center), Hold (latch), Momentary
-- State save/restore: saves filter, mix, routing, deck on touch start
-- Routes EffectRack1_EffectUnit1 to target deck, enables slot 1 if none active
+### 5.6 XYPad (XYPad.qml)
+Rectangle #e60a0d14 (semi-transparent dark), radius 12, border accentColor 40% alpha
+- **Touch surface**: drag updates currentX (0=LPF, 0.5=neutral, 1=HPF) and currentY (0=dry, 1=wet)
+- Binds: [QuickEffectRack1_[ChannelN]],super1 (filter) + [EffectRack1_EffectUnit1],mix (wet/dry) + routing group_[ChannelN]_enable
+- **Modes**: SNAP (returns to saved state on release), HOLD (latches)
+- Deck switcher: Deck 1 / Deck 2 pills
+- Hold button (holdColor #ab47bc)
 - Close button (closable property)
+- State save/restore on first touch
 
-### 6.7 StemsOverlay (StemsOverlay.qml, 139 lines)
-- Item providing two UI elements:
-  1. **StemsQueuePopup**: Popup centered, max 640px wide, modal
-     - Header: "Stems queue" + Close button
-     - `StemsQueue` component (see below)
-  2. **StemsToast**: Bottom-center toast (60px from bottom), z=95
-     - Green (#1e3a2a) for success, red (#4a1e1e) for error
-     - Auto-dismiss timer (3s), click to dismiss
-     - Text from `stemsToast.text` + `isError`
+### 5.7 StemsOverlay (StemsOverlay.qml)
+Item with:
+- **StemsQueuePopup**: modal, centered, width min(640, parent-20), shows StemsQueue component
+- **StemsToast**: bottom toast (60px margin), green (#1e3a2a) success / red (#4a1e1e) error, auto-dismiss timer
+- Opens via openQueue() called from skin indicator
 
-### 6.8 StemsQueue (StemsQueue.qml, 204 lines)
-- ColumnLayout, spacing 8
-- Status row: text (pending count, hold state), Pause/Resume button (green/red), Cancel All (red), Clear Done (when finished)
-- Job rows: Repeater over `Mixxx.Stems.jobs`
-  - Running: blue border #42a5f5, bg #1e2a3a, progress bar
-  - Done: green border, shows stems icons (vocals, drums, bass, other)
-  - Failed: red border, error text
-  - Buttons: Load to Deck 1/2, Remove
+### 5.8 MicrophoneDuckingPanel (MicrophoneDuckingPanel.qml)
+Column, spacing 2:
+- **Mode Button**: Skin.Button, text cycles Off to Auto to Manual, activeColor pflActiveButtonColor (#3a60be)
+- **Strength Knob**: ControlKnob, arcStart Maximum, color effectUnitColor (red #ea2a4e), binds [Master],duckStrength
+- ControlProxy: duckingControl on [Master],talkoverDucking (0=Off, 1=Auto, 2=Manual), nextMode() cycles
 
-### 6.9 MicrophoneDuckingPanel (MicrophoneDuckingPanel.qml, 61 lines)
-- Column, spacing 2
-- Mode button: cycles Off → Auto → Manual (3 states), text shows mode, highlight when Auto/Manual
-  - Binds to `[Master],talkoverDucking`
-- Strength knob: `ControlKnob` (35×35), arcStart=Maximum, color=effectUnitColor
-  - Binds to `[Master],duckStrength`
+### 5.9 Settings Popup (Settings.qml)
+Popup, modal, centered, width min(1400, parent), height min(840, parent), radius 8
+- **Background**: Theme.darkGray2 (#2e2e2e), radius 8
+- **Left Sidebar** (280px): ListView of categories (searchable)
+  - Categories: Interface, Controllers, Audio, Library, Waveforms, Pads & FX, Stems, Recording, Broadcast, AutoDJ, Skins, About
+- **Right Content**: StackLoader showing active category page
+- **Search bar** (top of sidebar): filters categories
+- **Save/Reset/Load** logic per category (dirty tracking)
 
-### 6.10 Settings (Settings.qml, 311 lines)
-- Popup, modal, centered, max 1400×840, radius 8, bg darkGray2
-- Left sidebar (280px): search field + category ListView
-  - Categories from `sectionProperties` (populated by Settings sections)
-  - Search filters categories
-- Right pane: active category's content (Loader)
-- Categories (from Settings sections):
-  - Interface, Decks, Library, Waveforms, Effects, Samplers, Recording, Broadcasting, MIDI, Controllers, Vinyl Control, Sound Hardware, Library Analysis, Library Metadata, Library Streaming, Privacy, About
-- Each section: `activated()`/`deactivated()` lifecycle
+### 5.10 Settings Pages
 
-### 6.11 MainMenuBar (MainMenuBar.qml, 187 lines) — Desktop only
-- `MenuBar` with native macOS support
-- **File**: Load Deck 1-4, Quit
-- **Library**: Rescan, Export, Search Current View, Search Tracks, Create Playlist, Create Crate
-- **View**: Show Microphone, Vinyl Control, Preview Deck, Cover Art, Keywheel, Maximize Library, Auto DJ, Fullscreen
-- **Options**: Vinyl Control (Enable 1-4), Preferences, Record Mix
-- **Developer** (if developerMode): Reload Skin, Developer Tools, Debugger, Base/Experiment Stats
-- **Help**: User Manual, Keyboard Shortcuts, Translate, Community Support, Settings Directory, About
+#### Interface (Settings/Interface.qml)
+- Skin selector (grid of skin previews)
+- Top bar items visibility toggles (MobileApp.hiddenTopBarItems)
+- Waveform overview type (RGB/Filtered/HSV)
+- Fullscreen startup toggle
+- Language selector
+- High DPI scaling
 
-### 6.12 ApplicationMenuActions (ApplicationMenuActions.qml, 491 lines)
-- Defines all `Action` objects for MainMenuBar
-- Shortcuts configurable via `Mixxx.Application.menuShortcut()`
-- Commands delegate to `ApplicationMenuCommands`
+#### Controllers (Settings/Controller.qml)
+- USB status bar (connected count, Rescan USB button)
+- Controller cards grid (ControllerCard.qml)
+- Mapping editor: learning mode (LearnController), device selection, MIDI mapping table
+- Edit/duplicate/delete mappings
 
-### 6.13 ActionPopup (ActionPopup.qml, 100 lines)
-- Generic popup with arrow pointing Left/Top/Right/Bottom
-- Shape-based arrow (20×20), rounded rectangle bg, drop shadow
-- Content: ColumnLayout with 2px spacing
-- Used for context menus, dropdowns
+#### Audio (Settings/AudioEntity.qml, AudioRouter.qml, SoundHardware.qml)
+- Audio device selection (input/output/sample rate/buffer)
+- Audio routing graph (AudioRouter: visual node editor)
+- Latency compensation
+- Master/Headphone gain
 
----
+#### Library (Settings/Library.qml)
+- Library folders management
+- Auto-analyze on import
+- Cover art handling
+- Playlist/crate import/export
 
-## 7. Gestures & Touch Interactions
+#### Waveforms (Settings/Waveform.qml)
+- Waveform type: Simple / Filtered / HSV / RGB / Stacked
+- Overview type: Filtered / HSV / RGB (index 0/1/2)
+- Overview stereo: on/off
+- Overview minute markers: on/off
+- Overview scaling: normalize / global gain
+- Waveform enabled: on/off
+- Frame rate: spinbox (default 60)
+- Zoom synchronization: on/off
+- Split stereo signal: on/off (RGB only)
+- High detail: on/off
+- Default zoom: spinbox (default 3)
+- End of track warning: spinbox seconds (default 30)
+- Beat grid alpha: slider 0-100 (default 90)
+- Play marker position: slider 0-100% (default 50)
+- Visual gains: All/Low/Mid/High sliders (default 2/1/1/1)
+- Until mark: show beats/time, align (left/center/right), text size
+- Stem opacity: 0.75, outline opacity: 0.15
+- Stem reorder on change: on/off
+- Stem display mode: stacked / overlap
+- Caching enabled: on/off
+- Generate with analysis: on/off
 
-### 7.1 Touch Spinny (Spinny.qml, 215 lines)
-- `Mixxx.SpinnyPosition` provides vinyl position
-- Two indicators: main (opaque) + ghost (slip mode, semi-transparent)
-- Rotation: `360 * (rps/2π) * positionSeconds` where `rps = rpm/60 * 2π`
-- Touch handling: `PointerHandler` for scratch
-  - `DragHandler` on indicator: maps horizontal drag → `scratch_position`
-  - `scratch_enable` control toggled with drag active
-  - Cursor shape: OpenHandCursor / ClosedHandCursor / BlankCursor
+#### Pads & FX (Settings/Pads.qml)
+- Sampler Bank A (pads 1-8) + Bank B (9-16) — PadGrid with SamplePicker
+- Pad FX 1 (pads 1-8) + Pad FX 2 (9-16) — PadGrid with EffectSelector
+- Reset buttons for each
+- Beat FX Select configuration
 
-### 7.2 Fader Touch (ControlFader.qml, 50 lines)
-- Extends `Skin.Fader` with `MouseArea` covering full track
-- `onPressed` / `onPositionChanged`: maps touch position → parameter value
-- Vertical: `1 - (y - handleHeight/2) / travelY`
-- Horizontal: `(x - handleWidth/2) / travelX`
-- Double-tap: `control.reset()`
+#### Stems (Settings/Stems.qml)
+- Model selector: Spleeter (fast, ~250MB) / HTDemucs (best, 2-2.5GB)
+- Download buttons with progress
+- Measure speed benchmark
+- Memory warning for HTDemucs
+- Queue management (pause/resume/cancel/clear)
 
-### 7.3 Knob Touch (Knob.qml, 67 lines)
-- `MixxxControls.Knob` with SVG background (imgKnob) and shadow (imgKnobShadow)
-- Foreground: rectangle indicator (width 2, height 20% of knob)
-- Arc: 116° offset, radius 45%, width 2px, color from required property
-- HiDPI: `sourceSize` set to `devicePixelRatio`×size
-- Double-tap: `TapHandler` → `control.reset()`
+#### Recording, Broadcast, AutoDJ, Skins, About
+- Standard Mixxx settings panels
 
-### 7.4 Hotcue Long Press (HotcueButton.qml, 85 lines)
-- `TapHandler` with `gesturePolicy: DragThreshold`, `onLongPressed`:
-  - Gets position, calls `hotcueBehavior.pressSecondary(x,y)` then `releaseSecondary()`
-- `MouseArea` for right-click: same secondary press/release
-- Opens `HotcuePopup` at touch/mouse position
+### 5.11 MainMenuBar (MainMenuBar.qml + ApplicationMenuActions.qml)
+**File Menu**:
+- Load Track to Deck 1 (Ctrl+O) to commands.loadTrackToDeck(1)
+- Load Track to Deck 2 (Ctrl+Shift+O) to loadTrackToDeck(2)
+- Load Track to Deck 3 (enabled if 4 decks) to loadTrackToDeck(3)
+- Load Track to Deck 4 (enabled if 4 decks) to loadTrackToDeck(4)
+- Separator
+- Exit (Ctrl+Q) to Qt.quit()
 
-### 7.5 Track Drag (TrackDrag.qml)
-- Hold threshold: 12px movement before drag activates
-- Ghost follows finger (offset -24px Y)
-- Disables list flickable during drag
-- Drop delivers to deck/sampler/playlist via dynamic `Connections` waiter
+**Library Menu**:
+- Rescan Library (Ctrl+Shift+L) to Mixxx.Library.rescanLibrary()
+- Export Library to Mixxx.Library.exportLibrary()
+- Separator
+- Search Current View to librarySearchCurrentView
+- Search Tracks to librarySearchTracks
+- Separator
+- Create Playlist to libraryCreatePlaylist
+- Create Crate to libraryCreateCrate
 
-### 7.6 XYPad Touch (XYPad.qml)
-- Full-surface `MouseArea` / touch
-- Drag updates `currentX` (filter) and `currentY` (mix) in real-time
-- Snap mode: on release, animates back to center (0.5, 0)
-- Hold mode: latches position
-- Momentary: only active while touching
+**View Menu**:
+- Show Microphone to viewShowMicrophone
+- Show Vinyl Control to viewShowVinylControl
+- Show Preview Deck to viewShowPreviewDeck
+- Show Cover Art to viewShowCoverArt
+- Show Keywheel to viewShowKeywheel
+- Maximize Library to viewMaximizeLibrary
+- Separator
+- Show AutoDJ to viewShowAutoDJ
+- Full Screen to viewFullScreen
 
-### 7.7 Library Browse Knob (Library/+android/Control.qml)
-- `[Playlist]SelectTrackKnob` → `moveVertical(value)`
-- `[Library]MoveVertical/Up/Down` → `moveVertical(±1)`
-- Sidebar focus: `[Library]GoToItem` activates sidebar item
+**Options Menu**:
+- Vinyl Control submenu (enabled if vinylControlAvailable):
+  - Enable Vinyl 1-4 (each with enabled binding)
+- Enable Keyboard Shortcuts to optionsEnableKeyboardShortcuts
+- Enable Live Broadcasting to optionsEnableLiveBroadcasting
+- Separator
+- Preferences (Ctrl+P / Ctrl+,) to optionsPreferences
 
-### 7.8 Effect Knobs (EffectSlot.qml +android)
-- Parameter knobs in expanded view: horizontal ListView, non-interactive (knobs handle own touch)
-- Meta knob (always visible): `ControlMiniKnob` 40px, arcStart=Minimum
+**Help Menu**:
+- User Manual (external link) to helpUserManual
+- Keyboard Shortcuts to helpKeyboardShortcuts
+- Community Support to helpCommunitySupport
+- Translate to helpTranslate
+- Settings Directory to helpSettingsDirectory
+- Separator
+- About to helpAbout
 
-### 7.9 Sampler Pads (Sampler.qml)
-- Play button (40×40) + label + BPM
-- Gain knob (40×40, samplerColor) top-right
-- Right-click on play → cue_default
-- Drag from sampler row
-
----
-
-## 8. Waveform Display Options
-
-### 8.1 WaveformDisplay (WaveformDisplay.qml / Mixxx/Controls/WaveformDisplay.qml)
-- `MixxxControls.WaveformDisplay` with multiple renderers:
-  - **Simple**: single-color waveform, axes #a1a1a1a1
-  - **Filtered** (3-band): low=#2154D7 (blue), mid=#97632D (brown), high=#D5C2A2 (tan), gains from Config
-  - **Stacked**: same colors, stacked=true
-  - **HSV/RGB**: multi-color spectral
-- Active renderer controlled by `Mixxx.Config.waveformType`
-- Markers (WaveformRendererMarkRange):
-  - Loop: green #00b400, opacity 0.7, disabled #FFFFFF 0.6
-  - Intro: blue #2c5c9a, opacity 0.6, duration text after, white
-  - Outro: blue #2c5c9a, opacity 0.6, duration text before, white
-- Preroll/End-of-track: #ff8872 (coral)
-- Cursor: white line
-- Beat markers: lightGray (desktop) / #222222 (Android)
-- Zoom: `Mixxx.Config.waveformDefaultZoom`, smoothed 500ms animation
-- Frame rate: `Mixxx.Config.waveformFrameRate`
-
-### 8.2 WaveformOverview (WaveformOverview.qml / Mixxx/Controls/WaveformOverview.qml)
-- `MixxxControls.WaveformOverview` with markers layer
-- Markers (WaveformOverviewMarkerLayer):
-  - Hotcues: colored lines (hotcue_X_color), width 1px
-  - Cue point: red line, "CUE" label
-  - Loop: green range, "LOOP" label
-  - Intro/Outro: blue ranges, "IN"/"OUT" labels
-  - Visibility: `[Skin]show_intro_outro_cues`
-- Passthrough mode: switches to cover art display (crossfade 150ms)
-
-### 8.3 WaveDeckBar (WaveDeckBar.qml, 463 lines) — Android minimized deck view
-- Two deck cards side by side (Deck 1 cyan, Deck 2 orange)
-- Each card (96px high):
-  - Header: deck pill, track title, BPM, key color indicator
-  - Transport: play/pause (large), cue, sync, quantize, slip, keylock
-  - Tempo: BPM display, rate slider (±8%/±16%/±50%), nudge ◀/▶ buttons
-  - Time: elapsed/remaining toggle, progress bar
-  - Waveform: mini WaveformDisplay (full card width)
-  - Hotcues: 8 small buttons
-- Nudge buttons: triangular indicators, press→rate_temp_up/down=1
+**Developer Menu** (when developerMode):
+- Show Developer Tools to developerTools
+- Reload Skin to developerReloadSkin
+- Base Stats to developerBaseStats
+- Experiment Stats to developerExperimentStats
+- Debugger to developerDebugger
 
 ---
 
-## 9. Effects (Effects/ + Effects/+android/)
+## 6. Gestures
 
-### 9.1 EffectUnit (EffectUnit.qml desktop 157 lines, +android 187 lines)
-- **Desktop**: 3 slots side-by-side (width/3 each), expanded stacks vertically (160px vs 60px)
-- **Android** (+android/EffectUnit.qml): `stacked` when expanded OR width<480
-  - Expanded height 160px, stacked 132px, normal 116px
-- Each slot: `EffectSlot` (see below)
-- Right control panel (150px wide):
-  - Expand toggle (▲/▼), binds to `[EffectRack1_EffectUnitN],show_parameters`
-  - Preset button ("FX N") → opens `EffectChainPresetPopup`
-  - PFL toggle: `[EffectRack1_EffectUnitN],group_[Headphone]_enable`
-  - Mix mode (D/W): `[EffectRack1_EffectUnitN],mix_mode`
-  - Mix knob: `ControlKnob` 40px, binds to `[EffectRack1_EffectUnitN],mix`
-  - Assign buttons: `EffectAssignmentButtons` (FX1-FX4 or FX1-FX2 per channel)
+### 6.1 Touch Spinny (TouchSpinny.qml)
+- **Scratch**: PointerHandler on indicator, drag to scratch_position_enable=1, scratch_position = mapped angle
+- **Vinyl speed**: RPM from vinylcontrol_speed_type (default 33.33), calculates rps
+- **Ghost indicator**: Shows slip position when slip_enabled, opacity animated
+- **Release**: scratch_position_enable=0
 
-### 9.2 EffectSlot (EffectSlot.qml desktop, +android/EffectSlot.qml 193 lines)
-- **Selector area** (left, max 300px, 45% when expanded):
-  - Focus button (F): `[EffectRack1_EffectUnitN],focused_effect` (show/hide via show_focus)
-  - Enable button (ON): `[EffectRack1_EffectUnitN_EffectM],enabled`
-  - Effect selector: `EffectSelector` (ComboBox) → `[EffectRack1_EffectUnitN_EffectM],effectId`
-  - Meta knob: `ControlMiniKnob` 40px, `[EffectRack1_EffectUnitN_EffectM],meta`
-- **Parameters** (right, visible when expanded):
-  - Horizontal ListView, non-flickable (knobs handle touch)
-  - Up to 8 parameters per type (knob/button)
-  - Each: `ControlKnob` (55px) or `ControlButton` with label
+### 6.2 XYPad Touch
+- Drag on surface to updates currentX (filter LPF<->HPF) and currentY (dry<->wet)
+- Binds to [QuickEffectRack1_[ChannelN]],super1 and [EffectRack1_EffectUnit1],mix
+- Snap/Hold modes via buttons
 
-### 9.3 EffectSelector (EffectSelector.qml / +android/EffectSelector.qml)
-- ComboBox, model = `Mixxx.EffectsManager.visibleEffectsModel`
-- Syncs `currentIndex` to `slot.effectId`
-- `popupMaxItem: 8` (Android), desktop uses default
+### 6.3 Library Swipe/Scroll
+- Flickable in TrackList, SourceTree
+- Hardware knob: [Library],MoveVertical / [Playlist],SelectTrackKnob
+- TapHandler on Track (Android): left click selects, right click opens context menu
 
-### 9.4 EffectFocusButton (EffectFocusButton.qml / +android/EffectFocusButton.qml)
-- Button "F", highlight when focused
-- Left tap: set focus to this effect (or clear if already focused)
-- Right tap: clear focus
-- **Android**: left tap never clears (controllers need persistent focus)
+### 6.4 Long Press
+- Preferences button (MainWindow toolbar): press-and-hold to Mixxx.PreferencesDialog.show()
+- Pad buttons (HotcueAndStem): press-and-hold to opens HotcuePopup (color picker)
+- Effect buttons (FxStation): press-and-hold to shows edit icon to opens EffectSlotPresetMenu
+- Library tracks: long-press to queue in AutoDJ (SuggestionsStrip)
 
-### 9.5 EffectPresetMenuItem / Separator / Menu
-- `EffectPresetMenuItem`: MenuItem with checkmark, hover colors
-- `EffectPresetMenuSeparator`: double line (top #000000, bottom #333333)
-- `EffectSlotPresetMenu`: Menu for one slot
-  - Presets from `slot.parametersModel` (checkable, toggle visibility)
-  - Save snapshot, separator
-- `EffectChainPresetPopup`: Menu for unit
-  - Standard chain presets from `Mixxx.EffectsManager.standardChainPresetModel`
-  - Update/Rename/Delete preset actions
-
-### 9.6 EffectAssignmentButtons (EffectAssignmentButtons.qml, 37 lines)
-- Row of 2 or 4 buttons (showFourUnits from `[Skin]show_4effectunits`)
-- Each: `ControlButton` toggleable, binds to `[EffectRack1_EffectUnitM],group_[ChannelN]_enable`
-- Text: "FX1"/"FX2" or "FX1"/"2"/"3"/"4"
+### 6.5 Waveform Seek
+- MouseArea on WaveformOverview: click/drag to playposition = x/width
+- Touch on WaveformDisplay: same
 
 ---
 
-## 10. Sampler (Sampler.qml, 313 lines + SamplerRow.qml)
+## 7. Waveform Display Options
 
-- `SamplerRow`: RowLayout with 8 `Sampler` (repeater, samplerOffset 0 or 8)
-- Each `Sampler` (group `[SamplerN]`):
-  - Minimized height 50px, full 170px
-  - Summary bar (50px): embedded bg, gain knob (40×40, samplerColor), play button (40×40), label, BPM
-  - Play button: highlight when playing/latched, right-click → cue_default
-  - Expanded: waveform overview, hotcues, beatjump, loop, volume fader, FX assign
-  - Drag source: `DragHandler` with mime "mixxx/player"
-  - Color: track color darkened 2×, fallback backgroundColor
+### 7.1 WaveformDisplay (WaveformDisplay.qml)
+MixxxControls.WaveformDisplay filling parent, group binding
+- **Renderers** (selected by Mixxx.Config.waveformType):
+  - Simple: axesColor #a1a1a1a1
+  - Filtered: lowColor #2154D7, midColor #97632D, highColor #D5C2A2, gains from Config
+  - HSV: hue/saturation/value mapping
+  - RGB: three color channels
+  - Stacked: Filtered with stacked=true
+- **Markers** (WaveformRendererMarkRange):
+  - Loop: color #00b400, disabled #FFFFFF, opacity 0.7, controls loop_enabled/start/end
+  - Intro: color #2c5c9a, durationTextColor white, location after, controls intro_start/end
+  - Outro: color #2c5c9a, durationTextColor white, location before, controls outro_start/end
+- **End of Track**: WaveformRendererEndOfTrack color #ff8872, warningTime from Config
+- **Preroll**: WaveformRendererPreroll color #ff8872
+- **Zoom**: Binding to zoomControl (waveformDefaultZoom), SmoothedAnimation 500ms
+- **Frame Rate**: Mixxx.Config.waveformFrameRate
 
----
+### 7.2 WaveformOverview (Mixxx/Controls/WaveformOverview.qml)
+- Minute markers: Mixxx.Config.waveformOverviewMinuteMarkers
+- Normalized: Mixxx.Config.waveformOverviewNormalized
+- Renderer: Filtered (0) / HSV (1) / RGB (2) per waveformOverviewType
+- Stereo: Mixxx.Config.waveformOverviewStereo
+- Analyzer status text: "Ready to play, analyzing..." / "Finalizing..." / "Loading track..."
+- Interactive seek: MouseArea click/drag to playposition
 
-## 11. Desktop Differences Summary
-
-| Aspect | Android | Desktop |
-|---|---|---|
-| Theme | Sugar Night (OLED black, hot pink accent) | Sugar Classic (dark blue-gray, cyan accent) |
-| Window | Fullscreen, no titlebar | Windowed, native menu bar (macOS) or loaded MainMenuBar |
-| Toolbar | Same buttons, no native menu | MainMenuBar loaded when not fullscreen |
-| Library | Touch-optimized: larger rows (48px), swipe gestures, TrackDrag | Mouse/keyboard: smaller rows, click headers to sort, context menu on right-click |
-| Deck layout | Fixed 2-deck cards (WaveDeckBar) when minimized | Resizable, 2/4 deck, focus-based expansion |
-| Effects | Stacked slots on narrow, tabs for FX Station | Side-by-side slots, expand toggle, all visible |
-| Sampler | Not in main view (commented out in MainWindow) | Available via toolbar button |
-| XYPad | Floating overlay, full touch | Floating overlay, mouse drag |
-| Stems | Queue popup + toast | Same |
-| Microphone | Panel in mixer area | Same |
-| Settings | Popup, searchable sidebar | Same |
-| Waveform | Passthrough shows cover art | Same |
-| Orientation | OrientationToggleButton (3-position) | Not needed |
-| Controller learning | LearnController (Android-specific) | Not present |
-| App update | Banner at top | Same |
-| Developer tools | Button in toolbar | Menu item + button |
+### 7.3 Deck WaveformOverview (Deck/WaveformOverview.qml)
+- 50px height, radius 5, deckBackgroundColor
+- Embedded Skin.WaveformOverview
 
 ---
 
-## 12. Numbered Checklist of Distinct UI Features (150+ items)
+## 8. Theme Colors (Theme/Theme.qml + Theme/+android/Theme.qml)
 
-### Application & Window (1-8)
+| Property | Desktop Hex | Android Hex (if different) |
+|----------|-------------|---------------------------|
+| accentColor | #3a60be | #00e5ff |
+| backgroundColor | #1e1e20 | #0f1319 |
+| blue | #01dcfc | #00e5ff |
+| buttonActiveColor | white | #ffffff |
+| buttonDisableColor | lightGray (#747474) | #626262 |
+| buttonNormalColor | midGray (#696969) | — |
+| crossfaderBarColor | blue (#01dcfc) | — |
+| crossfaderOrientationColor | lightGray (#747474) | — |
+| darkGray | #0f0f0f | — |
+| darkGray2 | #2e2e2e | #14171f |
+| darkGray3 | #3F3F3F | #2a3648 |
+| darkGray4 | #202020 | — |
+| deckActiveColor | white | #ffffff |
+| deckBackgroundColor | darkGray (#0f0f0f) | #181a20 |
+| deckBeatjumpBackgroundColor | midGray3 (#626262) | — |
+| deckBeatjumpLabelColor | darkGray3 (#3F3F3F) | — |
+| deckEmptyCoverArt | darkGray3 (#3F3F3F) | — |
+| deckInfoBarBackgroundColor | #0e0e0e | — |
+| deckLineColor | darkGray2 (#2e2e2e) | — |
+| deckLoopBackgroundColor | midGray3 (#626262) | — |
+| deckLoopLabelColor | darkGray3 (#3F3F3F) | — |
+| deckTextColor | lightGray2 (#b0b0b0) | — |
+| effectColor | yellow (#fca001) | — |
+| effectUnitColor | red (#ea2a4e) | #ff4081 |
+| embeddedBackgroundColor | #a0000000 | — |
+| eqFxColor | red (#ea2a4e) | — |
+| eqHighColor | white | — |
+| eqLowColor | white | — |
+| eqMidColor | white | — |
+| fontFamily | "Open Sans" | "Open Sans" |
+| gainKnobColor | blue (#3a60be) | — |
+| green | #85c85b | — |
+| knobBackgroundColor | #262626 | — |
+| libraryPanelSplitterBackground | #1e1e1e | — |
+| libraryPanelSplitterHandle | #5f5f5f | — |
+| libraryPanelSplitterHandleActive | #7a7a7a | — |
+| lightGray | #747474 | — |
+| lightGray2 | #b0b0b0 | — |
+| lightGray3 | #939393 | — |
+| midGray | #696969 | — |
+| midGray2 | #676767 | — |
+| midGray3 | #626262 | — |
+| panelSplitterBackground | backgroundColor | — |
+| panelSplitterHandle | midGray | — |
+| panelSplitterHandleActive | lightGray2 | — |
+| pflActiveButtonColor | blue (#3a60be) | — |
+| red | #ea2a4e | — |
+| samplerColor | blue (#3a60be) | #00e676 |
+| sunkenBackgroundColor | #0C0C0C | — |
+| textColor | lightGray2 (#b0b0b0) | — |
+| textFontPixelSize | 14 | — |
+| toolbarActiveColor | white | — |
+| toolbarBackgroundColor | darkGray2 (#2e2e2e) | #1c202a |
+| volumeSliderBarColor | blue (#3a60be) | — |
+| warningColor | #7D3B3B | — |
+| waveformBeatColor | lightGray (#747474) | — |
+| waveformCursorColor | white | — |
+| waveformMarkerDefault | #ff7a01 | — |
+| waveformMarkerIntroOutroColor | #2c5c9a | — |
+| waveformMarkerLabel | rgba(255,255,255,0.8) | — |
+| waveformMarkerLoopColor | #00b400 | — |
+| waveformMarkerLoopColorDisabled | #FFFFFF | — |
+| waveformPostrollColor | midGray | — |
+| waveformPrerollColor | midGray | — |
+| white | #D9D9D9 | #ffffff |
+| yellow | #fca001 | — |
+
+**Android-specific additions (Theme/+android/Theme.qml)**:
+- Additional colors for deck accents: deck1 #00b0ff, deck2 #ff6d00, deck3 #00e676, deck4 #e040fb
+- Surface colors: #080b10, #1a222d, #0f131a, #181b22
+- Button colors: #303e4f borders, #90a4ae text
+
+---
+
+## 9. Android-Specific Differences Summary
+
+| Aspect | Desktop | Android |
+|--------|---------|---------|
+| Window | 1792x1008, windowed | Fullscreen, Screen.width/height |
+| Layout | Single SplitView with all regions | View modes (DJ/Wave/Lib/Ctl) via top bar |
+| Deck | Full component with all controls | Compact InfoBar + Spinny + Pad switcher |
+| Mixer | Central column with EQ+Volume | Mini mixer in DJ view, full in Wave view |
+| Library | Sidebar + TrackList in SplitView | Full-screen in Lib view, drawer in DJ view |
+| Waveform | 2-4 stacked over mixer | Full-screen in Wave view, mini in Deck cards |
+| FX Station | Separate window/panel | Integrated in DJ view (strip) or full-screen |
+| Settings | Popup centered | Full-screen or large popup |
+| Menus | Native MenuBar (macOS) or in-window | No MenuBar, all via Settings popup |
+| Touch | Mouse + limited touch | Full touch: spinny scratch, XYPad, swipe |
+| Colors | Dark theme (#1e1e20 bg) | Darker (#0f1319 bg), neon accents |
+| Orientation | OrientationToggleButton in Aux | Same, plus deck orientation in mixer |
+
+---
+
+## 10. Numbered Checklist of Distinct UI Features (150+ Items)
+
 1. ApplicationWindow with mobile/desktop detection
-2. Design resolution 1792×1008 (landscape) / 1008×1792 (portrait)
-3. Fullscreen on mobile, centered windowed on desktop
-4. Window clamping to screen (desktop, 3-pass timer)
-5. Skin switching via `applySkinTheme()` preserving Theme defaults
-6. OrientationToggleButton (3-position horizontal slider)
-7. Theme singleton with 80+ color/size/font properties
-8. Android-specific Theme override (Sugar Night OLED palette)
-
-### Toolbar (9-20)
-9. Toolbar height 36px, background `toolbarBackgroundColor`
-10. 4 Decks toggle button (checkable, visible height>515)
-11. Library maximize toggle (bound to `[Skin]show_maximized_library`)
-12. Effects toggle button
-13. XY Pad toggle button (opens floating overlay)
-14. Aux toggle button
-15. Sampler toggle button
-16. Edit Deck toggle button (enables deck edit mode)
-17. Developer Tools toggle (opens 640×480 window)
-18. Preferences button (gear icon, click=Settings popup, press-hold=native dialog)
-19. Toolbar button style: `Skin.Button` with activeColor=white, checkable
-20. Spacer item pushing Edit/Develop/Preferences right
-
-### Main Layout (21-35)
-21. Vertical SplitView with custom handle (3px→6px on hover, accent color on Android)
-22. Upper pane: Waveforms area (hidden when library maximized)
-23. 2-deck waveform split: Channel1 top 50%, Channel2 bottom 50%
-24. 4-deck waveform split: Channel3/1/2/4 each 25%
-25. Side fade gradients (125px) on waveform edges
-26. Lower pane: Decks + Mixer + Library
-27. Deck focus system (click toggles, narrow screen expands focused deck)
-28. Deck minimized state (80px) when library maximized
-29. SpringAnimation on deck height changes (damping 0.2, 500ms, spring 2)
-30. Mixer centered, fixed 190px width
-31. Library Loader (activates when space≥400px or maximized)
-32. Library anchor transitions (under mixer, or under deck3/4 in 4-deck maximize)
-33. FadeBehavior on library visibility
-34. Settings popup (modal, centered, max 1400×840, Gaussian blur overlay)
-35. XYPad overlay (floating, z=90, max 680×380, centered)
-
-### Deck Components (36-65)
-36. Deck layout driven by `itemModel` (editable via Edit mode)
-37. Info panel: track title, artist, BPM, key, cover art
-38. Play button (large, binds `[ChannelN],play`)
-39. Cue button (binds `[ChannelN],cue_default`)
-40. Toolbar with transport toggles
-41. HotcueAndStem: 8 hotcue buttons + stem separation button
-42. HotcueButton: numbered 1-8, color from hotcue, long-press→HotcuePopup
-43. HotcuePopup: 4-column color grid + Clear + Close
-44. Beatjump: 6 button pairs (1/2/4/8/16/32 beats forward/back)
-45. Loop: in/out, reloop, halve/double, beatloop 1/2/1/2/4/8/16/32
-46. WaveformOverview: full-width, markers, passthrough cover art toggle
-47. WaveformDisplay: main zoom, multiple renderers (Simple/Filtered/Stacked/HSV/RGB)
-48. Waveform renderers: gains from Config, colors per band
-49. Loop range marker (green, opacity 0.7)
-50. Intro/Outro range markers (blue, opacity 0.6, duration text)
-51. End-of-track / preroll warning (coral #ff8872)
-52. Beat markers (lightGray desktop / #222222 Android)
-53. Cursor line (white)
-54. Zoom control (smoothed 500ms, synchronized option)
-55. Deck drag-and-drop (mime "mixxx/player" + track URL)
-56. Deck toggleFocus signal
-57. Deck editMode property
-58. Deck minimized property
-59. Deck height binding to mixer/show4decks/maximizeLibrary
-60. Deck focus expansion on narrow screens (<1400px)
-61. Mixer shift animation on focus change (AnchorAnimation 200ms)
-62. Deck 3/4 Loaders (active when show4decks)
-63. Deck component types: column, row, info, waveformOverview, play, cue, toolbar, hotcueAndStem, beatjump, loop
-64. DelegateChooser for component rendering (Qt.labs.qmlmodels / QtQml.Models)
-65. Serialize/deserialize model for edit mode persistence
-
-### Mixer (66-80)
-66. Mixer width 190px, height = EQ + strips + crossfader
-67. EQ Column per deck (42px wide): High/Mid/Low knobs + QuickFX knob + effect selector
-68. EQ knob colors: High/Mid/Low=white, FX=red (desktop) / hot pink (Android)
-69. MixerColumn per deck: gain knob (top), VU meters (L/R), volume fader, PFL button
-69. Gain knob: 40×40, cyan/blue, `[ChannelN],pregain`
-70. VU meters: 4px wide, left/right keys
-71. Volume fader: full height, bar color `volumeSliderBarColor`, custom handle image
-72. PFL button: toggleable, active color `pflActiveButtonColor`
-73. Crossfader: horizontal, full width, custom background/handle images
-74. Crossfader orientation toggle (3-position slider)
-75. 4-deck mixer rearrangement (2×2 grid via states)
-76. Mixer height SpringAnimation (same as decks)
-77. Mixer visibility tied to `!maximizeLibrary`
-78. Mixer fade transition on show/hide
-79. Mixer columns anchored to EQ columns above
-80. Crossfader at bottom of mixer column
-
-### Library (81-115)
-81. Library fills bottom pane, Loader-activated
-82. SourceTree (sidebar): sections All Tracks, Playlists, Crates, Recordings, History, Streaming, Rekordbox, Engine DJ, Computer
-83. SourceTree columns: Cover, Title, Artist, Album, Year, BPM, Key, File Type, Bitrate
-84. Playlist columns add Position after Cover
-85. Auto-hide columns at narrow widths
-86. TrackList: TableView with HorizontalHeaderView
-87. Column header click → sort toggle (Asc/Desc)
-88. Row selection: single, keyboard navigation
-89. TrackList sort default: playlist order or date added newest
-90. Track delegate: alternating row colors, highlighted border
-91. Cell: Android uses sunkenBackgroundColor/backgroundColor alternation
-92. TrackDrag: touch hold→drag, ghost pill, drop on deck/sampler/playlist
-93. TrackDrag streaming: downloads first, then loads
-94. TrackMenu (context): Load to Deck 1-4, Sampler, Preview; Analyze/Download; Playlist browser
-95. PlaylistBrowser: searchable, checkable rows, accent left bar when checked
-96. Library Control: FocusedWidgetControl (Sidebar/LibraryView)
-97. Hardware browse knob → MoveVertical on track list
-98. Hardware browse press → GoToItem (activate sidebar or load track)
-99. Hardware SelectTrackKnob/Prev/Next → move vertical
-100. LoadSelectedTrackHandler per deck (instantiated from num_decks)
-101. StreamingHub: 5 platform tabs (Navidrome/URL/Radio, Audius, YouTube, SoundCloud, Spotify)
-102. StreamingHub tab bar: colored buttons with icons, 26px height
-103. StreamingHub content: Loader per platform (WebView, YouTubeView, etc.)
-104. StreamingControl: routes controller browse/load to active platform
-105. StreamingControl: MoveTab (browse press) cycles platforms
-106. StreamingControl: MoveResult (browse turn) navigates results
-107. StreamingControl: LoadResult (load press) loads highlighted track
-108. StreamingControl disables library Control while active
-109. Library search: TextInput in Settings sidebar filters categories
-110. PlaylistBrowser search: TextField filters playlists client-side
-111. SourceTree activation: click row → activate, toggle expand if has children
-112. SourceTree drive access: USB permission request for Rekordbox/Engine DJ/Computer
-113. SourceTree playlistColumns() adds position column
-114. TrackList autoHideWidth on columns
-115. TrackList moveSelectionVertical batches rapid knob turns
-
-### Popups & Overlays (116-140)
-116. HotcuePopup: color grid (4 cols) + Clear + Close
-117. BeatCounter: 4 rectangles showing beat-in-bar (downbeat distinct)
-118. QuickLoadDrawer: modal, deck switcher, source tabs (Local/Streaming), embedded Library/StreamingHub
-119. SamplePicker: pill buttons, preview, import/record/trim/delete
-120. FxStation: Scene/Isolate/X-Pad/Release sections, tabbed on compact, strip mode
-121. FxStation Scene: 17 effects in 4×4 grid, editable assignments, tempo sync + amount knobs
-122. FxStation Isolate: Low/Mid/High kill knobs + mode selector
-123. FxStation X-Pad: XYPad for sample triggering with SamplePicker
-124. FxStation Release: 3 effects, editable
-125. FxStation header: tempo display, close button
-126. XYPad: touch surface X=filter(LPF↔HPF), Y=mix(Dry↔Wet), Snap/Hold/Momentary modes
-127. XYPad state save/restore (filter, mix, routing, deck)
-128. XYPad routes EffectRack1_EffectUnit1 to target deck
-129. StemsOverlay: StemsQueuePopup + StemsToast
-130. StemsQueuePopup: status row (Pause/Resume, Cancel All, Clear Done) + job rows
-131. StemsQueue job rows: progress bar (running), stem icons (done), error (failed), Load Deck 1/2, Remove
-132. StemsToast: bottom-center, auto-dismiss 3s, green success / red error
-133. MicrophoneDuckingPanel: mode button (Off/Auto/Manual) + strength knob
-134. Settings popup: searchable sidebar + category content panes
-135. Settings categories: Interface, Decks, Library, Waveforms, Effects, Samplers, Recording, Broadcasting, MIDI, Controllers, Vinyl Control, Sound Hardware, Library Analysis, Library Metadata, Library Streaming, Privacy, About
-136. MainMenuBar (desktop): File, Library, View, Options, Developer, Help menus
-137. ApplicationMenuActions: all Action objects with configurable shortcuts
-138. ActionPopup: generic arrow popup (Left/Top/Right/Bottom) with shadow
-139. AppUpdateBanner: top bar when update available, Skip/Download/Install/Close
-140. AboutDialog: native MessageDialog with version/platform
-
-### Effects (141-155)
-141. EffectUnit: 3 slots, expand toggle (desktop side-by-side, Android stacked when narrow)
-142. EffectSlot: focus button (F), enable (ON), selector ComboBox, meta knob
-143. EffectSlot expanded: horizontal parameter list (knobs/buttons, up to 8 per type)
-144. EffectSelector: ComboBox synced to slot.effectId, visibleEffectsModel
-145. EffectFocusButton: "F" button, highlight when focused, left tap sets focus, right tap clears (Android: left never clears)
-146. EffectPresetMenuItem: checkable menu item with hover styling
-147. EffectPresetMenuSeparator: double-line separator
-148. EffectSlotPresetMenu: parameter visibility toggles + Save snapshot
-149. EffectChainPresetPopup: chain presets + Update/Rename/Delete
-150. EffectAssignmentButtons: 2 or 4 toggle buttons routing FX units to channels
-151. EffectUnit control panel: expand, preset, PFL, D/W, mix knob, assignments
-152. EffectUnit PFL toggle: `[EffectRack1_EffectUnitN],group_[Headphone]_enable`
-153. EffectUnit mix mode: `[EffectRack1_EffectUnitN],mix_mode`
-154. EffectUnit mix knob: `ControlKnob` binds `[EffectRack1_EffectUnitN],mix`
-155. EffectUnit preset button opens EffectChainPresetPopup
-
-### Sampler & Misc (156-165)
-156. SamplerRow: 2 rows × 8 samplers (offset 0 and 8)
-157. Sampler: minimized 50px (gain, play, label, BPM), expanded 170px (waveform, hotcues, beatjump, loop, volume, FX)
-158. Sampler play button: highlight when playing/latched, right-click→cue_default
-159. Sampler gain knob: 40×40, samplerColor
-160. Sampler drag source (mime "mixxx/player")
-161. Sampler color from track color darkened 2×
-162. PreviewDeck: placeholder (42 lines, "PreviewDeck placeholder")
-163. EmbeddedBackground: rounded rect, border deckBackgroundColor, color embeddedBackgroundColor
-164. SectionBackground: BorderImage with Theme.imgSectionBackground (borders 10px)
-165. SugarLogo: procedural donut record + "DJ SUGAR" wordmark, scalable, no assets
-
-### Controls & Primitives (166-185)
-166. Button (Skin.Button): checkable, highlight, activeColor, normalColor, icon support
-167. ControlButton: wraps ControlProxyButtonBehavior, binds group/key, toggleable
-168. ControlProxyButtonBehavior: press/hold/latch/power-window logic, primary/secondary actions
-169. ControlKnob: Knob + ControlProxy, double-tap reset
-170. ControlFader: Fader + ControlProxy, touch-area tap-to-seek + drag, double-tap reset
-171. Knob (Skin.Knob): SVG background (imgKnob), shadow (imgKnobShadow), arc indicator, HiDPI sourceSize
-172. Fader (Skin.Fader): background/handle images, margins, drop shadow on handle
-173. Slider (Skin.Slider): horizontal, markers, text input suffix, accent handle with glow
-174. ComboBox (Skin.ComboBox): styled popup, max 6-8 items, footer items, InnerShadow/DropShadow
-175. InputField: TextInput with drop/inner shadows, dark bg, white/red text
-176. ArrowText: Row with optional ◀/▶ triangles (drawn, not glyphs)
-177. FormButton: uppercase label, category colors (Action blue, Danger red), drop shadow
-178. ActionButton: same as FormButton, Category enum
-179. EditIcon: canvas-drawn pencil (14×14), click signal
-180. ControlMiniKnob: smaller Knob variant (used for meta, gain, etc.)
-181. HotcueButtonBehavior: press primary=activate, secondary=open popup, long-press→secondary
-182. IntroOutroButton: cue button with behavior, right-click secondary
-183. BeatCounter: 4 cells, beat_in_bar control
-184. MobileRecordButton: REC pill, blinking red dot when recording, confirmation popup on stop
-185. OrientationToggleButton: 3-position horizontal fader (0/1/2)
-
-### Waveform & Markers (186-195)
-186. WaveformDisplay (Mixxx.Controls): multi-renderer, zoom, frame rate
-187. WaveformOverview (Mixxx.Controls): overview with marker layer
-188. WaveformOverviewHotcueMarker: Shape line, hotcue color, position from track_samples
-189. WaveformOverviewMarker: Shape line, cue/loop/intro/outro, labels
-190. WaveformOverviewMarkerLayer: Repeater for hotcues + cue/loop/intro/outro markers
-191. WaveformOverview passthrough: crossfade to cover art (150ms)
-192. KeyColorIndicator: vertical split strip, colors from key palette, visual_key_distance
-193. DurationFormatter: singleton, modes Traditional/Seconds/Kilo/Hecto
-194. PlayerDropArea: (referenced, not found)
-195. Spinny: vinyl indicator + ghost (slip), rotation from rpm, scratch drag handler
-
----
-
-## 13. File Inventory (Key Files)
-
-| File | Lines | Purpose |
-|---|---|---|
-| main.qml | 269 | Application entry, window setup, skin loading |
-| MainWindow.qml | 749 | Main layout: toolbar, split view, decks, mixer, library, overlays |
-| OrientationToggleButton.qml | 71 | 3-position orientation slider |
-| Theme/Theme.qml | 88 | Desktop color/size/font singleton |
-| Theme/+android/Theme.qml | 122 | Android OLED theme + library colors |
-| Deck.qml | 924 | Dynamic deck layout, component model |
-| Deck/ (directory) | — | Play, Cue, Toolbar, HotcueAndStem, Beatjump, Loop, Info |
-| Mixer.qml | 302 | Mixer with EQ, channel strips, crossfader |
-| MixerColumn.qml | 81 | Single channel strip |
-| EqColumn.qml | 63 | EQ knobs + QuickFX + selector |
-| WaveformDisplay.qml | 360 | Main waveform, multi-renderer |
-| WaveformOverview.qml | 145 | Overview waveform + passthrough |
-| WaveDeckBar.qml | 463 | Android minimized deck cards |
-| Library.qml | — | Library root (loaded via Loader) |
-| Library/SourceTree.qml | 353 | Sidebar source tree (desktop) |
-| Library/+android/SourceTree.qml | 152 | Sidebar source tree (Android) |
-| Library/TrackList.qml | 470 | Track table (desktop) |
-| Library/+android/TrackList.qml | 953 | Track table (Android) |
-| Library/Cell.qml | 23 | Row background (Android) |
-| Library/Track.qml | 153 | Track drag/tap/context menu |
-| Library/TrackDrag.qml | 205 | Touch drag ghost + drop |
-| Library/TrackMenu.qml | 157 | Track context menu |
-| Library/PlaylistBrowser.qml | 213 | Playlist picker with search |
-| Library/Control.qml | 161 | Library controller bindings (desktop) |
-| Library/+android/Control.qml | 233 | Library controller bindings (Android) |
-| Library/ControlLoadSelectedTrackHandler.qml | 40 | Per-deck load handler |
-| Library/Streaming/StreamingHub.qml | 272 | 5-platform streaming browser |
-| Library/Streaming/StreamingControl.qml | 120 | Controller routing for streaming |
-| HotcuePopup.qml | 100 | Hotcue color picker + clear |
-| BeatCounter.qml | 41 | 4-cell beat indicator |
-| QuickLoadDrawer.qml | 206 | Modal load drawer with deck switch |
-| SamplePicker.qml | 650 | Sample browser with preview/import |
-| FxStation.qml | 1296 | FX Station (Scene/Isolate/X-Pad/Release) |
-| XYPad.qml | 563 | Touch XY pad for filter+mix |
-| StemsOverlay.qml | 139 | Stems queue popup + toast |
-| StemsQueue.qml | 204 | Stems job queue UI |
-| MicrophoneDuckingPanel.qml | 61 | Ducking mode + strength |
-| Settings.qml | 311 | Settings popup with categories |
-| MainMenuBar.qml | 187 | Desktop native menu bar |
-| ApplicationMenuActions.qml | 491 | All menu actions with shortcuts |
-| ActionPopup.qml | 100 | Generic arrow popup |
-| Effects/EffectUnit.qml | 157 | Effect unit (desktop) |
-| Effects/+android/EffectUnit.qml | 187 | Effect unit (Android, stacked) |
-| Effects/EffectSlot.qml | — | Effect slot (desktop) |
-| Effects/+android/EffectSlot.qml | 193 | Effect slot (Android) |
-| Effects/EffectSelector.qml | 35 | Effect picker ComboBox |
-| Effects/EffectFocusButton.qml | 40 | Focus button (desktop) |
-| Effects/+android/EffectFocusButton.qml | 42 | Focus button (Android) |
-| Effects/EffectPresetMenuItem.qml | 54 | Preset menu item |
-| Effects/EffectPresetMenuSeparator.qml | 28 | Preset menu separator |
-| Effects/EffectSlotPresetMenu.qml | 92 | Slot preset menu |
-| Effects/EffectChainPresetPopup.qml | 175 | Chain preset menu |
-| Effects/EffectAssignmentButtons.qml | 37 | FX unit → channel routing |
-| Sampler.qml | 313 | Single sampler slot |
-| SamplerRow.qml | 25 | 8-sampler row (×2) |
-| ControlButton.qml | 30 | Button + ControlProxy binding |
-| ControlKnob.qml | 21 | Knob + ControlProxy |
-| ControlFader.qml | 50 | Fader + touch area + ControlProxy |
-| HotcueButton.qml | 85 | Hotcue button + long-press popup |
-| IntroOutroButton.qml | 47 | Intro/Outro cue button |
-| Button.qml | — | Base Button (Skin.Button) |
-| FormButton.qml | 162 | Styled form button |
-| ActionButton.qml | 51 | Action button with categories |
-| ComboBox.qml | 232 | Styled ComboBox |
-| InputField.qml | 48 | Styled TextInput |
-| ArrowText.qml | 38 | Text with triangle arrows |
-| Slider.qml | 170 | Slider with markers + text input |
-| Knob.qml | 67 | SVG knob with arc |
-| Fader.qml | 60 | Image-based fader |
-| SectionBackground.qml | 15 | BorderImage section bg |
-| EmbeddedBackground.qml | 11 | Rounded embedded bg |
-| EditIcon.qml | 51 | Canvas pencil icon |
-| MobileRecordButton.qml | 148 | REC button with confirmation |
-| LearnController.qml | 305 | Android controller learning UI |
-| AboutDialog.qml | 9 | Native about dialog |
-| DeveloperToolsWindow.qml | 257 | Control inspector table |
-| AppUpdateBanner.qml | 94 | Update notification bar |
-| Mixxx/Controls/WaveformDisplay.qml | 7 | Thin wrapper |
-| Mixxx/Controls/WaveformOverview.qml | — | Overview wrapper |
-| Mixxx/Controls/WaveformOverviewHotcueMarker.qml | 77 | Hotcue marker line |
-| Mixxx/Controls/WaveformOverviewMarker.qml | 51 | Generic marker line |
-| Mixxx/Controls/WaveformOverviewMarkerLayer.qml | 336 | Marker layer repeater |
-| Mixxx/Controls/Spinny.qml | 215 | Vinyl spinny + ghost |
-| Mixxx/Controls/KeyColorIndicator.qml | 60 | Key color strip |
-| Mixxx/Controls/Slider.qml | 189 | Base Slider control |
-| Mixxx/Controls/Fader.qml | 46 | Base Fader control |
-| Mixxx/DurationFormatter.qml | 61 | Time formatting singleton |
+2. Design resolution 1792x1008 (desktop)
+3. Fullscreen on Android/iOS
+4. Theme singleton with 88 color/size properties
+5. Android Theme override with neon accents
+6. Skin switching via Settings to Interface
+7. MainWindow toolbar (36px) with 9 toggle buttons
+8. 4 Decks toggle (show/hide decks 3&4)
+9. Library toggle (maximize library panel)
+10. Effects toggle (show effect rack)
+11. XY Pad toggle (floating overlay)
+12. Aux toggle (show auxiliary units)
+13. Sampler toggle (show sampler row)
+14. Edit mode toggle (deck editing)
+15. Developer tools toggle
+16. Preferences button (click=Settings popup, hold=native dialog)
+17. Vertical SplitView (waveforms / mixer+decks+library)
+18. Horizontal SplitView handle (3 dots, animated)
+19. Waveform stack: 2-deck (50/50) or 4-deck (25% each)
+20. Deck1 waveform ([Channel1])
+21. Deck2 waveform ([Channel2])
+22. Deck3 waveform ([Channel3], 4-deck only)
+23. Deck3 waveform ([Channel4], 4-deck only)
+24. Side gradient fades on waveform edges
+25. Deck1 component ([Channel1], left of mixer)
+26. Deck2 component ([Channel2], right of mixer)
+27. Deck3 component ([Channel3], below deck1, 4-deck)
+28. Deck4 component ([Channel4], below deck2, 4-deck)
+29. Mixer component (center, 2 or 4 channels)
+30. Mixer EQ columns (High/Mid/Low + Filter per deck)
+31. Mixer volume faders (vertical, per deck)
+32. Mixer gain knobs (per deck)
+33. Mixer PFL buttons (per deck, toggleable)
+34. Library panel (Loader, conditional activation)
+35. Library SearchField (debounced 300ms)
+36. SuggestionsStrip (Up Next cards)
+37. Library SplitView (SourceTree | TrackList)
+38. SourceTree sidebar (playlists, crates, drives)
+39. TrackList table (sortable columns)
+40. Track columns: Cover, Title, Artist, BPM, Key, Duration, Year, Rating, Position
+41. OrientationToggleButton (3-position slider for crossfader/orientation)
+42. Deck PlayButton (cue_gotoandplay, green on Android)
+43. Deck CueButton (cue_default, orange on Android)
+44. Deck SyncButton (sync_enabled)
+45. Deck PitchDown/PitchUp buttons
+46. Deck Keylock toggle (24-color key display)
+47. Deck Rate fader (vertical)
+48. Deck Gain knob (pregain)
+49. Deck EQ High/Mid/Low knobs
+50. Deck Filter knob (super1)
+51. Deck Filter toggle button
+52. Deck PFL button
+53. Deck Volume fader
+54. Deck Crossfader (horizontal, Master)
+55. Desktop Spinny (140px, vinyl + tempo display)
+56. Android Spinny (adaptive 80-140px, groove rings, tempo box)
+57. TouchSpinny (scratch handler, ghost slip indicator)
+58. WaveformOverview (50px, interactive seek)
+59. InfoBar (gradient, cover art, track metadata cells)
+60. YouTube download progress bar (bottom gradient)
+61. Toolbar (Reverse, Beatgrid, Eject)
+62. BeatJump panel (size spinbox, backward/forward)
+63. Loop panel (size spinbox, In/Out/Recall, halve/double)
+64. TempoColumn (pitch buttons, key display, rate fader)
+65. HotcueAndStem desktop (8 hotcues 4x2 grid + 4 stem buttons)
+66. HotcueAndStem Android (3-mode pad switcher: Hotcue/Loop/Stem)
+67. Hotcue color popup (4-column grid + Clear)
+68. BeatgridPopup (align, 1/2x, 2x, shift L/R, reset)
+69. FXAssign row (4 effect units + Main mix + OrientationToggle)
+70. Android MainWindow view modes (DJ/Wave/Lib/Ctl)
+71. Android top bar (4 view buttons, configurable hidden items)
+72. Android DJ view (WaveDeckBar + mini mixer + transport)
+73. Android Wave view (full-screen waveform)
+74. Android Lib view (full-screen library)
+75. Android Ctl view (LearnController)
+76. Android bottom bar (Play, Sync, Cue, Load, FX, Sampler, Settings)
+77. WaveDeckBar (2 deck cards with transport, waveform, metadata)
+78. QuickLoadDrawer (deck target, Local/Streaming tabs)
+79. StreamingHub (SoundCloud, YouTube, Spotify, Subsonic, Custom URL)
+80. SamplePicker (sampler browser + preview + trim/import)
+81. FxStation (Scene/Isolate/X-Pad/Release sections)
+82. FxStation layout modes (strip/compact/full)
+83. Scene buttons (17 effects, editable mapping)
+84. Isolate dials (Low/Mid/High)
+85. X-Pad (embedded XYPad)
+86. Release buttons (3 effects)
+87. XYPad standalone (filter X, wet/dry Y, Snap/Hold, deck switcher)
+88. StemsOverlay (queue popup + toast notifications)
+89. StemsQueue (job list with progress, pause/resume/cancel/clear)
+90. MicrophoneDuckingPanel (Off/Auto/Manual + strength knob)
+91. Settings popup (sidebar categories + content stack)
+92. Settings: Interface (skin, top bar items, waveform, language)
+93. Settings: Controllers (USB status, cards, mapping editor, learning)
+94. Settings: Audio (device, routing graph, latency)
+95. Settings: Library (folders, analyze, cover art)
+96. Settings: Waveforms (15+ options: type, overview, gains, stems, caching)
+97. Settings: Pads & FX (Sampler banks A/B, Pad FX 1/2, Beat FX)
+98. Settings: Stems (Spleeter/HTDemucs download, measure, queue)
+99. Settings: Recording, Broadcast, AutoDJ, Skins, About
+100. MainMenuBar (File/Library/View/Options/Help/Developer)
+101. File: Load Deck 1-4, Exit
+102. Library: Rescan, Export, Search, Create Playlist/Crate
+103. View: Microphone, Vinyl, Preview, Cover Art, Keywheel, Maximize Lib, AutoDJ, Fullscreen
+104. Options: Vinyl 1-4, Keyboard Shortcuts, Live Broadcast, Preferences
+105. Help: Manual, Shortcuts, Community, Translate, Settings Dir, About
+106. Developer: Tools, Reload Skin, Stats, Debugger
+107. TouchSpinny scratch gesture (pointer drag to scratch_position)
+108. XYPad drag gesture (filter + wet/dry)
+109. Library flickable scroll (touch + hardware knob)
+110. Waveform seek (click/drag on overview)
+111. Long press: Preferences to native dialog
+112. Long press: Hotcue to color picker popup
+113. Long press: Effect button to preset menu
+114. Long press: Suggestion card to AutoDJ queue
+115. Hardware knob: Library MoveVertical
+116. Hardware knob: Playlist SelectTrackKnob
+117. Hardware button: Library GoToItem (load selected)
+118. Hardware button: Playlist LoadSelectedIntoFirstStopped
+119. Android storage access (Rekordbox/Engine DJ/Computer drives)
+120. Android USB permission requests
+121. Deck minimized state (80px height, compact info)
+122. Deck focus toggle (expands focused deck on narrow screens)
+123. SpringAnimation on deck height changes (500ms, damping 0.2)
+124. AnchorAnimation on mixer position (200ms)
+125. FadeBehavior on visibility changes (waveforms, mixer, library)
+126. Waveform renderer switching (Simple/Filtered/HSV/RGB/Stacked)
+127. Waveform markers: Cue (red), Intro/Outro (blue), Loop (green), Play (white)
+128. Waveform end-of-track warning (configurable time)
+129. Waveform preroll highlight
+130. Waveform analyzer status text
+131. Waveform minute markers toggle
+132. Waveform normalized/global gain toggle
+133. Waveform stereo/split stereo toggle
+134. Waveform zoom synchronization toggle
+135. Waveform beat grid alpha slider
+136. Waveform play marker position slider
+137. Waveform visual gains (All/Low/Mid/High)
+138. Waveform until-mark options (beats/time/align/text size)
+139. Waveform stem opacity/outline/reorder/display mode
+140. Waveform caching toggle
+141. Waveform generation with analysis toggle
+142. Sampler row (commented out in MainWindow)
+143. Effect row (commented out in MainWindow)
+144. EffectUnit component (3 slots + controls: expand, preset, PFL, D/W, mix knob)
+145. EffectSlot (selector, enable, meta knob, parameter list when expanded)
+146. EffectChainPresetPopup (standard presets + update/rename/save)
+147. EffectSlotPresetMenu (parameter visibility + save snapshot)
+148. LearnController (7 sections, 50+ mappable functions per deck)
+149. Controller learning flow (start/cancel, learned feedback)
+150. ApplicationMenuActions (all menu items with shortcuts)
+151. MobileApp.hiddenTopBarItems (persisted hidden top bar items)
+152. Deck card states (inactive/hotcue/stem via stem_count)
+153. Hotcue activator (press=activate, hold=color popup)
+154. Stem solo logic (mutual exclusion)
+155. Pad switcher tabs (Hotcue/Loop/Stem) on narrow Android decks
+156. BeatSizeSpinBoxBehavior (halve/double keys for beatjump/beatloop)
+157. ControlKnob with arcStart Minimum/Maximum variants
+158. ControlFader with live/snap modes
+159. ControlButton with toggleable/checkable states
+160. EmbeddedBackground (semi-transparent overlay)
+161. SectionBackground (section.svg image)
+162. SectionText (styled labels)
+163. Triangle shape component (for play/cue/reverse icons)
+164. EditIcon (pencil, shows on editable items)
+165. FadeBehavior (opacity animation on visible change)
+166. ColorPaletteComboBox (for hotcue/stem colors)
+167. RatioChoice (for aspect ratios)
+168. SpinBox (numeric input with arrows)
+169. FormButton (styled button for settings)
+170. InfoBubble (tooltips)
+171. ControllerCard (controller device representation)
+172. ControllerMappingLink (mapping info link)
+173. ControllerScreens (controller screen config)
+174. AudioEntity (audio device node)
+175. AudioEntityEdge (routing connection)
+176. AudioRouter (visual routing graph editor)
+177. AutoDJ settings panel
+178. Broadcast settings panel
+179. Recording settings panel
+180. StatsPerformance panel
+181. DefaultColorSelector (color picker)
+182. MixerEffect (effect rack item)
+183. Stems.js (stem name localization: Drums/Bass/Vocals/Other)
+184. DurationFormatter (time formatting: Traditional/Seconds/Kilo/Hecto)
+185. WaveformOverviewHotcueMarker (hotcue markers on overview)
+186. WaveformOverviewMarker (generic position marker)
+187. WaveformOverviewMarkerLayer (cue/intro/loop labels)
+188. KeyColorIndicator (camelot wheel color)
+189. PlayerDropArea (drag-drop track loading)
+170. ControlLoadSelectedTrackHandler (library to deck loading)
+171. TrackDrag (drag from library with track URL mime)
+172. TrackMenu (context menu for tracks)
+173. LibraryCell (track list cell with waveform preview, disabled)
+174. LibraryComponent.Track (base track component)
+175. LibraryComponent.Control (focus management)
+176. LibraryComponent.SourceTree (sidebar model)
+177. LibraryComponent.Browser (track list view)
+178. LibraryComponent.ControlLoadSelectedTrackHandler
+179. Streaming views: OnlineStreamView, SoundCloudView, YouTubeView, SpotifyView, SubsonicView, CustomUrlView, WebView
+180. StreamingControl (unified streaming UI)
+181. StreamingHub (tabbed streaming services)
+182. AboutDialog (version, credits, license)
+183. AppUpdateBanner / AppUpdateInstallPopup (auto-update UI)
+184. ActionButton / ActionPopup (contextual popups with arrow)
+185. InputField (styled text input)
+186. ArrowText (text with arrow indicator)
+187. SamplerRow (sampler bank UI, commented)
+188. EffectRow (effect rack UI, commented)
+189. AuxiliaryUnit (aux send with orientation + main mix + FX assign)
+190. ControlMiniKnob (small knob for gain/meta)
+191. VuMeter (vertical/horizontal level meter)
+192. EmbeddedText (styled text in embedded bg)
+193. PillButton (rounded button with accent)
+194. Card (settings card container)
+195. ModelRow (stem model download row)
+196. PadGrid (2x4 pad configuration grid)
+197. EffectSelector (effect type dropdown)
+198. EffectFocusButton (focus indicator)
+199. EffectPresetMenuItem / Separator (menu items)
+200. Settings Category base component
+201. ControllerManager integration (knownDevices, rescan)
+202. MobileLibrary integration (playlists, USB access)
+203. Mixxx.Stems integration (jobs, models, queue, toast)
+204. Mixxx.EffectsManager integration (units, slots, presets, catalogs)
+205. Mixxx.PlayerManager integration (players, bundled samples, fx station)
+206. Mixxx.Config integration (waveform, library, app settings)
+207. Mixxx.Application integration (menu shortcuts, developer mode)
+208. Mixxx.Core ready state handling
+209. Mixxx.ControllerLearning integration (mapping creation)
+210. Mixxx.MobileApp integration (Android top bar, hidden items)
+211. Mixxx.YouTube integration (deck download progress)
+212. Mixxx.Library integration (rescan, export, search)
+213. Mixxx.TrackListColumn / SQLColumns (library schema)
+214. Mixxx.WaveformDisplay / WaveformOverview types and options
+215. Mixxx.WaveformRenderer variants (Simple/Filtered/HSV/RGB/Stacked/MarkRange/EndOfTrack/Preroll)
+216. Mixxx.ControlProxy pattern (group/key binding with updateInterval)
+217. Mixxx.SpinnyPosition (vinyl position data)
+218. Mixxx.EffectUnitProxy / EffectSlotProxy (effect introspection)
+219. Mixxx.EffectSlotParametersModel (parameter list for UI)
+220. Mixxx.FxStation controls (scene/isolate/xpad/release)
+221. Mixxx.DurationFormatter (time display modes)
+222. Mixxx.TrackListColumn delegate system (DefaultDelegate)
+223. Mixxx.TrackListColumn fillSpan/autoHideWidth responsive columns
+224. QtQuick.Controls 2.12/2.15 (Popup, Menu, Button, Slider, etc.)
+225. QtQuick.Layouts (RowLayout, ColumnLayout, GridLayout, SplitView)
+226. QtQuick.Shapes (custom button icons: triangles, eject, etc.)
+227. Qt5Compat.GraphicalEffects (DropShadow, OpacityMask)
+228. Qt.labs.qmlmodels / QtQml.Models (DelegateChooser, Instantiator)
 
 ---
 
-## 14. Mixxx Control Keys Reference (Per Component)
-
-### Deck Controls ([ChannelN])
-| UI Element | Control Key |
-|---|---|
-| Play button | `play` |
-| Cue button | `cue_default` |
-| Sync button | `sync_enabled` |
-| Quantize button | `quantize` |
-| Slip button | `slip_enabled` |
-| Keylock button | `keylock` |
-| Rate fader | `rate` |
-| Rate temp up | `rate_temp_up` |
-| Rate temp down | `rate_temp_down` |
-| Beatjump 1/2/4/8/16/32 fwd | `beatjump_X_forward` |
-| Beatjump 1/2/4/8/16/32 back | `beatjump_X_backward` |
-| Loop in | `loop_in` |
-| Loop out | `loop_out` |
-| Reloop | `reloop_toggle` |
-| Beatloop 1/2/1/2/4/8/16/32 | `beatloop_X_toggle` |
-| Loop halve | `loop_halve` |
-| Loop double | `loop_double` |
-| Hotcue 1-8 activate | `hotcue_X_activate` |
-| Hotcue 1-8 color | `hotcue_X_color` |
-| Hotcue 1-8 status | `hotcue_X_status` |
-| Hotcue 1-8 position | `hotcue_X_position` |
-| Volume fader | `volume` |
-| Gain/trim knob | `pregain` |
-| EQ High | `parameter3` (group `[EqualizerRack1_[ChannelN]_Effect1]`) |
-| EQ Mid | `parameter2` (group `[EqualizerRack1_[ChannelN]_Effect1]`) |
-| EQ Low | `parameter1` (group `[EqualizerRack1_[ChannelN]_Effect1]`) |
-| Filter knob | `super1` (group `[QuickEffectRack1_[ChannelN]]`) |
-| PFL button | `pfl` |
-| BPM display | `bpm` |
-| Key display | `visual_key` |
-| Play position | `playposition` |
-| Duration | `duration` |
-| Track loaded | `track_loaded` |
-| Track samples | `track_samples` |
-| Cue point | `cue_point` |
-| Loop start | `loop_start_position` |
-| Loop end | `loop_end_position` |
-| Loop enabled | `loop_enabled` |
-| Intro start | `intro_start_position` |
-| Intro end | `intro_end_position` |
-| Outro start | `outro_start_position` |
-| Outro end | `outro_end_position` |
-
-### Mixer ([Master])
-| UI Element | Control Key |
-|---|---|
-| Crossfader | `crossfader` |
-| Crossfader orientation | (OrientationToggleButton, 3-position) |
-| Headphone mix | `headMix` |
-| Headphone gain | `headGain` |
-| Main gain | `gain` |
-| Microphone ducking mode | `talkoverDucking` (0=Off,1=Auto,2=Manual) |
-| Microphone duck strength | `duckStrength` |
-
-### Effects ([EffectRack1_EffectUnitN], [EffectRack1_EffectUnitN_EffectM])
-| UI Element | Control Key |
-|---|---|
-| Show parameters | `show_parameters` |
-| Effect M enable | `enabled` (slot group) |
-| Effect M selector | `effectId` (slot group) |
-| Effect M meta knob | `meta` (slot group) |
-| Effect M parameter K | `parameterK` (slot group) |
-| Unit mix mode | `mix_mode` |
-| Unit mix knob | `mix` |
-| Unit PFL | `group_[Headphone]_enable` |
-| Unit preset | `loaded_chain_preset` |
-| Focused effect | `focused_effect` |
-| Show focus | `show_focus` |
-| Channel assign | `group_[ChannelN]_enable` |
-
-### Library ([Library], [Playlist])
-| UI Element | Control Key |
-|---|---|
-| Browse vertical | `MoveVertical` |
-| Browse up | `MoveUp` |
-| Browse down | `MoveDown` |
-| GoToItem (activate/load) | `GoToItem` |
-| Load selected to deck | `LoadSelectedTrack` / `LoadSelectedTrackAndPlay` |
-| Load to first stopped | `LoadSelectedIntoFirstStopped` |
-| Select track knob | `SelectTrackKnob` |
-| Select prev/next | `SelectPrevTrack` / `SelectNextTrack` |
-
-### Sampler ([SamplerN])
-| UI Element | Control Key |
-|---|---|
-| Play | `cue_gotoandplay` |
-| Gain | `pregain` |
-| Volume | `volume` |
-| Cue (right-click) | `cue_default` |
-
-### Recording ([Recording])
-| UI Element | Control Key |
-|---|---|
-| Status | `status` |
-| Toggle recording | `toggle_recording` |
-
-### Application ([App])
-| UI Element | Control Key |
-|---|---|
-| Num decks | `num_decks` |
-| Num samplers | `num_samplers` |
-| Num preview decks | `num_preview_decks` |
-
-### Waveform ([Waveform])
-| UI Element | Control Key |
-|---|---|
-| Overview type | `WaveformOverviewType` |
-
-### Skin ([Skin])
-| UI Element | Control Key |
-|---|---|
-| Show maximized library | `show_maximized_library` |
-| Show 4 effect units | `show_4effectunits` |
-| Show intro/outro cues | `show_intro_outro_cues` |
-
----
-
-## 15. Android-Specific Behaviours
-
-1. **Theme**: Sugar Night (true black #000000, hot pink #ff4fa8 accent, electric violet #7c5cff active)
-2. **Library rows**: 48px height, alternating sunkenBackgroundColor/backgroundColor, accent border on highlight
-3. **TrackDrag**: Touch hold (12px threshold) → ghost pill → drop on deck/sampler/playlist
-4. **Hotcue long-press**: TapHandler with DragThreshold → opens HotcuePopup
-5. **Fader touch**: Full-track MouseArea maps touch position to value
-6. **EffectUnit stacked**: When expanded OR width<480, slots stack vertically
-7. **EffectFocusButton**: Left tap never clears focus (controller compatibility)
-8. **StreamingHub**: 5 tabs, hardware browse/load routed to active platform
-9. **WaveDeckBar**: Minimized deck cards (96px) with full transport + mini waveform
-10. **OrientationToggleButton**: 3-position slider for portrait/landscape/auto
-11. **LearnController**: Full controller mapping UI (transport, tempo, hotcues, loops, mixer, library, FX Station, main)
-12. **AppUpdateBanner**: Top bar with Skip/Download/Install/Close
-13. **No native menu bar**: MainMenuBar only loaded on desktop when not fullscreen
-14. **Settings search**: TextInput in sidebar filters categories in real-time
-15. **PlaylistBrowser search**: Client-side filter when >6 playlists
-16. **StemsQueuePopup**: Modal with job list, progress, stem icons, load/cancel buttons
-17. **StemsToast**: Auto-dismiss bottom toast for separation complete/error
-18. **SamplePicker**: Pill buttons, preview via PreviewDeck or main mix, trim/import/record
-19. **XYPad**: Floating overlay, Snap/Hold/Momentary, state save/restore
-20. **MobileRecordButton**: Blinking REC, confirmation popup before stop
-
----
-
-## 16. Desktop-Specific Behaviours
-
-1. **Theme**: Sugar Classic (dark blue-gray #1e1e20, cyan #01dcfc accent)
-2. **Native menu bar**: MainMenuBar loaded on macOS or when not fullscreen
-3. **Window management**: Centered, clamped to screen, min 680×300
-4. **Library rows**: Smaller, clickable column headers for sorting
-5. **Context menus**: Right-click on tracks, headers
-6. **EffectUnit**: Side-by-side slots, expand toggles vertical stack
-7. **EffectFocusButton**: Left tap toggles focus, right tap clears
-8. **Sampler row**: Available via toolbar (commented in MainWindow but present)
-9. **Developer Tools**: Menu item + toolbar button
-10. **Gaussian blur**: Settings overlay uses blur when hardware acceleration available
-11. **Keyboard shortcuts**: Configurable via ApplicationMenuActions
-12. **Multi-monitor**: Window clamping to screen with titlebar reachable
-
----
-
-## 17. Component Hierarchy Summary
-
-```
-ApplicationWindow (main.qml)
-├── MainWindow (skin root)
-│   ├── Toolbar (36px)
-│   │   ├── 4 Decks, Library, Effects, XY, Aux, Sampler, Edit, Develop, Preferences
-│   ├── SplitView (vertical)
-│   │   ├── Waveforms pane
-│   │   │   ├── Deck3 WaveformDisplay (4-deck)
-│   │   │   ├── Deck1 WaveformDisplay
-│   │   │   ├── Deck2 WaveformDisplay
-│   │   │   └── Deck4 WaveformDisplay (4-deck)
-│   │   └── Decks+Mixer+Library pane
-│   │       ├── Deck1 (left)
-│   │       ├── Mixer (center, 190px)
-│   │       │   ├── EQ Columns (×2 or ×4)
-│   │       │   ├── MixerColumns (×2 or ×4)
-│   │       │   └── Crossfader
-│   │       ├── Deck2 (right)
-│   │       ├── Deck3 (under Deck1, 4-deck)
-│   │       ├── Deck4 (under Deck2, 4-deck)
-│   │       └── Library (bottom, Loader)
-│   ├── Settings Popup
-│   └── XYPad Overlay
-├── OrientationToggleButton
-└── Theme Singleton
-```
-
----
-
-*End of specification. Total checklist items: 195+*
+Total items: 228 distinct UI features catalogued

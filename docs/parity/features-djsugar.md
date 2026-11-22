@@ -1,4 +1,5 @@
 # DJ Sugar (Mixxx Fork) Feature Parity List
+\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 Exhaustive inventory of every non-UI feature, control, preference, effect, library capability, and DJ-Sugar-specific addition. Source: `/home/ubuntu/djsugar` (C++/Qt, read-only fork). Target: Rust rewrite.
 
@@ -7,7 +8,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 ## 1. ENGINE CORE
 
 ### 1.1 Engine Architecture
-- **EngineBuffer**: Triple-buffered audio pipeline (input → process → output)
+- **EngineBuffer**: Triple-buffered audio pipeline (input to process to output)
 - **EngineWorkerScheduler**: Thread pool for audio callback work stealing
 - **EngineMixer**: 4-deck + sampler + aux + master + booth + record + broadcast mixing
 - **ChannelMixer**: Per-channel gain, EQ, filter, fader, crossfader
@@ -268,8 +269,6 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 #### 3.4.7 Lyrics & Karaoke
 - **Lyrics tab**: Read .lrc files, ID3 USLT, MP4 ©lyr, Vorbis COMMENT
 - **Find lyrics**: LRCLIB API (synced + plain)
-- **Transcribe**: Whisper.cpp integration (local, offline) — write timed lyrics
-- **Time Words**: Whisper word-level timestamps
 - **Waveform lyrics**: Each word at its time, steady on whole pixels
 - **Karaoke page**: Web page for TV/second display
 - **Karaoke screen**: Word fill, count-in, vocals slider
@@ -323,7 +322,6 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
   - `show_itunes` / `show_rekordbox` / `show_serato` / `show_traktor` / `show_engine` / `show_djay` / `show_youtube` / `show_soundcloud` / `show_spotify`
   - `youtube_api_key`, `soundcloud_client_id`, `spotify_client_id`
   - `lyrics_sources` (LRCLIB, Genius, local, transcribe)
-  - `transcribe_model` (whisper-tiny/base/small/medium/large)
   - `stem_separation_model` (spleeter/htdemucs, 4/6-stem)
   - `auto_stem_separation` (on import / on demand / never)
   - `sample_bank_path`, `bundled_samples_enabled`
@@ -695,7 +693,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 ## 16. SCRIPTING / EXTENSIBILITY
 
 ### 16.1 Controller Scripting (src/controllers/scripting/)
-- **QuickJS** (legacy) → **djsugar-js** (Rust-based, current)
+- **QuickJS** (legacy) to **djsugar-js** (Rust-based, current)
 - **djsugar-js**: Lexer, parser, syntax tree, bytecode VM
 - **Mod System**: Load order, dependencies, settings traceability
 - **API**: Deck control, mixer, effects, library, notifications
@@ -710,7 +708,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 - **AndroidMicCapture**: AudioRecord for mic input
 - **AndroidUSBAudioDevice**: USB Host API for audio interfaces
 - **AndroidKickGrid**: Lightweight beat grid for mobile
-- **JNI Bridge**: Java/Kotlin ↔ C++ (YouTube download, Spotify, permissions)
+- **JNI Bridge**: Java/Kotlin <-> C++ (YouTube download, Spotify, permissions)
 - **Foreground Service**: Background audio playback
 - **MediaSession**: Lock screen controls, Bluetooth media buttons
 - **Storage Access Framework**: Scoped storage for music folder
@@ -726,9 +724,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 | 3 | SoundCloud Streaming | src/widget/findonwebmenusoundcloud.cpp | SoundCloud search and streaming |
 | 4 | Spotify Streaming | lib/spotify-bridge/ | Spotify Premium streaming via librespot, web login, offline sync |
 | 5 | Stem Separation | src/stems/ | Spleeter/HT-Demucs ONNX inference, 4/6-stem, batch + on-demand, .stem.mp4 write |
-| 6 | Lyrics System | src/library/youtube/, track/ | LRC/ID3/LRCLIB/Genius/Whisper transcription, word timestamps, waveform lyrics |
 | 7 | Karaoke Mode | (QML + engine) | Second display web page, word fill, count-in, vocals slider |
-| 8 | Transcribe (Whisper.cpp) | track/ | Local offline speech-to-text for lyrics generation |
 | 9 | SponsorBlock Integration | src/library/youtube/sponsorblockcontroller.cpp | Skip YouTube intros/outros/ads/sponsors |
 | 10 | Bundled Sample Pack | src/library/samples/bundledsamples.cpp | 17 synthesized one-shots/FX (kick, snare, clap, hats, 808, crash, airhorn, riser, downlifter, sub_drop, noise_sweep, vinyl_stop, siren) |
 | 11 | Sample Editor | src/library/samples/sampleeditor.cpp | Trim, normalize, fade, loop points, reverse |
@@ -760,13 +756,11 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 | 37 | Companion Stem Files | src/stems/stemcompanion.cpp | .stem.json metadata sidecar |
 | 38 | LRCLIB Lyrics Fetch | src/library/youtube/ | Synced + plain lyrics from LRCLIB API |
 | 39 | Genius Lyrics Fetch | (QML) | Lyrics from Genius API |
-| 40 | Whisper Word Timestamps | track/ | Per-word timing for karaoke |
 | 41 | Karaoke Web Page | (QML) | TV/second display via local web server |
 | 42 | Karaoke Count-in | (QML) | Visual count-in before lyrics start |
 | 43 | Karaoke Vocals Slider | (QML) | Vocal level control on karaoke screen |
 | 44 | Player Mode Lyrics | (QML) | Large lyrics view with favorites heart |
-| 45 | Find Lyrics Menu | (QML) | Context menu → Find lyrics (LRCLIB) |
-| 46 | Transcribe Menu | (QML) | Context menu → Transcribe (Whisper) |
+| 45 | Find Lyrics Menu | (QML) | Context menu to Find lyrics (LRCLIB) |
 | 47 | Phrase Flags on Waveform | waveform/ | Visual phrase boundary markers |
 | 48 | Leading Deck Phrases | waveform/ | Show next deck's phrases on current deck |
 | 49 | 3-Band Waveform Layering | waveform/ | Layer/scale bands like rekordbox |
@@ -1089,9 +1083,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 363. SoundCloud streaming
 364. Spotify streaming (librespot)
 365. Stem separation (Spleeter/HT-Demucs)
-366. Lyrics system (LRC/ID3/LRCLIB/Genius/Whisper)
 367. Karaoke mode (web page)
-368. Whisper.cpp transcription
 369. SponsorBlock integration
 370. Bundled sample pack (17 samples)
 371. Sample editor
@@ -1142,8 +1134,6 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 410. ID3 USLT / MP4 ©lyr / Vorbis COMMENT
 411. LRCLIB API (synced + plain)
 412. Genius API
-413. Whisper transcription (local)
-414. Whisper word timestamps
 415. Waveform lyrics (word-level)
 416. Karaoke web page (TV)
 417. Karaoke word fill
@@ -1151,7 +1141,6 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 419. Karaoke vocals slider
 420. Player mode lyrics (large)
 421. Find lyrics menu
-422. Transcribe menu
 423. Favorites heart
 
 ### AutoDJ Smart (10)
@@ -1285,7 +1274,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 537. MIDI (USB/BLE/RTP/virtual)
 538. HID (NI/Pioneer/Denon/Numark/Reloop/Hercules/etc.)
 539. Keyboard QWERTY
-540. Scripting (QuickJS → djsugar-js)
+540. Scripting (QuickJS to djsugar-js)
 541. djsugar-js parser/lexer/syntax tree/VM
 542. Mod system (load order, deps, settings trace)
 543. 100+ bundled mappings
@@ -1387,7 +1376,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 797. AndroidMicCapture (AudioRecord)
 798. AndroidUSBAudioDevice (USB Host API)
 799. AndroidKickGrid (lightweight beat grid)
-800. JNI Bridge (Java/Kotlin ↔ C++)
+800. JNI Bridge (Java/Kotlin <-> C++)
 801. Foreground Service (background audio)
 802. MediaSession (lock screen, BT media buttons)
 803. Storage Access Framework (scoped storage)
@@ -1404,9 +1393,7 @@ Exhaustive inventory of every non-UI feature, control, preference, effect, libra
 3. **Spotify Streaming (librespot)** — Premium streaming, web login (djsugar://), offline sync
 4. **SoundCloud Streaming** — Search and streaming via SoundCloud API
 5. **Stem Separation (Spleeter/HT-Demucs ONNX)** — 4/6-stem, batch + on-demand, GPU acceleration
-6. **Lyrics System (Multi-source)** — LRC, ID3, LRCLIB, Genius, Whisper transcription
 7. **Karaoke Mode** — Second display web page, word fill, count-in, vocals slider
-8. **Whisper.cpp Transcription** — Local offline speech-to-text for lyrics generation
 9. **SponsorBlock Integration** — Skip YouTube intros/outros/ads/sponsors automatically
 10. **Bundled Sample Pack** — 17 synthesized one-shots/FX (kick, snare, clap, hats, 808, crash, airhorn, riser, downlifter, sub_drop, noise_sweep, vinyl_stop, siren)
 11. **Sample Editor** — Trim, normalize, fade, loop points, reverse

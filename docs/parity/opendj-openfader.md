@@ -1,4 +1,5 @@
 # OpenDJ and OpenFadeR Feature Parity List
+\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 This document enumerates every feature, quality-of-life detail, and capability of OpenDJ and OpenFadeR based on source code analysis, READMEs, changelogs, and documentation. Items are grouped by category. Each item cites its source file or URL.
 
@@ -291,7 +292,7 @@ This document enumerates every feature, quality-of-life detail, and capability o
 | 233 | Backup/Export/Sync library | crates/app/ui/usb_export.slint | ui/device.slint (DeviceWindow) |
 | 234 | USB export (Pioneer/Engine DJ formats) | crates/app/ui/usb_export.slint | ui/device-export.slint |
 | 235 | Sync Manager (auto-sync playlists to device) | — | ui/device-export.slint (SyncPage) |
-| 236 | Cue sync (device ↔ collection) | — | ui/docs/backup-export-sync.md |
+| 236 | Cue sync (device <-> collection) | — | ui/docs/backup-export-sync.md |
 | 237 | Device backup/restore | — | ui/device-backup.slint |
 | 238 | Collection backup (with/without music) | crates/app/ui/checklist.slint | ui/docs/backup-export-sync.md |
 

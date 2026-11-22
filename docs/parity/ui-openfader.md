@@ -1,4 +1,5 @@
 # OpenFadeR UI Specification (Screen-by-Screen)
+\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader/ui/*.slint` (Slint UI files) and supporting Rust logic. Every screen, region, panel, control, popup, menu, gesture, color/size token is documented.
 
@@ -6,7 +7,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 1. Global UI Structure
 
-### 1.1 Main Window (`src/main.rs` → `app::run` → `ui/app.slint`)
+### 1.1 Main Window (`src/main.rs` to `app::run` to `ui/app.slint`)
 - **Window**: `MainWindow` — full-screen or resizable, no title bar on Windows
 - **Background**: `Theme.bg`
 - **Root**: `VerticalLayout`
@@ -24,7 +25,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
   - Controller status (name + link)
   - Audio device status
 
-### 1.3 Layout Profiles (`theme.slint` → `layout-profile`)
+### 1.3 Layout Profiles (`theme.slint` to `layout-profile`)
 | Profile | Value | Description |
 |---------|-------|-------------|
 | Desktop | 0 | Standard desktop UI, mouse/keyboard, compact controls |
@@ -35,7 +36,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 2. Workspace: LIBRARY Mode (Desktop Profile)
 
-### 2.1 Layout (`ui/browser.slint` → `Browser` component)
+### 2.1 Layout (`ui/browser.slint` to `Browser` component)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ GLOBAL BAR                                                          │
@@ -54,10 +55,10 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
   - Files view: Folder, Drive, Pinned folder, Cloud drive
 - **Indicators**: separator lines, stage badge (Inbox/Triage/Collection), track count, color dot, icon (crate/star/heart/flame/bolt/moon/sun/leaf)
 - **Interactions**:
-  - Click → select, show tracks in center
-  - Double-click playlist → rename (if editable)
-  - Right-click → context menu (New playlist/crate, Rename, Delete, Import, Analyze All, Make lists mine)
-  - Drag tracks onto folder → add to crate/playlist
+  - Click to select, show tracks in center
+  - Double-click playlist to rename (if editable)
+  - Right-click to context menu (New playlist/crate, Rename, Delete, Import, Analyze All, Make lists mine)
+  - Drag tracks onto folder to add to crate/playlist
   - Chevron expand/collapse
 
 ### 2.3 Filter Bar (`ui/filters.slint` — not present; OpenFadeR uses palette columns instead)
@@ -75,10 +76,10 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
   - Key match: green highlight
   - Mini waveform: white, colored by list palette
 - **Interactions**:
-  - Click → select
-  - Double-click → load to active deck
-  - Right-click → track menu (`TrackMenu`)
-  - Drag → deck, palette column, device, export
+  - Click to select
+  - Double-click to load to active deck
+  - Right-click to track menu (`TrackMenu`)
+  - Drag to deck, palette column, device, export
   - Sort: click header (single column)
 
 ### 2.5 Track Menu (`ui/track-menu.slint`)
@@ -87,9 +88,9 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ### 2.6 Palette Columns (`ui/browser-palette.slint`) — right sidebar replacement
 - **Component**: `PaletteColumn` (slot 0 = TAG LIST, slots 1-3 = user playlists)
-- **Header**: name (click → select in tree, double-click → rename, chevron → pick playlist)
+- **Header**: name (click to select in tree, double-click to rename, chevron to pick playlist)
 - **DropArea**: accepts tracks from table / other palettes, playlists from tree
-- **Rows**: simple text list, click → select in table, drag → reorder
+- **Rows**: simple text list, click to select in table, drag to reorder
 - **Context menu** (right-click row): Remove, Move up/down, Play, Load to deck
 
 ### 2.7 Side Panel Tabs (`ui/browser.slint` imports)
@@ -123,7 +124,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Stage Deck (`ui/stage/deck.slint` → `StageDeck`)
+### 3.2 Stage Deck (`ui/stage/deck.slint` to `StageDeck`)
 - **4 Styles** (`Theme.stage-deck`):
   0. **Performance** (`ui/stage/deck-performance.slint`): Waveform top, pads middle, jog bottom, transport
   1. **Turntable** (`ui/stage/deck-turntable.slint`): Large jog center, waveform ring, pads around
@@ -183,7 +184,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
   - Phrase editor: start/end time, type dropdown, character dropdown
 - **Grid Tools** (`GridTools`):
   - BPM display + edit, ×2 / ÷2 buttons
-  - Shift grid: ← / → (nudge), Tap button
+  - Shift grid: <- / to (nudge), Tap button
   - Range: WHOLE / FROM HERE selector
   - Analysis Lock: lock icon (prevents re-analysis)
   - Undo / Redo buttons
@@ -203,7 +204,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 5. Workspace: VIDEO Mode
 
-### 5.1 Layout (`ui/video.slint` → `VideoState` global + `VideoView`)
+### 5.1 Layout (`ui/video.slint` to `VideoState` global + `VideoView`)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ GLOBAL BAR (mode=VIDEO)                                             │
@@ -222,7 +223,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 ### 5.2 Video Output Window (`VideoWindow`)
 - **Window**: 960×540 preferred, separate monitor/projector
 - **Content**: `VideoOutput` — master frame + overlay (text/image)
-- **Double-click** → toggle fullscreen
+- **Double-click** to toggle fullscreen
 - **Overlay**: mode 0=Text (centered, sized), 1=Image (contain, centered)
 - **Opacity/Size** sliders
 
@@ -230,7 +231,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 6. Workspace: LIGHTING Mode
 
-### 6.1 Layout (`ui/lighting.slint` → `LightingState` global + `LightingView`)
+### 6.1 Layout (`ui/lighting.slint` to `LightingState` global + `LightingView`)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ GLOBAL BAR (mode=LIGHTING)                                          │
@@ -254,14 +255,14 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 ### 6.3 Patch List (`PatchRow`)
 - **Per fixture**: color swatch, name, universe spinbox, address spinbox, remove button
 - **Conflict** highlighted in red
-- **Add fixture** → picks `profile` from built-in + user profiles (`fixtures-dir`)
+- **Add fixture** to picks `profile` from built-in + user profiles (`fixtures-dir`)
 
 ---
 
 ## 7. Deck Components (Shared)
 
 ### 7.1 Deck Header (`ui/deck-header.slint`)
-- **Jacket** (`Jacket`): cover art, click → load, shows stem isolation badges
+- **Jacket** (`Jacket`): cover art, click to load, shows stem isolation badges
 - **Title/Artist**: `DeckTitle` — track title, artist, album (if known)
 - **Times** (`DeckTimes`): elapsed / remaining, BPM, key (Camelot/Note), sync rate
 - **Sync Cluster** (`SyncCluster`): MASTER, SYNC, KEY SYNC chips
@@ -279,7 +280,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ### 7.3 Deck Controls (`ui/deck-controls.slint`)
 - **TempoColumn**: tempo fader (vertical), range chip (±6/10/16/25/50/100%), key lock, sync, master tempo
-- **LoopBlock**: In/Out, size, halve/double, move ←/→, reloop
+- **LoopBlock**: In/Out, size, halve/double, move <-/->, reloop
 - **RingColumn**: jog wheel (`JogWheel` touch-sensitive), play/pause center, cue button
 - **RingButton**: circular buttons for transport, cue, hot cues
 - **PadGrid** (`ui/pads.slint`): 8 pads, modes 0-11+ (Hot Cue, Pad FX, Slicer, Sampler, Sequencer, Stems, Plugin)
@@ -309,7 +310,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 9. Sampler & Groove Box
 
-### 9.1 Sampler (`ui/sampler.slint` → `GrooveDeckView` + `GrooveState`)
+### 9.1 Sampler (`ui/sampler.slint` to `GrooveDeckView` + `GrooveState`)
 - **8 slots per deck** (2 banks A/B), `GrooveDeckView` per deck
 - **DrumSlotView**: pad, state (empty/loaded/playing), play mode, level
 - **Modes**: Oneshot, Hold, Stutter, Loop
@@ -328,62 +329,62 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 10. Popups & Dialogs
 
-### 10.1 Device Window (`ui/device.slint` → `DeviceWindow`)
+### 10.1 Device Window (`ui/device.slint` to `DeviceWindow`)
 - **DialogFrame**: 900×780 (desktop), full-screen (touch)
 - **Tabs** (SegmentedChips/Dropdown): DEVICES, EXPORT, SYNC MANAGER, BACKUPS
 - **Progress bar** at bottom when busy
 
-### 10.2 DEVICES Tab (`ui/device-devices.slint` → `DevicesPage`)
+### 10.2 DEVICES Tab (`ui/device-devices.slint` to `DevicesPage`)
 - **Device list**: `DeviceItem` (name, icon, formats, status, capacity)
 - **Actions**: Format (opens `DeviceFormat`), Backup, Restore, Eject
 - **Format options** per device: Pioneer Device Library, OneLibrary, Engine DJ
 - **Device preview** (`DevicePreview`): shows what write will do (add/update/blocked tracks)
 
-### 10.3 EXPORT Tab (`ui/device-export.slint` → `ExportPage`)
+### 10.3 EXPORT Tab (`ui/device-export.slint` to `ExportPage`)
 - **Device/folder picker**: dropdown devices + folder text field
 - **Format chips**: one per library format device supports (dot = already on device)
 - **Playlist picker**: `PickList` (checklist of playlists, none = everything)
 - **EXPORT button**: starts write, shows `DevicePreview` first
 
-### 10.4 SYNC MANAGER Tab (`ui/device-export.slint` → `SyncPage`)
+### 10.4 SYNC MANAGER Tab (`ui/device-export.slint` to `SyncPage`)
 - **Toggle**: "Synchronize playlists with [device]"
 - **Format chips** (same as Export)
 - **Playlist checklist**: `PickList` (playlists to keep in sync)
 - **SYNC NOW** button
 
-### 10.5 BACKUPS Tab (`ui/device-backup.slint` → `BackupPage`)
+### 10.5 BACKUPS Tab (`ui/device-backup.slint` to `BackupPage`)
 - **Backup folder** text field
 - **Backup list**: table (Date, Computer, Device, FS) with selection
 - **Buttons**: BACKUP NOW, RESTORE TO DEVICE, DELETE
 
-### 10.6 Device Preview (`ui/device-preview.slint` → `DevicePreview`)
+### 10.6 Device Preview (`ui/device-preview.slint` to `DevicePreview`)
 - **DialogFrame**: 640px wide
 - **Sections**: "X new tracks to copy (Y MB)", "Z tracks to refresh", info lines, blocked tracks (red)
-- **Each section**: SHOW/HIDE LIST toggle → virtualized `TrackList`
+- **Each section**: SHOW/HIDE LIST toggle to virtualized `TrackList`
 - **START / CANCEL** buttons
 
-### 10.7 Device Sync Ask (`ui/device-preview.slint` → `DeviceSyncAsk`)
+### 10.7 Device Sync Ask (`ui/device-preview.slint` to `DeviceSyncAsk`)
 - **DialogFrame**: 460px
 - **Text**: "KEY is plugged in: sync 3 playlists (12 new tracks, 480 MB)?"
 - **SYNC / NOT NOW** buttons
 
-### 10.8 Device Review (`ui/device-review.slint` → `ReviewOverlay`)
+### 10.8 Device Review (`ui/device-review.slint` to `ReviewOverlay`)
 - **Full-screen overlay** during device write
 - **Progress**: phase + %, cancel button
 - **Review rows**: compare collection vs device (ratings, colors, comments, history)
 
 ### 10.9 Controller Editor — not a dialog; integrated in Preferences
-- **Preferences → Decks & Controllers** → `PrefsController` → "Get mappings" chip → `GetMappings` (`ui/catalog.slint`)
+- **Preferences to Decks & Controllers** to `PrefsController` to "Get mappings" chip to `GetMappings` (`ui/catalog.slint`)
 
-### 10.10 Artwork Picker (`ui/artwork.slint` → `ArtworkPicker`)
+### 10.10 Artwork Picker (`ui/artwork.slint` to `ArtworkPicker`)
 - **DialogFrame**: 584×480
 - **Grid**: 4 columns, `ArtCandidate` (thumb, source, size)
-- **Click** → choose, downloads and saves
+- **Click** to choose, downloads and saves
 - **Status**: "Asking MusicBrainz…", "No artwork found"
 
 ### 10.11 Preferences (`ui/prefs-view.slint` + `ui/prefs-controller.slint` + `ui/prefs-keyboard.slint`)
 - **Root**: `PrefRows` from `prefs-state.slint` (Rust-owned)
-- **Controller page**: connected controller name, "Get mappings" → `GetMappings`, then `PrefRows`
+- **Controller page**: connected controller name, "Get mappings" to `GetMappings`, then `PrefRows`
 - **Keyboard page**: shortcut editor
 
 ### 10.12 Catalog / Extensions (`ui/catalog.slint`)
@@ -407,7 +408,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 
 ## 11. Waveform & Visual Details
 
-### 11.1 Waveform Rendering (`ui/deck-wave.slint` → `WaveStrip`)
+### 11.1 Waveform Rendering (`ui/deck-wave.slint` to `WaveStrip`)
 - **Pixel-perfect**: `pixelated` rendering, no anti-aliasing
 - **Stem layers**: 4 textures (vocal/inst/drums/bass) blended
 - **Grid lines**: beat (white), phrase (lilac), downbeat (bright)
@@ -576,7 +577,7 @@ Based on source code at `/home/ubuntu/.hermes/cache/scratch/parity-src/openfader
 68. DeviceSyncAsk: DialogFrame 460px, "device plugged in: sync N playlists?", SYNC/NOT NOW
 69. DeviceReview: full-screen overlay during write, progress + cancel, review rows (compare)
 70. ArtworkPicker: DialogFrame 584×480, 4-col grid of candidates (thumb, source, size), click to choose
-71. Preferences: PrefRows (Rust-owned), Controller page (Get mappings → Catalog), Keyboard page
+71. Preferences: PrefRows (Rust-owned), Controller page (Get mappings to Catalog), Keyboard page
 72. Catalog: RepoBar (repos list, add/remove/refresh), GetPlugins, GetThemes, GetMappings
 73. GetPlugins: name, version, installed, description, repo, native, action (INSTALL/UPDATE/INSTALLED)
 74. GetThemes: name, author, description, repo, action, active, colors preview

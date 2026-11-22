@@ -1,4 +1,5 @@
 # Commercial DJ App Feature Parity Matrix
+\nStatus: generated from source reading by research agents; each item must be checked against the source before it is built.
 
 **Generated**: 2025-11-22  
 **Source**: Official manuals, feature pages, release notes, and verified community sources  
