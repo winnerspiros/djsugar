@@ -1,7 +1,7 @@
 #[cfg(target_os = "linux")]
 mod linux {
-    use djsugar::{Ui, fail, read_dir_sample};
-    use sugar_shell::{App, Event, Frame};
+    use djsugar::{Key, Ui, fail, read_dir_sample};
+    use sugar_shell::{App, Event, Frame, keysym};
     use sugar_ui::Renderer;
 
     const MOUSE: u64 = u64::MAX;
@@ -35,6 +35,17 @@ mod linux {
                         self.ui.pointer_up(MOUSE, y);
                     }
                 }
+                Event::Key { sym, pressed: true } => match sym {
+                    keysym::BACKSPACE => self.ui.key(Key::Backspace),
+                    keysym::ESCAPE => self.ui.key(Key::Escape),
+                    keysym::RETURN => self.ui.key(Key::Enter),
+                    keysym::F1 => self.ui.key(Key::Play(0)),
+                    keysym::F2 => self.ui.key(Key::Play(1)),
+                    _ => match keysym::char(sym) {
+                        Some(c) => self.ui.text(c.encode_utf8(&mut [0; 4])),
+                        None => return false,
+                    },
+                },
                 _ => return false,
             }
             true

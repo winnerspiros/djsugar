@@ -1,7 +1,7 @@
 use sugar_layout::{Axis, Id, Node, Rect, Size};
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, DeckUi, Hit, LOOP_BEATS, Mode, SAMPLES, State, Target};
+use crate::state::{DETAIL_FRAMES, DeckUi, Hit, LOOP_BEATS, Mode, State, Target};
 
 pub const BACKGROUND: u32 = rgb(0x000000);
 const PANEL: u32 = rgb(0x000000);
@@ -116,7 +116,12 @@ pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]
         let r = screen_body(window);
         p.outlined(r.x, r.y, r.w, r.h, 10.0, PANEL, 1.5, DECK[d]);
         let head = Style::new(14.0, Weight::Bold, DECK[d]);
-        p.text(r.x + 14.0, r.y + 24.0, head, ["Load to deck A", "Load to deck B"][d]);
+        let x = r.x + 30.0 + p.text(r.x + 14.0, r.y + 24.0, head, ["Load to deck A", "Load to deck B"][d]);
+        let q = if s.query.is_empty() { "Type to search" } else { &s.query };
+        let tw = p.text_in(x, r.y + 24.0, r.w * 0.5, if s.query.is_empty() { HINT } else { TITLE }, q);
+        if !s.query.is_empty() {
+            p.rect(x + tw + 2.0, r.y + 11.0, 2.0, 17.0, 1.0, ACCENT);
+        }
         let close = "Close";
         let cw = p.text_width(BUTTON, close) + 24.0;
         p.outlined(r.x + r.w - cw - 10.0, r.y + 8.0, cw, 24.0, 6.0, RAISED, 1.0, LINE);
@@ -134,12 +139,16 @@ fn screen_body(window: Rect) -> Rect {
 
 fn top(p: &mut Painter, s: &State, r: Rect) {
     let x = r.x + 28.0 + p.text(r.x + 12.0, r.y + 22.0, BRAND, "DJ Sugar");
-    let hint = s.status.as_deref().unwrap_or("Search tracks, streaming, or type a command");
-    p.text_in(x, r.y + 22.0, r.x + r.w - x - 12.0, HINT, hint);
-}
-
-fn stem(file: &str) -> &str {
-    file.rsplit_once('.').map_or(file, |(s, _)| s)
+    let w = r.x + r.w - x - 12.0;
+    if s.query.is_empty() {
+        let hint = s.status.as_deref().unwrap_or("Type to search the library");
+        p.text_in(x, r.y + 22.0, w, HINT, hint);
+    } else {
+        let tw = p.text_in(x, r.y + 22.0, w - 80.0, TITLE, &s.query);
+        p.rect(x + tw + 2.0, r.y + 9.0, 2.0, 17.0, 1.0, ACCENT);
+        let n = format!("{} found", s.shown.len());
+        p.text(r.x + r.w - 12.0 - p.text_width(SUB, &n), r.y + 22.0, SUB, &n);
+    }
 }
 
 fn clock(secs: f64) -> String {
@@ -229,10 +238,7 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.text(right - iw, r.y + 24.0, TIME, &info);
     let x = r.x + 22.0 + p.text(r.x + 12.0, r.y + 24.0, Style::new(18.0, Weight::Bold, colour), ["A", "B"][d]);
     let (title, sub) = match &ui.loaded {
-        Some(l) => {
-            let (dir, file) = l.name.rsplit_once('/').unwrap_or(("samples", l.name));
-            (stem(file).replace(['-', '_'], " "), dir.to_string())
-        }
+        Some(l) => (l.entry.title.to_string(), l.entry.folder.to_string()),
         None => ("No track".into(), String::new()),
     };
     p.text_in(x, r.y + 24.0, right - iw - 12.0 - x, TITLE, &title);
@@ -330,9 +336,9 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 )
             }
             Mode::Samples => {
-                let name = stem(SAMPLES[s.pads[d][i]].rsplit('/').next().unwrap_or(""));
+                let name = &*s.entries[s.pads[d][i]].title;
                 let short = name
-                    .split_once(['-', '_'])
+                    .split_once(' ')
                     .map_or(name, |(n, rest)| if n.chars().all(|c| c.is_ascii_digit()) { rest } else { name });
                 (short.to_string(), false)
             }
@@ -399,21 +405,23 @@ fn library(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x + 8.0, r.y + 28.0, r.w - 16.0, 1.0, 0.0, LINE);
     let first = (s.scroll / ROW_H) as usize;
     let rows = ((r.h - 34.0) / ROW_H) as usize;
-    for (n, i) in (first..SAMPLES.len()).take(rows).enumerate() {
+    for (n, &i) in s.shown.iter().skip(first).take(rows + 1).enumerate() {
         let y = r.y + 30.0 + n as f32 * ROW_H - (s.scroll % ROW_H);
-        if y < r.y + 29.0 {
+        if y < r.y + 29.0 || y + ROW_H > r.y + r.h {
             continue;
         }
-        let path = SAMPLES[i];
-        let loaded = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.name == path));
+        let e = &s.entries[i as usize];
+        let loaded = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.entry.source == e.source));
         if let Some(d) = loaded {
             p.rect(r.x + 6.0, y, r.w - 12.0, ROW_H, 4.0, fade(DECK[d.min(1)], 0x28));
         }
-        let (dir, file) = path.rsplit_once('/').unwrap_or(("samples", path));
         let base = y + ROW_H - 7.0;
-        p.text(r.x + 12.0, base, LABEL, &(i + 1).to_string());
-        p.text_in(r.x + 12.0 + inner * 0.07, base, inner * 0.54, CELL, stem(file));
-        p.text_in(r.x + 12.0 + inner * 0.62, base, inner * 0.38, SUB, dir);
+        p.text(r.x + 12.0, base, LABEL, &(first + n + 1).to_string());
+        p.text_in(r.x + 12.0 + inner * 0.07, base, inner * 0.54, CELL, &e.title);
+        p.text_in(r.x + 12.0 + inner * 0.62, base, inner * 0.38, SUB, &e.folder);
+    }
+    if s.shown.is_empty() {
+        p.text(r.x + 12.0, r.y + 52.0, SUB, "No matches");
     }
     hit(s, r.x, r.y, r.w, r.h, Target::Library);
 }

@@ -49,6 +49,25 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
     conn.map_window(window).map_err(Error::from)?;
     conn.flush().map_err(Error::from)?;
 
+    let setup = conn.setup();
+    let (min_code, max_code) = (setup.min_keycode, setup.max_keycode);
+    let map = conn
+        .get_keyboard_mapping(min_code, max_code - min_code + 1)
+        .map_err(Error::from)?
+        .reply()
+        .map_err(Error::from)?;
+    let per = usize::from(map.keysyms_per_keycode);
+    let keysym = |code: u8, shift: bool| -> u32 {
+        let base = usize::from(code.saturating_sub(min_code)) * per;
+        let syms = map.keysyms.get(base..base + per).unwrap_or(&[]);
+        let lower = syms.first().copied().unwrap_or(0);
+        match syms.get(1).copied() {
+            Some(upper) if shift && upper != 0 => upper,
+            _ if shift && (0x61..=0x7a).contains(&lower) => lower - 0x20,
+            _ => lower,
+        }
+    };
+
     let max_request = conn.maximum_request_bytes();
     let mut size = (width, height);
     app.event(Event::Resize { width, height, scale });
@@ -72,8 +91,11 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
                 XEvent::MotionNotify(e) => Some(Event::Pointer { x: f32::from(e.event_x), y: f32::from(e.event_y) }),
                 XEvent::ButtonPress(e) => Some(Event::Button { button: e.detail, pressed: true }),
                 XEvent::ButtonRelease(e) => Some(Event::Button { button: e.detail, pressed: false }),
-                XEvent::KeyPress(e) => Some(Event::Key { code: u32::from(e.detail), pressed: true }),
-                XEvent::KeyRelease(e) => Some(Event::Key { code: u32::from(e.detail), pressed: false }),
+                XEvent::KeyPress(e) => {
+                    let shift = u16::from(e.state) & 1 != 0;
+                    Some(Event::Key { sym: keysym(e.detail, shift), pressed: true })
+                }
+                XEvent::KeyRelease(e) => Some(Event::Key { sym: keysym(e.detail, false), pressed: false }),
                 XEvent::ClientMessage(e) if e.data.as_data32()[0] == delete => Some(Event::Close),
                 _ => None,
             };

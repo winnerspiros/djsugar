@@ -7,7 +7,7 @@ pub enum Event {
     Redraw,
     Pointer { x: f32, y: f32 },
     Button { button: u8, pressed: bool },
-    Key { code: u32, pressed: bool },
+    Key { sym: u32, pressed: bool },
     Close,
 }
 
@@ -45,4 +45,22 @@ impl Error {
 #[cfg(target_os = "linux")]
 pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(), Error> {
     x11::run(title, width, height, app)
+}
+
+pub mod keysym {
+    pub const BACKSPACE: u32 = 0xff08;
+    pub const RETURN: u32 = 0xff0d;
+    pub const ESCAPE: u32 = 0xff1b;
+    pub const F1: u32 = 0xffbe;
+    pub const F2: u32 = 0xffbf;
+
+    pub fn char(sym: u32) -> Option<char> {
+        match sym {
+            0x20..=0x7e | 0xa0..=0xff => char::from_u32(sym),
+            0x0100_0000..=0x0110_ffff => char::from_u32(sym - 0x0100_0000),
+            0x7c1..=0x7d9 => char::from_u32(sym - 0x7c1 + 0x391),
+            0x7e1..=0x7f9 => char::from_u32(sym - 0x7e1 + 0x3b1),
+            _ => None,
+        }
+    }
 }

@@ -1,11 +1,12 @@
+mod library;
 mod screen;
 mod state;
 
 use sugar_layout::{Id, Layout, Rect};
 use sugar_ui::{Fonts, Painter};
 
-pub use state::Reader;
 use state::State;
+pub use state::{Key, Reader};
 
 static FONT: &[u8] = include_bytes!("../../../res/fonts/Inter.ttf");
 
@@ -33,11 +34,13 @@ impl Ui {
             Ok(o) => (Some(o), None),
             Err(e) => (None, Some(format!("Audio unavailable: {e}"))),
         };
+        let mut state = State::new(engine, read, status);
+        state.scan();
         Self {
             layout: Layout::new(&screen::tree()),
             placed: Vec::with_capacity(sugar_layout::MAX_MODULES),
             painter: Painter::new(Fonts::new(FONT)),
-            state: State::new(engine, read, status),
+            state,
             window: Rect::new(0.0, 0.0, 1.0, 1.0),
             scale: 1.0,
             _output: output,
@@ -73,6 +76,16 @@ impl Ui {
         self.state.pointer_up(id, y / self.scale);
     }
 
+    pub fn text(&mut self, text: &str) {
+        if text.chars().all(|c| !c.is_control()) {
+            self.state.type_text(text);
+        }
+    }
+
+    pub fn key(&mut self, key: Key) {
+        self.state.key(key);
+    }
+
     pub fn wheel(&mut self, x: f32, y: f32, dy: f32) {
         self.state.wheel(x / self.scale, y / self.scale, dy);
     }
@@ -91,9 +104,10 @@ pub mod native {
     use winit::application::ApplicationHandler;
     use winit::event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent};
     use winit::event_loop::{ActiveEventLoop, EventLoop};
+    use winit::keyboard::{Key as WKey, NamedKey};
     use winit::window::{Window, WindowId};
 
-    use crate::{Reader, Ui, fail};
+    use crate::{Key, Reader, Ui, fail};
 
     const MOUSE: u64 = u64::MAX;
 
@@ -177,6 +191,21 @@ pub mod native {
                         MouseScrollDelta::PixelDelta(p) => p.y as f32,
                     };
                     self.ui.wheel(self.cursor.0, self.cursor.1, dy);
+                    self.redraw();
+                }
+                WindowEvent::KeyboardInput { event, .. } if event.state == ElementState::Pressed => {
+                    match &event.logical_key {
+                        WKey::Named(NamedKey::Backspace) => self.ui.key(Key::Backspace),
+                        WKey::Named(NamedKey::Escape) => self.ui.key(Key::Escape),
+                        WKey::Named(NamedKey::Enter) => self.ui.key(Key::Enter),
+                        WKey::Named(NamedKey::F1) => self.ui.key(Key::Play(0)),
+                        WKey::Named(NamedKey::F2) => self.ui.key(Key::Play(1)),
+                        _ => {
+                            if let Some(t) = &event.text {
+                                self.ui.text(t);
+                            }
+                        }
+                    }
                     self.redraw();
                 }
                 WindowEvent::Touch(t) => {

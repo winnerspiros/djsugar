@@ -4,6 +4,8 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use sugar_engine::{Command, Control, DECKS, Telemetry, Track};
 use sugar_layout::Rect;
 
+use crate::library::{self, Entry, Source};
+
 include!(concat!(env!("OUT_DIR"), "/samples.rs"));
 
 pub type Reader = fn(&str) -> Option<Vec<u8>>;
@@ -49,7 +51,7 @@ pub struct Hit {
 
 #[derive(Debug)]
 pub struct Loaded {
-    pub name: &'static str,
+    pub entry: Entry,
     pub track: Arc<Track>,
     pub overview: Box<[u8]>,
     pub detail: Box<[u8]>,
@@ -85,11 +87,20 @@ impl DeckUi {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Key {
+    Backspace,
+    Escape,
+    Enter,
+    Play(usize),
+}
+
 type Done = (Job, Option<Loaded>);
 
 enum Job {
     Deck(usize),
     Sample(usize, bool),
+    Scan(Vec<Entry>),
 }
 
 struct Drag {
@@ -108,6 +119,9 @@ pub struct State {
     pub crossfader: f32,
     pub samples: Vec<Option<Arc<Track>>>,
     pub pads: [[usize; 8]; 2],
+    pub entries: Vec<Entry>,
+    pub shown: Vec<u32>,
+    pub query: String,
     pub focus: usize,
     pub browser: Option<usize>,
     pub scroll: f32,
@@ -150,6 +164,9 @@ impl State {
             crossfader: 0.0,
             samples: vec![None; SAMPLES.len()],
             pads,
+            entries: library::samples(),
+            shown: (0..SAMPLES.len() as u32).collect(),
+            query: String::new(),
             focus: 0,
             browser: None,
             scroll: 0.0,
@@ -193,6 +210,12 @@ impl State {
                     self.samples[i] = Some(l.track);
                 }
                 (Job::Sample(..), None) => {}
+                (Job::Scan(found), _) => {
+                    self.entries.truncate(SAMPLES.len());
+                    self.entries.extend(found);
+                    let q = std::mem::take(&mut self.query);
+                    self.search(q);
+                }
             }
         }
         if let Some(c) = &mut self.control {
@@ -201,20 +224,73 @@ impl State {
     }
 
     fn load(&mut self, job: Job, index: usize) {
-        let Some(&name) = SAMPLES.get(index) else { return };
+        let Some(entry) = self.entries.get(index).cloned() else { return };
         let (tx, read) = (self.jobs.0.clone(), self.read);
         let detail = matches!(job, Job::Deck(_));
         std::thread::spawn(move || {
-            let loaded = read(name)
-                .and_then(|b| sugar_decode::bytes(b, name.rsplit('.').next().unwrap_or("ogg")).ok())
-                .map(|t| {
-                    let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
-                    let detail = if detail { peaks(&t, 0, DETAIL_FRAMES) } else { Box::default() };
-                    let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
-                    Loaded { name, track: Arc::new(t), overview, detail, grid }
-                });
+            let bytes = match &entry.source {
+                Source::Sample(name) => read(name),
+                Source::File(path) => std::fs::read(path).ok(),
+            };
+            let loaded = bytes.and_then(|b| sugar_decode::bytes(b, entry.extension()).ok()).map(|t| {
+                let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
+                let detail = if detail { peaks(&t, 0, DETAIL_FRAMES) } else { Box::default() };
+                let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
+                Loaded { entry, track: Arc::new(t), overview, detail, grid }
+            });
             let _ = tx.send((job, loaded));
         });
+    }
+
+    pub fn scan(&mut self) {
+        let roots = library::roots();
+        if roots.is_empty() {
+            return;
+        }
+        let tx = self.jobs.0.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send((Job::Scan(library::scan(&roots)), None));
+        });
+    }
+
+    pub fn search(&mut self, query: String) {
+        self.query = query;
+        self.scroll = 0.0;
+        let q = &self.query;
+        let (n, s) = (self.entries.len() as u32, SAMPLES.len() as u32);
+        let order = (s..n).chain(0..s);
+        self.shown = order.filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
+    }
+
+    pub fn type_text(&mut self, text: &str) {
+        let mut q = std::mem::take(&mut self.query);
+        q.push_str(text);
+        self.search(q);
+    }
+
+    pub fn key(&mut self, key: Key) {
+        match key {
+            Key::Backspace => {
+                let mut q = std::mem::take(&mut self.query);
+                q.pop();
+                self.search(q);
+            }
+            Key::Escape => {
+                self.browser = None;
+                self.search(String::new());
+            }
+            Key::Enter => {
+                if let Some(&first) = self.shown.first() {
+                    let deck = self.browser.take().unwrap_or(self.focus);
+                    self.load_deck(deck, first as usize);
+                }
+            }
+            Key::Play(d) => {
+                let on = !self.telemetry.decks[d].playing;
+                self.send(Command::Play(d, on));
+                self.telemetry.decks[d].playing = on;
+            }
+        }
     }
 
     pub fn load_deck(&mut self, deck: usize, index: usize) {
@@ -342,13 +418,16 @@ impl State {
         match d.target {
             Some(Target::Library) if !d.moved => {
                 let row = ((y - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
-                if row >= 0.0 && (row as usize) < SAMPLES.len() && y > self.library.y + 30.0 {
+                if let Some(&index) = self.shown.get(row.max(0.0) as usize)
+                    && row >= 0.0
+                    && y > self.library.y + 30.0
+                {
                     let deck = match self.browser.take() {
                         Some(d) => d,
                         None if self.telemetry.decks[self.focus].playing => 1 - self.focus.min(1),
                         None => self.focus,
                     };
-                    self.load_deck(deck, row as usize);
+                    self.load_deck(deck, index as usize);
                 }
             }
             Some(Target::Jog(deck)) if d.resume => {
@@ -366,7 +445,7 @@ impl State {
     }
 
     fn scroll_by(&mut self, dy: f32) {
-        let max = (SAMPLES.len() as f32 * self.row_h - (self.library.h - 30.0)).max(0.0);
+        let max = (self.shown.len() as f32 * self.row_h - (self.library.h - 30.0)).max(0.0);
         self.scroll = (self.scroll + dy).clamp(0.0, max);
     }
 
