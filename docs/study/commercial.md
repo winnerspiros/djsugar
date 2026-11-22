@@ -49,7 +49,7 @@
 
 ### 1.7 Stems
 - **Stems Separation**: Neural/Algoriddim-style AI separation (Serato Stems) [^serato-stems-prep]
-- **Deck Control**: Load stem file → auto-switches to Stem Deck; per-stem volume, mute, filter, FX
+- **Deck Control**: Load stem file to auto-switches to Stem Deck; per-stem volume, mute, filter, FX
 
 ### 1.8 Lyrics / Karaoke
 - **Not natively supported** (no lyrics overlay or karaoke mode in current versions)
@@ -194,7 +194,7 @@
 | **Scratch Bank** | Saved scratch samples |
 | **Custom** | User-scripted buttons (VDJScript) |
 
-- **16 Pad Mode**: GUI-only 16-pad grid (View → Pads 16) [^vdj-pads]
+- **16 Pad Mode**: GUI-only 16-pad grid (View to Pads 16) [^vdj-pads]
 - **Pad Editor**: Full customization of pages, parameters, colors, scripts
 
 ### 3.5 FX UI
@@ -298,7 +298,7 @@
   - **Group Mode**: 3 FX chained per unit (X/Y macro control)
   - **Single Mode**: 1 FX per unit, full parameter control
 - **Mixer FX**: 9 per channel (Filter, Delay, Reverb, etc.) — 1-knob macro
-- **Assignment**: Any FX Unit → any Deck/Channel/Bus
+- **Assignment**: Any FX Unit to any Deck/Channel/Bus
 - **Pattern Player Units**: 4 units × 17 kits (Pro 4) [^traktor-pro4]
 
 ### 4.6 Library / Browse UX
@@ -361,7 +361,7 @@
 
 ### 5.3 Waveform Styles
 - **4-Band Color Coding**: Red=bass, Yellow=low-mid, Green=high-mid, Blue=treble [^djay-ipad-manual]
-- **Orientation**: Horizontal (parallel, scroll R→L) or Vertical (parallel, scroll top→bottom) — switchable live [^djay-ios-decks]
+- **Orientation**: Horizontal (parallel, scroll R->L) or Vertical (parallel, scroll top->bottom) — switchable live [^djay-ios-decks]
 - **Layouts**: 2-deck / 4-deck / single-deck; variable zoom [^djay-windows]
 - **Overview Stripe**: Full-track with cue points (colored) + red playhead [^djay-ipad-manual]
 - **Neural Mix Waveforms**: Per-stem waveforms in deck (Vocal, Drums, Harmonic) [^djay-windows]
@@ -408,8 +408,8 @@
 - **Unified Search**: Single query across all sources
 
 ### 5.10 Touch Gestures
-- **Multi-touch Scratching/Seeking**: Two fingers on waveform/jog → scratch, seek, hold [^djay-releasenotes]
-- **Multi-touch FX/Pad**: Two fingers on pad → pressure/position control [^djay-releasenotes]
+- **Multi-touch Scratching/Seeking**: Two fingers on waveform/jog to scratch, seek, hold [^djay-releasenotes]
+- **Multi-touch FX/Pad**: Two fingers on pad to pressure/position control [^djay-releasenotes]
 - **Pinch-zoom Waveform**: Standard
 - **Swipe Load**: Swipe track from browser to deck
 - **Split View / Slide Over** (iPad): djay + another app side-by-side [^djay-ipad-press]
@@ -463,7 +463,7 @@
 - **Pad LED Brightness**: Configurable [^engine-x]
 
 ### 6.5 FX UI
-- **Touch FX**: Swipe any direction → build-ups, drops, transitions [^engine-os]
+- **Touch FX**: Swipe any direction to build-ups, drops, transitions [^engine-os]
 - **Filter Echo / Filter Dub Echo**: Extra amount slider for tweakability [^engine-4-release]
 - **FX Buttons**: Flash when engaged; Reset FX = defaults [^engine-4-release]
 - **Channel FX**: 4 assignable hardware FX slots (Mixstream, Prime Go) [^engine-x]
@@ -481,7 +481,7 @@
 
 ### 6.7 Stems
 - **4-Part Stems**: Vocal, Melody, Bass, Drums [^engine-x]
-- **On-Device Separation**: Swipe left on track → split to Stems playlist (basic quality) [^engine-x]
+- **On-Device Separation**: Swipe left on track to split to Stems playlist (basic quality) [^engine-x]
 - **High Quality**: LAN offload to computer running `htdemucs` (Prime 4 G2, System One keep official) [^engine-x]
 - **Control**: Performance Pads or Channel EQ knobs (`Stems EQ Mode` or `Shift+Cue`) [^engine-x]
 
@@ -523,7 +523,7 @@
 
 | Form Factor | Primary Layout | Alternative Layouts | Key Adaptations |
 |-------------|----------------|---------------------|-----------------|
-| **Phone Portrait** (S23 Ultra 19.3:9) | **Starter/Compact 2-Deck** — vertical waveforms stacked, large touch targets, collapsible browser drawer | Classic (turntables), Pro (jog+waveform), One Deck (prep) | Hide mixer EQ; tap deck header → expanded deck; swipe browser overlay; bottom sheet for pads/FX |
+| **Phone Portrait** (S23 Ultra 19.3:9) | **Starter/Compact 2-Deck** — vertical waveforms stacked, large touch targets, collapsible browser drawer | Classic (turntables), Pro (jog+waveform), One Deck (prep) | Hide mixer EQ; tap deck header to expanded deck; swipe browser overlay; bottom sheet for pads/FX |
 | **Phone Landscape** | **Pro 2-Deck** — horizontal parallel waveforms, jog wheels, mixer strip, pads side panel | 4-Deck (condensed), Looper, Video | Split-view: waveforms top 60%, mixer/pads bottom 40%; swipe pads/FX panels |
 | **Tablet Portrait** (iPad 4:3) | **Pro 2-Deck** — vertical waveforms, full mixer, pads right sidebar, browser left drawer | Classic, Looper, One Deck | Sidebar browser (rekordbox Column View style); pads always visible |
 | **Tablet Landscape** | **4-Deck Pro** — 4 horizontal waveforms, crossfader assignments, pads bottom grid | 2-Deck Expanded, Video, Looper | Equal deck sizing; pad grid 4×4; browser floating panel |
@@ -554,8 +554,8 @@
 |------|----------------------------------|----------|
 | **3-Band RGB** | Low: `#FF3333` (red), Mid: `#FFCC00` (amber), High: `#00FFFF` (cyan) | Standard mixing; color-blind safe |
 | **4-Band (djay)** | Bass: `#FF3333`, Low-Mid: `#FFCC00`, High-Mid: `#33FF33`, Treble: `#0099FF` | Fine frequency discrimination |
-| **Ultraviolet (Traktor)** | Single hue gradient: `#4B0082` → `#8A2BE2` → `#FFFFFF` | Minimal distraction; OLED power saving |
-| **Infrared** | `#FF0000` → `#FF8800` → `#FFFF00` | High contrast |
+| **Ultraviolet (Traktor)** | Single hue gradient: `#4B0082` to `#8A2BE2` to `#FFFFFF` | Minimal distraction; OLED power saving |
+| **Infrared** | `#FF0000` to `#FF8800` to `#FFFF00` | High contrast |
 | **Spectrum** | Full rainbow mapping (FFT bins) | Visual analysis |
 | **Monochrome / Neutral** | `#FFFFFF` / `#CCCCCC` on `#000000` | Maximum battery life; accessibility |
 
@@ -603,10 +603,10 @@
 - Always visible on mixer strip
 
 **Layer 2: FX Units (Global, 4 Units × 2 Modes)**
-- **Group Mode**: 3 FX chained → X/Y macro pad (Traktor) / XY Pad (djay) / Touch swipe (Engine)
-- **Single Mode**: 1 FX per unit → full parameter sliders
-- **Assignment Matrix**: Any Unit → Deck A/B/C/D / Master / Sampler / Mic
-- **Touch FX**: Swipe gestures on waveform/FX panel (Engine) → mapped to X/Y of active unit
+- **Group Mode**: 3 FX chained to X/Y macro pad (Traktor) / XY Pad (djay) / Touch swipe (Engine)
+- **Single Mode**: 1 FX per unit to full parameter sliders
+- **Assignment Matrix**: Any Unit to Deck A/B/C/D / Master / Sampler / Mic
+- **Touch FX**: Swipe gestures on waveform/FX panel (Engine) to mapped to X/Y of active unit
 
 **FX Rack Panel**: Collapsible; shows all 4 units with mini XY pads; expand for parameters.
 
@@ -618,20 +618,20 @@
 | **Column View** | rekordbox | Hierarchical playlist/folder nav (Finder-style) — desktop/tablet |
 | **Collection Filter** | rekordbox | Multi-column filter bar (Genre, BPM, Key, Artist, Label, Date, Stem avail) |
 | **Sub Browser / Dual Pane** | rekordbox | Two collection panes side-by-side (compare playlists) |
-| **Expanded Track List** | Engine 4 | Toggle: compact rows ↔️ expanded rows with mini waveform + cues |
+| **Expanded Track List** | Engine 4 | Toggle: compact rows <->️ expanded rows with mini waveform + cues |
 | **Search Bar** | Engine 4 | Fixed position (both Library & Performance views); scope: Collection / Playlist / Streaming |
 | **Smartlists / Intelligent Playlists** | rekordbox, Engine | Rule-based auto-playlists; AI "similar to selected" (Collection Radar) |
-| **Cloud Sync** | rekordbox, djay | Cues, grids, metadata, playlists → cloud (user choice: iCloud, Dropbox, Google, custom) |
+| **Cloud Sync** | rekordbox, djay | Cues, grids, metadata, playlists to cloud (user choice: iCloud, Dropbox, Google, custom) |
 | **Library Import** | Engine | Serato, Traktor, rekordbox, iTunes — cues/grids preserved |
 | **Stems Playlist** | rekordbox, Engine | Auto-generated "Stems" playlist in sidebar |
-| **Vocal Position Markers** | rekordbox | AI vocal detection → markers on overview waveform |
+| **Vocal Position Markers** | rekordbox | AI vocal detection to markers on overview waveform |
 | **Offline Cache Mgmt** | Engine | Per-service cache size, auto-evict LRU |
 
 ### 7.7 Stems — Neural Mix + Engine Hybrid
 
 - **Separation**: On-device (Core ML / ONNX Runtime / candle) — 4 stems (Vocals, Drums, Bass, Melody) + Other
 - **Quality Tiers**: Fast (mobile) / Balanced / High (desktop GPU) / LAN offload (Engine-style)
-- **Deck Integration**: Load → auto Stem Deck; per-stem volume, mute, solo, filter, FX send
+- **Deck Integration**: Load to auto Stem Deck; per-stem volume, mute, solo, filter, FX send
 - **Crossfader Fusion**: Stem-aware morph (djay) — assign stems to crossfader curve
 - **Pad Page**: 5-pad stem control + per-stem FX
 - **EQ Modes**: 3-knob (Vocal/Drums/Harmonic) + 5-knob full
@@ -643,7 +643,7 @@
 - **Lyrics Overlay**: On waveform (toggle) + full-screen karaoke view
 - **Karaoke VideoFX**: Lyrics on video output (HDMI/DeX external display) with guide vocal (vocal stem muted)
 - **Clone View**: Second window for singer (DeX / desktop multi-monitor)
-- **Instant Karaoke**: One tap → mute Vocal stem + enable Karaoke VideoFX
+- **Instant Karaoke**: One tap to mute Vocal stem + enable Karaoke VideoFX
 
 ### 7.9 Streaming Integration — Unified + OmniSource
 
@@ -657,9 +657,9 @@
 | Deezer / Qobuz | OAuth | FLAC / HiRes | Cache | |
 | NetEase | QR | 320 kbps | Cache | Engine-style QR login |
 
-- **OmniSource Search**: Single query → merged results (local + all streaming + LAN) with source badges
+- **OmniSource Search**: Single query to merged results (local + all streaming + LAN) with source badges
 - **Cross-source Playlists**: Mix local + streaming tracks; missing tracks grayed out
-- **QR Login Flow**: Engine-style — scan QR on phone → token stored securely
+- **QR Login Flow**: Engine-style — scan QR on phone to token stored securely
 
 ### 7.10 Touch Gestures — Comprehensive Map
 
@@ -670,8 +670,8 @@
 | **Long press** | Waveform | Loop in/out start |
 | **Drag** | Waveform | Scrub / scratch |
 | **Pinch** | Waveform | Zoom |
-| **Swipe L→R** | Track row (browser) | Load to Deck 1 / next free |
-| **Swipe R→L** | Track row | Stems split / more actions |
+| **Swipe L->R** | Track row (browser) | Load to Deck 1 / next free |
+| **Swipe R->L** | Track row | Stems split / more actions |
 | **Two-finger rotate** | Jog / Waveform | Scratch / seek (djay) |
 | **Two-finger drag** | Pad / XY Pad | Pressure + position (djay) |
 | **Swipe any dir** | FX Panel / Waveform | Touch FX build-up/drop (Engine) |
@@ -692,7 +692,7 @@
 | **Fluid Beatgrid** | djay | Variable-tempo support (Traktor flexible beatgrids) |
 | **OmniSource Search** | Engine | Unified local + 7 streaming + LAN |
 | **Lyrics + Karaoke** | VirtualDJ | LRC editor + overlay + Clone View + instant karaoke |
-| **Touch FX Swipe** | Engine | Customizable swipe→FX mapping |
+| **Touch FX Swipe** | Engine | Customizable swipe->FX mapping |
 | **Ableton Link + Wireless** | Engine | Native Link + Bluetooth MIDI |
 | **Engine Lighting** | Engine | DMX/Art-Net/sACN + Hue/Nanoleaf + touchscreen designer |
 | **DVS (AI)** | djay | Timecode + AI-assisted lead-in detection |
@@ -746,12 +746,12 @@
 | Mode | Changes |
 |------|---------|
 | **Standard** | Full palette above |
-| **Dim** | `fg.primary` → `#AAAAAA`; accents 60% opacity; waveforms 50% brightness |
+| **Dim** | `fg.primary` to `#AAAAAA`; accents 60% opacity; waveforms 50% brightness |
 | **Ultra** | Monochrome waveform (`#888888`); hide overview stripe; panels `#000000`; only playhead + active cues lit |
 | **Burn-in Protection** | Slow UI element drift (1px/hr); periodic full-screen black frame (1 frame/10 min) |
 
 ### 8.4 Accessibility
-- **High Contrast Toggle**: `fg.primary` → `#FFFFFF`, borders → `#444444`
+- **High Contrast Toggle**: `fg.primary` to `#FFFFFF`, borders to `#444444`
 - **Color Blind Safe**: 3-band palette uses luminance-separated hues (red/amber/cyan)
 - **Reduced Motion**: Disable waveform scroll animation; instant seek
 
@@ -794,7 +794,7 @@
 
 1. **Layout Engine**: Build constraint-based panel system (Rust + GPU UI framework) with 5 view presets + free docking
 2. **Waveform Renderer**: GPU instanced rendering; 4 color modes + stem waveforms; true black background
-3. **Deck Component**: Unified deck widget with 7 layout densities (Micro → Parallel Full)
+3. **Deck Component**: Unified deck widget with 7 layout densities (Micro to Parallel Full)
 4. **Pad System**: Page-based, 8/16 pads, shift actions, custom Rust/WASM scripts
 5. **FX Rack**: 4 units × 2 modes + Mixer FX; Touch FX swipe mapper
 6. **Library Core**: Unified source abstraction (Local, Streaming×7, Cloud, LAN); Column View + Expanded List

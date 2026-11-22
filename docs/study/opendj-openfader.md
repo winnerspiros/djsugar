@@ -43,7 +43,7 @@
 **Time-stretch**: `djsugar-stretch` — custom phase vocoder (realfft), block 2048/4096, hop = interval, peak phase-locking for clean tones and tight transients. Input/output rates independent; ratio = stretch. Used for key-lock (tempo change without pitch change) and pitch-shift.
 
 **Analysis** (`crates/engine/src/analysis.rs`, `beats.rs`, `beatthis.rs`, `key.rs`, `keynet.rs`):
-- Onset envelope (200 Hz) → autocorrelation → tempo candidate → DP beat tracker (Ellis 2007) → dynamic grid (`gridfit.rs`) with tempo sections.
+- Onset envelope (200 Hz) to autocorrelation to tempo candidate to DP beat tracker (Ellis 2007) to dynamic grid (`gridfit.rs`) with tempo sections.
 - Beat This! (MIT, `beat-this` on `rten` runtime) as neural fallback for difficult tracks.
 - Key detection: multiple detectors (Krumhansl-Schmuckler, `keynet` spectrogram CNN via `rten`).
 - 3-band waveform (low/mid/high) at 150 Hz (detail) and 1200 entries (overview).
@@ -58,7 +58,7 @@
 **Workspace**: root + `sdk`, `ui`, `compatibility/*`, `mobile`. AGPL-3.0.
 
 **Crate structure** (single crate `openfader` with many modules under `src/`):
-- `audio/` — entire audio engine: `bus` (routing), `player` (one cpal stream, varispeed/key-lock, loop, EQ, filter, meter, latency-compensated clock), `stretch` (WSOLA key-lock), `decode` (symphonia → `Pcm` f32 or `Track16` quantised), `device` (output device caps), `fx` (Beat FX), `cfx` (Color FX), `merge` (Merge FX), `stems` (per-stem gain mix), `sampler`, `groove`, `rec`, `cue` (headphone cue), `mic`, `auxin`, `duck`, `metronome`, `preview`, `input`, `route`, `transport` (key shift, reverse, slip, brake), `track16` (16-bit track, half RAM), `stemfile`, `loudness`, `wavout`.
+- `audio/` — entire audio engine: `bus` (routing), `player` (one cpal stream, varispeed/key-lock, loop, EQ, filter, meter, latency-compensated clock), `stretch` (WSOLA key-lock), `decode` (symphonia to `Pcm` f32 or `Track16` quantised), `device` (output device caps), `fx` (Beat FX), `cfx` (Color FX), `merge` (Merge FX), `stems` (per-stem gain mix), `sampler`, `groove`, `rec`, `cue` (headphone cue), `mic`, `auxin`, `duck`, `metronome`, `preview`, `input`, `route`, `transport` (key shift, reverse, slip, brake), `track16` (16-bit track, half RAM), `stemfile`, `loudness`, `wavout`.
 - `analysis/` — beat grid, 3-band waveforms, key (Camelot), vocal regions, phrases, fingerprint, cache, similar-tracks features.
 - `library/` — pluggable sources: `own` (Collection, SQLite + SQLCipher), `folder`, `snapshot`, `playlist_file`, `relocate`, `import`, `translate`, `open_format` (JSON/CSV), plus built-in adapters for Rekordbox (device/db/xml), Engine DJ, Serato, Traktor, VirtualDJ, iTunes (`compatibility/*`).
 - `plugin/` — extensible plugin system: Lua scripts (mlua) or child processes (JSON stdin/stdout), native libraries for effects, libraries, controllers, knob/pad modes, artwork. Registry loads on startup, hot-reload for actions/events/settings.
@@ -112,7 +112,7 @@
 - **Framework**: Slint 1.18 with `unstable-wgpu-30`, `unstable-fontique-011`, `unstable-winit-030`, `renderer-femtovg-wgpu`.
 - **UI definition**: `.slint` files under `crates/app/ui/` (30+ files: `main.slint`, `deck.slint`, `library.slint`, `player.slint`, `mixer.slint`, `controls.slint`, `theme.slint`, `preferences.slint`, `sampler.slint`, `lyrics.slint`, `karaoke.slint`, etc.).
 - **Layout**: Hand-positioned in `main.slint` (2000+ lines). Global bar (mode selector: Export/Performance/Edit/Lighting/Video), waveforms stacked above deck row (2/4 deck horizontal/vertical, Browse), mixer column, sampler strip, browser, status bar. No layout managers — explicit `x`, `y`, `width`, `height` arithmetic.
-- **Waveform rendering**: `djsugar-waveform` crate (wgpu) → GPU texture → Slint `Image`. Summary data (`GpuTrack`) uploaded once; per-frame uniform block only. Styles: RGB (band balance), Bands (stacked), Mono (played/unplayed), Blue (rekordbox-style), Stems (per-stem colour).
+- **Waveform rendering**: `djsugar-waveform` crate (wgpu) to GPU texture to Slint `Image`. Summary data (`GpuTrack`) uploaded once; per-frame uniform block only. Styles: RGB (band balance), Bands (stacked), Mono (played/unplayed), Blue (rekordbox-style), Stems (per-stem colour).
 - **Menu bar**: Native macOS menu bar (`crates/app/src/mac_menu.rs`); Windows/Linux: button opens same File/Edit/View menus (`crates/app/src/app_menu.rs`, `appmenu.slint`). 40 actions (Settings, Quit, Undo, Find, Export*, Record Mix, Mini Player, Zoom, Waveform Height, Tour, Tutorials, User Guide, Report Problem, Check for Updates).
 - **Touch**: `touch.slint`, `touch-actions.slint`, `deck-touch.slint` — touch workspace, gestures, large hit targets. Layout profile 1 = touch.
 - **Theming**: `theme.slint`, `themes.slint`, `skin/` — Catppuccin Mocha base, skin files restyle `Theme` globals, per-deck waveform colours.
@@ -121,7 +121,7 @@
 - **Framework**: Slint 1.17/1.18 (pinned), `unstable-winit-030`, `raw-window-handle-06`. UI built as separate crate `openfader-ui` (workspace member).
 - **UI definition**: `.slint` files under `ui/` (50+ files: `app.slint`, `deck.slint`, `browser.slint`, `mixer.slint`, `fx.slint`, `sampler.slint`, `groove.slint`, `deck-wave.slint`, `deck-wave-v.slint`, `deck-compact.slint`, `theme.slint`, `themes.slint`, `prefs.slint`, `plugins.slint`, `device.slint`, `exportmode.slint`, `edit.slint`, `lighting.slint`, `video.slint`, `stage/state.slint`, `stage/stage.slint`, `widgets.slint`, `touch.slint`, `split.slint`, etc.).
 - **Layout**: `app.slint` (650 lines) hand-positioned. Global bar, mode selector (Export/Performance/Edit/Lighting/Video), waveforms (horizontal stack or vertical between decks), deck row, mixer column, sampler, browser, status bar. Touch layout profile 1, Stage workspace profile 2 (replaces desktop layout for 2-deck performance).
-- **Waveform rendering**: CPU composition into `SharedPixelBuffer` (Slint's renderer, no second GPU context). `render/mod.rs` selects GPU image compositor (femtovg) or CPU fallback. `detail.rs`/`overview.rs`/`phrase.rs` compose layers: 3-band (low=blue, mid=amber, high=white), color preview (RGBH), mono. `Axis` maps time→pixel; `Wave` downsamples/upsamples entries to pixel columns; `Canvas` anti-aliases edges. Stem waveform replaces 3-band when stem muted.
+- **Waveform rendering**: CPU composition into `SharedPixelBuffer` (Slint's renderer, no second GPU context). `render/mod.rs` selects GPU image compositor (femtovg) or CPU fallback. `detail.rs`/`overview.rs`/`phrase.rs` compose layers: 3-band (low=blue, mid=amber, high=white), color preview (RGBH), mono. `Axis` maps time->pixel; `Wave` downsamples/upsamples entries to pixel columns; `Canvas` anti-aliases edges. Stem waveform replaces 3-band when stem muted.
 - **Menu bar**: No native menu bar. Global bar with mode selector + panel toggles (FX, Mixer, Sampler, Browser). File/Edit/View actions in submenus of global bar or via keyboard shortcuts.
 - **Touch**: `touch.slint`, `deck-touch.slint`, `touch-actions.slint` — touch workspace, safe-area insets, large controls. `Theme.layout-profile == 1` enables touch layout.
 - **Theming**: `theme.slint` (tokens), `themes.slint` (theme cards), `skin/` — base theme + skin overrides, `Palette` struct in Rust for waveform colours.
@@ -241,7 +241,7 @@
 - **Export mode** (`exportmode.rs`, `exportmode.slint`): Player panels over decks A/B, 6 layouts.
 - **Raspberry Pi optimisation** (`profile.pi`, `Dockerfile.pi`): Fat LTO, strip, CPU-only stems, prebuilt archives.
 - **Rollback on failed update** (`update.rs`, `main.rs`): Keeps `.prev` copy, `--rollback` flag.
-- **Low-memory malloc tuning** (`main.rs`): `mallopt` for glibc (274→203 MB RSS measured).
+- **Low-memory malloc tuning** (`main.rs`): `mallopt` for glibc (274->203 MB RSS measured).
 - **Stick verifier** (`device/verify.rs`): `openfader verify <mount>` headless, checks player compatibility.
 
 ---
@@ -292,7 +292,7 @@
 | `cpal` | Audio I/O | Cross-platform (ALSA/CoreAudio/WASAPI/Oboe/ASIO). Standard. |
 | `realfft` | FFT for stretch/analysis | Pure Rust, used by `djsugar-stretch` and `beat-this`. |
 | `rubato` | Sample rate conversion | High-quality, pure Rust. Consider for resampling. |
-| `rtrb` | Lock-free ring buffers | Used by djsugar for audio↔loader queues. Simple, correct. |
+| `rtrb` | Lock-free ring buffers | Used by djsugar for audio<->loader queues. Simple, correct. |
 | `rayon` | Thread pool for analysis | Standard, work-stealing. Both use it (djsugar explicitly, openfader via `thread::scope`). |
 | `parking_lot` | Fast mutex/RwLock | Used by openfader; faster than std. |
 | `rusqlite` + `sqlcipher` | Library DB | Both use SQLite. SQLCipher for encrypted adapters (openfader). |

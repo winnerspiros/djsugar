@@ -613,7 +613,7 @@ Any allocation/lock in callback = priority inversion risk = xrun.
 
 | Pattern | Crate | Use Case |
 |---------|-------|----------|
-| Lock-free SPSC ring | `crossbeam-channel` (bounded), `heapless::spsc`, `ringbuf` | Audio → UI, UI → Audio |
+| Lock-free SPSC ring | `crossbeam-channel` (bounded), `heapless::spsc`, `ringbuf` | Audio to UI, UI to Audio |
 | Bump arena per callback | `bumpalo` | Temp DSP buffers |
 | Object pool | `object_pool`, `pooling` | Reusable filter states |
 | Pre-allocated vec | `Vec::with_capacity` + `set_len` | Output buffers |
@@ -621,7 +621,7 @@ Any allocation/lock in callback = priority inversion risk = xrun.
 ### Config Snippet
 
 ```rust
-// Lock-free SPSC for audio → analysis worker
+// Lock-free SPSC for audio to analysis worker
 use crossbeam_channel::bounded;
 use std::sync::Arc;
 
@@ -786,7 +786,7 @@ Mobile GPUs (Tile-Based Deferred Rendering) need different patterns: avoid overd
 | `Immediate` | Yes | 0 frames | Benchmarking only |
 | `AutoVsync` / `AutoNoVsync` | Auto | Auto | Cross-platform |
 
-**For DJ app (redraw-on-demand):** Use `PresentMode::AutoNoVsync` → falls back to `Immediate` (no queue) or `Mailbox`. Only call `request_redraw()` on UI change.
+**For DJ app (redraw-on-demand):** Use `PresentMode::AutoNoVsync` to falls back to `Immediate` (no queue) or `Mailbox`. Only call `request_redraw()` on UI change.
 
 ### Tile-Based Optimization (Adreno/Mali/Apple)
 
@@ -867,7 +867,7 @@ fn request_redraw_when_needed(window: &winit::window::Window, needs_redraw: bool
 Memory-map decoded audio files (zero-copy), cache layout computations, use `memmap2` for cross-platform mmap.
 
 ### Why
-Avoids double-buffering (disk → page cache → app buffer). Enables random access for scratching/seeking. Reduces startup I/O.
+Avoids double-buffering (disk to page cache to app buffer). Enables random access for scratching/seeking. Reduces startup I/O.
 
 ### Measured Gains
 - `memmap2` + `symphonia` (via `oxiaudio-decode` mmap feature): Zero-copy decode, OS handles paging.
@@ -1011,22 +1011,22 @@ split-debuginfo = "packed"
 
 | Category | Done? | Verification |
 |----------|-------|--------------|
-| Compiler flags per platform | ☐ | `cargo build --release --target=... && cargo size` |
-| PGO + BOLT pipeline | ☐ | `hyperfine` before/after on DJ workload |
-| mold linker (Linux/Android) | ☐ | `time cargo build` comparison |
-| rusty_alloc global allocator | ☐ | `heaptrack` / `alloc-trace` |
-| Binary size < 10MB (striped) | ☐ | `ls -lh target/release/djsugar` |
-| SIMD multiversioned (x86-64-v3 + aarch64-basic) | ☐ | `cargo asm` verify vectors |
-| Audio thread realtime priority | ☐ | `chrt -p <pid>` / `SCHED_FIFO` |
-| big.LITTLE pin to perf cores | ☐ | `cat /proc/<pid>/status` Cpus_allowed |
-| FTZ/DAZ guard in callback | ☐ | `perf stat -e fp_ret_sse_avx_ops.all` |
-| Buffer size = 2 * burst (Android) | ☐ | `AAudioStream_getFramesPerBurst` |
-| Zero alloc/lock in callback | ☐ | `heaptrack` / manual audit |
-| ADPF hint session + thermal | ☐ | `dumpsys thermal` / log headroom |
-| wgpu AutoNoVsync + redraw-on-demand | ☐ | Frame time < 16ms, no continuous GPU |
-| Transient attachments / fused passes | ☐ | RenderDoc / `adb shell dumpsys gfxinfo` |
-| mmap audio + layout cache | ☐ | Startup I/O `strace -c` |
-| Startup < 500ms cold | ☐ | `time ./target/release/djsugar --benchmark-startup` |
+| Compiler flags per platform | open | `cargo build --release --target=... && cargo size` |
+| PGO + BOLT pipeline | open | `hyperfine` before/after on DJ workload |
+| mold linker (Linux/Android) | open | `time cargo build` comparison |
+| rusty_alloc global allocator | open | `heaptrack` / `alloc-trace` |
+| Binary size < 10MB (striped) | open | `ls -lh target/release/djsugar` |
+| SIMD multiversioned (x86-64-v3 + aarch64-basic) | open | `cargo asm` verify vectors |
+| Audio thread realtime priority | open | `chrt -p <pid>` / `SCHED_FIFO` |
+| big.LITTLE pin to perf cores | open | `cat /proc/<pid>/status` Cpus_allowed |
+| FTZ/DAZ guard in callback | open | `perf stat -e fp_ret_sse_avx_ops.all` |
+| Buffer size = 2 * burst (Android) | open | `AAudioStream_getFramesPerBurst` |
+| Zero alloc/lock in callback | open | `heaptrack` / manual audit |
+| ADPF hint session + thermal | open | `dumpsys thermal` / log headroom |
+| wgpu AutoNoVsync + redraw-on-demand | open | Frame time < 16ms, no continuous GPU |
+| Transient attachments / fused passes | open | RenderDoc / `adb shell dumpsys gfxinfo` |
+| mmap audio + layout cache | open | Startup I/O `strace -c` |
+| Startup < 500ms cold | open | `time ./target/release/djsugar --benchmark-startup` |
 
 ---
 
@@ -1090,7 +1090,7 @@ rustflags = [
 ]
 ```
 
-**PGO on iOS:** `cargo-pgo` works cross-target. Profile on device/simulator via `cargo-dinghy` or TestFlight build. Instrument → run DJ workload (mixing, stems, UI) → optimize.
+**PGO on iOS:** `cargo-pgo` works cross-target. Profile on device/simulator via `cargo-dinghy` or TestFlight build. Instrument to run DJ workload (mixing, stems, UI) to optimize.
 
 ### Audio Thread: Realtime Priority + Audio Workgroups
 
@@ -1119,7 +1119,7 @@ os_workgroup_leave(workgroup, &mut token);
 ```
 
 **Key APIs (iOS 14+):**
-- `kAudioOutputUnitProperty_OSWorkgroup` → `os_workgroup_t`
+- `kAudioOutputUnitProperty_OSWorkgroup` to `os_workgroup_t`
 - `os_workgroup_join` / `os_workgroup_leave` (libc)
 - `pthread_set_qos_class_self_np` with `QOS_CLASS_USER_INTERACTIVE`
 - `AVAudioEngine` / `AVAudioSinkNode` for Swift-friendly path; same workgroup via `AUAudioUnit.osWorkgroup`
@@ -1130,7 +1130,7 @@ os_workgroup_leave(workgroup, &mut token);
 
 | API | Buffer Frames | Sample Rate | Latency (ms) | Notes |
 |-----|---------------|-------------|--------------|-------|
-| **RemoteIO / AVAudioEngine** | 128–512 (IOBufferDuration × SR) | 44.1/48kHz | **2.7–11.6ms** | `AVAudioSession.setPreferredIOBufferDuration(0.005)` → ~5ms |
+| **RemoteIO / AVAudioEngine** | 128–512 (IOBufferDuration × SR) | 44.1/48kHz | **2.7–11.6ms** | `AVAudioSession.setPreferredIOBufferDuration(0.005)` to ~5ms |
 | **AAudio (Android)** | 2 × burst | 48kHz | 4–5ms | Reference |
 
 **iOS config snippet:**
@@ -1206,9 +1206,9 @@ unsafe {
 ```
 
 **Quality reduction actions:**
-- Lower FFT size (2048 → 1024)
+- Lower FFT size (2048 to 1024)
 - Disable stem separation inference
-- Reduce UI frame rate (60 → 30 fps)
+- Reduce UI frame rate (60 to 30 fps)
 - Decrease oversampling factor
 
 ### Startup Time (iOS)
@@ -1278,7 +1278,7 @@ fn main() {
 
 | Guideline | Requirement | Verification |
 |-----------|-------------|--------------|
-| **2.4.2** | No excessive battery/heat/background abuse | Profile with `Instruments` → Energy Log |
+| **2.4.2** | No excessive battery/heat/background abuse | Profile with `Instruments` to Energy Log |
 | **2.5.2** | No downloaded executable code | Binary audit: `otool -L`, `codesign -dvvv` |
 | **2.5.4** | Background audio mode only for actual playback | `UIBackgroundModes:audio` + RemoteIO callback running in background |
 
@@ -1286,12 +1286,12 @@ fn main() {
 
 | Category | Done? | Verification |
 |----------|-------|--------------|
-| target-cpu=apple-a16 (or baseline features) | ☐ | `cargo build --release --target aarch64-apple-ios && cargo asm` |
-| Audio thread QoS = UserInteractive | ☐ | `pthread_get_qos_class_self_np` |
-| Audio workgroup joined (aux threads) | ☐ | `os_workgroup_join` returns 0 |
-| IOBufferDuration ≤ 5ms (256 frames @ 48kHz) | ☐ | `AVAudioSession.ioBufferDuration` |
-| Thermal monitor (ProcessInfo.thermalState) | ☐ | Simulate via `Instruments` → Thermal State |
-| Metal transient attachments / FP16 textures | ☐ | `Instruments` → GPU / Metal System Trace |
-| Background audio works (RemoteIO callback fires) | ☐ | Test: lock screen, audio continues |
-| No JIT / no downloaded code | ☐ | `codesign -dvvv`, binary scan for `wasmtime`/`dlopen` |
-| Startup < 800ms cold (device) | ☐ | `time xcrun simctl launch booted <bundle-id>` |
+| target-cpu=apple-a16 (or baseline features) | open | `cargo build --release --target aarch64-apple-ios && cargo asm` |
+| Audio thread QoS = UserInteractive | open | `pthread_get_qos_class_self_np` |
+| Audio workgroup joined (aux threads) | open | `os_workgroup_join` returns 0 |
+| IOBufferDuration ≤ 5ms (256 frames @ 48kHz) | open | `AVAudioSession.ioBufferDuration` |
+| Thermal monitor (ProcessInfo.thermalState) | open | Simulate via `Instruments` to Thermal State |
+| Metal transient attachments / FP16 textures | open | `Instruments` to GPU / Metal System Trace |
+| Background audio works (RemoteIO callback fires) | open | Test: lock screen, audio continues |
+| No JIT / no downloaded code | open | `codesign -dvvv`, binary scan for `wasmtime`/`dlopen` |
+| Startup < 800ms cold (device) | open | `time xcrun simctl launch booted <bundle-id>` |

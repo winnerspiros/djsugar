@@ -11,56 +11,152 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTFLAGS: -D warnings
+  RUSTDOCFLAGS: -D warnings
+  RUST_BACKTRACE: short
 
 jobs:
-  lint-test:
+  hygiene:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - run: scripts/hygiene.sh
+      - uses: crate-ci/typos@master
+
+  fmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
+          components: rustfmt
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace --release
+
+  deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny,cargo-shear
+      - run: cargo deny --all-features check
+      - run: cargo shear
+      - name: Lockfile is current
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
+      - run: cargo test --workspace --locked
+      - run: cargo test --workspace --release --locked
+      - run: cargo doc --workspace --no-deps --locked
+      - run: cargo build --release -p djsugar --locked
+      - name: Size
+        run: |
+          f=target/release/djsugar
+          s=$(stat -c %s $f)
+          echo "Linux binary: $((s / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
+          [ $s -lt 41943040 ] || { echo "::error::Linux binary over 40 MiB: $s"; exit 1; }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-linux
+          path: target/release/djsugar
+
+  miri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo miri test --locked -p sugar-core -p sugar-layout
+        env:
+          RUSTFLAGS: ""
 
   desktop:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            bin: target/release/djsugar.exe
+          - os: macos-latest
+            bin: target/release/djsugar
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release -p djsugar
-      - run: cargo test --workspace --release
+      - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
+      - run: cargo test --workspace --locked
+      - run: cargo build --release -p djsugar --locked
+      - uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-${{ runner.os }}
+          path: ${{ matrix.bin }}
 
   ios:
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --release --target aarch64-apple-ios -p djsugar
+      - run: cargo clippy --target aarch64-apple-ios -p djsugar --locked -- -D clippy::all
+      - run: cargo build --release --target aarch64-apple-ios -p djsugar --lib --locked
 
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME bash platform/android/build.sh
-      - uses: actions/upload-artifact@v4
+      - name: Toolchain
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+      - run: cargo clippy --target aarch64-linux-android -p djsugar --locked -- -D clippy::all
+      - run: KEYSTORE=$RUNNER_TEMP/debug.keystore bash platform/android/build.sh
+      - name: Verify and size
+        run: |
+          bt=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $bt/zipalign -c -P 16 4 target/djsugar.apk
+          $bt/apksigner verify target/djsugar.apk
+          s=$(stat -c %s target/djsugar.apk)
+          so=$(stat -c %s target/android/lib/arm64-v8a/libdjsugar.so)
+          echo "APK: $((s / 1024)) KiB, native lib: $((so / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
+          [ $s -lt 25165824 ] || { echo "::error::APK over 24 MiB: $s"; exit 1; }
+      - uses: actions/upload-artifact@v7
         with:
-          name: djsugar-apk
+          name: djsugar-android
           path: target/djsugar.apk

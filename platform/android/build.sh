@@ -16,6 +16,6 @@ llvm-strip --strip-unneeded "$OUT/lib/arm64-v8a/libdjsugar.so"
 (cd "$OUT" && zip -q -0 base.apk lib/arm64-v8a/libdjsugar.so)
 "$BT/zipalign" -f -P 16 4 "$OUT/base.apk" "$OUT/aligned.apk"
 KS=${KEYSTORE:-$HOME/.android/debug.keystore}
-[ -f "$KS" ] || keytool -genkeypair -keystore "$KS" -storepass android -keypass android -alias androiddebugkey -dname CN=debug -keyalg RSA -validity 10000
+[ -f "$KS" ] || { mkdir -p "$(dirname "$KS")"; keytool -genkeypair -keystore "$KS" -storepass android -keypass android -alias androiddebugkey -dname CN=debug -keyalg RSA -validity 10000; }
 "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --out target/djsugar.apk "$OUT/aligned.apk"
 echo target/djsugar.apk

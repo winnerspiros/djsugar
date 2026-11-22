@@ -264,26 +264,37 @@ mod android {
     #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
     fn request_audio(app: &AndroidApp) -> jni::errors::Result<()> {
         use jni::objects::{JObject, JValue};
-        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) }?;
-        let mut env = vm.attach_current_thread()?;
-        let activity = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
-        let sdk = env.get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?.i()?;
-        let name =
-            if sdk >= 33 { "android.permission.READ_MEDIA_AUDIO" } else { "android.permission.READ_EXTERNAL_STORAGE" };
-        let perm = env.new_string(name)?;
-        let state = env
-            .call_method(&activity, "checkSelfPermission", "(Ljava/lang/String;)I", &[JValue::Object(&perm)])?
-            .i()?;
-        if state != 0 {
-            let list = env.new_object_array(1, "java/lang/String", &perm)?;
-            env.call_method(
-                &activity,
-                "requestPermissions",
-                "([Ljava/lang/String;I)V",
-                &[JValue::Object(&list), JValue::Int(1)],
-            )?;
-        }
-        Ok(())
+        use jni::{jni_sig, jni_str};
+        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
+        vm.attach_current_thread(|env| {
+            let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
+            let sdk =
+                env.get_static_field(jni_str!("android/os/Build$VERSION"), jni_str!("SDK_INT"), jni_sig!("I"))?.i()?;
+            let name = if sdk >= 33 {
+                "android.permission.READ_MEDIA_AUDIO"
+            } else {
+                "android.permission.READ_EXTERNAL_STORAGE"
+            };
+            let perm = env.new_string(name)?;
+            let state = env
+                .call_method(
+                    &activity,
+                    jni_str!("checkSelfPermission"),
+                    jni_sig!("(Ljava/lang/String;)I"),
+                    &[JValue::Object(&perm)],
+                )?
+                .i()?;
+            if state != 0 {
+                let list = env.new_object_array(1, jni_str!("java/lang/String"), &perm)?;
+                env.call_method(
+                    &activity,
+                    jni_str!("requestPermissions"),
+                    jni_sig!("([Ljava/lang/String;I)V"),
+                    &[JValue::Object(&list), JValue::Int(1)],
+                )?;
+            }
+            Ok(())
+        })
     }
 
     #[allow(unsafe_code, reason = "the activity glue looks this symbol up by name")]

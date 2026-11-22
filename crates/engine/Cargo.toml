@@ -6,9 +6,9 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-rtrb = "0.3"
+rtrb = "0.4"
 sugar-stretch = { path = "../stretch" }
-triple_buffer = "8"
+triple_buffer = "9"
 
 [lints]
 workspace = true

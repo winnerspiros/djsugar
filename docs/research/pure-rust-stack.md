@@ -22,13 +22,13 @@ Cross-platform (Android, Linux, Windows, macOS) DJ application. **Goal: zero C/C
 
 | OS | Crate | Version | Pure Rust | Maturity | Notes |
 |----|-------|---------|-----------|----------|-------|
-| **Linux (X11)** | `x11rb` | 0.10+ | ✅ | Stable | Pure-Rust X11 protocol (XCB replacement). No `libxcb`/`libX11`. Use `RustConnection`. |
-| **Linux (Wayland)** | `wayland-client` + `wayland-protocols` | 0.31+ / 0.31+ | ✅ | Stable | Pure-Rust Wayland client (generated from XML). No `libwayland`. Pair with `smithay-client-toolkit` for higher-level abstractions. |
-| **Linux (Keymap)** | `xkbcommon-rs` (no dl) / `keymap` | — | ✅ | Emerging | Parse XKB keymaps in Rust. Avoid `xkbcommon-dl`. |
-| **Android** | `android-activity` + `ndk` | 0.5+ / 0.9+ | ✅ | Stable | JNI glue + NDK syscalls. `GameActivity`/`SurfaceView` for 120 Hz VSync. No `ndk-glue`. |
-| **Windows** | `windows-sys` / `windows` | 0.58+ / 0.58+ | ✅ | Stable | Win32 API from metadata. `windows-sys` = `no_std` friendly, zero deps. |
-| **macOS / iOS** | `objc2` + `objc2-foundation` + `objc2-appkit` / `objc2-uikit` | 0.6+ | ✅ | Stable | Objective-C runtime via Rust. `CAMetalLayer`, `NSWindow`, `NSTextInputClient`. |
-| **Web (WASM)** | `web-sys` + `wasm-bindgen` | 0.3+ | ✅ | Stable | `HtmlCanvasElement`, `WebGl2RenderingContext`, `GpuDevice`. |
+| **Linux (X11)** | `x11rb` | 0.10+ | yes | Stable | Pure-Rust X11 protocol (XCB replacement). No `libxcb`/`libX11`. Use `RustConnection`. |
+| **Linux (Wayland)** | `wayland-client` + `wayland-protocols` | 0.31+ / 0.31+ | yes | Stable | Pure-Rust Wayland client (generated from XML). No `libwayland`. Pair with `smithay-client-toolkit` for higher-level abstractions. |
+| **Linux (Keymap)** | `xkbcommon-rs` (no dl) / `keymap` | — | yes | Emerging | Parse XKB keymaps in Rust. Avoid `xkbcommon-dl`. |
+| **Android** | `android-activity` + `ndk` | 0.5+ / 0.9+ | yes | Stable | JNI glue + NDK syscalls. `GameActivity`/`SurfaceView` for 120 Hz VSync. No `ndk-glue`. |
+| **Windows** | `windows-sys` / `windows` | 0.58+ / 0.58+ | yes | Stable | Win32 API from metadata. `windows-sys` = `no_std` friendly, zero deps. |
+| **macOS / iOS** | `objc2` + `objc2-foundation` + `objc2-appkit` / `objc2-uikit` | 0.6+ | yes | Stable | Objective-C runtime via Rust. `CAMetalLayer`, `NSWindow`, `NSTextInputClient`. |
+| **Web (WASM)** | `web-sys` + `wasm-bindgen` | 0.3+ | yes | Stable | `HtmlCanvasElement`, `WebGl2RenderingContext`, `GpuDevice`. |
 
 **Recommendation:** Replace `winit` with **per-platform shells** behind a narrow `PlatformWindow` trait (see `rune` architecture). winit's X11/Wayland backends pull `wayland-sys`/`x11-dl`/`xkbcommon-dl`; its Android backend pulls `android-activity` but with version-locked `ndk-glue`. Writing thin shells (~4–6k LOC each) avoids all `-sys` crates and gives first-class text input, live resize, and accessibility.
 
@@ -43,12 +43,12 @@ cargo tree -p x11rb -p wayland-client -p android-activity -p windows-sys -p objc
 
 | Backend | OS | Crate | Pure Rust | Feature Flag | Notes |
 |---------|----|-------|-----------|--------------|-------|
-| **Vulkan** | Linux, Windows, Android | `ash` | ⚠️ dlopen only | `vulkan` | `ash` uses `libloading` to `dlopen` `libvulkan.so`/`vulkan-1.dll` — **unavoidable driver ABI**. Disable `renderdoc` feature. |
-| **Metal** | macOS, iOS | `metal` (via `objc2`) | ✅ | `metal` | Pure Rust via `objc2` bindings. No C. |
-| **DX12** | Windows | `windows-sys` | ✅ | `dx12` | Pure Rust via `windows-sys` metadata. No C. |
-| **GLES** | Linux, Android, Windows | `glow` / `khronos-egl` | ⚠️ dlopen | `gles` | `glow` dlopen's `libEGL`/`libGLESv2`. Prefer Vulkan/Metal/DX12. |
-| **WebGPU** | WASM | `web-sys` | ✅ | `webgpu` | Browser native. |
-| **Noop** | Testing | Built-in | ✅ | `noop` | Stub backend. |
+| **Vulkan** | Linux, Windows, Android | `ash` | warn dlopen only | `vulkan` | `ash` uses `libloading` to `dlopen` `libvulkan.so`/`vulkan-1.dll` — **unavoidable driver ABI**. Disable `renderdoc` feature. |
+| **Metal** | macOS, iOS | `metal` (via `objc2`) | yes | `metal` | Pure Rust via `objc2` bindings. No C. |
+| **DX12** | Windows | `windows-sys` | yes | `dx12` | Pure Rust via `windows-sys` metadata. No C. |
+| **GLES** | Linux, Android, Windows | `glow` / `khronos-egl` | warn dlopen | `gles` | `glow` dlopen's `libEGL`/`libGLESv2`. Prefer Vulkan/Metal/DX12. |
+| **WebGPU** | WASM | `web-sys` | yes | `webgpu` | Browser native. |
+| **Noop** | Testing | Built-in | yes | `noop` | Stub backend. |
 
 **wgpu Cargo.toml (pure-Rust profile):**
 ```toml
@@ -76,12 +76,12 @@ cargo tree -p wgpu -p wgpu-hal -p ash -p metal -p windows-sys --edges features |
 
 | Platform | Backend | Crate | Version | Pure Rust | Maturity | Notes |
 |----------|---------|-------|---------|-----------|----------|-------|
-| **Linux** | ALSA (ioctl) | `alsa-rs` / `alsa-pcm` (custom) | — | ✅ | Emerging | Pure-Rust ALSA via `ioctl` on `/dev/snd/*`. No `alsa-sys`. See `rodio`/`cpal` source for ioctl patterns. |
-| **Linux** | PipeWire | `pipewire-rs` (via `spa-sys`) | — | ❌ | — | Pulls `spa-sys` (C). Avoid. |
-| **Android** | AAudio | `ndk` + `aaudio-sys` (custom) | 0.9+ | ✅ | Stable | `ndk` crate provides AAudio bindings. No `oboe`/`cpal` default. |
-| **Windows** | WASAPI | `windows-sys` (IAudioClient) | 0.58+ | ✅ | Stable | Pure Rust via `windows-sys` COM interfaces. No `cpal` default. |
-| **macOS/iOS** | CoreAudio | `objc2-core-audio` (custom) | — | ✅ | Emerging | `objc2` + `AudioUnit`/`AudioToolbox` frameworks. No `coreaudio-sys`. |
-| **Cross-platform (fallback)** | cpal | `cpal` | 0.15+ | ⚠️ | Stable | **Default pulls `alsa-sys` on Linux**. Use only with `no-default-features` + per-platform feature gates. |
+| **Linux** | ALSA (ioctl) | `alsa-rs` / `alsa-pcm` (custom) | — | yes | Emerging | Pure-Rust ALSA via `ioctl` on `/dev/snd/*`. No `alsa-sys`. See `rodio`/`cpal` source for ioctl patterns. |
+| **Linux** | PipeWire | `pipewire-rs` (via `spa-sys`) | — | no | — | Pulls `spa-sys` (C). Avoid. |
+| **Android** | AAudio | `ndk` + `aaudio-sys` (custom) | 0.9+ | yes | Stable | `ndk` crate provides AAudio bindings. No `oboe`/`cpal` default. |
+| **Windows** | WASAPI | `windows-sys` (IAudioClient) | 0.58+ | yes | Stable | Pure Rust via `windows-sys` COM interfaces. No `cpal` default. |
+| **macOS/iOS** | CoreAudio | `objc2-core-audio` (custom) | — | yes | Emerging | `objc2` + `AudioUnit`/`AudioToolbox` frameworks. No `coreaudio-sys`. |
+| **Cross-platform (fallback)** | cpal | `cpal` | 0.15+ | warn | Stable | **Default pulls `alsa-sys` on Linux**. Use only with `no-default-features` + per-platform feature gates. |
 
 **Recommendation:** Write **per-platform audio backends** behind a `AudioDevice` trait (same pattern as windowing). cpal's Linux default requires `alsa-sys` (C). For a DJ app needing low latency, direct WASAPI/CoreAudio/AAudio/ALSA-ioctl is superior anyway.
 
@@ -104,12 +104,12 @@ cargo tree -p your-audio-crate | grep -E "(sys|dl|cc)" || echo "CLEAN"
 
 | Protocol | Platform | Crate | Version | Pure Rust | Maturity | Notes |
 |----------|----------|-------|---------|-----------|----------|-------|
-| **MIDI (Linux)** | ALSA Sequencer | `midir` | 0.11+ | ❌ | Stable | **Pulls `alsa-sys`**. No pure-Rust ALSA sequencer crate exists yet. |
-| **MIDI (Windows)** | WinMM / WinRT | `midir` (winrt feature) | 0.11+ | ✅ | Stable | WinRT via `windows-sys`. Pure Rust. |
-| **MIDI (macOS)** | CoreMIDI | `midir` / `coremidi` | 0.11+ | ⚠️ | Stable | `coremidi` crate uses `objc2` — pure Rust. |
-| **MIDI (Android)** | NDK AMidi | `midir` (android feature) | 0.11+ | ⚠️ | Beta | JNI via `ndk`. Pure Rust glue. |
-| **BLE MIDI** | Cross-platform | `btleplug` | 0.11+ | ⚠️ | Stable | Linux: `bluez-dbus` (dbus C). Windows/macOS: pure via `windows-sys`/`objc2`. |
-| **HID** | Cross-platform | `hidapi` | 0.2+ | ❌ | Stable | C library. Consider `device_query` (pure) for basic input. |
+| **MIDI (Linux)** | ALSA Sequencer | `midir` | 0.11+ | no | Stable | **Pulls `alsa-sys`**. No pure-Rust ALSA sequencer crate exists yet. |
+| **MIDI (Windows)** | WinMM / WinRT | `midir` (winrt feature) | 0.11+ | yes | Stable | WinRT via `windows-sys`. Pure Rust. |
+| **MIDI (macOS)** | CoreMIDI | `midir` / `coremidi` | 0.11+ | warn | Stable | `coremidi` crate uses `objc2` — pure Rust. |
+| **MIDI (Android)** | NDK AMidi | `midir` (android feature) | 0.11+ | warn | Beta | JNI via `ndk`. Pure Rust glue. |
+| **BLE MIDI** | Cross-platform | `btleplug` | 0.11+ | warn | Stable | Linux: `bluez-dbus` (dbus C). Windows/macOS: pure via `windows-sys`/`objc2`. |
+| **HID** | Cross-platform | `hidapi` | 0.2+ | no | Stable | C library. Consider `device_query` (pure) for basic input. |
 
 **Recommendation:**
 - **Linux MIDI:** Write a pure-Rust ALSA sequencer client (parse `/proc/asound/seq/*` + ioctl). ~500 LOC.
@@ -128,18 +128,18 @@ cargo tree -p btleplug --features "bluez" | grep -E "(dbus|bluez-sys)" && echo "
 
 | Format | Crate | Version | Pure Rust | Gapless | Default | Maturity |
 |--------|-------|---------|-----------|---------|---------|----------|
-| **FLAC** | `symphonia-bundle-flac` | 0.5+ | ✅ | ✅ | Yes | Excellent |
-| **MP3** | `symphonia-bundle-mp3` | 0.5+ | ✅ | ✅ | No | Excellent |
-| **Vorbis** | `symphonia-codec-vorbis` | 0.5+ | ✅ | ✅ | Yes | Excellent |
-| **Opus** | `symphonia-codec-opus` | 0.5+ | ✅ | ✅ | Yes | Excellent |
-| **AAC-LC** | `symphonia-codec-aac` | 0.5+ | ✅ | ❌ | No | Great |
-| **HE-AAC/v2** | `symphonia-codec-aac` (he-aac feature) | 0.5+ | ✅ | ❌ | No | Good |
-| **ALAC** | `symphonia-codec-alac` | 0.5+ | ✅ | ✅ | No | Great |
-| **WavPack** | `symphonia-codec-wavpack` | 0.5+ | ✅ | ✅ | Yes | Good |
-| **PCM/WAV** | `symphonia-codec-pcm` / `symphonia-format-riff` | 0.5+ | ✅ | ✅ | Yes | Excellent |
-| **MP4/M4A** | `symphonia-format-isomp4` | 0.5+ | ✅ | ✅ | No | Excellent |
-| **OGG** | `symphonia-format-ogg` | 0.5+ | ✅ | ✅ | Yes | Excellent |
-| **MKV/WebM** | `symphonia-format-mkv` | 0.5+ | ✅ | ✅ | Yes | Excellent |
+| **FLAC** | `symphonia-bundle-flac` | 0.5+ | yes | yes | Yes | Excellent |
+| **MP3** | `symphonia-bundle-mp3` | 0.5+ | yes | yes | No | Excellent |
+| **Vorbis** | `symphonia-codec-vorbis` | 0.5+ | yes | yes | Yes | Excellent |
+| **Opus** | `symphonia-codec-opus` | 0.5+ | yes | yes | Yes | Excellent |
+| **AAC-LC** | `symphonia-codec-aac` | 0.5+ | yes | no | No | Great |
+| **HE-AAC/v2** | `symphonia-codec-aac` (he-aac feature) | 0.5+ | yes | no | No | Good |
+| **ALAC** | `symphonia-codec-alac` | 0.5+ | yes | yes | No | Great |
+| **WavPack** | `symphonia-codec-wavpack` | 0.5+ | yes | yes | Yes | Good |
+| **PCM/WAV** | `symphonia-codec-pcm` / `symphonia-format-riff` | 0.5+ | yes | yes | Yes | Excellent |
+| **MP4/M4A** | `symphonia-format-isomp4` | 0.5+ | yes | yes | No | Excellent |
+| **OGG** | `symphonia-format-ogg` | 0.5+ | yes | yes | Yes | Excellent |
+| **MKV/WebM** | `symphonia-format-mkv` | 0.5+ | yes | yes | Yes | Excellent |
 
 **Recommendation:** **Symphonia** — single ecosystem, all pure Rust, modular features. Enable only needed codecs.
 
@@ -162,10 +162,10 @@ cargo tree -p symphonia -p symphonia-codec-aac -p symphonia-bundle-mp3 --edges f
 
 | Crate | Version | Algorithm | Pure Rust | Streaming | Maturity | Best For |
 |-------|---------|-----------|-----------|-----------|----------|----------|
-| `timestretch` | 0.7+ | Hybrid WSOLA + Phase Vocoder | ✅ | ✅ | Stable | **DJ/EDM** — transient-aware, presets (House, Techno, etc.) |
-| `wsola` | 0.3+ | WSOLA only | ✅ | ✅ | Stable | Speech, simple tempo change, low CPU |
-| `cathar` | 0.8+ | WSOLA + Phase Vocoder (selectable) | ✅ | ❌ | Stable | Offline processing, pitch shift |
-| `rubato` | 0.18+ | Sinc resampling (not time-stretch) | ✅ | ✅ | Stable | Sample-rate conversion only |
+| `timestretch` | 0.7+ | Hybrid WSOLA + Phase Vocoder | yes | yes | Stable | **DJ/EDM** — transient-aware, presets (House, Techno, etc.) |
+| `wsola` | 0.3+ | WSOLA only | yes | yes | Stable | Speech, simple tempo change, low CPU |
+| `cathar` | 0.8+ | WSOLA + Phase Vocoder (selectable) | yes | no | Stable | Offline processing, pitch shift |
+| `rubato` | 0.18+ | Sinc resampling (not time-stretch) | yes | yes | Stable | Sample-rate conversion only |
 
 **Recommendation:** **`timestretch`** — designed for electronic music, hybrid engine preserves transients (kicks) while stretching pads smoothly. Streaming API for real-time deck control.
 
@@ -180,16 +180,16 @@ cargo tree -p timestretch -p wsola -p cathar --edges features | grep -E "(sys|dl
 
 | Layer | Crate | Version | Pure Rust | Coverage | Maturity | Notes |
 |-------|-------|---------|-----------|----------|----------|-------|
-| **Shaping (Primary)** | `swash` | 0.1+ | ✅ | Full (HarfBuzz parity) | Stable | Used by `cosmic-text`, `oxitext`. TrueType hinting, color glyphs (COLRv1, CBDT). |
-| **Shaping (Alt)** | `rustybuzz` | 0.16+ | ✅ | 2221/2252 HB tests | Stable | HarfBuzz 10.1 port. Slower than C HB. No layout/rendering. |
-| **Shaping (New)** | `harfrust` | 0.1+ | ✅ | Google Fonts | Beta | New HB port in Rust. Used by `parley`/`cosmic-text` (v0.4+). |
-| **Layout** | `cosmic-text` | 0.10+ | ✅ | BiDi, line break, fallback | Stable | Batteries-included: `harfrust` + `fontdb` + `swash`. |
-| **Layout (Alt)** | `parley` | 0.4+ | ✅ | Knuth-Plass, BiDi | Stable | Lower-level. `harfrust` + `skrifa` + `kurbo`. |
-| **Raster (Primary)** | `fontdue` | 0.12+ | ✅ | Basic Latin, fast | Stable | No shaping. Simple API. `no_std` capable. |
-| **Raster (Hinting)** | `swash` (scale) | 0.1+ | ✅ | Full hinting | Stable | TrueType hinting via `zeno`. |
-| **Raster (Alt)** | `ab_glyph` | 0.3+ | ✅ | Basic | Stable | Sharper hints on some fonts. |
-| **Font DB** | `fontdb` | 0.13+ | ✅ | System fonts | Stable | Pure Rust font enumeration. |
-| **Full Pipeline** | `oxitext` | 0.1+ | ✅ | Complete | Beta | COOLJAPAN stack: `swash`/`rustybuzz` + `fontdue`/`ab_glyph`/`swash` raster + ICU4X. `#![forbid(unsafe_code)]`. |
+| **Shaping (Primary)** | `swash` | 0.1+ | yes | Full (HarfBuzz parity) | Stable | Used by `cosmic-text`, `oxitext`. TrueType hinting, color glyphs (COLRv1, CBDT). |
+| **Shaping (Alt)** | `rustybuzz` | 0.16+ | yes | 2221/2252 HB tests | Stable | HarfBuzz 10.1 port. Slower than C HB. No layout/rendering. |
+| **Shaping (New)** | `harfrust` | 0.1+ | yes | Google Fonts | Beta | New HB port in Rust. Used by `parley`/`cosmic-text` (v0.4+). |
+| **Layout** | `cosmic-text` | 0.10+ | yes | BiDi, line break, fallback | Stable | Batteries-included: `harfrust` + `fontdb` + `swash`. |
+| **Layout (Alt)** | `parley` | 0.4+ | yes | Knuth-Plass, BiDi | Stable | Lower-level. `harfrust` + `skrifa` + `kurbo`. |
+| **Raster (Primary)** | `fontdue` | 0.12+ | yes | Basic Latin, fast | Stable | No shaping. Simple API. `no_std` capable. |
+| **Raster (Hinting)** | `swash` (scale) | 0.1+ | yes | Full hinting | Stable | TrueType hinting via `zeno`. |
+| **Raster (Alt)** | `ab_glyph` | 0.3+ | yes | Basic | Stable | Sharper hints on some fonts. |
+| **Font DB** | `fontdb` | 0.13+ | yes | System fonts | Stable | Pure Rust font enumeration. |
+| **Full Pipeline** | `oxitext` | 0.1+ | yes | Complete | Beta | COOLJAPAN stack: `swash`/`rustybuzz` + `fontdue`/`ab_glyph`/`swash` raster + ICU4X. `#![forbid(unsafe_code)]`. |
 
 **Recommendation:** **`cosmic-text`** for turnkey (shaping + layout + raster + fallback + BiDi). **`oxitext`** if you need pipeline control, SIMD raster, SDF atlas, or COLRv1/SVG color glyphs. Both 100% pure Rust.
 
@@ -204,11 +204,11 @@ cargo tree -p cosmic-text -p oxitext -p swash -p rustybuzz -p fontdue --edges fe
 
 | Crate | Version | Pure Rust | Type | ACID | MVCC | Maturity | Notes |
 |-------|---------|-----------|------|------|------|----------|-------|
-| `redb` | 4.6+ | ✅ | K/V (B+tree) | ✅ | ✅ | Beta | LMDB-inspired. Zero-copy. File format stable. No `no_std` fs. |
-| `native_db` | 0.8+ | ✅ | Document (on redb) | ✅ | ✅ | Alpha | Typed models, auto-migration, real-time subscriptions. Requires `native_model`. |
-| `powdb` | 0.29+ | ✅ (engine) | Document (PowQL) | ✅ | ✅ | Alpha | Nested JSON-like. Windows **not supported** (mmap Unix-only). Server pulls TLS. |
-| `sled` | 0.34+ | ✅ | K/V (LSM) | ✅ | ❌ | Stable | Higher write amplification. Larger files. |
-| `fjall` | 0.7+ | ✅ | K/V (LSM) | ✅ | ✅ | Beta | Fast, tiered storage. |
+| `redb` | 4.6+ | yes | K/V (B+tree) | yes | yes | Beta | LMDB-inspired. Zero-copy. File format stable. No `no_std` fs. |
+| `native_db` | 0.8+ | yes | Document (on redb) | yes | yes | Alpha | Typed models, auto-migration, real-time subscriptions. Requires `native_model`. |
+| `powdb` | 0.29+ | yes (engine) | Document (PowQL) | yes | yes | Alpha | Nested JSON-like. Windows **not supported** (mmap Unix-only). Server pulls TLS. |
+| `sled` | 0.34+ | yes | K/V (LSM) | yes | no | Stable | Higher write amplification. Larger files. |
+| `fjall` | 0.7+ | yes | K/V (LSM) | yes | yes | Beta | Fast, tiered storage. |
 
 **Recommendation:** **`redb`** for raw K/V (proven, fast reads, pure Rust). **`native_db`** if you want typed documents + migrations + subscriptions (built on `redb`). Both pure Rust.
 
@@ -223,14 +223,14 @@ cargo tree -p redb -p native_db -p native_model --edges features | grep -E "(sys
 
 | Layer | Crate | Version | Pure Rust | Notes |
 |-------|-------|---------|-----------|-------|
-| **TCP/UDP** | `tokio` / `async-std` / `smol` | — | ✅ | `mio` (epoll/kqueue/IOCP) is pure Rust. |
-| **TLS (Client/Server)** | `rustls` | 0.23+ | ⚠️ | **Default pulls `aws-lc-rs` (C/asm)**. Must disable default features. |
-| **Crypto Provider (Pure)** | `moirai-crypto` | 0.11+ | ✅ | `rustls` `CryptoProvider` via RustCrypto. `#![forbid(unsafe_code)]`. No `ring`, no `aws-lc-rs`. TLS 1.2/1.3. |
-| **Crypto Provider (Pure)** | `rustls-pure` | 0.15+ | ✅ | TLS 1.3 only. PQ X25519MLKEM768. Wycheproof tested. |
-| **Crypto Provider (Pure)** | `rind-rustls` | 0.23+ | ✅ | **Fastest** — Rust `asm!` (x86_64, aarch64, arm32). Verified via `s2n-bignum` + Lean proofs. Drop-in for `ring`/`aws-lc-rs` APIs. |
-| **Crypto Provider (Pure)** | `oxitls-adapter-rustls-rustcrypto` | 0.3+ | ✅ | OxiTLS stack default. Per-config provider (no global install). |
-| **HTTP Client** | `reqwest` | 0.12+ | ⚠️ | Default uses `rustls` + `aws-lc-rs`. Use `default-features = false, features = ["rustls-tls", "rustls-no-provider"]` + install pure provider. |
-| **QUIC** | `quinn` | 0.11+ | ⚠️ | Pulls `rustls` default. Same provider fix. |
+| **TCP/UDP** | `tokio` / `async-std` / `smol` | — | yes | `mio` (epoll/kqueue/IOCP) is pure Rust. |
+| **TLS (Client/Server)** | `rustls` | 0.23+ | warn | **Default pulls `aws-lc-rs` (C/asm)**. Must disable default features. |
+| **Crypto Provider (Pure)** | `moirai-crypto` | 0.11+ | yes | `rustls` `CryptoProvider` via RustCrypto. `#![forbid(unsafe_code)]`. No `ring`, no `aws-lc-rs`. TLS 1.2/1.3. |
+| **Crypto Provider (Pure)** | `rustls-pure` | 0.15+ | yes | TLS 1.3 only. PQ X25519MLKEM768. Wycheproof tested. |
+| **Crypto Provider (Pure)** | `rind-rustls` | 0.23+ | yes | **Fastest** — Rust `asm!` (x86_64, aarch64, arm32). Verified via `s2n-bignum` + Lean proofs. Drop-in for `ring`/`aws-lc-rs` APIs. |
+| **Crypto Provider (Pure)** | `oxitls-adapter-rustls-rustcrypto` | 0.3+ | yes | OxiTLS stack default. Per-config provider (no global install). |
+| **HTTP Client** | `reqwest` | 0.12+ | warn | Default uses `rustls` + `aws-lc-rs`. Use `default-features = false, features = ["rustls-tls", "rustls-no-provider"]` + install pure provider. |
+| **QUIC** | `quinn` | 0.11+ | warn | Pulls `rustls` default. Same provider fix. |
 
 **rustls Cargo.toml (pure-Rust):**
 ```toml
@@ -259,11 +259,11 @@ cargo build --target x86_64-unknown-linux-musl 2>&1 | grep -E "error.*linker|cc1
 
 | Crate | Version | Pure Rust | SIMD | API Compat | Maturity | Notes |
 |-------|---------|-----------|------|------------|----------|-------|
-| `serde_json` | 1.0+ | ✅ | No | Standard | Stable | Baseline. 12 `unsafe` sites (inherited). |
-| `sonic-rs` | 0.5+ | ✅ | Yes (packed_simd) | Serde-compat | Stable | Requires `-C target-cpu=native`. x86_64/aarch64 only. |
-| `rusty_json_turbo` | 0.1+ | ✅ | No | **Byte-identical to serde_json** | Beta | Fork of `serde_json`. 1.21–1.89x faster. `no_std+alloc`, WASM. Same crate name. |
-| `simd-json` | 0.18+ | ✅ | Yes | Tape → struct | Stable | Two-stage parse. Slower than sonic/serde on struct deserialize. |
-| `nosj` | 0.1+ | ✅ | Yes | Event-based (no Value) | Alpha | Streaming Sink/Reader/Writer. 2–19x serde_json. No DOM. |
+| `serde_json` | 1.0+ | yes | No | Standard | Stable | Baseline. 12 `unsafe` sites (inherited). |
+| `sonic-rs` | 0.5+ | yes | Yes (packed_simd) | Serde-compat | Stable | Requires `-C target-cpu=native`. x86_64/aarch64 only. |
+| `rusty_json_turbo` | 0.1+ | yes | No | **Byte-identical to serde_json** | Beta | Fork of `serde_json`. 1.21–1.89x faster. `no_std+alloc`, WASM. Same crate name. |
+| `simd-json` | 0.18+ | yes | Yes | Tape to struct | Stable | Two-stage parse. Slower than sonic/serde on struct deserialize. |
+| `nosj` | 0.1+ | yes | Yes | Event-based (no Value) | Alpha | Streaming Sink/Reader/Writer. 2–19x serde_json. No DOM. |
 
 **Recommendation:** `serde_json` (or `sonic-rs` where SIMD and a known target CPU are available). `rusty_json_turbo` is too new; see the maturity table.
 
@@ -278,15 +278,15 @@ cargo tree -p rusty_json_turbo -p sonic-rs --edges features | grep -E "(sys|dl|c
 
 | Format | Crate | Version | Pure Rust | Encode | Maturity | Notes |
 |--------|-------|---------|-----------|--------|----------|-------|
-| **PNG** | `png` / `zune-png` | 0.18+ / 0.5+ | ✅ | ✅ | Stable | `png` = reference. `zune-png` = faster, modular. |
-| **JPEG** | `zune-jpeg` / `jpeg-decoder` / `jpeg-encoder` | 0.5+ | ✅ | ✅ | Stable | `zune-jpeg` = pure decode. `jpeg-decoder` = CMYK, progressive, DCT scaling. `jpeg-encoder` = baseline. |
-| **WebP** | `image-webp` | 0.9+ | ✅ | Lossless only | Stable | Lossy needs `libwebp` (C). Lossless VP8L is pure. |
-| **AVIF** | `ravif` (+ `rav1e`) / `avif-parse` + `re_rav1d` | 0.1+ | ✅ | ✅ | Beta | `rav1e` = pure Rust encoder (slow). `re_rav1d` = dav1d port (pure Rust decoder). Heavy compile. |
-| **JPEG XL** | `jxl-oxide` / `jixel` | 0.1+ | ✅ | ✅ | Beta | Decode conformant. Encode native only (lossy VarDCT / lossless Modular). |
-| **TIFF** | `tiff` | 0.8+ | ✅ | ✅ | Stable | LZW/Deflate/PackBits/JPEG. |
-| **GIF/BMP/ICO** | `image` (gif/bmp features) | 0.25+ | ✅ | ✅ | Stable | First frame only for GIF. |
-| **HDR/EXR** | `exr` / `zune-hdr` | 0.16+ / 0.5+ | ✅ | ✅ | Stable | Half/f32, DWAA/DWAB. |
-| **Unified** | `zune-image` / `imgio` / `rusty_image` | 0.5+ / 0.1+ / 0.1+ | ✅ | ✅ | Beta | `zune-image` = modular codecs. `imgio` = GPU textures (BC/ASTC/ETC). `rusty_image` = small formats + header probe. |
+| **PNG** | `png` / `zune-png` | 0.18+ / 0.5+ | yes | yes | Stable | `png` = reference. `zune-png` = faster, modular. |
+| **JPEG** | `zune-jpeg` / `jpeg-decoder` / `jpeg-encoder` | 0.5+ | yes | yes | Stable | `zune-jpeg` = pure decode. `jpeg-decoder` = CMYK, progressive, DCT scaling. `jpeg-encoder` = baseline. |
+| **WebP** | `image-webp` | 0.9+ | yes | Lossless only | Stable | Lossy needs `libwebp` (C). Lossless VP8L is pure. |
+| **AVIF** | `ravif` (+ `rav1e`) / `avif-parse` + `re_rav1d` | 0.1+ | yes | yes | Beta | `rav1e` = pure Rust encoder (slow). `re_rav1d` = dav1d port (pure Rust decoder). Heavy compile. |
+| **JPEG XL** | `jxl-oxide` / `jixel` | 0.1+ | yes | yes | Beta | Decode conformant. Encode native only (lossy VarDCT / lossless Modular). |
+| **TIFF** | `tiff` | 0.8+ | yes | yes | Stable | LZW/Deflate/PackBits/JPEG. |
+| **GIF/BMP/ICO** | `image` (gif/bmp features) | 0.25+ | yes | yes | Stable | First frame only for GIF. |
+| **HDR/EXR** | `exr` / `zune-hdr` | 0.16+ / 0.5+ | yes | yes | Stable | Half/f32, DWAA/DWAB. |
+| **Unified** | `zune-image` / `imgio` / `rusty_image` | 0.5+ / 0.1+ / 0.1+ | yes | yes | Beta | `zune-image` = modular codecs. `imgio` = GPU textures (BC/ASTC/ETC). `rusty_image` = small formats + header probe. |
 
 **Recommendation:** **`zune-image`** for modular, fast decoding (enable only needed format features). **`imgio`** if you need GPU texture compression (BC1-7, ASTC, ETC, Basis Universal). **`rusty_image`** for header probing + small formats (QOI, BMP, TGA, HDR, ICO, PNM).
 
@@ -301,14 +301,14 @@ cargo tree -p zune-image -p zune-jpeg -p zune-png -p jxl-oxide -p ravif --edges 
 
 | Crate | Version | Pure Rust | Backends | ONNX | Training | Maturity | Best For |
 |-------|---------|-----------|----------|------|----------|----------|----------|
-| `tract` | 0.22+ | ✅ | CPU | ✅ (~85% ops) | ❌ | Stable | Edge/embedded ONNX. No GPU. WASM. |
-| `candle` | 0.9+ | ✅ | CPU, CUDA, Metal | Weight loading | Exp. | Stable | LLM/vision inference. Small binary. |
-| `burn` | 0.21+ | ✅ | WGPU (Vulkan/Metal/DX12/WASM), CUDA, ROCm, NDArray, LibTorch | ✅ (via `burn-onnx` → Rust code) | ✅ | Stable | Full framework. Multi-backend. `no_std` core. |
-| `rten` | 0.26+ | ✅ | CPU | ✅ | ❌ | Beta | Pure-Rust ONNX engine. |
-| `oxionnx` | 0.1+ | ✅ | CPU | ✅ | ❌ | Alpha | Pure-Rust ONNX with control flow + quantization. |
-| `wonnx` | 0.1+ | ✅ | WebGPU | ✅ | ❌ | Alpha | WebGPU-accelerated ONNX for native + web. |
-| `mistral.rs` | 0.1+ | ✅ | CPU, CUDA, Metal | ❌ (GGUF/safetensors) | ❌ | Beta | Quantized LLM inference. |
-| `ort` | 2.0+ | ❌ | CUDA, TRT, DirectML, CoreML, OpenVINO | ✅ | ❌ | RC | **Wraps ONNX Runtime C++**. Use `ort-tract` / `ort-candle` backends for pure Rust. |
+| `tract` | 0.22+ | yes | CPU | yes (~85% ops) | no | Stable | Edge/embedded ONNX. No GPU. WASM. |
+| `candle` | 0.9+ | yes | CPU, CUDA, Metal | Weight loading | Exp. | Stable | LLM/vision inference. Small binary. |
+| `burn` | 0.21+ | yes | WGPU (Vulkan/Metal/DX12/WASM), CUDA, ROCm, NDArray, LibTorch | yes (via `burn-onnx` to Rust code) | yes | Stable | Full framework. Multi-backend. `no_std` core. |
+| `rten` | 0.26+ | yes | CPU | yes | no | Beta | Pure-Rust ONNX engine. |
+| `oxionnx` | 0.1+ | yes | CPU | yes | no | Alpha | Pure-Rust ONNX with control flow + quantization. |
+| `wonnx` | 0.1+ | yes | WebGPU | yes | no | Alpha | WebGPU-accelerated ONNX for native + web. |
+| `mistral.rs` | 0.1+ | yes | CPU, CUDA, Metal | no (GGUF/safetensors) | no | Beta | Quantized LLM inference. |
+| `ort` | 2.0+ | no | CUDA, TRT, DirectML, CoreML, OpenVINO | yes | no | RC | **Wraps ONNX Runtime C++**. Use `ort-tract` / `ort-candle` backends for pure Rust. |
 
 **Recommendation:**
 - **Stems separation (ONNX models):** `tract` (CPU-only, pure, small) or `burn` + `burn-onnx` (GPU via WGPU, converts ONNX to Rust code at build time).
@@ -332,15 +332,15 @@ cargo tree -p tract -p candle -p burn -p burn-onnx -p rten --edges features | gr
 
 | Algorithm | Crate | Version | Pure Rust | Stream | Maturity | Notes |
 |-----------|-------|---------|-----------|--------|----------|-------|
-| **DEFLATE/zlib/gzip** | `miniz_oxide` (via `flate2` rust_backend) | 0.7+ / 1.0+ | ✅ | ✅ | Stable | Default `flate2` backend. RFC 1950/1951. |
-| **DEFLATE (fast)** | `omnizip-deflate` / `omnizip-libdeflate` | 0.1+ | ✅ | ✅ | Beta | `miniz_oxide` compat. Optimized decode. |
-| **Zstandard** | `ruzstd` | 0.1+ | ✅ | ✅ | Beta | ZSTD frame format. Level 1 (fastest) encode. |
-| **LZ4** | `lz4_flex` | 0.11+ | ✅ | ✅ | Stable | Block + frame. HC (optimal parse) via feature. |
-| **Snappy** | `snap` / `omnizip-snappy` | 1.0+ / 0.1+ | ✅ | ✅ | Stable | Raw block. ~500 MB/s. |
-| **Brotli** | `brotli` | 3.4+ | ✅ | ✅ | Stable | Quality 11 (best ratio). |
-| **LZMA2/XZ** | `omnizip-lzma` | 0.1+ | ✅ | ✅ | Beta | XZ container. |
-| **BZip2** | `bzip2` (pure-Rust impl) | 0.4+ | ✅ | ✅ | Stable | Pure Rust port. |
-| **Unified** | `compcol` / `limnifs-core` | 0.1+ / 0.1+ | ✅ | ✅ | Alpha | Multi-codec registry. Cross-validated vs CLI tools. |
+| **DEFLATE/zlib/gzip** | `miniz_oxide` (via `flate2` rust_backend) | 0.7+ / 1.0+ | yes | yes | Stable | Default `flate2` backend. RFC 1950/1951. |
+| **DEFLATE (fast)** | `omnizip-deflate` / `omnizip-libdeflate` | 0.1+ | yes | yes | Beta | `miniz_oxide` compat. Optimized decode. |
+| **Zstandard** | `ruzstd` | 0.1+ | yes | yes | Beta | ZSTD frame format. Level 1 (fastest) encode. |
+| **LZ4** | `lz4_flex` | 0.11+ | yes | yes | Stable | Block + frame. HC (optimal parse) via feature. |
+| **Snappy** | `snap` / `omnizip-snappy` | 1.0+ / 0.1+ | yes | yes | Stable | Raw block. ~500 MB/s. |
+| **Brotli** | `brotli` | 3.4+ | yes | yes | Stable | Quality 11 (best ratio). |
+| **LZMA2/XZ** | `omnizip-lzma` | 0.1+ | yes | yes | Beta | XZ container. |
+| **BZip2** | `bzip2` (pure-Rust impl) | 0.4+ | yes | yes | Stable | Pure Rust port. |
+| **Unified** | `compcol` / `limnifs-core` | 0.1+ / 0.1+ | yes | yes | Alpha | Multi-codec registry. Cross-validated vs CLI tools. |
 
 **Recommendation:** **`flate2` with `rust_backend` (default)** for DEFLATE. **`ruzstd`** for Zstd. **`lz4_flex`** for LZ4. All pure Rust, stable, well-tested.
 
@@ -618,16 +618,16 @@ os_workgroup_leave(workgroup, &mut token);
 |-------|-------|---------|-----------|-------|
 | **Core MIDI** | `objc2-core-midi` | 0.3.2 | 1.0M | Pure Rust. `MIDIClientCreate`, `MIDISourceCreate`, `MIDIDestinationCreate`, `MIDIReceived`/`MIDISend`. MIDI 2.0 UMP support via `MIDIUMP*` APIs. |
 | **Core Bluetooth** | `objc2-core-bluetooth` | 0.3.2 | 15K | Pure Rust. `CBCentralManager`, `CBPeripheralManager`. BLE MIDI service UUID `03B80E5A-EDE8-4B33-A751-6CE34EC4C700`. |
-| **BLE MIDI Bridge** | `objc2-core-midi` (feature `MIDIBluetoothConnection`) | 0.3.2 | — | `MIDIBluetoothDriverActivateAllConnections()` promotes connected CB peripherals to Core MIDI endpoints. Flow: scan → connect via CoreBluetooth → activate → Core MIDI owns connection. |
+| **BLE MIDI Bridge** | `objc2-core-midi` (feature `MIDIBluetoothConnection`) | 0.3.2 | — | `MIDIBluetoothDriverActivateAllConnections()` promotes connected CB peripherals to Core MIDI endpoints. Flow: scan to connect via CoreBluetooth to activate to Core MIDI owns connection. |
 
 ### Build / Packaging (xcodebuild-free options)
 | Tool | Approach | Status | Notes |
 |------|----------|--------|-------|
 | **cargo-bundle** | `cargo bundle --target aarch64-apple-ios` | Experimental iOS | Generates `.app` bundle. Requires Xcode for codesign/simulator launch. |
 | **cargo-xcodebuild** | Generates `.xcodeproj`, builds via `xcodebuild` | Mature | `cargo install cargo-xcodebuild`. `Cargo.toml` `[package.metadata.ios] build_targets = ["aarch64-apple-ios", "aarch64-apple-ios-sim"]`. |
-| **cargo-mobile2** (Tauri) | `cargo mobile init` → `cargo apple run` | Active | Generates Xcode project, handles signing, runs on device/sim. `cargo install --git https://github.com/tauri-apps/cargo-mobile2`. |
+| **cargo-mobile2** (Tauri) | `cargo mobile init` to `cargo apple run` | Active | Generates Xcode project, handles signing, runs on device/sim. `cargo install --git https://github.com/tauri-apps/cargo-mobile2`. |
 | **cargo-dinghy** | Test runner for device/sim | Active | `cargo install cargo-dinghy`. Uses `pymobiledevice3` for device deploy. No bundle generation. |
-| **Manual + xcodegen** | `cargo build --target ... --crate-type staticlib` → `xcodegen` → `xcodebuild` | Full control | Used by `horizon-ios`, `rageEMU`. Lipo fat simulator binary (`x86_64` + `arm64`). |
+| **Manual + xcodegen** | `cargo build --target ... --crate-type staticlib` to `xcodegen` to `xcodebuild` | Full control | Used by `horizon-ios`, `rageEMU`. Lipo fat simulator binary (`x86_64` + `arm64`). |
 
 **Minimal Cargo.toml for iOS:**
 ```toml
@@ -684,7 +684,7 @@ rustflags = [
 ### Thermal State API (iOS 11+)
 | API | Access | Values | Usage |
 |-----|--------|--------|-------|
-| `ProcessInfo.thermalState` | `objc2-foundation` → `ProcessInfo` | `.nominal`, `.fair`, `.serious`, `.critical` | Poll on background thread (1–5s). On `.serious`/`.critical`: reduce quality (lower FFT size, disable stems, drop UI frame rate). |
+| `ProcessInfo.thermalState` | `objc2-foundation` to `ProcessInfo` | `.nominal`, `.fair`, `.serious`, `.critical` | Poll on background thread (1–5s). On `.serious`/`.critical`: reduce quality (lower FFT size, disable stems, drop UI frame rate). |
 | `thermalStateDidChangeNotification` | `NotificationCenter` | Same enum | Observer for immediate reaction. |
 
 **Rust access via objc2:**

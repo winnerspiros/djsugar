@@ -204,7 +204,7 @@
 | **LateNightQML Skin** (complete QML rewrite) | Multiple merges from upstream (`a86fa6eb7e`, `dc4bf99322` mixxxdj#17270) | `res/skins/LateNightQML/` |
 | **Back Spin Effect** (hand throw + coast, needle model) | `f4d63c6bd5`, `161f8d96ee` (format) | `src/effects/backends/builtin/backspineffect.cpp`, `src/engine/fxstation/fxstationscenes.h` (BackSpin Release) |
 | **Improved Library Scanner** (songs show within seconds, cancellation) | `3016e6dab6`, `024e5a849a` (cancellation checks), `170d9e7995` (skip phone/app folders) | `src/library/scanner/`, `src/library/androidscanorder.cpp` |
-| **Modern Track Menu** (Artist-Title card, hold→menu for decks/download/playlist) | `a389bbe6eb`, `aa349495b1`, `4d7ec002f1` | `src/qml/` (TrackMenu), `src/library/youtube/youtubeservice.cpp` |
+| **Modern Track Menu** (Artist-Title card, hold->menu for decks/download/playlist) | `a389bbe6eb`, `aa349495b1`, `4d7ec002f1` | `src/qml/` (TrackMenu), `src/library/youtube/youtubeservice.cpp` |
 | **Playlist Folders + Multi-create** | `240cb87150`, `04200834af` (remove playlist folders), `cf33997461` (track menu: check playlists, add/remove many) | `src/library/trackset/playlistfeature.cpp` |
 | **Android Optimizations** (no debug logs, no full rescan, SponsorBlock off) | `4090a4fb4d`, `170d9e7995` | `src/library/androidscanorder.cpp`, `src/controllers/android.cpp` |
 | **FX Station X-Pad** (app samples bank 1, edit icon, shared picker) | `5f2b82adf4`, `13e382ffc0` | `src/engine/fxstation/fxstationinstruments.cpp`, `res/skins/LateNightQML/Samplers/` |
@@ -240,7 +240,7 @@
 ```
 
 **Key Layout Behaviors:**
-- **Deck States**: Mini (waveform only) → Compact (transport + mini waveform) → Full (all controls); animated via `deckHeightAnimation` (250 ms OutCubic) or big-library transition (80–100 ms)
+- **Deck States**: Mini (waveform only) to Compact (transport + mini waveform) to Full (all controls); animated via `deckHeightAnimation` (250 ms OutCubic) or big-library transition (80–100 ms)
 - **Big Library Mode**: Library expands to full height; decks shrink to Mini or hide; smooth `AnchorAnimation` + `SpringAnimation` (damping 0.2, spring 2)
 - **Compact VuMeters**: Optional center slot between decks; animated width spring
 - **Effects/Samplers/Mic**: Collapsible drawers below decks; `SpringAnimation` on height (500 ms, damping 0.2)
@@ -261,16 +261,16 @@
 |------|-------------|----------|
 | **Simple** | Mono envelope | `WaveformRendererSimpleSignal` |
 | **Filtered** | 3-band split (Low/Mid/High) colored | `WaveformRendererFilteredSignal` |
-| **HSV** | Frequency → hue, amplitude → value | `WaveformRendererHSV` |
+| **HSV** | Frequency to hue, amplitude to value | `WaveformRendererHSV` |
 | **RGB** | Low=Red, Mid=Green, High=Blue | `WaveformRendererRGB` |
 | **Stacked** | Overview + zoomed stacked vertically | `WaveformStack.qml` + `WaveformOverviewRenderer` |
 | **Stem** | Per-stem waveforms (vocals/drums/bass/other) | `StemControls.qml` + stem renderers |
 
 **Interactions:**
-- Left-click drag → scratch (`scratch_position` control)
-- Right-click drag → pitch bend (`wheel` control)
-- Mouse wheel → zoom (1–10×, animated `SmoothedAnimation` 500 ms)
-- Double-click → toggle stem split view
+- Left-click drag to scratch (`scratch_position` control)
+- Right-click drag to pitch bend (`wheel` control)
+- Mouse wheel to zoom (1–10×, animated `SmoothedAnimation` 500 ms)
+- Double-click to toggle stem split view
 - Beat markers, cue markers, loop range, intro/outro markers rendered as overlays (`WaveformMark`, `WaveformMarkRange`)
 
 ### 3.4 Color Scheme (`LateNightTheme.qml`)
@@ -293,7 +293,7 @@
 
 ### 3.5 Interactions That Make It Great
 1. **Animated Layout Transitions** — Every region change (deck size, library maximize, effects toggle) uses spring/OutCubic animations; feels responsive, not jarring.
-2. **Focusable Decks** — Double-click title row → deck gains focus (highlighted border); keyboard shortcuts target focused deck.
+2. **Focusable Decks** — Double-click title row to deck gains focus (highlighted border); keyboard shortcuts target focused deck.
 3. **Unified Waveform Stack** — Overview + zoomed waveform in single component; synchronized zoom; stem split on double-click.
 4. **FX Assignment at Top** — Always visible; 4-unit mode toggle; no menu diving.
 5. **Search Syntax in Library** — Advanced filters (`bpm:120..130 key:8A genre:house`) work instantly; fuzzy `~` and negation `-` supported.
@@ -306,7 +306,7 @@
 | **No Waveform Color Customization** | `LateNightTheme.qml` hardcodes colors; no user palette editor | Power users can't adapt to color blindness or preference |
 | **FX Station UI Only in QML** | `res/skins/LateNightQML/Effects/`; classic skin lacks FX Station rack | Classic LateNight users miss the flagship feature |
 | **Stem Separation Not Real-Time** | `soundsourcestem.cpp` — offline only; no live stem EQ/mute on deck | Stem controls show placeholders but no live processing |
-| **Library Scan Blocks UI on Large Collections** | `AnalyzerThread` runs in background but DB writes cause micro-stutters | 10k+ tracks → occasional frame drops |
+| **Library Scan Blocks UI on Large Collections** | `AnalyzerThread` runs in background but DB writes cause micro-stutters | 10k+ tracks to occasional frame drops |
 | **Controller Mapping UI Complexity** | `DlgControllerLearning` + JS scripting steep learning curve | New users struggle to map unsupported hardware |
 | **No Cloud Sync for Cues/Loops** | Local SQLite only; export/import manual | Multi-device DJs lose metadata |
 | **Android Library Scan Aggressive** | Full rescan on start (mitigated in fork but still heavy) | Slow startup on mobile |
@@ -341,7 +341,7 @@
 - **Beat-Synced LFOs** — All Scene/Isolate/Release modulation derived from `FxStation` clock (beat phase); zero drift.
 
 ### 4.5 Waveform Rendering (`src/waveform/renderers/`, `VisualsManager`, `VSyncThread`)
-- **Scene Graph Integration** — `QSGNode` subclasses (`WaveformWidgetRenderer`) render directly on Qt Quick scene graph thread; no CPU→GPU copy.
+- **Scene Graph Integration** — `QSGNode` subclasses (`WaveformWidgetRenderer`) render directly on Qt Quick scene graph thread; no CPU->GPU copy.
 - **Multi-Resolution Overviews** — `AnalyzerWaveform` generates downsampled peaks (1/256, 1/64, 1/16, 1/4); `WaveformOverviewRenderer` picks level by zoom.
 - **VSync Thread** — Dedicated `VSyncThread` drives 60 fps waveform updates; decoupled from audio thread; `VisualPlayPosition` interpolates playhead.
 - **Stem Waveforms** — Separate renderers per stem; `WaveformStack.qml` composites; double-click toggles split view.
@@ -406,8 +406,8 @@
 - Modern LateNightQML skin with spring animations
 
 **Avoid / Improve:**
-- Classic/LateNight skin split → single QML skin with theme variants
-- Stem separation → real-time (rvl/spleeter integration)
+- Classic/LateNight skin split to single QML skin with theme variants
+- Stem separation to real-time (rvl/spleeter integration)
 - Cloud sync for cues/loops/playlists
-- Controller mapping → visual node-based editor
-- Library scan → incremental, non-blocking, progress UI
+- Controller mapping to visual node-based editor
+- Library scan to incremental, non-blocking, progress UI
