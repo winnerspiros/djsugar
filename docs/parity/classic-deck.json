@@ -1,0 +1,364 @@
+{
+  "deckStructure": {
+    "root": "Deck.qml:15-31",
+    "type": "Item",
+    "id": "root",
+    "properties": {
+      "group": "required string",
+      "minimized": "bool default false",
+      "mobilePadView": "int default 0 (0=Hotcue&Stem, 1=Loop)",
+      "editMode": "bool default false",
+      "clip": true
+    },
+    "layoutModel": "itemModel with nested column/row structure (Deck.qml:64-119)"
+  },
+  "components": {
+    "InfoBar": {
+      "file": "Deck/+android/InfoBar.qml",
+      "type": "Rectangle",
+      "geometry": {
+        "radius": 6,
+        "color": "#181b22",
+        "borderColor": "deckColor",
+        "borderWidth": 1,
+        "layout": "RowLayout fill parent margins 6 spacing 8"
+      },
+      "sections": [
+        {
+          "name": "deckBadge",
+          "preferredHeight": "minimized?22:36",
+          "preferredWidth": "width<360?48:(minimized?54:62)",
+          "radius": 4,
+          "color": "deckBgColor",
+          "borderColor": "deckColor",
+          "text": {
+            "font": "Open Sans bold 9/11px",
+            "color": "#ffffff",
+            "content": "DECK 1/2/3/4"
+          }
+        },
+        {
+          "name": "coverArt",
+          "preferredHeight": "minimized?22:36",
+          "preferredWidth": "minimized?22:36",
+          "radius": 4,
+          "color": "#222734",
+          "visible": "!minimized&&width>=400"
+        },
+        {
+          "name": "titleArtist",
+          "layoutFill": true,
+          "title": {
+            "color": "loaded?#fff:#90a4ae",
+            "font": "Open Sans bold 10/12px",
+            "elide": "right"
+          },
+          "artistAlbum": {
+            "visible": "!minimized&&loaded&&width>=340",
+            "color": "deckColor",
+            "font": "10px"
+          }
+        },
+        {
+          "name": "bpmPitchPill",
+          "preferredHeight": "minimized?22:36",
+          "radius": 4,
+          "color": "pressed?#263043:#12151c",
+          "borderColor": "deckColor",
+          "bpmText": {
+            "color": "bpm>0?#fff:#78909c",
+            "font": "bold 10/12px"
+          },
+          "pitchText": {
+            "visible": "!minimized&&bpm>0",
+            "color": "deckColor",
+            "font": "bold 9px"
+          }
+        },
+        {
+          "name": "keyPill",
+          "visible": "!minimized&&key!=''&&width>=360",
+          "height": 28,
+          "radius": 4,
+          "color": "#1e2433",
+          "borderColor": "#374151",
+          "text": {
+            "color": "#e0e0e0",
+            "font": "bold 10px"
+          }
+        },
+        {
+          "name": "timeBadge",
+          "visible": "width>=330",
+          "preferredHeight": "minimized?22:36",
+          "radius": 4,
+          "color": "#141720",
+          "borderColor": "hover?#64b5f6:#293040",
+          "modes": [
+            "elapsed/total",
+            "remaining",
+            "elapsed"
+          ],
+          "cycleOnClick": true
+        },
+        {
+          "name": "pflButton",
+          "preferredHeight": "minimized?24:36",
+          "preferredWidth": "width<360?36:44",
+          "radius": 4,
+          "color": "pfl>0?#ff9800:pressed?#2a2d36:#1a1e27",
+          "borderColor": "pfl>0?#ffe082:#323947",
+          "icon": "headphones",
+          "label": "CUE"
+        },
+        {
+          "name": "loadButton",
+          "type": "Skin.Button",
+          "preferredHeight": "minimized?24:36",
+          "preferredWidth": "width<360?58:(minimized?66:76)",
+          "activeColor": "deck1?#64b5f6:#ffb74d",
+          "bgColor": "deck1?#1565c0:#e65100",
+          "textColor": "#fff",
+          "font": "bold 9/11px",
+          "text": "LOAD"
+        }
+      ]
+    },
+    "WaveformOverview": {
+      "file": "Deck/WaveformOverview.qml",
+      "height": 50,
+      "radius": 5,
+      "color": "#1e1e20",
+      "content": "Skin.WaveformOverview fill parent"
+    },
+    "PlayButton": {
+      "file": "Deck/+android/PlayButton.qml",
+      "base": "Skin.ControlButton",
+      "activeColor": "#00e676",
+      "key": "play",
+      "toggleable": "trackLoaded",
+      "icon": "triangle 26x28",
+      "iconColor": "playing?#00e676:loaded?#fff:#626262",
+      "label": "Play",
+      "labelFont": "Open Sans bold uppercase 10px",
+      "labelColor": "same as icon",
+      "states": "pressed/active/inactive with color changes"
+    },
+    "CueButton": {
+      "file": "Deck/+android/CueButton.qml",
+      "base": "Skin.ControlButton",
+      "activeColor": "#ff9100",
+      "key": "cue_default",
+      "text": "CUE",
+      "font": "bold"
+    },
+    "Toolbar": {
+      "file": "Deck/+android/Toolbar.qml",
+      "height": 22,
+      "controls": [
+        {
+          "name": "pitchDown",
+          "key": "pitch_down",
+          "icon": "down triangle",
+          "size": "20x22"
+        },
+        {
+          "name": "keylock",
+          "key": "keylock",
+          "toggleable": true,
+          "fillWidth": true,
+          "text": "key notation (1d,8d,3d...)",
+          "colors": "24-color map",
+          "font": "bold"
+        },
+        {
+          "name": "pitchUp",
+          "key": "pitch_up",
+          "icon": "up triangle",
+          "size": "20x22"
+        },
+        {
+          "name": "sync",
+          "key": "sync_enabled",
+          "toggleable": true,
+          "activeColor": "#00e676",
+          "size": "22x22"
+        },
+        {
+          "name": "rateDisplay",
+          "width": 50,
+          "font": "Open Sans bold 10px",
+          "color": "rate!=0?accent:textColor",
+          "text": "rate%"
+        }
+      ]
+    },
+    "HotcueAndStem": {
+      "file": "Deck/+android/HotcueAndStem.qml",
+      "tabs": {
+        "width": "38/46px",
+        "color": "#14171d",
+        "border": "#2c3544",
+        "radius": 5,
+        "modes": "CUE/LOOP/STEM",
+        "activeColor": "deckColor",
+        "activeMark": "white 3px bar"
+      },
+      "hotcueGrid": {
+        "model": 8,
+        "layout": "4x2",
+        "margins": "4/16px",
+        "spacing": "3/6px",
+        "cell": {
+          "radius": 10,
+          "bgColor": "set?hotcueColor:pressed?#3F3F3F:#202020",
+          "border": "set?#fff:#3F3F3F",
+          "number": "13px bold",
+          "label": "10px"
+        }
+      },
+      "loopGrid": {
+        "model": 8,
+        "layout": "4x2",
+        "sizes": "1/4..32",
+        "cell": {
+          "radius": 4,
+          "enabledColor": "#00e5ff",
+          "disabledColor": "#1a222e",
+          "pressedColor": "#374151",
+          "border": "enabled?#fff:#2c3b4d",
+          "label": "size 15px bold, BEATS 8px"
+        }
+      },
+      "stemGrid": {
+        "columns": 2,
+        "model": "stemsModel",
+        "cell": {
+          "radius": 4,
+          "playingColor": "darker(stemColor,2.2)",
+          "mutedColor": "#14171d",
+          "pressedColor": "#2e3440",
+          "border": "muted?1:2px stemColor",
+          "text": "DRUMS/BASS/VOCALS/OTHER",
+          "font": "bold 11/14px Fit",
+          "strikeout": "muted",
+          "onClick": "toggle mute",
+          "onHold": "solo stem"
+        }
+      }
+    },
+    "Spinny": {
+      "file": "Deck/+android/Spinny.qml",
+      "size": "140x140",
+      "spinner": {
+        "size": "80-140px",
+        "color": "#181a20",
+        "border": "2.5px deckAccentColor",
+        "grooves": "2 rings"
+      },
+      "indicator": "TouchSpinny tick deckAccentColor",
+      "tempoInfo": {
+        "size": "44%h x 62%w",
+        "color": "#0c0d10",
+        "border": "#282a32",
+        "animation": "Spring 350ms damping 0.3",
+        "bpm": "Fit font max(8,h*0.3) white",
+        "pitch": "Fit font max(8,h*0.22) deckAccentColor"
+      }
+    },
+    "BeatJump": {
+      "file": "Deck/BeatJump.qml",
+      "bgColor": "#626262",
+      "controls": [
+        "beatjumpSize spinbox",
+        "backward button double-left",
+        "forward button double-right",
+        "size label"
+      ]
+    },
+    "Loop": {
+      "file": "Deck/Loop.qml",
+      "bgColor": "#626262",
+      "controls": [
+        "beatloopSize spinbox 1/32..512",
+        "In/Out buttons fillWidth min28px",
+        "Recall/Exit toggle fillWidth min40px",
+        "1/2x and 2x buttons fillWidth"
+      ]
+    }
+  },
+  "sharedComponents": {
+    "Button": {
+      "file": "+android/Button.qml",
+      "base": "AbstractButton",
+      "height": 26,
+      "minWidth": 52,
+      "radius": 10,
+      "bgColor": "#202020",
+      "normalText": "#696969",
+      "pressedText": "activeColor",
+      "activeBg": "#3a60be",
+      "activeText": "activeColor",
+      "font": "Open Sans bold uppercase 10px",
+      "states": "pressed/active/inactive"
+    },
+    "ControlButton": "Skin.ControlButton with activeColor, key, toggleable, contentItem",
+    "Hotcue": "Skin.Hotcue with group, hotcueNumber, activate, isSet, color, label",
+    "FadeBehavior": "on visible {fadeTarget: item} for tab transitions",
+    "ControlFader": "MouseArea relative drag, double-click reset",
+    "ControlProxyButtonBehavior": "toggleable, powerWindow, longPressLatching, pressAndHoldKey, rightClickKey, longPress 300ms, signals primaryPressed/secondaryPressed",
+    "ControlCycleButtonBehavior": "TapHandler ReleaseWithinBounds cycles numberStates (default 3)",
+    "TouchSpinny": "Deck/TouchSpinny.qml for vinyl simulation",
+    "BeatgridPopup": "Deck/BeatgridPopup.qml for beatgrid editing"
+  },
+  "themeColors": {
+    "accentColor": "#3a60be",
+    "backgroundColor": "#1e1e20",
+    "blue": "#01dcfc",
+    "buttonActiveColor": "#D9D9D9",
+    "buttonDisableColor": "#747474",
+    "buttonNormalColor": "#696969",
+    "darkGray": "#0f0f0f",
+    "darkGray2": "#2e2e2e",
+    "darkGray3": "#3F3F3F",
+    "darkGray4": "#202020",
+    "deckActiveColor": "#D9D9D9",
+    "deckBackgroundColor": "#0f0f0f",
+    "deckBeatjumpBackgroundColor": "#626262",
+    "deckBeatjumpLabelColor": "#3F3F3F",
+    "deckInfoBarBackgroundColor": "#0e0e0e",
+    "deckLineColor": "#2e2e2e",
+    "deckLoopBackgroundColor": "#626262",
+    "deckLoopLabelColor": "#3F3F3F",
+    "deckTextColor": "#b0b0b0",
+    "lightGray": "#747474",
+    "lightGray2": "#b0b0b0",
+    "lightGray3": "#939393",
+    "midGray": "#696969",
+    "midGray2": "#676767",
+    "midGray3": "#626262",
+    "textColor": "#b0b0b0",
+    "toolbarActiveColor": "#D9D9D9",
+    "toolbarBackgroundColor": "#2e2e2e",
+    "white": "#D9D9D9",
+    "red": "#ea2a4e",
+    "green": "#85c85b",
+    "yellow": "#fca001",
+    "fontFamily": "Open Sans",
+    "buttonFontPixelSize": 10,
+    "textFontPixelSize": 14
+  },
+  "animations": [
+    "FadeBehavior on tab visibility",
+    "SpringAnimation Spinny tempoInfo 350ms damping 0.3 spring 2",
+    "State transitions Button pressed/active/inactive"
+  ],
+  "behaviors": {
+    "tap": "TapHandler ReleaseWithinBounds",
+    "longPress": "TapHandler DragThreshold 300ms",
+    "drag": "MouseArea relative (ControlFader)",
+    "doubleClick": "ControlProxy.reset()",
+    "click": "MouseArea onClicked",
+    "pressAndHold": "MouseArea onPressAndHold (stem solo)"
+  }
+}
