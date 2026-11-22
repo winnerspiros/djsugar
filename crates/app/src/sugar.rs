@@ -15,6 +15,16 @@ const DARK: u32 = rgb(0x555555);
 const GREEN: u32 = rgb(0x00e676);
 const RED: u32 = rgb(0xff6b6b);
 const AMBER: u32 = rgb(0xffd54f);
+pub const CUES: [u32; 8] = [
+    rgb(0xff4fa8),
+    rgb(0xff3b30),
+    rgb(0xff9500),
+    rgb(0xffd60a),
+    rgb(0x30d158),
+    rgb(0x40c8e0),
+    rgb(0x2f7bff),
+    rgb(0xaf52de),
+];
 pub const DECK: [u32; 2] = [rgb(0x1f6fd1), rgb(0xe8650f)];
 
 const LOGO: Style = Style::new(16.0, Weight::Bold, ACCENT);
@@ -93,6 +103,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             crate::screen::library(p, s, Rect::new(0.0, y + wh + 2.0, w, rest - wh - 2.0));
         }
     }
+    cue_menu(p, s, w, h);
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
@@ -229,8 +240,9 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             let Some(c) = cue else { continue };
             let x = ((c - left) / per_px) as f32;
             if (0.0..r.w).contains(&x) {
-                p.rect(r.x + x, r.y, 1.5, r.h, 0.0, ACCENT);
-                p.rect(r.x + x, r.y, 12.0, 11.0, 2.0, ACCENT);
+                let colour = CUES[usize::from(deck.cue_colours[n]) % 8];
+                p.rect(r.x + x, r.y, 1.5, r.h, 0.0, colour);
+                p.rect(r.x + x, r.y, 12.0, 11.0, 2.0, colour);
                 p.text(r.x + x + 3.0, r.y + 9.0, Style { colour: rgb(0x000000), ..SMALL }, &(n + 1).to_string());
             }
         }
@@ -241,6 +253,37 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(r.x, r.y + r.h, r.w, 1.0, 0.0, rgb(0x0a0b10));
     p.rect(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 0.0, TEXT);
     p.rect(r.x + 4.0, r.y + 4.0, 3.0, r.h - 8.0, 1.5, DECK[d]);
+}
+
+fn cue_colour(s: &State, d: usize, i: usize) -> u32 {
+    CUES[usize::from(s.decks[d].cue_colours[i]) % 8]
+}
+
+fn cue_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some((d, i, x, y)) = s.cue_menu else { return };
+    p.layer();
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::CueMenuClose);
+    let (cell, gap) = (30.0, 4.0);
+    let pw = 4.0 * cell + 3.0 * gap + 16.0;
+    let ph = 2.0 * cell + gap + 70.0;
+    let r = Rect::new(x.clamp(4.0, w - pw - 4.0), y.clamp(4.0, h - ph - 4.0), pw, ph);
+    p.outlined(r.x, r.y, r.w, r.h, 8.0, SURFACE, 1.5, cue_colour(s, d, i));
+    let head = format!("HOT CUE {}", i + 1);
+    p.text(r.x + 8.0, r.y + 18.0, TAB, &head);
+    for (n, &c) in CUES.iter().enumerate() {
+        let b = Rect::new(
+            r.x + 8.0 + (n % 4) as f32 * (cell + gap),
+            r.y + 26.0 + (n / 4) as f32 * (cell + gap),
+            cell,
+            cell,
+        );
+        let on = usize::from(s.decks[d].cue_colours[i]) == n;
+        p.outlined(b.x, b.y, b.w, b.h, 5.0, c, if on { 2.0 } else { 0.0 }, TEXT);
+        hit(s, b, Target::CueColour(n as u8));
+    }
+    let by = r.y + r.h - 34.0;
+    button(p, s, Rect::new(r.x + 8.0, by, r.w - 54.0, 26.0), "CLEAR", false, RED, Target::CueClear);
+    button(p, s, Rect::new(r.x + r.w - 40.0, by, 32.0, 26.0), "X", false, ACCENT, Target::CueMenuClose);
 }
 
 fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
@@ -257,8 +300,10 @@ fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let ink = if (c as f32) < played * cols as f32 { DARK } else { DECK[d] };
         p.rect(r.x + c as f32, r.y + r.h * 0.5 - a, 1.0, a * 2.0 + 0.5, 0.0, ink);
     }
-    for cue in deck.cues.iter().flatten() {
-        p.rect(r.x + (cue / len) as f32 * r.w, r.y, 1.0, r.h, 0.0, ACCENT);
+    for (cue, &c) in deck.cues.iter().zip(&deck.cue_colours) {
+        if let Some(cue) = cue {
+            p.rect(r.x + (cue / len) as f32 * r.w, r.y, 1.0, r.h, 0.0, CUES[usize::from(c) % 8]);
+        }
     }
     p.rect(r.x + r.w * played - 1.0, r.y, 2.0, r.h, 1.0, TEXT);
     hit(s, r, Target::Overview(d));
@@ -416,10 +461,7 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     for i in 0..cols * rows {
         let b = Rect::new(r.x + (i % cols) as f32 * (pw + 3.0), r.y + (i / cols) as f32 * (ph + 3.0), pw, ph);
         let (label, on, colour) = match mode {
-            Mode::Cues => match s.decks[d].cues[i] {
-                Some(_) => ((i + 1).to_string(), true, ACCENT),
-                None => ((i + 1).to_string(), false, ACCENT),
-            },
+            Mode::Cues => ((i + 1).to_string(), s.decks[d].cues[i].is_some(), cue_colour(s, d, i)),
             Mode::Loops => (beats_label(LOOP_BEATS[i]), s.decks[d].looping == Some(i), GREEN),
             Mode::Samples => (crate::state::pad_name(s, d, i), false, ACTIVE),
             Mode::Fx => (FX_PADS[i].to_string(), s.decks[d].echo == Some(i), AMBER),

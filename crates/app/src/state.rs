@@ -49,6 +49,9 @@ pub enum Target {
     LoopOut(usize),
     LoopSize(usize, i8),
     LoopToggle(usize),
+    CueColour(u8),
+    CueClear,
+    CueMenuClose,
     Gain(usize),
 }
 
@@ -60,6 +63,8 @@ pub enum View {
     Lib,
     Wave,
 }
+
+pub const LONG_PRESS_MS: u128 = 450;
 
 pub const JUMP_BEATS: [f64; 10] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0];
 
@@ -125,6 +130,7 @@ pub struct DeckUi {
     pub cue: f64,
     pub mode: Mode,
     pub cues: [Option<f64>; 8],
+    pub cue_colours: [u8; 8],
     pub looping: Option<usize>,
     pub loop_range: Option<(f64, f64)>,
     pub echo: Option<usize>,
@@ -189,6 +195,7 @@ struct Drag {
     last: (f32, f32),
     moved: bool,
     resume: bool,
+    at: std::time::Instant,
 }
 
 pub struct State {
@@ -216,6 +223,7 @@ pub struct State {
     pub view: View,
     pub show_fx: bool,
     pub show_samplers: bool,
+    pub cue_menu: Option<(usize, usize, f32, f32)>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -295,6 +303,7 @@ impl State {
             view: View::Dj,
             show_fx: false,
             show_samplers: false,
+            cue_menu: None,
         }
     }
 
@@ -305,10 +314,21 @@ impl State {
     }
 
     pub fn animating(&self) -> bool {
-        self.telemetry.decks.iter().any(|d| d.playing) || self.decks.iter().any(|d| d.loading) || self.auto.is_some()
+        self.telemetry.decks.iter().any(|d| d.playing)
+            || self.drags.iter().any(|d| matches!(d.target, Some(Target::Pad(..))))
+            || self.decks.iter().any(|d| d.loading)
+            || self.auto.is_some()
     }
 
     pub fn tick(&mut self) {
+        if self.cue_menu.is_none()
+            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Pad(d, p)) = g.target
+            && self.decks[d].mode == Mode::Cues
+            && self.decks[d].cues[p].is_some()
+        {
+            self.cue_menu = Some((d, p, g.start.0, g.start.1));
+        }
         while let Ok((job, loaded)) = self.jobs.1.try_recv() {
             match (job, loaded) {
                 (Job::Deck(d), Some(l)) => {
@@ -537,6 +557,7 @@ impl State {
                 let pos = self.telemetry.decks[d].position;
                 let at = if self.decks[d].quantize { grid.map_or(pos, |g| g.snap(rate, pos)).max(0.0) } else { pos };
                 self.decks[d].cues[p] = Some(at);
+                self.decks[d].cue_colours[p] = p as u8;
             }
         }
     }
@@ -639,7 +660,15 @@ impl State {
         let target = self.hit(x, y);
         self.drags.retain(|d| d.id != id);
         let resume = matches!(target, Some(Target::Jog(d)) if self.telemetry.decks[d].playing);
-        self.drags.push(Drag { id, target, start: (x, y), last: (x, y), moved: false, resume });
+        self.drags.push(Drag {
+            id,
+            target,
+            start: (x, y),
+            last: (x, y),
+            moved: false,
+            resume,
+            at: std::time::Instant::now(),
+        });
         let Some(t) = target else { return };
         match t {
             Target::Play(d) if self.decks[d].loaded.is_some() => {
@@ -687,6 +716,17 @@ impl State {
                 self.browser = if self.browser == Some(d) { None } else { Some(d) };
             }
             Target::CloseBrowser => self.browser = None,
+            Target::CueMenuClose => self.cue_menu = None,
+            Target::CueColour(c) => {
+                if let Some((d, p, ..)) = self.cue_menu.take() {
+                    self.decks[d].cue_colours[p] = c;
+                }
+            }
+            Target::CueClear => {
+                if let Some((d, p, ..)) = self.cue_menu.take() {
+                    self.decks[d].cues[p] = None;
+                }
+            }
             Target::View(v) => self.view = v,
             Target::ToggleFx => self.show_fx = !self.show_fx,
             Target::ToggleSamplers => self.show_samplers = !self.show_samplers,

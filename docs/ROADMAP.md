@@ -113,7 +113,8 @@ Done:
 
 Next, in order:
 - Portrait layout from the DJ Sugar portrait QML.
-- Hot cue popup (colour, label, delete), beat grid popup (tap, half, double, shift), quick load drawer.
+- Done: hot cue popup on long press (8 colours, clear, close), colours on pads, waveform and overview.
+- Beat grid popup (tap, half, double, shift), quick load drawer.
 - Headphone cue output for PFL, cue mix and split cue.
 - File, Edit and View menus and the settings pages.
 - Library columns (artist, BPM, key, duration, rating), sorting, crates, playlists and history.
