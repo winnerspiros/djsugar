@@ -70,6 +70,7 @@ shot 03-typed
 adb shell input keyevent KEYCODE_BACK
 sleep 1
 adb shell settings put system user_rotation 1
+adb shell wm user-rotation lock 1 2>/dev/null || true
 sleep 5
 alive rotate
 read -r RW RH <<< "$(adb exec-out screencap -p | python3 -c 'import sys,struct;d=sys.stdin.buffer.read(24);print(*struct.unpack(">II",d[16:24]))')"

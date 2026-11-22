@@ -74,7 +74,8 @@ fn main() {
                 }
             }
             for (t, [x, y, tw, th]) in shown {
-                if x < -0.5 || y < -0.5 || x + tw > w as f32 + 0.5 || y + th > h as f32 + 0.5 {
+                let (lw, lh) = (w as f32 / scale, h as f32 / scale);
+                if x < -0.5 || y < -0.5 || x + tw > lw + 0.5 || y + th > lh + 0.5 {
                     faults.push(format!("{name} {view}: {t} off screen at {x:.0},{y:.0} {tw:.0}x{th:.0}"));
                 }
                 if (tw < 20.0 || th < 18.0) && !t.starts_with("Library") && !t.starts_with("Wave") {
