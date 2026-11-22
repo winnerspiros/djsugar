@@ -56,7 +56,7 @@ rustflags = [
 
 # Per-platform target-cpu/target-feature
 [target.aarch64-linux-android]
-rustflags = ["-C", "target-feature=+v8.2a,+dotprod,+fp16,+rcpc,+aes,+sha2,+crc"]
+rustflags = ["-C", "target-feature=+dotprod,+fp16,+rcpc,+aes,+sha2,+crc"]
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "target-cpu=apple-m1"]

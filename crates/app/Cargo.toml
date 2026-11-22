@@ -5,6 +5,9 @@ edition.workspace = true
 license.workspace = true
 version.workspace = true
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 sugar-layout = { path = "../layout" }
 sugar-ui = { path = "../ui" }
@@ -12,8 +15,11 @@ sugar-ui = { path = "../ui" }
 [target.'cfg(target_os = "linux")'.dependencies]
 sugar-shell = { path = "../shell" }
 
-[target.'cfg(not(target_os = "linux"))'.dependencies]
+[target.'cfg(not(any(target_os = "linux", target_os = "android")))'.dependencies]
 winit = { version = "0.30", default-features = false, features = ["rwh_06"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "android-native-activity"] }
 
 [lints]
 workspace = true

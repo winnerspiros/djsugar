@@ -1,0 +1,3 @@
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android29-clang"
+rustflags = ["-C", "target-feature=+dotprod,+fp16,+rcpc,+aes,+sha2,+crc"]
