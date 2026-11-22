@@ -26,7 +26,7 @@ pub const CUES: [u32; 8] = [
     rgb(0x2f7bff),
     rgb(0xaf52de),
 ];
-pub const DECK: [u32; 2] = [rgb(0x1f6fd1), rgb(0xe8650f)];
+pub const DECK: [u32; 2] = [rgb(0x00b0ff), rgb(0xff6d00)];
 
 const LOGO: Style = Style::new(16.0, Weight::Bold, rgb(0xe63380));
 const TAB: Style = Style::new(11.0, Weight::Bold, TEXT);
@@ -85,24 +85,20 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let rest = h - y;
     match s.view {
         View::Dj => {
-            // Slim waveforms, the Booth decks and mixer, the library below.
-            let wh =
-                if tall { (rest * 0.11).round().clamp(48.0, 96.0) } else { (rest * 0.16).round().clamp(44.0, 84.0) };
+            // The Classic phone layout: waveforms, decks around the mixer, the library below.
+            let wh = (rest * 0.22).round().clamp(56.0, 96.0);
             waveforms(p, s, Rect::new(0.0, y, w, wh));
-            let y = y + wh + 3.0;
+            let y = y + wh + 4.0;
             let lower = h - y;
-            // Small portrait screens need all the room for the decks; the library tab has it.
-            let dh = if tall && lower < 700.0 {
-                lower
-            } else if tall {
-                (lower * 0.6).clamp(420.0, 560.0)
+            let dh = if tall {
+                if lower < 900.0 { lower } else { (lower * 0.75).min(1000.0) }
             } else {
-                (lower * 0.62).clamp(150.0, 340.0)
+                crate::classic::height(lower * 0.62).max(150.0)
             }
             .min(lower);
-            crate::booth::dj(p, s, Rect::new(0.0, y, w, dh));
+            crate::classic::dj(p, s, Rect::new(0.0, y, w, dh), tall);
             if lower - dh > 60.0 {
-                library(p, s, Rect::new(0.0, y + dh + 3.0, w, lower - dh - 3.0));
+                library(p, s, Rect::new(0.0, y + dh + 4.0, w, lower - dh - 4.0));
             }
         }
         View::Wave => {

@@ -1,4 +1,4 @@
-mod booth;
+mod classic;
 mod hub;
 mod library;
 mod lyrics;
