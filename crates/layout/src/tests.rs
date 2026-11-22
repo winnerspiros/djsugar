@@ -1,13 +1,19 @@
 use super::*;
 
-const BAR: u32 = 1;
-const DECK_A: u32 = 2;
-const MIXER: u32 = 3;
-const DECK_B: u32 = 4;
-const WAVES: u32 = 5;
-const LIBRARY: u32 = 6;
-const FX_A: u32 = 7;
-const FX_B: u32 = 8;
+fn solve(root: &Node, area: Rect) -> Vec<(Id, Rect)> {
+    let mut out = Vec::new();
+    Layout::new(root).solve(area, &mut out);
+    out
+}
+
+const BAR: Id = 1;
+const DECK_A: Id = 2;
+const MIXER: Id = 3;
+const DECK_B: Id = 4;
+const WAVES: Id = 5;
+const LIBRARY: Id = 6;
+const FX_A: Id = 7;
+const FX_B: Id = 8;
 
 fn main_screen() -> Node {
     Node::group(
@@ -64,7 +70,7 @@ const SIZES: &[(f32, f32)] = &[
     (3840.0, 2160.0),
 ];
 
-fn check(area: Rect, placed: &[(u32, Rect)]) {
+fn check(area: Rect, placed: &[(Id, Rect)]) {
     for (i, (a, ra)) in placed.iter().enumerate() {
         assert!(area.contains(ra), "{a} leaves {area:?}: {ra:?}");
         assert!(ra.w > 0.0 && ra.h > 0.0, "{a} is empty");
@@ -88,7 +94,7 @@ fn every_screen_size_is_valid_and_keeps_the_decks() {
         };
         let placed = solve(&main_screen(), area);
         check(area, &placed);
-        let ids: Vec<u32> = placed.iter().map(|p| p.0).collect();
+        let ids: Vec<Id> = placed.iter().map(|p| p.0).collect();
         for must in [BAR, DECK_A, MIXER, DECK_B] {
             assert!(ids.contains(&must), "{must} missing at {w}x{h}: {ids:?}");
         }
@@ -116,7 +122,7 @@ fn continuous_resize_never_breaks() {
 
 #[test]
 fn wide_is_a_row_tall_is_a_column() {
-    let get = |p: &[(u32, Rect)], id| p.iter().find(|x| x.0 == id).unwrap().1;
+    let get = |p: &[(Id, Rect)], id| p.iter().find(|x| x.0 == id).unwrap().1;
     let wide = solve(
         &main_screen(),
         Rect {
@@ -155,7 +161,7 @@ fn low_priority_goes_first() {
         )
         .iter()
         .map(|p| p.0)
-        .collect::<Vec<u32>>()
+        .collect::<Vec<Id>>()
     };
     assert_eq!(
         ids(780.0, 360.0),
@@ -194,4 +200,16 @@ fn spare_space_respects_max() {
     );
     assert_eq!(p[0].1.w, 50.0);
     assert_eq!(p[1].1.w, 150.0);
+}
+
+#[test]
+fn solving_again_reuses_every_buffer() {
+    let mut layout = Layout::new(&main_screen());
+    let mut out = Vec::new();
+    layout.solve(Rect::new(0.0, 0.0, 1920.0, 1080.0), &mut out);
+    let (cap, scratch) = (out.capacity(), layout.scratch.capacity());
+    for &(w, h) in SIZES {
+        layout.solve(Rect::new(0.0, 0.0, w, h), &mut out);
+    }
+    assert_eq!((out.capacity(), layout.scratch.capacity()), (cap, scratch));
 }
