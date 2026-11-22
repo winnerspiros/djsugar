@@ -17,6 +17,7 @@ const SIZES: [(&str, u32, u32); 7] = [
     ("desktop", 1920, 1080),
 ];
 const TOOLBAR: [&str; 7] = ["Browse(0)", "Browse(1)", "ToggleFx", "ToggleSamplers", "AutoDj", "Record", "SearchFocus"];
+const FRAMES: u32 = 30;
 const VIEWS: [&str; 6] = ["DJ", "WAVE", "LIB", "FX", "STREAM", "CTL"];
 
 fn save(r: &Renderer<'_>, path: &Path) {
@@ -44,11 +45,18 @@ fn main() {
     let out = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "target/shots".into()));
     std::fs::create_dir_all(&out).expect("output dir");
     let mut faults = Vec::new();
+    let mut perf = Vec::new();
     for (name, w, h) in SIZES {
         let mut r = Renderer::offscreen(w, h).expect("offscreen renderer");
         let mut ui = Ui::new(read_dir_sample);
         ui.resize(w, h, 1.0);
         ui.render(&mut r);
+        let t = std::time::Instant::now();
+        for _ in 0..FRAMES {
+            ui.render(&mut r);
+        }
+        let ms = t.elapsed().as_secs_f64() * 1e3 / f64::from(FRAMES);
+        perf.push(format!("| {name} | {w}x{h} | {ms:.2} |"));
         for view in VIEWS {
             let tab = format!("View({})", view_name(view));
             if !ui.tap(&tab) {
@@ -82,6 +90,9 @@ fn main() {
         typing(&mut ui, &mut r, name, &mut faults);
         save(&r, &out.join(format!("{name}-typed.png")));
     }
+    let table = format!("| size | pixels | ms per frame, software GPU |\n|---|---|---|\n{}\n", perf.join("\n"));
+    print!("{table}");
+    std::fs::write(out.join("perf.md"), table).expect("perf table");
     faults.sort();
     faults.dedup();
     for f in &faults {

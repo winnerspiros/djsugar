@@ -1,43 +1,67 @@
 #!/bin/bash
-# Installs the APK on a running emulator and drives it like a user: portrait and
-# landscape, view tabs, typing into search, home and back. Fails on any crash.
+# Drives the APK on an emulator like a user and collects what is needed to debug it:
+# screenshots, logcat, frame stats and memory. Fails on a crash or a dead process.
 set -uo pipefail
-APK=$1 OUT=$2 PKG=app.djsugar
+APK=$1 OUT=$2 PKG=app.djsugar ACT=app.djsugar/android.app.NativeActivity
 mkdir -p "$OUT"
-fail() { echo "::error::$*"; adb logcat -d > "$OUT/logcat.txt"; exit 1; }
+SUM=${GITHUB_STEP_SUMMARY:-/dev/null}
+collect() {
+  adb logcat -d > "$OUT/logcat.txt"
+  adb shell dumpsys gfxinfo $PKG > "$OUT/gfxinfo.txt"
+  adb shell dumpsys meminfo $PKG > "$OUT/meminfo.txt"
+  {
+    echo "### Emulator"
+    echo '```'
+    grep -E "Total frames|Janky|percentile" "$OUT/gfxinfo.txt"
+    grep -E "TOTAL PSS|Native Heap|Graphics" "$OUT/meminfo.txt" | head -5
+    grep -iE "djsugar|panicked|FATAL|wgpu|vulkan" "$OUT/logcat.txt" | tail -40
+    echo '```'
+  } >> "$SUM"
+}
+fail() { echo "::error::$*"; collect; exit 1; }
 shot() { sleep 2; adb exec-out screencap -p > "$OUT/$1.png"; }
 alive() { adb shell pidof $PKG > /dev/null || fail "app died: $1"; }
-size() { adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*'; }
+D=$(adb shell wm density | grep -o '[0-9]*' | tail -1)
+px() { awk "BEGIN{print int($1*$D/160)}"; }
+tap() { adb shell input tap "$(px "$1")" "$(px "$2")"; sleep 1; alive "tap $1,$2"; }
 adb install -r -g "$APK" || fail "install failed"
 adb logcat -c
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
-adb shell am start -W -n $PKG/android.app.NativeActivity || fail "launch failed"
-sleep 6
+adb shell am start -W -n $ACT || fail "launch failed"
+sleep 8
 alive launch
-shot portrait
-read -r W H <<< "$(size | tr x ' ')"
-# Bottom-row tabs sit in the first toolbar row; tap across it.
-for x in 0.35 0.45 0.55 0.65 0.75 0.85 0.95; do
-  adb shell input tap "$(awk "BEGIN{print int($W*$x)}")" 40
-  sleep 1
-  alive "tab at $x"
+shot 01-portrait
+read -r W _ <<< "$(adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*' | tr x ' ')"
+WD=$(awk "BEGIN{print $W*160/$D}")
+for i in 0 1 2 3 4 5; do
+  tap "$(awk "BEGIN{print 100+($WD-106)*($i+0.5)/6}")" 18
+  shot "02-tab-$i"
 done
-shot portrait-tabs
-adb shell settings put system user_rotation 1
-sleep 4
-alive rotate
-shot landscape
-adb shell input keyevent KEYCODE_HOME
-sleep 2
-adb shell am start -n $PKG/android.app.NativeActivity
-sleep 4
-alive resume
-shot resumed
+tap 60 90
 adb shell input text "daft"
 sleep 1
 alive typing
-adb logcat -d > "$OUT/logcat.txt"
+shot 03-typed
+adb shell settings put system user_rotation 1
+sleep 5
+alive rotate
+shot 04-landscape
+adb shell input keyevent KEYCODE_HOME
+sleep 3
+adb shell am start -n $ACT
+sleep 5
+alive resume
+shot 05-resumed
+adb shell input keyevent KEYCODE_APP_SWITCH
+sleep 2
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+adb shell am start -n $ACT
+sleep 4
+alive "app switcher"
+shot 06-after-switcher
+collect
 if grep -E "panicked|FATAL EXCEPTION|SIGSEGV|SIGABRT" "$OUT/logcat.txt"; then
   fail "crash in logcat"
 fi

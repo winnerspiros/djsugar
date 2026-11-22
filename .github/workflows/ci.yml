@@ -62,6 +62,9 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -yq mesa-vulkan-drivers
           cargo run --release --locked -p djsugar --example shots -- shots
       - if: always()
+        name: Frame times to the summary
+        run: cat shots/perf.md >> $GITHUB_STEP_SUMMARY || true
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: djsugar-screens
@@ -199,6 +202,98 @@ jobs:
         with:
           name: djsugar-emulator
           path: emu
+
+  coverage:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - run: cargo llvm-cov --workspace --locked --summary-only | tee cov.txt
+      - name: Coverage to the summary
+        run: |
+          echo '### Line coverage per file' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat cov.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  sanitize:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+      - name: AddressSanitizer over the engine, DSP and decoders
+        env:
+          RUSTFLAGS: -Zsanitizer=address
+          RUSTDOCFLAGS: -Zsanitizer=address
+        run: >-
+          cargo test -Zbuild-std --target x86_64-unknown-linux-gnu --locked
+          -p sugar-core -p sugar-engine -p sugar-decode -p sugar-stretch -p sugar-analysis -p sugar-layout
+
+  optimize:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-bloat
+      - name: Pedantic, nursery and perf lints as hints
+        env:
+          RUSTFLAGS: ""
+        run: |
+          cargo clippy --workspace --all-targets --locked --message-format short -- \
+            -W clippy::pedantic -W clippy::nursery 2>&1 | grep -E '^[a-z/]+.*(warning|error)' > lints.txt || true
+          echo "### Optimisation hints: $(wc -l < lints.txt)" >> $GITHUB_STEP_SUMMARY
+          grep -oE '\[clippy::[a-z_]+\]|#\[warn\(clippy::[a-z_]+' lints.txt | sort | uniq -c | sort -rn | head -30 \
+            | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || true
+      - name: What the binary is made of
+        run: |
+          echo '### Largest functions and crates in the release binary' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cargo bloat --release -p djsugar --locked -n 25 >> $GITHUB_STEP_SUMMARY
+          cargo bloat --release -p djsugar --locked --crates -n 20 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-lints
+          path: lints.txt
+
+  streaming:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Live YouTube search and download from a clean network
+        run: |
+          mkdir -p yt
+          cargo run --release --locked -p sugar-net --example youtube -- "daft punk around the world" yt 2>&1 | tee yt.log
+          ls -la yt | tee -a yt.log
+          echo '### YouTube live check' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -20 yt.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls yt/*.* > /dev/null 2>&1 || { echo "::warning::YouTube download failed, see the log"; }
 
   release:
     if: github.event_name == 'push'
