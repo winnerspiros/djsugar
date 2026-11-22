@@ -7,7 +7,7 @@ pub const BACKGROUND: u32 = rgb(0x000000);
 const PANEL: u32 = rgb(0x000000);
 const RAISED: u32 = rgb(0x111114);
 const LINE: u32 = rgb(0x222228);
-const DECK: [u32; 2] = [rgb(0xff2e93), rgb(0x3fe0ff)];
+use crate::sugar::DECK;
 const ACCENT: u32 = rgb(0xffe45c);
 const TEXT: u32 = rgb(0xf2f2f5);
 const DIM: u32 = rgb(0x8a8a96);
@@ -115,6 +115,11 @@ fn hit(s: &mut State, x: f32, y: f32, w: f32, h: f32, target: Target) {
 
 pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]) {
     s.hits.clear();
+    if window.w >= window.h * 1.1 {
+        crate::sugar::paint(p, s, window.w, window.h);
+        overlay(p, s, window);
+        return;
+    }
     p.rect(0.0, 0.0, window.w, MENU_H, 0.0, PANEL);
     p.rect(0.0, MENU_H - 1.0, window.w, 1.0, 0.0, LINE);
     let mut x = 10.0;
@@ -134,6 +139,10 @@ pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]
             M::Ring => ring(p, s, r),
         }
     }
+    overlay(p, s, window);
+}
+
+fn overlay(p: &mut Painter, s: &mut State, window: Rect) {
     if let Some(d) = s.browser {
         p.layer();
         let r = screen_body(window);
@@ -473,7 +482,7 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     hit(s, r.x + 2.0 * PAD, y - 8.0, w + 2.0 * PAD, 30.0, Target::Crossfader);
 }
 
-fn library(p: &mut Painter, s: &mut State, r: Rect) {
+pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
     s.library = r;
     s.row_h = ROW_H;
     let inner = r.w - 24.0;

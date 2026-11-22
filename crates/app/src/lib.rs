@@ -2,6 +2,7 @@ mod library;
 mod lyrics;
 mod screen;
 mod state;
+mod sugar;
 
 use sugar_layout::{Id, Layout, Rect};
 use sugar_ui::{Fonts, Painter};

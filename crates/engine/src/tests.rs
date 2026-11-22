@@ -214,3 +214,37 @@ fn spin_runs_backwards_then_stops() {
     assert!(!s.playing);
     assert!(s.position < 96000.0 - 30000.0, "{}", s.position);
 }
+
+#[test]
+fn reverse_plays_backwards() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 2.0)));
+    c.send(Command::Seek(0, 48000.0));
+    c.send(Command::Reverse(0, true));
+    c.send(Command::Play(0, true));
+    let mut out = vec![0.0; 1024];
+    for _ in 0..10 {
+        e.process(&mut out);
+    }
+    let p = c.poll().decks[0].position;
+    assert!((p - (48000.0 - 5120.0)).abs() < 2.0, "{p}");
+}
+
+#[test]
+fn slip_returns_to_where_the_track_would_be() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 4.0)));
+    c.send(Command::Play(0, true));
+    c.send(Command::Slip(0, true));
+    c.send(Command::Reverse(0, true));
+    c.send(Command::Seek(0, 96000.0));
+    let mut out = vec![0.0; 1024];
+    for _ in 0..10 {
+        e.process(&mut out);
+    }
+    c.send(Command::Reverse(0, false));
+    c.send(Command::Slip(0, false));
+    e.process(&mut out);
+    let p = c.poll().decks[0].position;
+    assert!((p - 5632.0).abs() < 2.0, "{p}");
+}

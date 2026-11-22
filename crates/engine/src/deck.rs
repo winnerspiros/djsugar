@@ -25,6 +25,8 @@ pub struct Deck {
     pub semitones: f32,
     pub looping: Option<(f64, f64)>,
     pub velocity: f64,
+    pub reverse: bool,
+    pub slip: Option<f64>,
     pub brake: f64,
     stretch: Stretch,
     primed: bool,
@@ -42,6 +44,8 @@ impl Deck {
             semitones: 0.0,
             looping: None,
             velocity: 1.0,
+            reverse: false,
+            slip: None,
             brake: 0.0,
             stretch: Stretch::standard(2, out_rate),
             primed: false,
@@ -63,12 +67,16 @@ impl Deck {
         }
         let speed = 1.0 + self.rate + self.nudge;
         let step = speed * f64::from(t.rate) / f64::from(out_rate);
+        if let Some(s) = &mut self.slip {
+            *s += step * out.len() as f64;
+        }
+        let step = if self.reverse { -step } else { step };
         if self.brake != 0.0 {
             let t = t.clone();
             self.render_brake(&t, step, out);
             return;
         }
-        if self.key_lock || self.semitones != 0.0 {
+        if (self.key_lock || self.semitones != 0.0) && !self.reverse {
             let t = t.clone();
             self.render_stretched(&t, step, out_rate, out);
             return;
@@ -97,9 +105,9 @@ impl Deck {
             }
         }
         self.position = pos;
-        if pos as isize > last {
+        if pos as isize > last || pos < 0.0 {
             self.playing = false;
-            self.position = last.max(0) as f64;
+            self.position = pos.clamp(0.0, last.max(0) as f64);
         }
     }
 }

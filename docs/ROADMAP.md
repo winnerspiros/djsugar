@@ -101,6 +101,27 @@ Quality
       size budgets, APK alignment and signature checks, artifacts for every platform
 - [x] Studies: DJ Sugar Mixxx fork, OpenDJ and OpenFadeR, commercial apps (not fact-checked)
 
+## Parity track (approved direction)
+The user approved the DJ Sugar based landscape screen. Every remaining screen and feature follows the same method: read the DJ Sugar QML or C++ source, the OpenDJ and OpenFadeR sources and the parity specs in docs/parity, then rebuild it in our own code and verify it with screenshots at 915x412 and 1280x800.
+
+Done:
+- Landscape screen from the DJ Sugar Android main window: toolbar with DJ, WAVE, LIB and CTL views, LOAD 1 and 2, FX bar, sampler bar, Auto DJ, search.
+- Stacked colour waveforms with beat lines, cue flags and loop region.
+- Deck: info bar with remaining time, BPM, Camelot key and pitch; overview; REV, SLIP, Q, EJECT; PLAY and CUE; HOT, LOOP, SMPL and FX pad modes; loop IN, OUT, size, toggle; beat jump with size; SYNC, pitch fader, key lock and semitone steps.
+- Mixer: HI, MID, LOW, filter, gain, faders, segmented VU, PFL, crossfader.
+- Engine: reverse, slip, unload.
+
+Next, in order:
+- Portrait layout from the DJ Sugar portrait QML.
+- Hot cue popup (colour, label, delete), beat grid popup (tap, half, double, shift), quick load drawer.
+- Headphone cue output for PFL, cue mix and split cue.
+- File, Edit and View menus and the settings pages.
+- Library columns (artist, BPM, key, duration, rating), sorting, crates, playlists and history.
+- Sampler grid with banks, FX station with chained effects and the XY pad.
+- Stems overlay, microphone ducking panel.
+- OpenDJ and OpenFadeR features and QoL items from docs/parity, item by item.
+- Commercial QoL items from docs/parity/commercial.md.
+
 ## M0 Foundations, remaining
 - [ ] Run the APK on the S23 Ultra: launch, touch, resize in DeX, rotation
 - [ ] Multi-touch on every shell: two faders at once, pinch zoom on waveforms

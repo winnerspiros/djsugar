@@ -12,6 +12,7 @@ pub const DECKS: usize = 4;
 #[derive(Debug)]
 pub enum Command {
     Load(usize, Arc<Track>),
+    Unload(usize),
     Play(usize, bool),
     Seek(usize, f64),
     Rate(usize, f64),
@@ -21,6 +22,8 @@ pub enum Command {
     Echo(usize, f32, f64),
     Brake(usize, f32),
     Spin(usize, f32),
+    Reverse(usize, bool),
+    Slip(usize, bool),
     Key(usize, f32),
     Gain(usize, f32),
     Volume(usize, f32),

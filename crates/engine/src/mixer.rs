@@ -130,6 +130,14 @@ impl Mixer {
                 c.deck.playing = false;
                 return c.deck.track.replace(t);
             }
+            Command::Unload(i) => {
+                let c = self.channels.get_mut(i)?;
+                c.deck.playing = false;
+                c.deck.looping = None;
+                c.deck.position = 0.0;
+                c.deck.invalidate();
+                return c.deck.track.take();
+            }
             Command::Play(i, p) => self.channels.get_mut(i)?.deck.playing = p,
             Command::Seek(i, s) => {
                 let d = &mut self.channels.get_mut(i)?.deck;
@@ -162,6 +170,18 @@ impl Mixer {
                 d.velocity = -3.0;
                 d.brake = 3.0 / (f64::from(seconds.max(0.05)) * f64::from(rate));
                 d.playing = true;
+            }
+            Command::Reverse(i, on) => self.channels.get_mut(i)?.deck.reverse = on,
+            Command::Slip(i, on) => {
+                let d = &mut self.channels.get_mut(i)?.deck;
+                match (on, d.slip.take()) {
+                    (true, _) => d.slip = Some(d.position),
+                    (false, Some(p)) => {
+                        d.position = p;
+                        d.invalidate();
+                    }
+                    (false, None) => {}
+                }
             }
             Command::Key(i, semitones) => self.channels.get_mut(i)?.deck.semitones = semitones,
             Command::Rate(i, r) => self.channels.get_mut(i)?.deck.rate = r,

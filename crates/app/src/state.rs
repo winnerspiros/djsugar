@@ -33,6 +33,54 @@ pub enum Target {
     Library,
     Browse(usize),
     CloseBrowser,
+    View(View),
+    ToggleFx,
+    ToggleSamplers,
+    Sampler(usize),
+    Reverse(usize),
+    Slip(usize),
+    Eject(usize),
+    Pfl(usize),
+    Quantize(usize),
+    Pitch(usize, i8),
+    Jump(usize, i8),
+    JumpSize(usize, i8),
+    LoopIn(usize),
+    LoopOut(usize),
+    LoopSize(usize, i8),
+    LoopToggle(usize),
+    Gain(usize),
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum View {
+    Ctl,
+    #[default]
+    Dj,
+    Lib,
+    Wave,
+}
+
+pub const JUMP_BEATS: [f64; 10] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0];
+
+fn short(name: &str) -> &str {
+    name.split_once(' ').map_or(name, |(n, rest)| if n.chars().all(|c| c.is_ascii_digit()) { rest } else { name })
+}
+
+pub fn sample_name(s: &State, i: usize) -> String {
+    s.entries.get(i).map_or_else(String::new, |e| short(&e.title).to_string())
+}
+
+pub fn pad_name(s: &State, d: usize, i: usize) -> String {
+    sample_name(s, s.pads[d % 2][i])
+}
+
+pub fn beats_label(b: f64) -> String {
+    match b {
+        0.25 => "1/4".into(),
+        0.5 => "1/2".into(),
+        _ => format!("{b}"),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -80,11 +128,20 @@ pub struct DeckUi {
     pub looping: Option<usize>,
     pub loop_range: Option<(f64, f64)>,
     pub echo: Option<usize>,
+    pub gain: f32,
+    pub jump: usize,
+    pub loop_size: usize,
+    pub loop_in: Option<f64>,
+    pub quantize: bool,
+    pub reverse: bool,
+    pub slip: bool,
+    pub pfl: bool,
+    pub semitones: i8,
 }
 
 impl DeckUi {
     fn new() -> Self {
-        Self { volume: 0.85, knobs: [0.5; 4], ..Self::default() }
+        Self { volume: 0.85, knobs: [0.5; 4], gain: 0.5, jump: 4, loop_size: 4, quantize: true, ..Self::default() }
     }
 
     pub fn seconds(&self, frames: f64) -> f64 {
@@ -93,6 +150,19 @@ impl DeckUi {
 
     pub fn length(&self) -> f64 {
         self.loaded.as_ref().map_or(0.0, |l| l.track.frames.len() as f64)
+    }
+
+    pub fn beat(&self) -> Option<(sugar_analysis::Grid, f64)> {
+        let l = self.loaded.as_ref()?;
+        let g = l.grid?;
+        Some((g, g.beat_frames(l.track.rate)))
+    }
+
+    pub fn snap(&self, pos: f64) -> f64 {
+        match self.beat() {
+            Some((g, b)) if self.quantize => (g.first_beat + ((pos - g.first_beat) / b).round() * b).max(0.0),
+            _ => pos,
+        }
     }
 }
 
@@ -143,6 +213,9 @@ pub struct State {
     pub status: Option<String>,
     pub out_rate: u32,
     pub auto: Option<Auto>,
+    pub view: View,
+    pub show_fx: bool,
+    pub show_samplers: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -219,6 +292,9 @@ impl State {
             status,
             out_rate,
             auto: None,
+            view: View::Dj,
+            show_fx: false,
+            show_samplers: false,
         }
     }
 
@@ -437,7 +513,10 @@ impl State {
     }
 
     fn pad(&mut self, deck: usize, pad: usize) {
-        let i = self.pads[deck % 2][pad];
+        self.sample(self.pads[deck % 2][pad]);
+    }
+
+    fn sample(&mut self, i: usize) {
         match self.samples.get(i).cloned().flatten() {
             Some(t) => self.send(Command::Sample(t, 0.9)),
             None => self.load(Job::Sample(i, true), i),
@@ -456,7 +535,7 @@ impl State {
             }
             None => {
                 let pos = self.telemetry.decks[d].position;
-                let at = grid.map_or(pos, |g| g.snap(rate, pos)).max(0.0);
+                let at = if self.decks[d].quantize { grid.map_or(pos, |g| g.snap(rate, pos)).max(0.0) } else { pos };
                 self.decks[d].cues[p] = Some(at);
             }
         }
@@ -517,23 +596,39 @@ impl State {
     }
 
     fn auto_loop(&mut self, d: usize, p: usize) {
-        let Some(l) = &self.decks[d].loaded else { return };
         if self.decks[d].looping == Some(p) {
             self.decks[d].looping = None;
             self.decks[d].loop_range = None;
             self.send(Command::Loop(d, None));
             return;
         }
-        let rate = l.track.rate;
+        self.decks[d].loop_size = p;
+        self.beat_loop(d, LOOP_BEATS[p], Some(p));
+    }
+
+    fn beat_loop(&mut self, d: usize, beats: f64, pad: Option<usize>) {
+        let Some(l) = &self.decks[d].loaded else { return };
         let g = l.grid.unwrap_or(sugar_analysis::Grid { bpm: 120.0, first_beat: 0.0 });
-        let beat = g.beat_frames(rate);
+        let beat = g.beat_frames(l.track.rate);
         let pos = self.telemetry.decks[d].position;
-        let start = g.first_beat + ((pos - g.first_beat) / beat).floor() * beat;
-        let start = start.max(0.0);
-        let range = (start, start + beat * LOOP_BEATS[p]);
-        self.decks[d].looping = Some(p);
+        let start = (g.first_beat + ((pos - g.first_beat) / beat).floor() * beat).max(0.0);
+        let range = (start, start + beat * beats);
+        self.decks[d].looping = pad;
         self.decks[d].loop_range = Some(range);
         self.send(Command::Loop(d, Some(range)));
+    }
+
+    fn beat_jump(&mut self, d: usize, beats: f64) {
+        let Some((_, beat)) = self.decks[d].beat() else { return };
+        let by = beat * beats;
+        let to = (self.telemetry.decks[d].position + by).clamp(0.0, self.decks[d].length());
+        if let Some((a, b)) = self.decks[d].loop_range {
+            let range = (a + by, b + by);
+            self.decks[d].loop_range = Some(range);
+            self.send(Command::Loop(d, Some(range)));
+        }
+        self.send(Command::Seek(d, to));
+        self.telemetry.decks[d].position = to;
     }
 
     fn hit(&self, x: f32, y: f32) -> Option<Target> {
@@ -592,6 +687,70 @@ impl State {
                 self.browser = if self.browser == Some(d) { None } else { Some(d) };
             }
             Target::CloseBrowser => self.browser = None,
+            Target::View(v) => self.view = v,
+            Target::ToggleFx => self.show_fx = !self.show_fx,
+            Target::ToggleSamplers => self.show_samplers = !self.show_samplers,
+            Target::Sampler(i) => self.sample(i),
+            Target::Reverse(d) => {
+                let on = !self.decks[d].reverse;
+                self.decks[d].reverse = on;
+                self.send(Command::Reverse(d, on));
+            }
+            Target::Slip(d) => {
+                let on = !self.decks[d].slip;
+                self.decks[d].slip = on;
+                self.send(Command::Slip(d, on));
+            }
+            Target::Eject(d) if !self.telemetry.decks[d].playing => {
+                self.decks[d] = DeckUi { volume: self.decks[d].volume, knobs: self.decks[d].knobs, ..DeckUi::new() };
+                self.send(Command::Unload(d));
+            }
+            Target::Pfl(d) => self.decks[d].pfl = !self.decks[d].pfl,
+            Target::Quantize(d) => self.decks[d].quantize = !self.decks[d].quantize,
+            Target::Pitch(d, by) => {
+                let st = if by == 0 { 0 } else { (self.decks[d].semitones + by).clamp(-12, 12) };
+                self.decks[d].semitones = st;
+                self.send(Command::Key(d, f32::from(st)));
+            }
+            Target::JumpSize(d, 0) => self.decks[d].jump = (self.decks[d].jump + 1) % JUMP_BEATS.len(),
+            Target::JumpSize(d, by) => {
+                self.decks[d].jump = self.decks[d].jump.saturating_add_signed(by.into()).min(JUMP_BEATS.len() - 1);
+            }
+            Target::Jump(d, dir) => self.beat_jump(d, JUMP_BEATS[self.decks[d].jump] * f64::from(dir)),
+            Target::LoopSize(d, by) => {
+                let i = self.decks[d].loop_size.saturating_add_signed(by.into()).min(LOOP_BEATS.len() - 1);
+                self.decks[d].loop_size = i;
+                if let Some((a, _)) = self.decks[d].loop_range
+                    && let Some((_, beat)) = self.decks[d].beat()
+                {
+                    let range = (a, a + beat * LOOP_BEATS[i]);
+                    self.decks[d].loop_range = Some(range);
+                    self.send(Command::Loop(d, Some(range)));
+                }
+            }
+            Target::LoopToggle(d) => {
+                if self.decks[d].loop_range.is_some() {
+                    self.decks[d].looping = None;
+                    self.decks[d].loop_range = None;
+                    self.send(Command::Loop(d, None));
+                } else {
+                    self.beat_loop(d, LOOP_BEATS[self.decks[d].loop_size], None);
+                }
+            }
+            Target::LoopIn(d) => {
+                let at = self.decks[d].snap(self.telemetry.decks[d].position);
+                self.decks[d].loop_in = Some(at);
+            }
+            Target::LoopOut(d) => {
+                let out = self.decks[d].snap(self.telemetry.decks[d].position);
+                if let Some(a) = self.decks[d].loop_in
+                    && out > a + 64.0
+                {
+                    self.decks[d].loop_range = Some((a, out));
+                    self.decks[d].looping = None;
+                    self.send(Command::Loop(d, Some((a, out))));
+                }
+            }
             _ => self.drag(t, x, y, (0.0, 0.0)),
         }
     }
@@ -696,6 +855,12 @@ impl State {
                     self.telemetry.decks[d].position = pos;
                     self.send(Command::Seek(d, pos));
                 }
+            }
+            Target::Gain(d) => {
+                let v = (self.decks[d].gain - delta.1 / 160.0).clamp(0.0, 1.0);
+                let v = if (v - 0.5).abs() < 0.02 { 0.5 } else { v };
+                self.decks[d].gain = v;
+                self.send(Command::Gain(d, knob_gain(v)));
             }
             Target::Library => self.scroll_by(-delta.1),
             _ => {}
