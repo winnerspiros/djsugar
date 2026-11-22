@@ -56,6 +56,13 @@ or any other DJ application. Ideas are studied; code, layouts and look are our o
   button. Every action is in the menus, so nothing is only reachable by gesture.
   Portrait is the vinyl face: one platter ring holding both waveforms, the mixer in its hub,
   decks under it.
+- Listen mode. A music-player face over the same engine: cover art, synced lyrics, an Up
+  next queue and simple player controls. Unlike a plain player, every change of track is a
+  real DJ transition: the queue shows how each track will come in (16-bar blend at the outro,
+  echo out, bass swap), chosen by phrase, key and energy, in a selectable style (smooth,
+  energetic, radio). Take over switches to the DJ view mid-song with no break in the audio:
+  both decks, the mix in progress and the queue carry over, and the DJ can hand back at any
+  time. Works for parties, warm-ups and as an everyday music player.
 - Lyrics. Synced lyrics for every track, local or streaming: the current line rides on the
   waveform, the full text scrolls in a side panel, and a fullscreen karaoke view can go to a
   second screen. Sources: embedded tags, .lrc files beside the track, online lyric services,
