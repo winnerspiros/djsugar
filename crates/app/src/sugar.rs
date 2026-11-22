@@ -6,14 +6,15 @@ use crate::state::{
 };
 use sugar_engine::station::Scene;
 
-const INK: u32 = rgb(0x0a0b10);
-const SURFACE: u32 = rgb(0x14161c);
-const DEEP: u32 = rgb(0x0d0e13);
-const EDGE: u32 = rgb(0x333333);
+const INK: u32 = rgb(0x0e0e11);
+const SURFACE: u32 = rgb(0x18181c);
+const DEEP: u32 = rgb(0x0a0a0c);
+const EDGE: u32 = rgb(0x2a2a30);
+const RAISED: u32 = rgb(0x1f1f24);
 const ACCENT: u32 = rgb(0xff4fa8);
 const ACTIVE: u32 = rgb(0x7c5cff);
 const TEXT: u32 = rgb(0xe8e8e8);
-const GREY: u32 = rgb(0x888888);
+const GREY: u32 = rgb(0x8c8c94);
 const DARK: u32 = rgb(0x555555);
 const GREEN: u32 = rgb(0x00e676);
 const RED: u32 = rgb(0xff6b6b);
@@ -52,26 +53,21 @@ fn hit(s: &mut State, r: Rect, target: Target) {
 
 fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
     let down = s.pressed(target);
-    let rad = (r.h * 0.5).min(8.0);
-    if on {
-        p.glow(r.x, r.y, r.w, r.h, rad, 6.0, fade(colour, 0x60));
-    }
-    let (top, bottom, edge, ink) = match (on, down) {
-        (true, _) => (fade(colour, 0x70), fade(colour, 0x40), colour, TEXT),
-        (false, true) => (rgb(0x2a2d36), rgb(0x1c1e25), fade(colour, 0xc0), TEXT),
-        (false, false) => (rgb(0x1d2028), rgb(0x121419), fade(colour, 0x55), GREY),
+    let rad = 4.0f32.min(r.h * 0.5);
+    let (fill, edge, ink) = match (on, down) {
+        (true, _) => (fade(colour, 0x38), fade(colour, 0xd0), colour),
+        (false, true) => (rgb(0x2c2c33), rgb(0x3a3a42), TEXT),
+        (false, false) => (RAISED, EDGE, GREY),
     };
-    p.gradient(r.x, r.y, r.w, r.h, rad, top, bottom, 1.0, edge);
-    p.texture(Material::Grain);
-    let style = Style::new(if r.h < 26.0 { 9.0 } else { 11.0 }, Weight::Bold, ink);
+    p.outlined(r.x, r.y, r.w, r.h, rad, fill, 1.0, edge);
+    let style = Style::new(if r.h < 26.0 { 9.0 } else { 10.5 }, Weight::Semibold, ink);
     let tw = p.text_width(style, label).min(r.w - 4.0);
     p.text_in(r.x + (r.w - tw) * 0.5, r.y + r.h * 0.5 + style.px * 0.36, r.w - 4.0, style, label);
     hit(s, r, target);
 }
 
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
-    p.rect(0.0, 0.0, w, h, 0.0, rgb(0x07080b));
-    p.texture(Material::Grain);
+    p.rect(0.0, 0.0, w, h, 0.0, DEEP);
     toolbar(p, s, Rect::new(0.0, 0.0, w, TOOLBAR));
     let mut y = TOOLBAR;
     if s.show_fx {
@@ -116,6 +112,12 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             waveforms(p, s, Rect::new(0.0, y, w, wh));
             station(p, s, Rect::new(0.0, y + wh + 2.0, w, rest - wh - 2.0));
         }
+        View::Stream => {
+            for d in 0..2 {
+                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, y, w * 0.5, 96.0), d);
+            }
+            hub(p, s, Rect::new(0.0, y + 98.0, w, rest - 98.0));
+        }
         View::Ctl => {
             let wh = (rest * 0.42).round();
             waveforms(p, s, Rect::new(0.0, y, w, wh));
@@ -129,20 +131,27 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
-    p.gradient(r.x, r.y, r.w, r.h, 0.0, rgb(0x22242d), rgb(0x101117), 0.0, 0);
-    p.texture(Material::Brushed);
-    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(ACCENT, 0x40));
+    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, EDGE);
     let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
-    let views = [("DJ", View::Dj), ("WAVE", View::Wave), ("LIB", View::Lib), ("FX", View::Fx), ("CTL", View::Ctl)];
+    let views = [
+        ("DJ", View::Dj),
+        ("WAVE", View::Wave),
+        ("LIB", View::Lib),
+        ("FX", View::Fx),
+        ("STREAM", View::Stream),
+        ("CTL", View::Ctl),
+    ];
     let compact = r.w < 760.0;
-    let tw = if compact { 40.0 } else { 54.0 };
+    let tw = if compact { 44.0 } else { 58.0 };
     p.outlined(x, r.y + 4.0, tw * views.len() as f32, r.h - 8.0, 6.0, DEEP, 1.0, EDGE);
     for (n, (label, v)) in views.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, r.h - 8.0);
         if s.view == v {
-            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 4.0, ACCENT);
+            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 4.0, rgb(0x2e2e36));
+            p.rect(b.x + 8.0, b.y + b.h - 4.0, b.w - 16.0, 2.0, 1.0, ACCENT);
         }
-        let ink = Style { colour: if s.view == v { rgb(0x000000) } else { GREY }, ..TAB };
+        let ink = Style { colour: if s.view == v { TEXT } else { GREY }, ..TAB };
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
         hit(s, b, Target::View(v));
     }
@@ -490,48 +499,33 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 fn transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let playing = s.telemetry.decks[d].playing;
-    let bh = (r.h - 4.0) * 0.5;
-    let play = Rect::new(r.x, r.y, r.w, bh);
-    let rad = (bh.min(r.w) * 0.5).min(14.0);
+    let bh = ((r.h - 4.0) * 0.5).min(r.w * 0.9);
+    let play = Rect::new(r.x, r.y + r.h - 2.0 * bh - 4.0, r.w, bh);
     let down = s.pressed(Target::Play(d));
+    let (fill, edge) = match (playing, down) {
+        (true, _) => (fade(GREEN, 0x30), GREEN),
+        (false, true) => (rgb(0x2c2c33), rgb(0x3a3a42)),
+        (false, false) => (RAISED, EDGE),
+    };
+    p.outlined(play.x, play.y, play.w, play.h, 5.0, fill, 1.0, edge);
+    let ink = if playing { GREEN } else { TEXT };
+    let (cx, cy, k) = (play.x + play.w * 0.5, play.y + play.h * 0.5, (bh * 0.2).min(10.0));
     if playing {
-        p.glow(play.x, play.y, play.w, play.h, rad, 10.0, fade(GREEN, 0x70));
-        p.gradient(play.x, play.y, play.w, play.h, rad, rgb(0x2bff95), rgb(0x00b85a), 0.0, 0);
-    } else {
-        p.gradient(
-            play.x,
-            play.y,
-            play.w,
-            play.h,
-            rad,
-            if down { rgb(0x23402f) } else { rgb(0x1a2620) },
-            rgb(0x0f1512),
-            1.5,
-            fade(GREEN, 0x90),
-        );
-    }
-    let ink = if playing { rgb(0x00170a) } else { GREEN };
-    let (cx, cy, k) = (play.x + play.w * 0.5, play.y + play.h * 0.5, (bh * 0.22).min(12.0));
-    if playing {
-        p.rect(cx - k * 0.8, cy - k, k * 0.55, k * 2.0, 1.5, ink);
-        p.rect(cx + k * 0.25, cy - k, k * 0.55, k * 2.0, 1.5, ink);
+        p.rect(cx - k * 0.8, cy - k, k * 0.55, k * 2.0, 1.0, ink);
+        p.rect(cx + k * 0.25, cy - k, k * 0.55, k * 2.0, 1.0, ink);
     } else {
         for i in 0..(k * 2.0) as i32 {
             let fy = i as f32;
             let len = (k * 1.7) * (1.0 - (fy - k).abs() / k);
-            p.rect(cx - k * 0.7, cy - k + fy, len, 1.0, 0.0, ink);
+            p.rect(cx - k * 0.6, cy - k + fy, len, 1.0, 0.0, ink);
         }
     }
     hit(s, play, Target::Play(d));
-    let cue = Rect::new(r.x, r.y + bh + 4.0, r.w, bh);
+    let cue = Rect::new(r.x, play.y + bh + 4.0, r.w, bh);
     let held = s.pressed(Target::Cue(d));
-    if held {
-        p.glow(cue.x, cue.y, cue.w, cue.h, rad, 10.0, fade(AMBER, 0x70));
-        p.gradient(cue.x, cue.y, cue.w, cue.h, rad, rgb(0xffe27a), rgb(0xe0a800), 0.0, 0);
-    } else {
-        p.gradient(cue.x, cue.y, cue.w, cue.h, rad, rgb(0x2a2517), rgb(0x15130c), 1.5, fade(AMBER, 0x90));
-    }
-    let cs = Style { colour: if held { rgb(0x1a1200) } else { AMBER }, ..TAB };
+    let (fill, edge, ink) = if held { (fade(AMBER, 0x40), AMBER, AMBER) } else { (RAISED, EDGE, TEXT) };
+    p.outlined(cue.x, cue.y, cue.w, cue.h, 5.0, fill, 1.0, edge);
+    let cs = Style { colour: ink, ..TAB };
     p.text(cue.x + (cue.w - p.text_width(cs, "CUE")) * 0.5, cue.y + cue.h * 0.5 + 4.0, cs, "CUE");
     hit(s, cue, Target::Cue(d));
 }
@@ -582,18 +576,16 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             Mode::Fx => (FX_PADS[i].to_string(), s.decks[d].echo == Some(i), AMBER),
         };
         let down = s.pressed(Target::Pad(d, i));
-        if down && on {
-            p.glow(b.x, b.y, b.w, b.h, 7.0, 10.0, fade(colour, 0x90));
-        }
-        let (top, bottom) = match (on, down) {
-            (true, true) => (colour, colour),
-            (true, false) => (fade(colour, 0x55), fade(colour, 0x28)),
-            (false, true) => (rgb(0x2a2d36), rgb(0x1c1e25)),
-            (false, false) => (rgb(0x1a1c23), rgb(0x101116)),
+        let fill = match (on, down) {
+            (true, true) => colour,
+            (true, false) => fade(colour, 0x30),
+            (false, true) => rgb(0x2c2c33),
+            (false, false) => RAISED,
         };
-        p.glow(b.x, b.y + 2.0, b.w, b.h, 7.0, 3.0, fade(rgb(0x000000), 0xc0));
-        p.gradient(b.x, b.y, b.w, b.h, 7.0, top, bottom, 1.0, if on { fade(colour, 0xb0) } else { rgb(0x2a2c33) });
-        p.texture(Material::Grain);
+        p.rect(b.x, b.y, b.w, b.h, 3.0, fill);
+        if on {
+            p.rect(b.x, b.y, 3.0, b.h, 1.5, colour);
+        }
         let ink = Style {
             colour: if on && down {
                 rgb(0x000000)
@@ -667,7 +659,6 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.gradient(r.x, r.y, r.w, r.h, 6.0, rgb(0x191b22), rgb(0x0e0f13), 1.0, rgb(0x2b2e37));
-    p.texture(Material::Brushed);
     let bh = 22.0;
     button(p, s, Rect::new(r.x + 3.0, r.y + 3.0, r.w - 6.0, bh), "SYNC", false, ACCENT, Target::Sync(d));
     let kl = s.decks[d].key_lock;
@@ -1238,8 +1229,100 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 
 /// Hardware style panel: brushed metal, lit bevel, a thin deck coloured top line.
 fn panel(p: &mut Painter, r: Rect, colour: u32) {
-    p.glow(r.x, r.y + 3.0, r.w, r.h, 10.0, 8.0, fade(rgb(0x000000), 0xe0));
-    p.gradient(r.x, r.y, r.w, r.h, 10.0, rgb(0x1e2028), rgb(0x0f1014), 1.0, rgb(0x30333d));
-    p.texture(Material::Brushed);
-    p.rect(r.x + 12.0, r.y + 1.0, r.w - 24.0, 2.0, 1.0, fade(colour, 0x90));
+    p.outlined(r.x, r.y, r.w, r.h, 6.0, INK, 1.0, rgb(0x202026));
+    p.rect(r.x + 1.0, r.y + 1.0, r.w - 2.0, 2.0, 1.0, fade(colour, 0xb0));
+}
+
+pub const HUB_ROW: f32 = 44.0;
+
+/// Streaming hub: service tabs, search, results with a load button per deck.
+fn hub(p: &mut Painter, s: &mut State, r: Rect) {
+    use crate::hub::Service;
+    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    let bar = 40.0;
+    p.rect(r.x, r.y + bar - 1.0, r.w, 1.0, 0.0, EDGE);
+    let mut x = r.x + 10.0;
+    for sv in Service::ALL {
+        let on = s.hub.service == sv;
+        let tw = p.text_width(TAB, sv.name()) + 24.0;
+        p.text(x + 12.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
+        if on {
+            p.rect(x + 8.0, r.y + bar - 3.0, tw - 16.0, 2.0, 1.0, rgb(0xff0033));
+        }
+        x += tw;
+    }
+    let fx = x + 12.0;
+    let fw = (r.w - fx - 110.0).max(120.0);
+    let field = Rect::new(fx, r.y + 6.0, fw, bar - 12.0);
+    p.outlined(field.x, field.y, field.w, field.h, 4.0, DEEP, 1.0, if s.hub.focus { ACCENT } else { EDGE });
+    let (shown, ink) = if s.hub.query.is_empty() && !s.hub.focus {
+        ("Search YouTube".to_string(), DARK)
+    } else {
+        (format!("{}{}", s.hub.query, if s.hub.focus { "|" } else { "" }), TEXT)
+    };
+    p.text_in(field.x + 10.0, field.y + field.h * 0.5 + 4.0, field.w - 20.0, Style { colour: ink, ..ARTIST }, &shown);
+    hit(s, field, Target::HubFocus);
+    let busy = s.hub.searching;
+    button(
+        p,
+        s,
+        Rect::new(field.x + field.w + 8.0, field.y, 90.0, field.h),
+        if busy { "SEARCHING" } else { "SEARCH" },
+        busy,
+        ACCENT,
+        Target::HubSearch,
+    );
+    let status_h = if s.hub.status.is_empty() { 0.0 } else { 24.0 };
+    if status_h > 0.0 {
+        let status = s.hub.status.clone();
+        p.text_in(r.x + 12.0, r.y + bar + 16.0, r.w - 24.0, Style { colour: AMBER, ..ARTIST }, &status);
+    }
+    let list = Rect::new(r.x, r.y + bar + status_h, r.w, r.h - bar - status_h);
+    s.hub_area = list;
+    if s.hub.hits.is_empty() {
+        let msg = if busy {
+            "Searching"
+        } else {
+            "Search YouTube, then send a result to deck 1 or 2. Audio is cached for next time."
+        };
+        p.text(
+            list.x + (list.w - p.text_width(ARTIST, msg)) * 0.5,
+            list.y + 40.0,
+            Style { colour: GREY, ..ARTIST },
+            msg,
+        );
+        return;
+    }
+    hit(s, list, Target::HubList);
+    let first = (s.hub.scroll / HUB_ROW).floor().max(0.0) as usize;
+    let rows = (list.h / HUB_ROW).ceil() as usize + 1;
+    let bw = 52.0;
+    for i in first..(first + rows).min(s.hub.hits.len()) {
+        let y = list.y + i as f32 * HUB_ROW - s.hub.scroll;
+        if y < list.y - 1.0 || y + HUB_ROW > list.y + list.h + 1.0 {
+            continue;
+        }
+        if i % 2 == 1 {
+            p.rect(list.x, y, list.w, HUB_ROW, 0.0, rgb(0x121216));
+        }
+        let h = &s.hub.hits[i];
+        let (title, artist, secs) = (h.title.clone(), h.artist.clone(), h.seconds);
+        let tw = list.w - 2.0 * (bw + 6.0) - 90.0;
+        p.text_in(list.x + 12.0, y + 18.0, tw, Style::new(12.5, Weight::Semibold, TEXT), &title);
+        p.text_in(list.x + 12.0, y + 34.0, tw, ARTIST, &artist);
+        let t = mmss(secs as f32);
+        p.text(list.x + list.w - 2.0 * (bw + 6.0) - 12.0 - p.text_width(ARTIST, &t), y + 26.0, ARTIST, &t);
+        for (d, &colour) in DECK.iter().enumerate() {
+            let b = Rect::new(list.x + list.w - (2 - d) as f32 * (bw + 6.0), y + 7.0, bw, HUB_ROW - 14.0);
+            let getting = s.hub.fetching.iter().find(|f| f.0 == s.hub.hits[i].id && f.1 == d).map(|f| f.2);
+            let label = match getting {
+                Some(f) => format!("{:.0}%", f * 100.0),
+                None => format!("DECK {}", d + 1),
+            };
+            button(p, s, b, &label, getting.is_some(), colour, Target::HubLoad(i, d));
+            if let Some(f) = getting {
+                p.rect(b.x + 2.0, b.y + b.h - 3.0, (b.w - 4.0) * f, 2.0, 1.0, colour);
+            }
+        }
+    }
 }

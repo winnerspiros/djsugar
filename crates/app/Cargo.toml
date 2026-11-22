@@ -16,6 +16,7 @@ sugar-engine = { path = "../engine" }
 sugar-decode = { path = "../decode" }
 sugar-io = { path = "../io" }
 sugar-analysis = { path = "../analysis" }
+sugar-net = { path = "../net" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sugar-shell = { path = "../shell" }

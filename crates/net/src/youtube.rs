@@ -1,16 +1,5 @@
-//! YouTube, as DJ Sugar does it.
-//!
-//! Search speaks InnerTube as ANDROID_VR, then TVHTML5_SIMPLY, then WEB,
-//! limited to videos in the music category. Audio comes from the player
-//! endpoint, client by client (two TV builds, ANDROID_VR, IOS, ANDROID,
-//! TVHTML5_SIMPLY), taking only plain stream URLs; if all of them refuse,
-//! the Piped servers are asked. AAC in MP4 is preferred, then bitrate, and
-//! a failing stream falls through to the next best.
-//!
-//! Requests are spaced at least 200 ms apart and at most 8 in 10 s. When
-//! YouTube flags the session as a bot, InnerTube rests for 30 s, doubling
-//! up to 10 minutes, and Piped is used meanwhile. The `visitorData` YouTube
-//! hands back is echoed on every request, as its own apps do.
+//! YouTube as DJ Sugar does it: InnerTube search and player clients in its order,
+//! then Piped. AAC first; paced 200 ms apart, 8 per 10 s; bot flags rest 30 s to 10 min.
 
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
@@ -321,11 +310,15 @@ impl YouTube {
                         return Ok((f, ""));
                     }
                 }
+                Ok(_) | Err(_) if matches!(last, Error::Refused(_)) => {}
                 Ok((s, _)) => last = Error::Status(s),
                 Err(e) => last = e,
             }
         }
-        Err(last)
+        Err(match last {
+            Error::Refused(why) => Error::Refused(format!("{why}; the Piped servers refused too")),
+            e => e,
+        })
     }
 
     /// Downloads a video's audio into `dir` as `<id>.m4a` or `<id>.webm`,

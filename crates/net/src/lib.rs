@@ -1,7 +1,5 @@
 //! Streaming services: search them and fetch their audio for the decks.
-//!
-//! Every call blocks; the app runs them off the UI and audio threads.
-//! Networking is pure Rust down to the TLS (rustls with RustCrypto).
+//! Calls block, so the app runs them on worker threads. Pure Rust down to TLS.
 
 pub mod http;
 pub mod youtube;

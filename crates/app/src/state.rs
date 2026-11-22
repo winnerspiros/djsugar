@@ -70,6 +70,10 @@ pub enum Target {
     Release(usize),
     Record,
     SearchFocus,
+    HubFocus,
+    HubSearch,
+    HubList,
+    HubLoad(usize, usize),
     LoadSelected(usize),
     GridOp(GridOp),
     GridClose,
@@ -97,6 +101,7 @@ pub enum View {
     Lib,
     Wave,
     Fx,
+    Stream,
 }
 
 /// Layout of the sample picker grid: columns and cell size.
@@ -358,6 +363,8 @@ pub struct State {
     pub show_fx: bool,
     pub show_samplers: bool,
     pub search_focus: bool,
+    pub hub: crate::hub::Hub,
+    pub hub_area: Rect,
     pub shelf: Shelf,
     pub playlists: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
@@ -455,6 +462,8 @@ impl State {
             show_fx: false,
             show_samplers: false,
             search_focus: false,
+            hub_area: Rect::default(),
+            hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
             shelf: Shelf::Tracks,
             playlists: crate::store::load_playlists(),
             history: Vec::new(),
@@ -486,6 +495,16 @@ impl State {
     }
 
     pub fn tick(&mut self) {
+        for (path, title, artist, deck) in self.hub.poll() {
+            let at =
+                self.entries.iter().position(|e| matches!(&e.source, Source::File(p) if **p == *path)).unwrap_or_else(
+                    || {
+                        self.entries.push(library::file(path, &title, &artist, "YouTube"));
+                        self.entries.len() - 1
+                    },
+                );
+            self.load_deck(deck, at);
+        }
         let bpm = self.master_bpm();
         if (bpm - self.station.bpm).abs() > 0.01 {
             self.station.bpm = bpm;
@@ -811,10 +830,18 @@ impl State {
     }
 
     pub fn typing(&self) -> bool {
-        self.search_focus || self.browser.is_some()
+        self.search_focus || self.browser.is_some() || self.hub_typing()
+    }
+
+    fn hub_typing(&self) -> bool {
+        self.view == View::Stream && self.hub.focus
     }
 
     pub fn type_text(&mut self, text: &str) {
+        if self.hub_typing() {
+            self.hub.query.push_str(text);
+            return;
+        }
         let mut q = std::mem::take(&mut self.query);
         q.push_str(text);
         self.search(q);
@@ -826,6 +853,20 @@ impl State {
     }
 
     fn key_press(&mut self, key: Key) {
+        if self.hub_typing() {
+            match key {
+                Key::Backspace => {
+                    self.hub.query.pop();
+                }
+                Key::Escape => self.hub.focus = false,
+                Key::Enter => {
+                    self.hub.focus = false;
+                    self.hub.search();
+                }
+                _ => {}
+            }
+            return;
+        }
         match key {
             Key::Backspace => {
                 let mut q = std::mem::take(&mut self.query);
@@ -1125,6 +1166,13 @@ impl State {
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
             Target::SearchFocus => self.search_focus = true,
+            Target::HubFocus => self.hub.focus = true,
+            Target::HubSearch => {
+                self.hub.focus = false;
+                self.hub.search();
+            }
+            Target::HubList => {}
+            Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
             Target::Shelf(sh) => {
                 self.shelf = sh;
                 self.selected = None;
@@ -1349,8 +1397,18 @@ impl State {
             self.drag(Target::Picker, x, y, (0.0, dy));
             return;
         }
-        if self.library.hit(x, y) {
+        if self.view == View::Stream {
+            self.hub_scroll(-dy);
+        } else if self.library.hit(x, y) {
             self.scroll_by(-dy);
+        }
+    }
+
+    fn hub_scroll(&mut self, dy: f32) {
+        let max = (self.hub.hits.len() as f32 * crate::sugar::HUB_ROW - (self.hub_area.h - 8.0)).max(0.0);
+        self.hub.scroll = (self.hub.scroll + dy).clamp(0.0, max);
+        if self.hub.scroll >= max - crate::sugar::HUB_ROW * 3.0 {
+            self.hub.more();
         }
     }
 
@@ -1419,6 +1477,7 @@ impl State {
                 self.send(Command::Gain(d, knob_gain(v)));
             }
             Target::Library => self.scroll_by(-delta.1),
+            Target::HubList => self.hub_scroll(-delta.1),
             Target::Picker => {
                 let g = self.picker_grid;
                 let rows = SAMPLES.len().div_ceil(g.cols.max(1)) as f32;

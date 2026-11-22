@@ -1,3 +1,4 @@
+mod hub;
 mod library;
 mod lyrics;
 mod record;

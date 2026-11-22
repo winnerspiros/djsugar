@@ -59,12 +59,8 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
     Ok(total.or_else(|| resp.headers().get("content-length").and_then(|v| v.to_str().ok()?.parse().ok())))
 }
 
-/// Downloads `url` to `to` through a `.part` file, renamed when complete.
-///
-/// Files of `chunk_from` bytes or more are fetched as `chunks` ranged
-/// requests at once, each resumed up to four times where it stopped; this
-/// is what makes long mixes arrive in seconds. `progress(done, total)` is
-/// called from the download threads.
+/// Downloads `url` to `to` via a `.part` file. Files of `chunk_from` bytes or more
+/// come as `chunks` parallel ranges, each resumed up to four times.
 pub fn download(
     url: &str,
     headers: &[(&str, &str)],

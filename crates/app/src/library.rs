@@ -149,6 +149,13 @@ pub fn roots() -> Vec<PathBuf> {
     v
 }
 
+/// A downloaded stream, named by the service's own title and artist.
+pub fn file(path: PathBuf, title: &str, artist: &str, folder: &str) -> Entry {
+    let name =
+        if artist.is_empty() || title.contains(" - ") { title.to_string() } else { format!("{artist} - {title}") };
+    Entry::new(Source::File(path.into()), &name, folder)
+}
+
 pub fn scan(roots: &[PathBuf]) -> Vec<Entry> {
     let mut out = Vec::new();
     let mut stack: Vec<PathBuf> = roots.to_vec();

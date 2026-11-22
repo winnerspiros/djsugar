@@ -550,6 +550,7 @@ dependencies = [
  "sugar-engine",
  "sugar-io",
  "sugar-layout",
+ "sugar-net",
  "sugar-shell",
  "sugar-ui",
  "winit",
