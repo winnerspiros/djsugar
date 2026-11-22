@@ -232,6 +232,8 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          profile: pixel_6
+          ram-size: 4096M
           disable-animations: true
           script: bash platform/android/twin.sh ref.apk target/djsugar.apk twin
       - name: Scores

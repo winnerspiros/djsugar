@@ -29,7 +29,7 @@ fn at(i: &Img, x: usize, y: usize, w: usize, h: usize) -> [u8; 3] {
 
 /// Mean colour difference in percent, and the side by side image with the heat map.
 fn compare(a: &Img, b: &Img) -> (f64, Vec<u8>, usize, usize) {
-    let (w, h) = (a.w.min(640), a.h * a.w.min(640) / a.w);
+    let (w, h) = (a.w.min(1200), a.h * a.w.min(1200) / a.w);
     let mut out = vec![0u8; w * 3 * h * 3];
     let mut sum = 0u64;
     for y in 0..h {
