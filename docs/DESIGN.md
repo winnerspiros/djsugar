@@ -137,6 +137,8 @@ Decisions:
 
 ## 6. Order of work
 
+The live plan with status is docs/ROADMAP.md.
+
 1. core, layout solver and the ui skeleton: one window that renders the mockup's structure
    fluidly at every size on desktop and Android.
 2. engine, io, decode: two decks, mixer, time-stretch; allocation guard in CI.
