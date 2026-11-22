@@ -160,8 +160,24 @@ fn screen_body(window: Rect) -> Rect {
     Rect::new(PAD, MENU_H + PAD, window.w - 2.0 * PAD, window.h - MENU_H - 2.0 * PAD)
 }
 
-fn top(p: &mut Painter, s: &State, r: Rect) {
+fn top(p: &mut Painter, s: &mut State, r: Rect) {
     let x = r.x + 28.0 + p.text(r.x + 12.0, r.y + 22.0, BRAND, "DJ Sugar");
+    let on = s.auto.is_some();
+    let bw = 78.0;
+    let bx = r.x + r.w - bw - 6.0;
+    p.outlined(
+        bx,
+        r.y + 5.0,
+        bw,
+        r.h - 10.0,
+        6.0,
+        if on { fade(PLAY, 0x30) } else { RAISED },
+        1.0,
+        if on { PLAY } else { LINE },
+    );
+    p.text(bx + bw * 0.5 - p.text_width(LABEL, "AUTO DJ") * 0.5, r.y + r.h * 0.5 + 4.0, LABEL, "AUTO DJ");
+    hit(s, bx, r.y, bw, r.h, Target::AutoDj);
+    let r = Rect::new(r.x, r.y, r.w - bw - 8.0, r.h);
     let w = r.x + r.w - x - 12.0;
     if s.query.is_empty() {
         let hint = s.status.as_deref().unwrap_or("Type to search the library");

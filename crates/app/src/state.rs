@@ -27,6 +27,7 @@ pub enum Target {
     Pad(usize, usize),
     Mode(usize, Mode),
     Sync(usize),
+    AutoDj,
     Jog(usize),
     Overview(usize),
     Library,
@@ -141,6 +142,13 @@ pub struct State {
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
     pub out_rate: u32,
+    pub auto: Option<Auto>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Auto {
+    pub next: usize,
+    pub fade: Option<(usize, f64, f64)>,
 }
 
 impl std::fmt::Debug for State {
@@ -210,6 +218,7 @@ impl State {
             jobs: channel(),
             status,
             out_rate,
+            auto: None,
         }
     }
 
@@ -220,7 +229,7 @@ impl State {
     }
 
     pub fn animating(&self) -> bool {
-        self.telemetry.decks.iter().any(|d| d.playing) || self.decks.iter().any(|d| d.loading)
+        self.telemetry.decks.iter().any(|d| d.playing) || self.decks.iter().any(|d| d.loading) || self.auto.is_some()
     }
 
     pub fn tick(&mut self) {
@@ -254,6 +263,94 @@ impl State {
         if let Some(c) = &mut self.control {
             self.telemetry = c.poll();
         }
+        self.auto_step();
+    }
+
+    fn toggle_auto(&mut self) {
+        if self.auto.take().is_some() {
+            return;
+        }
+        let mut next = 0;
+        if self.decks[0].loaded.is_none()
+            && !self.decks[0].loading
+            && let Some(&i) = self.shown.first()
+        {
+            self.load_deck(0, i as usize);
+            next = 1;
+        }
+        self.auto = Some(Auto { next, fade: None });
+        if let Some(&i) = self.shown.get(next)
+            && self.decks[1].loaded.is_none()
+        {
+            self.load_deck(1, i as usize);
+        }
+        if let Some(a) = &mut self.auto {
+            a.next = next + 1;
+        }
+    }
+
+    fn auto_step(&mut self) {
+        let Some(mut a) = self.auto else { return };
+        let live = (0..2).find(|&d| self.telemetry.decks[d].playing);
+        let Some(live) = live else {
+            a.fade = None;
+            let fresh = |d: usize| {
+                self.decks[d]
+                    .loaded
+                    .as_ref()
+                    .is_some_and(|l| self.telemetry.decks[d].position + 1.0 < l.track.frames.len() as f64)
+            };
+            if let Some(d) = (0..2).find(|&d| fresh(d)) {
+                self.send(Command::Play(d, true));
+                self.telemetry.decks[d].playing = true;
+                self.crossfade(if d == 0 { -1.0 } else { 1.0 });
+            } else if let Some(d) = (0..2).find(|&d| self.decks[d].loaded.is_some() && !self.decks[d].loading)
+                && let Some(&i) = self.shown.get(a.next % self.shown.len().max(1))
+            {
+                self.load_deck(d, i as usize);
+                a.next += 1;
+            }
+            self.auto = Some(a);
+            return;
+        };
+        let other = 1 - live;
+        if let Some((from, start, len)) = a.fade {
+            let pos = self.telemetry.decks[1 - from].position;
+            let t = ((pos - start) / len).clamp(0.0, 1.0) as f32;
+            let dir = if from == 0 { 1.0 } else { -1.0 };
+            self.crossfade(-dir + 2.0 * dir * t);
+            if t >= 1.0 {
+                self.send(Command::Play(from, false));
+                self.telemetry.decks[from].playing = false;
+                a.fade = None;
+                if let Some(&i) = self.shown.get(a.next % self.shown.len().max(1)) {
+                    self.load_deck(from, i as usize);
+                    a.next += 1;
+                }
+            }
+            self.auto = Some(a);
+            return;
+        }
+        let (Some(l), Some(o)) = (&self.decks[live].loaded, &self.decks[other].loaded) else { return };
+        let len = l.track.frames.len() as f64;
+        let rate = f64::from(l.track.rate);
+        let beat = l.grid.map_or(0.5 * rate, |g| g.beat_frames(l.track.rate));
+        let mix = (beat * 16.0).min(len * 0.4);
+        if len - self.telemetry.decks[live].position > mix {
+            return;
+        }
+        let other_mix = (mix * f64::from(o.track.rate) / rate).min(o.track.frames.len() as f64 * 0.5);
+        self.sync(other);
+        self.send(Command::Play(other, true));
+        self.telemetry.decks[other].playing = true;
+        let start = self.telemetry.decks[other].position;
+        a.fade = Some((live, start, other_mix));
+        self.auto = Some(a);
+    }
+
+    fn crossfade(&mut self, v: f32) {
+        self.crossfader = v.clamp(-1.0, 1.0);
+        self.send(Command::Crossfader(self.crossfader));
     }
 
     fn load(&mut self, job: Job, index: usize) {
@@ -484,6 +581,7 @@ impl State {
             }
             Target::Mode(d, m) => self.decks[d].mode = m,
             Target::Sync(d) => self.sync(d),
+            Target::AutoDj => self.toggle_auto(),
             Target::Jog(d) => {
                 self.focus = d;
                 self.send(Command::Play(d, false));
