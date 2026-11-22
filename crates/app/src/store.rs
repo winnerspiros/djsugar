@@ -121,6 +121,29 @@ pub fn load_pads<const N: usize>() -> Option<[[usize; N]; 2]> {
     Some(out)
 }
 
+/// Playlists, one per line: the name, then the tracks, tab separated.
+pub fn save_playlists(lists: &[(String, Vec<String>)]) {
+    let Some(d) = dir() else { return };
+    let text: String = lists
+        .iter()
+        .map(|(n, keys)| {
+            std::iter::once(n.as_str()).chain(keys.iter().map(String::as_str)).collect::<Vec<_>>().join("\t") + "\n"
+        })
+        .collect();
+    let _ = std::fs::create_dir_all(&d);
+    let _ = std::fs::write(d.join("playlists.tsv"), text);
+}
+
+pub fn load_playlists() -> Vec<(String, Vec<String>)> {
+    let text = dir().and_then(|d| std::fs::read_to_string(d.join("playlists.tsv")).ok()).unwrap_or_default();
+    text.lines()
+        .filter_map(|l| {
+            let mut f = l.split('\t');
+            Some((f.next()?.to_string(), f.map(str::to_string).collect()))
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

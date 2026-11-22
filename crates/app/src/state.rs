@@ -56,6 +56,11 @@ pub enum Target {
     Grid(usize),
     Sort(library::Column),
     XfadeStep(i8),
+    Shelf(Shelf),
+    NewPlaylist,
+    MenuDeck(usize),
+    MenuToggle(usize),
+    MenuClose,
     Picker,
     PickerClose,
     Scene(usize),
@@ -99,6 +104,22 @@ pub enum View {
 pub struct Picker {
     pub cols: usize,
     pub cell: (f32, f32),
+}
+
+/// What the library lists, picked in its sidebar.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Shelf {
+    #[default]
+    Tracks,
+    History,
+    Playlist(usize),
+}
+
+pub fn entry_key(e: &Entry) -> String {
+    match &e.source {
+        Source::File(p) => p.to_string_lossy().into_owned(),
+        Source::Sample(n) => format!("sample:{n}"),
+    }
 }
 
 /// FX station settings shown on its page.
@@ -337,6 +358,10 @@ pub struct State {
     pub show_fx: bool,
     pub show_samplers: bool,
     pub search_focus: bool,
+    pub shelf: Shelf,
+    pub playlists: Vec<(String, Vec<String>)>,
+    pub history: Vec<u32>,
+    pub track_menu: Option<u32>,
     pub station: Station,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
     pub grid_menu: Option<usize>,
@@ -412,7 +437,7 @@ impl State {
             picker_scroll: 0.0,
             picker_grid: Picker::default(),
             entries: library::samples(),
-            shown: (0..SAMPLES.len() as u32).collect(),
+            shown: Vec::new(),
             query: String::new(),
             focus: 0,
             browser: None,
@@ -430,6 +455,10 @@ impl State {
             show_fx: false,
             show_samplers: false,
             search_focus: false,
+            shelf: Shelf::Tracks,
+            playlists: crate::store::load_playlists(),
+            history: Vec::new(),
+            track_menu: None,
             station: Station::default(),
             cue_menu: None,
             grid_menu: None,
@@ -469,6 +498,16 @@ impl State {
             && self.decks[d].cues[p].is_some()
         {
             self.cue_menu = Some((d, p, g.start.0, g.start.1));
+        }
+        if self.track_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && g.target == Some(Target::Library)
+        {
+            g.moved = true;
+            let row = ((g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
+            if row >= 0.0 && g.start.1 > self.library.y + 30.0 {
+                self.track_menu = self.shown.get(row as usize).copied();
+            }
         }
         if self.picker.is_none()
             && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -754,9 +793,21 @@ impl State {
         self.scroll = 0.0;
         let q = &self.query;
         let (n, s) = (self.entries.len() as u32, SAMPLES.len() as u32);
-        let order = (s..n).chain(0..s);
-        self.shown = order.filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
-        self.resort();
+        let order: Vec<u32> = match self.shelf {
+            Shelf::Tracks => (s..n).collect(),
+            Shelf::History => self.history.clone(),
+            Shelf::Playlist(p) => {
+                let keys = self.playlists.get(p).map(|(_, k)| k.as_slice()).unwrap_or_default();
+                keys.iter()
+                    .filter_map(|k| self.entries.iter().position(|e| entry_key(e) == *k))
+                    .map(|i| i as u32)
+                    .collect()
+            }
+        };
+        self.shown = order.into_iter().filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
+        if !matches!(self.shelf, Shelf::History | Shelf::Playlist(_)) || self.sort.0 != library::Column::Index {
+            self.resort();
+        }
     }
 
     pub fn typing(&self) -> bool {
@@ -818,6 +869,8 @@ impl State {
     }
 
     pub fn load_deck(&mut self, deck: usize, index: usize) {
+        self.history.retain(|&i| i as usize != index);
+        self.history.insert(0, index as u32);
         self.decks[deck].loading = true;
         self.load(Job::Deck(deck), index);
     }
@@ -1072,6 +1125,39 @@ impl State {
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
             Target::SearchFocus => self.search_focus = true,
+            Target::Shelf(sh) => {
+                self.shelf = sh;
+                self.selected = None;
+                let q = std::mem::take(&mut self.query);
+                self.search(q);
+            }
+            Target::NewPlaylist => {
+                let name = format!("Playlist {}", self.playlists.len() + 1);
+                self.playlists.push((name, Vec::new()));
+                crate::store::save_playlists(&self.playlists);
+            }
+            Target::MenuDeck(d) => {
+                if let Some(i) = self.track_menu.take() {
+                    self.load_deck(d, i as usize);
+                }
+            }
+            Target::MenuToggle(p) => {
+                if let (Some(i), Some((_, keys))) = (self.track_menu, self.playlists.get_mut(p)) {
+                    let k = entry_key(&self.entries[i as usize]);
+                    match keys.iter().position(|x| *x == k) {
+                        Some(at) => {
+                            keys.remove(at);
+                        }
+                        None => keys.push(k),
+                    }
+                    crate::store::save_playlists(&self.playlists);
+                    if self.shelf == Shelf::Playlist(p) {
+                        let q = std::mem::take(&mut self.query);
+                        self.search(q);
+                    }
+                }
+            }
+            Target::MenuClose => self.track_menu = None,
             Target::Scene(i) => {
                 self.station.scene = Scene::ALL[i.min(Scene::ALL.len() - 1)];
                 self.send(Command::Station(Set::Scene(self.station.scene)));

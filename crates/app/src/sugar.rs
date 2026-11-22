@@ -123,6 +123,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
+    track_menu(p, s, w, h);
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
@@ -840,14 +841,132 @@ fn mmss(secs: f32) -> String {
     format!("{}:{:02}", t / 60, t % 60)
 }
 
+/// Library sources: tracks, samples, history and the playlists.
+fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
+    use crate::state::Shelf;
+    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    p.rect(r.x + r.w - 1.0, r.y, 1.0, r.h, 0.0, EDGE);
+    let mut items: Vec<(String, Shelf)> =
+        vec![("Tracks".into(), Shelf::Tracks), (format!("History  {}", s.history.len()), Shelf::History)];
+    for (n, (name, keys)) in s.playlists.iter().enumerate() {
+        items.push((format!("{name}  {}", keys.len()), Shelf::Playlist(n)));
+    }
+    let rh = 28.0;
+    let mut y = r.y + 6.0;
+    p.text(r.x + 12.0, y + 12.0, SMALL, "LIBRARY");
+    y += 18.0;
+    for (n, (label, sh)) in items.iter().enumerate() {
+        if n == 2 {
+            p.text(r.x + 12.0, y + 14.0, SMALL, "PLAYLISTS");
+            y += 20.0;
+        }
+        if y + rh > r.y + r.h - rh {
+            break;
+        }
+        let on = s.shelf == *sh;
+        let b = Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0);
+        if on {
+            p.rect(b.x, b.y, b.w, b.h, 5.0, fade(ACCENT, 0x30));
+            p.rect(b.x, b.y + 4.0, 3.0, b.h - 8.0, 1.5, ACCENT);
+        }
+        p.text_in(
+            b.x + 10.0,
+            b.y + b.h * 0.5 + 4.0,
+            b.w - 14.0,
+            Style { colour: if on { TEXT } else { GREY }, ..ARTIST },
+            label,
+        );
+        hit(s, b, Target::Shelf(*sh));
+        y += rh;
+    }
+    if items.len() == 2 {
+        p.text(r.x + 12.0, y + 14.0, SMALL, "PLAYLISTS");
+        y += 20.0;
+    }
+    let b = Rect::new(r.x + 6.0, (y + 4.0).min(r.y + r.h - rh), r.w - 12.0, rh - 4.0);
+    button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
+}
+
+/// Card for a held track: load it to a deck, add it to playlists.
+fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(i) = s.track_menu else { return };
+    p.layer();
+    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0x99));
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::MenuClose);
+    let lists = s.playlists.len();
+    let cw = 360.0f32.min(w - 24.0);
+    let ch = (16.0 + 22.0 + 52.0 + 26.0 + lists.max(1) as f32 * 34.0 + 16.0).min(h - 24.0);
+    let r = Rect::new((w - cw) * 0.5, (h - ch) * 0.5, cw, ch);
+    p.glow(r.x, r.y + 6.0, r.w, r.h, 16.0, 18.0, fade(rgb(0x000000), 0xc0));
+    p.outlined(r.x, r.y, r.w, r.h, 16.0, SURFACE, 1.0, EDGE);
+    hit(s, r, Target::Picker);
+    let e = &s.entries[i as usize];
+    let key = crate::state::entry_key(e);
+    let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
+    p.text_in(r.x + 16.0, r.y + 30.0, r.w - 32.0, Style::new(15.0, Weight::Bold, TEXT), &title);
+    let bw = (r.w - 40.0) * 0.5;
+    for d in 0..2 {
+        let b = Rect::new(r.x + 16.0 + d as f32 * (bw + 8.0), r.y + 44.0, bw, 44.0);
+        button(p, s, b, ["DECK 1", "DECK 2"][d], true, DECK[d], Target::MenuDeck(d));
+    }
+    let mut y = r.y + 104.0;
+    p.rect(r.x + 16.0, y - 8.0, r.w - 32.0, 1.0, 0.0, EDGE);
+    let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
+    p.text(r.x + 16.0, y + 8.0, SMALL, "PLAYLISTS");
+    let pill = format!("in {held}");
+    p.text(
+        r.x + r.w - 16.0 - p.text_width(SMALL, &pill),
+        y + 8.0,
+        Style { colour: if held > 0 { ACCENT } else { GREY }, ..SMALL },
+        &pill,
+    );
+    y += 18.0;
+    if lists == 0 {
+        p.text(r.x + 16.0, y + 20.0, ARTIST, "No playlists yet: make one in the sidebar");
+    }
+    for n in 0..lists {
+        if y + 32.0 > r.y + r.h - 8.0 {
+            break;
+        }
+        let on = s.playlists[n].1.contains(&key);
+        let b = Rect::new(r.x + 16.0, y, r.w - 32.0, 30.0);
+        p.rect(b.x, b.y, b.w, b.h, 6.0, if on { fade(ACCENT, 0x28) } else { rgb(0x16181e) });
+        p.outlined(
+            b.x + 8.0,
+            b.y + 8.0,
+            14.0,
+            14.0,
+            3.0,
+            if on { ACCENT } else { 0 },
+            1.5,
+            if on { ACCENT } else { GREY },
+        );
+        let name = s.playlists[n].0.clone();
+        p.text_in(b.x + 32.0, b.y + 20.0, b.w - 40.0, Style { colour: TEXT, ..ARTIST }, &name);
+        hit(s, b, Target::MenuToggle(n));
+        y += 34.0;
+    }
+}
+
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
+    let r = if r.w >= 640.0 {
+        let sw = (r.w * 0.2).clamp(150.0, 220.0);
+        sidebar(p, s, Rect::new(r.x, r.y, sw, r.h));
+        Rect::new(r.x + sw, r.y, r.w - sw, r.h)
+    } else {
+        r
+    };
+    table(p, s, r);
+}
+
+fn table(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::library::Column as C;
     p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
     let bar = if s.selected.is_some() { 40.0 } else { 0.0 };
     let list = Rect::new(r.x, r.y, r.w, r.h - bar);
     s.library = list;
     s.row_h = 22.0;
-    let wide = r.w >= 700.0;
+    let wide = r.w >= 600.0;
     let cols: &[(C, &str, f32)] = if wide {
         &[
             (C::Index, "#", 0.05),

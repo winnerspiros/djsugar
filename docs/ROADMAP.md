@@ -113,6 +113,8 @@ Done:
 - Keyboard: the DJ Sugar en_US desktop map (play, cue, beat jump, sync, PFL, hot cues 1 to 4 with shift to clear, loop in, out, reloop, beat loop, halve, double, crossfader); typing goes to search only when it has focus.
 - Track memory: beat grid, grid lock, hot cues and colours saved per track and restored on load.
 - FX station: master bus page with 16 beat synced scenes (echo, HPF, LPF and crush echo, spiral up and down, noise, reverb up and down, flanger, phaser, filter, roll, gater, pitch, drive), an XY pad for amount and depth, a TIME knob in beats, a three band isolator and brake, echo and back spin release effects; follows the playing deck tempo.
+- Sample pads: four banks of 8 per deck (tap SMPL again to switch bank); long press a pad for a picker over every bundled sound; picks play at once and are saved. Samples live only on the pads and their picker, never in the library.
+- Library sidebar: Tracks, History (tracks loaded this session) and playlists, with a new playlist button; long press a track for a card with DECK 1, DECK 2 and playlist ticks; playlists are saved.
 - Recording: REC in the toolbar writes a 32-bit float WAV with live elapsed time.
 - Renderer: vertical and radial gradients, soft glow and shadow, arcs and pie wedges, lines. Decks use a platter with a glowing position ring, candy transport, shaded pads with press feedback, arc knobs, shaded fader caps.
 
