@@ -46,9 +46,10 @@ enum M {
     DeckB,
     Library,
     Side,
+    Ring,
 }
 
-const ALL: [M; 7] = [M::Top, M::Waves, M::DeckA, M::Mixer, M::DeckB, M::Library, M::Side];
+const ALL: [M; 8] = [M::Top, M::Waves, M::DeckA, M::Mixer, M::DeckB, M::Library, M::Side, M::Ring];
 
 fn module(id: M, w: f32, h: f32, grow: f32, max: f32, priority: u8) -> Node {
     Node::Module { id: id as Id, min: Size { w, h }, grow, max, priority }
@@ -83,6 +84,27 @@ pub fn tree() -> Node {
     )
 }
 
+pub fn portrait() -> Node {
+    let open = f32::INFINITY;
+    Node::group(
+        Axis::Column,
+        GAP,
+        u8::MAX,
+        vec![
+            module(M::Top, 240.0, 34.0, 0.0, open, 250),
+            module(M::Ring, 240.0, 220.0, 1.0, 420.0, 248),
+            Node::group(
+                Axis::Row,
+                GAP,
+                240,
+                vec![module(M::DeckA, 150.0, 250.0, 1.0, open, 240), module(M::DeckB, 150.0, 250.0, 1.0, open, 240)],
+            ),
+            module(M::Mixer, 240.0, 150.0, 0.0, 180.0, 150),
+            module(M::Library, 240.0, 120.0, 0.6, open, 100),
+        ],
+    )
+}
+
 pub fn inset(window: Rect) -> Rect {
     Rect::new(PAD, MENU_H + PAD, (window.w - 2.0 * PAD).max(0.0), (window.h - MENU_H - 2.0 * PAD).max(0.0))
 }
@@ -109,6 +131,7 @@ pub fn paint(p: &mut Painter, s: &mut State, window: Rect, placed: &[(Id, Rect)]
             M::Mixer => mixer(p, s, r),
             M::Library => library(p, s, r),
             M::Side => lyrics(p, r),
+            M::Ring => ring(p, s, r),
         }
     }
     if let Some(d) = s.browser {
@@ -271,8 +294,13 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
     let inner_x = if d == 0 { fx + fader_w + PAD } else { body.x };
     let inner_w = body.w - fader_w - PAD;
+    let narrow = inner_w < 260.0;
     let btn_h = 34.0f32.min(body.h * 0.22);
-    let jog = (body.h - btn_h - PAD).min(inner_w * 0.48).max(40.0);
+    let jog = if narrow {
+        (inner_w * 0.58).min(body.h * 0.45).max(40.0)
+    } else {
+        (body.h - btn_h - PAD).min(inner_w * 0.48).max(40.0)
+    };
     let jx = inner_x;
     let jy = body.y;
     p.outlined(jx, jy, jog, jog, jog * 0.5, RAISED, 2.0, if t.playing { colour } else { LINE });
@@ -284,26 +312,34 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(cx + sn * rr - 3.0, cy - cs * rr - 3.0, 6.0, 6.0, 3.0, colour);
     hit(s, jx, jy, jog, jog, Target::Jog(d));
 
-    let by = body.y + body.h - btn_h;
-    let bw = (jog - PAD) * 0.5;
+    let (play, cue) = if narrow {
+        let bx = jx + jog + PAD;
+        let bw = inner_x + inner_w - bx;
+        let bh = ((jog - PAD) * 0.5).min(44.0);
+        (Rect::new(bx, jy, bw, bh), Rect::new(bx, jy + bh + PAD, bw, bh))
+    } else {
+        let by = body.y + body.h - btn_h;
+        let bw = (jog - PAD) * 0.5;
+        (Rect::new(jx, by, bw, btn_h), Rect::new(jx + bw + PAD, by, bw, btn_h))
+    };
     let playing = t.playing;
     p.outlined(
-        jx,
-        by,
-        bw,
-        btn_h,
+        play.x,
+        play.y,
+        play.w,
+        play.h,
         6.0,
         if playing { fade(PLAY, 0x20) } else { RAISED },
         1.5,
         if playing { PLAY } else { LINE },
     );
-    p.text(jx + bw * 0.5 - p.text_width(BUTTON, "PLAY") * 0.5, by + btn_h * 0.5 + 4.0, BUTTON, "PLAY");
-    hit(s, jx, by, bw, btn_h, Target::Play(d));
-    p.outlined(jx + bw + PAD, by, bw, btn_h, 6.0, RAISED, 1.5, ACCENT);
-    p.text(jx + bw + PAD + bw * 0.5 - p.text_width(BUTTON, "CUE") * 0.5, by + btn_h * 0.5 + 4.0, BUTTON, "CUE");
-    hit(s, jx + bw + PAD, by, bw, btn_h, Target::Cue(d));
+    p.text(play.x + play.w * 0.5 - p.text_width(BUTTON, "PLAY") * 0.5, play.y + play.h * 0.5 + 4.0, BUTTON, "PLAY");
+    hit(s, play.x, play.y, play.w, play.h, Target::Play(d));
+    p.outlined(cue.x, cue.y, cue.w, cue.h, 6.0, RAISED, 1.5, ACCENT);
+    p.text(cue.x + cue.w * 0.5 - p.text_width(BUTTON, "CUE") * 0.5, cue.y + cue.h * 0.5 + 4.0, BUTTON, "CUE");
+    hit(s, cue.x, cue.y, cue.w, cue.h, Target::Cue(d));
 
-    let px = jx + jog + PAD;
+    let (px, py) = if narrow { (inner_x, jy + jog + PAD) } else { (jx + jog + PAD, body.y) };
     let pw = inner_x + inner_w - px;
     if pw < 60.0 {
         return;
@@ -317,21 +353,23 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         ("LOOP", Some(Mode::Loops)),
         ("SMP", Some(Mode::Samples)),
     ];
+    let short = pw < 230.0;
     let tw = (pw - 4.0 * 4.0) / 5.0;
     for (n, (label, mode)) in tabs.into_iter().enumerate() {
         let x = px + n as f32 * (tw + 4.0);
         let on = mode.map_or(n == 1 && kl, |m| s.decks[d].mode == m);
         let edge = if on { if mode.is_none() { ACCENT } else { colour } } else { LINE };
-        p.outlined(x, body.y, tw, key_h, 5.0, if on { fade(edge, 0x30) } else { RAISED }, 1.0, edge);
-        p.text(x + tw * 0.5 - p.text_width(LABEL, label) * 0.5, body.y + 16.0, LABEL, label);
+        let label = if short { ["SYN", "KEY", "CUE", "LP", "SMP"][n] } else { label };
+        p.outlined(x, py, tw, key_h, 5.0, if on { fade(edge, 0x30) } else { RAISED }, 1.0, edge);
+        p.text(x + tw * 0.5 - p.text_width(LABEL, label) * 0.5, py + 16.0, LABEL, label);
         let t = match (n, mode) {
             (0, _) => Target::Sync(d),
             (_, None) => Target::KeyLock(d),
             (_, Some(m)) => Target::Mode(d, m),
         };
-        hit(s, x, body.y, tw, key_h, t);
+        hit(s, x, py, tw, key_h, t);
     }
-    let gy = body.y + key_h + PAD;
+    let gy = py + key_h + PAD;
     let gh = body.y + body.h - gy;
     let cw = (pw - 3.0 * PAD) * 0.25;
     let ch = (gh - PAD) * 0.5;
@@ -447,6 +485,64 @@ fn lyrics(p: &mut Painter, r: Rect) {
     p.text_in(r.x + 12.0, r.y + 48.0, r.w - 24.0, LYRIC, "No synced lyrics for this track");
 }
 
+fn ring(p: &mut Painter, s: &mut State, r: Rect) {
+    let size = r.w.min(r.h) - 2.0 * PAD;
+    let (cx, cy) = (r.x + r.w * 0.5, r.y + r.h * 0.5);
+    let outer = size * 0.5;
+    let hub = outer * 0.42;
+    let band = (outer - hub) * 0.5 - 4.0;
+    p.rect(cx - outer, cy - outer, outer * 2.0, outer * 2.0, outer, RAISED);
+    let steps = ((outer * std::f32::consts::TAU) / 3.0).clamp(120.0, 720.0) as usize;
+    for d in 0..2 {
+        let mid = hub + 4.0 + band * (1.5 - d as f32) + 2.0 * (1.0 - d as f32);
+        let deck = &s.decks[d];
+        let Some(l) = &deck.loaded else {
+            p.text(cx - 40.0, cy - mid + 4.0, SUB, ["A empty", "B empty"][d]);
+            continue;
+        };
+        let centre = (s.telemetry.decks[d].position / DETAIL_FRAMES as f64) as isize;
+        for k in 0..steps {
+            let off = k as isize - steps as isize / 2;
+            let Some(&[v, lo, md, hi]) = usize::try_from(centre + off).ok().and_then(|i| l.detail.get(i)) else {
+                continue;
+            };
+            let angle = off as f32 / steps as f32 * std::f32::consts::TAU;
+            let (sn, cs) = angle.sin_cos();
+            let a = f32::from(v) / 255.0 * band * 0.95;
+            let sum = (u32::from(lo) + u32::from(md) + u32::from(hi)).max(1);
+            let ch = |x: u8| (u32::from(x) * 255 / sum * 2).min(255);
+            let alpha = if off < 0 { 0x70 } else { 0xff };
+            let col = ch(lo) | (ch(md) << 8) | (ch(hi) << 16) | (alpha << 24);
+            let mut t = -a;
+            while t <= a {
+                let rr = mid + t;
+                p.rect(cx + sn * rr - 1.0, cy - cs * rr - 1.0, 2.0, 2.0, 0.0, col);
+                t += 2.0;
+            }
+        }
+    }
+    p.rect(cx - 1.0, r.y + PAD, 2.0, outer - hub, 1.0, TEXT);
+    p.outlined(cx - hub, cy - hub, hub * 2.0, hub * 2.0, hub, PANEL, 1.5, LINE);
+    for d in 0..2 {
+        let ui = &s.decks[d];
+        let bpm = ui
+            .loaded
+            .as_ref()
+            .and_then(|l| l.grid)
+            .map_or("--".into(), |g| format!("{:.1}", g.bpm * (1.0 + f64::from(ui.rate) * 0.08)));
+        let y = cy - hub * 0.35 + d as f32 * 18.0;
+        let label = format!("{}  {bpm}", ["A", "B"][d]);
+        let style = Style::new(13.0, Weight::Semibold, DECK[d]);
+        p.text(cx - p.text_width(style, &label) * 0.5, y, style, &label);
+    }
+    let w = hub * 1.3;
+    let y = cy + hub * 0.35;
+    p.rect(cx - w * 0.5, y, w, 4.0, 2.0, LINE);
+    let xf = cx - w * 0.5 + (s.crossfader + 1.0) * 0.5 * (w - 14.0);
+    p.rect(xf, y - 8.0, 14.0, 20.0, 3.0, ACCENT);
+    hit(s, cx - w * 0.5 - 6.0, y - 14.0, w + 12.0, 32.0, Target::Crossfader);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -456,6 +552,18 @@ mod tests {
     fn ids_match_their_modules() {
         for (i, m) in ALL.into_iter().enumerate() {
             assert_eq!(m as usize, i);
+        }
+    }
+
+    #[test]
+    fn portrait_keeps_ring_and_decks_on_phones() {
+        let mut layout = Layout::new(&portrait());
+        let mut out = Vec::new();
+        for (w, h) in [(360.0, 780.0), (412.0, 915.0), (600.0, 1024.0), (800.0, 1280.0)] {
+            layout.solve(inset(Rect::new(0.0, 0.0, w, h)), &mut out);
+            for m in [M::Ring, M::DeckA, M::DeckB] {
+                assert!(out.iter().any(|p| p.0 == m as Id), "{w}x{h}");
+            }
         }
     }
 

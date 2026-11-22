@@ -13,6 +13,7 @@ static FONT: &[u8] = include_bytes!("../../../res/fonts/Inter.ttf");
 #[derive(Debug)]
 pub struct Ui {
     layout: Layout,
+    portrait: Layout,
     placed: Vec<(Id, Rect)>,
     painter: Painter,
     state: State,
@@ -38,6 +39,7 @@ impl Ui {
         state.scan();
         Self {
             layout: Layout::new(&screen::tree()),
+            portrait: Layout::new(&screen::portrait()),
             placed: Vec::with_capacity(sugar_layout::MAX_MODULES),
             painter: Painter::new(Fonts::new(FONT)),
             state,
@@ -50,7 +52,8 @@ impl Ui {
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
         self.scale = scale.max(0.5);
         self.window = Rect::new(0.0, 0.0, width as f32 / self.scale, height as f32 / self.scale);
-        self.layout.solve(screen::inset(self.window), &mut self.placed);
+        let layout = if self.window.h > self.window.w * 1.1 { &mut self.portrait } else { &mut self.layout };
+        layout.solve(screen::inset(self.window), &mut self.placed);
     }
 
     pub fn animating(&self) -> bool {
