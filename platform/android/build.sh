@@ -12,7 +12,8 @@ cp -r res/samples "$OUT/assets/samples"
 rm -f "$OUT/assets/samples/README.md"
 cp target/aarch64-linux-android/release/libdjsugar.so "$OUT/lib/arm64-v8a/"
 llvm-strip --strip-unneeded "$OUT/lib/arm64-v8a/libdjsugar.so"
-"$BT/aapt2" link -o "$OUT/base.apk" --manifest platform/android/AndroidManifest.xml -A "$OUT/assets" -I "$(ls -d "$SDK"/platforms/* | sort -V | tail -1)/android.jar"
+"$BT/aapt2" compile --dir platform/android/res -o "$OUT/res.zip"
+"$BT/aapt2" link "$OUT/res.zip" -o "$OUT/base.apk" --manifest platform/android/AndroidManifest.xml -A "$OUT/assets" -I "$(ls -d "$SDK"/platforms/* | sort -V | tail -1)/android.jar"
 (cd "$OUT" && zip -q -0 base.apk lib/arm64-v8a/libdjsugar.so)
 "$BT/zipalign" -f -P 16 4 "$OUT/base.apk" "$OUT/aligned.apk"
 KS=${KEYSTORE:-$HOME/.android/debug.keystore}

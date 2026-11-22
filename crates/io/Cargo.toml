@@ -4,6 +4,7 @@ description = "Audio device output per platform."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [dependencies]
 sugar-engine = { path = "../engine" }

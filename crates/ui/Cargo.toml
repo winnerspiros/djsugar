@@ -4,9 +4,10 @@ description = "GPU renderer and widgets."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [dependencies]
-ttf-parser = { version = "0.25", default-features = false, features = ["std", "opentype-layout", "variable-fonts"] }
+skrifa = { version = "0.50", default-features = false, features = ["std"] }
 bytemuck = { version = "1.25", features = ["derive"] }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl"] }
 

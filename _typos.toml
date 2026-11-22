@@ -1,0 +1,10 @@
+[default.extend-words]
+flate = "flate"
+ND = "ND"
+togglable = "togglable"
+ACN = "ACN"
+Pn = "Pn"
+Maschine = "Maschine"
+
+[files]
+extend-exclude = ["res/samples", "*.lock"]

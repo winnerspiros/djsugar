@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
-use ttf_parser::{Face, GlyphId, OutlineBuilder, Tag};
+use skrifa::font::Font;
+use skrifa::{DrawMemory, GlyphId, PathSink, ScalerFont};
 
 use crate::raster::Raster;
 
@@ -38,7 +39,7 @@ struct Slot {
 }
 
 pub struct Fonts {
-    faces: [Face<'static>; 3],
+    faces: [ScalerFont; 3],
     scale_unit: f32,
     cache: HashMap<u64, Option<Slot>, BuildHasherDefault<IdHasher>>,
     raster: Raster,
@@ -68,7 +69,7 @@ impl Outline<'_> {
     }
 }
 
-impl OutlineBuilder for Outline<'_> {
+impl PathSink for Outline<'_> {
     fn move_to(&mut self, x: f32, y: f32) {
         self.start = self.p(x, y);
         self.at = self.start;
@@ -104,13 +105,10 @@ pub(crate) struct Run {
 
 impl Fonts {
     pub fn new(data: &'static [u8]) -> Self {
-        let face = |w: f32| {
-            let mut f = Face::parse(data, 0).expect("bundled font parses");
-            f.set_variation(Tag::from_bytes(b"wght"), w);
-            f
-        };
-        let faces = WEIGHTS.map(face);
-        let scale_unit = f32::from(faces[0].units_per_em()).recip();
+        let font = Font::new(data, 0).expect("bundled font parses");
+        let faces =
+            WEIGHTS.map(|w| ScalerFont::unhinted(font.instance_builder().variations([("wght", w)]).build(), None));
+        let scale_unit = f32::from(font.units_per_em()).recip();
         Self {
             faces,
             scale_unit,
@@ -124,10 +122,10 @@ impl Fonts {
 
     pub fn width(&self, text: &str, px: f32, weight: Weight) -> f32 {
         let f = &self.faces[weight as usize];
-        let s = px * self.scale_unit;
-        text.chars()
-            .map(|c| f.glyph_index(c).and_then(|g| f.glyph_hor_advance(g)).map_or(0.0, |a| f32::from(a) * s))
-            .sum()
+        let (map, metrics) = (f.font().charmap(), f.linear_glyph_metrics());
+        text.chars().filter_map(|c| map.map_unicode(c)).map(|g| metrics.h_advance(g)).sum::<f32>()
+            * px
+            * self.scale_unit
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -173,12 +171,12 @@ impl Fonts {
         limit: f32,
     ) -> Option<f32> {
         let f = &self.faces[weight as usize];
-        let Some(g) = f.glyph_index(c) else { return Some(0.0) };
-        let adv = f.glyph_hor_advance(g).map_or(0.0, |a| f32::from(a) * s);
+        let Some(g) = f.font().charmap().map_unicode(c) else { return Some(0.0) };
+        let adv = f.linear_glyph_metrics().h_advance(g) * s;
         if pen + adv - x > limit {
             return None;
         }
-        let key = u64::from(g.0) | ((px * 4.0).round() as u64) << 16 | (weight as u64) << 40;
+        let key = u64::from(g.to_u32()) | ((px * 4.0).round() as u64) << 16 | (weight as u64) << 40;
         let slot = match self.cache.get(&key) {
             Some(&slot) => slot,
             None => {
@@ -195,11 +193,14 @@ impl Fonts {
 
     fn rasterize(&mut self, weight: Weight, g: GlyphId, s: f32) -> Option<Slot> {
         let f = &self.faces[weight as usize];
-        let bb = f.glyph_bounding_box(g)?;
-        let x0 = (f32::from(bb.x_min) * s).floor() - 1.0;
-        let x1 = (f32::from(bb.x_max) * s).ceil() + 1.0;
-        let y0 = (f32::from(bb.y_min) * s).floor() - 1.0;
-        let y1 = (f32::from(bb.y_max) * s).ceil() + 1.0;
+        let e = f.linear_glyph_metrics().extents(g)?;
+        if e.width <= 0.0 || e.height <= 0.0 {
+            return None;
+        }
+        let x0 = (e.x_bearing * s).floor() - 1.0;
+        let x1 = ((e.x_bearing + e.width) * s).ceil() + 1.0;
+        let y0 = ((e.y_bearing - e.height) * s).floor() - 1.0;
+        let y1 = (e.y_bearing * s).ceil() + 1.0;
         let (w, h) = ((x1 - x0) as usize, (y1 - y0) as usize);
         if w >= ATLAS || h >= ATLAS {
             return None;
@@ -217,7 +218,13 @@ impl Fonts {
             self.dirty = Some((0, ATLAS));
         }
         self.raster.reset(w, h);
-        f.outline_glyph(g, &mut Outline { r: &mut self.raster, s, ox: -x0, oy: y1, start: (0.0, 0.0), at: (0.0, 0.0) });
+        let outline = f.outline(g)?;
+        outline
+            .draw(
+                DrawMemory::Scratch,
+                &mut Outline { r: &mut self.raster, s, ox: -x0, oy: y1, start: (0.0, 0.0), at: (0.0, 0.0) },
+            )
+            .ok()?;
         let at = usize::from(sy) * ATLAS + usize::from(sx);
         self.raster.write(&mut self.pixels[at..], ATLAS);
         let rows = (usize::from(sy), usize::from(sy) + h);

@@ -4,6 +4,7 @@ description = "Musical time, tempo and key types."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [lints]
 workspace = true

@@ -36,6 +36,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+#[cfg(target_os = "linux")]
 impl Error {
     fn from(e: impl std::fmt::Display) -> Self {
         Self(e.to_string())

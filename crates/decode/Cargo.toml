@@ -4,6 +4,7 @@ description = "Audio file decoding to stereo f32."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [dependencies]
 sugar-engine = { path = "../engine" }

@@ -1,0 +1,5 @@
+{
+  "path": "/home/ubuntu/djsugar-next/docs/parity/ui-djsugar.md",
+  "items": 195,
+  "summary": "Exhaustive UI parity spec for DJ Sugar Android QML interface written to /home/ubuntu/djsugar-next/docs/parity/ui-djsugar.md (1317 lines). Covers: overall screen structure (main.qml, MainWindow.qml, OrientationToggleButton), Android vs desktop themes with all 80+ hex colors, deck layout with dynamic component model (924 lines), mixer with EQ/channel strips/crossfader, library with SourceTree/TrackList/TrackDrag/StreamingHub, 12 popups/drawers/menus (HotcuePopup, QuickLoadDrawer, SamplePicker, FxStation, XYPad, StemsOverlay, Settings, etc.), gestures (touch spinny, fader tap-to-seek, hotcue long-press, track drag, XYPad, browse knob), waveform options (5 renderers, markers, passthrough), effects (EffectUnit, EffectSlot, presets, focus, assignments), sampler, and all Mixxx control key bindings. Checklist contains 195 distinct UI features."
+}

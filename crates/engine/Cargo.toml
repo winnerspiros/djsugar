@@ -4,6 +4,7 @@ description = "Real-time decks, mixer and command rings."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [dependencies]
 rtrb = "0.4"

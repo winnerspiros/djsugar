@@ -4,6 +4,7 @@ description = "DJ Sugar."
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish = false
 
 [lib]
 crate-type = ["lib", "cdylib"]
