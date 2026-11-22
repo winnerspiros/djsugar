@@ -108,7 +108,7 @@ crates/
   core       time, beats, keys, ids; no dependencies
   dsp        SIMD kernels: time-stretch, resample, EQ, filters, effects
   engine     real-time graph: decks, mixer, FX, sampler; lock-free command and telemetry rings
-  io         audio back ends: CoreAudio, WASAPI/ASIO, ALSA/PipeWire/JACK, AAudio
+  io         audio back ends: CoreAudio and AVAudioSession (macOS, iOS), WASAPI, ALSA, AAudio
   decode     audio decoding (symphonia)
   analysis   tempo, beat grid, key, phrases, energy, waveform pyramid; worker pool
   stems      real-time source separation, cached per track
@@ -118,7 +118,7 @@ crates/
   control    MIDI, HID, BLE MIDI; mapping runtime on crates/js
   layout     constraint solver for the fluid layout
   ui         renderer (wgpu), widgets, theme, text, input
-  app        wiring, settings, platform shells (desktop, Android)
+  app        wiring, settings, platform shells (desktop, Android, iOS)
 ```
 
 Decisions:
@@ -146,3 +146,12 @@ Decisions:
 6. stems, Sandbox, transition planner, set memory.
 7. Importers and exporters, USB export, recording and broadcast.
 8. Video, lighting, Automix (Automix only after its design has been agreed).
+
+## Platforms
+
+Android (arm64), iOS and iPadOS (arm64, Metal), Linux (x86_64, arm64), Windows (x86_64, arm64),
+macOS (Apple Silicon, Intel). iOS specifics: UIKit shell through objc2, Metal through wgpu,
+AVAudioSession with the playAndRecord category and the smallest IO buffer duration, Core MIDI
+and Bluetooth MIDI, external display for the karaoke and player views, files through the
+document picker. App Store rules forbid downloading executable code: yt-dlp style extractors
+must be our own Rust code built into the app.

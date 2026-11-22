@@ -1,6 +1,6 @@
 # DJ Sugar
 
-DJ software written in Rust for Android, Linux, Windows and macOS. This is a new codebase,
+DJ software written in Rust for Android, iOS, Linux, Windows and macOS. This is a new codebase,
 written from scratch.
 
 - Design and plan: [docs/DESIGN.md](docs/DESIGN.md)
