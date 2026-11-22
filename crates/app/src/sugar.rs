@@ -85,27 +85,25 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let rest = h - y;
     match s.view {
         View::Dj => {
-            // Booth: the performance view takes the lower 46 percent, slim deck
-            // strips sit above it and the waveforms fill what is left.
-            let dj = (h * if h < 520.0 {
-                0.5
+            // Slim waveforms, the Booth decks and mixer, the library below.
+            let wh =
+                if tall { (rest * 0.11).round().clamp(48.0, 96.0) } else { (rest * 0.16).round().clamp(44.0, 84.0) };
+            waveforms(p, s, Rect::new(0.0, y, w, wh));
+            let y = y + wh + 3.0;
+            let lower = h - y;
+            // Small portrait screens need all the room for the decks; the library tab has it.
+            let dh = if tall && lower < 700.0 {
+                lower
             } else if tall {
-                0.62
+                (lower * 0.6).clamp(420.0, 560.0)
             } else {
-                0.46
-            })
-            .round();
-            let strip = if h < 520.0 { 58.0 } else { 84.0 };
-            let top = h - dj - 3.0;
-            let sy = top - strip - 3.0;
-            if sy - y > 24.0 {
-                waveforms(p, s, Rect::new(0.0, y, w, sy - 3.0 - y));
+                (lower * 0.62).clamp(150.0, 340.0)
             }
-            let hw = (w - 3.0) * 0.5;
-            for d in 0..2 {
-                mini_deck(p, s, Rect::new(d as f32 * (hw + 3.0), sy, hw, strip), d);
+            .min(lower);
+            crate::booth::dj(p, s, Rect::new(0.0, y, w, dh));
+            if lower - dh > 60.0 {
+                library(p, s, Rect::new(0.0, y + dh + 3.0, w, lower - dh - 3.0));
             }
-            crate::booth::dj(p, s, Rect::new(0.0, top, w, dj));
         }
         View::Wave => {
             let bar = (rest * 0.38).round().clamp(86.0, 115.0);

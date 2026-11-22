@@ -148,7 +148,7 @@ pub struct PoTokens {
 }
 
 /// Mints tokens for (video, visitor ID); the platform layer installs it.
-pub type PoTokenSource = fn(&str, &str) -> Option<PoTokens>;
+pub type PoTokenSource = fn(&str, &str) -> std::result::Result<PoTokens, String>;
 
 static PO_TOKEN_SOURCE: OnceLock<PoTokenSource> = OnceLock::new();
 
@@ -361,8 +361,9 @@ impl YouTube {
             }
         }
         std::fs::create_dir_all(dir).map_err(net)?;
-        let tokens = self.mint(video);
-        self.each_source(video, tokens.as_ref(), |formats, ua| {
+        let minted = self.mint(video);
+        let tokens = minted.as_ref().ok().cloned();
+        let out = self.each_source(video, tokens.as_ref(), |formats, ua| {
             let mut last = Error::Refused("No usable audio stream URL".into());
             for f in formats {
                 let to = dir.join(format!("{video}.{}", f.ext()));
@@ -381,16 +382,22 @@ impl YouTube {
                 }
             }
             Err(last)
-        })
+        });
+        // Without a token the real cause is usually the mint, so the DJ sees it.
+        match (out, minted) {
+            (Err(e), Err(why)) if PO_TOKEN_SOURCE.get().is_some() => Err(Error::Refused(format!("{e} (token: {why})"))),
+            (out, _) => out,
+        }
     }
 
     /// Mints tokens for one download; a fresh visitor ID from the mint is kept.
-    fn mint(&self, video: &str) -> Option<PoTokens> {
-        let t = PO_TOKEN_SOURCE.get()?(video, &self.visitor())?;
+    fn mint(&self, video: &str) -> std::result::Result<PoTokens, String> {
+        let source = PO_TOKEN_SOURCE.get().ok_or("no token source")?;
+        let t = source(video, &self.visitor())?;
         if !t.visitor.is_empty() && t.visitor != video {
             self.lock().visitor.clone_from(&t.visitor);
         }
-        Some(t)
+        Ok(t)
     }
 }
 

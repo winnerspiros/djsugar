@@ -117,7 +117,7 @@ pub fn dj(p: &mut Painter, s: &mut State, r: Rect) {
     let top = Rect::new(r.x, r.y, r.w, r.h - bar - gap);
     if top.w < top.h * 1.6 {
         // Too narrow for two decks abreast: each deck gets the full width.
-        let mh = (top.h * 0.24).round();
+        let mh = (top.h * 0.34).round();
         let dh = ((top.h - mh - 2.0 * gap) * 0.5).floor();
         deck(p, s, Rect::new(top.x, top.y, top.w, dh), 0, false);
         mixer(p, s, Rect::new(top.x, top.y + dh + gap, top.w, mh));
@@ -260,7 +260,9 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize, unit: f32) {
     let st = bold(unit * 0.95, if looping { WARN } else { LABEL });
     p.text(r.x + 1.0, y + st.px, st, "LOOP");
     y += st.px + 5.0;
-    let big = Rect::new(r.x, y, r.w, (unit * 3.8).round());
+    // Everything shrinks together when the column is short, so nothing overlaps.
+    let k = ((r.y + r.h - y - 15.0) / (unit * 13.0)).min(1.0);
+    let big = Rect::new(r.x, y, r.w, (unit * 3.8 * k).round());
     let t = Target::LoopToggle(d);
     let fill = if s.pressed(t) {
         rgb(0x5a2a08)
@@ -291,7 +293,7 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize, unit: f32) {
     );
     hit(s, big, t);
     y += big.h + 3.0;
-    let row = (unit * 2.4).round();
+    let row = (unit * 2.4 * k).round();
     let hw = (r.w - 3.0) * 0.5;
     small(p, s, Rect::new(r.x, y, hw, row), unit, ("1/2", false, WARN), Target::LoopSize(d, -1));
     small(p, s, Rect::new(r.x + hw + 3.0, y, hw, row), unit, ("x2", false, WARN), Target::LoopSize(d, 1));
@@ -299,7 +301,7 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize, unit: f32) {
     let armed = s.decks[d].loop_in.is_some();
     small(p, s, Rect::new(r.x, y, hw, row), unit, ("IN", armed, ORANGE), Target::LoopIn(d));
     small(p, s, Rect::new(r.x + hw + 3.0, y, hw, row), unit, ("OUT", false, ORANGE), Target::LoopOut(d));
-    let bh = (unit * 2.2).round();
+    let bh = (unit * 2.2 * k).round();
     let y = r.y + r.h - 2.0 * bh - 3.0;
     small(p, s, Rect::new(r.x, y, r.w, bh), unit, ("GRID", false, WARN), Target::Grid(d));
     small(p, s, Rect::new(r.x, y + bh + 3.0, r.w, bh), unit, ("SLIP", s.decks[d].slip, ORANGE), Target::Slip(d));
@@ -418,7 +420,8 @@ fn channel(p: &mut Painter, s: &mut State, r: Rect, d: usize, unit: f32) {
     } else {
         (1.0, 5.0)
     };
-    let (cw, chh) = (kw / cols, r.h / rows);
+    // The last knob's label hangs below its cell, so the cells stop short of the bottom.
+    let (cw, chh) = (kw / cols, (r.h - unit * 0.8) / rows);
     let cell = |n: usize| {
         let (c, row) = ((n % cols as usize) as f32, (n / cols as usize) as f32);
         Rect::new(r.x + c * cw + 1.0, r.y + row * chh + 1.0, cw - 2.0, chh - 2.0)

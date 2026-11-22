@@ -28,14 +28,14 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// The token source handed to the YouTube client.
-pub fn mint(video: &str, visitor: &str) -> Option<PoTokens> {
+pub fn mint(video: &str, visitor: &str) -> Result<PoTokens, String> {
     let started = Instant::now();
     let out = mint_inner(video, visitor);
     match &out {
         Ok(_) => crate::diag(&format!("token mint ok in {} ms", started.elapsed().as_millis())),
         Err(e) => crate::diag(&format!("token mint failed: {e}")),
     }
-    out.ok()
+    out
 }
 
 fn mint_inner(video: &str, visitor: &str) -> Result<PoTokens, String> {
