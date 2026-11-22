@@ -16,6 +16,16 @@ pub struct Quad {
     pub arc: u32,
 }
 
+/// Surface textures drawn by the shader, with a lit bevel.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Material {
+    Brushed = 2,
+    Vinyl = 3,
+    Knurled = 4,
+    Grain = 5,
+}
+
 fn turns(a: f32) -> u32 {
     (a.rem_euclid(1.0) * 65535.0).round() as u32
 }
@@ -184,6 +194,11 @@ impl Painter {
             let t = i as f32 / n as f32;
             self.rect(x0 + dx * t - w * 0.5, y0 + dy * t - w * 0.5, w, w, w * 0.5, colour);
         }
+    }
+
+    /// Gives the last shape a surface texture.
+    pub fn texture(&mut self, m: Material) {
+        self.last().radial = m as u8 as f32;
     }
 
     fn last(&mut self) -> &mut Quad {

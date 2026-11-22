@@ -1,5 +1,5 @@
 use sugar_layout::Rect;
-use sugar_ui::{Painter, Style, Weight, rgb};
+use sugar_ui::{Material, Painter, Style, Weight, rgb};
 
 use crate::state::{
     DETAIL_FRAMES, FX_PADS, GridOp, Hit, JUMP_BEATS, LOOP_BEATS, Mode, State, Target, View, beats_label,
@@ -62,6 +62,7 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour
         (false, false) => (rgb(0x1d2028), rgb(0x121419), fade(colour, 0x55), GREY),
     };
     p.gradient(r.x, r.y, r.w, r.h, rad, top, bottom, 1.0, edge);
+    p.texture(Material::Grain);
     let style = Style::new(if r.h < 26.0 { 9.0 } else { 11.0 }, Weight::Bold, ink);
     let tw = p.text_width(style, label).min(r.w - 4.0);
     p.text_in(r.x + (r.w - tw) * 0.5, r.y + r.h * 0.5 + style.px * 0.36, r.w - 4.0, style, label);
@@ -69,7 +70,8 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour
 }
 
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
-    p.rect(0.0, 0.0, w, h, 0.0, rgb(0x000000));
+    p.rect(0.0, 0.0, w, h, 0.0, rgb(0x07080b));
+    p.texture(Material::Grain);
     toolbar(p, s, Rect::new(0.0, 0.0, w, TOOLBAR));
     let mut y = TOOLBAR;
     if s.show_fx {
@@ -127,7 +129,8 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
-    p.gradient(r.x, r.y, r.w, r.h, 0.0, rgb(0x141520), rgb(0x0a0b10), 0.0, 0);
+    p.gradient(r.x, r.y, r.w, r.h, 0.0, rgb(0x22242d), rgb(0x101117), 0.0, 0);
+    p.texture(Material::Brushed);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(ACCENT, 0x40));
     let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
     let views = [("DJ", View::Dj), ("WAVE", View::Wave), ("LIB", View::Lib), ("FX", View::Fx), ("CTL", View::Ctl)];
@@ -456,7 +459,7 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 }
 
 fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
+    panel(p, Rect::new(r.x + 2.0, r.y + 1.0, r.w - 4.0, r.h - 2.0), DECK[d]);
     let r = Rect::new(r.x + 6.0, r.y + 4.0, r.w - 12.0, r.h - 8.0);
     let info_h = 44.0f32.min(r.h * 0.22);
     info(p, s, Rect::new(r.x, r.y, r.w, info_h), d);
@@ -588,7 +591,9 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             (false, true) => (rgb(0x2a2d36), rgb(0x1c1e25)),
             (false, false) => (rgb(0x1a1c23), rgb(0x101116)),
         };
+        p.glow(b.x, b.y + 2.0, b.w, b.h, 7.0, 3.0, fade(rgb(0x000000), 0xc0));
         p.gradient(b.x, b.y, b.w, b.h, 7.0, top, bottom, 1.0, if on { fade(colour, 0xb0) } else { rgb(0x2a2c33) });
+        p.texture(Material::Grain);
         let ink = Style {
             colour: if on && down {
                 rgb(0x000000)
@@ -661,7 +666,8 @@ fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 }
 
 fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.rect(r.x, r.y, r.w, r.h, 5.0, SURFACE);
+    p.gradient(r.x, r.y, r.w, r.h, 6.0, rgb(0x191b22), rgb(0x0e0f13), 1.0, rgb(0x2b2e37));
+    p.texture(Material::Brushed);
     let bh = 22.0;
     button(p, s, Rect::new(r.x + 3.0, r.y + 3.0, r.w - 6.0, bh), "SYNC", false, ACCENT, Target::Sync(d));
     let kl = s.decks[d].key_lock;
@@ -703,7 +709,9 @@ fn platter(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     if t.playing {
         p.glow(cx - rad, cy - rad, k, k, rad, k / 9.0, fade(DECK[d], 0x70));
     }
-    p.disc(cx, cy, rad, rgb(0x23262f), rgb(0x0b0c10));
+    p.glow(cx - rad, cy - rad + 4.0, k, k, rad, 8.0, fade(rgb(0x000000), 0xd0));
+    p.disc(cx, cy, rad, rgb(0x1c1d22), rgb(0x0c0c0f));
+    p.texture(Material::Vinyl);
     for g in [0.84, 0.74, 0.64] {
         let gr = rad * g;
         p.outlined(cx - gr, cy - gr, gr * 2.0, gr * 2.0, gr, 0, 1.0, rgb(0x1c1e25));
@@ -769,7 +777,8 @@ fn knob(p: &mut Painter, s: &mut State, r: Rect, v: f32, colour: u32, label: &st
     }
     let body = rad - thick - 2.0;
     p.glow(cx - body, cy - body + 2.0, body * 2.0, body * 2.0, body, 3.0, fade(rgb(0x000000), 0xa0));
-    p.disc(cx, cy, body, rgb(0x343843), rgb(0x16181e));
+    p.disc(cx, cy, body, rgb(0x4a4e5a), rgb(0x1a1c22));
+    p.texture(Material::Knurled);
     let ang = (0.625 + v * 0.75) * std::f32::consts::TAU;
     let (sn, cs) = ang.sin_cos();
     p.line((cx + sn * body * 0.25, cy - cs * body * 0.25), (cx + sn * body * 0.85, cy - cs * body * 0.85), 2.0, TEXT);
@@ -779,7 +788,7 @@ fn knob(p: &mut Painter, s: &mut State, r: Rect, v: f32, colour: u32, label: &st
 }
 
 fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    panel(p, Rect::new(r.x + 1.0, r.y + 1.0, r.w - 2.0, r.h - 2.0), ACCENT);
     let xf = 34.0;
     let body = Rect::new(r.x + 4.0, r.y + 4.0, r.w - 8.0, r.h - xf - 8.0);
     let cw = (body.w - 9.0) / 4.0;
@@ -1225,4 +1234,12 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             &label,
         );
     }
+}
+
+/// Hardware style panel: brushed metal, lit bevel, a thin deck coloured top line.
+fn panel(p: &mut Painter, r: Rect, colour: u32) {
+    p.glow(r.x, r.y + 3.0, r.w, r.h, 10.0, 8.0, fade(rgb(0x000000), 0xe0));
+    p.gradient(r.x, r.y, r.w, r.h, 10.0, rgb(0x1e2028), rgb(0x0f1014), 1.0, rgb(0x30333d));
+    p.texture(Material::Brushed);
+    p.rect(r.x + 12.0, r.y + 1.0, r.w - 24.0, 2.0, 1.0, fade(colour, 0x90));
 }
