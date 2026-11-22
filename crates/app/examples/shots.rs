@@ -7,14 +7,16 @@ use std::path::{Path, PathBuf};
 use djsugar::{Key, Ui, read_dir_sample};
 use sugar_ui::Renderer;
 
-const SIZES: [(&str, u32, u32); 7] = [
-    ("phone-portrait", 412, 915),
-    ("small-portrait", 360, 780),
-    ("phone-landscape", 915, 412),
-    ("tablet-portrait", 800, 1280),
-    ("dex-window", 1024, 700),
-    ("laptop", 1280, 800),
-    ("desktop", 1920, 1080),
+/// Physical pixels and the scale the app draws at there: phones use 0.45 of
+/// their density like DJ Sugar does, desktops their own scale.
+const SIZES: [(&str, u32, u32, f32); 7] = [
+    ("phone-portrait", 1080, 2400, 2.625 * 0.45),
+    ("small-portrait", 720, 1600, 2.0 * 0.45),
+    ("phone-landscape", 2400, 1080, 2.625 * 0.45),
+    ("tablet-portrait", 1600, 2560, 2.0 * 0.45),
+    ("dex-window", 1536, 1050, 1.5 * 0.45),
+    ("laptop", 1280, 800, 1.0),
+    ("desktop", 1920, 1080, 1.0),
 ];
 const TOOLBAR: [&str; 7] = ["Browse(0)", "Browse(1)", "ToggleFx", "ToggleSamplers", "AutoDj", "Record", "SearchFocus"];
 const FRAMES: u32 = 30;
@@ -46,10 +48,10 @@ fn main() {
     std::fs::create_dir_all(&out).expect("output dir");
     let mut faults = Vec::new();
     let mut perf = Vec::new();
-    for (name, w, h) in SIZES {
+    for (name, w, h, scale) in SIZES {
         let mut r = Renderer::offscreen(w, h).expect("offscreen renderer");
         let mut ui = Ui::new(read_dir_sample);
-        ui.resize(w, h, 1.0);
+        ui.resize(w, h, scale);
         ui.render(&mut r);
         let t = std::time::Instant::now();
         for _ in 0..FRAMES {

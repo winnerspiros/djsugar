@@ -264,7 +264,9 @@ impl YouTube {
     }
 
     /// The audio formats YouTube offers for a video, best first.
-    pub fn formats(&self, video: &str) -> Result<(Vec<Format>, &'static str)> {
+    /// Offers each client's formats to `take` in turn, moving on when it fails:
+    /// a stream 403 gates only that client, so the next one may still serve it.
+    fn each_source<T>(&self, video: &str, mut take: impl FnMut(Vec<Format>, &'static str) -> Result<T>) -> Result<T> {
         if !valid_id(video) {
             return Err(Error::Refused("Not a YouTube video".into()));
         }
@@ -289,8 +291,8 @@ impl YouTube {
                     last = Error::Refused(why);
                     break;
                 }
-                match player_formats(&v) {
-                    Ok(f) => return Ok((f, c.agent)),
+                match player_formats(&v).and_then(|f| take(f, c.agent)) {
+                    Ok(t) => return Ok(t),
                     Err(e) => last = e,
                 }
             }
@@ -307,7 +309,10 @@ impl YouTube {
                     let v: Value = serde_json::from_str(&text).map_err(|_| Error::Parse("Piped"))?;
                     let f = piped_formats(&v);
                     if !f.is_empty() {
-                        return Ok((f, ""));
+                        match take(f, "") {
+                            Ok(t) => return Ok(t),
+                            Err(e) => last = e,
+                        }
                     }
                 }
                 Ok(_) | Err(_) if matches!(last, Error::Refused(_)) => {}
@@ -331,17 +336,19 @@ impl YouTube {
             }
         }
         std::fs::create_dir_all(dir).map_err(net)?;
-        let (formats, ua) = self.formats(video)?;
-        let mut last = Error::Refused("No usable audio stream URL".into());
-        for f in formats {
-            let to = dir.join(format!("{video}.{}", f.ext()));
-            let headers: &[(&str, &str)] = if ua.is_empty() { &[] } else { &[("User-Agent", ua)] };
-            match download(&f.url, headers, &to, CHUNK_FROM, CHUNKS, progress) {
-                Ok(_) => return Ok(to),
-                Err(e) => last = e,
+        self.each_source(video, |formats, ua| {
+            let mut last = Error::Refused("No usable audio stream URL".into());
+            for f in formats {
+                let to = dir.join(format!("{video}.{}", f.ext()));
+                let headers: &[(&str, &str)] = if ua.is_empty() { &[] } else { &[("User-Agent", ua)] };
+                match download(&f.url, headers, &to, CHUNK_FROM, CHUNKS, progress) {
+                    Ok(_) => return Ok(to),
+                    Err(Error::Status(403)) if !f.url.contains("pot=") => return Err(Error::Status(403)),
+                    Err(e) => last = e,
+                }
             }
-        }
-        Err(last)
+            Err(last)
+        })
     }
 }
 

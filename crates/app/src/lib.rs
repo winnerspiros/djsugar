@@ -47,7 +47,7 @@ impl Ui {
     }
 
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
-        self.scale = scale.max(0.5);
+        self.scale = scale.max(0.25);
         self.size = (width as f32 / self.scale, height as f32 / self.scale);
     }
 
@@ -187,7 +187,7 @@ pub mod native {
             let Some(gpu) = &mut self.gpu else { return };
             let size = gpu.window.inner_size();
             gpu.renderer.resize(size.width, size.height);
-            self.ui.resize(size.width, size.height, gpu.window.scale_factor() as f32);
+            self.ui.resize(size.width, size.height, gpu.window.scale_factor() as f32 * crate::UI_SCALE);
             gpu.window.request_redraw();
         }
 
@@ -399,6 +399,10 @@ mod android {
         crate::native::run(event_loop, read);
     }
 }
+
+/// DJ Sugar draws its phone UI at 0.45 of Android's density; the same factor here
+/// gives the same density of controls. Desktops draw at the system scale.
+pub const UI_SCALE: f32 = if cfg!(target_os = "android") { 0.45 } else { 1.0 };
 
 pub fn read_dir_sample(name: &str) -> Option<Vec<u8>> {
     let root = std::env::var_os("DJSUGAR_RES")
