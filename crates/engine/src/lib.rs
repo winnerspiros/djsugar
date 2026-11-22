@@ -16,6 +16,8 @@ pub enum Command {
     Seek(usize, f64),
     Rate(usize, f64),
     Nudge(usize, f64),
+    KeyLock(usize, bool),
+    Key(usize, f32),
     Gain(usize, f32),
     Volume(usize, f32),
     Eq(usize, [f32; 3]),

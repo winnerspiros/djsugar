@@ -1,0 +1,15 @@
+[package]
+name = "sugar-io"
+description = "Audio device output per platform."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+sugar-engine = { path = "../engine" }
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk = { version = "0.9", default-features = false, features = ["audio", "api-level-29"] }
+
+[lints]
+workspace = true

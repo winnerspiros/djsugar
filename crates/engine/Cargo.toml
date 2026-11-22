@@ -7,6 +7,7 @@ version.workspace = true
 
 [dependencies]
 rtrb = "0.3"
+sugar-stretch = { path = "../stretch" }
 triple_buffer = "8"
 
 [lints]

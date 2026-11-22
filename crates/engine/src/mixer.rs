@@ -21,9 +21,9 @@ pub struct Channel {
 }
 
 impl Channel {
-    fn new() -> Self {
+    fn new(rate: u32) -> Self {
         Self {
-            deck: Deck::default(),
+            deck: Deck::new(rate),
             gain: 1.0,
             volume: 1.0,
             eq: [1.0; 3],
@@ -65,7 +65,7 @@ impl Mixer {
     pub fn new(rate: f32, max_block: usize) -> Self {
         Self {
             rate,
-            channels: std::array::from_fn(|_| Channel::new()),
+            channels: std::array::from_fn(|_| Channel::new(rate as u32)),
             crossfader: 0.0,
             main: 1.0,
             scratch: vec![[0.0; 2]; max_block],
@@ -79,11 +79,22 @@ impl Mixer {
             Command::Load(i, t) => {
                 let c = self.channels.get_mut(i)?;
                 c.deck.position = 0.0;
+                c.deck.invalidate();
                 c.deck.playing = false;
                 return c.deck.track.replace(t);
             }
             Command::Play(i, p) => self.channels.get_mut(i)?.deck.playing = p,
-            Command::Seek(i, s) => self.channels.get_mut(i)?.deck.position = s.max(0.0),
+            Command::Seek(i, s) => {
+                let d = &mut self.channels.get_mut(i)?.deck;
+                d.position = s.max(0.0);
+                d.invalidate();
+            }
+            Command::KeyLock(i, on) => {
+                let d = &mut self.channels.get_mut(i)?.deck;
+                d.key_lock = on;
+                d.invalidate();
+            }
+            Command::Key(i, semitones) => self.channels.get_mut(i)?.deck.semitones = semitones,
             Command::Rate(i, r) => self.channels.get_mut(i)?.deck.rate = r,
             Command::Nudge(i, n) => self.channels.get_mut(i)?.deck.nudge = n,
             Command::Gain(i, g) => self.channels.get_mut(i)?.gain = g,
@@ -135,7 +146,7 @@ impl Mixer {
                 c.deck.render(rate, buf);
                 let g = c.gain * c.volume * xf;
                 let mut peak = 0.0f32;
-                for (f, o) in buf.iter_mut().zip(dst.chunks_exact_mut(2)) {
+                for (f, o) in buf.iter_mut().zip(dst.as_chunks_mut::<2>().0) {
                     for k in 0..2 {
                         let mut s = f[k];
                         for b in &mut c.bands {
@@ -151,7 +162,7 @@ impl Mixer {
             done += n;
         }
         let mut pk = [0.0f32; 2];
-        for f in out.chunks_exact_mut(2) {
+        for f in out.as_chunks_mut::<2>().0 {
             for k in 0..2 {
                 let s = f[k] * self.main;
                 let s = s.clamp(-1.0, 1.0);

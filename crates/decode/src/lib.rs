@@ -79,7 +79,7 @@ fn decode(mss: MediaSourceStream<'static>, hint: &Hint, len: u64) -> Result<Trac
         audio.copy_to_slice_interleaved(&mut buf);
         match channels {
             1 => frames.extend(buf.iter().map(|&s| [s, s])),
-            2 => frames.extend(buf.chunks_exact(2).map(|c| [c[0], c[1]])),
+            2 => frames.extend_from_slice(buf.as_chunks::<2>().0),
             n => frames.extend(buf.chunks_exact(n).map(|c| [c[0], c[1]])),
         }
     }

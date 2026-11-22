@@ -1290,6 +1290,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "realfft"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "538895ccf2006b473aafbe8d72770e21038961ab67aae34f3c577485fc703a7d"
+dependencies = [
+ "rustfft",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1535,7 +1544,16 @@ name = "sugar-engine"
 version = "0.1.0"
 dependencies = [
  "rtrb",
+ "sugar-stretch",
  "triple_buffer",
+]
+
+[[package]]
+name = "sugar-io"
+version = "0.1.0"
+dependencies = [
+ "ndk",
+ "sugar-engine",
 ]
 
 [[package]]
@@ -1547,6 +1565,13 @@ name = "sugar-shell"
 version = "0.1.0"
 dependencies = [
  "x11rb",
+]
+
+[[package]]
+name = "sugar-stretch"
+version = "0.1.0"
+dependencies = [
+ "realfft",
 ]
 
 [[package]]
