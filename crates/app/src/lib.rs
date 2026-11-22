@@ -1,3 +1,4 @@
+mod booth;
 mod hub;
 mod library;
 mod lyrics;

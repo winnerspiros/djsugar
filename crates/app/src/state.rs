@@ -45,7 +45,6 @@ pub enum Target {
     Quantize(usize),
     Pitch(usize, i8),
     Jump(usize, i8),
-    JumpSize(usize, i8),
     LoopIn(usize),
     LoopOut(usize),
     LoopSize(usize, i8),
@@ -1294,10 +1293,6 @@ impl State {
                 let st = if by == 0 { 0 } else { (self.decks[d].semitones + by).clamp(-12, 12) };
                 self.decks[d].semitones = st;
                 self.send(Command::Key(d, f32::from(st)));
-            }
-            Target::JumpSize(d, 0) => self.decks[d].jump = (self.decks[d].jump + 1) % JUMP_BEATS.len(),
-            Target::JumpSize(d, by) => {
-                self.decks[d].jump = self.decks[d].jump.saturating_add_signed(by.into()).min(JUMP_BEATS.len() - 1);
             }
             Target::Jump(d, dir) => self.beat_jump(d, JUMP_BEATS[self.decks[d].jump] * f64::from(dir)),
             Target::LoopSize(d, by) => {
