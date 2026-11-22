@@ -1,0 +1,44 @@
+//! Streaming services: search them and fetch their audio for the decks.
+//!
+//! Every call blocks; the app runs them off the UI and audio threads.
+//! Networking is pure Rust down to the TLS (rustls with RustCrypto).
+
+pub mod http;
+pub mod youtube;
+
+/// One search result.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Hit {
+    /// The service's own ID, enough to fetch the audio later.
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub seconds: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Error {
+    /// No connection, timeout, TLS failure.
+    Network(String),
+    /// The service answered with an HTTP error.
+    Status(u16),
+    /// The reply was not what the service normally sends.
+    Parse(&'static str),
+    /// The service turned the request down; the message is for the DJ.
+    Refused(String),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Network(e) => write!(f, "network: {e}"),
+            Self::Status(s) => write!(f, "HTTP {s}"),
+            Self::Parse(what) => write!(f, "unexpected reply: {what}"),
+            Self::Refused(why) => f.write_str(why),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+pub type Result<T> = std::result::Result<T, Error>;
