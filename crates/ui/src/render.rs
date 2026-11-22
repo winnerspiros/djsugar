@@ -26,16 +26,22 @@ impl std::error::Error for RendererError {}
 
 const GLYPH_ATTRIBUTES: [wgpu::VertexAttribute; 3] =
     wgpu::vertex_attr_array![0 => Float32x2, 1 => Uint16x4, 2 => Uint32];
-
 const QUAD_ATTRIBUTES: [wgpu::VertexAttribute; 4] =
     wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x2, 2 => Uint32, 3 => Uint32];
+const OFFSCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
+const ROW_ALIGN: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+
+#[derive(Debug)]
+enum Target<'w> {
+    Surface { surface: wgpu::Surface<'w>, config: wgpu::SurfaceConfiguration },
+    Offscreen { texture: wgpu::Texture, view: wgpu::TextureView, readback: wgpu::Buffer, width: u32, height: u32 },
+}
 
 #[derive(Debug)]
 pub struct Renderer<'w> {
-    surface: wgpu::Surface<'w>,
+    target: Target<'w>,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
     pipeline: wgpu::RenderPipeline,
     glyph_pipeline: wgpu::RenderPipeline,
     viewport: wgpu::Buffer,
@@ -45,17 +51,44 @@ pub struct Renderer<'w> {
     atlas: wgpu::Texture,
 }
 
+#[derive(Debug)]
+pub struct Pixels<'a> {
+    pub bytes: &'a [u8],
+    pub stride: usize,
+    pub width: u32,
+    pub height: u32,
+}
+
 impl<'w> Renderer<'w> {
     pub fn new(target: impl Into<wgpu::SurfaceTarget<'w>>, width: u32, height: u32) -> Result<Self, RendererError> {
         let instance = wgpu::Instance::default();
         let surface = instance.create_surface(target).map_err(RendererError::Surface)?;
-        let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-            apply_limit_buckets: false,
-        }))
-        .map_err(RendererError::Adapter)?;
+        let adapter = adapter(&instance, Some(&surface))?;
+        let mut config =
+            surface.get_default_config(&adapter, width.max(1), height.max(1)).ok_or(RendererError::Unsupported)?;
+        if let Some(&f) = surface.get_capabilities(&adapter).formats.iter().find(|f| f.is_srgb()) {
+            config.format = f;
+        }
+        config.present_mode = wgpu::PresentMode::AutoVsync;
+        config.desired_maximum_frame_latency = 1;
+        let format = config.format;
+        Self::build(&adapter, format, |device| {
+            surface.configure(device, &config);
+            Target::Surface { surface, config }
+        })
+    }
+
+    pub fn offscreen(width: u32, height: u32) -> Result<Renderer<'static>, RendererError> {
+        let instance = wgpu::Instance::default();
+        let adapter = adapter(&instance, None)?;
+        Renderer::build(&adapter, OFFSCREEN_FORMAT, |device| offscreen_target(device, width, height))
+    }
+
+    fn build(
+        adapter: &wgpu::Adapter,
+        format: wgpu::TextureFormat,
+        target: impl FnOnce(&wgpu::Device) -> Target<'w>,
+    ) -> Result<Self, RendererError> {
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: None,
             required_limits: wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits()),
@@ -63,18 +96,8 @@ impl<'w> Renderer<'w> {
             ..Default::default()
         }))
         .map_err(RendererError::Device)?;
+        let target = target(&device);
 
-        let mut config =
-            surface.get_default_config(&adapter, width.max(1), height.max(1)).ok_or(RendererError::Unsupported)?;
-        let caps = surface.get_capabilities(&adapter);
-        if let Some(&f) = caps.formats.iter().find(|f| f.is_srgb()) {
-            config.format = f;
-        }
-        config.present_mode = wgpu::PresentMode::AutoVsync;
-        config.desired_maximum_frame_latency = 1;
-        surface.configure(&device, &config);
-
-        let shader = device.create_shader_module(wgpu::include_wgsl!("quad.wgsl"));
         let viewport = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
             size: 16,
@@ -155,7 +178,7 @@ impl<'w> Renderer<'w> {
                     entry_point: Some("fs"),
                     compilation_options: Default::default(),
                     targets: &[Some(wgpu::ColorTargetState {
-                        format: config.format,
+                        format,
                         blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
@@ -164,52 +187,107 @@ impl<'w> Renderer<'w> {
                 cache: None,
             })
         };
-        let pipeline = make(&shader, size_of::<Quad>(), &QUAD_ATTRIBUTES);
-        let glyph_shader = device.create_shader_module(wgpu::include_wgsl!("glyph.wgsl"));
-        let glyph_pipeline = make(&glyph_shader, size_of::<Glyph>(), &GLYPH_ATTRIBUTES);
+        let pipeline =
+            make(&device.create_shader_module(wgpu::include_wgsl!("quad.wgsl")), size_of::<Quad>(), &QUAD_ATTRIBUTES);
+        let glyph_pipeline = make(
+            &device.create_shader_module(wgpu::include_wgsl!("glyph.wgsl")),
+            size_of::<Glyph>(),
+            &GLYPH_ATTRIBUTES,
+        );
         let instances = instance_buffer(&device, 256 * size_of::<Quad>());
         let glyphs = instance_buffer(&device, 1024 * size_of::<Glyph>());
-        let r = Self {
-            surface,
-            device,
-            queue,
-            config,
-            pipeline,
-            glyph_pipeline,
-            viewport,
-            bind_group,
-            instances,
-            glyphs,
-            atlas,
-        };
+        let r =
+            Self { target, device, queue, pipeline, glyph_pipeline, viewport, bind_group, instances, glyphs, atlas };
         r.write_viewport();
         Ok(r)
     }
 
+    pub fn size(&self) -> (u32, u32) {
+        match &self.target {
+            Target::Surface { config, .. } => (config.width, config.height),
+            Target::Offscreen { width, height, .. } => (*width, *height),
+        }
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) {
-        if width == 0 || height == 0 || (width, height) == (self.config.width, self.config.height) {
+        if width == 0 || height == 0 || (width, height) == self.size() {
             return;
         }
-        self.config.width = width;
-        self.config.height = height;
-        self.surface.configure(&self.device, &self.config);
+        match &mut self.target {
+            Target::Surface { surface, config } => {
+                config.width = width;
+                config.height = height;
+                surface.configure(&self.device, config);
+            }
+            offscreen => *offscreen = offscreen_target(&self.device, width, height),
+        }
         self.write_viewport();
     }
 
     fn write_viewport(&self) {
-        let v = [self.config.width as f32, self.config.height as f32, 0.0, 0.0];
-        self.queue.write_buffer(&self.viewport, 0, bytemuck::cast_slice(&v));
+        let (w, h) = self.size();
+        self.queue.write_buffer(&self.viewport, 0, bytemuck::cast_slice(&[w as f32, h as f32, 0.0, 0.0]));
     }
 
     pub fn render(&mut self, painter: &mut Painter, clear: u32) {
-        let frame = match self.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => f,
-            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
-                self.surface.configure(&self.device, &self.config);
-                return;
-            }
-            _ => return,
+        let frame = match &self.target {
+            Target::Surface { surface, config } => match surface.get_current_texture() {
+                wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => Some(f),
+                wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                    surface.configure(&self.device, config);
+                    return;
+                }
+                _ => return,
+            },
+            Target::Offscreen { .. } => None,
         };
+        let view = match (&frame, &self.target) {
+            (Some(f), _) => f.texture.create_view(&Default::default()),
+            (None, Target::Offscreen { view, .. }) => view.clone(),
+            (None, Target::Surface { .. }) => return,
+        };
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        self.draw(&mut encoder, &view, painter, clear);
+        if let Target::Offscreen { texture, readback, width, height, .. } = &self.target {
+            encoder.copy_texture_to_buffer(
+                texture.as_image_copy(),
+                wgpu::TexelCopyBufferInfo {
+                    buffer: readback,
+                    layout: wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(padded_row(*width)),
+                        rows_per_image: None,
+                    },
+                },
+                wgpu::Extent3d { width: *width, height: *height, depth_or_array_layers: 1 },
+            );
+        }
+        self.queue.submit([encoder.finish()]);
+        if let Some(f) = frame {
+            self.queue.present(f);
+        }
+    }
+
+    pub fn read(&self, sink: impl FnOnce(Pixels<'_>)) {
+        let Target::Offscreen { readback, width, height, .. } = &self.target else { return };
+        let slice = readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |_| {});
+        if self.device.poll(wgpu::PollType::wait_indefinitely()).is_err() {
+            return;
+        }
+        if let Ok(bytes) = slice.get_mapped_range() {
+            sink(Pixels { bytes: &bytes, stride: padded_row(*width) as usize, width: *width, height: *height });
+        }
+        readback.unmap();
+    }
+
+    fn draw(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        painter: &mut Painter,
+        clear: u32,
+    ) {
         if let Some((row, pixels)) = painter.atlas_update() {
             self.queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
@@ -227,41 +305,71 @@ impl<'w> Renderer<'w> {
         let glyphs = painter.glyphs();
         let quad_bytes = upload(&self.device, &self.queue, &mut self.instances, bytemuck::cast_slice(quads));
         let glyph_bytes = upload(&self.device, &self.queue, &mut self.glyphs, bytemuck::cast_slice(glyphs));
-        let view = frame.texture.create_view(&Default::default());
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        {
-            let [r, g, b, _] = clear.to_le_bytes().map(|c| srgb_to_linear(f64::from(c) / 255.0));
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color { r, g, b, a: 1.0 }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            if !quads.is_empty() {
-                pass.set_pipeline(&self.pipeline);
-                pass.set_vertex_buffer(0, self.instances.slice(..quad_bytes));
-                pass.draw(0..4, 0..quads.len() as u32);
-            }
-            if !glyphs.is_empty() {
-                pass.set_pipeline(&self.glyph_pipeline);
-                pass.set_vertex_buffer(0, self.glyphs.slice(..glyph_bytes));
-                pass.draw(0..4, 0..glyphs.len() as u32);
-            }
+        let [r, g, b, _] = clear.to_le_bytes().map(|c| srgb_to_linear(f64::from(c) / 255.0));
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color { r, g, b, a: 1.0 }),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        pass.set_bind_group(0, &self.bind_group, &[]);
+        if !quads.is_empty() {
+            pass.set_pipeline(&self.pipeline);
+            pass.set_vertex_buffer(0, self.instances.slice(..quad_bytes));
+            pass.draw(0..4, 0..quads.len() as u32);
         }
-        self.queue.submit([encoder.finish()]);
-        self.queue.present(frame);
+        if !glyphs.is_empty() {
+            pass.set_pipeline(&self.glyph_pipeline);
+            pass.set_vertex_buffer(0, self.glyphs.slice(..glyph_bytes));
+            pass.draw(0..4, 0..glyphs.len() as u32);
+        }
     }
+}
+
+fn adapter(instance: &wgpu::Instance, surface: Option<&wgpu::Surface<'_>>) -> Result<wgpu::Adapter, RendererError> {
+    block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        power_preference: wgpu::PowerPreference::LowPower,
+        compatible_surface: surface,
+        force_fallback_adapter: false,
+        apply_limit_buckets: false,
+    }))
+    .map_err(RendererError::Adapter)
+}
+
+fn padded_row(width: u32) -> u32 {
+    (width * 4).div_ceil(ROW_ALIGN) * ROW_ALIGN
+}
+
+fn offscreen_target<'w>(device: &wgpu::Device, width: u32, height: u32) -> Target<'w> {
+    let (width, height) = (width.max(1), height.max(1));
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: None,
+        size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: OFFSCREEN_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&Default::default());
+    let readback = device.create_buffer(&wgpu::BufferDescriptor {
+        label: None,
+        size: u64::from(padded_row(width)) * u64::from(height),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    Target::Offscreen { texture, view, readback, width, height }
 }
 
 fn upload(device: &wgpu::Device, queue: &wgpu::Queue, buffer: &mut wgpu::Buffer, data: &[u8]) -> u64 {
@@ -306,5 +414,17 @@ fn block_on<F: Future>(f: F) -> F::Output {
             return v;
         }
         std::thread::park();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rows_are_padded_for_copies() {
+        assert_eq!(padded_row(64), 256);
+        assert_eq!(padded_row(65), 512);
+        assert_eq!(padded_row(1920), 7680);
     }
 }

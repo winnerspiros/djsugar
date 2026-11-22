@@ -8,7 +8,12 @@ version.workspace = true
 [dependencies]
 sugar-layout = { path = "../layout" }
 sugar-ui = { path = "../ui" }
-winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+sugar-shell = { path = "../shell" }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["rwh_06"] }
 
 [lints]
 workspace = true

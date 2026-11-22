@@ -1,0 +1,12 @@
+[package]
+name = "sugar-shell"
+description = "Windows, input and presentation per platform."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb = { version = "0.13", default-features = false }
+
+[lints]
+workspace = true
