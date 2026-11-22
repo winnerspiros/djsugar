@@ -32,11 +32,11 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - [x] Linux window over pure-Rust X11, offscreen GPU render
 - [x] Android APK: native activity, freely resizable (DeX, split screen), 16 KB aligned
 - [x] True black OLED palette
-- [ ] Input on every shell: pointer, multi-touch, wheel, keyboard, stylus (S Pen)
+- [~] Input on every shell: pointer, multi-touch, wheel, keyboard (X11 keysyms, winit); stylus (S Pen) open
 - [ ] Live resize verified on DeX (S23 Ultra) and every desktop
 
 ## M1 Study and spec
-- [~] Studies: DJ Sugar Mixxx fork, OpenDJ and OpenFadeR, commercial apps
+- [x] Studies: DJ Sugar Mixxx fork, OpenDJ and OpenFadeR, commercial apps
 - [ ] docs/SPEC.md: the full feature list with source and priority per item, screen anatomy
       per form factor, palette, interaction rules
 - [ ] Mockups of every form factor approved before M3
@@ -45,33 +45,33 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - [x] Engine: 4 decks, cubic resampling at any rate, gain, 3-band EQ with kills, filter,
       crossfader, lock-free commands, triple-buffered telemetry, tracks freed off the audio thread
 - [x] Decode: symphonia, every codec and container; all 192 DJ Sugar samples decode in 1.5 s
-- [>] Time-stretch and key lock: own phase vocoder (old `stretch` crate), port and benchmark
-- [ ] io: AAudio with low-latency/exclusive mode (Android), CoreAudio (macOS, iOS),
+- [x] Time-stretch, key lock and key shift: own phase vocoder ported, allocation-free test
+- [~] io: AAudio (written, needs a device run), with low-latency/exclusive mode (Android), CoreAudio (macOS, iOS),
       WASAPI, pure-Rust ALSA over ioctls (Linux)
 - [ ] Headphone cue and split cue, booth output, any mix to any output pair
 - [ ] Streaming decode into page-aligned buffers for long tracks on phones
 - Acceptance: two tracks mixed on the S23 Ultra, under 10 ms output, one hour without a dropout
 
 ## M3 Pro screen
-- [ ] Landscape pro layout and portrait vinyl ring, per the approved spec
+- [~] Landscape pro layout and portrait vinyl ring (platter waveforms, hub mixer), working; spec pending
 - [ ] Menu bar (File, Edit, View, ...) on every platform, plus command search over everything
 - [ ] Widgets: knob, fader, jog platter, pad, button, list, menu, text field, sheet
-- [ ] Scrolling RGB and 3-band waveforms, stacked and side by side, overview, beat grid
+- [~] Scrolling RGB and 3-band waveforms (RGB scrolling, overview, beat ticks, loop shading done);, stacked and side by side, overview, beat grid
 - [ ] Spring motion, 120 Hz, no frame over 8 ms
 - Acceptance: every control works by touch, mouse and keyboard
 
 ## M4 Analysis and library
-- [ ] BPM, beat grid, key, ReplayGain, phrases, energy, intro and outro, waveform pyramid
+- [~] BPM and beat grid done; key, ReplayGain, phrases, energy, intro and outro, waveform pyramid
 - [ ] Accuracy against Mixxx as oracle on GiantSteps and synthetic sets
-- [ ] Library: folders, playlists, crates, smart crates, history, tags, ratings, colours
-- [ ] Search syntax; Greek and Greeklish search, accent-folded sorting [>]
-- [ ] Sync, quantize, 36 hot cues, saved loops, beat jump, rolls, slip, censor, brake, spinback
+- [~] Library: folder scan done;  playlists, crates, smart crates, history, tags, ratings, colours
+- [~] Search: words, negation, Greek and Greeklish, accent folding done; field syntax open
+- [~] Sync (tempo + phase), 8 hot cues, beat loops, brake, spinback done; quantize, 36 cues, saved loops, beat jump, rolls, slip, censor open
 - [ ] Library health: relink moved files, duplicates by fingerprint [>]
 
 ## M5 DJ Sugar features
-- [ ] Sample library (192 samples) with picker, pad banks, sample editor, recordings
+- [~] Sample library bundled, sampler voices and pad bank done; picker, sample editor, recordings
 - [ ] FX Station: scenes, isolate, X-Pad, release; XY touch pad overlay
-- [~] Synced lyrics: tags, .lrc, online sources, karaoke view
+- [~] Synced lyrics: .lrc done; tags, online sources, karaoke view open
 - [ ] Listen mode
 - [>] Streaming: YouTube (own extractor, SponsorBlock), SoundCloud, Spotify, Audius,
       Subsonic, Jellyfin, Plex; streaming hub, smart URL box, next track prefetched
@@ -80,7 +80,7 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - [ ] Touch: Lite and Booth layouts, UI scale
 
 ## M6 Effects
-- [ ] Every Mixxx built-in effect, plus DJ Sugar's effects, chained units, presets
+- [~] Echo (beat-synced, echo out) done; every Mixxx built-in effect, plus DJ Sugar's effects, chained units, presets
 - [ ] Stem FX
 - [ ] Plugin hosting on desktop (CLAP, LV2, VST3)
 
