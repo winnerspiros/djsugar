@@ -8,8 +8,16 @@ pub struct Quad {
     pub rect: [f32; 4],
     pub radius: f32,
     pub border: f32,
+    pub soft: f32,
+    pub radial: f32,
     pub fill: u32,
     pub stroke: u32,
+    pub fill2: u32,
+    pub arc: u32,
+}
+
+fn turns(a: f32) -> u32 {
+    (a.rem_euclid(1.0) * 65535.0).round() as u32
 }
 
 pub const fn rgb(hex: u32) -> u32 {
@@ -112,7 +120,74 @@ impl Painter {
             border: border * s,
             fill,
             stroke,
+            ..Quad::default()
         });
+    }
+
+    /// Vertical gradient from `top` to `bottom`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn gradient(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        radius: f32,
+        top: u32,
+        bottom: u32,
+        border: f32,
+        stroke: u32,
+    ) {
+        self.outlined(x, y, w, h, radius, top, border, stroke);
+        self.last().fill2 = bottom | u32::from(bottom == 0);
+    }
+
+    /// Radial gradient disc from `centre` colour to `edge` colour.
+    pub fn disc(&mut self, cx: f32, cy: f32, r: f32, centre: u32, edge: u32) {
+        self.rect(cx - r, cy - r, r * 2.0, r * 2.0, r, centre);
+        let q = self.last();
+        q.fill2 = edge | u32::from(edge == 0);
+        q.radial = 1.0;
+    }
+
+    /// Soft blurred shape: shadows and neon glow.
+    #[allow(clippy::too_many_arguments)]
+    pub fn glow(&mut self, x: f32, y: f32, w: f32, h: f32, radius: f32, blur: f32, colour: u32) {
+        self.rect(x, y, w, h, radius, colour);
+        self.last().soft = blur * self.scale;
+    }
+
+    /// Ring segment of width `thick`, starting at `start` turns clockwise from 12 o'clock for `sweep` turns.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arc(&mut self, cx: f32, cy: f32, r: f32, thick: f32, start: f32, sweep: f32, colour: u32) {
+        if sweep <= 0.0 {
+            return;
+        }
+        self.outlined(cx - r, cy - r, r * 2.0, r * 2.0, r, 0, thick, colour);
+        self.last().arc = turns(start) | ((sweep.min(1.0) * 65535.0).round() as u32) << 16;
+    }
+
+    /// Filled pie wedge, as `arc` but solid.
+    pub fn pie(&mut self, cx: f32, cy: f32, r: f32, start: f32, sweep: f32, colour: u32) {
+        if sweep <= 0.0 {
+            return;
+        }
+        self.rect(cx - r, cy - r, r * 2.0, r * 2.0, r, colour);
+        self.last().arc = turns(start) | ((sweep.min(1.0) * 65535.0).round() as u32) << 16;
+    }
+
+    /// Straight line of width `w` between two points, drawn as a rotated-free thin quad series.
+    pub fn line(&mut self, (x0, y0): (f32, f32), (x1, y1): (f32, f32), w: f32, colour: u32) {
+        let (dx, dy) = (x1 - x0, y1 - y0);
+        let n = (dx.abs().max(dy.abs()) / (w * 0.75).max(0.5)).ceil().max(1.0) as usize;
+        for i in 0..=n {
+            let t = i as f32 / n as f32;
+            self.rect(x0 + dx * t - w * 0.5, y0 + dy * t - w * 0.5, w, w, w * 0.5, colour);
+        }
+    }
+
+    fn last(&mut self) -> &mut Quad {
+        self.quads.last_mut().expect("pushed")
     }
 
     pub fn quads(&self) -> &[Quad] {
@@ -131,8 +206,8 @@ mod tests {
     }
 
     #[test]
-    fn quad_is_32_bytes() {
-        assert_eq!(size_of::<Quad>(), 32);
+    fn quad_is_48_bytes() {
+        assert_eq!(size_of::<Quad>(), 48);
     }
 
     #[test]

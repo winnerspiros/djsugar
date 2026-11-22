@@ -26,8 +26,8 @@ impl std::error::Error for RendererError {}
 
 const GLYPH_ATTRIBUTES: [wgpu::VertexAttribute; 3] =
     wgpu::vertex_attr_array![0 => Float32x2, 1 => Uint16x4, 2 => Uint32];
-const QUAD_ATTRIBUTES: [wgpu::VertexAttribute; 4] =
-    wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x2, 2 => Uint32, 3 => Uint32];
+const QUAD_ATTRIBUTES: [wgpu::VertexAttribute; 6] =
+    wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Uint32, 3 => Uint32, 4 => Uint32, 5 => Uint32];
 const OFFSCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 const ROW_ALIGN: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
 

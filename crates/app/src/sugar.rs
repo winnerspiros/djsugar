@@ -50,8 +50,17 @@ fn hit(s: &mut State, r: Rect, target: Target) {
 }
 
 fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
-    let (fill, edge, ink) = if on { (fade(colour, 0x38), colour, TEXT) } else { (SURFACE, EDGE, GREY) };
-    p.outlined(r.x, r.y, r.w, r.h, 5.0, fill, 1.0, edge);
+    let down = s.pressed(target);
+    let rad = (r.h * 0.5).min(8.0);
+    if on {
+        p.glow(r.x, r.y, r.w, r.h, rad, 6.0, fade(colour, 0x60));
+    }
+    let (top, bottom, edge, ink) = match (on, down) {
+        (true, _) => (fade(colour, 0x70), fade(colour, 0x40), colour, TEXT),
+        (false, true) => (rgb(0x2a2d36), rgb(0x1c1e25), fade(colour, 0xc0), TEXT),
+        (false, false) => (rgb(0x1d2028), rgb(0x121419), fade(colour, 0x55), GREY),
+    };
+    p.gradient(r.x, r.y, r.w, r.h, rad, top, bottom, 1.0, edge);
     let style = Style::new(if r.h < 26.0 { 9.0 } else { 11.0 }, Weight::Bold, ink);
     let tw = p.text_width(style, label).min(r.w - 4.0);
     p.text_in(r.x + (r.w - tw) * 0.5, r.y + r.h * 0.5 + style.px * 0.36, r.w - 4.0, style, label);
@@ -95,9 +104,9 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         }
         View::Lib => {
             for d in 0..2 {
-                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, y, w * 0.5, 70.0), d);
+                mini_deck(p, s, Rect::new(d as f32 * w * 0.5, y, w * 0.5, 96.0), d);
             }
-            crate::screen::library(p, s, Rect::new(0.0, y + 72.0, w, rest - 72.0));
+            crate::screen::library(p, s, Rect::new(0.0, y + 98.0, w, rest - 98.0));
         }
         View::Ctl => {
             let wh = (rest * 0.42).round();
@@ -110,7 +119,8 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    p.gradient(r.x, r.y, r.w, r.h, 0.0, rgb(0x141520), rgb(0x0a0b10), 0.0, 0);
+    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, fade(ACCENT, 0x40));
     let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
     let views = [("DJ", View::Dj), ("WAVE", View::Wave), ("LIB", View::Lib), ("CTL", View::Ctl)];
     let compact = r.w < 760.0;
@@ -254,7 +264,8 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         p.text(r.x + 12.0, mid + 4.0, Style { colour: DARK, ..ARTIST }, msg);
     }
     p.rect(r.x, r.y + r.h, r.w, 1.0, 0.0, rgb(0x0a0b10));
-    p.rect(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 0.0, TEXT);
+    p.glow(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 1.0, 4.0, fade(DECK[d], 0xc0));
+    p.rect(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 1.0, TEXT);
     p.rect(r.x + 4.0, r.y + 4.0, 3.0, r.h - 8.0, 1.5, DECK[d]);
 }
 
@@ -425,8 +436,8 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let pc = (h * 0.5 - 2.0).clamp(26.0, 60.0);
     let pw = pc.max(44.0);
     transport(p, s, Rect::new(body.x, y, pw, h), d);
-    let spinny = body.w >= 800.0;
-    let sw = if spinny { h.min(body.w * 0.22) } else { 0.0 };
+    let spinny = h >= 90.0 && body.w >= 360.0;
+    let sw = if spinny { h.min(body.w * 0.3) } else { 0.0 };
     let cx = body.x + pw + 4.0;
     let cw = body.w - pw - 4.0 - if spinny { sw + 4.0 } else { 0.0 };
     controls(p, s, Rect::new(cx, y, cw, h), d);
@@ -439,31 +450,46 @@ fn transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let playing = s.telemetry.decks[d].playing;
     let bh = (r.h - 4.0) * 0.5;
     let play = Rect::new(r.x, r.y, r.w, bh);
-    p.outlined(
-        play.x,
-        play.y,
-        play.w,
-        play.h,
-        6.0,
-        if playing { fade(GREEN, 0x30) } else { SURFACE },
-        1.5,
-        if playing { GREEN } else { EDGE },
-    );
+    let rad = (bh.min(r.w) * 0.5).min(14.0);
+    let down = s.pressed(Target::Play(d));
+    if playing {
+        p.glow(play.x, play.y, play.w, play.h, rad, 10.0, fade(GREEN, 0x70));
+        p.gradient(play.x, play.y, play.w, play.h, rad, rgb(0x2bff95), rgb(0x00b85a), 0.0, 0);
+    } else {
+        p.gradient(
+            play.x,
+            play.y,
+            play.w,
+            play.h,
+            rad,
+            if down { rgb(0x23402f) } else { rgb(0x1a2620) },
+            rgb(0x0f1512),
+            1.5,
+            fade(GREEN, 0x90),
+        );
+    }
+    let ink = if playing { rgb(0x00170a) } else { GREEN };
     let (cx, cy, k) = (play.x + play.w * 0.5, play.y + play.h * 0.5, (bh * 0.22).min(12.0));
     if playing {
-        p.rect(cx - k * 0.8, cy - k, k * 0.55, k * 2.0, 1.0, GREEN);
-        p.rect(cx + k * 0.25, cy - k, k * 0.55, k * 2.0, 1.0, GREEN);
+        p.rect(cx - k * 0.8, cy - k, k * 0.55, k * 2.0, 1.5, ink);
+        p.rect(cx + k * 0.25, cy - k, k * 0.55, k * 2.0, 1.5, ink);
     } else {
         for i in 0..(k * 2.0) as i32 {
             let fy = i as f32;
             let len = (k * 1.7) * (1.0 - (fy - k).abs() / k);
-            p.rect(cx - k * 0.7, cy - k + fy, len, 1.0, 0.0, TEXT);
+            p.rect(cx - k * 0.7, cy - k + fy, len, 1.0, 0.0, ink);
         }
     }
     hit(s, play, Target::Play(d));
     let cue = Rect::new(r.x, r.y + bh + 4.0, r.w, bh);
-    p.outlined(cue.x, cue.y, cue.w, cue.h, 6.0, SURFACE, 1.5, AMBER);
-    let cs = Style { colour: AMBER, ..TAB };
+    let held = s.pressed(Target::Cue(d));
+    if held {
+        p.glow(cue.x, cue.y, cue.w, cue.h, rad, 10.0, fade(AMBER, 0x70));
+        p.gradient(cue.x, cue.y, cue.w, cue.h, rad, rgb(0xffe27a), rgb(0xe0a800), 0.0, 0);
+    } else {
+        p.gradient(cue.x, cue.y, cue.w, cue.h, rad, rgb(0x2a2517), rgb(0x15130c), 1.5, fade(AMBER, 0x90));
+    }
+    let cs = Style { colour: if held { rgb(0x1a1200) } else { AMBER }, ..TAB };
     p.text(cue.x + (cue.w - p.text_width(cs, "CUE")) * 0.5, cue.y + cue.h * 0.5 + 4.0, cs, "CUE");
     hit(s, cue, Target::Cue(d));
 }
@@ -512,9 +538,27 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             Mode::Samples => (crate::state::pad_name(s, d, i), false, ACTIVE),
             Mode::Fx => (FX_PADS[i].to_string(), s.decks[d].echo == Some(i), AMBER),
         };
-        let fill = if on { fade(colour, 0xc0) } else { SURFACE };
-        p.outlined(b.x, b.y, b.w, b.h, 5.0, fill, 1.0, if on { colour } else { fade(colour, 0x60) });
-        let ink = Style { colour: if on { rgb(0x000000) } else { TEXT }, ..PAD_TEXT };
+        let down = s.pressed(Target::Pad(d, i));
+        if down && on {
+            p.glow(b.x, b.y, b.w, b.h, 7.0, 10.0, fade(colour, 0x90));
+        }
+        let (top, bottom) = match (on, down) {
+            (true, true) => (colour, colour),
+            (true, false) => (fade(colour, 0x55), fade(colour, 0x28)),
+            (false, true) => (rgb(0x2a2d36), rgb(0x1c1e25)),
+            (false, false) => (rgb(0x1a1c23), rgb(0x101116)),
+        };
+        p.gradient(b.x, b.y, b.w, b.h, 7.0, top, bottom, 1.0, if on { fade(colour, 0xb0) } else { rgb(0x2a2c33) });
+        let ink = Style {
+            colour: if on && down {
+                rgb(0x000000)
+            } else if on {
+                colour
+            } else {
+                DARK
+            },
+            ..PAD_TEXT
+        };
         let tw = p.text_width(ink, &label).min(b.w - 6.0);
         p.text_in(b.x + (b.w - tw) * 0.5, b.y + b.h * 0.5 + 4.0, b.w - 6.0, ink, &label);
         hit(s, b, Target::Pad(d, i));
@@ -612,17 +656,52 @@ fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 fn platter(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let k = r.w.min(r.h);
-    let (x, y) = (r.x + (r.w - k) * 0.5, r.y + (r.h - k) * 0.5);
-    p.outlined(x, y, k, k, k * 0.5, DEEP, 2.0, EDGE);
-    let pos = s.telemetry.decks[d].position;
-    let secs = s.decks[d].seconds(pos);
-    let a = (secs * std::f64::consts::TAU / 1.8) as f32;
-    let (sn, cs) = a.sin_cos();
-    let rr = k * 0.42;
-    let (cx, cy) = (x + k * 0.5, y + k * 0.5);
-    p.rect(cx + sn * rr - 3.0, cy - cs * rr - 3.0, 6.0, 6.0, 3.0, DECK[d]);
-    p.outlined(cx - k * 0.12, cy - k * 0.12, k * 0.24, k * 0.24, k * 0.12, SURFACE, 1.0, EDGE);
-    hit(s, Rect::new(x, y, k, k), Target::Jog(d));
+    let (cx, cy) = (r.x + r.w * 0.5, r.y + r.h * 0.5);
+    let rad = k * 0.5;
+    let t = s.telemetry.decks[d];
+    let deck = &s.decks[d];
+    if t.playing {
+        p.glow(cx - rad, cy - rad, k, k, rad, k / 9.0, fade(DECK[d], 0x70));
+    }
+    p.disc(cx, cy, rad, rgb(0x23262f), rgb(0x0b0c10));
+    for g in [0.84, 0.74, 0.64] {
+        let gr = rad * g;
+        p.outlined(cx - gr, cy - gr, gr * 2.0, gr * 2.0, gr, 0, 1.0, rgb(0x1c1e25));
+    }
+    let ring = (k / 26.0).max(3.0);
+    p.arc(cx, cy, rad - 1.0, ring, 0.0, 1.0, rgb(0x1f2128));
+    if deck.loaded.is_some() {
+        let progress = (t.position / deck.length().max(1.0)) as f32;
+        p.arc(cx, cy, rad - 1.0, ring, 0.0, progress, DECK[d]);
+        let spin = (deck.seconds(t.position) / 1.8).fract() as f32 * std::f32::consts::TAU;
+        let (sn, cs) = spin.sin_cos();
+        p.line(
+            (cx + sn * rad * 0.6, cy - cs * rad * 0.6),
+            (cx + sn * rad * 0.8, cy - cs * rad * 0.8),
+            (k / 50.0).max(2.0),
+            TEXT,
+        );
+        p.disc(cx, cy, rad * 0.5, fade(DECK[d], 0xff), fade(DECK[d], 0x90));
+        let initials: String = deck
+            .loaded
+            .as_ref()
+            .map(|l| {
+                l.entry
+                    .title
+                    .split_whitespace()
+                    .take(2)
+                    .filter_map(|w| w.chars().next())
+                    .flat_map(char::to_uppercase)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let st = Style::new(k / 7.0, Weight::Bold, rgb(0x0a0b10));
+        p.text(cx - p.text_width(st, &initials) * 0.5, cy + k / 20.0, st, &initials);
+    } else {
+        p.disc(cx, cy, rad * 0.5, rgb(0x1d2028), rgb(0x14161c));
+        p.disc(cx, cy, rad * 0.03 + 1.0, rgb(0x0b0c10), rgb(0x0b0c10));
+    }
+    hit(s, Rect::new(cx - rad, cy - rad, k, k), Target::Jog(d));
 }
 
 fn mini_deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
@@ -640,31 +719,22 @@ fn mini_deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 fn knob(p: &mut Painter, s: &mut State, r: Rect, v: f32, colour: u32, label: &str, target: Target) {
     let k = r.w.min(r.h - 10.0);
-    let (x, y) = (r.x + (r.w - k) * 0.5, r.y);
-    p.outlined(x, y, k, k, k * 0.5, DEEP, 1.5, EDGE);
-    let steps = 24;
-    let on = (v - 0.5).abs() >= 0.01;
-    for i in 0..=steps {
-        let t = i as f32 / steps as f32;
-        let lit = on && ((t >= 0.5 && t <= v) || (t <= 0.5 && t >= v));
-        let a = (t - 0.5) * 1.5 * std::f32::consts::PI;
-        let (sn, cs) = a.sin_cos();
-        let rr = k * 0.5 - 2.0;
-        p.rect(
-            x + k * 0.5 + sn * rr - 1.0,
-            y + k * 0.5 - cs * rr - 1.0,
-            2.0,
-            2.0,
-            1.0,
-            if lit { colour } else { rgb(0x222222) },
-        );
+    let (cx, cy) = (r.x + r.w * 0.5, r.y + k * 0.5);
+    let rad = k * 0.5;
+    let thick = (k * 0.09).max(2.0);
+    p.arc(cx, cy, rad, thick, 0.625, 0.75, rgb(0x22242b));
+    let (a, b) = if v >= 0.5 { (0.5, v) } else { (v, 0.5) };
+    if (v - 0.5).abs() >= 0.01 {
+        p.arc(cx, cy, rad, thick, 0.625 + a * 0.75, (b - a) * 0.75, colour);
     }
-    let a = (v - 0.5) * 1.5 * std::f32::consts::PI;
-    let (sn, cs) = a.sin_cos();
-    let rr = k * 0.28;
-    p.rect(x + k * 0.5 + sn * rr - 2.0, y + k * 0.5 - cs * rr - 2.0, 4.0, 4.0, 2.0, TEXT);
+    let body = rad - thick - 2.0;
+    p.glow(cx - body, cy - body + 2.0, body * 2.0, body * 2.0, body, 3.0, fade(rgb(0x000000), 0xa0));
+    p.disc(cx, cy, body, rgb(0x343843), rgb(0x16181e));
+    let ang = (0.625 + v * 0.75) * std::f32::consts::TAU;
+    let (sn, cs) = ang.sin_cos();
+    p.line((cx + sn * body * 0.25, cy - cs * body * 0.25), (cx + sn * body * 0.85, cy - cs * body * 0.85), 2.0, TEXT);
     let lw = p.text_width(SMALL, label);
-    p.text(r.x + (r.w - lw) * 0.5, y + k + 9.0, SMALL, label);
+    p.text(r.x + (r.w - lw) * 0.5, r.y + k + 9.0, SMALL, label);
     hit(s, r, target);
 }
 
@@ -709,7 +779,10 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
         let fx = ch.x + (ch.w - 6.0) * 0.5;
         p.rect(fx - 1.5, ft, 3.0, fh, 1.5, DEEP);
         let v = s.decks[d].volume;
-        p.rect(fx - 10.0, ft + (1.0 - v) * (fh - 10.0), 20.0, 10.0, 3.0, TEXT);
+        let cap = ft + (1.0 - v) * (fh - 14.0);
+        p.glow(fx - 11.0, cap + 2.0, 22.0, 14.0, 3.0, 4.0, fade(rgb(0x000000), 0xc0));
+        p.gradient(fx - 11.0, cap, 22.0, 14.0, 3.0, rgb(0xf4f4f4), rgb(0x9a9aa4), 0.0, 0);
+        p.rect(fx - 9.0, cap + 6.5, 18.0, 1.0, 0.0, DECK[d]);
         hit(s, Rect::new(ch.x, ft, ch.w, fh), Target::Volume(d));
         let on = s.decks[d].pfl;
         button(p, s, Rect::new(ch.x, ch.y + ch.h - pfl, ch.w, pfl), "PFL", on, ACCENT, Target::Pfl(d));
@@ -718,7 +791,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let w = r.w - 24.0;
     p.rect(r.x + 12.0, y + xf * 0.5 - 2.0, w, 4.0, 2.0, DEEP);
     let t = r.x + 12.0 + (s.crossfader + 1.0) * 0.5 * (w - 14.0);
-    p.rect(t, y + 6.0, 14.0, xf - 12.0, 3.0, ACCENT);
+    p.glow(t, y + 6.0, 14.0, xf - 12.0, 3.0, 8.0, fade(ACCENT, 0x80));
+    p.gradient(t, y + 6.0, 14.0, xf - 12.0, 3.0, rgb(0xff8cc6), rgb(0xd62f86), 0.0, 0);
     hit(s, Rect::new(r.x + 6.0, y, r.w - 12.0, xf), Target::Crossfader);
 }
 

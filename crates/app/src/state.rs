@@ -346,7 +346,7 @@ impl State {
 
     pub fn animating(&self) -> bool {
         self.telemetry.decks.iter().any(|d| d.playing)
-            || self.drags.iter().any(|d| matches!(d.target, Some(Target::Pad(..))))
+            || !self.drags.is_empty()
             || self.decks.iter().any(|d| d.loading)
             || self.auto.is_some()
     }
@@ -797,6 +797,10 @@ impl State {
         }
         self.send(Command::Seek(d, to));
         self.telemetry.decks[d].position = to;
+    }
+
+    pub fn pressed(&self, t: Target) -> bool {
+        self.drags.iter().any(|d| d.target == Some(t))
     }
 
     fn hit(&self, x: f32, y: f32) -> Option<Target> {

@@ -110,6 +110,7 @@ Done:
 - Deck: info bar with remaining time, BPM, Camelot key and pitch; overview; REV, SLIP, Q, EJECT; PLAY and CUE; HOT, LOOP, SMPL and FX pad modes; loop IN, OUT, size, toggle; beat jump with size; SYNC, pitch fader, key lock and semitone steps.
 - Mixer: HI, MID, LOW, filter, gain, faders, segmented VU, PFL, crossfader.
 - Engine: reverse, slip, unload.
+- Renderer: vertical and radial gradients, soft glow and shadow, arcs and pie wedges, lines. Decks use a platter with a glowing position ring, candy transport, shaded pads with press feedback, arc knobs, shaded fader caps.
 
 Next, in order:
 - Portrait layout from the DJ Sugar portrait QML.
