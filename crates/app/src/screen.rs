@@ -1,10 +1,10 @@
 use sugar_layout::{Axis, Id, Node, Rect, Size};
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-pub const BACKGROUND: u32 = rgb(0x0e0a10);
-const PANEL: u32 = rgb(0x17111a);
-const RAISED: u32 = rgb(0x2a1f2f);
-const LINE: u32 = rgb(0x34263a);
+pub const BACKGROUND: u32 = rgb(0x000000);
+const PANEL: u32 = rgb(0x000000);
+const RAISED: u32 = rgb(0x0d0d0f);
+const LINE: u32 = rgb(0x1f1f24);
 const DECK_A: u32 = rgb(0xff2e93);
 const DECK_B: u32 = rgb(0x3fe0ff);
 const ACCENT: u32 = rgb(0xffe45c);
