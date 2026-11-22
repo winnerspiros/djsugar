@@ -1,4 +1,4 @@
-# Booth Skin DECK Side — Visual & Behaviour Specification
+# Booth Skin DECK Side - Visual & Behaviour Specification
 
 This document specifies the DJ Sugar Booth skin DECK side for reimplementation in a Rust immediate‑mode GPU painter. Every colour is resolved to hex with opacity. Geometry is expressed as formulas of parent width/height using the original Layout.preferred*, anchors, margins, spacing, Math.round/min/max exactly as written. Canvas/Shape drawing code is noted exactly (paths, angles). Controls list their Mixxx group/key, click/drag/long‑press behaviour, and drag sensitivity.
 
@@ -83,40 +83,40 @@ Root: `Rectangle` (id: `root`)
 
 ### 2.1 Root Properties & Geometry
 - Required: `group` (string), `deckNumber` (int)
-- `mirrored` (bool, default false) — Deck 2 mirrored, pads on outer side
-- `compact` (bool, default false) — Landscape phones
-- `padMode` (string, default "hotcue") — "hotcue" | "beatjump" | "beatloop" | "stem" | "sampler"
+- `mirrored` (bool, default false) - Deck 2 mirrored, pads on outer side
+- `compact` (bool, default false) - Landscape phones
+- `padMode` (string, default "hotcue") - "hotcue" | "beatjump" | "beatloop" | "stem" | "sampler"
 - `deckColor`: `deckNumber === 1 ? #1f6fd1 : #e8650f`
 - `loaded`: `trackLoadedControl.value > 0`
-- `unit`: `Math.max(9, Math.min(height / 14, width / 34))` — base unit for all sizing
+- `unit`: `Math.max(9, Math.min(height / 14, width / 34))` - base unit for all sizing
 - Border: `color: #626262` (midGray3), `width: 1`
 - Background: `color: #202020` (darkGray4)
 
 ### 2.2 Control Proxies (Mixxx)
 | Id | Group | Key | UpdateInterval |
 |----|-------|-----|----------------|
-| trackLoadedControl | root.group | track_loaded | — |
+| trackLoadedControl | root.group | track_loaded | - |
 | playControl | root.group | play | 100 ms |
-| cueControl | root.group | cue_default | — |
-| cueIndicatorControl | root.group | cue_indicator | — |
-| syncControl | root.group | sync_enabled | — |
-| syncLeaderControl | root.group | sync_leader | — |
-| quantizeControl | root.group | quantize | — |
-| keylockControl | root.group | keylock | — |
-| slipControl | root.group | slip_enabled | — |
-| bpmControl | root.group | bpm | — |
-| rateRatioControl | root.group | rate_ratio | — |
-| rateRangeControl | root.group | rateRange | — |
-| loopEnabledControl | root.group | loop_enabled | — |
-| loopSizeControl | root.group | beatloop_size | — |
-| sampleRateControl | root.group | track_samplerate | — |
-| loopActivate | root.group | beatloop_activate | — |
-| reloopToggle | root.group | reloop_toggle | — |
-| loopHalve | root.group | loop_halve | — |
-| loopDouble | root.group | loop_double | — |
-| loopIn | root.group | loop_in | — |
-| loopOut | root.group | loop_out | — |
-| jumpControl | root.group | (dynamic) | — |
+| cueControl | root.group | cue_default | - |
+| cueIndicatorControl | root.group | cue_indicator | - |
+| syncControl | root.group | sync_enabled | - |
+| syncLeaderControl | root.group | sync_leader | - |
+| quantizeControl | root.group | quantize | - |
+| keylockControl | root.group | keylock | - |
+| slipControl | root.group | slip_enabled | - |
+| bpmControl | root.group | bpm | - |
+| rateRatioControl | root.group | rate_ratio | - |
+| rateRangeControl | root.group | rateRange | - |
+| loopEnabledControl | root.group | loop_enabled | - |
+| loopSizeControl | root.group | beatloop_size | - |
+| sampleRateControl | root.group | track_samplerate | - |
+| loopActivate | root.group | beatloop_activate | - |
+| reloopToggle | root.group | reloop_toggle | - |
+| loopHalve | root.group | loop_halve | - |
+| loopDouble | root.group | loop_double | - |
+| loopIn | root.group | loop_in | - |
+| loopOut | root.group | loop_out | - |
+| jumpControl | root.group | (dynamic) | - |
 
 ### 2.3 Component: SmallButton
 - Rectangle, `radius: 2`, `border.width: 1`
@@ -134,8 +134,8 @@ Root: `Rectangle` (id: `root`)
   - hotcue: `hotcueStatus.value > 0`
   - beatloop: `loopEnabledControl.value > 0 && loopSizeControl.value === loopSizes[index]`
   - else: false
-- `litColor`: hotcue → `hotcueColor` (parsed from RGB int), else `#1f6fd1`
-- `hotcueColor`: from `hotcue_${number}_color` control; if < 0 → `#85c85b` (green)
+- `litColor`: hotcue to `hotcueColor` (parsed from RGB int), else `#1f6fd1`
+- `hotcueColor`: from `hotcue_${number}_color` control; if < 0 to `#85c85b` (green)
 - Label `Text`: centered vertically, left margin 3 (hotcue) or 0 (others), `pixelSize: round(unit * 1.05)`, color `lit ? #d9d9d9 : #939393`
   - hotcue: time `formatTime(hotcuePosition / sampleRate / 2)` if set
   - beatjump: `jumpLabels[sizeIndex]` from `[FINE, 1/8, 1/4, 1/2, 1, 2, 4, 8]`
@@ -156,7 +156,7 @@ Root: `Rectangle` (id: `root`)
 - Rectangle, `radius: 2`, `border.width: 1`
 - `stemNumber = (padIndex % 4) + 1`, `isFxPad = padIndex >= 4`
 - `stemLabels`: `[DRUMS, BASS, INST, VOCAL]`
-- `stemColors`: `[#01dcfc (blue), #3a60be (accent), #fca001 (yellow), #3a60be (activeColor)]` — note activeColor = accentColor
+- `stemColors`: `[#01dcfc (blue), #3a60be (accent), #fca001 (yellow), #3a60be (activeColor)]` - note activeColor = accentColor
 - `padColor = stemColors[stemNumber-1]`
 - `stemActive`: isFxPad ? `stemFxControl.value > 0` : `stemMuteControl.value === 0`
 - Border: `pressed ? #d9d9d9 : (stemActive ? padColor : #626262)`
@@ -171,13 +171,13 @@ Root: `Rectangle` (id: `root`)
 
 ##### GridLayout (visible: padMode not sampler/stem)
 - `fillHeight/Width`, `columns: 2`, `colSpacing: 3`, `rowSpacing: 3`
-- Repeater model 8 → `Pad` (fillHeight/Width)
+- Repeater model 8 to `Pad` (fillHeight/Width)
 
 ##### GridLayout (visible: padMode === "stem")
-- Same grid, Repeater model 8 → `StemPad` (group: root.group, padIndex: index)
+- Same grid, Repeater model 8 to `StemPad` (group: root.group, padIndex: index)
 
 ##### GridLayout (visible: padMode === "sampler")
-- Same grid, Repeater model 8 → `SamplerPad` (mirrored: root.mirrored)
+- Same grid, Repeater model 8 to `SamplerPad` (mirrored: root.mirrored)
 
 ##### Mode Button (Rectangle)
 - `fillWidth`, `prefHeight: round(unit * 1.8)`, `border.color: #626262`, `border.width: 1`
@@ -196,7 +196,7 @@ Root: `Rectangle` (id: `root`)
   - Column centered, spacing 0:
     - Size text: `pixelSize: round(unit * 1.8)`, `bold`, color `looping ? #000000 : #e8650f` (libDeck2Bg), text: `size >= 1 ? round(size) : "1/" + round(1/size)`
     - Subtext: `pixelSize: round(unit * 0.8)`, `bold`, color `looping ? #000000 : #939393`, text: `looping ? "EXIT" : "BEATS"`
-  - TapHandler `loopTap`: onTapped → `looping ? reloopToggle.trigger() : loopActivate.trigger()`
+  - TapHandler `loopTap`: onTapped to `looping ? reloopToggle.trigger() : loopActivate.trigger()`
 - RowLayout (½ / ×2): `prefHeight: round(unit * 2.4)`, spacing 3, two `SmallButton` (label "½", "×2"), onPressed trigger `loopHalve` / `loopDouble`
 - RowLayout (IN / OUT): `prefHeight: round(unit * 2.4)`, spacing 3, two `SmallButton` (label "IN", "OUT"), `on` bound to `loopIn/Out.value > 0`, onPressed=1, onReleased=0
 - Spacer `Item fillHeight: true`
@@ -213,13 +213,13 @@ Root: `Rectangle` (id: `root`)
   - Border color: `cueIndicator > 0 ? #ff9a1f : #8a5a20`
   - Fill: `pressed ? #3a2408 : #202020`
   - Label "CUE": centered, `pixelSize: round(height * 0.28)`, `bold`, color `cueIndicator > 0 ? #ff9a1f : #c08040`
-  - TapHandler `cueTap`: `gesturePolicy: WithinBounds`, onPressedChanged → `cueControl.value = pressed ? 1 : 0`
+  - TapHandler `cueTap`: `gesturePolicy: WithinBounds`, onPressedChanged to `cueControl.value = pressed ? 1 : 0`
 - PLAY Button (Rectangle):
   - Same geometry as CUE
   - Border: `playing ? #85c85b : #2a6a2a`, width 2
   - Fill: `pressed ? #0c2a0c : #202020`
-  - Content: when playing → Row centered, two vertical bars (Rectangles) `color: #85c85b`, `height: round(height * 0.34)`, `width: round(barHeight * 0.3)`, spacing `round(barHeight * 0.3)`; when stopped → `Skin.Triangle` centered (horizontalCenterOffset `round(width * 0.1)`), `color: #85c85b`, `height: round(height * 0.36)`, `width: round(height * 0.9)`, points right
-  - TapHandler `playTap`: onPressedChanged → if pressed `playControl.value = playing ? 0 : 1`
+  - Content: when playing to Row centered, two vertical bars (Rectangles) `color: #85c85b`, `height: round(height * 0.34)`, `width: round(barHeight * 0.3)`, spacing `round(barHeight * 0.3)`; when stopped to `Skin.Triangle` centered (horizontalCenterOffset `round(width * 0.1)`), `color: #85c85b`, `height: round(height * 0.36)`, `width: round(height * 0.9)`, points right
+  - TapHandler `playTap`: onPressedChanged to if pressed `playControl.value = playing ? 0 : 1`
 
 #### 2.6.4 Jog Area (Item)
 - `readonly size = min(width, height)`
@@ -249,14 +249,14 @@ Root: `Rectangle` (id: `root`)
 
 ### 3.1 Root Properties
 - Required: `group` (string), `deckNumber` (int)
-- `slim` (bool, default false) — only title bar + overview
+- `slim` (bool, default false) - only title bar + overview
 - `deckPlayer = Mixxx.PlayerManager.getPlayer(group)`
 - `currentTrack = deckPlayer?.currentTrack`
 - `loaded = trackLoadedControl.value > 0`
 - `playing = playControl.value > 0`
 - `leader = syncLeaderControl.value > 0`
 - `showElapsed` (bool, default false)
-- `seconds`: if showElapsed → position, else duration - position
+- `seconds`: if showElapsed to position, else duration - position
 - `unit = Math.max(9, Math.min(height / 11, width / 30))`
 - Background: `Theme.backgroundColor` (#1e1e20)
 - Border: `color: playing ? #b0b0b0 : #626262`, `width: 1`
@@ -264,16 +264,16 @@ Root: `Rectangle` (id: `root`)
 ### 3.2 Control Proxies
 | Id | Group | Key | UpdateInterval |
 |----|-------|-----|----------------|
-| trackLoadedControl | root.group | track_loaded | — |
-| playControl | root.group | play | — |
-| durationControl | root.group | duration | — |
+| trackLoadedControl | root.group | track_loaded | - |
+| playControl | root.group | play | - |
+| durationControl | root.group | duration | - |
 | positionControl | root.group | playposition | 100 ms |
-| bpmControl | root.group | bpm | — |
-| rateControl | root.group | rate | — |
-| rateRangeControl | root.group | rateRange | — |
-| syncControl | root.group | sync_enabled | — |
-| syncLeaderControl | root.group | sync_leader | — |
-| keylockControl | root.group | keylock | — |
+| bpmControl | root.group | bpm | - |
+| rateControl | root.group | rate | - |
+| rateRangeControl | root.group | rateRange | - |
+| syncControl | root.group | sync_enabled | - |
+| syncLeaderControl | root.group | sync_leader | - |
+| keylockControl | root.group | keylock | - |
 
 ### 3.3 Component: Caption (Text)
 - `color: #939393` (lightGray3)
@@ -285,7 +285,7 @@ Root: `Rectangle` (id: `root`)
 - `color: on ? alpha(onColor, 0.18) : transparent`
 - `height: round(unit * 1.8)`, `width: round(unit * 6.6)`
 - Label `Text`: fill, color `on ? onColor : #b0b0b0`, `fontSizeMode: HorizontalFit`, `pixelSize: round(unit * 0.95)`, min 7, centered
-- MouseArea `anchors.fill margins: -3`: onClicked → `clicked()`, onPressAndHold → `pressAndHold()`
+- MouseArea `anchors.fill margins: -3`: onClicked to `clicked()`, onPressAndHold to `pressAndHold()`
 
 ### 3.5 Title Bar (Rectangle)
 - Anchors: left/right/top margins 1, `color: #3f3f3f` (darkGray3), `height: round(unit * 2.3)`, `clip: true`
@@ -299,7 +299,7 @@ Root: `Rectangle` (id: `root`)
   - Else if loaded: `#d9d9d9`, text `♪ title`
   - Else empty
 - Key Label (Text): right margin 8, verticalCenter, `color: #d9d9d9`, `pixelSize: round(unit * 1.3)`, text `loaded ? keyText : ""`
-- Download gradient bar (bottom of titleBar, visible when downloading): height 3, gradient horizontal `#3a60be` → `#ff99ca` → `#01dcfc`, animated width
+- Download gradient bar (bottom of titleBar, visible when downloading): height 3, gradient horizontal `#3a60be` to `#ff99ca` to `#01dcfc`, animated width
 
 ### 3.6 Info Area (Item, visible: !slim)
 - Anchors: left/right margins 6, top `titleBar.bottom + round(unit * 0.5)`, `height: round(unit * 4.4)`
@@ -318,7 +318,7 @@ Root: `Rectangle` (id: `root`)
     - Text: `pixelSize: round(unit * 0.95)`, `color: #d9d9d9`, text `round(rateRange*100)%`
   - Pitch Text (bottom right): `pixelSize: round(unit * 1.45)`, color `loaded ? #d8dadd : #626262`, text `(rate*rateRange*100)` with sign, 2 decimals + "%"
 - BPM Box (Rectangle): bottom/right anchored, top anchored, `border.width: 1`, `border.color: leader ? #fca001 : #b0b0b0`, `color: transparent`, `width: max(round(unit*6.2), bpmCaption.width + masterText.width + 12)`
-  - Top Row: Caption "BPM" (leftPadding 4, rightPadding 4, color `#b0b0b0`), if leader → Rectangle `color: #fca001`, height = caption height, width = masterText.width+8, Text "MASTER" centered, `pixelSize: round(unit * 0.95)`, `color: #1e1e20`
+  - Top Row: Caption "BPM" (leftPadding 4, rightPadding 4, color `#b0b0b0`), if leader to Rectangle `color: #fca001`, height = caption height, width = masterText.width+8, Text "MASTER" centered, `pixelSize: round(unit * 0.95)`, `color: #1e1e20`
   - Bottom Row: right margin 5
     - Whole BPM: `pixelSize: round(unit * 2.6)`, color `leader ? #ff6a13 : (loaded ? #ffffff : #626262)`, text `loaded ? floor(bpm) : "--"`
     - Fraction: baseline aligned, `pixelSize: round(unit * 1.5)`, same color, text `loaded ? "." + floor((bpm%1)*10) : ".-"`
@@ -347,7 +347,7 @@ Root: `Rectangle` (id: `padItem`)
 - Border color: `pressed ? #d9d9d9 : (playing ? #7d3b3b : (lit ? #e8650f : #626262))`
 - Fill: `pressed ? #626262 : (playing ? alpha(#7d3b3b, 0.3) : (lit ? alpha(#e8650f, 0.18) : #202020))`
 - `radius: 2`
-- Label `Text`: centered, `bold`, `pixelSize: round(height * 0.28)`, color `playing ? #d9d9d9 : (lit ? #e8650f : #626262)`, text `samplerGroup.replace("[Sampler","S").replace("]","")` → "S1".."S16"
+- Label `Text`: centered, `bold`, `pixelSize: round(height * 0.28)`, color `playing ? #d9d9d9 : (lit ? #e8650f : #626262)`, text `samplerGroup.replace("[Sampler","S").replace("]","")` to "S1".."S16"
 
 ### 4.3 Behaviour
 - TapHandler `padTap`: `gesturePolicy: WithinBounds`
@@ -400,7 +400,7 @@ Root: `Rectangle` (id: `root`)
   - `Skin.Triangle` centered, height 11, width 8, pointsRight false
   - MouseArea: onClicked `prevEffectControl.value = 1; = 0`
 - Effect Name Box (Rectangle): `fillHeight/Width`, `border #626262`, width 1, `color: #202020`
-  - Text: fill margins 3, `color: #d9d9d9`, `elideRight`, `HorizontalFit`, `pixelSize: compact?14:17`, centered, text `slot.loaded ? slot.effectName : "—"`
+  - Text: fill margins 3, `color: #d9d9d9`, `elideRight`, `HorizontalFit`, `pixelSize: compact?14:17`, centered, text `slot.loaded ? slot.effectName : "-"`
 - Next Button: same as prev but `pointsRight: true`, onClicked `nextEffectControl.value = 1; = 0`
 
 #### Row 2: Slot Indicators (RowLayout, spacing 4)
@@ -438,9 +438,9 @@ Root: `Item` (id: `root`)
 ### 6.1 Properties
 - Required: `group`, `key`
 - `label` (string, default "")
-- `bipolar` (bool, default true) — ring lights from middle (EQ, trim) or from start
+- `bipolar` (bool, default true) - ring lights from middle (EQ, trim) or from start
 - `color` (default `#1f6fd1` = libraryDeck1Background)
-- `dragRange` (default 160) — pixels for full 0-1 turn
+- `dragRange` (default 160) - pixels for full 0-1 turn
 - `value = control.parameter` (readonly)
 - `ringSize = max(12, min(width, height - (labelVisible ? labelHeight+1 : 0)))`
 - `implicitHeight: 40 + (labelVisible ? labelHeight+1 : 0)`, `implicitWidth: 40`
@@ -482,7 +482,7 @@ Root: `Item` (id: `root`)
 ### 7.1 Properties
 - Required: `group`, `key`
 - `horizontal` (bool, default false)
-- `inverted` (bool, default false) — top/left is start of range
+- `inverted` (bool, default false) - top/left is start of range
 - `color` (default `#b0b0b0` = lightGray2)
 - `centerMark` (bool, default false)
 - `position = inverted ? 1 - control.parameter : control.parameter` (readonly)
@@ -522,15 +522,15 @@ Root: `Item` (id: `root`)
 
 | Component | States | Visual Changes |
 |-----------|--------|----------------|
-| BoothPerformanceDeck root | loaded, playing, mirrored, compact, padMode | Border color (playing→#b0b0b0), layoutDirection, pad grid visibility, unit scaling |
-| Pad | lit, pressed, padMode (hotcue/beatjump/beatloop) | Border color (lit→litColor/pressed→#d9d9d9), label content, letter visible, triangles visible |
+| BoothPerformanceDeck root | loaded, playing, mirrored, compact, padMode | Border color (playingto#b0b0b0), layoutDirection, pad grid visibility, unit scaling |
+| Pad | lit, pressed, padMode (hotcue/beatjump/beatloop) | Border color (littolitColor/pressedto#d9d9d9), label content, letter visible, triangles visible |
 | StemPad | stemActive, pressed, isFxPad | Border/fill from padColor, label text (FX suffix) |
 | SmallButton | on, pressed | Border/fill from onColor, label color |
 | Loop Size Button | looping, pressed | Border color/width, fill, label text (size/EXIT/BEATS), subtext color |
 | SYNC Button | sync, syncLeader | Label (SYNC/MASTER), onColor, on state |
 | CUE Button | cueIndicator, pressed | Border color, fill, label color |
 | PLAY Button | playing, pressed | Border color, fill, pause bars vs play triangle |
-| Platter | loaded, playing | Spinny indicator visible, BPM text color (leader→#fca001) |
+| Platter | loaded, playing | Spinny indicator visible, BPM text color (leaderto#fca001) |
 | BoothDeckPanel root | loaded, playing, leader, slim, showElapsed | Border color, time display, info area visibility, BPM box border |
 | Chip | on, pressed | Border/fill from onColor, label color |
 | Title Bar | downloading | Progress bar, gradient bar, title text |
@@ -680,7 +680,7 @@ stroke()
 | BoothKnob | `delta = -translation.y / dragRange` (default 160 px per full turn) | Vertical drag only; double-tap resets |
 | BoothFader (vertical) | `delta = -translation.y / (height - handle.height)` | Inverted option flips mapping; double-tap resets |
 | BoothFader (horizontal) | `delta = translation.x / (width - handle.width)` | For crossfader/tempo horizontal |
-| TouchSpinny (jog) | Handled by `DeckComponent.TouchSpinny` — scratch on touch, auto-spin when playing | Not directly parameterized here |
+| TouchSpinny (jog) | Handled by `DeckComponent.TouchSpinny` - scratch on touch, auto-spin when playing | Not directly parameterized here |
 
 ---
 
@@ -741,14 +741,14 @@ stroke()
   - Deck 1 (left): pads left, jog right, tempo far right
   - Deck 2 (right, mirrored): pads right, jog left, tempo far left
 - `BoothDeckPanel`: no mirroring (display only)
-- `SamplerPad`: `mirrored` selects sampler bank: left deck → Sampler1-8, right deck → Sampler9-16
+- `SamplerPad`: `mirrored` selects sampler bank: left deck to Sampler1-8, right deck to Sampler9-16
 - Jog bottom buttons (Q/MT): anchored left if mirrored else right
 
 ---
 
 ## 15. Compact Mode (Landscape Phones)
 
-- `BoothPerformanceDeck`: `unit = max(9, min(height/14, width/34))` — same formula, but smaller height reduces unit
+- `BoothPerformanceDeck`: `unit = max(9, min(height/14, width/34))` - same formula, but smaller height reduces unit
 - `BoothDeckPanel`: `unit = max(9, min(height/11, width/30))`
 - `BoothBeatFx`: `compact` prop reduces heights (header 20 vs 26, slots 20/24, toggles 24/30, sliders 22/32, ON/OFF 34/44, labels 9/10, toggle labels 11/13, ON/OFF 13/15)
 - No separate compact logic in BoothKnob/BoothFader (size from parent)

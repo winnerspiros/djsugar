@@ -1,6 +1,6 @@
 # DJ Sugar Booth Skin Shell Specification
 
-This document specifies the visual and behavioural contract of the Booth skin's shell — the top-level window, view switching, top bar, deck panels, waveforms, DJ view, browser, and shared controls. All colours are resolved to hex with opacity. Geometry is expressed as formulas of parent width/height using the exact QML expressions (Layout.preferred*, anchors, margins, spacing, Math.round/min/max). Canvas/Shape drawing code is reproduced verbatim. States (compact, portrait, pressed, selected, active) and their effects are listed. Every control's Mixxx group/key and interaction behaviour are documented.
+This document specifies the visual and behavioural contract of the Booth skin's shell - the top-level window, view switching, top bar, deck panels, waveforms, DJ view, browser, and shared controls. All colours are resolved to hex with opacity. Geometry is expressed as formulas of parent width/height using the exact QML expressions (Layout.preferred*, anchors, margins, spacing, Math.round/min/max). Canvas/Shape drawing code is reproduced verbatim. States (compact, portrait, pressed, selected, active) and their effects are listed. Every control's Mixxx group/key and interaction behaviour are documented.
 
 ---
 
@@ -215,7 +215,7 @@ readonly property var viewNames: { "1": "wave", "2": "lib", "3": "dj", "4": "xy"
 ```
 
 - `function itemShown(name) { return root.hiddenTopBarItems.indexOf(name) < 0; }`
-- `function preferredView()` returns first shown in order: controller connected → [1,3,2] else [3,1,2]
+- `function preferredView()` returns first shown in order: controller connected to [1,3,2] else [3,1,2]
 - `Component.onCompleted: root.showView(root.preferredView())`
 - `onHiddenTopBarItemsChanged: root.leaveHiddenView()`
 - `onControllerConnectedChanged:` switches between WAVE/DJ if current view hidden
@@ -334,9 +334,9 @@ Item (id: content)
   ├─ readonly property int gap: 3
   ├─ anchors.fill: parent
   ├─ enabled: !settingsPopup.opened
-  ├─ CutoutInsets (panelInset) → target: deckPanels
-  ├─ CutoutInsets (middleInset) → target: middle
-  └─ CutoutInsets (djViewInset) → target: djView
+  ├─ CutoutInsets (panelInset) to target: deckPanels
+  ├─ CutoutInsets (middleInset) to target: middle
+  └─ CutoutInsets (djViewInset) to target: djView
 ```
 
 ### 4.2 Deck Panels (Bottom Row)
@@ -527,10 +527,10 @@ SplitView (id: splitView)
 - `readonly property real scrollingHeight: Math.max(0, height - waveDeckBarHeight)`
 - `SplitView.fillHeight: root.viewMode === 3`
 - `SplitView.preferredHeight:`
-  - `viewMode === 3` → `splitView.height`
-  - `viewMode === 0` → `Math.round(splitView.height * 0.42)`
-  - `viewMode === 2 || maximizeLibrary` → `0`
-  - else → `Math.max(56, Math.min(96, Math.round(splitView.height * 0.22)))`
+  - `viewMode === 3` to `splitView.height`
+  - `viewMode === 0` to `Math.round(splitView.height * 0.42)`
+  - `viewMode === 2 || maximizeLibrary` to `0`
+  - else to `Math.max(56, Math.min(96, Math.round(splitView.height * 0.22)))`
 - `visible: root.viewMode !== 2 && !root.maximizeLibrary`
 - `FadeBehavior on visible { fadeTarget: waveforms }`
 
@@ -1068,9 +1068,9 @@ function activateCursor() { /* controller select */ }
 
 ### 11.5 Track Row Interaction
 
-- Tap → selects row
-- Double-tap → loads into `loadTarget` deck (or next available)
-- Long press → opens track menu
+- Tap to selects row
+- Double-tap to loads into `loadTarget` deck (or next available)
+- Long press to opens track menu
 
 ---
 
@@ -1154,8 +1154,8 @@ TextCell (extends RowCell)
 ### 13.2 Quit Handling
 
 - `property bool quitConfirmed: false`
-- `onClosing:` mobile → show quitPopup
-- `Shortcut (Back):` mobile + no overlay → quitPopup
+- `onClosing:` mobile to show quitPopup
+- `Shortcut (Back):` mobile + no overlay to quitPopup
 - `function quit() { quitConfirmed = true; Qt.quit(); }`
 
 ### 13.3 Skin Loading
@@ -1200,7 +1200,7 @@ Rectangle (id: toolbar)
   ├─ radius: 1
   ├─ width: parent.width
   ├─ z: 20
-  └─ CutoutInsets (toolbarInset) → target: toolbar
+  └─ CutoutInsets (toolbarInset) to target: toolbar
 ```
 
 ### 14.2 Left Section
@@ -1259,7 +1259,7 @@ Skin.SamplerRow (id: samplers) { visible: root.showSamplers; width: parent.width
 
 | Mode | Booth (MainWindow.qml) | Android (+android/MainWindow.qml) |
 |---|---|---|
-| 0 | — | CTL (controller view) |
+| 0 | - | CTL (controller view) |
 | 1 | WAVE (waveforms) | DJ (touch controls) |
 | 2 | BROWSE (library) | LIB (library) |
 | 3 | DJ (touch controls) | WAVE (waveforms) |
@@ -1395,23 +1395,23 @@ RowLayout {
 
 | Control | Group/Key | Drag | Tap | Double-Tap | Long Press |
 |---|---|---|---|---|---|
-| BoothKnob | group/key | Vertical drag → parameter | — | Reset to default | — |
-| BoothFader | group/key | Horizontal/vertical drag → parameter | — | Reset to default | — |
-| BoothMixer CUE | [ChannelN]/pfl | — | Toggle PFL | — | — |
-| BoothMixer Filter | [QuickEffectRack1_N]/super1 | Vertical drag → parameter | — | Reset | — |
-| BoothMixer EQ/Trim | [ChannelN]/[EqualizerRack1]/pregain/parameter1-3 | Vertical drag → parameter | — | Reset | — |
-| BoothMixer Fader | [ChannelN]/volume | Vertical drag → parameter | — | Reset | — |
-| TopBar Tab | — | — | Switch view | — | — |
-| LOAD 1/2 | — | — | Open browser for deck | — | — |
-| SPLIT | [Master]/headSplit | — | Toggle split cue | — | — |
-| FX ST | — | — | Toggle FX Station | — | — |
-| XY | — | — | Toggle XY pad | — | — |
-| BEAT FX | — | — | Toggle Beat FX panel | — | — |
-| REC | [Master]/record | — | Start/stop recording (with confirm) | — | — |
-| UTILITY | — | — | Open settings | — | — |
-| Browser Row | — | — | Select | Load into deck | Track menu |
-| Browser Sidebar | — | — | Activate source/entry | — | — |
-| Controller Browse Knob | — | moveCursor(offset) | activateCursor() | — | — |
+| BoothKnob | group/key | Vertical drag to parameter | - | Reset to default | - |
+| BoothFader | group/key | Horizontal/vertical drag to parameter | - | Reset to default | - |
+| BoothMixer CUE | [ChannelN]/pfl | - | Toggle PFL | - | - |
+| BoothMixer Filter | [QuickEffectRack1_N]/super1 | Vertical drag to parameter | - | Reset | - |
+| BoothMixer EQ/Trim | [ChannelN]/[EqualizerRack1]/pregain/parameter1-3 | Vertical drag to parameter | - | Reset | - |
+| BoothMixer Fader | [ChannelN]/volume | Vertical drag to parameter | - | Reset | - |
+| TopBar Tab | - | - | Switch view | - | - |
+| LOAD 1/2 | - | - | Open browser for deck | - | - |
+| SPLIT | [Master]/headSplit | - | Toggle split cue | - | - |
+| FX ST | - | - | Toggle FX Station | - | - |
+| XY | - | - | Toggle XY pad | - | - |
+| BEAT FX | - | - | Toggle Beat FX panel | - | - |
+| REC | [Master]/record | - | Start/stop recording (with confirm) | - | - |
+| UTILITY | - | - | Open settings | - | - |
+| Browser Row | - | - | Select | Load into deck | Track menu |
+| Browser Sidebar | - | - | Activate source/entry | - | - |
+| Controller Browse Knob | - | moveCursor(offset) | activateCursor() | - | - |
 
 ---
 
