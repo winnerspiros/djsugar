@@ -54,6 +54,9 @@ pub enum Target {
     CueMenuClose,
     Grid(usize),
     Sort(library::Column),
+    XfadeStep(i8),
+    Record,
+    SearchFocus,
     LoadSelected(usize),
     GridOp(GridOp),
     GridClose,
@@ -80,6 +83,14 @@ pub enum View {
     Dj,
     Lib,
     Wave,
+}
+
+fn recordings_dir() -> Option<std::path::PathBuf> {
+    let music = std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join("Music"));
+    match music {
+        Some(m) if m.is_dir() => Some(m.join("DJ Sugar Recordings")),
+        _ => crate::store::dir().map(|d| d.join("recordings")),
+    }
 }
 
 pub const LONG_PRESS_MS: u128 = 450;
@@ -198,6 +209,38 @@ pub enum Key {
     Escape,
     Enter,
     Play(usize),
+    Char(char, bool),
+}
+
+/// Default keyboard map, same keys as the DJ Sugar desktop mapping (en_US).
+pub fn keymap(c: char) -> Option<Target> {
+    const DECK: [[char; 15]; 2] = [
+        ['d', 'f', 'a', 's', '1', 't', 'z', 'x', 'c', 'v', '2', '3', '4', 'w', 'e'],
+        ['l', ';', 'j', 'k', '6', 'y', 'm', ',', '.', '/', '7', '8', '9', 'i', 'o'],
+    ];
+    let c = c.to_ascii_lowercase();
+    match c {
+        'q' => return Some(Target::LoopToggle(0)),
+        'u' => return Some(Target::LoopToggle(1)),
+        'g' => return Some(Target::XfadeStep(-1)),
+        'h' => return Some(Target::XfadeStep(1)),
+        _ => {}
+    }
+    let (d, n) = DECK.iter().enumerate().find_map(|(d, row)| row.iter().position(|&k| k == c).map(|n| (d, n)))?;
+    Some(match n {
+        0 => Target::Play(d),
+        1 => Target::Cue(d),
+        2 => Target::Jump(d, -1),
+        3 => Target::Jump(d, 1),
+        4 => Target::Sync(d),
+        5 => Target::Pfl(d),
+        6..=9 => Target::Pad(d, n - 6),
+        10 => Target::LoopIn(d),
+        11 => Target::LoopOut(d),
+        12 => Target::LoopToggle(d),
+        13 => Target::LoopSize(d, -1),
+        _ => Target::LoopSize(d, 1),
+    })
 }
 
 type Done = (Job, Option<Loaded>);
@@ -244,12 +287,15 @@ pub struct State {
     pub view: View,
     pub show_fx: bool,
     pub show_samplers: bool,
+    pub search_focus: bool,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
     pub grid_menu: Option<usize>,
     pub meta: Vec<Option<library::Meta>>,
     pub sort: (library::Column, bool),
     pub selected: Option<u32>,
     analysis: Arc<std::sync::atomic::AtomicU32>,
+    store: crate::store::Store,
+    pub recorder: Option<crate::record::Recorder>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -329,12 +375,15 @@ impl State {
             view: View::Dj,
             show_fx: false,
             show_samplers: false,
+            search_focus: false,
             cue_menu: None,
             grid_menu: None,
             meta: Vec::new(),
             sort: (library::Column::Index, true),
             selected: None,
             analysis: Arc::default(),
+            store: crate::store::Store::open(),
+            recorder: None,
         }
     }
 
@@ -345,7 +394,8 @@ impl State {
     }
 
     pub fn animating(&self) -> bool {
-        self.telemetry.decks.iter().any(|d| d.playing)
+        self.recorder.is_some()
+            || self.telemetry.decks.iter().any(|d| d.playing)
             || !self.drags.is_empty()
             || self.decks.iter().any(|d| d.loading)
             || self.auto.is_some()
@@ -370,6 +420,8 @@ impl State {
                     self.decks[d].cues = [None; 8];
                     self.decks[d].grid_undo.clear();
                     self.decks[d].grid_locked = false;
+                    self.decks[d].cue_colours = [0; 8];
+                    self.restore(d);
                     self.decks[d].looping = None;
                     self.decks[d].loop_range = None;
                 }
@@ -406,6 +458,12 @@ impl State {
             }
         }
         if let Some(c) = &mut self.control {
+            if let Some(rec) = &mut self.recorder {
+                let mut block = Vec::new();
+                if c.drain_recording(&mut block) > 0 {
+                    rec.push(block);
+                }
+            }
             self.telemetry = c.poll();
         }
         self.auto_step();
@@ -535,6 +593,36 @@ impl State {
         });
     }
 
+    fn track_key(d: &DeckUi) -> Option<String> {
+        match &d.loaded.as_ref()?.entry.source {
+            Source::File(p) => Some(p.to_string_lossy().into_owned()),
+            Source::Sample(n) => Some(format!("sample:{n}")),
+        }
+    }
+
+    fn restore(&mut self, d: usize) {
+        let Some(key) = Self::track_key(&self.decks[d]) else { return };
+        let Some(saved) = self.store.get(&key) else { return };
+        let deck = &mut self.decks[d];
+        deck.cues = saved.cues;
+        deck.cue_colours = saved.colours;
+        deck.grid_locked = saved.locked;
+        if let (Some((bpm, first_beat)), Some(l)) = (saved.grid, &mut deck.loaded) {
+            l.grid = Some(sugar_analysis::Grid { bpm, first_beat });
+        }
+    }
+
+    fn remember(&mut self) {
+        for d in 0..2 {
+            let deck = &self.decks[d];
+            let Some(key) = Self::track_key(deck) else { continue };
+            let grid = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| (g.bpm, g.first_beat));
+            let saved =
+                crate::store::Saved { grid, locked: deck.grid_locked, cues: deck.cues, colours: deck.cue_colours };
+            self.store.put(&key, saved);
+        }
+    }
+
     pub fn analyze(&mut self) {
         use std::sync::atomic::Ordering::Relaxed;
         self.meta = vec![None; self.entries.len()];
@@ -602,6 +690,10 @@ impl State {
         self.resort();
     }
 
+    pub fn typing(&self) -> bool {
+        self.search_focus || self.browser.is_some()
+    }
+
     pub fn type_text(&mut self, text: &str) {
         let mut q = std::mem::take(&mut self.query);
         q.push_str(text);
@@ -609,6 +701,11 @@ impl State {
     }
 
     pub fn key(&mut self, key: Key) {
+        self.key_press(key);
+        self.remember();
+    }
+
+    fn key_press(&mut self, key: Key) {
         match key {
             Key::Backspace => {
                 let mut q = std::mem::take(&mut self.query);
@@ -616,6 +713,7 @@ impl State {
                 self.search(q);
             }
             Key::Escape => {
+                self.search_focus = false;
                 self.browser = None;
                 self.search(String::new());
             }
@@ -631,6 +729,22 @@ impl State {
                 self.telemetry.decks[d].playing = on;
             }
             Key::Play(_) => {}
+            Key::Char(c, shift) => {
+                if let Some(t) = keymap(c) {
+                    let t = match (t, shift) {
+                        (Target::Jump(d, dir), true) => {
+                            self.beat_jump(d, f64::from(dir));
+                            return;
+                        }
+                        (Target::Pad(d, p), true) => {
+                            self.decks[d].cues[p] = None;
+                            return;
+                        }
+                        (t, _) => t,
+                    };
+                    self.pointer_target(t);
+                }
+            }
         }
     }
 
@@ -820,7 +934,19 @@ impl State {
             resume,
             at: std::time::Instant::now(),
         });
-        let Some(t) = target else { return };
+        if let Some(t) = target {
+            if t != Target::SearchFocus {
+                self.search_focus = false;
+            }
+            self.press(t, x, y);
+        }
+    }
+
+    pub fn pointer_target(&mut self, t: Target) {
+        self.press(t, 0.0, 0.0);
+    }
+
+    fn press(&mut self, t: Target, x: f32, y: f32) {
         match t {
             Target::Play(d) if self.decks[d].loaded.is_some() => {
                 let on = !self.telemetry.decks[d].playing;
@@ -870,6 +996,26 @@ impl State {
             Target::CueMenuClose => self.cue_menu = None,
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
+            Target::SearchFocus => self.search_focus = true,
+            Target::Record => {
+                if let Some(rec) = self.recorder.take() {
+                    self.status = Some(format!("Recording saved: {}", rec.path.display()));
+                    self.send(Command::Record(false));
+                    if let Some(c) = &mut self.control {
+                        let mut rest = Vec::new();
+                        c.drain_recording(&mut rest);
+                    }
+                } else if let Some(dir) = recordings_dir()
+                    && let Ok(rec) = crate::record::Recorder::start(dir, self.out_rate)
+                {
+                    self.recorder = Some(rec);
+                    self.send(Command::Record(true));
+                }
+            }
+            Target::XfadeStep(by) => {
+                self.crossfader = (self.crossfader + f32::from(by) * 0.1).clamp(-1.0, 1.0);
+                self.send(Command::Crossfader(self.crossfader));
+            }
             Target::Sort(c) => {
                 self.sort = if self.sort.0 == c { (c, !self.sort.1) } else { (c, true) };
                 let q = std::mem::take(&mut self.query);
@@ -975,6 +1121,11 @@ impl State {
     }
 
     pub fn pointer_up(&mut self, id: u64, y: f32) {
+        self.release(id, y);
+        self.remember();
+    }
+
+    fn release(&mut self, id: u64, y: f32) {
         let Some(i) = self.drags.iter().position(|d| d.id == id) else { return };
         let d = self.drags.swap_remove(i);
         match d.target {

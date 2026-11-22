@@ -109,7 +109,10 @@ Done:
 - Stacked colour waveforms with beat lines, cue flags and loop region.
 - Deck: info bar with remaining time, BPM, Camelot key and pitch; overview; REV, SLIP, Q, EJECT; PLAY and CUE; HOT, LOOP, SMPL and FX pad modes; loop IN, OUT, size, toggle; beat jump with size; SYNC, pitch fader, key lock and semitone steps.
 - Mixer: HI, MID, LOW, filter, gain, faders, segmented VU, PFL, crossfader.
-- Engine: reverse, slip, unload.
+- Engine: reverse, slip, unload, lock-free mix recording tap.
+- Keyboard: the DJ Sugar en_US desktop map (play, cue, beat jump, sync, PFL, hot cues 1 to 4 with shift to clear, loop in, out, reloop, beat loop, halve, double, crossfader); typing goes to search only when it has focus.
+- Track memory: beat grid, grid lock, hot cues and colours saved per track and restored on load.
+- Recording: REC in the toolbar writes a 32-bit float WAV with live elapsed time.
 - Renderer: vertical and radial gradients, soft glow and shadow, arcs and pie wedges, lines. Decks use a platter with a glowing position ring, candy transport, shaded pads with press feedback, arc knobs, shaded fader caps.
 
 Next, in order:

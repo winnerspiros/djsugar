@@ -222,6 +222,7 @@ impl Mixer {
             }
             Command::Crossfader(x) => self.crossfader = x.clamp(-1.0, 1.0),
             Command::Main(v) => self.main = v.max(0.0),
+            Command::Record(_) => {}
         }
         None
     }

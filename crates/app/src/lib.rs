@@ -1,7 +1,9 @@
 mod library;
 mod lyrics;
+mod record;
 mod screen;
 mod state;
+mod store;
 mod sugar;
 
 use sugar_layout::{Id, Layout, Rect};
@@ -93,6 +95,10 @@ impl Ui {
         self.state.key(key);
     }
 
+    pub fn typing(&self) -> bool {
+        self.state.typing()
+    }
+
     pub fn rescan(&mut self) {
         self.state.scan();
     }
@@ -131,6 +137,7 @@ pub mod native {
         ui: Ui,
         gpu: Option<Gpu>,
         cursor: (f32, f32),
+        shift: bool,
         started: bool,
     }
 
@@ -201,6 +208,7 @@ pub mod native {
                     }
                     self.redraw();
                 }
+                WindowEvent::ModifiersChanged(m) => self.shift = m.state().shift_key(),
                 WindowEvent::MouseWheel { delta, .. } => {
                     let dy = match delta {
                         MouseScrollDelta::LineDelta(_, y) => y * 44.0,
@@ -218,7 +226,11 @@ pub mod native {
                         WKey::Named(NamedKey::F2) => self.ui.key(Key::Play(1)),
                         _ => {
                             if let Some(t) = &event.text {
-                                self.ui.text(t);
+                                if self.ui.typing() {
+                                    self.ui.text(t);
+                                } else if let Some(c) = t.chars().next() {
+                                    self.ui.key(Key::Char(c, self.shift));
+                                }
                             }
                         }
                     }
@@ -239,7 +251,7 @@ pub mod native {
     }
 
     pub fn run(event_loop: EventLoop<()>, read: Reader) {
-        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), started: false };
+        let mut app = Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), shift: false, started: false };
         event_loop.run_app(&mut app).unwrap_or_else(|e| fail(&e));
     }
 }
@@ -302,6 +314,9 @@ mod android {
     #[unsafe(no_mangle)]
     fn android_main(app: AndroidApp) {
         let _ = APP.set(app.clone());
+        if let Some(dir) = app.internal_data_path() {
+            crate::store::set_dir(dir);
+        }
         let _ = request_audio(&app);
         let event_loop =
             winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));

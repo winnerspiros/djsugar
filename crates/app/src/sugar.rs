@@ -137,26 +137,50 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     }
     x += tw * 4.0 + 8.0;
     let h = r.h - 8.0;
-    let items: [(&str, bool, Target); 5] = [
+    let rec = s.recorder.as_ref().map(|r| {
+        let t = r.frames / u64::from(s.out_rate.max(1));
+        format!("REC {}:{:02}", t / 60, t % 60)
+    });
+    let rec_label = rec.as_deref().unwrap_or("REC");
+    let items: [(&str, bool, Target); 6] = [
         ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
         ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
         ("FX", s.show_fx, Target::ToggleFx),
         ("SMPL", s.show_samplers, Target::ToggleSamplers),
         ("AUTO", s.auto.is_some(), Target::AutoDj),
+        (rec_label, s.recorder.is_some(), Target::Record),
     ];
     for (label, on, t) in items {
-        let bw = if label.len() > 4 { 58.0 } else { 46.0 };
+        let bw = if label.len() > 6 {
+            78.0
+        } else if label.len() > 4 {
+            58.0
+        } else {
+            46.0
+        };
+        let colour = if matches!(t, Target::Record) { RED } else { ACCENT };
         if x + bw > r.w - 140.0 {
             break;
         }
-        button(p, s, Rect::new(x, r.y + 4.0, bw, h), label, on, ACCENT, t);
+        button(p, s, Rect::new(x, r.y + 4.0, bw, h), label, on, colour, t);
         x += bw + 4.0;
     }
-    let sx = (r.w - 220.0).max(x + 4.0);
+    let sx = (r.w - 300.0).max(x + 4.0);
     let sw = r.w - sx - 8.0;
-    p.outlined(sx, r.y + 5.0, sw, h - 2.0, 6.0, DEEP, 1.0, if s.query.is_empty() { EDGE } else { ACCENT });
+    p.outlined(
+        sx,
+        r.y + 5.0,
+        sw,
+        h - 2.0,
+        6.0,
+        DEEP,
+        1.0,
+        if s.search_focus || !s.query.is_empty() { ACCENT } else { EDGE },
+    );
+    hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
     if s.query.is_empty() {
-        p.text_in(sx + 10.0, r.y + 22.0, sw - 16.0, Style { colour: DARK, ..ARTIST }, "Search");
+        let hint = s.status.as_deref().unwrap_or("Search");
+        p.text_in(sx + 10.0, r.y + 22.0, sw - 16.0, Style { colour: DARK, ..ARTIST }, hint);
     } else {
         let qw = p.text_in(sx + 10.0, r.y + 22.0, sw - 50.0, Style { px: 12.0, ..TITLE }, &s.query);
         p.rect(sx + 11.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
@@ -237,17 +261,24 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 n += 1.0;
             }
         }
-        let bars = (r.w / 2.0) as usize;
-        let centre = (pos / DETAIL_FRAMES as f64) as isize;
-        for b in 0..bars {
-            let i = centre + ((b as f32 - bars as f32 * 0.5) * speed) as isize;
-            let Some(&[v, lo, md, hi]) = usize::try_from(i).ok().and_then(|i| l.detail.get(i)) else { continue };
-            let a = f32::from(v) / 255.0 * r.h * 0.47;
-            let sum = (u32::from(lo) + u32::from(md) + u32::from(hi)).max(1);
-            let ch = |x: u8| (u32::from(x) * 255 / sum * 2).min(255);
-            let alpha = if (b as f32) < bars as f32 * 0.5 { 0x80 } else { 0xff };
-            let x = r.x + b as f32 * 2.0;
-            p.rect(x, mid - a, 1.5, a * 2.0 + 0.5, 0.0, ch(lo) | ch(md) << 8 | ch(hi) << 16 | alpha << 24);
+        let cols = r.w as usize;
+        let centre = pos / DETAIL_FRAMES as f64;
+        let half = r.h * 0.47;
+        for c in 0..cols {
+            let i = centre + f64::from((c as f32 - cols as f32 * 0.5) * speed);
+            let Some(&[v, lo, md, hi]) = (i >= 0.0).then(|| l.detail.get(i as usize)).flatten() else { continue };
+            let past = (c as f32) < cols as f32 * 0.5;
+            let a = if past { 0x70 } else { 0xff };
+            let x = r.x + c as f32;
+            let amp = f32::from(v) / 255.0 * half;
+            let total = (f32::from(lo) + f32::from(md) + f32::from(hi)).max(1.0);
+            let lo_h = amp * (f32::from(lo) / total).sqrt().min(1.0);
+            let md_h = amp * (f32::from(md) / total).sqrt().min(1.0) * 0.8;
+            let hi_h = amp * (f32::from(hi) / total).sqrt().min(1.0) * 0.6;
+            p.rect(x, mid - amp, 1.0, amp * 2.0, 0.0, fade(rgb(0x1e3c78), a));
+            p.rect(x, mid - lo_h, 1.0, lo_h * 2.0, 0.0, fade(rgb(0xd8304a), a));
+            p.rect(x, mid - md_h, 1.0, md_h * 2.0, 0.0, fade(rgb(0x3ccf6e), a));
+            p.rect(x, mid - hi_h, 1.0, hi_h * 2.0, 0.0, fade(rgb(0x7fd8ff), a));
         }
         for (n, cue) in deck.cues.iter().enumerate() {
             let Some(c) = cue else { continue };

@@ -42,7 +42,8 @@ mod linux {
                     keysym::F1 => self.ui.key(Key::Play(0)),
                     keysym::F2 => self.ui.key(Key::Play(1)),
                     _ => match keysym::char(sym) {
-                        Some(c) => self.ui.text(c.encode_utf8(&mut [0; 4])),
+                        Some(c) if self.ui.typing() => self.ui.text(c.encode_utf8(&mut [0; 4])),
+                        Some(c) => self.ui.key(Key::Char(c, c.is_uppercase())),
                         None => return false,
                     },
                 },

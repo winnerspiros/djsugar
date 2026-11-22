@@ -248,3 +248,19 @@ fn slip_returns_to_where_the_track_would_be() {
     let p = c.poll().decks[0].position;
     assert!((p - 5632.0).abs() < 2.0, "{p}");
 }
+
+#[test]
+fn recording_captures_the_main_output() {
+    let (mut c, mut e) = new(48000, 512);
+    c.send(Command::Load(0, sine(48000, 440.0, 1.0)));
+    c.send(Command::Play(0, true));
+    c.send(Command::Record(true));
+    let mut out = vec![0.0; 1024];
+    e.process(&mut out);
+    let mut got = Vec::new();
+    assert_eq!(c.drain_recording(&mut got), 1024);
+    assert_eq!(got, out);
+    c.send(Command::Record(false));
+    e.process(&mut out);
+    assert_eq!(c.drain_recording(&mut got), 0);
+}
