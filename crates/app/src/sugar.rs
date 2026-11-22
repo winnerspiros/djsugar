@@ -721,3 +721,121 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(t, y + 6.0, 14.0, xf - 12.0, 3.0, ACCENT);
     hit(s, Rect::new(r.x + 6.0, y, r.w - 12.0, xf), Target::Crossfader);
 }
+
+fn mmss(secs: f32) -> String {
+    let t = secs.max(0.0) as u32;
+    format!("{}:{:02}", t / 60, t % 60)
+}
+
+pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
+    use crate::library::Column as C;
+    p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
+    let bar = if s.selected.is_some() { 40.0 } else { 0.0 };
+    let list = Rect::new(r.x, r.y, r.w, r.h - bar);
+    s.library = list;
+    s.row_h = 22.0;
+    let wide = r.w >= 700.0;
+    let cols: &[(C, &str, f32)] = if wide {
+        &[
+            (C::Index, "#", 0.05),
+            (C::Title, "TITLE", 0.37),
+            (C::Artist, "ARTIST", 0.27),
+            (C::Bpm, "BPM", 0.1),
+            (C::Key, "KEY", 0.08),
+            (C::Time, "TIME", 0.13),
+        ]
+    } else {
+        &[
+            (C::Index, "#", 0.07),
+            (C::Title, "TITLE", 0.5),
+            (C::Bpm, "BPM", 0.15),
+            (C::Key, "KEY", 0.12),
+            (C::Time, "TIME", 0.16),
+        ]
+    };
+    let inner = r.w - 24.0;
+    let mut x = r.x + 12.0;
+    let xs: Vec<f32> = cols
+        .iter()
+        .map(|&(_, _, f)| {
+            let at = x;
+            x += inner * f;
+            at
+        })
+        .collect();
+    for (&(col, name, f), &cx) in cols.iter().zip(&xs) {
+        let on = s.sort.0 == col;
+        let style = Style { colour: if on { ACCENT } else { GREY }, ..SMALL };
+        let w = p.text(cx, r.y + 19.0, style, name);
+        if on {
+            p.text(cx + w + 4.0, r.y + 19.0, style, if s.sort.1 { "^" } else { "v" });
+        }
+        hit(s, Rect::new(cx - 4.0, r.y, inner * f, 28.0), Target::Sort(col));
+    }
+    p.rect(r.x + 8.0, r.y + 28.0, r.w - 16.0, 1.0, 0.0, EDGE);
+    let row = s.row_h;
+    let first = (s.scroll / row) as usize;
+    let rows = ((list.h - 30.0) / row) as usize + 1;
+    hit(s, Rect::new(list.x, list.y + 29.0, list.w, list.h - 29.0), Target::Library);
+    let cell = Style::new(12.0, Weight::Regular, TEXT);
+    for (n, &i) in s.shown.iter().skip(first).take(rows).enumerate() {
+        let y = r.y + 30.0 + n as f32 * row - (s.scroll % row);
+        if y < r.y + 29.0 || y + row > list.y + list.h {
+            continue;
+        }
+        let e = &s.entries[i as usize];
+        let deck = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.entry.source == e.source));
+        if s.selected == Some(i) {
+            p.outlined(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(ACCENT, 0x30), 1.0, ACCENT);
+        } else if let Some(d) = deck {
+            p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(1)], 0x50));
+        } else if n % 2 == 1 {
+            p.rect(r.x + 6.0, y, r.w - 12.0, row, 0.0, rgb(0x08090c));
+        }
+        let m = s.meta.get(i as usize).copied().flatten();
+        let base = y + row - 6.0;
+        for (&(col, _, f), &cx) in cols.iter().zip(&xs) {
+            let w = inner * f - 8.0;
+            match col {
+                C::Index => p.text(cx, base, SMALL, &(first + n + 1).to_string()),
+                C::Title => p.text_in(cx, base, w, cell, &e.title),
+                C::Artist => p.text_in(
+                    cx,
+                    base,
+                    w,
+                    Style { colour: GREY, ..cell },
+                    if e.artist.is_empty() { &e.folder } else { &e.artist },
+                ),
+                C::Bpm => p.text(
+                    cx,
+                    base,
+                    Style { colour: AMBER, ..cell },
+                    &m.filter(|m| m.bpm > 0.0).map_or(String::new(), |m| format!("{:.1}", m.bpm)),
+                ),
+                C::Key => p.text(
+                    cx,
+                    base,
+                    Style { colour: GREEN, ..cell },
+                    &m.and_then(|m| m.key).map_or(String::new(), |k| k.camelot()),
+                ),
+                C::Time => p.text(cx, base, Style { colour: GREY, ..cell }, &m.map_or(String::new(), |m| mmss(m.secs))),
+            };
+        }
+    }
+    if s.shown.is_empty() {
+        p.text(r.x + 12.0, r.y + 52.0, ARTIST, "No matches");
+    }
+    let Some(i) = s.selected else { return };
+    let y = r.y + r.h - bar;
+    p.rect(r.x, y, r.w, bar, 0.0, INK);
+    let name = &s.entries[i as usize].title;
+    let bw = 96.0f32.min(r.w * 0.2);
+    p.text_in(r.x + 12.0, y + 25.0, r.w - 2.0 * bw - 36.0, TITLE, name);
+    for d in 0..2 {
+        let b = Rect::new(r.x + r.w - (2 - d) as f32 * (bw + 6.0), y + 6.0, bw, bar - 12.0);
+        p.rect(b.x, b.y, b.w, b.h, 5.0, DECK[d]);
+        let label = ["DECK 1", "DECK 2"][d];
+        p.text(b.x + (b.w - p.text_width(TAB, label)) * 0.5, b.y + b.h * 0.5 + 4.0, TAB, label);
+        hit(s, b, Target::LoadSelected(d));
+    }
+}

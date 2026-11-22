@@ -105,10 +105,17 @@ impl Key {
         format!("{}{}", NOTES[usize::from(self.tonic)], if self.minor { "m" } else { "" })
     }
 
-    pub fn camelot(self) -> String {
+    pub fn camelot_number(self) -> u8 {
         let t = i32::from(self.tonic);
-        let n = if self.minor { (t * 7 + 4).rem_euclid(12) + 1 } else { (t * 7 + 7).rem_euclid(12) + 1 };
-        format!("{n}{}", if self.minor { 'A' } else { 'B' })
+        ((t * 7 + if self.minor { 4 } else { 7 }).rem_euclid(12) + 1) as u8
+    }
+
+    pub fn camelot_order(self) -> u8 {
+        self.camelot_number() * 2 + u8::from(!self.minor)
+    }
+
+    pub fn camelot(self) -> String {
+        format!("{}{}", self.camelot_number(), if self.minor { 'A' } else { 'B' })
     }
 }
 

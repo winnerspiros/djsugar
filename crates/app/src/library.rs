@@ -15,17 +15,26 @@ pub enum Source {
 pub struct Entry {
     pub source: Source,
     pub title: Box<str>,
+    pub artist: Box<str>,
     pub folder: Box<str>,
     key: Box<str>,
     loose: Box<str>,
 }
 
 impl Entry {
-    fn new(source: Source, title: &str, folder: &str) -> Self {
-        let title = title.replace(['_', '-'], " ");
-        let key = fold(&format!("{title} {folder}"));
+    fn new(source: Source, name: &str, folder: &str) -> Self {
+        let (artist, title) = name.split_once(" - ").map_or(("", name), |(a, t)| (a.trim(), t.trim()));
+        let title = title.replace('_', " ");
+        let key = fold(&format!("{title} {artist} {folder}"));
         let loose = key.replace('h', "");
-        Self { source, title: title.into(), folder: folder.into(), key: key.into(), loose: loose.into() }
+        Self {
+            source,
+            title: title.into(),
+            artist: artist.into(),
+            folder: folder.into(),
+            key: key.into(),
+            loose: loose.into(),
+        }
     }
 
     pub fn extension(&self) -> &str {
@@ -40,6 +49,34 @@ impl Entry {
 fn split(path: &str) -> (&str, &str) {
     let (dir, file) = path.rsplit_once('/').unwrap_or(("samples", path));
     (dir.rsplit('/').next().unwrap_or(dir), file.rsplit_once('.').map_or(file, |(s, _)| s))
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Meta {
+    pub bpm: f32,
+    pub key: Option<sugar_analysis::Key>,
+    pub secs: f32,
+}
+
+impl Meta {
+    pub fn of(t: &sugar_engine::Track) -> Self {
+        Self {
+            bpm: sugar_analysis::grid(t.rate, &t.frames).map_or(0.0, |g| g.bpm as f32),
+            key: sugar_analysis::key(t.rate, &t.frames),
+            secs: t.frames.len() as f32 / t.rate as f32,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Column {
+    #[default]
+    Index,
+    Title,
+    Artist,
+    Bpm,
+    Key,
+    Time,
 }
 
 pub fn fold(s: &str) -> String {

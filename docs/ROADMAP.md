@@ -118,7 +118,8 @@ Next, in order:
 - Quick load drawer with local and streaming tabs; re-analyze from the grid popup.
 - Headphone cue output for PFL, cue mix and split cue.
 - File, Edit and View menus and the settings pages.
-- Library columns (artist, BPM, key, duration, rating), sorting, crates, playlists and history.
+- Done: library with title, artist, BPM, Camelot key and time columns filled by a background analyzer, tap-to-sort headers, select then DECK 1 or DECK 2 bar.
+- Library rating, crates, playlists, history, sidebar.
 - Sampler grid with banks, FX station with chained effects and the XY pad.
 - Stems overlay, microphone ducking panel.
 - OpenDJ and OpenFadeR features and QoL items from docs/parity, item by item.

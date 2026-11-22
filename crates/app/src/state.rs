@@ -53,6 +53,8 @@ pub enum Target {
     CueClear,
     CueMenuClose,
     Grid(usize),
+    Sort(library::Column),
+    LoadSelected(usize),
     GridOp(GridOp),
     GridClose,
     Gain(usize),
@@ -204,6 +206,7 @@ enum Job {
     Deck(usize),
     Sample(usize, bool),
     Scan(Vec<Entry>),
+    Meta(u32, u32, library::Meta),
 }
 
 struct Drag {
@@ -243,6 +246,10 @@ pub struct State {
     pub show_samplers: bool,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
     pub grid_menu: Option<usize>,
+    pub meta: Vec<Option<library::Meta>>,
+    pub sort: (library::Column, bool),
+    pub selected: Option<u32>,
+    analysis: Arc<std::sync::atomic::AtomicU32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -324,6 +331,10 @@ impl State {
             show_samplers: false,
             cue_menu: None,
             grid_menu: None,
+            meta: Vec::new(),
+            sort: (library::Column::Index, true),
+            selected: None,
+            analysis: Arc::default(),
         }
     }
 
@@ -373,8 +384,24 @@ impl State {
                 (Job::Scan(found), _) => {
                     self.entries.truncate(SAMPLES.len());
                     self.entries.extend(found);
+                    self.selected = None;
                     let q = std::mem::take(&mut self.query);
                     self.search(q);
+                    self.analyze();
+                }
+                (Job::Meta(generation, i, m), _) => {
+                    use std::sync::atomic::Ordering::Relaxed;
+                    if generation == self.analysis.load(Relaxed)
+                        && let Some(slot) = self.meta.get_mut(i as usize)
+                    {
+                        *slot = Some(m);
+                        if !matches!(
+                            self.sort.0,
+                            library::Column::Index | library::Column::Title | library::Column::Artist
+                        ) {
+                            self.resort();
+                        }
+                    }
                 }
             }
         }
@@ -508,6 +535,63 @@ impl State {
         });
     }
 
+    pub fn analyze(&mut self) {
+        use std::sync::atomic::Ordering::Relaxed;
+        self.meta = vec![None; self.entries.len()];
+        let generation = self.analysis.fetch_add(1, Relaxed) + 1;
+        let (live, tx, read) = (self.analysis.clone(), self.jobs.0.clone(), self.read);
+        let entries: Vec<(u32, Entry)> = self
+            .entries
+            .iter()
+            .enumerate()
+            .skip(SAMPLES.len())
+            .chain(self.entries.iter().enumerate().take(SAMPLES.len()))
+            .map(|(i, e)| (i as u32, e.clone()))
+            .collect();
+        std::thread::spawn(move || {
+            for (i, entry) in entries {
+                if live.load(Relaxed) != generation {
+                    return;
+                }
+                let bytes = match &entry.source {
+                    Source::Sample(name) => read(name),
+                    Source::File(path) => std::fs::read(path).ok(),
+                };
+                let Some(t) = bytes.and_then(|b| sugar_decode::bytes(b, entry.extension()).ok()) else { continue };
+                if tx.send((Job::Meta(generation, i, library::Meta::of(&t)), None)).is_err() {
+                    return;
+                }
+            }
+        });
+    }
+
+    pub fn resort(&mut self) {
+        use library::Column as C;
+        let (col, asc) = self.sort;
+        if col == C::Index {
+            if !asc {
+                self.shown.reverse();
+            }
+            return;
+        }
+        let (entries, meta) = (&self.entries, &self.meta);
+        let m = |i: u32| meta.get(i as usize).copied().flatten();
+        let num = |i: u32| match col {
+            C::Bpm => m(i).map_or(f32::MAX, |m| if m.bpm > 0.0 { m.bpm } else { f32::MAX }),
+            C::Time => m(i).map_or(f32::MAX, |m| m.secs),
+            C::Key => m(i).and_then(|m| m.key).map_or(f32::MAX, |k| k.camelot_order() as f32),
+            _ => 0.0,
+        };
+        self.shown.sort_by(|&a, &b| {
+            let o = match col {
+                C::Title => entries[a as usize].title.to_lowercase().cmp(&entries[b as usize].title.to_lowercase()),
+                C::Artist => entries[a as usize].artist.to_lowercase().cmp(&entries[b as usize].artist.to_lowercase()),
+                _ => num(a).total_cmp(&num(b)),
+            };
+            if asc { o } else { o.reverse() }
+        });
+    }
+
     pub fn search(&mut self, query: String) {
         self.query = query;
         self.scroll = 0.0;
@@ -515,6 +599,7 @@ impl State {
         let (n, s) = (self.entries.len() as u32, SAMPLES.len() as u32);
         let order = (s..n).chain(0..s);
         self.shown = order.filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
+        self.resort();
     }
 
     pub fn type_text(&mut self, text: &str) {
@@ -781,6 +866,16 @@ impl State {
             Target::CueMenuClose => self.cue_menu = None,
             Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
             Target::GridClose => self.grid_menu = None,
+            Target::Sort(c) => {
+                self.sort = if self.sort.0 == c { (c, !self.sort.1) } else { (c, true) };
+                let q = std::mem::take(&mut self.query);
+                self.search(q);
+            }
+            Target::LoadSelected(d) => {
+                if let Some(i) = self.selected {
+                    self.load_deck(d, i as usize);
+                }
+            }
             Target::GridOp(op) => {
                 if let Some(d) = self.grid_menu {
                     self.grid_edit(d, op);
@@ -885,12 +980,18 @@ impl State {
                     && row >= 0.0
                     && y > self.library.y + 30.0
                 {
-                    let deck = match self.browser.take() {
-                        Some(d) => d,
-                        None if self.telemetry.decks[self.focus].playing => 1 - self.focus.min(1),
-                        None => self.focus,
-                    };
-                    self.load_deck(deck, index as usize);
+                    match self.browser.take() {
+                        Some(d) => self.load_deck(d, index as usize),
+                        None if self.selected == Some(index) => {
+                            let d = if self.telemetry.decks[self.focus].playing {
+                                1 - self.focus.min(1)
+                            } else {
+                                self.focus
+                            };
+                            self.load_deck(d, index as usize);
+                        }
+                        None => self.selected = Some(index),
+                    }
                 }
             }
             Some(Target::Jog(deck)) if d.resume => {

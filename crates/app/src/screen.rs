@@ -22,7 +22,6 @@ const SUB: Style = Style::new(12.0, Weight::Regular, DIM);
 const TIME: Style = Style::new(13.0, Weight::Semibold, ACCENT);
 const LABEL: Style = Style::new(10.5, Weight::Semibold, DIM);
 const BUTTON: Style = Style::new(11.5, Weight::Bold, TEXT);
-const CELL: Style = Style::new(13.0, Weight::Regular, TEXT);
 const LYRIC: Style = Style::new(13.0, Weight::Regular, DIM);
 
 const fn fade(c: u32, a: u32) -> u32 {
@@ -34,7 +33,6 @@ const KNOBS: [&str; 4] = ["HI", "MID", "LOW", "FILT"];
 const MENU_H: f32 = 24.0;
 const PAD: f32 = 6.0;
 const GAP: f32 = 6.0;
-pub const ROW_H: f32 = 22.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -483,35 +481,7 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
 }
 
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
-    s.library = r;
-    s.row_h = ROW_H;
-    let inner = r.w - 24.0;
-    let cols = [(0.0, "#"), (0.07, "NAME"), (0.62, "FOLDER")];
-    for (f, name) in cols {
-        p.text(r.x + 12.0 + inner * f, r.y + 20.0, HEADER, name);
-    }
-    p.rect(r.x + 8.0, r.y + 28.0, r.w - 16.0, 1.0, 0.0, LINE);
-    let first = (s.scroll / ROW_H) as usize;
-    let rows = ((r.h - 34.0) / ROW_H) as usize;
-    for (n, &i) in s.shown.iter().skip(first).take(rows + 1).enumerate() {
-        let y = r.y + 30.0 + n as f32 * ROW_H - (s.scroll % ROW_H);
-        if y < r.y + 29.0 || y + ROW_H > r.y + r.h {
-            continue;
-        }
-        let e = &s.entries[i as usize];
-        let loaded = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.entry.source == e.source));
-        if let Some(d) = loaded {
-            p.rect(r.x + 6.0, y, r.w - 12.0, ROW_H, 4.0, fade(DECK[d.min(1)], 0x28));
-        }
-        let base = y + ROW_H - 7.0;
-        p.text(r.x + 12.0, base, LABEL, &(first + n + 1).to_string());
-        p.text_in(r.x + 12.0 + inner * 0.07, base, inner * 0.54, CELL, &e.title);
-        p.text_in(r.x + 12.0 + inner * 0.62, base, inner * 0.38, SUB, &e.folder);
-    }
-    if s.shown.is_empty() {
-        p.text(r.x + 12.0, r.y + 52.0, SUB, "No matches");
-    }
-    hit(s, r.x, r.y, r.w, r.h, Target::Library);
+    crate::sugar::library(p, s, r);
 }
 
 fn lyrics(p: &mut Painter, s: &State, r: Rect) {
