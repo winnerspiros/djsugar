@@ -1,86 +1,199 @@
 # Roadmap
 
-Goal: more than every other DJ app. Everything Mixxx, the DJ Sugar fork, OpenDJ and OpenFadeR
-do, everything Serato, rekordbox, VirtualDJ, Traktor, djay and Engine DJ are loved for, then
-our own ideas on top. Other projects are studied for behaviour and ideas; every line here is
-our own Rust (docs/study holds the studies).
+Goal: the best DJ app on every device. Everything Mixxx, the DJ Sugar fork, OpenDJ and
+OpenFadeR do, everything Serato, rekordbox, VirtualDJ, Traktor, djay and Engine DJ are loved
+for, then our own ideas on top. Other projects are studied for behaviour and ideas only; every
+line in this repository is our own Rust, dependencies included (docs/study holds the studies).
 
-This roadmap merges the earlier plans: the Mixxx fork backlog and the first Rust rewrite
-(`docs/djsugar-rust-roadmap.md` on the old base). Work already done there in our own crates is
-carried over and brought up to the rules below; nothing of it is lost.
+Targets: Android (Samsung DeX first-class), iOS and iPadOS, Linux, Windows, macOS.
+Branches: `main` (the Mixxx-based app) and `rust` (this rewrite). Nothing else.
 
-Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] not started.
+Status: [x] done, [~] in progress or partial, [>] done in the old Rust base, to port,
+[ ] not started. Every [x] is backed by a test, a screenshot in docs/screens or a CI check.
 
 ## Rules (apply to every milestone)
 
 - Real-time audio thread: no allocation, locks, syscalls, logging or panics; lock-free rings
-  only; checked by an allocation-failing guard on the callback.
+  only; an allocation-failing guard checks the callback in tests.
 - Measured, not assumed: benchmarks for DSP, decoding, analysis, library and waveforms;
   regressions fail CI. Profile before optimising. SIMD where it pays.
 - Rust for everything, dependencies included; C only where an OS ABI forces it (AAudio,
   CoreAudio, WASAPI, Vulkan loader). Every dependency has a written reason.
-- One app everywhere: same features and layouts on Android, iOS, Linux, Windows and macOS.
-  Layouts adapt to size and input, never to the OS. Resizing is fluid on every platform,
-  Samsung DeX first-class.
+- Latest stable dependencies; majors are taken as soon as they release, after tests pass.
+- One app everywhere: same features and layouts on every platform. Layouts adapt to size
+  and input, never to the OS. Resizing is fluid everywhere, Samsung DeX first.
 - OLED: true black base; only live elements light up.
-- No build reaches the user before the developer has checked it at phone landscape and
-  portrait, DeX, tablet, desktop, QHD and 1024x600.
+- No code or UI identical to any other app; own look, own names.
+- Docs hold facts only: no emoji, no symbols, no HTML, no comment walls in code.
+- No build reaches the user before it has been checked at phone landscape (915x412),
+  phone portrait (412x915), DeX (1280x800 and up), tablet, desktop, QHD and 1024x600.
 
-## M0 Foundations
-- [x] Workspace, layout solver (no allocation per solve), property tests
-- [x] Own wgpu renderer: instanced rounded rects, glyph atlas, own coverage rasterizer
-- [x] Linux window over pure-Rust X11, offscreen GPU render
-- [x] Android APK: native activity, freely resizable (DeX, split screen), 16 KB aligned
-- [x] True black OLED palette
-- [~] Input on every shell: pointer, multi-touch, wheel, keyboard (X11 keysyms, winit); stylus (S Pen) open
-- [ ] Live resize verified on DeX (S23 Ultra) and every desktop
+## Done so far (rust branch)
 
-## M1 Study and spec
-- [x] Studies: DJ Sugar Mixxx fork, OpenDJ and OpenFadeR, commercial apps
-- [ ] docs/SPEC.md: the full feature list with source and priority per item, screen anatomy
-      per form factor, palette, interaction rules
-- [ ] Mockups of every form factor approved before M3
+Foundations
+- [x] Cargo workspace, edition 2024, fat LTO, one codegen unit, panic abort, stripped release
+- [x] sugar-core: shared types
+- [x] sugar-layout: constraint layout solver, no allocation per solve, priorities hide
+      modules that do not fit, property tests across sizes
+- [x] sugar-ui: own wgpu renderer, instanced rounded rects and outlines, own glyph
+      rasterizer and atlas (ttf-parser), text measuring, clipping, draw layers for overlays
+- [x] sugar-shell: pure-Rust X11 window (x11rb), keyboard via keysyms with shift and Greek
+      layouts, offscreen GPU render for screenshots
+- [x] Android: native activity, freely resizable (DeX, split screen, pop-up), 16 KB page
+      aligned, signed APK, bundled samples, build script, permission request for audio files
+      through JNI, library rescan on resume
+- [x] True black OLED palette: deck A pink, deck B cyan, accent yellow, play green
 
-## M2 Audio engine
-- [x] Engine: 4 decks, cubic resampling at any rate, gain, 3-band EQ with kills, filter,
-      crossfader, lock-free commands, triple-buffered telemetry, tracks freed off the audio thread
-- [x] Decode: symphonia, every codec and container; all 192 DJ Sugar samples decode in 1.5 s
-- [x] Time-stretch, key lock and key shift: own phase vocoder ported, allocation-free test
-- [~] io: AAudio (written, needs a device run), with low-latency/exclusive mode (Android), CoreAudio (macOS, iOS),
-      WASAPI, pure-Rust ALSA over ioctls (Linux)
-- [ ] Headphone cue and split cue, booth output, any mix to any output pair
-- [ ] Streaming decode into page-aligned buffers for long tracks on phones
-- Acceptance: two tracks mixed on the S23 Ultra, under 10 ms output, one hour without a dropout
+Engine (sugar-engine)
+- [x] 4 decks, any output rate, cubic resampling, gain, 3-band EQ with kills, filter,
+      crossfader, channel volumes, peak meters
+- [x] Lock-free command ring, triple-buffered telemetry, retired tracks freed off the audio
+      thread
+- [x] Play, cue, seek, rate, nudge
+- [x] Key lock and key shift through sugar-stretch, allocation-free test
+- [x] Beat loops from 1/4 to 32 beats, sample-exact, loop exit
+- [x] Sampler: 16 voices, one-shot pads
+- [x] Echo per channel: beat-synced time, ping-pong feedback, preallocated 4 s line, tail keeps
+      ringing after stop (echo out)
+- [x] Vinyl brake and backspin with tested stop distance
+- [x] 12 engine tests including allocation-free render
+
+Decode, stretch, analysis
+- [x] sugar-decode: symphonia, every codec and container it supports; all bundled samples
+- [x] sugar-stretch: own phase vocoder ported from the earlier crate, presets, 9 tests
+- [x] sugar-analysis: BPM by onset flux over 70 to 180 BPM, beat grid with first beat
+- [x] Key detection: chroma by Goertzel bins, major and minor profiles, Camelot and note names,
+      tested on synthetic progressions
+- [~] sugar-io: AAudio exclusive low-latency output written, silent sink elsewhere; not yet
+      run on a device
+
+App (djsugar)
+- [x] Landscape pro screen: top bar, two scrolling waveforms, overview, two decks, mixer,
+      library, side panel; reflows from 780x360 up to desktop
+- [x] Portrait vinyl face: platter ring holding both waveforms, BPM and crossfader in the hub,
+      stacked decks for narrow widths
+- [x] Frequency-coloured waveforms: low, mid and high peaks per bin, played part dimmed
+- [x] Beat ticks with bar markers, loop shading, playhead
+- [x] Jog platters, play and cue, rate fader, BPM and key per deck
+- [x] Pad modes: CUE (8 hot cues snapped to beats), LOOP, SMP (samples), FX (echo, echo out,
+      brake, spin)
+- [x] SYNC: tempo match with half and double tempo handling, beat phase alignment
+- [x] KEY lock toggle
+- [x] Mixer: gain, 3-band EQ, filter knob, channel faders, crossfader
+- [x] Library: bundled samples plus a background scan of music folders (DJSUGAR_MUSIC,
+      Android Music and Download)
+- [x] Search: type anywhere, words, negation with a minus sign, accent folding, Greek and
+      Greeklish both ways, Enter loads the top result
+- [x] Browser overlay on phones where the library is hidden
+- [x] Synced lyrics from .lrc beside the track: repeated stamps, offset tag, current line
+      follows playback
+- [x] Auto DJ (basic): plays the shown list, syncs and crossfades over 16 beats before the
+      end, reloads the idle deck; smart version below needs the owner's design approval
+- [x] F1 and F2 play decks A and B
+
+Quality
+- [x] 55 tests across the workspace, clippy clean with all warnings denied
+- [x] CI on every push and pull request: hygiene (no HTML, no other app names in code, no
+      emoji or symbols, no comment walls, no leftover markers, no file over 2 MB), typos,
+      rustfmt, cargo-deny (advisories, licenses, sources, bans), unused dependency check,
+      locked lockfile, clippy per target (Linux, Windows, macOS, iOS, Android), debug and
+      release tests, docs with warnings denied, miri on core and layout, release builds with
+      size budgets, APK alignment and signature checks, artifacts for every platform
+- [x] Studies: DJ Sugar Mixxx fork, OpenDJ and OpenFadeR, commercial apps (not fact-checked)
+
+## M0 Foundations, remaining
+- [ ] Run the APK on the S23 Ultra: launch, touch, resize in DeX, rotation
+- [ ] Multi-touch on every shell: two faders at once, pinch zoom on waveforms
+- [ ] Stylus (S Pen): hover, pressure for scratch, side button
+- [ ] Mouse wheel on every control; right-click and long-press menus
+- [ ] Pure-Rust Wayland shell with fractional scaling and dmabuf presentation
+- [ ] Windows and macOS shells checked by hand, HiDPI, window state saved
+- [ ] Settings storage: own format, atomic writes, versioned migrations
+- [ ] Crash-safe state: decks, loops and mixer restored after a kill
+- [ ] Logging off the audio thread, ring buffered, exportable from the Help menu
+
+## M1 Spec and design
+- [ ] docs/SPEC.md: every feature with source, priority and status; screen anatomy per form
+      factor; interaction rules; palette and type scale
+- [ ] Mockups for phone landscape, phone portrait, foldable, tablet, DeX, desktop, QHD,
+      1024x600 and booth view; owner approval before polish
+- [ ] Own icon set drawn in code, no icon fonts
+- [ ] Theme system: OLED black default, dim, high contrast, accent colours per deck
+- [ ] UI scale and Lite, Pro and Booth densities
+
+## M2 Audio engine, remaining
+- [ ] Real output on every OS: AAudio verified on device, CoreAudio (macOS, iOS), WASAPI
+      exclusive and shared, pure-Rust ALSA over ioctls, PipeWire native
+- [ ] Device picker, sample rate and buffer size choice, latency shown in ms
+- [ ] Headphone cue per deck, cue mix and split cue, booth output, any bus to any output pair
+- [ ] Master limiter and clip meter, master EQ, balance, mono switch
+- [ ] Streaming decode into page-aligned buffers for long tracks; memory budget per device
+- [ ] Gapless decode, resample quality settings (cubic, sinc), dither on 16-bit outputs
+- [ ] 4 decks in the UI, deck layering on 2-deck screens
+- [ ] Slip mode, reverse, censor (reverse roll), vinyl stop speed setting
+- [ ] Pitch bend and nudge with ramp, pitch range 4, 8, 16, 50, 100 percent
+- [ ] Scratch: platter drag with inertia, scratch filter, touch-down stop
+- [ ] Quantize for cues, loops, samples and play
+- [ ] Beat jump forward and back by 1/4 to 64 beats; loop move and loop halve and double
+- [ ] Loop rolls, saved loops, loop in and out by hand with fine adjust
+- [ ] Hot cues up to 36 per track, colours, names, cue to loop
+- [ ] Sampler: banks, loops, sync to master, per-pad gain and colour, sample recording
+- [ ] Metronome, master clock, master deck choice, tempo lock to master
+- [ ] Microphone and aux inputs with ducking and talkover
+- [ ] Allocation-free guard installed on the real callback in debug builds
+- [ ] Acceptance: two tracks mixed on the S23 Ultra, under 10 ms output, one hour without a
+      dropout
 
 ## M3 Pro screen
-- [~] Landscape pro layout and portrait vinyl ring (platter waveforms, hub mixer), working; spec pending
-- [ ] Menu bar (File, Edit, View, ...) on every platform, plus command search over everything
-- [ ] Widgets: knob, fader, jog platter, pad, button, list, menu, text field, sheet
-- [~] Scrolling RGB and 3-band waveforms (RGB scrolling, overview, beat ticks, loop shading done);, stacked and side by side, overview, beat grid
-- [ ] Spring motion, 120 Hz, no frame over 8 ms
-- Acceptance: every control works by touch, mouse and keyboard
+- [ ] Menu bar (File, Edit, View, Deck, Library, Mix, Tools, Window, Help) wired to commands
+- [ ] Command palette searching every action, track and setting
+- [ ] Widgets: knob, fader, jog platter, pad, button, list, menu, text field, sheet, dialog,
+      tooltip, toast
+- [ ] Waveform styles: RGB, 3-band stacked, mono, stems; zoom, stacked and side by side,
+      beat grid edit by drag
+- [ ] Vertical waveforms option for portrait and booth
+- [ ] Spring motion, 120 Hz, no frame over 8 ms, redraw only on change when idle
+- [ ] Keyboard map for every control, editable
+- [ ] Undo and redo for cues, loops, grid edits and library edits
+- [ ] Acceptance: every control works by touch, mouse and keyboard at every checked size
 
 ## M4 Analysis and library
-- [~] BPM, beat grid and key (Camelot) done; ReplayGain, phrases, energy, intro and outro, waveform pyramid
-- [ ] Accuracy against Mixxx as oracle on GiantSteps and synthetic sets
-- [~] Library: folder scan done;  playlists, crates, smart crates, history, tags, ratings, colours
-- [~] Search: words, negation, Greek and Greeklish, accent folding done; field syntax open
-- [~] Sync (tempo + phase), 8 hot cues, beat loops, brake, spinback done; quantize, 36 cues, saved loops, beat jump, rolls, slip, censor open
-- [ ] Library health: relink moved files, duplicates by fingerprint [>]
+- [ ] Better BPM: tempo changes, half and double resolution, confidence, manual tap
+- [ ] Dynamic beat grid with tempo sections, downbeat and bar detection
+- [ ] Key: detection confidence, key change sections, open key and classic notation choice
+- [ ] ReplayGain and loudness (EBU R128), auto gain on load
+- [ ] Phrases, energy, intro and outro, vocal detection
+- [ ] Waveform pyramid cached on disk, analysis queue with progress, background priority
+- [ ] Accuracy checks against public datasets (GiantSteps tempo and key) in CI
+- [ ] Library database in our own Rust store: tracks, tags, play counts, ratings, colours,
+      comments, cue and loop data
+- [ ] Tag reading and writing (ID3, Vorbis comments, MP4, FLAC, APE), cover art
+- [ ] Playlists, crates, smart crates with rules, history per session, prep list
+- [ ] Search field syntax: bpm:120-128, key:8A, artist:, genre:, year:, rating:, played:
+- [ ] Sort by any column, column layout per size, compatible keys and BPM highlight
+- [ ] Library health: relink moved files, duplicates by fingerprint, missing files report
+- [ ] Watch folders for changes; Android media store; iOS Music library and Files
 
 ## M5 DJ Sugar features
-- [~] Sample library bundled, sampler voices and pad bank done; picker, sample editor, recordings
+- [ ] All 195 DJ Sugar samples bundled with a picker, favourites and pad banks
+- [ ] Sample editor: trim, fade, gain, loop points
 - [ ] FX Station: scenes, isolate, X-Pad, release; XY touch pad overlay
-- [~] Synced lyrics: .lrc done; tags, online sources, karaoke view open
-- [ ] Listen mode
-- [>] Streaming: YouTube (own extractor, SponsorBlock), SoundCloud, Spotify, Audius,
+- [ ] Synced lyrics: embedded tags (SYLT, LYRICS), online sources, karaoke view, word timing
+- [ ] Listen mode: a calm player view for listening, no DJ controls
+- [ ] Streaming: YouTube (own extractor, SponsorBlock), SoundCloud, Spotify, Audius,
       Subsonic, Jellyfin, Plex; streaming hub, smart URL box, next track prefetched
-- [ ] Smart Auto DJ: energy, key and phrase scoring, beat-matched transitions
-- [ ] Microphone unit with ducking; latency calibration with the microphone [>]
-- [ ] Touch: Lite and Booth layouts, UI scale
+- [ ] Smart Auto DJ: energy, key and phrase scoring, phrase-aligned transitions, transition
+      styles; design approved by the owner first
+- [ ] Latency calibration with the microphone [>]
+- [ ] Touch layouts: Lite and Booth, UI scale
 
 ## M6 Effects
-- [~] Echo (beat-synced, echo out) done; every Mixxx built-in effect, plus DJ Sugar's effects, chained units, presets
+- [ ] Every Mixxx built-in effect in our own code: reverb, delay, flanger, phaser, bitcrusher,
+      autopan, tremolo, gate, compressor, distortion, filters, pitch shift, white noise,
+      loudness contour, metronome, balance, glitch, moog ladder
+- [ ] DJ Sugar's own effects
+- [ ] Beat FX units with chains, wet and dry, beat fractions, presets
+- [ ] Colour FX per channel on the filter knob (filter, noise, space, dub echo, crush)
 - [ ] Stem FX
 - [ ] Plugin hosting on desktop (CLAP, LV2, VST3)
 
@@ -90,27 +203,31 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - [ ] USB MIDI on every OS, Android MIDI, Core MIDI, BLE MIDI with pairing
 - [ ] Hotplug and auto-detect by VID/PID and BLE name; DDJ-FLX4 first
 - [ ] MIDI learn, Map mode, Quick map wizard [>]
-- [>] DVS timecode decoder: Serato CV02, Traktor MK1, MixVibes (old `timecode` crate)
-- [ ] DVS interfaces: Rane SL1-SL4, Seventy, Twelve; Pioneer DJM; Traktor Audio
-- [ ] Controllers with sound cards: routing per device [>]
+- [>] DVS timecode decoder for common vinyl timecodes (old `timecode` crate)
+- [ ] DVS interfaces and controller sound cards: routing per device [>]
 - [ ] Jog screens and motorised platters
 - [ ] Mapping translator: Mixxx XML and JS into our own mapping format
+- [ ] Controller LED feedback, VU meters, jog screen artwork
 
 ## M8 Library exchange
-- [>] Import and export, both ways: rekordbox (XML, master.db, USB PDB and OneLibrary),
+- [>] Import and export both ways: rekordbox (XML, master.db, USB PDB and OneLibrary),
       Serato (database, crates, file markers), Traktor NML, Engine DJ, VirtualDJ, Mixxx,
-      djay, iTunes/Music
+      djay, Apple Music
 - [>] USB export for CDJ/XDJ and Engine players; two-way sync manager
 - [ ] Dry-run preview and conflict report for every import
+- [ ] Cloud sync of library metadata between devices (own server-free format)
 
-## M9 Performance and streaming out
-- [>] Recording (WAV, FLAC, MP3, Opus, all pure Rust) and Icecast/Shoutcast broadcasting
+## M9 Recording, broadcasting and sync
+- [>] Recording (WAV, FLAC, MP3, Opus, all pure Rust)
+- [>] Icecast and Shoutcast broadcasting
 - [>] Ableton Link in pure Rust (old `link` crate); needs a live test
-- [ ] OSC and remote control
+- [ ] OSC and remote control from a second device
+- [ ] Set history with timestamps, export as tracklist
 
 ## M10 Stems
-- [>] Demucs separation on device, STEM files, per-stem volume and mute
+- [>] Separation on device, STEM files, per-stem volume and mute
 - [ ] Real-time separation on the S23 Ultra; stems cached per track
+- [ ] Stem pads: acapella, instrumental, drums only, quick swaps
 
 ## M11 Mods
 - [>] Mod core: manifest, load order, slots with provenance, live reload (old `mods` crate)
@@ -122,14 +239,24 @@ Status: [x] done, [~] in progress, [>] done in the old Rust base, to port, [ ] n
 - [ ] Graphics per device: Vulkan, Metal, DX12; Adreno, Mali, Xclipse workarounds; 120 Hz
 - [ ] Audio per device: AAudio MMAP, Samsung low-latency, ADPF hints, Audio Workgroups, MMCSS
 - [ ] Runtime SIMD dispatch, big.LITTLE thread placement, power and thermal profiles
+- [ ] Profile-guided optimisation in release builds, binary size tracked per commit
 
 ## M13 Platforms and release
-- [ ] Pure-Rust Wayland with zero-copy dmabuf presentation
-- [ ] iOS and iPadOS (needs a Mac to build)
-- [ ] Windows and macOS builds checked; AppImage, .deb, .dmg, installer
+- [ ] iOS and iPadOS app bundle, signing, TestFlight (needs a Mac or a macOS CI signer)
+- [ ] Windows installer, macOS dmg with notarisation, Linux AppImage and .deb, Flatpak
+- [ ] Android release keystore in CI secrets, Play and F-Droid builds
 - [ ] Store builds without download sources; full build on GitHub releases
+- [ ] Release notes generated from commits; version shown in Help > About
+
+## Quality, ongoing
+- [ ] Benchmarks in CI with regression limits (engine render, decode, analysis, layout, paint)
+- [ ] Screenshot tests at every checked size compared against approved images
+- [ ] Fuzzing for decoders, lyric and playlist parsers, library import
+- [ ] Coverage report; every engine command has a test
+- [ ] Android emulator run in CI: launch, render a frame, play a sample
 
 ## Later
 - Lighting: DMX, Art-Net, sACN, fixtures, beat-driven scenes
 - Visuals and video mixing
-- Automix: only after its design is agreed with the owner
+- Karaoke mode with pitch scoring
+- Collaborative sets across two devices over the network
