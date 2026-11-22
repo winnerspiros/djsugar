@@ -23,39 +23,27 @@ env:
   RUST_BACKTRACE: short
 
 jobs:
-  hygiene:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - run: scripts/hygiene.sh
-      - uses: crate-ci/typos@v1.52.2
-
-  fmt:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - run: cargo fmt --all --check
-
-  deps:
+  check:
+    name: check (hygiene, typos, fmt, deny, shear, lockfile)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny,cargo-shear
+      - run: scripts/hygiene.sh
+      - uses: crate-ci/typos@v1.52.2
+      - run: cargo fmt --all --check
+      - run: cargo metadata --locked --format-version 1 > /dev/null
       - run: cargo deny --all-features check
       - run: cargo shear
-      - name: Lockfile is current
-        run: cargo metadata --locked --format-version 1 > /dev/null
 
   linux:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -69,6 +57,15 @@ jobs:
       - run: cargo test --workspace --release --locked
       - run: cargo doc --workspace --no-deps --locked
       - run: cargo build --release -p djsugar --locked
+      - name: Every view at seven sizes, typing, focus loss, GPU recreation
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq mesa-vulkan-drivers
+          cargo run --release --locked -p djsugar --example shots -- shots
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: djsugar-screens
+          path: shots
       - name: Size
         run: |
           f=target/release/djsugar
@@ -81,6 +78,7 @@ jobs:
           path: target/release/djsugar
 
   miri:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -94,6 +92,7 @@ jobs:
           RUSTFLAGS: ""
 
   desktop:
+    needs: check
     strategy:
       fail-fast: false
       matrix:
@@ -119,6 +118,7 @@ jobs:
           path: ${{ matrix.bin }}
 
   ios:
+    needs: check
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -132,6 +132,7 @@ jobs:
       - run: cargo build --release --target aarch64-apple-ios -p djsugar --lib --locked
 
   android:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -166,24 +167,8 @@ jobs:
           name: djsugar-android
           path: target/djsugar.apk
 
-  ui:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Software Vulkan
-        run: sudo apt-get update -q && sudo apt-get install -yq mesa-vulkan-drivers
-      - name: Every view at every size, typing and focus loss
-        run: cargo run --release --locked -p djsugar --example shots -- shots
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: djsugar-screens
-          path: shots
-
   emulator:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -217,7 +202,7 @@ jobs:
 
   release:
     if: github.event_name == 'push'
-    needs: [android, linux, deps, hygiene, ui, emulator]
+    needs: [android, linux, emulator]
     runs-on: ubuntu-latest
     permissions:
       contents: write

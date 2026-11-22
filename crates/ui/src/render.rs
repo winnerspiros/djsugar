@@ -49,6 +49,7 @@ pub struct Renderer<'w> {
     instances: wgpu::Buffer,
     glyphs: wgpu::Buffer,
     atlas: wgpu::Texture,
+    fresh: bool,
 }
 
 #[derive(Debug)]
@@ -196,8 +197,19 @@ impl<'w> Renderer<'w> {
         );
         let instances = instance_buffer(&device, 256 * size_of::<Quad>());
         let glyphs = instance_buffer(&device, 1024 * size_of::<Glyph>());
-        let r =
-            Self { target, device, queue, pipeline, glyph_pipeline, viewport, bind_group, instances, glyphs, atlas };
+        let r = Self {
+            target,
+            device,
+            queue,
+            pipeline,
+            glyph_pipeline,
+            viewport,
+            bind_group,
+            instances,
+            glyphs,
+            atlas,
+            fresh: true,
+        };
         r.write_viewport();
         Ok(r)
     }
@@ -232,10 +244,18 @@ impl<'w> Renderer<'w> {
     pub fn render(&mut self, painter: &mut Painter, clear: u32) {
         let frame = match &self.target {
             Target::Surface { surface, config } => match surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => Some(f),
+                wgpu::CurrentSurfaceTexture::Success(f) => Some(f),
+                wgpu::CurrentSurfaceTexture::Suboptimal(f) => {
+                    drop(f);
+                    surface.configure(&self.device, config);
+                    return self.render(painter, clear);
+                }
                 wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
                     surface.configure(&self.device, config);
-                    return;
+                    match surface.get_current_texture() {
+                        wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => Some(f),
+                        _ => return,
+                    }
                 }
                 _ => return,
             },
@@ -288,7 +308,7 @@ impl<'w> Renderer<'w> {
         painter: &mut Painter,
         clear: u32,
     ) {
-        if let Some((row, pixels)) = painter.atlas_update() {
+        if let Some((row, pixels)) = painter.atlas_update(std::mem::take(&mut self.fresh)) {
             self.queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
                     texture: &self.atlas,

@@ -102,8 +102,14 @@ impl Painter {
         &self.glyphs
     }
 
-    pub(crate) fn atlas_update(&mut self) -> Option<(usize, &[u8])> {
-        let (a, b) = self.fonts.dirty.take()?;
+    /// Rows of the glyph atlas to upload; all of it for a `fresh` texture, as after the GPU is recreated.
+    pub(crate) fn atlas_update(&mut self, fresh: bool) -> Option<(usize, &[u8])> {
+        let (a, b) = if fresh {
+            self.fonts.dirty.take();
+            Some((0, ATLAS))
+        } else {
+            self.fonts.dirty.take()
+        }?;
         Some((a, &self.fonts.pixels[a * ATLAS..b * ATLAS]))
     }
 

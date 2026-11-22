@@ -34,6 +34,12 @@ fn save(r: &Renderer<'_>, path: &Path) {
     });
 }
 
+fn pixels(r: &Renderer<'_>) -> Vec<u8> {
+    let mut v = Vec::new();
+    r.read(|p| v.extend_from_slice(p.bytes));
+    v
+}
+
 fn main() {
     let out = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "target/shots".into()));
     std::fs::create_dir_all(&out).expect("output dir");
@@ -66,6 +72,12 @@ fn main() {
                 }
             }
             save(&r, &out.join(format!("{name}-{}.png", view.to_lowercase())));
+        }
+        let before = pixels(&r);
+        r = Renderer::offscreen(w, h).expect("second renderer");
+        ui.render(&mut r);
+        if pixels(&r) != before {
+            faults.push(format!("{name}: frame changes when the GPU is recreated, as after leaving the app"));
         }
         typing(&mut ui, &mut r, name, &mut faults);
         save(&r, &out.join(format!("{name}-typed.png")));
