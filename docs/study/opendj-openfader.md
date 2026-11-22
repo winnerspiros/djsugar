@@ -113,7 +113,7 @@
 - **UI definition**: `.slint` files under `crates/app/ui/` (30+ files: `main.slint`, `deck.slint`, `library.slint`, `player.slint`, `mixer.slint`, `controls.slint`, `theme.slint`, `preferences.slint`, `sampler.slint`, `lyrics.slint`, `karaoke.slint`, etc.).
 - **Layout**: Hand-positioned in `main.slint` (2000+ lines). Global bar (mode selector: Export/Performance/Edit/Lighting/Video), waveforms stacked above deck row (2/4 deck horizontal/vertical, Browse), mixer column, sampler strip, browser, status bar. No layout managers — explicit `x`, `y`, `width`, `height` arithmetic.
 - **Waveform rendering**: `djsugar-waveform` crate (wgpu) → GPU texture → Slint `Image`. Summary data (`GpuTrack`) uploaded once; per-frame uniform block only. Styles: RGB (band balance), Bands (stacked), Mono (played/unplayed), Blue (rekordbox-style), Stems (per-stem colour).
-- **Menu bar**: Native macOS menu bar (`crates/app/src/mac_menu.rs`); Windows/Linux: ☰ button opens same File/Edit/View menus (`crates/app/src/app_menu.rs`, `appmenu.slint`). 40 actions (Settings, Quit, Undo, Find, Export*, Record Mix, Mini Player, Zoom, Waveform Height, Tour, Tutorials, User Guide, Report Problem, Check for Updates).
+- **Menu bar**: Native macOS menu bar (`crates/app/src/mac_menu.rs`); Windows/Linux: button opens same File/Edit/View menus (`crates/app/src/app_menu.rs`, `appmenu.slint`). 40 actions (Settings, Quit, Undo, Find, Export*, Record Mix, Mini Player, Zoom, Waveform Height, Tour, Tutorials, User Guide, Report Problem, Check for Updates).
 - **Touch**: `touch.slint`, `touch-actions.slint`, `deck-touch.slint` — touch workspace, gestures, large hit targets. Layout profile 1 = touch.
 - **Theming**: `theme.slint`, `themes.slint`, `skin/` — Catppuccin Mocha base, skin files restyle `Theme` globals, per-deck waveform colours.
 
@@ -211,7 +211,7 @@
 ## 4. What Is Genuinely Good
 
 ### OpenDJ (djsugar-rust)
-- **File/Edit/View native menu bar on macOS** (`mac_menu.rs` + `app_menu.rs`): macOS gets real menu bar; Windows/Linux get identical items from ☰ button. Single source of truth (`MENUS` array, 40 actions). No window height wasted on menu strip.
+- **File/Edit/View native menu bar on macOS** (`mac_menu.rs` + `app_menu.rs`): macOS gets real menu bar; Windows/Linux get identical items from button. Single source of truth (`MENUS` array, 40 actions). No window height wasted on menu strip.
 - **Wait-free audio/loader communication** (`engine.rs`): `rtrb` ring buffers, `Command`/`Returned` enums, zero allocation on audio thread. Tracks play immediately on load; waveform/tempo fill in asynchronously.
 - **Phase vocoder with peak phase-locking** (`stretch/lib.rs`): Clean tones, tight transients, independent input/output rates. Custom, no external deps beyond `realfft`.
 - **Out-of-process plugin host** (`plugin-host/`): Helper binary per slot, crash/hang isolation, restart-once-then-disable policy. Audio thread never waits.
