@@ -114,7 +114,8 @@ Done:
 Next, in order:
 - Portrait layout from the DJ Sugar portrait QML.
 - Done: hot cue popup on long press (8 colours, clear, close), colours on pads, waveform and overview.
-- Beat grid popup (tap, half, double, shift), quick load drawer.
+- Done: beat grid popup from the BPM readout: half beat, downbeat here, 10 ms earlier and later, BPM halve and double, match other deck phase, undo stack, lock.
+- Quick load drawer with local and streaming tabs; re-analyze from the grid popup.
 - Headphone cue output for PFL, cue mix and split cue.
 - File, Edit and View menus and the settings pages.
 - Library columns (artist, BPM, key, duration, rating), sorting, crates, playlists and history.

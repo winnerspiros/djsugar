@@ -52,7 +52,23 @@ pub enum Target {
     CueColour(u8),
     CueClear,
     CueMenuClose,
+    Grid(usize),
+    GridOp(GridOp),
+    GridClose,
     Gain(usize),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GridOp {
+    Half,
+    Here,
+    Earlier,
+    Later,
+    Halve,
+    Double,
+    Match,
+    Undo,
+    Lock,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -131,6 +147,8 @@ pub struct DeckUi {
     pub mode: Mode,
     pub cues: [Option<f64>; 8],
     pub cue_colours: [u8; 8],
+    pub grid_undo: Vec<sugar_analysis::Grid>,
+    pub grid_locked: bool,
     pub looping: Option<usize>,
     pub loop_range: Option<(f64, f64)>,
     pub echo: Option<usize>,
@@ -224,6 +242,7 @@ pub struct State {
     pub show_fx: bool,
     pub show_samplers: bool,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
+    pub grid_menu: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -304,6 +323,7 @@ impl State {
             show_fx: false,
             show_samplers: false,
             cue_menu: None,
+            grid_menu: None,
         }
     }
 
@@ -337,6 +357,8 @@ impl State {
                     self.decks[d].loading = false;
                     self.decks[d].cue = 0.0;
                     self.decks[d].cues = [None; 8];
+                    self.decks[d].grid_undo.clear();
+                    self.decks[d].grid_locked = false;
                     self.decks[d].looping = None;
                     self.decks[d].loop_range = None;
                 }
@@ -639,6 +661,46 @@ impl State {
         self.send(Command::Loop(d, Some(range)));
     }
 
+    fn grid_edit(&mut self, d: usize, op: GridOp) {
+        let pos = self.telemetry.decks[d].position;
+        let other = self.decks[1 - d].beat().map(|(g, b)| (g, b, self.telemetry.decks[1 - d].position));
+        let deck = &mut self.decks[d];
+        match op {
+            GridOp::Lock => return deck.grid_locked = !deck.grid_locked,
+            GridOp::Undo => {
+                if let (false, Some(g), Some(l)) = (deck.grid_locked, deck.grid_undo.pop(), &mut deck.loaded) {
+                    l.grid = Some(g);
+                }
+                return;
+            }
+            _ if deck.grid_locked => return,
+            _ => {}
+        }
+        let Some(l) = &mut deck.loaded else { return };
+        let rate = l.track.rate;
+        let g = l.grid.unwrap_or(sugar_analysis::Grid { bpm: 120.0, first_beat: 0.0 });
+        let beat = g.beat_frames(rate);
+        let nudge = f64::from(rate) * 0.01;
+        let mut n = g;
+        match op {
+            GridOp::Half => n.first_beat += beat * 0.5,
+            GridOp::Here => n.first_beat = pos,
+            GridOp::Earlier => n.first_beat -= nudge,
+            GridOp::Later => n.first_beat += nudge,
+            GridOp::Halve => n.bpm *= 0.5,
+            GridOp::Double => n.bpm *= 2.0,
+            GridOp::Match => {
+                let Some((og, ob, opos)) = other else { return };
+                let phase = ((opos - og.first_beat) / ob).rem_euclid(1.0);
+                n.first_beat = pos - phase * beat;
+            }
+            GridOp::Undo | GridOp::Lock => unreachable!(),
+        }
+        n.first_beat = n.first_beat.rem_euclid(n.beat_frames(rate));
+        deck.grid_undo.push(g);
+        l.grid = Some(n);
+    }
+
     fn beat_jump(&mut self, d: usize, beats: f64) {
         let Some((_, beat)) = self.decks[d].beat() else { return };
         let by = beat * beats;
@@ -717,6 +779,13 @@ impl State {
             }
             Target::CloseBrowser => self.browser = None,
             Target::CueMenuClose => self.cue_menu = None,
+            Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
+            Target::GridClose => self.grid_menu = None,
+            Target::GridOp(op) => {
+                if let Some(d) = self.grid_menu {
+                    self.grid_edit(d, op);
+                }
+            }
             Target::CueColour(c) => {
                 if let Some((d, p, ..)) = self.cue_menu.take() {
                     self.decks[d].cue_colours[p] = c;

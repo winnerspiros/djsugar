@@ -1,7 +1,9 @@
 use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, FX_PADS, Hit, JUMP_BEATS, LOOP_BEATS, Mode, State, Target, View, beats_label};
+use crate::state::{
+    DETAIL_FRAMES, FX_PADS, GridOp, Hit, JUMP_BEATS, LOOP_BEATS, Mode, State, Target, View, beats_label,
+};
 
 const INK: u32 = rgb(0x0a0b10);
 const SURFACE: u32 = rgb(0x14161c);
@@ -104,6 +106,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         }
     }
     cue_menu(p, s, w, h);
+    grid_menu(p, s, w, h);
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
@@ -286,6 +289,48 @@ fn cue_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     button(p, s, Rect::new(r.x + r.w - 40.0, by, 32.0, 26.0), "X", false, ACCENT, Target::CueMenuClose);
 }
 
+fn grid_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(d) = s.grid_menu else { return };
+    p.layer();
+    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0x90));
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::GridClose);
+    let pw = 340.0f32.min(w - 16.0);
+    let row = 34.0;
+    let ph = 54.0 + 5.0 * (row + 6.0) + 6.0;
+    let r = Rect::new((w - pw) * 0.5, ((h - ph) * 0.5).max(4.0), pw, ph);
+    p.outlined(r.x, r.y, r.w, r.h, 10.0, SURFACE, 1.5, DECK[d]);
+    hit(s, r, Target::Grid(d));
+    p.text(r.x + 12.0, r.y + 22.0, Style { colour: DECK[d], ..TAB }, &format!("BEATGRID  DECK {}", d + 1));
+    let locked = s.decks[d].grid_locked;
+    if let Some((g, _)) = s.decks[d].beat() {
+        let bpm = format!("{:.2} BPM", g.bpm);
+        p.text(r.x + r.w - 44.0 - p.text_width(TAB, &bpm), r.y + 22.0, Style { colour: AMBER, ..TAB }, &bpm);
+    }
+    button(p, s, Rect::new(r.x + r.w - 38.0, r.y + 6.0, 30.0, 24.0), "X", false, ACCENT, Target::GridClose);
+    let hint = if locked { "Grid locked: unlock to edit" } else { "Move the grid until beat lines sit on the kicks" };
+    p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, hint);
+    let edits = !locked;
+    let undo = edits && !s.decks[d].grid_undo.is_empty();
+    let ops = [
+        ("1/2 BEAT", Target::GridOp(GridOp::Half), edits),
+        ("DOWNBEAT HERE", Target::GridOp(GridOp::Here), edits),
+        ("EARLIER", Target::GridOp(GridOp::Earlier), edits),
+        ("LATER", Target::GridOp(GridOp::Later), edits),
+        ("BPM / 2", Target::GridOp(GridOp::Halve), edits),
+        ("BPM x 2", Target::GridOp(GridOp::Double), edits),
+        ("MATCH OTHER DECK", Target::GridOp(GridOp::Match), edits),
+        ("UNDO", Target::GridOp(GridOp::Undo), undo),
+        (if locked { "UNLOCK GRID" } else { "LOCK GRID" }, Target::GridOp(GridOp::Lock), true),
+        ("CLOSE", Target::GridClose, true),
+    ];
+    let bw = (r.w - 30.0) * 0.5;
+    for (n, (label, t, enabled)) in ops.into_iter().enumerate() {
+        let b = Rect::new(r.x + 12.0 + (n % 2) as f32 * (bw + 6.0), r.y + 54.0 + (n / 2) as f32 * (row + 6.0), bw, row);
+        let on = n == 8 && locked;
+        button(p, s, b, label, on, if enabled { if n == 8 { AMBER } else { ACCENT } } else { DARK }, t);
+    }
+}
+
 fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(r.x, r.y, r.w, r.h, 3.0, DEEP);
     let deck = &s.decks[d];
@@ -357,6 +402,7 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         }
     }
     hit(s, Rect::new(r.x, r.y, r.w - right, r.h), Target::Browse(d));
+    hit(s, Rect::new(r.x + r.w - right, r.y, right, r.h), Target::Grid(d));
 }
 
 fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
