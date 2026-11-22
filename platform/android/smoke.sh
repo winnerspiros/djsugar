@@ -60,9 +60,13 @@ adb shell input text "daft"
 sleep 1
 alive typing
 shot 03-typed
+adb shell input keyevent KEYCODE_BACK
+sleep 1
 adb shell settings put system user_rotation 1
 sleep 5
 alive rotate
+read -r RW RH <<< "$(adb exec-out screencap -p | python3 -c 'import sys,struct;d=sys.stdin.buffer.read(24);print(*struct.unpack(">II",d[16:24]))')"
+[ "$RW" -gt "$RH" ] || fail "screen did not rotate to landscape (${RW}x${RH})"
 shot 04-landscape
 adb shell input keyevent KEYCODE_HOME
 sleep 3
