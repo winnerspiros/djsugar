@@ -330,7 +330,10 @@ pub mod native {
 }
 
 #[cfg(target_os = "android")]
-mod android {
+mod potoken;
+
+#[cfg(target_os = "android")]
+pub(crate) mod android {
     use std::io::Read;
     use std::sync::OnceLock;
 
@@ -383,6 +386,22 @@ mod android {
         })
     }
 
+    fn property(name: &std::ffi::CStr) -> Option<String> {
+        #[allow(unsafe_code, reason = "a libc call present on every Android version")]
+        unsafe extern "C" {
+            fn __system_property_get(name: *const std::ffi::c_char, value: *mut std::ffi::c_char) -> i32;
+        }
+        let mut buf = [0u8; 92];
+        #[allow(unsafe_code, reason = "the buffer is the documented 92 byte maximum")]
+        let n = unsafe { __system_property_get(name.as_ptr(), buf.as_mut_ptr().cast()) };
+        let len = usize::try_from(n).ok().filter(|&n| n > 0)?;
+        Some(String::from_utf8_lossy(&buf[..len]).into_owned())
+    }
+
+    pub fn app() -> Option<&'static AndroidApp> {
+        APP.get()
+    }
+
     #[allow(unsafe_code, reason = "the activity glue looks this symbol up by name")]
     #[unsafe(no_mangle)]
     fn android_main(app: AndroidApp) {
@@ -393,6 +412,11 @@ mod android {
             crate::store::set_dir(dir);
         }
         let _ = request_audio(&app);
+        sugar_net::youtube::set_po_token_source(crate::potoken::mint);
+        // CI sets this to a video ID to prove the token mint works on a real device.
+        if let Some(video) = property(c"debug.djsugar.mint") {
+            std::thread::spawn(move || crate::potoken::mint(&video, ""));
+        }
         crate::stage("permissions");
         let event_loop =
             winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));

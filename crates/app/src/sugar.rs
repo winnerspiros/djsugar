@@ -4,12 +4,12 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 use crate::state::{DETAIL_FRAMES, FX_PADS, GridOp, Hit, Mode, State, Target, View};
 use sugar_engine::station::Scene;
 
-const INK: u32 = rgb(0x0e0e0e);
-const SURFACE: u32 = rgb(0x181b22);
+const INK: u32 = rgb(0x000000);
+const SURFACE: u32 = rgb(0x0d0e13);
 const DEEP: u32 = rgb(0x0c0c0c);
 const EDGE: u32 = rgb(0x2e2e2e);
 const RAISED: u32 = rgb(0x2b2b2b);
-const ACCENT: u32 = rgb(0x3a60be);
+const ACCENT: u32 = rgb(0xff4fa8);
 const TEXT: u32 = rgb(0xe8e8e8);
 const GREY: u32 = rgb(0xb0b0b0);
 const DARK: u32 = rgb(0x555555);
@@ -85,10 +85,27 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let rest = h - y;
     match s.view {
         View::Dj => {
-            let wh =
-                if tall { (rest * 0.13).round().clamp(56.0, 120.0) } else { (rest * 0.22).round().clamp(56.0, 96.0) };
-            waveforms(p, s, Rect::new(0.0, y, w, wh));
-            crate::booth::dj(p, s, Rect::new(0.0, y + wh + 3.0, w, h - y - wh - 3.0));
+            // Booth: the performance view takes the lower 46 percent, slim deck
+            // strips sit above it and the waveforms fill what is left.
+            let dj = (h * if h < 520.0 {
+                0.5
+            } else if tall {
+                0.62
+            } else {
+                0.46
+            })
+            .round();
+            let strip = if h < 520.0 { 58.0 } else { 84.0 };
+            let top = h - dj - 3.0;
+            let sy = top - strip - 3.0;
+            if sy - y > 24.0 {
+                waveforms(p, s, Rect::new(0.0, y, w, sy - 3.0 - y));
+            }
+            let hw = (w - 3.0) * 0.5;
+            for d in 0..2 {
+                mini_deck(p, s, Rect::new(d as f32 * (hw + 3.0), sy, hw, strip), d);
+            }
+            crate::booth::dj(p, s, Rect::new(0.0, top, w, dj));
         }
         View::Wave => {
             let bar = (rest * 0.38).round().clamp(86.0, 115.0);

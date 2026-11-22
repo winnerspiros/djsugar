@@ -51,6 +51,7 @@ adb logcat -c
 adb logcat -b events -c
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
+adb shell setprop debug.djsugar.mint dQw4w9WgXcQ
 adb shell am start -W -n $ACT || fail "launch failed"
 drawn launch 30
 adb logcat -d -s djsugar | tee "$OUT/startup.txt"
@@ -76,6 +77,15 @@ alive rotate
 read -r RW RH <<< "$(adb exec-out screencap -p | python3 -c 'import sys,struct;d=sys.stdin.buffer.read(24);print(*struct.unpack(">II",d[16:24]))')"
 [ "$RW" -gt "$RH" ] || fail "screen did not rotate to landscape (${RW}x${RH})"
 shot 04-landscape
+for _ in $(seq 1 60); do
+  adb logcat -d -s djsugar | grep -q "token mint" && break
+  sleep 1
+done
+MINT=$(adb logcat -d -s djsugar | grep -o "token mint.*" | head -1)
+echo "${MINT:-token mint: no result in 60 s}" | tee "$OUT/mint.txt"
+# Warns rather than fails while the token path is new; the summary shows it either way.
+case "$MINT" in "token mint ok"*) ;; *) echo "::warning::${MINT:-token mint: no result in 60 s}" ;; esac
+alive "token mint"
 adb shell input keyevent KEYCODE_HOME
 sleep 3
 adb logcat -c

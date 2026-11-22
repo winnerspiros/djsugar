@@ -7,11 +7,11 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 use crate::state::{FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
 use crate::sugar::{DECK, fade, hit};
 
-const BG: u32 = rgb(0x1e1e20);
-const PANEL: u32 = rgb(0x202020);
+const BG: u32 = rgb(0x000000);
+const PANEL: u32 = rgb(0x0d0e13);
 const LINE: u32 = rgb(0x626262);
 const LINE2: u32 = rgb(0x676767);
-const RING: u32 = rgb(0x3f3f3f);
+const RING: u32 = rgb(0x14161c);
 const TEXT: u32 = rgb(0xb0b0b0);
 const LABEL: u32 = rgb(0x939393);
 const WHITE: u32 = rgb(0xd9d9d9);
@@ -115,12 +115,13 @@ pub fn dj(p: &mut Painter, s: &mut State, r: Rect) {
     let compact = r.h < 520.0;
     let bar = if compact { 30.0 } else { 40.0 };
     let top = Rect::new(r.x, r.y, r.w, r.h - bar - gap);
-    if r.h > r.w * 1.1 {
-        let mh = (top.h * 0.26).round();
+    if top.w < top.h * 1.6 {
+        // Too narrow for two decks abreast: each deck gets the full width.
+        let mh = (top.h * 0.24).round();
         let dh = ((top.h - mh - 2.0 * gap) * 0.5).floor();
         deck(p, s, Rect::new(top.x, top.y, top.w, dh), 0, false);
         mixer(p, s, Rect::new(top.x, top.y + dh + gap, top.w, mh));
-        deck(p, s, Rect::new(top.x, top.y + dh + mh + 2.0 * gap, top.w, dh), 1, true);
+        deck(p, s, Rect::new(top.x, top.y + top.h - dh, top.w, dh), 1, false);
     } else {
         let mw = (top.w * 0.24).min(top.h * 0.9).round();
         let dw = ((top.w - mw - 2.0 * gap) * 0.5).floor();
@@ -187,7 +188,7 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
 }
 
 fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize, unit: f32) {
-    let mode_h = (unit * 1.8).round();
+    let mode_h = (unit * 1.8).round().max(22.0);
     let grid = Rect::new(r.x, r.y, r.w, r.h - mode_h - 3.0);
     let (pw, ph) = ((grid.w - 3.0) * 0.5, (grid.h - 9.0) / 4.0);
     let mode = s.decks[d].mode;

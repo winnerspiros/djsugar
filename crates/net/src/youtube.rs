@@ -3,7 +3,7 @@
 
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
@@ -139,6 +139,23 @@ pub struct YouTube {
     pub region: String,
 }
 
+/// Tokens minted on the device that let token-gated clients play a video.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PoTokens {
+    pub player: String,
+    pub streaming: String,
+    pub visitor: String,
+}
+
+/// Mints tokens for (video, visitor ID); the platform layer installs it.
+pub type PoTokenSource = fn(&str, &str) -> Option<PoTokens>;
+
+static PO_TOKEN_SOURCE: OnceLock<PoTokenSource> = OnceLock::new();
+
+pub fn set_po_token_source(f: PoTokenSource) {
+    let _ = PO_TOKEN_SOURCE.set(f);
+}
+
 impl YouTube {
     pub fn new(region: &str, visitor: &str) -> Self {
         let s = Self { region: region.to_string(), ..Self::default() };
@@ -266,19 +283,27 @@ impl YouTube {
     /// The audio formats YouTube offers for a video, best first.
     /// Offers each client's formats to `take` in turn, moving on when it fails:
     /// a stream 403 gates only that client, so the next one may still serve it.
-    fn each_source<T>(&self, video: &str, mut take: impl FnMut(Vec<Format>, &'static str) -> Result<T>) -> Result<T> {
+    fn each_source<T>(
+        &self,
+        video: &str,
+        tokens: Option<&PoTokens>,
+        mut take: impl FnMut(Vec<Format>, &'static str) -> Result<T>,
+    ) -> Result<T> {
         if !valid_id(video) {
             return Err(Error::Refused("Not a YouTube video".into()));
         }
         let mut last = Error::Refused("All InnerTube clients failed".into());
         if !self.resting() {
             for c in &PLAYER_CLIENTS {
-                let body = json!({
+                let mut body = json!({
                     "videoId": video,
                     "contentCheckOk": true,
                     "racyCheckOk": true,
                     "playbackContext": { "contentPlaybackContext": { "html5Preference": "HTML5_PREF_WANTS" } },
                 });
+                if let Some(t) = tokens.filter(|t| !t.player.is_empty()) {
+                    body["playbackContext"]["serviceIntegrityDimensions"] = json!({ "poToken": t.player });
+                }
                 let (status, v, raw) = match self.post("player", c, body, SEARCH_TIMEOUT) {
                     Ok(r) => r,
                     Err(e) => {
@@ -336,19 +361,36 @@ impl YouTube {
             }
         }
         std::fs::create_dir_all(dir).map_err(net)?;
-        self.each_source(video, |formats, ua| {
+        let tokens = self.mint(video);
+        self.each_source(video, tokens.as_ref(), |formats, ua| {
             let mut last = Error::Refused("No usable audio stream URL".into());
             for f in formats {
                 let to = dir.join(format!("{video}.{}", f.ext()));
                 let headers: &[(&str, &str)] = if ua.is_empty() { &[] } else { &[("User-Agent", ua)] };
-                match download(&f.url, headers, &to, CHUNK_FROM, CHUNKS, progress) {
+                // Proxied mirror links carry no signature, so they take no token.
+                let url = match &tokens {
+                    Some(t) if !ua.is_empty() && !t.streaming.is_empty() && !f.url.contains("pot=") => {
+                        format!("{}{}pot={}", f.url, if f.url.contains('?') { '&' } else { '?' }, t.streaming)
+                    }
+                    _ => f.url.clone(),
+                };
+                match download(&url, headers, &to, CHUNK_FROM, CHUNKS, progress) {
                     Ok(_) => return Ok(to),
-                    Err(Error::Status(403)) if !f.url.contains("pot=") => return Err(Error::Status(403)),
+                    Err(Error::Status(403)) => return Err(Error::Status(403)),
                     Err(e) => last = e,
                 }
             }
             Err(last)
         })
+    }
+
+    /// Mints tokens for one download; a fresh visitor ID from the mint is kept.
+    fn mint(&self, video: &str) -> Option<PoTokens> {
+        let t = PO_TOKEN_SOURCE.get()?(video, &self.visitor())?;
+        if !t.visitor.is_empty() && t.visitor != video {
+            self.lock().visitor.clone_from(&t.visitor);
+        }
+        Some(t)
     }
 }
 
@@ -357,6 +399,7 @@ fn jitter() -> f64 {
     f64::from(n.wrapping_mul(2_654_435_761) >> 8) / f64::from(1u32 << 24)
 }
 
+/// Checks whether a video ID looks valid (11 chars, URL-safe base64 alphabet).
 pub fn valid_id(id: &str) -> bool {
     id.len() == 11 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
