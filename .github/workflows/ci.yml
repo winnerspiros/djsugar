@@ -146,7 +146,12 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
           echo "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
       - run: cargo clippy --target aarch64-linux-android -p djsugar --locked -- -D clippy::all
-      - run: KEYSTORE=$RUNNER_TEMP/debug.keystore bash platform/android/build.sh
+      - name: Build
+        env:
+          KEY: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          [ -z "$KEY" ] || base64 -d <<< "$KEY" > "$RUNNER_TEMP/debug.keystore"
+          KEYSTORE=$RUNNER_TEMP/debug.keystore bash platform/android/build.sh
       - name: Verify and size
         run: |
           bt=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
@@ -160,3 +165,23 @@ jobs:
         with:
           name: djsugar-android
           path: target/djsugar.apk
+
+  release:
+    if: github.event_name == 'push'
+    needs: [android, linux, deps, hygiene]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: djsugar-android
+          path: out
+      - name: Publish the nightly build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp out/djsugar.apk djsugar-android.apk
+          gh release delete nightly -R "$GITHUB_REPOSITORY" -y --cleanup-tag || true
+          gh release create nightly -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            -t "Nightly ${GITHUB_SHA::7}" -n "Built from ${GITHUB_SHA::7} on the rust branch." djsugar-android.apk

@@ -9,8 +9,7 @@ publish = false
 [dependencies]
 ureq = { version = "3", default-features = false, features = ["rustls-no-provider", "json", "gzip"] }
 webpki-root-certs = "1"
-rustls = { version = "0.23", default-features = false, features = ["std", "tls12"] }
-rustls-rustcrypto = "0.0.2-alpha"
+rustls-rustcrypto = "=0.1.0-pre.0"
 serde_json = "1"
 
 [lints]
