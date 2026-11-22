@@ -265,7 +265,7 @@ cargo build --target x86_64-unknown-linux-musl 2>&1 | grep -E "error.*linker|cc1
 | `simd-json` | 0.18+ | ✅ | Yes | Tape → struct | Stable | Two-stage parse. Slower than sonic/serde on struct deserialize. |
 | `nosj` | 0.1+ | ✅ | Yes | Event-based (no Value) | Alpha | Streaming Sink/Reader/Writer. 2–19x serde_json. No DOM. |
 
-**Recommendation:** **`rusty_json_turbo`** — drop-in `serde_json` replacement, byte-identical output, faster, pure Rust, `no_std+alloc`, tested on WASM. If you need SIMD and control target CPU: `sonic-rs`.
+**Recommendation:** `serde_json` (or `sonic-rs` where SIMD and a known target CPU are available). `rusty_json_turbo` is too new; see the maturity table.
 
 **Verification:**
 ```bash
