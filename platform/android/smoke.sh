@@ -14,22 +14,39 @@ collect() {
     echo '```'
     grep -E "Total frames|Janky|percentile" "$OUT/gfxinfo.txt"
     grep -E "TOTAL PSS|Native Heap|Graphics" "$OUT/meminfo.txt" | head -5
-    grep -iE "djsugar|panicked|FATAL|wgpu|vulkan" "$OUT/logcat.txt" | tail -40
+    grep -E " djsugar *:" "$OUT/logcat.txt" | tail -30
+    grep -E "ANR in|Reason:|FATAL|panicked" "$OUT/logcat.txt" | head -10
     echo '```'
   } >> "$SUM"
 }
 fail() { echo "::error::$*"; collect; exit 1; }
 shot() { sleep 2; adb exec-out screencap -p > "$OUT/$1.png"; }
-alive() { adb shell pidof $PKG > /dev/null || fail "app died: $1"; }
+frozen() {
+  adb shell dumpsys window | grep -q "Application Not Responding: $PKG" && return 0
+  adb logcat -d -b events | grep -q "am_anr.*$PKG"
+}
+alive() {
+  adb shell pidof $PKG > /dev/null || fail "app died: $1"
+  if frozen; then shot "frozen-$(echo "$1" | tr -c 'a-z0-9' '-')"; fail "app not responding after: $1"; fi
+}
+drawn() {
+  for _ in $(seq 1 "$2"); do
+    adb logcat -d -s djsugar | grep -q "first frame" && return 0
+    sleep 1
+  done
+  fail "no first frame within $2 s after: $1"
+}
 D=$(adb shell wm density | grep -o '[0-9]*' | tail -1)
 px() { awk "BEGIN{print int($1*$D/160)}"; }
 tap() { adb shell input tap "$(px "$1")" "$(px "$2")"; sleep 1; alive "tap $1,$2"; }
 adb install -r -g "$APK" || fail "install failed"
 adb logcat -c
+adb logcat -b events -c
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
 adb shell am start -W -n $ACT || fail "launch failed"
-sleep 8
+drawn launch 30
+adb logcat -d -s djsugar | tee "$OUT/startup.txt"
 alive launch
 shot 01-portrait
 read -r W _ <<< "$(adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*' | tr x ' ')"
@@ -49,8 +66,9 @@ alive rotate
 shot 04-landscape
 adb shell input keyevent KEYCODE_HOME
 sleep 3
+adb logcat -c
 adb shell am start -n $ACT
-sleep 5
+drawn resume 20
 alive resume
 shot 05-resumed
 adb shell input keyevent KEYCODE_APP_SWITCH

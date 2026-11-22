@@ -25,6 +25,7 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(read: Reader) -> Self {
+        stage("ui");
         let mut engine = None;
         let mut out_rate = 48_000;
         let output = sugar_io::open(|f| {
@@ -38,8 +39,10 @@ impl Ui {
             Ok(o) => (Some(o), None),
             Err(e) => (None, Some(format!("Audio unavailable: {e}"))),
         };
+        stage("audio open");
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
+        stage("state ready");
         Self { painter: Painter::new(Fonts::new(FONT)), state, size: (1.0, 1.0), scale: 1.0, _output: output }
     }
 
@@ -117,8 +120,35 @@ impl Ui {
     }
 }
 
+/// Startup and failure notes: Android's log on phones, stderr elsewhere.
+pub fn diag(msg: &str) {
+    #[cfg(target_os = "android")]
+    {
+        #[allow(unsafe_code, reason = "liblog is the platform log sink")]
+        #[link(name = "log")]
+        unsafe extern "C" {
+            fn __android_log_write(prio: i32, tag: *const std::ffi::c_char, text: *const std::ffi::c_char) -> i32;
+        }
+        if let Ok(text) = std::ffi::CString::new(msg) {
+            #[allow(unsafe_code, reason = "both strings are NUL terminated and live for the call")]
+            unsafe {
+                __android_log_write(4, c"djsugar".as_ptr(), text.as_ptr());
+            }
+        }
+    }
+    #[cfg(not(target_os = "android"))]
+    eprintln!("djsugar: {msg}");
+}
+
+/// Logs how long a startup stage took since the process began.
+pub fn stage(name: &str) {
+    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    let t = START.get_or_init(std::time::Instant::now).elapsed();
+    diag(&format!("{name} at {} ms", t.as_millis()));
+}
+
 pub fn fail(e: &dyn std::fmt::Display) -> ! {
-    eprintln!("djsugar: {e}");
+    diag(&e.to_string());
     std::process::exit(1);
 }
 
@@ -149,6 +179,7 @@ pub mod native {
         shift: bool,
         started: bool,
         ime: bool,
+        drawn: bool,
     }
 
     impl Native {
@@ -185,7 +216,9 @@ pub mod native {
                 .with_min_inner_size(winit::dpi::LogicalSize::new(320.0, 320.0));
             let window = Arc::new(event_loop.create_window(attrs).unwrap_or_else(|e| fail(&e)));
             let size = window.inner_size();
+            crate::stage("window");
             let renderer = Renderer::new(window.clone(), size.width, size.height).unwrap_or_else(|e| fail(&e));
+            crate::stage("gpu ready");
             self.gpu = Some(Gpu { window, renderer });
             self.ime = false;
             self.resize();
@@ -195,6 +228,7 @@ pub mod native {
         fn suspended(&mut self, _: &ActiveEventLoop) {
             self.ui.release_all();
             if cfg!(target_os = "android") {
+                self.drawn = false;
                 self.gpu = None;
             }
         }
@@ -207,6 +241,10 @@ pub mod native {
                     if let Some(gpu) = &mut self.gpu {
                         gpu.window.pre_present_notify();
                         self.ui.render(&mut gpu.renderer);
+                        if !self.drawn {
+                            self.drawn = true;
+                            crate::stage("first frame");
+                        }
                         if self.ui.animating() {
                             gpu.window.request_redraw();
                         }
@@ -276,8 +314,15 @@ pub mod native {
     }
 
     pub fn run(event_loop: EventLoop<()>, read: Reader) {
-        let mut app =
-            Native { ui: Ui::new(read), gpu: None, cursor: (0.0, 0.0), shift: false, started: false, ime: false };
+        let mut app = Native {
+            ui: Ui::new(read),
+            gpu: None,
+            cursor: (0.0, 0.0),
+            shift: false,
+            started: false,
+            ime: false,
+            drawn: false,
+        };
         event_loop.run_app(&mut app).unwrap_or_else(|e| fail(&e));
     }
 }
@@ -339,11 +384,14 @@ mod android {
     #[allow(unsafe_code, reason = "the activity glue looks this symbol up by name")]
     #[unsafe(no_mangle)]
     fn android_main(app: AndroidApp) {
+        crate::stage("start");
+        std::panic::set_hook(Box::new(|info| crate::diag(&format!("panicked: {info}"))));
         let _ = APP.set(app.clone());
         if let Some(dir) = app.internal_data_path() {
             crate::store::set_dir(dir);
         }
         let _ = request_audio(&app);
+        crate::stage("permissions");
         let event_loop =
             winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));
         crate::native::run(event_loop, read);

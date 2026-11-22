@@ -47,7 +47,7 @@ fn small(p: &mut Painter, s: &mut State, r: Rect, unit: f32, (label, on, colour)
 
 /// The Booth knob: a 270 degree ring, filled from the centre or the start, and a pointer.
 pub fn knob(p: &mut Painter, s: &mut State, r: Rect, (v, bipolar, colour): (f32, bool, u32), label: &str, t: Target) {
-    let lp = (r.w * 0.22).round().clamp(8.0, 13.0);
+    let lp = (r.w * 0.22).min(r.h * 0.28).round().clamp(7.0, 13.0);
     let lh = if label.is_empty() { 0.0 } else { lp + 3.0 };
     let size = r.w.min(r.h - lh).clamp(12.0, 64.0);
     let (cx, cy) = (r.x + r.w * 0.5, r.y + (r.h - lh - size) * 0.5 + size * 0.5);
