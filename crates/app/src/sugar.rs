@@ -553,6 +553,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
+    let r = if r.h > 220.0 { library_head(p, s, r) } else { r };
     let r = if r.w >= 640.0 {
         let sw = (r.w * 0.2).clamp(150.0, 220.0);
         sidebar(p, s, Rect::new(r.x, r.y, sw, r.h));
@@ -566,7 +567,7 @@ pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
 fn table(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::library::Column as C;
     p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
-    let bar = if s.selected.is_some() { 40.0 } else { 0.0 };
+    let bar = 40.0;
     let list = Rect::new(r.x, r.y, r.w, r.h - bar);
     s.library = list;
     s.row_h = 22.0;
@@ -661,9 +662,12 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
     if s.shown.is_empty() {
         p.text(r.x + 12.0, r.y + 52.0, ARTIST, "No matches");
     }
-    let Some(i) = s.selected else { return };
     let y = r.y + r.h - bar;
-    p.rect(r.x, y, r.w, bar, 0.0, INK);
+    p.rect(r.x, y, r.w, bar, 0.0, rgb(0x0c0c0c));
+    let Some(i) = s.selected else {
+        p.text(r.x + 12.0, y + 25.0, Style { colour: GREY, ..TITLE }, "Select a track to load");
+        return;
+    };
     let name = &s.entries[i as usize].title;
     let bw = 96.0f32.min(r.w * 0.2);
     p.text_in(r.x + 12.0, y + 25.0, r.w - 2.0 * bw - 36.0, TITLE, name);
@@ -674,6 +678,42 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         p.text(b.x + (b.w - p.text_width(TAB, label)) * 0.5, b.y + b.h * 0.5 + 4.0, TAB, label);
         hit(s, b, Target::LoadSelected(d));
     }
+}
+
+/// The library's header in the DJ view: source tabs, then the search line.
+fn library_head(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
+    let tab = Style::new(11.0, Weight::Bold, ACCENT);
+    let mut x = r.x + 12.0;
+    for (label, on, t) in
+        [("LOCAL MUSIC", true, Target::View(View::Lib)), ("STREAMING HUB", false, Target::View(View::Stream))]
+    {
+        let w = p.text_width(tab, label);
+        let st = Style { colour: if on { ACCENT } else { rgb(0xff99ca) }, ..tab };
+        p.text(x, r.y + 17.0, st, label);
+        if on {
+            p.rect(x, r.y + 22.0, w, 2.0, 1.0, ACCENT);
+        }
+        hit(s, Rect::new(x - 6.0, r.y, w + 12.0, 26.0), t);
+        x += w + 30.0;
+    }
+    let y = r.y + 28.0;
+    let sh = 34.0;
+    let focus = s.search_focus || !s.query.is_empty();
+    p.rect(r.x + 8.0, y + sh - 2.0, r.w - 16.0, 2.0, 1.0, if focus { ACCENT } else { fade(ACCENT, 0x80) });
+    if s.query.is_empty() {
+        p.text_in(
+            r.x + 16.0,
+            y + 22.0,
+            r.w - 32.0,
+            Style::new(13.0, Weight::Regular, GREY),
+            "Search songs, artists, albums",
+        );
+    } else {
+        let qw = p.text_in(r.x + 16.0, y + 22.0, r.w - 40.0, Style::new(13.0, Weight::Regular, TEXT), &s.query);
+        p.rect(r.x + 17.0 + qw, y + 9.0, 1.5, 16.0, 0.0, ACCENT);
+    }
+    hit(s, Rect::new(r.x, y, r.w, sh), Target::SearchFocus);
+    Rect::new(r.x, y + sh + 4.0, r.w, r.h - sh - 32.0)
 }
 
 /// Length the TIME knob picks for the scene, as the page shows it.

@@ -79,31 +79,112 @@ pub fn height(avail: f32) -> f32 {
 fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(r.x, r.y, r.w, r.h, 6.0, DECK_BG);
     let r = Rect::new(r.x + 4.0, r.y + 4.0, r.w - 8.0, r.h - 8.0);
-    let info_h = (r.h * 0.22).clamp(28.0, 56.0).round();
+    let info_h = (r.h * 0.2).clamp(28.0, 50.0).round();
     info(p, s, Rect::new(r.x, r.y, r.w, info_h), d);
-    let ov_h = (r.h * 0.19).clamp(18.0, 50.0).round();
-    overview(p, s, Rect::new(r.x, r.y + info_h + 3.0, r.w, ov_h), d);
-    let body = Rect::new(r.x, r.y + info_h + ov_h + 6.0, r.w, r.h - info_h - ov_h - 6.0);
-    if body.h < 30.0 {
+    let mut top = r.y + info_h + 6.0;
+    // The overview strip appears with a track, as in the reference.
+    if s.decks[d].loaded.is_some() {
+        let ov = (r.h * 0.14).clamp(14.0, 40.0).round();
+        overview(p, s, Rect::new(r.x, top, r.w, ov), d);
+        top += ov + 4.0;
+    }
+    let body = Rect::new(r.x, top, r.w, r.y + r.h - top);
+    if body.h < 40.0 {
         return;
     }
-    let tw = (body.w * 0.16).clamp(44.0, 60.0).round();
-    transport(p, s, Rect::new(body.x, body.y, tw, body.h), d);
-    // The tempo fader on the outer edge, the platter beside the transport when there is room.
-    let rw = 22.0;
-    let rate = s.decks[d].rate;
-    let tr = Rect::new(body.x + body.w - rw, body.y, rw, body.h);
-    fader(p, s, tr, ((rate + 1.0) * 0.5, false, true), DECK[d], Target::Rate(d));
-    let mut x = body.x + tw + 4.0;
-    let sp = body.h.min(140.0);
-    if body.w - tw - rw > sp + 260.0 {
-        spinny(p, s, Rect::new(x, body.y + (body.h - sp) * 0.5, sp, sp), d);
-        x += sp + 4.0;
+    // Left to right as in the reference: transport, pads with their mode tabs,
+    // beat jump, loop, the tempo platter, the sync column, the tempo fader.
+    let u = body.w / 1080.0;
+    let col = |w: f32| (w * u).round();
+    let mut x = body.x;
+    let mut take = |w: f32| {
+        let at = x;
+        x += w + 6.0;
+        Rect::new(at, body.y, w, body.h)
+    };
+    let tr = take(col(75.0).max(40.0));
+    transport(p, s, tr, d);
+    let pr = take(col(350.0).max(150.0));
+    pads(p, s, pr, d);
+    let wide = body.w > 620.0;
+    if wide {
+        let bj = take(col(140.0));
+        beatjump(p, s, bj, d);
+        let lp = take(col(215.0));
+        loops(p, s, lp, d);
     }
-    let rest = Rect::new(x, body.y, body.x + body.w - rw - 4.0 - x, body.h);
-    let tb = 22.0_f32.min(rest.h * 0.2).round();
-    toolbar(p, s, Rect::new(rest.x, rest.y, rest.w, tb), d);
-    pads(p, s, Rect::new(rest.x, rest.y + tb + 3.0, rest.w, rest.h - tb - 3.0), d);
+    let sp = body.h.min(col(165.0)).max(60.0);
+    let sr = take(sp);
+    spinny(p, s, Rect::new(sr.x, sr.y + (sr.h - sp) * 0.5, sp, sp), d);
+    let rw = 22.0;
+    let side = Rect::new(x, body.y, (body.x + body.w - rw - 6.0 - x).max(30.0), body.h);
+    side_column(p, s, side, d, !wide);
+    let rate = s.decks[d].rate;
+    let rr = Rect::new(body.x + body.w - rw, body.y, rw, body.h);
+    fader(p, s, rr, ((rate + 1.0) * 0.5, false, true), DECK[d], Target::Rate(d));
+}
+
+/// A titled dark panel, the frame of the beat jump and loop blocks.
+fn panel(p: &mut Painter, r: Rect, title: &str) -> Rect {
+    p.rect(r.x, r.y, r.w, r.h, 6.0, PAD);
+    let th = (r.h * 0.28).clamp(14.0, 34.0);
+    centred(p, Rect::new(r.x, r.y, r.w, th), Style::new((th * 0.62).round(), Weight::Regular, DIM), title);
+    Rect::new(r.x + 4.0, r.y + th + 2.0, r.w - 8.0, r.h - th - 6.0)
+}
+
+fn beatjump(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let inner = panel(p, r, "Beatjump");
+    let h = ((inner.h - 4.0) * 0.5).floor();
+    let w = ((inner.w - 4.0) * 0.5).floor();
+    button(p, s, Rect::new(inner.x, inner.y, w, h), "<<", (false, ACCENT), Target::Jump(d, -1));
+    button(p, s, Rect::new(inner.x + w + 4.0, inner.y, w, h), ">>", (false, ACCENT), Target::Jump(d, 1));
+    let n = beats_label(s.decks[d].jump as f64);
+    centred(p, Rect::new(inner.x, inner.y + h + 4.0, inner.w, h), bold((h * 0.4).min(18.0), WHITE), &n);
+}
+
+fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let inner = panel(p, r, "Loop");
+    let h = ((inner.h - 4.0) * 0.5).floor();
+    let w = ((inner.w - 8.0) / 3.0).floor();
+    let cell = |i: f32, y: f32| Rect::new(inner.x + i * (w + 4.0), y, w, h);
+    let on = s.decks[d].loop_range.is_some();
+    let armed = s.decks[d].loop_in.is_some();
+    button(p, s, cell(0.0, inner.y), "IN", (armed, ACCENT), Target::LoopIn(d));
+    button(p, s, cell(1.0, inner.y), "OUT", (false, ACCENT), Target::LoopOut(d));
+    button(p, s, cell(2.0, inner.y), "RECALL", (on, LOOP_ON), Target::LoopToggle(d));
+    let y = inner.y + h + 4.0;
+    button(p, s, cell(0.0, y), "/2", (false, ACCENT), Target::LoopSize(d, -1));
+    let n = beats_label(s.decks[d].loop_size as f64);
+    centred(p, cell(1.0, y), bold((h * 0.4).min(18.0), WHITE), &n);
+    button(p, s, cell(2.0, y), "x2", (false, ACCENT), Target::LoopSize(d, 1));
+}
+
+/// Beat grid, sync and the deck switches stacked beside the platter.
+fn side_column(p: &mut Painter, s: &mut State, r: Rect, d: usize, narrow: bool) {
+    let deck = &s.decks[d];
+    let (kl, q, slip, rev, grid) = (deck.key_lock, deck.quantize, deck.slip, deck.reverse, deck.grid_locked);
+    let mut items: Vec<(&str, bool, u32, Target)> = vec![
+        ("BEATGRID", grid, ACCENT, Target::Grid(d)),
+        ("SYNC", false, rgb(0x2e7d32), Target::Sync(d)),
+        ("Q", q, ACCENT, Target::Quantize(d)),
+        ("KEY", kl, ACCENT, Target::KeyLock(d)),
+        ("SLIP", slip, ACCENT, Target::Slip(d)),
+        ("REV", rev, rgb(0xbf360c), Target::Reverse(d)),
+    ];
+    if narrow {
+        items.extend([
+            ("PITCH -", false, ACCENT, Target::Pitch(d, -1)),
+            ("PITCH +", false, ACCENT, Target::Pitch(d, 1)),
+        ]);
+    }
+    let cols = if r.w > 150.0 { 2 } else { 1 };
+    let rows = items.len().div_ceil(cols);
+    let h = ((r.h - (rows - 1) as f32 * 3.0) / rows as f32).floor();
+    let w = ((r.w - (cols - 1) as f32 * 3.0) / cols as f32).floor();
+    for (i, (label, on, colour, t)) in items.into_iter().enumerate() {
+        let b = Rect::new(r.x + (i % cols) as f32 * (w + 3.0), r.y + (i / cols) as f32 * (h + 3.0), w, h);
+        button(p, s, b, label, (on, colour), t);
+    }
 }
 
 fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
@@ -113,8 +194,14 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     centred(p, badge, bold(badge.h * 0.5, DECK[d]), if d == 0 { "1" } else { "2" });
     let deck = &s.decks[d];
     let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+    // LOAD's place on the right ejects a loaded track.
+    let ej_w = (r.h * 1.7).min(r.w * 0.16).round();
+    let ej = Rect::new(r.x + r.w - ej_w - 4.0, r.y + 4.0, ej_w, r.h - 8.0);
+    let loaded = s.decks[d].loaded.is_some();
+    button(p, s, ej, "EJECT", (loaded, DARK[d]), Target::Eject(d));
+    let deck = &s.decks[d];
     let pill_w = (r.h * 1.6).min(r.w * 0.2).round();
-    let pill = Rect::new(r.x + r.w - pill_w - 4.0, r.y + 4.0, pill_w, r.h - 8.0);
+    let pill = Rect::new(ej.x - pill_w - 6.0, r.y + 4.0, pill_w, r.h - 8.0);
     p.rect(pill.x, pill.y, pill.w, pill.h, pill.h * 0.5, PAD);
     let bpm = bpm.map_or_else(|| "--.-".to_string(), |b| format!("{b:.1}"));
     centred(p, pill, bold((pill.h * 0.42).min(13.0), WHITE), &bpm);
@@ -190,24 +277,6 @@ fn transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(cue.x, cue.y, cue.w, cue.h, 10.0, if down { CUE } else { PAD });
     centred(p, cue, bold(cue.w * 0.24, if down { WHITE } else { CUE }), "CUE");
     hit(s, cue, Target::Cue(d));
-}
-
-fn toolbar(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.rect(r.x, r.y, r.w, r.h, 4.0, rgb(0x161616));
-    let n = 8.0;
-    let bw = ((r.w - (n - 1.0) * 3.0) / n).floor();
-    let cell = |i: f32| Rect::new(r.x + i * (bw + 3.0), r.y, bw, r.h);
-    let deck = &s.decks[d];
-    let (kl, q, slip) = (deck.key_lock, deck.quantize, deck.slip);
-    button(p, s, cell(0.0), "-", (false, ACCENT), Target::Pitch(d, -1));
-    button(p, s, cell(1.0), "+", (false, ACCENT), Target::Pitch(d, 1));
-    button(p, s, cell(2.0), "KEY", (kl, ACCENT), Target::KeyLock(d));
-    button(p, s, cell(3.0), "SYNC", (false, rgb(0x2e7d32)), Target::Sync(d));
-    button(p, s, cell(4.0), "Q", (q, ACCENT), Target::Quantize(d));
-    button(p, s, cell(5.0), "SLIP", (slip, ACCENT), Target::Slip(d));
-    let rev = s.decks[d].reverse;
-    button(p, s, cell(6.0), "REV", (rev, rgb(0xbf360c)), Target::Reverse(d));
-    button(p, s, cell(7.0), "EJECT", (false, ACCENT), Target::Eject(d));
 }
 
 const MODES: [(Mode, &str); 4] =
@@ -394,12 +463,23 @@ fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         p.outlined(cx - g, cy - g, g * 2.0, g * 2.0, g, 0, 1.0, rgb(0x2a2a2a));
     }
     let deck = &s.decks[d];
-    let label = rad * 0.34;
-    p.disc(cx, cy, label, DECK[d], DARK[d]);
     if deck.loaded.is_some() {
         let turn = (deck.seconds(s.telemetry.decks[d].position) / 1.8).fract() as f32 * std::f32::consts::TAU;
         let (sn, cs) = turn.sin_cos();
-        p.line((cx + sn * label, cy - cs * label), (cx + sn * (rad - 2.0), cy - cs * (rad - 2.0)), 2.0, WHITE);
+        p.line(
+            (cx + sn * rad * 0.7, cy - cs * rad * 0.7),
+            (cx + sn * (rad - 2.0), cy - cs * (rad - 2.0)),
+            2.0,
+            DECK[d],
+        );
     }
+    // The tempo readout in the middle: BPM, then the rate offset in the deck colour.
+    let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+    let bpm = bpm.map_or_else(|| "--.-- BPM".to_string(), |b| format!("{b:.2} BPM"));
+    let pct = format!("{:+.2}%", f64::from(deck.rate) * 8.0);
+    let big = bold((rad * 0.2).clamp(9.0, 18.0), WHITE);
+    centred(p, Rect::new(cx - rad, cy - big.px * 1.1, rad * 2.0, big.px * 1.2), big, &bpm);
+    let sm = Style::new((rad * 0.14).clamp(8.0, 13.0).round(), Weight::Regular, DECK[d]);
+    centred(p, Rect::new(cx - rad, cy + 2.0, rad * 2.0, sm.px * 1.3), sm, &pct);
     hit(s, r, Target::Jog(d));
 }
