@@ -8,18 +8,15 @@ pub mod instruments;
 pub mod scenes;
 pub mod vinylmotion;
 
-use std::f32::consts::TAU;
 use std::sync::Arc;
 
 use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
 use crate::fxstation::dsp::{soft_clip, Crossover, DelayLine, PitchShifter, Smoother, Svf};
 use crate::fxstation::fdnreverb::FdnReverb;
-use crate::fxstation::instruments::{Instrument, Instruments};
+use crate::fxstation::instruments::{Instrument, Instruments, Loader};
 use crate::fxstation::scenes::{gate_gain, Drive, Flanger, Phaser, Roll, SweepFilter, WsolaPitch};
 use crate::fxstation::vinylmotion::{BackSpinMotion, NeedleShaper};
-
-const TWO_PI: f32 = TAU;
 
 const K_DECKS: usize = 4;
 const K_BANDS: usize = 3;
@@ -185,8 +182,6 @@ pub struct FxStation {
     xpad_mutes: [ControlHandle; K_INSTRUMENTS],
     xpad_clear: ControlHandle,
     xpad_bank: ControlHandle,
-    xpad_reload: ControlHandle,
-    xpad_bank_sounds: [ControlHandle; K_BANKS],
     xpad_loop_steps: ControlHandle,
     release_type_ctrl: ControlHandle,
     release_ctrl: ControlHandle,
@@ -204,6 +199,7 @@ pub struct FxStation {
 
     // Instruments
     instruments: Instruments,
+    loader: Option<Loader>,
 
     // Sample rate
     sample_rate: f32,
@@ -285,7 +281,7 @@ pub struct FxStation {
 
 impl FxStation {
     /// Creates a new FX Station with the given control registry.
-    pub fn new(reg: &Arc<ControlRegistry>, sample_rate: f32) -> Self {
+    pub fn new(reg: &ControlRegistry, _sample_rate: f32) -> Self {
         let make_control = |key: &str, default: f64| -> ControlHandle {
             let h = ControlRegistry::create(reg, K_GROUP, key, default, f64::MIN, f64::MAX, Behavior::Free);
             h.set(default);
@@ -364,7 +360,6 @@ impl FxStation {
         let source = make_control("source", 0.0);
 
         // Pre-allocate all buffers at max sample rate
-        let max_rate = K_MAX_SAMPLE_RATE as usize;
         let mut echo = DelayLine::default();
         echo.allocate((K_MAX_ECHO_SECONDS * K_MAX_SAMPLE_RATE) as usize);
         let mut release_echo = DelayLine::default();
@@ -382,7 +377,7 @@ impl FxStation {
         let mut flanger = Flanger::default();
         flanger.allocate(K_MAX_SAMPLE_RATE);
 
-        let mut phaser = Phaser::default();
+        let phaser = Phaser::default();
 
         let mut roll = Roll::default();
         roll.allocate(K_MAX_SAMPLE_RATE, K_MAX_SCENE_ROLL_SECONDS);
@@ -395,7 +390,7 @@ impl FxStation {
             buffer.allocate((K_MAX_ROLL_SECONDS * K_MAX_SAMPLE_RATE) as usize);
         }
 
-        let instruments = Instruments::new();
+        let (instruments, loader) = Instruments::new(xpad_reload, xpad_bank_sounds);
 
         // Resolve deck handles upfront
         let mut deck_handles: [DeckHandles; K_DECKS] = std::array::from_fn(|_| DeckHandles::default());
@@ -428,8 +423,6 @@ impl FxStation {
             xpad_mutes,
             xpad_clear,
             xpad_bank,
-            xpad_reload,
-            xpad_bank_sounds,
             xpad_loop_steps,
             release_type_ctrl,
             release_ctrl,
@@ -443,6 +436,7 @@ impl FxStation {
             source,
             deck_handles: std::array::from_fn(|_| DeckHandles::default()),
             instruments,
+            loader: Some(loader),
             sample_rate: 0.0,
             beat: 0.0,
             bpm: 120.0,
@@ -568,7 +562,7 @@ impl FxStation {
                     }
                 } else {
                     0.0
-                } + p_volume.map_or(1.0, |v| v.get() as f64);
+                } + p_volume.map_or(1.0, |v| v.get());
                 if loudness > loudest {
                     loudest = loudness;
                     source = Some(i);
@@ -947,14 +941,12 @@ impl FxStation {
             let band_roll = &mut self.rolls[band];
 
             // Gate/Drive.
-            if mode == IsolateMode::GateDrive {
-                if value < 0.0 {
-                    let level = 0.5 * (bands[band][0].abs() + bands[band][1].abs());
-                    let envelope = &mut self.band_envelope[band];
-                    *envelope += (level - *envelope) * if level > *envelope { 0.3 } else { 0.0015 };
-                    let threshold = 0.25 * (-value) * (-value);
-                    gain *= if *envelope > threshold { 1.0 } else { (*envelope / threshold).max(0.0) };
-                }
+            if mode == IsolateMode::GateDrive && value < 0.0 {
+                let level = 0.5 * (bands[band][0].abs() + bands[band][1].abs());
+                let envelope = &mut self.band_envelope[band];
+                *envelope += (level - *envelope) * if level > *envelope { 0.3 } else { 0.0015 };
+                let threshold = 0.25 * (-value) * (-value);
+                gain *= if *envelope > threshold { 1.0 } else { (*envelope / threshold).max(0.0) };
             }
 
             for channel in 0..2 {
@@ -994,29 +986,7 @@ impl FxStation {
 
     fn trigger_instrument(&mut self, instrument: usize, velocity: f32) {
         let bank_index = self.xpad_bank.get() as usize % K_BANKS;
-        let bank = self.instruments.bank(bank_index);
-        let factory = self.instruments.bank(0);
-
-        let p_instrument = bank
-            .as_ref()
-            .and_then(|b| {
-                if !b.instruments[instrument].is_empty() {
-                    Some(Arc::new(b.instruments[instrument].clone()))
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                factory.as_ref().and_then(|b| {
-                    if !b.instruments[instrument].is_empty() {
-                        Some(Arc::new(b.instruments[instrument].clone()))
-                    } else {
-                        None
-                    }
-                })
-            });
-
-        let Some(p_instrument) = p_instrument else { return };
+        let Some(p_instrument) = self.instruments.sound(bank_index, instrument).cloned() else { return };
 
         // A new hit chokes the last one of the instrument (rolls stay clean).
         let mut p_free: Option<&mut Voice> = None;
@@ -1082,15 +1052,14 @@ impl FxStation {
         // The roll of the ribbon: 1/1 to 1/16 of a beat.
         if division > 0 {
             let step_beats = 1.0 / 2.0_f64.powi(division as i32 - 1);
-            let mut hit = false;
-            if division != self.previous_division && self.previous_division == 0 {
+            let hit = if division != self.previous_division && self.previous_division == 0 {
                 self.roll_origin = if quantize { 0.0 } else { beat };
                 self.roll_instrument = instrument;
-                hit = !quantize;
+                !quantize
             } else {
                 let origin = if quantize { 0.0 } else { self.roll_origin };
-                hit = ((beat - origin) / step_beats).floor() != ((previous_beat - origin) / step_beats).floor();
-            }
+                ((beat - origin) / step_beats).floor() != ((previous_beat - origin) / step_beats).floor()
+            };
             if hit {
                 self.trigger_instrument(instrument, volume);
                 if self.xpad_overdub.get() > 0.0 {
@@ -1144,10 +1113,11 @@ impl FxStation {
         let quantize = self.quantize.get() > 0.0;
         let mut out_left = 0.0;
         let mut out_right = 0.0;
-        let mut duration = 0.0;
 
         if !self.release_waiting {
             let t = self.release_elapsed / beat_length;
+            // How long the release lasts, in beats.
+            let duration;
             match self.release_type {
                 ReleaseType::VinylBrake => {
                     duration = 2.0;
@@ -1196,6 +1166,11 @@ impl FxStation {
     }
 
     /// Processes the main mix in place (interleaved stereo).
+    /// The X-Pad sound loader, once: the app starts it with the folder of the user banks.
+    pub fn take_loader(&mut self) -> Option<Loader> {
+        self.loader.take()
+    }
+
     pub fn process(&mut self, buf: &mut [[f32; 2]], sample_rate: f32) {
         let frames = buf.len();
         if sample_rate <= 0.0 || frames == 0 {
@@ -1205,6 +1180,7 @@ impl FxStation {
             self.prepare(sample_rate);
         }
 
+        self.instruments.poll();
         self.update_clock(frames);
         self.handle_buttons();
 

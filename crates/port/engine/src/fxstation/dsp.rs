@@ -88,7 +88,7 @@ pub struct Biquad {
 impl Biquad {
     pub fn set_low_pass(&mut self, frequency: f32, sample_rate: f32) {
         let w = 2.0 * PI * frequency / sample_rate;
-        let alpha = (w.sin()) / (2.0 * 0.70710678);
+        let alpha = (w.sin()) / (2.0 * std::f32::consts::FRAC_1_SQRT_2);
         let c = w.cos();
         let a0 = 1.0 + alpha;
         self.b0 = (1.0 - c) / 2.0 / a0;
@@ -100,7 +100,7 @@ impl Biquad {
 
     pub fn set_high_pass(&mut self, frequency: f32, sample_rate: f32) {
         let w = 2.0 * PI * frequency / sample_rate;
-        let alpha = (w.sin()) / (2.0 * 0.70710678);
+        let alpha = (w.sin()) / (2.0 * std::f32::consts::FRAC_1_SQRT_2);
         let c = w.cos();
         let a0 = 1.0 + alpha;
         self.b0 = (1.0 + c) / 2.0 / a0;

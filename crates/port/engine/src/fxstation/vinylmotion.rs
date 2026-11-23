@@ -58,9 +58,9 @@ impl NeedleShaper {
     pub fn process(&mut self, left: &mut f32, right: &mut f32, velocity: f64) {
         let speed = velocity.abs();
         let level = speed.min(1.0) as f32;
-        let g = (PI * (0.45 * speed.min(1.0 / speed.max(1e-3))).clamp(0.002, 0.45) as f64).tan() as f32;
+        let g = (PI * (0.45 * speed.min(1.0 / speed.max(1e-3))).clamp(0.002, 0.45)).tan() as f32;
         // Two 2-pole state variable stages (24 dB/oct, Butterworth).
-        const K_DAMPING: f32 = 1.41421356;
+        const K_DAMPING: f32 = std::f32::consts::SQRT_2;
         let a1 = 1.0 / (1.0 + g * (g + K_DAMPING));
         let mut channels = [*left, *right];
         for c in 0..2 {

@@ -16,6 +16,8 @@ pub mod decode;
 pub mod dsp;
 mod effects;
 pub mod engine;
+// Per-channel and per-step DSP loops read clearest by index.
+#[allow(clippy::needless_range_loop)]
 pub mod fxstation;
 mod gridfit;
 pub mod groove;
@@ -118,6 +120,7 @@ pub enum SampleSource {
 
 /// Handle to the running engine. Dropping it stops playback.
 pub struct AudioEngine {
+    xpad: Option<fxstation::instruments::LoaderHandle>,
     registry: Arc<ControlRegistry>,
     alerts: Alerts,
     requests: Sender<loader::LoadRequest>,
@@ -168,6 +171,17 @@ impl MasterFeed {
     }
 }
 
+/// Where users put their X-Pad banks: "Bank 2" to "Bank 4" folders, beside
+/// the music on phones and in the music folder elsewhere.
+pub fn xpad_folder() -> std::path::PathBuf {
+    let base = if cfg!(target_os = "android") {
+        std::path::PathBuf::from("/storage/emulated/0")
+    } else {
+        paths::home_dir().unwrap_or_default().join("Music")
+    };
+    base.join("DJ Sugar").join("FxStation")
+}
+
 /// The plugin helper, `djsugar-plugin-host`, installed beside the app.
 pub fn plugin_helper() -> Option<std::path::PathBuf> {
     let exe = std::env::current_exe().ok()?;
@@ -204,6 +218,11 @@ impl AudioEngine {
         let instrument_view = engine.instrument_view();
         let live_waves = engine.take_live_waves().expect("live waves");
         let groove_hits = engine.take_groove_hits().expect("groove hits");
+        let xpad = engine.take_xpad_loader().map(|l| {
+            let handle = l.handle();
+            l.start(xpad_folder());
+            handle
+        });
         let plugins = plugin_helper().map(|helper| {
             plugins::PluginHost::start(&registry, plugin_link, plugins::HostOptions::new(helper, rate as u32))
         });
@@ -243,6 +262,14 @@ impl AudioEngine {
             groove_hits: Mutex::new(Some(groove_hits)),
             broadcast_feed: Mutex::new(broadcast_feed),
             midi_clock,
+            xpad,
+        }
+    }
+
+    /// The app's own drum kit for the X-Pad's first bank.
+    pub fn xpad_factory(&self, files: [Option<std::path::PathBuf>; fxstation::instruments::INSTRUMENTS]) {
+        if let Some(x) = &self.xpad {
+            x.set_factory(files);
         }
     }
 

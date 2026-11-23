@@ -95,13 +95,6 @@ fn soft_triangle(phase: f32) -> f32 {
     tri * (1.5 - 0.5 * tri * tri)
 }
 
-/// Picks a value from an array based on a knob position (0..1).
-fn pick<T: Copy>(values: &[T], knob: f32) -> T {
-    let n = values.len();
-    let idx = (knob * n as f32).clamp(0.0, (n - 1) as f32) as usize;
-    values[idx]
-}
-
 /// Flanger: a short delay swept by the beat, with feedback and the
 /// dry signal on equal level (the deep comb notches of tape flanging).
 /// Stereo with the right sweep a quarter of a cycle later.
@@ -615,5 +608,5 @@ impl Drive {
 fn log_cosh(x: f32) -> f32 {
     // log(cosh(x)) without overflow.
     let a = x.abs();
-    a + (-2.0 * a).exp().ln_1p() - 0.69314718
+    a + (-2.0 * a).exp().ln_1p() - std::f32::consts::LN_2
 }

@@ -2227,9 +2227,9 @@ impl Flanger {
     }
 }
 
-/// The flanger's level makeup for its depth, manual and feedback knobs (0..1 each). Mixing the swept copy in at depth `d` takes the dry signal down to `1
-/// - d/2` and adds the copy at `d/2`; where the two don't line up the sum is quieter, by 3 dB at full depth, so switching it on sounded like a drop. This
-/// puts that back, less where it isn't lost: at the shortest delays the bass stays in phase, and feedback's resonance makes up the rest on its own.
+/// Flanger level makeup for its depth, manual and feedback knobs (0..1). At depth `d` the dry signal is `1 - d/2`
+/// plus the copy at `d/2`, which sums 3 dB quieter at full depth; this puts that back, less at the shortest delays
+/// (bass stays in phase) and with feedback (its resonance makes up the rest).
 fn flanger_makeup(depth: f32, manual: f32, feedback: f32) -> f32 {
     let (dry, wet) = (1.0 - 0.5 * depth, 0.5 * depth);
     let loss = dry * dry + wet * wet;

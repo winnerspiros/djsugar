@@ -26,7 +26,7 @@ pub struct Ui {
 impl Ui {
     pub fn new(read: Reader) -> Self {
         stage("ui");
-        let engine = crate::bridge::Bridge::start();
+        let engine = crate::bridge::Bridge::start(read);
         let out_rate = engine.rate();
         let status = None;
         let engine = Some(engine);

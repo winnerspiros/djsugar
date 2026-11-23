@@ -1534,6 +1534,8 @@ pub struct Engine {
     decks: [Deck; NUM_DECKS],
     master: MasterControls,
     fx: EffectRack,
+    /// The remix station on the main mix, after its effects.
+    fxstation: crate::fxstation::FxStation,
     /// Per-buffer scratch for the mix's stages, [`BLOCK`] frames each, made
     /// up front: each deck's audio and metronome click, the main mix and the
     /// headphone cue before the main mix's effects.
@@ -1827,6 +1829,7 @@ impl Engine {
         let inputs = std::array::from_fn(|i| Input::new(registry, i, sample_rate));
         let ducker = Ducker::new(registry, sample_rate);
         crate::midi_clock::create_controls(registry);
+        let fxstation = crate::fxstation::FxStation::new(registry, sample_rate as f32);
         (
             Self {
                 inputs,
@@ -1857,6 +1860,7 @@ impl Engine {
                 decks,
                 master,
                 fx,
+                fxstation,
                 deck_buf: vec![vec![[0.0; 2]; BLOCK]; NUM_DECKS],
                 mixer_dry: vec![[0.0; 2]; BLOCK],
                 click_buf: vec![vec![0.0; BLOCK]; NUM_DECKS],
@@ -1922,6 +1926,10 @@ impl Engine {
     }
 
     /// The app's ends of the Groove Boxes' hit queues; there is one set.
+    pub(crate) fn take_xpad_loader(&mut self) -> Option<crate::fxstation::instruments::Loader> {
+        self.fxstation.take_loader()
+    }
+
     pub(crate) fn take_groove_hits(&mut self) -> Option<[rtrb::Consumer<crate::groove::GrooveHit>; NUM_DECKS]> {
         self.groove_hit_rx.take()
     }
@@ -3707,6 +3715,7 @@ impl Engine {
         }
         if !external {
             self.fx.process_block(MAIN, &mut main_buf[..frames]);
+            self.fxstation.process(&mut main_buf[..frames], self.sample_rate as f32);
         }
         for f in 0..frames {
             let r = (f + 1) as f32 / frames as f32;
@@ -3897,6 +3906,7 @@ impl Engine {
             d.c.cue_indicator.set_bool((!playing && (at_cue || blink)) || d.c.cue_default.get_bool());
             let phase = track.beat_at(d.seconds()).rem_euclid(1.0);
             d.c.beat_active.set_bool(p.moving && phase < 0.15);
+            d.c.beat_distance.set(phase);
         }
         self.master_gain = master_target;
         self.balance = balance_target;

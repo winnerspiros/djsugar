@@ -35,10 +35,27 @@ impl std::fmt::Debug for Bridge {
     }
 }
 
+/// The X-Pad's first bank: the app's own kick, snare, clap and hi-hat, written
+/// once to a folder the engine can read.
+fn xpad_kit(read: crate::state::Reader) -> [Option<PathBuf>; 4] {
+    let dir = std::env::temp_dir().join("djsugar-samples");
+    djsugar_engine::fxstation::instruments::FACTORY_FILES.map(|name| {
+        let path = dir.join(name);
+        if path.is_file() {
+            return Some(path);
+        }
+        let bytes = read(name)?;
+        std::fs::create_dir_all(&dir).ok()?;
+        std::fs::write(&path, bytes).ok()?;
+        Some(path)
+    })
+}
+
 impl Bridge {
-    pub fn start() -> Self {
+    pub fn start(read: crate::state::Reader) -> Self {
         let reg = ControlRegistry::new();
         let engine = AudioEngine::start(reg.clone(), &AudioSetup::default());
+        engine.xpad_factory(xpad_kit(read));
         let slots = (0..SLOTS).map(|_| Slot { name: String::new(), ready: Arc::default() }).collect();
         Self { engine, reg, rate: [44_100.0; DECKS], slots, next: 0, last: Telemetry::default() }
     }

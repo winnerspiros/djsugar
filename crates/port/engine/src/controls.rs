@@ -155,6 +155,8 @@ pub(crate) struct DeckControls {
     pub(crate) bpm: ControlHandle,
     pub(crate) duration: ControlHandle,
     pub(crate) beat_active: ControlHandle,
+    /// How far into the current beat the deck is, 0 to 1.
+    pub(crate) beat_distance: ControlHandle,
     pub(crate) loop_enabled: ControlHandle,
     pub(crate) loop_start: ControlHandle,
     pub(crate) loop_end: ControlHandle,
@@ -405,6 +407,7 @@ impl DeckControls {
             bpm: reg.indicator(g, "bpm", 300.0),
             duration: reg.indicator(g, "duration", 3600.0),
             beat_active: reg.indicator(g, "beat_active", 1.0),
+            beat_distance: reg.indicator(g, "beat_distance", 1.0),
             loop_enabled: reg.toggle(g, "loop_enabled"),
             // Mappings expect these in samples; the engine uses seconds.
             loop_start: reg.indicator(g, "loop_start_position", 3600.0),
