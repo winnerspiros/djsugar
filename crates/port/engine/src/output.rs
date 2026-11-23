@@ -357,22 +357,10 @@ pub struct OutputDevice {
     pub channels: u16,
 }
 
-/// What ASIO drivers' names start with in the device lists, next to the
-/// Windows Audio (WASAPI) devices.
-#[cfg(windows)]
-const ASIO_PREFIX: &str = "ASIO: ";
-
 /// The audio systems devices are listed from, each with what its devices'
-/// names start with: Windows Audio (WASAPI) and, on Windows, ASIO drivers
-/// ("ASIO: Focusrite USB ASIO"); elsewhere only the system's own.
+/// names start with: only the system's own (ASIO needs a C SDK).
 fn hosts() -> Vec<(&'static str, cpal::Host)> {
-    #[allow(unused_mut)]
-    let mut hosts = vec![("", cpal::default_host())];
-    #[cfg(windows)]
-    if let Ok(asio) = cpal::host_from_id(cpal::HostId::Asio) {
-        hosts.push((ASIO_PREFIX, asio));
-    }
-    hosts
+    vec![("", cpal::default_host())]
 }
 
 /// The audio system a listed device name belongs to, and the device's own

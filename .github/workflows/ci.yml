@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -253,6 +254,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
+      - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p djsugar
@@ -278,6 +280,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
@@ -317,6 +320,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
