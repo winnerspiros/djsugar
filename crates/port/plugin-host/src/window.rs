@@ -93,6 +93,9 @@ impl EditorWindow {
     /// this only sleeps.
     pub fn step(&mut self, main: &mut dyn MainThread, editor: &AtomicU32, shown: &AtomicU32, wait: Duration) {
         self.follow(main, editor, shown, None);
+        if self.wants_run() {
+            return;
+        }
         let Some(el) = self.event_loop.as_mut() else {
             std::thread::sleep(wait);
             return;
@@ -155,6 +158,22 @@ impl EditorWindow {
                 self.close(main, shown);
             }
         } else if !self.open && !self.refused {
+            // macOS can't pump its loop and then hand it over: make the loop and
+            // open the editor inside it, on the next turn (see `wants_run`).
+            if cfg!(target_os = "macos") && el.is_none() {
+                if self.event_loop.is_none() {
+                    match new_event_loop() {
+                        Ok(l) => self.event_loop = Some(l),
+                        Err(e) => {
+                            eprintln!("editor: {e}");
+                            self.refused = true;
+                            editor.store(CLOSED, Ordering::Release);
+                            shown.store(NONE, Ordering::Release);
+                        }
+                    }
+                }
+                return;
+            }
             match self.open_editor(main, el) {
                 Ok(()) => shown.store(OPEN, Ordering::Release),
                 Err(e) => {

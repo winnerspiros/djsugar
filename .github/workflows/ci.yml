@@ -45,7 +45,7 @@ jobs:
   linux:
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
@@ -55,7 +55,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
       # One optimized build for the tests and the app: the engine is too big to build twice.
-      - run: cargo test --workspace --release --locked
+      - run: cargo test --workspace --profile ci --locked
       - run: cargo doc --workspace --no-deps --locked
       - run: cargo build --release -p djsugar --locked
       - name: Every view at seven sizes, typing, focus loss, GPU recreation
@@ -106,7 +106,7 @@ jobs:
           - os: macos-latest
             bin: target/release/djsugar
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -114,7 +114,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
-      - run: cargo test --workspace --release --locked
+      - run: cargo test --workspace --profile ci --locked
       - run: cargo build --release -p djsugar --locked
       - uses: actions/upload-artifact@v7
         with:
