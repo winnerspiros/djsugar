@@ -14,6 +14,8 @@ pub type Reader = fn(&str) -> Option<Vec<u8>>;
 const OVERVIEW: usize = 1024;
 pub const DETAIL_FRAMES: usize = 256;
 const RATE_RANGE: f64 = 0.08;
+/// The view switch fade, as long as the reference's reflow transition.
+pub const VIEW_FADE: std::time::Duration = std::time::Duration::from_millis(150);
 const TAP: f32 = 8.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -359,6 +361,8 @@ pub struct State {
     pub out_rate: u32,
     pub auto: Option<Auto>,
     pub view: View,
+    /// When the view last changed, for its fade in.
+    pub view_at: Option<std::time::Instant>,
     pub show_fx: bool,
     pub show_samplers: bool,
     pub search_focus: bool,
@@ -458,6 +462,7 @@ impl State {
             out_rate,
             auto: None,
             view: View::Dj,
+            view_at: None,
             show_fx: false,
             show_samplers: false,
             search_focus: false,
@@ -491,6 +496,7 @@ impl State {
             || !self.drags.is_empty()
             || self.decks.iter().any(|d| d.loading)
             || self.auto.is_some()
+            || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE)
     }
 
     pub fn tick(&mut self) {
@@ -1269,7 +1275,12 @@ impl State {
                     self.decks[d].cues[p] = None;
                 }
             }
-            Target::View(v) => self.view = v,
+            Target::View(v) => {
+                if self.view != v {
+                    self.view_at = Some(std::time::Instant::now());
+                }
+                self.view = v;
+            }
             Target::ToggleFx => self.show_fx = !self.show_fx,
             Target::ToggleSamplers => self.show_samplers = !self.show_samplers,
             Target::Sampler(i) => self.sample(i),

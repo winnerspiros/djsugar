@@ -65,6 +65,7 @@ fn main() {
                 faults.push(format!("{name}: no {view} tab"));
                 continue;
             }
+            std::thread::sleep(std::time::Duration::from_millis(200));
             ui.render(&mut r);
             ui.render(&mut r);
             let shown = ui.targets();

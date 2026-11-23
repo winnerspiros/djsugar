@@ -133,6 +133,15 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             }
         }
     }
+    if let Some(t) = s.view_at {
+        let k = t.elapsed().as_secs_f32() / crate::state::VIEW_FADE.as_secs_f32();
+        if k < 1.0 {
+            let a = ((1.0 - k) * (1.0 - k) * 255.0) as u32;
+            p.rect(0.0, bar, w, h - bar, 0.0, fade(rgb(0x000000), a));
+        } else {
+            s.view_at = None;
+        }
+    }
     browser(p, s, w, h, bar);
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
