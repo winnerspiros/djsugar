@@ -3,6 +3,7 @@ mod hub;
 mod library;
 mod lyrics;
 mod record;
+mod bridge;
 mod state;
 mod store;
 mod sugar;
@@ -20,30 +21,20 @@ pub struct Ui {
     state: State,
     size: (f32, f32),
     scale: f32,
-    _output: Option<sugar_io::Output>,
 }
 
 impl Ui {
     pub fn new(read: Reader) -> Self {
         stage("ui");
-        let mut engine = None;
-        let mut out_rate = 48_000;
-        let output = sugar_io::open(|f| {
-            out_rate = f.rate;
-            let (control, e) = sugar_engine::new(f.rate, f.burst.max(256) * 4);
-            engine = Some(control);
-            e
-        });
-        let (output, status) = match output {
-            Ok(o) if o.silent => (Some(o), Some("No audio output on this platform yet: playback is silent".into())),
-            Ok(o) => (Some(o), None),
-            Err(e) => (None, Some(format!("Audio unavailable: {e}"))),
-        };
+        let engine = crate::bridge::Bridge::start();
+        let out_rate = engine.rate();
+        let status = None;
+        let engine = Some(engine);
         stage("audio open");
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
         stage("state ready");
-        Self { painter: Painter::new(Fonts::new(FONT)), state, size: (1.0, 1.0), scale: 1.0, _output: output }
+        Self { painter: Painter::new(Fonts::new(FONT)), state, size: (1.0, 1.0), scale: 1.0 }
     }
 
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {

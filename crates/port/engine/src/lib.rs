@@ -23,6 +23,7 @@ pub mod decode;
 pub mod dsp;
 mod effects;
 pub mod engine;
+pub mod fxstation;
 mod gridfit;
 pub mod groove;
 pub mod groove_dice;

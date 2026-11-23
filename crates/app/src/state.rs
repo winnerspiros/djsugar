@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use sugar_engine::{Command, Control, DECKS, Telemetry, Track};
+use crate::bridge::Bridge as Control;
+use sugar_engine::{Command, DECKS, Telemetry, Track};
 use sugar_layout::Rect;
 
 use crate::library::{self, Entry, Source};
@@ -484,6 +485,30 @@ impl State {
         }
     }
 
+    /// A file the engine can open: library files as they are, built-in
+    /// samples written once to the cache.
+    fn on_disk(&self, source: &Source) -> Option<std::path::PathBuf> {
+        match source {
+            Source::File(p) => Some(p.to_path_buf()),
+            Source::Sample(name) => {
+                let path = std::env::temp_dir().join("djsugar-samples").join(name);
+                if !path.is_file() {
+                    std::fs::create_dir_all(path.parent()?).ok()?;
+                    std::fs::write(&path, (self.read)(name)?).ok()?;
+                }
+                Some(path)
+            }
+        }
+    }
+
+    fn play_sample(&mut self, i: usize) {
+        let Some(name) = SAMPLES.get(i) else { return };
+        let Some(path) = self.on_disk(&Source::Sample(name)) else { return };
+        if let Some(c) = &mut self.control {
+            c.sample(name, path, 0.9);
+        }
+    }
+
     fn send(&mut self, c: Command) {
         if let Some(ctl) = &mut self.control {
             ctl.send(c);
@@ -545,7 +570,11 @@ impl State {
         while let Ok((job, loaded)) = self.jobs.1.try_recv() {
             match (job, loaded) {
                 (Job::Deck(d), Some(l)) => {
-                    self.send(Command::Load(d, l.track.clone()));
+                    if let Some(path) = self.on_disk(&l.entry.source)
+                        && let Some(c) = &mut self.control
+                    {
+                        c.load(d, &path, l.track.rate);
+                    }
                     self.decks[d].loaded = Some(l);
                     self.decks[d].loading = false;
                     self.decks[d].cue = 0.0;
@@ -560,7 +589,7 @@ impl State {
                 (Job::Deck(d), None) => self.decks[d].loading = false,
                 (Job::Sample(i, play), Some(l)) => {
                     if play {
-                        self.send(Command::Sample(l.track.clone(), 0.9));
+                        self.play_sample(i);
                     }
                     self.samples[i] = Some(l.track);
                 }
@@ -927,7 +956,7 @@ impl State {
 
     fn sample(&mut self, i: usize) {
         match self.samples.get(i).cloned().flatten() {
-            Some(t) => self.send(Command::Sample(t, 0.9)),
+            Some(_) => self.play_sample(i),
             None => self.load(Job::Sample(i, true), i),
         }
     }

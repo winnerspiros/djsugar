@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn checksums_match_the_published_models() {
-        let sums = include_str!("../../../scripts/models/SHA256SUMS");
+        let sums = include_str!("../../models/SHA256SUMS");
         for (name, sha) in MODELS {
             assert!(
                 sums.lines().any(|l| l == format!("{sha}  {name}")),
