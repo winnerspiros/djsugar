@@ -1,6 +1,6 @@
-//! Neural key detection: KeyNet, the convolutional network of Korzeniowski and Widmer ("Genre-Agnostic Key Classification with Convolutional Neural Networks", ISMIR 2018), with the weights openkeyscan-analyzer
-//! log(1 + magnitude). The filters here are librosa's, applied at the file's own rate in a single pass instead of octave by octave; that comes within about half a percent of librosa's values and gives the same keys.
-//! log(1 + magnitude). The filters here are librosa's, applied at the file's own rate in a single pass instead of octave by octave; that comes within about half a percent of librosa's values and gives the same
+//! Neural key detection: KeyNet, the convolutional network of Korzeniowski and Widmer ("Genre-Agnostic Key Classification with Convolutional Neural Networks", ISMIR 2018), with the weights openkeyscan-analyzer trained
+//! on the GiantSteps MTG key set (MIT licence; see `models/README.md`). The network reads a constant-Q spectrogram as librosa makes it: 105 bins, two per semitone from 65 Hz, five frames a second, as log(1 + magnitude).
+//! The filters here are librosa's, applied at the file's own rate in a single pass instead of octave by octave; that comes within about half a percent of librosa's values and gives the same keys.
 
 use std::sync::{Arc, OnceLock};
 

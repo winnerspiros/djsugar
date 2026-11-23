@@ -26,7 +26,7 @@ pub type Stems = Vec<[Vec<f32>; 2]>;
 /// The four U-Nets on some device.
 pub trait Net {
     /// Each stem's estimated magnitudes for one window of the mix's
-    /// magnitudes (`[channel][frame][bin]`, 2 × [`T`] × [`F`]), in the same
+    /// magnitudes (`[channel][frame][bin]`, 2 x [`T`] x [`F`]), in the same
     /// layout, one after the other in [`STEMS`] order.
     fn estimate(&self, magnitudes: Vec<f32>) -> Vec<f32>;
 }
@@ -34,7 +34,7 @@ pub trait Net {
 /// One stem's U-Net on its own, for when only that stem's level is wanted.
 pub trait OneStem {
     /// Stem `stem`'s estimated magnitudes for one window, laid out as in
-    /// [`Net::estimate`] (2 × [`T`] × [`F`]).
+    /// [`Net::estimate`] (2 x [`T`] x [`F`]).
     fn estimate_stem(&self, stem: usize, magnitudes: &[f32]) -> Vec<f32>;
 }
 
@@ -145,9 +145,9 @@ pub fn separate(net: &impl Net, channels: [&[f32]; 2], from: usize, done: impl F
     out
 }
 
-/// Separates like [`separate`], handing over each stretch of `chunk` samples as soon as it is final (every window that overlaps it is done), so the stems can play while the rest is
-/// samples before it (for filters to settle on; those may lack a window that isn't done yet); chunks come in no particular order. Stops early, returning false, when `ready` returns false.
-/// samples before it (for filters to settle on; those may lack a window that isn't done yet); chunks come in no particular order. Stops early, returning false, when `ready` returns
+/// Separates like [`separate`], handing over each stretch of `chunk` samples as soon as it is final (every window that overlaps it is done), so the stems can play while the rest is separated,
+/// and keeping only the windows still needed in memory. `ready(k, stems)` gets chunk `k`, samples `k * chunk..`, as `[stem][channel][sample]`, preceded by up to `lead` samples before
+/// it (for filters to settle on; those may lack a window that isn't done yet); chunks come in no particular order. Stops early, returning false, when `ready` returns false.
 pub fn separate_in_chunks(
     net: &impl Net,
     channels: [&[f32]; 2],
@@ -160,7 +160,7 @@ pub fn separate_in_chunks(
 }
 
 /// One window's stems, overlap-added from its own frames:
-/// `[stem][channel][sample]`, from padded sample `first frame × HOP`.
+/// `[stem][channel][sample]`, from padded sample `first frame x HOP`.
 type Local = Vec<[Vec<f32>; 2]>;
 
 fn run(

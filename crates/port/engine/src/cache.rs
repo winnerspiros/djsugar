@@ -1,6 +1,6 @@
-//! Keeps each file's analysis (waveform, tempo, first beat) on disk, so a track loaded again shows its waveform at once. Entries live in the
-//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and modification time, so an edited file is analysed again.
-//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and modification time, so an edited file is
+//! Keeps each file's analysis (waveform, tempo, first beat) on disk, so a track loaded again shows its waveform at once. Entries live in the user's
+//! cache folder (`~/Library/Caches/DJSugar` on macOS, `%LOCALAPPDATA%\DJ Sugar` on Windows, `$XDG_CACHE_HOME/djsugar` or `~/.cache/djsugar` elsewhere,
+//! or `DJSUGAR_CACHE`), named by a hash of the file's path, size and modification time, so an edited file is analysed again.
 
 use std::fs;
 use std::io::{Read, Write};

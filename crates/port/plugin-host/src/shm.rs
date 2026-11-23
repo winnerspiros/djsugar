@@ -1,6 +1,6 @@
-//! The block of memory DJ Sugar and a helper share: a header of atomics, then the input and output audio, one channel after the other. Who may touch what, and when: - DJ Sugar writes the input, the frame
-//! `seq_out` to that number. - DJ Sugar reads the output only once `seq_out` has caught up. The release/acquire pairs on the two counters order every other access, so the audio buffers themselves need no locks.
-//! `seq_out` to that number. - DJ Sugar reads the output only once `seq_out` has caught up. The release/acquire pairs on the two counters order every other access, so the audio buffers themselves need no
+//! The block of memory DJ Sugar and a helper share: a header of atomics, then the input and output audio, one channel after the other. Who may touch what, and when: - DJ Sugar writes the input, the frame count
+//! and the transport, then bumps `seq_in`. It only does so while the helper is idle (`seq_out == seq_in`). - The helper reads them after it sees the new `seq_in`, writes the output, then sets `seq_out` to
+//! that number. - DJ Sugar reads the output only once `seq_out` has caught up. The release/acquire pairs on the two counters order every other access, so the audio buffers themselves need no locks.
 
 use std::fs::{File, OpenOptions};
 use std::io;

@@ -1,6 +1,6 @@
-//! Musical variation for the Groove Box's tracks: new grooves in a genre's style, small mutations, busier and calmer tracks and even spacing. Not plain dice: each move is weighted by how
-//! three 16-bit masks ([`Track`]) and a small random number generator, so it runs on the audio thread without allocating. The genre statistics ([`Habits`]) are built once, when the engine starts.
-//! three 16-bit masks ([`Track`]) and a small random number generator, so it runs on the audio thread without allocating. The genre statistics ([`Habits`]) are built once, when the engine
+//! Musical variation for the Groove Box's tracks: new grooves in a genre's style, small mutations, busier and calmer tracks and even spacing. Not plain dice: each move is weighted by how strong
+//! a step is in the bar (downbeats first, as in Mutable Instruments' Grids) and by how often the genre's library grooves hit that step with that sound. Everything works on a track's three 16-bit
+//! masks ([`Track`]) and a small random number generator, so it runs on the audio thread without allocating. The genre statistics ([`Habits`]) are built once, when the engine starts.
 
 use crate::groove::STEPS;
 use crate::kits::ROLES;

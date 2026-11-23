@@ -288,9 +288,9 @@ impl CrossAttentionLayer {
     }
 }
 
-/// 1D sinusoidal positional embedding matching Python's
-/// concatenated along last dim. `phase[pos, i] = pos / 10000^(i / (half - 1))` for i = 0..half.
-/// concatenated along last dim. `phase[pos, i] = pos / 10000^(i / (half
+/// 1D sinusoidal positional embedding matching Python's `create_sin_embedding`.
+/// Layout: `[cos(phase), sin(phase)]` concatenated along last dim. `phase[pos,
+/// i] = pos / 10000^(i / (half - 1))` for i = 0..half.
 fn create_sin_embed(seq_len: usize, d_model: usize, device: &Device) -> Tensor<3> {
     let mut data = vec![0.0f32; seq_len * d_model];
     let half = d_model / 2;
@@ -307,9 +307,9 @@ fn create_sin_embed(seq_len: usize, d_model: usize, device: &Device) -> Tensor<3
     Tensor::<2>::from_data(TensorData::new(data, [seq_len, d_model]), device).unsqueeze_dim::<3>(0)
 }
 
-/// 2D sinusoidal positional embedding matching Python's `create_2d_sin_embedding`. Encodes both time (width) and frequency (height) positions. Returns [1,
-/// 1,3,5,...,half-1: cos(time_pos * div_term) - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term) - Channels half+1,half+3,...,d_model-1: cos(freq_pos * div_term)
-/// 1,3,5,...,half-1: cos(time_pos * div_term) - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term) - Channels half+1,half+3,...,d_model-1: cos(freq_pos *
+/// 2D sinusoidal positional embedding matching Python's `create_2d_sin_embedding`. Encodes both time (width) and frequency (height) positions. Returns [1, width*height,
+/// d_model] in time-major order (t varies slowest). Layout within d_model channels: - Channels 0,2,4,...,half-2: sin(time_pos * div_term) - Channels 1,3,5,...,half-1:
+/// cos(time_pos * div_term) - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term) - Channels half+1,half+3,...,d_model-1: cos(freq_pos * div_term)
 fn create_2d_sin_embed(
     d_model: usize,
     height: usize, // freq bins

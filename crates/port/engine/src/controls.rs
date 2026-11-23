@@ -17,9 +17,9 @@ pub const BEAT_FX_UNIT: usize = 4;
 pub const fn pad_fx_unit(deck: usize) -> usize {
     BEAT_FX_UNIT + 1 + deck
 }
-/// The microphone and auxiliary inputs' own unit, the last one (now
-/// units can't be routed to the inputs, nor this one to the decks. The UI reads its number from `EffectList.mic-unit`.
-/// units can't be routed to the inputs, nor this one to the decks. The UI reads its number
+/// The microphone and auxiliary inputs' own unit, the last one (now `[EffectRack1_EffectUnit10]`),
+/// so effects on the voice leave the decks' alone. The other units can't be routed to the inputs,
+/// nor this one to the decks. The UI reads its number from `EffectList.mic-unit`.
 pub const MIC_FX_UNIT: usize = NUM_EFFECT_UNITS - 1;
 pub const EFFECTS_PER_UNIT: usize = 3;
 
@@ -301,9 +301,9 @@ impl DeckControls {
         alias(reg, g, "vu_meter_left", g, "VuMeterL");
         alias(reg, g, "vu_meter_right", g, "VuMeterR");
         reg.indicator(g, "playposition_seconds", 3600.0);
-        // A pad panel a controller's pad mode buttons ask the deck to show (0 hot cues, 1 pad
-        // shift, 9 loop roll, 10 slicer, 11 freeze); the skin shows it and sets this back to -1.
-        // shift, 9 loop roll, 10 slicer, 11 freeze); the skin shows it and sets this back to
+        // A pad panel a controller's pad mode buttons ask the deck to show (0 hot cues, 1 pad FX
+        // 1, 2 beat jump, 3 sampler, 4 stems, 5 beat loop, 6 pad FX 2, 7 keyboard, 8 key shift,
+        // 9 loop roll, 10 slicer, 11 freeze); the skin shows it and sets this back to -1.
         reg.create(g, "pad_panel", -1.0, -1.0, 16.0, Behavior::Free);
         // Touching the jog's top scratches (on, as on vinyl) or only bends
         // like the rim (off, CDJ mode). Only controller mappings read it;
@@ -689,9 +689,9 @@ pub(crate) struct MasterControls {
     /// loudness meter take: 0 the main mix, 1 to 8 Auxiliary input 1 to 8
     /// as it comes in (a hardware mixer's record out).
     pub(crate) record_source: ControlHandle,
-    /// `[Master] latency_measure`: set to an input (as in
-    /// main output and time it coming back in; the engine sets it back to 0 when the burst starts.
-    /// main output and time it coming back in; the engine sets it back to 0 when
+    /// `[Master] latency_measure`: set to an input (as in `[ChannelN],vinylcontrol_input`)
+    /// to play a short noise burst out of the main output and time it coming back
+    /// in; the engine sets it back to 0 when the burst starts.
     pub(crate) latency_measure: ControlHandle,
     /// `[Master] input_latency`: seconds the last measurement found from the
     /// main output back into the input, or -1 if the input never heard it.

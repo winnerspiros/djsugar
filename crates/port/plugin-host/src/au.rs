@@ -1,6 +1,6 @@
-//! Audio Unit effects (macOS only) inside the helper, through AudioToolbox. Effects are found in the system's component registry, which lists them without loading their code. An instance is made on the
-//! deck's tempo through the host callbacks. Parameters are in the unit's own range. An id is `type:subtype:manufacturer` as four-character codes, as `auval` prints them (e.g. `aufx:dely:appl` for Apple's AUDelay).
-//! deck's tempo through the host callbacks. Parameters are in the unit's own range. An id is `type:subtype:manufacturer` as four-character codes, as `auval` prints them (e.g. `aufx:dely:appl` for Apple's
+//! Audio Unit effects (macOS only) inside the helper, through AudioToolbox. Effects are found in the system's component registry, which lists them without loading their code. An instance is made on the helper's
+//! main thread (AUv3 extensions then run in their own process, as macOS does for them); blocks are rendered on the helper's audio thread, with the input supplied through a render callback and the deck's tempo
+//! through the host callbacks. Parameters are in the unit's own range. An id is `type:subtype:manufacturer` as four-character codes, as `auval` prints them (e.g. `aufx:dely:appl` for Apple's AUDelay).
 
 #![allow(non_upper_case_globals, non_snake_case)]
 

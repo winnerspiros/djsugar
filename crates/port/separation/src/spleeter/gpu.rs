@@ -33,14 +33,14 @@ impl Layer {
         x * self.scale.clone() + self.shift.clone()
     }
 
-    /// 5×5 convolution, stride 2. TensorFlow's "same" padding on an even size
+    /// 5x5 convolution, stride 2. TensorFlow's "same" padding on an even size
     /// pads 1 before and 2 after.
     fn down(&self, x: Tensor<4>) -> Tensor<4> {
         let x = x.pad((1, 2, 1, 2), PadMode::Constant(0.0));
         conv2d(x, self.weight.clone(), Some(self.bias.clone()), ConvOptions::new([2, 2], [0, 0], [1, 1], 1))
     }
 
-    /// 5×5 transposed convolution, stride 2, doubling the size: the full
+    /// 5x5 transposed convolution, stride 2, doubling the size: the full
     /// output is 2n + 3, of which "same" keeps 2n starting at 1.
     fn up(&self, x: Tensor<4>) -> Tensor<4> {
         let [b, _, h, w] = x.dims();

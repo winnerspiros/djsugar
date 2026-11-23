@@ -1,6 +1,6 @@
 //! Stems: a track split into up to four parts (drums, bass, other and vocals) that play together with their own volume and mute. Stems come from Native Instruments STEM files (`.stem.mp4` / `.stem.m4a`): an
-//! Demucs (see [`separate`]), which leaves four FLAC files in the cache. The full mix stays the track's [`Audio`](crate::track::Audio), for the waveform and analysis; a deck with stems plays their sum instead.
-//! Demucs (see [`separate`]), which leaves four FLAC files in the cache. The full mix stays the track's [`Audio`](crate::track::Audio), for the waveform and analysis; a deck with stems plays their sum
+//! MP4 with the full mix as its first audio stream, the four stems as the next four, and a JSON manifest at `moov/udta/stem` naming and colouring them. Or they come from separating an ordinary file with Demucs
+//! (see [`separate`]), which leaves four FLAC files in the cache. The full mix stays the track's [`Audio`](crate::track::Audio), for the waveform and analysis; a deck with stems plays their sum instead.
 
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
@@ -153,9 +153,9 @@ impl Stems {
         self.complete.load(Ordering::Acquire)
     }
 
-    /// How much of the track is sung along it, `rate` a second, 0 to 255, from the vocal stem of
-    /// [`crate::vocals::to_levels`]). None for fast stems, stems without a vocal stem, or before they are complete.
-    /// [`crate::vocals::to_levels`]). None for fast stems, stems without a vocal stem, or before they
+    /// How much of the track is sung along it, `rate` a second, 0 to 255, from the vocal stem of complete
+    /// high-quality stems: its share of all the stems, mapped as the vocal pass's (see [`crate::vocals::to_levels`]).
+    /// None for fast stems, stems without a vocal stem, or before they are complete.
     pub fn vocal_levels(&self, rate: f64) -> Option<Vec<u8>> {
         let s = self.current();
         if s.quality != Quality::High || !s.is_complete() || rate <= 0.0 {
@@ -192,8 +192,8 @@ impl Stems {
     }
 
     /// Each stem's peak along the stems that play (see [`Stems::current`]), `rate`
-    /// relative to the loudest stem's, scaled to 0..255. None until they are complete.
-    /// relative to the loudest stem's, scaled to 0..255. None until they are
+    /// a second, as waveform slices hold levels: the square root of the peak relative
+    /// to the loudest stem's, scaled to 0..255. None until they are complete.
     pub fn levels(&self, rate: f64) -> Option<Vec<[u8; MAX_STEMS]>> {
         let s = self.current();
         if !s.is_complete() || rate <= 0.0 {
@@ -228,9 +228,9 @@ impl Stems {
         Some(peaks.into_iter().map(|p| p.map(scale)).collect())
     }
 
-    /// The mix of frame `i` with each stem scaled by its gain. Separated stems play as
-    /// original where the stems aren't separated yet. Stems from an NI file play as their sum.
-    /// original where the stems aren't separated yet. Stems from an NI file play as their
+    /// The mix of frame `i` with each stem scaled by its gain. Separated stems play as `original()
+    /// − Σ (1 − gain) x stem`: the track itself at full gains, and the original where the
+    /// stems aren't separated yet. Stems from an NI file play as their sum.
     #[inline]
     pub fn mix(&self, i: usize, gains: &[f32; MAX_STEMS], original: impl FnOnce() -> [f32; 2]) -> [f32; 2] {
         match self.ready_upgrade() {
@@ -738,9 +738,9 @@ fn find_demucs() -> Command {
 /// `python.exe` (its `python3.exe` is usually the Microsoft Store's stand-in).
 const PYTHONS: &[&str] = if cfg!(windows) { &["python"] } else { &["python3"] };
 
-/// Where `pip install demucs` may have put Demucs. An app opened from the Finder or a desktop menu doesn't get the
-/// python.org, pip `--user`, pyenv and conda folders (on Windows, the python.org installer's folders and their `Scripts`).
-/// python.org, pip `--user`, pyenv and conda folders (on Windows, the python.org installer's folders and their
+/// Where `pip install demucs` may have put Demucs. An app opened from the Finder or a desktop menu doesn't get the PATH
+/// set up by the user's shell profile, so this asks the login shell for it and adds the usual Homebrew, python.org,
+/// pip `--user`, pyenv and conda folders (on Windows, the python.org installer's folders and their `Scripts`).
 fn search_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     if let Some(path) = std::env::var_os("PATH") {

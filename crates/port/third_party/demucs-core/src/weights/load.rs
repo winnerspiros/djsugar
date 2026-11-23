@@ -191,9 +191,9 @@ fn load_tdec_layer(
 
 // ─── Attention loaders ──────────────────────────────────────────────────────
 
-/// Load Burn's MultiHeadAttention from PyTorch's packed in_proj_weight/bias. PyTorch MHA stores:
-/// `{prefix}.out_proj.weight` [d_model, d_model] `{prefix}.out_proj.bias` [d_model] Burn MHA has separate `.query`, `.key`, `.value`, `.output` Linear modules.
-/// `{prefix}.out_proj.weight` [d_model, d_model] `{prefix}.out_proj.bias` [d_model] Burn MHA has separate `.query`,
+/// Load Burn's MultiHeadAttention from PyTorch's packed in_proj_weight/bias. PyTorch MHA stores: `{prefix}.in_proj_weight`
+/// [3*d_model, d_model] — packed Q, K, V `{prefix}.in_proj_bias` [3*d_model] `{prefix}.out_proj.weight` [d_model, d_model]
+/// `{prefix}.out_proj.bias` [d_model] Burn MHA has separate `.query`, `.key`, `.value`, `.output` Linear modules.
 fn load_mha(
     attn: &mut burn::nn::attention::MultiHeadAttention,
     store: &mut TensorStore,

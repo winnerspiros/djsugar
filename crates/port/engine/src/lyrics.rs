@@ -1,6 +1,6 @@
-//! A track's lyrics: plain text, timed by line, or timed by word. Lyrics are read from what the DJ already has: an
-//! `SYLT` timed lyrics, ID3 `USLT`, Vorbis `LYRICS`, MP4 `©lyr`, which often hold LRC text too). Nothing is fetched here.
-//! `SYLT` timed lyrics, ID3 `USLT`, Vorbis `LYRICS`, MP4 `©lyr`, which often hold LRC text too). Nothing is fetched
+//! A track's lyrics: plain text, timed by line, or timed by word. Lyrics are read from what the DJ already has: an `.lrc`
+//! file beside the track (plain LRC, or enhanced LRC with a time before each word), or the file's own tags (ID3 `SYLT`
+//! timed lyrics, ID3 `USLT`, Vorbis `LYRICS`, MP4 `©lyr`, which often hold LRC text too). Nothing is fetched here.
 
 use std::borrow::Cow;
 use std::fs;

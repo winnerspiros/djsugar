@@ -1,6 +1,6 @@
-//! Timecode vinyl and CD decoding (DVS): turns the stereo signal of a control record into a pitch (speed and direction) and an absolute position on the
-//! holds one bit, as a loud or a quiet cycle. The bits come from a linear feedback shift register, so any `bits` bits in a row name a unique place on the record.
-//! holds one bit, as a loud or a quiet cycle. The bits come from a linear feedback shift register, so any `bits` bits in a row name a unique place on the
+//! Timecode vinyl and CD decoding (DVS): turns the stereo signal of a control record into a pitch (speed and direction) and an absolute position on the record.
+//! A control record carries a sine carrier on both channels, a quarter cycle apart, so which channel leads tells the direction. Each carrier cycle holds one
+//! bit, as a loud or a quiet cycle. The bits come from a linear feedback shift register, so any `bits` bits in a row name a unique place on the record.
 
 use std::sync::OnceLock;
 

@@ -1,6 +1,6 @@
-//! FX benchmark and quality checks: cost per effect and for the full rack, memory, no
-//! allocation on the audio thread, clean output at the extremes. Run in release:
-//! cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture
+//! FX benchmark and quality harness: each effect's cost per frame, the whole rack's with four decks of effects, the memory it holds;
+//! checks the audio thread never allocates and every effect stays clean and finite at its extremes. The benchmark is ignored by
+//! default and only means something in release: cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture
 
 use std::hint::black_box;
 use std::time::Instant;

@@ -1,6 +1,6 @@
-//! The helper process. Two modes: - `djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> | --vst3 <bundle> --id <cid>)` maps the block DJ Sugar shares, loads one effect, describes it on stdout (`name`, `latency`, `param` lines, then `ready`) and runs a block each time DJ Sugar writes a byte to stdin. It exits when stdin closes, so a helper never
-//! bundle, and `--scan-au` lists the installed Audio Units (macOS) (`plugin` lines, then `done`) and exits. - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)` lists the plugin's own presets (`preset` lines, name then reference, then `done`) and exits. The plugin's main-thread half stays on this process's main thread; the audio runs on a second thread.
-//! bundle, and `--scan-au` lists the installed Audio Units (macOS) (`plugin` lines, then `done`) and exits. - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)` lists the plugin's own presets (`preset` lines, name then reference, then `done`) and exits. The plugin's main-thread half stays on this process's main thread; the audio runs on a second
+//! The helper process. Two modes: - `djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> | --vst3 <bundle> --id <cid>)` maps the block DJ Sugar shares, loads one effect, describes it on stdout (`name`, `latency`, `param` lines, then `ready`) and runs a block each time DJ Sugar writes a byte to stdin. It exits when stdin closes, so a helper never outlives
+//! DJ Sugar. `--title <text>` names the window the plugin's editor opens in, when DJ Sugar asks for it. `--state <file>` names the file the plugin's state is saved to and loaded from when DJ Sugar asks (see `shm::Header::state_cmd`); if it exists at start, the plugin starts from it. - `djsugar-plugin-host --scan <file>` lists the plugins in a CLAP file or VST3 bundle, and
+//! `--scan-au` lists the installed Audio Units (macOS) (`plugin` lines, then `done`) and exits. - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)` lists the plugin's own presets (`preset` lines, name then reference, then `done`) and exits. The plugin's main-thread half stays on this process's main thread; the audio runs on a second thread.
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -144,8 +144,8 @@ fn main() {
     say("ready");
 
     // Main thread: serve the plugin's main-thread requests, and its editor window,
-    // deliberate: a plugin can't crash on the way out if it is never asked to clean up.
-    // deliberate: a plugin can't crash on the way out if it is never asked to
+    // until DJ Sugar lets go. Exiting without tearing the plugin down is deliberate:
+    // a plugin can't crash on the way out if it is never asked to clean up.
     let title = title.unwrap_or_else(|| info.name.clone());
     let mut editor = EditorWindow::new(title);
     while !audio.is_finished() {

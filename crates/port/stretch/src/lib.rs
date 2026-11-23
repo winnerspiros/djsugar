@@ -1,6 +1,6 @@
 //! Time-stretching and pitch-shifting for live audio: a phase vocoder that keeps the bins around each spectral peak phase-locked
-//! [`Stretch::process`] call plays its input over its output, and the ratio of the two is the stretch. Nothing allocates after construction.
-//! [`Stretch::process`] call plays its input over its output, and the ratio of the two is the stretch. Nothing allocates after
+//! to the peak, so tones stay clean and transients stay tight. Input and output run at independent rates: each [`Stretch::process`]
+//! call plays its input over its output, and the ratio of the two is the stretch. Nothing allocates after construction.
 
 use std::f32::consts::TAU;
 use std::sync::Arc;

@@ -62,8 +62,8 @@ pub const PLUGIN_BASE: usize = KINDS.len() + 1;
 pub const MAX_PLUGINS: usize = 1024;
 
 /// How long one plugin may take in a buffer that started at `start`: half the buffer, and all plugins together no more than
-/// buffer's plugin time is used up: that plugin plays dry this buffer without being sent the block, so it isn't counted late.
-/// buffer's plugin time is used up: that plugin plays dry this buffer without being sent the block, so it isn't counted
+/// [`PLUGIN_SHARE`] of it, so several slow plugins can't make the audio drop out (each waits in turn). `None` once the buffer's
+/// plugin time is used up: that plugin plays dry this buffer without being sent the block, so it isn't counted late.
 fn plugin_deadline(start: std::time::Instant, frames: usize, sample_rate: f32) -> Option<std::time::Duration> {
     let block = std::time::Duration::from_secs_f32(frames as f32 / sample_rate);
     let left = (start + block.mul_f32(PLUGIN_SHARE)).checked_duration_since(std::time::Instant::now())?;
@@ -991,9 +991,9 @@ fn held_after(mut held: u128, notes: &[Midi]) -> u128 {
 /// `loaded_effect` for the Flanger.
 const FLANGER: f64 = 4.0;
 
-/// The legacy flanger, which older controller mappings still drive (the Numark V7's FX section, among others):
-/// `lfoPeriod` (microseconds) set it for all of them. It plays through the deck's Pad FX unit, which is free while no pad is held.
-/// `lfoPeriod` (microseconds) set it for all of them. It plays through the deck's Pad FX unit, which is free while no
+/// The legacy flanger, which older controller mappings still drive (the Numark V7's FX section, among others): `[ChannelN],flanger`
+/// turns it on for a deck, and `[Flanger]`'s `lfoDepth`, `lfoDelay` (microseconds) and `lfoPeriod` (microseconds) set
+/// it for all of them. It plays through the deck's Pad FX unit, which is free while no pad is held.
 struct LegacyFlanger {
     decks: [ControlHandle; NUM_DECKS],
     on: [bool; NUM_DECKS],
@@ -1493,8 +1493,8 @@ impl EffectRack {
     }
 
     /// Auto reset on load: switches off the effects of every unit sent to `deck`, unless the unit
-    /// parameters and the unit's dry/wet stay as they were, ready for the next time it is switched on.
-    /// parameters and the unit's dry/wet stay as they were, ready for the next time it is switched
+    /// also sounds on the main mix or on another deck that is playing. Each effect's beats, parameters
+    /// and the unit's dry/wet stay as they were, ready for the next time it is switched on.
     pub(crate) fn reset_deck(&mut self, deck: usize, playing: [bool; NUM_DECKS]) {
         for (u, unit) in self.units.iter().enumerate() {
             let routed = |t: usize| unit.routes[t].get_bool();
@@ -1523,9 +1523,9 @@ impl EffectRack {
         self.process_blocks(&mut [(target, buf)]);
     }
 
-    /// Runs each block through the units routed to its target, in place: unit by unit and slot by slot, a whole block at a time, which is where plugin slots can join in. Each instance sees the same samples in the same order as frame by frame, so the
-    /// first, the built-in effects run meanwhile, and only then does the rack wait for the plugins. So plugins on different decks work at the same time, each in its own helper, instead of one after another. At most [`PARALLEL`] blocks, all the same length.
-    /// first, the built-in effects run meanwhile, and only then does the rack wait for the plugins. So plugins on different decks work at the same time, each in its own helper, instead of one after another. At most [`PARALLEL`] blocks, all the same
+    /// Runs each block through the units routed to its target, in place: unit by unit and slot by slot, a whole block at a time, which is where plugin slots can join in. Each instance sees the same samples in the same order as frame by frame, so the result
+    /// is the same. Frame `f` of a block is `(f + 1) / frames` of the way through the buffer, for the dry/wet ramp; effects fade on and off at a fixed rate. The blocks go through side by side: at each slot every target's plugin gets its block first, the
+    /// built-in effects run meanwhile, and only then does the rack wait for the plugins. So plugins on different decks work at the same time, each in its own helper, instead of one after another. At most [`PARALLEL`] blocks, all the same length.
     pub(crate) fn process_blocks(&mut self, blocks: &mut [(usize, &mut [[f32; 2]])]) {
         let Some(frames) = blocks.first().map(|(_, b)| b.len()) else {
             return;
@@ -2680,9 +2680,9 @@ impl Spiral {
     }
 }
 
-/// The Color FX each deck's filter knob can play, Pioneer-style, as
-/// nothing). Each deck picks its own from the menu beside its filter knob; the DDJ-FLX4's SHIFT + SMART CFX steps both decks.
-/// nothing). Each deck picks its own from the menu beside its filter knob; the DDJ-FLX4's SHIFT +
+/// The Color FX each deck's filter knob can play, Pioneer-style, as `[QuickEffectRack1_[ChannelN]],loaded_chain_preset`
+/// values 1 and up (0 is none: the knob does nothing). Each deck picks its own from the menu beside
+/// its filter knob; the DDJ-FLX4's SHIFT + SMART CFX steps both decks.
 pub const COLOR_FX: [&str; 5] = ["Filter", "Space", "Dub Echo", "Noise", "Crush"];
 
 /// The Color FX of a `loaded_chain_preset` value ("" for none).
@@ -2814,9 +2814,9 @@ fn beats_parameter(wanted: f32, lo: i32, hi: i32) -> f32 {
     (wanted.log2() - lo as f32) / (hi - lo) as f32
 }
 
-/// The effects a deck's stems can be sent into, as `[ChannelN],stem_fx` values 1 and up.
-/// (`[QuickEffectRack1_[ChannelN_StemM]],enabled`) share it, which sounds the same as one each since both effects are linear.
-/// (`[QuickEffectRack1_[ChannelN_StemM]],enabled`) share it, which sounds the same as one
+/// The effects a deck's stems can be sent into, as `[ChannelN],stem_fx` values 1 and up. One
+/// per deck: the stems with their quick effect on (`[QuickEffectRack1_[ChannelN_StemM]],enabled`)
+/// share it, which sounds the same as one each since both effects are linear.
 pub const STEM_FX: [&str; 2] = ["Echo", "Reverb"];
 
 /// How long a stem effect rings on once nothing is sent into it, in

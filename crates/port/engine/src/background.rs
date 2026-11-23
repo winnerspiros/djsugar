@@ -19,9 +19,9 @@ pub fn beat_threads() -> usize {
     std::thread::available_parallelism().map_or(2, |n| n.get() / 4).clamp(2, 4)
 }
 
-/// Sizes rten's thread pool (Beat This! runs on it) with [`beat_threads`], unless
-/// first used, so this is called first thing in `main`, before any other thread starts.
-/// first used, so this is called first thing in `main`, before any other thread
+/// Sizes rten's thread pool (Beat This! runs on it) with [`beat_threads`], unless `RTEN_NUM_THREADS`
+/// is set already. rten reads the variable once, when the pool is first used, so this
+/// is called first thing in `main`, before any other thread starts.
 pub fn configure() {
     if std::env::var_os("RTEN_NUM_THREADS").is_none() {
         std::env::set_var("RTEN_NUM_THREADS", beat_threads().to_string());
@@ -33,12 +33,12 @@ pub fn configure() {
 /// afterwards should call it too (see [`is_low`]): macOS doesn't pass the class on to them.
 pub fn lower_priority() {
     LOW.with(|l| l.set(true));
-    #[cfg(target_os = "macos")]
+    #[cfg(target_vendor = "apple")]
     // SAFETY: only changes the calling thread's scheduling.
     unsafe {
         libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_UTILITY, 0);
     }
-    #[cfg(all(unix, not(target_os = "macos")))]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     // SAFETY: as above; on Linux the nice value belongs to each thread.
     unsafe {
         let tid = libc::syscall(libc::SYS_gettid) as libc::id_t;

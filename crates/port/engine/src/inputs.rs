@@ -1,6 +1,6 @@
 //! The microphone and auxiliary inputs, `[Microphone]` and `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`. The microphone and auxiliaries take audio from an input device (see [`crate::output`]), the instrument from an instrument plugin playing the notes it is sent (see [`crate::plugins`]). Each goes through
-//! `main_mix` is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs dry.
-//! `main_mix` is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs
+//! its gain, a 3-band EQ and the effect units routed to it, then its fader. The microphone is heard while `talkover` is on. It joins the main mix after the main mix's effects, so they don't touch the voice, and can duck the music while the DJ talks (`[Master],talkover_ducking`). The auxiliary input joins the music while `main_mix`
+//! is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs dry.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -470,9 +470,9 @@ impl Input {
         std::mem::replace(&mut self.feed, feed)
     }
 
-    /// The Instrument input's first half of a buffer of `frames`: takes the scale, chord,
-    /// decks are worked out; [`Input::render`] picks the sound up. Nothing for the other inputs.
-    /// decks are worked out; [`Input::render`] picks the sound up. Nothing for the other
+    /// The Instrument input's first half of a buffer of `frames`: takes the scale, chord, arpeggiator,
+    /// pads and knobs and hands the plugin its block, so it plays while the decks are worked
+    /// out; [`Input::render`] picks the sound up. Nothing for the other inputs.
     pub(crate) fn start(&mut self, frames: usize, fx: &mut EffectRack, target: usize, on_deck: bool) {
         if self.index != INSTRUMENT {
             return;
@@ -614,9 +614,9 @@ impl Input {
     }
 }
 
-/// A peak readout after a buffer whose peak was `peak` (linear) and which lasted
-/// [`PEAK_DB_HOLD`]; after that it falls at [`PEAK_DB_FALL`], never below the buffer's own peak.
-/// [`PEAK_DB_HOLD`]; after that it falls at [`PEAK_DB_FALL`], never below the
+/// A peak readout after a buffer whose peak was `peak` (linear) and which lasted `dt`
+/// seconds, from `(db, held)`: a new high jumps up and holds for [`PEAK_DB_HOLD`];
+/// after that it falls at [`PEAK_DB_FALL`], never below the buffer's own peak.
 fn hold_peak((db, held): (f32, f32), peak: f32, dt: f32) -> (f32, f32) {
     let now = if peak > 0.0 { (20.0 * peak.log10()).clamp(PEAK_DB_FLOOR, PEAK_DB_TOP) } else { PEAK_DB_FLOOR };
     if now >= db {

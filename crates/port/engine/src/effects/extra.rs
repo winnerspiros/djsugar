@@ -158,9 +158,9 @@ fn saturate(x: f32) -> f32 {
     x / (1.0 + x * x).sqrt()
 }
 
-/// [`saturate`] with first-order antiderivative anti-aliasing (Parker, Zavalishin et al., "Reducing the aliasing of nonlinear
-/// this one, which damps the very high harmonics a hard-driven sine makes before they can fold back. `last` is the previous input.
-/// this one, which damps the very high harmonics a hard-driven sine makes before they can fold back. `last` is the previous
+/// [`saturate`] with first-order antiderivative anti-aliasing (Parker, Zavalishin et al., "Reducing the aliasing of nonlinear waveshaping
+/// using continuous-time convolution", DAFx 2016): the average of the curve over the step from the last input to this one, which
+/// damps the very high harmonics a hard-driven sine makes before they can fold back. `last` is the previous input.
 #[inline]
 fn saturate_adaa(x: f32, last: &mut f32) -> f32 {
     // The antiderivative of x / sqrt(1 + x^2).
@@ -174,9 +174,9 @@ fn saturate_adaa(x: f32, last: &mut f32) -> f32 {
 // ---------------------------------------------------------------------------
 // Drive
 
-/// Overdrive: the sound pushed into a smooth saturator, 4x oversampled and antiderivative anti-aliased so the harmonics
-/// harmonics, like a valve; a tone control rounds the top; the level is matched so turning the drive up adds grit, not volume.
-/// harmonics, like a valve; a tone control rounds the top; the level is matched so turning the drive up adds grit, not
+/// Overdrive: the sound pushed into a smooth saturator, 4x oversampled and antiderivative anti-aliased so the harmonics don't
+/// fold back as aliasing, after the approach of Signalsmith Basics' Crunch (MIT). A little bias gives it even harmonics,
+/// like a valve; a tone control rounds the top; the level is matched so turning the drive up adds grit, not volume.
 pub(super) struct Drive {
     over: [Oversampler; 2],
     /// Gain into the saturator, and the tone low-pass coefficient, gliding.
@@ -372,9 +372,9 @@ impl Chorus {
 // ---------------------------------------------------------------------------
 // Ladder
 
-/// A Moog-style 4-pole low-pass ladder with resonance and a saturating input, in
-/// can sweep fast without zipper or instability. Modeled on the Moog ladder (Huovilainen's model).
-/// can sweep fast without zipper or instability. Modeled on the Moog ladder (Huovilainen's
+/// A Moog-style 4-pole low-pass ladder with resonance and a saturating input, in Zavalishin's
+/// zero-delay-feedback form ("The Art of VA Filter Design"), so its cutoff can sweep fast
+/// without zipper or instability. Modeled on the Moog ladder (Huovilainen's model).
 pub(super) struct Ladder {
     sample_rate: f32,
     s: [[f32; 4]; 2],
@@ -629,9 +629,9 @@ impl Hall {
 // ---------------------------------------------------------------------------
 // Filter Echo
 
-/// An echo whose repeats run through a filter: turned left, each repeat is darker
-/// meta knob opens the send and sweeps the high-pass up together, for a washed-out exit.
-/// meta knob opens the send and sweeps the high-pass up together, for a washed-out
+/// An echo whose repeats run through a filter: turned left, each repeat is darker (low-pass);
+/// turned right, thinner (high-pass), as Pioneer's LPF and HPF Echo do. Its meta knob opens
+/// the send and sweeps the high-pass up together, for a washed-out exit.
 pub(super) struct FilterEcho {
     pub(super) echo: Echo,
     lp: Svf,

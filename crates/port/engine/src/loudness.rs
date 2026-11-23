@@ -1,6 +1,6 @@
-//! Track loudness for auto gain: EBU R128 / ITU-R BS.1770 integrated loudness, measured during analysis, and the sample peak. The meter
-//! that pass two gates: above -70 LUFS, then above 10 LU below the average of those. Silence and quiet intros so don't pull a track's loudness down.
-//! that pass two gates: above -70 LUFS, then above 10 LU below the average of those. Silence and quiet intros so don't pull a track's loudness
+//! Track loudness for auto gain: EBU R128 / ITU-R BS.1770 integrated loudness, measured during analysis, and the sample peak. The meter K-weights
+//! the signal (a high shelf for the head, then a high pass), takes its power in 400 ms blocks every 100 ms, and averages the blocks that pass two
+//! gates: above -70 LUFS, then above 10 LU below the average of those. Silence and quiet intros so don't pull a track's loudness down.
 
 /// How loud a track is.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -140,9 +140,9 @@ fn integrated(blocks: &[f64]) -> Option<f64> {
     Some(lufs(mean_above(lufs(ungated) - 10.0)?))
 }
 
-/// Loudness range in LU of short-term (3 s) powers, as EBU Tech 3342 measures
-/// loudness, leaving out values below -70 LUFS and more than 20 LU below the average.
-/// loudness, leaving out values below -70 LUFS and more than 20 LU below the
+/// Loudness range in LU of short-term (3 s) powers, as EBU Tech 3342 measures it:
+/// the spread between the 10th and 95th percentile of the short-term loudness,
+/// leaving out values below -70 LUFS and more than 20 LU below the average.
 fn loudness_range(short_terms: &[f64]) -> Option<f64> {
     let above: Vec<f64> = short_terms.iter().copied().filter(|&p| p > 0.0 && lufs(p) > -70.0).collect();
     if above.is_empty() {
@@ -158,9 +158,9 @@ fn loudness_range(short_terms: &[f64]) -> Option<f64> {
 /// Taps per phase of the true-peak interpolator.
 const TP_TAPS: usize = 12;
 
-/// Finds the peaks between samples, as ITU-R BS.1770 Annex 2 does: the signal is upsampled four times with a windowed-sinc
-/// in-between values, so they can go over full scale even when no sample does. Each value comes out [`TruePeak::LATENCY`] frames late.
-/// in-between values, so they can go over full scale even when no sample does. Each value comes out [`TruePeak::LATENCY`] frames
+/// Finds the peaks between samples, as ITU-R BS.1770 Annex 2 does: the signal is upsampled four times with a windowed-sinc interpolator
+/// and the highest of the original and in-between values is the true peak. Lossy encoders and DACs rebuild those in-between values,
+/// so they can go over full scale even when no sample does. Each value comes out [`TruePeak::LATENCY`] frames late.
 #[derive(Clone)]
 pub struct TruePeak {
     /// Coefficients of the three in-between phases (1/4, 2/4, 3/4).

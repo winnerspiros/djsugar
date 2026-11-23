@@ -41,9 +41,9 @@ impl BackSpinMotion {
     const K_BACK_PER_PEAK: f64 = (1.0 - Self::K_CATCH) / 3.0 + Self::K_CATCH / 2.0;
 }
 
-/// How a record played at any speed sounds through a cartridge, as in the scratch engine: the level
-/// below 1x it removes the images a slowed record does not have, above 1x the aliasing of reading faster.
-/// below 1x it removes the images a slowed record does not have, above 1x the aliasing of reading
+/// How a record played at any speed sounds through a cartridge, as in the scratch engine: the level follows
+/// the stylus velocity (slow is quiet, a stop is silent), and a low pass follows the speed: below 1x it
+/// removes the images a slowed record does not have, above 1x the aliasing of reading faster.
 #[derive(Clone, Debug, Default)]
 pub struct NeedleShaper {
     state: [[f32; 4]; 2],

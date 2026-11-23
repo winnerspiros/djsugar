@@ -112,9 +112,9 @@ const NETSEARCH: [(&str, &str); 5] =
     [("td", "tidal"), ("sc", "soundcloud"), ("bp", "beatport"), ("bs", "beatsource"), ("dz", "deezer")];
 
 impl StreamedTrack {
-    /// The streamed track `uri` names, if it names one rather than a file:
-    /// service's web address, or any other `scheme://` address (an "online" track of unknown service).
-    /// service's web address, or any other `scheme://` address (an "online" track of
+    /// The streamed track `uri` names, if it names one rather than a file: a `netsearch://td123` style,
+    /// a `tidal:tracks:123` or `spotify:track:abc` URI, a service's web address, or any other
+    /// `scheme://` address (an "online" track of unknown service).
     pub fn parse(uri: &str) -> Option<Self> {
         let uri = uri.trim();
         let streamed = |service: &str, id: &str| {

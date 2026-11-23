@@ -1,6 +1,6 @@
-//! The plugin host: starts a helper process for every effect slot that has a plugin loaded on a target its unit is routed to, attaches it to the audio thread, and watches it. The audio thread never waits for a plugin
-//! switched off; the second time, or when it keeps using too much of the block's time, the plugin is switched off for the rest of the session and its slots are emptied. Nothing turns back on by itself in the middle of a set.
-//! switched off; the second time, or when it keeps using too much of the block's time, the plugin is switched off for the rest of the session and its slots are emptied. Nothing turns back on by itself in the middle of a
+//! The plugin host: starts a helper process for every effect slot that has a plugin loaded on a target its unit is routed to, attaches it to the audio thread, and watches it. The audio thread never waits for a plugin (see
+//! `djsugar-plugin-host`): a block the helper can't deliver in time plays dry. This thread decides what happens next. A helper that crashes, or misses too many blocks in a row, is restarted once with its slot switched off;
+//! the second time, or when it keeps using too much of the block's time, the plugin is switched off for the rest of the session and its slots are emptied. Nothing turns back on by itself in the middle of a set.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -163,9 +163,9 @@ impl PluginHost {
         }
     }
 
-    /// The plugins the slots can load: `loaded_effect` [`PLUGIN_BASE`] + i is
-    /// place, slots whose plugin left are emptied, and every plugin gets a fresh start.
-    /// place, slots whose plugin left are emptied, and every plugin gets a fresh
+    /// The plugins the slots can load: `loaded_effect` [`PLUGIN_BASE`] + i is `entries[i]`.
+    /// With a new list, slots keep their plugin (by key) at its new place, slots whose
+    /// plugin left are emptied, and every plugin gets a fresh start.
     pub fn set_plugins(&self, mut entries: Vec<PluginEntry>) {
         entries.truncate(MAX_PLUGINS);
         let n = entries.len();
@@ -209,9 +209,9 @@ impl PluginHost {
         rx.recv_timeout(SOUND_WAIT).unwrap_or_else(|_| Err("the instrument didn't answer".into()))
     }
 
-    /// Loads one of instrument plugin `key`'s own presets, by the reference its
-    /// it makes is kept as the plugin's. Waits for the plugin, a few seconds at most.
-    /// it makes is kept as the plugin's. Waits for the plugin, a few seconds at
+    /// Loads one of instrument plugin `key`'s own presets, by the reference its preset
+    /// list gave: now if it is playing, else as soon as it starts. The sound it makes
+    /// is kept as the plugin's. Waits for the plugin, a few seconds at most.
     pub fn load_instrument_preset(&self, key: &str, reference: &str) -> Result<(), String> {
         let (tx, rx) = mpsc::channel();
         self.list.lock().unwrap().requests.push(SoundRequest::Preset(key.into(), reference.into(), tx));

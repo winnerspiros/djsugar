@@ -1,6 +1,6 @@
 //! The messages on the network: discovery (multicast, every peer's state) and measurement (unicast ping/pong that
-//! four-character key, a 32-bit size and that many bytes; unknown keys are skipped, so newer peers can add entries.
-//! four-character key, a 32-bit size and that many bytes; unknown keys are skipped, so newer peers can add
+//! maps a peer's session clock to ours). All integers are big-endian. A payload is a run of entries, each a four-character
+//! key, a 32-bit size and that many bytes; unknown keys are skipped, so newer peers can add entries.
 
 pub const DISCOVERY_HEADER: [u8; 8] = *b"_asdp_v\x01";
 pub const MEASUREMENT_HEADER: [u8; 8] = *b"_link_v\x01";

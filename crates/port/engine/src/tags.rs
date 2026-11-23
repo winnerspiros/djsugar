@@ -1,6 +1,6 @@
-//! Reading and writing the tags the track info panel edits, the front cover, and what the file itself is (format, bitrate, sample
-//! M4A), creating one if the file has none. The rating goes in as a popularimeter, MusicBee's scale, which other DJ software reads too.
-//! M4A), creating one if the file has none. The rating goes in as a popularimeter, MusicBee's scale, which other DJ software reads
+//! Reading and writing the tags the track info panel edits, the front cover, and what the file itself is (format, bitrate, sample rate).
+//! Tags are written through lofty into the file's main tag (ID3v2 for MP3, Vorbis comments for FLAC and Ogg, iTunes atoms for M4A), creating
+//! one if the file has none. The rating goes in as a popularimeter, the 0 to 255 scale other DJ apps read too.
 
 use std::path::Path;
 

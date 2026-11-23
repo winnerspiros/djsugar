@@ -1,6 +1,6 @@
-//! Turns detected beats into a beat grid, steady unless the track really drifts. Beat detectors place each beat on its own, so even a track made on a computer comes back with beats a
-//! straight line (one tempo) is fitted through them; only where the beats move away from that line for a while, as live drums and old disco do, does the grid start a new tempo section.
-//! straight line (one tempo) is fitted through them; only where the beats move away from that line for a while, as live drums and old disco do, does the grid start a new tempo
+//! Turns detected beats into a beat grid, steady unless the track really drifts. Beat detectors place each beat on its own, so even a track made on a computer comes back with beats
+//! a few milliseconds early or late. Taking the tempo from neighbouring beats turns that jitter into small tempo changes that aren't there. Instead the beats are numbered and a straight
+//! line (one tempo) is fitted through them; only where the beats move away from that line for a while, as live drums and old disco do, does the grid start a new tempo section.
 
 use crate::beats::{BeatGrid, GridMarker};
 
@@ -103,9 +103,9 @@ pub fn share_on(beats: &[f64], grid: &BeatGrid) -> f64 {
     on as f64 / beats.len().max(1) as f64
 }
 
-/// Numbers the beats (beat number, seconds), counting the beats missed in a gap. Each beat is
-/// stray onset, or a run of them the tracker followed) is dropped, whichever of the two is further off.
-/// stray onset, or a run of them the tracker followed) is dropped, whichever of the two is further
+/// Numbers the beats (beat number, seconds), counting the beats missed in a gap. Each beat is numbered
+/// on the grid of the few before it, so a beat that lands on a number already taken (a stray onset,
+/// or a run of them the tracker followed) is dropped, whichever of the two is further off.
 fn number(beats: &[f64], period: f64) -> Vec<(f64, f64)> {
     /// Beats before each one that give the grid it is numbered on.
     const LOCAL: usize = 16;
@@ -244,9 +244,9 @@ impl Line {
         self.offset + n * self.period
     }
 
-    /// This line at the nearest whole BPM, else half BPM, when `beats` sit on that as
-    /// drifts across a long track. A tempo the beats really keep away from a round one stays.
-    /// drifts across a long track. A tempo the beats really keep away from a round one
+    /// This line at the nearest whole BPM, else half BPM, when `beats` sit on that as well:
+    /// tracks are mostly made at a round tempo, and a fit a few hundredths off it drifts across
+    /// a long track. A tempo the beats really keep away from a round one stays.
     fn rounded(self, beats: &[(f64, f64)]) -> Line {
         let off = |line: &Line| {
             let mut d: Vec<f64> = beats.iter().map(|&(n, t)| (t - line.at(n)).abs()).collect();

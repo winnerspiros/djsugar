@@ -1,6 +1,6 @@
-//! Sends the engine's mixes to output devices with cpal, as a list of routes: each route takes the master, headphone (cue) or booth mix, or one deck or the sampler on its own, to a pair of channels on a device. Without a usable device (a headless machine, CI) the engine runs on a timer instead, so everything except the sound itself keeps working. The master
-//! each input's frames for the engine (see [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second stream on a device, and two streams on one device drift apart. [`Health`] keeps watch: how much of each buffer the engine takes, the dropouts the device reports or that show as late callbacks, and a device that goes away, which is reopened once it is back.
-//! each input's frames for the engine (see [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second stream on a device, and two streams on one device drift apart. [`Health`] keeps watch: how much of each buffer the engine takes, the dropouts the device reports or that show as late callbacks, and a device that goes away, which is reopened once it is
+//! Sends the engine's mixes to output devices with cpal, as a list of routes: each route takes the master, headphone (cue) or booth mix, or one deck or the sampler on its own, to a pair of channels on a device. Without a usable device (a headless machine, CI) the engine runs on a timer instead, so everything except the sound itself keeps working. The master route's
+//! device runs the engine in its callback. Other devices are fed through ring buffers; as their clocks drift from the master device's, they drop or pad a little audio to keep the delay short. The microphone and auxiliary inputs come in the same way, from input devices: each device is opened once, with every channel its inputs take, and its callback queues each input's
+//! frames for the engine (see [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second stream on a device, and two streams on one device drift apart. [`Health`] keeps watch: how much of each buffer the engine takes, the dropouts the device reports or that show as late callbacks, and a device that goes away, which is reopened once it is back.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -1234,9 +1234,9 @@ fn input_config_at(device: &cpal::Device, rate: f64, channels: u16) -> Option<cp
     ranges.into_iter().find_map(|r| r.try_with_sample_rate(rate as u32))
 }
 
-/// Opens and starts an input stream that hands `take` its audio in f32, interleaved,
-/// input buffer is heard as delay), else its default. `lost` is set if the stream stops.
-/// input buffer is heard as delay), else its default. `lost` is set if the stream
+/// Opens and starts an input stream that hands `take` its audio in f32, interleaved, with
+/// buffers of `frames` if the device takes them (the outputs' size: a bigger input buffer
+/// is heard as delay), else its default. `lost` is set if the stream stops.
 fn input_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,

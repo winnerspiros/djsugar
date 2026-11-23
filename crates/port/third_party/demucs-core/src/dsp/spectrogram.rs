@@ -1,5 +1,5 @@
 //! Display-ready spectrogram computation. Computes STFT of mono audio and
-//! returns dB magnitudes in a flat `[frame × bin]` layout. Used by both the
+//! returns dB magnitudes in a flat `[frame x bin]` layout. Used by both the
 //! web app and the DAW plugin for rendering magma-colormap spectrograms.
 
 use super::stft::Stft;
@@ -7,7 +7,7 @@ use crate::{Result, HOP_LENGTH, N_FFT};
 
 /// Result of computing a display spectrogram.
 pub struct SpectrogramData {
-    /// dB magnitude values, flat `[frame × bin]` layout.
+    /// dB magnitude values, flat `[frame x bin]` layout.
     /// Frame-major: `mags[frame * num_bins + bin]`.
     pub mags: Vec<f32>,
     /// Number of time frames.
@@ -17,8 +17,8 @@ pub struct SpectrogramData {
 }
 
 /// Compute the STFT of a mono audio signal and return dB magnitudes.
-/// parameters. Output bins range from 0 Hz to Nyquist (sample_rate / 2).
-/// parameters. Output bins range from 0 Hz to Nyquist (sample_rate /
+/// Uses `n_fft = 4096` and `hop_length = 1024` to match HTDemucs parameters.
+/// Output bins range from 0 Hz to Nyquist (sample_rate / 2).
 pub fn compute_spectrogram(samples: &[f32]) -> Result<SpectrogramData> {
     let num_bins = N_FFT / 2; // forward() drops the Nyquist bin
 

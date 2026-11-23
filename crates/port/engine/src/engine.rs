@@ -1,6 +1,6 @@
-//! The real-time part: runs inside the audio callback, reads controls, plays the decks through the EQ, filter and effect
-//! Tracks arrive over a wait-free queue and replaced or ejected tracks go back over another, so they are freed off this thread.
-//! Tracks arrive over a wait-free queue and replaced or ejected tracks go back over another, so they are freed off this
+//! The real-time part: runs inside the audio callback, reads controls, plays the decks through the EQ, filter and effect units,
+//! mixes them with the microphone and auxiliary inputs and updates the meters. Nothing here allocates or locks. Tracks arrive
+//! over a wait-free queue and replaced or ejected tracks go back over another, so they are freed off this thread.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -102,9 +102,9 @@ const JOG_SEARCH_SPEED: f64 = 8.0;
 /// How long a deck stays quiet after its last fast-search jog, in seconds,
 /// so it doesn't flutter between wheel steps.
 const JOG_SEARCH_HOLD: f64 = 0.15;
-/// `jog_bend` comes in ticks of a jog's rim, 720 to a turn as on Pioneer controllers: a
-/// second the rim turns adds 0.08% of normal speed (a quarter turn a second is about +14%).
-/// second the rim turns adds 0.08% of normal speed (a quarter turn a second is about
+/// `jog_bend` comes in ticks of a jog's rim, 720 to a turn as on Pioneer controllers: a rim
+/// tick is a `jog` of 0.8 and a jog adds a tenth of itself to the rate: each tick a second
+/// the rim turns adds 0.08% of normal speed (a quarter turn a second is about +14%).
 const BEND_PER_TICK_PER_SECOND: f64 = 0.0008;
 /// Seconds the rim's speed is averaged over: the
 /// bend follows the hand smoothly and springs back once the rim stops.
@@ -1045,9 +1045,9 @@ impl Deck {
         }
     }
 
-    /// In slip mode, whether a trick is taking the track away from where it would be: scratching, reverse, a loop, a hot cue
-    /// where they are. `unslipped` is the position before this buffer's jumps, which tells a pause from a stop at the cue point.
-    /// where they are. `unslipped` is the position before this buffer's jumps, which tells a pause from a stop at the cue
+    /// In slip mode, whether a trick is taking the track away from where it would be: scratching, reverse, a loop, a hot cue held,
+    /// or a pause. Only a deck that is (or was just) playing slips: a paused deck's scratching and cue finding stay where they
+    /// are. `unslipped` is the position before this buffer's jumps, which tells a pause from a stop at the cue point.
     fn slip_trick(&self, unslipped: f64) -> bool {
         if !self.c.slip_enabled.get_bool() {
             return false;
@@ -1069,8 +1069,8 @@ impl Deck {
     }
 
     /// The speed that closes most of the gap to the waveform drag's position over the next
-    /// jumping. A gap too wide to cover at [`SCRUB_MAX_SPEED`] in a few glides is jumped over.
-    /// jumping. A gap too wide to cover at [`SCRUB_MAX_SPEED`] in a few glides is jumped
+    /// [`SCRUB_GLIDE`] seconds, so the deck follows the pointer smoothly instead of jumping.
+    /// A gap too wide to cover at [`SCRUB_MAX_SPEED`] in a few glides is jumped over.
     fn scrub_velocity(&mut self, dt: f64) -> f64 {
         let Some(track) = &self.track else { return 0.0 };
         let target = self.c.scrub_position.get().clamp(0.0, 1.0) * track.duration;
@@ -1227,9 +1227,9 @@ impl Frames for Audio {
     }
 }
 
-/// A deck's stems mixed at their gains. The gains glide from `from` to `to` over the `span`
-/// frames go straight out or through the time-stretcher (which reads ahead of the play position).
-/// frames go straight out or through the time-stretcher (which reads ahead of the play
+/// A deck's stems mixed at their gains. The gains glide from `from` to `to` over the `span` frames
+/// read after [`Frames::begin`], so a mute or a fader move doesn't click, whether the frames go
+/// straight out or through the time-stretcher (which reads ahead of the play position).
 pub(crate) struct StemMix<'a> {
     stems: &'a Stems,
     /// The high-quality stems taking over from `stems`, once complete, and
@@ -2022,9 +2022,9 @@ impl Engine {
                             c.set(v);
                         }
                     }
-                    // The stems pads belong to the track they were pressed on: a muted stem (Acapella, Instrumental or a stem's own pad) left over from the
-                    // plays again; their levels, on the EQ knobs in stems mode, reset with the EQ. Their effects too, and whatever still rings from the last track.
-                    // plays again; their levels, on the EQ knobs in stems mode, reset with the EQ. Their effects too, and whatever still rings from the last
+                    // The stems pads belong to the track they were pressed on: a muted stem (Acapella, Instrumental or a stem's own pad) left over from the last
+                    // track would silence whatever part of the new one it holds, with nothing lit to say why until its stems are ready. So every stem plays again;
+                    // their levels, on the EQ knobs in stems mode, reset with the EQ. Their effects too, and whatever still rings from the last track.
                     for s in &d.c.stems {
                         s.mute.set_bool(false);
                         s.fx.set_bool(false);
@@ -2361,9 +2361,9 @@ impl Engine {
         self.link.handle()
     }
 
-    /// A synced deck follows its leader's tempo, at half or double when that is closer to its own, and stays on the leader's beat: drift is
-    /// while playing, or beatsync, lines the beats up at once. With Link on, the master deck also leads the Link session (see [`Engine::lead_link`]).
-    /// while playing, or beatsync, lines the beats up at once. With Link on, the master deck also leads the Link session (see
+    /// A synced deck follows its leader's tempo, at half or double when that is closer to its own, and stays on the leader's beat: drift is caught
+    /// up by bending the speed a little, never by jumping, and a nudge by hand moves where it sits against the beat. Turning sync on while playing,
+    /// or beatsync, lines the beats up at once. With Link on, the master deck also leads the Link session (see [`Engine::lead_link`]).
     fn sync(&mut self, link: Option<Moment>) {
         let changed = self.pick_master_deck();
         let source = LeaderSource::from_value(self.leader_source.get());
@@ -2492,9 +2492,9 @@ impl Engine {
         }
     }
 
-    /// The deck synced decks follow. With one deck synced it follows a playing
-    /// been playing longest, handing over when it stops, as Link's master deck does.
-    /// been playing longest, handing over when it stops, as Link's master deck
+    /// The deck synced decks follow. With one deck synced it follows a playing deck
+    /// among the others; with more, the leader is the synced deck that has been playing
+    /// longest, handing over when it stops, as Link's master deck does.
     fn pick_sync_leader(&mut self, synced: [bool; NUM_DECKS]) {
         self.read_pinned_leader();
         let count = synced.iter().filter(|&&s| s).count();
@@ -2776,9 +2776,9 @@ impl Engine {
         self.visual.clone()
     }
 
-    /// Renders one buffer of interleaved audio with `channels` channels. With four or more channels, channels 3 and 4 carry the headphone mix. Gapless playback: a deck with a
-    /// next deck takes over from there (see [`Self::hand_over`]), so the two join with neither a gap nor an overlap. (A UI timer can only start the next deck to within a screen frame.)
-    /// next deck takes over from there (see [`Self::hand_over`]), so the two join with neither a gap nor an overlap. (A UI timer can only start the next deck to within a screen
+    /// Renders one buffer of interleaved audio with `channels` channels. With four or more channels, channels 3 and 4 carry the headphone mix. Gapless playback: a deck with a `play_next`
+    /// deck reads on past its track's end into that deck's track. In the buffer where its track ends it plays on into the next track to the end of the buffer, and the next deck takes
+    /// over from there (see [`Self::hand_over`]), so the two join with neither a gap nor an overlap. (A UI timer can only start the next deck to within a screen frame.)
     fn start_gapless(&mut self, frames: usize) {
         let out_rate = self.sample_rate;
         for d in &mut self.decks {
@@ -3560,9 +3560,9 @@ impl Engine {
                 let mut dry = None;
                 if live_on[i] > 0 || mixer_on[i] {
                     let x = if mixer_on[i] {
-                        // The strips after their trim, effects, pan and fader: the
-                        // Mixer's master; its effect units only on the strips with FX on.
-                        // Mixer's master; its effect units only on the strips with FX
+                        // The strips after their trim, effects, pan and fader: the deck's
+                        // own trim, EQ, filter and fader act on the sums, the Mixer's
+                        // master; its effect units only on the strips with FX on.
                         let mut sums = [[0.0f32; 2]; 2];
                         for inp in self.inputs.iter().filter(|inp| inp.in_mixer) {
                             let g = lerp(inp.level_ramp);
@@ -6570,6 +6570,7 @@ mod tests {
     /// Times the engine with every effect slot on, routed to both decks and
     /// the main mix. Run with `--nocapture` to see the realtime factor.
     #[test]
+    #[cfg_attr(debug_assertions, ignore = "times the engine: only an optimized build means anything")]
     fn stays_cheap_with_every_effect_on() {
         let (reg, mut engine, mut input) = setup();
         load(&mut input, 0, short_track(124.0, 12.0));
@@ -6598,10 +6599,11 @@ mod tests {
         assert!(factor > 2.0, "{factor}x realtime");
     }
 
-    /// The worst case a set can throw at the audio thread: four decks with key lock and key shifts, every effect on, and each deck beatjumping (which re-seeds its
-    /// buffer's time on average or the slowest buffer runs far past it. Run with `--nocapture` to see the numbers; `DJSUGAR_STRESS_SECONDS` runs it longer, as a soak.
-    /// buffer's time on average or the slowest buffer runs far past it. Run with `--nocapture` to see the numbers; `DJSUGAR_STRESS_SECONDS` runs it longer, as a
+    /// The worst case a set can throw at the audio thread: four decks with key lock and key shifts, every effect on, and each deck beatjumping (which re-seeds its time-stretcher)
+    /// every few buffers. Times every 256-frame buffer, as a sound card at 5.8 ms would ask for them, and fails if the engine needs more than the buffer's time on average
+    /// or the slowest buffer runs far past it. Run with `--nocapture` to see the numbers; `DJSUGAR_STRESS_SECONDS` runs it longer, as a soak.
     #[test]
+    #[cfg_attr(debug_assertions, ignore = "times the engine: only an optimized build means anything")]
     fn keeps_up_under_stress() {
         const FRAMES: usize = 256;
         let (reg, mut engine, mut input) = setup();

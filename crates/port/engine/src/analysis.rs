@@ -390,8 +390,8 @@ const FLUX_TOP_HZ: f64 = 11_000.0;
 const FLUX_MEAN_SECS: f64 = 0.5;
 
 /// Spectral flux, one value per onset bin: how much the log-magnitude spectrum rises from
-/// detectors do). Fed the mono signal a sample at a time; each spectrum is centred on its bin.
-/// detectors do). Fed the mono signal a sample at a time; each spectrum is centred on its
+/// one bin to the next, summed over frequency (as the Queen Mary and librosa onset detectors
+/// do). Fed the mono signal a sample at a time; each spectrum is centred on its bin.
 #[derive(Default)]
 struct SpectralFlux {
     fft: Option<Arc<dyn Fft<f32>>>,

@@ -451,9 +451,9 @@ fn segment(levels: &[[f32; 3]], novelty: &[f32]) -> Vec<usize> {
     cuts
 }
 
-/// Moves each cut to where the bass actually comes in or drops out, up to `SNAP_BARS` either way: the fit above
-/// inside the intro. The bass crosses halfway between the levels on either side; the earliest crossing in reach wins.
-/// inside the intro. The bass crosses halfway between the levels on either side; the earliest crossing in reach
+/// Moves each cut to where the bass actually comes in or drops out, up to `SNAP_BARS` either way: the fit above prefers
+/// whole 8- and 16-bar sections, so a kick entering on its own a few bars early would otherwise end up inside the
+/// intro. The bass crosses halfway between the levels on either side; the earliest crossing in reach wins.
 fn refine(levels: &[[f32; 3]], cuts: &[usize]) -> Vec<usize> {
     let n = levels.len();
     let low = |a: usize, b: usize| levels[a..b].iter().map(|l| l[0]).sum::<f32>() / (b - a) as f32;

@@ -1,6 +1,6 @@
-//! DJ Sugar's side: starts a helper and trades audio blocks with it. [`spawn`] returns two halves. The
-//! longer than the deadline it is given. The [`Helper`] stays on a normal thread and watches the process (exit, kill).
-//! longer than the deadline it is given. The [`Helper`] stays on a normal thread and watches the process (exit,
+//! DJ Sugar's side: starts a helper and trades audio blocks with it. [`spawn`] returns two halves. The [`Connection`]
+//! goes to the audio thread: [`Connection::process`] never allocates, never locks and never waits longer than the
+//! deadline it is given. The [`Helper`] stays on a normal thread and watches the process (exit, kill).
 
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -185,9 +185,9 @@ pub fn scan_audio_units(helper: &Path, timeout: Duration) -> Result<Vec<Descript
     scan_with(helper, &["--scan-au".into()], timeout)
 }
 
-/// A plugin's own presets, as (name, reference for [`Helper::load_preset`]),
-/// discovery providers, an Audio Unit's factory presets. Other plugins list none.
-/// discovery providers, an Audio Unit's factory presets. Other plugins list
+/// A plugin's own presets, as (name, reference for [`Helper::load_preset`]), read
+/// in a throwaway helper like [`scan`]: a CLAP plugin's from its preset discovery
+/// providers, an Audio Unit's factory presets. Other plugins list none.
 pub fn presets(helper: &Path, plugin: &Plugin, timeout: Duration) -> Result<Vec<(String, String)>, ScanError> {
     let args: Vec<std::ffi::OsString> = match plugin {
         Plugin::Clap { file, id } => {
@@ -442,9 +442,9 @@ impl Connection {
         out
     }
 
-    /// The first half of [`Connection::process_events`]: hands the block to the helper and returns at once, so several
-    /// can't go (the helper is still on a late block, or gone): it plays dry and there is nothing to collect. Real-time safe.
-    /// can't go (the helper is still on a late block, or gone): it plays dry and there is nothing to collect. Real-time
+    /// The first half of [`Connection::process_events`]: hands the block to the helper and returns at once, so several helpers
+    /// can work on their blocks side by side. [`Connection::collect`] picks the result up. `Err` when the block can't go (the
+    /// helper is still on a late block, or gone): it plays dry and there is nothing to collect. Real-time safe.
     pub fn send(&mut self, input: [&[f32]; CHANNELS], transport: Transport, events: &[Midi]) -> Result<(), Outcome> {
         let frames = input[0].len();
         assert!(frames <= self.shm.max_frames(), "block longer than max_frames");

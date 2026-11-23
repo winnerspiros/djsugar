@@ -1,6 +1,6 @@
-//! Times each word of a track's lyrics by listening to it: Whisper (whisper.cpp, through whisper-rs) hears the vocals, word by word with times, and the lyrics the DJ has are
-//! instead: the words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation models.
-//! instead: the words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation
+//! Times each word of a track's lyrics by listening to it: Whisper (whisper.cpp, through whisper-rs) hears the vocals, word by word with times, and the lyrics the DJ has are lined
+//! up with what it heard. Words it heard well take its times; the words between are spread over the gap by their length. A track with no lyrics can be transcribed instead: the
+//! words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation models.
 
 use std::path::Path;
 

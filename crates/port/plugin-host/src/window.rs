@@ -1,6 +1,6 @@
-//! The helper's window for a plugin's own editor, on the helper's main thread. DJ Sugar asks for the editor through the shared block (`editor`); the helper's main loop calls
-//! editor is never opened stay headless. The window floats above DJ Sugar, is titled after the plugin and where it plays, and closing it only hides the editor: the plugin keeps playing.
-//! editor is never opened stay headless. The window floats above DJ Sugar, is titled after the plugin and where it plays, and closing it only hides the editor: the plugin keeps
+//! The helper's window for a plugin's own editor, on the helper's main thread. DJ Sugar asks for the editor through the shared block (`editor`); the helper's main loop calls [`EditorWindow::step`]
+//! between the plugin's idle calls. The window (and the platform's event loop under it) is only made the first time an editor is asked for, so helpers whose editor is never opened
+//! stay headless. The window floats above DJ Sugar, is titled after the plugin and where it plays, and closing it only hides the editor: the plugin keeps playing.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;

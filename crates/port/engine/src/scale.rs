@@ -1,6 +1,6 @@
 //! Scale mode for the instrument: notes played move to the nearest note of a scale, so any key played sounds in key with the mix. `[Instrument1],scale_mode` is 0 Off, 1 Auto (the master deck's key) or 2 the
 //! root and scale picked (`scale_root` 0 to 11 from C, `scale_type` an index into [`SCALES`]). `scale_mask` shows the notes the scale has now, a bit per pitch class from C, and `scale_now` which scale that
-//! is, 1 + type × 12 + root; both 0 while every note plays as it is. Chord mode (`chord_mode`, see [`CHORDS`]) plays a chord built on the scale from each key; `chord_learn` takes the next chord held as Mine.
+//! is, 1 + type x 12 + root; both 0 while every note plays as it is. Chord mode (`chord_mode`, see [`CHORDS`]) plays a chord built on the scale from each key; `chord_learn` takes the next chord held as Mine.
 
 use djsugar_plugin_host::Midi;
 
@@ -48,9 +48,9 @@ pub fn nearest(key: u8, mask: u16) -> u8 {
     (1..12).flat_map(|d| [key as i32 - d, key as i32 + d]).find(|&k| in_scale(k)).map_or(key, |k| k as u8)
 }
 
-/// `chord_mode` values: one key plays the key alone, or a chord built on it. Triad and Seventh
-/// Power is root, fifth and octave; Mine is the chord learned (`chord_shape`), moved into the scale.
-/// Power is root, fifth and octave; Mine is the chord learned (`chord_shape`), moved into the
+/// `chord_mode` values: one key plays the key alone, or a chord built on it. Triad and Seventh stack
+/// every other note of the scale (a major triad and a dominant seventh with no scale); Power is root,
+/// fifth and octave; Mine is the chord learned (`chord_shape`), moved into the scale.
 pub const CHORDS: [&str; 5] = ["Off", "Triad", "Seventh", "Power", "Mine"];
 pub const CHORD_OFF: u8 = 0;
 pub const TRIAD: u8 = 1;

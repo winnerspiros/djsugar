@@ -257,9 +257,9 @@ fn build_time_tensor(left: &[f32], right: &[f32], padded_len: usize, device: &De
     Tensor::from_data(TensorData::new(data, [1, 2, padded_len]), device)
 }
 
-/// Extract all stems from a single model's output using bulk GPU readback.
-/// (instead of 3 per stem = 12 total), then does all CaC->complex->iSTFT work on CPU.
-/// (instead of 3 per stem = 12 total), then does all CaC->complex->iSTFT work
+/// Extract all stems from a single model's output using bulk GPU readback. Reads
+/// the entire freq_out and time_out tensors in 2 GPU->CPU transfers (instead of
+/// 3 per stem = 12 total), then does all CaC->complex->iSTFT work on CPU.
 async fn extract_all_stems(
     freq_out: &Tensor<4>, // [1, n_sources * 4, F, padded_T]
     time_out: &Tensor<3>, // [1, n_sources * 2, padded_T]

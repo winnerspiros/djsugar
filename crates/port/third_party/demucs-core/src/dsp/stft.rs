@@ -4,9 +4,9 @@ use realfft::{num_complex::Complex, ComplexToReal, RealFftPlanner, RealToComplex
 
 use crate::{DemucsError, Result};
 
-/// Short-Time Fourier Transform (STFT) and its inverse (ISTFT). Matches the behavior of HTDemucs's `_spec` and `_ispec` methods: **Forward (`_spec`):** 1. Pad signal: left = `hop/2 * 3`, right = enough to align to `le` hops 2.
-/// ceil(input_len / hop_length)` **Inverse (`_ispec`):** 1. Input has `n_fft/2 + 1` bins (CaC re-adds Nyquist as zero) 2. Re-pad 2 zero frames on each side 3. Standard overlap-add iSTFT with center-trim 4. Trim to desired output length
-/// ceil(input_len / hop_length)` **Inverse (`_ispec`):** 1. Input has `n_fft/2 + 1` bins (CaC re-adds Nyquist as zero) 2. Re-pad 2 zero frames on each side 3. Standard overlap-add iSTFT with center-trim 4. Trim to desired output
+/// Short-Time Fourier Transform (STFT) and its inverse (ISTFT). Matches the behavior of HTDemucs's `_spec` and `_ispec` methods: **Forward (`_spec`):** 1. Pad signal: left = `hop/2 * 3`, right = enough to align to `le` hops 2. Center-pad
+/// by `n_fft/2` on each side (reflect) 3. Standard windowed FFT -> `le + 4` frames x `n_fft/2 + 1` bins 4. Drop Nyquist bin -> `n_fft/2` bins 5. Trim border frames: keep `[2..2+le]` -> exactly `le` frames 6. `le = ceil(input_len / hop_length)`
+/// **Inverse (`_ispec`):** 1. Input has `n_fft/2 + 1` bins (CaC re-adds Nyquist as zero) 2. Re-pad 2 zero frames on each side 3. Standard overlap-add iSTFT with center-trim 4. Trim to desired output length
 pub struct Stft {
     n_fft: usize,
     hop_length: usize,
@@ -28,9 +28,9 @@ impl Stft {
         }
     }
 
-    /// Computes the forward STFT matching HTDemucs `_spec`. Returns a flat buffer of
-    /// hop_length)` frames. Layout: `[frame_0_bin_0, ..., frame_0_bin_F, frame_1_bin_0, ...]`
-    /// hop_length)` frames. Layout: `[frame_0_bin_0, ..., frame_0_bin_F, frame_1_bin_0,
+    /// Computes the forward STFT matching HTDemucs `_spec`. Returns a flat buffer of complex
+    /// bins with `n_fft / 2` bins per frame (Nyquist dropped) and `ceil(len / hop_length)`
+    /// frames. Layout: `[frame_0_bin_0, ..., frame_0_bin_F, frame_1_bin_0, ...]`
     pub fn forward(&mut self, samples: &[f32]) -> Result<Vec<Complex<f32>>> {
         let hl = self.hop_length;
         let le = samples.len().div_ceil(hl); // target frame count
@@ -86,9 +86,9 @@ impl Stft {
         Ok(output)
     }
 
-    /// Computes the inverse STFT matching HTDemucs `_ispec`. Input
-    /// which re-adds the Nyquist bin as zero). Reconstructs `length` samples.
-    /// which re-adds the Nyquist bin as zero). Reconstructs `length`
+    /// Computes the inverse STFT matching HTDemucs `_ispec`. Input spectrogram
+    /// has `n_fft/2 + 1` bins per frame (from `cac_to_stft` which re-adds
+    /// the Nyquist bin as zero). Reconstructs `length` samples.
     pub fn inverse(&mut self, spectrogram: &[Complex<f32>], length: usize) -> Result<Vec<f32>> {
         let bins = self.n_fft / 2 + 1;
         let num_frames_in = spectrogram.len() / bins;
@@ -229,9 +229,9 @@ mod tests {
 
     #[test]
     fn round_trip_reconstructs_signal() {
-        // Use a long signal to minimize boundary effects. The _spec/_ispec pair uses reflect
-        // imperfect reconstruction. This is by design — the model is trained with this exact behavior.
-        // imperfect reconstruction. This is by design — the model is trained with this exact
+        // Use a long signal to minimize boundary effects. The _spec/_ispec pair uses reflect padding
+        // on forward but zero-padded border frames on inverse, so the boundary region has imperfect
+        // reconstruction. This is by design — the model is trained with this exact behavior.
         let n_fft = 4096;
         let hop = 1024;
         let num_samples = 343980; // training length

@@ -1,6 +1,6 @@
-//! The master's loudness meter, for recording and broadcasting. The audio thread copies the master into a ring buffer all the time (a tap like the recorder's); a thread here empties it into a [`LiveLoudness`] and publishes the readings as
-//! soon after a reset). - `[Master],loudness_reset` starts integrated loudness, the range and the true peak again. So does starting a recording or going on air. - `[Master],loudness_target` holds the chosen target in LUFS, for the meter's colours.
-//! soon after a reset). - `[Master],loudness_reset` starts integrated loudness, the range and the true peak again. So does starting a recording or going on air. - `[Master],loudness_target` holds the chosen target in LUFS, for the meter's
+//! The master's loudness meter, for recording and broadcasting: the audio thread copies the master into a ring buffer (a tap like the recorder's), a thread here empties it into a [`LiveLoudness`] and publishes `[Master],loudness_momentary`, `loudness_short_term` and `loudness_integrated` in LUFS,
+//! `loudness_range` in LU and `true_peak` (the highest since the reset) in dBTP; [`NO_READING`] while there is nothing to read (silence, or too soon after a reset). `[Master],loudness_reset` starts integrated loudness,
+//! the range and the true peak again, as does starting a recording or going on air; `[Master],loudness_target` holds the chosen target in LUFS, for the meter's colours.
 
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};

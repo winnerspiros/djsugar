@@ -1,6 +1,6 @@
-//! The instrument's arpeggiator: the notes held play one at a time, in time with the mix's beat. `[Instrument1],arp` turns it on; `arp_mode` is Up, Down, Up-down, Random or Order (as played, see
-//! keys are played. It takes the notes after scale and chord mode, so a chord held with one key is arpeggiated too. Steps fall on the master deck's beat grid while it plays, and run on at its tempo otherwise.
-//! keys are played. It takes the notes after scale and chord mode, so a chord held with one key is arpeggiated too. Steps fall on the master deck's beat grid while it plays, and run on at its tempo
+//! The instrument's arpeggiator: the notes held play one at a time, in time with the mix's beat. `[Instrument1],arp` turns it on; `arp_mode` is Up, Down, Up-down, Random or Order (as played, see [`MODES`]);
+//! `arp_rate` an index into [`RATES`]; `arp_gate` how much of each step a note sounds, 0.1 to 1; `arp_octaves` 1 to 4; `arp_hold` keeps the notes playing after the keys are let go, until new keys are played.
+//! It takes the notes after scale and chord mode, so a chord held with one key is arpeggiated too. Steps fall on the master deck's beat grid while it plays, and run on at its tempo otherwise.
 
 use djsugar_plugin_host::{Midi, Transport};
 

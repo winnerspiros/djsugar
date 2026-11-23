@@ -1,6 +1,6 @@
-//! MIDI clock in: a drum machine, groovebox or another app leads the decks. The input picked in Settings › Controllers › MIDI Clock is opened by the clock thread (see [`crate::midi_clock`]); its messages are read on the MIDI input's own thread by a
-//! change is followed within two beats. What it finds goes to the audio thread through a [`ClockIn`] snapshot, with no locks: with `[Master],sync_leader_source` on Clock, decks with SYNC on follow its tempo and, while it runs, its beat, with bar 1 on its Start.
-//! change is followed within two beats. What it finds goes to the audio thread through a [`ClockIn`] snapshot, with no locks: with `[Master],sync_leader_source` on Clock, decks with SYNC on follow its tempo and, while it runs, its beat, with bar 1 on its
+//! MIDI clock in: a drum machine, groovebox or another app leads the decks. The input picked in Settings › Controllers › MIDI Clock is opened by the clock thread (see [`crate::midi_clock`]); its messages are read on the MIDI input's own thread by a [`ClockReader`],
+//! which smooths the tempo with a straight line fitted through the pulses of the last four bars, so a jittery hardware clock still gives a steady tempo; when the last two beats say the tempo changed, the fit starts over from them, so a tempo change is followed
+//! within two beats. What it finds goes to the audio thread through a [`ClockIn`] snapshot, with no locks: with `[Master],sync_leader_source` on Clock, decks with SYNC on follow its tempo and, while it runs, its beat, with bar 1 on its Start.
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -23,9 +23,9 @@ pub type WaveformBin = [u8; 8];
 pub struct Waveform {
     /// Slices per second in `levels[0]`.
     pub bins_per_second: f64,
-    /// `levels[0]` is the full resolution; each further level merges pairs of slices of the one
-    /// [`Waveform::from_finest`]). Zoomed-out views read a coarser level instead of scanning thousands of slices per pixel.
-    /// [`Waveform::from_finest`]). Zoomed-out views read a coarser level instead of scanning
+    /// `levels[0]` is the full resolution; each further level merges pairs of slices of the one before
+    /// (peaks by maximum, RMS by power), down to a single slice (see [`Waveform::from_finest`]). Zoomed-out
+    /// views read a coarser level instead of scanning thousands of slices per pixel.
     pub levels: Vec<Vec<WaveformBin>>,
     /// The track's harmony over time, for finding where its chords change
     /// (see [`crate::phrases`]); empty for analyses from before it was kept.

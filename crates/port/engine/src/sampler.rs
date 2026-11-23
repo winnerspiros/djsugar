@@ -1,6 +1,6 @@
-//! The sampler: sixteen players, `[Sampler1]` to `[Sampler16]`, for the pads' Sampler page. Out of the box the first eight hold short built-in sounds, made here when the engine starts (kick, snare, clap, hat, air horn, siren, laser, crash), so the pads work with no sample files; the app puts its sample packs and the DJ's own files on them with
-//! `cue_gotoandstop` stops. `pregain` is the slot's level, silent to +6 dB. `LoadSelectedTrack` and `eject` are for the app, which owns what each slot holds. Samples are decoded and resampled off the audio thread and arrive over a wait-free queue; ones the players are done with go back over another to be freed off it, so nothing allocates or frees on the audio thread.
-//! `cue_gotoandstop` stops. `pregain` is the slot's level, silent to +6 dB. `LoadSelectedTrack` and `eject` are for the app, which owns what each slot holds. Samples are decoded and resampled off the audio thread and arrive over a wait-free queue; ones the players are done with go back over another to be freed off it, so nothing allocates or frees on the
+//! The sampler: sixteen players, `[Sampler1]` to `[Sampler16]`, for the pads' Sampler page. Out of the box the first eight hold short built-in sounds, made here when the engine starts (kick, snare, clap, hat, air horn, siren, laser, crash), so the pads work with no sample files; the app puts its sample packs and the DJ's own files on them with [`crate::AudioEngine::set_sample`].
+//! Samplers go to the main mix after the crossfader. Pressing a pad (`cue_gotoandplay`) does what the slot's `play_mode` says: 0 one shot (plays to the end; pressing again restarts), 1 hold (plays while held), 2 on/off (pressing again stops) or 3 loop (repeats until pressed again; `repeat` loops in any mode). `cue_gotoandstop` stops. `pregain` is the slot's
+//! level, silent to +6 dB. `LoadSelectedTrack` and `eject` are for the app, which owns what each slot holds. Samples are decoded and resampled off the audio thread and arrive over a wait-free queue; ones the players are done with go back over another to be freed off it, so nothing allocates or frees on the audio thread.
 
 use std::f32::consts::TAU;
 use std::path::Path;
@@ -157,7 +157,7 @@ struct Player {
     duration: ControlHandle,
     volume: ControlHandle,
     pregain: ControlHandle,
-    /// The level being played (volume × pregain), gliding to `target`, so
+    /// The level being played (volume x pregain), gliding to `target`, so
     /// turning a pad's level while it plays doesn't zip.
     gain: f32,
     /// The level the controls ask for, read once per buffer.

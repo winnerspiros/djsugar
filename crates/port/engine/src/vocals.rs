@@ -1,6 +1,6 @@
 //! Where a track has vocals: a level along the track, from Spleeter's vocal network on its own
-//! analysis. The deck waveforms tint the sung parts with it (Settings › Appearance › Show vocals).
-//! analysis. The deck waveforms tint the sung parts with it (Settings › Appearance › Show
+//! (see [`spleeter::vocal_levels`]), worked out once and kept in the cache beside the analysis.
+//! The deck waveforms tint the sung parts with it (Settings › Appearance › Show vocals).
 
 use std::fs;
 use std::path::{Path, PathBuf};

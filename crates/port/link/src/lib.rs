@@ -1,6 +1,6 @@
-//! Shares tempo and beat phase with other apps and devices on the local network, joining Link sessions (other music software, phones, drum machines). Each app keeps a timeline (tempo and
-//! where beats fall in time). Peers find each other by multicast, measure each other's clocks, and settle on one session whose timeline they all follow; a change any of them commits reaches the
-//! rest. [`LinkSession`] is shared between threads. The audio thread captures and commits a [`SessionState`] without blocking or allocating; enabling opens the sockets and starts a network thread.
+//! Shares tempo and beat phase with other apps and devices on the local network, joining Link sessions (music software, phones, drum machines). Each app keeps a timeline (tempo and
+//! where beats fall in time). Peers find each other by multicast, measure each other's clocks, and settle on one session whose timeline they all follow; a change any of them commits reaches the rest.
+//! [`LinkSession`] is shared between threads. The audio thread captures and commits a [`SessionState`] without blocking or allocating; enabling opens the sockets and starts a network thread.
 
 mod net;
 pub mod timeline;

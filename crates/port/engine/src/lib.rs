@@ -1,6 +1,6 @@
-//! The audio engine. It owns the named controls (`[Channel1],play`, `[Master],crossfader`, ...), plays the decks through a 3-band isolator EQ, a filter and
-//! [`engine::Engine`]; loader threads put tracks on decks over a wait-free queue as soon as their files are open, then decode and analyse them while they play.
-//! [`engine::Engine`]; loader threads put tracks on decks over a wait-free queue as soon as their files are open, then decode and analyse them while they
+//! The audio engine. It owns the named controls (`[Channel1],play`, `[Master],crossfader`, ...), plays the decks through a 3-band isolator EQ, a filter and the
+//! effect units, mixes them with the crossfader and sends the result to the sound card. The UI only talks to controls. Threads: the audio callback runs [`engine::Engine`];
+//! loader threads put tracks on decks over a wait-free queue as soon as their files are open, then decode and analyse them while they play.
 
 pub mod analysis;
 pub mod arp;
@@ -566,8 +566,8 @@ impl AudioEngine {
     }
 
     /// Puts `track` on `deck` as soon as its file is open; decoding and analysis carry
-    /// `[Controls],AllowTrackLoadToPlayingDeck` is on, a deck that is playing keeps its track and this returns false.
-    /// `[Controls],AllowTrackLoadToPlayingDeck` is on, a deck that is playing keeps its
+    /// on in the background (see [`loader`]). Unless `[Controls],AllowTrackLoadToPlayingDeck`
+    /// is on, a deck that is playing keeps its track and this returns false.
     pub fn load_track(&self, deck: usize, track: Arc<Track>) -> bool {
         let on = |group: &str, key: &str| self.registry.get(group, key).is_some_and(|c| c.get_bool());
         if on(&deck_group(deck), "play") && !on("[Controls]", "AllowTrackLoadToPlayingDeck") {

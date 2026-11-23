@@ -189,9 +189,9 @@ impl Svf {
     /// Low-pass, band-pass and high-pass outputs for one frame.
     #[inline]
     pub(crate) fn process(&mut self, x: [f32; 2]) -> [[f32; 2]; 3] {
-        // About 5 ms to glide to a new cutoff, but never more than about a sixtieth of an
-        // end) then sweeps over about 12 ms instead of leaping several octaves in the first samples.
-        // end) then sweeps over about 12 ms instead of leaping several octaves in the first
+        // About 5 ms to glide to a new cutoff, but never more than about a sixtieth of an octave
+        // per sample: a jump across the whole range (a MIDI knob slammed from end to end) then
+        // sweeps over about 12 ms instead of leaping several octaves in the first samples.
         let step = (self.target - self.g) * 0.004;
         let most = self.g * 0.012;
         self.g += step.clamp(-most, most);
@@ -386,8 +386,8 @@ pub const SOFT_CLIP_KNEE: f32 = 0.841;
 pub const SOFT_CLIP_CEILING: f32 = 0.9886;
 
 /// A zero-latency safety clipper for outputs without the master's limiter (headphones, booth, the deck outputs to
-/// instead of squaring off at full scale. The bend starts with a slope of one, so there is no kink where it begins.
-/// instead of squaring off at full scale. The bend starts with a slope of one, so there is no kink where it
+/// an external mixer): untouched up to [`SOFT_CLIP_KNEE`], then bent smoothly towards [`SOFT_CLIP_CEILING`] instead
+/// of squaring off at full scale. The bend starts with a slope of one, so there is no kink where it begins.
 #[inline]
 pub fn soft_clip(v: f32) -> f32 {
     let a = v.abs();

@@ -326,9 +326,9 @@ const DRAG_PAUSE: Duration = Duration::from_millis(600);
 /// Most edits kept for undo per deck.
 const UNDO_DEPTH: usize = 64;
 
-/// Applies a beat grid edit to the track loaded on `deck`, if it is still `track`. The
-/// edits but unlocking; resetting gives back the grid the analysis found (from the cache).
-/// edits but unlocking; resetting gives back the grid the analysis found (from the
+/// Applies a beat grid edit to the track loaded on `deck`, if it is still `track`. The edited
+/// grid is the DJ's from now on: re-analysis keeps it. A locked grid takes no edits but
+/// unlocking; resetting gives back the grid the analysis found (from the cache).
 fn edit_grid(loaded: &LoadedTracks, deck: usize, track: &Track, edit: GridEdit, seconds: f64) -> Option<Arc<Track>> {
     let mut l = loaded.write().unwrap();
     let current = l[deck].as_ref().filter(|t| same_load(t, track))?.clone();

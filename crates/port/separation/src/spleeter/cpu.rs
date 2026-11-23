@@ -50,9 +50,9 @@ fn threads() -> usize {
     }
 }
 
-/// `c = a · b` for row-major `a` (m × k) and `b` (k × n).
+/// `c = a · b` for row-major `a` (m x k) and `b` (k x n).
 fn matmul(a: &[f32], b: &[f32], c: &mut [f32], m: usize, k: usize, n: usize) {
-    // SAFETY: the slices hold m × k, k × n and m × n values (checked by the
+    // SAFETY: the slices hold m x k, k x n and m x n values (checked by the
     // asserts), and the strides describe dense row-major matrices.
     assert!(a.len() >= m * k && b.len() >= k * n && c.len() >= m * n);
     unsafe {
@@ -84,7 +84,7 @@ fn elu(x: f32) -> f32 {
 }
 
 impl Layer {
-    /// A layer from burn-layout 5×5 weights: [out, in, kh, kw] for a
+    /// A layer from burn-layout 5x5 weights: [out, in, kh, kw] for a
     /// convolution, [in, out, kh, kw] for a transposed one (`shape` is the
     /// first two).
     fn new(w: &[f32], shape: [usize; 2], transposed: bool, bias: Vec<f32>, scale: Vec<f32>, shift: Vec<f32>) -> Layer {
@@ -118,7 +118,7 @@ impl Layer {
         }
     }
 
-    /// 5×5 convolution, stride 2, TensorFlow "same" padding (1 before, 2
+    /// 5x5 convolution, stride 2, TensorFlow "same" padding (1 before, 2
     /// after), plus bias. Output rows are shared out between threads.
     fn down(&self, x: &Map) -> Map {
         let (oh, ow) = (x.h / 2, x.w / 2);
@@ -158,13 +158,13 @@ impl Layer {
         Map { h: oh, w: ow, c: self.out, data: out }
     }
 
-    /// 5×5 transposed convolution, stride 2, "same" (output 2n, the full
+    /// 5x5 transposed convolution, stride 2, "same" (output 2n, the full
     /// output's rows and columns from 1), plus bias.
     fn up(&self, x: &Map) -> Map {
         let (oh, ow) = (x.h * 2, x.w * 2);
         let spread = K * K * self.out;
         let pixels = x.h * x.w;
-        // Each input pixel's contribution to its 5×5 neighbourhood.
+        // Each input pixel's contribution to its 5x5 neighbourhood.
         let mut cols = vec![0.0f32; pixels * spread];
         let rows = pixels.div_ceil(threads());
         std::thread::scope(|scope| {
@@ -215,7 +215,7 @@ fn concat(a: &Map, b: &Map) -> Map {
 }
 
 impl UNet {
-    /// The stem's estimated magnitudes for `x` (T × F × 2).
+    /// The stem's estimated magnitudes for `x` (T x F x 2).
     fn forward(&self, x: &Map) -> Vec<f32> {
         let mut convs: Vec<Map> = Vec::with_capacity(6);
         let mut h: Option<Map> = None;
@@ -239,7 +239,7 @@ impl UNet {
                 None => u,
             };
         }
-        // 4×4 convolution, dilation 2, "same" (3 each side), sigmoid, then
+        // 4x4 convolution, dilation 2, "same" (3 each side), sigmoid, then
         // the mask times the input.
         let mut est = vec![0.0f32; T * F * 2];
         for y in 0..T {

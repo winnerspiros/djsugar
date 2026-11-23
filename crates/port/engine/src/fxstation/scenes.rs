@@ -321,9 +321,9 @@ pub fn gate_gain(beat: f64, division: f64, width: f32, softness: f32) -> f32 {
     }
 }
 
-/// Pitch shifter (WSOLA): a read tap runs through the recent input at the pitch ratio. When it drifts out of its window it
-/// crossfades until the next jump (up to 30 ms). Joins in phase do not warble or comb like fixed grains; about 20 ms of latency.
-/// crossfades until the next jump (up to 30 ms). Joins in phase do not warble or comb like fixed grains; about 20 ms of
+/// Pitch shifter (WSOLA): a read tap runs through the recent input at the pitch ratio. When it drifts out of its window it jumps
+/// a period back or forward, to the position (searched over +-5 ms) whose waveform matches the one playing best, and crossfades
+/// until the next jump (up to 30 ms). Joins in phase do not warble or comb like fixed grains; about 20 ms of latency.
 #[derive(Clone, Debug, Default)]
 pub struct WsolaPitch {
     lines: [HermiteLine; 2],

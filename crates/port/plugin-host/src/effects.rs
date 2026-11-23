@@ -193,8 +193,8 @@ impl MainThread for TestEditor {
 pub const ALL_PARAMS: usize = 4096;
 
 /// Puts a plugin's parameters in knob order and keeps the first [`MAX_PARAMS`](crate::shm::MAX_PARAMS): each picked
-/// order, then the rest in its own order. Returns every parameter as (id, name), in its own order, for [`Info::all`].
-/// order, then the rest in its own order. Returns every parameter as (id, name), in its own order, for
+/// one (knob slot, param id) in its slot, then those in `preferred` (its maker's remote controls pages) in that order,
+/// then the rest in its own order. Returns every parameter as (id, name), in its own order, for [`Info::all`].
 pub fn arrange<T>(params: &mut Vec<(T, Param)>, preferred: &[u32], picks: &[(usize, u32)]) -> Vec<(u32, String)> {
     use crate::shm::MAX_PARAMS;
     let all = params.iter().take(ALL_PARAMS).map(|(_, p)| (p.id, p.name.clone())).collect();

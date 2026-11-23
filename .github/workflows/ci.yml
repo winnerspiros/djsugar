@@ -45,7 +45,7 @@ jobs:
   linux:
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev

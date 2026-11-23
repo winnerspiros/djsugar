@@ -55,8 +55,8 @@ pub fn is_audio(path: &Path) -> bool {
 }
 
 /// Whether `path` is in a cloud drive and not downloaded: macOS marks such files
-/// drives such as Google Drive, Dropbox and OneDrive), and reading one downloads it.
-/// drives such as Google Drive, Dropbox and OneDrive), and reading one downloads
+/// "dataless" (iCloud Drive with Optimise Mac Storage, and the File Provider drives
+/// such as Google Drive, Dropbox and OneDrive), and reading one downloads it.
 pub fn is_cloud_only(path: &Path) -> bool {
     #[cfg(target_os = "macos")]
     {
