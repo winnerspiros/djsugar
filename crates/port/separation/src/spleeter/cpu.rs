@@ -87,19 +87,8 @@ impl Layer {
     /// A layer from burn-layout 5×5 weights: [out, in, kh, kw] for a
     /// convolution, [in, out, kh, kw] for a transposed one (`shape` is the
     /// first two).
-    fn new(
-        w: &[f32],
-        shape: [usize; 2],
-        transposed: bool,
-        bias: Vec<f32>,
-        scale: Vec<f32>,
-        shift: Vec<f32>,
-    ) -> Layer {
-        let (inp, out) = if transposed {
-            (shape[0], shape[1])
-        } else {
-            (shape[1], shape[0])
-        };
+    fn new(w: &[f32], shape: [usize; 2], transposed: bool, bias: Vec<f32>, scale: Vec<f32>, shift: Vec<f32>) -> Layer {
+        let (inp, out) = if transposed { (shape[0], shape[1]) } else { (shape[1], shape[0]) };
         let mut weights = vec![0.0f32; w.len()];
         for a in 0..shape[0] {
             for b in 0..shape[1] {
@@ -118,14 +107,7 @@ impl Layer {
                 }
             }
         }
-        Layer {
-            weights,
-            bias,
-            inp,
-            out,
-            scale,
-            shift,
-        }
+        Layer { weights, bias, inp, out, scale, shift }
     }
 
     fn norm(&self, x: &mut Map) {
@@ -155,9 +137,7 @@ impl Layer {
                             for dx in 0..K {
                                 let ix = (2 * ox + dx) as isize - 1;
                                 let dst = &mut patch[(dy * K + dx) * self.inp..][..self.inp];
-                                if (0..x.h as isize).contains(&iy)
-                                    && (0..x.w as isize).contains(&ix)
-                                {
+                                if (0..x.h as isize).contains(&iy) && (0..x.w as isize).contains(&ix) {
                                     let at = (iy as usize * x.w + ix as usize) * x.c;
                                     dst.copy_from_slice(&x.data[at..at + x.c]);
                                 } else {
@@ -175,12 +155,7 @@ impl Layer {
                 });
             }
         });
-        Map {
-            h: oh,
-            w: ow,
-            c: self.out,
-            data: out,
-        }
+        Map { h: oh, w: ow, c: self.out, data: out }
     }
 
     /// 5×5 transposed convolution, stride 2, "same" (output 2n, the full
@@ -225,12 +200,7 @@ impl Layer {
                 *v += b;
             }
         }
-        Map {
-            h: oh,
-            w: ow,
-            c: self.out,
-            data: out,
-        }
+        Map { h: oh, w: ow, c: self.out, data: out }
     }
 }
 
@@ -241,12 +211,7 @@ fn concat(a: &Map, b: &Map) -> Map {
         data.extend_from_slice(pa);
         data.extend_from_slice(pb);
     }
-    Map {
-        h: a.h,
-        w: a.w,
-        c,
-        data,
-    }
+    Map { h: a.h, w: a.w, c, data }
 }
 
 impl UNet {
@@ -289,8 +254,7 @@ impl UNet {
                         for dx in 0..4 {
                             let ix = (xx + 2 * dx) as isize - 3;
                             if (0..F as isize).contains(&ix) {
-                                s += h.data[iy as usize * F + ix as usize]
-                                    * self.out_weights[(o * 4 + dy) * 4 + dx];
+                                s += h.data[iy as usize * F + ix as usize] * self.out_weights[(o * 4 + dy) * 4 + dx];
                             }
                         }
                     }
@@ -327,12 +291,8 @@ impl Net {
             .iter()
             .map(|stem| {
                 Ok(UNet {
-                    enc: (0..6)
-                        .map(|k| layer(&format!("{stem}.enc{k}"), false))
-                        .collect::<Result<_, String>>()?,
-                    dec: (0..6)
-                        .map(|k| layer(&format!("{stem}.dec{k}"), true))
-                        .collect::<Result<_, String>>()?,
+                    enc: (0..6).map(|k| layer(&format!("{stem}.enc{k}"), false)).collect::<Result<_, String>>()?,
+                    dec: (0..6).map(|k| layer(&format!("{stem}.dec{k}"), true)).collect::<Result<_, String>>()?,
                     out_weights: get(&format!("{stem}.out.weight"))?.0,
                     out_bias: get(&format!("{stem}.out.bias"))?.0,
                 })
@@ -349,12 +309,7 @@ fn input(magnitudes: &[f32]) -> Map {
         let (c, i) = (j / (T * F), j % (T * F));
         data[i * 2 + c] = *v;
     }
-    Map {
-        h: T,
-        w: F,
-        c: 2,
-        data,
-    }
+    Map { h: T, w: F, c: 2, data }
 }
 
 impl super::OneStem for Net {
@@ -402,12 +357,7 @@ mod tests {
     }
 
     fn map(h: usize, w: usize, c: usize) -> Map {
-        Map {
-            h,
-            w,
-            c,
-            data: noise(h * w * c, 7),
-        }
+        Map { h, w, c, data: noise(h * w * c, 7) }
     }
 
     fn at(x: &Map, y: isize, xx: isize, c: usize) -> f32 {
@@ -434,12 +384,7 @@ mod tests {
                     for i in 0..inp {
                         for dy in 0..K {
                             for dx in 0..K {
-                                let v = at(
-                                    &x,
-                                    (2 * oy + dy) as isize - 1,
-                                    (2 * ox + dx) as isize - 1,
-                                    i,
-                                );
+                                let v = at(&x, (2 * oy + dy) as isize - 1, (2 * ox + dx) as isize - 1, i);
                                 s += v * w[((o * inp + i) * K + dy) * K + dx];
                             }
                         }

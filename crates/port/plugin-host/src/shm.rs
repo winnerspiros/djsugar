@@ -1,16 +1,6 @@
-//! The block of memory DJ Sugar and a helper share: a header of atomics, then
-//! the input and output audio, one channel after the other.
-//!
-//! Who may touch what, and when:
-//!
-//! - DJ Sugar writes the input, the frame count and the transport, then bumps
-//!   `seq_in`. It only does so while the helper is idle (`seq_out == seq_in`).
-//! - The helper reads them after it sees the new `seq_in`, writes the output,
-//!   then sets `seq_out` to that number.
-//! - DJ Sugar reads the output only once `seq_out` has caught up.
-//!
-//! The release/acquire pairs on the two counters order every other access, so
-//! the audio buffers themselves need no locks.
+//! The block of memory DJ Sugar and a helper share: a header of atomics, then the input and output audio, one channel after the other. Who may touch what, and when: - DJ Sugar writes the input, the frame
+//! `seq_out` to that number. - DJ Sugar reads the output only once `seq_out` has caught up. The release/acquire pairs on the two counters order every other access, so the audio buffers themselves need no locks.
+//! `seq_out` to that number. - DJ Sugar reads the output only once `seq_out` has caught up. The release/acquire pairs on the two counters order every other access, so the audio buffers themselves need no
 
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -62,18 +52,16 @@ pub struct Header {
     /// What the helper did about it: 0 closed, 1 open, 2 the plugin has no
     /// window of its own (or it failed to open). Closing the window sets 0.
     pub editor_shown: AtomicU32,
-    /// DJ Sugar asks for the plugin's state: [`STATE_SAVE`] (write it to the
-    /// helper's state file) or [`STATE_LOAD`] (read it from there), then
-    /// bumps `state_asked`. The helper's main thread does it, stores
-    /// `state_ok` (1 done, 0 failed) and sets `state_done` to `state_asked`.
+    /// DJ Sugar asks for the plugin's state: [`STATE_SAVE`] (write it to the helper's state file)
+    /// or [`STATE_LOAD`] (read it from there), then bumps `state_asked`. The helper's main thread
+    /// does it, stores `state_ok` (1 done, 0 failed) and sets `state_done` to `state_asked`.
     pub state_cmd: AtomicU32,
     pub state_asked: AtomicU32,
     pub state_done: AtomicU32,
     pub state_ok: AtomicU32,
-    /// The parameters' values as the plugin has them now, in its own
-    /// ranges, as `f32` bits: its window or a loaded sound can change them
-    /// behind DJ Sugar's back. The helper's main thread writes them now and
-    /// then and bumps `values_seq` after.
+    /// The parameters' values as the plugin has them now, in its own ranges, as `f32`
+    /// bits: its window or a loaded sound can change them behind DJ Sugar's back. The
+    /// helper's main thread writes them now and then and bumps `values_seq` after.
     pub values: [AtomicU32; MAX_PARAMS],
     pub values_seq: AtomicU32,
 }
@@ -95,17 +83,11 @@ pub struct Midi {
 
 impl Midi {
     pub fn note_on(frame: u32, channel: u8, key: u8, velocity: u8) -> Self {
-        Self {
-            frame,
-            data: [0x90 | (channel & 15), key & 127, velocity & 127],
-        }
+        Self { frame, data: [0x90 | (channel & 15), key & 127, velocity & 127] }
     }
 
     pub fn note_off(frame: u32, channel: u8, key: u8) -> Self {
-        Self {
-            frame,
-            data: [0x80 | (channel & 15), key & 127, 0],
-        }
+        Self { frame, data: [0x80 | (channel & 15), key & 127, 0] }
     }
 
     /// The note it starts, as (channel, key, velocity 0..1); a note-on
@@ -118,22 +100,15 @@ impl Midi {
     /// The note it ends, as (channel, key).
     pub fn as_note_off(&self) -> Option<(u8, u8)> {
         let kind = self.data[0] & 0xf0;
-        (kind == 0x80 || (kind == 0x90 && self.data[2] == 0))
-            .then(|| (self.data[0] & 15, self.data[1]))
+        (kind == 0x80 || (kind == 0x90 && self.data[2] == 0)).then(|| (self.data[0] & 15, self.data[1]))
     }
 
     pub fn pack(&self) -> u64 {
-        ((self.frame as u64) << 32)
-            | ((self.data[0] as u64) << 16)
-            | ((self.data[1] as u64) << 8)
-            | self.data[2] as u64
+        ((self.frame as u64) << 32) | ((self.data[0] as u64) << 16) | ((self.data[1] as u64) << 8) | self.data[2] as u64
     }
 
     pub fn unpack(v: u64) -> Self {
-        Self {
-            frame: (v >> 32) as u32,
-            data: [(v >> 16) as u8, (v >> 8) as u8, v as u8],
-        }
+        Self { frame: (v >> 32) as u32, data: [(v >> 16) as u8, (v >> 8) as u8, v as u8] }
     }
 }
 
@@ -155,11 +130,7 @@ pub fn size_for(max_frames: usize) -> usize {
 impl Shm {
     /// Creates the file at `path` and maps it (DJ Sugar's side).
     pub fn create(path: &Path, max_frames: usize, sample_rate: u32) -> io::Result<Self> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(path)?;
+        let file = OpenOptions::new().read(true).write(true).create_new(true).open(path)?;
         file.set_len(size_for(max_frames) as u64)?;
         let shm = Self::map(&file, max_frames)?;
         let h = shm.header();
@@ -180,21 +151,14 @@ impl Shm {
         // Read the header first to learn the buffer size.
         let shm = Self::map(&file, 0)?;
         let h = shm.header();
-        if h.magic.load(Ordering::Acquire) != MAGIC || h.version.load(Ordering::Relaxed) != VERSION
-        {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "not an DJ Sugar plugin block, or another version",
-            ));
+        if h.magic.load(Ordering::Acquire) != MAGIC || h.version.load(Ordering::Relaxed) != VERSION {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "not an DJ Sugar plugin block, or another version"));
         }
         let max_frames = h.max_frames.load(Ordering::Relaxed) as usize;
         if len < size_for(max_frames) {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "too short"));
         }
-        Ok(Self {
-            map: shm.map,
-            max_frames,
-        })
+        Ok(Self { map: shm.map, max_frames })
     }
 
     fn map(file: &File, max_frames: usize) -> io::Result<Self> {
@@ -218,28 +182,21 @@ impl Shm {
         assert!(ch < CHANNELS);
         let i = (output as usize) * CHANNELS + ch;
         // SAFETY: in bounds by `size_for`; the header size is a multiple of 8.
-        unsafe {
-            (self.map.as_ptr().add(std::mem::size_of::<Header>()) as *mut f32)
-                .add(i * self.max_frames)
-        }
+        unsafe { (self.map.as_ptr().add(std::mem::size_of::<Header>()) as *mut f32).add(i * self.max_frames) }
     }
 
     /// Copies `data` into input (or output) channel `ch`.
     pub fn write(&self, output: bool, ch: usize, data: &[f32]) {
         assert!(data.len() <= self.max_frames);
         // SAFETY: in bounds; only the side the protocol allows writes now.
-        unsafe {
-            std::ptr::copy_nonoverlapping(data.as_ptr(), self.channel(output, ch), data.len())
-        }
+        unsafe { std::ptr::copy_nonoverlapping(data.as_ptr(), self.channel(output, ch), data.len()) }
     }
 
     /// Copies input (or output) channel `ch` into `data`.
     pub fn read(&self, output: bool, ch: usize, data: &mut [f32]) {
         assert!(data.len() <= self.max_frames);
         // SAFETY: as in `write`.
-        unsafe {
-            std::ptr::copy_nonoverlapping(self.channel(output, ch), data.as_mut_ptr(), data.len())
-        }
+        unsafe { std::ptr::copy_nonoverlapping(self.channel(output, ch), data.as_mut_ptr(), data.len()) }
     }
 }
 

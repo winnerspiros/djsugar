@@ -1,7 +1,6 @@
-//! Stem separation inside DJ Sugar, without Python: Spleeter for stems within a
-//! second or two of loading a track, HTDemucs for high-quality stems in the
-//! background. Both run on burn, on the GPU (Metal on macOS, Vulkan on Linux)
-//! or on the CPU. See openspec/changes/improve-stem-separation.
+//! Stem separation inside DJ Sugar, without Python: Spleeter for stems within a second or two of
+//! loading a track, HTDemucs for high-quality stems in the background. Both run on burn, on the GPU
+//! (Metal on macOS, Vulkan on Linux) or on the CPU. See openspec/changes/improve-stem-separation.
 
 pub mod htdemucs;
 pub mod spleeter;

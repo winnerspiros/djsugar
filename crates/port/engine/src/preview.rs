@@ -1,12 +1,6 @@
-//! The preview player, `[PreviewDeck1]`: listens to a track in
-//! the headphones without loading it on a deck. It plays into the cue
-//! (headphone) mix only, so the audience never hears it.
-//!
-//! Controls: `play`, `playposition` (0 to 1; set it to seek), `duration`,
-//! `track_loaded` and `volume`.
-//!
-//! The audio arrives over a wait-free queue, and audio it is done with goes
-//! back over another to be freed off the audio thread, as deck tracks do.
+//! The preview player, `[PreviewDeck1]`: listens to a track in the headphones without loading it on a deck. It plays into the cue (headphone) mix
+//! only, so the audience never hears it. Controls: `play`, `playposition` (0 to 1; set it to seek), `duration`, `track_loaded` and `volume`. The
+//! audio arrives over a wait-free queue, and audio it is done with goes back over another to be freed off the audio thread, as deck tracks do.
 
 use std::sync::Arc;
 
@@ -71,10 +65,7 @@ impl Preview {
                 incoming,
                 done,
             },
-            PreviewInput {
-                audio: audio_tx,
-                done: done_rx,
-            },
+            PreviewInput { audio: audio_tx, done: done_rx },
         )
     }
 
@@ -93,14 +84,10 @@ impl Preview {
             self.written = 0.0;
             self.position.set(0.0);
             self.play.set_bool(play && self.audio.is_some());
-            self.step = self
-                .audio
-                .as_ref()
-                .map_or(1.0, |a| a.sample_rate as f64 / self.rate);
+            self.step = self.audio.as_ref().map_or(1.0, |a| a.sample_rate as f64 / self.rate);
         }
         self.loaded.set_bool(self.audio.is_some());
-        self.duration
-            .set(self.audio.as_ref().map_or(0.0, |a| a.duration()));
+        self.duration.set(self.audio.as_ref().map_or(0.0, |a| a.duration()));
         let wanted = self.position.get();
         if (wanted - self.written).abs() > 1e-9 {
             self.pos = wanted.clamp(0.0, 1.0) * self.len();
@@ -116,11 +103,7 @@ impl Preview {
     pub(crate) fn next(&mut self) -> [f32; 2] {
         let playing = self.play.get_bool();
         // A short ramp, so starting and stopping don't click.
-        let target = if playing {
-            self.volume.get() as f32
-        } else {
-            0.0
-        };
+        let target = if playing { self.volume.get() as f32 } else { 0.0 };
         self.gain += (target - self.gain) * 0.002;
         let Some(audio) = &self.audio else {
             return [0.0; 2];
@@ -135,10 +118,7 @@ impl Preview {
             self.pos += self.step;
         }
         let g = self.gain;
-        [
-            (a[0] + (b[0] - a[0]) * t) * g,
-            (a[1] + (b[1] - a[1]) * t) * g,
-        ]
+        [(a[0] + (b[0] - a[0]) * t) * g, (a[1] + (b[1] - a[1]) * t) * g]
     }
 
     /// Publishes where it is, and stops at the end; once per buffer.

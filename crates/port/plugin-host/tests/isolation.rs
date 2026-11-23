@@ -47,10 +47,7 @@ fn block(conn: &mut Connection, deadline: Duration) -> (Outcome, Vec<f32>, Vec<f
     let out = conn.process([&l, &r], [&mut ol, &mut or], Default::default(), deadline);
     let dry = ol == l && or == r;
     let expect_dry = !out.is_wet();
-    assert!(
-        !expect_dry || dry,
-        "a {out:?} block must be the dry input exactly"
-    );
+    assert!(!expect_dry || dry, "a {out:?} block must be the dry input exactly");
     (out, ol, l)
 }
 
@@ -61,10 +58,7 @@ fn the_plugin_processes_the_audio() {
     for _ in 0..20 {
         let (out, got, input) = block(&mut conn, DEADLINE);
         assert_eq!(out, Outcome::Wet);
-        assert!(got
-            .iter()
-            .zip(&input)
-            .all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
+        assert!(got.iter().zip(&input).all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
     }
 }
 
@@ -77,10 +71,7 @@ fn a_crash_leaves_the_audio_dry_and_is_seen() {
     }
     let (out, ..) = block(&mut conn, Duration::from_millis(50));
     assert_eq!(out, Outcome::Late);
-    assert!(matches!(
-        helper.wait_exit(Duration::from_secs(5)),
-        Status::Exited(_)
-    ));
+    assert!(matches!(helper.wait_exit(Duration::from_secs(5)), Status::Exited(_)));
     // Keep going: every block after the crash is dry, none blocks.
     for _ in 0..10 {
         let (out, ..) = block(&mut conn, Duration::from_millis(5));
@@ -103,10 +94,7 @@ fn a_hang_is_cut_off_at_the_deadline() {
     for _ in 0..10 {
         let t = Instant::now();
         assert_eq!(block(&mut conn, Duration::from_millis(5)).0, Outcome::Busy);
-        assert!(
-            t.elapsed() < Duration::from_millis(50),
-            "a busy block must not wait"
-        );
+        assert!(t.elapsed() < Duration::from_millis(50), "a busy block must not wait");
         action = policy.on_missed(conn.missed_in_row());
         if action != Action::Keep {
             break;
@@ -134,10 +122,7 @@ fn a_slow_block_plays_dry_and_the_next_one_recovers() {
 fn the_helper_quits_when_djsugar_lets_go() {
     let (conn, mut helper) = start("test-gain");
     drop(conn); // closes the helper's stdin, as when DJ Sugar quits
-    assert!(matches!(
-        helper.wait_exit(Duration::from_secs(5)),
-        Status::Exited(_)
-    ));
+    assert!(matches!(helper.wait_exit(Duration::from_secs(5)), Status::Exited(_)));
 }
 
 #[test]
@@ -182,22 +167,11 @@ fn an_instrument_plays_the_notes_it_is_sent() {
     let mut l = vec![9.0; FRAMES];
     let mut r = vec![9.0; FRAMES];
     let run = |conn: &mut Connection, events: &[Midi], l: &mut [f32], r: &mut [f32]| {
-        let out = conn.process_events(
-            [&silent, &silent],
-            [l, r],
-            Default::default(),
-            events,
-            DEADLINE,
-        );
+        let out = conn.process_events([&silent, &silent], [l, r], Default::default(), events, DEADLINE);
         assert_eq!(out, Outcome::Wet);
     };
     // Key 127 from frame 100 to frame 200: full level there, silence around.
-    run(
-        &mut conn,
-        &[Midi::note_on(100, 0, 127, 100), Midi::note_off(200, 0, 127)],
-        &mut l,
-        &mut r,
-    );
+    run(&mut conn, &[Midi::note_on(100, 0, 127, 100), Midi::note_off(200, 0, 127)], &mut l, &mut r);
     assert!(l[..100].iter().all(|&v| v == 0.0));
     assert!(l[100..200].iter().all(|&v| v == 1.0));
     assert!(l[200..].iter().all(|&v| v == 0.0));
@@ -224,12 +198,8 @@ fn a_helper_that_never_exits_after_answering_does_not_stall_a_scan() {
     .unwrap();
     std::fs::set_permissions(&helper, std::fs::Permissions::from_mode(0o755)).unwrap();
     let start = Instant::now();
-    let found = djsugar_plugin_host::client::scan(
-        &helper,
-        std::path::Path::new("x.clap"),
-        Duration::from_secs(5),
-    )
-    .unwrap();
+    let found =
+        djsugar_plugin_host::client::scan(&helper, std::path::Path::new("x.clap"), Duration::from_secs(5)).unwrap();
     assert!(start.elapsed() < Duration::from_secs(3));
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].name, "Name");
@@ -281,8 +251,7 @@ fn helpers_handed_their_blocks_together_work_side_by_side() {
     for _ in 0..2 {
         let t = Instant::now();
         for (conn, _) in &mut conns {
-            conn.send([&input, &input], Default::default(), &[])
-                .unwrap();
+            conn.send([&input, &input], Default::default(), &[]).unwrap();
         }
         for (conn, _) in &mut conns {
             let (mut l, mut r) = (vec![0.0; FRAMES], vec![0.0; FRAMES]);
@@ -299,22 +268,12 @@ fn a_block_that_could_not_go_collects_nothing() {
     let (mut conn, _helper) = start("test-slow");
     conn.set_param(0, 100.0);
     let input = vec![0.5f32; FRAMES];
-    conn.send([&input, &input], Default::default(), &[])
-        .unwrap();
+    conn.send([&input, &input], Default::default(), &[]).unwrap();
     let (mut l, mut r) = (vec![9.0; FRAMES], vec![9.0; FRAMES]);
-    assert_eq!(
-        conn.collect([&mut l, &mut r], Duration::from_millis(5)),
-        Outcome::Late
-    );
+    assert_eq!(conn.collect([&mut l, &mut r], Duration::from_millis(5)), Outcome::Late);
     // Still busy with that block: the next one can't go, and collecting it
     // gives nothing, not the late block's output.
-    assert_eq!(
-        conn.send([&input, &input], Default::default(), &[]),
-        Err(Outcome::Busy)
-    );
-    assert_eq!(
-        conn.collect([&mut l, &mut r], Duration::from_millis(200)),
-        Outcome::Busy
-    );
+    assert_eq!(conn.send([&input, &input], Default::default(), &[]), Err(Outcome::Busy));
+    assert_eq!(conn.collect([&mut l, &mut r], Duration::from_millis(200)), Outcome::Busy);
     assert!(l.iter().chain(&r).all(|&x| x == 9.0), "output untouched");
 }

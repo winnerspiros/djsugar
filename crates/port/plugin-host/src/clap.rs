@@ -1,10 +1,6 @@
-//! CLAP effects inside the helper, through `clack-host`.
-//!
-//! The plugin instance lives on the helper's main thread; its audio
-//! processor is sent to the helper's audio thread, where [`ClapEffect`] runs
-//! one block per wake. Parameters arrive through the shared block as plain
-//! values and are sent to the plugin as events when they change; the routed
-//! deck's tempo and beat position go in as a transport event.
+//! CLAP effects inside the helper, through `clack-host`. The plugin instance lives on the helper's main thread; its audio processor is
+//! sent to the helper's audio thread, where [`ClapEffect`] runs one block per wake. Parameters arrive through the shared block as plain
+//! values and are sent to the plugin as events when they change; the routed deck's tempo and beat position go in as a transport event.
 
 use std::cell::{Cell, RefCell};
 use std::ffi::{CStr, CString};
@@ -14,9 +10,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
-use clack_extensions::gui::{
-    GuiApiType, GuiConfiguration, GuiSize, HostGui, HostGuiImpl, PluginGui, Window,
-};
+use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiSize, HostGui, HostGuiImpl, PluginGui, Window};
 use clack_extensions::latency::PluginLatency;
 use clack_extensions::params::{ParamInfoBuffer, ParamInfoFlags, PluginParams};
 #[cfg(all(unix, not(target_os = "macos")))]
@@ -24,8 +18,7 @@ use clack_extensions::posix_fd::{FdFlags, HostPosixFd, HostPosixFdImpl, PluginPo
 use clack_extensions::preset_discovery::indexer::IndexerImpl;
 use clack_extensions::preset_discovery::metadata_receiver::MetadataReceiverImpl;
 use clack_extensions::preset_discovery::prelude::{
-    FileType, Flags, Location, LocationInfo, PluginPresetLoad, Provider, Soundpack, Timestamp,
-    UniversalPluginId,
+    FileType, Flags, Location, LocationInfo, PluginPresetLoad, Provider, Soundpack, Timestamp, UniversalPluginId,
 };
 use clack_extensions::remote_controls::{PluginRemoteControls, RemoteControlsPageBuffer};
 use clack_extensions::state::PluginState;
@@ -44,8 +37,7 @@ use crate::effects::{arrange, EditorSize, Effect, Info, Loaded, MainThread, Para
 use crate::shm::{Midi, CHANNELS, MAX_EVENTS, MAX_PARAMS};
 
 fn text(s: Option<&CStr>) -> String {
-    s.map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default()
+    s.map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
 fn load_entry(file: &Path) -> Result<PluginEntry, String> {
@@ -58,9 +50,7 @@ fn load_entry(file: &Path) -> Result<PluginEntry, String> {
 /// (`djsugar-plugin-host --scan`), never in DJ Sugar.
 pub fn scan(file: &Path) -> Result<Vec<Descriptor>, String> {
     let entry = load_entry(file)?;
-    let factory = entry
-        .get_plugin_factory()
-        .ok_or("the file has no plugin factory")?;
+    let factory = entry.get_plugin_factory().ok_or("the file has no plugin factory")?;
     Ok(factory
         .plugin_descriptors()
         .map(|d| Descriptor {
@@ -68,10 +58,7 @@ pub fn scan(file: &Path) -> Result<Vec<Descriptor>, String> {
             name: text(d.name()),
             vendor: text(d.vendor()),
             version: text(d.version()),
-            features: d
-                .features()
-                .map(|f| f.to_string_lossy().into_owned())
-                .collect(),
+            features: d.features().map(|f| f.to_string_lossy().into_owned()).collect(),
         })
         .collect())
 }
@@ -95,22 +82,13 @@ struct Declared {
 
 impl IndexerImpl for Declared {
     fn declare_filetype(&mut self, file_type: FileType) -> Result<(), HostError> {
-        self.types.push(
-            file_type
-                .file_extension
-                .map(|e| e.to_string_lossy().to_lowercase())
-                .unwrap_or_default(),
-        );
+        self.types.push(file_type.file_extension.map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default());
         Ok(())
     }
 
     fn declare_location(&mut self, location: LocationInfo) -> Result<(), HostError> {
-        self.locations.push(
-            location
-                .location
-                .file_path()
-                .map(|p| std::path::PathBuf::from(p.to_string_lossy().into_owned())),
-        );
+        self.locations
+            .push(location.location.file_path().map(|p| std::path::PathBuf::from(p.to_string_lossy().into_owned())));
         Ok(())
     }
 
@@ -135,11 +113,7 @@ impl Receiver<'_> {
     fn finish(&mut self) {
         if let Some((name, key, ids)) = self.current.take() {
             if ids.is_empty() || ids.iter().any(|i| i == self.id) {
-                let name = if name.is_empty() {
-                    self.fallback.clone()
-                } else {
-                    name
-                };
+                let name = if name.is_empty() { self.fallback.clone() } else { name };
                 self.found.push((name, format!("{}{SEP}{key}", self.at)));
             }
         }
@@ -149,19 +123,10 @@ impl Receiver<'_> {
 impl MetadataReceiverImpl for Receiver<'_> {
     fn on_error(&mut self, _code: i32, _message: Option<&CStr>) {}
 
-    fn begin_preset(
-        &mut self,
-        name: Option<&CStr>,
-        load_key: Option<&CStr>,
-    ) -> Result<(), HostError> {
+    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) -> Result<(), HostError> {
         self.finish();
-        self.current = Some((
-            text(name),
-            load_key
-                .map(|k| k.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            Vec::new(),
-        ));
+        self.current =
+            Some((text(name), load_key.map(|k| k.to_string_lossy().into_owned()).unwrap_or_default(), Vec::new()));
         Ok(())
     }
 
@@ -203,10 +168,7 @@ fn preset_files(dir: &Path, types: &[String], depth: usize, out: &mut Vec<std::p
             }
             continue;
         }
-        let ext = path
-            .extension()
-            .map(|e| e.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
+        let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
         if types.is_empty() || types.iter().any(|t| t.is_empty() || *t == ext) {
             out.push(path);
         }
@@ -221,29 +183,18 @@ pub fn presets(file: &Path, id: &str) -> Result<Vec<(String, String)>, String> {
     let host = host_info()?;
     let ids: Vec<CString> = entry
         .get_factory::<clack_extensions::preset_discovery::prelude::PresetDiscoveryFactory>()
-        .map(|f| {
-            f.provider_descriptors()
-                .filter_map(|d| d.id().map(CStr::to_owned))
-                .collect()
-        })
+        .map(|f| f.provider_descriptors().filter_map(|d| d.id().map(CStr::to_owned)).collect())
         .unwrap_or_default();
     let mut found = Vec::new();
     for provider_id in ids {
-        let Ok(mut provider) =
-            Provider::instantiate(Declared::default(), &entry, &provider_id, &host)
-        else {
+        let Ok(mut provider) = Provider::instantiate(Declared::default(), &entry, &provider_id, &host) else {
             continue;
         };
         let types = provider.indexer().types.clone();
         let locations = provider.indexer().locations.clone();
         for location in locations {
-            let receiver = |at: String, fallback: String| Receiver {
-                id,
-                at,
-                fallback,
-                current: None,
-                found: Vec::new(),
-            };
+            let receiver =
+                |at: String, fallback: String| Receiver { id, at, fallback, current: None, found: Vec::new() };
             match location {
                 None => {
                     let mut r = receiver(format!("plugin{SEP}"), String::new());
@@ -258,10 +209,7 @@ pub fn presets(file: &Path, id: &str) -> Result<Vec<(String, String)>, String> {
                         let Ok(path) = CString::new(f.to_string_lossy().into_owned()) else {
                             continue;
                         };
-                        let name = f
-                            .file_stem()
-                            .map(|s| s.to_string_lossy().into_owned())
-                            .unwrap_or_default();
+                        let name = f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
                         let mut r = receiver(format!("file{SEP}{}", f.display()), name);
                         provider.get_metadata(Location::File { path: &path }, &mut r);
                         r.finish();
@@ -279,13 +227,8 @@ pub fn presets(file: &Path, id: &str) -> Result<Vec<(String, String)>, String> {
 }
 
 fn host_info() -> Result<HostInfo, String> {
-    HostInfo::new(
-        "DJ Sugar",
-        "DJ Sugar",
-        "https://github.com/winnerspiros/djsugar",
-        env!("CARGO_PKG_VERSION"),
-    )
-    .map_err(|e| e.to_string())
+    HostInfo::new("DJ Sugar", "DJ Sugar", "https://github.com/winnerspiros/djsugar", env!("CARGO_PKG_VERSION"))
+        .map_err(|e| e.to_string())
 }
 
 struct Host;
@@ -351,11 +294,7 @@ impl HostTimerImpl for HostMain {
         let id = self.next_timer.get();
         self.next_timer.set(id.wrapping_add(1));
         let period = Duration::from_millis(period_ms.max(10) as u64);
-        self.timers.borrow_mut().push(ClapTimer {
-            id,
-            period,
-            next: Instant::now() + period,
-        });
+        self.timers.borrow_mut().push(ClapTimer { id, period, next: Instant::now() + period });
         Ok(TimerId(id))
     }
 
@@ -438,9 +377,7 @@ impl ClapMain {
     /// Hands the plugin the file descriptors that are ready (Linux).
     #[cfg(all(unix, not(target_os = "macos")))]
     fn run_fds(&mut self) {
-        let fds: Vec<(i32, FdFlags)> = self
-            .instance
-            .access_handler(|h: &HostMain| h.fds.borrow().clone());
+        let fds: Vec<(i32, FdFlags)> = self.instance.access_handler(|h: &HostMain| h.fds.borrow().clone());
         if fds.is_empty() {
             return;
         }
@@ -454,11 +391,7 @@ impl ClapMain {
                 if flags.contains(FdFlags::WRITE) {
                     events |= libc::POLLOUT;
                 }
-                libc::pollfd {
-                    fd: *fd,
-                    events,
-                    revents: 0,
-                }
+                libc::pollfd { fd: *fd, events, revents: 0 }
             })
             .collect();
         // SAFETY: `polls` is a valid array of its length; no waiting.
@@ -489,24 +422,16 @@ impl ClapMain {
 impl MainThread for ClapMain {
     fn save_state(&mut self) -> Result<Vec<u8>, String> {
         let handle = self.instance.plugin_handle();
-        let state = handle
-            .get_extension::<PluginState>()
-            .ok_or("it can't save its sound")?;
+        let state = handle.get_extension::<PluginState>().ok_or("it can't save its sound")?;
         let mut data = Vec::new();
-        state
-            .save(&handle, &mut data)
-            .map_err(|e| format!("saving its sound failed: {e}"))?;
+        state.save(&handle, &mut data).map_err(|e| format!("saving its sound failed: {e}"))?;
         Ok(data)
     }
 
     fn load_state(&mut self, data: &[u8]) -> Result<(), String> {
         let handle = self.instance.plugin_handle();
-        let state = handle
-            .get_extension::<PluginState>()
-            .ok_or("it can't load a saved sound")?;
-        state
-            .load(&handle, &mut &data[..])
-            .map_err(|e| format!("loading the sound failed: {e}"))
+        let state = handle.get_extension::<PluginState>().ok_or("it can't load a saved sound")?;
+        state.load(&handle, &mut &data[..]).map_err(|e| format!("loading the sound failed: {e}"))
     }
 
     fn load_preset(&mut self, reference: &str) -> Result<(), String> {
@@ -520,12 +445,9 @@ impl MainThread for ClapMain {
             _ => return Err("not one of its presets".into()),
         };
         let handle = self.instance.plugin_handle();
-        let ext = handle
-            .get_extension::<PluginPresetLoad>()
-            .ok_or("it can't load its own presets")?;
+        let ext = handle.get_extension::<PluginPresetLoad>().ok_or("it can't load its own presets")?;
         let key = (!key.is_empty()).then_some(key.as_c_str());
-        ext.load_from_location(&handle, location, key)
-            .map_err(|_| "it couldn't load that preset".to_string())
+        ext.load_from_location(&handle, location, key).map_err(|_| "it couldn't load that preset".to_string())
     }
 
     fn param_values(&mut self, out: &mut [f64]) -> bool {
@@ -542,9 +464,7 @@ impl MainThread for ClapMain {
     }
 
     fn idle(&mut self) {
-        let asked = self
-            .instance
-            .access_shared_handler(|s| s.callback.swap(false, Ordering::AcqRel));
+        let asked = self.instance.access_shared_handler(|s| s.callback.swap(false, Ordering::AcqRel));
         if asked {
             self.instance.call_on_main_thread_callback();
         }
@@ -556,39 +476,23 @@ impl MainThread for ClapMain {
     fn next_idle(&self) -> Option<Duration> {
         let now = Instant::now();
         self.instance.access_handler(|h: &HostMain| {
-            h.timers
-                .borrow()
-                .iter()
-                .map(|t| t.next.saturating_duration_since(now))
-                .min()
+            h.timers.borrow().iter().map(|t| t.next.saturating_duration_since(now)).min()
         })
     }
 
     fn open_editor(&mut self, parent: ParentWindow, scale: f64) -> Result<EditorSize, String> {
         let handle = self.instance.plugin_handle();
-        let gui = handle
-            .get_extension::<PluginGui>()
-            .ok_or("it has no window of its own")?;
+        let gui = handle.get_extension::<PluginGui>().ok_or("it has no window of its own")?;
         let (api, window) = match parent {
-            ParentWindow::Cocoa(view) => (
-                GuiApiType::COCOA,
-                Window::from_generic_ptr(GuiApiType::COCOA, view),
-            ),
-            ParentWindow::Win32(hwnd) => (
-                GuiApiType::WIN32,
-                Window::from_generic_ptr(GuiApiType::WIN32, hwnd),
-            ),
+            ParentWindow::Cocoa(view) => (GuiApiType::COCOA, Window::from_generic_ptr(GuiApiType::COCOA, view)),
+            ParentWindow::Win32(hwnd) => (GuiApiType::WIN32, Window::from_generic_ptr(GuiApiType::WIN32, hwnd)),
             ParentWindow::X11(id) => (GuiApiType::X11, Window::from_x11_handle(id as _)),
         };
-        let config = GuiConfiguration {
-            api_type: api,
-            is_floating: false,
-        };
+        let config = GuiConfiguration { api_type: api, is_floating: false };
         if !gui.is_api_supported(&handle, config) {
             return Err("its window can't be shown inside DJ Sugar's".into());
         }
-        gui.create(&handle, config)
-            .map_err(|_| "its window failed to open")?;
+        gui.create(&handle, config).map_err(|_| "its window failed to open")?;
         if api != GuiApiType::COCOA {
             // Cocoa sizes are in points; elsewhere the plugin scales itself.
             let _ = gui.set_scale(&handle, scale);
@@ -598,17 +502,11 @@ impl MainThread for ClapMain {
             gui.destroy(&handle);
             return Err("its window failed to open".into());
         }
-        let size = gui.get_size(&handle).unwrap_or(GuiSize {
-            width: 640,
-            height: 400,
-        });
+        let size = gui.get_size(&handle).unwrap_or(GuiSize { width: 640, height: 400 });
         let _ = gui.show(&handle);
         self.resizable = gui.can_resize(&handle);
         self.gui = Some(gui);
-        Ok(EditorSize {
-            width: size.width,
-            height: size.height,
-        })
+        Ok(EditorSize { width: size.width, height: size.height })
     }
 
     fn close_editor(&mut self) {
@@ -632,10 +530,7 @@ impl MainThread for ClapMain {
             return size;
         };
         let handle = self.instance.plugin_handle();
-        let asked = GuiSize {
-            width: size.width,
-            height: size.height,
-        };
+        let asked = GuiSize { width: size.width, height: size.height };
         let took = if gui.can_resize(&handle) {
             let s = gui.adjust_size(&handle, asked).unwrap_or(asked);
             let _ = gui.set_size(&handle, s);
@@ -643,31 +538,23 @@ impl MainThread for ClapMain {
         } else {
             gui.get_size(&handle).unwrap_or(asked)
         };
-        EditorSize {
-            width: took.width,
-            height: took.height,
-        }
+        EditorSize { width: took.width, height: took.height }
     }
 
     fn take_editor_resize(&mut self) -> Option<EditorSize> {
         self.instance
             .access_shared_handler(|s| s.resize.lock().unwrap_or_else(|e| e.into_inner()).take())
-            .map(|s| EditorSize {
-                width: s.width,
-                height: s.height,
-            })
+            .map(|s| EditorSize { width: s.width, height: s.height })
     }
 
     fn take_editor_closed(&mut self) -> bool {
-        self.instance
-            .access_shared_handler(|s| s.gui_closed.swap(false, Ordering::AcqRel))
+        self.instance.access_shared_handler(|s| s.gui_closed.swap(false, Ordering::AcqRel))
     }
 }
 
-/// Loads plugin `id` from `file` and activates it for blocks of up to
-/// `max_frames`.
-/// The parameters on the plugin's remote controls pages, page by page,
-/// each once; none if it has no pages.
+/// Loads plugin `id` from `file` and activates it for blocks of up
+/// to `max_frames`. The parameters on the plugin's remote controls
+/// pages, page by page, each once; none if it has no pages.
 fn remote_controls(handle: &PluginMainThreadHandle) -> Vec<ClapId> {
     let mut ids = Vec::new();
     if let Some(ext) = handle.get_extension::<PluginRemoteControls>() {
@@ -693,9 +580,7 @@ pub fn load(
     picks: &[(usize, u32)],
 ) -> Result<Loaded, String> {
     let entry = load_entry(file)?;
-    let factory = entry
-        .get_plugin_factory()
-        .ok_or("the file has no plugin factory")?;
+    let factory = entry.get_plugin_factory().ok_or("the file has no plugin factory")?;
     let desc = factory
         .plugin_descriptors()
         .find(|d| d.id().is_some_and(|i| i.to_bytes() == id.as_bytes()))
@@ -703,21 +588,14 @@ pub fn load(
     let name = text(desc.name());
     let cid = CString::new(id).map_err(|_| "bad plugin id")?;
     let host = host_info()?;
-    let mut instance = PluginInstance::<Host>::new(
-        |_| HostShared::default(),
-        |_| HostMain::default(),
-        &entry,
-        &cid,
-        &host,
-    )
-    .map_err(|e| format!("{name} failed to start: {e}"))?;
+    let mut instance =
+        PluginInstance::<Host>::new(|_| HostShared::default(), |_| HostMain::default(), &entry, &cid, &host)
+            .map_err(|e| format!("{name} failed to start: {e}"))?;
 
     // A stereo output, and a stereo input unless it is an instrument,
     // which has none.
     let handle = instance.plugin_handle();
-    let ports = handle
-        .get_extension::<PluginAudioPorts>()
-        .ok_or_else(|| format!("{name} has no audio ports"))?;
+    let ports = handle.get_extension::<PluginAudioPorts>().ok_or_else(|| format!("{name} has no audio ports"))?;
     let mut buf = AudioPortInfoBuffer::new();
     let has_input = ports.count(&handle, true) >= 1;
     for is_input in [true, false] {
@@ -725,9 +603,7 @@ pub fn load(
             continue;
         }
         let ok = ports.count(&handle, is_input) >= 1
-            && ports
-                .get(&handle, 0, is_input, &mut buf)
-                .is_some_and(|p| p.channel_count == 2);
+            && ports.get(&handle, 0, is_input, &mut buf).is_some_and(|p| p.channel_count == 2);
         if !ok {
             return Err(format!("{name} is not a stereo effect or instrument"));
         }
@@ -745,9 +621,7 @@ pub fn load(
             let Some(p) = ext.get_info(&handle, i, &mut buf) else {
                 continue;
             };
-            if p.flags
-                .intersects(ParamInfoFlags::IS_HIDDEN | ParamInfoFlags::IS_READONLY)
-            {
+            if p.flags.intersects(ParamInfoFlags::IS_HIDDEN | ParamInfoFlags::IS_READONLY) {
                 continue;
             }
             let value = ext.get_value(&handle, p.id).unwrap_or(p.default_value);
@@ -779,10 +653,7 @@ pub fn load(
         )
         .map_err(|e| format!("{name} failed to activate: {e}"))?;
     let handle = instance.plugin_handle();
-    let latency = handle
-        .get_extension::<PluginLatency>()
-        .map(|l| l.get(&handle))
-        .unwrap_or(0);
+    let latency = handle.get_extension::<PluginLatency>().map(|l| l.get(&handle)).unwrap_or(0);
 
     let effect = ClapEffect {
         processor: processor.into(),
@@ -806,12 +677,7 @@ pub fn load(
             resizable: false,
             param_ids: params.iter().map(|(id, _)| *id).collect(),
         })),
-        info: Info {
-            name,
-            params: params.into_iter().map(|(_, p)| p).collect(),
-            all: listed,
-            latency,
-        },
+        info: Info { name, params: params.into_iter().map(|(_, p)| p).collect(), all: listed, latency },
     })
 }
 
@@ -832,9 +698,7 @@ struct ClapEffect {
 }
 
 fn transport_event(t: &Transport) -> TransportEvent {
-    let mut flags = TransportFlags::HAS_TEMPO
-        | TransportFlags::HAS_BEATS_TIMELINE
-        | TransportFlags::HAS_TIME_SIGNATURE;
+    let mut flags = TransportFlags::HAS_TEMPO | TransportFlags::HAS_BEATS_TIMELINE | TransportFlags::HAS_TIME_SIGNATURE;
     if t.playing {
         flags |= TransportFlags::IS_PLAYING;
     }
@@ -880,8 +744,7 @@ impl Effect for ClapEffect {
             let v = params[i];
             if v != self.sent[i] {
                 self.sent[i] = v;
-                self.events
-                    .push(&ParamValueEvent::new(0, *id, Pckn::match_all(), v as f64));
+                self.events.push(&ParamValueEvent::new(0, *id, Pckn::match_all(), v as f64));
             }
         }
         // Notes in CLAP's own events, which every instrument takes; other
@@ -889,11 +752,9 @@ impl Effect for ClapEffect {
         for n in notes {
             let pckn = |ch: u8, key: u8| Pckn::new(0u16, ch as u16, key as u16, Match::All);
             if let Some((ch, key, vel)) = n.as_note_on() {
-                self.events
-                    .push(&NoteOnEvent::new(n.frame, pckn(ch, key), vel as f64));
+                self.events.push(&NoteOnEvent::new(n.frame, pckn(ch, key), vel as f64));
             } else if let Some((ch, key)) = n.as_note_off() {
-                self.events
-                    .push(&NoteOffEvent::new(n.frame, pckn(ch, key), 0.0));
+                self.events.push(&NoteOffEvent::new(n.frame, pckn(ch, key), 0.0));
             } else {
                 self.events.push(&MidiEvent::new(n.frame, 0, n.data));
             }
@@ -908,9 +769,7 @@ impl Effect for ClapEffect {
             [AudioPortBuffer {
                 latency: 0,
                 channels: AudioPortBufferType::f32_input_only(
-                    [&mut in_l[..frames], &mut in_r[..frames]]
-                        .into_iter()
-                        .map(InputChannel::variable),
+                    [&mut in_l[..frames], &mut in_r[..frames]].into_iter().map(InputChannel::variable),
                 ),
             }]
             .into_iter()
@@ -919,9 +778,7 @@ impl Effect for ClapEffect {
         let [out_l, out_r] = &mut self.output;
         let mut outputs = self.out_ports.with_output_buffers([AudioPortBuffer {
             latency: 0,
-            channels: AudioPortBufferType::f32_output_only(
-                [&mut out_l[..frames], &mut out_r[..frames]].into_iter(),
-            ),
+            channels: AudioPortBufferType::f32_output_only([&mut out_l[..frames], &mut out_r[..frames]].into_iter()),
         }]);
         self.out_events.clear();
         let ok = match self.processor.as_started_mut() {

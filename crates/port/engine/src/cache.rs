@@ -1,9 +1,6 @@
-//! Keeps each file's analysis (waveform, tempo, first beat) on disk, so a track loaded again shows its waveform at once.
-//!
-//! Entries live in the user's cache folder (`~/Library/Caches/DJSugar` on
-//! macOS, `%LOCALAPPDATA%\DJ Sugar` on Windows, `$XDG_CACHE_HOME/djsugar` or
-//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and
-//! modification time, so an edited file is analysed again.
+//! Keeps each file's analysis (waveform, tempo, first beat) on disk, so a track loaded again shows its waveform at once. Entries live in the
+//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and modification time, so an edited file is analysed again.
+//! `~/.cache/djsugar` elsewhere, or `DJSUGAR_CACHE`), named by a hash of the file's path, size and modification time, so an edited file is
 
 use std::fs;
 use std::io::{Read, Write};
@@ -81,10 +78,7 @@ pub fn clear_analysis() -> usize {
     let Some(entries) = analysis_dir().and_then(|d| fs::read_dir(d).ok()) else {
         return 0;
     };
-    entries
-        .flatten()
-        .filter(|e| fs::remove_file(e.path()).is_ok())
-        .count()
+    entries.flatten().filter(|e| fs::remove_file(e.path()).is_ok()).count()
 }
 
 /// Where `path`'s analysis is kept, or None if the file can't be read.
@@ -95,19 +89,11 @@ pub(crate) fn entry_path(path: &Path) -> Option<PathBuf> {
 
 fn entry(path: &Path) -> Option<PathBuf> {
     let meta = fs::metadata(path).ok()?;
-    let modified = meta
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_nanos());
+    let modified = meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_nanos());
     // FNV-1a: stable across Rust versions, unlike the standard hasher.
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     let path_bytes = path.as_os_str().as_encoded_bytes();
-    for b in path_bytes
-        .iter()
-        .chain(&meta.len().to_le_bytes())
-        .chain(&modified.to_le_bytes())
-    {
+    for b in path_bytes.iter().chain(&meta.len().to_le_bytes()).chain(&modified.to_le_bytes()) {
         h = (h ^ *b as u64).wrapping_mul(0x0100_0000_01b3);
     }
     Some(analysis_dir()?.join(format!("{h:016x}")))
@@ -130,19 +116,9 @@ pub(crate) fn tags_rewritten(path: &Path, old: Option<PathBuf>) {
         return;
     }
     let _ = fs::rename(&old, &new);
-    let stems = |entry: &Path| -> Option<PathBuf> {
-        Some(
-            entry
-                .parent()?
-                .parent()?
-                .join("stems")
-                .join(entry.file_name()?),
-        )
-    };
-    for (from, to) in [
-        (stems(&old), stems(&new)),
-        (overview_file(&old), overview_file(&new)),
-    ] {
+    let stems =
+        |entry: &Path| -> Option<PathBuf> { Some(entry.parent()?.parent()?.join("stems").join(entry.file_name()?)) };
+    for (from, to) in [(stems(&old), stems(&new)), (overview_file(&old), overview_file(&new))] {
         if let (Some(from), Some(to)) = (from, to) {
             if from.exists() {
                 let _ = fs::rename(from, to);
@@ -225,10 +201,7 @@ pub fn stems_usage() -> (usize, u64) {
 /// Deletes every kept stem folder; returns how many.
 pub fn clear_stems() -> usize {
     let entries = stems_root().map(|r| stems_entries(&r)).unwrap_or_default();
-    entries
-        .iter()
-        .filter(|e| fs::remove_dir_all(&e.path).is_ok())
-        .count()
+    entries.iter().filter(|e| fs::remove_dir_all(&e.path).is_ok()).count()
 }
 
 /// Deletes the stems used longest ago until the rest take at most
@@ -264,13 +237,7 @@ fn trim_stems_in(root: &Path, limit: u64, keep: &[PathBuf]) -> usize {
 /// file beside the analyses, so the library can draw a whole list of
 /// mini waveforms without reading every track's full waveform.
 fn overview_file(entry: &Path) -> Option<PathBuf> {
-    Some(
-        entry
-            .parent()?
-            .parent()?
-            .join("overviews")
-            .join(entry.file_name()?),
-    )
+    Some(entry.parent()?.parent()?.join("overviews").join(entry.file_name()?))
 }
 
 /// The overview of `path` (see [`Waveform::overview`]), if it has been
@@ -303,10 +270,9 @@ fn store_overview(file: &Path, o: &[OverviewSlice]) {
     }
 }
 
-/// Writes `data` aside and renames it over `file`, so a reader never sees
-/// half of it. Where the rename fails because the file is in use (Windows,
-/// or a scanner holding it) and what's there already passes `valid`, another
-/// writer stored the same thing first and that stands.
+/// Writes `data` aside and renames it over `file`, so a reader never sees half of it. Where
+/// the rename fails because the file is in use (Windows, or a scanner holding it) and what's
+/// there already passes `valid`, another writer stored the same thing first and that stands.
 fn replace(file: &Path, data: &[u8], valid: impl Fn(&[u8]) -> bool) -> std::io::Result<()> {
     static SEQ: AtomicU32 = AtomicU32::new(0);
     let n = SEQ.fetch_add(1, Ordering::Relaxed);
@@ -369,9 +335,7 @@ fn encode(a: &Analysis) -> Vec<u8> {
     // entries from before there was a choice of detector say u64::MAX.
     let key = a.key.map_or(0xff, |k| k.index() as u64) | (a.key_detector.id() as u64) << 8;
     out.extend_from_slice(&key.to_le_bytes());
-    let (lufs, peak) = a
-        .loudness
-        .map_or((f64::NAN, f64::NAN), |l| (l.lufs as f64, l.peak as f64));
+    let (lufs, peak) = a.loudness.map_or((f64::NAN, f64::NAN), |l| (l.lufs as f64, l.peak as f64));
     out.extend_from_slice(&lufs.to_le_bytes());
     out.extend_from_slice(&peak.to_le_bytes());
     let markers = a.grid.markers();
@@ -414,24 +378,15 @@ fn decode(data: &[u8]) -> Option<Analysis> {
     let bins_per_second = f64::from_le_bytes(num()?);
     let (key, key_detector) = match u64::from_le_bytes(num()?) {
         u64::MAX => (None, Detector::Standard),
-        v => (
-            Key::from_index((v & 0xff) as u8),
-            Detector::from_id((v >> 8) as u8)?,
-        ),
+        v => (Key::from_index((v & 0xff) as u8), Detector::from_id((v >> 8) as u8)?),
     };
     let lufs = f64::from_le_bytes(num()?);
     let peak = f64::from_le_bytes(num()?);
-    let loudness = (lufs.is_finite() && peak.is_finite()).then_some(Loudness {
-        lufs: lufs as f32,
-        peak: peak as f32,
-    });
+    let loudness = (lufs.is_finite() && peak.is_finite()).then_some(Loudness { lufs: lufs as f32, peak: peak as f32 });
     let markers = u64::from_le_bytes(num()?) as usize;
     let mut grid = Vec::with_capacity(markers.min(4096));
     for _ in 0..markers {
-        grid.push(GridMarker {
-            seconds: f64::from_le_bytes(num()?),
-            bpm: f64::from_le_bytes(num()?),
-        });
+        grid.push(GridMarker { seconds: f64::from_le_bytes(num()?), bpm: f64::from_le_bytes(num()?) });
     }
     let flags = u64::from_le_bytes(num()?);
     let len = u64::from_le_bytes(num()?) as usize;
@@ -459,10 +414,7 @@ fn decode_chroma(data: &[u8]) -> Option<Chroma> {
     let (len, rest) = rest.split_first_chunk::<8>()?;
     let len = u64::from_le_bytes(*len) as usize;
     let (steps, _) = rest.as_chunks::<12>();
-    (steps.len() == len).then(|| Chroma {
-        per_second: f64::from_le_bytes(*rate),
-        steps: steps.to_vec(),
-    })
+    (steps.len() == len).then(|| Chroma { per_second: f64::from_le_bytes(*rate), steps: steps.to_vec() })
 }
 
 #[cfg(test)]
@@ -476,13 +428,9 @@ mod tests {
             let dir = root.join(name);
             fs::create_dir_all(&dir).unwrap();
             fs::write(dir.join("drums.flac"), vec![0u8; 1000]).unwrap();
-            let f = fs::File::options()
-                .write(true)
-                .open(dir.join("drums.flac"))
-                .unwrap();
+            let f = fs::File::options().write(true).open(dir.join("drums.flac")).unwrap();
             // a is the oldest, c the newest.
-            f.set_modified(old + std::time::Duration::from_secs(60 * i as u64))
-                .unwrap();
+            f.set_modified(old + std::time::Duration::from_secs(60 * i as u64)).unwrap();
         }
         // "a" is kept (playing), so "b" goes, then "c" isn't needed.
         let deleted = trim_stems_in(&root, 2000, &[root.join("a")]);
@@ -539,9 +487,7 @@ mod tests {
         // Its overview: peaks and RMS across the track, kept small.
         let o = a.waveform.overview(OVERVIEW_SLICES);
         assert_eq!(o.len(), OVERVIEW_SLICES);
-        assert!(o
-            .iter()
-            .all(|[peak, rms, mid, high]| rms <= peak && *mid as u16 + *high as u16 <= 256));
+        assert!(o.iter().all(|[peak, rms, mid, high]| rms <= peak && *mid as u16 + *high as u16 <= 256));
         let mut kept = OVERVIEW_MAGIC.to_vec();
         kept.extend_from_slice(MAGIC);
         kept.extend(o.iter().flatten());

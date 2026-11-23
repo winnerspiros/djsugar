@@ -262,11 +262,7 @@ impl PitchShifter {
         self.line.write(*left, *right);
         self.phase += (1.0 - ratio) / self.window as f32;
         self.phase -= self.phase.floor();
-        let phase2 = if self.phase + 0.5 >= 1.0 {
-            self.phase - 0.5
-        } else {
-            self.phase + 0.5
-        };
+        let phase2 = if self.phase + 0.5 >= 1.0 { self.phase - 0.5 } else { self.phase + 0.5 };
         // Triangular windows, summing to one
         let gain1 = 1.0 - (2.0 * self.phase - 1.0).abs();
         let gain2 = 1.0 - gain1;

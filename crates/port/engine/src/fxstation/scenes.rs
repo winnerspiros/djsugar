@@ -188,10 +188,9 @@ impl Phaser {
     }
 }
 
-/// DJ filter: one knob, low pass to the left of the center, high pass to
-/// the right; 24 dB/octave (two zero delay feedback state variable
-/// filters), resonance on the second one, its output softly limited so
-/// that it sings without blowing up. Bypassed in the center.
+/// DJ filter: one knob, low pass to the left of the center, high pass to the right; 24
+/// dB/octave (two zero delay feedback state variable filters), resonance on the second one,
+/// its output softly limited so that it sings without blowing up. Bypassed in the center.
 #[derive(Clone, Debug, Default)]
 pub struct SweepFilter {
     s: [[[f32; 2]; 2]; 2], // [channel][stage][ic1/ic2]
@@ -303,11 +302,7 @@ impl Roll {
         }
         let fade_frames = (0.002 * sample_rate).max(1.0) as usize;
         let edge = self.position.min(length - 1 - self.position);
-        let fade = if edge >= fade_frames {
-            1.0
-        } else {
-            0.5 - 0.5 * (PI * edge as f32 / fade_frames as f32).cos()
-        };
+        let fade = if edge >= fade_frames { 1.0 } else { 0.5 - 0.5 * (PI * edge as f32 / fade_frames as f32).cos() };
         *left = self.buffer[2 * self.position] * fade * self.gain;
         *right = self.buffer[2 * self.position + 1] * fade * self.gain;
         self.position += 1;
@@ -333,11 +328,9 @@ pub fn gate_gain(beat: f64, division: f64, width: f32, softness: f32) -> f32 {
     }
 }
 
-/// Pitch shifter (WSOLA): a read tap runs through the recent input at the
-/// pitch ratio. When it drifts out of its window it jumps a period back or
-/// forward, to the position (searched over +-5 ms) whose waveform matches
-/// the one playing best, and crossfades until the next jump (up to 30 ms).
-/// Joins in phase do not warble or comb like fixed grains; about 20 ms of latency.
+/// Pitch shifter (WSOLA): a read tap runs through the recent input at the pitch ratio. When it drifts out of its window it
+/// crossfades until the next jump (up to 30 ms). Joins in phase do not warble or comb like fixed grains; about 20 ms of latency.
+/// crossfades until the next jump (up to 30 ms). Joins in phase do not warble or comb like fixed grains; about 20 ms of
 #[derive(Clone, Debug, Default)]
 pub struct WsolaPitch {
     lines: [HermiteLine; 2],
@@ -525,11 +518,7 @@ impl Default for Oversampler2x {
             *c /= sum as f32;
         }
 
-        Self {
-            coefficients,
-            up: [0.0; K_TAPS],
-            down: [0.0; K_TAPS],
-        }
+        Self { coefficients, up: [0.0; K_TAPS], down: [0.0; K_TAPS] }
     }
 }
 
@@ -616,11 +605,8 @@ impl Drive {
 
     fn shape(&mut self, c: usize, x: f32) -> f32 {
         let dx = x - self.x1[c];
-        let y = if dx.abs() < 1e-4 {
-            (0.5 * (x + self.x1[c])).tanh()
-        } else {
-            (log_cosh(x) - log_cosh(self.x1[c])) / dx
-        };
+        let y =
+            if dx.abs() < 1e-4 { (0.5 * (x + self.x1[c])).tanh() } else { (log_cosh(x) - log_cosh(self.x1[c])) / dx };
         self.x1[c] = x;
         y
     }

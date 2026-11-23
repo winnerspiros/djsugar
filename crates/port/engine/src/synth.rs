@@ -57,19 +57,9 @@ const TITLES: &[&str] = &[
     "Subway Lights",
     "Echo Chamber",
 ];
-const GENRES: &[&str] = &[
-    "House",
-    "Techno",
-    "Deep House",
-    "Tech House",
-    "Disco",
-    "Breaks",
-    "Progressive",
-];
-const KEYS: &[&str] = &[
-    "1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A", "9A", "10A", "11A", "12A", "1B", "4B", "8B",
-    "11B",
-];
+const GENRES: &[&str] = &["House", "Techno", "Deep House", "Tech House", "Disco", "Breaks", "Progressive"];
+const KEYS: &[&str] =
+    &["1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A", "9A", "10A", "11A", "12A", "1B", "4B", "8B", "11B"];
 
 const VERSIONS: &[&str] = &["", " (Extended Mix)", " (Dub)", " (Night Edit)"];
 
@@ -81,19 +71,13 @@ pub fn sample_library() -> Vec<Arc<Track>> {
     (0..SAMPLE_LIBRARY_SIZE)
         .map(|id| {
             let h = hash(id as u64 + 1);
-            let bpm = [
-                118.0, 120.0, 122.0, 124.0, 125.0, 126.0, 128.0, 130.0, 132.0,
-            ][(h % 9) as usize];
+            let bpm = [118.0, 120.0, 122.0, 124.0, 125.0, 126.0, 128.0, 130.0, 132.0][(h % 9) as usize];
             let duration = 240.0 + (h >> 8) as f64 % 180.0;
             let first_beat = ((h >> 16) % 400) as f64 / 1000.0;
             Arc::new(Track {
                 id,
                 artist: ARTISTS[(h >> 24) as usize % ARTISTS.len()].to_string(),
-                title: format!(
-                    "{}{}",
-                    TITLES[id % TITLES.len()],
-                    VERSIONS[id / TITLES.len() % VERSIONS.len()]
-                ),
+                title: format!("{}{}", TITLES[id % TITLES.len()], VERSIONS[id / TITLES.len() % VERSIONS.len()]),
                 rating: (h >> 48) as u8 % 6,
                 album: format!("{} EP", TITLES[(id * 7 + 3) % TITLES.len()]),
                 genre: GENRES[(h >> 32) as usize % GENRES.len()].to_string(),
@@ -117,21 +101,14 @@ struct Noise(u64);
 
 impl Noise {
     fn next(&mut self) -> f32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         ((self.0 >> 40) as f32 / (1u64 << 23) as f32) - 1.0
     }
 }
 
 /// Bass notes per bar, in Hz, for a few simple progressions.
-const BASS_LINES: [[f32; 4]; 4] = [
-    [55.0, 55.0, 65.41, 49.0],
-    [49.0, 58.27, 55.0, 43.65],
-    [61.74, 55.0, 49.0, 55.0],
-    [43.65, 49.0, 55.0, 65.41],
-];
+const BASS_LINES: [[f32; 4]; 4] =
+    [[55.0, 55.0, 65.41, 49.0], [49.0, 58.27, 55.0, 43.65], [61.74, 55.0, 49.0, 55.0], [43.65, 49.0, 55.0, 65.41]];
 
 /// Renders a track's audio: intro, build, drop, breakdown, drop, outro.
 pub fn render(track: &Track, seed: u64) -> Audio {
@@ -185,12 +162,7 @@ pub fn render_with(bpm: f64, first_beat: f64, duration: f64, seed: u64) -> Audio
     impl Osc {
         fn new(freq: f32, sr: f32) -> Self {
             let w = std::f32::consts::TAU * freq / sr;
-            Self {
-                c: 1.0,
-                s: 0.0,
-                dc: w.cos(),
-                ds: w.sin(),
-            }
+            Self { c: 1.0, s: 0.0, dc: w.cos(), ds: w.sin() }
         }
         fn set(&mut self, freq: f32, sr: f32) {
             let w = std::f32::consts::TAU * freq / sr;
@@ -198,10 +170,7 @@ pub fn render_with(bpm: f64, first_beat: f64, duration: f64, seed: u64) -> Audio
         }
         #[inline]
         fn step(&mut self) -> (f32, f32) {
-            let (c, s) = (
-                self.c * self.dc - self.s * self.ds,
-                self.s * self.dc + self.c * self.ds,
-            );
+            let (c, s) = (self.c * self.dc - self.s * self.ds, self.s * self.dc + self.c * self.ds);
             // Keep the amplitude at 1 despite rounding.
             let k = 1.5 - 0.5 * (c * c + s * s);
             (self.c, self.s) = (c * k, s * k);
@@ -233,11 +202,7 @@ pub fn render_with(bpm: f64, first_beat: f64, duration: f64, seed: u64) -> Audio
         let on_beat = beats >= 0.0;
 
         let kick_s = if on_beat { kick[since] } else { 0.0 };
-        let snare_s = if on_beat && beat_index.rem_euclid(2) == 1 {
-            snare[since]
-        } else {
-            0.0
-        };
+        let snare_s = if on_beat && beat_index.rem_euclid(2) == 1 { snare[since] } else { 0.0 };
 
         let bar = beat_index.div_euclid(4).rem_euclid(4) as usize;
         if bar != bar_playing {
@@ -249,11 +214,7 @@ pub fn render_with(bpm: f64, first_beat: f64, duration: f64, seed: u64) -> Audio
 
         let sixteenths = beats * 4.0;
         let since16 = ((sixteenths - sixteenths.floor()) * beat / 4.0 * sr) as usize;
-        let accent = if sixteenths.floor() as i64 % 4 == 2 {
-            1.0
-        } else {
-            0.45
-        };
+        let accent = if sixteenths.floor() as i64 % 4 == 2 { 1.0 } else { 0.45 };
         let hat_s = if on_beat { hat[since16] * accent } else { 0.0 };
 
         let swell = 0.65 + 0.35 * lfo.step().1;
@@ -263,10 +224,7 @@ pub fn render_with(bpm: f64, first_beat: f64, duration: f64, seed: u64) -> Audio
         let centre = kick_amt * kick_s * 0.8 + bass_amt * bass_s * 0.32 + kick_amt * snare_s * 0.22;
         let (hat_l, hat_r) = (hats_amt * hat_s * 0.16, hats_amt * hat_s * 0.11);
         let (pad_l, pad_r) = (pad_amt * pad_s * 0.09, pad_amt * pad_s * 0.08);
-        frames.push([
-            (centre + hat_l + pad_l) * fade,
-            (centre + hat_r + pad_r) * fade,
-        ]);
+        frames.push([(centre + hat_l + pad_l) * fade, (centre + hat_r + pad_r) * fade]);
     }
     Audio::from_frames(SYNTH_RATE, frames)
 }

@@ -1,10 +1,6 @@
-//! Key lock and key shifting: playing a deck at any speed and in any key,
-//! with the phase-vocoder time-stretcher in `djsugar-stretch`.
-//!
-//! The deck's play position stays the position being heard. The stretcher
-//! needs input ahead of that (its latency), so its read position runs ahead
-//! by a fixed amount and is re-seeded whenever the deck jumps, with a short
-//! crossfade from the audio that would have played on.
+//! Key lock and key shifting: playing a deck at any speed and in any key, with the phase-vocoder time-stretcher in `djsugar-stretch`. The
+//! deck's play position stays the position being heard. The stretcher needs input ahead of that (its latency), so its read position runs
+//! ahead by a fixed amount and is re-seeded whenever the deck jumps, with a short crossfade from the audio that would have played on.
 
 use djsugar_stretch::Stretch;
 
@@ -101,12 +97,9 @@ impl KeyShifter {
         self.render(audio, pos, speed, ratio, transpose, looping, out);
     }
 
-    /// Renders `out.len()` frames of a deck playing forwards from source
-    /// frame `pos` at `speed` (multiples of normal speed), shifted by
-    /// `transpose` (a frequency factor: 1 keeps the original key).
-    ///
-    /// `ratio` is source frames per output frame at normal speed; `looping`
-    /// is the active loop in source frames.
+    /// Renders `out.len()` frames of a deck playing forwards from source frame `pos` at `speed` (multiples
+    /// of normal speed), shifted by `transpose` (a frequency factor: 1 keeps the original key). `ratio` is
+    /// source frames per output frame at normal speed; `looping` is the active loop in source frames.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn render<F: Frames + ?Sized>(
         &mut self,
@@ -125,10 +118,7 @@ impl KeyShifter {
         // How far ahead of the heard position the next input frame is.
         let lead = (in_latency + out_latency * speed) * ratio;
         // Reads wrap at the loop's end, fading over it as the deck does.
-        let wrap = Wrap {
-            looping: looping.filter(|(a, b)| b > a),
-            fade: self.declick as f64 * ratio,
-        };
+        let wrap = Wrap { looping: looping.filter(|(a, b)| b > a), fade: self.declick as f64 * ratio };
         let tolerance = 4.0 * ratio + 1.0;
         // A loop that starts, ends or changes size leaves the input already
         // fed (which runs ahead of the play position) read the wrong way
@@ -155,8 +145,7 @@ impl KeyShifter {
             if self.tail.len() < fade * 2 {
                 self.tail.resize(fade * 2, 0.0);
             }
-            self.stretch
-                .process(&self.input[..n_in * 2], &mut self.tail[..fade * 2]);
+            self.stretch.process(&self.input[..n_in * 2], &mut self.tail[..fade * 2]);
         }
         if !continuing {
             // Prime the stretcher so its output starts at `pos`.
@@ -179,32 +168,26 @@ impl KeyShifter {
             if self.output.len() < prime * 2 {
                 self.output.resize(prime * 2, 0.0);
             }
-            self.stretch
-                .process(&self.input[..prime_in * 2], &mut self.output[..prime * 2]);
+            self.stretch.process(&self.input[..prime_in * 2], &mut self.output[..prime * 2]);
             self.read_pos = end;
             self.active = true;
         }
         let end = pos + step * frames as f64;
-        // Feed the input at the deck's speed, steering towards the read
-        // position that keeps the output on the play position. The lead
-        // grows and shrinks with the speed, so a sudden nudge would
-        // otherwise feed nothing for a few buffers (the stretcher freezes
-        // and glitches) or a burst; steering spreads that over a few tenths
-        // of a second.
+        // Feed the input at the deck's speed, steering towards the read position that keeps the output on the play
+        // position. The lead grows and shrinks with the speed, so a sudden nudge would otherwise feed nothing for a few
+        // buffers (the stretcher freezes and glitches) or a burst; steering spreads that over a few tenths of a second.
         let natural = speed * frames as f64;
         let wanted = (end + lead - self.read_pos) / ratio;
         let steer = MAX_STEER * natural;
-        let n_in = (natural + (wanted - natural).clamp(-steer, steer))
-            .round()
-            .clamp(0.0, MAX_RATE * frames as f64) as usize;
+        let n_in =
+            (natural + (wanted - natural).clamp(-steer, steer)).round().clamp(0.0, MAX_RATE * frames as f64) as usize;
         let start = self.read_pos;
         self.fill_input(audio, start, ratio, n_in, &wrap);
         self.read_pos += n_in as f64 * ratio;
         if self.output.len() < frames * 2 {
             self.output.resize(frames * 2, 0.0);
         }
-        self.stretch
-            .process(&self.input[..n_in * 2], &mut self.output[..frames * 2]);
+        self.stretch.process(&self.input[..n_in * 2], &mut self.output[..frames * 2]);
         for (f, o) in out.iter_mut().enumerate() {
             *o = [self.output[2 * f], self.output[2 * f + 1]];
         }
@@ -217,14 +200,7 @@ impl KeyShifter {
         self.last = (speed, ratio, transpose);
     }
 
-    fn fill_input<F: Frames + ?Sized>(
-        &mut self,
-        audio: &F,
-        start: f64,
-        ratio: f64,
-        n: usize,
-        wrap: &Wrap,
-    ) {
+    fn fill_input<F: Frames + ?Sized>(&mut self, audio: &F, start: f64, ratio: f64, n: usize, wrap: &Wrap) {
         if self.input.len() < n * 2 {
             self.input.resize(n * 2, 0.0);
         }
@@ -340,10 +316,7 @@ mod tests {
                 }
             }
             let at = heard.iter().max_by(|a, b| a.1.total_cmp(&b.1)).unwrap().0;
-            assert!(
-                (at - 48_100.0).abs() < 0.01 * sr,
-                "speed {speed}: click heard at {at}"
-            );
+            assert!((at - 48_100.0).abs() < 0.01 * sr, "speed {speed}: click heard at {at}");
         }
     }
 
@@ -370,10 +343,7 @@ mod tests {
                 }
             }
             let at = heard.iter().max_by(|a, b| a.1.total_cmp(&b.1)).unwrap().0;
-            assert!(
-                (at - 48_100.0).abs() < 0.01 * sr,
-                "{before} to {after}: click heard at {at}"
-            );
+            assert!((at - 48_100.0).abs() < 0.01 * sr, "{before} to {after}: click heard at {at}");
         }
     }
 
@@ -382,19 +352,13 @@ mod tests {
         let sr = 48_000.0;
         let audio = tone(440.0, sr, 6.0);
         // Faster with key lock: same pitch.
-        let p = pitch(
-            &play(&audio, 1.08, transpose_factor(0.0, 1.08, true), sr),
-            sr,
-        );
+        let p = pitch(&play(&audio, 1.08, transpose_factor(0.0, 1.08, true), sr), sr);
         assert!((p - 440.0).abs() < 8.0, "{p}");
         // Two semitones up: 494 Hz.
         let p = pitch(&play(&audio, 1.0, transpose_factor(2.0, 1.0, true), sr), sr);
         assert!((p - 494.0).abs() < 8.0, "{p}");
         // Without key lock the speed raises the pitch too.
-        let p = pitch(
-            &play(&audio, 1.08, transpose_factor(0.0, 1.08, false), sr),
-            sr,
-        );
+        let p = pitch(&play(&audio, 1.08, transpose_factor(0.0, 1.08, false), sr), sr);
         assert!((p - 475.0).abs() < 8.0, "{p}");
     }
 }

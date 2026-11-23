@@ -1,30 +1,6 @@
-//! The Looper: a deck that records and plays four layers locked to the
-//! mix's bars (`[LooperN]`, N the deck).
-//!
-//! Everything the looper hears goes into a ring that always runs: the
-//! main mix (a buffer late, since the mix is made after the decks) or one
-//! input (microphone, auxiliary inputs, the instrument). Each bar line is
-//! stamped with where it fell in the ring. Recording a layer is then
-//! copying the bars between two stamps out of the ring, and CAPTURE copies
-//! the bars just heard the same way, without recording having been
-//! started. Copies run a chunk per buffer, well ahead of the playhead, so
-//! no buffer does much more work than another.
-//!
-//! A layer plays by the beat: where it is in its loop follows the leader's
-//! beat (the deck SYNC follows, else the first playing deck, else Link,
-//! else the looper's own tempo), so its bars stay on the mix's bars. A
-//! tempo change plays it faster or slower (no key lock yet).
-//!
-//! Each layer goes empty → armed (waits for the next bar) → recording (the
-//! length set, `[LooperN],length` bars) → playing, or overdubbing when
-//! `after` is on. Tapping a playing layer overdubs it; tapping again plays
-//! it. UNDO takes back the last recording or overdub and REDO brings it
-//! back: an overdub's additions are kept in a pass buffer, cleared in
-//! blocks as they are first written, so starting one costs nothing.
-//!
-//! Memory (a ring and five layer-sized buffers, about 48 seconds each) is
-//! made off the audio thread when a deck becomes a looper (see [`supply`])
-//! and handed back when it stops being one.
+//! The Looper: a deck that records and plays four layers locked to the mix's bars (`[LooperN]`, N the deck). Everything the looper hears goes into a ring that always runs: the main mix (a buffer late, since the mix is made after the decks) or one input (microphone, auxiliary inputs, the instrument). Each bar line is stamped with where it fell in the ring. Recording a layer is then copying the bars between two stamps out of the ring, and CAPTURE copies the bars just heard the same way, without
+//! `[LooperN],length` bars) -> playing, or overdubbing when `after` is on. Tapping a playing layer overdubs it; tapping again plays it. UNDO takes back the last recording or overdub and REDO brings it back: an overdub's additions are kept in a pass buffer, cleared in blocks as they are first written, so starting one costs nothing. Memory (a ring and five layer-sized buffers, about 48 seconds each) is made off the audio thread when a deck becomes a looper (see [`supply`]) and handed back when it stops being one.
+//! `[LooperN],length` bars) -> playing, or overdubbing when `after` is on. Tapping a playing layer overdubs it; tapping again plays it. UNDO takes back the last recording or overdub and REDO brings it back: an overdub's additions are kept in a pass buffer, cleared in blocks as they are first written, so starting one costs nothing. Memory (a ring and five layer-sized buffers, about 48 seconds each) is made off the audio thread when a deck becomes a looper (see [`supply`]) and handed back when it
 
 #[cfg(test)]
 use std::sync::Arc;
@@ -147,14 +123,7 @@ impl LooperControls {
         Self {
             enabled: reg.toggle(g, "enabled"),
             ready: reg.indicator(g, "ready", 1.0),
-            input: reg.create(
-                g,
-                "input",
-                INPUT_MIX as f64,
-                0.0,
-                crate::inputs::NUM_INPUTS as f64,
-                Behavior::Free,
-            ),
+            input: reg.create(g, "input", INPUT_MIX as f64, 0.0, crate::inputs::NUM_INPUTS as f64, Behavior::Free),
             length: reg.create(g, "length", 4.0, 1.0, 16.0, Behavior::Free),
             capture: reg.push(g, "capture"),
             capture_edge: Edge::default(),
@@ -176,14 +145,7 @@ impl LooperControls {
                     clear: reg.push(g, &format!("layer{n}_clear")),
                     clear_edge: Edge::default(),
                     mute: reg.toggle(g, &format!("layer{n}_mute")),
-                    volume: reg.create(
-                        g,
-                        &format!("layer{n}_volume"),
-                        1.0,
-                        0.0,
-                        1.0,
-                        Behavior::Linear,
-                    ),
+                    volume: reg.create(g, &format!("layer{n}_volume"), 1.0, 0.0, 1.0, Behavior::Linear),
                     state: reg.indicator(g, &format!("layer{n}_state"), OVERDUBBING as f64),
                     bars: reg.indicator(g, &format!("layer{n}_bars"), 16.0),
                     position: reg.indicator(g, &format!("layer{n}_position"), 1.0),
@@ -195,15 +157,7 @@ impl LooperControls {
 
 /// The nearest length from `lengths` to a control's value.
 fn nearest(lengths: &[u32], v: f64) -> u32 {
-    *lengths
-        .iter()
-        .min_by(|a, b| {
-            (**a as f64 - v)
-                .abs()
-                .partial_cmp(&(**b as f64 - v).abs())
-                .unwrap()
-        })
-        .unwrap()
+    *lengths.iter().min_by(|a, b| (**a as f64 - v).abs().partial_cmp(&(**b as f64 - v).abs()).unwrap()).unwrap()
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -313,11 +267,7 @@ impl Looper {
     /// The input it records and plays through (1 + the engine's input),
     /// or 0 for the main mix.
     pub fn input(&self) -> usize {
-        self.c
-            .input
-            .get()
-            .round()
-            .clamp(0.0, crate::inputs::NUM_INPUTS as f64) as usize
+        self.c.input.get().round().clamp(0.0, crate::inputs::NUM_INPUTS as f64) as usize
     }
 
     /// Takes new memory; returns the old, to free off the audio thread.
@@ -352,17 +302,10 @@ impl Looper {
         self.c.too_long.set_bool(true);
     }
 
-    /// Plays one buffer into `out` (the layers, and the input when it plays
-    /// through) and records what it hears. `play` is the deck's PLAY.
-    /// Returns true when the deck should start playing (a layer was tapped
-    /// or captured on a stopped deck).
-    pub fn render(
-        &mut self,
-        play: bool,
-        source: Source,
-        heard: Heard,
-        out: &mut [[f32; 2]],
-    ) -> bool {
+    /// Plays one buffer into `out` (the layers, and the input when it plays through)
+    /// and records what it hears. `play` is the deck's PLAY. Returns true when the
+    /// deck should start playing (a layer was tapped or captured on a stopped deck).
+    pub fn render(&mut self, play: bool, source: Source, heard: Heard, out: &mut [[f32; 2]]) -> bool {
         let frames = out.len();
         if self.mem.is_none() {
             out.fill([0.0; 2]);
@@ -373,8 +316,7 @@ impl Looper {
             self.c.bpm.set(source.bpm);
         }
         // Started with nothing to follow and nothing recorded: bar 1 starts now.
-        if play && !self.was_playing && source.beat.is_none() && self.layers.iter().all(Layer::free)
-        {
+        if play && !self.was_playing && source.beat.is_none() && self.layers.iter().all(Layer::free) {
             self.clock.start(source);
             self.last_beat = 0.0;
         }
@@ -461,20 +403,13 @@ impl Looper {
             self.last_beat = b;
             let mem = self.mem.as_mut().unwrap();
             let mut s = thru.map_or([0.0; 2], |i| i[f]);
-            let dub = heard
-                .input
-                .map(|i| i[f])
-                .or(heard.mix.and_then(|m| m.get(f).copied()));
+            let dub = heard.input.map(|i| i[f]).or(heard.mix.and_then(|m| m.get(f).copied()));
             for (k, layer) in self.layers.iter().enumerate() {
                 if !(layer.state == PLAYING || layer.state == OVERDUBBING) {
                     continue;
                 }
                 let (i, frac) = layer.place(b);
-                let ready = if layer.copying {
-                    layer.copied
-                } else {
-                    layer.frames
-                };
+                let ready = if layer.copying { layer.copied } else { layer.frames };
                 if i >= ready {
                     continue;
                 }
@@ -522,11 +457,7 @@ impl Looper {
     fn publish_layers(&self) {
         for (k, layer) in self.layers.iter().enumerate() {
             self.c.layers[k].state.set(layer.state as f64);
-            let bars = if layer.state == EMPTY {
-                0.0
-            } else {
-                layer.beats / BAR
-            };
+            let bars = if layer.state == EMPTY { 0.0 } else { layer.beats / BAR };
             self.c.layers[k].bars.set(bars);
         }
     }
@@ -544,11 +475,7 @@ impl Looper {
                 if matches!(self.undo, Some(Undo::Recorded(j) | Undo::Overdub(j)) if j == k) {
                     self.undo = None;
                 }
-                self.layers[k] = Layer {
-                    state: ARMED,
-                    beats,
-                    ..Layer::default()
-                };
+                self.layers[k] = Layer { state: ARMED, beats, ..Layer::default() };
                 true
             }
             ARMED => {
@@ -633,17 +560,12 @@ impl Looper {
             self.refuse();
             return false;
         };
-        let Some(&(_, from)) = stamps
-            .iter()
-            .find(|(b, _)| (*b - (end_bar - beats)).abs() < 1e-6)
-        else {
+        let Some(&(_, from)) = stamps.iter().find(|(b, _)| (*b - (end_bar - beats)).abs() < 1e-6) else {
             self.refuse();
             return false;
         };
         let frames = (to - from) as usize;
-        let oldest = self
-            .t
-            .saturating_sub(self.mem.as_ref().map_or(0, |m| m.capacity()) as u64);
+        let oldest = self.t.saturating_sub(self.mem.as_ref().map_or(0, |m| m.capacity()) as u64);
         if frames == 0
             || !self.fits(beats, bpm)
             || !self_fits(self.mem.as_deref(), frames)
@@ -671,11 +593,7 @@ impl Looper {
     /// UNDO: cancels an armed or recording layer, else takes back the last
     /// recording or overdub.
     fn take_back(&mut self) {
-        if let Some(k) = self
-            .layers
-            .iter()
-            .position(|l| l.state == ARMED || l.state == RECORDING)
-        {
+        if let Some(k) = self.layers.iter().position(|l| l.state == ARMED || l.state == RECORDING) {
             self.layers[k] = Layer::default();
             return;
         }
@@ -796,43 +714,35 @@ pub struct LooperIntake {
 pub fn channel(decks: usize) -> (LooperSupply, LooperIntake) {
     let (to_engine, from_app) = rtrb::RingBuffer::new(decks * 2);
     let (to_app, from_engine) = rtrb::RingBuffer::new(decks * 2);
-    (
-        LooperSupply {
-            to_engine,
-            from_engine,
-        },
-        LooperIntake { from_app, to_app },
-    )
+    (LooperSupply { to_engine, from_engine }, LooperIntake { from_app, to_app })
 }
 
 /// Watches `[LooperN],enabled` and `ready` on its own thread: a looper
 /// turned on without memory gets some, and memory handed back is freed.
 pub fn supply(mut s: LooperSupply, registry: Weak<ControlRegistry>, decks: usize, rate: f64) {
-    let spawned = std::thread::Builder::new()
-        .name("looper-memory".into())
-        .spawn(move || {
-            let mut sent = vec![false; decks];
-            loop {
-                let Some(reg) = registry.upgrade() else {
-                    return;
-                };
-                while let Ok(old) = s.from_engine.pop() {
-                    drop(old);
-                }
-                for (deck, sent) in sent.iter_mut().enumerate() {
-                    let g = looper_group(deck);
-                    let on = reg.get(&g, "enabled").is_some_and(|c| c.get_bool());
-                    let ready = reg.get(&g, "ready").is_some_and(|c| c.get_bool());
-                    if on && !ready && !*sent {
-                        *sent = s.to_engine.push((deck, LooperMemory::new(rate))).is_ok();
-                    } else if ready || !on {
-                        *sent = false;
-                    }
-                }
-                drop(reg);
-                std::thread::sleep(Duration::from_millis(40));
+    let spawned = std::thread::Builder::new().name("looper-memory".into()).spawn(move || {
+        let mut sent = vec![false; decks];
+        loop {
+            let Some(reg) = registry.upgrade() else {
+                return;
+            };
+            while let Ok(old) = s.from_engine.pop() {
+                drop(old);
             }
-        });
+            for (deck, sent) in sent.iter_mut().enumerate() {
+                let g = looper_group(deck);
+                let on = reg.get(&g, "enabled").is_some_and(|c| c.get_bool());
+                let ready = reg.get(&g, "ready").is_some_and(|c| c.get_bool());
+                if on && !ready && !*sent {
+                    *sent = s.to_engine.push((deck, LooperMemory::new(rate))).is_ok();
+                } else if ready || !on {
+                    *sent = false;
+                }
+            }
+            drop(reg);
+            std::thread::sleep(Duration::from_millis(40));
+        }
+    });
     if let Err(e) = spawned {
         eprintln!("could not start the looper memory thread: {e}");
     }
@@ -846,10 +756,7 @@ pub struct Loopers {
 
 impl Loopers {
     pub fn new(reg: &ControlRegistry, decks: usize, rate: f64, intake: LooperIntake) -> Self {
-        Self {
-            loopers: (0..decks).map(|d| Looper::new(reg, d, rate)).collect(),
-            intake,
-        }
+        Self { loopers: (0..decks).map(|d| Looper::new(reg, d, rate)).collect(), intake }
     }
 
     /// Takes memory sent and hands back memory of loopers turned off.
@@ -892,35 +799,18 @@ mod tests {
     }
 
     fn own() -> Source {
-        Source {
-            bpm: 120.0,
-            beat: None,
-        }
+        Source { bpm: 120.0, beat: None }
     }
 
     /// Runs `buffers` buffers hearing `input(frame)` as an input; returns
     /// what came out, one value (left) per frame.
-    fn run(
-        l: &mut Looper,
-        play: bool,
-        from: usize,
-        buffers: usize,
-        input: impl Fn(usize) -> f32,
-    ) -> Vec<f32> {
+    fn run(l: &mut Looper, play: bool, from: usize, buffers: usize, input: impl Fn(usize) -> f32) -> Vec<f32> {
         let mut out = Vec::new();
         for b in 0..buffers {
             let start = from + b * BUF;
             let inp: Vec<[f32; 2]> = (0..BUF).map(|f| [input(start + f); 2]).collect();
             let mut o = vec![[0.0; 2]; BUF];
-            l.render(
-                play,
-                own(),
-                Heard {
-                    input: Some(&inp),
-                    mix: None,
-                },
-                &mut o,
-            );
+            l.render(play, own(), Heard { input: Some(&inp), mix: None }, &mut o);
             out.extend(o.iter().map(|s| s[0]));
         }
         out
@@ -954,24 +844,14 @@ mod tests {
         };
         run(&mut l, true, BUF, BAR_FRAMES / BUF + 5, ramp);
         assert_eq!(state.get() as u8, RECORDING);
-        let out = run(
-            &mut l,
-            true,
-            BAR_FRAMES + BUF * 6,
-            (2 * BAR_FRAMES) / BUF,
-            ramp,
-        );
+        let out = run(&mut l, true, BAR_FRAMES + BUF * 6, (2 * BAR_FRAMES) / BUF, ramp);
         assert_eq!(state.get() as u8, PLAYING);
         assert_eq!(l.c.layers[0].bars.get(), 1.0);
         // Bar 3 plays the ramp back from its first beat, lined up with the bar.
         let bar3 = 2 * BAR_FRAMES - (BAR_FRAMES + BUF * 6);
         for k in [100, 4_000, 8_000, 12_000] {
             let expected = k as f32 / BAR_FRAMES as f32;
-            assert!(
-                (out[bar3 + k] - expected).abs() < 0.01,
-                "frame {k}: {} vs {expected}",
-                out[bar3 + k]
-            );
+            assert!((out[bar3 + k] - expected).abs() < 0.01, "frame {k}: {} vs {expected}", out[bar3 + k]);
         }
     }
 
@@ -995,23 +875,13 @@ mod tests {
             }
         };
         run(&mut l, true, BUF, BAR_FRAMES / BUF + 5, ramp);
-        let out = run(
-            &mut l,
-            true,
-            BAR_FRAMES + BUF * 6,
-            (2 * BAR_FRAMES) / BUF,
-            ramp,
-        );
+        let out = run(&mut l, true, BAR_FRAMES + BUF * 6, (2 * BAR_FRAMES) / BUF, ramp);
         assert_eq!(state.get() as u8, PLAYING);
         let bar3 = 2 * BAR_FRAMES - (BAR_FRAMES + BUF * 6);
         // Past the tail of bar 2 still coming in (and heard through).
         for k in [2_000, 4_000, 8_000, 12_000] {
             let expected = k as f32 / BAR_FRAMES as f32;
-            assert!(
-                (out[bar3 + k] - expected).abs() < 0.01,
-                "frame {k}: {} vs {expected}",
-                out[bar3 + k]
-            );
+            assert!((out[bar3 + k] - expected).abs() < 0.01, "frame {k}: {} vs {expected}", out[bar3 + k]);
         }
     }
 
@@ -1098,18 +968,7 @@ mod tests {
         press(&tap);
         let mut o = vec![[0.0; 2]; BUF];
         let inp = vec![[0.0; 2]; BUF];
-        l.render(
-            true,
-            Source {
-                bpm: 40.0,
-                beat: None,
-            },
-            Heard {
-                input: Some(&inp),
-                mix: None,
-            },
-            &mut o,
-        );
+        l.render(true, Source { bpm: 40.0, beat: None }, Heard { input: Some(&inp), mix: None }, &mut o);
         assert_eq!(l.c.layers[1].state.get() as u8, EMPTY);
         assert!(l.c.too_long.get_bool());
     }

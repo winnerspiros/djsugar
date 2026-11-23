@@ -30,12 +30,8 @@ impl HtDemucs {
     /// Separates a stereo track at 44.1 kHz into [`STEMS`]:
     /// `[stem][channel][sample]`.
     pub fn separate(&self, channels: [&[f32]; 2]) -> Result<Vec<[Vec<f32>; 2]>, String> {
-        let stems = pollster::block_on(self.model.separate(
-            channels[0],
-            channels[1],
-            crate::SAMPLE_RATE,
-        ))
-        .map_err(|e| e.to_string())?;
+        let stems = pollster::block_on(self.model.separate(channels[0], channels[1], crate::SAMPLE_RATE))
+            .map_err(|e| e.to_string())?;
         Ok(stems.into_iter().map(|s| [s.left, s.right]).collect())
     }
 }

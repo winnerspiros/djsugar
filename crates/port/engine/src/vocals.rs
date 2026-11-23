@@ -1,7 +1,6 @@
-//! Where a track has vocals: a level along the track, from Spleeter's
-//! vocal network on its own (see [`spleeter::vocal_levels`]), worked out
-//! once and kept in the cache beside the analysis. The deck waveforms tint
-//! the sung parts with it (Settings › Appearance › Show vocals).
+//! Where a track has vocals: a level along the track, from Spleeter's vocal network on its own
+//! analysis. The deck waveforms tint the sung parts with it (Settings › Appearance › Show vocals).
+//! analysis. The deck waveforms tint the sung parts with it (Settings › Appearance › Show
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -51,18 +50,12 @@ fn detect(audio: &Audio, mut keep_going: impl FnMut() -> bool) -> Result<Vec<u8>
     if stopped {
         return Err("stopped".into());
     }
-    Ok(levels
-        .iter()
-        .map(|s| (s.clamp(0.0, 1.0) * 255.0).round() as u8)
-        .collect())
+    Ok(levels.iter().map(|s| (s.clamp(0.0, 1.0) * 255.0).round() as u8).collect())
 }
 
-/// The levels drawn from vocal shares (0..1, as amplitudes: the square
-/// root of the vocals' part of the power), `rate` a second. Averaged over
-/// [`SMOOTH_SECONDS`] first; then under 0.4 (a sixth of the power) is what
-/// leaks from other instruments and reads as none, rising to full at 0.75
-/// (over half the power). A voice over a mix sits well above that; a lead
-/// synth or pad that leaks into the vocal network rarely holds it.
+/// The levels drawn from vocal shares (0..1, as amplitudes: the square root of the vocals' part of the power), `rate` a second. Averaged over
+/// [`SMOOTH_SECONDS`] first; then under 0.4 (a sixth of the power) is what leaks from other instruments and reads as none, rising to full at
+/// 0.75 (over half the power). A voice over a mix sits well above that; a lead synth or pad that leaks into the vocal network rarely holds it.
 pub fn to_levels(shares: &[f32], rate: f64) -> Levels {
     let half = (SMOOTH_SECONDS * rate * 0.5).round() as usize;
     let mut sums = Vec::with_capacity(shares.len() + 1);
@@ -88,13 +81,7 @@ fn shares_to_levels(shares: &[u8]) -> Levels {
 /// Where the vocal levels of `path` are kept, beside its analysis.
 fn file(path: &Path) -> Option<PathBuf> {
     let entry = crate::cache::entry_path(path)?;
-    Some(
-        entry
-            .parent()?
-            .parent()?
-            .join("vocals")
-            .join(entry.file_name()?),
-    )
+    Some(entry.parent()?.parent()?.join("vocals").join(entry.file_name()?))
 }
 
 /// The vocal levels of `path` from its kept shares, if it has them for the
@@ -123,11 +110,7 @@ fn store(path: &Path, levels: &[u8]) {
 /// The vocal levels of the file at `path`: kept ones, or found now (which
 /// decodes it and takes a few seconds) and kept. `audio` saves decoding
 /// when the caller has it already.
-pub fn analyse(
-    path: &Path,
-    audio: Option<&Audio>,
-    keep_going: impl FnMut() -> bool,
-) -> Result<Levels, String> {
+pub fn analyse(path: &Path, audio: Option<&Audio>, keep_going: impl FnMut() -> bool) -> Result<Levels, String> {
     if let Some(l) = cached(path) {
         return Ok(l);
     }
@@ -153,10 +136,7 @@ mod tests {
     #[test]
     fn leakage_reads_as_none_and_voices_as_full() {
         // No smoothing at one step a second.
-        assert_eq!(
-            to_levels(&[0.0, 0.3, 0.4, 0.75, 0.9], 1.0),
-            vec![0, 0, 0, 255, 255]
-        );
+        assert_eq!(to_levels(&[0.0, 0.3, 0.4, 0.75, 0.9], 1.0), vec![0, 0, 0, 255, 255]);
         let mid = to_levels(&[0.575], 1.0)[0];
         assert!((120..=135).contains(&mid), "{mid}");
     }

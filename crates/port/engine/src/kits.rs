@@ -1,22 +1,6 @@
-//! The Groove Box's built-in kits.
-//!
-//! Every sound is synthesised here when the engine starts, so the kits need
-//! no sample files. The Analog and Synthetic kits play the drum models of
-//! Mutable Instruments' Plaits (Emilie Gillet's, MIT, through the
-//! `mi-plaits-dsp` port): a kick that is a resonant filter struck by a
-//! pulse, a snare of tuned modes and noise, hats of square-wave metal or
-//! ring-modulated noise. The other kits are drawn here in the style of the
-//! classic analogue drum machines: a kick is a sine wave swept down in
-//! pitch with a click on top, a snare two tones and filtered noise, a clap
-//! a few quick bursts of noise, the hats six square waves at clashing
-//! pitches through a high-pass filter (the way the 808 makes its cymbals),
-//! the cowbell two square waves through a band-pass. Nothing is sampled
-//! from another machine. Kits are named by their character, never after a
-//! manufacturer's model.
-//!
-//! Every kit has the same nine sounds first, in [`ROLES`] order, so row N
-//! of a groove plays the same kind of sound in any kit; some kits add
-//! sounds of their own after them, for a row to switch to.
+//! The Groove Box's built-in kits. Every sound is synthesised here when the engine starts, so the kits need no sample files. The Analog and Synthetic kits play the drum models of Mutable Instruments' Plaits (Emilie Gillet's, MIT, through the `mi-plaits-dsp` port): a kick that is a resonant filter struck by a pulse, a snare of tuned modes and noise, hats of
+//! cymbals), the cowbell two square waves through a band-pass. Nothing is sampled from another machine. Kits are named by their character, never after a manufacturer's model. Every kit has the same nine sounds first, in [`ROLES`] order, so row N of a groove plays the same kind of sound in any kit; some kits add sounds of their own after them, for a row to switch to.
+//! cymbals), the cowbell two square waves through a band-pass. Nothing is sampled from another machine. Kits are named by their character, never after a manufacturer's model. Every kit has the same nine sounds first, in [`ROLES`] order, so row N of a groove plays the same kind of sound in any kit; some kits add sounds of their own after them, for a row to switch
 
 use std::f32::consts::TAU;
 use std::sync::Arc;
@@ -29,17 +13,7 @@ use mi_plaits_dsp::drums::{
 use crate::sampler::Sample;
 
 /// The sounds every kit has, in the Groove Box's row order.
-pub const ROLES: [&str; 9] = [
-    "Kick",
-    "Snare",
-    "Closed hat",
-    "Open hat",
-    "Clap",
-    "Rim",
-    "Cowbell",
-    "Crash",
-    "Ride",
-];
+pub const ROLES: [&str; 9] = ["Kick", "Snare", "Closed hat", "Open hat", "Clap", "Rim", "Cowbell", "Crash", "Ride"];
 
 /// The most sounds a kit has (the nine roles and its own).
 pub const MAX_SOUNDS: usize = 12;
@@ -82,21 +56,13 @@ pub const KITS: [KitInfo; 6] = [
         about: "Tight digital kick and snare, crisp hats (Plaits drum models)",
         extras: &["Low tom", "High tom"],
     },
-    KitInfo {
-        name: "Boom",
-        about: "Deep, long kick and soft analogue drums, 808-style",
-        extras: &["Tom"],
-    },
+    KitInfo { name: "Boom", about: "Deep, long kick and soft analogue drums, 808-style", extras: &["Tom"] },
     KitInfo {
         name: "Punch",
         about: "Short, punchy kick and bright hats for house and techno, 909-style",
         extras: &["Tom"],
     },
-    KitInfo {
-        name: "Tin",
-        about: "Small, ticking rhythm-box drums, 606-style",
-        extras: &["Shaker", "Tom"],
-    },
+    KitInfo { name: "Tin", about: "Small, ticking rhythm-box drums, 606-style", extras: &["Shaker", "Tom"] },
     KitInfo {
         name: "Dub",
         about: "Soft kick, rimshot and a chord stab for dub techno",
@@ -128,11 +94,7 @@ pub fn build(rate: f64) -> Vec<Kit> {
                     let mono = sound(k, n, name, sr);
                     KitSound {
                         name,
-                        pitch: if name == "Kick" {
-                            pitch_of(&mono, sr)
-                        } else {
-                            0.0
-                        },
+                        pitch: if name == "Kick" { pitch_of(&mono, sr) } else { 0.0 },
                         sample: Arc::new(Sample::from_mono(&mono, rate)),
                     }
                 })
@@ -155,11 +117,7 @@ pub fn pitch_of(sound: &[f32], sr: f32) -> f32 {
         return 0.0;
     }
     let corr = |lag: usize| -> f32 {
-        body.iter()
-            .zip(&body[lag..])
-            .map(|(a, b)| a * b)
-            .sum::<f32>()
-            / (body.len() - lag) as f32
+        body.iter().zip(&body[lag..]).map(|(a, b)| a * b).sum::<f32>() / (body.len() - lag) as f32
     };
     let (min_lag, max_lag) = ((sr / 250.0) as usize, (sr / 30.0) as usize);
     let mut best = (0, 0.0f32);
@@ -239,10 +197,7 @@ fn plaits(sr: f32, seconds: f32, peak: f32, mut render: impl FnMut(bool, &mut [f
     }
     let max = out.iter().fold(0.0f32, |m, s| m.max(s.abs()));
     let quiet = max * 1e-3;
-    let end = out
-        .iter()
-        .rposition(|s| s.abs() > quiet)
-        .map_or(0, |i| i + 1);
+    let end = out.iter().rposition(|s| s.abs() > quiet).map_or(0, |i| i + 1);
     out.truncate(end.max(1));
     finish(out, peak, sr)
 }
@@ -251,18 +206,14 @@ fn plaits(sr: f32, seconds: f32, peak: f32, mut render: impl FnMut(bool, &mut [f
 fn plaits_kick(sr: f32, hz: f32, tone: f32, decay: f32, attack_fm: f32, self_fm: f32) -> Vec<f32> {
     let mut d = AnalogBassDrum::new();
     d.init(sr);
-    plaits(sr, 1.2, 0.95, |t, o| {
-        d.render(false, t, 0.8, hz / sr, tone, decay, attack_fm, self_fm, o)
-    })
+    plaits(sr, 1.2, 0.95, |t, o| d.render(false, t, 0.8, hz / sr, tone, decay, attack_fm, self_fm, o))
 }
 
 /// The analogue snare; bright and snappy, it stands in for a clap.
 fn plaits_snare(sr: f32, hz: f32, tone: f32, decay: f32, snappy: f32) -> Vec<f32> {
     let mut d = AnalogSnareDrum::new();
     d.init(sr);
-    plaits(sr, 0.8, 0.8, |t, o| {
-        d.render(false, t, 0.8, hz / sr, tone, decay, snappy, o)
-    })
+    plaits(sr, 0.8, 0.8, |t, o| d.render(false, t, 0.8, hz / sr, tone, decay, snappy, o))
 }
 
 /// Ring-modulated noise (`square` false) or six square waves, with a
@@ -277,39 +228,20 @@ fn plaits_hat(sr: f32, square: bool, decay: f32, noisiness: f32) -> Vec<f32> {
         (hihat::NoiseType::RingMod, hihat::VcaType::Swing)
     };
     plaits(sr, 1.0, 0.6, |t, o| {
-        d.render(
-            false,
-            t,
-            0.8,
-            3000.0 / sr,
-            0.5,
-            decay,
-            noisiness,
-            &mut a,
-            &mut b,
-            o,
-            noise,
-            vca,
-            !square,
-            square,
-        )
+        d.render(false, t, 0.8, 3000.0 / sr, 0.5, decay, noisiness, &mut a, &mut b, o, noise, vca, !square, square)
     })
 }
 
 fn plaits_synth_kick(sr: f32, hz: f32) -> Vec<f32> {
     let mut d = SyntheticBassDrum::new();
     d.init(sr);
-    plaits(sr, 1.2, 0.95, |t, o| {
-        d.render(false, t, 0.8, hz / sr, 0.5, 0.5, 0.4, 0.5, 0.3, o)
-    })
+    plaits(sr, 1.2, 0.95, |t, o| d.render(false, t, 0.8, hz / sr, 0.5, 0.5, 0.4, 0.5, 0.3, o))
 }
 
 fn plaits_synth_snare(sr: f32) -> Vec<f32> {
     let mut d = SyntheticSnareDrum::new();
     d.init(sr);
-    plaits(sr, 0.8, 0.8, |t, o| {
-        d.render(false, t, 0.8, 200.0 / sr, 0.5, 0.45, 0.6, o)
-    })
+    plaits(sr, 0.8, 0.8, |t, o| d.render(false, t, 0.8, 200.0 / sr, 0.5, 0.45, 0.6, o))
 }
 
 /// A small, repeatable noise source.
@@ -349,12 +281,7 @@ impl Biquad {
             Shape::High => [(1.0 + cos) / 2.0, -(1.0 + cos), (1.0 + cos) / 2.0],
             Shape::Band => [alpha, 0.0, -alpha],
         };
-        Self {
-            b: b.map(|v| v / a0),
-            a: [-2.0 * cos / a0, (1.0 - alpha) / a0],
-            x: [0.0; 2],
-            y: [0.0; 2],
-        }
+        Self { b: b.map(|v| v / a0), a: [-2.0 * cos / a0, (1.0 - alpha) / a0], x: [0.0; 2], y: [0.0; 2] }
     }
 
     fn process(&mut self, x: f32) -> f32 {
@@ -406,22 +333,14 @@ fn kick(sr: f32, from: f32, to: f32, sweep: f32, decay: f32, click: f32, drive: 
 }
 
 /// Two tones and band-passed noise.
-fn snare(
-    sr: f32,
-    tones: [f32; 2],
-    tone_decay: f32,
-    noise_decay: f32,
-    snap: f32,
-    seed: u32,
-) -> Vec<f32> {
+fn snare(sr: f32, tones: [f32; 2], tone_decay: f32, noise_decay: f32, snap: f32, seed: u32) -> Vec<f32> {
     let n = frames(sr, noise_decay * 4.0);
     let mut noise = Noise(seed);
     let mut bp = Biquad::new(Shape::High, 1800.0, 0.6, sr);
     let out = (0..n)
         .map(|i| {
             let t = i as f32 / sr;
-            let tone = ((TAU * tones[0] * t).sin() + 0.6 * (TAU * tones[1] * t).sin())
-                * (-t / tone_decay).exp();
+            let tone = ((TAU * tones[0] * t).sin() + 0.6 * (TAU * tones[1] * t).sin()) * (-t / tone_decay).exp();
             let rattle = bp.process(noise.next()) * (-t / noise_decay).exp();
             tone * (1.0 - snap) + rattle * snap * 1.6
         })
@@ -448,11 +367,7 @@ fn clap(sr: f32, tail: f32, seed: u32) -> Vec<f32> {
                     }
                 })
                 .fold(0.0f32, f32::max);
-            let env = burst.max(if t > 0.023 {
-                0.6 * (-(t - 0.023) / tail).exp()
-            } else {
-                0.0
-            });
+            let env = burst.max(if t > 0.023 { 0.6 * (-(t - 0.023) / tail).exp() } else { 0.0 });
             bp.process(noise.next()) * env
         })
         .collect();
@@ -468,17 +383,8 @@ fn metal(sr: f32, n: usize, tone: f32, seed: u32) -> Vec<f32> {
     (0..n)
         .map(|i| {
             let t = i as f32 / sr;
-            let squares: f32 = PITCHES
-                .iter()
-                .map(|f| {
-                    if (f * 1.7 * t).fract() < 0.5 {
-                        1.0
-                    } else {
-                        -1.0
-                    }
-                })
-                .sum::<f32>()
-                / 6.0;
+            let squares: f32 =
+                PITCHES.iter().map(|f| if (f * 1.7 * t).fract() < 0.5 { 1.0 } else { -1.0 }).sum::<f32>() / 6.0;
             hp2.process(hp1.process(squares * 0.8 + noise.next() * 0.25))
         })
         .collect()
@@ -545,10 +451,7 @@ fn rim(sr: f32, decay: f32, seed: u32) -> Vec<f32> {
 }
 
 fn tom(sr: f32, pitch: f32, decay: f32) -> Vec<f32> {
-    kick(sr, pitch * 1.6, pitch, 0.05, decay, 0.15, 1.0)
-        .into_iter()
-        .map(|s| s * 0.85)
-        .collect()
+    kick(sr, pitch * 1.6, pitch, 0.05, decay, 0.15, 1.0).into_iter().map(|s| s * 0.85).collect()
 }
 
 fn shaker(sr: f32, seed: u32) -> Vec<f32> {
@@ -612,15 +515,8 @@ mod tests {
             for s in &kit.sounds {
                 assert!(!s.sample.is_empty(), "{} {}", kit.name, s.name);
                 assert!(s.sample.seconds() < 5.0, "{} {}", kit.name, s.name);
-                let peak = (0..s.sample.len())
-                    .map(|i| s.sample.frame(i)[0].abs())
-                    .fold(0.0, f32::max);
-                assert!(
-                    peak > 0.2 && peak <= 1.0,
-                    "{} {} peak {peak}",
-                    kit.name,
-                    s.name
-                );
+                let peak = (0..s.sample.len()).map(|i| s.sample.frame(i)[0].abs()).fold(0.0, f32::max);
+                assert!(peak > 0.2 && peak <= 1.0, "{} {} peak {peak}", kit.name, s.name);
             }
         }
     }

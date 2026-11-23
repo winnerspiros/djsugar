@@ -1,14 +1,6 @@
-//! Ableton Link: shares tempo and beat phase with other apps and devices on
-//! the network (Ableton Live, Traktor, phones, drum machines).
-//!
-//! With `[Link],enabled` on, Link follows the master deck: the session takes the tempo and beat of the deck that is
-//! playing (`[Link],master_deck`), so other apps play along with the mix.
-//! The decks themselves sync to each other as usual.
-//!
-//! Enabling Link opens network sockets, which can't happen on the audio
-//! thread; [`watch`] does it on its own thread and keeps the peer count up to
-//! date. The audio thread only captures and commits session states, which
-//! Link makes real-time safe.
+//! Ableton Link: shares tempo and beat phase with other apps and devices on the network (other DJ software, phones, drum machines). With `[Link],enabled` on, Link follows the master deck: the session takes
+//! the tempo and beat of the deck that is playing (`[Link],master_deck`), so other apps play along with the mix. The decks themselves sync to each other as usual. Enabling Link opens network sockets, which
+//! can't happen on the audio thread; [`watch`] does it on its own thread and keeps the peer count up to date. The audio thread only captures and commits session states, which Link makes real-time safe.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -104,11 +96,7 @@ impl Link {
         self.link.capture_audio_session_state(&mut self.state);
         let tempo = self.state.tempo();
         self.c.bpm.set(tempo);
-        Some(Moment {
-            tempo,
-            beat: self.state.beat_at_time(self.heard_at, self.quantum()),
-            just_enabled,
-        })
+        Some(Moment { tempo, beat: self.state.beat_at_time(self.heard_at, self.quantum()), just_enabled })
     }
 
     fn quantum(&self) -> f64 {
@@ -135,23 +123,19 @@ impl Link {
 /// Turns Link on and off as `[Link],enabled` says and keeps
 /// `[Link],num_peers` current. Runs until the registry is dropped.
 pub(crate) fn watch(link: Arc<AblLink>, reg: std::sync::Weak<ControlRegistry>) {
-    let spawned = std::thread::Builder::new()
-        .name("ableton-link".into())
-        .spawn(move || loop {
-            let Some(reg) = reg.upgrade() else { return };
-            let (Some(enabled), Some(peers)) =
-                (reg.get(GROUP, "enabled"), reg.get(GROUP, "num_peers"))
-            else {
-                return;
-            };
-            drop(reg);
-            let want = enabled.get_bool();
-            if want != link.is_enabled() {
-                link.enable(want);
-            }
-            peers.set(if want { link.num_peers() as f64 } else { 0.0 });
-            std::thread::sleep(Duration::from_millis(100));
-        });
+    let spawned = std::thread::Builder::new().name("ableton-link".into()).spawn(move || loop {
+        let Some(reg) = reg.upgrade() else { return };
+        let (Some(enabled), Some(peers)) = (reg.get(GROUP, "enabled"), reg.get(GROUP, "num_peers")) else {
+            return;
+        };
+        drop(reg);
+        let want = enabled.get_bool();
+        if want != link.is_enabled() {
+            link.enable(want);
+        }
+        peers.set(if want { link.num_peers() as f64 } else { 0.0 });
+        std::thread::sleep(Duration::from_millis(100));
+    });
     if let Err(e) = spawned {
         eprintln!("could not start Ableton Link: {e}");
     }

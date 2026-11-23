@@ -1,13 +1,6 @@
-//! A plugin's own presets as files: VST3 `.vstpreset` and AU `.aupreset`,
-//! in the folders each format names for them, made into the sound
-//! [`crate::Connection::load_state`] takes.
-//!
-//! - VST3 keeps its presets in `<root>/<maker>/<plugin>/`, the roots being
-//!   `~/Library/Audio/Presets` on macOS, `Documents/VST3 Presets` on Windows
-//!   and `~/.vst3/presets` on Linux, plus the machine-wide ones.
-//! - AU keeps `.aupreset` files in `~/Library/Audio/Presets/<maker>/<name>/`
-//!   (and `/Library/...`). One is the unit's class info, as the AU helper
-//!   saves its sound, so the file is the sound itself.
+//! A plugin's own presets as files: VST3 `.vstpreset` and AU `.aupreset`, in the folders each format names for them, made into the sound [`crate::Connection::load_state`] takes. - VST3 keeps its
+//! presets in `<root>/<maker>/<plugin>/`, the roots being `~/Library/Audio/Presets` on macOS, `Documents/VST3 Presets` on Windows and `~/.vst3/presets` on Linux, plus the machine-wide ones. - AU
+//! keeps `.aupreset` files in `~/Library/Audio/Presets/<maker>/<name>/` (and `/Library/...`). One is the unit's class info, as the AU helper saves its sound, so the file is the sound itself.
 
 use std::path::{Path, PathBuf};
 
@@ -50,8 +43,7 @@ pub fn unpack_states(data: &[u8]) -> Option<(&[u8], &[u8])> {
 
 /// The folders a format keeps presets in, before the maker's and plugin's.
 fn roots(format: &str) -> Vec<PathBuf> {
-    let home =
-        std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from);
+    let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from);
     let mut out = Vec::new();
     if cfg!(target_os = "macos") {
         if let Some(h) = &home {
@@ -80,9 +72,7 @@ fn roots(format: &str) -> Vec<PathBuf> {
 /// A name as the formats write it into a folder name: `/` and the like
 /// are not allowed there.
 fn folder_name(name: &str) -> String {
-    name.chars()
-        .map(|c| if r#"/\:*?"<>|"#.contains(c) { '_' } else { c })
-        .collect()
+    name.chars().map(|c| if r#"/\:*?"<>|"#.contains(c) { '_' } else { c }).collect()
 }
 
 /// The presets of the plugin `name` by `maker`, in `format` ("vst3" or
@@ -125,15 +115,8 @@ fn walk(dir: &Path, ext: &str, depth: usize, out: &mut Vec<Found>) {
             if depth > 0 {
                 walk(&path, ext, depth - 1, out);
             }
-        } else if path
-            .extension()
-            .and_then(|x| x.to_str())
-            .is_some_and(|x| x.eq_ignore_ascii_case(ext))
-        {
-            let name = path
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default();
+        } else if path.extension().and_then(|x| x.to_str()).is_some_and(|x| x.eq_ignore_ascii_case(ext)) {
+            let name = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
             out.push(Found { name, path });
         }
     }
@@ -156,19 +139,10 @@ fn same_class(a: &str, b: &str) -> bool {
     let swap = |s: &str| -> Option<String> {
         let bytes = |r: std::ops::Range<usize>| s.get(r);
         let rev = |p: &str| -> String {
-            let pairs: Vec<&str> = (0..p.len())
-                .step_by(2)
-                .filter_map(|i| p.get(i..i + 2))
-                .collect();
+            let pairs: Vec<&str> = (0..p.len()).step_by(2).filter_map(|i| p.get(i..i + 2)).collect();
             pairs.into_iter().rev().collect()
         };
-        Some(format!(
-            "{}{}{}{}",
-            rev(bytes(0..8)?),
-            rev(bytes(8..12)?),
-            rev(bytes(12..16)?),
-            bytes(16..32)?
-        ))
+        Some(format!("{}{}{}{}", rev(bytes(0..8)?), rev(bytes(8..12)?), rev(bytes(12..16)?), bytes(16..32)?))
     };
     swap(a).is_some_and(|s| s.eq_ignore_ascii_case(b))
 }
@@ -179,20 +153,13 @@ pub fn vst3_state(bytes: &[u8]) -> Result<Vec<u8>, String> {
     if bytes.get(..4) != Some(b"VST3") {
         return Err("it isn't a VST3 preset".into());
     }
-    let int = |at: usize| -> Option<i64> {
-        Some(i64::from_le_bytes(bytes.get(at..at + 8)?.try_into().ok()?))
-    };
+    let int = |at: usize| -> Option<i64> { Some(i64::from_le_bytes(bytes.get(at..at + 8)?.try_into().ok()?)) };
     let list = usize::try_from(int(40).ok_or_else(damaged)?).map_err(|_| damaged())?;
     if bytes.get(list..list + 4) != Some(b"List") {
         return Err(damaged());
     }
-    let count = i32::from_le_bytes(
-        bytes
-            .get(list + 4..list + 8)
-            .ok_or_else(damaged)?
-            .try_into()
-            .map_err(|_| damaged())?,
-    );
+    let count =
+        i32::from_le_bytes(bytes.get(list + 4..list + 8).ok_or_else(damaged)?.try_into().map_err(|_| damaged())?);
     let (mut component, mut controller) = (None, None);
     for i in 0..usize::try_from(count).map_err(|_| damaged())? {
         let at = list + 8 + i * 20;
@@ -203,9 +170,7 @@ pub fn vst3_state(bytes: &[u8]) -> Result<Vec<u8>, String> {
         let (Ok(offset), Ok(size)) = (usize::try_from(offset), usize::try_from(size)) else {
             return Err(damaged());
         };
-        let data = bytes
-            .get(offset..offset.checked_add(size).ok_or_else(damaged)?)
-            .ok_or_else(damaged)?;
+        let data = bytes.get(offset..offset.checked_add(size).ok_or_else(damaged)?).ok_or_else(damaged)?;
         match id {
             b"Comp" => component = Some(data),
             b"Cont" => controller = Some(data),
@@ -231,10 +196,7 @@ mod tests {
         out.extend_from_slice(cont);
         out.extend_from_slice(b"List");
         out.extend_from_slice(&2i32.to_le_bytes());
-        for (id, at, len) in [
-            (b"Comp", 48, comp.len()),
-            (b"Cont", 48 + comp.len(), cont.len()),
-        ] {
+        for (id, at, len) in [(b"Comp", 48, comp.len()), (b"Cont", 48 + comp.len(), cont.len())] {
             out.extend_from_slice(id);
             out.extend_from_slice(&(at as i64).to_le_bytes());
             out.extend_from_slice(&(len as i64).to_le_bytes());
@@ -248,10 +210,7 @@ mod tests {
     fn a_vstpreset_reads_as_the_sound_the_helper_takes() {
         let file = vstpreset(CLASS, b"component", b"ctl");
         let state = vst3_state(&file).unwrap();
-        assert_eq!(
-            unpack_states(&state),
-            Some((&b"component"[..], &b"ctl"[..]))
-        );
+        assert_eq!(unpack_states(&state), Some((&b"component"[..], &b"ctl"[..])));
         assert!(vst3_state(b"nope").is_err());
         assert!(vst3_state(&file[..50]).is_err());
     }
@@ -266,36 +225,13 @@ mod tests {
         let other = "00000000000000000000000000000001";
         std::fs::write(dir.join("Other.vstpreset"), vstpreset(other, b"c", b"")).unwrap();
         std::fs::write(dir.join("notes.txt"), b"x").unwrap();
-        let found = find_in(
-            std::slice::from_ref(&root),
-            "vst3",
-            "Maker Co",
-            "Synth/One",
-            CLASS,
-        );
+        let found = find_in(std::slice::from_ref(&root), "vst3", "Maker Co", "Synth/One", CLASS);
         let names: Vec<&str> = found.iter().map(|f| f.name.as_str()).collect();
         assert_eq!(names, ["Airy", "Deep"]);
         // Windows writes the class with its first groups' bytes reversed.
         let windows = "77A4A81B0AEE2D4A80F50D1413D2EAA0";
-        assert_eq!(
-            find_in(
-                std::slice::from_ref(&root),
-                "vst3",
-                "Maker Co",
-                "Synth/One",
-                windows
-            )
-            .len(),
-            2
-        );
-        assert!(find_in(
-            std::slice::from_ref(&root),
-            "au",
-            "Maker Co",
-            "Synth/One",
-            ""
-        )
-        .is_empty());
+        assert_eq!(find_in(std::slice::from_ref(&root), "vst3", "Maker Co", "Synth/One", windows).len(), 2);
+        assert!(find_in(std::slice::from_ref(&root), "au", "Maker Co", "Synth/One", "").is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 }

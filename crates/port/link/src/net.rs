@@ -1,10 +1,6 @@
-//! The network side: announces this app's state, tracks peers, measures
-//! other sessions' clocks and joins the session that has been running
-//! longest.
-//!
-//! Every session has a shared ("ghost") clock: each peer's host clock plus
-//! an offset it measures by pinging a member. A timeline on the wire is in
-//! ghost time, so peers with unrelated clocks agree on where beats fall.
+//! The network side: announces this app's state, tracks peers, measures other sessions' clocks and joins the session that
+//! has been running longest. Every session has a shared ("ghost") clock: each peer's host clock plus an offset it measures
+//! by pinging a member. A timeline on the wire is in ghost time, so peers with unrelated clocks agree on where beats fall.
 
 use std::collections::HashMap;
 use std::io;
@@ -45,9 +41,7 @@ impl Running {
         let mut node = Node::open(shared)?;
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
-        let thread = std::thread::Builder::new()
-            .name("link".into())
-            .spawn(move || node.run(&flag))?;
+        let thread = std::thread::Builder::new().name("link".into()).spawn(move || node.run(&flag))?;
         Ok(Self { stop, thread })
     }
 
@@ -164,8 +158,7 @@ impl Node {
         #[cfg(all(unix, not(any(target_os = "solaris", target_os = "illumos"))))]
         d.set_reuse_port(true)?;
         d.bind(&SocketAddr::from((Ipv4Addr::UNSPECIFIED, PORT)).into())?;
-        d.join_multicast_v4(&GROUP, &ip)
-            .or_else(|_| d.join_multicast_v4(&GROUP, &Ipv4Addr::UNSPECIFIED))?;
+        d.join_multicast_v4(&GROUP, &ip).or_else(|_| d.join_multicast_v4(&GROUP, &Ipv4Addr::UNSPECIFIED))?;
         d.set_nonblocking(true)?;
         let u = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
         u.bind(&SocketAddr::from((ip, 0)).into())?;
@@ -273,11 +266,7 @@ impl Node {
             }
         } else if now.duration_since(self.measured_at) > REMEASURE_EVERY {
             self.measured_at = now;
-            let member = self
-                .peers
-                .values()
-                .find(|p| p.state.session == self.session)
-                .and_then(|p| p.state.endpoint);
+            let member = self.peers.values().find(|p| p.state.session == self.session).and_then(|p| p.state.endpoint);
             if let Some(e) = member {
                 self.start_measuring(self.session, e);
             }
@@ -301,17 +290,11 @@ impl Node {
     /// Puts the session timeline into the shared one, keeping the app's offset.
     fn publish(&self) {
         let (_, offset) = self.shared.timeline.read();
-        self.shared
-            .timeline
-            .write(from_wire(&self.timeline, self.xform), offset);
+        self.shared.timeline.write(from_wire(&self.timeline, self.xform), offset);
     }
 
     fn count_peers(&self) {
-        let n = self
-            .peers
-            .values()
-            .filter(|p| p.state.session == self.session)
-            .count();
+        let n = self.peers.values().filter(|p| p.state.session == self.session).count();
         self.shared.peers.store(n, Ordering::Relaxed);
     }
 
@@ -329,13 +312,8 @@ impl Node {
         }
         let Some(state) = m.state else { return };
         let new = !self.peers.contains_key(&m.node);
-        self.peers.insert(
-            m.node,
-            Peer {
-                state,
-                expires: Instant::now() + Duration::from_secs(m.ttl.max(1) as u64 + 1),
-            },
-        );
+        self.peers
+            .insert(m.node, Peer { state, expires: Instant::now() + Duration::from_secs(m.ttl.max(1) as u64 + 1) });
         if m.kind == wire::ALIVE && new {
             self.send_discovery(wire::RESPONSE, Some(from));
         }
@@ -345,10 +323,7 @@ impl Node {
                 self.publish();
             }
         } else if self.measuring.is_none() {
-            let blocked = self
-                .unreachable
-                .get(&state.session)
-                .is_some_and(|until| *until > Instant::now());
+            let blocked = self.unreachable.get(&state.session).is_some_and(|until| *until > Instant::now());
             if let (false, Some(e)) = (blocked, state.endpoint) {
                 self.start_measuring(state.session, e);
             }
@@ -370,15 +345,9 @@ impl Node {
 
     fn ping(&mut self) {
         let Some(m) = &mut self.measuring else { return };
-        let msg = Measurement {
-            host_time: Some(now_micros()),
-            prev_ghost_time: m.prev_ghost,
-            ..Default::default()
-        };
+        let msg = Measurement { host_time: Some(now_micros()), prev_ghost_time: m.prev_ghost, ..Default::default() };
         m.sent = Instant::now();
-        let _ = self
-            .unicast
-            .send_to(&wire::encode_measurement(wire::PING, &msg, &[]), m.to);
+        let _ = self.unicast.send_to(&wire::encode_measurement(wire::PING, &msg, &[]), m.to);
     }
 
     fn measurement_message(&mut self, b: &[u8], from: SocketAddr) {
@@ -392,9 +361,7 @@ impl Node {
                 ghost_time: Some(self.xform.to_ghost(now as f64).round() as i64),
                 ..Default::default()
             };
-            let _ = self
-                .unicast
-                .send_to(&wire::encode_measurement(wire::PONG, &pong, payload), from);
+            let _ = self.unicast.send_to(&wire::encode_measurement(wire::PONG, &pong, payload), from);
             return;
         }
         let Some(meas) = &mut self.measuring else {
@@ -478,11 +445,7 @@ mod tests {
     #[test]
     fn wire_conversion_round_trips() {
         let x = XForm { intercept: -5e6 };
-        let t = Timeline {
-            bpm: 128.0,
-            beat_origin: 3.5,
-            time_origin: 9e6,
-        };
+        let t = Timeline { bpm: 128.0, beat_origin: 3.5, time_origin: 9e6 };
         let back = from_wire(&to_wire(&t, x), x);
         assert!((back.bpm - 128.0).abs() < 1e-3);
         assert_eq!(back.beat_origin, 3.5);

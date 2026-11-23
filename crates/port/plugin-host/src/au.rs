@@ -1,14 +1,6 @@
-//! Audio Unit effects (macOS only) inside the helper, through AudioToolbox.
-//!
-//! Effects are found in the system's component registry, which lists them
-//! without loading their code. An instance is made on the helper's main
-//! thread (AUv3 extensions then run in their own process, as macOS does for
-//! them); blocks are rendered on the helper's audio thread, with the input
-//! supplied through a render callback and the deck's tempo through the host
-//! callbacks. Parameters are in the unit's own range.
-//!
-//! An id is `type:subtype:manufacturer` as four-character codes, as `auval`
-//! prints them (e.g. `aufx:dely:appl` for Apple's AUDelay).
+//! Audio Unit effects (macOS only) inside the helper, through AudioToolbox. Effects are found in the system's component registry, which lists them without loading their code. An instance is made on the
+//! deck's tempo through the host callbacks. Parameters are in the unit's own range. An id is `type:subtype:manufacturer` as four-character codes, as `auval` prints them (e.g. `aufx:dely:appl` for Apple's AUDelay).
+//! deck's tempo through the host callbacks. Parameters are in the unit's own range. An id is `type:subtype:manufacturer` as four-character codes, as `auval` prints them (e.g. `aufx:dely:appl` for Apple's
 
 #![allow(non_upper_case_globals, non_snake_case)]
 
@@ -87,14 +79,8 @@ struct AudioBufferList2 {
     mBuffers: [AudioBuffer; 2],
 }
 
-type RenderCallback = unsafe extern "C" fn(
-    *mut c_void,
-    *mut u32,
-    *const AudioTimeStamp,
-    u32,
-    u32,
-    *mut AudioBufferList2,
-) -> OSStatus;
+type RenderCallback =
+    unsafe extern "C" fn(*mut c_void, *mut u32, *const AudioTimeStamp, u32, u32, *mut AudioBufferList2) -> OSStatus;
 
 #[repr(C)]
 struct AURenderCallbackStruct {
@@ -128,20 +114,11 @@ struct AudioUnitParameterInfo {
 
 #[link(name = "AudioToolbox", kind = "framework")]
 extern "C" {
-    fn AudioComponentFindNext(
-        inComponent: AudioComponent,
-        inDesc: *const AudioComponentDescription,
-    ) -> AudioComponent;
-    fn AudioComponentGetDescription(
-        inComponent: AudioComponent,
-        outDesc: *mut AudioComponentDescription,
-    ) -> OSStatus;
+    fn AudioComponentFindNext(inComponent: AudioComponent, inDesc: *const AudioComponentDescription) -> AudioComponent;
+    fn AudioComponentGetDescription(inComponent: AudioComponent, outDesc: *mut AudioComponentDescription) -> OSStatus;
     fn AudioComponentCopyName(inComponent: AudioComponent, outName: *mut CFStringRef) -> OSStatus;
     fn AudioComponentGetVersion(inComponent: AudioComponent, outVersion: *mut u32) -> OSStatus;
-    fn AudioComponentInstanceNew(
-        inComponent: AudioComponent,
-        outInstance: *mut AudioUnit,
-    ) -> OSStatus;
+    fn AudioComponentInstanceNew(inComponent: AudioComponent, outInstance: *mut AudioUnit) -> OSStatus;
     fn AudioUnitSetProperty(
         inUnit: AudioUnit,
         inID: u32,
@@ -287,12 +264,7 @@ fn parse_code(s: &str) -> Option<u32> {
 
 /// `type:subtype:manufacturer`.
 fn desc_id(d: &AudioComponentDescription) -> String {
-    format!(
-        "{}:{}:{}",
-        code(d.componentType),
-        code(d.componentSubType),
-        code(d.componentManufacturer)
-    )
+    format!("{}:{}:{}", code(d.componentType), code(d.componentSubType), code(d.componentManufacturer))
 }
 
 fn parse_id(id: &str) -> Option<AudioComponentDescription> {
@@ -310,20 +282,10 @@ unsafe fn cf_string(s: CFStringRef) -> String {
         return String::new();
     }
     let mut buf = [0 as c_char; 256];
-    if CFStringGetCString(
-        s,
-        buf.as_mut_ptr(),
-        buf.len() as isize,
-        kCFStringEncodingUTF8,
-    ) == 0
-    {
+    if CFStringGetCString(s, buf.as_mut_ptr(), buf.len() as isize, kCFStringEncodingUTF8) == 0 {
         return String::new();
     }
-    let bytes: Vec<u8> = buf
-        .iter()
-        .take_while(|&&c| c != 0)
-        .map(|&c| c as u8)
-        .collect();
+    let bytes: Vec<u8> = buf.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
@@ -338,10 +300,7 @@ pub fn scan() -> Vec<Descriptor> {
             (kAudioUnitType_MusicEffect, "audio-effect"),
             (kAudioUnitType_MusicDevice, "instrument"),
         ] {
-            let want = AudioComponentDescription {
-                componentType: ty,
-                ..Default::default()
-            };
+            let want = AudioComponentDescription { componentType: ty, ..Default::default() };
             let mut c = AudioComponentFindNext(ptr::null_mut(), &want);
             while !c.is_null() {
                 let mut d = AudioComponentDescription::default();
@@ -384,10 +343,8 @@ struct AuMain {
 
 impl MainThread for AuMain {
     fn load_preset(&mut self, reference: &str) -> Result<(), String> {
-        let number: i32 = reference
-            .strip_prefix(FACTORY)
-            .and_then(|n| n.parse().ok())
-            .ok_or("not one of its presets")?;
+        let number: i32 =
+            reference.strip_prefix(FACTORY).and_then(|n| n.parse().ok()).ok_or("not one of its presets")?;
         let mut result = Err("it no longer has that preset".to_string());
         // SAFETY: the unit lives as long as the helper; the preset (and its
         // name) is the unit's own, alive while it is set.
@@ -415,9 +372,7 @@ impl MainThread for AuMain {
             let mut v = 0.0f32;
             // SAFETY: the unit lives as long as the helper; reading a
             // parameter is allowed from any thread.
-            if unsafe { AudioUnitGetParameter(self.unit, *id, kAudioUnitScope_Global, 0, &mut v) }
-                == 0
-            {
+            if unsafe { AudioUnitGetParameter(self.unit, *id, kAudioUnitScope_Global, 0, &mut v) } == 0 {
                 *o = v as f64;
             }
         }
@@ -470,13 +425,8 @@ impl MainThread for AuMain {
             if data.is_null() {
                 return Err("out of memory".into());
             }
-            let list = CFPropertyListCreateWithData(
-                std::ptr::null(),
-                data,
-                0,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-            );
+            let list =
+                CFPropertyListCreateWithData(std::ptr::null(), data, 0, std::ptr::null_mut(), std::ptr::null_mut());
             CFRelease(data);
             if list.is_null() {
                 return Err("the saved sound is damaged".into());
@@ -588,16 +538,8 @@ mod editor {
             let _: () = msg_send![&*view, setFrameOrigin: NSPoint::new(0.0, 0.0)];
             let _: () = msg_send![&*view, setFrameSize: size];
             let _: () = msg_send![parent, addSubview: &*view];
-            let last = EditorSize {
-                width: size.width.round() as u32,
-                height: size.height.round() as u32,
-            };
-            Ok(View {
-                view,
-                _controller: controller,
-                resizable,
-                last,
-            })
+            let last = EditorSize { width: size.width.round() as u32, height: size.height.round() as u32 };
+            Ok(View { view, _controller: controller, resizable, last })
         }
 
         pub fn size(&self) -> EditorSize {
@@ -675,8 +617,7 @@ mod editor {
             return None;
         }
         let info = &*(buf.as_ptr() as *const CocoaViewInfo);
-        let classes = (size as usize - std::mem::size_of::<*const c_void>())
-            / std::mem::size_of::<CFStringRef>();
+        let classes = (size as usize - std::mem::size_of::<*const c_void>()) / std::mem::size_of::<CFStringRef>();
         let view = (|| {
             if info.bundle.is_null() || classes == 0 || info.class[0].is_null() {
                 eprintln!("editor: the Audio Unit's Cocoa view is empty");
@@ -689,8 +630,7 @@ mod editor {
                 return None;
             };
             let _: bool = msg_send![&*bundle, load];
-            let class: *const AnyClass =
-                msg_send![&*bundle, classNamed: info.class[0] as *mut AnyObject];
+            let class: *const AnyClass = msg_send![&*bundle, classNamed: info.class[0] as *mut AnyObject];
             if class.is_null() {
                 eprintln!("editor: the Audio Unit's view class isn't in its bundle");
                 return None;
@@ -726,9 +666,7 @@ mod editor {
     }
 
     /// An AUv3 unit's view, from its view controller.
-    unsafe fn requested_view(
-        unit: AudioUnit,
-    ) -> Option<(Retained<AnyObject>, Retained<AnyObject>)> {
+    unsafe fn requested_view(unit: AudioUnit) -> Option<(Retained<AnyObject>, Retained<AnyObject>)> {
         let got: Rc<RefCell<Option<Retained<AnyObject>>>> = Rc::default();
         let done = Rc::new(std::cell::Cell::new(false));
         let block = {
@@ -764,8 +702,7 @@ mod editor {
     /// Apple's generic view of a unit's parameters (CoreAudioKit).
     unsafe fn generic_view(unit: AudioUnit) -> Result<Retained<AnyObject>, String> {
         let path = NSString::from_str("/System/Library/Frameworks/CoreAudioKit.framework");
-        let bundle: Option<Retained<AnyObject>> =
-            msg_send![class!(NSBundle), bundleWithPath: &*path];
+        let bundle: Option<Retained<AnyObject>> = msg_send![class!(NSBundle), bundleWithPath: &*path];
         if let Some(b) = &bundle {
             let _: bool = msg_send![&**b, load];
         }
@@ -816,11 +753,7 @@ unsafe extern "C" fn render_input(
     0
 }
 
-unsafe extern "C" fn beat_and_tempo(
-    user: *mut c_void,
-    beat: *mut f64,
-    tempo: *mut f64,
-) -> OSStatus {
+unsafe extern "C" fn beat_and_tempo(user: *mut c_void, beat: *mut f64, tempo: *mut f64) -> OSStatus {
     let feed = &*(user as *const Feed);
     if !beat.is_null() {
         *beat = f64::from_bits(feed.beat.load(Ordering::Relaxed));
@@ -831,11 +764,9 @@ unsafe extern "C" fn beat_and_tempo(
     0
 }
 
-/// Calls `f` with each of `unit`'s factory presets, while the list the unit
-/// gave is alive (the names belong to it).
-///
-/// # Safety
-/// `unit` must be a live unit.
+/// Calls `f` with each of `unit`'s factory presets, while the
+/// list the unit gave is alive (the names belong to it). #
+/// Safety `unit` must be a live unit.
 unsafe fn each_factory_preset(unit: AudioUnit, mut f: impl FnMut(&AUPreset)) {
     let mut list: *const c_void = ptr::null();
     let mut size = std::mem::size_of::<*const c_void>() as u32;
@@ -876,10 +807,7 @@ pub fn presets(id: &str) -> Result<Vec<(String, String)>, String> {
         check(AudioComponentInstanceNew(comp, &mut unit), "starting it")?;
         let mut found = Vec::new();
         each_factory_preset(unit, |p| {
-            found.push((
-                cf_string(p.presetName),
-                format!("{FACTORY}{}", p.presetNumber),
-            ));
+            found.push((cf_string(p.presetName), format!("{FACTORY}{}", p.presetNumber)));
         });
         Ok(found)
     }
@@ -894,12 +822,7 @@ fn check(r: OSStatus, what: &str) -> Result<(), String> {
 }
 
 /// Loads the effect `id` (`type:subtype:manufacturer`).
-pub fn load(
-    id: &str,
-    sample_rate: u32,
-    max_frames: usize,
-    picks: &[(usize, u32)],
-) -> Result<Loaded, String> {
+pub fn load(id: &str, sample_rate: u32, max_frames: usize, picks: &[(usize, u32)]) -> Result<Loaded, String> {
     let want = parse_id(id).ok_or_else(|| format!("bad Audio Unit id {id:?}"))?;
     let name = scan()
         .into_iter()
@@ -914,16 +837,11 @@ pub fn load(
             return Err(format!("no Audio Unit {id:?} is installed"));
         }
         let mut unit: AudioUnit = ptr::null_mut();
-        check(
-            AudioComponentInstanceNew(comp, &mut unit),
-            &format!("starting {name}"),
-        )?;
+        check(AudioComponentInstanceNew(comp, &mut unit), &format!("starting {name}"))?;
         let format = AudioStreamBasicDescription {
             mSampleRate: sample_rate as f64,
             mFormatID: kAudioFormatLinearPCM,
-            mFormatFlags: kAudioFormatFlagIsFloat
-                | kAudioFormatFlagIsPacked
-                | kAudioFormatFlagIsNonInterleaved,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked | kAudioFormatFlagIsNonInterleaved,
             mBytesPerPacket: 4,
             mFramesPerPacket: 1,
             mBytesPerFrame: 4,
@@ -966,10 +884,7 @@ pub fn load(
             beat: AtomicU64::new(0),
         });
         let feed_ptr = &*feed as *const Feed as *mut c_void;
-        let cb = AURenderCallbackStruct {
-            inputProc: render_input,
-            inputProcRefCon: feed_ptr,
-        };
+        let cb = AURenderCallbackStruct { inputProc: render_input, inputProcRefCon: feed_ptr };
         if !instrument {
             check(
                 AudioUnitSetProperty(
@@ -1057,12 +972,7 @@ pub fn load(
                     CFRelease(info.cfNameString);
                     n
                 } else {
-                    let b: Vec<u8> = info
-                        .name
-                        .iter()
-                        .take_while(|&&c| c != 0)
-                        .map(|&c| c as u8)
-                        .collect();
+                    let b: Vec<u8> = info.name.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
                     String::from_utf8_lossy(&b).into_owned()
                 };
                 let mut value = info.defaultValue;
@@ -1094,11 +1004,7 @@ pub fn load(
         };
         Ok(Loaded {
             effect: Box::new(effect),
-            main: Some(Box::new(AuMain {
-                unit,
-                view: None,
-                param_ids: params.iter().map(|(id, _)| *id).collect(),
-            })),
+            main: Some(Box::new(AuMain { unit, view: None, param_ids: params.iter().map(|(id, _)| *id).collect() })),
             info: Info {
                 name,
                 params: params.into_iter().map(|(_, p)| p).collect(),
@@ -1136,13 +1042,7 @@ impl Effect for AuEffect {
         for n in notes {
             // SAFETY: a live unit; effects ignore MIDI they don't take.
             unsafe {
-                MusicDeviceMIDIEvent(
-                    unit,
-                    n.data[0] as u32,
-                    n.data[1] as u32,
-                    n.data[2] as u32,
-                    n.frame,
-                );
+                MusicDeviceMIDIEvent(unit, n.data[0] as u32, n.data[1] as u32, n.data[2] as u32, n.frame);
             }
         }
         for (i, id) in self.ids.iter().enumerate() {
@@ -1158,12 +1058,8 @@ impl Effect for AuEffect {
             self.feed.input[ch][..frames].copy_from_slice(data);
         }
         self.feed.frames = frames;
-        self.feed
-            .bpm
-            .store(transport.bpm.to_bits(), Ordering::Relaxed);
-        self.feed
-            .beat
-            .store(transport.beat.to_bits(), Ordering::Relaxed);
+        self.feed.bpm.store(transport.bpm.to_bits(), Ordering::Relaxed);
+        self.feed.beat.store(transport.beat.to_bits(), Ordering::Relaxed);
         let mut list = AudioBufferList2 {
             mNumberBuffers: 2,
             mBuffers: [
@@ -1185,8 +1081,7 @@ impl Effect for AuEffect {
         ts.mFlags = kAudioTimeStampSampleTimeValid;
         let mut flags = 0u32;
         // SAFETY: the buffers hold `frames` floats each and outlive the call.
-        let ok =
-            unsafe { AudioUnitRender(unit, &mut flags, &ts, 0, frames as u32, &mut list) } == 0;
+        let ok = unsafe { AudioUnitRender(unit, &mut flags, &ts, 0, frames as u32, &mut list) } == 0;
         self.sample_time += frames as f64;
         for (ch, o) in output.into_iter().enumerate() {
             // A unit may answer with its own buffers instead of ours.
@@ -1231,13 +1126,7 @@ mod tests {
         let params: Vec<f32> = loaded.info.params.iter().map(|p| p.value as f32).collect();
         let mut all = [0.0f32; MAX_PARAMS];
         all[..params.len()].copy_from_slice(&params);
-        loaded.effect.process(
-            [&l, &r],
-            [&mut ol, &mut or],
-            &all,
-            &Transport::default(),
-            &[],
-        );
+        loaded.effect.process([&l, &r], [&mut ol, &mut or], &all, &Transport::default(), &[]);
         assert!(ol.iter().all(|x| x.is_finite()));
     }
 
@@ -1251,18 +1140,8 @@ mod tests {
         let all = [0.0f32; MAX_PARAMS];
         let mut heard = 0.0f32;
         for block in 0..40 {
-            let notes = if block == 0 {
-                vec![Midi::note_on(0, 0, 60, 120)]
-            } else {
-                Vec::new()
-            };
-            loaded.effect.process(
-                [&silent, &silent],
-                [&mut ol, &mut or],
-                &all,
-                &Transport::default(),
-                &notes,
-            );
+            let notes = if block == 0 { vec![Midi::note_on(0, 0, 60, 120)] } else { Vec::new() };
+            loaded.effect.process([&silent, &silent], [&mut ol, &mut or], &all, &Transport::default(), &notes);
             heard = heard.max(ol.iter().fold(0.0f32, |m, x| m.max(x.abs())));
         }
         assert!(heard > 0.001, "the note is heard: {heard}");

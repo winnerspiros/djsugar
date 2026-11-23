@@ -1,13 +1,6 @@
-//! The Groove Box's library of named grooves, by genre.
-//!
-//! Grooves are text files in `data/grooves/`, built into the app (see
-//! `basics.txt` for the format). Each groove has a step pattern for each of
-//! the kits' nine sounds ([`crate::kits::ROLES`]), and every step one of
-//! three levels: soft, normal or accented.
-//!
-//! The library is read once, the first time it is asked for (when the
-//! Groove Boxes' controls are made, before any audio runs); after that it
-//! is only read, so the audio thread can load a groove without allocating.
+//! The Groove Box's library of named grooves, by genre. Grooves are text files in `data/grooves/`, built into the app (see `basics.txt` for the format). Each groove has a step
+//! pattern for each of the kits' nine sounds ([`crate::kits::ROLES`]), and every step one of three levels: soft, normal or accented. The library is read once, the first time
+//! it is asked for (when the Groove Boxes' controls are made, before any audio runs); after that it is only read, so the audio thread can load a groove without allocating.
 
 use std::sync::OnceLock;
 
@@ -100,10 +93,7 @@ pub struct Genre {
 /// The files the library is read from, in order: DJ Sugar's own grooves,
 /// then mpump's (AGPL-3.0, see NOTICE; written by
 /// `scripts/import-mpump-grooves.py`).
-const FILES: [&str; 2] = [
-    include_str!("../data/grooves/basics.txt"),
-    include_str!("../data/grooves/mpump.txt"),
-];
+const FILES: [&str; 2] = [include_str!("../data/grooves/basics.txt"), include_str!("../data/grooves/mpump.txt")];
 
 /// Every genre, Basics first.
 pub fn library() -> &'static [Genre] {
@@ -136,10 +126,7 @@ fn parse(text: &str, genres: &mut Vec<Genre>) {
             genre = Some(match genres.iter().position(|g| g.name == name) {
                 Some(i) => i,
                 None => {
-                    genres.push(Genre {
-                        name: name.to_string(),
-                        grooves: Vec::new(),
-                    });
+                    genres.push(Genre { name: name.to_string(), grooves: Vec::new() });
                     genres.len() - 1
                 }
             });
@@ -155,9 +142,7 @@ fn parse(text: &str, genres: &mut Vec<Genre>) {
             let Some(groove) = genre.and_then(|g| genres[g].grooves.last_mut()) else {
                 continue;
             };
-            let role = ROLES
-                .iter()
-                .position(|r| r.to_ascii_lowercase().replace(' ', "-") == key);
+            let role = ROLES.iter().position(|r| r.to_ascii_lowercase().replace(' ', "-") == key);
             if let Some(r) = role {
                 groove.rows[r] = Steps::parse(steps.trim());
             }
@@ -186,12 +171,7 @@ mod tests {
         for g in lib {
             assert!(!g.grooves.is_empty(), "{} is empty", g.name);
             for groove in &g.grooves {
-                assert!(
-                    groove.rows.iter().any(|r| r.hits != 0),
-                    "{} / {} has no hits",
-                    g.name,
-                    groove.name
-                );
+                assert!(groove.rows.iter().any(|r| r.hits != 0), "{} / {} has no hits", g.name, groove.name);
             }
         }
     }
@@ -199,10 +179,7 @@ mod tests {
     #[test]
     fn rows_are_read_by_sound_name() {
         let mut genres = Vec::new();
-        parse(
-            "genre Test\ngroove One | about\nkick x...\nopen-hat ..x.\nnope xxxx\n",
-            &mut genres,
-        );
+        parse("genre Test\ngroove One | about\nkick x...\nopen-hat ..x.\nnope xxxx\n", &mut genres);
         let g = &genres[0].grooves[0];
         assert_eq!(g.about, "about");
         assert_eq!(g.rows[0].hits, 1);

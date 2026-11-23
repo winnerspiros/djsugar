@@ -1,12 +1,6 @@
-//! Timecode vinyl and CD decoding (DVS): turns the stereo signal of a
-//! control record into a pitch (speed and direction) and an absolute
-//! position on the record.
-//!
-//! A control record carries a sine carrier on both channels, a quarter
-//! cycle apart, so which channel leads tells the direction. Each carrier
-//! cycle holds one bit, as a loud or a quiet cycle. The bits come from a
-//! linear feedback shift register, so any `bits` bits in a row name a
-//! unique place on the record.
+//! Timecode vinyl and CD decoding (DVS): turns the stereo signal of a control record into a pitch (speed and direction) and an absolute position on the
+//! holds one bit, as a loud or a quiet cycle. The bits come from a linear feedback shift register, so any `bits` bits in a row name a unique place on the record.
+//! holds one bit, as a loud or a quiet cycle. The bits come from a linear feedback shift register, so any `bits` bits in a row name a unique place on the
 
 use std::sync::OnceLock;
 
@@ -30,7 +24,7 @@ pub struct Format {
 /// The records and CDs DJ Sugar reads.
 pub static FORMATS: [Format; 7] = [
     Format {
-        name: "Serato CV02 vinyl, side A",
+        name: "CV02 control vinyl, side A",
         carrier_hz: 1000.0,
         bits: 20,
         seed: 0x59017,
@@ -38,23 +32,16 @@ pub static FORMATS: [Format; 7] = [
         length: 712_000,
     },
     Format {
-        name: "Serato CV02 vinyl, side B",
+        name: "CV02 control vinyl, side B",
         carrier_hz: 1000.0,
         bits: 20,
         seed: 0x8f3c6,
         taps: 0x4f0d8,
         length: 922_000,
     },
+    Format { name: "CV02 control CD", carrier_hz: 1000.0, bits: 20, seed: 0xd8b40, taps: 0x34d54, length: 950_000 },
     Format {
-        name: "Serato control CD",
-        carrier_hz: 1000.0,
-        bits: 20,
-        seed: 0xd8b40,
-        taps: 0x34d54,
-        length: 950_000,
-    },
-    Format {
-        name: "Traktor Scratch MK1 vinyl, side A",
+        name: "MK1 scratch vinyl, side A",
         carrier_hz: 2000.0,
         bits: 23,
         seed: 0x134503,
@@ -62,21 +49,14 @@ pub static FORMATS: [Format; 7] = [
         length: 1_500_000,
     },
     Format {
-        name: "Traktor Scratch MK1 vinyl, side B",
+        name: "MK1 scratch vinyl, side B",
         carrier_hz: 2000.0,
         bits: 23,
         seed: 0x32066c,
         taps: 0x041040,
         length: 2_110_000,
     },
-    Format {
-        name: "MixVibes V2 vinyl",
-        carrier_hz: 1300.0,
-        bits: 20,
-        seed: 0x22c90,
-        taps: 0x00008,
-        length: 950_000,
-    },
+    Format { name: "MixVibes V2 vinyl", carrier_hz: 1300.0, bits: 20, seed: 0x22c90, taps: 0x00008, length: 950_000 },
     Format {
         name: "MixVibes 7-inch vinyl",
         carrier_hz: 1300.0,
@@ -109,14 +89,7 @@ impl Format {
     /// What the record sends when played from `start` cycles in at `speed`
     /// for `seconds`, with hiss of `noise` peak: for tests, and to check a
     /// setup without a turntable.
-    pub fn signal(
-        &self,
-        start: f64,
-        speed: f64,
-        rate: u32,
-        seconds: f64,
-        noise: f32,
-    ) -> Vec<[f32; 2]> {
+    pub fn signal(&self, start: f64, speed: f64, rate: u32, seconds: f64, noise: f32) -> Vec<[f32; 2]> {
         let rate = f64::from(rate);
         let mut codes = vec![self.seed];
         for _ in 0..self.length {
@@ -137,20 +110,14 @@ impl Format {
                 let one = codes.get(cycle).is_some_and(|c| c >> (self.bits - 1) == 1);
                 let amp = if one { 1.0 } else { 0.7 };
                 let t = std::f64::consts::TAU * phase;
-                [
-                    (amp * t.sin()) as f32 + hiss(),
-                    (amp * t.cos()) as f32 + hiss(),
-                ]
+                [(amp * t.sin()) as f32 + hiss(), (amp * t.cos()) as f32 + hiss()]
             })
             .collect()
     }
 
     fn table(&self) -> &'static OnceLock<Vec<u32>> {
         static TABLES: [OnceLock<Vec<u32>>; 7] = [const { OnceLock::new() }; 7];
-        let i = FORMATS
-            .iter()
-            .position(|f| std::ptr::eq(f, self))
-            .expect("a listed format");
+        let i = FORMATS.iter().position(|f| std::ptr::eq(f, self)).expect("a listed format");
         &TABLES[i]
     }
 
@@ -239,11 +206,7 @@ impl Decoder {
             let right = pr + (r - pr) * frac as f32;
             let samples = self.since - 1.0 + frac;
             self.since = 1.0 - frac;
-            self.period = if self.period == 0.0 {
-                samples
-            } else {
-                self.period + (samples - self.period) * 0.25
-            };
+            self.period = if self.period == 0.0 { samples } else { self.period + (samples - self.period) * 0.25 };
             self.forward = right > 0.0;
             let loud = right.abs();
             if self.level == 0.0 {
@@ -339,21 +302,10 @@ mod tests {
             let start = 5_000.0;
             let seconds = 0.5;
             let d = decode(f, &f.signal(start, 1.0, 44_100, seconds, 0.0));
-            assert!(
-                (d.pitch() - 1.0).abs() < 0.01,
-                "{}: pitch {}",
-                f.name,
-                d.pitch()
-            );
+            assert!((d.pitch() - 1.0).abs() < 0.01, "{}: pitch {}", f.name, d.pitch());
             let want = (start + seconds * f.carrier_hz) / f.carrier_hz;
-            let got = d
-                .position()
-                .unwrap_or_else(|| panic!("{}: no position", f.name));
-            assert!(
-                (got - want).abs() < 2.0 / f.carrier_hz,
-                "{}: {got} vs {want}",
-                f.name
-            );
+            let got = d.position().unwrap_or_else(|| panic!("{}: no position", f.name));
+            assert!((got - want).abs() < 2.0 / f.carrier_hz, "{}: {got} vs {want}", f.name);
         }
     }
 
@@ -364,17 +316,10 @@ mod tests {
             let start = 300_000.0;
             let seconds = 0.6;
             let d = decode(f, &f.signal(start, speed, 44_100, seconds, 0.0));
-            assert!(
-                (d.pitch() - speed).abs() < 0.01,
-                "speed {speed}: pitch {}",
-                d.pitch()
-            );
+            assert!((d.pitch() - speed).abs() < 0.01, "speed {speed}: pitch {}", d.pitch());
             let want = (start + speed * seconds * f.carrier_hz) / f.carrier_hz;
             let got = d.position().expect("a position");
-            assert!(
-                (got - want).abs() < 2.0 / f.carrier_hz,
-                "speed {speed}: {got} vs {want}"
-            );
+            assert!((got - want).abs() < 2.0 / f.carrier_hz, "speed {speed}: {got} vs {want}");
         }
     }
 

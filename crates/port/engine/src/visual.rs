@@ -1,10 +1,6 @@
-//! Play positions for drawing, published by the audio thread.
-//!
-//! `playposition` changes once per audio buffer, so a waveform drawn from it
-//! moves in uneven steps. Like `VisualPlayPosition`, the engine also
-//! publishes each deck's position together with its speed and the time it
-//! was written; the UI extrapolates from those to the moment it draws, which
-//! scrolls smoothly at any frame rate.
+//! Play positions for drawing, published by the audio thread. `playposition` changes once per audio buffer, so a waveform drawn
+//! from it moves in uneven steps. Like `VisualPlayPosition`, the engine also publishes each deck's position together with its speed
+//! and the time it was written; the UI extrapolates from those to the moment it draws, which scrolls smoothly at any frame rate.
 
 use std::sync::atomic::{fence, AtomicU32, AtomicU64, Ordering};
 use std::time::Instant;
@@ -31,10 +27,7 @@ pub struct VisualPositions {
 
 impl Default for VisualPositions {
     fn default() -> Self {
-        Self {
-            base: Instant::now(),
-            decks: Default::default(),
-        }
+        Self { base: Instant::now(), decks: Default::default() }
     }
 }
 

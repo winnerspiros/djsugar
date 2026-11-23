@@ -1,9 +1,6 @@
-//! What to do when a plugin misbehaves.
-//!
-//! The engine already plays a bad block dry; this decides what happens to
-//! the plugin afterwards: keep it, restart its helper, or switch it off until
-//! the DJ turns it back on. A restarted plugin comes back bypassed, never on
-//! by itself in the middle of a set.
+//! What to do when a plugin misbehaves. The engine already plays a bad block dry; this decides what
+//! happens to the plugin afterwards: keep it, restart its helper, or switch it off until the DJ turns
+//! it back on. A restarted plugin comes back bypassed, never on by itself in the middle of a set.
 
 /// A verdict for one plugin instance.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,12 +29,7 @@ pub struct Limits {
 
 impl Default for Limits {
     fn default() -> Self {
-        Self {
-            max_crashes: 2,
-            max_missed: 8,
-            cpu_budget: 0.3,
-            max_over_budget: 200,
-        }
+        Self { max_crashes: 2, max_missed: 8, cpu_budget: 0.3, max_over_budget: 200 }
     }
 }
 
@@ -51,10 +43,7 @@ pub struct Policy {
 
 impl Policy {
     pub fn new(limits: Limits) -> Self {
-        Self {
-            limits,
-            ..Self::default()
-        }
+        Self { limits, ..Self::default() }
     }
 
     /// Crashes and hangs so far.
@@ -126,10 +115,7 @@ mod tests {
 
     #[test]
     fn only_a_long_run_over_budget_disables() {
-        let mut p = Policy::new(Limits {
-            max_over_budget: 3,
-            ..Limits::default()
-        });
+        let mut p = Policy::new(Limits { max_over_budget: 3, ..Limits::default() });
         assert_eq!(p.on_load(0.9), Action::Keep);
         assert_eq!(p.on_load(0.9), Action::Keep);
         assert_eq!(p.on_load(0.1), Action::Keep);

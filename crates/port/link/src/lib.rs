@@ -1,15 +1,6 @@
-//! Shares tempo and beat phase with other apps and devices on the local
-//! network, joining Ableton Link sessions (Ableton Live, Traktor, phones,
-//! drum machines).
-//!
-//! Each app keeps a timeline (tempo and where beats fall in time). Peers find
-//! each other by multicast, measure each other's clocks, and settle on one
-//! session whose timeline they all follow; a change any of them commits
-//! reaches the rest.
-//!
-//! [`AblLink`] is shared between threads. The audio thread captures and
-//! commits a [`SessionState`] without blocking or allocating; enabling opens
-//! the sockets and starts a network thread.
+//! Shares tempo and beat phase with other apps and devices on the local network, joining Ableton Link sessions (other music software, phones, drum machines). Each app keeps a timeline (tempo and
+//! where beats fall in time). Peers find each other by multicast, measure each other's clocks, and settle on one session whose timeline they all follow; a change any of them commits reaches the
+//! rest. [`AblLink`] is shared between threads. The audio thread captures and commits a [`SessionState`] without blocking or allocating; enabling opens the sockets and starts a network thread.
 
 mod net;
 pub mod timeline;
@@ -77,19 +68,13 @@ impl SharedTimeline {
     }
 
     fn write(&self, t: Timeline, offset: f64) {
-        while self
-            .writing
-            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
-            .is_err()
-        {
+        while self.writing.compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed).is_err() {
             std::hint::spin_loop();
         }
         self.seq.fetch_add(1, Ordering::AcqRel);
         self.bpm.store(t.bpm.to_bits(), Ordering::Relaxed);
-        self.beat_origin
-            .store(t.beat_origin.to_bits(), Ordering::Relaxed);
-        self.time_origin
-            .store(t.time_origin.to_bits(), Ordering::Relaxed);
+        self.beat_origin.store(t.beat_origin.to_bits(), Ordering::Relaxed);
+        self.time_origin.store(t.time_origin.to_bits(), Ordering::Relaxed);
         self.offset.store(offset.to_bits(), Ordering::Relaxed);
         self.seq.fetch_add(1, Ordering::Release);
         self.writing.store(false, Ordering::Release);
@@ -113,11 +98,7 @@ pub struct AblLink {
 impl AblLink {
     /// A Link instance, off, with its timeline at `bpm`.
     pub fn new(bpm: f64) -> Self {
-        let t = Timeline {
-            bpm: bpm.clamp(MIN_BPM, MAX_BPM),
-            beat_origin: 0.0,
-            time_origin: now_micros() as f64,
-        };
+        let t = Timeline { bpm: bpm.clamp(MIN_BPM, MAX_BPM), beat_origin: 0.0, time_origin: now_micros() as f64 };
         Self {
             shared: Arc::new(Shared {
                 timeline: SharedTimeline::new(t),
@@ -209,14 +190,7 @@ impl Default for SessionState {
 
 impl SessionState {
     pub fn new() -> Self {
-        Self {
-            session: Timeline {
-                bpm: 120.0,
-                beat_origin: 0.0,
-                time_origin: 0.0,
-            },
-            offset: 0.0,
-        }
+        Self { session: Timeline { bpm: 120.0, beat_origin: 0.0, time_origin: 0.0 }, offset: 0.0 }
     }
 
     pub fn tempo(&self) -> f64 {
@@ -226,11 +200,8 @@ impl SessionState {
     /// Changes the tempo from `at` (microseconds) on; the beat at `at` stays.
     pub fn set_tempo(&mut self, bpm: f64, at: i64) {
         let at = at as f64;
-        self.session = Timeline {
-            bpm: bpm.clamp(MIN_BPM, MAX_BPM),
-            beat_origin: self.session.beats_at(at),
-            time_origin: at,
-        };
+        self.session =
+            Timeline { bpm: bpm.clamp(MIN_BPM, MAX_BPM), beat_origin: self.session.beats_at(at), time_origin: at };
     }
 
     /// The beat at `time`, in phase with the session for bars of `quantum`
@@ -274,11 +245,7 @@ impl Default for HostTimeFilter {
 
 impl HostTimeFilter {
     pub fn new() -> Self {
-        Self {
-            points: vec![(0.0, 0.0); FILTER_POINTS].into_boxed_slice(),
-            len: 0,
-            next: 0,
-        }
+        Self { points: vec![(0.0, 0.0); FILTER_POINTS].into_boxed_slice(), len: 0, next: 0 }
     }
 
     pub fn reset(&mut self) {
@@ -295,12 +262,10 @@ impl HostTimeFilter {
         self.len = (self.len + 1).min(FILTER_POINTS);
         let points = &self.points[..self.len];
         let n = self.len as f64;
-        let (mx, my) = points
+        let (mx, my) = points.iter().fold((0.0, 0.0), |(sx, sy), (x, y)| (sx + x / n, sy + y / n));
+        let (sxy, sxx) = points
             .iter()
-            .fold((0.0, 0.0), |(sx, sy), (x, y)| (sx + x / n, sy + y / n));
-        let (sxy, sxx) = points.iter().fold((0.0, 0.0), |(sxy, sxx), (px, py)| {
-            (sxy + (px - mx) * (py - my), sxx + (px - mx) * (px - mx))
-        });
+            .fold((0.0, 0.0), |(sxy, sxx), (px, py)| (sxy + (px - mx) * (py - my), sxx + (px - mx) * (px - mx)));
         if sxx == 0.0 {
             return host_time;
         }

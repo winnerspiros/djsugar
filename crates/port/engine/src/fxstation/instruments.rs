@@ -1,8 +1,6 @@
-//! X-Pad instruments: kick, snare, clap and hi-hat samples.
-//!
-//! The C++ version loads samples from disk in background threads. In this
-//! Rust port, we provide the data structures and API; sample loading would
-//! be done by the host application and passed in.
+//! X-Pad instruments: kick, snare, clap and hi-hat samples. The C++ version loads
+//! structures and API; sample loading would be done by the host application and passed in.
+//! structures and API; sample loading would be done by the host application and passed
 
 use std::sync::{Arc, Mutex};
 
@@ -44,9 +42,7 @@ impl Default for Instruments {
 
 impl Instruments {
     pub fn new() -> Self {
-        Self {
-            banks: Mutex::new([None, None, None, None]),
-        }
+        Self { banks: Mutex::new([None, None, None, None]) }
     }
 
     /// For the engine thread: the bank, or None while not loaded.

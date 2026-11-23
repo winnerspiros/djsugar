@@ -23,7 +23,8 @@ markers=$(git grep -n -E '\b(TODO|FIXME|XXX|HACK|dbg!|todo!|unimplemented!)' -- 
 [ -z "$markers" ] || bad "Leftover markers:
 $markers"
 
-big=$(git ls-files -z | xargs -0 du -k 2>/dev/null | awk '$1 > 2048 {print $2" "$1"K"}')
+# Neural model weights the engine builds in are the one exception.
+big=$(git ls-files -z ':!*/models/*.bin' | xargs -0 du -k 2>/dev/null | awk '$1 > 2048 {print $2" "$1"K"}')
 [ -z "$big" ] || bad "Files over 2 MB: $big"
 
 exit $fail

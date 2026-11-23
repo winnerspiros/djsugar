@@ -37,12 +37,7 @@ impl Layer {
     /// pads 1 before and 2 after.
     fn down(&self, x: Tensor<4>) -> Tensor<4> {
         let x = x.pad((1, 2, 1, 2), PadMode::Constant(0.0));
-        conv2d(
-            x,
-            self.weight.clone(),
-            Some(self.bias.clone()),
-            ConvOptions::new([2, 2], [0, 0], [1, 1], 1),
-        )
+        conv2d(x, self.weight.clone(), Some(self.bias.clone()), ConvOptions::new([2, 2], [0, 0], [1, 1], 1))
     }
 
     /// 5×5 transposed convolution, stride 2, doubling the size: the full
@@ -101,10 +96,7 @@ impl Net {
         let st = SafeTensors::deserialize(bytes).map_err(|e| e.to_string())?;
         let t4 = |name: &str| -> Result<Tensor<4>, String> {
             let (d, s) = tensor(&st, name)?;
-            Ok(Tensor::from_data(
-                TensorData::new(d, [s[0], s[1], s[2], s[3]]),
-                device,
-            ))
+            Ok(Tensor::from_data(TensorData::new(d, [s[0], s[1], s[2], s[3]]), device))
         };
         let t1 = |name: &str| -> Result<Tensor<1>, String> {
             let (d, s) = tensor(&st, name)?;
@@ -112,10 +104,7 @@ impl Net {
         };
         let channel = |name: &str| -> Result<Tensor<4>, String> {
             let (d, s) = tensor(&st, name)?;
-            Ok(Tensor::from_data(
-                TensorData::new(d, [1, s[0], 1, 1]),
-                device,
-            ))
+            Ok(Tensor::from_data(TensorData::new(d, [1, s[0], 1, 1]), device))
         };
         let layer = |p: &str| -> Result<Layer, String> {
             Ok(Layer {
@@ -129,21 +118,14 @@ impl Net {
             .iter()
             .map(|stem| {
                 Ok(UNet {
-                    enc: (0..6)
-                        .map(|k| layer(&format!("{stem}.enc{k}")))
-                        .collect::<Result<_, String>>()?,
-                    dec: (0..6)
-                        .map(|k| layer(&format!("{stem}.dec{k}")))
-                        .collect::<Result<_, String>>()?,
+                    enc: (0..6).map(|k| layer(&format!("{stem}.enc{k}"))).collect::<Result<_, String>>()?,
+                    dec: (0..6).map(|k| layer(&format!("{stem}.dec{k}"))).collect::<Result<_, String>>()?,
                     out_weight: t4(&format!("{stem}.out.weight"))?,
                     out_bias: t1(&format!("{stem}.out.bias"))?,
                 })
             })
             .collect::<Result<_, String>>()?;
-        Ok(Net {
-            nets,
-            device: device.clone(),
-        })
+        Ok(Net { nets, device: device.clone() })
     }
 }
 
@@ -151,9 +133,6 @@ impl super::Net for Net {
     fn estimate(&self, magnitudes: Vec<f32>) -> Vec<f32> {
         let x = Tensor::<4>::from_data(TensorData::new(magnitudes, [1, 2, T, F]), &self.device);
         let estimates: Vec<Tensor<4>> = self.nets.iter().map(|n| n.forward(x.clone())).collect();
-        Tensor::cat(estimates, 0)
-            .into_data()
-            .try_into_vec::<f32>()
-            .expect("float estimates")
+        Tensor::cat(estimates, 0).into_data().try_into_vec::<f32>().expect("float estimates")
     }
 }

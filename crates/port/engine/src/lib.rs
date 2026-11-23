@@ -1,13 +1,6 @@
-//! The audio engine.
-//!
-//! It owns the named controls (`[Channel1],play`,
-//! `[Master],crossfader`, ...), plays the decks through a 3-band isolator EQ,
-//! a filter and the effect units, mixes them with the crossfader and sends the
-//! result to the sound card. The UI only talks to controls.
-//!
-//! Threads: the audio callback runs [`engine::Engine`]; loader threads put
-//! tracks on decks over a wait-free queue as soon as their files are open,
-//! then decode and analyse them while they play.
+//! The audio engine. It owns the named controls (`[Channel1],play`, `[Master],crossfader`, ...), plays the decks through a 3-band isolator EQ, a filter and
+//! [`engine::Engine`]; loader threads put tracks on decks over a wait-free queue as soon as their files are open, then decode and analyse them while they play.
+//! [`engine::Engine`]; loader threads put tracks on decks over a wait-free queue as soon as their files are open, then decode and analyse them while they
 
 pub mod analysis;
 pub mod arp;
@@ -78,26 +71,24 @@ use djsugar_control::ControlRegistry;
 
 pub use beats::{BeatGrid, GridMarker};
 pub use controls::{
-    deck_group, default_orientation, effect_group, effect_unit_group, eq_group, pad_fx_unit,
-    quick_effect_group, size_name, stem_group, BEATJUMP_SIZES, BEATLOOP_SIZES, BEAT_FX_UNIT,
-    DEFAULT_AUTO_GAIN_TARGET, EFFECTS_PER_UNIT, KEYBOARD_SEMITONES, MIC_FX_UNIT, NUM_DECKS,
-    NUM_EFFECT_UNITS, NUM_HOTCUES, XFADER_CUT_IN,
+    deck_group, default_orientation, effect_group, effect_unit_group, eq_group, pad_fx_unit, quick_effect_group,
+    size_name, stem_group, BEATJUMP_SIZES, BEATLOOP_SIZES, BEAT_FX_UNIT, DEFAULT_AUTO_GAIN_TARGET, EFFECTS_PER_UNIT,
+    KEYBOARD_SEMITONES, MIC_FX_UNIT, NUM_DECKS, NUM_EFFECT_UNITS, NUM_HOTCUES, XFADER_CUT_IN,
 };
 pub use effects::{
-    color_fx_name, effect_name, parameter_names, plugin_index, InstrumentView, NoteInput,
-    PluginLink, AVAILABLE_EFFECTS, COLOR_FX, DEFAULT_EFFECTS, MAX_BUTTON_PARAMETERS,
-    MAX_PARAMETERS, MAX_PLUGINS, PLUGIN_BASE, SCOPE_BINS,
+    color_fx_name, effect_name, parameter_names, plugin_index, InstrumentView, NoteInput, PluginLink,
+    AVAILABLE_EFFECTS, COLOR_FX, DEFAULT_EFFECTS, MAX_BUTTON_PARAMETERS, MAX_PARAMETERS, MAX_PLUGINS, PLUGIN_BASE,
+    SCOPE_BINS,
 };
 pub use output::{
-    channel_names, controller_routes, deck_outputs_split, default_output_device, input_devices,
-    output_devices, AudioSetup, InputRole, InputRoute, OutputDevice, Role, Route, BUFFER_SIZES,
-    SAMPLE_RATES,
+    channel_names, controller_routes, deck_outputs_split, default_output_device, input_devices, output_devices,
+    AudioSetup, InputRole, InputRoute, OutputDevice, Role, Route, BUFFER_SIZES, SAMPLE_RATES,
 };
 pub use recorder::{RecordFormat, RecordSettings, Recorder};
 pub use synth::sample_library;
 pub use track::{
-    hashtags, same_tag, split_tags, tag_name, Audio, Hotcue, LibraryInfo, Marker, MarkerKind,
-    OverviewSlice, Source, Track, TrackTag, Waveform, WaveformBin, MEMORY_CUE, WAVEFORM_RATE,
+    hashtags, same_tag, split_tags, tag_name, Audio, Hotcue, LibraryInfo, Marker, MarkerKind, OverviewSlice, Source,
+    Track, TrackTag, Waveform, WaveformBin, MEMORY_CUE, WAVEFORM_RATE,
 };
 pub use visual::VisualPositions;
 
@@ -192,11 +183,7 @@ pub fn create_controls(registry: &Arc<ControlRegistry>) {
     let (mut engine, _input) = engine::Engine::new(registry, rate);
     let feed = engine.take_record_feed().expect("record feed");
     Recorder::new(registry, rate, feed, LoadedTracks::default());
-    meter::start(
-        registry,
-        rate,
-        engine.take_meter_feed().expect("meter feed"),
-    );
+    meter::start(registry, rate, engine.take_meter_feed().expect("meter feed"));
     output::Health::new(registry);
 }
 
@@ -207,11 +194,7 @@ impl AudioEngine {
         let rate = output::sample_rate(setup);
         let (mut engine, input) = engine::Engine::new(&registry, rate);
         let feed = engine.take_record_feed().expect("record feed");
-        meter::start(
-            &registry,
-            rate,
-            engine.take_meter_feed().expect("meter feed"),
-        );
+        meter::start(&registry, rate, engine.take_meter_feed().expect("meter feed"));
         let broadcast_feed = engine.take_broadcast_feed();
         let preview = engine.take_preview_input().expect("preview input");
         let samplers = engine.take_sampler_input().expect("sampler input");
@@ -222,25 +205,11 @@ impl AudioEngine {
         let live_waves = engine.take_live_waves().expect("live waves");
         let groove_hits = engine.take_groove_hits().expect("groove hits");
         let plugins = plugin_helper().map(|helper| {
-            plugins::PluginHost::start(
-                &registry,
-                plugin_link,
-                plugins::HostOptions::new(helper, rate as u32),
-            )
+            plugins::PluginHost::start(&registry, plugin_link, plugins::HostOptions::new(helper, rate as u32))
         });
         link::watch(engine.link_handle(), Arc::downgrade(&registry));
-        looper::supply(
-            engine.take_looper_supply().expect("looper supply"),
-            Arc::downgrade(&registry),
-            NUM_DECKS,
-            rate,
-        );
-        let midi_clock = midi_clock::start(
-            engine.beat_clock(),
-            engine.clock_in(),
-            engine.link_handle(),
-            &registry,
-        );
+        looper::supply(engine.take_looper_supply().expect("looper supply"), Arc::downgrade(&registry), NUM_DECKS, rate);
+        let midi_clock = midi_clock::start(engine.beat_clock(), engine.clock_in(), engine.link_handle(), &registry);
         let output = output::Outputs::new(engine, setup, output::Health::new(&registry));
 
         let loaded: LoadedTracks = Arc::new(RwLock::new(Default::default()));
@@ -339,32 +308,24 @@ impl AudioEngine {
     /// The playing instrument's parameter names, for its knobs
     /// (`[Instrument1],parameterN` is the N-th); empty while none plays.
     pub fn instrument_parameters(&self) -> Vec<String> {
-        self.plugins
-            .as_ref()
-            .map_or_else(Vec::new, |p| p.instrument_parameters())
+        self.plugins.as_ref().map_or_else(Vec::new, |p| p.instrument_parameters())
     }
 
     /// Every parameter of the playing instrument, (id, name), to pick
     /// from for a knob; empty while none plays.
     pub fn instrument_all_parameters(&self) -> Vec<(u32, String)> {
-        self.plugins
-            .as_ref()
-            .map_or_else(Vec::new, |p| p.instrument_all_parameters())
+        self.plugins.as_ref().map_or_else(Vec::new, |p| p.instrument_all_parameters())
     }
 
     /// The parameter id each of the playing instrument's knobs turns.
     pub fn instrument_knob_ids(&self) -> Vec<u32> {
-        self.plugins
-            .as_ref()
-            .map_or_else(Vec::new, |p| p.instrument_knob_ids())
+        self.plugins.as_ref().map_or_else(Vec::new, |p| p.instrument_knob_ids())
     }
 
     /// The playing instrument's knobs the DJ picked a parameter for:
     /// (knob from 0, parameter id).
     pub fn instrument_picks(&self) -> Vec<(usize, u32)> {
-        self.plugins
-            .as_ref()
-            .map_or_else(Vec::new, |p| p.instrument_picks())
+        self.plugins.as_ref().map_or_else(Vec::new, |p| p.instrument_picks())
     }
 
     /// Puts parameter `id` on the playing instrument's knob `knob` (from
@@ -431,10 +392,7 @@ impl AudioEngine {
 
     /// What happened to plugins since the last call (crashes, failures).
     fn plugin_events(&self) -> Vec<plugins::PluginEvent> {
-        self.plugins
-            .as_ref()
-            .map(|p| p.events())
-            .unwrap_or_default()
+        self.plugins.as_ref().map(|p| p.events()).unwrap_or_default()
     }
 
     /// Puts `track` in the preview player (`[PreviewDeck1]`, heard in the
@@ -452,33 +410,31 @@ impl AudioEngine {
         let base = track.clone();
         let input = self.preview.clone();
         let current = self.preview_generation.clone();
-        let spawned = std::thread::Builder::new()
-            .name("preview".into())
-            .spawn(move || {
-                let latest = || current.load(Ordering::Acquire) == generation;
-                let send = |audio: Arc<Audio>| {
-                    if latest() {
-                        if let Ok(mut p) = input.lock() {
-                            p.send(Some(audio), play);
+        let spawned = std::thread::Builder::new().name("preview".into()).spawn(move || {
+            let latest = || current.load(Ordering::Acquire) == generation;
+            let send = |audio: Arc<Audio>| {
+                if latest() {
+                    if let Ok(mut p) = input.lock() {
+                        p.send(Some(audio), play);
+                    }
+                }
+            };
+            match &source {
+                Source::Synth { seed } => send(Arc::new(synth::render(&base, *seed))),
+                Source::File(path) => match decode::Decoder::open(path) {
+                    Ok(d) if d.length_known() => {
+                        send(d.audio().clone());
+                        let _ = d.run(|_| latest());
+                    }
+                    Ok(d) => {
+                        if let Ok(audio) = d.run(|_| latest()) {
+                            send(audio);
                         }
                     }
-                };
-                match &source {
-                    Source::Synth { seed } => send(Arc::new(synth::render(&base, *seed))),
-                    Source::File(path) => match decode::Decoder::open(path) {
-                        Ok(d) if d.length_known() => {
-                            send(d.audio().clone());
-                            let _ = d.run(|_| latest());
-                        }
-                        Ok(d) => {
-                            if let Ok(audio) = d.run(|_| latest()) {
-                                send(audio);
-                            }
-                        }
-                        Err(e) => eprintln!("can't preview {}: {e}", path.display()),
-                    },
-                }
-            });
+                    Err(e) => eprintln!("can't preview {}: {e}", path.display()),
+                },
+            }
+        });
         if let Err(e) = spawned {
             eprintln!("could not start the preview: {e}");
         }
@@ -491,38 +447,34 @@ impl AudioEngine {
         let generation = self.preview_generation.fetch_add(1, Ordering::AcqRel) + 1;
         let input = self.preview.clone();
         let current = self.preview_generation.clone();
-        let spawned = std::thread::Builder::new()
-            .name("preview".into())
-            .spawn(move || {
-                let latest = {
-                    let current = current.clone();
-                    move || current.load(Ordering::Acquire) == generation
-                };
-                let wanted: Arc<dyn Fn() -> bool + Send + Sync> = Arc::new(latest.clone());
-                match decode::Decoder::open_growing(&path, size, wanted) {
-                    // Plays at once, even with no length yet: it's only a
-                    // taste, and waiting for the whole file would defeat it.
-                    Ok(d) => {
-                        if latest() {
-                            if let Ok(mut p) = input.lock() {
-                                p.send(Some(d.audio().clone()), true);
-                            }
+        let spawned = std::thread::Builder::new().name("preview".into()).spawn(move || {
+            let latest = {
+                let current = current.clone();
+                move || current.load(Ordering::Acquire) == generation
+            };
+            let wanted: Arc<dyn Fn() -> bool + Send + Sync> = Arc::new(latest.clone());
+            match decode::Decoder::open_growing(&path, size, wanted) {
+                // Plays at once, even with no length yet: it's only a
+                // taste, and waiting for the whole file would defeat it.
+                Ok(d) => {
+                    if latest() {
+                        if let Ok(mut p) = input.lock() {
+                            p.send(Some(d.audio().clone()), true);
                         }
-                        let _ = d.run(|_| latest());
                     }
-                    Err(e) => eprintln!("can't preview {}: {e}", path.display()),
+                    let _ = d.run(|_| latest());
                 }
-            });
+                Err(e) => eprintln!("can't preview {}: {e}", path.display()),
+            }
+        });
         if let Err(e) = spawned {
             eprintln!("could not start the preview: {e}");
         }
     }
 
-    /// Puts the built-in sound `n`, the audio file at a path, or nothing on
-    /// sampler slot `slot`. Files are decoded in the background; one that
-    /// can't be read, or is too long, leaves the slot as it was, and
-    /// `done` hears why. `done` gets the sample's length in seconds, and
-    /// isn't called when a later request for the slot overtook this one.
+    /// Puts the built-in sound `n`, the audio file at a path, or nothing on sampler slot `slot`. Files are decoded in
+    /// the background; one that can't be read, or is too long, leaves the slot as it was, and `done` hears why. `done`
+    /// gets the sample's length in seconds, and isn't called when a later request for the slot overtook this one.
     pub fn set_sample(
         &self,
         slot: usize,
@@ -533,18 +485,11 @@ impl AudioEngine {
             return;
         };
         let generation = counter.fetch_add(1, Ordering::AcqRel) + 1;
-        let (input, all, rate) = (
-            self.samplers.clone(),
-            self.sample_generation.clone(),
-            self.rate,
-        );
+        let (input, all, rate) = (self.samplers.clone(), self.sample_generation.clone(), self.rate);
         let current = move || all[slot].load(Ordering::Acquire) == generation;
         let send = move |sample: Option<sampler::Sample>| {
             let seconds = sample.as_ref().map_or(0.0, |s| s.seconds());
-            let sent = input
-                .lock()
-                .map(|mut i| i.send(slot, sample.map(Arc::new)))
-                .unwrap_or(false);
+            let sent = input.lock().map(|mut i| i.send(slot, sample.map(Arc::new))).unwrap_or(false);
             if sent {
                 Ok(seconds)
             } else {
@@ -555,14 +500,12 @@ impl AudioEngine {
             SampleSource::Empty => done(send(None)),
             SampleSource::Builtin(n) => done(send(Some(sampler::Sample::builtin(n, rate)))),
             SampleSource::File(path) => {
-                let spawned = std::thread::Builder::new()
-                    .name("sample-loader".into())
-                    .spawn(move || {
-                        let loaded = sampler::Sample::load(&path, rate);
-                        if current() {
-                            done(loaded.and_then(|s| send(Some(s))));
-                        }
-                    });
+                let spawned = std::thread::Builder::new().name("sample-loader".into()).spawn(move || {
+                    let loaded = sampler::Sample::load(&path, rate);
+                    if current() {
+                        done(loaded.and_then(|s| send(Some(s))));
+                    }
+                });
                 if let Err(e) = spawned {
                     eprintln!("could not load the sample: {e}");
                 }
@@ -573,11 +516,7 @@ impl AudioEngine {
     /// Plays a sampler sound in the headphones, through the preview player.
     pub fn preview_sample(&self, sample: SampleSource) {
         let generation = self.preview_generation.fetch_add(1, Ordering::AcqRel) + 1;
-        let (input, current, rate) = (
-            self.preview.clone(),
-            self.preview_generation.clone(),
-            self.rate,
-        );
+        let (input, current, rate) = (self.preview.clone(), self.preview_generation.clone(), self.rate);
         let play = move |s: sampler::Sample| {
             if current.load(Ordering::Acquire) == generation {
                 if let Ok(mut p) = input.lock() {
@@ -589,23 +528,21 @@ impl AudioEngine {
             SampleSource::Empty => {}
             SampleSource::Builtin(n) => play(sampler::Sample::builtin(n, rate)),
             SampleSource::File(path) => {
-                let _ = std::thread::Builder::new()
-                    .name("preview".into())
-                    .spawn(move || match sampler::Sample::load(&path, rate) {
+                let _ = std::thread::Builder::new().name("preview".into()).spawn(move || {
+                    match sampler::Sample::load(&path, rate) {
                         Ok(s) => play(s),
                         Err(e) => eprintln!("can't preview {}: {e}", path.display()),
-                    });
+                    }
+                });
             }
         }
     }
 
-    /// Puts `track` on `deck` as soon as its file is open; decoding and
-    /// analysis carry on in the background (see [`loader`]).
-    /// Unless `[Controls],AllowTrackLoadToPlayingDeck` is on, a deck that is
-    /// playing keeps its track and this returns false.
+    /// Puts `track` on `deck` as soon as its file is open; decoding and analysis carry
+    /// `[Controls],AllowTrackLoadToPlayingDeck` is on, a deck that is playing keeps its track and this returns false.
+    /// `[Controls],AllowTrackLoadToPlayingDeck` is on, a deck that is playing keeps its
     pub fn load_track(&self, deck: usize, track: Arc<Track>) -> bool {
-        let on =
-            |group: &str, key: &str| self.registry.get(group, key).is_some_and(|c| c.get_bool());
+        let on = |group: &str, key: &str| self.registry.get(group, key).is_some_and(|c| c.get_bool());
         if on(&deck_group(deck), "play") && !on("[Controls]", "AllowTrackLoadToPlayingDeck") {
             alert(
                 &self.alerts,
@@ -635,11 +572,7 @@ impl AudioEngine {
     /// Alerts since the last call, oldest first. Also reopens an audio
     /// output that went away once it is back, so call it every so often.
     pub fn take_alerts(&self) -> Vec<String> {
-        let mut alerts: Vec<String> = self
-            .alerts
-            .lock()
-            .map(|mut a| std::mem::take(&mut *a))
-            .unwrap_or_default();
+        let mut alerts: Vec<String> = self.alerts.lock().map(|mut a| std::mem::take(&mut *a)).unwrap_or_default();
         if let Ok(mut output) = self.output.try_borrow_mut() {
             alerts.extend(output.recover());
         }
@@ -658,14 +591,8 @@ impl AudioEngine {
     pub fn set_cover(&self, path: &std::path::Path, cover: Option<Arc<cover::Cover>>) {
         let mut loaded = self.loaded.write().unwrap();
         for slot in loaded.iter_mut() {
-            if let Some(t) = slot
-                .as_ref()
-                .filter(|t| matches!(&t.source, Source::File(p) if p == path))
-            {
-                *slot = Some(Arc::new(Track {
-                    cover: cover.clone(),
-                    ..(**t).clone()
-                }));
+            if let Some(t) = slot.as_ref().filter(|t| matches!(&t.source, Source::File(p) if p == path)) {
+                *slot = Some(Arc::new(Track { cover: cover.clone(), ..(**t).clone() }));
             }
         }
     }

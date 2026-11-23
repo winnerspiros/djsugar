@@ -1,9 +1,6 @@
-//! DJ Sugar's side: starts a helper and trades audio blocks with it.
-//!
-//! [`spawn`] returns two halves. The [`Connection`] goes to the audio thread:
-//! [`Connection::process`] never allocates, never locks and never waits
-//! longer than the deadline it is given. The [`Helper`] stays on a normal
-//! thread and watches the process (exit, kill).
+//! DJ Sugar's side: starts a helper and trades audio blocks with it. [`spawn`] returns two halves. The
+//! longer than the deadline it is given. The [`Helper`] stays on a normal thread and watches the process (exit, kill).
+//! longer than the deadline it is given. The [`Helper`] stays on a normal thread and watches the process (exit,
 
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -116,18 +113,8 @@ pub struct Helper {
 fn plugin_args(plugin: &Plugin) -> Vec<std::ffi::OsString> {
     match plugin {
         Plugin::Test(id) => vec!["--test".into(), id.into()],
-        Plugin::Clap { file, id } => vec![
-            "--clap".into(),
-            file.clone().into_os_string(),
-            "--id".into(),
-            id.into(),
-        ],
-        Plugin::Vst3 { file, id } => vec![
-            "--vst3".into(),
-            file.clone().into_os_string(),
-            "--id".into(),
-            id.into(),
-        ],
+        Plugin::Clap { file, id } => vec!["--clap".into(), file.clone().into_os_string(), "--id".into(), id.into()],
+        Plugin::Vst3 { file, id } => vec!["--vst3".into(), file.clone().into_os_string(), "--id".into(), id.into()],
         Plugin::Au { id } => vec!["--au".into(), id.into()],
     }
 }
@@ -143,14 +130,7 @@ fn read_info(info: &mut Info, line: &str) {
             let (min, max, default, value) = (num(), num(), num(), num());
             let id = f.next().and_then(|v| v.parse().ok()).unwrap_or(0);
             let name = f.next().unwrap_or_default().to_string();
-            info.params.push(Param {
-                id,
-                name,
-                min,
-                max,
-                default,
-                value,
-            });
+            info.params.push(Param { id, name, min, max, default, value });
         }
         Some("all") => {
             if let (Some(id), Some(name)) = (f.next().and_then(|v| v.parse().ok()), f.next()) {
@@ -163,8 +143,7 @@ fn read_info(info: &mut Info, line: &str) {
 
 /// Whether `file` is a VST3 plugin (by its `.vst3` name).
 pub fn is_vst3(file: &Path) -> bool {
-    file.extension()
-        .is_some_and(|e| e.eq_ignore_ascii_case("vst3"))
+    file.extension().is_some_and(|e| e.eq_ignore_ascii_case("vst3"))
 }
 
 /// Why a file could not be scanned.
@@ -188,21 +167,16 @@ impl std::fmt::Display for ScanError {
     }
 }
 
-/// Lists the plugins in one CLAP file or VST3 bundle. A VST3 bundle's
-/// `moduleinfo.json` is read directly when it has one; otherwise the file is
-/// loaded in a throwaway helper that is killed after `timeout`. Loading a
-/// plugin runs its code, so this never happens inside DJ Sugar.
+/// Lists the plugins in one CLAP file or VST3 bundle. A VST3 bundle's `moduleinfo.json` is read
+/// directly when it has one; otherwise the file is loaded in a throwaway helper that is killed
+/// after `timeout`. Loading a plugin runs its code, so this never happens inside DJ Sugar.
 pub fn scan(helper: &Path, file: &Path, timeout: Duration) -> Result<Vec<Descriptor>, ScanError> {
     if is_vst3(file) {
         if let Some(found) = crate::descriptor::scan_moduleinfo(file) {
             return Ok(found);
         }
     }
-    scan_with(
-        helper,
-        &["--scan".into(), file.as_os_str().to_owned()],
-        timeout,
-    )
+    scan_with(helper, &["--scan".into(), file.as_os_str().to_owned()], timeout)
 }
 
 /// Lists the installed Audio Units (macOS), from the system registry, in a
@@ -211,23 +185,14 @@ pub fn scan_audio_units(helper: &Path, timeout: Duration) -> Result<Vec<Descript
     scan_with(helper, &["--scan-au".into()], timeout)
 }
 
-/// A plugin's own presets, as (name, reference for
-/// [`Helper::load_preset`]), read in a throwaway helper like [`scan`]: a
-/// CLAP plugin's from its preset discovery providers, an Audio Unit's
-/// factory presets. Other plugins list none.
-pub fn presets(
-    helper: &Path,
-    plugin: &Plugin,
-    timeout: Duration,
-) -> Result<Vec<(String, String)>, ScanError> {
+/// A plugin's own presets, as (name, reference for [`Helper::load_preset`]),
+/// discovery providers, an Audio Unit's factory presets. Other plugins list none.
+/// discovery providers, an Audio Unit's factory presets. Other plugins list
+pub fn presets(helper: &Path, plugin: &Plugin, timeout: Duration) -> Result<Vec<(String, String)>, ScanError> {
     let args: Vec<std::ffi::OsString> = match plugin {
-        Plugin::Clap { file, id } => vec![
-            "--presets".into(),
-            "--clap".into(),
-            file.as_os_str().to_owned(),
-            "--id".into(),
-            id.into(),
-        ],
+        Plugin::Clap { file, id } => {
+            vec!["--presets".into(), "--clap".into(), file.as_os_str().to_owned(), "--id".into(), id.into()]
+        }
         Plugin::Au { id } => vec!["--presets".into(), "--au".into(), id.into()],
         _ => return Ok(Vec::new()),
     };
@@ -236,20 +201,14 @@ pub fn presets(
         .filter_map(|line| {
             let mut f = line.splitn(3, '\t');
             match (f.next(), f.next(), f.next()) {
-                (Some("preset"), Some(name), Some(reference)) => {
-                    Some((name.to_string(), reference.to_string()))
-                }
+                (Some("preset"), Some(name), Some(reference)) => Some((name.to_string(), reference.to_string())),
                 _ => None,
             }
         })
         .collect())
 }
 
-fn scan_with(
-    helper: &Path,
-    args: &[std::ffi::OsString],
-    timeout: Duration,
-) -> Result<Vec<Descriptor>, ScanError> {
+fn scan_with(helper: &Path, args: &[std::ffi::OsString], timeout: Duration) -> Result<Vec<Descriptor>, ScanError> {
     Ok(lines(helper, args, timeout)?
         .iter()
         .filter_map(|line| {
@@ -260,11 +219,7 @@ fn scan_with(
                     name: name.into(),
                     vendor: vendor.into(),
                     version: version.into(),
-                    features: features
-                        .split(',')
-                        .filter(|s| !s.is_empty())
-                        .map(String::from)
-                        .collect(),
+                    features: features.split(',').filter(|s| !s.is_empty()).map(String::from).collect(),
                 }),
                 _ => None,
             }
@@ -274,11 +229,7 @@ fn scan_with(
 
 /// Runs a throwaway helper with `args` and gives the lines it wrote before
 /// `done`, killing it after `timeout`.
-fn lines(
-    helper: &Path,
-    args: &[std::ffi::OsString],
-    timeout: Duration,
-) -> Result<Vec<String>, ScanError> {
+fn lines(helper: &Path, args: &[std::ffi::OsString], timeout: Duration) -> Result<Vec<String>, ScanError> {
     let mut child = Command::new(helper)
         .args(args)
         .stdin(Stdio::null())
@@ -319,9 +270,7 @@ fn lines(
                 let status = loop {
                     match child.try_wait() {
                         Ok(Some(status)) => break status.to_string(),
-                        Ok(None) if Instant::now() < end => {
-                            std::thread::sleep(Duration::from_millis(20))
-                        }
+                        Ok(None) if Instant::now() < end => std::thread::sleep(Duration::from_millis(20)),
                         _ => {
                             stop(&mut child);
                             return Err(ScanError::TimedOut);
@@ -382,16 +331,8 @@ pub fn spawn(opts: &Options) -> io::Result<(Connection, Helper)> {
         .arg("--state")
         .arg(&state_path)
         .args(plugin_args(&opts.plugin))
-        .args(
-            opts.picks
-                .iter()
-                .flat_map(|(slot, id)| ["--pick".into(), format!("{slot}:{id}")]),
-        )
-        .args(
-            opts.title
-                .iter()
-                .flat_map(|t| [std::ffi::OsString::from("--title"), t.into()]),
-        )
+        .args(opts.picks.iter().flat_map(|(slot, id)| ["--pick".into(), format!("{slot}:{id}")]))
+        .args(opts.title.iter().flat_map(|t| [std::ffi::OsString::from("--title"), t.into()]))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -407,16 +348,14 @@ pub fn spawn(opts: &Options) -> io::Result<(Connection, Helper)> {
     let wake = child.stdin.take().expect("piped stdin");
     let stdout = child.stdout.take().expect("piped stdout");
     let (tx, messages) = mpsc::channel();
-    std::thread::Builder::new()
-        .name("plugin-host-messages".into())
-        .spawn(move || {
-            for line in BufReader::new(stdout).lines() {
-                let Ok(line) = line else { break };
-                if tx.send(line).is_err() {
-                    break;
-                }
+    std::thread::Builder::new().name("plugin-host-messages".into()).spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            let Ok(line) = line else { break };
+            if tx.send(line).is_err() {
+                break;
             }
-        })?;
+        }
+    })?;
     let mut helper = Helper {
         health: Arc::default(),
         child,
@@ -441,10 +380,7 @@ pub fn spawn(opts: &Options) -> io::Result<(Connection, Helper)> {
             }
             Err(_) => {
                 helper.kill();
-                return Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "the plugin did not start in time",
-                ));
+                return Err(io::Error::new(io::ErrorKind::TimedOut, "the plugin did not start in time"));
             }
         }
     }
@@ -506,23 +442,12 @@ impl Connection {
         out
     }
 
-    /// The first half of [`Connection::process_events`]: hands the block to
-    /// the helper and returns at once, so several helpers can work on their
-    /// blocks side by side. [`Connection::collect`] picks the result up.
-    /// `Err` when the block can't go (the helper is still on a late block,
-    /// or gone): it plays dry and there is nothing to collect. Real-time
-    /// safe.
-    pub fn send(
-        &mut self,
-        input: [&[f32]; CHANNELS],
-        transport: Transport,
-        events: &[Midi],
-    ) -> Result<(), Outcome> {
+    /// The first half of [`Connection::process_events`]: hands the block to the helper and returns at once, so several
+    /// can't go (the helper is still on a late block, or gone): it plays dry and there is nothing to collect. Real-time safe.
+    /// can't go (the helper is still on a late block, or gone): it plays dry and there is nothing to collect. Real-time
+    pub fn send(&mut self, input: [&[f32]; CHANNELS], transport: Transport, events: &[Midi]) -> Result<(), Outcome> {
         let frames = input[0].len();
-        assert!(
-            frames <= self.shm.max_frames(),
-            "block longer than max_frames"
-        );
+        assert!(frames <= self.shm.max_frames(), "block longer than max_frames");
         assert!(input.iter().all(|c| c.len() == frames));
         let h = self.shm.header();
         if self.gone {
@@ -563,10 +488,9 @@ impl Connection {
         Ok(())
     }
 
-    /// The second half: waits up to `deadline` for the block
-    /// [`Connection::send`] handed over and writes the plugin's output.
-    /// Anything but [`Outcome::Wet`] leaves `output` as it was (the caller
-    /// plays the block dry). Real-time safe.
+    /// The second half: waits up to `deadline` for the block [`Connection::send`]
+    /// handed over and writes the plugin's output. Anything but [`Outcome::Wet`]
+    /// leaves `output` as it was (the caller plays the block dry). Real-time safe.
     pub fn collect(&mut self, mut output: [&mut [f32]; CHANNELS], deadline: Duration) -> Outcome {
         self.collect_until(&mut output, Instant::now() + deadline)
     }
@@ -609,9 +533,7 @@ impl Connection {
 
     fn missed(&mut self, n: u32) {
         self.missed_in_row += n;
-        self.health
-            .missed_in_row
-            .store(self.missed_in_row, Ordering::Relaxed);
+        self.health.missed_in_row.store(self.missed_in_row, Ordering::Relaxed);
     }
 
     /// Sets parameter `index` (0..32); the helper sees it on its next block.
@@ -695,10 +617,7 @@ impl Helper {
 
     /// Asks the helper to open (or close) the plugin's own window.
     pub fn set_editor(&self, open: bool) {
-        self.shm
-            .header()
-            .editor
-            .store(open as u32, Ordering::Release);
+        self.shm.header().editor.store(open as u32, Ordering::Release);
     }
 
     /// Whether DJ Sugar's ask for the window still stands: the helper takes

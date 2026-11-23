@@ -1,14 +1,6 @@
-//! Beat grids whose tempo can change partway through a track
-//! (live drums, edits, old disco).
-//!
-//! A grid is a list of markers. Each marker is a beat, and the beats carry on
-//! at the marker's tempo until the next marker. Every marker falls on a whole
-//! beat (beat numbers count from the first marker), so bars and phase stay
-//! continuous across tempo changes: [`BeatGrid::new`] nudges each section's
-//! tempo so a whole number of beats fits between its markers. Before the
-//! first marker and after the last the grid carries on at their tempo.
-//!
-//! The lookups only read the markers, so the audio thread can use them.
+//! Beat grids whose tempo can change partway through a track (live drums, edits, old disco). A grid is a list of markers. Each marker is a beat, and the beats carry on at the marker's tempo until the
+//! next marker. Every marker falls on a whole beat (beat numbers count from the first marker), so bars and phase stay continuous across tempo changes: [`BeatGrid::new`] nudges each section's tempo so a
+//! whole number of beats fits between its markers. Before the first marker and after the last the grid carries on at their tempo. The lookups only read the markers, so the audio thread can use them.
 
 /// A change to a loaded track's beat grid, asked for from a deck or a
 /// controller, made at the deck's play position.
@@ -53,15 +45,9 @@ impl BeatGrid {
             GridEdit::SetTempo(bpm) => self.with_bpm_at(seconds, bpm),
             GridEdit::AddSection => self.with_marker(seconds, self.bpm_at(seconds)),
             GridEdit::RemoveSection => self.without_marker_at(seconds),
-            GridEdit::Scale(f) => Self::new(
-                self.markers
-                    .iter()
-                    .map(|m| GridMarker {
-                        seconds: m.seconds,
-                        bpm: m.bpm * f,
-                    })
-                    .collect(),
-            ),
+            GridEdit::Scale(f) => {
+                Self::new(self.markers.iter().map(|m| GridMarker { seconds: m.seconds, bpm: m.bpm * f }).collect())
+            }
             GridEdit::Undo | GridEdit::Lock(_) | GridEdit::Reset => self.clone(),
         }
     }
@@ -111,18 +97,12 @@ impl BeatGrid {
             kept.push(m);
             index.push(at);
         }
-        BeatGrid {
-            markers: kept,
-            index,
-        }
+        BeatGrid { markers: kept, index }
     }
 
     /// A grid at one tempo, with a beat at `first_beat`.
     pub fn constant(bpm: f64, first_beat: f64) -> Self {
-        Self::new(vec![GridMarker {
-            seconds: first_beat,
-            bpm,
-        }])
+        Self::new(vec![GridMarker { seconds: first_beat, bpm }])
     }
 
     pub fn is_empty(&self) -> bool {
@@ -140,9 +120,7 @@ impl BeatGrid {
 
     /// Which section `seconds` falls in.
     fn section(&self, seconds: f64) -> usize {
-        self.markers
-            .partition_point(|m| m.seconds <= seconds)
-            .saturating_sub(1)
+        self.markers.partition_point(|m| m.seconds <= seconds).saturating_sub(1)
     }
 
     /// The beat number at `seconds`, fractional between beats. The first
@@ -210,14 +188,7 @@ impl BeatGrid {
     /// The same grid moved by `seconds`.
     pub fn shifted(&self, seconds: f64) -> Self {
         BeatGrid {
-            markers: self
-                .markers
-                .iter()
-                .map(|m| GridMarker {
-                    seconds: m.seconds + seconds,
-                    bpm: m.bpm,
-                })
-                .collect(),
+            markers: self.markers.iter().map(|m| GridMarker { seconds: m.seconds + seconds, bpm: m.bpm }).collect(),
             index: self.index.clone(),
         }
     }
@@ -240,10 +211,7 @@ impl BeatGrid {
             return self.clone();
         }
         let mut markers = self.markers.clone();
-        markers.push(GridMarker {
-            seconds: first.seconds - to_bar * 60.0 / first.bpm,
-            bpm: first.bpm,
-        });
+        markers.push(GridMarker { seconds: first.seconds - to_bar * 60.0 / first.bpm, bpm: first.bpm });
         Self::new(markers)
     }
 
@@ -254,12 +222,8 @@ impl BeatGrid {
             return Self::constant(bpm, seconds);
         }
         let at = self.snap(seconds, false);
-        let mut markers: Vec<GridMarker> = self
-            .markers
-            .iter()
-            .copied()
-            .filter(|m| (m.seconds - at).abs() > 1e-6)
-            .collect();
+        let mut markers: Vec<GridMarker> =
+            self.markers.iter().copied().filter(|m| (m.seconds - at).abs() > 1e-6).collect();
         markers.push(GridMarker { seconds: at, bpm });
         Self::new(markers)
     }
@@ -317,11 +281,7 @@ impl BeatGrid {
 
     /// Stores the grid as text: `seconds:bpm` pairs separated by spaces.
     pub fn to_text(&self) -> String {
-        self.markers
-            .iter()
-            .map(|m| format!("{}:{}", m.seconds, m.bpm))
-            .collect::<Vec<_>>()
-            .join(" ")
+        self.markers.iter().map(|m| format!("{}:{}", m.seconds, m.bpm)).collect::<Vec<_>>().join(" ")
     }
 
     /// Reads a grid stored with [`BeatGrid::to_text`].
@@ -330,10 +290,7 @@ impl BeatGrid {
             text.split_whitespace()
                 .filter_map(|pair| {
                     let (s, b) = pair.split_once(':')?;
-                    Some(GridMarker {
-                        seconds: s.parse().ok()?,
-                        bpm: b.parse().ok()?,
-                    })
+                    Some(GridMarker { seconds: s.parse().ok()?, bpm: b.parse().ok()? })
                 })
                 .collect(),
         )
@@ -366,14 +323,8 @@ mod tests {
         // 120 BPM for 16 beats (8 s), then 126 BPM. The second marker is a
         // little off the 120 grid; the first section's tempo is refitted.
         let g = BeatGrid::new(vec![
-            GridMarker {
-                seconds: 8.05,
-                bpm: 126.0,
-            },
-            GridMarker {
-                seconds: 0.05 + 0.01,
-                bpm: 120.0,
-            },
+            GridMarker { seconds: 8.05, bpm: 126.0 },
+            GridMarker { seconds: 0.05 + 0.01, bpm: 120.0 },
         ]);
         assert_eq!(g.markers().len(), 2);
         assert!(close(g.beat_at(8.05), 16.0));
@@ -396,16 +347,8 @@ mod tests {
         assert!((moved.beat_at(2.76) - 8.0).abs() < 1e-9, "{:?}", moved);
         assert!((moved.snap(10.26, false) - 10.26).abs() < 1e-9);
         // A grid in sections keeps its later section.
-        let two = BeatGrid::new(vec![
-            GridMarker {
-                seconds: 0.0,
-                bpm: 120.0,
-            },
-            GridMarker {
-                seconds: 16.0,
-                bpm: 125.0,
-            },
-        ]);
+        let two =
+            BeatGrid::new(vec![GridMarker { seconds: 0.0, bpm: 120.0 }, GridMarker { seconds: 16.0, bpm: 125.0 }]);
         let bar = two.with_bar_at(1.5);
         assert_eq!(bar.beat_at(1.5).round().rem_euclid(4.0), 0.0);
         assert!((bar.bpm_at(20.0) - 125.0).abs() < 1e-9);
@@ -416,31 +359,16 @@ mod tests {
     #[test]
     fn tiny_sections_are_dropped() {
         let g = BeatGrid::new(vec![
-            GridMarker {
-                seconds: 0.0,
-                bpm: 120.0,
-            },
+            GridMarker { seconds: 0.0, bpm: 120.0 },
             // One beat later: too short.
-            GridMarker {
-                seconds: 0.5,
-                bpm: 130.0,
-            },
+            GridMarker { seconds: 0.5, bpm: 130.0 },
         ]);
         assert_eq!(g.markers().len(), 1);
     }
 
     #[test]
     fn main_tempo_is_the_one_that_runs_longest() {
-        let g = BeatGrid::new(vec![
-            GridMarker {
-                seconds: 0.0,
-                bpm: 100.0,
-            },
-            GridMarker {
-                seconds: 24.0,
-                bpm: 128.0,
-            },
-        ]);
+        let g = BeatGrid::new(vec![GridMarker { seconds: 0.0, bpm: 100.0 }, GridMarker { seconds: 24.0, bpm: 128.0 }]);
         assert!(close(g.main_bpm(200.0), 128.0));
         assert!(close(g.main_bpm(30.0), 100.0));
     }

@@ -157,15 +157,9 @@ pub enum Plugin {
     /// One of [`TEST_EFFECTS`].
     Test(String),
     /// Plugin `id` in the `.clap` file `file`.
-    Clap {
-        file: std::path::PathBuf,
-        id: String,
-    },
+    Clap { file: std::path::PathBuf, id: String },
     /// Class `id` (32 hex digits) in the `.vst3` bundle `file`.
-    Vst3 {
-        file: std::path::PathBuf,
-        id: String,
-    },
+    Vst3 { file: std::path::PathBuf, id: String },
     /// The Audio Unit `type:subtype:manufacturer` (macOS only).
     Au { id: String },
 }
@@ -191,45 +185,24 @@ impl MainThread for TestEditor {
     }
 
     fn open_editor(&mut self, _parent: ParentWindow, _scale: f64) -> Result<EditorSize, String> {
-        Ok(EditorSize {
-            width: 320,
-            height: 200,
-        })
+        Ok(EditorSize { width: 320, height: 200 })
     }
 }
 
 /// The most parameters listed to pick from (see [`Info::all`]).
 pub const ALL_PARAMS: usize = 4096;
 
-/// Puts a plugin's parameters in knob order and keeps the first
-/// [`MAX_PARAMS`](crate::shm::MAX_PARAMS): each picked one (knob slot,
-/// param id) in its slot, then those in `preferred` (its maker's remote
-/// controls pages) in that order, then the rest in its own order. Returns
-/// every parameter as (id, name), in its own order, for [`Info::all`].
-pub fn arrange<T>(
-    params: &mut Vec<(T, Param)>,
-    preferred: &[u32],
-    picks: &[(usize, u32)],
-) -> Vec<(u32, String)> {
+/// Puts a plugin's parameters in knob order and keeps the first [`MAX_PARAMS`](crate::shm::MAX_PARAMS): each picked
+/// order, then the rest in its own order. Returns every parameter as (id, name), in its own order, for [`Info::all`].
+/// order, then the rest in its own order. Returns every parameter as (id, name), in its own order, for
+pub fn arrange<T>(params: &mut Vec<(T, Param)>, preferred: &[u32], picks: &[(usize, u32)]) -> Vec<(u32, String)> {
     use crate::shm::MAX_PARAMS;
-    let all = params
-        .iter()
-        .take(ALL_PARAMS)
-        .map(|(_, p)| (p.id, p.name.clone()))
-        .collect();
-    params.sort_by_key(|(_, p)| {
-        preferred
-            .iter()
-            .position(|&id| id == p.id)
-            .unwrap_or(usize::MAX)
-    });
+    let all = params.iter().take(ALL_PARAMS).map(|(_, p)| (p.id, p.name.clone())).collect();
+    params.sort_by_key(|(_, p)| preferred.iter().position(|&id| id == p.id).unwrap_or(usize::MAX));
     let mut slots: Vec<Option<(T, Param)>> = (0..MAX_PARAMS).map(|_| None).collect();
     let mut rest = Vec::with_capacity(params.len());
     for (t, p) in params.drain(..) {
-        match picks
-            .iter()
-            .find(|&&(slot, id)| id == p.id && slot < MAX_PARAMS)
-        {
+        match picks.iter().find(|&&(slot, id)| id == p.id && slot < MAX_PARAMS) {
             Some(&(slot, _)) if slots[slot].is_none() => slots[slot] = Some((t, p)),
             _ => rest.push((t, p)),
         }
@@ -246,21 +219,10 @@ pub fn arrange<T>(
 }
 
 /// Ids of the test effects.
-pub const TEST_EFFECTS: [&str; 5] = [
-    "test-gain",
-    "test-crash",
-    "test-hang",
-    "test-slow",
-    "test-synth",
-];
+pub const TEST_EFFECTS: [&str; 5] = ["test-gain", "test-crash", "test-hang", "test-slow", "test-synth"];
 
 /// Loads `plugin`, or says why not.
-pub fn load(
-    plugin: &Plugin,
-    sample_rate: u32,
-    max_frames: usize,
-    picks: &[(usize, u32)],
-) -> Result<Loaded, String> {
+pub fn load(plugin: &Plugin, sample_rate: u32, max_frames: usize, picks: &[(usize, u32)]) -> Result<Loaded, String> {
     #[cfg(not(feature = "formats"))]
     let _ = picks;
     // Each test effect has one parameter, the one it acts on.
@@ -269,31 +231,17 @@ pub fn load(
         main: None,
         info: Info {
             name: name.into(),
-            params: vec![Param {
-                id: 0,
-                name: param.into(),
-                min: 0.0,
-                max,
-                default: value,
-                value,
-            }],
+            params: vec![Param { id: 0, name: param.into(), min: 0.0, max, default: value, value }],
             all: vec![(0, param.into())],
             ..Info::default()
         },
     };
     match plugin {
         Plugin::Test(id) => match id.as_str() {
-            "test-gain" => Ok(Loaded {
-                main: Some(Box::<TestEditor>::default()),
-                ..test(Box::new(Gain), id, "Gain", 2.0, 1.0)
-            }),
-            "test-crash" => Ok(test(
-                Box::new(Crash { blocks: 0 }),
-                id,
-                "Crash after",
-                1000.0,
-                0.0,
-            )),
+            "test-gain" => {
+                Ok(Loaded { main: Some(Box::<TestEditor>::default()), ..test(Box::new(Gain), id, "Gain", 2.0, 1.0) })
+            }
+            "test-crash" => Ok(test(Box::new(Crash { blocks: 0 }), id, "Crash after", 1000.0, 0.0)),
             "test-hang" => Ok(test(Box::new(Hang), id, "Hang", 1.0, 0.0)),
             "test-slow" => Ok(test(Box::new(Slow), id, "Milliseconds", 100.0, 0.0)),
             "test-synth" => Ok(test(Box::<Synth>::default(), id, "Volume", 1.0, 1.0)),
@@ -444,17 +392,7 @@ mod tests {
             .iter()
             .enumerate()
             .map(|(i, n)| {
-                (
-                    (),
-                    Param {
-                        id: i as u32 * 10,
-                        name: n.to_string(),
-                        min: 0.0,
-                        max: 1.0,
-                        default: 0.0,
-                        value: 0.0,
-                    },
-                )
+                ((), Param { id: i as u32 * 10, name: n.to_string(), min: 0.0, max: 1.0, default: 0.0, value: 0.0 })
             })
             .collect()
     }
@@ -478,10 +416,7 @@ mod tests {
         let all = arrange(&mut p, &[30, 10], &[(0, 40), (3, 0)]);
         assert_eq!(names(&p), ["e", "d", "b", "a", "c"]);
         // Listed in the plugin's own order, whatever the knobs.
-        assert_eq!(
-            all.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            [0, 10, 20, 30, 40]
-        );
+        assert_eq!(all.iter().map(|(id, _)| *id).collect::<Vec<_>>(), [0, 10, 20, 30, 40]);
         // A pick past the last knob, or of a parameter gone, closes up.
         let mut p = params(&["a", "b"]);
         arrange(&mut p, &[], &[(5, 0), (0, 99)]);

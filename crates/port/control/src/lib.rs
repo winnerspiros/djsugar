@@ -1,10 +1,6 @@
-//! Named controls, compatible with `[Group],key` addressing.
-//!
-//! Every knob, button and meter is a control looked up by name
-//! in a global, mutex-guarded hash and changed through Qt signals. Here the names
-//! stay the same (so skins and controller mappings keep working), but a name is
-//! resolved once to a [`ControlHandle`]. Reading or writing a handle is a single
-//! atomic operation: no locks, no allocation, safe on the real-time audio thread.
+//! Named controls, compatible with `[Group],key` addressing. Every knob, button and meter is a control looked up by name in a global, mutex-guarded
+//! hash and changed through Qt signals. Here the names stay the same (so skins and controller mappings keep working), but a name is resolved once to
+//! a [`ControlHandle`]. Reading or writing a handle is a single atomic operation: no locks, no allocation, safe on the real-time audio thread.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -20,10 +16,7 @@ pub struct ConfigKey {
 
 impl ConfigKey {
     pub fn new(group: impl Into<String>, item: impl Into<String>) -> Self {
-        Self {
-            group: group.into(),
-            item: item.into(),
-        }
+        Self { group: group.into(), item: item.into() }
     }
 }
 
@@ -38,7 +31,7 @@ impl fmt::Display for ConfigKey {
 pub enum Behavior {
     /// Linear between `min` and `max` (faders, crossfader, rate).
     Linear,
-    /// EQ/gain knob: 0 → min, 0.5 → default (unity), 1 → max.
+    /// EQ/gain knob: 0 -> min, 0.5 -> default (unity), 1 -> max.
     /// Each half is linear, which matches how DJ EQ knobs centre on unity gain.
     CenteredOnDefault,
     /// On/off; widgets toggle it.
@@ -160,13 +153,7 @@ impl ControlHandle {
 
     /// The value as a 0..1 widget position.
     pub fn get_parameter(&self) -> f64 {
-        value_to_parameter(
-            self.0.behavior,
-            self.get(),
-            self.0.default,
-            self.0.min,
-            self.0.max,
-        )
+        value_to_parameter(self.0.behavior, self.get(), self.0.default, self.0.min, self.0.max)
     }
 
     /// Sets the value from a 0..1 widget position.
@@ -247,9 +234,7 @@ impl ControlRegistry {
         let key = ConfigKey::new(group, item);
         let mut map = self.controls.write().unwrap();
         map.entry(key.clone())
-            .or_insert_with(|| {
-                ControlHandle(Arc::new(Control::new(key, default, min, max, behavior)))
-            })
+            .or_insert_with(|| ControlHandle(Arc::new(Control::new(key, default, min, max, behavior))))
             .clone()
     }
 
@@ -270,7 +255,7 @@ impl ControlRegistry {
         self.create(group, item, 0.0, f64::MIN, f64::MAX, Behavior::Free)
     }
 
-    /// Makes `alias` resolve to `target`, like `[Master]` → `[Main]` rename.
+    /// Makes `alias` resolve to `target`, like `[Master]` -> `[Main]` rename.
     pub fn insert_alias(&self, alias: ConfigKey, target: ConfigKey) {
         self.aliases.write().unwrap().insert(alias, target);
     }
@@ -316,10 +301,7 @@ mod tests {
         assert!(reg.get("[Channel1]", "play").is_some());
         assert!(reg.get("[Channel1]", "nope").is_none());
         reg.create("[Main]", "gain", 1.0, 0.0, 5.0, Behavior::CenteredOnDefault);
-        reg.insert_alias(
-            ConfigKey::new("[Master]", "gain"),
-            ConfigKey::new("[Main]", "gain"),
-        );
+        reg.insert_alias(ConfigKey::new("[Master]", "gain"), ConfigKey::new("[Main]", "gain"));
         assert_eq!(reg.get("[Master]", "gain").unwrap().get(), 1.0);
         play.set_bool(true);
         assert!(reg.get("[Channel1]", "play").unwrap().get_bool());
@@ -355,14 +337,8 @@ mod tests {
     #[test]
     fn eq_knob_centres_on_unity() {
         let reg = ControlRegistry::new();
-        let eq = reg.create(
-            "[EqualizerRack1_[Channel1]_Effect1]",
-            "parameter1",
-            1.0,
-            0.0,
-            4.0,
-            Behavior::CenteredOnDefault,
-        );
+        let eq =
+            reg.create("[EqualizerRack1_[Channel1]_Effect1]", "parameter1", 1.0, 0.0, 4.0, Behavior::CenteredOnDefault);
         assert_eq!(eq.get_parameter(), 0.5);
         eq.set_parameter(1.0);
         assert_eq!(eq.get(), 4.0);

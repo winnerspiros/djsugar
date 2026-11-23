@@ -1,11 +1,6 @@
-//! Measures how long sound takes from the speakers back into an input
-//! (output latency + air + input latency), so what a looper or a recording
-//! takes from a microphone lines up with the beat the DJ played to.
-//!
-//! A probe of white noise plays on the main output; what the input heard is
-//! cross-correlated with it, and the strongest peak is the delay. Noise has
-//! one sharp correlation peak, so echoes and a quiet room still give one
-//! answer, and a weak peak means the input never heard the probe.
+//! Measures how long sound takes from the speakers back into an input (output latency + air + input latency), so what a looper or a recording takes from a microphone
+//! lines up with the beat the DJ played to. A probe of white noise plays on the main output; what the input heard is cross-correlated with it, and the strongest peak
+//! is the delay. Noise has one sharp correlation peak, so echoes and a quiet room still give one answer, and a weak peak means the input never heard the probe.
 
 use rustfft::num_complex::Complex32;
 use rustfft::FftPlanner;
@@ -54,11 +49,7 @@ pub fn delay(sent: &[f32], heard: &[f32]) -> Option<usize> {
     }
     inv.process(&mut h);
     let lags = &h[..=heard.len() - sent.len()];
-    let (at, peak) = lags
-        .iter()
-        .map(|c| c.re.abs())
-        .enumerate()
-        .max_by(|a, b| a.1.total_cmp(&b.1))?;
+    let (at, peak) = lags.iter().map(|c| c.re.abs()).enumerate().max_by(|a, b| a.1.total_cmp(&b.1))?;
     let typical = lags.iter().map(|c| c.re.abs()).sum::<f32>() / lags.len() as f32;
     (peak > typical * CLEAR).then_some(at)
 }

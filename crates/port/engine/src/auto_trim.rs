@@ -1,8 +1,6 @@
-//! Auto trim: the first seconds an input or instrument plays through a deck
-//! set its TRIM (`[ChannelN],live_trim`), so quiet gear comes up and hot
-//! gear comes down to the level tracks play at. It listens only while the
-//! trim is untouched (0 dB) when the input goes on the deck, counts only
-//! the time it hears something, and stops for good once the DJ turns TRIM.
+//! Auto trim: the first seconds an input or instrument plays through a deck set its TRIM (`[ChannelN],live_trim`), so quiet
+//! gear comes up and hot gear comes down to the level tracks play at. It listens only while the trim is untouched (0 dB)
+//! when the input goes on the deck, counts only the time it hears something, and stops for good once the DJ turns TRIM.
 
 /// How long it listens to the input playing before setting the trim.
 pub(crate) const LISTEN_SECONDS: f64 = 3.0;
@@ -26,10 +24,7 @@ pub(crate) struct AutoTrim {
 impl AutoTrim {
     /// Starts listening afresh.
     pub(crate) fn arm(&mut self) {
-        *self = Self {
-            armed: true,
-            ..Self::default()
-        };
+        *self = Self { armed: true, ..Self::default() };
     }
 
     pub(crate) fn disarm(&mut self) {

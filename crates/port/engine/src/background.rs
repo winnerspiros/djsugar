@@ -16,25 +16,21 @@ thread_local! {
 /// How many threads Beat This! (on rten's thread pool) runs on: a quarter
 /// of the cores, between 2 and 4, rather than every fast core.
 pub fn beat_threads() -> usize {
-    std::thread::available_parallelism()
-        .map_or(2, |n| n.get() / 4)
-        .clamp(2, 4)
+    std::thread::available_parallelism().map_or(2, |n| n.get() / 4).clamp(2, 4)
 }
 
-/// Sizes rten's thread pool (Beat This! runs on it) with [`beat_threads`],
-/// unless `RTEN_NUM_THREADS` is set already. rten reads the variable once,
-/// when the pool is first used, so this is called first thing in `main`,
-/// before any other thread starts.
+/// Sizes rten's thread pool (Beat This! runs on it) with [`beat_threads`], unless
+/// first used, so this is called first thing in `main`, before any other thread starts.
+/// first used, so this is called first thing in `main`, before any other thread
 pub fn configure() {
     if std::env::var_os("RTEN_NUM_THREADS").is_none() {
         std::env::set_var("RTEN_NUM_THREADS", beat_threads().to_string());
     }
 }
 
-/// Runs the calling thread at low priority: the utility QoS class on macOS
-/// (it may move to the efficiency cores), nice 10 on Linux, below normal on
-/// Windows. Threads it starts afterwards should call it too (see
-/// [`is_low`]): macOS doesn't pass the class on to them.
+/// Runs the calling thread at low priority: the utility QoS class on macOS (it may move to
+/// the efficiency cores), nice 10 on Linux, below normal on Windows. Threads it starts
+/// afterwards should call it too (see [`is_low`]): macOS doesn't pass the class on to them.
 pub fn lower_priority() {
     LOW.with(|l| l.set(true));
     #[cfg(target_os = "macos")]

@@ -1,20 +1,6 @@
-//! Track analysis: the 3-band waveform summary, tempo, beat phase and key
-//! (see [`crate::key`] and [`crate::keynet`]).
-//!
-//! The tempo detector works on an onset envelope (rises in bass energy and
-//! overall level, 200 per second). It picks the strongest autocorrelation
-//! lag in the tempo range (60 to 180 BPM unless set otherwise, or the
-//! octave around the track's genre's tempo; see [`genre_range`]), then refines
-//! it to 0.01 BPM by folding the envelope at each candidate period and
-//! keeping the one whose beats line up best. When the beats then fit no
-//! steady grid, the spectral flux (rises across the whole spectrum) gets a
-//! second say in the tempo.
-//!
-//! Live and older recordings drift, so a steady grid misses their beats. A
-//! dynamic-programming beat tracker (Ellis, "Beat Tracking by Dynamic
-//! Programming", 2007) then follows the beats one by one, and a grid is
-//! fitted through them: steady unless the beats move away from one tempo
-//! for a while, then in tempo sections (see [`crate::gridfit`]).
+//! Track analysis: the 3-band waveform summary, tempo, beat phase and key (see [`crate::key`] and [`crate::keynet`]). The tempo detector works on an onset envelope (rises in bass energy and overall level, 200 per second). It picks the strongest autocorrelation lag in the tempo range (60 to 180 BPM unless set otherwise, or the
+//! octave around the track's genre's tempo; see [`genre_range`]), then refines it to 0.01 BPM by folding the envelope at each candidate period and keeping the one whose beats line up best. When the beats then fit no steady grid, the spectral flux (rises across the whole spectrum) gets a second say in the tempo. Live and older
+//! recordings drift, so a steady grid misses their beats. A dynamic-programming beat tracker (Ellis, "Beat Tracking by Dynamic Programming", 2007) then follows the beats one by one, and a grid is fitted through them: steady unless the beats move away from one tempo for a while, then in tempo sections (see [`crate::gridfit`]).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -76,10 +62,9 @@ pub fn set_bpm_range(lo: f64, hi: f64) {
     let hi = hi.round().max((lo * 1.9).ceil()).min(400.0);
     BPM_RANGE.store(pack_range((lo, hi)), Ordering::Relaxed);
 }
-/// What analysis is told about a track before it listens: a tempo from tags
-/// (see [`tag_tempo`]) and the track's genre, which picks the octave
-/// tempos are read in (see [`genre_range`]). `None` and `Some(bpm)` convert
-/// to a hint without a genre.
+/// What analysis is told about a track before it listens: a tempo from tags (see
+/// [`tag_tempo`]) and the track's genre, which picks the octave tempos are read in
+/// (see [`genre_range`]). `None` and `Some(bpm)` convert to a hint without a genre.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TempoHint {
     pub bpm: Option<f64>,
@@ -88,10 +73,7 @@ pub struct TempoHint {
 
 impl From<Option<f64>> for TempoHint {
     fn from(bpm: Option<f64>) -> Self {
-        TempoHint {
-            bpm,
-            genre: String::new(),
-        }
+        TempoHint { bpm, genre: String::new() }
     }
 }
 
@@ -112,19 +94,7 @@ impl TempoHint {
 /// tempo). The first match wins, so narrower genres come first. Genres that
 /// span many tempos (pop, rock, electronic, dance) aren't here.
 const GENRE_TEMPOS: &[(&[&str], f64)] = &[
-    (
-        &[
-            "drum & bass",
-            "drum and bass",
-            "drum n bass",
-            "drum'n'bass",
-            "dnb",
-            "d&b",
-            "jungle",
-            "neurofunk",
-        ],
-        172.0,
-    ),
+    (&["drum & bass", "drum and bass", "drum n bass", "drum'n'bass", "dnb", "d&b", "jungle", "neurofunk"], 172.0),
     (&["footwork", "juke"], 160.0),
     (&["hardstyle", "rawstyle"], 150.0),
     (&["gabber", "hardcore", "frenchcore"], 170.0),
@@ -137,31 +107,14 @@ const GENRE_TEMPOS: &[(&[&str], f64)] = &[
     (&["techno"], 130.0),
     (&["moombahton"], 108.0),
     (&["reggaeton", "dembow", "dancehall"], 95.0),
-    (
-        &["hip hop", "hip-hop", "hiphop", "rap", "r&b", "rnb", "trap"],
-        90.0,
-    ),
+    (&["hip hop", "hip-hop", "hiphop", "rap", "r&b", "rnb", "trap"], 90.0),
     (&["house", "garage", "disco", "big room", "electro"], 124.0),
-    (
-        &[
-            "ambient",
-            "downtempo",
-            "chillout",
-            "chill out",
-            "lounge",
-            "trip hop",
-            "trip-hop",
-            "lo-fi",
-            "lofi",
-        ],
-        85.0,
-    ),
+    (&["ambient", "downtempo", "chillout", "chill out", "lounge", "trip hop", "trip-hop", "lo-fi", "lofi"], 85.0),
 ];
 
-/// The tempo range for tracks of `genre`: the octave around the genre's
-/// typical tempo, so half and double tempo readings fold to the one the
-/// genre is known by (drum & bass at 174 rather than 87, hip-hop at 90
-/// rather than 180). None for an unknown or empty genre.
+/// The tempo range for tracks of `genre`: the octave around the genre's typical tempo, so
+/// half and double tempo readings fold to the one the genre is known by (drum & bass at 174
+/// rather than 87, hip-hop at 90 rather than 180). None for an unknown or empty genre.
 pub fn genre_range(genre: &str) -> Option<(f64, f64)> {
     genre_tempo(genre).map(genre_range_of)
 }
@@ -177,10 +130,7 @@ fn genre_tempo(genre: &str) -> Option<f64> {
             !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
         })
     };
-    GENRE_TEMPOS
-        .iter()
-        .find(|(words, _)| words.iter().any(|w| has(w)))
-        .map(|&(_, tempo)| tempo)
+    GENRE_TEMPOS.iter().find(|(words, _)| words.iter().any(|w| has(w))).map(|&(_, tempo)| tempo)
 }
 
 /// The octave around `tempo`, in whole BPM.
@@ -360,21 +310,13 @@ impl Analyser {
             Some(bpm) => Pick::steady(&onset, bpm),
             None => Pick::at(&onset, detect_bpm(&onset, range, prior)),
         };
-        // The bass and level can keep a rhythm that isn't the beat: a bass
-        // line playing every beat and a half reads as two thirds of the
-        // tempo, and its beats then drift off any grid. Then the spectral
-        // flux, which also hears the soft attacks of pads, plucks and
-        // vocals, gets a say in the tempo; its tempo is taken when its beats
-        // sit on one grid better. (On its own the flux follows hi-hats too
-        // readily, so it isn't the first opinion.)
+        // The bass and level can keep a rhythm that isn't the beat: a bass line playing every beat and a half reads as two thirds of the tempo, and its
+        // beats then drift off any grid. Then the spectral flux, which also hears the soft attacks of pads, plucks and vocals, gets a say in the tempo;
+        // its tempo is taken when its beats sit on one grid better. (On its own the flux follows hi-hats too readily, so it isn't the first opinion.)
         if tag_tempo(bpm_hint).is_none() && pick.bpm > 0.0 && pick.share < STEADY_SHARE {
             let flux = std::mem::take(&mut self.flux).finish(onset.len());
             let (sd_level, sd_flux) = (std_dev(&onset), std_dev(&flux));
-            let both: Vec<f32> = onset
-                .iter()
-                .zip(&flux)
-                .map(|(o, f)| o / sd_level + f / sd_flux)
-                .collect();
+            let both: Vec<f32> = onset.iter().zip(&flux).map(|(o, f)| o / sd_level + f / sd_flux).collect();
             let bpm = detect_bpm(&both, range, prior);
             if bpm > 0.0 && (bpm / pick.bpm - 1.0).abs() > 0.01 {
                 let other = Pick::at(&onset, bpm);
@@ -383,12 +325,7 @@ impl Analyser {
                 }
             }
         }
-        let Pick {
-            bpm,
-            first_beat,
-            fitted,
-            ..
-        } = pick;
+        let Pick { bpm, first_beat, fitted, .. } = pick;
         // The tracked beats say whether the tempo really moves; if it
         // doesn't, the folded tempo and phase are the more precise.
         let grid_unsure = fitted.as_ref().is_some_and(|f| f.unsure);
@@ -397,20 +334,14 @@ impl Analyser {
             Some(f) if f.grid.is_dynamic() => f.grid,
             _ => BeatGrid::constant(bpm, first_beat),
         };
-        let (bpm, first_beat) = if grid.is_dynamic() {
-            (grid.main_bpm(seconds), grid.first_beat())
-        } else {
-            (bpm, first_beat)
-        };
+        let (bpm, first_beat) =
+            if grid.is_dynamic() { (grid.main_bpm(seconds), grid.first_beat()) } else { (bpm, first_beat) };
         let key_detector = match self.neural {
             Some(_) => Detector::Neural,
             None => Detector::Standard,
         };
         // Audio too short for the network gets the standard detector's key.
-        let key = self
-            .neural
-            .and_then(Spectrogram::key)
-            .or_else(|| self.key.key());
+        let key = self.neural.and_then(Spectrogram::key).or_else(|| self.key.key());
         Analysis {
             waveform,
             key,
@@ -431,19 +362,12 @@ fn summarise(slices: &[Slice]) -> Waveform {
     // The bands carry less energy than the whole signal; lift them so the
     // colours read clearly.
     const BAND_GAIN: [f32; 4] = [1.0, 1.4, 2.0, 1.0];
-    let q =
-        |v: f32, k: usize| ((v * BAND_GAIN[k] / top).clamp(0.0, 1.0).sqrt() * 255.0).round() as u8;
+    let q = |v: f32, k: usize| ((v * BAND_GAIN[k] / top).clamp(0.0, 1.0).sqrt() * 255.0).round() as u8;
     let finest = slices
         .iter()
         .map(|s| {
             let rms = s.rms();
-            std::array::from_fn(|i| {
-                if i < 4 {
-                    q(s.peak[i], i)
-                } else {
-                    q(rms[i - 4], i - 4)
-                }
-            })
+            std::array::from_fn(|i| if i < 4 { q(s.peak[i], i) } else { q(rms[i - 4], i - 4) })
         })
         .collect();
     Waveform::from_finest(WAVEFORM_RATE, finest)
@@ -453,9 +377,7 @@ fn summarise(slices: &[Slice]) -> Waveform {
 fn std_dev(v: &[f32]) -> f32 {
     let n = v.len().max(1) as f32;
     let mean = v.iter().sum::<f32>() / n;
-    (v.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / n)
-        .sqrt()
-        .max(1e-9)
+    (v.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / n).sqrt().max(1e-9)
 }
 
 /// Samples in each spectrum of the spectral flux (about 43 ms at 48 kHz).
@@ -467,10 +389,9 @@ const FLUX_TOP_HZ: f64 = 11_000.0;
 /// a busy stretch doesn't outvote the beats in a quiet one.
 const FLUX_MEAN_SECS: f64 = 0.5;
 
-/// Spectral flux, one value per onset bin: how much the log-magnitude
-/// spectrum rises from one bin to the next, summed over frequency (as
-/// the Queen Mary and librosa onset detectors do). Fed the mono
-/// signal a sample at a time; each spectrum is centred on its bin.
+/// Spectral flux, one value per onset bin: how much the log-magnitude spectrum rises from
+/// detectors do). Fed the mono signal a sample at a time; each spectrum is centred on its bin.
+/// detectors do). Fed the mono signal a sample at a time; each spectrum is centred on its
 #[derive(Default)]
 struct SpectralFlux {
     fft: Option<Arc<dyn Fft<f32>>>,
@@ -526,11 +447,7 @@ impl SpectralFlux {
         let start = self.next_start();
         for (k, c) in self.buf.iter_mut().enumerate() {
             let j = start + k as isize;
-            let x = if j >= 0 && (j as usize) < self.pos {
-                self.ring[j as usize % FLUX_FFT]
-            } else {
-                0.0
-            };
+            let x = if j >= 0 && (j as usize) < self.pos { self.ring[j as usize % FLUX_FFT] } else { 0.0 };
             *c = Complex32::new(x * self.window[k], 0.0);
         }
         fft.process(&mut self.buf);
@@ -588,9 +505,7 @@ fn fold(onset: &[f32], period: f64) -> (f64, f32) {
     let total: f32 = hist.iter().sum::<f32>().max(1e-9);
     let mut best = (0, 0.0f32);
     for k in 0..PHASE_BINS {
-        let s = hist[(k + PHASE_BINS - 1) % PHASE_BINS] * 0.5
-            + hist[k]
-            + hist[(k + 1) % PHASE_BINS] * 0.5;
+        let s = hist[(k + PHASE_BINS - 1) % PHASE_BINS] * 0.5 + hist[k] + hist[(k + 1) % PHASE_BINS] * 0.5;
         if s > best.1 {
             best = (k, s);
         }
@@ -602,11 +517,7 @@ fn fold(onset: &[f32], period: f64) -> (f64, f32) {
         w += hist[k] as f64;
         acc += hist[k] as f64 * (best.0 as f64 + d as f64 + 0.5);
     }
-    let phase = if w > 0.0 {
-        acc / w
-    } else {
-        best.0 as f64 + 0.5
-    } / PHASE_BINS as f64;
+    let phase = if w > 0.0 { acc / w } else { best.0 as f64 + 0.5 } / PHASE_BINS as f64;
     (phase.rem_euclid(1.0), best.1 / total)
 }
 
@@ -617,10 +528,7 @@ const PRIOR_OCTAVES: f64 = 1.0;
 /// The tempo of `onset` in `(min_bpm, max_bpm)`, leaning towards `prior`.
 fn detect_bpm(onset: &[f32], (min_bpm, max_bpm): (f64, f64), prior: f64) -> f64 {
     let lag_of = |bpm: f64| ONSET_RATE * 60.0 / bpm;
-    let (min_lag, max_lag) = (
-        lag_of(max_bpm).floor() as usize,
-        lag_of(min_bpm).ceil() as usize,
-    );
+    let (min_lag, max_lag) = (lag_of(max_bpm).floor() as usize, lag_of(min_bpm).ceil() as usize);
     if onset.len() < max_lag * 4 {
         return 0.0;
     }
@@ -635,11 +543,7 @@ fn detect_bpm(onset: &[f32], (min_bpm, max_bpm): (f64, f64), prior: f64) -> f64 
             if l >= centred.len() {
                 break;
             }
-            let c: f32 = centred[l..]
-                .iter()
-                .zip(&centred[..centred.len() - l])
-                .map(|(a, b)| a * b)
-                .sum();
+            let c: f32 = centred[l..].iter().zip(&centred[..centred.len() - l]).map(|(a, b)| a * b).sum();
             s += c / k as f32;
         }
         // Lean towards tempos near the prior (120 BPM or the genre's), so a half-time reading only
@@ -676,37 +580,27 @@ fn detect_bpm(onset: &[f32], (min_bpm, max_bpm): (f64, f64), prior: f64) -> f64 
 /// How strong an onset (in standard deviations) marks a beat clearly.
 const CLEAR_ONSET: f64 = 2.0;
 
-/// Beat times (in onset bins) found by dynamic programming: each beat is
-/// the strongest onset reachable from the best path to it, with a penalty
-/// for spacing away from `period` (Ellis 2007). Each beat comes with whether
-/// a clear onset marks it; through a breakdown the path only guesses.
+/// Beat times (in onset bins) found by dynamic programming: each beat is the strongest onset
+/// reachable from the best path to it, with a penalty for spacing away from `period` (Ellis 2007).
+/// Each beat comes with whether a clear onset marks it; through a breakdown the path only guesses.
 fn track_beats(onset: &[f32], period: f64) -> Vec<(usize, bool)> {
     let n = onset.len();
     if n < (period * 8.0) as usize {
         return Vec::new();
     }
     let mean = onset.iter().sum::<f32>() / n as f32;
-    let sd = (onset.iter().map(|o| (o - mean).powi(2)).sum::<f32>() / n as f32)
-        .sqrt()
-        .max(1e-9);
+    let sd = (onset.iter().map(|o| (o - mean).powi(2)).sum::<f32>() / n as f32).sqrt().max(1e-9);
     let norm: Vec<f64> = onset.iter().map(|o| (*o / sd) as f64).collect();
     // How tightly beats keep to the period; Ellis's default.
     const TIGHTNESS: f64 = 100.0;
-    let (lo, hi) = (
-        (period * 0.5).round() as usize,
-        (period * 2.0).round() as usize,
-    );
+    let (lo, hi) = ((period * 0.5).round() as usize, (period * 2.0).round() as usize);
     let mut score = vec![0.0f64; n];
     let mut from = vec![usize::MAX; n];
     for i in 0..n {
         let mut best = (0.0, usize::MAX);
         let first = i.saturating_sub(hi);
         let last = i.saturating_sub(lo).min(i);
-        for (prev, &sp) in score[first..last]
-            .iter()
-            .enumerate()
-            .map(|(k, s)| (k + first, s))
-        {
+        for (prev, &sp) in score[first..last].iter().enumerate().map(|(k, s)| (k + first, s)) {
             let gap = (i - prev) as f64 / period;
             let s = sp - TIGHTNESS * gap.ln().powi(2);
             if best.1 == usize::MAX || s > best.0 {
@@ -718,9 +612,7 @@ fn track_beats(onset: &[f32], period: f64) -> Vec<(usize, bool)> {
     }
     // End on the best-scoring beat in the last period.
     let tail = n.saturating_sub(period.ceil() as usize);
-    let mut i = (tail..n)
-        .max_by(|&a, &b| score[a].total_cmp(&score[b]))
-        .unwrap();
+    let mut i = (tail..n).max_by(|&a, &b| score[a].total_cmp(&score[b])).unwrap();
     let mut beats = vec![i];
     while from[i] != usize::MAX {
         i = from[i];
@@ -765,12 +657,7 @@ impl Pick {
         } else {
             0.0
         };
-        Pick {
-            bpm,
-            first_beat,
-            share: 1.0,
-            fitted: None,
-        }
+        Pick { bpm, first_beat, share: 1.0, fitted: None }
     }
 
     /// At `bpm`, steady unless the beats [`track_beats`] finds keep off the
@@ -807,22 +694,12 @@ mod tests {
             let beat = 60.0 / bpm;
             let err = (a.first_beat - first_beat).rem_euclid(beat);
             let err = err.min(beat - err);
-            assert!(
-                err < 0.015,
-                "{bpm}: first beat {} vs {first_beat}",
-                a.first_beat
-            );
+            assert!(err < 0.015, "{bpm}: first beat {} vs {first_beat}", a.first_beat);
             let w = &a.waveform;
             assert_eq!(w.levels[0].len(), (60.0 * WAVEFORM_RATE) as usize);
             assert_eq!(w.levels.last().unwrap().len(), 1);
             let max = |k: usize| w.levels[0].iter().map(|b| b[k]).max().unwrap();
-            assert!(
-                max(0) > 180 && max(1) > 80 && max(2) > 80,
-                "{} {} {}",
-                max(0),
-                max(1),
-                max(2)
-            );
+            assert!(max(0) > 180 && max(1) > 80 && max(2) > 80, "{} {} {}", max(0), max(1), max(2));
             // Peaks are never below RMS, and coarser levels keep the peak.
             assert!(w.levels[0].iter().all(|b| (0..4).all(|k| b[k] >= b[k + 4])));
             assert_eq!(w.levels.last().unwrap()[0][3], max(3));
@@ -840,10 +717,7 @@ mod tests {
             a.feed(&frames[..1000]);
             a.waveform()
         };
-        assert_eq!(
-            partial.levels[0].len(),
-            whole.waveform.levels[0].len() + 114
-        );
+        assert_eq!(partial.levels[0].len(), whole.waveform.levels[0].len() + 114);
         for piece in frames[1000..].chunks(777) {
             a.feed(piece);
         }
@@ -868,12 +742,7 @@ mod tests {
         // 64 beats at 120 BPM (32 s), then 60 s at 126 BPM.
         let first = synth::render_with(120.0, 0.0, 32.0, 4);
         let second = synth::render_with(126.0, 0.0, 60.0, 4);
-        let frames: Vec<[f32; 2]> = first
-            .decoded_chunks()
-            .chain(second.decoded_chunks())
-            .flatten()
-            .copied()
-            .collect();
+        let frames: Vec<[f32; 2]> = first.decoded_chunks().chain(second.decoded_chunks()).flatten().copied().collect();
         let audio = Audio::from_frames(first.sample_rate, frames);
         let a = analyse(&audio, None);
         assert!(a.grid.is_dynamic(), "{:?}", a.grid);
@@ -884,11 +753,7 @@ mod tests {
         for k in 0..20 {
             let t = 32.0 + 60.0 / 126.0 * (k as f64 * 5.0);
             let off = (t - a.grid.snap(t, false)).abs();
-            assert!(
-                off < 0.02,
-                "beat at {t} is {off} s off the grid {:?}",
-                a.grid
-            );
+            assert!(off < 0.02, "beat at {t} is {off} s off the grid {:?}", a.grid);
         }
     }
 
@@ -975,19 +840,13 @@ mod tests {
             assert_eq!(hi, 2.0 * lo);
             assert!((lo..hi).contains(tempo));
         }
-        let hint = TempoHint {
-            bpm: None,
-            genre: "Pop".into(),
-        };
+        let hint = TempoHint { bpm: None, genre: "Pop".into() };
         assert_eq!(hint.range(), bpm_range());
     }
 
     #[test]
     fn a_genre_moves_the_tempo_detectors_lean() {
-        let hint = |genre: &str| TempoHint {
-            bpm: None,
-            genre: genre.into(),
-        };
+        let hint = |genre: &str| TempoHint { bpm: None, genre: genre.into() };
         assert_eq!(hint("").prior(), PRIOR_BPM);
         assert_eq!(hint("Jungle").prior(), 172.0);
         assert_eq!(hint("Hip Hop").prior(), 90.0);
@@ -996,17 +855,11 @@ mod tests {
     #[test]
     fn a_genre_folds_a_detected_tempo_into_its_octave() {
         let audio = synth::render_with(87.0, 0.1, 20.0, 5);
-        let dnb = TempoHint {
-            bpm: None,
-            genre: "Drum & Bass".into(),
-        };
+        let dnb = TempoHint { bpm: None, genre: "Drum & Bass".into() };
         assert!((analyse(&audio, dnb).bpm - 174.0).abs() < 0.1);
         assert!((analyse(&audio, None).bpm - 87.0).abs() < 0.1);
         // A tempo from tags still wins.
-        let tagged = TempoHint {
-            bpm: Some(87.0),
-            genre: "Drum & Bass".into(),
-        };
+        let tagged = TempoHint { bpm: Some(87.0), genre: "Drum & Bass".into() };
         assert_eq!(analyse(&audio, tagged).bpm, 87.0);
     }
 }

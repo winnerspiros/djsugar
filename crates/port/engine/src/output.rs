@@ -1,23 +1,6 @@
-//! Sends the engine's mixes to output devices with cpal, as a list of
-//! routes: each route takes the master,
-//! headphone (cue) or booth mix, or one deck or the sampler on its own, to a
-//! pair of channels on a device. Without
-//! a usable device (a headless machine, CI) the engine runs on a timer
-//! instead, so everything except the sound itself keeps working.
-//!
-//! The master route's device runs the engine in its callback. Other devices
-//! are fed through ring buffers; as their clocks drift from the master
-//! device's, they drop or pad a little audio to keep the delay short.
-//!
-//! The microphone and auxiliary inputs come in the same way, from input
-//! devices: each device is opened once, with every channel its inputs take,
-//! and its callback queues each input's frames for the engine (see
-//! [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second
-//! stream on a device, and two streams on one device drift apart.
-//!
-//! [`Health`] keeps watch: how much of each buffer the engine takes, the
-//! dropouts the device reports or that show as late callbacks, and a device
-//! that goes away, which is reopened once it is back.
+//! Sends the engine's mixes to output devices with cpal, as a list of routes: each route takes the master, headphone (cue) or booth mix, or one deck or the sampler on its own, to a pair of channels on a device. Without a usable device (a headless machine, CI) the engine runs on a timer instead, so everything except the sound itself keeps working. The master
+//! each input's frames for the engine (see [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second stream on a device, and two streams on one device drift apart. [`Health`] keeps watch: how much of each buffer the engine takes, the dropouts the device reports or that show as late callbacks, and a device that goes away, which is reopened once it is back.
+//! each input's frames for the engine (see [`crate::inputs`]). Some drivers (ASIO, ALSA `hw:`) refuse a second stream on a device, and two streams on one device drift apart. [`Health`] keeps watch: how much of each buffer the engine takes, the dropouts the device reports or that show as late callbacks, and a device that goes away, which is reopened once it is
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -90,11 +73,7 @@ impl Role {
 /// sampler pairs up to the last one routed. Without deck outputs it is the
 /// six of the mixes, so the engine does no tap work at all.
 fn render_width(setup: &AudioSetup) -> usize {
-    setup
-        .routes
-        .iter()
-        .map(|r| 2 * r.role.source() + 2)
-        .fold(MIX_CHANNELS, usize::max)
+    setup.routes.iter().map(|r| 2 * r.role.source() + 2).fold(MIX_CHANNELS, usize::max)
 }
 
 /// One output: a mix to channels `2 * pair + 1` and `2 * pair + 2` of the
@@ -177,10 +156,7 @@ impl InputRole {
     /// 1 for the first auxiliary input to 8 for the last; none for the
     /// microphone.
     pub fn aux_number(self) -> Option<usize> {
-        InputRole::AUXILIARIES
-            .iter()
-            .position(|r| *r == self)
-            .map(|n| n + 1)
+        InputRole::AUXILIARIES.iter().position(|r| *r == self).map(|n| n + 1)
     }
 
     /// Whether it can take one channel or two (the auxiliary inputs).
@@ -243,11 +219,7 @@ impl Default for AudioSetup {
     /// The master mix on the system's default device.
     fn default() -> Self {
         Self {
-            routes: vec![Route {
-                role: Role::Master,
-                device: String::new(),
-                pair: 0,
-            }],
+            routes: vec![Route { role: Role::Master, device: String::new(), pair: 0 }],
             inputs: Vec::new(),
             sample_rate: None,
             buffer_frames: None,
@@ -339,14 +311,7 @@ struct Meter {
 
 impl Meter {
     fn new(health: Arc<Health>) -> Self {
-        Self {
-            health,
-            elapsed: 0.0,
-            last: None,
-            worst: 0.0,
-            window: HEALTH_WINDOW,
-            overload_left: 0.0,
-        }
+        Self { health, elapsed: 0.0, last: None, worst: 0.0, window: HEALTH_WINDOW, overload_left: 0.0 }
     }
 
     /// After a callback that started at `start` and rendered `period`
@@ -354,9 +319,9 @@ impl Meter {
     fn measure(&mut self, start: Instant, period: f64) {
         let now = Instant::now();
         let used = now.duration_since(start).as_secs_f64() / period;
-        let late = self.last.is_some_and(|(at, before)| {
-            start.duration_since(at).as_secs_f64() > LATE_CALLBACK * before.max(period)
-        });
+        let late = self
+            .last
+            .is_some_and(|(at, before)| start.duration_since(at).as_secs_f64() > LATE_CALLBACK * before.max(period));
         self.last = Some((start, period));
         self.elapsed += period;
         if self.elapsed < HEALTH_WARMUP {
@@ -451,11 +416,7 @@ pub fn controller_routes(devices: &[OutputDevice]) -> Option<Vec<Route>> {
         let name = d.name.to_lowercase();
         d.channels >= 4 && CONTROLLER_CARDS.iter().any(|w| name.contains(w))
     })?;
-    let route = |role, pair| Route {
-        role,
-        device: card.name.clone(),
-        pair,
-    };
+    let route = |role, pair| Route { role, device: card.name.clone(), pair };
     Some(vec![route(Role::Master, 0), route(Role::Headphones, 1)])
 }
 
@@ -470,10 +431,7 @@ pub fn output_devices() -> Vec<OutputDevice> {
         .flat_map(|(prefix, devices)| devices.map(move |d| (prefix, d)))
         .map(|(prefix, d)| OutputDevice {
             name: format!("{prefix}{}", device_name(&d)),
-            channels: d
-                .supported_output_configs()
-                .map(|c| c.map(|r| r.channels()).max().unwrap_or(2))
-                .unwrap_or(2),
+            channels: d.supported_output_configs().map(|c| c.map(|r| r.channels()).max().unwrap_or(2)).unwrap_or(2),
         })
         .collect();
     list.dedup_by(|a, b| a.name == b.name);
@@ -491,10 +449,7 @@ pub fn input_devices() -> Vec<OutputDevice> {
         .flat_map(|(prefix, devices)| devices.map(move |d| (prefix, d)))
         .map(|(prefix, d)| OutputDevice {
             name: format!("{prefix}{}", device_name(&d)),
-            channels: d
-                .supported_input_configs()
-                .map(|c| c.map(|r| r.channels()).max().unwrap_or(1))
-                .unwrap_or(1),
+            channels: d.supported_input_configs().map(|c| c.map(|r| r.channels()).max().unwrap_or(1)).unwrap_or(1),
         })
         .collect();
     list.dedup_by(|a, b| a.name == b.name);
@@ -523,9 +478,7 @@ fn no_audio() -> bool {
 }
 
 fn device_name(d: &cpal::Device) -> String {
-    d.description()
-        .map(|d| d.name().to_string())
-        .unwrap_or_else(|_| "audio device".into())
+    d.description().map(|d| d.name().to_string()).unwrap_or_else(|_| "audio device".into())
 }
 
 /// The device called `name`, or the default device for an empty name.
@@ -542,9 +495,7 @@ fn find(name: &str) -> Option<cpal::Device> {
 fn clock_device(setup: &AudioSetup) -> &str {
     let mut used = setup.routes.iter().filter(|r| setup.in_use(r));
     let first = used.clone().next();
-    used.find(|r| r.role == Role::Master)
-        .or(first)
-        .map_or("", |r| r.device.as_str())
+    used.find(|r| r.role == Role::Master).or(first).map_or("", |r| r.device.as_str())
 }
 
 /// Whether a deck or sampler output goes to another device than the
@@ -552,10 +503,7 @@ fn clock_device(setup: &AudioSetup) -> &str {
 /// apart from the master and from each other by a few samples.
 pub fn deck_outputs_split(setup: &AudioSetup) -> bool {
     let clock = clock_device(setup);
-    setup
-        .routes
-        .iter()
-        .any(|r| r.role.is_tap() && r.device != clock)
+    setup.routes.iter().any(|r| r.role.is_tap() && r.device != clock)
 }
 
 /// The sample rate the engine runs at: the one chosen if the clock device
@@ -572,27 +520,15 @@ pub(crate) fn sample_rate(setup: &AudioSetup) -> f64 {
             return rate as f64;
         }
     }
-    device
-        .default_output_config()
-        .map_or(44_100.0, |c| c.sample_rate() as f64)
+    device.default_output_config().map_or(44_100.0, |c| c.sample_rate() as f64)
 }
 
 /// A stream config at `rate` with at least `channels` channels, preferring
 /// float samples and the fewest channels.
-fn config_at(
-    device: &cpal::Device,
-    rate: f64,
-    channels: u16,
-) -> Option<cpal::SupportedStreamConfig> {
-    let mut ranges: Vec<_> = device
-        .supported_output_configs()
-        .ok()?
-        .filter(|r| r.channels() >= channels)
-        .collect();
+fn config_at(device: &cpal::Device, rate: f64, channels: u16) -> Option<cpal::SupportedStreamConfig> {
+    let mut ranges: Vec<_> = device.supported_output_configs().ok()?.filter(|r| r.channels() >= channels).collect();
     ranges.sort_by_key(|r| (r.sample_format() != SampleFormat::F32, r.channels()));
-    ranges
-        .into_iter()
-        .find_map(|r| r.try_with_sample_rate(rate as u32))
+    ranges.into_iter().find_map(|r| r.try_with_sample_rate(rate as u32))
 }
 
 /// The routes going to one device: (engine pair, device pair, route index).
@@ -793,10 +729,7 @@ impl Outputs {
     /// call, by the device's name as the setup gives it (empty for the
     /// system default): for the input picker's meters.
     pub(crate) fn input_levels(&self) -> Vec<(String, Vec<f32>)> {
-        self.levels
-            .iter()
-            .map(|(name, levels)| (name.clone(), levels.take()))
-            .collect()
+        self.levels.iter().map(|(name, levels)| (name.clone(), levels.take())).collect()
     }
 
     /// Meters the input device called `device` (empty for the system
@@ -812,11 +745,7 @@ impl Outputs {
         }
         self.drop_watched();
         let open = self.levels.iter().any(|(d, _)| d == device);
-        let stream = if open || no_audio() {
-            None
-        } else {
-            self.open_meter(device)
-        };
+        let stream = if open || no_audio() { None } else { self.open_meter(device) };
         self.watched = Some((device.to_string(), stream));
     }
 
@@ -844,11 +773,9 @@ impl Outputs {
         Some(stream)
     }
 
-    /// Opens the input device called `device` once for all of `routes`,
-    /// with buffers of `frames` as the outputs have (else the device's
-    /// default), and fans its channels out to one queue per input. Returns,
-    /// for each input by [`InputRole::index`], its queue, status and whether
-    /// it has sent anything but silence yet, or what is wrong.
+    /// Opens the input device called `device` once for all of `routes`, with buffers of `frames` as the outputs have
+    /// (else the device's default), and fans its channels out to one queue per input. Returns, for each input by
+    /// [`InputRole::index`], its queue, status and whether it has sent anything but silence yet, or what is wrong.
     #[allow(clippy::type_complexity)]
     fn open_inputs(
         &mut self,
@@ -856,16 +783,9 @@ impl Outputs {
         routes: &[InputRoute],
         frames: Option<u32>,
     ) -> Vec<(usize, Result<(InputFeed, String, Arc<AtomicBool>), String>)> {
-        let label = if device.is_empty() {
-            "System default"
-        } else {
-            device
-        };
+        let label = if device.is_empty() { "System default" } else { device };
         let Some(dev) = find_input(device) else {
-            return routes
-                .iter()
-                .map(|r| (r.role.index(), Err(format!("{label} unavailable"))))
-                .collect();
+            return routes.iter().map(|r| (r.role.index(), Err(format!("{label} unavailable")))).collect();
         };
         let name = device_name(&dev);
         let khz = self.rate / 1000.0;
@@ -879,10 +799,7 @@ impl Outputs {
             } else {
                 out.push((
                     r.role.index(),
-                    Err(format!(
-                        "{name} can't record {} at {khz} kHz",
-                        channel_names(r.channel, r.channels())
-                    )),
+                    Err(format!("{name} can't record {} at {khz} kHz", channel_names(r.channel, r.channels()))),
                 ));
             }
         }
@@ -897,21 +814,9 @@ impl Outputs {
             // Half a second of room; the engine keeps it much emptier.
             let (tx, rx) = rtrb::RingBuffer::<f32>::new((self.rate * 0.5) as usize * 2);
             let heard = Arc::new(AtomicBool::new(false));
-            taps.push(Tap {
-                first: r.channel as usize,
-                stereo: r.channels() == 2,
-                tx,
-                heard: heard.clone(),
-            });
-            let status = format!(
-                "{name} · {} · {khz} kHz",
-                channel_names(r.channel, r.channels())
-            );
-            let feed = InputFeed {
-                rx,
-                period: period.clone(),
-                queued: Arc::default(),
-            };
+            taps.push(Tap { first: r.channel as usize, stereo: r.channels() == 2, tx, heard: heard.clone() });
+            let status = format!("{name} · {} · {khz} kHz", channel_names(r.channel, r.channels()));
+            let feed = InputFeed { rx, period: period.clone(), queued: Arc::default() };
             opened.push((r.role.index(), feed, status, heard));
         }
         let channels = config.channels() as usize;
@@ -928,11 +833,7 @@ impl Outputs {
             Ok(stream) => {
                 self.inputs.push(stream);
                 self.levels.push((device.to_string(), levels));
-                out.extend(
-                    opened
-                        .into_iter()
-                        .map(|(i, feed, status, heard)| (i, Ok((feed, status, heard)))),
-                );
+                out.extend(opened.into_iter().map(|(i, feed, status, heard)| (i, Ok((feed, status, heard)))));
             }
             Err(e) => out.extend(opened.into_iter().map(|(i, ..)| (i, Err(e.clone())))),
         }
@@ -952,19 +853,14 @@ impl Outputs {
         }
         self.retry_at = Some(now + RETRY);
         let name = clock_device(&self.setup).to_string();
-        let label = if name.is_empty() {
-            "The system's audio output".to_string()
-        } else {
-            name.clone()
-        };
+        let label = if name.is_empty() { "The system's audio output".to_string() } else { name.clone() };
         if find(&name).is_none() {
             if std::mem::replace(&mut self.lost_reported, true) {
                 return None;
             }
-            // The engine ran in the lost stream's callback. Run it on the
-            // timer instead, so the app keeps answering (load, seek, cue)
-            // while the decks stand still: frozen, a playing deck's
-            // waveform jumps back and forth as the screen guesses ahead.
+            // The engine ran in the lost stream's callback. Run it on the timer instead, so
+            // the app keeps answering (load, seek, cue) while the decks stand still: frozen,
+            // a playing deck's waveform jumps back and forth as the screen guesses ahead.
             self.streams.clear();
             if let Ok(mut engine) = self.engine.lock() {
                 engine.pause_decks();
@@ -1005,10 +901,7 @@ impl Outputs {
         self.input_retry_at = Some(now + RETRY);
         let setup = self.setup.clone();
         self.configure_inputs(&setup);
-        let wanted: usize = group_inputs(&setup.inputs)
-            .iter()
-            .map(|(_, routes)| routes.len())
-            .sum();
+        let wanted: usize = group_inputs(&setup.inputs).iter().map(|(_, routes)| routes.len()).sum();
         let open = self.heard.iter().filter(|h| h.is_some()).count();
         if open < wanted {
             // Not back yet: try again in a while.
@@ -1036,11 +929,7 @@ impl Outputs {
             eprintln!("audio output unavailable ({e}); running without sound");
             self.streams.clear();
             self.timer = Some(self.start_timer());
-            self.main_status = if no_audio() {
-                "No audio output".into()
-            } else {
-                e
-            };
+            self.main_status = if no_audio() { "No audio output".into() } else { e };
             for s in &mut self.route_status {
                 if s.is_empty() || !s.contains("unavailable") {
                     *s = self.main_status.clone();
@@ -1055,18 +944,12 @@ impl Outputs {
         }
         let khz = self.rate / 1000.0;
         let buffer = setup.buffer_frames;
-        let clock = find(clock_device(setup))
-            .or_else(|| find(""))
-            .ok_or("no output device")?;
+        let clock = find(clock_device(setup)).or_else(|| find("")).ok_or("no output device")?;
         let clock_name = device_name(&clock);
 
         // Group the routes by device, the clock device first. A route to
         // channels another route already uses is left out.
-        let mut devices = vec![DeviceRoutes {
-            name: clock_name.clone(),
-            device: clock,
-            routes: Vec::new(),
-        }];
+        let mut devices = vec![DeviceRoutes { name: clock_name.clone(), device: clock, routes: Vec::new() }];
         for (i, r) in setup.routes.iter().enumerate() {
             if !setup.in_use(r) {
                 self.route_status[i] = "Not used with an external mixer".into();
@@ -1081,11 +964,7 @@ impl Outputs {
                 Some(at) => at,
                 None => match find(&name) {
                     Some(device) => {
-                        devices.push(DeviceRoutes {
-                            name: name.clone(),
-                            device,
-                            routes: Vec::new(),
-                        });
+                        devices.push(DeviceRoutes { name: name.clone(), device, routes: Vec::new() });
                         devices.len() - 1
                     }
                     None => {
@@ -1096,8 +975,7 @@ impl Outputs {
             };
             let pair = r.pair as usize;
             if let Some(&(_, _, other)) = devices[at].routes.iter().find(|x| x.1 == pair) {
-                self.route_status[i] =
-                    format!("same channels as {}", setup.routes[other].role.name());
+                self.route_status[i] = format!("same channels as {}", setup.routes[other].role.name());
                 continue;
             }
             devices[at].routes.push((r.role.source(), pair, i));
@@ -1109,20 +987,11 @@ impl Outputs {
             if d.routes.is_empty() {
                 continue;
             }
-            let needed = d
-                .routes
-                .iter()
-                .map(|r| r.1 as u16 * 2 + 2)
-                .max()
-                .unwrap_or(2);
+            let needed = d.routes.iter().map(|r| r.1 as u16 * 2 + 2).max().unwrap_or(2);
             let Some(config) = config_at(&d.device, self.rate, needed) else {
                 for &(_, pair, i) in &d.routes {
-                    self.route_status[i] = format!(
-                        "{} unavailable at {khz} kHz with ch {} & {}",
-                        d.name,
-                        2 * pair + 1,
-                        2 * pair + 2
-                    );
+                    self.route_status[i] =
+                        format!("{} unavailable at {khz} kHz with ch {} & {}", d.name, 2 * pair + 1, 2 * pair + 2);
                 }
                 continue;
             };
@@ -1130,33 +999,26 @@ impl Outputs {
             let width = d.routes.len() * 2;
             // A quarter second of audio in flight at most.
             let (tx, mut rx) = rtrb::RingBuffer::<f32>::new((self.rate * 0.5) as usize * width);
-            let pairs: Vec<(usize, usize)> =
-                d.routes.iter().enumerate().map(|(k, r)| (k, r.1)).collect();
+            let pairs: Vec<(usize, usize)> = d.routes.iter().enumerate().map(|(k, r)| (k, r.1)).collect();
             let mut frame = [0.0f32; OUTPUT_CHANNELS];
-            match stream(
-                &d.device,
-                &config,
-                buffer,
-                &self.health,
-                move |data: &mut [f32]| {
-                    let frames = data.len() / channels;
-                    // Keep at most two buffers queued: drop the oldest beyond that.
-                    let excess = rx.slots().saturating_sub(frames * width * 2) / width * width;
-                    for _ in 0..excess {
-                        let _ = rx.pop();
-                    }
-                    for out in data.chunks_exact_mut(channels) {
-                        if rx.slots() >= width {
-                            for v in &mut frame[..width] {
-                                *v = rx.pop().unwrap_or(0.0);
-                            }
-                            write_pairs(out, &frame, &pairs);
-                        } else {
-                            out.fill(0.0);
+            match stream(&d.device, &config, buffer, &self.health, move |data: &mut [f32]| {
+                let frames = data.len() / channels;
+                // Keep at most two buffers queued: drop the oldest beyond that.
+                let excess = rx.slots().saturating_sub(frames * width * 2) / width * width;
+                for _ in 0..excess {
+                    let _ = rx.pop();
+                }
+                for out in data.chunks_exact_mut(channels) {
+                    if rx.slots() >= width {
+                        for v in &mut frame[..width] {
+                            *v = rx.pop().unwrap_or(0.0);
                         }
+                        write_pairs(out, &frame, &pairs);
+                    } else {
+                        out.fill(0.0);
                     }
-                },
-            ) {
+                }
+            }) {
                 Ok(s) => {
                     self.streams.push(s);
                     for &(_, _, i) in &d.routes {
@@ -1175,12 +1037,7 @@ impl Outputs {
 
         // The clock device runs the engine and feeds the others.
         let d = devices.pop().expect("clock device");
-        let needed = d
-            .routes
-            .iter()
-            .map(|r| r.1 as u16 * 2 + 2)
-            .max()
-            .unwrap_or(2);
+        let needed = d.routes.iter().map(|r| r.1 as u16 * 2 + 2).max().unwrap_or(2);
         let config = config_at(&d.device, self.rate, needed)
             .or_else(|| config_at(&d.device, self.rate, 1))
             .ok_or_else(|| format!("{clock_name} can't play at {khz} kHz"))?;
@@ -1199,43 +1056,36 @@ impl Outputs {
         let mut feeds = feeds;
         let mut meter = Meter::new(self.health.clone());
         let rate = self.rate;
-        self.streams.push(stream(
-            &d.device,
-            &config,
-            buffer,
-            &self.health,
-            move |data: &mut [f32]| {
-                let start = Instant::now();
-                let frames = data.len() / channels;
-                if mix.len() < frames * width {
-                    mix.resize(frames * width, 0.0);
-                }
-                let mix = &mut mix[..frames * width];
-                match engine.try_lock() {
-                    Ok(mut e) => e.process(mix, width),
-                    Err(_) => mix.fill(0.0),
-                }
-                for (out, m) in data.chunks_exact_mut(channels).zip(mix.chunks_exact(width)) {
-                    write_pairs(out, m, &pairs);
-                    for (tx, sources) in &mut feeds {
-                        if tx.slots() >= sources.len() * 2 {
-                            for &s in sources.iter() {
-                                let _ = tx.push(m[2 * s]);
-                                let _ = tx.push(m[2 * s + 1]);
-                            }
+        self.streams.push(stream(&d.device, &config, buffer, &self.health, move |data: &mut [f32]| {
+            let start = Instant::now();
+            let frames = data.len() / channels;
+            if mix.len() < frames * width {
+                mix.resize(frames * width, 0.0);
+            }
+            let mix = &mut mix[..frames * width];
+            match engine.try_lock() {
+                Ok(mut e) => e.process(mix, width),
+                Err(_) => mix.fill(0.0),
+            }
+            for (out, m) in data.chunks_exact_mut(channels).zip(mix.chunks_exact(width)) {
+                write_pairs(out, m, &pairs);
+                for (tx, sources) in &mut feeds {
+                    if tx.slots() >= sources.len() * 2 {
+                        for &s in sources.iter() {
+                            let _ = tx.push(m[2 * s]);
+                            let _ = tx.push(m[2 * s + 1]);
                         }
                     }
                 }
-                if frames > 0 {
-                    meter.measure(start, frames as f64 / rate);
-                }
-            },
-        )?);
+            }
+            if frames > 0 {
+                meter.measure(start, frames as f64 / rate);
+            }
+        })?);
         self.main_status = match buffer_frames(&config, buffer) {
-            BufferSize::Fixed(n) => format!(
-                "{clock_name} · {khz} kHz · {n} samples ({:.1} ms)",
-                n as f64 / self.rate * 1000.0
-            ),
+            BufferSize::Fixed(n) => {
+                format!("{clock_name} · {khz} kHz · {n} samples ({:.1} ms)", n as f64 / self.rate * 1000.0)
+            }
             BufferSize::Default => format!("{clock_name} · {khz} kHz"),
         };
         Ok(())
@@ -1268,10 +1118,7 @@ impl Outputs {
                 })
                 .expect("spawn engine timer")
         };
-        Timer {
-            running,
-            thread: Some(thread),
-        }
+        Timer { running, thread: Some(thread) }
     }
 }
 
@@ -1290,10 +1137,7 @@ fn group_inputs(inputs: &[InputRoute]) -> Vec<(String, Vec<InputRoute>)> {
     let mut groups: Vec<(String, Vec<InputRoute>)> = Vec::new();
     for role in InputRole::ALL {
         // A strip playing the Groove Box opens no device.
-        let Some(r) = inputs
-            .iter()
-            .find(|r| r.role == role && r.device != GROOVE_BOX)
-        else {
+        let Some(r) = inputs.iter().find(|r| r.role == role && r.device != GROOVE_BOX) else {
             continue;
         };
         match groups.iter_mut().find(|(d, _)| *d == r.device) {
@@ -1321,9 +1165,7 @@ fn fan_out(taps: &mut [Tap], channels: usize, data: &[f32]) {
     for tap in taps {
         let width = if tap.stereo { 2 } else { 1 };
         if !tap.heard.load(Ordering::Relaxed)
-            && data
-                .chunks_exact(channels)
-                .any(|f| f[tap.first..tap.first + width].iter().any(|v| *v != 0.0))
+            && data.chunks_exact(channels).any(|f| f[tap.first..tap.first + width].iter().any(|v| *v != 0.0))
         {
             tap.heard.store(true, Ordering::Relaxed);
         }
@@ -1348,10 +1190,9 @@ pub fn channel_names(first: u16, count: u16) -> String {
     }
 }
 
-/// Each channel's peak on an input device since it was last read, shared
-/// between the device's callback, which raises them, and the app, which
-/// takes them. Held as f32 bits: for levels of 0 and up, their order as
-/// integers is their order as numbers, so `fetch_max` works on them.
+/// Each channel's peak on an input device since it was last read, shared between the device's
+/// callback, which raises them, and the app, which takes them. Held as f32 bits: for levels of
+/// 0 and up, their order as integers is their order as numbers, so `fetch_max` works on them.
 #[derive(Clone)]
 struct Levels(Arc<[AtomicU32]>);
 
@@ -1379,24 +1220,16 @@ impl Levels {
 
     /// Each channel's peak since the last time, starting over.
     fn take(&self) -> Vec<f32> {
-        self.0
-            .iter()
-            .map(|l| f32::from_bits(l.swap(0, Ordering::Relaxed)))
-            .collect()
+        self.0.iter().map(|l| f32::from_bits(l.swap(0, Ordering::Relaxed))).collect()
     }
 }
 
 /// An input stream config at `rate` with at least `channels` channels, and
 /// all the device's own if it has more (as many as its default config has),
 /// so the input picker can meter every one.
-fn input_config_wide(
-    device: &cpal::Device,
-    rate: f64,
-    channels: u16,
-) -> Option<cpal::SupportedStreamConfig> {
+fn input_config_wide(device: &cpal::Device, rate: f64, channels: u16) -> Option<cpal::SupportedStreamConfig> {
     let own = device.default_input_config().map_or(0, |c| c.channels());
-    input_config_at(device, rate, wide_channels(own, channels))
-        .or_else(|| input_config_at(device, rate, channels))
+    input_config_at(device, rate, wide_channels(own, channels)).or_else(|| input_config_at(device, rate, channels))
 }
 
 /// The channels to open a device with: those the inputs need, or the
@@ -1407,26 +1240,15 @@ fn wide_channels(own: u16, needed: u16) -> u16 {
 
 /// An input stream config at `rate` with at least `channels` channels,
 /// preferring float samples and the fewest channels.
-fn input_config_at(
-    device: &cpal::Device,
-    rate: f64,
-    channels: u16,
-) -> Option<cpal::SupportedStreamConfig> {
-    let mut ranges: Vec<_> = device
-        .supported_input_configs()
-        .ok()?
-        .filter(|r| r.channels() >= channels)
-        .collect();
+fn input_config_at(device: &cpal::Device, rate: f64, channels: u16) -> Option<cpal::SupportedStreamConfig> {
+    let mut ranges: Vec<_> = device.supported_input_configs().ok()?.filter(|r| r.channels() >= channels).collect();
     ranges.sort_by_key(|r| (r.sample_format() != SampleFormat::F32, r.channels()));
-    ranges
-        .into_iter()
-        .find_map(|r| r.try_with_sample_rate(rate as u32))
+    ranges.into_iter().find_map(|r| r.try_with_sample_rate(rate as u32))
 }
 
-/// Opens and starts an input stream that hands `take` its audio in f32,
-/// interleaved, with buffers of `frames` if the device takes them (the
-/// outputs' size: a bigger input buffer is heard as delay), else its
-/// default. `lost` is set if the stream stops.
+/// Opens and starts an input stream that hands `take` its audio in f32, interleaved,
+/// input buffer is heard as delay), else its default. `lost` is set if the stream stops.
+/// input buffer is heard as delay), else its default. `lost` is set if the stream
 fn input_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
@@ -1487,10 +1309,7 @@ where
     let mut scratch = vec![0.0f32; 16_384 * channels];
     device
         .build_input_stream::<T, _, _>(
-            cpal::StreamConfig {
-                buffer_size,
-                ..config.config()
-            },
+            cpal::StreamConfig { buffer_size, ..config.config() },
             move |data: &[T], _| {
                 if scratch.len() < data.len() {
                     // Rare: a device delivering more than asked for.
@@ -1563,10 +1382,7 @@ where
     let mut scratch = vec![0.0f32; 16_384 * channels];
     device
         .build_output_stream::<T, _, _>(
-            cpal::StreamConfig {
-                buffer_size,
-                ..config.config()
-            },
+            cpal::StreamConfig { buffer_size, ..config.config() },
             move |data: &mut [T], _| {
                 if scratch.len() < data.len() {
                     scratch.resize(data.len(), 0.0);
@@ -1588,26 +1404,13 @@ mod tests {
     use super::*;
 
     fn input_route(role: InputRole, device: &str, channel: u16, mono: bool) -> InputRoute {
-        InputRoute {
-            role,
-            device: device.to_string(),
-            channel,
-            mono,
-        }
+        InputRoute { role, device: device.to_string(), channel, mono }
     }
 
     fn tap(first: usize, stereo: bool) -> (Tap, rtrb::Consumer<f32>) {
         let (tx, rx) = rtrb::RingBuffer::new(64);
         let heard = Arc::new(AtomicBool::new(false));
-        (
-            Tap {
-                first,
-                stereo,
-                tx,
-                heard,
-            },
-            rx,
-        )
+        (Tap { first, stereo, tx, heard }, rx)
     }
 
     fn drain(rx: &mut rtrb::Consumer<f32>) -> Vec<f32> {
@@ -1655,12 +1458,7 @@ mod tests {
     #[test]
     fn a_full_queue_drops_only_its_own_input() {
         let (tx, mut full) = rtrb::RingBuffer::new(2);
-        let a = Tap {
-            first: 0,
-            stereo: true,
-            tx,
-            heard: Arc::new(AtomicBool::new(false)),
-        };
+        let a = Tap { first: 0, stereo: true, tx, heard: Arc::new(AtomicBool::new(false)) };
         let (b, mut rb) = tap(2, true);
         fan_out(&mut [a, b], 4, &FOUR);
         assert_eq!(drain(&mut full), [1.0, 2.0]);
@@ -1725,18 +1523,13 @@ mod tests {
             input_route(InputRole::Auxiliary, "Other", 1, false),
         ];
         let groups = group_inputs(&inputs);
-        let summary: Vec<(&str, Vec<(InputRole, u16)>)> = groups
-            .iter()
-            .map(|(d, rs)| (d.as_str(), rs.iter().map(|r| (r.role, r.channel)).collect()))
-            .collect();
+        let summary: Vec<(&str, Vec<(InputRole, u16)>)> =
+            groups.iter().map(|(d, rs)| (d.as_str(), rs.iter().map(|r| (r.role, r.channel)).collect())).collect();
         assert_eq!(
             summary,
             [
                 ("", vec![(InputRole::Microphone, 3)]),
-                (
-                    "M4",
-                    vec![(InputRole::Auxiliary, 0), (InputRole::Auxiliary2, 2)]
-                ),
+                ("M4", vec![(InputRole::Auxiliary, 0), (InputRole::Auxiliary2, 2)]),
                 ("Other", vec![(InputRole::Auxiliary3, 0)]),
             ]
         );
@@ -1748,10 +1541,7 @@ mod tests {
         let reg = ControlRegistry::new();
         let mut meter = Meter::new(Health::new(&reg));
         for _ in 0..(seconds / period) as usize {
-            meter.measure(
-                Instant::now() - Duration::from_secs_f64(period * share),
-                period,
-            );
+            meter.measure(Instant::now() - Duration::from_secs_f64(period * share), period);
         }
         (reg, meter)
     }
@@ -1796,28 +1586,15 @@ mod tests {
     }
 
     fn route(role: Role, device: &str, pair: u16) -> Route {
-        Route {
-            role,
-            device: device.into(),
-            pair,
-        }
+        Route { role, device: device.into(), pair }
     }
 
     #[test]
     fn a_controllers_sound_card_takes_master_and_headphones() {
-        let dev = |name: &str, channels| OutputDevice {
-            name: name.into(),
-            channels,
-        };
+        let dev = |name: &str, channels| OutputDevice { name: name.into(), channels };
         let devices = [dev("Speakers (Realtek)", 2), dev("DDJ-FLX4", 4)];
         let routes = controller_routes(&devices).unwrap();
-        assert_eq!(
-            routes,
-            [
-                route(Role::Master, "DDJ-FLX4", 0),
-                route(Role::Headphones, "DDJ-FLX4", 1)
-            ]
-        );
+        assert_eq!(routes, [route(Role::Master, "DDJ-FLX4", 0), route(Role::Headphones, "DDJ-FLX4", 1)]);
         // Without headphone outputs, or without a controller, nothing.
         assert_eq!(controller_routes(&[dev("DDJ-200", 2)]), None);
         assert_eq!(controller_routes(&[dev("Scarlett 4i4", 4)]), None);
@@ -1834,17 +1611,12 @@ mod tests {
         assert_eq!(render_width(&setup), OUTPUT_CHANNELS);
         assert!(Role::Deck1.is_tap() && Role::Sampler.is_tap());
         assert!(!Role::Booth.is_tap());
-        assert!(Role::ALL
-            .iter()
-            .all(|r| Role::from_name(r.name()) == Some(*r)));
+        assert!(Role::ALL.iter().all(|r| Role::from_name(r.name()) == Some(*r)));
     }
 
     #[test]
     fn warns_when_deck_outputs_leave_the_master_device() {
-        let mut setup = AudioSetup {
-            routes: vec![route(Role::Master, "BlackHole 16ch", 0)],
-            ..AudioSetup::default()
-        };
+        let mut setup = AudioSetup { routes: vec![route(Role::Master, "BlackHole 16ch", 0)], ..AudioSetup::default() };
         setup.routes.push(route(Role::Deck1, "BlackHole 16ch", 1));
         setup.routes.push(route(Role::Headphones, "DDJ-FLX4", 1));
         assert!(!deck_outputs_split(&setup));

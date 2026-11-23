@@ -1,8 +1,6 @@
-//! Loads tracks off the audio thread: a track goes on its
-//! deck as soon as its file is opened, and plays while the rest decodes. The
-//! waveform fills in as the audio is analysed, and the tempo and beat grid
-//! follow when the analysis is done. Results are cached on disk, so a track
-//! loaded again has its waveform and tempo at once.
+//! Loads tracks off the audio thread: a track goes on its deck as soon as its file is opened, and plays while
+//! the rest decodes. The waveform fills in as the audio is analysed, and the tempo and beat grid follow when the
+//! analysis is done. Results are cached on disk, so a track loaded again has its waveform and tempo at once.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
@@ -54,10 +52,7 @@ fn tempo_hint(track: &Track) -> Option<f64> {
 /// What analysis is told about `track`: the tempo it keeps and the genre
 /// that picks the octave a detected tempo is read in.
 fn analysis_hint(track: &Track) -> TempoHint {
-    TempoHint {
-        bpm: tempo_hint(track),
-        genre: track.genre.clone(),
-    }
+    TempoHint { bpm: tempo_hint(track), genre: track.genre.clone() }
 }
 
 /// Whether `track`'s key is for analysis to find: it has none, or an
@@ -102,24 +97,14 @@ fn with_analysis(track: &Track, analysis: &Analysis, detected: bool) -> Track {
             track.key.clone()
         }
     };
-    let mut t = Track {
-        key,
-        info,
-        ..track.clone()
-    };
+    let mut t = Track { key, info, ..track.clone() };
     with_grid(&mut t, track, analysis);
     t
 }
 
-/// Analyses `track` away from the decks (background analysis): its cached
-/// analysis when there is one, else the file is decoded and analysed and
-/// the result cached, as loading it on a deck would. A key found by
-/// another detector is found again. With `fresh` (the DJ asked), the file
-/// is analysed again whatever the cache holds, and a grid the library got
-/// from an earlier analysis may be replaced; a grid the DJ edited or an
-/// import brought, and a key from tags, an import or the DJ, still stay.
-/// The track comes back with its tempo, grid, key and detected phrases
-/// (unless it has imported ones), and without audio or waveform.
+/// Analyses `track` away from the decks (background analysis): its cached analysis when there is one, else the file is decoded and analysed and the result cached, as loading it on a deck would. A key found by
+/// another detector is found again. With `fresh` (the DJ asked), the file is analysed again whatever the cache holds, and a grid the library got from an earlier analysis may be replaced; a grid the DJ edited or
+/// an import brought, and a key from tags, an import or the DJ, still stay. The track comes back with its tempo, grid, key and detected phrases (unless it has imported ones), and without audio or waveform.
 pub fn analyse_file(track: &Track, fresh: bool) -> Result<Track, String> {
     analyse_file_keeping(track, fresh).map(|(t, _)| t)
 }
@@ -137,10 +122,7 @@ pub fn analyse_file_keeping(track: &Track, fresh: bool) -> Result<(Track, Analys
         base.grid = BeatGrid::default();
     }
     // Afresh, the tempo is found without the library's as a hint.
-    let hint = TempoHint {
-        bpm: tempo_hint(track).filter(|_| !fresh),
-        genre: track.genre.clone(),
-    };
+    let hint = TempoHint { bpm: tempo_hint(track).filter(|_| !fresh), genre: track.genre.clone() };
     let cached = if fresh { None } else { cache::load(path) };
     let mut audio = None;
     let mut analysis = match cached {
@@ -183,8 +165,7 @@ pub fn analyse_file_keeping(track: &Track, fresh: bool) -> Result<(Track, Analys
         t.waveform = Arc::new(std::mem::take(&mut analysis.waveform));
         let found = phrases::to_markers(&phrases::detect(&t), t.duration);
         t.info.markers = phrases::with_phrases(&t.info.markers, found);
-        analysis.waveform =
-            Arc::try_unwrap(std::mem::take(&mut t.waveform)).unwrap_or_else(|w| (*w).clone());
+        analysis.waveform = Arc::try_unwrap(std::mem::take(&mut t.waveform)).unwrap_or_else(|w| (*w).clone());
     }
     Ok((t, analysis))
 }
@@ -266,12 +247,7 @@ impl Shared {
                         l[deck] = None;
                     }
                 }
-                Returned::GridEdit {
-                    deck,
-                    track,
-                    edit,
-                    seconds,
-                } => {
+                Returned::GridEdit { deck, track, edit, seconds } => {
                     if let Some(t) = edit_grid(loaded, deck, &track, edit, seconds) {
                         Self::send_locked(input, Command::Regrid { deck, track: t }, loaded);
                     }
@@ -312,10 +288,7 @@ impl Shared {
                 // since `track` was made stays.
                 l[deck] = Some(match &t.cover {
                     Some(c) if !track.cover.as_ref().is_some_and(|n| Arc::ptr_eq(c, n)) => {
-                        Arc::new(Track {
-                            cover: Some(c.clone()),
-                            ..(**track).clone()
-                        })
+                        Arc::new(Track { cover: Some(c.clone()), ..(**track).clone() })
                     }
                     _ => track.clone(),
                 });
@@ -343,8 +316,7 @@ impl Shared {
 
 /// Grids replaced by edits, newest last, per deck, for undo. Cleared when
 /// another track is loaded.
-static UNDO: Mutex<[Vec<(usize, BeatGrid)>; NUM_DECKS]> =
-    Mutex::new([const { Vec::new() }; NUM_DECKS]);
+static UNDO: Mutex<[Vec<(usize, BeatGrid)>; NUM_DECKS]> = Mutex::new([const { Vec::new() }; NUM_DECKS]);
 
 /// When each deck's grid was last dragged, so a drag is one undo step.
 static LAST_DRAG: Mutex<[Option<Instant>; NUM_DECKS]> = Mutex::new([None; NUM_DECKS]);
@@ -354,17 +326,10 @@ const DRAG_PAUSE: Duration = Duration::from_millis(600);
 /// Most edits kept for undo per deck.
 const UNDO_DEPTH: usize = 64;
 
-/// Applies a beat grid edit to the track loaded on `deck`, if it is still
-/// `track`. The edited grid is the DJ's from now on: re-analysis keeps it.
-/// A locked grid takes no edits but unlocking; resetting gives back the
-/// grid the analysis found (from the cache).
-fn edit_grid(
-    loaded: &LoadedTracks,
-    deck: usize,
-    track: &Track,
-    edit: GridEdit,
-    seconds: f64,
-) -> Option<Arc<Track>> {
+/// Applies a beat grid edit to the track loaded on `deck`, if it is still `track`. The
+/// edits but unlocking; resetting gives back the grid the analysis found (from the cache).
+/// edits but unlocking; resetting gives back the grid the analysis found (from the
+fn edit_grid(loaded: &LoadedTracks, deck: usize, track: &Track, edit: GridEdit, seconds: f64) -> Option<Arc<Track>> {
     let mut l = loaded.write().unwrap();
     let current = l[deck].as_ref().filter(|t| same_load(t, track))?.clone();
     let mut t = (*current).clone();
@@ -441,27 +406,19 @@ fn edit_grid(
 /// Separates `audio` into stems with Spleeter in the background (see
 /// [`separation::separate_fast`]), one track at a time, stopping if the
 /// deck loads another track meanwhile.
-fn separate_on_load(
-    shared: &Arc<Shared>,
-    deck: usize,
-    generation: u64,
-    audio: Arc<Audio>,
-    from: usize,
-) {
+fn separate_on_load(shared: &Arc<Shared>, deck: usize, generation: u64, audio: Arc<Audio>, from: usize) {
     static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
     let shared = shared.clone();
-    let spawned = std::thread::Builder::new()
-        .name(format!("stems-deck-{}", deck + 1))
-        .spawn(move || {
-            let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
-            let latest = || shared.is_latest(deck, generation);
-            if !latest() {
-                return;
-            }
-            if let Err(e) = separation::separate_fast(&audio, from, latest) {
-                eprintln!("no stems on load: {e}");
-            }
-        });
+    let spawned = std::thread::Builder::new().name(format!("stems-deck-{}", deck + 1)).spawn(move || {
+        let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
+        let latest = || shared.is_latest(deck, generation);
+        if !latest() {
+            return;
+        }
+        if let Err(e) = separation::separate_fast(&audio, from, latest) {
+            eprintln!("no stems on load: {e}");
+        }
+    });
     if let Err(e) = spawned {
         eprintln!("could not start separating stems: {e}");
     }
@@ -470,11 +427,7 @@ fn separate_on_load(
 /// Decodes the stems from `source` and gives them to `audio` once they are
 /// all decoded, so a deck switches to them with nothing missing (taking
 /// over from stems separated on load). Stops if `keep_going` turns false.
-pub(crate) fn load_stems(
-    audio: &Audio,
-    source: &StemSource,
-    keep_going: impl Fn() -> bool,
-) -> Result<(), String> {
+pub(crate) fn load_stems(audio: &Audio, source: &StemSource, keep_going: impl Fn() -> bool) -> Result<(), String> {
     let stems = stems::Decode::open(source)?.run(&keep_going)?;
     // Better stems take over from the ones Spleeter made on load.
     let given = match audio.stems() {
@@ -487,18 +440,8 @@ pub(crate) fn load_stems(
     Ok(())
 }
 
-pub(crate) fn run(
-    requests: Receiver<LoadRequest>,
-    input: EngineInput,
-    loaded: LoadedTracks,
-    alerts: crate::Alerts,
-) {
-    let shared = Arc::new(Shared {
-        input: Mutex::new(input),
-        loaded,
-        generation: Default::default(),
-        alerts,
-    });
+pub(crate) fn run(requests: Receiver<LoadRequest>, input: EngineInput, loaded: LoadedTracks, alerts: crate::Alerts) {
+    let shared = Arc::new(Shared { input: Mutex::new(input), loaded, generation: Default::default(), alerts });
     loop {
         shared.collect();
         // Short enough that an ejected deck empties on screen promptly.
@@ -510,22 +453,17 @@ pub(crate) fn run(
         let generation = shared.generation[req.deck].fetch_add(1, Ordering::AcqRel) + 1;
         let shared = shared.clone();
         // One thread per load, so loading one deck never waits for another.
-        let spawned = std::thread::Builder::new()
-            .name(format!("load-deck-{}", req.deck + 1))
-            .spawn(move || {
-                if let Err(e) = load(&shared, req.deck, generation, &req.track) {
-                    eprintln!("could not load track: {e}");
-                    let name = if req.track.title.is_empty() {
-                        "The track".to_string()
-                    } else {
-                        format!("“{}”", req.track.title)
-                    };
-                    crate::alert(
-                        &shared.alerts,
-                        format!("{name} couldn't be loaded on deck {}: {e}", req.deck + 1),
-                    );
-                }
-            });
+        let spawned = std::thread::Builder::new().name(format!("load-deck-{}", req.deck + 1)).spawn(move || {
+            if let Err(e) = load(&shared, req.deck, generation, &req.track) {
+                eprintln!("could not load track: {e}");
+                let name = if req.track.title.is_empty() {
+                    "The track".to_string()
+                } else {
+                    format!("“{}”", req.track.title)
+                };
+                crate::alert(&shared.alerts, format!("{name} couldn't be loaded on deck {}: {e}", req.deck + 1));
+            }
+        });
         if let Err(e) = spawned {
             eprintln!("could not start loading a track: {e}");
         }
@@ -566,9 +504,7 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
     if let Some(l) = cached.as_ref().and_then(|c| c.loudness) {
         audio.set_loudness(l);
     }
-    let mut analyser = cached
-        .is_none()
-        .then(|| Analyser::new(audio.sample_rate, audio.len()));
+    let mut analyser = cached.is_none().then(|| Analyser::new(audio.sample_rate, audio.len()));
     let waveform = match &cached {
         Some(c) => c.waveform.clone(),
         None => analyser.as_ref().unwrap().waveform(),
@@ -586,9 +522,7 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
     match &cached {
         Some(c) => with_grid(&mut first, base, c),
         // Unknown until analysed; the beat grid starts at zero meanwhile.
-        None if !base.info.fixed_grid && matches!(base.source, Source::File(_)) => {
-            first.first_beat = 0.0
-        }
+        None if !base.info.fixed_grid && matches!(base.source, Source::File(_)) => first.first_beat = 0.0,
         None => {}
     }
     let first = Arc::new(first);
@@ -599,10 +533,7 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
     // Album art is looked up alongside decoding, so neither waits for the other.
     let cover: OnceLock<Arc<Cover>> = OnceLock::new();
     let with_cover = |t: Track| match cover.get() {
-        Some(c) => Track {
-            cover: Some(c.clone()),
-            ..t
-        },
+        Some(c) => Track { cover: Some(c.clone()), ..t },
         None => t,
     };
     let analysis = std::thread::scope(|scope| -> Result<Analysis, String> {
@@ -641,10 +572,7 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
             }
             if last_update.elapsed() >= WAVEFORM_UPDATE {
                 last_update = Instant::now();
-                let partial = Arc::new(with_cover(Track {
-                    waveform: Arc::new(a.waveform()),
-                    ..(*first).clone()
-                }));
+                let partial = Arc::new(with_cover(Track { waveform: Arc::new(a.waveform()), ..(*first).clone() }));
                 shared.update(deck, &partial);
             }
         };
@@ -695,17 +623,9 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
     // meanwhile, then takes the grid fitted to its beats.
     let refine = beatthis::wanted(&analysis) && grid_replaceable(base) && path.is_some();
     let mut later = refine.then(|| analysis.clone());
-    let done = Arc::new(with_cover(analysed(
-        base,
-        audio.clone(),
-        analysis,
-        detected,
-    )));
+    let done = Arc::new(with_cover(analysed(base, audio.clone(), analysis, detected)));
     if shared.update(deck, &done) {
-        shared.send(Command::Analysed {
-            deck,
-            track: done.clone(),
-        });
+        shared.send(Command::Analysed { deck, track: done.clone() });
     }
     if let (Some(analysis), Some(path)) = (later.as_mut(), path) {
         if let Err(e) = beatthis::refine(analysis, &audio, analysis_hint(base)) {
@@ -721,13 +641,7 @@ fn load(shared: &Arc<Shared>, deck: usize, generation: u64, base: &Track) -> Res
         // takes the new grid.
         let mut t = (*done).clone();
         t.info.fixed_grid = false;
-        let unfixed = Track {
-            info: LibraryInfo {
-                fixed_grid: false,
-                ..base.info.clone()
-            },
-            ..base.clone()
-        };
+        let unfixed = Track { info: LibraryInfo { fixed_grid: false, ..base.info.clone() }, ..base.clone() };
         with_grid(&mut t, &unfixed, analysis);
         let t = Arc::new(t);
         if shared.update(deck, &t) {
@@ -809,10 +723,7 @@ mod tests {
     #[test]
     fn keys_from_tags_stay_and_detected_keys_follow_the_analysis() {
         let audio = Arc::new(synth::render_with(124.0, 0.25, 4.0, 3));
-        let analysis = || Analysis {
-            key: Key::parse("8A"),
-            ..analyse(&audio, None)
-        };
+        let analysis = || Analysis { key: Key::parse("8A"), ..analyse(&audio, None) };
         let mut t = Track {
             key: "3B".into(),
             source: Source::File("/nowhere/track.mp3".into()),
@@ -821,18 +732,12 @@ mod tests {
         t.info.key_detected = Some(false);
         assert!(!key_is_detected(&t));
         let kept = analysed(&t, audio.clone(), analysis(), false);
-        assert_eq!(
-            (kept.key.as_str(), kept.info.key_detected),
-            ("3B", Some(false))
-        );
+        assert_eq!((kept.key.as_str(), kept.info.key_detected), ("3B", Some(false)));
 
         t.info.key_detected = Some(true);
         assert!(key_is_detected(&t));
         let found = analysed(&t, audio.clone(), analysis(), true);
-        assert_eq!(
-            (found.key.as_str(), found.info.key_detected),
-            ("8A", Some(true))
-        );
+        assert_eq!((found.key.as_str(), found.info.key_detected), ("8A", Some(true)));
 
         // Not recorded, and the file has no key tag: analysis found it.
         t.info.key_detected = None;
@@ -846,11 +751,8 @@ mod tests {
         cache::TEST_DIR.set(dir.join("cache")).unwrap();
         let path = dir.join("beats.wav");
         let audio = synth::render_with(124.0, 0.25, 40.0, 9);
-        let samples: Vec<i16> = audio
-            .decoded_chunks()
-            .flatten()
-            .flat_map(|f| f.map(|v| (v * 32_000.0) as i16))
-            .collect();
+        let samples: Vec<i16> =
+            audio.decoded_chunks().flatten().flat_map(|f| f.map(|v| (v * 32_000.0) as i16)).collect();
         write_wav(&path, audio.sample_rate, 2, &samples);
         let track = Arc::new(Track {
             bpm: 0.0,
@@ -871,12 +773,7 @@ mod tests {
         let bpm = reg.get("[Channel1]", "bpm").unwrap();
 
         // On the deck straight away, tempo unknown; then analysed.
-        requests
-            .send(LoadRequest {
-                deck: 0,
-                track: track.clone(),
-            })
-            .unwrap();
+        requests.send(LoadRequest { deck: 0, track: track.clone() }).unwrap();
         let mut first = None;
         run_until(&mut engine, || {
             first = first.take().or_else(|| deck(&loaded));
@@ -893,9 +790,7 @@ mod tests {
         // Loaded again: the cached tempo and waveform come with it.
         requests.send(LoadRequest { deck: 0, track }).unwrap();
         run_until(&mut engine, || {
-            deck(&loaded).is_some_and(|t| {
-                !Arc::ptr_eq(t.audio.as_ref().unwrap(), analysed.audio.as_ref().unwrap())
-            })
+            deck(&loaded).is_some_and(|t| !Arc::ptr_eq(t.audio.as_ref().unwrap(), analysed.audio.as_ref().unwrap()))
         });
         let again = deck(&loaded).unwrap();
         assert_eq!(again.bpm, analysed.bpm);
@@ -903,9 +798,7 @@ mod tests {
 
         // The library's mini waveform was kept with the analysis, and is
         // made again from it when its file is gone.
-        let Source::File(path) = &again.source else {
-            unreachable!()
-        };
+        let Source::File(path) = &again.source else { unreachable!() };
         let overview = cache::overview(path).unwrap();
         assert_eq!(overview, analysed.waveform.overview(cache::OVERVIEW_SLICES));
         assert!(overview.iter().any(|s| s[0] > 100));
@@ -915,11 +808,7 @@ mod tests {
 
         // Analysed on request: past the cache, a grid from an earlier
         // analysis is replaced, and one the DJ edited stays.
-        let mut stale = Track {
-            audio: None,
-            waveform: Arc::default(),
-            ..(*again).clone()
-        };
+        let mut stale = Track { audio: None, waveform: Arc::default(), ..(*again).clone() };
         stale.set_grid(BeatGrid::constant(100.0, 0.0));
         stale.info.fixed_grid = true;
         stale.info.grid_analysed = true;

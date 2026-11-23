@@ -1,7 +1,6 @@
-//! Prints the tempo and beat grid DJ Sugar finds for audio files:
-//! `cargo run --release -p djsugar-engine --example analyse_file -- FILE...`
-//! With `--neural`, Beat This! refines the grid too (models from
-//! `DJSUGAR_MODELS` or downloaded).
+//! Prints the tempo and beat grid DJ Sugar finds for audio files: `cargo run
+//! `--neural`, Beat This! refines the grid too (models from `DJSUGAR_MODELS` or downloaded).
+//! `--neural`, Beat This! refines the grid too (models from `DJSUGAR_MODELS` or
 
 use std::path::Path;
 

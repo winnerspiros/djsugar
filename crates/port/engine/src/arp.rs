@@ -1,15 +1,6 @@
-//! The instrument's arpeggiator: the notes held play one at a time, in
-//! time with the mix's beat.
-//!
-//! `[Instrument1],arp` turns it on; `arp_mode` is Up, Down, Up-down,
-//! Random or Order (as played, see [`MODES`]); `arp_rate` an index into
-//! [`RATES`]; `arp_gate` how much of each step a note sounds, 0.1 to 1;
-//! `arp_octaves` 1 to 4; `arp_hold` keeps the notes playing after the keys
-//! are let go, until new keys are played.
-//!
-//! It takes the notes after scale and chord mode, so a chord held with one
-//! key is arpeggiated too. Steps fall on the master deck's beat grid while
-//! it plays, and run on at its tempo otherwise.
+//! The instrument's arpeggiator: the notes held play one at a time, in time with the mix's beat. `[Instrument1],arp` turns it on; `arp_mode` is Up, Down, Up-down, Random or Order (as played, see
+//! keys are played. It takes the notes after scale and chord mode, so a chord held with one key is arpeggiated too. Steps fall on the master deck's beat grid while it plays, and run on at its tempo otherwise.
+//! keys are played. It takes the notes after scale and chord mode, so a chord held with one key is arpeggiated too. Steps fall on the master deck's beat grid while it plays, and run on at its tempo
 
 use djsugar_plugin_host::{Midi, Transport};
 
@@ -22,14 +13,8 @@ pub const RANDOM: u8 = 3;
 pub const ORDER: u8 = 4;
 
 /// `arp_rate` values: the step's name and steps per beat.
-pub const RATES: [(&str, f64); 6] = [
-    ("1/4", 1.0),
-    ("1/8", 2.0),
-    ("1/8T", 3.0),
-    ("1/16", 4.0),
-    ("1/16T", 6.0),
-    ("1/32", 8.0),
-];
+pub const RATES: [(&str, f64); 6] =
+    [("1/4", 1.0), ("1/8", 2.0), ("1/8T", 3.0), ("1/16", 4.0), ("1/16T", 6.0), ("1/32", 8.0)];
 /// The rate it starts at: 1/16.
 pub const DEFAULT_RATE: usize = 3;
 
@@ -49,14 +34,7 @@ pub struct ArpSettings {
 
 impl Default for ArpSettings {
     fn default() -> Self {
-        Self {
-            on: false,
-            mode: UP,
-            rate: DEFAULT_RATE,
-            gate: 0.5,
-            octaves: 1,
-            hold: false,
-        }
+        Self { on: false, mode: UP, rate: DEFAULT_RATE, gate: 0.5, octaves: 1, hold: false }
     }
 }
 
@@ -121,20 +99,9 @@ impl Arp {
         };
         if s.on != self.settings.on {
             for ch in 0..16 {
-                push(
-                    out,
-                    Midi {
-                        frame: 0,
-                        data: [0xb0 | ch, 123, 0],
-                    },
-                );
+                push(out, Midi { frame: 0, data: [0xb0 | ch, 123, 0] });
             }
-            *self = Self {
-                settings: s,
-                rng: self.rng,
-                beat: self.beat,
-                ..Self::default()
-            };
+            *self = Self { settings: s, rng: self.rng, beat: self.beat, ..Self::default() };
             return;
         }
         if !s.hold && self.settings.hold && self.keys_down == 0 {
@@ -229,24 +196,14 @@ impl Arp {
         for &m in incoming {
             self.take(m, out);
         }
-        let bpm = if transport.bpm > 0.0 {
-            transport.bpm
-        } else {
-            120.0
-        };
-        let start = if transport.playing {
-            transport.beat
-        } else {
-            self.beat
-        };
+        let bpm = if transport.bpm > 0.0 { transport.bpm } else { 120.0 };
+        let start = if transport.playing { transport.beat } else { self.beat };
         let beats_per_frame = bpm / 60.0 / f64::from(sample_rate);
         let end = start + frames as f64 * beats_per_frame;
         self.beat = end;
         let per_beat = RATES[self.settings.rate].1;
-        let frame_of = |beat: f64| {
-            (((beat - start) / beats_per_frame).max(0.0) as usize).min(frames.saturating_sub(1))
-                as u32
-        };
+        let frame_of =
+            |beat: f64| (((beat - start) / beats_per_frame).max(0.0) as usize).min(frames.saturating_sub(1)) as u32;
         // Steps and gates closing in this buffer, in order.
         let mut k = (start * per_beat).ceil();
         if k <= self.last_k && self.last_k - k < 2.0 {
@@ -296,11 +253,7 @@ mod tests {
 
     /// 120 BPM, playing from beat 0: a beat is 24,000 frames.
     fn transport(beat: f64) -> Transport {
-        Transport {
-            bpm: 120.0,
-            beat,
-            playing: true,
-        }
+        Transport { bpm: 120.0, beat, playing: true }
     }
 
     fn arp(s: ArpSettings) -> Arp {
@@ -318,13 +271,7 @@ mod tests {
         for b in 0..buffers {
             let mut out = Vec::with_capacity(64);
             let beat = from + b as f64 * 480.0 / 24_000.0;
-            a.process(
-                if b == 0 { incoming } else { &[] },
-                480,
-                SR,
-                transport(beat),
-                &mut out,
-            );
+            a.process(if b == 0 { incoming } else { &[] }, 480, SR, transport(beat), &mut out);
             for m in out {
                 if let Some((_, n, _)) = m.as_note_on() {
                     started.push((n, b * 480 + m.frame as usize));
@@ -340,10 +287,7 @@ mod tests {
 
     #[test]
     fn up_plays_the_notes_held_on_the_beat_grid() {
-        let mut a = arp(ArpSettings {
-            rate: 1,
-            ..Default::default()
-        });
+        let mut a = arp(ArpSettings { rate: 1, ..Default::default() });
         let started = run(&mut a, &chord(&[67, 60, 64]), 0.0, 2.0);
         // 1/8 notes: every 12,000 frames, low to high.
         assert_eq!(started, [(60, 0), (64, 12_000), (67, 24_000), (60, 36_000)]);
@@ -353,42 +297,20 @@ mod tests {
     fn modes_and_octaves_order_the_notes() {
         let notes = |s: ArpSettings, keys: &[u8]| {
             let mut a = arp(s);
-            run(&mut a, &chord(keys), 0.0, 1.0)
-                .into_iter()
-                .map(|n| n.0)
-                .collect::<Vec<_>>()
+            run(&mut a, &chord(keys), 0.0, 1.0).into_iter().map(|n| n.0).collect::<Vec<_>>()
         };
-        let s = ArpSettings {
-            rate: 5,
-            ..Default::default()
-        };
-        assert_eq!(
-            notes(ArpSettings { mode: DOWN, ..s }, &[60, 64, 67]),
-            [67, 64, 60, 67, 64, 60, 67, 64]
-        );
-        assert_eq!(
-            notes(ArpSettings { mode: UP_DOWN, ..s }, &[60, 64, 67]),
-            [60, 64, 67, 64, 60, 64, 67, 64]
-        );
-        assert_eq!(
-            notes(ArpSettings { mode: ORDER, ..s }, &[67, 60, 64]),
-            [67, 60, 64, 67, 60, 64, 67, 60]
-        );
-        assert_eq!(
-            notes(ArpSettings { octaves: 2, ..s }, &[60, 64]),
-            [60, 64, 72, 76, 60, 64, 72, 76]
-        );
+        let s = ArpSettings { rate: 5, ..Default::default() };
+        assert_eq!(notes(ArpSettings { mode: DOWN, ..s }, &[60, 64, 67]), [67, 64, 60, 67, 64, 60, 67, 64]);
+        assert_eq!(notes(ArpSettings { mode: UP_DOWN, ..s }, &[60, 64, 67]), [60, 64, 67, 64, 60, 64, 67, 64]);
+        assert_eq!(notes(ArpSettings { mode: ORDER, ..s }, &[67, 60, 64]), [67, 60, 64, 67, 60, 64, 67, 60]);
+        assert_eq!(notes(ArpSettings { octaves: 2, ..s }, &[60, 64]), [60, 64, 72, 76, 60, 64, 72, 76]);
         let random = notes(ArpSettings { mode: RANDOM, ..s }, &[60, 64, 67]);
         assert!(random.iter().all(|n| [60, 64, 67].contains(n)));
     }
 
     #[test]
     fn the_gate_ends_each_note_and_letting_go_stops() {
-        let mut a = arp(ArpSettings {
-            rate: 0,
-            gate: 0.25,
-            ..Default::default()
-        });
+        let mut a = arp(ArpSettings { rate: 0, gate: 0.25, ..Default::default() });
         let mut out = Vec::with_capacity(64);
         // A quarter-beat gate at 1/4: the note ends 6,000 frames in.
         a.process(&chord(&[60]), 480, SR, transport(0.0), &mut out);
@@ -397,11 +319,7 @@ mod tests {
         for b in 1..20 {
             out.clear();
             a.process(&[], 480, SR, transport(b as f64 / 50.0), &mut out);
-            offs.extend(
-                out.iter()
-                    .filter(|m| m.as_note_off().is_some())
-                    .map(|m| b * 480 + m.frame as usize),
-            );
+            offs.extend(out.iter().filter(|m| m.as_note_off().is_some()).map(|m| b * 480 + m.frame as usize));
         }
         assert_eq!(offs, [6_000]);
         // Let go, and nothing more plays.
@@ -410,31 +328,18 @@ mod tests {
 
     #[test]
     fn hold_keeps_playing_until_new_keys() {
-        let mut a = arp(ArpSettings {
-            rate: 0,
-            hold: true,
-            ..Default::default()
-        });
+        let mut a = arp(ArpSettings { rate: 0, hold: true, ..Default::default() });
         let mut keys = chord(&[60, 64]);
         keys.extend([Midi::note_off(0, 0, 60), Midi::note_off(0, 0, 64)]);
-        let n: Vec<u8> = run(&mut a, &keys, 0.0, 2.0)
-            .into_iter()
-            .map(|n| n.0)
-            .collect();
+        let n: Vec<u8> = run(&mut a, &keys, 0.0, 2.0).into_iter().map(|n| n.0).collect();
         assert_eq!(n, [60, 64], "still playing after the keys are let go");
-        let n: Vec<u8> = run(&mut a, &chord(&[62]), 2.0, 2.0)
-            .into_iter()
-            .map(|n| n.0)
-            .collect();
+        let n: Vec<u8> = run(&mut a, &chord(&[62]), 2.0, 2.0).into_iter().map(|n| n.0).collect();
         assert_eq!(n, [62, 62], "a new key starts a new set");
     }
 
     #[test]
     fn a_beat_that_steps_back_a_hair_plays_no_step_twice() {
-        let mut a = arp(ArpSettings {
-            rate: 0,
-            ..Default::default()
-        });
+        let mut a = arp(ArpSettings { rate: 0, ..Default::default() });
         let mut out = Vec::with_capacity(64);
         a.process(&chord(&[60]), 480, SR, transport(0.99), &mut out);
         assert_eq!(out.len(), 1, "beat 1 starts in this buffer");
@@ -445,15 +350,8 @@ mod tests {
 
     #[test]
     fn it_runs_on_while_the_mix_is_stopped() {
-        let mut a = arp(ArpSettings {
-            rate: 0,
-            ..Default::default()
-        });
-        let stopped = Transport {
-            bpm: 120.0,
-            beat: 7.3,
-            playing: false,
-        };
+        let mut a = arp(ArpSettings { rate: 0, ..Default::default() });
+        let stopped = Transport { bpm: 120.0, beat: 7.3, playing: false };
         let mut on = 0;
         for b in 0..99 {
             let mut out = Vec::with_capacity(64);

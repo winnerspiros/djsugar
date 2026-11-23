@@ -1,14 +1,6 @@
-//! The FX benchmark and quality harness: what each effect costs per frame,
-//! what the whole rack costs with four decks of effects, how much memory it
-//! holds, and checks that the audio thread never allocates and that every
-//! effect stays clean and finite at its extremes.
-//!
-//! The benchmark is ignored by default (it takes a few seconds and only
-//! means something in a release build):
-//!
-//! ```text
+//! FX benchmark and quality checks: cost per effect and for the full rack, memory, no
+//! allocation on the audio thread, clean output at the extremes. Run in release:
 //! cargo test --release -p djsugar-engine fx_bench -- --ignored --nocapture
-//! ```
 
 use std::hint::black_box;
 use std::time::Instant;
@@ -39,14 +31,7 @@ fn instance(kind: Kind, p: [f32; MAX_PARAMETERS]) -> Instance {
     let mut inst = Instance::with_memory(SR);
     inst.kind = Some(kind);
     inst.reset();
-    inst.prepare(
-        &p,
-        Ctx {
-            sample_rate: SR,
-            beat_seconds: 0.5,
-            beat: None,
-        },
-    );
+    inst.prepare(&p, Ctx { sample_rate: SR, beat_seconds: 0.5, beat: None });
     inst
 }
 
@@ -106,16 +91,9 @@ fn the_rack_never_allocates_on_the_audio_thread() {
     // control up allocates its name; turning it doesn't).
     let slots: Vec<_> = (0..4)
         .flat_map(|u| (0..EFFECTS_PER_UNIT).map(move |s| effect_group(u, s)))
-        .map(|g| {
-            (
-                reg.get(&g, "next_effect").unwrap(),
-                reg.get(&g, "enabled").unwrap(),
-            )
-        })
+        .map(|g| (reg.get(&g, "next_effect").unwrap(), reg.get(&g, "enabled").unwrap()))
         .collect();
-    let releases: Vec<_> = (0..4)
-        .map(|u| reg.get(&effect_unit_group(u), "release").unwrap())
-        .collect();
+    let releases: Vec<_> = (0..4).map(|u| reg.get(&effect_unit_group(u), "release").unwrap()).collect();
     // Warm up, so every instance has sounded once.
     run_rack(&mut rack, &input, 20, &mut clock);
     // Switching effects, releasing tails and turning slots on and off all
@@ -171,9 +149,7 @@ fn an_empty_pool_leaves_the_effect_off_until_memory_comes_back() {
     assert!(deck1 != deck2, "exactly one echo got the buffer");
     // Turn the one that sounds off: once it has faded, the other gets it.
     let (on, off) = if deck1 { (0, 1) } else { (1, 0) };
-    reg.get(&effect_group(on, 1), "enabled")
-        .unwrap()
-        .set_bool(false);
+    reg.get(&effect_group(on, 1), "enabled").unwrap().set_bool(false);
     for _ in 0..3 {
         click(&mut rack, off);
     }
@@ -207,10 +183,7 @@ fn every_effect_stays_finite_and_bounded_at_its_extremes() {
             for &x in &input {
                 // Full scale, both channels different.
                 let y = inst.process([x * 2.0, -x * 2.0]);
-                assert!(
-                    y[0].is_finite() && y[1].is_finite(),
-                    "{kind:?} {p:?} blew up"
-                );
+                assert!(y[0].is_finite() && y[1].is_finite(), "{kind:?} {p:?} blew up");
                 peak = peak.max(y[0].abs()).max(y[1].abs());
             }
             assert!(peak < 8.0, "{kind:?} {p:?} peaked at {peak}");
@@ -223,13 +196,7 @@ fn feedback_effects_decay_to_true_silence() {
     // With flush-to-zero on, as on the audio thread, a tail decays to
     // exact zeros instead of lingering in denormals that cost CPU.
     crate::dsp::flush_denormals();
-    for kind in [
-        Kind::Reverb,
-        Kind::Echo,
-        Kind::Flanger,
-        Kind::Phaser,
-        Kind::Spiral,
-    ] {
+    for kind in [Kind::Reverb, Kind::Echo, Kind::Flanger, Kind::Phaser, Kind::Spiral] {
         let mut p = defaults(kind);
         // Long tails: high feedback or decay.
         p[1] = p[1].max(0.8);
@@ -279,12 +246,7 @@ fn fx_bench() {
             let x = input[i];
             black_box(inst.process(black_box([x, -x])));
         });
-        println!(
-            "{:<14}{:>10.1}{:>9.2}%",
-            AVAILABLE_EFFECTS[kind as usize],
-            ns,
-            100.0 * ns / budget
-        );
+        println!("{:<14}{:>10.1}{:>9.2}%", AVAILABLE_EFFECTS[kind as usize], ns, 100.0 * ns / budget);
     }
 
     let reg = ControlRegistry::new();
@@ -292,9 +254,7 @@ fn fx_bench() {
     let mut clock = 0.0;
     let buffers = frames / BUFFER;
     let mut acc = 0.0;
-    let ns = time(1, |_| {
-        acc += run_rack(&mut rack, &input, buffers, &mut clock)
-    }) / (buffers * BUFFER) as f64;
+    let ns = time(1, |_| acc += run_rack(&mut rack, &input, buffers, &mut clock)) / (buffers * BUFFER) as f64;
     black_box(acc);
     println!(
         "rack: 4 decks x Reverb+Echo+Gate, Beat FX Echo on 2 decks: {ns:.1} ns/frame ({:.2}% core)",
@@ -303,13 +263,8 @@ fn fx_bench() {
 
     let reg = ControlRegistry::new();
     let mut idle = EffectRack::new(&reg, SR as f64);
-    let ns = time(1, |_| {
-        acc += run_rack(&mut idle, &input, buffers, &mut clock)
-    }) / (buffers * BUFFER) as f64;
-    println!(
-        "rack, no effects on: {ns:.1} ns/frame ({:.2}% core)",
-        100.0 * ns / budget
-    );
+    let ns = time(1, |_| acc += run_rack(&mut idle, &input, buffers, &mut clock)) / (buffers * BUFFER) as f64;
+    println!("rack, no effects on: {ns:.1} ns/frame ({:.2}% core)", 100.0 * ns / budget);
 
     let mut color = ColorFx::new(SR as f64);
     for (preset, name) in COLOR_FX.iter().enumerate() {
@@ -318,10 +273,7 @@ fn fx_bench() {
             let x = input[i];
             black_box(color.process(black_box([x, -x])));
         });
-        println!(
-            "color fx {name:<10}{ns:>8.1} ns/frame ({:.2}% core)",
-            100.0 * ns / budget
-        );
+        println!("color fx {name:<10}{ns:>8.1} ns/frame ({:.2}% core)", 100.0 * ns / budget);
     }
     println!("rack memory: {:.1} MB", idle.memory_bytes() as f64 / 1e6);
 }
@@ -344,11 +296,7 @@ fn tone(i: usize) -> f32 {
 
 #[test]
 fn turning_any_knob_all_the_way_does_not_click() {
-    let ctx = Ctx {
-        sample_rate: SR,
-        beat_seconds: 0.5,
-        beat: None,
-    };
+    let ctx = Ctx { sample_rate: SR, beat_seconds: 0.5, beat: None };
     let mut clicks = Vec::new();
     // Effects whose knobs are continuous. Gate, Roll, Brake and Bitcrusher
     // make edges or steps on purpose.
@@ -388,9 +336,7 @@ fn turning_any_knob_all_the_way_does_not_click() {
             let after = largest_step(&mut inst, settle + 2_400, settle);
             let bound = 1.5 * before.max(after) + 1e-3;
             if during > bound {
-                clicks.push(format!(
-                    "{kind:?} parameter {k} jumped by {during} (steady {before} / {after})"
-                ));
+                clicks.push(format!("{kind:?} parameter {k} jumped by {during} (steady {before} / {after})"));
             }
         }
     }
@@ -450,11 +396,7 @@ fn run_on_grid(
         let first = b * BUFFER;
         inst.prepare(
             &p,
-            Ctx {
-                sample_rate: SR,
-                beat_seconds: 0.5,
-                beat: Some(start + first as f64 / (0.5 * SR as f64)),
-            },
+            Ctx { sample_rate: SR, beat_seconds: 0.5, beat: Some(start + first as f64 / (0.5 * SR as f64)) },
         );
         for i in first..(first + BUFFER).min(frames) {
             let x = input(i);
@@ -473,9 +415,7 @@ fn gates_open_on_the_beat_grid() {
     let out = run_on_grid(Kind::Gate, p, 10.3, 10 * SR as usize, |_| 0.5);
     let quarter = 6_000;
     // Frame 0 is beat 10.3: the next quarter beat (10.5) is 4 800 frames in.
-    let opens: Vec<usize> = (1..out.len())
-        .filter(|&i| out[i - 1] < 0.3 && out[i] >= 0.3)
-        .collect();
+    let opens: Vec<usize> = (1..out.len()).filter(|&i| out[i - 1] < 0.3 && out[i] >= 0.3).collect();
     assert!(opens.len() > 70, "{} openings", opens.len());
     for &i in &opens {
         let off = (i + quarter - 4_800) % quarter;
@@ -496,11 +436,7 @@ fn flanger_and_phaser_sweeps_follow_the_grid() {
         // The same music, but the effect turned on half a second later.
         let half = SR as usize / 2;
         let b = run_on_grid(kind, p, 5.0, half, |i| input(i + half));
-        let diff: f32 = a[half + 4_800..]
-            .iter()
-            .zip(&b[4_800..])
-            .map(|(x, y)| (x - y).abs())
-            .fold(0.0, f32::max);
+        let diff: f32 = a[half + 4_800..].iter().zip(&b[4_800..]).map(|(x, y)| (x - y).abs()).fold(0.0, f32::max);
         assert!(diff < 0.05, "{kind:?} sweeps differ by {diff}");
     }
 }
@@ -512,13 +448,8 @@ fn rolls_start_on_the_grid() {
     // beat later (past the 3 ms fade at each seam).
     let mut p = defaults(Kind::Roll);
     p[0] = 0.0;
-    let out = run_on_grid(Kind::Roll, p, 10.1, 3 * SR as usize, |i| {
-        if (3_600..3_900).contains(&i) {
-            0.8
-        } else {
-            0.0
-        }
-    });
+    let out =
+        run_on_grid(Kind::Roll, p, 10.1, 3 * SR as usize, |i| if (3_600..3_900).contains(&i) { 0.8 } else { 0.0 });
     let beat = SR as usize / 2;
     assert!(out[3_800] > 0.7, "plays live until the grid");
     assert!(out[3_800 + beat] > 0.7, "repeats a beat later");
@@ -528,11 +459,7 @@ fn rolls_start_on_the_grid() {
 #[test]
 fn no_effect_allocates_when_reset_or_run() {
     let mut inst = Instance::with_memory(SR);
-    let ctx = Ctx {
-        sample_rate: SR,
-        beat_seconds: 0.5,
-        beat: Some(3.3),
-    };
+    let ctx = Ctx { sample_rate: SR, beat_seconds: 0.5, beat: Some(3.3) };
     let before = allocations();
     for kind in KINDS {
         inst.kind = Some(kind);
@@ -567,10 +494,7 @@ fn the_flanger_keeps_the_level_when_switched_on() {
             let mut inst = instance(Kind::Flanger, p);
             let out: Vec<f32> = src.iter().map(|&x| inst.process([x, x])[0]).collect();
             let db = 20.0 * (rms(&out[4800..]) / rms(&src[4800..])).log10();
-            assert!(
-                db.abs() < 1.0,
-                "depth {depth} feedback {feedback}: {db:+.2} dB"
-            );
+            assert!(db.abs() < 1.0, "depth {depth} feedback {feedback}: {db:+.2} dB");
         }
     }
 }

@@ -1,10 +1,6 @@
-//! Musical key detection, after the Queen Mary key detector:
-//! a chromagram with three bins per semitone from C3 to C7, averaged over the
-//! track, correlated with the major and minor chord profiles of
-//! Noland and Sandler (the ones in qm-dsp's `GetKeyMode`) in all 24 keys.
-//!
-//! Audio arrives at the analyser's full rate; the low and mid bands (below
-//! about 2.5 kHz) are mixed to mono and decimated to around 11 kHz first.
+//! Musical key detection, after the Queen Mary key detector: a chromagram with three bins per semitone from C3 to C7, averaged over the
+//! track, correlated with the major and minor chord profiles of Noland and Sandler (the ones in qm-dsp's `GetKeyMode`) in all 24 keys. Audio
+//! arrives at the analyser's full rate; the low and mid bands (below about 2.5 kHz) are mixed to mono and decimated to around 11 kHz first.
 
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
@@ -23,14 +19,14 @@ const HIGHEST_NOTE: f32 = 96.0;
 // qm-dsp's chord profiles. Bin 1 of each semitone's three is its centre;
 // bin 1 is C.
 const MAJOR: [f64; BINS_PER_OCTAVE] = [
-    0.0384, 0.0629, 0.0258, 0.0121, 0.0146, 0.0106, 0.0364, 0.0610, 0.0267, 0.0126, 0.0121, 0.0086,
-    0.0364, 0.0623, 0.0279, 0.0275, 0.0414, 0.0186, 0.0173, 0.0248, 0.0145, 0.0364, 0.0631, 0.0262,
-    0.0129, 0.0150, 0.0098, 0.0312, 0.0521, 0.0235, 0.0129, 0.0142, 0.0095, 0.0289, 0.0478, 0.0239,
+    0.0384, 0.0629, 0.0258, 0.0121, 0.0146, 0.0106, 0.0364, 0.0610, 0.0267, 0.0126, 0.0121, 0.0086, 0.0364, 0.0623,
+    0.0279, 0.0275, 0.0414, 0.0186, 0.0173, 0.0248, 0.0145, 0.0364, 0.0631, 0.0262, 0.0129, 0.0150, 0.0098, 0.0312,
+    0.0521, 0.0235, 0.0129, 0.0142, 0.0095, 0.0289, 0.0478, 0.0239,
 ];
 const MINOR: [f64; BINS_PER_OCTAVE] = [
-    0.0375, 0.0682, 0.0299, 0.0119, 0.0138, 0.0093, 0.0296, 0.0543, 0.0257, 0.0292, 0.0519, 0.0246,
-    0.0159, 0.0234, 0.0135, 0.0291, 0.0544, 0.0248, 0.0137, 0.0176, 0.0104, 0.0352, 0.0670, 0.0302,
-    0.0222, 0.0349, 0.0164, 0.0174, 0.0297, 0.0166, 0.0222, 0.0401, 0.0202, 0.0175, 0.0270, 0.0146,
+    0.0375, 0.0682, 0.0299, 0.0119, 0.0138, 0.0093, 0.0296, 0.0543, 0.0257, 0.0292, 0.0519, 0.0246, 0.0159, 0.0234,
+    0.0135, 0.0291, 0.0544, 0.0248, 0.0137, 0.0176, 0.0104, 0.0352, 0.0670, 0.0302, 0.0222, 0.0349, 0.0164, 0.0174,
+    0.0297, 0.0166, 0.0222, 0.0401, 0.0202, 0.0175, 0.0270, 0.0146,
 ];
 
 /// A key: `tonic` 0..12 from C, major or minor.
@@ -45,11 +41,7 @@ impl Key {
     /// ("8B" is C major, "8A" A minor).
     pub fn camelot(self) -> String {
         // Relative majors share a number; each step of a fifth adds one.
-        let major_tonic = if self.minor {
-            self.tonic + 3
-        } else {
-            self.tonic
-        } as usize;
+        let major_tonic = if self.minor { self.tonic + 3 } else { self.tonic } as usize;
         let number = (major_tonic * 7 + 7) % 12 + 1;
         format!("{number}{}", if self.minor { 'A' } else { 'B' })
     }
@@ -62,17 +54,13 @@ impl Key {
 
     /// The key as notes, with sharps or flats for the black keys.
     pub fn spelt(self, flats: bool) -> String {
-        const SHARPS: [&str; 12] = [
-            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-        ];
-        const FLATS: [&str; 12] = [
-            "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B",
-        ];
+        const SHARPS: [&str; 12] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const FLATS: [&str; 12] = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
         let note = if flats { FLATS } else { SHARPS }[self.tonic as usize];
         format!("{note}{}", if self.minor { "m" } else { "" })
     }
 
-    /// The key in Open Key notation (Traktor's): "1d" is C major, "1m" A
+    /// The key in Open Key notation: "1d" is C major, "1m" A
     /// minor.
     pub fn open_key(self) -> String {
         let n = (self.camelot_number() + 4) % 12 + 1;
@@ -123,11 +111,7 @@ impl Key {
             };
             // Inverse of `camelot`: 7 is its own inverse modulo 12.
             let major_tonic = (7 * (camelot as i32 - 8)).rem_euclid(12) as u8;
-            let tonic = if minor {
-                (major_tonic + 9) % 12
-            } else {
-                major_tonic
-            };
+            let tonic = if minor { (major_tonic + 9) % 12 } else { major_tonic };
             return Some(Key { tonic, minor });
         }
         let mut chars = t.chars();
@@ -143,8 +127,8 @@ impl Key {
         };
         let rest = chars.as_str();
         let (shift, rest) = match rest.chars().next() {
-            Some(c @ ('#' | '♯')) => (1, &rest[c.len_utf8()..]),
-            Some(c @ ('b' | '♭')) => (-1, &rest[c.len_utf8()..]),
+            Some(c @ ('#' | '\u{266f}')) => (1, &rest[c.len_utf8()..]),
+            Some(c @ ('b' | '\u{266d}')) => (-1, &rest[c.len_utf8()..]),
             _ => (0, rest),
         };
         let is = |w: &str| rest.trim().eq_ignore_ascii_case(w);
@@ -155,18 +139,12 @@ impl Key {
         } else {
             return None;
         };
-        Some(Key {
-            tonic: (base + shift).rem_euclid(12) as u8,
-            minor,
-        })
+        Some(Key { tonic: (base + shift).rem_euclid(12) as u8, minor })
     }
 
     /// The key `semitones` higher (or lower, when negative).
     pub fn transpose(self, semitones: i32) -> Key {
-        Key {
-            tonic: (self.tonic as i32 + semitones).rem_euclid(12) as u8,
-            minor: self.minor,
-        }
+        Key { tonic: (self.tonic as i32 + semitones).rem_euclid(12) as u8, minor: self.minor }
     }
 
     /// The key as `key` control numbers it (ChromaticKey): 1-12 for
@@ -198,29 +176,19 @@ impl Key {
     /// deck whose key is `self` mix with `target`: 0 when it already does,
     /// and down rather than up when both are as near.
     pub fn shift_to_mix(self, target: Key, max: i32, mixing: Mixing) -> Option<i32> {
-        (0..=max)
-            .flat_map(|n| [-n, n])
-            .find(|&n| self.transpose(n).mixes(target, mixing))
+        (0..=max).flat_map(|n| [-n, n]).find(|&n| self.transpose(n).mixes(target, mixing))
     }
 
     /// The key's number on the Camelot wheel, 1 to 12.
     pub fn camelot_number(self) -> u8 {
-        let major_tonic = if self.minor {
-            self.tonic + 3
-        } else {
-            self.tonic
-        } as usize;
+        let major_tonic = if self.minor { self.tonic + 3 } else { self.tonic } as usize;
         ((major_tonic * 7 + 7) % 12 + 1) as u8
     }
 
     /// The key a deck plays in: its file's key shifted by `semitones`, plus
     /// the speed's own pitch change unless key lock holds the key.
     pub fn playing(self, semitones: f64, speed: f64, keylock: bool) -> Key {
-        let from_speed = if keylock || speed <= 0.0 {
-            0.0
-        } else {
-            12.0 * speed.log2()
-        };
+        let from_speed = if keylock || speed <= 0.0 { 0.0 } else { 12.0 * speed.log2() };
         self.transpose((semitones + from_speed).round() as i32)
     }
 
@@ -239,10 +207,7 @@ impl Key {
     }
 
     pub fn from_index(i: u8) -> Option<Key> {
-        (i < 24).then_some(Key {
-            tonic: i % 12,
-            minor: i >= 12,
-        })
+        (i < 24).then_some(Key { tonic: i % 12, minor: i >= 12 })
     }
 }
 
@@ -325,12 +290,7 @@ pub enum Notation {
 }
 
 impl Notation {
-    pub const ALL: [Notation; 4] = [
-        Notation::Camelot,
-        Notation::OpenKey,
-        Notation::Sharps,
-        Notation::Flats,
-    ];
+    pub const ALL: [Notation; 4] = [Notation::Camelot, Notation::OpenKey, Notation::Sharps, Notation::Flats];
 
     pub fn id(self) -> u8 {
         self as u8
@@ -393,9 +353,7 @@ impl KeyDetector {
     pub fn new(sample_rate: f64) -> Self {
         let decimation = ((sample_rate / 11_025.0).round() as usize).max(1);
         let rate = sample_rate as f32 / decimation as f32;
-        let window = (0..FRAME)
-            .map(|i| 0.5 - 0.5 * (std::f32::consts::TAU * i as f32 / FRAME as f32).cos())
-            .collect();
+        let window = (0..FRAME).map(|i| 0.5 - 0.5 * (std::f32::consts::TAU * i as f32 / FRAME as f32).cos()).collect();
         let mut bin_map = Vec::new();
         for k in 1..FRAME / 2 {
             let f = k as f32 * rate / FRAME as f32;
@@ -444,12 +402,8 @@ impl KeyDetector {
     }
 
     fn frame(&mut self) {
-        let mut spectrum: Vec<Complex32> = self
-            .buf
-            .iter()
-            .zip(&self.window)
-            .map(|(x, w)| Complex32::new(x * w, 0.0))
-            .collect();
+        let mut spectrum: Vec<Complex32> =
+            self.buf.iter().zip(&self.window).map(|(x, w)| Complex32::new(x * w, 0.0)).collect();
         self.fft.process(&mut spectrum);
         let mut chroma = [0.0f64; BINS_PER_OCTAVE];
         for (k, targets) in &self.bin_map {
@@ -466,11 +420,7 @@ impl KeyDetector {
             classes[b / 3] += c;
         }
         let top = classes.iter().copied().fold(0.0, f64::max);
-        self.steps.push(if top > 1e-9 {
-            classes.map(|c| (c / top * 255.0).round() as u8)
-        } else {
-            [0; 12]
-        });
+        self.steps.push(if top > 1e-9 { classes.map(|c| (c / top * 255.0).round() as u8) } else { [0; 12] });
         if max > 1e-9 {
             for (sum, c) in self.chroma.iter_mut().zip(chroma) {
                 *sum += c / max;
@@ -482,10 +432,7 @@ impl KeyDetector {
     /// The pitch classes of everything pushed, one step per spectrum
     /// (about 0.74 s).
     pub fn timeline(&self) -> crate::track::Chroma {
-        crate::track::Chroma {
-            per_second: self.rate,
-            steps: self.steps.clone(),
-        }
+        crate::track::Chroma { per_second: self.rate, steps: self.steps.clone() }
     }
 
     /// The key of everything pushed, or None for silence or very short audio.
@@ -499,13 +446,7 @@ impl KeyDetector {
         };
         let data = centre(&self.chroma);
         let (major, minor) = (centre(&MAJOR), centre(&MINOR));
-        let mut best = (
-            f64::MIN,
-            Key {
-                tonic: 0,
-                minor: false,
-            },
-        );
+        let mut best = (f64::MIN, Key { tonic: 0, minor: false });
         // Profiles shift a whole semitone (three bins) at a time.
         for tonic in 0..12u8 {
             for (profile, minor) in [(&major, false), (&minor, true)] {
@@ -549,10 +490,7 @@ mod tests {
                 let mut v = 0.0;
                 for &note in chord {
                     // The root an octave lower too, like a bass line.
-                    for (n, gain) in [
-                        (note, 1.0),
-                        (note - 12.0, 0.6 * (note == chord[0]) as u8 as f32),
-                    ] {
+                    for (n, gain) in [(note, 1.0), (note - 12.0, 0.6 * (note == chord[0]) as u8 as f32)] {
                         let f = 440.0 * 2f32.powf((n - 69.0) / 12.0);
                         for h in 1..4 {
                             v += gain / h as f32 * (std::f32::consts::TAU * f * h as f32 * t).sin();
@@ -576,24 +514,9 @@ mod tests {
     #[test]
     fn finds_major_and_minor_keys() {
         // I IV V I in C major; i iv V in A minor (with its G sharp); I IV V in D.
-        let c_major = [
-            [60.0, 64.0, 67.0],
-            [65.0, 69.0, 72.0],
-            [67.0, 71.0, 74.0],
-            [60.0, 64.0, 67.0],
-        ];
-        let a_minor = [
-            [57.0, 60.0, 64.0],
-            [62.0, 65.0, 69.0],
-            [64.0, 68.0, 71.0],
-            [57.0, 60.0, 64.0],
-        ];
-        let d_major = [
-            [62.0, 66.0, 69.0],
-            [67.0, 71.0, 74.0],
-            [69.0, 73.0, 76.0],
-            [62.0, 66.0, 69.0],
-        ];
+        let c_major = [[60.0, 64.0, 67.0], [65.0, 69.0, 72.0], [67.0, 71.0, 74.0], [60.0, 64.0, 67.0]];
+        let a_minor = [[57.0, 60.0, 64.0], [62.0, 65.0, 69.0], [64.0, 68.0, 71.0], [57.0, 60.0, 64.0]];
+        let d_major = [[62.0, 66.0, 69.0], [67.0, 71.0, 74.0], [69.0, 73.0, 76.0], [62.0, 66.0, 69.0]];
         assert_eq!(detect(44_100.0, &c_major), "8B");
         assert_eq!(detect(48_000.0, &a_minor), "8A");
         assert_eq!(detect(44_100.0, &d_major), "10B");
@@ -611,7 +534,7 @@ mod tests {
         assert_eq!(p("F#m"), k("F#m", "11A"));
         assert_eq!(p("Gbm"), k("F#m", "11A"));
         assert_eq!(p("Eb minor"), k("D#m", "2A"));
-        assert_eq!(p("B♭"), k("A#", "6B"));
+        assert_eq!(p("B\u{266d}"), k("A#", "6B"));
         assert_eq!(p("Db"), k("C#", "3B"));
         assert_eq!(p("c maj"), k("C", "8B"));
         assert_eq!(p("Cb"), k("B", "1B"));
@@ -649,12 +572,7 @@ mod tests {
         assert!(!k("Am").compatible(k("F#m")));
         // 8A with 7B (F) and 9B (G): only when fuzzy.
         let (h, f) = (Mixing::Harmonic, Mixing::Fuzzy);
-        let mixes = |a: &str, mixing| {
-            (0..24)
-                .filter_map(Key::from_index)
-                .filter(|&b| k(a).mixes(b, mixing))
-                .count()
-        };
+        let mixes = |a: &str, mixing| (0..24).filter_map(Key::from_index).filter(|&b| k(a).mixes(b, mixing)).count();
         assert_eq!((mixes("8A", h), mixes("8A", f)), (4, 6));
         assert!(!k("Am").mixes(k("F"), h) && k("Am").mixes(k("F"), f));
         assert!(k("Am").mixes(k("G"), f) && !k("Am").mixes(k("D"), f));
@@ -663,9 +581,7 @@ mod tests {
             let a = Key::from_index(i).unwrap();
             for j in 0..24 {
                 let b = Key::from_index(j).unwrap();
-                let fuzzy = a
-                    .shift_to_mix(b, 2, f)
-                    .expect("fuzzy reaches every key in ±2");
+                let fuzzy = a.shift_to_mix(b, 2, f).expect("fuzzy reaches every key in ±2");
                 assert!(a.transpose(fuzzy).mixes(b, f));
                 if let Some(n) = a.shift_to_mix(b, 2, h) {
                     assert!(a.transpose(n).mixes(b, h) && n.abs() <= 2);
@@ -679,10 +595,7 @@ mod tests {
         assert_eq!(k("E").shift_to_mix(k("C"), 2, h), Some(1));
         // Am (8A) with Eb (5B): harmonic needs Cm (5A), three up.
         assert_eq!(k("Am").shift_to_mix(k("Eb"), 2, h), None);
-        assert_eq!(
-            Key::from_control_number(k("Am").control_number()),
-            Some(k("Am"))
-        );
+        assert_eq!(Key::from_control_number(k("Am").control_number()), Some(k("Am")));
         assert_eq!(k("C").control_number(), 1.0);
     }
 

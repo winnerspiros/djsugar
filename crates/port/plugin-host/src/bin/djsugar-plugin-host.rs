@@ -1,24 +1,6 @@
-//! The helper process. Two modes:
-//!
-//! - `djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> |
-//!   --vst3 <bundle> --id <cid>)`
-//!   maps the block DJ Sugar shares, loads one effect, describes it on stdout
-//!   (`name`, `latency`, `param` lines, then `ready`) and runs a block each
-//!   time DJ Sugar writes a byte to stdin. It exits when stdin closes, so a
-//!   helper never outlives DJ Sugar. `--title <text>` names the window the
-//!   plugin's editor opens in, when DJ Sugar asks for it. `--state <file>`
-//!   names the file the plugin's state is saved to and loaded from when
-//!   DJ Sugar asks (see `shm::Header::state_cmd`); if it exists at start, the
-//!   plugin starts from it.
-//! - `djsugar-plugin-host --scan <file>` lists the plugins in a CLAP file or
-//!   VST3 bundle, and `--scan-au` lists the installed Audio Units (macOS)
-//!   (`plugin` lines, then `done`) and exits.
-//! - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)`
-//!   lists the plugin's own presets (`preset` lines, name then reference, then `done`)
-//!   and exits.
-//!
-//! The plugin's main-thread half stays on this process's main thread; the
-//! audio runs on a second thread.
+//! The helper process. Two modes: - `djsugar-plugin-host --shm <path> (--test <id> | --clap <file> --id <id> | --vst3 <bundle> --id <cid>)` maps the block DJ Sugar shares, loads one effect, describes it on stdout (`name`, `latency`, `param` lines, then `ready`) and runs a block each time DJ Sugar writes a byte to stdin. It exits when stdin closes, so a helper never
+//! bundle, and `--scan-au` lists the installed Audio Units (macOS) (`plugin` lines, then `done`) and exits. - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)` lists the plugin's own presets (`preset` lines, name then reference, then `done`) and exits. The plugin's main-thread half stays on this process's main thread; the audio runs on a second thread.
+//! bundle, and `--scan-au` lists the installed Audio Units (macOS) (`plugin` lines, then `done`) and exits. - `djsugar-plugin-host --presets (--clap <file> --id <id> | --au <id>)` lists the plugin's own presets (`preset` lines, name then reference, then `done`) and exits. The plugin's main-thread half stays on this process's main thread; the audio runs on a second
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -31,11 +13,9 @@ use djsugar_plugin_host::shm::{self, Midi, Shm, CHANNELS, MAX_EVENTS, MAX_PARAMS
 use djsugar_plugin_host::window::EditorWindow;
 use djsugar_plugin_host::Transport;
 
-/// macOS: makes this helper a background (accessory) app before any plugin
-/// code runs. The helper sits inside DJSugar.app, so once a plugin touches
-/// AppKit on load (many instruments do) macOS would otherwise show it as a
-/// second "DJ Sugar" in the Dock and the ⌘-Tab switcher. Quitting that one
-/// would kill the plugin.
+/// macOS: makes this helper a background (accessory) app before any plugin code runs. The helper sits inside
+/// DJSugar.app, so once a plugin touches AppKit on load (many instruments do) macOS would otherwise show it
+/// as a second "DJ Sugar" in the Dock and the ⌘-Tab switcher. Quitting that one would kill the plugin.
 #[cfg(target_os = "macos")]
 fn stay_in_background() {
     use objc2::runtime::AnyObject;
@@ -125,12 +105,10 @@ fn main() {
     let Some(shm_path) = shm_path else {
         fail("--shm <path> is needed");
     };
-    let shm =
-        Arc::new(Shm::open(&shm_path).unwrap_or_else(|e| fail(&format!("shared memory: {e}"))));
+    let shm = Arc::new(Shm::open(&shm_path).unwrap_or_else(|e| fail(&format!("shared memory: {e}"))));
     let h = shm.header();
     let sample_rate = h.sample_rate.load(Ordering::Relaxed);
-    let loaded =
-        effects::load(&plugin, sample_rate, shm.max_frames(), &picks).unwrap_or_else(|e| fail(&e));
+    let loaded = effects::load(&plugin, sample_rate, shm.max_frames(), &picks).unwrap_or_else(|e| fail(&e));
 
     // Describe it, and start the shared parameters at its current values,
     // so DJ Sugar changes only what the DJ touches.
@@ -139,24 +117,13 @@ fn main() {
     say(&format!("latency\t{}", info.latency));
     for (i, p) in info.params.iter().enumerate() {
         shm::store_f32(&h.params[i], p.value as f32);
-        say(&format!(
-            "param\t{}\t{}\t{}\t{}\t{}\t{}",
-            p.min,
-            p.max,
-            p.default,
-            p.value,
-            p.id,
-            clean(&p.name)
-        ));
+        say(&format!("param\t{}\t{}\t{}\t{}\t{}\t{}", p.min, p.max, p.default, p.value, p.id, clean(&p.name)));
     }
     for (id, name) in &info.all {
         say(&format!("all\t{id}\t{}", clean(name)));
     }
     let mut main = loaded.main;
-    let mut no_main = NoMain {
-        state: Vec::new(),
-        value: info.params.first().map(|p| p.value),
-    };
+    let mut no_main = NoMain { state: Vec::new(), value: info.params.first().map(|p| p.value) };
     let mut params = ParamSync::new(info.params.iter().map(|p| p.value as f32).collect());
     // A saved sound to start from, before the first block.
     if let Some(data) = state.as_ref().and_then(|p| std::fs::read(p).ok()) {
@@ -176,10 +143,9 @@ fn main() {
         .unwrap_or_else(|e| fail(&format!("audio thread: {e}")));
     say("ready");
 
-    // Main thread: serve the plugin's main-thread requests, and its editor
-    // window, until DJ Sugar lets go. Exiting without tearing the plugin down
-    // is deliberate: a plugin can't crash on the way out if it is never
-    // asked to clean up.
+    // Main thread: serve the plugin's main-thread requests, and its editor window,
+    // deliberate: a plugin can't crash on the way out if it is never asked to clean up.
+    // deliberate: a plugin can't crash on the way out if it is never asked to
     let title = title.unwrap_or_else(|| info.name.clone());
     let mut editor = EditorWindow::new(title);
     while !audio.is_finished() {
@@ -192,10 +158,7 @@ fn main() {
             params.loaded(h);
         }
         params.step(m, h);
-        let wait = m
-            .next_idle()
-            .map_or(IDLE, |d| d.min(IDLE))
-            .max(Duration::from_millis(1));
+        let wait = m.next_idle().map_or(IDLE, |d| d.min(IDLE)).max(Duration::from_millis(1));
         editor.step(m, &h.editor, &h.editor_shown, wait);
         if editor.wants_run() {
             break;
@@ -221,9 +184,7 @@ fn main() {
         }
         params.step(m, h);
         win.step_in(m, &h.editor, &h.editor_shown, el);
-        m.next_idle()
-            .map_or(IDLE, |d| d.min(IDLE))
-            .max(Duration::from_millis(1))
+        m.next_idle().map_or(IDLE, |d| d.min(IDLE)).max(Duration::from_millis(1))
     })
 }
 
@@ -242,16 +203,14 @@ fn serve_state(m: &mut dyn MainThread, h: &shm::Header, path: Option<&std::path:
     let result = match (cmd, path) {
         (shm::STATE_SAVE, Some(path)) => m.save_state().and_then(|data| {
             let tmp = path.with_extension("tmp");
-            std::fs::write(&tmp, data)
-                .and_then(|_| std::fs::rename(&tmp, path))
-                .map_err(|e| e.to_string())
+            std::fs::write(&tmp, data).and_then(|_| std::fs::rename(&tmp, path)).map_err(|e| e.to_string())
         }),
-        (shm::STATE_LOAD, Some(path)) => std::fs::read(path)
-            .map_err(|e| e.to_string())
-            .and_then(|data| m.load_state(&data)),
-        (shm::STATE_PRESET, Some(path)) => std::fs::read_to_string(path)
-            .map_err(|e| e.to_string())
-            .and_then(|reference| m.load_preset(&reference)),
+        (shm::STATE_LOAD, Some(path)) => {
+            std::fs::read(path).map_err(|e| e.to_string()).and_then(|data| m.load_state(&data))
+        }
+        (shm::STATE_PRESET, Some(path)) => {
+            std::fs::read_to_string(path).map_err(|e| e.to_string()).and_then(|reference| m.load_preset(&reference))
+        }
         _ => Err("no state file".into()),
     };
     if let Err(e) = &result {
@@ -277,11 +236,7 @@ struct ParamSync {
 
 impl ParamSync {
     fn new(set: Vec<f32>) -> Self {
-        Self {
-            now: vec![0.0; set.len()],
-            set,
-            next: std::time::Instant::now(),
-        }
+        Self { now: vec![0.0; set.len()], set, next: std::time::Instant::now() }
     }
 
     /// A sound was loaded: it set the plugin's values, so knob moves not
@@ -314,10 +269,9 @@ impl ParamSync {
     }
 }
 
-/// The main thread of an effect that needs none (the test effects). Its
-/// state is whatever was last loaded, so saving and loading can be tested;
-/// a 4-byte state is also its first parameter's value (an `f32`), so a
-/// sound changing the plugin's knobs can be tested too.
+/// The main thread of an effect that needs none (the test effects). Its state is whatever
+/// was last loaded, so saving and loading can be tested; a 4-byte state is also its first
+/// parameter's value (an `f32`), so a sound changing the plugin's knobs can be tested too.
 struct NoMain {
     state: Vec<u8>,
     value: Option<f64>,
@@ -405,9 +359,7 @@ fn run_audio(shm: &Shm, mut fx: Box<dyn Effect>) {
             playing: h.playing.load(Ordering::Relaxed) != 0,
         };
         {
-            let [l, r] = &mut output[..] else {
-                unreachable!()
-            };
+            let [l, r] = &mut output[..] else { unreachable!() };
             fx.process(
                 [&input[0][..frames], &input[1][..frames]],
                 [&mut l[..frames], &mut r[..frames]],
@@ -419,8 +371,7 @@ fn run_audio(shm: &Shm, mut fx: Box<dyn Effect>) {
         for (ch, buf) in output.iter().enumerate() {
             shm.write(true, ch, &buf[..frames]);
         }
-        h.process_ns
-            .store(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
+        h.process_ns.store(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
         h.seq_out.store(seq, Ordering::Release);
     }
 }
@@ -510,10 +461,8 @@ mod realtime {
             if libc::mach_timebase_info(&mut tb) != 0 || tb.numer == 0 {
                 return;
             }
-            let ticks = |d: Duration| {
-                (d.as_nanos() as f64 * tb.denom as f64 / tb.numer as f64).min(u32::MAX as f64)
-                    as u32
-            };
+            let ticks =
+                |d: Duration| (d.as_nanos() as f64 * tb.denom as f64 / tb.numer as f64).min(u32::MAX as f64) as u32;
             let period = period.clamp(Duration::from_micros(500), Duration::from_millis(100));
             let mut policy = libc::thread_time_constraint_policy {
                 period: ticks(period),

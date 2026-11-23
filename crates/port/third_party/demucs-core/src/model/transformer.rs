@@ -93,16 +93,12 @@ impl CrossDomainTransformer {
         // 1. Save original shapes
         let [_, ch, freq_bins, time_f] = freq.dims();
         let [_, _, time_t] = time.dims();
-        let d_model = if self.channel_upsampler.is_some() {
-            self.norm_in.gamma.dims()[0]
-        } else {
-            ch
-        };
+        let d_model = if self.channel_upsampler.is_some() { self.norm_in.gamma.dims()[0] } else { ch };
 
-        // 2. Channel upsample freq (4D → 3D for Conv1d → 4D)
+        // 2. Channel upsample freq (4D -> 3D for Conv1d -> 4D)
         let freq = match &self.channel_upsampler {
             Some(up) => {
-                // [1, ch, Fr, T] → [ch, Fr, T] → [Fr, ch, T] for Conv1d → [Fr, d_model, T] → [1, d_model, Fr, T]
+                // [1, ch, Fr, T] -> [ch, Fr, T] -> [Fr, ch, T] for Conv1d -> [Fr, d_model, T] -> [1, d_model, Fr, T]
                 let freq = freq.reshape([ch, freq_bins, time_f]).swap_dims(0, 1); // [Fr, ch, T]
                 let freq = up.forward(freq); // [Fr, d_model, T]
                 freq.swap_dims(0, 1).unsqueeze_dim::<4>(0) // [1, d_model, Fr, T]
@@ -114,13 +110,13 @@ impl CrossDomainTransformer {
             None => time,
         };
 
-        // 3. Flatten freq (time-major): [1, d_model, Fr, T] → [1, T*Fr, d_model]
+        // 3. Flatten freq (time-major): [1, d_model, Fr, T] -> [1, T*Fr, d_model]
         let device = freq.device();
         let freq = freq
             .permute([0, 3, 2, 1]) // [1, T, Fr, d_model]
             .reshape([1, time_f * freq_bins, d_model]);
 
-        // 4. Reshape time: [1, d_model, time_t] → [1, time_t, d_model]
+        // 4. Reshape time: [1, d_model, time_t] -> [1, time_t, d_model]
         let time = time.permute([0, 2, 1]);
 
         // 5. Norm FIRST, then add positional embeddings (Python order)
@@ -145,26 +141,20 @@ impl CrossDomainTransformer {
                     freq = new_freq;
                     time = new_time;
                 }
-                _ => {
-                    return Err(DemucsError::Internal(
-                        "freq and time transformer layers must be same type".into(),
-                    ))
-                }
+                _ => return Err(DemucsError::Internal("freq and time transformer layers must be same type".into())),
             }
         }
 
-        // 8. Unflatten freq (time-major): [1, T*Fr, d_model] → [1, d_model, Fr, T]
-        let freq = freq
-            .reshape([1, time_f, freq_bins, d_model])
-            .permute([0, 3, 2, 1]); // [1, d_model, Fr, T]
+        // 8. Unflatten freq (time-major): [1, T*Fr, d_model] -> [1, d_model, Fr, T]
+        let freq = freq.reshape([1, time_f, freq_bins, d_model]).permute([0, 3, 2, 1]); // [1, d_model, Fr, T]
 
-        // 9. Reshape time: [1, time_t, d_model] → [1, d_model, time_t]
+        // 9. Reshape time: [1, time_t, d_model] -> [1, d_model, time_t]
         let time = time.permute([0, 2, 1]);
 
         // 10. Channel downsample
         let freq = match &self.channel_downsampler {
             Some(down) => {
-                // [1, d_model, Fr, T] → [d_model, Fr, T] → [Fr, d_model, T] for Conv1d → [Fr, ch, T] → [1, ch, Fr, T]
+                // [1, d_model, Fr, T] -> [d_model, Fr, T] -> [Fr, d_model, T] for Conv1d -> [Fr, ch, T] -> [1, ch, Fr, T]
                 let freq = freq.reshape([d_model, freq_bins, time_f]).swap_dims(0, 1); // [Fr, d_model, T]
                 let freq = down.forward(freq); // [Fr, ch, T]
                 freq.swap_dims(0, 1).unsqueeze_dim::<4>(0) // [1, ch, Fr, T]
@@ -201,13 +191,7 @@ pub(crate) struct SelfAttentionLayer {
 }
 
 impl SelfAttentionLayer {
-    pub(crate) fn init(
-        d_model: usize,
-        n_heads: usize,
-        ffn_dim: usize,
-        with_norm_out: bool,
-        device: &Device,
-    ) -> Self {
+    pub(crate) fn init(d_model: usize, n_heads: usize, ffn_dim: usize, with_norm_out: bool, device: &Device) -> Self {
         Self {
             norm1: LayerNormConfig::new(d_model).init(device),
             attn: MultiHeadAttentionConfig::new(d_model, n_heads).init(device),
@@ -216,11 +200,7 @@ impl SelfAttentionLayer {
             linear1: LinearConfig::new(d_model, ffn_dim).init(device),
             linear2: LinearConfig::new(ffn_dim, d_model).init(device),
             gamma_2: LayerScale::init(d_model, device),
-            norm_out: if with_norm_out {
-                Some(GroupNormConfig::new(1, d_model).init(device))
-            } else {
-                None
-            },
+            norm_out: if with_norm_out { Some(GroupNormConfig::new(1, d_model).init(device)) } else { None },
         }
     }
 
@@ -242,7 +222,7 @@ impl SelfAttentionLayer {
         // Optional output GroupNorm (Python's MyGroupNorm transposes to [B, C, S])
         match &self.norm_out {
             Some(norm) => {
-                // [B, S, D] → [B, D, S] for GroupNorm → [B, S, D]
+                // [B, S, D] -> [B, D, S] for GroupNorm -> [B, S, D]
                 let x = x.swap_dims(1, 2);
                 let x = norm.forward(x);
                 x.swap_dims(1, 2)
@@ -266,13 +246,7 @@ pub(crate) struct CrossAttentionLayer {
 }
 
 impl CrossAttentionLayer {
-    pub(crate) fn init(
-        d_model: usize,
-        n_heads: usize,
-        ffn_dim: usize,
-        with_norm_out: bool,
-        device: &Device,
-    ) -> Self {
+    pub(crate) fn init(d_model: usize, n_heads: usize, ffn_dim: usize, with_norm_out: bool, device: &Device) -> Self {
         Self {
             norm1: LayerNormConfig::new(d_model).init(device),
             norm2: LayerNormConfig::new(d_model).init(device),
@@ -282,11 +256,7 @@ impl CrossAttentionLayer {
             linear1: LinearConfig::new(d_model, ffn_dim).init(device),
             linear2: LinearConfig::new(ffn_dim, d_model).init(device),
             gamma_2: LayerScale::init(d_model, device),
-            norm_out: if with_norm_out {
-                Some(GroupNormConfig::new(1, d_model).init(device))
-            } else {
-                None
-            },
+            norm_out: if with_norm_out { Some(GroupNormConfig::new(1, d_model).init(device)) } else { None },
         }
     }
 
@@ -318,10 +288,9 @@ impl CrossAttentionLayer {
     }
 }
 
-/// 1D sinusoidal positional embedding matching Python's `create_sin_embedding`.
-///
-/// Layout: `[cos(phase), sin(phase)]` concatenated along last dim.
-/// `phase[pos, i] = pos / 10000^(i / (half - 1))` for i = 0..half.
+/// 1D sinusoidal positional embedding matching Python's
+/// concatenated along last dim. `phase[pos, i] = pos / 10000^(i / (half - 1))` for i = 0..half.
+/// concatenated along last dim. `phase[pos, i] = pos / 10000^(i / (half
 fn create_sin_embed(seq_len: usize, d_model: usize, device: &Device) -> Tensor<3> {
     let mut data = vec![0.0f32; seq_len * d_model];
     let half = d_model / 2;
@@ -338,16 +307,9 @@ fn create_sin_embed(seq_len: usize, d_model: usize, device: &Device) -> Tensor<3
     Tensor::<2>::from_data(TensorData::new(data, [seq_len, d_model]), device).unsqueeze_dim::<3>(0)
 }
 
-/// 2D sinusoidal positional embedding matching Python's `create_2d_sin_embedding`.
-///
-/// Encodes both time (width) and frequency (height) positions.
-/// Returns [1, width*height, d_model] in time-major order (t varies slowest).
-///
-/// Layout within d_model channels:
-/// - Channels 0,2,4,...,half-2: sin(time_pos * div_term)
-/// - Channels 1,3,5,...,half-1: cos(time_pos * div_term)
-/// - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term)
-/// - Channels half+1,half+3,...,d_model-1: cos(freq_pos * div_term)
+/// 2D sinusoidal positional embedding matching Python's `create_2d_sin_embedding`. Encodes both time (width) and frequency (height) positions. Returns [1,
+/// 1,3,5,...,half-1: cos(time_pos * div_term) - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term) - Channels half+1,half+3,...,d_model-1: cos(freq_pos * div_term)
+/// 1,3,5,...,half-1: cos(time_pos * div_term) - Channels half,half+2,...,d_model-2: sin(freq_pos * div_term) - Channels half+1,half+3,...,d_model-1: cos(freq_pos *
 fn create_2d_sin_embed(
     d_model: usize,
     height: usize, // freq bins
@@ -358,9 +320,8 @@ fn create_2d_sin_embed(
     let quarter = half / 2; // number of sin/cos pairs per dimension
 
     // div_term[k] = exp(-2k * ln(10000) / half) = 1 / 10000^(2k/half)
-    let div_terms: Vec<f32> = (0..quarter)
-        .map(|k| (-2.0 * k as f32 * (10000.0_f32).ln() / half as f32).exp())
-        .collect();
+    let div_terms: Vec<f32> =
+        (0..quarter).map(|k| (-2.0 * k as f32 * (10000.0_f32).ln() / half as f32).exp()).collect();
 
     let seq_len = width * height;
     let mut data = vec![0.0f32; seq_len * d_model];
@@ -397,9 +358,7 @@ mod tests {
 
     fn make_layer_scale(ch: usize) -> LayerScale {
         let device = Default::default();
-        LayerScale {
-            scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)),
-        }
+        LayerScale { scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)) }
     }
 
     fn make_self_attn_layer(with_norm_out: bool) -> SelfAttentionLayer {
@@ -412,11 +371,7 @@ mod tests {
             linear1: LinearConfig::new(D_MODEL, FFN_DIM).init(&device),
             linear2: LinearConfig::new(FFN_DIM, D_MODEL).init(&device),
             gamma_2: make_layer_scale(D_MODEL),
-            norm_out: if with_norm_out {
-                Some(GroupNormConfig::new(1, D_MODEL).init(&device))
-            } else {
-                None
-            },
+            norm_out: if with_norm_out { Some(GroupNormConfig::new(1, D_MODEL).init(&device)) } else { None },
         }
     }
 
@@ -431,22 +386,14 @@ mod tests {
             linear1: LinearConfig::new(D_MODEL, FFN_DIM).init(&device),
             linear2: LinearConfig::new(FFN_DIM, D_MODEL).init(&device),
             gamma_2: make_layer_scale(D_MODEL),
-            norm_out: if with_norm_out {
-                Some(GroupNormConfig::new(1, D_MODEL).init(&device))
-            } else {
-                None
-            },
+            norm_out: if with_norm_out { Some(GroupNormConfig::new(1, D_MODEL).init(&device)) } else { None },
         }
     }
 
     #[test]
     fn self_attn_preserves_shape() {
         let layer = make_self_attn_layer(false);
-        let x = Tensor::<3>::random(
-            [1, 100, D_MODEL],
-            Distribution::Default,
-            &Default::default(),
-        );
+        let x = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &Default::default());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 100, D_MODEL]);
     }
@@ -462,13 +409,8 @@ mod tests {
     #[test]
     fn cross_attn_preserves_query_shape() {
         let layer = make_cross_attn_layer(false);
-        let query =
-            Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &Default::default());
-        let cross = Tensor::<3>::random(
-            [1, 100, D_MODEL],
-            Distribution::Default,
-            &Default::default(),
-        );
+        let query = Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &Default::default());
+        let cross = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &Default::default());
         let out = layer.forward(query, cross);
         assert_eq!(out.dims(), [1, 50, D_MODEL]);
     }
@@ -476,10 +418,8 @@ mod tests {
     #[test]
     fn cross_attn_with_norm_out() {
         let layer = make_cross_attn_layer(true);
-        let query =
-            Tensor::<3>::random([1, 30, D_MODEL], Distribution::Default, &Default::default());
-        let cross =
-            Tensor::<3>::random([1, 80, D_MODEL], Distribution::Default, &Default::default());
+        let query = Tensor::<3>::random([1, 30, D_MODEL], Distribution::Default, &Default::default());
+        let cross = Tensor::<3>::random([1, 80, D_MODEL], Distribution::Default, &Default::default());
         let out = layer.forward(query, cross);
         assert_eq!(out.dims(), [1, 30, D_MODEL]);
     }
@@ -487,13 +427,8 @@ mod tests {
     #[test]
     fn cross_attn_different_seq_lengths() {
         let layer = make_cross_attn_layer(false);
-        let freq = Tensor::<3>::random(
-            [1, 200, D_MODEL],
-            Distribution::Default,
-            &Default::default(),
-        );
-        let time =
-            Tensor::<3>::random([1, 20, D_MODEL], Distribution::Default, &Default::default());
+        let freq = Tensor::<3>::random([1, 200, D_MODEL], Distribution::Default, &Default::default());
+        let time = Tensor::<3>::random([1, 20, D_MODEL], Distribution::Default, &Default::default());
         let out = layer.forward(freq, time);
         assert_eq!(out.dims(), [1, 200, D_MODEL]);
     }
@@ -589,13 +524,8 @@ mod tests {
         let time_t = 8;
 
         // 4D freq: [1, ch, Fr, T]
-        let freq = Tensor::<4>::random(
-            [1, 384, freq_bins, time_f],
-            Distribution::Default,
-            &Default::default(),
-        );
-        let time =
-            Tensor::<3>::random([1, 384, time_t], Distribution::Default, &Default::default());
+        let freq = Tensor::<4>::random([1, 384, freq_bins, time_f], Distribution::Default, &Default::default());
+        let time = Tensor::<3>::random([1, 384, time_t], Distribution::Default, &Default::default());
 
         let (freq_out, time_out) = transformer.forward(freq, time).unwrap();
         assert_eq!(freq_out.dims(), [1, 384, freq_bins, time_f]);

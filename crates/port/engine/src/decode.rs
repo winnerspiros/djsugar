@@ -15,9 +15,8 @@ use symphonia::core::meta::MetadataOptions;
 use crate::track::{Audio, AudioWriter};
 
 /// File extensions the scanner offers and the decoder can read.
-pub const EXTENSIONS: &[&str] = &[
-    "mp3", "flac", "wav", "wave", "ogg", "oga", "m4a", "mp4", "aac", "aif", "aiff", "caf", "mka",
-];
+pub const EXTENSIONS: &[&str] =
+    &["mp3", "flac", "wav", "wave", "ogg", "oga", "m4a", "mp4", "aac", "aif", "aiff", "caf", "mka"];
 
 /// Decodes `path` to stereo frames. Mono is duplicated to both sides; channels
 /// beyond the first two are dropped.
@@ -53,8 +52,8 @@ impl Decoder {
         size: u64,
         wanted: Arc<dyn Fn() -> bool + Send + Sync>,
     ) -> Result<Decoder, String> {
-        let file = crate::growing::GrowingFile::open(path, size, wanted)
-            .map_err(|e| format!("{}: {e}", path.display()))?;
+        let file =
+            crate::growing::GrowingFile::open(path, size, wanted).map_err(|e| format!("{}: {e}", path.display()))?;
         Decoder::open_source(path, Box::new(file))
     }
 
@@ -67,16 +66,10 @@ impl Decoder {
             hint.with_extension(ext);
         }
         let format = symphonia::default::get_probe()
-            .probe(
-                &hint,
-                mss,
-                FormatOptions::default(),
-                MetadataOptions::default(),
-            )
+            .probe(&hint, mss, FormatOptions::default(), MetadataOptions::default())
             .map_err(err)?;
-        let track = format
-            .default_track(TrackType::Audio)
-            .ok_or_else(|| format!("{}: no audio track", path.display()))?;
+        let track =
+            format.default_track(TrackType::Audio).ok_or_else(|| format!("{}: no audio track", path.display()))?;
         let track_id = track.id;
         let n_frames = track.num_frames;
         let Some(CodecParameters::Audio(params)) = track.codec_params.clone() else {
@@ -90,14 +83,7 @@ impl Decoder {
         // Without a length, guess ten minutes; the audio grows past it as needed.
         let expected = n_frames.map_or(600 * sample_rate.max(44_100) as usize, |n| n as usize);
         let (_, writer) = Audio::writer(sample_rate, expected);
-        Ok(Decoder {
-            path: path.to_owned(),
-            format,
-            decoder,
-            track_id,
-            writer,
-            length_known,
-        })
+        Ok(Decoder { path: path.to_owned(), format, decoder, track_id, writer, length_known })
     }
 
     /// The audio being decoded; frames appear in it as [`Decoder::run`] goes.
@@ -115,14 +101,10 @@ impl Decoder {
         (self.length_known && a.sample_rate > 0).then(|| a.len() as f64 / a.sample_rate as f64)
     }
 
-    /// Decodes to the end without keeping the audio: `each` gets the sample
-    /// rate and each packet as interleaved stereo, and stops decoding early
-    /// by returning false. For files too long to hold in memory, such as a
-    /// recorded set. Returns the sample rate and the frames decoded.
-    pub fn stream(
-        mut self,
-        mut each: impl FnMut(u32, &[f32]) -> bool,
-    ) -> Result<(u32, u64), String> {
+    /// Decodes to the end without keeping the audio: `each` gets the sample rate and each packet
+    /// as interleaved stereo, and stops decoding early by returning false. For files too long to
+    /// hold in memory, such as a recorded set. Returns the sample rate and the frames decoded.
+    pub fn stream(mut self, mut each: impl FnMut(u32, &[f32]) -> bool) -> Result<(u32, u64), String> {
         let path = self.path.clone();
         let err = |e: Error| format!("{}: {e}", path.display());
         let mut buf: Vec<f32> = Vec::new();
@@ -202,8 +184,7 @@ impl Decoder {
             let channels = spec.channels().count().max(1);
             decoded.copy_to_vec_interleaved(&mut buf);
             for f in buf.chunks_exact(channels) {
-                self.writer
-                    .push([f[0], if channels > 1 { f[1] } else { f[0] }]);
+                self.writer.push([f[0], if channels > 1 { f[1] } else { f[0] }]);
             }
             if !progress(self.writer.audio()) {
                 return Err(format!("{}: decoding cancelled", path.display()));
@@ -249,9 +230,7 @@ pub(crate) mod tests {
         let dir = std::env::temp_dir().join(format!("djsugar-decode-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("tone.wav");
-        let samples: Vec<i16> = (0..48_000)
-            .map(|i| ((i as f32 / 48.0).sin() * 16_000.0) as i16)
-            .collect();
+        let samples: Vec<i16> = (0..48_000).map(|i| ((i as f32 / 48.0).sin() * 16_000.0) as i16).collect();
         write_wav(&path, 48_000, 1, &samples);
         let audio = decode(&path).unwrap();
         assert_eq!(audio.sample_rate, 48_000);

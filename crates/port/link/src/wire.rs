@@ -1,8 +1,6 @@
-//! The messages on the network: discovery (multicast, every peer's state)
-//! and measurement (unicast ping/pong that maps a peer's session clock to
-//! ours). All integers are big-endian. A payload is a run of entries, each a
-//! four-character key, a 32-bit size and that many bytes; unknown keys are
-//! skipped, so newer peers can add entries.
+//! The messages on the network: discovery (multicast, every peer's state) and measurement (unicast ping/pong that
+//! four-character key, a 32-bit size and that many bytes; unknown keys are skipped, so newer peers can add entries.
+//! four-character key, a 32-bit size and that many bytes; unknown keys are skipped, so newer peers can add
 
 pub const DISCOVERY_HEADER: [u8; 8] = *b"_asdp_v\x01";
 pub const MEASUREMENT_HEADER: [u8; 8] = *b"_link_v\x01";
@@ -143,19 +141,12 @@ pub fn decode_discovery(b: &[u8]) -> Option<Discovery> {
         _ => {}
     })?;
     let state = match (session, timeline) {
-        (Some(session), Some(timeline)) if timeline.micros_per_beat > 0 => Some(PeerState {
-            session,
-            timeline,
-            endpoint,
-        }),
+        (Some(session), Some(timeline)) if timeline.micros_per_beat > 0 => {
+            Some(PeerState { session, timeline, endpoint })
+        }
         _ => None,
     };
-    Some(Discovery {
-        kind,
-        ttl,
-        node,
-        state,
-    })
+    Some(Discovery { kind, ttl, node, state })
 }
 
 pub fn encode_measurement(kind: u8, m: &Measurement, echo: &[u8]) -> Vec<u8> {
@@ -165,11 +156,7 @@ pub fn encode_measurement(kind: u8, m: &Measurement, echo: &[u8]) -> Vec<u8> {
     if let Some(s) = &m.session {
         entry(&mut out, SESSION, s);
     }
-    for (key, v) in [
-        (GHOST_TIME, m.ghost_time),
-        (PREV_GHOST_TIME, m.prev_ghost_time),
-        (HOST_TIME, m.host_time),
-    ] {
+    for (key, v) in [(GHOST_TIME, m.ghost_time), (PREV_GHOST_TIME, m.prev_ghost_time), (HOST_TIME, m.host_time)] {
         if let Some(v) = v {
             entry(&mut out, key, &v.to_be_bytes());
         }
@@ -208,11 +195,7 @@ mod tests {
             node: *b"abcdefgh",
             state: Some(PeerState {
                 session: *b"sessionA",
-                timeline: WireTimeline {
-                    micros_per_beat: 500_000,
-                    beat_origin: -3_250_000,
-                    time_origin: 123_456_789,
-                },
+                timeline: WireTimeline { micros_per_beat: 500_000, beat_origin: -3_250_000, time_origin: 123_456_789 },
                 endpoint: Some(([192, 168, 1, 7], 50123)),
             }),
         };
@@ -224,12 +207,7 @@ mod tests {
 
     #[test]
     fn byebye_has_no_state() {
-        let m = Discovery {
-            kind: BYEBYE,
-            ttl: 0,
-            node: *b"12345678",
-            state: None,
-        };
+        let m = Discovery { kind: BYEBYE, ttl: 0, node: *b"12345678", state: None };
         let b = encode_discovery(&m);
         assert_eq!(b.len(), 20);
         assert_eq!(decode_discovery(&b), Some(m));
@@ -237,12 +215,7 @@ mod tests {
 
     #[test]
     fn unknown_entries_are_skipped_and_short_ones_rejected() {
-        let mut b = encode_discovery(&Discovery {
-            kind: ALIVE,
-            ttl: 5,
-            node: [1; 8],
-            state: None,
-        });
+        let mut b = encode_discovery(&Discovery { kind: ALIVE, ttl: 5, node: [1; 8], state: None });
         entry(&mut b, key(b"zzzz"), &[9; 3]);
         assert!(decode_discovery(&b).is_some());
         b.pop();
@@ -253,25 +226,14 @@ mod tests {
     fn pong_echoes_the_ping() {
         let ping = encode_measurement(
             PING,
-            &Measurement {
-                host_time: Some(42),
-                prev_ghost_time: Some(7),
-                ..Default::default()
-            },
+            &Measurement { host_time: Some(42), prev_ghost_time: Some(7), ..Default::default() },
             &[],
         );
         let (kind, m, payload) = decode_measurement(&ping).unwrap();
-        assert_eq!(
-            (kind, m.host_time, m.prev_ghost_time),
-            (PING, Some(42), Some(7))
-        );
+        assert_eq!((kind, m.host_time, m.prev_ghost_time), (PING, Some(42), Some(7)));
         let pong = encode_measurement(
             PONG,
-            &Measurement {
-                session: Some(*b"sessionB"),
-                ghost_time: Some(1000),
-                ..Default::default()
-            },
+            &Measurement { session: Some(*b"sessionB"), ghost_time: Some(1000), ..Default::default() },
             payload,
         );
         let (kind, m, _) = decode_measurement(&pong).unwrap();

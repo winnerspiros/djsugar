@@ -60,9 +60,9 @@ djsugar-next exposes **16 FX Station scenes** + 3 release types. No per-deck eff
 
 | DJ Sugar (QuickEffectRack) | djsugar-next | Status | Difference |
 |---|---|---|---|
-| Filter (LPF↔HPF) on `super1` | `Station.iso` (3-band isolator) + `Scene::Filter` | PARTIAL | DJ Sugar: single filter knob per deck. Rust: 3-band isolator on master + filter scene |
+| Filter (LPF<->HPF) on `super1` | `Station.iso` (3-band isolator) + `Scene::Filter` | PARTIAL | DJ Sugar: single filter knob per deck. Rust: 3-band isolator on master + filter scene |
 | Quick effect selectable per deck (via prefs) | — | MISSING | No per-deck quick effect selection |
-| Routing: effect unit → deck (group_[ChannelN]_enable) | — | MISSING | No per-deck FX unit routing |
+| Routing: effect unit -> deck (group_[ChannelN]_enable) | — | MISSING | No per-deck FX unit routing |
 
 ---
 
@@ -85,7 +85,7 @@ djsugar-next exposes **16 FX Station scenes** + 3 release types. No per-deck eff
 
 | Feature | DJ Sugar (XYPad.qml) | djsugar-next | Status | Difference |
 |---|---|---|---|---|
-| Filter X-axis (LPF↔HPF) | Yes (`currentX`) | `Scene::Filter` uses `dial` | PARTIAL | Rust filter scene uses single dial |
+| Filter X-axis (LPF<->HPF) | Yes (`currentX`) | `Scene::Filter` uses `dial` | PARTIAL | Rust filter scene uses single dial |
 | Wet/Dry Y-axis | Yes (`currentY`) | `Station.mix` | PARTIAL | |
 | Hold/Snap Mode | Yes (`holdMode`, `savedState`) | — | MISSING | No hold/snap restore |
 | Deck Routing Save/Restore | Yes (saves routing, mix, filter) | — | MISSING | |
@@ -176,7 +176,7 @@ djsugar-next exposes **16 FX Station scenes** + 3 release types. No per-deck eff
 |---|---|---|---|---|
 | Sampler Deck (16 slots × 2 banks) | Yes (Sampler.qml, PlayerManager) | `state.rs`: `samples`, `pads[2][32]`, `bank[2]` | DONE | |
 | Bundled Samples | `PlayerManager.bundledSamples()` | `SAMPLES` const array (compile-time) | PARTIAL | Rust samples are embedded, not user-loadable |
-| Sample Load/Play | Drag-drop, right-click load | Click pad → loads on demand | PARTIAL | No drag-drop, no user sample management |
+| Sample Load/Play | Drag-drop, right-click load | Click pad -> loads on demand | PARTIAL | No drag-drop, no user sample management |
 | Sampler Gain / Pregain | Yes | — | MISSING | |
 | Sampler Loop / Sync / Reverse | Yes | — | MISSING | |
 | Pad FX Mode (effects on pads) | Settings/Pads.qml | — | MISSING | |

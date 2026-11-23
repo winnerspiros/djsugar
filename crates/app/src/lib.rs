@@ -1,9 +1,9 @@
+mod bridge;
 mod classic;
 mod hub;
 mod library;
 mod lyrics;
 mod record;
-mod bridge;
 mod state;
 mod store;
 mod sugar;

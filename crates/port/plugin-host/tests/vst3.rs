@@ -28,23 +28,11 @@ fn bundle() -> PathBuf {
             .success();
         assert!(ok, "the test plugin builds");
         let (built, inner) = if cfg!(windows) {
-            (
-                "djsugar_test_vst3.dll",
-                "Contents/x86_64-win/DJSugarTestGain.vst3".to_string(),
-            )
+            ("djsugar_test_vst3.dll", "Contents/x86_64-win/DJSugarTestGain.vst3".to_string())
         } else if cfg!(target_os = "macos") {
-            (
-                "libdjsugar_test_vst3.dylib",
-                "Contents/MacOS/DJSugarTestGain".to_string(),
-            )
+            ("libdjsugar_test_vst3.dylib", "Contents/MacOS/DJSugarTestGain".to_string())
         } else {
-            (
-                "libdjsugar_test_vst3.so",
-                format!(
-                    "Contents/{}-linux/DJSugarTestGain.so",
-                    std::env::consts::ARCH
-                ),
-            )
+            ("libdjsugar_test_vst3.so", format!("Contents/{}-linux/DJSugarTestGain.so", std::env::consts::ARCH))
         };
         let dir = target.join(format!("vst3-test-{}", std::process::id()));
         let bundle = dir.join("DJSugarTestGain.vst3");
@@ -65,10 +53,7 @@ fn start() -> (Connection, Helper) {
     spawn(&Options {
         picks: Vec::new(),
         helper: helper(),
-        plugin: Plugin::Vst3 {
-            file: bundle(),
-            id: id(),
-        },
+        plugin: Plugin::Vst3 { file: bundle(), id: id() },
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -78,9 +63,7 @@ fn start() -> (Connection, Helper) {
 }
 
 fn run(conn: &mut Connection, transport: Transport) -> (Outcome, Vec<f32>, Vec<f32>) {
-    let l: Vec<f32> = (0..FRAMES)
-        .map(|i| 0.1 + (i as f32 / 10.0).sin() * 0.5)
-        .collect();
+    let l: Vec<f32> = (0..FRAMES).map(|i| 0.1 + (i as f32 / 10.0).sin() * 0.5).collect();
     let r: Vec<f32> = l.iter().map(|x| -x).collect();
     let mut ol = vec![0.0; FRAMES];
     let mut or = vec![0.0; FRAMES];
@@ -120,21 +103,14 @@ fn audio_and_parameters_go_through_the_plugin() {
     conn.set_param(0, 0.5);
     let (out, got, input) = run(&mut conn, Transport::default());
     assert_eq!(out, Outcome::Wet);
-    assert!(got
-        .iter()
-        .zip(&input)
-        .all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
+    assert!(got.iter().zip(&input).all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
 }
 
 #[test]
 fn the_deck_tempo_reaches_the_plugin() {
     let (mut conn, _helper) = start();
     conn.set_param(1, 1.0);
-    let t = Transport {
-        bpm: 126.0,
-        beat: 3.0,
-        playing: true,
-    };
+    let t = Transport { bpm: 126.0, beat: 3.0, playing: true };
     let (out, got, _) = run(&mut conn, t);
     assert_eq!(out, Outcome::Wet);
     assert_eq!(got[0], 126.0);
@@ -145,10 +121,7 @@ fn a_missing_class_fails_to_start() {
     let err = spawn(&Options {
         picks: Vec::new(),
         helper: helper(),
-        plugin: Plugin::Vst3 {
-            file: bundle(),
-            id: "00000000000000000000000000000000".into(),
-        },
+        plugin: Plugin::Vst3 { file: bundle(), id: "00000000000000000000000000000000".into() },
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -177,13 +150,7 @@ fn notes_reach_the_plugin() {
     assert_eq!(out, Outcome::Wet);
     assert_eq!(ol[1], 60.0);
     // No notes, no key.
-    let out = conn.process_events(
-        [&silent, &silent],
-        [&mut ol, &mut or],
-        Transport::default(),
-        &[],
-        DEADLINE,
-    );
+    let out = conn.process_events([&silent, &silent], [&mut ol, &mut or], Transport::default(), &[], DEADLINE);
     assert_eq!(out, Outcome::Wet);
     assert_eq!(ol[1], -1.0);
 }

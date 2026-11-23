@@ -1,26 +1,6 @@
-//! Records the master mix to a WAV or FLAC file, with a log of every control
-//! change next to it.
-//!
-//! The audio thread copies the master pair into a ring buffer while
-//! `[Recording],status` is on; nothing else happens there. A writer thread
-//! empties the buffer into the file and rewrites its header every couple of
-//! seconds, so a crash or power cut keeps everything up to then. WAV files
-//! move on to a new part before they reach 4 GB.
-//!
-//! A logger thread writes `<name>.controls.jsonl`: one line per control
-//! change (`[Channel1],volume` and so on), stamped with the time in the
-//! recording, plus a line for each track loaded on a deck, and `pos` lines
-//! with each loaded deck's place in its track: one a second, and one
-//! whenever the deck jumps (a hot cue, a seek on the waveform, a loop going
-//! round). That is enough to rebuild the set later, e.g. as an Ableton Live
-//! set. When the recording
-//! stops it also writes `<name>.cue`, listing each track from the moment it
-//! became audible, and `<name>.tracklist.txt`, the same as `0:00 Artist -
-//! Title` lines.
-//!
-//! The controls: `[Recording],toggle_recording` starts and stops,
-//! `[Recording],status` is 0 (off) or 2 (recording). `[Recording],duration`
-//! counts the seconds recorded.
+//! Records the master mix to a WAV or FLAC file, with a log of every control change next to it. The audio thread copies the master pair into a ring buffer while `[Recording],status` is on; nothing else happens there. A writer thread empties the buffer into the file and rewrites its header every couple of seconds, so a crash or power cut keeps everything up to then. WAV files move on to a new part
+//! before they reach 4 GB. A logger thread writes `<name>.controls.jsonl`: one line per control change (`[Channel1],volume` and so on), stamped with the time in the recording, plus a line for each track loaded on a deck, and `pos` lines with each loaded deck's place in its track: one a second, and one whenever the deck jumps (a hot cue, a seek on the waveform, a loop going round). That is enough to
+//! rebuild the set later, e.g. as an Ableton Live set. When the recording stops it also writes `<name>.cue`, listing each track from the moment it became audible, and `<name>.tracklist.txt`, the same as `0:00 Artist - Title` lines. The controls: `[Recording],toggle_recording` starts and stops, `[Recording],status` is 0 (off) or 2 (recording). `[Recording],duration` counts the seconds recorded.
 
 use std::fs::File;
 use std::io::{self, BufWriter, Seek, SeekFrom, Write};
@@ -105,20 +85,13 @@ pub struct RecordSettings {
 
 impl Default for RecordSettings {
     fn default() -> Self {
-        Self {
-            dir: default_dir(),
-            format: RecordFormat::Wav,
-            bits: 24,
-        }
+        Self { dir: default_dir(), format: RecordFormat::Wav, bits: 24 }
     }
 }
 
 /// `~/Music/DJSugar/Recordings`.
 pub fn default_dir() -> PathBuf {
-    crate::scan::default_music_dir()
-        .unwrap_or_else(std::env::temp_dir)
-        .join("DJ Sugar")
-        .join("Recordings")
+    crate::scan::default_music_dir().unwrap_or_else(std::env::temp_dir).join("DJ Sugar").join("Recordings")
 }
 
 /// What the audio thread and the writer share.
@@ -153,23 +126,17 @@ impl RecordTap {
         }
         let frames = out.len() / channels;
         if self.tx.slots() < frames * 2 {
-            self.shared
-                .dropped
-                .fetch_add(frames as u64, Ordering::Relaxed);
+            self.shared.dropped.fetch_add(frames as u64, Ordering::Relaxed);
         } else if let Ok(mut chunk) = self.tx.write_chunk_uninit(frames * 2) {
             let (a, b) = chunk.as_mut_slices();
-            let samples = out
-                .chunks_exact(channels)
-                .flat_map(|f| [f[0], if channels > 1 { f[1] } else { f[0] }]);
+            let samples = out.chunks_exact(channels).flat_map(|f| [f[0], if channels > 1 { f[1] } else { f[0] }]);
             for (slot, s) in a.iter_mut().chain(b.iter_mut()).zip(samples) {
                 slot.write(s);
             }
             // SAFETY: every slot of both slices was written just above.
             unsafe { chunk.commit_all() };
         }
-        self.shared
-            .frames
-            .fetch_add(frames as u64, Ordering::Release);
+        self.shared.frames.fetch_add(frames as u64, Ordering::Release);
     }
 }
 
@@ -177,13 +144,7 @@ impl RecordTap {
 pub(crate) fn tap(sample_rate: f64) -> (RecordTap, Feed) {
     let shared = Arc::new(Shared::default());
     let (tx, rx) = rtrb::RingBuffer::new((sample_rate * BUFFER_SECONDS) as usize * 2);
-    (
-        RecordTap {
-            tx,
-            shared: shared.clone(),
-        },
-        Feed { rx, shared },
-    )
+    (RecordTap { tx, shared: shared.clone() }, Feed { rx, shared })
 }
 
 /// The ring buffer's reading end.
@@ -289,12 +250,7 @@ pub struct Recorder(Arc<Inner>);
 impl Recorder {
     /// Creates the `[Recording]` controls and a thread that answers
     /// `[Recording],toggle_recording`.
-    pub(crate) fn new(
-        registry: &Arc<ControlRegistry>,
-        rate: f64,
-        feed: Feed,
-        loaded: LoadedTracks,
-    ) -> Self {
+    pub(crate) fn new(registry: &Arc<ControlRegistry>, rate: f64, feed: Feed, loaded: LoadedTracks) -> Self {
         let toggle = registry.push("[Recording]", "toggle_recording");
         let inner = Arc::new(Inner {
             rate,
@@ -359,10 +315,7 @@ impl Recorder {
     /// The file being written, or the last one written.
     pub fn file(&self) -> Option<PathBuf> {
         let s = self.0.state.lock().unwrap();
-        s.session
-            .as_ref()
-            .map(|x| x.first_file.clone())
-            .or_else(|| s.last_file.clone())
+        s.session.as_ref().map(|x| x.first_file.clone()).or_else(|| s.last_file.clone())
     }
 
     /// Why the last recording failed, if it did.
@@ -378,14 +331,12 @@ impl Recorder {
             return Ok(s.first_file.clone());
         }
         let settings = state.settings.clone();
-        std::fs::create_dir_all(&settings.dir)
-            .map_err(|e| format!("{}: {e}", settings.dir.display()))?;
+        std::fs::create_dir_all(&settings.dir).map_err(|e| format!("{}: {e}", settings.dir.display()))?;
         let base = unique_base(&settings.dir, &chrono::Local::now(), settings.format);
         let first_file = audio_path(&base, 1, settings.format);
-        let sink = open_sink(&first_file, &settings, self.0.rate)
-            .map_err(|e| format!("{}: {e}", first_file.display()))?;
-        let log = File::create(sibling(&base, ".controls.jsonl"))
-            .map_err(|e| format!("{}: {e}", base.display()))?;
+        let sink =
+            open_sink(&first_file, &settings, self.0.rate).map_err(|e| format!("{}: {e}", first_file.display()))?;
+        let log = File::create(sibling(&base, ".controls.jsonl")).map_err(|e| format!("{}: {e}", base.display()))?;
         let Some(mut feed) = state.feed.take() else {
             return Err("the recorder is busy".into());
         };
@@ -395,10 +346,7 @@ impl Recorder {
         self.0.shared.dropped.store(0, Ordering::Relaxed);
 
         let stop = Arc::new(AtomicBool::new(false));
-        let parts: Arc<Mutex<Vec<Part>>> = Arc::new(Mutex::new(vec![Part {
-            path: first_file.clone(),
-            start: 0,
-        }]));
+        let parts: Arc<Mutex<Vec<Part>>> = Arc::new(Mutex::new(vec![Part { path: first_file.clone(), start: 0 }]));
         let (loads, loads_rx) = mpsc::channel();
         for (deck, t) in self.0.loaded.read().unwrap().iter().enumerate() {
             if let Some(t) = t {
@@ -427,14 +375,7 @@ impl Recorder {
         self.0.shared.active.store(true, Ordering::Release);
         self.0.status.set(2.0);
         state.last_error = None;
-        state.session = Some(Session {
-            stop,
-            writer,
-            logger,
-            loads,
-            first_file: first_file.clone(),
-            parts,
-        });
+        state.session = Some(Session { stop, writer, logger, loads, first_file: first_file.clone(), parts });
         Ok(first_file)
     }
 
@@ -447,13 +388,7 @@ impl Recorder {
         let _ = session.writer.join();
         let _ = session.logger.join();
         self.0.status.set(0.0);
-        let parts = session
-            .parts
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|p| p.path.clone())
-            .collect();
+        let parts = session.parts.lock().unwrap().iter().map(|p| p.path.clone()).collect();
         let mut state = self.0.state.lock().unwrap();
         state.last_file = Some(session.first_file);
         state.last_parts = parts;
@@ -486,11 +421,7 @@ fn unique_base(dir: &Path, now: &chrono::DateTime<chrono::Local>, format: Record
     let stem = format!("DJ Sugar {}", now.format("%Y-%m-%d %H.%M"));
     let mut n = 1;
     loop {
-        let name = if n == 1 {
-            stem.clone()
-        } else {
-            format!("{stem} {n}")
-        };
+        let name = if n == 1 { stem.clone() } else { format!("{stem} {n}") };
         let base = dir.join(name);
         if !audio_path(&base, 1, format).exists() {
             return base;
@@ -565,11 +496,7 @@ impl WavSink {
         out.write_all(&bits.to_le_bytes())?;
         out.write_all(b"data")?;
         out.write_all(&0u32.to_le_bytes())?;
-        Ok(Self {
-            out,
-            bits,
-            data_bytes: 0,
-        })
+        Ok(Self { out, bits, data_bytes: 0 })
     }
 }
 
@@ -577,8 +504,7 @@ impl Sink for WavSink {
     fn write(&mut self, samples: &[f32]) -> io::Result<()> {
         let bytes = self.bits as usize / 8;
         for &s in samples {
-            self.out
-                .write_all(&to_int(s, self.bits).to_le_bytes()[..bytes])?;
+            self.out.write_all(&to_int(s, self.bits).to_le_bytes()[..bytes])?;
         }
         self.data_bytes += (samples.len() * bytes) as u64;
         Ok(())
@@ -607,10 +533,7 @@ impl Sink for WavSink {
 pub(crate) fn write_flac(path: &Path, rate: u32, channels: [&[f32]; 2]) -> io::Result<()> {
     let mut sink = Box::new(FlacSink::create(path, rate, 16)?);
     let mut buf = Vec::with_capacity(FLAC_BLOCK * 2);
-    for (l, r) in channels[0]
-        .chunks(FLAC_BLOCK)
-        .zip(channels[1].chunks(FLAC_BLOCK))
-    {
+    for (l, r) in channels[0].chunks(FLAC_BLOCK).zip(channels[1].chunks(FLAC_BLOCK)) {
         buf.clear();
         for (a, b) in l.iter().zip(r) {
             buf.extend_from_slice(&[*a, *b]);
@@ -643,10 +566,9 @@ impl FlacSink {
         config.block_size = FLAC_BLOCK;
         config.multithread = false;
         let config = config.into_verified().map_err(|e| bad(format!("{e:?}")))?;
-        let info = flacenc::component::StreamInfo::new(rate as usize, 2, bits as usize)
-            .map_err(|e| bad(format!("{e:?}")))?;
-        let fb = flacenc::source::FrameBuf::with_size(2, FLAC_BLOCK)
-            .map_err(|e| bad(format!("{e:?}")))?;
+        let info =
+            flacenc::component::StreamInfo::new(rate as usize, 2, bits as usize).map_err(|e| bad(format!("{e:?}")))?;
+        let fb = flacenc::source::FrameBuf::with_size(2, FLAC_BLOCK).map_err(|e| bad(format!("{e:?}")))?;
         let mut sink = Self {
             out: BufWriter::new(File::create(path)?),
             bits,
@@ -667,11 +589,8 @@ impl FlacSink {
     /// rewritten in place as the file grows.
     fn write_stream_info(&mut self) -> io::Result<()> {
         let i = &self.info;
-        let (min_frame, max_frame) = if i.max_frame_size() == 0 {
-            (0u32, 0u32)
-        } else {
-            (i.min_frame_size() as u32, i.max_frame_size() as u32)
-        };
+        let (min_frame, max_frame) =
+            if i.max_frame_size() == 0 { (0u32, 0u32) } else { (i.min_frame_size() as u32, i.max_frame_size() as u32) };
         let mut b = Vec::with_capacity(38);
         b.extend_from_slice(&[0x80, 0, 0, 34]); // last block, STREAMINFO, 34 bytes
         b.extend_from_slice(&(FLAC_BLOCK as u16).to_be_bytes()); // min block (fixed size)
@@ -680,8 +599,7 @@ impl FlacSink {
         b.extend_from_slice(&max_frame.to_be_bytes()[1..]);
         // 20 bits rate, 3 bits channels - 1, 5 bits bits - 1, 36 bits samples.
         let total = i.total_samples() as u64 & 0xF_FFFF_FFFF;
-        let packed: u64 =
-            (u64::from(self.rate) << 44) | (1u64 << 41) | (u64::from(self.bits - 1) << 36) | total;
+        let packed: u64 = (u64::from(self.rate) << 44) | (1u64 << 41) | (u64::from(self.bits - 1) << 36) | total;
         b.extend_from_slice(&packed.to_be_bytes());
         b.extend_from_slice(&[0; 16]); // no MD5
         self.out.write_all(&b)
@@ -696,12 +614,9 @@ impl FlacSink {
             self.fb.resize(frames);
             self.fb_size = frames;
         }
-        self.fb
-            .fill_interleaved(samples)
+        self.fb.fill_interleaved(samples).map_err(|e| bad(format!("{e:?}")))?;
+        let frame = flacenc::encode_fixed_size_frame(&self.config, &self.fb, self.frame_number, &self.info)
             .map_err(|e| bad(format!("{e:?}")))?;
-        let frame =
-            flacenc::encode_fixed_size_frame(&self.config, &self.fb, self.frame_number, &self.info)
-                .map_err(|e| bad(format!("{e:?}")))?;
         self.frame_number += 1;
         self.info.update_frame_info(&frame);
         let mut sink = flacenc::bitsink::ByteSink::new();
@@ -786,10 +701,7 @@ fn write_audio(
                     result = Err(e);
                     break;
                 }
-                parts.lock().unwrap().push(Part {
-                    path,
-                    start: written,
-                });
+                parts.lock().unwrap().push(Part { path, start: written });
             }
             if let Err(e) = sink.write(&buf) {
                 result = Err(e);
@@ -823,10 +735,7 @@ fn write_audio(
     };
     let dropped = inner.shared.dropped.load(Ordering::Relaxed);
     if dropped > 0 {
-        eprintln!(
-            "recording: {:.2} s of audio lost while the disk was busy",
-            dropped as f64 / inner.rate
-        );
+        eprintln!("recording: {:.2} s of audio lost while the disk was busy", dropped as f64 / inner.rate);
     }
     // Hand the buffer back for the next recording.
     inner.state.lock().unwrap().feed = Some(feed);
@@ -868,11 +777,7 @@ fn watched(registry: &ControlRegistry, known: &mut Vec<Watched>) -> Vec<usize> {
             continue;
         }
         added.push(known.len());
-        known.push(Watched {
-            version: handle.version(),
-            handle,
-            name,
-        });
+        known.push(Watched { version: handle.version(), handle, name });
     }
     added
 }
@@ -927,28 +832,22 @@ fn log_controls(
     );
     let mut known = Vec::new();
     watched(&registry, &mut known);
-    let snapshot: serde_json::Map<String, Value> = known
-        .iter()
-        .map(|w| (w.name.clone(), json!(w.handle.get())))
-        .collect();
+    let snapshot: serde_json::Map<String, Value> =
+        known.iter().map(|w| (w.name.clone(), json!(w.handle.get()))).collect();
     line(&mut out, json!({ "t": 0.0, "snapshot": snapshot }));
 
     let decks: [(ControlHandle, ControlHandle); NUM_DECKS] = std::array::from_fn(|d| {
         let g = deck_group(d);
+        (registry.toggle(&g, "play"), registry.create(&g, "volume", 1.0, 0.0, 1.0, Behavior::Linear))
+    });
+    let places: [(ControlHandle, ControlHandle, ControlHandle); NUM_DECKS] = std::array::from_fn(|d| {
+        let g = deck_group(d);
         (
-            registry.toggle(&g, "play"),
-            registry.create(&g, "volume", 1.0, 0.0, 1.0, Behavior::Linear),
+            registry.create(&g, "playposition", 0.0, 0.0, 1.0, Behavior::Linear),
+            registry.indicator(&g, "duration", 3600.0),
+            registry.indicator(&g, "track_loaded", 1.0),
         )
     });
-    let places: [(ControlHandle, ControlHandle, ControlHandle); NUM_DECKS] =
-        std::array::from_fn(|d| {
-            let g = deck_group(d);
-            (
-                registry.create(&g, "playposition", 0.0, 0.0, 1.0, Behavior::Linear),
-                registry.indicator(&g, "duration", 3600.0),
-                registry.indicator(&g, "track_loaded", 1.0),
-            )
-        });
     // Per deck: the place last looked at, when, and when it was last logged.
     let mut place: [Option<(f64, f64, f64)>; NUM_DECKS] = [None; NUM_DECKS];
     let mut on_deck: [Option<(Loaded, bool)>; NUM_DECKS] = Default::default();
@@ -983,20 +882,14 @@ fn log_controls(
             last_rescan = Instant::now();
             for i in watched(&registry, &mut known) {
                 let w = &known[i];
-                line(
-                    &mut out,
-                    json!({ "t": t, "c": w.name, "v": w.handle.get() }),
-                );
+                line(&mut out, json!({ "t": t, "c": w.name, "v": w.handle.get() }));
             }
         }
         for w in &mut known {
             let v = w.handle.version();
             if v != w.version {
                 w.version = v;
-                line(
-                    &mut out,
-                    json!({ "t": t, "c": w.name, "v": w.handle.get() }),
-                );
+                line(&mut out, json!({ "t": t, "c": w.name, "v": w.handle.get() }));
             }
         }
         for (d, (position, duration, loaded)) in places.iter().enumerate() {
@@ -1011,10 +904,7 @@ fn log_controls(
             };
             let logged = if log {
                 let s = (s * 1000.0).round() / 1000.0;
-                line(
-                    &mut out,
-                    json!({ "t": t, "pos": { "deck": d + 1, "s": s } }),
-                );
+                line(&mut out, json!({ "t": t, "pos": { "deck": d + 1, "s": s } }));
                 t
             } else {
                 place[d].map_or(t, |p| p.2)
@@ -1025,10 +915,7 @@ fn log_controls(
             if let Some((track, cued)) = &mut on_deck[d] {
                 if !*cued && play.get_bool() && volume.get() > AUDIBLE_VOLUME {
                     *cued = true;
-                    cues.push(CueEntry {
-                        frame,
-                        track: track.clone(),
-                    });
+                    cues.push(CueEntry { frame, track: track.clone() });
                 }
             }
         }
@@ -1050,10 +937,7 @@ fn log_controls(
 }
 
 fn audio_name(path: &Path) -> String {
-    path.file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .into_owned()
+    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
 }
 
 fn cue_text(s: &str) -> String {
@@ -1063,12 +947,7 @@ fn cue_text(s: &str) -> String {
 /// `mm:ss:ff`, ff in 75ths of a second, as CUE sheets count.
 fn cue_time(seconds: f64) -> String {
     let frames = (seconds.max(0.0) * 75.0).round() as u64;
-    format!(
-        "{:02}:{:02}:{:02}",
-        frames / 75 / 60,
-        frames / 75 % 60,
-        frames % 75
-    )
+    format!("{:02}:{:02}:{:02}", frames / 75 / 60, frames / 75 % 60, frames % 75)
 }
 
 fn write_cue(
@@ -1088,31 +967,19 @@ fn write_cue(
         let p = parts.iter().rposition(|p| p.start <= c.frame).unwrap_or(0);
         if p != current {
             current = p;
-            s.push_str(&format!(
-                "FILE \"{}\" WAVE\n",
-                cue_text(&audio_name(&parts[p].path))
-            ));
+            s.push_str(&format!("FILE \"{}\" WAVE\n", cue_text(&audio_name(&parts[p].path))));
         }
         let at = (c.frame - parts[p].start) as f64 / rate;
         s.push_str(&format!("  TRACK {:02} AUDIO\n", n + 1));
         s.push_str(&format!("    TITLE \"{}\"\n", cue_text(&c.track.title)));
-        s.push_str(&format!(
-            "    PERFORMER \"{}\"\n",
-            cue_text(&c.track.artist)
-        ));
+        s.push_str(&format!("    PERFORMER \"{}\"\n", cue_text(&c.track.artist)));
         if let Some(path) = &c.track.path {
-            s.push_str(&format!(
-                "    REM FILE \"{}\"\n",
-                cue_text(&path.display().to_string())
-            ));
+            s.push_str(&format!("    REM FILE \"{}\"\n", cue_text(&path.display().to_string())));
         }
         s.push_str(&format!("    INDEX 01 {}\n", cue_time(at)));
     }
     if cues.is_empty() {
-        s.push_str(&format!(
-            "FILE \"{}\" WAVE\n",
-            cue_text(&audio_name(&parts[0].path))
-        ));
+        s.push_str(&format!("FILE \"{}\" WAVE\n", cue_text(&audio_name(&parts[0].path))));
     }
     std::fs::write(sibling(base, ".cue"), s)?;
     std::fs::write(sibling(base, ".tracklist.txt"), tracklist_text(cues, rate))
@@ -1157,28 +1024,18 @@ mod tests {
         use crate::loader::prepare;
 
         const SR: f64 = 48_000.0;
-        for (format, bits) in [
-            (RecordFormat::Wav, 24),
-            (RecordFormat::Wav, 16),
-            (RecordFormat::Flac, 24),
-            (RecordFormat::Flac, 16),
-        ] {
-            let dir = std::env::temp_dir().join(format!(
-                "djsugar-rec-test-{}-{}-{bits}",
-                std::process::id(),
-                format.name()
-            ));
+        for (format, bits) in
+            [(RecordFormat::Wav, 24), (RecordFormat::Wav, 16), (RecordFormat::Flac, 24), (RecordFormat::Flac, 16)]
+        {
+            let dir =
+                std::env::temp_dir().join(format!("djsugar-rec-test-{}-{}-{bits}", std::process::id(), format.name()));
             let _ = std::fs::remove_dir_all(&dir);
             let reg = ControlRegistry::new();
             let (mut engine, mut input) = Engine::new(&reg, SR);
             let feed = engine.take_record_feed().unwrap();
             let loaded: LoadedTracks = Default::default();
             let rec = Recorder::new(&reg, SR, feed, loaded);
-            rec.configure(RecordSettings {
-                dir: dir.clone(),
-                format,
-                bits,
-            });
+            rec.configure(RecordSettings { dir: dir.clone(), format, bits });
             let mut t = (*crate::synth::sample_library()[0]).clone();
             t.title = "Test \"Tone\"".into();
             t.artist = "Someone".into();
@@ -1197,13 +1054,7 @@ mod tests {
             };
             run(&mut engine, 0.5);
             rec.track_loaded(0, &track);
-            input
-                .send(Command::Load {
-                    deck: 0,
-                    track: track.clone(),
-                })
-                .ok()
-                .unwrap();
+            input.send(Command::Load { deck: 0, track: track.clone() }).ok().unwrap();
             run(&mut engine, 0.1);
             reg.get("[Channel1]", "play").unwrap().set_bool(true);
             run(&mut engine, 0.9);
@@ -1220,43 +1071,28 @@ mod tests {
             // The audio decodes, is as long as recorded and isn't silent.
             let audio = crate::decode::decode(&file).unwrap();
             let frames = audio.len();
-            let peak = audio
-                .decoded_chunks()
-                .flatten()
-                .fold(0.0f32, |p, f| p.max(f[0].abs()).max(f[1].abs()));
+            let peak = audio.decoded_chunks().flatten().fold(0.0f32, |p, f| p.max(f[0].abs()).max(f[1].abs()));
             assert!((frames as f64 / SR - 2.5).abs() < 0.05, "{frames}");
             assert!(peak > 0.05, "{peak}");
 
             let base = file.with_extension("");
             let log = std::fs::read_to_string(sibling(&base, ".controls.jsonl")).unwrap();
-            let lines: Vec<Value> = log
-                .lines()
-                .map(|l| serde_json::from_str(l).unwrap())
-                .collect();
+            let lines: Vec<Value> = log.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
             assert_eq!(lines[0]["djsugar_recording"], 1);
             assert!(lines[1]["snapshot"]["[Channel1],volume"].is_number());
             assert!(lines.iter().any(|l| l["load"]["title"] == "Test \"Tone\""));
-            let volume = lines
-                .iter()
-                .find(|l| l["c"] == "[Channel1],volume")
-                .expect("volume change logged");
+            let volume = lines.iter().find(|l| l["c"] == "[Channel1],volume").expect("volume change logged");
             // The test runs faster than real time, so the logger's 5 ms
             // polls are further apart in recorded time.
             let at = volume["t"].as_f64().unwrap();
             assert!((at - 1.5).abs() < 0.25, "{at}");
             assert!(!log.contains("playposition\""));
             // The deck's place is logged, including right after the seek.
-            let places: Vec<f64> = lines
-                .iter()
-                .filter(|l| l["pos"]["deck"] == 1)
-                .map(|l| l["pos"]["s"].as_f64().unwrap())
-                .collect();
+            let places: Vec<f64> =
+                lines.iter().filter(|l| l["pos"]["deck"] == 1).map(|l| l["pos"]["s"].as_f64().unwrap()).collect();
             assert!(places.len() >= 2, "{places:?}");
             let half = track.duration / 2.0;
-            assert!(
-                places.iter().any(|&s| (s - half).abs() < 1.0),
-                "{places:?} {half}"
-            );
+            assert!(places.iter().any(|&s| (s - half).abs() < 1.0), "{places:?} {half}");
 
             let cue = std::fs::read_to_string(sibling(&base, ".cue")).unwrap();
             assert!(cue.contains("TITLE \"Test 'Tone'\""), "{cue}");
@@ -1287,13 +1123,7 @@ mod tests {
     #[test]
     fn parts_get_numbered() {
         let base = Path::new("/r/DJSugar 2026-10-19 21.05");
-        assert_eq!(
-            audio_path(base, 1, RecordFormat::Wav),
-            Path::new("/r/DJSugar 2026-10-19 21.05.wav")
-        );
-        assert_eq!(
-            audio_path(base, 2, RecordFormat::Flac),
-            Path::new("/r/DJSugar 2026-10-19 21.05 (part 2).flac")
-        );
+        assert_eq!(audio_path(base, 1, RecordFormat::Wav), Path::new("/r/DJSugar 2026-10-19 21.05.wav"));
+        assert_eq!(audio_path(base, 2, RecordFormat::Flac), Path::new("/r/DJSugar 2026-10-19 21.05 (part 2).flac"));
     }
 }

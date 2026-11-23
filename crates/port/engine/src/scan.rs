@@ -51,15 +51,12 @@ pub fn find_audio_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 pub fn is_audio(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+    path.extension().and_then(|e| e.to_str()).is_some_and(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
 }
 
-/// Whether `path` is in a cloud drive and not downloaded: macOS marks such
-/// files "dataless" (iCloud Drive with Optimise Mac Storage, and the File
-/// Provider drives such as Google Drive, Dropbox and OneDrive), and reading
-/// one downloads it.
+/// Whether `path` is in a cloud drive and not downloaded: macOS marks such files
+/// drives such as Google Drive, Dropbox and OneDrive), and reading one downloads it.
+/// drives such as Google Drive, Dropbox and OneDrive), and reading one downloads
 pub fn is_cloud_only(path: &Path) -> bool {
     #[cfg(target_os = "macos")]
     {
@@ -78,10 +75,7 @@ pub fn is_cloud_only(path: &Path) -> bool {
 /// Reads tags and length. Files whose tags cannot be read still get a row,
 /// titled after the file name.
 pub fn read_track(id: usize, path: &Path) -> Track {
-    let stem = path
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default();
+    let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     // "Song.stem.mp4" is an NI stem file of "Song".
     let stem = match stem.len().checked_sub(5) {
         Some(n) if crate::stems::is_ni_stem(path) => stem[..n].to_string(),
@@ -126,12 +120,7 @@ pub fn read_track(id: usize, path: &Path) -> Track {
         if !track.key.is_empty() {
             track.info.key_detected = Some(false);
         }
-        let item = |k: ItemKey| {
-            tag.get_string(k)
-                .map(str::trim)
-                .unwrap_or_default()
-                .to_string()
-        };
+        let item = |k: ItemKey| tag.get_string(k).map(str::trim).unwrap_or_default().to_string();
         let info = &mut track.info;
         info.disc_number = tag.disk().unwrap_or(0);
         info.label = item(ItemKey::Label);
@@ -159,10 +148,7 @@ pub fn read_track(id: usize, path: &Path) -> Track {
 }
 
 fn tag_key(tag: &lofty::tag::Tag) -> String {
-    tag.get_string(ItemKey::InitialKey)
-        .unwrap_or_default()
-        .trim()
-        .to_string()
+    tag.get_string(ItemKey::InitialKey).unwrap_or_default().trim().to_string()
 }
 
 /// The key the file's tags give, or "" for none.
@@ -191,11 +177,7 @@ pub fn read_comment(path: &Path) -> String {
 /// Scans `dir` and returns its tracks, numbered from `first_id` so their ids
 /// do not collide with tracks already loaded on a deck.
 pub fn scan(dir: &Path, first_id: usize) -> Vec<Arc<Track>> {
-    find_audio_files(dir)
-        .iter()
-        .enumerate()
-        .map(|(i, p)| Arc::new(read_track(first_id + i, p)))
-        .collect()
+    find_audio_files(dir).iter().enumerate().map(|(i, p)| Arc::new(read_track(first_id + i, p))).collect()
 }
 
 #[cfg(test)]
@@ -213,11 +195,7 @@ mod tests {
         assert_eq!(tracks.len(), 1);
         assert_eq!(tracks[0].title, "01 Tune");
         assert_eq!(tracks[0].id, 100);
-        assert!(
-            (tracks[0].duration - 1.0).abs() < 0.01,
-            "{}",
-            tracks[0].duration
-        );
+        assert!((tracks[0].duration - 1.0).abs() < 0.01, "{}", tracks[0].duration);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

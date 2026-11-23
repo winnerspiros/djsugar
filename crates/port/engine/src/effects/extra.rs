@@ -33,11 +33,7 @@ fn halfband<const N: usize>() -> [f32; N] {
     let mut h = [0.0f32; N];
     for (j, v) in h.iter_mut().enumerate() {
         let k = j as f64 - c;
-        let sinc = if k == 0.0 {
-            0.5
-        } else {
-            (std::f64::consts::PI * k / 2.0).sin() / (std::f64::consts::PI * k)
-        };
+        let sinc = if k == 0.0 { 0.5 } else { (std::f64::consts::PI * k / 2.0).sin() / (std::f64::consts::PI * k) };
         let r = k / c;
         let w = bessel_i0(beta * (1.0 - r * r).max(0.0).sqrt()) / bessel_i0(beta);
         *v = (sinc * w) as f32;
@@ -57,10 +53,7 @@ struct History<const N: usize, const M: usize> {
 impl<const N: usize, const M: usize> Default for History<N, M> {
     fn default() -> Self {
         assert!(M >= 2 * N);
-        Self {
-            buf: [0.0; M],
-            pos: 0,
-        }
+        Self { buf: [0.0; M], pos: 0 }
     }
 }
 
@@ -93,11 +86,7 @@ struct Stage<const N: usize, const M: usize> {
 
 impl<const N: usize, const M: usize> Stage<N, M> {
     fn new() -> Self {
-        Self {
-            h: halfband::<N>(),
-            up: History::default(),
-            down: History::default(),
-        }
+        Self { h: halfband::<N>(), up: History::default(), down: History::default() }
     }
 
     fn reset(&mut self) {
@@ -142,10 +131,7 @@ struct Oversampler {
 
 impl Oversampler {
     fn new() -> Self {
-        Self {
-            s1: Stage::new(),
-            s2: Stage::new(),
-        }
+        Self { s1: Stage::new(), s2: Stage::new() }
     }
 
     fn reset(&mut self) {
@@ -172,22 +158,15 @@ fn saturate(x: f32) -> f32 {
     x / (1.0 + x * x).sqrt()
 }
 
-/// [`saturate`] with first-order antiderivative anti-aliasing (Parker,
-/// Zavalishin et al., "Reducing the aliasing of nonlinear waveshaping using
-/// continuous-time convolution", DAFx 2016): the average of the curve over
-/// the step from the last input to this one, which damps the very high
-/// harmonics a hard-driven sine makes before they can fold back. `last` is
-/// the previous input.
+/// [`saturate`] with first-order antiderivative anti-aliasing (Parker, Zavalishin et al., "Reducing the aliasing of nonlinear
+/// this one, which damps the very high harmonics a hard-driven sine makes before they can fold back. `last` is the previous input.
+/// this one, which damps the very high harmonics a hard-driven sine makes before they can fold back. `last` is the previous
 #[inline]
 fn saturate_adaa(x: f32, last: &mut f32) -> f32 {
     // The antiderivative of x / sqrt(1 + x^2).
     let big_f = |v: f32| (1.0 + v * v).sqrt();
     let dx = x - *last;
-    let y = if dx.abs() > 1e-3 {
-        (big_f(x) - big_f(*last)) / dx
-    } else {
-        saturate(0.5 * (x + *last))
-    };
+    let y = if dx.abs() > 1e-3 { (big_f(x) - big_f(*last)) / dx } else { saturate(0.5 * (x + *last)) };
     *last = x;
     y
 }
@@ -195,11 +174,9 @@ fn saturate_adaa(x: f32, last: &mut f32) -> f32 {
 // ---------------------------------------------------------------------------
 // Drive
 
-/// Overdrive: the sound pushed into a smooth saturator, 4x oversampled and
-/// antiderivative anti-aliased so the harmonics don't fold back as
-/// aliasing, after the approach of Signalsmith Basics' Crunch (MIT). A little bias gives it even harmonics,
-/// like a valve; a tone control rounds the top; the level is matched so
-/// turning the drive up adds grit, not volume.
+/// Overdrive: the sound pushed into a smooth saturator, 4x oversampled and antiderivative anti-aliased so the harmonics
+/// harmonics, like a valve; a tone control rounds the top; the level is matched so turning the drive up adds grit, not volume.
+/// harmonics, like a valve; a tone control rounds the top; the level is matched so turning the drive up adds grit, not
 pub(super) struct Drive {
     over: [Oversampler; 2],
     /// Gain into the saturator, and the tone low-pass coefficient, gliding.
@@ -346,13 +323,7 @@ impl Chorus {
         // swing and how loud they are. Spread: mono to wide.
         let cycle = beats(p[0], 0, 2);
         self.step = 1.0 / (cycle * ctx.beat_seconds * ctx.sample_rate);
-        super::lock_to_beat(
-            &mut self.phase,
-            &mut self.step,
-            &mut self.unlocked,
-            ctx.beat,
-            cycle,
-        );
+        super::lock_to_beat(&mut self.phase, &mut self.step, &mut self.unlocked, ctx.beat, cycle);
         self.targets = [p[1], p[2]];
         if self.fresh {
             self.fresh = false;
@@ -381,8 +352,7 @@ impl Chorus {
         // voices by rotation.
         let (s0, c0) = (self.phase * TAU).sin_cos();
         let (s1, c1) = (self.phase * TAU + 0.25 * TAU * self.spread).sin_cos();
-        const ROT: [(f32, f32); CHORUS_VOICES] =
-            [(0.0, 1.0), (0.866_025_4, -0.5), (-0.866_025_4, -0.5)];
+        const ROT: [(f32, f32); CHORUS_VOICES] = [(0.0, 1.0), (0.866_025_4, -0.5), (-0.866_025_4, -0.5)];
         let amount = self.swing * self.depth;
         for (sin, cos) in ROT {
             for (c, (buf, (s, co))) in [(&*l, (s0, c0)), (&*r, (s1, c1))].into_iter().enumerate() {
@@ -402,10 +372,9 @@ impl Chorus {
 // ---------------------------------------------------------------------------
 // Ladder
 
-/// A Moog-style 4-pole low-pass ladder with resonance and a saturating
-/// input, in Zavalishin's zero-delay-feedback form ("The Art of VA Filter
-/// Design"), so its cutoff can sweep fast without zipper or instability.
-/// Modeled on the Moog ladder (Huovilainen's model).
+/// A Moog-style 4-pole low-pass ladder with resonance and a saturating input, in
+/// can sweep fast without zipper or instability. Modeled on the Moog ladder (Huovilainen's model).
+/// can sweep fast without zipper or instability. Modeled on the Moog ladder (Huovilainen's
 pub(super) struct Ladder {
     sample_rate: f32,
     s: [[f32; 4]; 2],
@@ -456,10 +425,9 @@ impl Ladder {
 
     #[inline]
     pub(super) fn process(&mut self, x: [f32; 2]) -> [f32; 2] {
-        // The cutoff glides as the filters' does, about 5 ms, but no more
-        // than about a hundred-and-twentieth of an octave per sample (the
-        // whole range in about 20 ms): the resonance sweeping fast through
-        // the music would ring like a click.
+        // The cutoff glides as the filters' does, about 5 ms, but no more than about a
+        // hundred-and-twentieth of an octave per sample (the whole range in about 20
+        // ms): the resonance sweeping fast through the music would ring like a click.
         let step = (self.g_target - self.g) * 0.004;
         let most = self.g * 0.006;
         self.g += step.clamp(-most, most);
@@ -504,10 +472,9 @@ const HALL_DIFFUSERS: [usize; 4] = [223, 337, 509, 761];
 /// Longest pre-delay, in seconds.
 const HALL_PREDELAY: f32 = 0.12;
 
-/// A concert hall: a feedback delay network of eight lines mixed by a
-/// Hadamard matrix, after Signalsmith's "Let's write a reverb" design
-/// (MIT), with input diffusion, gentle modulation, a pre-delay and damping.
-/// Bigger and smoother than the plate, for long blends and breakdowns.
+/// A concert hall: a feedback delay network of eight lines mixed by a Hadamard matrix, after
+/// Signalsmith's "Let's write a reverb" design (MIT), with input diffusion, gentle modulation, a
+/// pre-delay and damping. Bigger and smoother than the plate, for long blends and breakdowns.
 pub(super) struct Hall {
     lines: [Line; 8],
     /// Each line's delay in samples (its buffer has room to swing past it).
@@ -539,11 +506,7 @@ impl Hall {
         let mut offset = 0;
         let mut place = |len: usize| {
             let len = ((len as f32 * scale) as usize).max(4);
-            let line = Line {
-                at: offset,
-                len,
-                pos: 0,
-            };
+            let line = Line { at: offset, len, pos: 0 };
             offset += len;
             line
         };
@@ -666,10 +629,9 @@ impl Hall {
 // ---------------------------------------------------------------------------
 // Filter Echo
 
-/// An echo whose repeats run through a filter: turned left, each repeat is
-/// darker (low-pass); turned right, thinner (high-pass), as Pioneer's
-/// LPF and HPF Echo do. Its meta knob opens the send and sweeps the
-/// high-pass up together, for a washed-out exit.
+/// An echo whose repeats run through a filter: turned left, each repeat is darker
+/// meta knob opens the send and sweeps the high-pass up together, for a washed-out exit.
+/// meta knob opens the send and sweeps the high-pass up together, for a washed-out
 pub(super) struct FilterEcho {
     pub(super) echo: Echo,
     lp: Svf,
@@ -741,9 +703,7 @@ mod tests {
         for hz in [1_000.0f32, 15_000.0] {
             let mut o = Oversampler::new();
             let n = 48_000;
-            let out: Vec<f32> = (0..n)
-                .map(|i| o.run((TAU * hz * i as f32 / 48_000.0).sin(), |v| v))
-                .collect();
+            let out: Vec<f32> = (0..n).map(|i| o.run((TAU * hz * i as f32 / 48_000.0).sin(), |v| v)).collect();
             let peak = out[1_000..].iter().fold(0.0f32, |m, v| m.max(v.abs()));
             assert!((peak - 1.0).abs() < 0.03, "{hz} Hz came out at {peak}");
         }
@@ -757,14 +717,7 @@ mod tests {
         use rustfft::{num_complex::Complex, FftPlanner};
         let sr = 48_000.0;
         let mut d = Drive::new(sr);
-        d.prepare(
-            &[1.0, 1.0, 0.0, 0.0],
-            Ctx {
-                sample_rate: sr,
-                beat_seconds: 0.5,
-                beat: None,
-            },
-        );
+        d.prepare(&[1.0, 1.0, 0.0, 0.0], Ctx { sample_rate: sr, beat_seconds: 0.5, beat: None });
         let n = 16_384;
         let skip = 4_096;
         // A frequency that falls exactly on an FFT bin, near 5 kHz.
@@ -782,8 +735,7 @@ mod tests {
             .map(|(i, &v)| {
                 // Blackman-Harris window keeps leakage far below 60 dB.
                 let t = TAU * i as f32 / n as f32;
-                let w = 0.35875 - 0.48829 * t.cos() + 0.14128 * (2.0 * t).cos()
-                    - 0.01168 * (3.0 * t).cos();
+                let w = 0.35875 - 0.48829 * t.cos() + 0.14128 * (2.0 * t).cos() - 0.01168 * (3.0 * t).cos();
                 Complex::new(v * w, 0.0)
             })
             .collect();

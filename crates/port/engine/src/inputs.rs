@@ -1,21 +1,6 @@
-//! The microphone and auxiliary inputs, `[Microphone]` and
-//! `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`.
-//! The microphone and auxiliaries take
-//! audio from an input device (see [`crate::output`]), the instrument from an
-//! instrument plugin playing the notes it is sent (see
-//! [`crate::plugins`]). Each goes through its gain, a 3-band EQ and the
-//! effect units routed to it, then its fader.
-//!
-//! The microphone is heard while `talkover` is on. It joins the main mix
-//! after the main mix's effects, so they don't touch the voice, and can duck
-//! the music while the DJ talks (`[Master],talkover_ducking`). The auxiliary
-//! input joins the music while `main_mix` is on. Both can be cued in the
-//! headphones, and both are in recordings, which take the main mix.
-//!
-//! An input device runs on its own clock, so its audio comes through a queue
-//! that the engine keeps short: it waits for a callback's worth before
-//! playing, drops audio when the queue grows, and pads with silence when
-//! it runs dry.
+//! The microphone and auxiliary inputs, `[Microphone]` and `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`. The microphone and auxiliaries take audio from an input device (see [`crate::output`]), the instrument from an instrument plugin playing the notes it is sent (see [`crate::plugins`]). Each goes through
+//! `main_mix` is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs dry.
+//! `main_mix` is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -43,16 +28,8 @@ pub const AUXILIARY_7: usize = 8;
 pub const AUXILIARY_8: usize = 9;
 pub const NUM_AUXILIARIES: usize = 8;
 /// The auxiliary inputs, in order.
-pub const AUXILIARIES: [usize; NUM_AUXILIARIES] = [
-    AUXILIARY,
-    AUXILIARY_2,
-    AUXILIARY_3,
-    AUXILIARY_4,
-    AUXILIARY_5,
-    AUXILIARY_6,
-    AUXILIARY_7,
-    AUXILIARY_8,
-];
+pub const AUXILIARIES: [usize; NUM_AUXILIARIES] =
+    [AUXILIARY, AUXILIARY_2, AUXILIARY_3, AUXILIARY_4, AUXILIARY_5, AUXILIARY_6, AUXILIARY_7, AUXILIARY_8];
 
 /// `[ChannelN],live_input` for the Mixer: the deck plays the auxiliary
 /// channels, the Mixer's strips, summed (see [`Routing::Mixer`]). After the
@@ -261,14 +238,7 @@ impl InputControls {
         if input == INSTRUMENT {
             // Which instrument plays: 1 + its place in the plugin host's
             // instrument list, 0 for none.
-            reg.create(
-                g,
-                "instrument",
-                0.0,
-                0.0,
-                crate::effects::MAX_PLUGINS as f64,
-                Behavior::Linear,
-            );
+            reg.create(g, "instrument", 0.0, 0.0, crate::effects::MAX_PLUGINS as f64, Behavior::Linear);
             // The instrument's own window, as an effect slot's `show_editor`.
             reg.toggle(g, "show_editor");
             // Its first parameters (see `INSTRUMENT_PARAMETERS`), and how
@@ -289,43 +259,21 @@ impl InputControls {
             let chords = (crate::scale::CHORDS.len() - 1) as f64;
             reg.create(g, "chord_mode", 0.0, 0.0, chords, Behavior::Free);
             let shape = crate::scale::DEFAULT_SHAPE as f64;
-            reg.create(
-                g,
-                "chord_shape",
-                shape,
-                0.0,
-                u32::MAX as f64,
-                Behavior::Free,
-            );
+            reg.create(g, "chord_shape", shape, 0.0, u32::MAX as f64, Behavior::Free);
             reg.create(g, "chord_learn", 0.0, 0.0, 1.0, Behavior::Free);
             // The arpeggiator (see `crate::arp`): off, Up, 1/16, half gate.
             use crate::arp::{DEFAULT_RATE, MODES, RATES};
             reg.create(g, "arp", 0.0, 0.0, 1.0, Behavior::Free);
-            reg.create(
-                g,
-                "arp_mode",
-                0.0,
-                0.0,
-                (MODES.len() - 1) as f64,
-                Behavior::Free,
-            );
+            reg.create(g, "arp_mode", 0.0, 0.0, (MODES.len() - 1) as f64, Behavior::Free);
             let rate = DEFAULT_RATE as f64;
-            reg.create(
-                g,
-                "arp_rate",
-                rate,
-                0.0,
-                (RATES.len() - 1) as f64,
-                Behavior::Free,
-            );
+            reg.create(g, "arp_rate", rate, 0.0, (RATES.len() - 1) as f64, Behavior::Free);
             reg.create(g, "arp_gate", 0.5, 0.05, 1.0, Behavior::Linear);
             reg.create(g, "arp_octaves", 1.0, 1.0, 4.0, Behavior::Free);
             reg.create(g, "arp_hold", 0.0, 0.0, 1.0, Behavior::Free);
         }
-        // The Mixer deck's strip controls, for the auxiliary inputs (fed by
-        // an interface's channels), the microphone and the instrument
-        // plugin: `solo` within the Mixer, and `fx` for the strip through
-        // the deck's effects.
+        // The Mixer deck's strip controls, for the auxiliary inputs (fed by an
+        // interface's channels), the microphone and the instrument plugin: `solo`
+        // within the Mixer, and `fx` for the strip through the deck's effects.
         let strip = AUXILIARIES.contains(&input) || input == MICROPHONE || input == INSTRUMENT;
         let pan = strip.then(|| reg.create(g, "pan", 0.0, -1.0, 1.0, Behavior::Linear));
         let solo = strip.then(|| reg.toggle(g, "solo"));
@@ -354,16 +302,8 @@ impl InputControls {
             mute: reg.toggle(g, "mute"),
             pfl: reg.toggle(g, "pfl"),
             configured,
-            eq: [1, 2, 3].map(|n| {
-                reg.create(
-                    &eqg,
-                    &format!("parameter{n}"),
-                    1.0,
-                    0.0,
-                    4.0,
-                    Behavior::CenteredOnDefault,
-                )
-            }),
+            eq: [1, 2, 3]
+                .map(|n| reg.create(&eqg, &format!("parameter{n}"), 1.0, 0.0, 4.0, Behavior::CenteredOnDefault)),
             eq_kill: [1, 2, 3].map(|n| reg.toggle(&eqg, &format!("button_parameter{n}"))),
             vu: reg.indicator(g, "VuMeter", 1.0),
             vu_lr: ["L", "R"].map(|s| reg.indicator(g, &format!("VuMeter{s}"), 1.0)),
@@ -438,37 +378,16 @@ impl Input {
             index: input,
             pads: (input == INSTRUMENT).then(|| Pads::create(reg, input_group(input))),
             scale: (input == INSTRUMENT).then(|| {
-                [
-                    "scale_mode",
-                    "scale_root",
-                    "scale_type",
-                    "scale_mask",
-                    "scale_now",
-                ]
-                .map(|k| {
-                    reg.get(input_group(input), k)
-                        .expect("the instrument's scale controls exist")
-                })
+                ["scale_mode", "scale_root", "scale_type", "scale_mask", "scale_now"]
+                    .map(|k| reg.get(input_group(input), k).expect("the instrument's scale controls exist"))
             }),
             chord: (input == INSTRUMENT).then(|| {
-                ["chord_mode", "chord_shape", "chord_learn"].map(|k| {
-                    reg.get(input_group(input), k)
-                        .expect("the instrument's chord controls exist")
-                })
+                ["chord_mode", "chord_shape", "chord_learn"]
+                    .map(|k| reg.get(input_group(input), k).expect("the instrument's chord controls exist"))
             }),
             arp: (input == INSTRUMENT).then(|| {
-                [
-                    "arp",
-                    "arp_mode",
-                    "arp_rate",
-                    "arp_gate",
-                    "arp_octaves",
-                    "arp_hold",
-                ]
-                .map(|k| {
-                    reg.get(input_group(input), k)
-                        .expect("the instrument's arpeggiator controls exist")
-                })
+                ["arp", "arp_mode", "arp_rate", "arp_gate", "arp_octaves", "arp_hold"]
+                    .map(|k| reg.get(input_group(input), k).expect("the instrument's arpeggiator controls exist"))
             }),
             master_key: None,
             params: if input == INSTRUMENT {
@@ -551,17 +470,10 @@ impl Input {
         std::mem::replace(&mut self.feed, feed)
     }
 
-    /// The Instrument input's first half of a buffer of `frames`: takes the
-    /// scale, chord, arpeggiator, pads and knobs and hands the plugin its
-    /// block, so it plays while the decks are worked out; [`Input::render`]
-    /// picks the sound up. Nothing for the other inputs.
-    pub(crate) fn start(
-        &mut self,
-        frames: usize,
-        fx: &mut EffectRack,
-        target: usize,
-        on_deck: bool,
-    ) {
+    /// The Instrument input's first half of a buffer of `frames`: takes the scale, chord,
+    /// decks are worked out; [`Input::render`] picks the sound up. Nothing for the other inputs.
+    /// decks are worked out; [`Input::render`] picks the sound up. Nothing for the other
+    pub(crate) fn start(&mut self, frames: usize, fx: &mut EffectRack, target: usize, on_deck: bool) {
         if self.index != INSTRUMENT {
             return;
         }
@@ -583,11 +495,7 @@ impl Input {
                 learn.set(0.0);
                 mode.set(crate::scale::MINE as f64);
             }
-            fx.set_chord(
-                mode.get().round() as u8,
-                shape.get().max(0.0) as u32,
-                learn.get() > 0.5,
-            );
+            fx.set_chord(mode.get().round() as u8, shape.get().max(0.0) as u32, learn.get() > 0.5);
         }
         if let Some([on, mode, rate, gate, octaves, hold]) = &self.arp {
             fx.set_arp(crate::arp::ArpSettings {
@@ -609,18 +517,10 @@ impl Input {
         fx.start_instrument(frames, target, &params, on_deck);
     }
 
-    /// Takes in `frames` from the device and runs them through the gain,
-    /// the EQ and the effects routed to `target`; the result is in `buf`.
-    /// `dt` is the buffer's length in seconds. `routing` says where it is
-    /// heard (see [`Routing`]).
-    pub(crate) fn render(
-        &mut self,
-        frames: usize,
-        fx: &mut EffectRack,
-        target: usize,
-        dt: f32,
-        routing: Routing,
-    ) {
+    /// Takes in `frames` from the device and runs them through the gain, the EQ and
+    /// the effects routed to `target`; the result is in `buf`. `dt` is the buffer's
+    /// length in seconds. `routing` says where it is heard (see [`Routing`]).
+    pub(crate) fn render(&mut self, frames: usize, fx: &mut EffectRack, target: usize, dt: f32, routing: Routing) {
         if self.buf.len() < frames {
             self.buf.resize(frames, [0.0; 2]);
         }
@@ -665,19 +565,13 @@ impl Input {
         self.level_ramp = (self.level, level);
         self.level = level;
         self.live = live && source;
-        self.pfl =
-            self.c.pfl.get_bool() && matches!(routing, Routing::Main | Routing::Mixer { .. });
+        self.pfl = self.c.pfl.get_bool() && matches!(routing, Routing::Main | Routing::Mixer { .. });
         self.in_mixer = matches!(routing, Routing::Mixer { .. });
         let pre = (self.pregain, self.c.pregain.get() as f32);
         self.pregain = pre.1;
         let eq_from = self.eq_gains;
-        let eq_to: [f32; 3] = std::array::from_fn(|k| {
-            if self.c.eq_kill[k].get_bool() {
-                0.0
-            } else {
-                self.c.eq[k].get() as f32
-            }
-        });
+        let eq_to: [f32; 3] =
+            std::array::from_fn(|k| if self.c.eq_kill[k].get_bool() { 0.0 } else { self.c.eq[k].get() as f32 });
         self.eq_gains = eq_to;
 
         for (f, s) in buf.iter_mut().enumerate() {
@@ -706,11 +600,7 @@ impl Input {
             }
         }
 
-        self.peak_hold = if peak.iter().any(|&p| p > 1.0) {
-            PEAK_HOLD
-        } else {
-            (self.peak_hold - dt).max(0.0)
-        };
+        self.peak_hold = if peak.iter().any(|&p| p > 1.0) { PEAK_HOLD } else { (self.peak_hold - dt).max(0.0) };
         self.c.peak.set_bool(self.peak_hold > 0.0);
         for ((vu, p), control) in self.vu.iter_mut().zip(peak).zip(&self.c.vu_lr) {
             *vu = crate::engine::meter(p).max(*vu - VU_FALL * dt);
@@ -724,16 +614,11 @@ impl Input {
     }
 }
 
-/// A peak readout after a buffer whose peak was `peak` (linear) and which
-/// lasted `dt` seconds, from `(db, held)`: a new high jumps up and holds
-/// for [`PEAK_DB_HOLD`]; after that it falls at [`PEAK_DB_FALL`], never
-/// below the buffer's own peak.
+/// A peak readout after a buffer whose peak was `peak` (linear) and which lasted
+/// [`PEAK_DB_HOLD`]; after that it falls at [`PEAK_DB_FALL`], never below the buffer's own peak.
+/// [`PEAK_DB_HOLD`]; after that it falls at [`PEAK_DB_FALL`], never below the
 fn hold_peak((db, held): (f32, f32), peak: f32, dt: f32) -> (f32, f32) {
-    let now = if peak > 0.0 {
-        (20.0 * peak.log10()).clamp(PEAK_DB_FLOOR, PEAK_DB_TOP)
-    } else {
-        PEAK_DB_FLOOR
-    };
+    let now = if peak > 0.0 { (20.0 * peak.log10()).clamp(PEAK_DB_FLOOR, PEAK_DB_TOP) } else { PEAK_DB_FLOOR };
     if now >= db {
         (now, PEAK_DB_HOLD)
     } else if held > 0.0 {
@@ -770,11 +655,7 @@ struct Queue {
 
 impl Default for Queue {
     fn default() -> Self {
-        Self {
-            filling: true,
-            low: usize::MAX,
-            played: 0,
-        }
+        Self { filling: true, low: usize::MAX, played: 0 }
     }
 }
 
@@ -785,14 +666,9 @@ fn skip(feed: &mut InputFeed, frames: usize) {
     }
 }
 
-/// Reads up to `out.len()` frames from `feed`, keeping its queue short.
-/// Returns how many it read.
-///
-/// Audio waiting in the queue is heard as delay, so the queue is kept as
-/// short as the callbacks allow: it waits for one input callback and one
-/// output buffer before playing, and every window it drops what was never
-/// needed, the queue's low point less [`QUEUE_SLACK`]. A device running
-/// ahead is cut back at once.
+/// Reads up to `out.len()` frames from `feed`, keeping its queue short. Returns how many it read. Audio waiting in the queue is heard as
+/// delay, so the queue is kept as short as the callbacks allow: it waits for one input callback and one output buffer before playing, and
+/// every window it drops what was never needed, the queue's low point less [`QUEUE_SLACK`]. A device running ahead is cut back at once.
 fn pull(feed: &mut InputFeed, q: &mut Queue, out: &mut [[f32; 2]]) -> usize {
     let n = pull_inner(feed, q, out);
     feed.queued.store(feed.rx.slots() / 2, Ordering::Relaxed);
@@ -858,22 +734,8 @@ impl Ducker {
         let sr = sample_rate as f32;
         let coef = |seconds: f32| 1.0 - (-1.0 / (seconds * sr)).exp();
         Self {
-            mode: reg.create(
-                "[Master]",
-                "talkover_ducking",
-                DUCK_AUTO,
-                0.0,
-                2.0,
-                Behavior::Free,
-            ),
-            strength: reg.create(
-                "[Master]",
-                "duckStrength",
-                DEFAULT_DUCK_STRENGTH,
-                0.0,
-                1.0,
-                Behavior::Linear,
-            ),
+            mode: reg.create("[Master]", "talkover_ducking", DUCK_AUTO, 0.0, 2.0, Behavior::Free),
+            strength: reg.create("[Master]", "duckStrength", DEFAULT_DUCK_STRENGTH, 0.0, 1.0, Behavior::Linear),
             gain: 1.0,
             hold: 0.0,
             hold_len: DUCK_HOLD * sr,
@@ -885,10 +747,7 @@ impl Ducker {
     /// The mode and how far down the music goes (as a gain), read once per
     /// buffer.
     pub(crate) fn settings(&self) -> (f64, f32) {
-        (
-            self.mode.get().round(),
-            1.0 - self.strength.get().clamp(0.0, 1.0) as f32,
-        )
+        (self.mode.get().round(), 1.0 - self.strength.get().clamp(0.0, 1.0) as f32)
     }
 
     /// The music's gain for one frame, given the microphone's frame (before
@@ -903,11 +762,7 @@ impl Ducker {
         }
         let ducked = live && ((mode == DUCK_MANUAL) || (mode == DUCK_AUTO && self.hold > 0.0));
         let target = if ducked { low } else { 1.0 };
-        let k = if target < self.gain {
-            self.attack
-        } else {
-            self.release
-        };
+        let k = if target < self.gain { self.attack } else { self.release };
         self.gain += (target - self.gain) * k;
         self.gain
     }
@@ -1027,9 +882,7 @@ mod tests {
         // A voice with the mic off doesn't duck.
         assert!(run(&mut d, 0.5, false, 0.2) > 0.99);
         // Manual ducks while the mic is on, voice or not.
-        reg.get("[Master]", "talkover_ducking")
-            .unwrap()
-            .set(DUCK_MANUAL);
+        reg.get("[Master]", "talkover_ducking").unwrap().set(DUCK_MANUAL);
         let manual = d.settings();
         let mut g = 1.0;
         for _ in 0..9600 {

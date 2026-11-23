@@ -31,9 +31,7 @@ impl Stft {
     pub fn new() -> Self {
         let mut planner = RealFftPlanner::new();
         Stft {
-            window: (0..FRAME)
-                .map(|i| 0.5 - 0.5 * (std::f32::consts::TAU * i as f32 / FRAME as f32).cos())
-                .collect(),
+            window: (0..FRAME).map(|i| 0.5 - 0.5 * (std::f32::consts::TAU * i as f32 / FRAME as f32).cos()).collect(),
             forward: planner.plan_fft_forward(FRAME),
             inverse: planner.plan_fft_inverse(FRAME),
         }
@@ -47,12 +45,8 @@ impl Stft {
     /// Frame `k` of `x`: `BINS` complex values.
     pub fn frame(&self, x: &[f32], k: usize, out: &mut [Complex32]) {
         let start = k * HOP;
-        let mut buf: Vec<f32> = (0..FRAME)
-            .map(|i| x.get(start + i).copied().unwrap_or(0.0) * self.window[i])
-            .collect();
-        self.forward
-            .process(&mut buf, out)
-            .expect("FFT sizes are fixed");
+        let mut buf: Vec<f32> = (0..FRAME).map(|i| x.get(start + i).copied().unwrap_or(0.0) * self.window[i]).collect();
+        self.forward.process(&mut buf, out).expect("FFT sizes are fixed");
     }
 
     /// The whole spectrogram of `x`, frame-major: `frames(len) * BINS` values.
@@ -76,9 +70,7 @@ impl Stft {
             // A real signal's DC and Nyquist bins are real.
             buf[0].im = 0.0;
             buf[BINS - 1].im = 0.0;
-            self.inverse
-                .process(&mut buf, &mut time)
-                .expect("FFT sizes are fixed");
+            self.inverse.process(&mut buf, &mut time).expect("FFT sizes are fixed");
             let start = (first + j) * HOP;
             for (i, t) in time.iter().enumerate() {
                 if let Some(o) = out.get_mut(start + i) {
@@ -95,9 +87,8 @@ mod tests {
 
     #[test]
     fn analysis_then_synthesis_gives_the_signal_back() {
-        let x: Vec<f32> = (0..50_000)
-            .map(|i| (i as f32 * 0.013).sin() * 0.5 + ((i * 7919) % 101) as f32 / 404.0)
-            .collect();
+        let x: Vec<f32> =
+            (0..50_000).map(|i| (i as f32 * 0.013).sin() * 0.5 + ((i * 7919) % 101) as f32 / 404.0).collect();
         let stft = Stft::new();
         let spec = stft.analyse(&x);
         let mut y = vec![0.0; x.len()];

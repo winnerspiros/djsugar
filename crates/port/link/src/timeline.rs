@@ -25,11 +25,7 @@ impl Timeline {
 
     /// The same line with its origin moved to `time`.
     pub fn rebased(&self, time: f64) -> Self {
-        Self {
-            bpm: self.bpm,
-            beat_origin: self.beats_at(time),
-            time_origin: time,
-        }
+        Self { bpm: self.bpm, beat_origin: self.beats_at(time), time_origin: time }
     }
 }
 
@@ -61,11 +57,7 @@ mod tests {
 
     #[test]
     fn line() {
-        let t = Timeline {
-            bpm: 120.0,
-            beat_origin: 4.0,
-            time_origin: 1e6,
-        };
+        let t = Timeline { bpm: 120.0, beat_origin: 4.0, time_origin: 1e6 };
         assert_eq!(t.beats_at(1.5e6), 5.0);
         assert_eq!(t.time_of(6.0), 2e6);
         assert_eq!(t.rebased(3e6).beat_origin, 8.0);

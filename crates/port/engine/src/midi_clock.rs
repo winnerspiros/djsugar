@@ -1,24 +1,6 @@
-//! MIDI clock out: drum machines, grooveboxes, synths and other apps follow
-//! the master deck (the deck Ableton Link follows) at 24 pulses per beat.
-//!
-//! The audio thread only publishes a [`BeatClock`] snapshot each buffer: the
-//! host time the buffer is heard, the master deck's beat then and its tempo.
-//! A thread of its own ([`start`]) reads it, works out when each pulse is due
-//! with a [`Generator`], and sends it at that moment: it sleeps until just
-//! before, then spins on the clock, so pulses go out within a fraction of a
-//! millisecond of when the audio is heard.
-//!
-//! The pulses follow the master deck's tempo and stay on its beat: drift (a
-//! nudge, another deck taking over) is caught up by bending the pulse rate a
-//! little, never by jumping, since gear reads the tempo from the spacing of
-//! the pulses. Start goes out on the deck's next downbeat, after Song Position
-//! 0, so pattern-based gear lands on the bar; RESTART ON BAR does the same
-//! while running. When the master deck stops, Stop goes out, or with
-//! `[MidiClock],keep_running` the clock carries on at the last tempo.
-//!
-//! Controls: `[MidiClock],enabled` (CLOCK OUT), `[MidiClock],restart`,
-//! `[MidiClock],keep_running`, and the indicators `[MidiClock],running`,
-//! `[MidiClock],bpm` and `[MidiClock],outputs` (outputs open).
+//! MIDI clock out: drum machines, grooveboxes, synths and other apps follow the master deck (the deck Ableton Link follows) at 24 pulses per beat. The audio thread only publishes a [`BeatClock`] snapshot each buffer: the host time the buffer is heard, the master deck's beat then and its tempo. A thread of its own ([`start`]) reads it, works out when each pulse is due with a [`Generator`], and sends it at that moment:
+//! it sleeps until just before, then spins on the clock, so pulses go out within a fraction of a millisecond of when the audio is heard. The pulses follow the master deck's tempo and stay on its beat: drift (a nudge, another deck taking over) is caught up by bending the pulse rate a little, never by jumping, since gear reads the tempo from the spacing of the pulses. Start goes out on the deck's next downbeat, after
+//! Song Position 0, so pattern-based gear lands on the bar; RESTART ON BAR does the same while running. When the master deck stops, Stop goes out, or with `[MidiClock],keep_running` the clock carries on at the last tempo. Controls: `[MidiClock],enabled` (CLOCK OUT), `[MidiClock],restart`, `[MidiClock],keep_running`, and the indicators `[MidiClock],running`, `[MidiClock],bpm` and `[MidiClock],outputs` (outputs open).
 
 use std::collections::VecDeque;
 use std::sync::atomic::{fence, AtomicBool, AtomicI64, AtomicU64, Ordering};
@@ -120,11 +102,7 @@ impl BeatClock {
             if self.seq.load(Ordering::Relaxed) != s1 {
                 continue;
             }
-            return (s1 > 0).then_some(Snapshot {
-                heard_at: heard_at as f64,
-                beat,
-                tempo,
-            });
+            return (s1 > 0).then_some(Snapshot { heard_at: heard_at as f64, beat, tempo });
         }
     }
 }
@@ -192,10 +170,7 @@ pub struct Generator {
 
 impl Default for Generator {
     fn default() -> Self {
-        Self {
-            state: State::Idle,
-            restart: false,
-        }
+        Self { state: State::Idle, restart: false }
     }
 }
 
@@ -275,23 +250,14 @@ impl Generator {
         loop {
             self.state = match self.state {
                 State::Idle => match master {
-                    Some(s) => State::Armed {
-                        bar: bar_from(s.beat_at(now)),
-                        free: None,
-                    },
+                    Some(s) => State::Armed { bar: bar_from(s.beat_at(now)), free: None },
                     None => return,
                 },
                 State::Stopped(f) => match master {
-                    Some(s) => State::Armed {
-                        bar: bar_from(s.beat_at(now)),
-                        free: Some(f),
-                    },
+                    Some(s) => State::Armed { bar: bar_from(s.beat_at(now)), free: Some(f) },
                     None if f.t <= horizon => {
                         out.push((f.t, Message::Clock));
-                        State::Stopped(Free {
-                            t: f.t + interval(f.tempo),
-                            ..f
-                        })
+                        State::Stopped(Free { t: f.t + interval(f.tempo), ..f })
                     }
                     None => return,
                 },
@@ -305,21 +271,12 @@ impl Generator {
                     // The deck jumped: wait for the next bar from where
                     // it is now.
                     if start < now || bar - at > BAR + 1e-6 {
-                        State::Armed {
-                            bar: bar_from(at),
-                            free,
-                        }
+                        State::Armed { bar: bar_from(at), free }
                     } else if let Some(f) = free.filter(|f| f.t <= horizon) {
                         // Free pulses up to half a pulse before Start's.
                         if f.t < start - interval(s.tempo) / 2.0 {
                             out.push((f.t, Message::Clock));
-                            State::Armed {
-                                bar,
-                                free: Some(Free {
-                                    t: f.t + interval(f.tempo),
-                                    ..f
-                                }),
-                            }
+                            State::Armed { bar, free: Some(Free { t: f.t + interval(f.tempo), ..f }) }
                         } else {
                             State::Armed { bar, free: None }
                         }
@@ -327,22 +284,12 @@ impl Generator {
                         out.push((start - POSITION_LEAD, Message::SongPosition(0)));
                         out.push((start - START_LEAD, Message::Start));
                         out.push((start, Message::Clock));
-                        State::Ticking {
-                            n: 1,
-                            t: start + interval(s.tempo),
-                            tempo: s.tempo,
-                            restart_at: None,
-                        }
+                        State::Ticking { n: 1, t: start + interval(s.tempo), tempo: s.tempo, restart_at: None }
                     } else {
                         return;
                     }
                 }
-                State::Ticking {
-                    mut n,
-                    t,
-                    mut tempo,
-                    mut restart_at,
-                } => {
+                State::Ticking { mut n, t, mut tempo, mut restart_at } => {
                     if master.is_none() && !keep_running {
                         out.push((now, Message::Stop));
                         self.state = State::Stopped(Free { t, tempo });
@@ -362,12 +309,7 @@ impl Generator {
                         });
                     }
                     if t > horizon {
-                        self.state = State::Ticking {
-                            n,
-                            t,
-                            tempo,
-                            restart_at,
-                        };
+                        self.state = State::Ticking { n, t, tempo, restart_at };
                         return;
                     }
                     if restart_at == Some(n) {
@@ -386,12 +328,7 @@ impl Generator {
                         let error = wrap(s.beat_at(t) - n as f64 / PPQN);
                         bend = (error * PHASE_GAIN).clamp(-MAX_BEND, MAX_BEND);
                     }
-                    State::Ticking {
-                        n: n + 1,
-                        t: t + interval(tempo * (1.0 + bend)),
-                        tempo,
-                        restart_at,
-                    }
+                    State::Ticking { n: n + 1, t: t + interval(tempo * (1.0 + bend)), tempo, restart_at }
                 }
             };
         }
@@ -491,14 +428,7 @@ pub(crate) fn create_controls(reg: &ControlRegistry) {
     // Clock in: the tempo it reads and whether it has started.
     reg.indicator(GROUP, "in_bpm", 999.0);
     reg.indicator(GROUP, "in_running", 1.0);
-    reg.create(
-        LEADER_GROUP,
-        "sync_leader_source",
-        0.0,
-        0.0,
-        2.0,
-        djsugar_control::Behavior::Free,
-    );
+    reg.create(LEADER_GROUP, "sync_leader_source", 0.0, 0.0, 2.0, djsugar_control::Behavior::Free);
 }
 
 /// Where `[Master],sync_leader_source` lives.
@@ -565,10 +495,7 @@ fn open(port: &str) -> Option<Box<dyn Sink>> {
         #[cfg(not(unix))]
         return None;
     }
-    let p = out
-        .ports()
-        .into_iter()
-        .find(|p| out.port_name(p).as_deref() == Ok(port))?;
+    let p = out.ports().into_iter().find(|p| out.port_name(p).as_deref() == Ok(port))?;
     match out.connect(&p, "DJ Sugar clock") {
         Ok(c) => Some(Box::new(c)),
         Err(e) => {
@@ -596,11 +523,7 @@ struct Sender {
 
 impl Sender {
     fn lookahead(&self) -> f64 {
-        let earliest = self
-            .outputs
-            .iter()
-            .map(Output::offset_us)
-            .fold(0.0, f64::min);
+        let earliest = self.outputs.iter().map(Output::offset_us).fold(0.0, f64::min);
         LOOKAHEAD - earliest
     }
 
@@ -608,12 +531,10 @@ impl Sender {
     fn generate(&mut self, snap: Option<Snapshot>, enabled: bool, keep_running: bool, now: f64) {
         let horizon = now + self.lookahead();
         self.events.clear();
-        self.generator
-            .poll(snap, enabled, keep_running, now, horizon, &mut self.events);
+        self.generator.poll(snap, enabled, keep_running, now, horizon, &mut self.events);
         for o in &mut self.outputs {
             let offset = o.offset_us();
-            o.queue
-                .extend(self.events.iter().map(|&(t, m)| (t + offset, m)));
+            o.queue.extend(self.events.iter().map(|&(t, m)| (t + offset, m)));
         }
     }
 
@@ -692,19 +613,14 @@ fn run(
     link: Arc<AblLink>,
     reg: Weak<ControlRegistry>,
     shared: Arc<Shared>,
-    [enabled, restart, keep_running, running, bpm, open_count, in_bpm, in_running]: [ControlHandle;
-        8],
+    [enabled, restart, keep_running, running, bpm, open_count, in_bpm, in_running]: [ControlHandle; 8],
 ) {
     let link_for_input = link.clone();
     let clock = move || link.clock_micros() as f64;
     let mut input: Option<midir::MidiInputConnection<()>> = None;
     let mut input_generation = u64::MAX;
     let mut input_try = f64::MIN;
-    let mut sender = Sender {
-        generator: Generator::default(),
-        outputs: Vec::new(),
-        events: Vec::new(),
-    };
+    let mut sender = Sender { generator: Generator::default(), outputs: Vec::new(), events: Vec::new() };
     let mut generation = u64::MAX;
     let mut last_try = f64::MIN;
     while reg.strong_count() > 0 {
@@ -725,11 +641,7 @@ fn run(
                         .position(|o| o.config.port == config.port && o.sink.is_some())
                         .map(|i| old.swap_remove(i));
                     let sink = kept.and_then(|o| o.sink).or_else(|| open(&config.port));
-                    Output {
-                        config,
-                        sink,
-                        queue: VecDeque::new(),
-                    }
+                    Output { config, sink, queue: VecDeque::new() }
                 })
                 .collect();
             // Gear on a dropped output shouldn't keep playing.
@@ -743,10 +655,7 @@ fn run(
             *shared.status.lock().unwrap() = sender
                 .outputs
                 .iter()
-                .map(|o| OutputStatus {
-                    port: o.config.port.clone(),
-                    open: o.sink.is_some(),
-                })
+                .map(|o| OutputStatus { port: o.config.port.clone(), open: o.sink.is_some() })
                 .collect();
             open_count.set(sender.outputs.iter().filter(|o| o.sink.is_some()).count() as f64);
             generation = g;
@@ -755,8 +664,7 @@ fn run(
         // The clock input changed in Settings, or isn't open yet.
         let g = shared.input_generation.load(Ordering::Relaxed);
         let wanted = shared.input.lock().unwrap().clone();
-        if g != input_generation || (input.is_none() && wanted.is_some() && now - input_try > RETRY)
-        {
+        if g != input_generation || (input.is_none() && wanted.is_some() && now - input_try > RETRY) {
             if g != input_generation {
                 drop(input.take());
             }
@@ -779,10 +687,7 @@ fn run(
             input_try = now;
         }
         // A clock that stopped coming isn't shown as running.
-        if clock_in
-            .read()
-            .is_some_and(|r| now - r.at.heard_at > crate::clock_in::STALE)
-        {
+        if clock_in.read().is_some_and(|r| now - r.at.heard_at > crate::clock_in::STALE) {
             clock_in.clear();
             in_bpm.set(0.0);
             in_running.set_bool(false);
@@ -810,11 +715,7 @@ mod tests {
     const US_PER_PULSE_120: f64 = 60e6 / (PPQN * 120.0);
 
     fn snap(t: f64, beat: f64, tempo: f64) -> Option<Snapshot> {
-        Some(Snapshot {
-            heard_at: t,
-            beat,
-            tempo,
-        })
+        Some(Snapshot { heard_at: t, beat, tempo })
     }
 
     /// Runs the generator every millisecond from `from` to `to` against a
@@ -838,11 +739,7 @@ mod tests {
     }
 
     fn clocks(events: &[Timed]) -> Vec<f64> {
-        events
-            .iter()
-            .filter(|(_, m)| *m == Message::Clock)
-            .map(|(t, _)| *t)
-            .collect()
+        events.iter().filter(|(_, m)| *m == Message::Clock).map(|(t, _)| *t).collect()
     }
 
     #[test]
@@ -869,22 +766,14 @@ mod tests {
         let start = out.iter().position(|(_, m)| *m == Message::Start).unwrap();
         assert_eq!(out[start - 1].1, Message::SongPosition(0));
         assert_eq!(out[start + 1].1, Message::Clock);
-        assert!(
-            (out[start + 1].0 - 1.25e6).abs() < 1.0,
-            "{}",
-            out[start + 1].0
-        );
+        assert!((out[start + 1].0 - 1.25e6).abs() < 1.0, "{}", out[start + 1].0);
         assert!(out[start].0 < out[start + 1].0);
         // Nothing before Start.
         assert_eq!(start, 1);
         // Then a pulse every 1/24 of a beat.
         let c = clocks(&out);
         for w in c.windows(2) {
-            assert!(
-                (w[1] - w[0] - US_PER_PULSE_120).abs() < 1.0,
-                "{}",
-                w[1] - w[0]
-            );
+            assert!((w[1] - w[0] - US_PER_PULSE_120).abs() < 1.0, "{}", w[1] - w[0]);
         }
     }
 
@@ -926,14 +815,7 @@ mod tests {
             assert!(g.running());
             for i in 0..1000 {
                 let now = 2e6 + i as f64 * 1000.0;
-                g.poll(
-                    snap(now, 0.0, 0.0),
-                    true,
-                    keep,
-                    now,
-                    now + LOOKAHEAD,
-                    &mut out,
-                );
+                g.poll(snap(now, 0.0, 0.0), true, keep, now, now + LOOKAHEAD, &mut out);
             }
             let stopped = out.iter().any(|(_, m)| *m == Message::Stop);
             assert_eq!(stopped, !keep);
@@ -952,14 +834,7 @@ mod tests {
         let mut out = run(&mut g, 0.0, 2e6, 120.0, |t| t * 120.0 / 60e6, false);
         for i in 0..1000 {
             let now = 2e6 + i as f64 * 1000.0;
-            g.poll(
-                snap(now, 0.0, 0.0),
-                true,
-                false,
-                now,
-                now + LOOKAHEAD,
-                &mut out,
-            );
+            g.poll(snap(now, 0.0, 0.0), true, false, now, now + LOOKAHEAD, &mut out);
         }
         assert!(!g.running());
         // Played again at 3 s from beat 2.5, now at 124 BPM: Start on beat
@@ -974,11 +849,7 @@ mod tests {
         let before = clocks(&out[..start]);
         assert!(before.len() > 30, "{}", before.len());
         let last = *before.last().unwrap();
-        assert!(
-            downbeat - last >= US_PER_PULSE_120 * 0.4,
-            "{}",
-            downbeat - last
-        );
+        assert!(downbeat - last >= US_PER_PULSE_120 * 0.4, "{}", downbeat - last);
         assert!(g.running());
     }
 
@@ -1002,20 +873,8 @@ mod tests {
         let out = run(&mut g, 2.6e6, 5e6, 120.0, beat_at, false);
         let start = out.iter().position(|(_, m)| *m == Message::Start).unwrap();
         let kinds: Vec<Message> = out[start - 2..=start + 1].iter().map(|e| e.1).collect();
-        assert_eq!(
-            kinds,
-            [
-                Message::Stop,
-                Message::SongPosition(0),
-                Message::Start,
-                Message::Clock
-            ]
-        );
-        assert!(
-            (out[start + 1].0 - 4e6).abs() < 50.0,
-            "{}",
-            out[start + 1].0
-        );
+        assert_eq!(kinds, [Message::Stop, Message::SongPosition(0), Message::Start, Message::Clock]);
+        assert!((out[start + 1].0 - 4e6).abs() < 50.0, "{}", out[start + 1].0);
         // The pulses didn't pause.
         let c = clocks(&out);
         for w in c.windows(2) {
@@ -1031,23 +890,9 @@ mod tests {
         g.poll(snap(0.0, 1.0, 120.0), true, false, 0.0, 3000.0, &mut out);
         // Cued back to bar 1 (beat 0) and heard at 0.505 s: Start goes out
         // on it, not on beat 4.
-        g.poll(
-            snap(0.5e6 + 5000.0, 0.0, 120.0),
-            true,
-            false,
-            0.5e6,
-            0.5e6 + 3000.0,
-            &mut out,
-        );
+        g.poll(snap(0.5e6 + 5000.0, 0.0, 120.0), true, false, 0.5e6, 0.5e6 + 3000.0, &mut out);
         assert!(out.is_empty());
-        let out = run(
-            &mut g,
-            0.5e6,
-            3e6,
-            120.0,
-            |t| (t - 0.5e6 - 5000.0) * 120.0 / 60e6,
-            false,
-        );
+        let out = run(&mut g, 0.5e6, 3e6, 120.0, |t| (t - 0.5e6 - 5000.0) * 120.0 / 60e6, false);
         let first = clocks(&out)[0];
         assert!((first - 0.505e6).abs() < 1.0, "{first}");
     }
@@ -1064,24 +909,19 @@ mod tests {
         }
     }
 
-    /// The clock thread's timing on this computer: how far each pulse goes
-    /// out from when it's due. Target: under 0.5 ms spread while idle.
-    /// Run with `cargo test -p djsugar-engine midi_clock -- --ignored
-    /// --nocapture`.
+    /// The clock thread's timing on this computer: how far each pulse goes out
+    /// from when it's due. Target: under 0.5 ms spread while idle. Run with
+    /// `cargo test -p djsugar-engine midi_clock -- --ignored --nocapture`.
     #[test]
     #[ignore = "timing; run by hand"]
     fn jitter() {
         let start = std::time::Instant::now();
-        let clock: Arc<dyn Fn() -> f64 + Send + Sync> =
-            Arc::new(move || start.elapsed().as_secs_f64() * 1e6);
+        let clock: Arc<dyn Fn() -> f64 + Send + Sync> = Arc::new(move || start.elapsed().as_secs_f64() * 1e6);
         let sent = Arc::new(Mutex::new(Vec::new()));
         let mut sender = Sender {
             generator: Generator::default(),
             outputs: vec![Output {
-                config: OutputConfig {
-                    port: "test".into(),
-                    offset_ms: 0.0,
-                },
+                config: OutputConfig { port: "test".into(), offset_ms: 0.0 },
                 sink: Some(Box::new(Recorder(sent.clone(), clock.clone()))),
                 queue: VecDeque::new(),
             }],
@@ -1099,12 +939,8 @@ mod tests {
             std::thread::sleep(Duration::from_secs_f64(wait / 1e6));
         }
         let sent = sent.lock().unwrap();
-        let late: Vec<f64> = sent
-            .iter()
-            .filter(|(_, b)| b == &[0xF8])
-            .zip(&due)
-            .map(|((at, _), due)| at - due)
-            .collect();
+        let late: Vec<f64> =
+            sent.iter().filter(|(_, b)| b == &[0xF8]).zip(&due).map(|((at, _), due)| at - due).collect();
         let max = late.iter().cloned().fold(f64::MIN, f64::max);
         let min = late.iter().cloned().fold(f64::MAX, f64::min);
         println!("{} pulses, late by {min:.1}..{max:.1} µs", late.len());

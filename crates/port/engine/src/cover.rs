@@ -1,8 +1,6 @@
-//! Album art, found as: a picture embedded in the file's
-//! tags (the front cover if there are several), otherwise an image next to the
-//! file. With one image in the folder that one is used; with several, one named
-//! after the track, its file, its album, or "cover", "front", "album" or
-//! "folder", in that order.
+//! Album art, found as: a picture embedded in the file's tags (the front cover if there are several),
+//! otherwise an image next to the file. With one image in the folder that one is used; with several, one
+//! named after the track, its file, its album, or "cover", "front", "album" or "folder", in that order.
 
 use std::path::Path;
 
@@ -49,11 +47,7 @@ pub fn has_cover(path: &Path, album: &str) -> bool {
 fn embedded(path: &Path) -> Option<Vec<u8>> {
     let file = lofty::read_from_path(path).ok()?;
     let pictures: Vec<_> = file.tags().iter().flat_map(|t| t.pictures()).collect();
-    pictures
-        .iter()
-        .find(|p| p.pic_type() == PictureType::CoverFront)
-        .or(pictures.first())
-        .map(|p| p.data().to_vec())
+    pictures.iter().find(|p| p.pic_type() == PictureType::CoverFront).or(pictures.first()).map(|p| p.data().to_vec())
 }
 
 /// An image file in the same folder that belongs with the track.
@@ -70,46 +64,20 @@ pub fn beside(path: &Path, album: &str) -> Option<std::path::PathBuf> {
     if images.len() <= 1 {
         return images.into_iter().next();
     }
-    let stem = |p: &Path| {
-        p.file_stem()
-            .map(|s| s.to_string_lossy().to_lowercase())
-            .unwrap_or_default()
-    };
-    let file_name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
-    let wanted = [
-        stem(path),
-        file_name,
-        album.to_lowercase(),
-        "cover".into(),
-        "front".into(),
-        "album".into(),
-        "folder".into(),
-    ];
-    wanted
-        .iter()
-        .filter(|w| !w.is_empty())
-        .find_map(|w| images.iter().find(|i| stem(i) == *w))
-        .cloned()
+    let stem = |p: &Path| p.file_stem().map(|s| s.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let file_name = path.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let wanted =
+        [stem(path), file_name, album.to_lowercase(), "cover".into(), "front".into(), "album".into(), "folder".into()];
+    wanted.iter().filter(|w| !w.is_empty()).find_map(|w| images.iter().find(|i| stem(i) == *w)).cloned()
 }
 
 /// Decodes an image file's bytes into a cover of at most `size` pixels on
 /// its longest side.
 pub fn decode(data: &[u8], size: u32) -> Option<Cover> {
     let img = image::load_from_memory(data).ok()?;
-    let img = if img.width().max(img.height()) > size {
-        img.thumbnail(size, size)
-    } else {
-        img
-    };
+    let img = if img.width().max(img.height()) > size { img.thumbnail(size, size) } else { img };
     let rgba = img.to_rgba8();
-    Some(Cover {
-        width: rgba.width(),
-        height: rgba.height(),
-        rgba: rgba.into_raw(),
-    })
+    Some(Cover { width: rgba.width(), height: rgba.height(), rgba: rgba.into_raw() })
 }
 
 #[cfg(test)]
@@ -118,9 +86,7 @@ mod tests {
     use std::fs;
 
     fn png(path: &Path, w: u32, h: u32, color: [u8; 4]) {
-        image::RgbaImage::from_pixel(w, h, image::Rgba(color))
-            .save(path)
-            .unwrap();
+        image::RgbaImage::from_pixel(w, h, image::Rgba(color)).save(path).unwrap();
     }
 
     #[test]
@@ -140,20 +106,11 @@ mod tests {
 
         // With several, the best-named one wins.
         png(&dir.join("Folder.png"), 8, 8, [0, 0, 255, 255]);
-        assert_eq!(
-            &find(&track, "Night Drive").unwrap().rgba[..4],
-            &[0, 0, 255, 255]
-        );
+        assert_eq!(&find(&track, "Night Drive").unwrap().rgba[..4], &[0, 0, 255, 255]);
         png(&dir.join("night drive.png"), 8, 8, [0, 255, 0, 255]);
-        assert_eq!(
-            &find(&track, "Night Drive").unwrap().rgba[..4],
-            &[0, 255, 0, 255]
-        );
+        assert_eq!(&find(&track, "Night Drive").unwrap().rgba[..4], &[0, 255, 0, 255]);
         png(&dir.join("01 Opening.png"), 8, 8, [9, 9, 9, 255]);
-        assert_eq!(
-            &find(&track, "Night Drive").unwrap().rgba[..4],
-            &[9, 9, 9, 255]
-        );
+        assert_eq!(&find(&track, "Night Drive").unwrap().rgba[..4], &[9, 9, 9, 255]);
         fs::remove_dir_all(&dir).unwrap();
     }
 }

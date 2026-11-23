@@ -44,16 +44,11 @@ fn start() -> (djsugar_plugin_host::Connection, djsugar_plugin_host::Helper) {
     start_from(None)
 }
 
-fn start_from(
-    state: Option<Vec<u8>>,
-) -> (djsugar_plugin_host::Connection, djsugar_plugin_host::Helper) {
+fn start_from(state: Option<Vec<u8>>) -> (djsugar_plugin_host::Connection, djsugar_plugin_host::Helper) {
     spawn(&Options {
         picks: Vec::new(),
         helper: helper(),
-        plugin: Plugin::Clap {
-            file: test_plugin(),
-            id: ID.into(),
-        },
+        plugin: Plugin::Clap { file: test_plugin(), id: ID.into() },
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -62,13 +57,8 @@ fn start_from(
     .expect("the CLAP plugin loads")
 }
 
-fn run(
-    conn: &mut djsugar_plugin_host::Connection,
-    transport: Transport,
-) -> (Outcome, Vec<f32>, Vec<f32>) {
-    let l: Vec<f32> = (0..FRAMES)
-        .map(|i| 0.1 + (i as f32 / 10.0).sin() * 0.5)
-        .collect();
+fn run(conn: &mut djsugar_plugin_host::Connection, transport: Transport) -> (Outcome, Vec<f32>, Vec<f32>) {
+    let l: Vec<f32> = (0..FRAMES).map(|i| 0.1 + (i as f32 / 10.0).sin() * 0.5).collect();
     let r: Vec<f32> = l.iter().map(|x| -x).collect();
     let mut ol = vec![0.0; FRAMES];
     let mut or = vec![0.0; FRAMES];
@@ -102,10 +92,7 @@ fn scanning_a_broken_file_fails_cleanly() {
 fn a_knob_takes_the_parameter_picked_for_it() {
     let (_conn, helper) = spawn(&Options {
         helper: helper(),
-        plugin: Plugin::Clap {
-            file: test_plugin(),
-            id: ID.into(),
-        },
+        plugin: Plugin::Clap { file: test_plugin(), id: ID.into() },
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -148,10 +135,7 @@ fn audio_and_parameters_go_through_the_plugin() {
     conn.set_param(0, 0.5);
     let (out, got, input) = run(&mut conn, Transport::default());
     assert_eq!(out, Outcome::Wet);
-    assert!(got
-        .iter()
-        .zip(&input)
-        .all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
+    assert!(got.iter().zip(&input).all(|(y, x)| (y - x * 0.5).abs() < 1e-6));
 }
 
 #[test]
@@ -167,15 +151,11 @@ fn the_plugins_sound_is_saved_and_brought_back() {
     let half = |conn: &mut _| {
         let (out, got, input) = run(conn, Transport::default());
         assert_eq!(out, Outcome::Wet);
-        got.iter()
-            .zip(&input)
-            .all(|(y, x)| (y - x * 0.5).abs() < 1e-6)
+        got.iter().zip(&input).all(|(y, x)| (y - x * 0.5).abs() < 1e-6)
     };
     assert!(half(&mut conn), "starts at the saved gain");
     // And a sound loaded while it plays takes over.
-    helper
-        .load_state(&1.0f64.to_bits().to_le_bytes())
-        .expect("the plugin loads a state");
+    helper.load_state(&1.0f64.to_bits().to_le_bytes()).expect("the plugin loads a state");
     let (_, got, input) = run(&mut conn, Transport::default());
     assert_eq!(got, input);
 }
@@ -188,12 +168,8 @@ fn the_plugins_own_presets_are_listed_and_load() {
     std::fs::write(dir.join("notes.txt"), "not a preset").unwrap();
     // Only this test's listing reads it.
     std::env::set_var("DJSUGAR_TEST_PRESETS", &dir);
-    let plugin = Plugin::Clap {
-        file: test_plugin(),
-        id: ID.into(),
-    };
-    let found =
-        presets(&helper(), &plugin, Duration::from_secs(20)).expect("the presets are listed");
+    let plugin = Plugin::Clap { file: test_plugin(), id: ID.into() };
+    let found = presets(&helper(), &plugin, Duration::from_secs(20)).expect("the presets are listed");
     let names: Vec<&str> = found.iter().map(|(n, _)| n.as_str()).collect();
     // Another plugin's preset is left out; a file's is named after it.
     assert_eq!(names, ["Loud", "Quiet", "Half"]);
@@ -202,13 +178,9 @@ fn the_plugins_own_presets_are_listed_and_load() {
         let state = helper.save_state().expect("the plugin saves its state");
         f64::from_bits(u64::from_le_bytes(state.try_into().unwrap()))
     };
-    helper
-        .load_preset(&found[0].1)
-        .expect("a preset in the plugin loads");
+    helper.load_preset(&found[0].1).expect("a preset in the plugin loads");
     assert_eq!(gain(&helper), 1.5);
-    helper
-        .load_preset(&found[2].1)
-        .expect("a preset file loads");
+    helper.load_preset(&found[2].1).expect("a preset file loads");
     assert_eq!(gain(&helper), 0.5);
     assert!(helper.load_preset("nothing").is_err());
     run(&mut conn, Transport::default());
@@ -219,11 +191,7 @@ fn the_plugins_own_presets_are_listed_and_load() {
 fn the_deck_tempo_reaches_the_plugin() {
     let (mut conn, _helper) = start();
     conn.set_param(1, 1.0); // the test plugin writes the tempo it sees into sample 0
-    let t = Transport {
-        bpm: 124.0,
-        beat: 17.5,
-        playing: true,
-    };
+    let t = Transport { bpm: 124.0, beat: 17.5, playing: true };
     let (out, got, _) = run(&mut conn, t);
     assert_eq!(out, Outcome::Wet);
     assert_eq!(got[0], 124.0);
@@ -234,10 +202,7 @@ fn a_missing_plugin_id_fails_to_start() {
     let err = spawn(&Options {
         picks: Vec::new(),
         helper: helper(),
-        plugin: Plugin::Clap {
-            file: test_plugin(),
-            id: "no.such.plugin".into(),
-        },
+        plugin: Plugin::Clap { file: test_plugin(), id: "no.such.plugin".into() },
         sample_rate: 48_000,
         max_frames: 1024,
         title: None,
@@ -266,13 +231,7 @@ fn notes_reach_the_plugin() {
     assert_eq!(out, Outcome::Wet);
     assert_eq!(ol[1], 60.0);
     // No notes, no key.
-    let out = conn.process_events(
-        [&silent, &silent],
-        [&mut ol, &mut or],
-        Transport::default(),
-        &[],
-        DEADLINE,
-    );
+    let out = conn.process_events([&silent, &silent], [&mut ol, &mut or], Transport::default(), &[], DEADLINE);
     assert_eq!(out, Outcome::Wet);
     assert_eq!(ol[1], -1.0);
 }

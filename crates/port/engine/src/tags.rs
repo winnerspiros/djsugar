@@ -1,10 +1,6 @@
-//! Reading and writing the tags the track info panel edits, the front
-//! cover, and what the file itself is (format, bitrate, sample rate).
-//!
-//! Tags are written through lofty into the file's main tag (ID3v2 for MP3,
-//! Vorbis comments for FLAC and Ogg, iTunes atoms for M4A), creating one if
-//! the file has none. The rating goes in as a popularimeter, MusicBee's
-//! scale, which rekordbox, VirtualDJ and Mixxx read too.
+//! Reading and writing the tags the track info panel edits, the front cover, and what the file itself is (format, bitrate, sample
+//! M4A), creating one if the file has none. The rating goes in as a popularimeter, MusicBee's scale, which other DJ software reads too.
+//! M4A), creating one if the file has none. The rating goes in as a popularimeter, MusicBee's scale, which other DJ software reads
 
 use std::path::Path;
 
@@ -56,11 +52,7 @@ fn text(tag: &Tag, key: ItemKey) -> String {
 
 /// The first number in "3/12" or "03".
 fn leading_number(s: &str) -> u32 {
-    s.trim()
-        .split(|c: char| !c.is_ascii_digit())
-        .next()
-        .and_then(|n| n.parse().ok())
-        .unwrap_or(0)
+    s.trim().split(|c: char| !c.is_ascii_digit()).next().and_then(|n| n.parse().ok()).unwrap_or(0)
 }
 
 /// Reads the tags the info panel edits from `tag`.
@@ -100,12 +92,7 @@ pub fn fields_of(tag: &Tag) -> TagFields {
 /// The tags of the file at `path`, or None when it can't be read.
 pub fn read(path: &Path) -> Option<TagFields> {
     let file = lofty::read_from_path(path).ok()?;
-    Some(
-        file.primary_tag()
-            .or_else(|| file.first_tag())
-            .map(fields_of)
-            .unwrap_or_default(),
-    )
+    Some(file.primary_tag().or_else(|| file.first_tag()).map(fields_of).unwrap_or_default())
 }
 
 fn set(tag: &mut Tag, key: ItemKey, value: &str) {
@@ -138,9 +125,7 @@ fn edit(path: &Path, change: impl FnOnce(&mut Tag)) -> Result<(), String> {
     let tag = file.tag_mut(tag_type).ok_or("the file can't hold tags")?;
     change(tag);
     let cached = crate::cache::before_retag(path);
-    let saved = file
-        .save_to_path(path, WriteOptions::default())
-        .map_err(|e| e.to_string());
+    let saved = file.save_to_path(path, WriteOptions::default()).map_err(|e| e.to_string());
     crate::cache::tags_rewritten(path, cached);
     saved
 }
@@ -156,22 +141,15 @@ pub fn write(path: &Path, fields: &TagFields) -> Result<(), String> {
         tag.remove_key(ItemKey::Year);
         set(tag, ItemKey::RecordingDate, &fields.year);
         set(tag, ItemKey::Genre, &fields.genre);
-        let number = if fields.track_number > 0 {
-            fields.track_number.to_string()
-        } else {
-            String::new()
-        };
+        let number = if fields.track_number > 0 { fields.track_number.to_string() } else { String::new() };
         set(tag, ItemKey::TrackNumber, &number);
         set(tag, ItemKey::ContentGroup, &fields.grouping);
         tag.remove_key(ItemKey::IntegerBpm);
         tag.remove_key(ItemKey::Bpm);
         if fields.bpm > 0.0 {
             // Whole tempos as integers, as most apps write them.
-            let exact = if fields.bpm.fract() == 0.0 {
-                format!("{}", fields.bpm as u32)
-            } else {
-                format!("{:.2}", fields.bpm)
-            };
+            let exact =
+                if fields.bpm.fract() == 0.0 { format!("{}", fields.bpm as u32) } else { format!("{:.2}", fields.bpm) };
             let whole = format!("{}", fields.bpm.round() as u32);
             // ID3v2's TBPM is text, so it keeps the decimals; MP4's tmpo is
             // a whole number, with the exact tempo in a BPM atom beside it.
@@ -185,10 +163,7 @@ pub fn write(path: &Path, fields: &TagFields) -> Result<(), String> {
         set(tag, ItemKey::InitialKey, &fields.key);
         tag.remove_key(ItemKey::Popularimeter);
         if let Some(stars) = star(fields.rating) {
-            tag.insert_text(
-                ItemKey::Popularimeter,
-                Popularimeter::musicbee(stars, 0).to_string(),
-            );
+            tag.insert_text(ItemKey::Popularimeter, Popularimeter::musicbee(stars, 0).to_string());
         }
         tag.remove_key(ItemKey::Description);
         set(tag, ItemKey::Comment, &fields.comment);
@@ -200,11 +175,7 @@ pub fn write(path: &Path, fields: &TagFields) -> Result<(), String> {
 pub fn embedded_cover(path: &Path) -> Option<Vec<u8>> {
     let file = lofty::read_from_path(path).ok()?;
     let pictures: Vec<_> = file.tags().iter().flat_map(|t| t.pictures()).collect();
-    pictures
-        .iter()
-        .find(|p| p.pic_type() == PictureType::CoverFront)
-        .or(pictures.first())
-        .map(|p| p.data().to_vec())
+    pictures.iter().find(|p| p.pic_type() == PictureType::CoverFront).or(pictures.first()).map(|p| p.data().to_vec())
 }
 
 /// Embeds `image` (JPEG or PNG data) as the file's front cover, replacing
@@ -225,16 +196,9 @@ pub fn write_cover(path: &Path, image: &[u8]) -> Result<(), String> {
 /// The format, bitrate and size of the file at `path`.
 pub fn file_info(path: &Path) -> FileInfo {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    let format = path
-        .extension()
-        .map(|e| e.to_string_lossy().to_uppercase())
-        .unwrap_or_default();
+    let format = path.extension().map(|e| e.to_string_lossy().to_uppercase()).unwrap_or_default();
     let Ok(file) = lofty::read_from_path(path) else {
-        return FileInfo {
-            format,
-            size,
-            ..Default::default()
-        };
+        return FileInfo { format, size, ..Default::default() };
     };
     let p = file.properties();
     FileInfo {
@@ -275,11 +239,7 @@ mod tests {
         assert_eq!(read(&path).unwrap(), fields);
 
         // Clearing a field takes it out.
-        let cleared = TagFields {
-            remix: String::new(),
-            rating: 0,
-            ..fields
-        };
+        let cleared = TagFields { remix: String::new(), rating: 0, ..fields };
         write(&path, &cleared).unwrap();
         assert_eq!(read(&path).unwrap(), cleared);
 

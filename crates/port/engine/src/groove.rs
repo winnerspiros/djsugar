@@ -1,64 +1,6 @@
-//! The Groove Box: a deck that plays a drum kit in a 16-step pattern, in
-//! time with the mix, instead of a track.
-//!
-//! `[GrooveN],enabled` turns deck N into a Groove Box. Its sound goes into
-//! the deck's channel where a track's would, so EQ, filter, fader,
-//! crossfader, effects and headphone cue work as on any deck, and
-//! `[ChannelN],play` starts and stops it.
-//!
-//! **Clock.** The groove keeps its own beat count and follows, in order:
-//! the leading deck while it plays, Ableton Link's session while Link is
-//! on, or its own tempo (`[GrooveN],bpm`). It never copies the leader's
-//! position; it bends its speed toward the leader's beat a little each
-//! buffer, as sync does, and when it is more than a quarter of a beat off
-//! (a hot cue or beat jump on the leader) it jumps to the leader's beat at
-//! its next bar line, never mid-bar. Started while a leader plays, it waits
-//! for the leader's next downbeat.
-//!
-//! **Steps.** Step k (of 16 to a bar) falls on beat k/4, every second one
-//! late by `swing`. Each buffer covers beats `[b0, b0 + frames × step)`;
-//! every step inside it starts its sounds on the frame it falls on, so the
-//! timing is exact to the sample whatever the buffer size.
-//!
-//! **Patterns.** Four grooves (A to D), each eight rows (tracks) of 16 steps, kept in
-//! `[GrooveN],patternG_rowR` as 16-bit numbers (bit s on = step s+1 plays)
-//! with `patternG_rowR_soft` and `patternG_rowR_accent` marking the steps
-//! that play softly (half as loud) or accented (a quarter louder), and
-//! `patternG_rowR_maybe` the ones that play only half the time. `vary`
-//! (0-1) lets the groove change by itself as it plays: weak hits drop out,
-//! soft ghost notes come in where the genre puts them, and hits waver in
-//! loudness (see [`crate::groove_dice`]).
-//! `[GrooveN],groove` picks the one playing (0-3); a change while playing
-//! waits for the next bar. Row N plays the kits' Nth sound
-//! ([`kits::ROLES`]: kick, snare, closed hat, open hat, clap, rim, cowbell)
-//! unless `rowR_sound` picks another; row 8, Cymbal, plays the crash or the
-//! ride, whichever the groove loaded last uses (no library groove has both).
-//!
-//! **Library.** `genre` and `pattern` (1-based, 0 none) name a groove of
-//! the library ([`crate::patterns`]); `load` puts it into the groove picked.
-//! `chain` (1-based, 0 off) names a second groove of the same genre;
-//! `load_chain` puts it into the groove after the one picked (A's partner
-//! is B, C's is D), and while `chain` is on the two take turns, a bar
-//! each. `groove_playing` is the one sounding now. Each row has `rowR_mute`,
-//! `rowR_solo`, `rowR_level` (0-1.5), `rowR_pitch` (−12 to +12 semitones)
-//! and `rowR_decay` (0-1, 1 = the sound's own length), `rowR_tone` (−1 to
-//! 1: left a low-pass, right a high-pass, centre off) and `rowR_pan` (−1
-//! left to 1 right), and `rowR_sound` picks which of the kit's sounds the
-//! row plays; `rowR_preview` plays it once, now, and `rowR_meter` (0-1)
-//! shows how loud the row sounds, for the screen. `[GrooveN],kit` picks the
-//! kit. `[GrooveN],position` is the step playing (0-15), −1 when stopped.
-//!
-//! **Fills.** `auto_fill` (1 or 2) plays a fill at the end of every 4th,
-//! 8th and 16th bar (or 2nd, 4th, 8th), `fill` held plays one now, and
-//! `remix` (a strip, 0 off) plays one of 16 figures while held; see
-//! [`crate::groove_fills`]. `fill_playing` shows when one sounds.
-//!
-//! **Duck.** With `[GrooveN],duck_deck` set to another deck (1-4), that
-//! deck dips by `duck_amount` (dB) on each step of row 1 and recovers over
-//! about a step.
-//!
-//! Kits are synthesised when the engine starts (see [`crate::kits`]); every
-//! buffer only reads them, and nothing allocates or frees here.
+//! The Groove Box: a deck that plays a drum kit in a 16-step pattern, in time with the mix, instead of a track. `[GrooveN],enabled` turns deck N into a Groove Box. Its sound goes into the deck's channel where a track's would, so EQ, filter, fader, crossfader, effects and headphone cue work as on any deck, and `[ChannelN],play` starts and stops it. **Clock.** The groove keeps its own beat count and follows, in order: the leading deck while it plays, Ableton Link's session while Link is on, or its own tempo (`[GrooveN],bpm`). It never copies the leader's position; it bends its speed toward the leader's beat a little each buffer, as sync does, and when it is more than a quarter of a beat off (a hot cue or beat jump on the leader) it jumps to the leader's beat at its next bar line, never mid-bar. Started while a leader plays, it waits for the leader's next downbeat. **Steps.** Step k (of 16 to a bar) falls on beat k/4, every second one late by `swing`. Each buffer covers beats `[b0, b0 + frames × step)`; every step inside it starts its sounds on the frame it falls on, so the timing is exact to the sample whatever the buffer size. **Patterns.** Four grooves
+//! while `chain` is on the two take turns, a bar each. `groove_playing` is the one sounding now. Each row has `rowR_mute`, `rowR_solo`, `rowR_level` (0-1.5), `rowR_pitch` (−12 to +12 semitones) and `rowR_decay` (0-1, 1 = the sound's own length), `rowR_tone` (−1 to 1: left a low-pass, right a high-pass, centre off) and `rowR_pan` (−1 left to 1 right), and `rowR_sound` picks which of the kit's sounds the row plays; `rowR_preview` plays it once, now, and `rowR_meter` (0-1) shows how loud the row sounds, for the screen. `[GrooveN],kit` picks the kit. `[GrooveN],position` is the step playing (0-15), −1 when stopped. **Fills.** `auto_fill` (1 or 2) plays a fill at the end of every 4th, 8th and 16th bar (or 2nd, 4th, 8th), `fill` held plays one now, and `remix` (a strip, 0 off) plays one of 16 figures while held; see [`crate::groove_fills`]. `fill_playing` shows when one sounds. **Duck.** With `[GrooveN],duck_deck` set to another deck (1-4), that deck dips by `duck_amount` (dB) on each step of row 1 and recovers over about a step. Kits are synthesised when the engine starts (see [`crate::kits`]); every buffer only reads them, and nothing allocates or frees here.
+//! while `chain` is on the two take turns, a bar each. `groove_playing` is the one sounding now. Each row has `rowR_mute`, `rowR_solo`, `rowR_level` (0-1.5), `rowR_pitch` (−12 to +12 semitones) and `rowR_decay` (0-1, 1 = the sound's own length), `rowR_tone` (−1 to 1: left a low-pass, right a high-pass, centre off) and `rowR_pan` (−1 left to 1 right), and `rowR_sound` picks which of the kit's sounds the row plays; `rowR_preview` plays it once, now, and `rowR_meter` (0-1) shows how loud the row sounds, for the screen. `[GrooveN],kit` picks the kit. `[GrooveN],position` is the step playing (0-15), −1 when stopped. **Fills.** `auto_fill` (1 or 2) plays a fill at the end of every 4th, 8th and 16th bar (or 2nd, 4th, 8th), `fill` held plays one now, and `remix` (a strip, 0 off) plays one of 16 figures while held; see [`crate::groove_fills`]. `fill_playing` shows when one sounds. **Duck.** With `[GrooveN],duck_deck` set to another deck (1-4), that deck dips by `duck_amount` (dB) on each step of row 1 and recovers over about a step. Kits are synthesised when the engine starts (see [`crate::kits`]); every buffer only reads them, and nothing allocates or frees
 
 use std::sync::Arc;
 
@@ -190,14 +132,7 @@ impl GrooveControls {
             load_chain: reg.push(g, "load_chain"),
             bpm: reg.create(g, "bpm", DEFAULT_BPM, 40.0, 220.0, Behavior::Linear),
             swing: reg.create(g, "swing", 0.0, 0.0, 0.75, Behavior::Linear),
-            position: reg.create(
-                g,
-                "position",
-                -1.0,
-                -1.0,
-                (STEPS - 1) as f64,
-                Behavior::Indicator,
-            ),
+            position: reg.create(g, "position", -1.0, -1.0, (STEPS - 1) as f64, Behavior::Indicator),
             beat: reg.create(g, "beat", 0.0, f64::MIN, f64::MAX, Behavior::Indicator),
             following: reg.indicator(g, "following", 1.0),
             follow: reg.create(g, "follow", 1.0, 0.0, 1.0, Behavior::Free),
@@ -213,51 +148,21 @@ impl GrooveControls {
             duck_deck: reg.create(g, "duck_deck", 0.0, 0.0, NUM_DECKS as f64, Behavior::Free),
             duck_amount: reg.create(g, "duck_amount", 6.0, 0.0, 24.0, Behavior::Linear),
             patterns: std::array::from_fn(|p| {
-                rows(&|r| {
-                    reg.create(
-                        g,
-                        &format!("pattern{}_row{}", p + 1, r + 1),
-                        0.0,
-                        0.0,
-                        65535.0,
-                        Behavior::Free,
-                    )
-                })
+                rows(&|r| reg.create(g, &format!("pattern{}_row{}", p + 1, r + 1), 0.0, 0.0, 65535.0, Behavior::Free))
             }),
             soft: std::array::from_fn(|p| {
                 rows(&|r| {
-                    reg.create(
-                        g,
-                        &format!("pattern{}_row{}_soft", p + 1, r + 1),
-                        0.0,
-                        0.0,
-                        65535.0,
-                        Behavior::Free,
-                    )
+                    reg.create(g, &format!("pattern{}_row{}_soft", p + 1, r + 1), 0.0, 0.0, 65535.0, Behavior::Free)
                 })
             }),
             accent: std::array::from_fn(|p| {
                 rows(&|r| {
-                    reg.create(
-                        g,
-                        &format!("pattern{}_row{}_accent", p + 1, r + 1),
-                        0.0,
-                        0.0,
-                        65535.0,
-                        Behavior::Free,
-                    )
+                    reg.create(g, &format!("pattern{}_row{}_accent", p + 1, r + 1), 0.0, 0.0, 65535.0, Behavior::Free)
                 })
             }),
             maybe: std::array::from_fn(|p| {
                 rows(&|r| {
-                    reg.create(
-                        g,
-                        &format!("pattern{}_row{}_maybe", p + 1, r + 1),
-                        0.0,
-                        0.0,
-                        65535.0,
-                        Behavior::Free,
-                    )
+                    reg.create(g, &format!("pattern{}_row{}_maybe", p + 1, r + 1), 0.0, 0.0, 65535.0, Behavior::Free)
                 })
             }),
             vary: reg.create(g, "vary", 0.0, 0.0, 1.0, Behavior::Linear),
@@ -267,66 +172,12 @@ impl GrooveControls {
             fill_playing: reg.indicator(g, "fill_playing", 1.0),
             mute: rows(&|r| reg.toggle(g, &format!("row{}_mute", r + 1))),
             solo: rows(&|r| reg.toggle(g, &format!("row{}_solo", r + 1))),
-            level: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_level", r + 1),
-                    1.0,
-                    0.0,
-                    1.5,
-                    Behavior::Linear,
-                )
-            }),
-            pitch: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_pitch", r + 1),
-                    0.0,
-                    -12.0,
-                    12.0,
-                    Behavior::Linear,
-                )
-            }),
-            decay: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_decay", r + 1),
-                    1.0,
-                    0.0,
-                    1.0,
-                    Behavior::Linear,
-                )
-            }),
-            tone: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_tone", r + 1),
-                    0.0,
-                    -1.0,
-                    1.0,
-                    Behavior::Linear,
-                )
-            }),
-            pan: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_pan", r + 1),
-                    0.0,
-                    -1.0,
-                    1.0,
-                    Behavior::Linear,
-                )
-            }),
-            meter: rows(&|r| {
-                reg.create(
-                    g,
-                    &format!("row{}_meter", r + 1),
-                    0.0,
-                    0.0,
-                    1.0,
-                    Behavior::Indicator,
-                )
-            }),
+            level: rows(&|r| reg.create(g, &format!("row{}_level", r + 1), 1.0, 0.0, 1.5, Behavior::Linear)),
+            pitch: rows(&|r| reg.create(g, &format!("row{}_pitch", r + 1), 0.0, -12.0, 12.0, Behavior::Linear)),
+            decay: rows(&|r| reg.create(g, &format!("row{}_decay", r + 1), 1.0, 0.0, 1.0, Behavior::Linear)),
+            tone: rows(&|r| reg.create(g, &format!("row{}_tone", r + 1), 0.0, -1.0, 1.0, Behavior::Linear)),
+            pan: rows(&|r| reg.create(g, &format!("row{}_pan", r + 1), 0.0, -1.0, 1.0, Behavior::Linear)),
+            meter: rows(&|r| reg.create(g, &format!("row{}_meter", r + 1), 0.0, 0.0, 1.0, Behavior::Indicator)),
             sound: rows(&|r| {
                 reg.create(
                     g,
@@ -346,10 +197,7 @@ impl GrooveControls {
 
     /// Puts groove `index` (1-based) of genre `genre` into groove `slot`.
     pub fn load_groove(&self, slot: usize, genre: usize, index: usize) {
-        let Some(p) = index
-            .checked_sub(1)
-            .and_then(|i| patterns::groove(genre, i))
-        else {
+        let Some(p) = index.checked_sub(1).and_then(|i| patterns::groove(genre, i)) else {
             return;
         };
         let slot = slot.min(GROOVES - 1);
@@ -454,11 +302,9 @@ impl Clock {
         self.pending = None;
     }
 
-    /// Advances over a buffer of `frames` at `rate`; returns the beat at its
-    /// first frame and the beats per frame. A jump waiting for the bar line
-    /// is taken here when the bar line falls in this buffer: the returned
-    /// span then starts on the bar line (`b0` is moved so the bar's steps
-    /// land on the same frames).
+    /// Advances over a buffer of `frames` at `rate`; returns the beat at its first frame and the beats per
+    /// frame. A jump waiting for the bar line is taken here when the bar line falls in this buffer: the
+    /// returned span then starts on the bar line (`b0` is moved so the bar's steps land on the same frames).
     pub fn advance(&mut self, frames: usize, rate: f64, source: Source) -> Span {
         let base = source.bpm.max(1.0) / 60.0 / rate;
         let mut per_frame = base;
@@ -479,11 +325,7 @@ impl Clock {
         }
         let b0 = self.beat;
         let b1 = b0 + per_frame * frames as f64;
-        let mut span = Span {
-            beat: b0,
-            per_frame,
-            jump: None,
-        };
+        let mut span = Span { beat: b0, per_frame, jump: None };
         if let Some(off) = self.pending {
             let bar = (b0 / 4.0).floor() * 4.0 + 4.0;
             if bar < b1 {
@@ -722,14 +564,7 @@ impl GrooveBox {
                 continue;
             }
             let mut t = was;
-            groove_dice::apply(
-                mv,
-                &mut t,
-                self.c.role(r),
-                genre,
-                &self.dice.habits,
-                &mut self.dice.rng,
-            );
+            groove_dice::apply(mv, &mut t, self.c.role(r), genre, &self.dice.habits, &mut self.dice.rng);
             self.c.set_track(slot, r, t);
         }
         self.c.can_undo.set(1.0);
@@ -775,26 +610,18 @@ impl GrooveBox {
     /// Renders one buffer into `out` (cleared first). `play` is the deck's
     /// play button and `source` where the beat comes from; `kick` hears
     /// the frame of every row 1 hit, for ducking.
-    pub fn render(
-        &mut self,
-        play: bool,
-        source: Source,
-        out: &mut [[f32; 2]],
-        mut kick: impl FnMut(usize),
-    ) {
+    pub fn render(&mut self, play: bool, source: Source, out: &mut [[f32; 2]], mut kick: impl FnMut(usize)) {
         out.iter_mut().for_each(|s| *s = [0.0; 2]);
         let frames = out.len();
         let genre = self.c.genre.get().round() as usize;
         let (chosen, partner) = self.c.slots();
         if self.c.load.get_bool() {
             self.c.load.set(0.0);
-            self.c
-                .load_groove(chosen, genre, self.c.pattern.get().round() as usize);
+            self.c.load_groove(chosen, genre, self.c.pattern.get().round() as usize);
         }
         if self.c.load_chain.get_bool() {
             self.c.load_chain.set(0.0);
-            self.c
-                .load_groove(partner, genre, self.c.chain.get().round() as usize);
+            self.c.load_groove(partner, genre, self.c.chain.get().round() as usize);
         }
         let chained = self.c.chain.get() >= 0.5;
         if play && !self.was_running {
@@ -812,9 +639,7 @@ impl GrooveBox {
         }
         let in_turn = self.playing == chosen || (chained && self.playing == partner);
         self.queued = (!in_turn).then_some(chosen);
-        self.c
-            .groove_queued
-            .set(self.queued.unwrap_or(self.playing) as f64);
+        self.c.groove_queued.set(self.queued.unwrap_or(self.playing) as f64);
         self.last_bpm = source.bpm;
         let mut n = self.take_pads(chosen);
         self.take_dice(chosen);
@@ -925,18 +750,9 @@ impl GrooveBox {
                     if velocity <= 0.0 {
                         continue;
                     }
-                    let audible = if any_solo {
-                        c.solo[row].get_bool()
-                    } else {
-                        !c.mute[row].get_bool()
-                    };
+                    let audible = if any_solo { c.solo[row].get_bool() } else { !c.mute[row].get_bool() };
                     if audible && n < MAX_HITS {
-                        hits[n] = Hit {
-                            frame,
-                            row,
-                            velocity,
-                            fill: fill.is_some() || remix > 0,
-                        };
+                        hits[n] = Hit { frame, row, velocity, fill: fill.is_some() || remix > 0 };
                         n += 1;
                     }
                 }
@@ -948,11 +764,7 @@ impl GrooveBox {
             // The step under the playhead, for the screen and LEDs.
             let now = span.beat_at(frames / 2);
             let step = ((now * 4.0).floor() as i64).rem_euclid(STEPS as i64);
-            self.c.position.set(if self.clock.plays(now) {
-                step as f64
-            } else {
-                last_step.map_or(-1.0, |s| s as f64)
-            });
+            self.c.position.set(if self.clock.plays(now) { step as f64 } else { last_step.map_or(-1.0, |s| s as f64) });
         } else {
             self.c.position.set(-1.0);
             self.c.fill_playing.set(0.0);
@@ -975,21 +787,11 @@ impl GrooveBox {
         }
         for (f, frame) in out.iter_mut().enumerate() {
             while next_hit < n && self.hits[next_hit].frame == f {
-                let Hit {
-                    row,
-                    velocity,
-                    fill,
-                    ..
-                } = self.hits[next_hit];
+                let Hit { row, velocity, fill, .. } = self.hits[next_hit];
                 next_hit += 1;
                 if let (Some(tx), Some(span)) = (self.hit_tx.as_mut(), span_now) {
                     // A full queue means the app isn't reading: dropped.
-                    let _ = tx.push(GrooveHit {
-                        beat: span.beat_at(f),
-                        row: row as u8,
-                        velocity,
-                        fill,
-                    });
+                    let _ = tx.push(GrooveHit { beat: span.beat_at(f), row: row as u8, velocity, fill });
                 }
                 if row == 0 {
                     kick(f);
@@ -1048,12 +850,8 @@ impl GrooveBox {
                 mode::PLAY => {
                     let row = groove_pads::play_row(k);
                     if n < MAX_HITS {
-                        self.hits[n] = Hit {
-                            frame: 0,
-                            row,
-                            velocity: 0.25 + 0.75 * p.velocity.clamp(0.0, 1.0),
-                            fill: false,
-                        };
+                        self.hits[n] =
+                            Hit { frame: 0, row, velocity: 0.25 + 0.75 * p.velocity.clamp(0.0, 1.0), fill: false };
                         n += 1;
                     }
                     if self.pads.c.record.get_bool() && self.clock.running {
@@ -1086,12 +884,7 @@ impl GrooveBox {
                     cell.set(bits as f64);
                     // Stopped, a new hit is heard, as a click on the screen.
                     if !self.clock.running && bits & (1 << k) != 0 && n < MAX_HITS {
-                        self.hits[n] = Hit {
-                            frame: 0,
-                            row,
-                            velocity: 1.0,
-                            fill: false,
-                        };
+                        self.hits[n] = Hit { frame: 0, row, velocity: 1.0, fill: false };
                         n += 1;
                     }
                 }
@@ -1103,17 +896,14 @@ impl GrooveBox {
     /// How many grooves the genre picked has (up to the 8 pads for them).
     fn genre_size(&self) -> usize {
         let genre = self.c.genre.get().round().max(0.0) as usize;
-        patterns::library()
-            .get(genre)
-            .map_or(0, |g| g.grooves.len().min(8))
+        patterns::library().get(genre).map_or(0, |g| g.grooves.len().min(8))
     }
 
     /// Lights the pads for what they do now.
     fn show_pads(&self, chosen: usize) {
         let row = self.pads.row();
         let position = self.c.position.get();
-        let playhead = (self.clock.running && self.playing == chosen && position >= 0.0)
-            .then_some(position as usize);
+        let playhead = (self.clock.running && self.playing == chosen && position >= 0.0).then_some(position as usize);
         let kit = (self.c.kit.get().round() as usize).min(self.kits.len().saturating_sub(1));
         let colors = groove_pads::colors(&groove_pads::View {
             mode: self.pads.mode(),
@@ -1154,14 +944,8 @@ impl GrooveBox {
         }
         let mut semitones = self.c.pitch[row].get();
         if row == 0 {
-            let shift = kick_shift(
-                kit.sounds[sound].pitch,
-                self.key,
-                self.c.kick_key.get().round() as u8,
-            );
-            self.c
-                .kick_note
-                .set(shift.map_or(0.0, |(_, note)| note as f64 + 1.0));
+            let shift = kick_shift(kit.sounds[sound].pitch, self.key, self.c.kick_key.get().round() as u8);
+            self.c.kick_note.set(shift.map_or(0.0, |(_, note)| note as f64 + 1.0));
             semitones += shift.map_or(0.0, |(s, _)| s as f64);
         }
         let level = self.c.level[row].get() as f32;
@@ -1187,10 +971,9 @@ impl GrooveBox {
     }
 }
 
-/// How far to tune a kick that rings at `hz` so it plays the root
-/// (`choice` 1) or fifth (2) of the key whose tonic is `key`: the nearest
-/// such note, never more than half an octave away, as (semitones, note
-/// 0-11 from C). None when off, keyless or the kick has no clear pitch.
+/// How far to tune a kick that rings at `hz` so it plays the root (`choice` 1) or fifth (2) of
+/// the key whose tonic is `key`: the nearest such note, never more than half an octave away,
+/// as (semitones, note 0-11 from C). None when off, keyless or the kick has no clear pitch.
 pub fn kick_shift(hz: f32, key: Option<u8>, choice: u8) -> Option<(i32, u8)> {
     let key = key?;
     if hz <= 0.0 || !(1..=2).contains(&choice) {
@@ -1212,11 +995,7 @@ fn tone_filter(tone: f64, rate: f64) -> (f32, bool) {
     if t.abs() < 0.02 {
         return (0.0, false);
     }
-    let cutoff = if t < 0.0 {
-        20_000.0 * (0.01f64).powf(-t)
-    } else {
-        20.0 * 200f64.powf(t)
-    };
+    let cutoff = if t < 0.0 { 20_000.0 * (0.01f64).powf(-t) } else { 20.0 * 200f64.powf(t) };
     let a = 1.0 - (-std::f64::consts::TAU * cutoff.min(rate * 0.45) / rate).exp();
     (a as f32, t > 0.0)
 }
@@ -1225,14 +1004,8 @@ fn tone_filter(tone: f64, rate: f64) -> (f32, bool) {
 /// else Link's, else the groove's own tempo.
 pub fn pick_source(leader: Option<(f64, f64)>, link: Option<(f64, f64)>, own_bpm: f64) -> Source {
     match leader.or(link) {
-        Some((bpm, beat)) if bpm > 0.0 => Source {
-            bpm,
-            beat: Some(beat),
-        },
-        _ => Source {
-            bpm: own_bpm,
-            beat: None,
-        },
+        Some((bpm, beat)) if bpm > 0.0 => Source { bpm, beat: Some(beat) },
+        _ => Source { bpm: own_bpm, beat: None },
     }
 }
 
@@ -1248,12 +1021,7 @@ mod tests {
 
     /// The frames (counted from the start) on which each step starts, over
     /// `total` frames rendered in buffers of `buffer`.
-    fn step_frames(
-        buffer: usize,
-        total: usize,
-        swing: f64,
-        source: impl Fn(f64) -> Source,
-    ) -> Vec<(usize, usize)> {
+    fn step_frames(buffer: usize, total: usize, swing: f64, source: impl Fn(f64) -> Source) -> Vec<(usize, usize)> {
         let mut clock = Clock::default();
         clock.start(source(0.0));
         let mut out = Vec::new();
@@ -1299,10 +1067,7 @@ mod tests {
     fn follows_the_leader_and_starts_on_its_next_downbeat() {
         // The leader plays at 124 BPM and is on beat 2.5 when PLAY is pressed.
         let bpm = 124.0;
-        let leader = |frame: f64| Source {
-            bpm,
-            beat: Some(2.5 + frame * bpm / 60.0 / RATE),
-        };
+        let leader = |frame: f64| Source { bpm, beat: Some(2.5 + frame * bpm / 60.0 / RATE) };
         let s = step_frames(256, 96_000, 0.0, leader);
         // The first step heard is step 0, on the leader's beat 4.
         assert_eq!(s[0].1, 0);
@@ -1323,10 +1088,7 @@ mod tests {
         let bpm_at = |t: f64| 120.0 + 10.0 * t / 4.0;
         let leader = |frame: f64| {
             let t = frame / RATE;
-            Source {
-                bpm: bpm_at(t),
-                beat: Some(beat_at(t)),
-            }
+            Source { bpm: bpm_at(t), beat: Some(beat_at(t)) }
         };
         let s = step_frames(512, 4 * 48_000, 0.0, leader);
         assert!(s.len() > 30, "{}", s.len());
@@ -1344,10 +1106,7 @@ mod tests {
         // back by a beat and a half (a hot cue).
         let leader = |frame: f64| {
             let beat = frame * 2.0 / RATE;
-            Source {
-                bpm: 120.0,
-                beat: Some(if frame >= 24_000.0 { beat - 1.5 } else { beat }),
-            }
+            Source { bpm: 120.0, beat: Some(if frame >= 24_000.0 { beat - 1.5 } else { beat }) }
         };
         let s = step_frames(480, 144_000, 0.0, leader);
         // Through the first bar the steps run on: 0..15 every 6000 frames.
@@ -1393,10 +1152,7 @@ mod tests {
         let mut kicks = Vec::new();
         g.render(true, own(120.0), &mut out, |f| kicks.push(f));
         assert_eq!(kicks, vec![0]);
-        assert!(
-            out[..200].iter().any(|s| s[0].abs() > 0.05),
-            "the kick sounds"
-        );
+        assert!(out[..200].iter().any(|s| s[0].abs() > 0.05), "the kick sounds");
         // Muted, the next beat is silent once the first kick has died away.
         g.c.mute[0].set_bool(true);
         let mut out = vec![[0.0; 2]; 6000 * 4 * 12];
@@ -1441,10 +1197,7 @@ mod tests {
         g.c.pan[1].set(-1.0);
         let out = one_hit(&mut g, 1);
         assert!(energy(&out, 0) > 1e-3);
-        assert!(
-            energy(&out, 1) < energy(&out, 0) * 1e-6,
-            "right side silent"
-        );
+        assert!(energy(&out, 1) < energy(&out, 0) * 1e-6, "right side silent");
     }
 
     #[test]
@@ -1544,17 +1297,10 @@ mod tests {
         let a = count_hits(&mut plain, 17);
         let b = count_hits(&mut filled, 17);
         assert_eq!(a[0], b[0], "bar 1 as written");
-        assert_eq!(
-            a[3][..12],
-            b[3][..12],
-            "bar 4 as written until its last beat"
-        );
+        assert_eq!(a[3][..12], b[3][..12], "bar 4 as written until its last beat");
         assert_ne!(a[3][12..], b[3][12..], "then a fill");
         assert_ne!(a[15][..8], b[15][..8], "bar 16 is all fill");
-        assert!(
-            b[16][0][7] > 0 && a[16][0][7] == 0,
-            "a crash on the next downbeat"
-        );
+        assert!(b[16][0][7] > 0 && a[16][0][7] == 0, "a crash on the next downbeat");
     }
 
     #[test]
@@ -1563,10 +1309,7 @@ mod tests {
         let plain = count_hits(&mut g, 1);
         g.c.remix.set(1.0);
         let rolled = count_hits(&mut g, 1);
-        assert!(
-            rolled[0].iter().all(|s| s[0] > 0),
-            "16th kicks at the top figure"
-        );
+        assert!(rolled[0].iter().all(|s| s[0] > 0), "16th kicks at the top figure");
         assert_eq!(g.c.fill_playing.get(), 1.0);
         g.c.remix.set(0.0);
         assert_eq!(count_hits(&mut g, 1), plain);
@@ -1582,10 +1325,7 @@ mod tests {
         g.render(false, own(120.0), &mut out, |_| {});
         let after = g.c.tracks(0);
         assert_eq!(after[0], before[0], "the locked kick");
-        assert!(
-            after[2].hits.count_ones() < before[2].hits.count_ones(),
-            "calmer hats"
-        );
+        assert!(after[2].hits.count_ones() < before[2].hits.count_ones(), "calmer hats");
         g.c.dice_row.set(1.0);
         g.c.dice.set(3.0);
         g.render(false, own(120.0), &mut out, |_| {});
@@ -1753,11 +1493,7 @@ mod tests {
     fn no_library_groove_needs_more_than_eight_tracks() {
         for genre in patterns::library() {
             for p in &genre.grooves {
-                assert!(
-                    p.rows[CRASH].hits == 0 || p.rows[RIDE].hits == 0,
-                    "{} has both a crash and a ride",
-                    p.name
-                );
+                assert!(p.rows[CRASH].hits == 0 || p.rows[RIDE].hits == 0, "{} has both a crash and a ride", p.name);
             }
         }
     }

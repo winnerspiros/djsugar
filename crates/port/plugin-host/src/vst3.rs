@@ -1,12 +1,6 @@
-//! VST3 effects inside the helper, through the `vst3` crate's bindings.
-//!
-//! The component and its edit controller stay on the helper's main thread;
-//! the audio processor runs on the helper's audio thread. Parameters are
-//! VST3's normalized values (0 to 1); changes go to the processor as
-//! parameter queues, and the deck's tempo and beat go in the process context.
-//!
-//! [`scan_moduleinfo`] reads a bundle's `moduleinfo.json` without loading any
-//! plugin code; [`scan`] loads the module (in a throwaway helper).
+//! VST3 effects inside the helper, through the `vst3` crate's bindings. The component and its edit controller stay on the helper's main thread; the audio processor runs
+//! on the helper's audio thread. Parameters are VST3's normalized values (0 to 1); changes go to the processor as parameter queues, and the deck's tempo and beat go in
+//! the process context. [`scan_moduleinfo`] reads a bundle's `moduleinfo.json` without loading any plugin code; [`scan`] loads the module (in a throwaway helper).
 
 #![allow(non_upper_case_globals)]
 // The bindings' constant types differ between platforms (u32 here, i32 on
@@ -23,24 +17,22 @@ use std::sync::{Arc, Mutex};
 use vst3::ComRef;
 use vst3::Steinberg::Vst::ViewType;
 use vst3::Steinberg::Vst::{
-    AudioBusBuffers, AudioBusBuffers__type0, BusDirections_, Event, Event_::EventTypes_,
-    Event__type0, IAudioProcessor, IAudioProcessorTrait, IComponent, IComponentHandler,
-    IComponentHandlerTrait, IComponentTrait, IConnectionPoint, IConnectionPointTrait,
-    IEditController, IEditControllerTrait, IEventList, IEventListTrait, IHostApplication,
-    IHostApplicationTrait, IParamValueQueue, IParamValueQueueTrait, IParameterChanges,
-    IParameterChangesTrait, MediaTypes_, NoteOffEvent, NoteOnEvent, ParamID, ParamValue,
-    ParameterInfo, ParameterInfo_::ParameterFlags_, ProcessContext,
-    ProcessContext_::StatesAndFlags_, ProcessData, ProcessModes_, ProcessSetup, SpeakerArr,
+    AudioBusBuffers, AudioBusBuffers__type0, BusDirections_, Event, Event_::EventTypes_, Event__type0, IAudioProcessor,
+    IAudioProcessorTrait, IComponent, IComponentHandler, IComponentHandlerTrait, IComponentTrait, IConnectionPoint,
+    IConnectionPointTrait, IEditController, IEditControllerTrait, IEventList, IEventListTrait, IHostApplication,
+    IHostApplicationTrait, IParamValueQueue, IParamValueQueueTrait, IParameterChanges, IParameterChangesTrait,
+    MediaTypes_, NoteOffEvent, NoteOnEvent, ParamID, ParamValue, ParameterInfo, ParameterInfo_::ParameterFlags_,
+    ProcessContext, ProcessContext_::StatesAndFlags_, ProcessData, ProcessModes_, ProcessSetup, SpeakerArr,
     SpeakerArrangement, String128, SymbolicSampleSizes_,
 };
 use vst3::Steinberg::{
-    kInvalidArgument, kResultFalse, kResultOk, kResultTrue, tresult, FUnknown, IBStream,
-    IBStreamTrait, IBStream_::IStreamSeekMode_, IPluginBaseTrait, IPluginFactory, IPluginFactory2,
-    IPluginFactory2Trait, IPluginFactoryTrait, PClassInfo, PClassInfo2, TUID,
+    kInvalidArgument, kResultFalse, kResultOk, kResultTrue, tresult, FUnknown, IBStream, IBStreamTrait,
+    IBStream_::IStreamSeekMode_, IPluginBaseTrait, IPluginFactory, IPluginFactory2, IPluginFactory2Trait,
+    IPluginFactoryTrait, PClassInfo, PClassInfo2, TUID,
 };
 use vst3::Steinberg::{
-    kPlatformTypeHWND, kPlatformTypeNSView, kPlatformTypeX11EmbedWindowID, IPlugFrame,
-    IPlugFrameTrait, IPlugView, IPlugViewTrait, ViewRect,
+    kPlatformTypeHWND, kPlatformTypeNSView, kPlatformTypeX11EmbedWindowID, IPlugFrame, IPlugFrameTrait, IPlugView,
+    IPlugViewTrait, ViewRect,
 };
 use vst3::{Class, ComPtr, ComWrapper, Interface};
 
@@ -51,11 +43,7 @@ use crate::presets::{pack_states, unpack_states};
 use crate::shm::{Midi, CHANNELS, MAX_EVENTS, MAX_PARAMS};
 
 fn cstr(buf: &[c_char]) -> String {
-    let bytes: Vec<u8> = buf
-        .iter()
-        .take_while(|&&c| c != 0)
-        .map(|&c| c as u8)
-        .collect();
+    let bytes: Vec<u8> = buf.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
@@ -102,14 +90,8 @@ pub fn library_path(bundle: &Path) -> PathBuf {
     if cfg!(target_os = "macos") {
         contents.join("MacOS").join(stem)
     } else if cfg!(windows) {
-        let arch = if cfg!(target_arch = "aarch64") {
-            "arm64-win"
-        } else {
-            "x86_64-win"
-        };
-        contents
-            .join(arch)
-            .join(bundle.file_name().unwrap_or_default())
+        let arch = if cfg!(target_arch = "aarch64") { "arm64-win" } else { "x86_64-win" };
+        contents.join(arch).join(bundle.file_name().unwrap_or_default())
     } else {
         let arch = format!("{}-linux", std::env::consts::ARCH);
         let mut name = stem.to_os_string();
@@ -157,9 +139,7 @@ fn load_module(bundle: &Path) -> Result<Module, String> {
     // SAFETY: the entry points have the signatures the VST3 SDK defines.
     unsafe {
         #[cfg(target_os = "linux")]
-        if let Ok(entry) =
-            lib.get::<unsafe extern "system" fn(*mut c_void) -> bool>(b"ModuleEntry\0")
-        {
+        if let Ok(entry) = lib.get::<unsafe extern "system" fn(*mut c_void) -> bool>(b"ModuleEntry\0") {
             // The library's handle; plugins use it to find their bundle.
             if !entry(handle) {
                 return Err("the plugin's ModuleEntry failed".into());
@@ -172,17 +152,10 @@ fn load_module(bundle: &Path) -> Result<Module, String> {
             }
         }
         #[cfg(target_os = "macos")]
-        if let Ok(entry) =
-            lib.get::<unsafe extern "system" fn(*mut c_void) -> bool>(b"bundleEntry\0")
-        {
+        if let Ok(entry) = lib.get::<unsafe extern "system" fn(*mut c_void) -> bool>(b"bundleEntry\0") {
             use std::os::unix::ffi::OsStrExt;
             let p = bundle.as_os_str().as_bytes();
-            let url = cf::CFURLCreateFromFileSystemRepresentation(
-                ptr::null(),
-                p.as_ptr(),
-                p.len() as isize,
-                1,
-            );
+            let url = cf::CFURLCreateFromFileSystemRepresentation(ptr::null(), p.as_ptr(), p.len() as isize, 1);
             let b = cf::CFBundleCreate(ptr::null(), url);
             if !entry(b) {
                 return Err("the plugin's bundleEntry failed".into());
@@ -208,9 +181,7 @@ pub fn scan(bundle: &Path) -> Result<Vec<Descriptor>, String> {
         for i in 0..f.countClasses() {
             if let Some(f2) = &f2 {
                 let mut info: PClassInfo2 = std::mem::zeroed();
-                if f2.getClassInfo2(i, &mut info) == kResultOk
-                    && cstr(&info.category) == AUDIO_MODULE
-                {
+                if f2.getClassInfo2(i, &mut info) == kResultOk && cstr(&info.category) == AUDIO_MODULE {
                     found.push(Descriptor {
                         id: cid_to_hex(&info.cid),
                         name: cstr(&info.name),
@@ -250,12 +221,7 @@ impl IHostApplicationTrait for HostApp {
         kResultOk
     }
 
-    unsafe fn createInstance(
-        &self,
-        _cid: *mut TUID,
-        _iid: *mut TUID,
-        obj: *mut *mut c_void,
-    ) -> tresult {
+    unsafe fn createInstance(&self, _cid: *mut TUID, _iid: *mut TUID, obj: *mut *mut c_void) -> tresult {
         *obj = ptr::null_mut();
         kResultFalse
     }
@@ -413,23 +379,10 @@ impl Class for Changes {
 impl Changes {
     fn new(cap: usize) -> Self {
         let queues: Vec<ComWrapper<Queue>> = (0..cap)
-            .map(|_| {
-                ComWrapper::new(Queue {
-                    id: Cell::new(0),
-                    value: Cell::new(0.0),
-                    points: Cell::new(0),
-                })
-            })
+            .map(|_| ComWrapper::new(Queue { id: Cell::new(0), value: Cell::new(0.0), points: Cell::new(0) }))
             .collect();
-        let ptrs = queues
-            .iter()
-            .map(|q| q.as_com_ref::<IParamValueQueue>().unwrap().as_ptr())
-            .collect();
-        Self {
-            queues,
-            ptrs,
-            count: Cell::new(0),
-        }
+        let ptrs = queues.iter().map(|q| q.as_com_ref::<IParamValueQueue>().unwrap().as_ptr()).collect();
+        Self { queues, ptrs, count: Cell::new(0) }
     }
 
     fn clear(&self) {
@@ -458,11 +411,7 @@ impl IParameterChangesTrait for Changes {
             ptr::null_mut()
         }
     }
-    unsafe fn addParameterData(
-        &self,
-        id: *const ParamID,
-        index: *mut i32,
-    ) -> *mut IParamValueQueue {
+    unsafe fn addParameterData(&self, id: *const ParamID, index: *mut i32) -> *mut IParamValueQueue {
         match self.push(*id, 0.0) {
             Some(i) => {
                 self.queues[i].points.set(0);
@@ -491,9 +440,7 @@ impl Class for Events {
 
 impl Events {
     fn new() -> Self {
-        Self {
-            list: RefCell::new(Vec::with_capacity(MAX_EVENTS)),
-        }
+        Self { list: RefCell::new(Vec::with_capacity(MAX_EVENTS)) }
     }
 
     /// Notes become VST3 note events; other MIDI isn't sent (VST3 takes
@@ -599,8 +546,8 @@ mod run_loop {
     use super::*;
     use std::time::{Duration, Instant};
     use vst3::Steinberg::Linux::{
-        FileDescriptor, IEventHandler, IEventHandlerTrait, IRunLoopTrait, ITimerHandler,
-        ITimerHandlerTrait, TimerInterval,
+        FileDescriptor, IEventHandler, IEventHandlerTrait, IRunLoopTrait, ITimerHandler, ITimerHandlerTrait,
+        TimerInterval,
     };
 
     #[derive(Default)]
@@ -632,14 +579,8 @@ mod run_loop {
             if handlers.is_empty() {
                 return;
             }
-            let mut polls: Vec<libc::pollfd> = handlers
-                .iter()
-                .map(|(_, fd)| libc::pollfd {
-                    fd: *fd,
-                    events: libc::POLLIN,
-                    revents: 0,
-                })
-                .collect();
+            let mut polls: Vec<libc::pollfd> =
+                handlers.iter().map(|(_, fd)| libc::pollfd { fd: *fd, events: libc::POLLIN, revents: 0 }).collect();
             // SAFETY: a valid array of its length; no waiting.
             if unsafe { libc::poll(polls.as_mut_ptr(), polls.len() as libc::nfds_t, 0) } <= 0 {
                 return;
@@ -654,60 +595,35 @@ mod run_loop {
 
         pub fn next(&self) -> Option<Duration> {
             let now = Instant::now();
-            self.timers
-                .borrow()
-                .iter()
-                .map(|(_, _, next)| next.saturating_duration_since(now))
-                .min()
+            self.timers.borrow().iter().map(|(_, _, next)| next.saturating_duration_since(now)).min()
         }
     }
 
     impl IRunLoopTrait for super::Frame {
-        unsafe fn registerEventHandler(
-            &self,
-            handler: *mut IEventHandler,
-            fd: FileDescriptor,
-        ) -> tresult {
+        unsafe fn registerEventHandler(&self, handler: *mut IEventHandler, fd: FileDescriptor) -> tresult {
             let Some(h) = ComRef::from_raw(handler) else {
                 return kInvalidArgument;
             };
-            self.run_loop
-                .handlers
-                .borrow_mut()
-                .push((h.to_com_ptr(), fd));
+            self.run_loop.handlers.borrow_mut().push((h.to_com_ptr(), fd));
             kResultOk
         }
 
         unsafe fn unregisterEventHandler(&self, handler: *mut IEventHandler) -> tresult {
-            self.run_loop
-                .handlers
-                .borrow_mut()
-                .retain(|(h, _)| h.as_ptr() != handler);
+            self.run_loop.handlers.borrow_mut().retain(|(h, _)| h.as_ptr() != handler);
             kResultOk
         }
 
-        unsafe fn registerTimer(
-            &self,
-            handler: *mut ITimerHandler,
-            milliseconds: TimerInterval,
-        ) -> tresult {
+        unsafe fn registerTimer(&self, handler: *mut ITimerHandler, milliseconds: TimerInterval) -> tresult {
             let Some(h) = ComRef::from_raw(handler) else {
                 return kInvalidArgument;
             };
             let period = Duration::from_millis(milliseconds.max(10));
-            self.run_loop.timers.borrow_mut().push((
-                h.to_com_ptr(),
-                period,
-                Instant::now() + period,
-            ));
+            self.run_loop.timers.borrow_mut().push((h.to_com_ptr(), period, Instant::now() + period));
             kResultOk
         }
 
         unsafe fn unregisterTimer(&self, handler: *mut ITimerHandler) -> tresult {
-            self.run_loop
-                .timers
-                .borrow_mut()
-                .retain(|(h, _, _)| h.as_ptr() != handler);
+            self.run_loop.timers.borrow_mut().retain(|(h, _, _)| h.as_ptr() != handler);
             kResultOk
         }
     }
@@ -733,10 +649,7 @@ struct Vst3Main {
 
 impl Vst3Main {
     fn stream(data: Vec<u8>) -> ComWrapper<Stream> {
-        ComWrapper::new(Stream {
-            data: RefCell::new(data),
-            pos: Cell::new(0),
-        })
+        ComWrapper::new(Stream { data: RefCell::new(data), pos: Cell::new(0) })
     }
 }
 
@@ -822,10 +735,7 @@ impl MainThread for Vst3Main {
     }
 
     fn open_editor(&mut self, parent: ParentWindow, _scale: f64) -> Result<EditorSize, String> {
-        let controller = self
-            .controller
-            .as_ref()
-            .ok_or("it has no window of its own")?;
+        let controller = self.controller.as_ref().ok_or("it has no window of its own")?;
         let (ptr, kind) = match parent {
             ParentWindow::Cocoa(view) => (view, kPlatformTypeNSView),
             ParentWindow::Win32(hwnd) => (hwnd, kPlatformTypeHWND),
@@ -834,16 +744,12 @@ impl MainThread for Vst3Main {
         // SAFETY: plain calls into the controller and its view, on the main
         // thread; the parent window outlives the view (see close_editor).
         unsafe {
-            let view = ComPtr::from_raw(controller.createView(ViewType::kEditor))
-                .ok_or("it has no window of its own")?;
+            let view =
+                ComPtr::from_raw(controller.createView(ViewType::kEditor)).ok_or("it has no window of its own")?;
             if view.isPlatformTypeSupported(kind) != kResultTrue {
                 return Err("its window can't be shown inside DJ Sugar's".into());
             }
-            let frame = self
-                .frame
-                .as_com_ref::<IPlugFrame>()
-                .ok_or("no frame")?
-                .as_ptr();
+            let frame = self.frame.as_com_ref::<IPlugFrame>().ok_or("no frame")?.as_ptr();
             view.setFrame(frame);
             if !ok(view.attached(ptr, kind)) {
                 view.setFrame(ptr::null_mut());
@@ -851,15 +757,9 @@ impl MainThread for Vst3Main {
             }
             let mut r: ViewRect = std::mem::zeroed();
             let size = if ok(view.getSize(&mut r)) && r.right > r.left && r.bottom > r.top {
-                EditorSize {
-                    width: (r.right - r.left) as u32,
-                    height: (r.bottom - r.top) as u32,
-                }
+                EditorSize { width: (r.right - r.left) as u32, height: (r.bottom - r.top) as u32 }
             } else {
-                EditorSize {
-                    width: 640,
-                    height: 400,
-                }
+                EditorSize { width: 640, height: 400 }
             };
             let resizable = view.canResize() == kResultTrue;
             self.view = Some((view, resizable));
@@ -903,34 +803,21 @@ impl MainThread for Vst3Main {
         };
         // SAFETY: plain calls into the open view.
         unsafe {
-            let mut r = ViewRect {
-                left: 0,
-                top: 0,
-                right: size.width as i32,
-                bottom: size.height as i32,
-            };
+            let mut r = ViewRect { left: 0, top: 0, right: size.width as i32, bottom: size.height as i32 };
             if *resizable {
                 view.checkSizeConstraint(&mut r);
                 view.onSize(&mut r);
             } else {
                 view.getSize(&mut r);
             }
-            EditorSize {
-                width: (r.right - r.left).max(1) as u32,
-                height: (r.bottom - r.top).max(1) as u32,
-            }
+            EditorSize { width: (r.right - r.left).max(1) as u32, height: (r.bottom - r.top).max(1) as u32 }
         }
     }
 
     fn take_editor_resize(&mut self) -> Option<EditorSize> {
         let size = self.frame.resize.take()?;
         if let Some((view, _)) = &self.view {
-            let mut r = ViewRect {
-                left: 0,
-                top: 0,
-                right: size.width as i32,
-                bottom: size.height as i32,
-            };
+            let mut r = ViewRect { left: 0, top: 0, right: size.width as i32, bottom: size.height as i32 };
             // SAFETY: the plugin asked for this size; it is told it has it.
             unsafe { view.onSize(&mut r) };
         }
@@ -962,28 +849,20 @@ pub fn load(
     let host = ComWrapper::new(HostApp);
     let host_ptr = host.as_com_ref::<IHostApplication>().unwrap().as_ptr() as *mut FUnknown;
     let edits: Edits = Arc::new(Mutex::new(Vec::with_capacity(EDITS)));
-    let handler = ComWrapper::new(Handler {
-        edits: edits.clone(),
-    });
+    let handler = ComWrapper::new(Handler { edits: edits.clone() });
 
     // SAFETY: calls through the plugin's COM interfaces, following the
     // order the VST3 SDK documents for hosts.
     unsafe {
         let mut obj: *mut c_void = ptr::null_mut();
-        let r = module.factory.createInstance(
-            cid.as_ptr(),
-            IComponent::IID.as_ptr() as *const c_char,
-            &mut obj,
-        );
+        let r = module.factory.createInstance(cid.as_ptr(), IComponent::IID.as_ptr() as *const c_char, &mut obj);
         let component = ComPtr::from_raw(obj as *mut IComponent)
             .filter(|_| ok(r))
             .ok_or_else(|| format!("{name} failed to start"))?;
         if !ok(component.initialize(host_ptr)) {
             return Err(format!("{name} failed to initialize"));
         }
-        let processor = component
-            .cast::<IAudioProcessor>()
-            .ok_or_else(|| format!("{name} has no audio processor"))?;
+        let processor = component.cast::<IAudioProcessor>().ok_or_else(|| format!("{name} has no audio processor"))?;
 
         // The edit controller: the component itself, or a separate class.
         let mut controller = component.cast::<IEditController>();
@@ -1007,18 +886,12 @@ pub fn load(
         }
         if let Some(c) = &controller {
             if separate {
-                if let (Some(a), Some(b)) = (
-                    component.cast::<IConnectionPoint>(),
-                    c.cast::<IConnectionPoint>(),
-                ) {
+                if let (Some(a), Some(b)) = (component.cast::<IConnectionPoint>(), c.cast::<IConnectionPoint>()) {
                     a.connect(b.as_ptr());
                     b.connect(a.as_ptr());
                 }
                 // The controller starts from the component's state.
-                let stream = ComWrapper::new(Stream {
-                    data: RefCell::new(Vec::new()),
-                    pos: Cell::new(0),
-                });
+                let stream = ComWrapper::new(Stream { data: RefCell::new(Vec::new()), pos: Cell::new(0) });
                 let s = stream.as_com_ref::<IBStream>().unwrap().as_ptr();
                 if ok(component.getState(s)) {
                     stream.pos.set(0);
@@ -1030,10 +903,7 @@ pub fn load(
 
         // Stereo in, stereo out.
         let audio = MediaTypes_::kAudio as i32;
-        let (inp, out) = (
-            BusDirections_::kInput as i32,
-            BusDirections_::kOutput as i32,
-        );
+        let (inp, out) = (BusDirections_::kInput as i32, BusDirections_::kOutput as i32);
         // An instrument has no audio input; it takes notes on an event bus.
         let has_input = component.getBusCount(audio, inp) >= 1;
         if component.getBusCount(audio, out) < 1 {
@@ -1087,9 +957,8 @@ pub fn load(
                 if !ok(c.getParameterInfo(i, &mut p)) {
                     continue;
                 }
-                let skip = ParameterFlags_::kIsReadOnly
-                    | ParameterFlags_::kIsHidden
-                    | ParameterFlags_::kIsProgramChange;
+                let skip =
+                    ParameterFlags_::kIsReadOnly | ParameterFlags_::kIsHidden | ParameterFlags_::kIsProgramChange;
                 if p.flags & skip != 0 {
                     continue;
                 }
@@ -1142,12 +1011,7 @@ pub fn load(
                 param_ids: params.iter().map(|(id, _)| *id).collect(),
                 _module: module,
             })),
-            info: Info {
-                name,
-                params: params.into_iter().map(|(_, p)| p).collect(),
-                all: listed,
-                latency,
-            },
+            info: Info { name, params: params.into_iter().map(|(_, p)| p).collect(), all: listed, latency },
         })
     }
 }
@@ -1219,16 +1083,12 @@ impl Effect for Vst3Effect {
             let mut ins = AudioBusBuffers {
                 numChannels: 2,
                 silenceFlags: 0,
-                __field0: AudioBusBuffers__type0 {
-                    channelBuffers32: in_ptrs.as_mut_ptr(),
-                },
+                __field0: AudioBusBuffers__type0 { channelBuffers32: in_ptrs.as_mut_ptr() },
             };
             let mut outs = AudioBusBuffers {
                 numChannels: 2,
                 silenceFlags: 0,
-                __field0: AudioBusBuffers__type0 {
-                    channelBuffers32: out_ptrs.as_mut_ptr(),
-                },
+                __field0: AudioBusBuffers__type0 { channelBuffers32: out_ptrs.as_mut_ptr() },
             };
             let mut ctx: ProcessContext = std::mem::zeroed();
             ctx.sampleRate = self.sample_rate;
@@ -1255,22 +1115,10 @@ impl Effect for Vst3Effect {
                 numSamples: frames as i32,
                 numInputs: i32::from(self.has_input),
                 numOutputs: 1,
-                inputs: if self.has_input {
-                    &mut ins
-                } else {
-                    ptr::null_mut()
-                },
+                inputs: if self.has_input { &mut ins } else { ptr::null_mut() },
                 outputs: &mut outs,
-                inputParameterChanges: self
-                    .changes
-                    .as_com_ref::<IParameterChanges>()
-                    .unwrap()
-                    .as_ptr(),
-                outputParameterChanges: self
-                    .out_changes
-                    .as_com_ref::<IParameterChanges>()
-                    .unwrap()
-                    .as_ptr(),
+                inputParameterChanges: self.changes.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
+                outputParameterChanges: self.out_changes.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
                 inputEvents: self.events.as_com_ref::<IEventList>().unwrap().as_ptr(),
                 outputEvents: ptr::null_mut(),
                 processContext: &mut ctx,

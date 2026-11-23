@@ -1,11 +1,6 @@
-//! Track loudness for auto gain: EBU R128 / ITU-R BS.1770 integrated
-//! loudness, measured during analysis, and the sample peak.
-//!
-//! The meter K-weights the signal (a high shelf for the head, then a high
-//! pass), takes its power in 400 ms blocks every 100 ms, and averages the
-//! blocks that pass two gates: above -70 LUFS, then above 10 LU below the
-//! average of those. Silence and quiet intros so don't pull a track's
-//! loudness down.
+//! Track loudness for auto gain: EBU R128 / ITU-R BS.1770 integrated loudness, measured during analysis, and the sample peak. The meter
+//! that pass two gates: above -70 LUFS, then above 10 LU below the average of those. Silence and quiet intros so don't pull a track's loudness down.
+//! that pass two gates: above -70 LUFS, then above 10 LU below the average of those. Silence and quiet intros so don't pull a track's loudness
 
 /// How loud a track is.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -64,11 +59,7 @@ fn k_weighting(sample_rate: f64) -> [Biquad; 2] {
         let vb = vh.powf(0.4996667741545416);
         let a0 = 1.0 + k / q + k * k;
         Biquad {
-            b: [
-                (vh + vb * k / q + k * k) / a0,
-                2.0 * (k * k - vh) / a0,
-                (vh - vb * k / q + k * k) / a0,
-            ],
+            b: [(vh + vb * k / q + k * k) / a0, 2.0 * (k * k - vh) / a0, (vh - vb * k / q + k * k) / a0],
             a: [2.0 * (k * k - 1.0) / a0, (1.0 - k / q + k * k) / a0],
             z: [[0.0; 2]; 2],
         }
@@ -77,11 +68,7 @@ fn k_weighting(sample_rate: f64) -> [Biquad; 2] {
         let (f0, q) = (38.13547087602444, 0.5003270373238773);
         let k = (PI * f0 / sample_rate).tan();
         let a0 = 1.0 + k / q + k * k;
-        Biquad {
-            b: [1.0, -2.0, 1.0],
-            a: [2.0 * (k * k - 1.0) / a0, (1.0 - k / q + k * k) / a0],
-            z: [[0.0; 2]; 2],
-        }
+        Biquad { b: [1.0, -2.0, 1.0], a: [2.0 * (k * k - 1.0) / a0, (1.0 - k / q + k * k) / a0], z: [[0.0; 2]; 2] }
     };
     [shelf, high_pass]
 }
@@ -130,15 +117,8 @@ impl LoudnessMeter {
     /// block or silent.
     pub fn finish(&self) -> Option<Loudness> {
         let block_frames = (4 * self.step) as f64;
-        let blocks: Vec<f64> = self
-            .steps
-            .windows(4)
-            .map(|w| w.iter().sum::<f64>() / block_frames)
-            .collect();
-        Some(Loudness {
-            lufs: integrated(&blocks)? as f32,
-            peak: self.peak,
-        })
+        let blocks: Vec<f64> = self.steps.windows(4).map(|w| w.iter().sum::<f64>() / block_frames).collect();
+        Some(Loudness { lufs: integrated(&blocks)? as f32, peak: self.peak })
     }
 }
 
@@ -152,26 +132,19 @@ fn lufs(power: f64) -> f64 {
 /// the average of the rest.
 fn integrated(blocks: &[f64]) -> Option<f64> {
     let mean_above = |gate: f64| {
-        let (sum, n) = blocks
-            .iter()
-            .filter(|&&p| p > 0.0 && lufs(p) > gate)
-            .fold((0.0, 0usize), |(s, n), &p| (s + p, n + 1));
+        let (sum, n) =
+            blocks.iter().filter(|&&p| p > 0.0 && lufs(p) > gate).fold((0.0, 0usize), |(s, n), &p| (s + p, n + 1));
         (n > 0).then(|| sum / n as f64)
     };
     let ungated = mean_above(-70.0)?;
     Some(lufs(mean_above(lufs(ungated) - 10.0)?))
 }
 
-/// Loudness range in LU of short-term (3 s) powers, as EBU Tech 3342
-/// measures it: the spread between the 10th and 95th percentile of the
-/// short-term loudness, leaving out values below -70 LUFS and more than
-/// 20 LU below the average.
+/// Loudness range in LU of short-term (3 s) powers, as EBU Tech 3342 measures
+/// loudness, leaving out values below -70 LUFS and more than 20 LU below the average.
+/// loudness, leaving out values below -70 LUFS and more than 20 LU below the
 fn loudness_range(short_terms: &[f64]) -> Option<f64> {
-    let above: Vec<f64> = short_terms
-        .iter()
-        .copied()
-        .filter(|&p| p > 0.0 && lufs(p) > -70.0)
-        .collect();
+    let above: Vec<f64> = short_terms.iter().copied().filter(|&p| p > 0.0 && lufs(p) > -70.0).collect();
     if above.is_empty() {
         return None;
     }
@@ -185,13 +158,9 @@ fn loudness_range(short_terms: &[f64]) -> Option<f64> {
 /// Taps per phase of the true-peak interpolator.
 const TP_TAPS: usize = 12;
 
-/// Finds the peaks between samples, as ITU-R BS.1770 Annex 2 does: the
-/// signal is upsampled four times with a windowed-sinc interpolator and the
-/// highest of the original and in-between values is the true peak. Lossy
-/// encoders and DACs rebuild those in-between values, so they can go over
-/// full scale even when no sample does.
-///
-/// Each value comes out [`TruePeak::LATENCY`] frames late.
+/// Finds the peaks between samples, as ITU-R BS.1770 Annex 2 does: the signal is upsampled four times with a windowed-sinc
+/// in-between values, so they can go over full scale even when no sample does. Each value comes out [`TruePeak::LATENCY`] frames late.
+/// in-between values, so they can go over full scale even when no sample does. Each value comes out [`TruePeak::LATENCY`] frames
 #[derive(Clone)]
 pub struct TruePeak {
     /// Coefficients of the three in-between phases (1/4, 2/4, 3/4).
@@ -220,11 +189,8 @@ impl TruePeak {
                 // History slot j holds the sample j frames back; the value
                 // wanted sits `half - frac` frames back.
                 let t = j as f64 - half + frac;
-                let sinc = if t.abs() < 1e-12 {
-                    1.0
-                } else {
-                    (std::f64::consts::PI * t).sin() / (std::f64::consts::PI * t)
-                };
+                let sinc =
+                    if t.abs() < 1e-12 { 1.0 } else { (std::f64::consts::PI * t).sin() / (std::f64::consts::PI * t) };
                 // A Hann window over the filter's span.
                 let w = 0.5 + 0.5 * (std::f64::consts::PI * t / (half + 0.5)).cos();
                 *tap = sinc * w;
@@ -234,11 +200,7 @@ impl TruePeak {
                 *c = (t / sum) as f32;
             }
         }
-        Self {
-            phases,
-            history: [[0.0; TP_TAPS]; 2],
-            at: 0,
-        }
+        Self { phases, history: [[0.0; TP_TAPS]; 2], at: 0 }
     }
 
     /// Takes the next frame and returns the true peak (a linear level) of
@@ -270,10 +232,9 @@ impl TruePeak {
 /// second. Older ones are dropped.
 const MAX_SHORT_TERMS: usize = 10 * 3600 * 10;
 
-/// Measures the master's loudness as it plays, the way a broadcast loudness
-/// meter does (EBU Tech 3341): momentary (the last 400 ms), short-term (the
-/// last 3 s), integrated since the last reset, the loudness range (EBU
-/// Tech 3342) and the highest true peak.
+/// Measures the master's loudness as it plays, the way a broadcast loudness meter does
+/// (EBU Tech 3341): momentary (the last 400 ms), short-term (the last 3 s), integrated
+/// since the last reset, the loudness range (EBU Tech 3342) and the highest true peak.
 pub struct LiveLoudness {
     sample_rate: f64,
     filters: [Biquad; 2],
@@ -415,12 +376,7 @@ mod tests {
             [v, v]
         };
         let steady = measure(48_000.0, 10.0, tone).unwrap();
-        let gapped = measure(
-            48_000.0,
-            30.0,
-            |t| if t < 10.0 { tone(t) } else { [0.0; 2] },
-        )
-        .unwrap();
+        let gapped = measure(48_000.0, 30.0, |t| if t < 10.0 { tone(t) } else { [0.0; 2] }).unwrap();
         assert!((steady.lufs - gapped.lufs).abs() < 0.1);
         assert!(measure(48_000.0, 2.0, |_| [0.0; 2]).is_none());
     }
@@ -447,11 +403,9 @@ mod tests {
         // -23 LUFS momentary, short-term and integrated.
         for sr in [44_100.0, 48_000.0] {
             let m = live(sr, 20.0, sine(-23.0, 1000.0));
-            for (name, v) in [
-                ("momentary", m.momentary()),
-                ("short-term", m.short_term()),
-                ("integrated", m.integrated()),
-            ] {
+            for (name, v) in
+                [("momentary", m.momentary()), ("short-term", m.short_term()), ("integrated", m.integrated())]
+            {
                 let v = v.unwrap();
                 assert!((v + 23.0).abs() < 0.1, "{sr} {name}: {v}");
             }
@@ -466,11 +420,7 @@ mod tests {
         // 20 s at -26, 20.1 s at -20, 20 s at -26 dBFS is -23 LUFS
         // integrated: the quieter parts count, gated against the louder.
         let m = live(48_000.0, 60.1, |t| {
-            let db = if (20.0..40.1).contains(&t) {
-                -20.0
-            } else {
-                -26.0
-            };
+            let db = if (20.0..40.1).contains(&t) { -20.0 } else { -26.0 };
             sine(db, 1000.0)(t)
         });
         let i = m.integrated().unwrap();
@@ -480,15 +430,11 @@ mod tests {
     #[test]
     fn loudness_range_follows_tech_3342() {
         // Case 1: 20 s at -20 dBFS then 20 s at -30 dBFS is 10 LU.
-        let m = live(48_000.0, 40.0, |t| {
-            sine(if t < 20.0 { -20.0 } else { -30.0 }, 1000.0)(t)
-        });
+        let m = live(48_000.0, 40.0, |t| sine(if t < 20.0 { -20.0 } else { -30.0 }, 1000.0)(t));
         let lra = m.range().unwrap();
         assert!((lra - 10.0).abs() < 1.0, "{lra}");
         // Case 2: -20 then -15 dBFS is 5 LU.
-        let m = live(48_000.0, 40.0, |t| {
-            sine(if t < 20.0 { -20.0 } else { -15.0 }, 1000.0)(t)
-        });
+        let m = live(48_000.0, 40.0, |t| sine(if t < 20.0 { -20.0 } else { -15.0 }, 1000.0)(t));
         let lra = m.range().unwrap();
         assert!((lra - 5.0).abs() < 1.0, "{lra}");
     }
@@ -502,8 +448,7 @@ mod tests {
         let mut sample_peak = 0.0f32;
         let mut true_peak = 0.0f32;
         for i in 0..4800 {
-            let v = (std::f64::consts::TAU * 12_000.0 * i as f64 / sr + std::f64::consts::FRAC_PI_4)
-                .sin() as f32;
+            let v = (std::f64::consts::TAU * 12_000.0 * i as f64 / sr + std::f64::consts::FRAC_PI_4).sin() as f32;
             sample_peak = sample_peak.max(v.abs());
             true_peak = true_peak.max(tp.push([v, v]));
         }
@@ -531,22 +476,13 @@ mod tests {
 
     #[test]
     fn gain_reaches_target_but_caps_boost_at_peak() {
-        let loud = Loudness {
-            lufs: -8.0,
-            peak: 1.0,
-        };
+        let loud = Loudness { lufs: -8.0, peak: 1.0 };
         assert!((20.0 * loud.gain(-14.0, 0.97).log10() + 6.0).abs() < 1e-3);
         // Needs +10 dB, but its peak allows only +6 dB.
-        let quiet = Loudness {
-            lufs: -24.0,
-            peak: 0.5,
-        };
+        let quiet = Loudness { lufs: -24.0, peak: 0.5 };
         assert!((quiet.gain(-14.0, 1.0) - 2.0).abs() < 1e-4);
         // Never cuts a quiet track because of its peak.
-        let peaky = Loudness {
-            lufs: -16.0,
-            peak: 1.0,
-        };
+        let peaky = Loudness { lufs: -16.0, peak: 1.0 };
         assert_eq!(peaky.gain(-14.0, 0.97), 1.0);
     }
 }

@@ -3,9 +3,8 @@ use std::path::PathBuf;
 use super::{ModelProvider, ProviderError};
 use crate::model::metadata::ModelInfo;
 
-/// Filesystem-based model cache.
-/// macOS: ~/Library/Caches/demucs-rs/
-/// Linux: ~/.cache/demucs-rs/
+/// Filesystem-based model cache. macOS:
+/// ~/Library/Caches/demucs-rs/ Linux: ~/.cache/demucs-rs/
 /// Windows: %LOCALAPPDATA%/demucs-rs/
 pub struct FsProvider {
     cache_dir: PathBuf,
@@ -14,9 +13,7 @@ pub struct FsProvider {
 impl FsProvider {
     pub fn new() -> Result<Self, ProviderError> {
         let base = dirs::cache_dir().ok_or(ProviderError::NoCacheDir)?;
-        Ok(Self {
-            cache_dir: base.join("demucs-rs"),
-        })
+        Ok(Self { cache_dir: base.join("demucs-rs") })
     }
 
     pub fn with_dir(cache_dir: PathBuf) -> Self {

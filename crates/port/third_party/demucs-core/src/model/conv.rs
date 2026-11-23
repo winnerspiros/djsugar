@@ -3,8 +3,8 @@ use burn::{
     module::{Module, Param},
     nn::{
         conv::{
-            Conv1d, Conv1dConfig, Conv2d, Conv2dConfig, ConvTranspose1d, ConvTranspose1dConfig,
-            ConvTranspose2d, ConvTranspose2dConfig,
+            Conv1d, Conv1dConfig, Conv2d, Conv2dConfig, ConvTranspose1d, ConvTranspose1dConfig, ConvTranspose2d,
+            ConvTranspose2dConfig,
         },
         GroupNorm, GroupNormConfig, PaddingConfig1d, PaddingConfig2d, GLU,
     },
@@ -26,35 +26,25 @@ impl HEncLayer {
     pub(crate) fn init(chin: usize, chout: usize, device: &Device) -> Self {
         let conv = Conv2dConfig::new([chin, chout], [KERNEL_SIZE, 1])
             .with_stride([STRIDE, 1])
-            .with_padding(PaddingConfig2d::Explicit(
-                KERNEL_SIZE / 4,
-                0,
-                KERNEL_SIZE / 4,
-                0,
-            ))
+            .with_padding(PaddingConfig2d::Explicit(KERNEL_SIZE / 4, 0, KERNEL_SIZE / 4, 0))
             .init(device);
         let dconv = DConv::init(chout, device);
         let rewrite = Conv2dConfig::new([chout, 2 * chout], [1, 1]).init(device);
         let glu = GLU::new(1);
-        Self {
-            conv,
-            dconv,
-            rewrite,
-            glu,
-        }
+        Self { conv, dconv, rewrite, glu }
     }
 
     pub(crate) fn forward(&self, x: Tensor<4>) -> Tensor<4> {
         // x: [B, C, Fr, T]
-        let x = self.conv.forward(x); // Conv2d([8,1]) → [B, chout, Fr/4, T]
+        let x = self.conv.forward(x); // Conv2d([8,1]) -> [B, chout, Fr/4, T]
         let x = activation::gelu(x);
-        // DConv operates per frequency bin: [B, C, Fr, T] → [B*Fr, C, T]
+        // DConv operates per frequency bin: [B, C, Fr, T] -> [B*Fr, C, T]
         // Python: y.permute(0, 2, 1, 3).reshape(-1, C, T)
         let [b, c, fr, t] = x.dims();
         let x = x.swap_dims(1, 2); // [B, Fr, C, T]
         let x = x.reshape([b * fr, c, t]); // [B*Fr, C, T]
         let x = self.dconv.forward(x);
-        // Reverse: [B*Fr, C, T] → [B, Fr, C, T] → [B, C, Fr, T]
+        // Reverse: [B*Fr, C, T] -> [B, Fr, C, T] -> [B, C, Fr, T]
         let x = x.reshape([b, fr, c, t]); // [B, Fr, C, T]
         let x = x.swap_dims(1, 2); // [B, C, Fr, T]
         let x = self.rewrite.forward(x); // Conv2d([1,1])
@@ -81,12 +71,7 @@ impl TEncLayer {
         let dconv = DConv::init(chout, device);
         let rewrite = Conv1dConfig::new(chout, 2 * chout, 1).init(device);
         let glu = GLU::new(1);
-        Self {
-            conv,
-            dconv,
-            rewrite,
-            glu,
-        }
+        Self { conv, dconv, rewrite, glu }
     }
 
     pub(crate) fn forward(&self, x: Tensor<3>) -> Tensor<3> {
@@ -110,11 +95,11 @@ impl TEncLayer {
 
 #[derive(Module, Debug)]
 pub(crate) struct DConvLayer {
-    pub(crate) conv1: Conv1d,     // compress: ch → ch/4, kernel=3, dilation=1<<j
+    pub(crate) conv1: Conv1d,     // compress: ch -> ch/4, kernel=3, dilation=1<<j
     pub(crate) norm1: GroupNorm,  // 1 group over ch/4
-    pub(crate) conv2: Conv1d,     // expand: ch/4 → 2*ch, kernel=1
+    pub(crate) conv2: Conv1d,     // expand: ch/4 -> 2*ch, kernel=1
     pub(crate) norm2: GroupNorm,  // 1 group over 2*ch
-    pub(crate) glu: GLU,          // 2*ch → ch (no learned params)
+    pub(crate) glu: GLU,          // 2*ch -> ch (no learned params)
     pub(crate) scale: LayerScale, // per-channel scaling
 }
 
@@ -130,14 +115,7 @@ impl DConvLayer {
         let norm2 = GroupNormConfig::new(1, 2 * ch).init(device);
         let glu = GLU::new(1);
         let scale = LayerScale::init(ch, device);
-        Self {
-            conv1,
-            norm1,
-            conv2,
-            norm2,
-            glu,
-            scale,
-        }
+        Self { conv1, norm1, conv2, norm2, glu, scale }
     }
 
     fn forward(&self, x: Tensor<3>) -> Tensor<3> {
@@ -174,20 +152,14 @@ impl HDecLayer {
             .with_stride([STRIDE, 1])
             .with_padding([KERNEL_SIZE / 4, 0])
             .init(device);
-        Self {
-            rewrite,
-            glu,
-            dconv,
-            conv_tr,
-            last,
-        }
+        Self { rewrite, glu, dconv, conv_tr, last }
     }
 
     pub(crate) fn forward(&self, x: Tensor<4>, skip: Tensor<4>, freq_target: usize) -> Tensor<4> {
         let x = x + skip;
         let x = self.rewrite.forward(x); // Conv2d(3,3)
         let x = self.glu.forward(x); // GLU on dim=1
-                                     // DConv: flatten [B, C, Fr, T] → [B*Fr, C, T], apply, reshape back
+                                     // DConv: flatten [B, C, Fr, T] -> [B*Fr, C, T], apply, reshape back
         let [b, c, fr, t] = x.dims();
         let x = x.swap_dims(1, 2); // [B, Fr, C, T]
         let x = x.reshape([b * fr, c, t]); // [B*Fr, C, T]
@@ -196,11 +168,7 @@ impl HDecLayer {
         let x = x.swap_dims(1, 2); // [B, C, Fr, T]
         let x = self.conv_tr.forward(x); // ConvTranspose2d([8,1])
                                          // Trim freq dim if ConvTranspose produced extra bins
-        let x = if x.dims()[2] > freq_target {
-            x.narrow(2, 0, freq_target)
-        } else {
-            x
-        };
+        let x = if x.dims()[2] > freq_target { x.narrow(2, 0, freq_target) } else { x };
         if self.last {
             x
         } else {
@@ -220,31 +188,19 @@ pub(crate) struct TDecLayer {
 
 impl TDecLayer {
     pub(crate) fn init(chin: usize, chout: usize, last: bool, device: &Device) -> Self {
-        let rewrite = Conv1dConfig::new(chin, 2 * chin, 3)
-            .with_padding(PaddingConfig1d::Explicit(1, 1))
-            .init(device);
+        let rewrite = Conv1dConfig::new(chin, 2 * chin, 3).with_padding(PaddingConfig1d::Explicit(1, 1)).init(device);
         let glu = GLU::new(1);
         let dconv = DConv::init(chin, device);
         let conv_tr = ConvTranspose1dConfig::new([chin, chout], KERNEL_SIZE)
             .with_stride(STRIDE)
             .with_padding(KERNEL_SIZE / 4)
             .init(device);
-        Self {
-            rewrite,
-            glu,
-            dconv,
-            conv_tr,
-            last,
-        }
+        Self { rewrite, glu, dconv, conv_tr, last }
     }
 
     pub(crate) fn forward(&self, x: Tensor<3>, skip: Tensor<3>, time_target: usize) -> Tensor<3> {
         // Trim skip to match x's time dimension (Python: skip[..., :x.shape[-1]])
-        let skip = if skip.dims()[2] > x.dims()[2] {
-            skip.narrow(2, 0, x.dims()[2])
-        } else {
-            skip
-        };
+        let skip = if skip.dims()[2] > x.dims()[2] { skip.narrow(2, 0, x.dims()[2]) } else { skip };
         let x = x + skip;
         let x = self.rewrite.forward(x);
         let x = self.glu.forward(x);
@@ -252,11 +208,7 @@ impl TDecLayer {
         let x = self.dconv.forward(x);
         let x = self.conv_tr.forward(x);
         // Trim time dim if ConvTranspose produced extra samples (Python: x[..., :length])
-        let x = if x.dims()[2] > time_target {
-            x.narrow(2, 0, time_target)
-        } else {
-            x
-        };
+        let x = if x.dims()[2] > time_target { x.narrow(2, 0, time_target) } else { x };
         if self.last {
             x
         } else {
@@ -272,9 +224,7 @@ pub(crate) struct DConv {
 
 impl DConv {
     fn init(ch: usize, device: &Device) -> Self {
-        let layers = (0..DCONV_DEPTH)
-            .map(|j| DConvLayer::init(ch, 1 << j, device))
-            .collect();
+        let layers = (0..DCONV_DEPTH).map(|j| DConvLayer::init(ch, 1 << j, device)).collect();
         Self { layers }
     }
 
@@ -294,9 +244,7 @@ pub(crate) struct LayerScale {
 
 impl LayerScale {
     pub(crate) fn init(ch: usize, device: &Device) -> Self {
-        Self {
-            scale: Param::from_tensor(Tensor::<1>::ones([ch], device)),
-        }
+        Self { scale: Param::from_tensor(Tensor::<1>::ones([ch], device)) }
     }
 
     pub(crate) fn forward(&self, x: Tensor<3>) -> Tensor<3> {
@@ -304,7 +252,7 @@ impl LayerScale {
     }
 
     pub(crate) fn forward_last(&self, x: Tensor<3>) -> Tensor<3> {
-        // [ch] → [1, 1, ch] broadcasts against [batch, seq, ch]
+        // [ch] -> [1, 1, ch] broadcasts against [batch, seq, ch]
         x * self.scale.val().unsqueeze_dim::<2>(0).unsqueeze_dim::<3>(0)
     }
 }
@@ -312,9 +260,7 @@ impl LayerScale {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::nn::conv::{
-        Conv1dConfig, Conv2dConfig, ConvTranspose1dConfig, ConvTranspose2dConfig,
-    };
+    use burn::nn::conv::{Conv1dConfig, Conv2dConfig, ConvTranspose1dConfig, ConvTranspose2dConfig};
     use burn::nn::{GroupNormConfig, PaddingConfig1d, PaddingConfig2d};
     use burn::tensor::Distribution;
 
@@ -327,12 +273,7 @@ mod tests {
         let dconv = make_dconv(chout, 2);
         let rewrite = Conv2dConfig::new([chout, 2 * chout], [1, 1]).init(&device);
         let glu = GLU::new(1);
-        HEncLayer {
-            conv,
-            dconv,
-            rewrite,
-            glu,
-        }
+        HEncLayer { conv, dconv, rewrite, glu }
     }
 
     #[test]
@@ -386,17 +327,8 @@ mod tests {
         let conv2 = Conv1dConfig::new(compress, 2 * ch, 1).init(&device);
         let norm2 = GroupNormConfig::new(1, 2 * ch).init(&device);
         let glu = GLU::new(1);
-        let scale = LayerScale {
-            scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)),
-        };
-        DConvLayer {
-            conv1,
-            norm1,
-            conv2,
-            norm2,
-            glu,
-            scale,
-        }
+        let scale = LayerScale { scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)) };
+        DConvLayer { conv1, norm1, conv2, norm2, glu, scale }
     }
 
     fn make_dconv(ch: usize, depth: usize) -> DConv {
@@ -442,9 +374,7 @@ mod tests {
         // With scale=0, output should equal input (residual passthrough)
         let device = Default::default();
         let mut layer = make_dconv_layer(48, 1);
-        layer.scale = LayerScale {
-            scale: Param::from_tensor(Tensor::<1>::zeros([48], &device)),
-        };
+        layer.scale = LayerScale { scale: Param::from_tensor(Tensor::<1>::zeros([48], &device)) };
         let x = Tensor::<3>::random([1, 48, 20], Distribution::Default, &device);
         let out = layer.forward(x.clone());
         let diff: Vec<f32> = (out - x).abs().to_data().try_to_vec().unwrap();
@@ -453,7 +383,7 @@ mod tests {
 
     #[test]
     fn henc_layer_output_shape() {
-        // 4D: [1, 4, 2048, 8] → [1, 48, 512, 8]
+        // 4D: [1, 4, 2048, 8] -> [1, 48, 512, 8]
         let layer = make_henc_layer(4, 48);
         let x = Tensor::<4>::random([1, 4, 2048, 8], Distribution::Default, &Default::default());
         let out = layer.forward(x);
@@ -471,7 +401,7 @@ mod tests {
 
     #[test]
     fn henc_layer_second_level() {
-        // Encoder layer 1: 48 → 96 channels
+        // Encoder layer 1: 48 -> 96 channels
         let layer = make_henc_layer(48, 96);
         let x = Tensor::<4>::random([1, 48, 512, 8], Distribution::Default, &Default::default());
         let out = layer.forward(x);
@@ -488,11 +418,7 @@ mod tests {
         for (expected_chin, chout) in configs {
             assert_eq!(chin, expected_chin);
             let layer = make_henc_layer(chin, chout);
-            let x = Tensor::<4>::random(
-                [1, chin, freq, time],
-                Distribution::Default,
-                &Default::default(),
-            );
+            let x = Tensor::<4>::random([1, chin, freq, time], Distribution::Default, &Default::default());
             let out = layer.forward(x);
             freq /= 4; // freq downsampled by stride 4
             chin = chout;
@@ -511,17 +437,12 @@ mod tests {
         let dconv = make_dconv(chout, 2);
         let rewrite = Conv1dConfig::new(chout, 2 * chout, 1).init(&device);
         let glu = GLU::new(1);
-        TEncLayer {
-            conv,
-            dconv,
-            rewrite,
-            glu,
-        }
+        TEncLayer { conv, dconv, rewrite, glu }
     }
 
     #[test]
     fn tenc_layer_output_shape() {
-        // Layer 0: stereo input → 48 channels
+        // Layer 0: stereo input -> 48 channels
         let layer = make_tenc_layer(2, 48);
         let x = Tensor::<3>::random([1, 2, 8], Distribution::Default, &Default::default());
         let out = layer.forward(x);
@@ -551,42 +472,23 @@ mod tests {
             .init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
-        let conv_tr = ConvTranspose2dConfig::new([chin, chout], [8, 1])
-            .with_stride([4, 1])
-            .with_padding([2, 0])
-            .init(&device);
-        HDecLayer {
-            rewrite,
-            glu,
-            dconv,
-            conv_tr,
-            last,
-        }
+        let conv_tr =
+            ConvTranspose2dConfig::new([chin, chout], [8, 1]).with_stride([4, 1]).with_padding([2, 0]).init(&device);
+        HDecLayer { rewrite, glu, dconv, conv_tr, last }
     }
 
     fn make_tdec_layer(chin: usize, chout: usize, last: bool) -> TDecLayer {
         let device = Default::default();
-        let rewrite = Conv1dConfig::new(chin, 2 * chin, 3)
-            .with_padding(PaddingConfig1d::Explicit(1, 1))
-            .init(&device);
+        let rewrite = Conv1dConfig::new(chin, 2 * chin, 3).with_padding(PaddingConfig1d::Explicit(1, 1)).init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
-        let conv_tr = ConvTranspose1dConfig::new([chin, chout], 8)
-            .with_stride(4)
-            .with_padding(2)
-            .init(&device);
-        TDecLayer {
-            rewrite,
-            glu,
-            dconv,
-            conv_tr,
-            last,
-        }
+        let conv_tr = ConvTranspose1dConfig::new([chin, chout], 8).with_stride(4).with_padding(2).init(&device);
+        TDecLayer { rewrite, glu, dconv, conv_tr, last }
     }
 
     #[test]
     fn hdec_layer_output_shape() {
-        // Decoder layer 0: 384 → 192 (4D)
+        // Decoder layer 0: 384 -> 192 (4D)
         let layer = make_hdec_layer(384, 192, false);
         let x = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &Default::default());
         let skip = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &Default::default());
@@ -596,7 +498,7 @@ mod tests {
 
     #[test]
     fn hdec_layer_last() {
-        // Decoder layer 3: 48 → 16 (last layer, no GELU)
+        // Decoder layer 3: 48 -> 16 (last layer, no GELU)
         let layer = make_hdec_layer(48, 16, true);
         let x = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &Default::default());
         let skip = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &Default::default());
@@ -606,7 +508,7 @@ mod tests {
 
     #[test]
     fn tdec_layer_output_shape() {
-        // Decoder layer 0: 384 → 192
+        // Decoder layer 0: 384 -> 192
         let layer = make_tdec_layer(384, 192, false);
         let x = Tensor::<3>::random([1, 384, 4], Distribution::Default, &Default::default());
         let skip = Tensor::<3>::random([1, 384, 4], Distribution::Default, &Default::default());
@@ -616,7 +518,7 @@ mod tests {
 
     #[test]
     fn tdec_layer_last() {
-        // Decoder layer 3: 48 → 8 (last, no GELU)
+        // Decoder layer 3: 48 -> 8 (last, no GELU)
         let layer = make_tdec_layer(48, 8, true);
         let x = Tensor::<3>::random([1, 48, 16], Distribution::Default, &Default::default());
         let skip = Tensor::<3>::random([1, 48, 16], Distribution::Default, &Default::default());

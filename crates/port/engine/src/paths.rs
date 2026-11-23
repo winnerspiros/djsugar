@@ -53,9 +53,7 @@ pub fn expand_tilde(path: &str) -> Option<PathBuf> {
     if path == "~" {
         return home_dir();
     }
-    let rest = path
-        .strip_prefix("~/")
-        .or_else(|| path.strip_prefix("~\\").filter(|_| cfg!(windows)));
+    let rest = path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\").filter(|_| cfg!(windows)));
     match rest {
         Some(rest) => home_dir().map(|h| h.join(rest)),
         None => Some(PathBuf::from(path)),
@@ -63,9 +61,7 @@ pub fn expand_tilde(path: &str) -> Option<PathBuf> {
 }
 
 fn non_empty(var: &str) -> Option<PathBuf> {
-    std::env::var_os(var)
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
+    std::env::var_os(var).filter(|v| !v.is_empty()).map(PathBuf::from)
 }
 
 #[cfg(test)]

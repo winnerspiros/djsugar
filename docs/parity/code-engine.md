@@ -12,13 +12,13 @@
 |---------|---------------|---------------------|--------|-------------|
 | **Multi-deck playback** | `EngineBuffer` + `EngineDeck` (4+ decks via `EngineMixer::ChannelInfo`) | `engine::Mixer` with `DECKS=4` `Channel` array, each with `Deck` | **DONE** | |
 | **Sample-accurate position** | `mixxx::audio::FramePos` (64-bit frame count) | `f64` position in `Deck` (frames) | **DONE** | |
-| **Variable rate playback** | `RateControl::calculateSpeed()` → `EngineBuffer::m_speed` | `Deck.rate` (f64, relative) + `nudge` + `velocity` for brake | **DONE** | |
+| **Variable rate playback** | `RateControl::calculateSpeed()` -> `EngineBuffer::m_speed` | `Deck.rate` (f64, relative) + `nudge` + `velocity` for brake | **DONE** | |
 | **Reverse playback** | `RateControl` reverse button + `m_reverse_old` | `Deck.reverse: bool` + negative step in render | **DONE** | |
 | **Brake / spin-down** | `RateControl` ramp down (motor sim, 33/45 RPM, power-cut/brake modes) | `Deck.brake` + `velocity` decay in `render_brake()` | **PARTIAL** | Rust has simple linear decay; C++ has configurable motor sim (rpm mode, ramp up/down time factors, power-cut vs brake) |
 | **Track end handling** | `ReadAheadManager` wraps for loops/repeat; `notifyWrapAround` | `Deck.render()` stops playing when `pos > last` or `< 0` | **PARTIAL** | C++ has repeat mode (`m_pRepeat`) and wrap-around notification for vinyl control; Rust just stops |
 | **Vinyl control (timecode)** | `VinylControlControl` + `PositionScratchController` | **MISSING** | **MISSING** | No vinyl/timecode support in Rust |
 | **Read-ahead / caching** | `CachingReader` + `ReadAheadManager` (async decode, prefetch) | **MISSING** | **MISSING** | Rust loads whole `Track` into memory (`Box<[[f32;2]]>`) — no streaming, no background decode |
-| **Multi-channel output** | `EngineMixer` → main/booth/headphones/sidechain buses | `Mixer.render()` writes single stereo `out`; `Station` for FX bus | **PARTIAL** | No booth/headphone split, no sidechain in Rust |
+| **Multi-channel output** | `EngineMixer` -> main/booth/headphones/sidechain buses | `Mixer.render()` writes single stereo `out`; `Station` for FX bus | **PARTIAL** | No booth/headphone split, no sidechain in Rust |
 | **Sample rate conversion** | `EngineBufferScale` (linear, SoundTouch, RubberBand) per-engine | `sugar_stretch::Stretch` (SoundTouch) per-deck | **PARTIAL** | C++ supports multiple algorithms + linear fallback for small pitch; Rust only SoundTouch |
 
 ---
@@ -33,7 +33,7 @@
 | **Seek-on-load modes** | `SeekOnLoadMode`: MainCue, Beginning, FirstSound, IntroStart, FirstHotcue | **MISSING** | **MISSING** | Rust always loads at position 0 |
 | **Hotcue set modes** | `HotcueSetMode`: Auto, Cue, Loop | **MISSING** | **MISSING** | Rust `hotcue()` toggles set/seek; no explicit loop-hotcue creation |
 | **Cue preview / cache** | `m_previewingPosition`, `m_previewingType` for safe delete during preview | **MISSING** | **MISSING** | |
-| **Quantized cue set** | `CueControl::m_pQuantizeEnabled` → snap to beat | `DeckUi.quantize` + `snap()` in `hotcue()` | **DONE** | |
+| **Quantized cue set** | `CueControl::m_pQuantizeEnabled` -> snap to beat | `DeckUi.quantize` + `snap()` in `hotcue()` | **DONE** | |
 | **Cue colours** | `ColorPaletteSettings`, per-hotcue RGB | `DeckUi.cue_colours: [u8; 8]` (index into palette) | **DONE** | |
 | **Cue persistence** | Saved in track metadata (crate/db) | `crate::store::Saved` (cues, colours, grid) | **DONE** | |
 
@@ -43,7 +43,7 @@
 
 | Feature | djsugar (C++) | djsugar-next (Rust) | Status | Gap Details |
 |---------|---------------|---------------------|--------|-------------|
-| **Manual loop in/out** | `LoopingControl::slotLoopIn/Out` → `LoopInfo{start,end,seekMode}` | `DeckUi.loop_in: Option<f64>` + `loop_range` + `LoopIn/Out` targets | **DONE** | |
+| **Manual loop in/out** | `LoopingControl::slotLoopIn/Out` -> `LoopInfo{start,end,seekMode}` | `DeckUi.loop_in: Option<f64>` + `loop_range` + `LoopIn/Out` targets | **DONE** | |
 | **Loop enable/disable** | `loop_enabled` proxy, `setLoop()`, `slotLoopExit()` | `Command::Loop(usize, Option<(f64,f64)>)` | **DONE** | |
 | **Reloop / saved loop** | `slotReloopToggle()`, `m_pCurrentSavedLoopControl` | **MISSING** | **MISSING** | No reloop (restore last loop) in Rust |
 | **Beatloop (quantized)** | `BeatLoopingControl` + `beatloop_activate` + `beatloop_X` sizes | `auto_loop()` + `LOOP_BEATS[8]` + `beat_loop()` | **DONE** | |
@@ -75,9 +75,9 @@
 | **Sync modes** | `SyncMode`: None, Leader, Follower, LeaderFromFollower, Lock | **MISSING** (only manual sync) | **MISSING** | No automatic leader/follower state machine in Rust |
 | **Sync lock engine** | `EngineSync` + `SyncLockAlgorithm` (PREFER_SOFT_LEADER / PREFER_LOCK_BPM) | **MISSING** | **MISSING** | |
 | **Tempo sync (bpm match)** | `activateFollower()` sets rate to match leader BPM | `sync()` calculates target BPM from other deck, sets rate | **PARTIAL** | Rust does one-shot tempo match; C++ maintains continuous lock |
-| **Phase sync (beat align)** | `notifyBeatDistanceChanged()` → continuous phase alignment | `sync()` seeks to matched phase once | **PARTIAL** | C++ tracks beat distance per callback; Rust only aligns on sync press |
+| **Phase sync (beat align)** | `notifyBeatDistanceChanged()` -> continuous phase alignment | `sync()` seeks to matched phase once | **PARTIAL** | C++ tracks beat distance per callback; Rust only aligns on sync press |
 | **Explicit leader selection** | `pickLeader()`, `activateLeader(explicitLeader)` | **MISSING** | **MISSING** | |
-| **Sync target fallback** | `pickNonSyncSyncTarget()` (leader → playing → first deck) | **MISSING** | **MISSING** | |
+| **Sync target fallback** | `pickNonSyncSyncTarget()` (leader -> playing -> first deck) | **MISSING** | **MISSING** | |
 | **Double/half tempo handling** | `updateLeaderBpm()` with 2x/0.5x multipliers | `while target/g.bpm > 1.5 { target/=2 }` etc. | **DONE** | |
 | **Internal clock sync** | `InternalClock` as sync master | **MISSING** | **MISSING** | |
 | **Sync key (key lock sync)** | `KeyControl::slotSyncKey()` | **MISSING** | **MISSING** | |
@@ -104,7 +104,7 @@
 | Feature | djsugar (C++) | djsugar-next (Rust) | Status | Gap Details |
 |---------|---------------|---------------------|--------|-------------|
 | **Global quantize toggle** | `QuantizeControl` + `m_pQuantizeEnabled` per deck | `DeckUi.quantize: bool` per deck | **DONE** | |
-| **Quantized seek** | `CueControl::quantizeChanged()` → cues snap | `DeckUi.snap()` used in `hotcue()`, `beat_jump()`, `LoopIn/Out` | **DONE** | |
+| **Quantized seek** | `CueControl::quantizeChanged()` -> cues snap | `DeckUi.snap()` used in `hotcue()`, `beat_jump()`, `LoopIn/Out` | **DONE** | |
 | **Quantized loop in/out** | `LoopingControl` uses quantize for beatloop | `LoopIn/Out` use `snap()` | **DONE** | |
 | **Quantize strength/mode** | **MISSING** (simple on/off) | **MISSING** | **DONE** (both minimal) | |
 
@@ -116,7 +116,7 @@
 |---------|---------------|---------------------|--------|-------------|
 | **Slip enable/disable** | `SlipModeState`: Disabled / Armed / Armed | `Deck.slip: Option<f64>` (None=off, Some=slip position) | **PARTIAL** | C++ has Armed state (slip starts after loop exits); Rust immediate |
 | **Slip position tracking** | `m_slipPos` + `m_dSlipRate` updated every callback | `Deck.render()`: `if slip { *s += step * len }` | **DONE** | |
-| **Loop exit adopts slip** | `m_slipQuitAndAdopt` → position jumps to slip pos on loop exit | `Slip(off)` → `position = p; invalidate()` | **PARTIAL** | C++ only adopts if loop was active when slip enabled; Rust always |
+| **Loop exit adopts slip** | `m_slipQuitAndAdopt` -> position jumps to slip pos on loop exit | `Slip(off)` -> `position = p; invalidate()` | **PARTIAL** | C++ only adopts if loop was active when slip enabled; Rust always |
 | **Slip with reverse** | `adjustedPositionForCurrentLoopOrRepeat(reverse)` | `step` sign flip in render; slip accumulates signed step | **DONE** | |
 | **Slip indicators** | `VisualPlayPosition` shows slip marker | **MISSING** | **MISSING** | No slip position telemetry in Rust |
 
@@ -164,7 +164,7 @@
 |---------|---------------|---------------------|--------|-------------|
 | **Rate slider range** | Configurable: ±8%, ±16%, ±25%, ±50%, ±100% | `RATE_RANGE = 0.08` (±8% hardcoded) | **PARTIAL** | C++ user-configurable; Rust fixed ±8% |
 | **Temporary rate buttons** | Coarse/fine, permanent/temp, ramp modes | `Deck.nudge` + `Command::Nudge` | **PARTIAL** | C++ has ramp (linear/stepping), sensitivity, RPM modes; Rust instant nudge |
-| **Rate ratio display** | `RateControl::calculateSpeed()` → `rate_ratio` control | `DeckUi.rate: f32` (normalized -1..1) | **DONE** | |
+| **Rate ratio display** | `RateControl::calculateSpeed()` -> `rate_ratio` control | `DeckUi.rate: f32` (normalized -1..1) | **DONE** | |
 
 ---
 
@@ -184,7 +184,7 @@
 |---------|---------------|---------------------|--------|-------------|
 | **3-band EQ** | `EngineChannel` + `EngineEffectsManager` (post-fader) | `Channel.eq: [f32;3]` + `kill: [bool;3]` + `Biquad` (LowShelf/Peak/HighShelf) | **DONE** | |
 | **EQ kill switches** | `m_pEqualizer*` controls per band | `Channel.kill` (sets gain to 1e-4) | **DONE** | |
-| **Filter (low/high pass)** | `EngineFilter*` (Moog, Bessel, Linkwitz-Riley, Butterworth) per channel | `Channel.filter: f32` (-1..1) → `Biquad::Low/High` at 20Hz..20kHz | **PARTIAL** | C++ multiple filter types + resonance; Rust single 1-pole with fixed Q |
+| **Filter (low/high pass)** | `EngineFilter*` (Moog, Bessel, Linkwitz-Riley, Butterworth) per channel | `Channel.filter: f32` (-1..1) -> `Biquad::Low/High` at 20Hz..20kHz | **PARTIAL** | C++ multiple filter types + resonance; Rust single 1-pole with fixed Q |
 | **Gain (pre-fader)** | `EnginePregain` + `m_pVolumeControl` | `Channel.gain: f32` (pre-EQ) + `volume: f32` (post-EQ) | **DONE** | |
 | **Per-channel VU meters** | `EngineVuMeter` per channel | `Channel.peak: f32` (post-mix) | **PARTIAL** | C++ pre-fader + post-fader; Rust post-mix only |
 
@@ -195,7 +195,7 @@
 | Feature | djsugar (C++) | djsugar-next (Rust) | Status | Gap Details |
 |---------|---------------|---------------------|--------|-------------|
 | **PFL toggle** | `EngineChannel::m_pPFL` (PowerWindow button) | `DeckUi.pfl: bool` + `Target::Pfl` | **DONE** | |
-| **PFL routing** | `EngineMixer::PflGainCalculator` → headphone bus | **MISSING** (no headphone bus) | **MISSING** | Rust has no separate headphone output; PFL is UI state only |
+| **PFL routing** | `EngineMixer::PflGainCalculator` -> headphone bus | **MISSING** (no headphone bus) | **MISSING** | Rust has no separate headphone output; PFL is UI state only |
 | **Split cue (main + cue)** | `EngineChannel::orientation` + crossfader | **MISSING** | **MISSING** | |
 | **PFL volume** | Separate headphone gain | **MISSING** | **MISSING** | |
 
@@ -206,7 +206,7 @@
 | Feature | djsugar (C++) | djsugar-next (Rust) | Status | Gap Details |
 |---------|---------------|---------------------|--------|-------------|
 | **Record to file** | `EngineRecord` + `Encoder` (MP3, OGG, FLAC, WAV, AIFF) | `crate::record::Recorder` + `Command::Record(bool)` | **PARTIAL** | C++ supports multiple formats + metadata + CUE files; Rust WAV only (see `record.rs`) |
-| **Record from main mix** | `EngineRecord::process()` receives main buffer | `Engine.record` ring buffer → `Control.drain_recording()` | **DONE** | |
+| **Record from main mix** | `EngineRecord::process()` receives main buffer | `Engine.record` ring buffer -> `Control.drain_recording()` | **DONE** | |
 | **Auto-split tracks** | `metaDataHasChanged()` writes CUE marks | **MISSING** | **MISSING** | |
 | **Recording level meter** | `bytesRecorded`, `durationRecorded` signals | **MISSING** | **MISSING** | |
 | **Recording preferences** | Path, format, bitrate, metadata, CUE options | Directory only (`recordings_dir()`) | **PARTIAL** | |
@@ -230,7 +230,7 @@
 
 | Feature | djsugar (C++) | djsugar-next (Rust) | Status | Gap Details |
 |---------|---------------|---------------------|--------|-------------|
-| **Stem separation** | `#ifdef __STEM__` → `m_stems` vector, `processStem()` mixes 4-5 channels | **MISSING** | **MISSING** | No stem support in Rust |
+| **Stem separation** | `#ifdef __STEM__` -> `m_stems` vector, `processStem()` mixes 4-5 channels | **MISSING** | **MISSING** | No stem support in Rust |
 | **Stem gain/mute** | `m_stemGain[]`, `m_stemMute[]` per stem | **MISSING** | **MISSING** | |
 | **Stem VU meters** | `m_stemVuMeter[]` | **MISSING** | **MISSING** | |
 | **Clone stem state** | `cloneStemState()` copies gain/volume | **MISSING** | **MISSING** | |

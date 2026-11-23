@@ -19,8 +19,7 @@ pub struct Descriptor {
 impl Descriptor {
     /// Effects are what DJ Sugar can use; instruments and note effects aren't.
     pub fn is_audio_effect(&self) -> bool {
-        self.features.iter().any(|f| f == "audio-effect")
-            && !self.features.iter().any(|f| f == "instrument")
+        self.features.iter().any(|f| f == "audio-effect") && !self.features.iter().any(|f| f == "instrument")
     }
 
     /// Instruments play notes; DJ Sugar plays one as an input of its own.
@@ -32,11 +31,7 @@ impl Descriptor {
 /// VST3 sub-categories ("Fx|Delay", "Instrument|Synth") as feature words,
 /// with CLAP's names for the two that matter, so one test works for both.
 pub(crate) fn features(sub: &str) -> Vec<String> {
-    let mut out: Vec<String> = sub
-        .split('|')
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect();
+    let mut out: Vec<String> = sub.split('|').filter(|s| !s.is_empty()).map(String::from).collect();
     if out.iter().any(|s| s == "Instrument") {
         out.push("instrument".into());
     } else if out.iter().any(|s| s == "Fx") {
@@ -52,12 +47,7 @@ pub fn scan_moduleinfo(bundle: &Path) -> Option<Vec<Descriptor>> {
     let text = std::fs::read_to_string(bundle.join("Contents/Resources/moduleinfo.json")).ok()?;
     let json: serde_json::Value = serde_json::from_str(&text).ok()?;
     let classes = json.get("Classes")?.as_array()?;
-    let field = |c: &serde_json::Value, k: &str| {
-        c.get(k)
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string()
-    };
+    let field = |c: &serde_json::Value, k: &str| c.get(k).and_then(|v| v.as_str()).unwrap_or_default().to_string();
     Some(
         classes
             .iter()

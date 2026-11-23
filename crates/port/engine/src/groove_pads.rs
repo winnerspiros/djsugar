@@ -1,28 +1,6 @@
-//! The Groove Box's pad surface: what 16 pads on a controller do, and how
-//! they light, the same for every pad controller.
-//!
-//! A controller mapping only passes presses in and colours out:
-//!
-//! - `[GrooveN],padK` (K 1-16, as the controller numbers its pads): set it
-//!   to how hard the pad is pressed (0-1, 1 for a pad without pressure)
-//!   and back to 0 on release.
-//! - `[GrooveN],padK_color`: what pad K shows, one of the [`light`]
-//!   colours; the mapping turns it into the device's own colour.
-//!
-//! The rest is here, so every controller behaves alike. `[GrooveN],pad_mode`
-//! picks what the pads do:
-//!
-//! - **Steps** (0): the 16 steps of the selected row (`row_selected`, 1-8)
-//!   of the groove on screen. A press adds or removes a hit; while stopped
-//!   it also plays the sound once.
-//! - **Play** (1): pads 1-8 (and again 9-16) play rows 1-8, now, as loud
-//!   as the pad is hit. With `record` on while playing, the hit is also written
-//!   into the nearest step of the groove playing.
-//! - **Grooves** (2): pads 1-4 pick groove A-D (on the next bar, as the
-//!   screen's buttons do), 5-8 the kit, 9-16 load the first eight grooves
-//!   of the genre picked into the groove playing.
-//!
-//! `row_clear` empties the selected row of the groove on screen.
+//! The Groove Box's pad surface: what 16 pads on a controller do, and how they light, the same for every pad controller. A controller mapping only passes presses in and colours out: - `[GrooveN],padK` (K 1-16, as the controller numbers its pads): set it to how hard the pad is pressed (0-1, 1 for a pad without pressure) and back to 0 on release. - `[GrooveN],padK_color`: what pad K shows, one
+//! of the [`light`] colours; the mapping turns it into the device's own colour. The rest is here, so every controller behaves alike. `[GrooveN],pad_mode` picks what the pads do: - **Steps** (0): the 16 steps of the selected row (`row_selected`, 1-8) of the groove on screen. A press adds or removes a hit; while stopped it also plays the sound once. - **Play** (1): pads 1-8 (and again 9-16)
+//! play rows 1-8, now, as loud as the pad is hit. With `record` on while playing, the hit is also written into the nearest step of the groove playing. - **Grooves** (2): pads 1-4 pick groove A-D (on the next bar, as the screen's buttons do), 5-8 the kit, 9-16 load the first eight grooves of the genre picked into the groove playing. `row_clear` empties the selected row of the groove on screen.
 
 use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
@@ -94,12 +72,8 @@ impl PadControls {
             row: reg.create(g, "row_selected", 1.0, 1.0, ROWS as f64, Behavior::Free),
             record: reg.toggle(g, "record"),
             row_clear: reg.push(g, "row_clear"),
-            pads: std::array::from_fn(|k| {
-                reg.create(g, &format!("pad{}", k + 1), 0.0, 0.0, 1.0, Behavior::Free)
-            }),
-            colors: std::array::from_fn(|k| {
-                reg.indicator(g, &format!("pad{}_color", k + 1), light::MAX as f64)
-            }),
+            pads: std::array::from_fn(|k| reg.create(g, &format!("pad{}", k + 1), 0.0, 0.0, 1.0, Behavior::Free)),
+            colors: std::array::from_fn(|k| reg.indicator(g, &format!("pad{}_color", k + 1), light::MAX as f64)),
         }
     }
 }
@@ -115,11 +89,7 @@ impl PadSurface {
     pub fn new(reg: &ControlRegistry, deck: usize) -> Self {
         let c = PadControls::new(reg, deck);
         let seen = std::array::from_fn(|k| c.pads[k].version());
-        Self {
-            c,
-            last: [0.0; PADS],
-            seen,
-        }
+        Self { c, last: [0.0; PADS], seen }
     }
 
     pub fn mode(&self) -> u8 {
@@ -150,15 +120,9 @@ impl PadSurface {
                 continue;
             }
             if v > 0.0 {
-                each(Press {
-                    pad: k,
-                    velocity: v as f32,
-                });
+                each(Press { pad: k, velocity: v as f32 });
             } else if changed {
-                each(Press {
-                    pad: k,
-                    velocity: 1.0,
-                });
+                each(Press { pad: k, velocity: 1.0 });
             }
         }
     }
@@ -276,19 +240,7 @@ mod tests {
         s.c.pads[5].set(1.0);
         s.c.pads[5].set(0.0);
         s.presses(|p| got.push(p));
-        assert_eq!(
-            got,
-            vec![
-                Press {
-                    pad: 2,
-                    velocity: 0.6
-                },
-                Press {
-                    pad: 5,
-                    velocity: 1.0
-                }
-            ]
-        );
+        assert_eq!(got, vec![Press { pad: 2, velocity: 0.6 }, Press { pad: 5, velocity: 1.0 }]);
     }
 
     fn view(mode: u8) -> [u8; PADS] {

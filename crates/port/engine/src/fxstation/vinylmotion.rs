@@ -2,10 +2,9 @@
 
 use std::f64::consts::PI;
 
-/// The motion of a back spin, in times the normal speed, at t = 0..1 of
-/// its length. The hand catches the record and throws it back (the speed
-/// glides through zero, the "zip" of a real spin), then the platter coasts
-/// to a stop against the friction of the mat.
+/// The motion of a back spin, in times the normal speed, at t = 0..1 of its length. The
+/// hand catches the record and throws it back (the speed glides through zero, the "zip"
+/// of a real spin), then the platter coasts to a stop against the friction of the mat.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BackSpinMotion;
 
@@ -42,11 +41,9 @@ impl BackSpinMotion {
     const K_BACK_PER_PEAK: f64 = (1.0 - Self::K_CATCH) / 3.0 + Self::K_CATCH / 2.0;
 }
 
-/// How a record played at any speed sounds through a cartridge, as in the
-/// scratch engine: the level follows the stylus velocity (slow is quiet, a
-/// stop is silent), and a low pass follows the speed: below 1x it removes
-/// the images a slowed record does not have, above 1x the aliasing of
-/// reading faster.
+/// How a record played at any speed sounds through a cartridge, as in the scratch engine: the level
+/// below 1x it removes the images a slowed record does not have, above 1x the aliasing of reading faster.
+/// below 1x it removes the images a slowed record does not have, above 1x the aliasing of reading
 #[derive(Clone, Debug, Default)]
 pub struct NeedleShaper {
     state: [[f32; 4]; 2],

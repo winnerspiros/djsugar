@@ -1,12 +1,6 @@
-//! Neural beat and downbeat detection with Beat This! (Foscarin, Schlüter
-//! and Widmer, ISMIR 2024; MIT licence), run through the `beat-this` crate
-//! on its pure-Rust runtime.
-//!
-//! The DSP analysis gives a track its tempo and a first grid within a
-//! second or so; this runs after it, finds each beat and downbeat, and fits
-//! the grid again through them (see [`crate::gridfit`]), so bar 1 lands on
-//! a downbeat. Its two model files are downloaded the first time they are
-//! needed, as the stem models are; without them the DSP grid stays.
+//! Neural beat and downbeat detection with Beat This! (Foscarin, Schlüter and Widmer, ISMIR 2024; MIT licence), run through the `beat-this` crate on its pure-Rust runtime. The
+//! [`crate::gridfit`]), so bar 1 lands on a downbeat. Its two model files are downloaded the first time they are needed, as the stem models are; without them the DSP grid stays.
+//! [`crate::gridfit`]), so bar 1 lands on a downbeat. Its two model files are downloaded the first time they are needed, as the stem models are; without them the DSP grid
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -27,14 +21,8 @@ pub const SMALL: &str = "beat-this-small.onnx";
 /// Each model file and its SHA-256, as the `stem-models` release of DJ Sugar
 /// has them (`.github/workflows/stem-models.yml`).
 pub const MODELS: [(&str, &str); 2] = [
-    (
-        MEL,
-        "fdd59e65c515331308e4c8841edf99972deca646bdf6197744c2a5b7755e3de9",
-    ),
-    (
-        SMALL,
-        "a5f8d39d989f31859454ba27afe61c5317ca95e4d9373e6853e5361b8937172f",
-    ),
+    (MEL, "fdd59e65c515331308e4c8841edf99972deca646bdf6197744c2a5b7755e3de9"),
+    (SMALL, "a5f8d39d989f31859454ba27afe61c5317ca95e4d9373e6853e5361b8937172f"),
 ];
 
 static ENABLED: AtomicBool = AtomicBool::new(true);
@@ -57,10 +45,7 @@ pub fn set_enabled(on: bool) {
 /// Whether `analysis` should be refined with [`refine`]: it has a tempo, and
 /// its beats came from the DSP analysis while Beat This! is on.
 pub fn wanted(analysis: &Analysis) -> bool {
-    enabled()
-        && !UNAVAILABLE.load(Ordering::Relaxed)
-        && !analysis.neural_beats
-        && analysis.bpm > 0.0
+    enabled() && !UNAVAILABLE.load(Ordering::Relaxed) && !analysis.neural_beats && analysis.bpm > 0.0
 }
 
 /// Beat and downbeat times (seconds) in the decoded `audio`.
@@ -98,23 +83,15 @@ fn detect(audio: &Audio) -> Result<(Vec<f64>, Vec<f64>), String> {
     Ok((secs(found.beats), secs(found.downbeats)))
 }
 
-/// Gives `analysis` the grid Beat This!'s beats and downbeats fit, at the
-/// tempo of those beats folded into the BPM range (the DSP tempo can be
-/// far off on slow, soft music, so it isn't used); the range is the
-/// track's genre's when it has a known one. A tempo from tags (in `hint`,
-/// as [`crate::analysis::analyse`] takes it) stays steady, with bar 1
-/// moved onto a downbeat.
-pub fn refine(
-    analysis: &mut Analysis,
-    audio: &Audio,
-    hint: impl Into<TempoHint>,
-) -> Result<(), String> {
+/// Gives `analysis` the grid Beat This!'s beats and downbeats fit, at the tempo of those beats folded into the BPM range (the
+/// DSP tempo can be far off on slow, soft music, so it isn't used); the range is the track's genre's when it has a known one.
+/// A tempo from tags (in `hint`, as [`crate::analysis::analyse`] takes it) stays steady, with bar 1 moved onto a downbeat.
+pub fn refine(analysis: &mut Analysis, audio: &Audio, hint: impl Into<TempoHint>) -> Result<(), String> {
     let hint = hint.into();
     let bpm_hint = hint.bpm;
     let (beats, downbeats) = detect(audio)?;
     let (beats, bpm) = in_range(beats, &downbeats, hint.range());
-    let fitted =
-        gridfit::fit(&beats, Some(&downbeats), bpm).ok_or("too few beats to fit a grid")?;
+    let fitted = gridfit::fit(&beats, Some(&downbeats), bpm).ok_or("too few beats to fit a grid")?;
     let grid = match tag_tempo(bpm_hint) {
         Some(bpm) => BeatGrid::constant(bpm, fitted.grid.markers()[0].seconds),
         None => fitted.grid,
@@ -144,18 +121,9 @@ fn in_range(mut beats: Vec<f64>, downbeats: &[f64], (lo, hi): (f64, f64)) -> (Ve
     for _ in 0..2 {
         if bpm > hi {
             let on_downbeat = |&b: &f64| downbeats.iter().any(|d| (d - b).abs() < 0.07);
-            let odd = beats
-                .iter()
-                .skip(1)
-                .step_by(2)
-                .filter(|b| on_downbeat(b))
-                .count();
+            let odd = beats.iter().skip(1).step_by(2).filter(|b| on_downbeat(b)).count();
             let even = beats.iter().step_by(2).filter(|b| on_downbeat(b)).count();
-            beats = beats
-                .into_iter()
-                .skip(usize::from(odd > even))
-                .step_by(2)
-                .collect();
+            beats = beats.into_iter().skip(usize::from(odd > even)).step_by(2).collect();
         } else if bpm > 0.0 && bpm < lo {
             let mids: Vec<f64> = beats.windows(2).map(|w| (w[0] + w[1]) / 2.0).collect();
             beats.extend(mids);
@@ -176,11 +144,7 @@ mod tests {
 
     #[test]
     fn folds_the_beats_tempo_into_the_range() {
-        let at = |bpm: f64, n: usize| {
-            (0..n)
-                .map(|k| 0.3 + k as f64 * 60.0 / bpm)
-                .collect::<Vec<_>>()
-        };
+        let at = |bpm: f64, n: usize| (0..n).map(|k| 0.3 + k as f64 * 60.0 / bpm).collect::<Vec<_>>();
         let (beats, bpm) = in_range(at(67.2, 100), &[], (60.0, 180.0));
         assert_eq!(beats.len(), 100);
         assert!((bpm - 67.2).abs() < 0.01, "{bpm}");
@@ -200,10 +164,7 @@ mod tests {
     /// downloaded in tests).
     #[test]
     fn puts_bar_one_on_a_downbeat() {
-        if MODELS
-            .iter()
-            .any(|(n, _)| crate::separation::model(n).is_none())
-        {
+        if MODELS.iter().any(|(n, _)| crate::separation::model(n).is_none()) {
             eprintln!("skipped: no Beat This! models in DJSUGAR_MODELS");
             return;
         }

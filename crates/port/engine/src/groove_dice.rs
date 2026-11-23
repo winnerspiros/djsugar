@@ -1,13 +1,6 @@
-//! Musical variation for the Groove Box's tracks: new grooves in a genre's
-//! style, small mutations, busier and calmer tracks and even spacing. Not
-//! plain dice: each move is weighted by how strong a step is in the bar
-//! (downbeats first, as in Mutable Instruments' Grids) and by how often the
-//! genre's library grooves hit that step with that sound.
-//!
-//! Everything works on a track's three 16-bit masks ([`Track`]) and a small
-//! random number generator, so it runs on the audio thread without
-//! allocating. The genre statistics ([`Habits`]) are built once, when the
-//! engine starts.
+//! Musical variation for the Groove Box's tracks: new grooves in a genre's style, small mutations, busier and calmer tracks and even spacing. Not plain dice: each move is weighted by how
+//! three 16-bit masks ([`Track`]) and a small random number generator, so it runs on the audio thread without allocating. The genre statistics ([`Habits`]) are built once, when the engine starts.
+//! three 16-bit masks ([`Track`]) and a small random number generator, so it runs on the audio thread without allocating. The genre statistics ([`Habits`]) are built once, when the engine
 
 use crate::groove::STEPS;
 use crate::kits::ROLES;
@@ -148,9 +141,7 @@ impl Habits {
     /// The library's habits, built once and shared by every Groove Box.
     pub fn shared() -> std::sync::Arc<Habits> {
         static SHARED: std::sync::OnceLock<std::sync::Arc<Habits>> = std::sync::OnceLock::new();
-        SHARED
-            .get_or_init(|| std::sync::Arc::new(Habits::from_library()))
-            .clone()
+        SHARED.get_or_init(|| std::sync::Arc::new(Habits::from_library())).clone()
     }
 
     pub fn from(library: &[Genre]) -> Habits {
@@ -249,14 +240,7 @@ fn suits(habit: Option<&Habit>, role: usize, step: usize) -> f32 {
 
 /// Changes `track` (playing the kit's sound `role`, 0-8) by `mv`, in the
 /// style of `genre`.
-pub fn apply(
-    mv: Move,
-    track: &mut Track,
-    role: usize,
-    genre: usize,
-    habits: &Habits,
-    rng: &mut Rng,
-) {
+pub fn apply(mv: Move, track: &mut Track, role: usize, genre: usize, habits: &Habits, rng: &mut Rng) {
     let habit = habits.get(genre, role);
     match mv {
         Move::New => *track = new_track(habit, role, rng),
@@ -269,10 +253,9 @@ pub fn apply(
     }
 }
 
-/// A new track: step by step, a hit as often as the genre follows a hit or
-/// a rest on the step before with one here; levels as often as the genre
-/// uses them. With no habit (a sound the genre never uses), a sparse track
-/// on strong steps.
+/// A new track: step by step, a hit as often as the genre follows a hit or a rest
+/// on the step before with one here; levels as often as the genre uses them. With
+/// no habit (a sound the genre never uses), a sparse track on strong steps.
 fn new_track(habit: Option<&Habit>, role: usize, rng: &mut Rng) -> Track {
     let mut t = Track::default();
     let Some(h) = habit else {
@@ -406,10 +389,7 @@ fn even(t: &mut Track) {
     let bits = euclid(k);
     let rotated = ((bits << first) | (bits >> (STEPS - first))) & 0xffff;
     // Levels don't carry over a respacing.
-    *t = Track {
-        hits: rotated,
-        ..Track::default()
-    };
+    *t = Track { hits: rotated, ..Track::default() };
 }
 
 fn rotate(t: &mut Track, by: usize) {
@@ -424,14 +404,7 @@ fn rotate(t: &mut Track, by: usize) {
 
 /// With Vary at `vary` (0-1), whether a hit on `step` of a track playing
 /// `role` plays this time: weak steps drop out more, the backbone never.
-pub fn keeps(
-    vary: f32,
-    role: usize,
-    step: usize,
-    genre: usize,
-    habits: &Habits,
-    rng: &mut Rng,
-) -> bool {
+pub fn keeps(vary: f32, role: usize, step: usize, genre: usize, habits: &Habits, rng: &mut Rng) -> bool {
     if vary <= 0.0 || anchored(role, step) {
         return true;
     }
@@ -442,14 +415,7 @@ pub fn keeps(
 /// With Vary at `vary`, whether an empty `step` of a track playing `role`
 /// gets a soft ghost hit this time: on steps the genre likes for the sound,
 /// for snares, hats and percussion only.
-pub fn ghost(
-    vary: f32,
-    role: usize,
-    step: usize,
-    genre: usize,
-    habits: &Habits,
-    rng: &mut Rng,
-) -> bool {
+pub fn ghost(vary: f32, role: usize, step: usize, genre: usize, habits: &Habits, rng: &mut Rng) -> bool {
     if vary <= 0.0 || !(1..=6).contains(&role) {
         return false;
     }
@@ -525,23 +491,10 @@ mod tests {
     fn vary_drops_weak_hits_more_and_never_the_backbone() {
         let h = habits();
         let mut rng = Rng(5);
-        let kept = |step: usize, rng: &mut Rng| {
-            (0..1000)
-                .filter(|_| keeps(1.0, 2, step, 0, &h, rng))
-                .count()
-        };
-        assert!(
-            kept(1, &mut rng) < kept(2, &mut rng),
-            "a 16th drops out more than an off-beat 8th"
-        );
-        assert!(
-            (0..1000).all(|_| keeps(1.0, 0, 0, 0, &h, &mut rng)),
-            "the kick's downbeat stays"
-        );
-        assert!(
-            (0..1000).all(|_| keeps(0.0, 2, 1, 0, &h, &mut rng)),
-            "no Vary, no change"
-        );
+        let kept = |step: usize, rng: &mut Rng| (0..1000).filter(|_| keeps(1.0, 2, step, 0, &h, rng)).count();
+        assert!(kept(1, &mut rng) < kept(2, &mut rng), "a 16th drops out more than an off-beat 8th");
+        assert!((0..1000).all(|_| keeps(1.0, 0, 0, 0, &h, &mut rng)), "the kick's downbeat stays");
+        assert!((0..1000).all(|_| keeps(0.0, 2, 1, 0, &h, &mut rng)), "no Vary, no change");
         let v: Vec<f32> = (0..1000).map(|_| humanize(1.0, 1.0, &mut rng)).collect();
         assert!(v.iter().all(|&x| (0.66..=1.34).contains(&x)));
         assert!(v.iter().any(|&x| x < 0.9) && v.iter().any(|&x| x > 1.1));
@@ -559,10 +512,7 @@ mod tests {
 
     #[test]
     fn even_keeps_the_count_and_the_first_hit() {
-        let mut t = Track {
-            hits: 0b0000_0000_0110_0110,
-            ..Track::default()
-        };
+        let mut t = Track { hits: 0b0000_0000_0110_0110, ..Track::default() };
         even(&mut t);
         assert_eq!(t.count(), 4);
         assert!(t.has(1));
@@ -571,11 +521,7 @@ mod tests {
 
     #[test]
     fn rotate_moves_every_hit_and_wraps() {
-        let mut t = Track {
-            hits: 1 | 1 << 15,
-            accent: 1 << 15,
-            ..Track::default()
-        };
+        let mut t = Track { hits: 1 | 1 << 15, accent: 1 << 15, ..Track::default() };
         rotate(&mut t, 1);
         assert_eq!(t.hits, 0b11);
         assert_eq!(t.accent, 1);
@@ -587,10 +533,7 @@ mod tests {
     fn new_kicks_in_house_mostly_hit_the_beats() {
         let h = habits();
         let lib = patterns::library();
-        let house = lib
-            .iter()
-            .position(|g| g.name.to_lowercase().contains("house"))
-            .unwrap();
+        let house = lib.iter().position(|g| g.name.to_lowercase().contains("house")).unwrap();
         let mut rng = Rng(7);
         let (mut on_beat, mut all) = (0, 0);
         for _ in 0..200 {
@@ -600,20 +543,14 @@ mod tests {
             on_beat += (t.hits & 0x1111).count_ones();
             all += t.count();
         }
-        assert!(
-            on_beat as f32 > all as f32 * 0.6,
-            "{on_beat} of {all} on the beat"
-        );
+        assert!(on_beat as f32 > all as f32 * 0.6, "{on_beat} of {all} on the beat");
     }
 
     #[test]
     fn busier_and_calmer_add_or_take_one_hit() {
         let h = habits();
         let mut rng = Rng(3);
-        let mut t = Track {
-            hits: 0x1111,
-            ..Track::default()
-        };
+        let mut t = Track { hits: 0x1111, ..Track::default() };
         apply(Move::Busier, &mut t, 0, 0, &h, &mut rng);
         assert_eq!(t.count(), 5);
         assert_eq!(t.hits & 0x1111, 0x1111, "the old hits stay");
@@ -628,10 +565,7 @@ mod tests {
         let h = habits();
         let mut rng = Rng(11);
         for _ in 0..100 {
-            let mut t = Track {
-                hits: 0x1111,
-                ..Track::default()
-            };
+            let mut t = Track { hits: 0x1111, ..Track::default() };
             apply(Move::Mutate, &mut t, 0, 0, &h, &mut rng);
             assert!(t.has(0));
             let changed = (t.hits ^ 0x1111).count_ones();
@@ -641,11 +575,7 @@ mod tests {
 
     #[test]
     fn levels_move_with_their_hits() {
-        let mut t = Track {
-            hits: 1 << 3,
-            accent: 1 << 3,
-            ..Track::default()
-        };
+        let mut t = Track { hits: 1 << 3, accent: 1 << 3, ..Track::default() };
         t.shift(3, 5);
         assert_eq!(t.hits, 1 << 5);
         assert_eq!(t.accent, 1 << 5);

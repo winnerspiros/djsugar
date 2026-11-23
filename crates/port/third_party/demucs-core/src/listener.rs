@@ -1,7 +1,6 @@
 //! Listener for observing the forward pass of the HTDemucs model.
-//!
-//! Emits lightweight events at each pipeline stage — enough for UI progress
-//! indicators and debugging, without copying full tensors.
+//! Emits lightweight events at each pipeline stage — enough for UI
+//! progress indicators and debugging, without copying full tensors.
 
 /// Summary statistics for a tensor at a checkpoint.
 #[derive(Debug, Clone)]
@@ -53,35 +52,19 @@ pub enum ForwardEvent {
     NormalizedCac { stats: Option<TensorStats> },
 
     /// An encoder layer finished.
-    EncoderDone {
-        domain: Domain,
-        layer: usize,
-        num_layers: usize,
-        stats: Option<TensorStats>,
-    },
+    EncoderDone { domain: Domain, layer: usize, num_layers: usize, stats: Option<TensorStats> },
 
     /// Frequency embedding applied (after encoder layer 0).
     FreqEmbApplied,
 
     /// Cross-domain transformer finished (at internal bottom_channels before downsampling).
-    TransformerDone {
-        freq_stats: Option<TensorStats>,
-        time_stats: Option<TensorStats>,
-    },
+    TransformerDone { freq_stats: Option<TensorStats>, time_stats: Option<TensorStats> },
 
     /// Transformer output after channel downsampling (decoder input).
-    DecoderInput {
-        freq_stats: Option<TensorStats>,
-        time_stats: Option<TensorStats>,
-    },
+    DecoderInput { freq_stats: Option<TensorStats>, time_stats: Option<TensorStats> },
 
     /// A decoder layer finished.
-    DecoderDone {
-        domain: Domain,
-        layer: usize,
-        num_layers: usize,
-        stats: Option<TensorStats>,
-    },
+    DecoderDone { domain: Domain, layer: usize, num_layers: usize, stats: Option<TensorStats> },
 
     /// Denormalization complete — model output ready.
     Denormalized,
@@ -139,52 +122,24 @@ impl ForwardListener for DebugListener {
                 let s = stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
                 eprintln!("[debug] normalized_cac  {s}");
             }
-            ForwardEvent::EncoderDone {
-                domain,
-                layer,
-                num_layers,
-                stats,
-            } => {
+            ForwardEvent::EncoderDone { domain, layer, num_layers, stats } => {
                 let s = stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
                 eprintln!("[debug] encoder {domain} {}/{num_layers}  {s}", layer + 1);
             }
             ForwardEvent::FreqEmbApplied => {
                 eprintln!("[debug] freq embedding applied");
             }
-            ForwardEvent::TransformerDone {
-                freq_stats,
-                time_stats,
-            } => {
-                let fs = freq_stats
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default();
-                let ts = time_stats
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default();
+            ForwardEvent::TransformerDone { freq_stats, time_stats } => {
+                let fs = freq_stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
+                let ts = time_stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
                 eprintln!("[debug] transformer done  freq: {fs}  time: {ts}");
             }
-            ForwardEvent::DecoderInput {
-                freq_stats,
-                time_stats,
-            } => {
-                let fs = freq_stats
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default();
-                let ts = time_stats
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default();
+            ForwardEvent::DecoderInput { freq_stats, time_stats } => {
+                let fs = freq_stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
+                let ts = time_stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
                 eprintln!("[debug] decoder_input  freq: {fs}  time: {ts}");
             }
-            ForwardEvent::DecoderDone {
-                domain,
-                layer,
-                num_layers,
-                stats,
-            } => {
+            ForwardEvent::DecoderDone { domain, layer, num_layers, stats } => {
                 let s = stats.as_ref().map(|s| s.to_string()).unwrap_or_default();
                 eprintln!("[debug] decoder {domain} {}/{num_layers}  {s}", layer + 1);
             }
@@ -208,9 +163,8 @@ impl ForwardListener for DebugListener {
     }
 }
 
-/// Compute summary statistics from a Burn tensor.
-///
-/// Uses tensor reduction ops (min/max/mean/var) so the heavy lifting stays
+/// Compute summary statistics from a Burn tensor. Uses tensor
+/// reduction ops (min/max/mean/var) so the heavy lifting stays
 /// on-device — only 4 scalar values are copied to the host.
 pub fn tensor_stats<const D: usize>(tensor: &burn::tensor::Tensor<D>) -> TensorStats {
     let shape = tensor.dims().to_vec();
@@ -220,20 +174,12 @@ pub fn tensor_stats<const D: usize>(tensor: &burn::tensor::Tensor<D>) -> TensorS
     let max = scalar(&flat.clone().max());
     let mean = scalar(&flat.clone().mean());
     let var = scalar(&flat.var(0));
-    TensorStats {
-        shape,
-        min,
-        max,
-        mean,
-        std: var.sqrt(),
-    }
+    TensorStats { shape, min, max, mean, std: var.sqrt() }
 }
 
 /// Extract a single f32 from a 1-element Burn tensor.
 fn scalar(t: &burn::tensor::Tensor<1>) -> f32 {
-    t.to_data()
-        .try_to_vec::<f32>()
-        .expect("scalar extraction failed")[0]
+    t.to_data().try_to_vec::<f32>().expect("scalar extraction failed")[0]
 }
 
 /// Helper: compute stats only if the listener wants them.

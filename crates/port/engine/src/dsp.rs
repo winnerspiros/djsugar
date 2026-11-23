@@ -16,15 +16,7 @@ pub struct Biquad {
 
 impl Default for Biquad {
     fn default() -> Self {
-        Self {
-            b0: 1.0,
-            b1: 0.0,
-            b2: 0.0,
-            a1: 0.0,
-            a2: 0.0,
-            z1: [0.0; 2],
-            z2: [0.0; 2],
-        }
+        Self { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0, z1: [0.0; 2], z2: [0.0; 2] }
     }
 }
 
@@ -44,40 +36,19 @@ impl Biquad {
     /// Changes the coefficients, keeping the state so a sweep does not click.
     pub fn set_lowpass(&mut self, sample_rate: f64, freq: f64, q: f64) {
         let (cos, alpha) = Self::prewarp(sample_rate, freq, q);
-        self.set(
-            (1.0 - cos) / 2.0,
-            1.0 - cos,
-            (1.0 - cos) / 2.0,
-            1.0 + alpha,
-            -2.0 * cos,
-            1.0 - alpha,
-        );
+        self.set((1.0 - cos) / 2.0, 1.0 - cos, (1.0 - cos) / 2.0, 1.0 + alpha, -2.0 * cos, 1.0 - alpha);
     }
 
     pub fn set_highpass(&mut self, sample_rate: f64, freq: f64, q: f64) {
         let (cos, alpha) = Self::prewarp(sample_rate, freq, q);
-        self.set(
-            (1.0 + cos) / 2.0,
-            -(1.0 + cos),
-            (1.0 + cos) / 2.0,
-            1.0 + alpha,
-            -2.0 * cos,
-            1.0 - alpha,
-        );
+        self.set((1.0 + cos) / 2.0, -(1.0 + cos), (1.0 + cos) / 2.0, 1.0 + alpha, -2.0 * cos, 1.0 - alpha);
     }
 
     /// A bell boosting or cutting `db` around `freq`.
     pub fn set_peaking(&mut self, sample_rate: f64, freq: f64, q: f64, db: f64) {
         let (cos, alpha) = Self::prewarp(sample_rate, freq, q);
         let a = 10f64.powf(db / 40.0);
-        self.set(
-            1.0 + alpha * a,
-            -2.0 * cos,
-            1.0 - alpha * a,
-            1.0 + alpha / a,
-            -2.0 * cos,
-            1.0 - alpha / a,
-        );
+        self.set(1.0 + alpha * a, -2.0 * cos, 1.0 - alpha * a, 1.0 + alpha / a, -2.0 * cos, 1.0 - alpha / a);
     }
 
     fn prewarp(sample_rate: f64, freq: f64, q: f64) -> (f64, f64) {
@@ -164,10 +135,7 @@ impl Isolator {
             rest: Lr4::highpass(sample_rate, EQ_LOW_HZ),
             mid: Lr4::lowpass(sample_rate, EQ_HIGH_HZ),
             high: Lr4::highpass(sample_rate, EQ_HIGH_HZ),
-            low_ap: (
-                Lr4::lowpass(sample_rate, EQ_HIGH_HZ),
-                Lr4::highpass(sample_rate, EQ_HIGH_HZ),
-            ),
+            low_ap: (Lr4::lowpass(sample_rate, EQ_HIGH_HZ), Lr4::highpass(sample_rate, EQ_HIGH_HZ)),
         }
     }
 
@@ -221,20 +189,15 @@ impl Svf {
     /// Low-pass, band-pass and high-pass outputs for one frame.
     #[inline]
     pub(crate) fn process(&mut self, x: [f32; 2]) -> [[f32; 2]; 3] {
-        // About 5 ms to glide to a new cutoff, but never more than about a
-        // sixtieth of an octave per sample: a jump across the whole range
-        // (a MIDI knob slammed from end to end) then sweeps over about
-        // 12 ms instead of leaping several octaves in the first samples.
+        // About 5 ms to glide to a new cutoff, but never more than about a sixtieth of an
+        // end) then sweeps over about 12 ms instead of leaping several octaves in the first samples.
+        // end) then sweeps over about 12 ms instead of leaping several octaves in the first
         let step = (self.target - self.g) * 0.004;
         let most = self.g * 0.012;
         self.g += step.clamp(-most, most);
         if self.k != self.k_target {
             let d = self.k_target - self.k;
-            self.k = if d.abs() < 1e-6 {
-                self.k_target
-            } else {
-                self.k + d * 0.004
-            };
+            self.k = if d.abs() < 1e-6 { self.k_target } else { self.k + d * 0.004 };
         }
         let (g, k) = (self.g, self.k);
         let a1 = 1.0 / (1.0 + g * (g + k));
@@ -255,12 +218,9 @@ impl Svf {
     }
 }
 
-/// The deck's quick filter knob: low-pass below the centre, high-pass above it.
-///
-/// Both halves are gliding state-variable filters, so turning the knob, even
-/// fast or by big MIDI steps, sweeps smoothly instead of zipping, and each
-/// half fades in and out around the centre instead of switching on with a
-/// click.
+/// The deck's quick filter knob: low-pass below the centre, high-pass above it. Both halves are gliding
+/// state-variable filters, so turning the knob, even fast or by big MIDI steps, sweeps smoothly instead
+/// of zipping, and each half fades in and out around the centre instead of switching on with a click.
 #[derive(Clone, Copy, Debug)]
 pub struct SweepFilter {
     sample_rate: f32,
@@ -317,10 +277,7 @@ impl SweepFilter {
             return x;
         }
         let mut y = x;
-        for (k, (svf, out)) in [(&mut self.lp, 0), (&mut self.hp, 2)]
-            .into_iter()
-            .enumerate()
-        {
+        for (k, (svf, out)) in [(&mut self.lp, 0), (&mut self.hp, 2)].into_iter().enumerate() {
             let m = &mut self.mix[k];
             let t = self.target[k];
             *m += (t - *m) * SWEEP_GLIDE;
@@ -341,11 +298,9 @@ impl SweepFilter {
     }
 }
 
-/// The channel of PlayDifferently's Model 1 mixer, in place of a three-band
-/// EQ (see notes/model1-sculpt.md in the project files): "contour" high- and
-/// low-pass filters that only cut, with no resonance, and a wide swept bell
-/// between them. The filters are 4th-order Linkwitz-Riley, steep enough that
-/// both fully closed leave almost nothing, as on the Model 1.
+/// The channel of PlayDifferently's Model 1 mixer, in place of a three-band EQ (see notes/model1-sculpt.md in the project
+/// files): "contour" high- and low-pass filters that only cut, with no resonance, and a wide swept bell between them. The
+/// filters are 4th-order Linkwitz-Riley, steep enough that both fully closed leave almost nothing, as on the Model 1.
 pub struct Sculpt {
     sample_rate: f64,
     knobs: [f64; 4],
@@ -360,13 +315,8 @@ pub struct Sculpt {
 /// The sculpt frequency at `knob` (0..1): exponential between the Model 1's
 /// markings.
 pub fn sculpt_freq(knob: f64) -> f64 {
-    const MARKS: [(f64, f64); 5] = [
-        (0.0, 70.0),
-        (1.0 / 6.0, 100.0),
-        (0.5, 500.0),
-        (5.0 / 6.0, 2_500.0),
-        (1.0, 7_000.0),
-    ];
+    const MARKS: [(f64, f64); 5] =
+        [(0.0, 70.0), (1.0 / 6.0, 100.0), (0.5, 500.0), (5.0 / 6.0, 2_500.0), (1.0, 7_000.0)];
     let k = knob.clamp(0.0, 1.0);
     let i = MARKS.iter().rposition(|m| m.0 <= k).unwrap_or(0).min(3);
     let ((k0, f0), (k1, f1)) = (MARKS[i], MARKS[i + 1]);
@@ -389,11 +339,9 @@ impl Sculpt {
         s
     }
 
-    /// The knobs, all 0..1, calibrated to the Model 1's panel markings:
-    /// `hpf` (0 flat, up to 1 kHz), the sculpt band's `freq` (70 Hz, 100 Hz
-    /// at a sixth, 500 Hz at the centre, 2.5 kHz at five sixths, 7 kHz) and
-    /// `gain` (−20 dB to +8 dB, evenly spaced each side of 0 at the centre),
-    /// and `lpf` (1 flat, down to 500 Hz).
+    /// The knobs, all 0..1, calibrated to the Model 1's panel markings: `hpf` (0 flat, up to 1 kHz), the sculpt
+    /// band's `freq` (70 Hz, 100 Hz at a sixth, 500 Hz at the centre, 2.5 kHz at five sixths, 7 kHz) and `gain`
+    /// (−20 dB to +8 dB, evenly spaced each side of 0 at the centre), and `lpf` (1 flat, down to 500 Hz).
     pub fn set(&mut self, hpf: f64, freq: f64, gain: f64, lpf: f64) {
         let knobs = [hpf, freq, gain, lpf];
         if knobs == self.knobs {
@@ -409,11 +357,7 @@ impl Sculpt {
         if self.lp_on {
             self.lp.set_lowpass(sr, 500.0 * 40f64.powf(lpf));
         }
-        let db = if gain < 0.5 {
-            -20.0 * (1.0 - gain * 2.0)
-        } else {
-            8.0 * (gain * 2.0 - 1.0)
-        };
+        let db = if gain < 0.5 { -20.0 * (1.0 - gain * 2.0) } else { 8.0 * (gain * 2.0 - 1.0) };
         self.bell_on = db.abs() > 0.05;
         if self.bell_on {
             // A wide bell (Q 0.5, as DJ TechTools' Model 1 recipe uses).
@@ -441,11 +385,9 @@ pub const SOFT_CLIP_KNEE: f32 = 0.841;
 /// What [`soft_clip`] never reaches: -0.1 dBFS.
 pub const SOFT_CLIP_CEILING: f32 = 0.9886;
 
-/// A zero-latency safety clipper for outputs without the master's limiter
-/// (headphones, booth, the deck outputs to an external mixer): untouched up
-/// to [`SOFT_CLIP_KNEE`], then bent smoothly towards [`SOFT_CLIP_CEILING`]
-/// instead of squaring off at full scale. The bend starts with a slope of
-/// one, so there is no kink where it begins.
+/// A zero-latency safety clipper for outputs without the master's limiter (headphones, booth, the deck outputs to
+/// instead of squaring off at full scale. The bend starts with a slope of one, so there is no kink where it begins.
+/// instead of squaring off at full scale. The bend starts with a slope of one, so there is no kink where it
 #[inline]
 pub fn soft_clip(v: f32) -> f32 {
     let a = v.abs();
@@ -461,14 +403,9 @@ pub fn soft_clip(v: f32) -> f32 {
     bent.copysign(v)
 }
 
-/// A look-ahead true-peak limiter for the master mix, with both channels
-/// linked.
-///
-/// The audio is delayed by the look-ahead, so the gain can come down before
-/// a peak arrives: every sample, and the wave between samples as a DAC or
-/// an MP3 encoder rebuilds it, leaves at or below the ceiling, with no
-/// clipping and no waveshaping distortion. The gain dips smoothly over the
-/// look-ahead and recovers over [`Limiter::RELEASE`].
+/// A look-ahead true-peak limiter for the master mix, with both channels linked. The audio is delayed by the look-ahead, so the gain can come
+/// down before a peak arrives: every sample, and the wave between samples as a DAC or an MP3 encoder rebuilds it, leaves at or below the
+/// ceiling, with no clipping and no waveshaping distortion. The gain dips smoothly over the look-ahead and recovers over [`Limiter::RELEASE`].
 pub struct Limiter {
     ceiling: f32,
     /// Finds the peaks between samples, a few frames late; the audio is
@@ -534,18 +471,10 @@ impl Limiter {
         // A little under the ceiling: the gain moving over a peak can lift
         // the wave between samples by a hair.
         let peak = self.true_peak.push(x) / Self::MARGIN;
-        self.needed[self.at] = if peak > self.ceiling {
-            self.ceiling / peak
-        } else {
-            1.0
-        };
+        self.needed[self.at] = if peak > self.ceiling { self.ceiling / peak } else { 1.0 };
         let held = self.needed.iter().copied().fold(1.0f32, f32::min);
         // Down at once, back up slowly.
-        self.gain = if held < self.gain {
-            held
-        } else {
-            self.gain + (held - self.gain) * self.release
-        };
+        self.gain = if held < self.gain { held } else { self.gain + (held - self.gain) * self.release };
         self.sum += (self.gain - self.released[self.at]) as f64;
         self.released[self.at] = self.gain;
         self.at = (self.at + 1) % self.needed.len();
@@ -675,13 +604,7 @@ mod tests {
         assert!((boost - 10f32.powf(8.0 / 20.0)).abs() < 0.05, "{boost}");
         assert!((sculpted(10_000.0, [0.0, 0.5, 0.0, 1.0]) - flat).abs() < 0.05);
         // The frequency knob's markings.
-        for (k, f) in [
-            (0.0, 70.0),
-            (1.0 / 6.0, 100.0),
-            (0.5, 500.0),
-            (5.0 / 6.0, 2_500.0),
-            (1.0, 7_000.0),
-        ] {
+        for (k, f) in [(0.0, 70.0), (1.0 / 6.0, 100.0), (0.5, 500.0), (5.0 / 6.0, 2_500.0), (1.0, 7_000.0)] {
             assert!((sculpt_freq(k) - f).abs() < 1e-6, "{k}");
         }
     }
@@ -717,11 +640,9 @@ mod tests {
     }
 }
 
-/// Makes the current thread's floating point treat denormal numbers as zero.
-/// Feedback effects (reverb, echo, phaser) decay towards zero through
-/// denormals, which many CPUs handle very slowly: a fading tail could then
-/// cost many times its usual CPU. Called at the start of every audio buffer,
-/// as is usual on an audio thread.
+/// Makes the current thread's floating point treat denormal numbers as zero. Feedback effects (reverb, echo,
+/// phaser) decay towards zero through denormals, which many CPUs handle very slowly: a fading tail could then
+/// cost many times its usual CPU. Called at the start of every audio buffer, as is usual on an audio thread.
 pub fn flush_denormals() {
     #[cfg(target_arch = "x86_64")]
     // SAFETY: only sets the MXCSR flush-to-zero (bit 15) and

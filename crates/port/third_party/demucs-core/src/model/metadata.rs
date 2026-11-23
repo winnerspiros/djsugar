@@ -81,8 +81,7 @@ pub const HTDEMUCS_FT: ModelInfo = ModelInfo {
 
 pub const ALL_MODELS: &[&ModelInfo] = &[&HTDEMUCS, &HTDEMUCS_6S, &HTDEMUCS_FT];
 
-pub const HF_BASE_URL: &str =
-    "https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/";
+pub const HF_BASE_URL: &str = "https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/";
 
 pub fn download_url(info: &ModelInfo) -> String {
     format!("{}{}", HF_BASE_URL, info.filename)

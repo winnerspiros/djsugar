@@ -1,14 +1,6 @@
-//! Scale mode for the instrument: notes played move to the nearest note
-//! of a scale, so any key played sounds in key with the mix.
-//!
-//! `[Instrument1],scale_mode` is 0 Off, 1 Auto (the master deck's key) or
-//! 2 the root and scale picked (`scale_root` 0 to 11 from C, `scale_type`
-//! an index into [`SCALES`]). `scale_mask` shows the notes the scale has
-//! now, a bit per pitch class from C, and `scale_now` which scale that is,
-//! 1 + type × 12 + root; both 0 while every note plays as it is.
-//!
-//! Chord mode (`chord_mode`, see [`CHORDS`]) plays a chord built on the
-//! scale from each key; `chord_learn` takes the next chord held as Mine.
+//! Scale mode for the instrument: notes played move to the nearest note of a scale, so any key played sounds in key with the mix. `[Instrument1],scale_mode` is 0 Off, 1 Auto (the master deck's key) or 2 the
+//! root and scale picked (`scale_root` 0 to 11 from C, `scale_type` an index into [`SCALES`]). `scale_mask` shows the notes the scale has now, a bit per pitch class from C, and `scale_now` which scale that
+//! is, 1 + type × 12 + root; both 0 while every note plays as it is. Chord mode (`chord_mode`, see [`CHORDS`]) plays a chord built on the scale from each key; `chord_learn` takes the next chord held as Mine.
 
 use djsugar_plugin_host::Midi;
 
@@ -18,12 +10,7 @@ use crate::key::Key;
 pub const SCALES: [&str; 4] = ["Major", "Minor", "Major pentatonic", "Minor pentatonic"];
 
 /// Each scale's notes, in semitones from its root.
-const STEPS: [&[u8]; 4] = [
-    &[0, 2, 4, 5, 7, 9, 11],
-    &[0, 2, 3, 5, 7, 8, 10],
-    &[0, 2, 4, 7, 9],
-    &[0, 3, 5, 7, 10],
-];
+const STEPS: [&[u8]; 4] = [&[0, 2, 4, 5, 7, 9, 11], &[0, 2, 3, 5, 7, 8, 10], &[0, 2, 4, 7, 9], &[0, 3, 5, 7, 10]];
 
 /// `scale_mode` values.
 pub const OFF: u8 = 0;
@@ -33,9 +20,7 @@ pub const PICKED: u8 = 2;
 /// The notes of scale `scale` (see [`SCALES`]) on `root` (0 to 11 from C),
 /// a bit per pitch class from C.
 pub fn mask(root: u8, scale: usize) -> u16 {
-    STEPS[scale.min(STEPS.len() - 1)]
-        .iter()
-        .fold(0, |m, s| m | 1 << ((root + s) % 12))
+    STEPS[scale.min(STEPS.len() - 1)].iter().fold(0, |m, s| m | 1 << ((root + s) % 12))
 }
 
 /// The scale a mode plays in, as (root, scale): none with Off, or with
@@ -60,16 +45,12 @@ pub fn nearest(key: u8, mask: u16) -> u8 {
     if mask & 0xfff == 0 || in_scale(key as i32) {
         return key;
     }
-    (1..12)
-        .flat_map(|d| [key as i32 - d, key as i32 + d])
-        .find(|&k| in_scale(k))
-        .map_or(key, |k| k as u8)
+    (1..12).flat_map(|d| [key as i32 - d, key as i32 + d]).find(|&k| in_scale(k)).map_or(key, |k| k as u8)
 }
 
-/// `chord_mode` values: one key plays the key alone, or a chord built on
-/// it. Triad and Seventh stack every other note of the scale (a major
-/// triad and a dominant seventh with no scale); Power is root, fifth and
-/// octave; Mine is the chord learned (`chord_shape`), moved into the scale.
+/// `chord_mode` values: one key plays the key alone, or a chord built on it. Triad and Seventh
+/// Power is root, fifth and octave; Mine is the chord learned (`chord_shape`), moved into the scale.
+/// Power is root, fifth and octave; Mine is the chord learned (`chord_shape`), moved into the
 pub const CHORDS: [&str; 5] = ["Off", "Triad", "Seventh", "Power", "Mine"];
 pub const CHORD_OFF: u8 = 0;
 pub const TRIAD: u8 = 1;
@@ -113,10 +94,9 @@ pub fn chord(key: u8, mask: u16, mode: u8, shape: u32) -> u128 {
     }
 }
 
-/// Moves notes to a scale, or plays a chord for each, as they come in,
-/// and ends each where it began even if the scale or chord changed while
-/// it was held. Two keys landing on the same note hold it until both are
-/// let go.
+/// Moves notes to a scale, or plays a chord for each, as they come in, and
+/// ends each where it began even if the scale or chord changed while it was
+/// held. Two keys landing on the same note hold it until both are let go.
 pub struct NoteMapper {
     /// The notes each key plays, by channel and key.
     to: [[u128; 128]; 16],
@@ -258,10 +238,7 @@ mod tests {
 
     #[test]
     fn auto_follows_the_master_key_and_waits_without_one() {
-        let a_minor = Key {
-            tonic: 9,
-            minor: true,
-        };
+        let a_minor = Key { tonic: 9, minor: true };
         assert_eq!(mask_for(AUTO, 0, 0, Some(a_minor)), mask(9, 1));
         assert_eq!(mask_for(AUTO, 0, 0, None), 0);
         assert_eq!(mask_for(PICKED, 2, 3, Some(a_minor)), mask(2, 3));
@@ -278,23 +255,14 @@ mod tests {
     fn a_note_ends_where_it_began() {
         let mut s = NoteMapper::default();
         let c_major = mask(0, 0);
-        assert_eq!(
-            play(&mut s, Midi::note_on(0, 0, 61, 100), c_major),
-            [[0x90, 60, 100]]
-        );
+        assert_eq!(play(&mut s, Midi::note_on(0, 0, 61, 100), c_major), [[0x90, 60, 100]]);
         // The scale changes while it is held: its note-off still ends 60.
-        assert_eq!(
-            play(&mut s, Midi::note_off(0, 0, 61), mask(2, 0)),
-            [[0x80, 60, 0]]
-        );
+        assert_eq!(play(&mut s, Midi::note_off(0, 0, 61), mask(2, 0)), [[0x80, 60, 0]]);
         // C and C# both play C: it sounds until both are let go.
         play(&mut s, Midi::note_on(0, 0, 60, 100), c_major);
         play(&mut s, Midi::note_on(0, 0, 61, 100), c_major);
         assert!(play(&mut s, Midi::note_off(0, 0, 61), c_major).is_empty());
-        assert_eq!(
-            play(&mut s, Midi::note_off(0, 0, 60), c_major),
-            [[0x80, 60, 0]]
-        );
+        assert_eq!(play(&mut s, Midi::note_off(0, 0, 60), c_major), [[0x80, 60, 0]]);
     }
 
     fn notes(bits: u128) -> Vec<u8> {
@@ -306,21 +274,9 @@ mod tests {
         let c_major = mask(0, 0);
         assert_eq!(notes(chord(60, c_major, TRIAD, 0)), [60, 64, 67], "C");
         assert_eq!(notes(chord(62, c_major, TRIAD, 0)), [62, 65, 69], "Dm");
-        assert_eq!(
-            notes(chord(71, c_major, SEVENTH, 0)),
-            [71, 74, 77, 81],
-            "Bm7b5"
-        );
-        assert_eq!(
-            notes(chord(61, c_major, TRIAD, 0)),
-            [60, 64, 67],
-            "C# moves to C first"
-        );
-        assert_eq!(
-            notes(chord(62, 0, TRIAD, 0)),
-            [62, 66, 69],
-            "no scale: major"
-        );
+        assert_eq!(notes(chord(71, c_major, SEVENTH, 0)), [71, 74, 77, 81], "Bm7b5");
+        assert_eq!(notes(chord(61, c_major, TRIAD, 0)), [60, 64, 67], "C# moves to C first");
+        assert_eq!(notes(chord(62, 0, TRIAD, 0)), [62, 66, 69], "no scale: major");
         assert_eq!(notes(chord(60, 0, POWER, 0)), [60, 67, 72]);
         assert_eq!(notes(chord(60, 0, CHORD_OFF, 0)), [60]);
         // A minor seventh learned, played on D in C major: D F A C.

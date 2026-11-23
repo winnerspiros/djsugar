@@ -18,9 +18,8 @@ pub const fn pad_fx_unit(deck: usize) -> usize {
     BEAT_FX_UNIT + 1 + deck
 }
 /// The microphone and auxiliary inputs' own unit, the last one (now
-/// `[EffectRack1_EffectUnit10]`), so effects on the voice leave the decks'
-/// alone. The other units can't be routed to the inputs, nor this one to
-/// the decks. The UI reads its number from `EffectList.mic-unit`.
+/// units can't be routed to the inputs, nor this one to the decks. The UI reads its number from `EffectList.mic-unit`.
+/// units can't be routed to the inputs, nor this one to the decks. The UI reads its number
 pub const MIC_FX_UNIT: usize = NUM_EFFECT_UNITS - 1;
 pub const EFFECTS_PER_UNIT: usize = 3;
 
@@ -61,10 +60,9 @@ pub fn effect_group(unit: usize, effect: usize) -> String {
     format!("[EffectRack1_EffectUnit{}_Effect{}]", unit + 1, effect + 1)
 }
 
-/// hotcue_N_type values.
-/// The Scratch crossfader curve's cut-in out of the box: a side opens
-/// fully within the last 2% of travel, under a millimetre on most
-/// controllers.
+/// hotcue_N_type values. The Scratch crossfader curve's cut-in
+/// out of the box: a side opens fully within the last 2% of
+/// travel, under a millimetre on most controllers.
 pub const XFADER_CUT_IN: f64 = 0.02;
 pub(crate) const HOTCUE_CUE: f64 = 1.0;
 pub(crate) const HOTCUE_LOOP: f64 = 4.0;
@@ -136,10 +134,9 @@ pub(crate) struct DeckControls {
     /// Requested range, applied with its fader adjustment before sync so
     /// the tempo stays where it is. Zero means no pending request.
     pub(crate) rate_range_set: ControlHandle,
-    /// `rate_dir`: which way the tempo fader changes the speed. `rate`
-    /// is where the fader is (+1 at the top); the speed is
-    /// `1 + rate * rateRange * rate_dir`. -1, the app's default, slows the
-    /// deck down as the fader goes up, as on Pioneer players.
+    /// `rate_dir`: which way the tempo fader changes the speed. `rate` is where the
+    /// fader is (+1 at the top); the speed is `1 + rate * rateRange * rate_dir`. -1, the
+    /// app's default, slows the deck down as the fader goes up, as on Pioneer players.
     pub(crate) rate_dir: ControlHandle,
     /// Pitch reset: while on, the tempo glides back to 0% and the control
     /// turns itself off when it gets there.
@@ -241,7 +238,7 @@ pub(crate) struct DeckControls {
     /// Set to N to multiply the loop length by N; the engine zeroes it.
     pub(crate) loop_scale: ControlHandle,
     /// Moves the loop by that many beats (loop_move), or by that many
-    /// of its own lengths (DJ Sugar's loop_move_loops, VirtualDJ's loop_move).
+    /// of its own lengths (as loop_move_loops).
     pub(crate) loop_move: [ControlHandle; 2],
     /// Set to N to move the beat grid N seconds later (negative: earlier),
     /// as a drag of the waveform does; the engine zeroes it.
@@ -302,14 +299,13 @@ impl DeckControls {
         alias(reg, g, "vu_meter_left", g, "VuMeterL");
         alias(reg, g, "vu_meter_right", g, "VuMeterR");
         reg.indicator(g, "playposition_seconds", 3600.0);
-        // A pad panel a controller's pad mode buttons ask the deck to show
-        // (0 hot cues, 1 pad FX 1, 2 beat jump, 3 sampler, 4 stems, 5 beat
-        // loop, 6 pad FX 2, 7 keyboard, 8 key shift, 9 loop roll, 10 slicer,
-        // 11 freeze); the skin shows it and sets this back to -1.
+        // A pad panel a controller's pad mode buttons ask the deck to show (0 hot cues, 1 pad
+        // shift, 9 loop roll, 10 slicer, 11 freeze); the skin shows it and sets this back to -1.
+        // shift, 9 loop roll, 10 slicer, 11 freeze); the skin shows it and sets this back to
         reg.create(g, "pad_panel", -1.0, -1.0, 16.0, Behavior::Free);
         // Touching the jog's top scratches (on, as on vinyl) or only bends
         // like the rim (off, CDJ mode). Only controller mappings read it;
-        // on by default (DJ Sugar's own, as VirtualDJ's vinyl_mode).
+        // on by default (as vinyl_mode).
         reg.create(g, "vinyl_mode", 1.0, 0.0, 1.0, Behavior::Toggle);
         // Asks the skin to open pad tab 0-7 by its place (a controller's pad
         // mode buttons: 0-3 plain, 4-7 with Shift), whatever panel it shows;
@@ -318,18 +314,8 @@ impl DeckControls {
         // The pad panel in each of the eight pad tabs (numbers as for
         // `pad_panel`), in the DDJ-FLX4's pad mode order. The skin changes
         // them; a controller's pads follow them.
-        for (tab, panel) in [0.0, 1.0, 2.0, 3.0, 7.0, 6.0, 5.0, 8.0]
-            .into_iter()
-            .enumerate()
-        {
-            reg.create(
-                g,
-                &format!("pad_slot_{}", tab + 1),
-                panel,
-                0.0,
-                16.0,
-                Behavior::Free,
-            );
+        for (tab, panel) in [0.0, 1.0, 2.0, 3.0, 7.0, 6.0, 5.0, 8.0].into_iter().enumerate() {
+            reg.create(g, &format!("pad_slot_{}", tab + 1), panel, 0.0, 16.0, Behavior::Free);
         }
         // Which 8 sampler slots the deck's SAMPLER pads play: 0 slots 1-8,
         // 1 slots 9-16.
@@ -341,8 +327,7 @@ impl DeckControls {
         // 0 none, 1 Filter, then the others. One is chosen for all decks.
         let n_cfx = crate::effects::COLOR_FX.len() as f64;
         let cfx_preset = reg.create(&qg, "loaded_chain_preset", 1.0, 0.0, n_cfx, Behavior::Free);
-        reg.indicator(&qg, "num_chain_presets", 64.0)
-            .set(n_cfx + 1.0);
+        reg.indicator(&qg, "num_chain_presets", 64.0).set(n_cfx + 1.0);
         let cfx_next = reg.push(&qg, "next_chain_preset");
         let cfx_prev = reg.push(&qg, "prev_chain_preset");
         // The EQ slot says how many knobs and kills it has;
@@ -394,25 +379,11 @@ impl DeckControls {
                     fx: reg.toggle(&stem_fx_group(deck, s), "enabled"),
                 }
             }),
-            stem_fx: reg.create(
-                g,
-                "stem_fx",
-                1.0,
-                1.0,
-                crate::effects::STEM_FX.len() as f64,
-                Behavior::Free,
-            ),
+            stem_fx: reg.create(g, "stem_fx", 1.0, 1.0, crate::effects::STEM_FX.len() as f64, Behavior::Free),
             play: reg.toggle(g, "play"),
             play_next: reg.create(g, "play_next", 0.0, 0.0, 4.0, Behavior::Free),
             pfl: reg.toggle(g, "pfl"),
-            orientation: reg.create(
-                g,
-                "orientation",
-                default_orientation(deck),
-                0.0,
-                2.0,
-                Behavior::Free,
-            ),
+            orientation: reg.create(g, "orientation", default_orientation(deck), 0.0, 2.0, Behavior::Free),
             cue_default: reg.push(g, "cue_default"),
             cue_play: reg.push(g, "cue_play"),
             cue_point: reg.indicator(g, "cue_point", 3600.0),
@@ -449,33 +420,18 @@ impl DeckControls {
             sync_leader: reg.create(g, "sync_leader", 0.0, 0.0, 2.0, Behavior::Free),
             beatloop_lights: BEATLOOP_SIZES
                 .iter()
-                .map(|&size| {
-                    (
-                        size,
-                        reg.indicator(g, &format!("beatloop_{}_enabled", size_name(size)), 1.0),
-                    )
-                })
+                .map(|&size| (size, reg.indicator(g, &format!("beatloop_{}_enabled", size_name(size)), 1.0)))
                 .collect(),
             pushes: deck_pushes(reg, g),
             instrument_pads: reg.toggle("[Instrument1]", "keyboard_pads"),
-            eq: [1, 2, 3].map(|n| {
-                reg.create(
-                    &eqg,
-                    &format!("parameter{n}"),
-                    1.0,
-                    0.0,
-                    4.0,
-                    Behavior::CenteredOnDefault,
-                )
-            }),
+            eq: [1, 2, 3]
+                .map(|n| reg.create(&eqg, &format!("parameter{n}"), 1.0, 0.0, 4.0, Behavior::CenteredOnDefault)),
             eq_kill: [1, 2, 3].map(|n| reg.toggle(&eqg, &format!("button_parameter{n}"))),
             filter: reg.create(&qg, "super1", 0.5, 0.0, 1.0, Behavior::Linear),
             sculpt: {
                 let sg = sculpt_group(deck);
                 let keys = ["hpf", "freq", "gain", "lpf"];
-                std::array::from_fn(|i| {
-                    reg.create(&sg, keys[i], SCULPT_DEFAULTS[i], 0.0, 1.0, Behavior::Linear)
-                })
+                std::array::from_fn(|i| reg.create(&sg, keys[i], SCULPT_DEFAULTS[i], 0.0, 1.0, Behavior::Linear))
             },
             quick_enabled: {
                 let e = reg.toggle(&qg, "enabled");
@@ -487,14 +443,7 @@ impl DeckControls {
             cfx_prev,
             cfx_edges: [Edge::default(); 2],
             hotcues,
-            hotcue_focus: reg.create(
-                g,
-                "hotcue_focus",
-                -1.0,
-                -1.0,
-                NUM_HOTCUES as f64,
-                Behavior::Free,
-            ),
+            hotcue_focus: reg.create(g, "hotcue_focus", -1.0, -1.0, NUM_HOTCUES as f64, Behavior::Free),
             scratch2: reg.create(g, "scratch2", 0.0, -100.0, 100.0, Behavior::Free),
             scratch2_enable: reg.toggle(g, "scratch2_enable"),
             vinylcontrol_enabled: reg.toggle(g, "vinylcontrol_enabled"),
@@ -515,33 +464,18 @@ impl DeckControls {
                 (djsugar_timecode::FORMATS.len() - 1) as f64,
                 Behavior::Free,
             ),
-            vinylcontrol_status: reg.create(
-                g,
-                "vinylcontrol_status",
-                0.0,
-                0.0,
-                2.0,
-                Behavior::Free,
-            ),
+            vinylcontrol_status: reg.create(g, "vinylcontrol_status", 0.0, 0.0, 2.0, Behavior::Free),
             scrub_enable: reg.toggle(g, "scrub_enable"),
             scrub_position: reg.create(g, "scrub_position", 0.0, 0.0, 1.0, Behavior::Linear),
             seek_hold: reg.toggle(g, "seek_hold"),
             jog: reg.create(g, "jog", 0.0, -1000.0, 1000.0, Behavior::Free),
             jog_bend: reg.create(g, "jog_bend", 0.0, -1000.0, 1000.0, Behavior::Free),
             rate_search: reg.create(g, "rateSearch", 0.0, -300.0, 300.0, Behavior::Free),
-            rate_temp: ["up", "down", "up_small", "down_small"]
-                .map(|k| reg.push(g, &format!("rate_temp_{k}"))),
+            rate_temp: ["up", "down", "up_small", "down_small"].map(|k| reg.push(g, &format!("rate_temp_{k}"))),
             reverse: reg.toggle(g, "reverse"),
             reverseroll: reg.push(g, "reverseroll"),
             slip_enabled: reg.toggle(g, "slip_enabled"),
-            slip_position: reg.create(
-                g,
-                "slip_position",
-                -1.0,
-                -1.0,
-                f64::MAX,
-                Behavior::Indicator,
-            ),
+            slip_position: reg.create(g, "slip_position", -1.0, -1.0, f64::MAX, Behavior::Indicator),
             mute: reg.toggle(g, "mute"),
             play_indicator: reg.indicator(g, "play_indicator", 1.0),
             cue_indicator: reg.indicator(g, "cue_indicator", 1.0),
@@ -549,40 +483,20 @@ impl DeckControls {
             beatjump_size: reg.create(g, "beatjump_size", 4.0, 1.0 / 32.0, 512.0, Behavior::Linear),
             beatjump: reg.create(g, "beatjump", 0.0, -512.0, 512.0, Behavior::Free),
             loop_scale: reg.create(g, "loop_scale", 0.0, 0.0, 64.0, Behavior::Free),
-            loop_move: ["loop_move", "loop_move_loops"]
-                .map(|k| reg.create(g, k, 0.0, -512.0, 512.0, Behavior::Free)),
+            loop_move: ["loop_move", "loop_move_loops"].map(|k| reg.create(g, k, 0.0, -512.0, 512.0, Behavior::Free)),
             grid_move: reg.create(g, "beats_translate_by", 0.0, -60.0, 60.0, Behavior::Free),
             eject: reg.push(g, "eject"),
             beatsync: reg.push(g, "beatsync"),
             rolls,
             slicer_enabled: reg.toggle(g, "slicer_enabled"),
-            slicer_pads: std::array::from_fn(|n| {
-                (
-                    reg.push(g, &format!("slicer_{}_activate", n + 1)),
-                    Edge::default(),
-                )
-            }),
-            slicer_status: std::array::from_fn(|n| {
-                reg.indicator(g, &format!("slicer_{}_status", n + 1), 1.0)
-            }),
-            freeze_pads: std::array::from_fn(|n| {
-                (
-                    reg.push(g, &format!("freeze_{}_activate", n + 1)),
-                    Edge::default(),
-                )
-            }),
+            slicer_pads: std::array::from_fn(|n| (reg.push(g, &format!("slicer_{}_activate", n + 1)), Edge::default())),
+            slicer_status: std::array::from_fn(|n| reg.indicator(g, &format!("slicer_{}_status", n + 1), 1.0)),
+            freeze_pads: std::array::from_fn(|n| (reg.push(g, &format!("freeze_{}_activate", n + 1)), Edge::default())),
             keylock: reg.toggle(g, "keylock"),
             bpmlock: reg.toggle(g, "bpmlock"),
             metronome: reg.toggle(g, "metronome"),
             beats_edit: reg.toggle(g, "beats_edit"),
-            live_input: reg.create(
-                g,
-                "live_input",
-                0.0,
-                0.0,
-                crate::inputs::MIXER as f64,
-                Behavior::Free,
-            ),
+            live_input: reg.create(g, "live_input", 0.0, 0.0, crate::inputs::MIXER as f64, Behavior::Free),
             live_trim: reg.create(g, "live_trim", 0.0, -12.0, 24.0, Behavior::Linear),
             live_pan: reg.create(g, "live_pan", 0.0, -1.0, 1.0, Behavior::Linear),
             pitch: reg.create(g, "pitch", 0.0, -6.0, 6.0, Behavior::Linear),
@@ -596,11 +510,9 @@ impl DeckControls {
 
 /// Loop sizes with their own pads (`beatloop_N_activate`), from the
 /// 1/16-beat loop rolls up.
-pub const BEATLOOP_SIZES: [f64; 11] = [
-    0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0,
-];
+pub const BEATLOOP_SIZES: [f64; 11] = [0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0];
 /// The KEYBOARD pads, `keyboard_N_activate`: the hot cue played this many
-/// semitones up or down, as on the DDJ-FLX4's KEYBOARD pads in rekordbox.
+/// semitones up or down, as on keyboard pads of DJ controllers.
 /// The top row climbs from the cue's own key, the bottom row goes below it.
 pub const KEYBOARD_SEMITONES: [f64; 8] = [0.0, 1.0, 2.0, 3.0, -4.0, -3.0, -2.0, -1.0];
 /// Beat jump sizes with their own buttons (`beatjump_N_forward` / `_backward`).
@@ -677,51 +589,21 @@ pub(crate) fn deck_pushes(reg: &ControlRegistry, g: &str) -> Vec<Push> {
         ("cue_gotoandplay".into(), Action::CueGoto(true)),
         ("cue_gotoandstop".into(), Action::CueGoto(false)),
         ("reloop_andstop".into(), Action::ReloopAndStop),
-        (
-            "beats_translate_curpos".into(),
-            Action::Grid(GridEdit::BeatHere),
-        ),
-        (
-            "beats_translate_earlier".into(),
-            Action::Grid(GridEdit::Shift(-0.005)),
-        ),
-        (
-            "beats_translate_later".into(),
-            Action::Grid(GridEdit::Shift(0.005)),
-        ),
-        (
-            "beats_adjust_faster".into(),
-            Action::Grid(GridEdit::Tempo(0.01)),
-        ),
-        (
-            "beats_adjust_slower".into(),
-            Action::Grid(GridEdit::Tempo(-0.01)),
-        ),
+        ("beats_translate_curpos".into(), Action::Grid(GridEdit::BeatHere)),
+        ("beats_translate_earlier".into(), Action::Grid(GridEdit::Shift(-0.005))),
+        ("beats_translate_later".into(), Action::Grid(GridEdit::Shift(0.005))),
+        ("beats_adjust_faster".into(), Action::Grid(GridEdit::Tempo(0.01))),
+        ("beats_adjust_slower".into(), Action::Grid(GridEdit::Tempo(-0.01))),
         ("beats_undo_adjustment".into(), Action::Grid(GridEdit::Undo)),
         // bar 1 on the beat here, and back to the grid
         // analysis found.
-        (
-            "beats_downbeat_here".into(),
-            Action::Grid(GridEdit::BarHere),
-        ),
+        ("beats_downbeat_here".into(), Action::Grid(GridEdit::BarHere)),
         ("beats_reset".into(), Action::Grid(GridEdit::Reset)),
         // tempo sections and halving or doubling.
-        (
-            "beats_section_add".into(),
-            Action::Grid(GridEdit::AddSection),
-        ),
-        (
-            "beats_section_remove".into(),
-            Action::Grid(GridEdit::RemoveSection),
-        ),
-        (
-            "beats_scale_half".into(),
-            Action::Grid(GridEdit::Scale(0.5)),
-        ),
-        (
-            "beats_scale_double".into(),
-            Action::Grid(GridEdit::Scale(2.0)),
-        ),
+        ("beats_section_add".into(), Action::Grid(GridEdit::AddSection)),
+        ("beats_section_remove".into(), Action::Grid(GridEdit::RemoveSection)),
+        ("beats_scale_half".into(), Action::Grid(GridEdit::Scale(0.5))),
+        ("beats_scale_double".into(), Action::Grid(GridEdit::Scale(2.0))),
         ("pitch_up".into(), Action::KeyStep(1.0)),
         ("pitch_down".into(), Action::KeyStep(-1.0)),
         ("pitch_up_small".into(), Action::KeyStep(0.1)),
@@ -731,35 +613,17 @@ pub(crate) fn deck_pushes(reg: &ControlRegistry, g: &str) -> Vec<Push> {
     for size in BEATLOOP_SIZES {
         // _activate here already turns off a loop of the same size, as _toggle does.
         for suffix in ["activate", "toggle"] {
-            v.push((
-                format!("beatloop_{}_{suffix}", size_name(size)),
-                Action::BeatLoop(size),
-            ));
+            v.push((format!("beatloop_{}_{suffix}", size_name(size)), Action::BeatLoop(size)));
         }
     }
     for (n, semitones) in KEYBOARD_SEMITONES.iter().enumerate() {
-        v.push((
-            format!("keyboard_{}_activate", n + 1),
-            Action::Keyboard(*semitones),
-        ));
+        v.push((format!("keyboard_{}_activate", n + 1), Action::Keyboard(*semitones)));
     }
     for size in BEATJUMP_SIZES {
-        v.push((
-            format!("beatjump_{}_forward", size_name(size)),
-            Action::BeatJump(size),
-        ));
-        v.push((
-            format!("beatjump_{}_backward", size_name(size)),
-            Action::BeatJump(-size),
-        ));
+        v.push((format!("beatjump_{}_forward", size_name(size)), Action::BeatJump(size)));
+        v.push((format!("beatjump_{}_backward", size_name(size)), Action::BeatJump(-size)));
     }
-    v.into_iter()
-        .map(|(key, action)| Push {
-            control: reg.push(g, &key),
-            edge: Edge::default(),
-            action,
-        })
-        .collect()
+    v.into_iter().map(|(key, action)| Push { control: reg.push(g, &key), edge: Edge::default(), action }).collect()
 }
 
 pub(crate) struct MasterControls {
@@ -796,10 +660,9 @@ pub(crate) struct MasterControls {
     /// How many semitones, at most, a track loaded while another deck plays
     /// is shifted so its key mixes with that deck's: 0 leaves it alone.
     pub(crate) key_match_on_load: ControlHandle,
-    /// What loading a track puts back to normal on its deck: `[Controls]`
-    /// auto_reset_fx (effects off), auto_reset_eq (EQ, kills, filter and
-    /// sculpt), auto_reset_gain (the gain knob) and auto_reset_tempo (the
-    /// tempo fader back to 0%). All on to start.
+    /// What loading a track puts back to normal on its deck: `[Controls]` auto_reset_fx
+    /// (effects off), auto_reset_eq (EQ, kills, filter and sculpt), auto_reset_gain (the
+    /// gain knob) and auto_reset_tempo (the tempo fader back to 0%). All on to start.
     pub(crate) auto_reset: [ControlHandle; 4],
     /// `[Controls] pfl_on_load`: loading a track cues its deck in the
     /// headphones and takes the other decks out of the cue. On to start;
@@ -824,9 +687,8 @@ pub(crate) struct MasterControls {
     /// as it comes in (a hardware mixer's record out).
     pub(crate) record_source: ControlHandle,
     /// `[Master] latency_measure`: set to an input (as in
-    /// `[ChannelN],vinylcontrol_input`) to play a short noise burst out of
-    /// the main output and time it coming back in; the engine sets it back
-    /// to 0 when the burst starts.
+    /// main output and time it coming back in; the engine sets it back to 0 when the burst starts.
+    /// main output and time it coming back in; the engine sets it back to 0 when
     pub(crate) latency_measure: ControlHandle,
     /// `[Master] input_latency`: seconds the last measurement found from the
     /// main output back into the input, or -1 if the input never heard it.
@@ -854,14 +716,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
     // filter, 1 stem volumes, 2 sculpt. Controllers' EQ knobs follow it.
     reg.create("[Mixer]", "knob_mode", 0.0, 0.0, 2.0, Behavior::Free);
     // Off: a track can't be loaded onto a deck that is playing.
-    reg.create(
-        "[Controls]",
-        "AllowTrackLoadToPlayingDeck",
-        0.0,
-        0.0,
-        1.0,
-        Behavior::Free,
-    );
+    reg.create("[Controls]", "AllowTrackLoadToPlayingDeck", 0.0, 0.0, 1.0, Behavior::Free);
     MasterControls {
         balance: reg.create("[Master]", "balance", 0.0, -1.0, 1.0, Behavior::Linear),
         vu: reg.indicator("[Master]", "VuMeter", 1.0),
@@ -872,31 +727,10 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
         head_mix: reg.create("[Master]", "headMix", -1.0, -1.0, 1.0, Behavior::Linear),
         booth_gain: reg.create("[Master]", "booth_gain", 1.0, 0.0, 1.0, Behavior::Linear),
         head_split: reg.toggle("[Master]", "headSplit"),
-        xfader_shape: reg.create(
-            "[Mixer Profile]",
-            "xFaderShape",
-            0.0,
-            0.0,
-            2.0,
-            Behavior::Free,
-        ),
-        xfader_cut_in: reg.create(
-            "[Mixer Profile]",
-            "xFaderCutIn",
-            XFADER_CUT_IN,
-            0.001,
-            0.5,
-            Behavior::Free,
-        ),
+        xfader_shape: reg.create("[Mixer Profile]", "xFaderShape", 0.0, 0.0, 2.0, Behavior::Free),
+        xfader_cut_in: reg.create("[Mixer Profile]", "xFaderCutIn", XFADER_CUT_IN, 0.001, 0.5, Behavior::Free),
         xfader_reverse: reg.toggle("[Mixer Profile]", "xFaderReverse"),
-        xfader_enabled: reg.create(
-            "[Mixer]",
-            "crossfader_enabled",
-            1.0,
-            0.0,
-            1.0,
-            Behavior::Toggle,
-        ),
+        xfader_enabled: reg.create("[Mixer]", "crossfader_enabled", 1.0, 0.0, 1.0, Behavior::Toggle),
         autodj_enabled: reg.toggle("[AutoDJ]", "enabled"),
         test_tone: reg.create("[Master]", "test_tone", 0.0, 0.0, 2.0, Behavior::Free),
         air_ceiling: reg.create(
@@ -929,14 +763,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
         vu_l: reg.indicator("[Master]", "VuMeterL", 1.0),
         vu_r: reg.indicator("[Master]", "VuMeterR", 1.0),
         // The ReplayGain switch lives in the [ReplayGain] group too.
-        auto_gain: reg.create(
-            "[ReplayGain]",
-            "ReplayGainEnabled",
-            1.0,
-            0.0,
-            1.0,
-            Behavior::Toggle,
-        ),
+        auto_gain: reg.create("[ReplayGain]", "ReplayGainEnabled", 1.0, 0.0, 1.0, Behavior::Toggle),
         auto_gain_target: reg.create(
             "[ReplayGain]",
             "target_lufs",
@@ -945,14 +772,7 @@ pub(crate) fn create_global_controls(reg: &ControlRegistry) -> MasterControls {
             0.0,
             Behavior::Free,
         ),
-        key_match_on_load: reg.create(
-            "[Controls]",
-            "key_match_on_load",
-            0.0,
-            0.0,
-            2.0,
-            Behavior::Free,
-        ),
+        key_match_on_load: reg.create("[Controls]", "key_match_on_load", 0.0, 0.0, 2.0, Behavior::Free),
         auto_reset: ["fx", "eq", "gain", "tempo"].map(|k| {
             let c = reg.toggle("[Controls]", &format!("auto_reset_{k}"));
             c.set_bool(true);
@@ -972,17 +792,8 @@ pub const DEFAULT_AUTO_GAIN_TARGET: f64 = -14.0;
 
 /// Newer mappings name the meters differently (`VuMeter` is now `vu_meter`, ...); mappings
 /// use both names.
-pub(crate) fn alias(
-    reg: &ControlRegistry,
-    group: &str,
-    key: &str,
-    target_group: &str,
-    target: &str,
-) {
-    reg.insert_alias(
-        ConfigKey::new(group, key),
-        ConfigKey::new(target_group, target),
-    );
+pub(crate) fn alias(reg: &ControlRegistry, group: &str, key: &str, target_group: &str, target: &str) {
+    reg.insert_alias(ConfigKey::new(group, key), ConfigKey::new(target_group, target));
 }
 
 /// Detects presses of a momentary control. Also catches a press and release that

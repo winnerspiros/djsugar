@@ -22,9 +22,7 @@ static GLOBAL: Counting = Counting;
 #[test]
 fn processing_does_not_allocate() {
     let mut s = djsugar_stretch::Stretch::preset_default_split(2, 48_000);
-    let input: Vec<f32> = (0..2 * 200_000)
-        .map(|i| ((i / 2) as f32 * 0.03).sin())
-        .collect();
+    let input: Vec<f32> = (0..2 * 200_000).map(|i| ((i / 2) as f32 * 0.03).sin()).collect();
     let mut out = vec![0.0f32; 2 * 512];
     let before = ALLOCATIONS.load(Ordering::Relaxed);
     s.set_transpose_factor(1.3, None);

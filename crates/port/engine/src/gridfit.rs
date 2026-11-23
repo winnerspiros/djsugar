@@ -1,13 +1,6 @@
-//! Turns detected beats into a beat grid, steady unless the track really
-//! drifts.
-//!
-//! Beat detectors place each beat on its own, so even a track made on a
-//! computer comes back with beats a few milliseconds early or late. Taking
-//! the tempo from neighbouring beats turns that jitter into small tempo
-//! changes that aren't there. Instead the beats are numbered and a straight
-//! line (one tempo) is fitted through them; only where the beats move away
-//! from that line for a while, as live drums and old disco do, does the grid
-//! start a new tempo section.
+//! Turns detected beats into a beat grid, steady unless the track really drifts. Beat detectors place each beat on its own, so even a track made on a computer comes back with beats a
+//! straight line (one tempo) is fitted through them; only where the beats move away from that line for a while, as live drums and old disco do, does the grid start a new tempo section.
+//! straight line (one tempo) is fitted through them; only where the beats move away from that line for a while, as live drums and old disco do, does the grid start a new tempo
 
 use crate::beats::{BeatGrid, GridMarker};
 
@@ -92,43 +85,27 @@ pub fn fit(beats: &[f64], downbeats: Option<&[f64]>, bpm: f64) -> Option<Fitted>
     // Start the grid on the last bar line at or before the first beat.
     let start = first - (first - bar).rem_euclid(4.0);
 
-    let mut grid_markers: Vec<GridMarker> = markers
-        .iter()
-        .map(|(n, line)| GridMarker {
-            seconds: line.at(*n),
-            bpm: 60.0 / line.period,
-        })
-        .collect();
+    let mut grid_markers: Vec<GridMarker> =
+        markers.iter().map(|(n, line)| GridMarker { seconds: line.at(*n), bpm: 60.0 / line.period }).collect();
     grid_markers[0].seconds = markers[0].1.at(start);
     let grid = BeatGrid::new(grid_markers);
 
-    let rms = (numbered
-        .iter()
-        .map(|&(_, t)| (t - grid.snap(t, false)).powi(2))
-        .sum::<f64>()
-        / numbered.len() as f64)
-        .sqrt();
-    Some(Fitted {
-        grid,
-        unsure: rms > UNSURE_RMS || downbeat_share < UNSURE_DOWNBEATS,
-    })
+    let rms =
+        (numbered.iter().map(|&(_, t)| (t - grid.snap(t, false)).powi(2)).sum::<f64>() / numbered.len() as f64).sqrt();
+    Some(Fitted { grid, unsure: rms > UNSURE_RMS || downbeat_share < UNSURE_DOWNBEATS })
 }
 
 /// The share of `beats` that fall on `grid`, within the tolerance a tempo
 /// section allows. It doesn't depend on counting the beats, so a stretch
 /// where a tracker followed the off-beats can't throw it.
 pub fn share_on(beats: &[f64], grid: &BeatGrid) -> f64 {
-    let on = beats
-        .iter()
-        .filter(|&&t| (t - grid.snap(t, false)).abs() < TOLERANCE)
-        .count();
+    let on = beats.iter().filter(|&&t| (t - grid.snap(t, false)).abs() < TOLERANCE).count();
     on as f64 / beats.len().max(1) as f64
 }
 
-/// Numbers the beats (beat number, seconds), counting the beats missed in a
-/// gap. Each beat is numbered on the grid of the few before it, so a beat
-/// that lands on a number already taken (a stray onset, or a run of them
-/// the tracker followed) is dropped, whichever of the two is further off.
+/// Numbers the beats (beat number, seconds), counting the beats missed in a gap. Each beat is
+/// stray onset, or a run of them the tracker followed) is dropped, whichever of the two is further off.
+/// stray onset, or a run of them the tracker followed) is dropped, whichever of the two is further
 fn number(beats: &[f64], period: f64) -> Vec<(f64, f64)> {
     /// Beats before each one that give the grid it is numbered on.
     const LOCAL: usize = 16;
@@ -142,8 +119,7 @@ fn number(beats: &[f64], period: f64) -> Vec<(f64, f64)> {
         let line = if recent.len() >= LOCAL / 2 {
             Line::through(recent)
         } else {
-            let offset =
-                recent.iter().map(|&(n, b)| b - n * period).sum::<f64>() / recent.len() as f64;
+            let offset = recent.iter().map(|&(n, b)| b - n * period).sum::<f64>() / recent.len() as f64;
             Line { offset, period }
         };
         let n = ((t - line.offset) / line.period).round();
@@ -167,10 +143,9 @@ fn nearest_number(numbered: &[(f64, f64)], t: f64, period: f64) -> Option<f64> {
     ((near.1 - t).abs() < period / 2.0).then_some(near.0)
 }
 
-/// Splits the numbered beats into runs that each keep one tempo, as
-/// (first, end) index ranges. Where the tracker slipped a beat (counted one
-/// too many or too few through a fill), the beats after it are numbered
-/// again instead.
+/// Splits the numbered beats into runs that each keep one tempo, as (first,
+/// end) index ranges. Where the tracker slipped a beat (counted one too many
+/// or too few through a fill), the beats after it are numbered again instead.
 fn sections(numbered: &mut [(f64, f64)]) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut start = 0;
@@ -184,10 +159,7 @@ fn sections(numbered: &mut [(f64, f64)]) -> Vec<(usize, usize)> {
         // Do the beats ahead keep away from this section's line, shifted
         // by `slip` beats?
         let away = |beats: &[(f64, f64)], slip: f64| {
-            let mut off: Vec<f64> = beats
-                .iter()
-                .map(|&(n, t)| (t - line.at(n + slip)).abs())
-                .collect();
+            let mut off: Vec<f64> = beats.iter().map(|&(n, t)| (t - line.at(n + slip)).abs()).collect();
             off.sort_by(f64::total_cmp);
             off[off.len() / 2] > TOLERANCE
         };
@@ -196,17 +168,11 @@ fn sections(numbered: &mut [(f64, f64)]) -> Vec<(usize, usize)> {
         // change of tempo doesn't.
         let ahead = &numbered[i..i + MIN_SECTION];
         let later = &numbered[i + MIN_SECTION..(i + 2 * MIN_SECTION).min(numbered.len())];
-        if !(away(&numbered[i..i + RUN], 0.0)
-            && away(ahead, 0.0)
-            && (later.len() < RUN || away(later, 0.0)))
-        {
+        if !(away(&numbered[i..i + RUN], 0.0) && away(ahead, 0.0) && (later.len() < RUN || away(later, 0.0))) {
             i += 1;
             continue;
         }
-        if let Some(slip) = [-1.0, 1.0, -2.0, 2.0]
-            .into_iter()
-            .find(|&slip| !away(ahead, slip))
-        {
+        if let Some(slip) = [-1.0, 1.0, -2.0, 2.0].into_iter().find(|&slip| !away(ahead, slip)) {
             for b in &mut numbered[i..] {
                 b.0 += slip;
             }
@@ -218,9 +184,7 @@ fn sections(numbered: &mut [(f64, f64)]) -> Vec<(usize, usize)> {
         let end = i + RUN;
         let cut = (i.saturating_sub(2 * RUN).max(start + MIN_SECTION)..end - 1)
             .min_by(|&a, &b| {
-                let err = |c: usize| {
-                    squared_error(&numbered[start..c]) + squared_error(&numbered[c..end])
-                };
+                let err = |c: usize| squared_error(&numbered[start..c]) + squared_error(&numbered[c..end]);
                 err(a).total_cmp(&err(b))
             })
             .unwrap_or(i);
@@ -246,10 +210,9 @@ struct Line {
 }
 
 impl Line {
-    /// The line through `beats`, kept from being pulled by beats far off it
-    /// (a fill, a stray onset): a first guess from the median slope between
-    /// beats half the run apart, then least squares through the beats near
-    /// that guess.
+    /// The line through `beats`, kept from being pulled by beats far off it (a
+    /// fill, a stray onset): a first guess from the median slope between beats
+    /// half the run apart, then least squares through the beats near that guess.
     fn through(beats: &[(f64, f64)]) -> Self {
         let all = || {
             let mut s = Sums::default();
@@ -262,22 +225,12 @@ impl Line {
         if half < 2 {
             return all();
         }
-        let mut slopes: Vec<f64> = beats
-            .iter()
-            .zip(&beats[half..])
-            .map(|(a, b)| (b.1 - a.1) / (b.0 - a.0))
-            .collect();
+        let mut slopes: Vec<f64> = beats.iter().zip(&beats[half..]).map(|(a, b)| (b.1 - a.1) / (b.0 - a.0)).collect();
         let period = median(&mut slopes);
         let mut offsets: Vec<f64> = beats.iter().map(|&(n, t)| t - n * period).collect();
-        let guess = Line {
-            offset: median(&mut offsets),
-            period,
-        };
+        let guess = Line { offset: median(&mut offsets), period };
         let mut s = Sums::default();
-        for &b in beats
-            .iter()
-            .filter(|&&(n, t)| (t - guess.at(n)).abs() < 2.0 * TOLERANCE)
-        {
+        for &b in beats.iter().filter(|&&(n, t)| (t - guess.at(n)).abs() < 2.0 * TOLERANCE) {
             s.add(b);
         }
         if s.count * 2.0 > beats.len() as f64 {
@@ -291,10 +244,9 @@ impl Line {
         self.offset + n * self.period
     }
 
-    /// This line at the nearest whole BPM, else half BPM, when `beats` sit
-    /// on that as well: tracks are mostly made at a round tempo, and a
-    /// fit a few hundredths off it drifts across a long track. A tempo the
-    /// beats really keep away from a round one stays.
+    /// This line at the nearest whole BPM, else half BPM, when `beats` sit on that as
+    /// drifts across a long track. A tempo the beats really keep away from a round one stays.
+    /// drifts across a long track. A tempo the beats really keep away from a round one
     fn rounded(self, beats: &[(f64, f64)]) -> Line {
         let off = |line: &Line| {
             let mut d: Vec<f64> = beats.iter().map(|&(n, t)| (t - line.at(n)).abs()).collect();
@@ -312,10 +264,7 @@ impl Line {
             }
             let period = 60.0 / round;
             let mut offsets: Vec<f64> = beats.iter().map(|&(n, t)| t - n * period).collect();
-            let line = Line {
-                offset: median(&mut offsets),
-                period,
-            };
+            let line = Line { offset: median(&mut offsets), period };
             if off(&line) <= fitted + ROUND_SLACK {
                 return line;
             }
@@ -352,16 +301,10 @@ impl Sums {
     fn line(&self) -> Line {
         let det = self.count * self.nn - self.n * self.n;
         if self.count < 2.0 || det.abs() < 1e-12 {
-            return Line {
-                offset: self.t / self.count.max(1.0),
-                period: 0.5,
-            };
+            return Line { offset: self.t / self.count.max(1.0), period: 0.5 };
         }
         let period = (self.count * self.nt - self.n * self.t) / det;
-        Line {
-            offset: (self.t - period * self.n) / self.count,
-            period,
-        }
+        Line { offset: (self.t - period * self.n) / self.count, period }
     }
 }
 
@@ -377,9 +320,7 @@ mod tests {
     #[test]
     fn jittery_steady_beats_get_one_tempo() {
         let period = 60.0 / 124.0;
-        let beats: Vec<f64> = (0..600)
-            .map(|k| 0.3 + k as f64 * period + 0.012 * jitter(k))
-            .collect();
+        let beats: Vec<f64> = (0..600).map(|k| 0.3 + k as f64 * period + 0.012 * jitter(k)).collect();
         let f = fit(&beats, None, 124.0).unwrap();
         assert!(!f.grid.is_dynamic(), "{:?}", f.grid);
         assert!((f.grid.bpm_at(100.0) - 124.0).abs() < 0.01);
@@ -433,11 +374,7 @@ mod tests {
         assert!((f.grid.bpm_at(20.0) - 120.0).abs() < 0.2, "{:?}", f.grid);
         assert!((f.grid.bpm_at(120.0) - 126.0).abs() < 0.2, "{:?}", f.grid);
         for &b in &beats {
-            assert!(
-                (b - f.grid.snap(b, false)).abs() < 0.03,
-                "{b}: {:?}",
-                f.grid
-            );
+            assert!((b - f.grid.snap(b, false)).abs() < 0.03, "{b}: {:?}", f.grid);
         }
     }
 
@@ -452,11 +389,7 @@ mod tests {
         let f = fit(&beats, None, 120.0).unwrap();
         assert!(f.grid.is_dynamic(), "{:?}", f.grid);
         for &b in &beats {
-            assert!(
-                (b - f.grid.snap(b, false)).abs() < 0.04,
-                "{b}: {:?}",
-                f.grid
-            );
+            assert!((b - f.grid.snap(b, false)).abs() < 0.04, "{b}: {:?}", f.grid);
         }
     }
 
@@ -485,9 +418,7 @@ mod tests {
     #[test]
     fn a_tempo_near_a_whole_bpm_is_rounded() {
         // 400 beats at 90 BPM, jittered: the fit lands a little off 90.
-        let beats: Vec<f64> = (0..400)
-            .map(|k| 0.07 + k as f64 * 60.0 / 90.0 + 0.015 * jitter(k * 7 + 1))
-            .collect();
+        let beats: Vec<f64> = (0..400).map(|k| 0.07 + k as f64 * 60.0 / 90.0 + 0.015 * jitter(k * 7 + 1)).collect();
         let f = fit(&beats, None, 90.0).unwrap();
         assert_eq!(f.grid.markers()[0].bpm, 90.0, "{:?}", f.grid);
         let unrounded = Line::through(&number(&beats, 60.0 / 90.0)).period;
@@ -496,15 +427,9 @@ mod tests {
         // would drift a fifth of a second.
         let beats: Vec<f64> = (0..400).map(|k| k as f64 * 60.0 / 59.96).collect();
         let f = fit(&beats, None, 60.0).unwrap();
-        assert!(
-            (f.grid.markers()[0].bpm - 59.96).abs() < 0.001,
-            "{:?}",
-            f.grid
-        );
+        assert!((f.grid.markers()[0].bpm - 59.96).abs() < 0.001, "{:?}", f.grid);
         // Near a half BPM too.
-        let beats: Vec<f64> = (0..300)
-            .map(|k| k as f64 * 60.0 / 127.5 + 0.015 * jitter(k * 3 + 2))
-            .collect();
+        let beats: Vec<f64> = (0..300).map(|k| k as f64 * 60.0 / 127.5 + 0.015 * jitter(k * 3 + 2)).collect();
         let f = fit(&beats, None, 127.5).unwrap();
         assert_eq!(f.grid.markers()[0].bpm, 127.5, "{:?}", f.grid);
     }

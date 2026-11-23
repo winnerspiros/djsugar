@@ -1,13 +1,6 @@
-//! The helper's window for a plugin's own editor, on the helper's main
-//! thread.
-//!
-//! DJ Sugar asks for the editor through the shared block (`editor`); the
-//! helper's main loop calls [`EditorWindow::step`] between the plugin's idle
-//! calls. The window (and the platform's event loop under it) is only made
-//! the first time an editor is asked for, so helpers whose editor is never
-//! opened stay headless. The window floats above DJ Sugar, is titled after the
-//! plugin and where it plays, and closing it only hides the editor: the
-//! plugin keeps playing.
+//! The helper's window for a plugin's own editor, on the helper's main thread. DJ Sugar asks for the editor through the shared block (`editor`); the helper's main loop calls
+//! editor is never opened stay headless. The window floats above DJ Sugar, is titled after the plugin and where it plays, and closing it only hides the editor: the plugin keeps playing.
+//! editor is never opened stay headless. The window floats above DJ Sugar, is titled after the plugin and where it plays, and closing it only hides the editor: the plugin keeps
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
@@ -87,13 +80,7 @@ pub struct EditorWindow {
 
 impl EditorWindow {
     pub fn new(title: String) -> Self {
-        Self {
-            title,
-            event_loop: None,
-            events: Events::default(),
-            open: false,
-            refused: false,
-        }
+        Self { title, event_loop: None, events: Events::default(), open: false, refused: false }
     }
 
     /// Whether the platform's events need pumping (a window was made once).
@@ -104,13 +91,7 @@ impl EditorWindow {
     /// Follows DJ Sugar's ask in `editor`, reporting in `shown`, and handles
     /// the window's events; waits up to `wait` for them. Without a window
     /// this only sleeps.
-    pub fn step(
-        &mut self,
-        main: &mut dyn MainThread,
-        editor: &AtomicU32,
-        shown: &AtomicU32,
-        wait: Duration,
-    ) {
+    pub fn step(&mut self, main: &mut dyn MainThread, editor: &AtomicU32, shown: &AtomicU32, wait: Duration) {
         self.follow(main, editor, shown, None);
         let Some(el) = self.event_loop.as_mut() else {
             std::thread::sleep(wait);
@@ -154,13 +135,7 @@ impl EditorWindow {
 
     /// [`EditorWindow::step`] inside the platform's loop: follows DJ Sugar's
     /// ask and handles what the window's events left.
-    pub fn step_in(
-        &mut self,
-        main: &mut dyn MainThread,
-        editor: &AtomicU32,
-        shown: &AtomicU32,
-        el: &ActiveEventLoop,
-    ) {
+    pub fn step_in(&mut self, main: &mut dyn MainThread, editor: &AtomicU32, shown: &AtomicU32, el: &ActiveEventLoop) {
         self.follow(main, editor, shown, Some(el));
         self.after_events(main, editor, shown);
     }
@@ -205,11 +180,7 @@ impl EditorWindow {
         let Some(window) = self.events.window.as_ref() else {
             return;
         };
-        let scale = self
-            .events
-            .scale
-            .take()
-            .unwrap_or_else(|| window.scale_factor());
+        let scale = self.events.scale.take().unwrap_or_else(|| window.scale_factor());
         let mut moved = false;
         if let Some(size) = main.take_editor_resize() {
             let _ = window.request_inner_size(window_size(size));
@@ -229,11 +200,7 @@ impl EditorWindow {
         }
     }
 
-    fn open_editor(
-        &mut self,
-        main: &mut dyn MainThread,
-        active: Option<&ActiveEventLoop>,
-    ) -> Result<(), String> {
+    fn open_editor(&mut self, main: &mut dyn MainThread, active: Option<&ActiveEventLoop>) -> Result<(), String> {
         if self.events.window.is_none() {
             self.events.create = Some(self.title.clone());
             match active {
@@ -248,11 +215,7 @@ impl EditorWindow {
                 }
             }
         }
-        let window = self
-            .events
-            .window
-            .as_ref()
-            .ok_or("the window could not be made")?;
+        let window = self.events.window.as_ref().ok_or("the window could not be made")?;
         let parent = parent_of(window)?;
         let size = main.open_editor(parent, window.scale_factor())?;
         window.set_resizable(main.editor_can_resize());
@@ -294,15 +257,9 @@ fn window_size(size: EditorSize) -> Size {
 fn editor_size(size: PhysicalSize<u32>, scale: f64) -> EditorSize {
     if LOGICAL {
         let l = size.to_logical::<f64>(scale);
-        EditorSize {
-            width: l.width.round() as u32,
-            height: l.height.round() as u32,
-        }
+        EditorSize { width: l.width.round() as u32, height: l.height.round() as u32 }
     } else {
-        EditorSize {
-            width: size.width,
-            height: size.height,
-        }
+        EditorSize { width: size.width, height: size.height }
     }
 }
 
@@ -312,9 +269,7 @@ fn new_event_loop() -> Result<EventLoop<()>, String> {
     {
         use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
         // No Dock icon or menu bar of its own: the window belongs to DJ Sugar.
-        builder
-            .with_activation_policy(ActivationPolicy::Accessory)
-            .with_default_menu(false);
+        builder.with_activation_policy(ActivationPolicy::Accessory).with_default_menu(false);
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
@@ -338,10 +293,9 @@ fn parent_of(window: &Window) -> Result<ParentWindow, String> {
     }
 }
 
-/// Keeps the editor at the window's top left on macOS. AppKit counts from
-/// the bottom, so an editor attached while the window was smaller (or that
-/// placed itself by the window's old height) shows only its bottom part,
-/// at the top, until it is moved.
+/// Keeps the editor at the window's top left on macOS. AppKit counts from the bottom,
+/// so an editor attached while the window was smaller (or that placed itself by the
+/// window's old height) shows only its bottom part, at the top, until it is moved.
 #[cfg(target_os = "macos")]
 fn pin_top_left(parent: ParentWindow) {
     use objc2::msg_send;
@@ -364,11 +318,7 @@ fn pin_top_left(parent: ParentWindow) {
         for i in 0..n {
             let sub: *mut AnyObject = msg_send![subviews, objectAtIndex: i];
             let frame: NSRect = msg_send![sub, frame];
-            let y = if flipped {
-                0.0
-            } else {
-                bounds.size.height - frame.size.height
-            };
+            let y = if flipped { 0.0 } else { bounds.size.height - frame.size.height };
             if frame.origin.x != 0.0 || frame.origin.y != y {
                 let _: () = msg_send![sub, setFrameOrigin: NSPoint::new(0.0, y)];
             }

@@ -81,11 +81,7 @@ impl ImportedEntry {
     pub fn new(path: impl Into<PathBuf>, played_at: Option<i64>) -> Self {
         let path = path.into();
         let streamed = path.to_str().and_then(StreamedTrack::parse);
-        Self {
-            path,
-            played_at,
-            streamed,
-        }
+        Self { path, played_at, streamed }
     }
 }
 
@@ -108,45 +104,24 @@ pub struct StreamedTrack {
 }
 
 /// The services a streamed track can be on, by the names other apps use.
-const SERVICES: [&str; 6] = [
-    "tidal",
-    "spotify",
-    "soundcloud",
-    "beatport",
-    "beatsource",
-    "deezer",
-];
+const SERVICES: [&str; 6] = ["tidal", "spotify", "soundcloud", "beatport", "beatsource", "deezer"];
 
-/// VirtualDJ's `netsearch://` prefixes. `td` is TIDAL, as seen in real
-/// libraries; the others follow VirtualDJ's catalogue names.
-const NETSEARCH: [(&str, &str); 5] = [
-    ("td", "tidal"),
-    ("sc", "soundcloud"),
-    ("bp", "beatport"),
-    ("bs", "beatsource"),
-    ("dz", "deezer"),
-];
+/// `netsearch://` prefixes in imported libraries. `td` is TIDAL, as seen in real
+/// libraries; the others follow the catalogue names in such files.
+const NETSEARCH: [(&str, &str); 5] =
+    [("td", "tidal"), ("sc", "soundcloud"), ("bp", "beatport"), ("bs", "beatsource"), ("dz", "deezer")];
 
 impl StreamedTrack {
     /// The streamed track `uri` names, if it names one rather than a file:
-    /// VirtualDJ's `netsearch://td123`, a `tidal:tracks:123` or
-    /// `spotify:track:abc` URI, a service's web address, or any other
-    /// `scheme://` address (an "online" track of unknown service).
+    /// service's web address, or any other `scheme://` address (an "online" track of unknown service).
+    /// service's web address, or any other `scheme://` address (an "online" track of
     pub fn parse(uri: &str) -> Option<Self> {
         let uri = uri.trim();
         let streamed = |service: &str, id: &str| {
-            Some(Self {
-                service: service.to_string(),
-                id: id.to_string(),
-                uri: uri.to_string(),
-                ..Default::default()
-            })
+            Some(Self { service: service.to_string(), id: id.to_string(), uri: uri.to_string(), ..Default::default() })
         };
-        // rekordbox XML puts a service URI where a file's address would be.
-        let bare = uri
-            .strip_prefix("file://localhost/")
-            .or_else(|| uri.strip_prefix("file:///"))
-            .unwrap_or(uri);
+        // Library XML exports put a service URI where a file's address would be.
+        let bare = uri.strip_prefix("file://localhost/").or_else(|| uri.strip_prefix("file:///")).unwrap_or(uri);
         if let Some(rest) = bare.strip_prefix("netsearch://") {
             let rest = rest.trim_matches('/');
             for (prefix, service) in NETSEARCH {
@@ -164,16 +139,11 @@ impl StreamedTrack {
                 return streamed(&service, parts[parts.len() - 1]);
             }
         }
-        if let Some(rest) = bare
-            .strip_prefix("https://")
-            .or_else(|| bare.strip_prefix("http://"))
-        {
+        if let Some(rest) = bare.strip_prefix("https://").or_else(|| bare.strip_prefix("http://")) {
             let mut segments = rest.split(['/', '?', '#']).filter(|s| !s.is_empty());
             let host = segments.next().unwrap_or_default().to_ascii_lowercase();
             let path: Vec<&str> = segments.collect();
-            let service = SERVICES
-                .iter()
-                .find(|s| host == format!("{s}.com") || host.ends_with(&format!(".{s}.com")));
+            let service = SERVICES.iter().find(|s| host == format!("{s}.com") || host.ends_with(&format!(".{s}.com")));
             if let Some(service) = service {
                 // The id follows "track": tidal.com/browse/track/123,
                 // open.spotify.com/track/abc, beatport.com/track/name/123.
@@ -252,18 +222,9 @@ mod tests {
         assert_eq!(parsed("tidal:tracks:123"), s("tidal", "123"));
         assert_eq!(parsed("spotify:track:4uLU6h"), s("spotify", "4uLU6h"));
         assert_eq!(parsed("file://localhost/tidal:tracks:55"), s("tidal", "55"));
-        assert_eq!(
-            parsed("https://tidal.com/browse/track/77?u"),
-            s("tidal", "77")
-        );
-        assert_eq!(
-            parsed("https://open.spotify.com/track/abc"),
-            s("spotify", "abc")
-        );
-        assert_eq!(
-            parsed("https://www.beatport.com/track/glue/123"),
-            s("beatport", "123")
-        );
+        assert_eq!(parsed("https://tidal.com/browse/track/77?u"), s("tidal", "77"));
+        assert_eq!(parsed("https://open.spotify.com/track/abc"), s("spotify", "abc"));
+        assert_eq!(parsed("https://www.beatport.com/track/glue/123"), s("beatport", "123"));
         assert_eq!(parsed("https://example.com/x"), s("online", ""));
         // Files are files, Windows drives included.
         assert_eq!(parsed("/Music/a.mp3"), None);
@@ -274,13 +235,7 @@ mod tests {
     fn links_to_the_track_on_its_service() {
         let t = StreamedTrack::parse("netsearch://td5").unwrap();
         assert_eq!(t.service_name(), "TIDAL");
-        assert_eq!(
-            t.page_url().as_deref(),
-            Some("https://tidal.com/browse/track/5")
-        );
-        assert_eq!(
-            StreamedTrack::parse("netsearch://zz9").unwrap().page_url(),
-            None
-        );
+        assert_eq!(t.page_url().as_deref(), Some("https://tidal.com/browse/track/5"));
+        assert_eq!(StreamedTrack::parse("netsearch://zz9").unwrap().page_url(), None);
     }
 }

@@ -1,18 +1,6 @@
-//! A tiny CLAP effect for the plugin-host tests: a stereo gain with one
-//! parameter ("Gain", 0 to 2, default 1) and a reported latency of 64 frames,
-//! plus a second parameter ("Tempo out") that copies the host's tempo into the
-//! left channel's first sample, and the key of the block's first note-on
-//! into its second, so tests can check the transport and notes arrive.
-//!
-//! Its state (what a host saves and loads) is the gain, as 8 bytes.
-//!
-//! Its own presets, through CLAP preset discovery and preset load: "Loud"
-//! (gain 1.5) and "Quiet" (0.25) inside the plugin, a preset for another
-//! plugin a host should leave out, and any `.gain` file (the gain as text)
-//! in the folder `DJSUGAR_TEST_PRESETS` names.
-//!
-//! It is a real `.clap` binary, loaded through the same path as third-party
-//! plugins.
+//! A tiny CLAP effect for the plugin-host tests: a stereo gain with one parameter ("Gain", 0 to 2, default 1) and a reported latency of 64 frames, plus a second parameter ("Tempo out") that copies the host's tempo into the left channel's first sample, and
+//! the key of the block's first note-on into its second, so tests can check the transport and notes arrive. Its state (what a host saves and loads) is the gain, as 8 bytes. Its own presets, through CLAP preset discovery and preset load: "Loud" (gain 1.5) and
+//! "Quiet" (0.25) inside the plugin, a preset for another plugin a host should leave out, and any `.gain` file (the gain as text) in the folder `DJSUGAR_TEST_PRESETS` names. It is a real `.clap` binary, loaded through the same path as third-party plugins.
 
 use std::ffi::{CStr, CString};
 use std::sync::atomic::{AtomicU64, Ordering};

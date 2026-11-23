@@ -1,10 +1,6 @@
-//! Time-stretching and pitch-shifting for live audio: a phase vocoder that
-//! keeps the bins around each spectral peak phase-locked to the peak, so
-//! tones stay clean and transients stay tight.
-//!
-//! Input and output run at independent rates: each [`Stretch::process`]
-//! call plays its input over its output, and the ratio of the two is the
-//! stretch. Nothing allocates after construction.
+//! Time-stretching and pitch-shifting for live audio: a phase vocoder that keeps the bins around each spectral peak phase-locked
+//! [`Stretch::process`] call plays its input over its output, and the ratio of the two is the stretch. Nothing allocates after construction.
+//! [`Stretch::process`] call plays its input over its output, and the ratio of the two is the stretch. Nothing allocates after
 
 use std::f32::consts::TAU;
 use std::sync::Arc;
@@ -86,18 +82,12 @@ impl Stretch {
         let mut planner = RealFftPlanner::<f32>::new();
         let fwd = planner.plan_fft_forward(block);
         let inv = planner.plan_fft_inverse(block);
-        let window: Vec<f32> = (0..block)
-            .map(|k| 0.5 - 0.5 * (TAU * k as f32 / block as f32).cos())
-            .collect();
+        let window: Vec<f32> = (0..block).map(|k| 0.5 - 0.5 * (TAU * k as f32 / block as f32).cos()).collect();
         let mut overlap = vec![0.0f32; hop];
         for (k, w) in window.iter().enumerate() {
             overlap[k % hop] += w * w;
         }
-        let synth = window
-            .iter()
-            .enumerate()
-            .map(|(k, w)| w / (block as f32 * overlap[k % hop].max(1e-6)))
-            .collect();
+        let synth = window.iter().enumerate().map(|(k, w)| w / (block as f32 * overlap[k % hop].max(1e-6))).collect();
         // Room for a chunk, and for one more while a split block reads
         // input from the chunk before.
         let capacity = block + hop + 2 * MAX_CHUNK;
@@ -310,11 +300,7 @@ impl Stretch {
 
     fn begin(&mut self, end: usize) {
         let reuse = self.last_end == Some(end.wrapping_sub(self.hop));
-        self.job = Some(Job {
-            end,
-            reuse,
-            step: 0,
-        });
+        self.job = Some(Job { end, reuse, step: 0 });
     }
 
     fn finish_job(&mut self) {
@@ -408,20 +394,9 @@ impl Stretch {
             if q >= bins {
                 break;
             }
-            let lo = if n == 0 {
-                0
-            } else {
-                (self.peaks[n - 1] + p).div_ceil(2)
-            };
-            let hi = self
-                .peaks
-                .get(n + 1)
-                .map_or(bins, |&next| (p + next).div_ceil(2));
-            let peak_phase = if onset {
-                st.phase[p]
-            } else {
-                wrap(self.src_phase[q] + self.freq[p] * t * hop as f32)
-            };
+            let lo = if n == 0 { 0 } else { (self.peaks[n - 1] + p).div_ceil(2) };
+            let hi = self.peaks.get(n + 1).map_or(bins, |&next| (p + next).div_ceil(2));
+            let peak_phase = if onset { st.phase[p] } else { wrap(self.src_phase[q] + self.freq[p] * t * hop as f32) };
             for k in lo..hi {
                 let Some(j) = (k + q).checked_sub(p).filter(|&j| j < bins) else {
                     continue;
@@ -466,11 +441,7 @@ impl Stretch {
         self.spectrum.copy_from_slice(&st.spec);
         self.spectrum[0].im = 0.0;
         self.spectrum[bins - 1].im = 0.0;
-        let _ = self.inv.process_with_scratch(
-            &mut self.spectrum,
-            &mut self.frame,
-            &mut self.inv_scratch,
-        );
+        let _ = self.inv.process_with_scratch(&mut self.spectrum, &mut self.frame, &mut self.inv_scratch);
         for ((p, x), w) in st.pending.iter_mut().zip(&self.frame).zip(&self.synth) {
             *p = x * w;
         }
@@ -483,11 +454,7 @@ impl Stretch {
         for ((f, s), w) in self.frame.iter_mut().zip(src).zip(&self.window) {
             *f = s * w;
         }
-        let _ = self.fwd.process_with_scratch(
-            &mut self.frame,
-            &mut self.spectrum,
-            &mut self.fwd_scratch,
-        );
+        let _ = self.fwd.process_with_scratch(&mut self.frame, &mut self.spectrum, &mut self.fwd_scratch);
     }
 }
 
@@ -513,10 +480,7 @@ mod tests {
     /// The dominant frequency of channel 0, from zero crossings.
     fn pitch(x: &[f32]) -> f32 {
         let left: Vec<f32> = x.iter().step_by(2).copied().collect();
-        let crossings = left
-            .windows(2)
-            .filter(|w| w[0] < 0.0 && w[1] >= 0.0)
-            .count();
+        let crossings = left.windows(2).filter(|w| w[0] < 0.0 && w[1] >= 0.0).count();
         crossings as f32 * RATE as f32 / left.len() as f32
     }
 
@@ -561,11 +525,7 @@ mod tests {
             let steady = &out[RATE as usize / 2..RATE as usize * 2];
             let got = pitch(steady);
             assert!((got / 440.0 - 1.0).abs() < 0.01, "{rate}: {got}");
-            assert!(
-                (rms(steady) / 0.3536 - 1.0).abs() < 0.1,
-                "{rate}: {}",
-                rms(steady)
-            );
+            assert!((rms(steady) / 0.3536 - 1.0).abs() < 0.1, "{rate}: {}", rms(steady));
         }
     }
 
@@ -589,9 +549,7 @@ mod tests {
         input[at * 2] = 1.0;
         input[at * 2 + 1] = 1.0;
         let out = run(&mut s, &input, 1.0);
-        let peak = (0..out.len() / 2)
-            .max_by(|&a, &b| out[a * 2].abs().total_cmp(&out[b * 2].abs()))
-            .unwrap();
+        let peak = (0..out.len() / 2).max_by(|&a, &b| out[a * 2].abs().total_cmp(&out[b * 2].abs())).unwrap();
         let want = at + s.input_latency() + s.output_latency();
         assert!(peak.abs_diff(want) <= 2, "{peak} vs {want}");
     }
@@ -631,11 +589,7 @@ mod tests {
         let (x, y) = (run(&mut a, &input, 1.0), run(&mut b, &input, 1.0));
         let d = b.output_latency() - a.output_latency();
         let r = RATE as usize;
-        let err = rms(&x[r..2 * r]
-            .iter()
-            .zip(&y[r + 2 * d..])
-            .map(|(p, q)| p - q)
-            .collect::<Vec<_>>());
+        let err = rms(&x[r..2 * r].iter().zip(&y[r + 2 * d..]).map(|(p, q)| p - q).collect::<Vec<_>>());
         assert!(err < 1e-4, "{err}");
     }
 

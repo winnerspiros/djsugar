@@ -1,11 +1,6 @@
-//! Stereo feedback delay network reverb.
-//!
-//! Structure (after Geraint Luff, "Let's write a reverb", ADC 2021, and
-//! Jot's FDN work): a 4-step Hadamard diffuser builds echo density fast,
-//! then an 8-line feedback network with a Householder matrix sustains the
-//! tail. Every line has a decay gain derived from RT60, a one-pole high
-//! damping and slow, decorrelated delay modulation that removes the
-//! metallic ringing of static FDNs. Freeze holds the tank at unity gain.
+//! Stereo feedback delay network reverb. Structure (after Geraint Luff, "Let's write a reverb", ADC 2021, and Jot's FDN work): a 4-step Hadamard diffuser
+//! builds echo density fast, then an 8-line feedback network with a Householder matrix sustains the tail. Every line has a decay gain derived from RT60, a
+//! one-pole high damping and slow, decorrelated delay modulation that removes the metallic ringing of static FDNs. Freeze holds the tank at unity gain.
 
 use std::f32::consts::TAU;
 
@@ -49,11 +44,19 @@ fn clampf(x: f32, min: f32, max: f32) -> f32 {
 }
 
 fn sanitize(x: f32) -> f32 {
-    if x.is_finite() { x } else { 0.0 }
+    if x.is_finite() {
+        x
+    } else {
+        0.0
+    }
 }
 
 fn flush(x: f32) -> f32 {
-    if x.is_normal() { x } else { 0.0 }
+    if x.is_normal() {
+        x
+    } else {
+        0.0
+    }
 }
 
 /// Stereo feedback delay network reverb.

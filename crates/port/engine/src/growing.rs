@@ -29,18 +29,8 @@ pub struct GrowingFile {
 impl GrowingFile {
     /// Opens `path`, which will hold `size` bytes once it's whole. The file
     /// stays readable when the writer moves it once it's done.
-    pub fn open(
-        path: &Path,
-        size: u64,
-        wanted: Arc<dyn Fn() -> bool + Send + Sync>,
-    ) -> io::Result<GrowingFile> {
-        Ok(GrowingFile {
-            file: File::open(path)?,
-            size,
-            pos: 0,
-            wanted,
-            stall: STALL,
-        })
+    pub fn open(path: &Path, size: u64, wanted: Arc<dyn Fn() -> bool + Send + Sync>) -> io::Result<GrowingFile> {
+        Ok(GrowingFile { file: File::open(path)?, size, pos: 0, wanted, stall: STALL })
     }
 
     /// How many bytes have arrived.
@@ -89,8 +79,7 @@ impl Seek for GrowingFile {
             SeekFrom::End(d) => self.size.max(self.arrived()).checked_add_signed(d),
             SeekFrom::Current(d) => self.pos.checked_add_signed(d),
         };
-        let pos =
-            pos.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "seek before 0"))?;
+        let pos = pos.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "seek before 0"))?;
         self.pos = pos;
         Ok(pos)
     }
@@ -136,8 +125,7 @@ mod tests {
         // Nobody wants the rest: the read ends instead of waiting.
         let wanted = Arc::new(AtomicBool::new(true));
         let w = wanted.clone();
-        let mut file =
-            GrowingFile::open(&path, 100, Arc::new(move || w.load(Ordering::Relaxed))).unwrap();
+        let mut file = GrowingFile::open(&path, 100, Arc::new(move || w.load(Ordering::Relaxed))).unwrap();
         file.seek(SeekFrom::Start(6)).unwrap();
         wanted.store(false, Ordering::Relaxed);
         assert_eq!(file.read(&mut two).unwrap(), 0);

@@ -13,10 +13,9 @@ use std::sync::{Arc, OnceLock};
 /// Slices per second of audio in the finest level of a waveform summary.
 pub const WAVEFORM_RATE: f64 = 1000.0;
 
-/// One waveform slice: the peak of the low, mid and high bands and of the
-/// whole signal, then their RMS in the same order. Each is the square root of
-/// the level relative to the track's loudest peak, scaled to 0..255, which
-/// keeps detail in quiet passages.
+/// One waveform slice: the peak of the low, mid and high bands and of the whole signal,
+/// then their RMS in the same order. Each is the square root of the level relative to
+/// the track's loudest peak, scaled to 0..255, which keeps detail in quiet passages.
 pub type WaveformBin = [u8; 8];
 
 /// A track's waveform summary at several resolutions.
@@ -24,10 +23,9 @@ pub type WaveformBin = [u8; 8];
 pub struct Waveform {
     /// Slices per second in `levels[0]`.
     pub bins_per_second: f64,
-    /// `levels[0]` is the full resolution; each further level merges pairs of
-    /// slices of the one before (peaks by maximum, RMS by power), down to a
-    /// single slice (see [`Waveform::from_finest`]). Zoomed-out views read a coarser level instead of
-    /// scanning thousands of slices per pixel.
+    /// `levels[0]` is the full resolution; each further level merges pairs of slices of the one
+    /// [`Waveform::from_finest`]). Zoomed-out views read a coarser level instead of scanning thousands of slices per pixel.
+    /// [`Waveform::from_finest`]). Zoomed-out views read a coarser level instead of scanning
     pub levels: Vec<Vec<WaveformBin>>,
     /// The track's harmony over time, for finding where its chords change
     /// (see [`crate::phrases`]); empty for analyses from before it was kept.
@@ -51,40 +49,34 @@ impl Waveform {
         let unpower = |p: f32| (p.sqrt().sqrt() * 255.0).round() as u8;
         let mut levels = vec![finest];
         while levels.last().unwrap().len() > 1 {
-            let next = levels
-                .last()
-                .unwrap()
-                .chunks(2)
-                .map(|c| {
-                    let (a, b) = (c[0], *c.last().unwrap());
-                    std::array::from_fn(|k| {
-                        if k < 4 {
-                            a[k].max(b[k])
-                        } else {
-                            unpower((power(a[k]) + power(b[k])) * 0.5)
-                        }
+            let next =
+                levels
+                    .last()
+                    .unwrap()
+                    .chunks(2)
+                    .map(|c| {
+                        let (a, b) = (c[0], *c.last().unwrap());
+                        std::array::from_fn(|k| {
+                            if k < 4 {
+                                a[k].max(b[k])
+                            } else {
+                                unpower((power(a[k]) + power(b[k])) * 0.5)
+                            }
+                        })
                     })
-                })
-                .collect();
+                    .collect();
             levels.push(next);
         }
-        Waveform {
-            bins_per_second,
-            levels,
-            chroma: Chroma::default(),
-        }
+        Waveform { bins_per_second, levels, chroma: Chroma::default() }
     }
 
     pub fn is_empty(&self) -> bool {
         self.levels.first().is_none_or(|l| l.is_empty())
     }
 
-    /// The whole track in `slices` slices, each the loudest peak and the
-    /// mean RMS of its part of the finest level, on the same square-root
-    /// scale, then the mids' and the highs' shares of its power (0 to 255;
-    /// the bass has the rest): what the library draws as a track's mini
-    /// waveform, shaded by its sound as the deck waveforms are.
-    /// Empty when the track isn't analysed.
+    /// The whole track in `slices` slices, each the loudest peak and the mean RMS of its part of the finest level, on the same
+    /// square-root scale, then the mids' and the highs' shares of its power (0 to 255; the bass has the rest): what the library
+    /// draws as a track's mini waveform, shaded by its sound as the deck waveforms are. Empty when the track isn't analysed.
     pub fn overview(&self, slices: usize) -> Vec<OverviewSlice> {
         let Some(finest) = self.levels.first().filter(|l| !l.is_empty()) else {
             return Vec::new();
@@ -107,12 +99,7 @@ impl Waveform {
                         85
                     }
                 };
-                [
-                    peak,
-                    (mean.sqrt().sqrt() * 255.0).round() as u8,
-                    share(mid),
-                    share(high),
-                ]
+                [peak, (mean.sqrt().sqrt() * 255.0).round() as u8, share(mid), share(high)]
             })
             .collect()
     }
@@ -138,13 +125,9 @@ const CHUNK: usize = 1 << 16;
 /// One chunk of decoded frames, set once when it has been decoded.
 type Chunk = OnceLock<Box<[[f32; 2]]>>;
 
-/// Decoded stereo audio at the file's own sample rate.
-///
-/// A track can play while it is still being decoded: an
-/// [`AudioWriter`] fills it in order, one chunk at a time, and frames that
-/// aren't decoded yet read as silence. Decoding runs hundreds of times faster
-/// than playback, so in practice only a seek far ahead in the first second
-/// after loading can land on them.
+/// Decoded stereo audio at the file's own sample rate. A track can play while it is still being decoded: an [`AudioWriter`]
+/// fills it in order, one chunk at a time, and frames that aren't decoded yet read as silence. Decoding runs hundreds of
+/// times faster than playback, so in practice only a seek far ahead in the first second after loading can land on them.
 pub struct Audio {
     pub sample_rate: u32,
     chunks: Box<[Chunk]>,
@@ -172,9 +155,7 @@ impl Audio {
     /// Empty audio of about `expected_frames` frames, and the writer that fills
     /// it. Frames beyond one chunk past the estimate are dropped.
     pub fn writer(sample_rate: u32, expected_frames: usize) -> (Arc<Audio>, AudioWriter) {
-        let chunks = (0..expected_frames / CHUNK + 2)
-            .map(|_| OnceLock::new())
-            .collect();
+        let chunks = (0..expected_frames / CHUNK + 2).map(|_| OnceLock::new()).collect();
         let audio = Arc::new(Audio {
             sample_rate,
             chunks,
@@ -184,11 +165,7 @@ impl Audio {
             stems: OnceLock::new(),
             loudness: OnceLock::new(),
         });
-        let writer = AudioWriter {
-            audio: audio.clone(),
-            buf: Vec::with_capacity(CHUNK),
-            chunk: 0,
-        };
+        let writer = AudioWriter { audio: audio.clone(), buf: Vec::with_capacity(CHUNK), chunk: 0 };
         (audio, writer)
     }
 
@@ -212,12 +189,7 @@ impl Audio {
     /// Frame `i`, or silence if it isn't decoded yet or is past the end.
     #[inline]
     pub fn frame(&self, i: usize) -> [f32; 2] {
-        self.chunks
-            .get(i / CHUNK)
-            .and_then(OnceLock::get)
-            .and_then(|c| c.get(i % CHUNK))
-            .copied()
-            .unwrap_or([0.0; 2])
+        self.chunks.get(i / CHUNK).and_then(OnceLock::get).and_then(|c| c.get(i % CHUNK)).copied().unwrap_or([0.0; 2])
     }
 
     /// The decoded frames, in order, as chunks.
@@ -303,8 +275,7 @@ impl AudioWriter {
     pub fn finish(mut self) -> Arc<Audio> {
         self.flush();
         let a = &self.audio;
-        a.len
-            .store(a.decoded.load(Ordering::Acquire), Ordering::Release);
+        a.len.store(a.decoded.load(Ordering::Acquire), Ordering::Release);
         a.complete.store(true, Ordering::Release);
         self.audio
     }
@@ -325,10 +296,9 @@ pub struct Track {
     pub duration: f64,
     /// Offset of the first beat in seconds.
     pub first_beat: f64,
-    /// Where every beat falls, when the tempo changes within the track or
-    /// the grid was edited; empty means a steady `bpm` from `first_beat`.
-    /// Set it with [`Track::set_grid`], which keeps `bpm` and `first_beat`
-    /// in step.
+    /// Where every beat falls, when the tempo changes within the track or the
+    /// grid was edited; empty means a steady `bpm` from `first_beat`. Set it
+    /// with [`Track::set_grid`], which keeps `bpm` and `first_beat` in step.
     pub grid: BeatGrid,
     pub source: Source,
     /// Band peaks and RMS for drawing, as needed for the
@@ -353,7 +323,7 @@ pub struct LibraryInfo {
     /// in Instruments.
     pub tags: Vec<TrackTag>,
     /// Tags another app keeps for the track, as it brings them in: where
-    /// that app keeps the tag (VirtualDJ's "User 1", a rekordbox My Tag
+    /// that app keeps the tag (a "User 1" field, a My Tag
     /// category) and the tag. The library puts them in the DJ's groups.
     pub imported_tags: Vec<(String, String)>,
     /// Colour as 0xRRGGBB.
@@ -412,10 +382,7 @@ pub struct LibraryInfo {
 impl LibraryInfo {
     /// The names of the track's tags in `group`, in the order they were added.
     pub fn tags_in(&self, group: i64) -> impl Iterator<Item = &str> {
-        self.tags
-            .iter()
-            .filter(move |t| t.group == group)
-            .map(|t| t.name.as_str())
+        self.tags.iter().filter(move |t| t.group == group).map(|t| t.name.as_str())
     }
 
     /// Whether the track has `name` in `group`, whatever its case.
@@ -432,11 +399,7 @@ impl LibraryInfo {
     /// Makes `names` the track's tags in `group`, in that order: tidied
     /// ([`tag_name`]), empty ones and repeats left out.
     pub fn set_tags_in(&mut self, group: i64, names: impl IntoIterator<Item = String>) {
-        let at = self
-            .tags
-            .iter()
-            .position(|t| t.group == group)
-            .unwrap_or(self.tags.len());
+        let at = self.tags.iter().position(|t| t.group == group).unwrap_or(self.tags.len());
         self.tags.retain(|t| t.group != group);
         let mut new: Vec<TrackTag> = Vec::new();
         for name in names {
@@ -455,19 +418,15 @@ impl LibraryInfo {
         if self.has_tag(group, name) {
             return;
         }
-        let mut names: Vec<String> = if single {
-            Vec::new()
-        } else {
-            self.tags_in(group).map(str::to_string).collect()
-        };
+        let mut names: Vec<String> =
+            if single { Vec::new() } else { self.tags_in(group).map(str::to_string).collect() };
         names.push(name.to_string());
         self.set_tags_in(group, names);
     }
 
     /// Takes `name` out of `group`.
     pub fn remove_tag(&mut self, group: i64, name: &str) {
-        self.tags
-            .retain(|t| t.group != group || !same_tag(&t.name, name));
+        self.tags.retain(|t| t.group != group || !same_tag(&t.name, name));
     }
 }
 
@@ -498,22 +457,16 @@ pub fn tag_name(s: &str) -> String {
 
 /// Tags typed on one line, parted by commas: "Synth, Vocals".
 pub fn split_tags(text: &str) -> Vec<String> {
-    text.split([',', '\n'])
-        .map(tag_name)
-        .filter(|t| !t.is_empty())
-        .collect()
+    text.split([',', '\n']).map(tag_name).filter(|t| !t.is_empty()).collect()
 }
 
-/// Hashtags as VirtualDJ users type them, "#synth #vox": one tag per
+/// Hashtags as DJs type them, "#synth #vox": one tag per
 /// word, without the `#`. Text with no `#` at all is one tag per word too.
 pub fn hashtags(text: &str) -> Vec<String> {
-    text.split_whitespace()
-        .map(tag_name)
-        .filter(|t| !t.is_empty())
-        .collect()
+    text.split_whitespace().map(tag_name).filter(|t| !t.is_empty()).collect()
 }
 
-/// Hot cues numbered from here up are memory cues: rekordbox's unnumbered
+/// Hot cues numbered from here up are memory cues: the unnumbered
 /// cues, which mark a place on the waveform but have no pad.
 pub const MEMORY_CUE: usize = 1000;
 
@@ -556,11 +509,11 @@ pub struct Marker {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MarkerKind {
-    /// A part of the track the DJ named (VirtualDJ's remix points).
+    /// A part of the track the DJ named (remix points).
     Section,
-    /// A phrase from analysis (rekordbox's Intro, Verse, Chorus…).
+    /// A phrase from analysis (Intro, Verse, Chorus…).
     Phrase,
-    /// Where Automix starts, fades or cuts (VirtualDJ's automix points).
+    /// Where Automix starts, fades or cuts (automix points).
     Automix,
 }
 
@@ -574,9 +527,7 @@ impl MarkerKind {
     }
 
     pub fn from_name(name: &str) -> Option<Self> {
-        [Self::Section, Self::Phrase, Self::Automix]
-            .into_iter()
-            .find(|k| k.name() == name)
+        [Self::Section, Self::Phrase, Self::Automix].into_iter().find(|k| k.name() == name)
     }
 }
 
@@ -593,11 +544,7 @@ impl Track {
     /// Sets the beat grid, and the main tempo and first beat from it.
     pub fn set_grid(&mut self, grid: BeatGrid) {
         if !grid.is_empty() {
-            self.bpm = grid.main_bpm(if self.duration > 0.0 {
-                self.duration
-            } else {
-                f64::MAX
-            });
+            self.bpm = grid.main_bpm(if self.duration > 0.0 { self.duration } else { f64::MAX });
             self.first_beat = grid.first_beat();
         }
         self.grid = grid;

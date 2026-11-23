@@ -1,13 +1,6 @@
-//! Neural key detection: KeyNet, the convolutional network of Korzeniowski
-//! and Widmer ("Genre-Agnostic Key Classification with Convolutional Neural
-//! Networks", ISMIR 2018), with the weights openkeyscan-analyzer trained on
-//! the GiantSteps MTG key set (MIT licence; see `models/README.md`).
-//!
-//! The network reads a constant-Q spectrogram as librosa makes it: 105 bins,
-//! two per semitone from 65 Hz, five frames a second, as log(1 + magnitude).
-//! The filters here are librosa's, applied at the file's own rate in a single
-//! pass instead of octave by octave; that comes within about half a percent
-//! of librosa's values and gives the same keys.
+//! Neural key detection: KeyNet, the convolutional network of Korzeniowski and Widmer ("Genre-Agnostic Key Classification with Convolutional Neural Networks", ISMIR 2018), with the weights openkeyscan-analyzer
+//! log(1 + magnitude). The filters here are librosa's, applied at the file's own rate in a single pass instead of octave by octave; that comes within about half a percent of librosa's values and gives the same keys.
+//! log(1 + magnitude). The filters here are librosa's, applied at the file's own rate in a single pass instead of octave by octave; that comes within about half a percent of librosa's values and gives the same
 
 use std::sync::{Arc, OnceLock};
 
@@ -68,8 +61,7 @@ impl Spectrogram {
                 // Hann windowed, scaled to sum to one, centred in n_fft.
                 let lo = (-len / 2.0).floor();
                 let n = ((len / 2.0).floor() - lo) as usize;
-                let window =
-                    |j: usize| 0.5 - 0.5 * (std::f64::consts::TAU * j as f64 / n as f64).cos();
+                let window = |j: usize| 0.5 - 0.5 * (std::f64::consts::TAU * j as f64 / n as f64).cos();
                 let sum: f64 = (0..n).map(window).sum();
                 // librosa scales by len / n_fft before its FFT and divides
                 // the result by sqrt(len); the network saw audio at 44.1 kHz,
@@ -89,10 +81,7 @@ impl Spectrogram {
                 let keep = |t: &Complex32| t.norm() > top * 1e-4;
                 let first = taps.iter().position(keep).unwrap_or(0);
                 let last = taps.iter().rposition(keep).unwrap_or(0);
-                Filter {
-                    first,
-                    taps: taps[first..=last].to_vec(),
-                }
+                Filter { first, taps: taps[first..=last].to_vec() }
             })
             .collect();
         Spectrogram {
@@ -123,11 +112,7 @@ impl Spectrogram {
         let from = (self.frames.len() * self.hop) as isize - (self.n_fft / 2) as isize;
         let at = (from - self.start) as usize;
         self.scratch.clear();
-        self.scratch.extend(
-            self.buf[at..at + self.n_fft]
-                .iter()
-                .map(|&x| Complex32::new(x, 0.0)),
-        );
+        self.scratch.extend(self.buf[at..at + self.n_fft].iter().map(|&x| Complex32::new(x, 0.0)));
         self.fft.process(&mut self.scratch);
         let mut out = [0.0f32; BINS];
         for (o, f) in out.iter_mut().zip(&self.filters) {
@@ -150,9 +135,7 @@ impl Spectrogram {
         let total = self.pushed / self.hop + 1;
         while self.frames.len() < total {
             self.buf.push(0.0);
-            if self.start + self.buf.len() as isize
-                >= (self.frames.len() * self.hop + self.n_fft / 2) as isize
-            {
+            if self.start + self.buf.len() as isize >= (self.frames.len() * self.hop + self.n_fft / 2) as isize {
                 self.frame();
             }
         }
@@ -229,13 +212,7 @@ impl Network {
             if kh != kw || kh % 2 == 0 {
                 return None;
             }
-            let bias = r
-                .take(out * 4)?
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .map(|b| f32::from_le_bytes(*b))
-                .collect();
+            let bias = r.take(out * 4)?.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect();
             let weights = r
                 .take(out * inp * kh * kw * 2)?
                 .as_chunks::<2>()
@@ -243,13 +220,7 @@ impl Network {
                 .iter()
                 .map(|b| f16_to_f32(u16::from_le_bytes(*b)))
                 .collect();
-            layers.push(Conv {
-                out,
-                inp,
-                k: kh,
-                bias,
-                weights,
-            });
+            layers.push(Conv { out, inp, k: kh, bias, weights });
         }
         r.0.is_empty().then_some(Network { layers })
     }
@@ -272,12 +243,7 @@ impl Network {
             }
         }
         let n = (x.h * x.w).max(1) as f32;
-        std::array::from_fn(|c| {
-            x.data[c * x.h * x.w..(c + 1) * x.h * x.w]
-                .iter()
-                .sum::<f32>()
-                / n
-        })
+        std::array::from_fn(|c| x.data[c * x.h * x.w..(c + 1) * x.h * x.w].iter().sum::<f32>() / n)
     }
 }
 
@@ -301,12 +267,9 @@ impl Conv {
         let (h, w, k, pad) = (x.h, x.w, self.k, self.k / 2);
         let depth = self.inp * k * k;
         let mut out = vec![0.0f32; self.out * h * w];
-        let threads = crate::background::threads(
-            std::thread::available_parallelism()
-                .map_or(1, |n| n.get() / 2)
-                .clamp(1, 4),
-        )
-        .min(h);
+        let threads =
+            crate::background::threads(std::thread::available_parallelism().map_or(1, |n| n.get() / 2).clamp(1, 4))
+                .min(h);
         // Background analysis keeps its helpers at its own low priority.
         let low = crate::background::is_low();
         let target = SendPtr(out.as_mut_ptr());
@@ -334,11 +297,7 @@ impl Conv {
                                     let shift = dx as isize - pad as isize;
                                     for (t, d) in dst.iter_mut().enumerate() {
                                         let s = t as isize + shift;
-                                        *d = if (0..w as isize).contains(&s) {
-                                            line[s as usize]
-                                        } else {
-                                            0.0
-                                        };
+                                        *d = if (0..w as isize).contains(&s) { line[s as usize] } else { 0.0 };
                                     }
                                 }
                             }
@@ -375,12 +334,7 @@ impl Conv {
                 *v = if y > 0.0 { y } else { y.exp_m1() };
             }
         }
-        Planes {
-            c: self.out,
-            h,
-            w,
-            data: out,
-        }
+        Planes { c: self.out, h, w, data: out }
     }
 }
 
@@ -398,12 +352,7 @@ fn max_pool(x: &Planes) -> Planes {
             for t in 0..w {
                 let at = |rr: usize, tt: usize| plane[rr * x.w + tt];
                 let (r2, t2) = (r * 2, t * 2);
-                data.push(
-                    at(r2, t2)
-                        .max(at(r2, t2 + 1))
-                        .max(at(r2 + 1, t2))
-                        .max(at(r2 + 1, t2 + 1)),
-                );
+                data.push(at(r2, t2).max(at(r2, t2 + 1)).max(at(r2 + 1, t2)).max(at(r2 + 1, t2 + 1)));
             }
         }
     }

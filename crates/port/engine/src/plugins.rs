@@ -1,14 +1,6 @@
-//! The plugin host: starts a helper process for every effect slot that has a
-//! plugin loaded on a target its unit is routed to, attaches it to the audio
-//! thread, and watches it.
-//!
-//! The audio thread never waits for a plugin (see `djsugar-plugin-host`): a
-//! block the helper can't deliver in time plays dry. This thread decides what
-//! happens next. A helper that crashes, or misses too many blocks in a row,
-//! is restarted once with its slot switched off; the second time, or when it
-//! keeps using too much of the block's time, the plugin is switched off for
-//! the rest of the session and its slots are emptied. Nothing turns back on
-//! by itself in the middle of a set.
+//! The plugin host: starts a helper process for every effect slot that has a plugin loaded on a target its unit is routed to, attaches it to the audio thread, and watches it. The audio thread never waits for a plugin
+//! switched off; the second time, or when it keeps using too much of the block's time, the plugin is switched off for the rest of the session and its slots are emptied. Nothing turns back on by itself in the middle of a set.
+//! switched off; the second time, or when it keeps using too much of the block's time, the plugin is switched off for the rest of the session and its slots are emptied. Nothing turns back on by itself in the middle of a
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -20,19 +12,15 @@ use std::time::{Duration, Instant};
 
 use djsugar_control::{ControlHandle, ControlRegistry};
 pub use djsugar_plugin_host::presets as plugin_presets;
-pub use djsugar_plugin_host::{
-    presets as own_presets, scan, scan_audio_units, Descriptor, Limits, Plugin, ScanError,
-};
+pub use djsugar_plugin_host::{presets as own_presets, scan, scan_audio_units, Descriptor, Limits, Plugin, ScanError};
 use djsugar_plugin_host::{spawn, Action, Editor, Helper, Options, Policy, Status};
 
 use crate::controls::{effect_group, effect_unit_group, EFFECTS_PER_UNIT, NUM_EFFECT_UNITS};
 use crate::effects::{
-    instance_indices, plugin_index, route_name, Attached, PluginLink, PluginMsg, BLOCK, MAIN,
-    MAX_PARAMETERS, MAX_PLUGINS, PLUGIN_BASE, TARGETS,
+    instance_indices, plugin_index, route_name, Attached, PluginLink, PluginMsg, BLOCK, MAIN, MAX_PARAMETERS,
+    MAX_PLUGINS, PLUGIN_BASE, TARGETS,
 };
-use crate::inputs::{
-    input_group, AUXILIARIES, AUXILIARY, INSTRUMENT, INSTRUMENT_PARAMETERS, MICROPHONE, NUM_INPUTS,
-};
+use crate::inputs::{input_group, AUXILIARIES, AUXILIARY, INSTRUMENT, INSTRUMENT_PARAMETERS, MICROPHONE, NUM_INPUTS};
 
 const INSTRUMENT_GROUP: &str = input_group(INSTRUMENT);
 
@@ -92,12 +80,7 @@ pub struct HostOptions {
 
 impl HostOptions {
     pub fn new(helper: PathBuf, sample_rate: u32) -> Self {
-        Self {
-            helper,
-            sample_rate,
-            poll: Duration::from_millis(50),
-            limits: Limits::default(),
-        }
+        Self { helper, sample_rate, poll: Duration::from_millis(50), limits: Limits::default() }
     }
 }
 
@@ -180,10 +163,9 @@ impl PluginHost {
         }
     }
 
-    /// The plugins the slots can load: `loaded_effect` [`PLUGIN_BASE`] + i
-    /// is `entries[i]`. With a new list, slots keep their plugin (by key)
-    /// at its new place, slots whose plugin left are emptied, and every
-    /// plugin gets a fresh start.
+    /// The plugins the slots can load: `loaded_effect` [`PLUGIN_BASE`] + i is
+    /// place, slots whose plugin left are emptied, and every plugin gets a fresh start.
+    /// place, slots whose plugin left are emptied, and every plugin gets a fresh
     pub fn set_plugins(&self, mut entries: Vec<PluginEntry>) {
         entries.truncate(MAX_PLUGINS);
         let n = entries.len();
@@ -214,13 +196,8 @@ impl PluginHost {
     /// (its key, its state). Waits for the plugin, a few seconds at most.
     pub fn instrument_sound(&self) -> Result<(String, Vec<u8>), String> {
         let (tx, rx) = mpsc::channel();
-        self.list
-            .lock()
-            .unwrap()
-            .requests
-            .push(SoundRequest::Save(tx));
-        rx.recv_timeout(SOUND_WAIT)
-            .unwrap_or_else(|_| Err("the instrument didn't answer".into()))
+        self.list.lock().unwrap().requests.push(SoundRequest::Save(tx));
+        rx.recv_timeout(SOUND_WAIT).unwrap_or_else(|_| Err("the instrument didn't answer".into()))
     }
 
     /// Gives instrument plugin `key` the sound `data` (a preset's): now if
@@ -228,28 +205,17 @@ impl PluginHost {
     /// seconds at most.
     pub fn load_instrument_sound(&self, key: &str, data: Vec<u8>) -> Result<(), String> {
         let (tx, rx) = mpsc::channel();
-        self.list
-            .lock()
-            .unwrap()
-            .requests
-            .push(SoundRequest::Load(key.into(), data, tx));
-        rx.recv_timeout(SOUND_WAIT)
-            .unwrap_or_else(|_| Err("the instrument didn't answer".into()))
+        self.list.lock().unwrap().requests.push(SoundRequest::Load(key.into(), data, tx));
+        rx.recv_timeout(SOUND_WAIT).unwrap_or_else(|_| Err("the instrument didn't answer".into()))
     }
 
-    /// Loads one of instrument plugin `key`'s own presets, by the
-    /// reference its preset list gave: now if it is playing, else as soon as
-    /// it starts. The sound it makes is kept as the plugin's. Waits for the
-    /// plugin, a few seconds at most.
+    /// Loads one of instrument plugin `key`'s own presets, by the reference its
+    /// it makes is kept as the plugin's. Waits for the plugin, a few seconds at most.
+    /// it makes is kept as the plugin's. Waits for the plugin, a few seconds at
     pub fn load_instrument_preset(&self, key: &str, reference: &str) -> Result<(), String> {
         let (tx, rx) = mpsc::channel();
-        self.list
-            .lock()
-            .unwrap()
-            .requests
-            .push(SoundRequest::Preset(key.into(), reference.into(), tx));
-        rx.recv_timeout(SOUND_WAIT)
-            .unwrap_or_else(|_| Err("the instrument didn't answer".into()))
+        self.list.lock().unwrap().requests.push(SoundRequest::Preset(key.into(), reference.into(), tx));
+        rx.recv_timeout(SOUND_WAIT).unwrap_or_else(|_| Err("the instrument didn't answer".into()))
     }
 
     /// The playing instrument's parameter names: `[Instrument1],parameterN`
@@ -288,14 +254,10 @@ impl PluginHost {
         self.ask(|tx| SoundRequest::Picks(key.into(), picks, tx))
     }
 
-    fn ask(
-        &self,
-        request: impl FnOnce(Sender<Result<(), String>>) -> SoundRequest,
-    ) -> Result<(), String> {
+    fn ask(&self, request: impl FnOnce(Sender<Result<(), String>>) -> SoundRequest) -> Result<(), String> {
         let (tx, rx) = mpsc::channel();
         self.list.lock().unwrap().requests.push(request(tx));
-        rx.recv_timeout(SOUND_WAIT)
-            .unwrap_or_else(|_| Err("the instrument didn't answer".into()))
+        rx.recv_timeout(SOUND_WAIT).unwrap_or_else(|_| Err("the instrument didn't answer".into()))
     }
 
     /// What happened since the last call.
@@ -352,10 +314,7 @@ fn target_name(target: usize) -> String {
             MICROPHONE => "Mic".into(),
             AUXILIARY => "Aux".into(),
             INSTRUMENT => "Instrument".into(),
-            i => format!(
-                "Aux {}",
-                AUXILIARIES.iter().position(|&a| a == i).unwrap_or(0) + 1
-            ),
+            i => format!("Aux {}", AUXILIARIES.iter().position(|&a| a == i).unwrap_or(0) + 1),
         }
     }
 }
@@ -363,12 +322,7 @@ fn target_name(target: usize) -> String {
 /// Keeps a helper's editor in step with a `show_editor` control: asks for
 /// it, takes it away, and turns the control off when the window was closed
 /// or can't open. Returns why it can't, when it can't.
-fn follow_editor(
-    helper: &Helper,
-    asked: &mut bool,
-    control: &ControlHandle,
-    want: bool,
-) -> Option<String> {
+fn follow_editor(helper: &Helper, asked: &mut bool, control: &ControlHandle, want: bool) -> Option<String> {
     if want && !*asked {
         helper.set_editor(true);
         *asked = true;
@@ -383,8 +337,7 @@ fn follow_editor(
             return Some(if cfg!(any(target_os = "macos", windows)) {
                 "it has no window of its own".into()
             } else {
-                "it has no window of its own, or there is no X11 display (XWayland) to show it on"
-                    .into()
+                "it has no window of its own, or there is no X11 display (XWayland) to show it on".into()
             });
         }
     }
@@ -471,13 +424,7 @@ struct ParamFollow {
 impl ParamFollow {
     fn new(knobs: &[ControlHandle], ranges: Vec<(f64, f64)>) -> Self {
         let now: Vec<f64> = knobs.iter().map(|k| k.get()).collect();
-        Self {
-            ranges,
-            seq: 0,
-            seen: now.clone(),
-            touched: vec![None; now.len()],
-            knob: now,
-        }
+        Self { ranges, seq: 0, seen: now.clone(), touched: vec![None; now.len()], knob: now }
     }
 
     /// Takes read-back `seq`'s `values` (in the plugin's own ranges).
@@ -519,9 +466,7 @@ const KEEP_EVERY: Duration = Duration::from_secs(20);
 /// keys hold paths.
 fn sound_file(folder: &Path, key: &str) -> PathBuf {
     // FNV-1a: the same file for the same key on every run and version.
-    let hash = key.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
-        (h ^ b as u64).wrapping_mul(0x0100_0000_01b3)
-    });
+    let hash = key.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ b as u64).wrapping_mul(0x0100_0000_01b3));
     folder.join(format!("{hash:016x}.sound"))
 }
 
@@ -576,10 +521,7 @@ fn with_pick(mut picks: Vec<(usize, u32)>, knob: usize, id: Option<u32>) -> Vec<
 fn kept_sound(list: &Mutex<List>, key: &str) -> Option<Vec<u8>> {
     let folder = list.lock().unwrap().sounds.clone()?;
     let data = std::fs::read(sound_file(&folder, key)).ok()?;
-    eprintln!(
-        "plugin {key}: starting from its kept sound ({} bytes)",
-        data.len()
-    );
+    eprintln!("plugin {key}: starting from its kept sound ({} bytes)", data.len());
     Some(data)
 }
 
@@ -614,8 +556,7 @@ fn keep_sound(list: &Mutex<List>, key: &str, helper: &Helper) {
 }
 
 fn get(reg: &ControlRegistry, group: &str, item: &str) -> ControlHandle {
-    reg.get(group, item)
-        .unwrap_or_else(|| panic!("{group},{item} exists: the rack makes it"))
+    reg.get(group, item).unwrap_or_else(|| panic!("{group},{item} exists: the rack makes it"))
 }
 
 impl Supervisor {
@@ -634,9 +575,7 @@ impl Supervisor {
                     SlotHandles {
                         loaded_effect: get(reg, &g, "loaded_effect"),
                         enabled: get(reg, &g, "enabled"),
-                        params: std::array::from_fn(|k| {
-                            get(reg, &g, &format!("parameter{}", k + 1))
-                        }),
+                        params: std::array::from_fn(|k| get(reg, &g, &format!("parameter{}", k + 1))),
                         num_parameters: get(reg, &g, "num_parameters"),
                         show_editor: get(reg, &g, "show_editor"),
                     }
@@ -721,9 +660,9 @@ impl Supervisor {
             match r {
                 SoundRequest::Save(tx) => {
                     let result = match &ins.running {
-                        Some((_, helper)) if !helper.is_gone() => helper
-                            .save_state()
-                            .map(|data| (ins.running_key.clone(), data)),
+                        Some((_, helper)) if !helper.is_gone() => {
+                            helper.save_state().map(|data| (ins.running_key.clone(), data))
+                        }
                         _ => Err("no instrument is playing".into()),
                     };
                     let _ = tx.send(result);
@@ -764,12 +703,7 @@ impl Supervisor {
                 }
                 SoundRequest::Load(key, data, tx) => {
                     // A sound given now replaces a preset still to load.
-                    if self
-                        .instrument
-                        .pending_preset
-                        .as_ref()
-                        .is_some_and(|(k, _)| *k == key)
-                    {
+                    if self.instrument.pending_preset.as_ref().is_some_and(|(k, _)| *k == key) {
                         self.instrument.pending_preset = None;
                     }
                     let ins = &self.instrument;
@@ -781,9 +715,7 @@ impl Supervisor {
                         let _ = std::fs::write(&file, &data);
                     }
                     let result = match &ins.running {
-                        Some((_, helper)) if ins.running_key == key && !helper.is_gone() => {
-                            helper.load_state(&data)
-                        }
+                        Some((_, helper)) if ins.running_key == key && !helper.is_gone() => helper.load_state(&data),
                         _ => Ok(()),
                     };
                     let _ = tx.send(result);
@@ -829,10 +761,7 @@ impl Supervisor {
                         keep_sound(&self.list, &r.key, &r.helper);
                     }
                     if let Some(reason) = reason {
-                        let name = self
-                            .entries
-                            .get(r.plugin as usize)
-                            .map_or_else(String::new, |e| e.name.clone());
+                        let name = self.entries.get(r.plugin as usize).map_or_else(String::new, |e| e.name.clone());
                         let _ = self.events.send(PluginEvent::NoWindow { name, reason });
                     }
                     // Only the first instance shows its window.
@@ -847,8 +776,7 @@ impl Supervisor {
                     if let Some(name) = name {
                         let _ = self.events.send(PluginEvent::NoWindow {
                             name,
-                            reason: "it opens once its FX unit plays on a deck or the master"
-                                .into(),
+                            reason: "it opens once its FX unit plays on a deck or the master".into(),
                         });
                     }
                 }
@@ -859,8 +787,7 @@ impl Supervisor {
             Some((plugin, helper)) => {
                 let want = ins.show_editor.get_bool();
                 let was_open = ins.editor;
-                if let Some(reason) = follow_editor(helper, &mut ins.editor, &ins.show_editor, want)
-                {
+                if let Some(reason) = follow_editor(helper, &mut ins.editor, &ins.show_editor, want) {
                     let name = ins.entries[*plugin as usize].name.clone();
                     let _ = self.events.send(PluginEvent::NoWindow { name, reason });
                 }
@@ -883,8 +810,7 @@ impl Supervisor {
         }
         self.version = list.version;
         let old = std::mem::replace(&mut self.entries, list.entries.clone());
-        let old_instruments =
-            std::mem::replace(&mut self.instrument.entries, list.instruments.clone());
+        let old_instruments = std::mem::replace(&mut self.instrument.entries, list.instruments.clone());
         drop(list);
         let ins = &mut self.instrument;
         ins.policies.clear();
@@ -900,9 +826,7 @@ impl Supervisor {
             let moved = if old_instruments.is_empty() {
                 (chosen <= ins.entries.len()).then_some(chosen - 1)
             } else {
-                old_instruments
-                    .get(chosen - 1)
-                    .and_then(|e| ins.entries.iter().position(|n| n.key == e.key))
+                old_instruments.get(chosen - 1).and_then(|e| ins.entries.iter().position(|n| n.key == e.key))
             };
             ins.choice.set(moved.map_or(0.0, |n| (n + 1) as f64));
         }
@@ -923,11 +847,9 @@ impl Supervisor {
                 let moved = if self.version == 1 && old.is_empty() {
                     (p < self.entries.len()).then_some(p)
                 } else {
-                    old.get(p)
-                        .and_then(|e| self.entries.iter().position(|n| n.key == e.key))
+                    old.get(p).and_then(|e| self.entries.iter().position(|n| n.key == e.key))
                 };
-                slot.loaded_effect
-                    .set(moved.map_or(0.0, |n| (PLUGIN_BASE + n) as f64));
+                slot.loaded_effect.set(moved.map_or(0.0, |n| (PLUGIN_BASE + n) as f64));
             }
         }
     }
@@ -939,10 +861,7 @@ impl Supervisor {
                 continue;
             };
             let plugin = r.plugin;
-            let policy = self
-                .policies
-                .entry(plugin)
-                .or_insert_with(|| Policy::new(self.opts.limits));
+            let policy = self.policies.entry(plugin).or_insert_with(|| Policy::new(self.opts.limits));
             let crashed = r.helper.status() != Status::Running || r.helper.is_gone();
             let missed = r.helper.missed_in_row();
             let action = if crashed {
@@ -972,10 +891,7 @@ impl Supervisor {
                         "it used too much of the audio time"
                     };
                     self.disable(plugin);
-                    let _ = self.events.send(PluginEvent::Disabled {
-                        name,
-                        reason: reason.into(),
-                    });
+                    let _ = self.events.send(PluginEvent::Disabled { name, reason: reason.into() });
                 }
             }
         }
@@ -1021,12 +937,7 @@ impl Supervisor {
             plugin: entry.plugin.clone(),
             sample_rate: self.opts.sample_rate,
             max_frames: BLOCK,
-            title: Some(format!(
-                "{} · {} · FX {}",
-                entry.name,
-                target_name(target),
-                slot + 1
-            )),
+            title: Some(format!("{} · {} · FX {}", entry.name, target_name(target), slot + 1)),
             state: kept_sound(&self.list, &entry.key),
         };
         match spawn(&opts) {
@@ -1039,11 +950,7 @@ impl Supervisor {
                 let mut sent = vec![0.5; shown];
                 for (k, p) in info.params.iter().take(shown).enumerate() {
                     let span = p.max - p.min;
-                    let v = if span > 0.0 {
-                        ((p.value - p.min) / span).clamp(0.0, 1.0)
-                    } else {
-                        0.0
-                    };
+                    let v = if span > 0.0 { ((p.value - p.min) / span).clamp(0.0, 1.0) } else { 0.0 };
                     if fresh {
                         slot_h.params[k].set(v);
                     }
@@ -1052,18 +959,8 @@ impl Supervisor {
                     ranges.push((p.min as f32, p.max as f32));
                 }
                 slot_h.num_parameters.set(shown as f64);
-                let attached = Box::new(Attached {
-                    conn,
-                    plugin,
-                    ranges,
-                    sent,
-                });
-                if self
-                    .link
-                    .to_engine
-                    .push(PluginMsg::Attach(i as u16, attached))
-                    .is_ok()
-                {
+                let attached = Box::new(Attached { conn, plugin, ranges, sent });
+                if self.link.to_engine.push(PluginMsg::Attach(i as u16, attached)).is_ok() {
                     self.knobs[unit][slot] = Some(plugin);
                     self.running[i] = Some(Running {
                         plugin,
@@ -1078,10 +975,7 @@ impl Supervisor {
             Err(e) => {
                 let name = entry.name.clone();
                 self.disable(plugin);
-                let _ = self.events.send(PluginEvent::Failed {
-                    name,
-                    error: e.to_string(),
-                });
+                let _ = self.events.send(PluginEvent::Failed { name, error: e.to_string() });
             }
         }
     }
@@ -1118,9 +1012,7 @@ impl Supervisor {
     }
 
     fn name(&self, plugin: u16) -> String {
-        self.entries
-            .get(plugin as usize)
-            .map_or_else(String::new, |e| e.name.clone())
+        self.entries.get(plugin as usize).map_or_else(String::new, |e| e.name.clone())
     }
 
     /// Keeps the instrument's knobs on the plugin's own values, and empties
@@ -1151,10 +1043,7 @@ impl Supervisor {
         let ins = &mut self.instrument;
         if let Some((plugin, helper)) = ins.running.as_mut() {
             let plugin = *plugin;
-            let policy = ins
-                .policies
-                .entry(plugin)
-                .or_insert_with(|| Policy::new(self.opts.limits));
+            let policy = ins.policies.entry(plugin).or_insert_with(|| Policy::new(self.opts.limits));
             let crashed = helper.status() != Status::Running || helper.is_gone();
             let missed = helper.missed_in_row();
             let action = if crashed {
@@ -1187,10 +1076,7 @@ impl Supervisor {
                     } else {
                         "it used too much of the audio time"
                     };
-                    let _ = self.events.send(PluginEvent::Disabled {
-                        name,
-                        reason: reason.into(),
-                    });
+                    let _ = self.events.send(PluginEvent::Disabled { name, reason: reason.into() });
                 }
             }
         }
@@ -1238,35 +1124,20 @@ impl Supervisor {
                     sent.push(v as f32);
                 }
                 ins.num_parameters.set(shown as f64);
-                ins.follow = ParamFollow::new(
-                    &ins.params[..shown],
-                    params.iter().take(shown).map(|p| (p.min, p.max)).collect(),
-                );
+                ins.follow =
+                    ParamFollow::new(&ins.params[..shown], params.iter().take(shown).map(|p| (p.min, p.max)).collect());
                 {
                     let mut list = self.list.lock().unwrap();
-                    list.instrument_params =
-                        params.iter().take(shown).map(|p| p.name.clone()).collect();
+                    list.instrument_params = params.iter().take(shown).map(|p| p.name.clone()).collect();
                     list.instrument_all = helper.info().all.clone();
                     list.instrument_ids = params.iter().take(shown).map(|p| p.id).collect();
                     list.instrument_picks = picks;
                 }
-                let attached = Box::new(Attached {
-                    conn,
-                    plugin,
-                    ranges,
-                    sent,
-                });
-                if self
-                    .link
-                    .to_engine
-                    .push(PluginMsg::Instrument(Some(attached)))
-                    .is_ok()
-                {
+                let attached = Box::new(Attached { conn, plugin, ranges, sent });
+                if self.link.to_engine.push(PluginMsg::Instrument(Some(attached))).is_ok() {
                     ins.running_key = entry.key.clone();
                     ins.editor = false;
-                    if let Some((_, reference)) =
-                        ins.pending_preset.take_if(|(k, _)| *k == entry.key)
-                    {
+                    if let Some((_, reference)) = ins.pending_preset.take_if(|(k, _)| *k == entry.key) {
                         match helper.load_preset(&reference) {
                             Ok(()) => keep_sound(&self.list, &entry.key, &helper),
                             Err(e) => {
@@ -1281,10 +1152,7 @@ impl Supervisor {
                 let name = entry.name.clone();
                 ins.disabled.insert(plugin);
                 ins.choice.set(0.0);
-                let _ = self.events.send(PluginEvent::Failed {
-                    name,
-                    error: e.to_string(),
-                });
+                let _ = self.events.send(PluginEvent::Failed { name, error: e.to_string() });
             }
         }
     }
@@ -1365,14 +1233,7 @@ mod tests {
                 name: format!("Test {effect}"),
                 plugin: Plugin::Test(effect.into()),
             }]);
-            let rig = Self {
-                reg,
-                rack,
-                host,
-                instrument,
-                notes,
-                now: 0.0,
-            };
+            let rig = Self { reg, rack, host, instrument, notes, now: 0.0 };
             rig.unit("mix").set(1.0);
             rig.slot("loaded_effect").set(PLUGIN_BASE as f64);
             rig.slot("enabled").set_bool(true);
@@ -1384,9 +1245,7 @@ mod tests {
         }
 
         fn slot(&self, item: &str) -> ControlHandle {
-            self.reg
-                .get("[EffectRack1_EffectUnit1_Effect1]", item)
-                .unwrap()
+            self.reg.get("[EffectRack1_EffectUnit1_Effect1]", item).unwrap()
         }
 
         /// One buffer of deck 1: what came out for a steady 0.5 in.
@@ -1444,12 +1303,7 @@ mod tests {
             events.extend(r.host.events());
             !events.is_empty()
         });
-        assert_eq!(
-            events,
-            vec![PluginEvent::Restarted {
-                name: "Test test-crash".into()
-            }]
-        );
+        assert_eq!(events, vec![PluginEvent::Restarted { name: "Test test-crash".into() }]);
         assert!(!rig.slot("enabled").get_bool(), "back, but off");
         // Turned on again it keeps the DJ's setting (the plugin's own is
         // "never") and crashes again: off for the session.
@@ -1460,10 +1314,7 @@ mod tests {
             events.extend(r.host.events());
             !events.is_empty()
         });
-        assert!(
-            matches!(&events[0], PluginEvent::Disabled { name, .. } if name == "Test test-crash"),
-            "{events:?}"
-        );
+        assert!(matches!(&events[0], PluginEvent::Disabled { name, .. } if name == "Test test-crash"), "{events:?}");
         assert_eq!(rig.slot("loaded_effect").get(), 0.0, "the slot is emptied");
     }
 
@@ -1480,12 +1331,7 @@ mod tests {
             !events.is_empty()
         });
         assert!(start.elapsed() < Duration::from_secs(5));
-        assert_eq!(
-            events,
-            vec![PluginEvent::Restarted {
-                name: "Test test-hang".into()
-            }]
-        );
+        assert_eq!(events, vec![PluginEvent::Restarted { name: "Test test-hang".into() }]);
     }
 
     #[test]
@@ -1507,13 +1353,8 @@ mod tests {
     fn a_slot_keeps_its_plugin_when_the_list_changes() {
         let mut rig = Rig::new("test-gain");
         rig.until(|r, _| r.slot("num_parameters").get() == 1.0);
-        let entry = |key: &str| PluginEntry {
-            key: key.into(),
-            name: key.into(),
-            plugin: Plugin::Test(key.into()),
-        };
-        rig.host
-            .set_plugins(vec![entry("test-slow"), entry("test-gain")]);
+        let entry = |key: &str| PluginEntry { key: key.into(), name: key.into(), plugin: Plugin::Test(key.into()) };
+        rig.host.set_plugins(vec![entry("test-slow"), entry("test-gain")]);
         let second = (PLUGIN_BASE + 1) as f64;
         rig.until(|r, _| r.slot("loaded_effect").get() == second);
     }
@@ -1538,10 +1379,7 @@ mod tests {
             events.extend(r.host.events());
             !events.is_empty()
         });
-        assert!(
-            matches!(&events[0], PluginEvent::NoWindow { name, .. } if name == "Test test-slow"),
-            "{events:?}"
-        );
+        assert!(matches!(&events[0], PluginEvent::NoWindow { name, .. } if name == "Test test-slow"), "{events:?}");
         assert!(!rig.slot("show_editor").get_bool());
         // The plugin plays on.
         rig.until(|_, out| (out - 0.5).abs() < 1e-6);
@@ -1552,8 +1390,8 @@ mod tests {
         let mut rig = Rig::new("test-gain");
         rig.until(|r, _| r.slot("num_parameters").get() == 1.0);
         rig.slot("show_editor").set_bool(true);
-        let display = cfg!(any(target_os = "macos", windows))
-            || std::env::var_os("DISPLAY").is_some_and(|d| !d.is_empty());
+        let display =
+            cfg!(any(target_os = "macos", windows)) || std::env::var_os("DISPLAY").is_some_and(|d| !d.is_empty());
         if !display {
             // Nowhere to show it: the button goes off again.
             rig.until(|r, _| !r.slot("show_editor").get_bool());
@@ -1581,18 +1419,13 @@ mod tests {
         fn instrument_buffer_on(&mut self, on_deck: bool) -> f32 {
             self.rack.prepare([0.5; TARGETS], self.now);
             let target = input_target(INSTRUMENT);
-            self.instrument
-                .start(FRAMES, &mut self.rack, target, on_deck);
+            self.instrument.start(FRAMES, &mut self.rack, target, on_deck);
             self.instrument.render(
                 FRAMES,
                 &mut self.rack,
                 target,
                 0.01,
-                if on_deck {
-                    crate::inputs::Routing::Deck
-                } else {
-                    crate::inputs::Routing::Main
-                },
+                if on_deck { crate::inputs::Routing::Deck } else { crate::inputs::Routing::Main },
             );
             self.rack.finish(FRAMES);
             self.now += FRAMES as f64 / SR as f64;
@@ -1626,9 +1459,7 @@ mod tests {
         assert!((rig.instrument_buffer() - 0.5).abs() < 1e-3);
         // A sound that sets the volume (the test synth takes 4 bytes as
         // its value) moves the knob to it, once the DJ's hands are off.
-        rig.host
-            .load_instrument_sound("test-synth", 0.25f32.to_le_bytes().to_vec())
-            .unwrap();
+        rig.host.load_instrument_sound("test-synth", 0.25f32.to_le_bytes().to_vec()).unwrap();
         let end = Instant::now() + Duration::from_secs(5);
         while (volume.get() - 0.25).abs() > 1e-6 {
             rig.instrument_buffer();
@@ -1823,10 +1654,7 @@ mod tests {
         rig.reg.get(group, "instrument").unwrap().set(0.0);
         while !file.exists() {
             rig.instrument_buffer();
-            assert!(
-                Instant::now() < end + Duration::from_secs(10),
-                "the sound is kept"
-            );
+            assert!(Instant::now() < end + Duration::from_secs(10), "the sound is kept");
             std::thread::sleep(Duration::from_millis(1));
         }
         assert_eq!(std::fs::read(&file).unwrap(), b"kept");
@@ -1858,10 +1686,7 @@ mod tests {
         }]);
         let group = input_group(INSTRUMENT);
         let configured = rig.reg.get(group, "input_configured").unwrap();
-        assert!(
-            rig.host.pick_instrument_knob(0, Some(0)).is_err(),
-            "nothing playing"
-        );
+        assert!(rig.host.pick_instrument_knob(0, Some(0)).is_err(), "nothing playing");
         rig.reg.get(group, "instrument").unwrap().set(1.0);
         let end = Instant::now() + Duration::from_secs(10);
         while !configured.get_bool() {
@@ -1872,10 +1697,7 @@ mod tests {
         assert_eq!(rig.host.instrument_all_parameters(), [(0, "Volume".into())]);
         assert!(rig.host.instrument_picks().is_empty());
         rig.host.pick_instrument_knob(0, Some(0)).unwrap();
-        assert_eq!(
-            std::fs::read_to_string(picks_file(&folder, "test-synth")).unwrap(),
-            "0 0\n"
-        );
+        assert_eq!(std::fs::read_to_string(picks_file(&folder, "test-synth")).unwrap(), "0 0\n");
         // It comes back with the pick.
         while rig.host.instrument_picks() != [(0, 0)] {
             rig.instrument_buffer();
@@ -1883,9 +1705,7 @@ mod tests {
             std::thread::sleep(Duration::from_millis(1));
         }
         // A preset without picks gives the knobs back.
-        rig.host
-            .set_instrument_picks("test-synth", Vec::new())
-            .unwrap();
+        rig.host.set_instrument_picks("test-synth", Vec::new()).unwrap();
         assert!(!picks_file(&folder, "test-synth").exists());
         while !rig.host.instrument_picks().is_empty() {
             rig.instrument_buffer();
@@ -1907,9 +1727,7 @@ mod tests {
             plugin: Plugin::Test("test-synth".into()),
         }]);
         // Given before it plays, it starts with it.
-        rig.host
-            .load_instrument_sound("test-synth", b"bass".to_vec())
-            .unwrap();
+        rig.host.load_instrument_sound("test-synth", b"bass".to_vec()).unwrap();
         let group = input_group(INSTRUMENT);
         let configured = rig.reg.get(group, "input_configured").unwrap();
         rig.reg.get(group, "instrument").unwrap().set(1.0);
@@ -1920,14 +1738,9 @@ mod tests {
             std::thread::sleep(Duration::from_millis(1));
         }
         let (key, data) = rig.host.instrument_sound().unwrap();
-        assert_eq!(
-            (key.as_str(), data.as_slice()),
-            ("test-synth", &b"bass"[..])
-        );
+        assert_eq!((key.as_str(), data.as_slice()), ("test-synth", &b"bass"[..]));
         // Given while it plays, it takes it now.
-        rig.host
-            .load_instrument_sound("test-synth", b"pad".to_vec())
-            .unwrap();
+        rig.host.load_instrument_sound("test-synth", b"pad".to_vec()).unwrap();
         assert_eq!(rig.host.instrument_sound().unwrap().1, b"pad");
         let _ = std::fs::remove_dir_all(&folder);
     }

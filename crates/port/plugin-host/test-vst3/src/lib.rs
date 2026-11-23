@@ -1,11 +1,6 @@
-//! A tiny VST3 effect for the plugin-host tests: a stereo gain (parameter
-//! 0), a reported latency of 64 frames, and parameter 1 ("Tempo out") that
-//! writes the host's tempo into the left channel's first sample so tests can
-//! check the process context arrives. The processor and controller are
-//! separate classes, so the host's connection and state hand-off are tested.
-//!
-//! Adapted from the `gain` example of the vst3 crate
-//! (https://github.com/coupler-rs/vst3-rs, MIT OR Apache-2.0).
+//! A tiny VST3 effect for the plugin-host tests: a stereo gain (parameter 0), a reported latency of 64 frames, and parameter 1 ("Tempo out") that writes the
+//! host's connection and state hand-off are tested. Adapted from the `gain` example of the vst3 crate (https://github.com/coupler-rs/vst3-rs, MIT OR Apache-2.0).
+//! host's connection and state hand-off are tested. Adapted from the `gain` example of the vst3 crate (https://github.com/coupler-rs/vst3-rs, MIT OR
 
 #![allow(non_upper_case_globals)]
 // The casts keep the bindings portable: some constants have other types on Windows.

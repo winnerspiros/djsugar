@@ -1,19 +1,6 @@
-//! Phrases: a track cut into sections of whole bars (intro, build, drop,
-//! breakdown, outro) from its beat grid and waveform.
-//!
-//! Each bar gets the mean level of the low, mid and high bands. A dynamic
-//! program then picks the cuts that fit those levels best with as few
-//! sections as it can, allowing only lengths of 8 to 32 bars in steps of 4
-//! (8 and 16 cost less), so short flickers never become phrases of their
-//! own. The first and last section may be shorter, down to 4 bars, for a
-//! pickup or a tail. Each cut then moves up to 4 bars to where the bass
-//! comes in or drops out, so a kick entering early ends the intro there.
-//! A section is a drop when its bass and level come close
-//! to the track's strongest section's, and a chorus (main groove) when they
-//! are a little further off; the others are named by where they fall. Neighbours of the same kind merge.
-//!
-//! The method follows the research in the project notes
-//! (phrase-analysis-review.md); it was written for DJ Sugar.
+//! Phrases: a track cut into sections of whole bars (intro, build, drop, breakdown, outro) from its beat grid and waveform. Each bar gets the mean level of the low, mid and high bands. A dynamic program then picks the cuts that fit those levels best with as few sections as it can, allowing only lengths of 8 to 32 bars
+//! in steps of 4 (8 and 16 cost less), so short flickers never become phrases of their own. The first and last section may be shorter, down to 4 bars, for a pickup or a tail. Each cut then moves up to 4 bars to where the bass comes in or drops out, so a kick entering early ends the intro there. A section is a drop when
+//! its bass and level come close to the track's strongest section's, and a chorus (main groove) when they are a little further off; the others are named by where they fall. Neighbours of the same kind merge. The method follows the research in the project notes (phrase-analysis-review.md); it was written for DJ Sugar.
 
 use crate::track::{Chroma, Marker, MarkerKind, Track};
 
@@ -35,15 +22,8 @@ pub enum PhraseKind {
 }
 
 impl PhraseKind {
-    const ALL: [Self; 7] = [
-        Self::Intro,
-        Self::Build,
-        Self::Drop,
-        Self::Breakdown,
-        Self::Outro,
-        Self::Chorus,
-        Self::Verse,
-    ];
+    const ALL: [Self; 7] =
+        [Self::Intro, Self::Build, Self::Drop, Self::Breakdown, Self::Outro, Self::Chorus, Self::Verse];
 
     /// What the library calls it.
     pub fn name(self) -> &'static str {
@@ -126,10 +106,7 @@ pub fn waveform_ready(track: &Track) -> bool {
     let wave = &track.waveform;
     wave.bins_per_second > 0.0
         && track.duration > 0.0
-        && wave
-            .levels
-            .first()
-            .is_some_and(|l| l.len() as f64 / wave.bins_per_second >= track.duration - 0.5)
+        && wave.levels.first().is_some_and(|l| l.len() as f64 / wave.bins_per_second >= track.duration - 0.5)
 }
 
 /// Phrases as the library keeps them: markers of kind phrase, each
@@ -156,13 +133,7 @@ pub fn stored(track: &Track) -> Vec<Phrase> {
         .markers
         .iter()
         .filter(|m| m.kind == MarkerKind::Phrase && m.detected)
-        .filter_map(|m| {
-            Some(Phrase {
-                start: m.seconds,
-                kind: PhraseKind::from_name(&m.name)?,
-                energy: 0,
-            })
-        })
+        .filter_map(|m| Some(Phrase { start: m.seconds, kind: PhraseKind::from_name(&m.name)?, energy: 0 }))
         .collect();
     out.sort_by(|a, b| a.start.total_cmp(&b.start));
     out
@@ -171,21 +142,13 @@ pub fn stored(track: &Track) -> Vec<Phrase> {
 /// Whether the track has phrases from an import, which detected ones
 /// don't replace.
 pub fn imported(track: &Track) -> bool {
-    track
-        .info
-        .markers
-        .iter()
-        .any(|m| m.kind == MarkerKind::Phrase && !m.detected)
+    track.info.markers.iter().any(|m| m.kind == MarkerKind::Phrase && !m.detected)
 }
 
 /// `markers` with its detected phrases replaced by `phrases`.
 pub fn with_phrases(markers: &[Marker], phrases: Vec<Marker>) -> Vec<Marker> {
-    let mut out: Vec<Marker> = markers
-        .iter()
-        .filter(|m| !(m.kind == MarkerKind::Phrase && m.detected))
-        .cloned()
-        .chain(phrases)
-        .collect();
+    let mut out: Vec<Marker> =
+        markers.iter().filter(|m| !(m.kind == MarkerKind::Phrase && m.detected)).cloned().chain(phrases).collect();
     out.sort_by(|a, b| a.seconds.total_cmp(&b.seconds));
     out
 }
@@ -233,9 +196,7 @@ pub fn detect(track: &Track) -> Vec<Phrase> {
     }
     normalise(&mut levels);
     let chroma = bar_chroma(&wave.chroma, &starts, &ends);
-    let novelty = chroma
-        .as_deref()
-        .map_or_else(|| vec![0.0; levels.len()], novelty);
+    let novelty = chroma.as_deref().map_or_else(|| vec![0.0; levels.len()], novelty);
     let cuts = refine(&levels, &segment(&levels, &novelty));
     let repeats = repeats(&levels, chroma.as_deref(), &cuts);
     let kinds = classify(&levels, &cuts, &repeats);
@@ -248,11 +209,7 @@ pub fn detect(track: &Track) -> Vec<Phrase> {
         if phrases.last().is_some_and(|p| p.kind == kind) {
             continue;
         }
-        phrases.push(Phrase {
-            start: if i == 0 { 0.0 } else { starts[cut] },
-            kind,
-            energy: 0,
-        });
+        phrases.push(Phrase { start: if i == 0 { 0.0 } else { starts[cut] }, kind, energy: 0 });
         first_bars.push(cut);
     }
     for (i, p) in phrases.iter_mut().enumerate() {
@@ -313,12 +270,9 @@ fn chroma_sim(a: &[f32; 12], b: &[f32; 12]) -> f32 {
     }
 }
 
-/// For each bar, how much the harmony changes as it starts (0 for the first
-/// and last few): Foote's checkerboard novelty, the mean likeness of the
-/// bars on the same side of the bar line minus that of bars on opposite
-/// sides, over `NOVELTY_BARS` either way. A chord loop shorter than that
-/// averages out, so only a real change (new chords, a vocal or lead
-/// entering on new notes) stands out, even at the same loudness.
+/// For each bar, how much the harmony changes as it starts (0 for the first and last few): Foote's checkerboard novelty, the mean likeness
+/// of the bars on the same side of the bar line minus that of bars on opposite sides, over `NOVELTY_BARS` either way. A chord loop shorter
+/// than that averages out, so only a real change (new chords, a vocal or lead entering on new notes) stands out, even at the same loudness.
 fn novelty(chroma: &[[f32; 12]]) -> Vec<f32> {
     let n = chroma.len();
     let l = NOVELTY_BARS;
@@ -348,11 +302,7 @@ fn novelty(chroma: &[[f32; 12]]) -> Vec<f32> {
 /// when known (a chroma cosine of 0.5 or less counts as unlike).
 fn bar_sim(levels: &[[f32; 3]], chroma: Option<&[[f32; 12]]>, a: usize, b: usize) -> f32 {
     let w: f32 = BAND_WEIGHT.iter().sum();
-    let d = ((0..3)
-        .map(|k| BAND_WEIGHT[k] * (levels[a][k] - levels[b][k]).powi(2))
-        .sum::<f32>()
-        / w)
-        .sqrt();
+    let d = ((0..3).map(|k| BAND_WEIGHT[k] * (levels[a][k] - levels[b][k]).powi(2)).sum::<f32>() / w).sqrt();
     let bands = (1.0 - d / BAND_APART).clamp(0.0, 1.0);
     match chroma {
         Some(c) => {
@@ -363,10 +313,9 @@ fn bar_sim(levels: &[[f32; 3]], chroma: Option<&[[f32; 12]]>, a: usize, b: usize
     }
 }
 
-/// For each pair of sections (`cuts` are their first bars), whether the
-/// later one plays the earlier one again: their bars match, in order, at
-/// least `REPEAT_SIM` on average, with up to 2 bars' slack in where each
-/// was cut, and neither is under half the other's length.
+/// For each pair of sections (`cuts` are their first bars), whether the later one plays the
+/// earlier one again: their bars match, in order, at least `REPEAT_SIM` on average, with up
+/// to 2 bars' slack in where each was cut, and neither is under half the other's length.
 fn repeats(levels: &[[f32; 3]], chroma: Option<&[[f32; 12]]>, cuts: &[usize]) -> Vec<Vec<bool>> {
     let n = levels.len();
     let ends: Vec<usize> = cuts.iter().skip(1).copied().chain([n]).collect();
@@ -387,12 +336,8 @@ fn repeats(levels: &[[f32; 3]], chroma: Option<&[[f32; 12]]>, cuts: &[usize]) ->
                     }
                     let b0 = b0 as usize;
                     let len = lx.min(ly).min(n.saturating_sub(b0));
-                    (len >= MIN_EDGE_BARS).then(|| {
-                        (0..len)
-                            .map(|k| bar_sim(levels, chroma, a0 + k, b0 + k))
-                            .sum::<f32>()
-                            / len as f32
-                    })
+                    (len >= MIN_EDGE_BARS)
+                        .then(|| (0..len).map(|k| bar_sim(levels, chroma, a0 + k, b0 + k)).sum::<f32>() / len as f32)
                 })
                 .fold(0.0, f32::max);
             if best >= REPEAT_SIM {
@@ -420,10 +365,7 @@ impl Energy {
         let mut v: Vec<f32> = levels.iter().map(Self::bar).collect();
         v.sort_by(f32::total_cmp);
         let at = |q: usize| v[(v.len() - 1) * q / 100];
-        Energy {
-            low: at(5),
-            high: at(95),
-        }
+        Energy { low: at(5), high: at(95) }
     }
 
     /// The energy of bars `a..b`, 1 to 10.
@@ -454,11 +396,7 @@ fn length_price(len: usize, edge: bool) -> Option<f32> {
     if !len.is_multiple_of(4) {
         return edge.then_some(NOT_FOUR + NOT_EIGHT);
     }
-    Some(if len.is_multiple_of(8) {
-        0.0
-    } else {
-        NOT_EIGHT
-    })
+    Some(if len.is_multiple_of(8) { 0.0 } else { NOT_EIGHT })
 }
 
 /// The first bar of each section, ascending, starting with 0. A cut where
@@ -491,11 +429,7 @@ fn segment(levels: &[[f32; 3]], novelty: &[f32]) -> Vec<usize> {
             let Some(price) = length_price(j - i, i == 0 || j == n) else {
                 continue;
             };
-            let bonus = if i == 0 {
-                0.0
-            } else {
-                NOVELTY_WEIGHT * (novelty[i] - NOVELTY_FLOOR).max(0.0)
-            };
+            let bonus = if i == 0 { 0.0 } else { NOVELTY_WEIGHT * (novelty[i] - NOVELTY_FLOOR).max(0.0) };
             let cost = best[i] + sse(i, j) + PER_SECTION + price - bonus;
             if cost < best[j] {
                 best[j] = cost;
@@ -517,11 +451,9 @@ fn segment(levels: &[[f32; 3]], novelty: &[f32]) -> Vec<usize> {
     cuts
 }
 
-/// Moves each cut to where the bass actually comes in or drops out, up to
-/// `SNAP_BARS` either way: the fit above prefers whole 8- and 16-bar
-/// sections, so a kick entering on its own a few bars early would otherwise
-/// end up inside the intro. The bass crosses halfway between the levels on
-/// either side; the earliest crossing in reach wins.
+/// Moves each cut to where the bass actually comes in or drops out, up to `SNAP_BARS` either way: the fit above
+/// inside the intro. The bass crosses halfway between the levels on either side; the earliest crossing in reach wins.
+/// inside the intro. The bass crosses halfway between the levels on either side; the earliest crossing in reach
 fn refine(levels: &[[f32; 3]], cuts: &[usize]) -> Vec<usize> {
     let n = levels.len();
     let low = |a: usize, b: usize| levels[a..b].iter().map(|l| l[0]).sum::<f32>() / (b - a) as f32;
@@ -537,11 +469,7 @@ fn refine(levels: &[[f32; 3]], cuts: &[usize]) -> Vec<usize> {
         let rises = after > before;
         // Both sides keep their least length.
         let min_left = if i == 1 { MIN_EDGE_BARS } else { MIN_BARS };
-        let min_right = if i + 1 == cuts.len() {
-            MIN_EDGE_BARS
-        } else {
-            MIN_BARS
-        };
+        let min_right = if i + 1 == cuts.len() { MIN_EDGE_BARS } else { MIN_BARS };
         let lo = c.saturating_sub(SNAP_BARS).max(a + min_left);
         let hi = (c + SNAP_BARS).min(b.saturating_sub(min_right));
         // A crossing: a bar on the old side of halfway, then two on the new.
@@ -576,10 +504,8 @@ fn classify(levels: &[[f32; 3]], cuts: &[usize], repeats: &[Vec<bool>]) -> Vec<P
     let means: Vec<[f32; 3]> = cuts.iter().zip(&ends).map(|(&a, &b)| mean(a, b)).collect();
     let top_low = means.iter().map(|m| m[0]).fold(0.0, f32::max);
     let top_level = means.iter().map(|m| level(*m)).fold(0.0, f32::max);
-    let drop: Vec<bool> = means
-        .iter()
-        .map(|m| m[0] >= DROP_SHARE * top_low && level(*m) >= DROP_SHARE * top_level)
-        .collect();
+    let drop: Vec<bool> =
+        means.iter().map(|m| m[0] >= DROP_SHARE * top_low && level(*m) >= DROP_SHARE * top_level).collect();
     let chorus: Vec<bool> = means
         .iter()
         .map(|m| m[0] >= CHORUS_LOW_SHARE * top_low && level(*m) >= CHORUS_LEVEL_SHARE * top_level)
@@ -598,8 +524,7 @@ fn classify(levels: &[[f32; 3]], cuts: &[usize], repeats: &[Vec<bool>]) -> Vec<P
         .collect();
     // Songs: a strong part that comes back. Then a part short of it, with
     // the bass going, that also comes back is a verse, not a break.
-    let song = (0..cuts.len())
-        .any(|a| strong(a) && (0..cuts.len()).any(|b| b != a && strong(b) && repeats[a][b]));
+    let song = (0..cuts.len()).any(|a| strong(a) && (0..cuts.len()).any(|b| b != a && strong(b) && repeats[a][b]));
     let verse: Vec<bool> = (0..cuts.len())
         .map(|s| {
             song && middle(s)
@@ -631,9 +556,7 @@ fn classify(levels: &[[f32; 3]], cuts: &[usize], repeats: &[Vec<bool>]) -> Vec<P
                 PhraseKind::Verse
             } else if last_strong.is_some_and(|l| s > l) {
                 PhraseKind::Outro
-            } else if first_drop.is_none_or(|f| s < f)
-                || strong_next && rising(levels, cuts[s], ends[s])
-            {
+            } else if first_drop.is_none_or(|f| s < f) || strong_next && rising(levels, cuts[s], ends[s]) {
                 // A lift into the first drop, or one that climbs into the next.
                 PhraseKind::Build
             } else {
@@ -707,9 +630,7 @@ mod tests {
         };
         t.info.markers = with_phrases(std::slice::from_ref(&section), markers.clone());
         // Kept without their energy, which is found again on load.
-        let unknown = |p: &[Phrase]| -> Vec<Phrase> {
-            p.iter().map(|p| Phrase { energy: 0, ..*p }).collect()
-        };
+        let unknown = |p: &[Phrase]| -> Vec<Phrase> { p.iter().map(|p| Phrase { energy: 0, ..*p }).collect() };
         assert_eq!(stored(&t), unknown(&p));
         assert!(!imported(&t));
         // Found again: the old ones go, the section stays.
@@ -717,11 +638,7 @@ mod tests {
         assert_eq!(stored(&t), unknown(&p[..1]));
         assert!(t.info.markers.contains(&section));
         // Phrases from an import.
-        t.info.markers.push(Marker {
-            kind: MarkerKind::Phrase,
-            detected: false,
-            ..section
-        });
+        t.info.markers.push(Marker { kind: MarkerKind::Phrase, detected: false, ..section });
         assert!(imported(&t));
         // Not ready while the waveform is still being made.
         t.duration *= 2.0;
@@ -736,11 +653,7 @@ mod tests {
         assert_eq!(kinds.first(), Some(&PhraseKind::Intro), "{p:?}");
         assert_eq!(kinds.last(), Some(&PhraseKind::Outro), "{p:?}");
         assert!(kinds.contains(&PhraseKind::Breakdown), "{p:?}");
-        assert_eq!(
-            kinds.iter().filter(|k| **k == PhraseKind::Drop).count(),
-            2,
-            "{p:?}"
-        );
+        assert_eq!(kinds.iter().filter(|k| **k == PhraseKind::Drop).count(), 2, "{p:?}");
         // The breakdown starts where the synth's does (bar 64), give or take a bar.
         let breakdown = p.iter().find(|p| p.kind == PhraseKind::Breakdown).unwrap();
         assert!((breakdown.start / bar - 64.0).abs() <= 1.0, "{p:?}");
@@ -781,10 +694,7 @@ mod tests {
         let cuts = segment(&levels, &vec![0.0; levels.len()]);
         assert!(cuts.contains(&16) && cuts.contains(&64), "{cuts:?}");
         let ends = cuts.iter().skip(1).copied().chain([levels.len()]);
-        assert!(
-            cuts.iter().zip(ends).all(|(a, b)| b - a >= MIN_BARS),
-            "the blip is not its own phrase: {cuts:?}"
-        );
+        assert!(cuts.iter().zip(ends).all(|(a, b)| b - a >= MIN_BARS), "the blip is not its own phrase: {cuts:?}");
     }
 
     #[test]
@@ -811,10 +721,7 @@ mod tests {
         levels.extend(vec![[0.1, 0.2, 0.2]; 16]);
         let cuts = [0, 16, 32, 56];
         use PhraseKind::*;
-        assert_eq!(
-            classify(&levels, &cuts, &none(cuts.len())),
-            [Intro, Drop, Chorus, Outro]
-        );
+        assert_eq!(classify(&levels, &cuts, &none(cuts.len())), [Intro, Drop, Chorus, Outro]);
     }
 
     #[test]
@@ -828,10 +735,7 @@ mod tests {
         levels.extend(vec![[0.3, 0.4, 0.4]; 16]);
         let cuts = [0, 16, 32, 48, 56, 72];
         use PhraseKind::*;
-        assert_eq!(
-            classify(&levels, &cuts, &none(cuts.len())),
-            [Intro, Drop, Chorus, Breakdown, Drop, Outro]
-        );
+        assert_eq!(classify(&levels, &cuts, &none(cuts.len())), [Intro, Drop, Chorus, Breakdown, Drop, Outro]);
     }
 
     /// No section plays another again.
@@ -852,12 +756,7 @@ mod tests {
     fn harmony_changes_stand_out_but_chord_loops_do_not() {
         // A four-chord loop, one chord a bar, for 16 bars, then 16 bars of
         // two other chords.
-        let (am, f, c, g) = (
-            chord(&[9, 0, 4]),
-            chord(&[5, 9, 0]),
-            chord(&[0, 4, 7]),
-            chord(&[7, 11, 2]),
-        );
+        let (am, f, c, g) = (chord(&[9, 0, 4]), chord(&[5, 9, 0]), chord(&[0, 4, 7]), chord(&[7, 11, 2]));
         let (dm, e) = (chord(&[2, 5, 9]), chord(&[4, 8, 11]));
         let mut bars: Vec<[f32; 12]> = (0..16).map(|i| [am, f, c, g][i % 4]).collect();
         bars.extend((0..16).map(|i| [dm, e][(i / 2) % 2]));
@@ -889,12 +788,7 @@ mod tests {
         // Intro, part A, part B, part A a little quieter, part B, outro.
         let mut levels = vec![[0.2, 0.3, 0.3]; 8];
         let mut chroma = vec![a; 8];
-        for (lv, ch) in [
-            ([0.6, 0.6, 0.6], a),
-            ([1.0, 1.0, 1.0], b),
-            ([0.55, 0.6, 0.6], a),
-            ([1.0, 1.0, 1.0], b),
-        ] {
+        for (lv, ch) in [([0.6, 0.6, 0.6], a), ([1.0, 1.0, 1.0], b), ([0.55, 0.6, 0.6], a), ([1.0, 1.0, 1.0], b)] {
             levels.extend(vec![lv; 16]);
             chroma.extend(vec![ch; 16]);
         }
@@ -914,22 +808,14 @@ mod tests {
     fn a_song_has_verses() {
         // Intro, verse, chorus, verse, chorus, outro.
         let mut levels = vec![[0.2, 0.3, 0.3]; 8];
-        for lv in [
-            [0.6, 0.6, 0.6],
-            [1.0, 1.0, 1.0],
-            [0.6, 0.6, 0.6],
-            [1.0, 1.0, 1.0],
-        ] {
+        for lv in [[0.6, 0.6, 0.6], [1.0, 1.0, 1.0], [0.6, 0.6, 0.6], [1.0, 1.0, 1.0]] {
             levels.extend(vec![lv; 16]);
         }
         levels.extend(vec![[0.2, 0.3, 0.3]; 8]);
         let cuts = [0, 8, 24, 40, 56, 72];
         let r = repeats(&levels, None, &cuts);
         use PhraseKind::*;
-        assert_eq!(
-            classify(&levels, &cuts, &r),
-            [Intro, Verse, Drop, Verse, Drop, Outro]
-        );
+        assert_eq!(classify(&levels, &cuts, &r), [Intro, Verse, Drop, Verse, Drop, Outro]);
         // A dance track's break, between drops that repeat, stays a break:
         // the bass is gone.
         let mut dance = vec![[0.3, 0.4, 0.4]; 16];
@@ -939,10 +825,7 @@ mod tests {
         dance.extend(vec![[0.3, 0.4, 0.4]; 16]);
         let cuts = [0, 16, 32, 48, 64];
         let r = repeats(&dance, None, &cuts);
-        assert_eq!(
-            classify(&dance, &cuts, &r),
-            [Intro, Drop, Breakdown, Drop, Outro]
-        );
+        assert_eq!(classify(&dance, &cuts, &r), [Intro, Drop, Breakdown, Drop, Outro]);
     }
 
     #[test]
@@ -950,13 +833,7 @@ mod tests {
         let (t, _) = analysed(124.0, 128, 3);
         let p = detect(&t);
         assert!(p.iter().all(|p| (1..=10).contains(&p.energy)), "{p:?}");
-        let of = |k: PhraseKind| {
-            p.iter()
-                .filter(|p| p.kind == k)
-                .map(|p| p.energy)
-                .max()
-                .unwrap()
-        };
+        let of = |k: PhraseKind| p.iter().filter(|p| p.kind == k).map(|p| p.energy).max().unwrap();
         assert!(of(PhraseKind::Drop) >= 8, "{p:?}");
         assert!(of(PhraseKind::Drop) > of(PhraseKind::Intro), "{p:?}");
         // The break, with the kick gone, is the quietest.

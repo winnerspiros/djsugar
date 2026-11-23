@@ -1,22 +1,6 @@
-//! The sampler: sixteen players, `[Sampler1]` to `[Sampler16]`, for the
-//! pads' Sampler page. Out of the box the first eight hold short built-in
-//! sounds, made here when the engine starts (kick, snare, clap, hat, air
-//! horn, siren, laser, crash), so the pads work with no sample files; the
-//! app puts its sample packs and the DJ's own files on them with
-//! [`crate::AudioEngine::set_sample`]. Samplers go to the main mix after
-//! the crossfader.
-//!
-//! Pressing a pad (`cue_gotoandplay`) does what the slot's `play_mode`
-//! says: 0 one shot (plays to the end; pressing again restarts), 1 hold
-//! (plays while held), 2 on/off (pressing again stops) or 3 loop (repeats
-//! until pressed again; `repeat` loops in any mode). `cue_gotoandstop`
-//! stops. `pregain` is the slot's level, silent to +6 dB.
-//! `LoadSelectedTrack` and `eject` are for the app, which owns what each
-//! slot holds.
-//!
-//! Samples are decoded and resampled off the audio thread and arrive over a
-//! wait-free queue; ones the players are done with go back over another to
-//! be freed off it, so nothing allocates or frees on the audio thread.
+//! The sampler: sixteen players, `[Sampler1]` to `[Sampler16]`, for the pads' Sampler page. Out of the box the first eight hold short built-in sounds, made here when the engine starts (kick, snare, clap, hat, air horn, siren, laser, crash), so the pads work with no sample files; the app puts its sample packs and the DJ's own files on them with
+//! `cue_gotoandstop` stops. `pregain` is the slot's level, silent to +6 dB. `LoadSelectedTrack` and `eject` are for the app, which owns what each slot holds. Samples are decoded and resampled off the audio thread and arrive over a wait-free queue; ones the players are done with go back over another to be freed off it, so nothing allocates or frees on the audio thread.
+//! `cue_gotoandstop` stops. `pregain` is the slot's level, silent to +6 dB. `LoadSelectedTrack` and `eject` are for the app, which owns what each slot holds. Samples are decoded and resampled off the audio thread and arrive over a wait-free queue; ones the players are done with go back over another to be freed off it, so nothing allocates or frees on the
 
 use std::f32::consts::TAU;
 use std::path::Path;
@@ -31,9 +15,7 @@ use crate::track::Audio;
 pub const NUM_SAMPLERS: usize = 16;
 
 /// The built-in sounds, in pad order.
-pub const SAMPLE_NAMES: [&str; 8] = [
-    "Kick", "Snare", "Clap", "Hat", "Horn", "Siren", "Laser", "Crash",
-];
+pub const SAMPLE_NAMES: [&str; 8] = ["Kick", "Snare", "Clap", "Hat", "Horn", "Siren", "Laser", "Crash"];
 
 /// The longest sample a pad takes; longer files belong on a deck.
 pub const MAX_SAMPLE_SECONDS: f64 = 60.0;
@@ -87,18 +69,11 @@ impl Sample {
     pub fn from_audio(audio: &Audio, rate: f64) -> Sample {
         let len = audio.decoded();
         let step = audio.sample_rate as f64 / rate;
-        let out = if step > 0.0 {
-            (len as f64 / step) as usize
-        } else {
-            0
-        };
+        let out = if step > 0.0 { (len as f64 / step) as usize } else { 0 };
         let frames = (0..out).map(|i| {
             let x = i as f64 * step;
             let (j, t) = (x as usize, (x.fract()) as f32);
-            let (a, b) = (
-                audio.frame(j),
-                audio.frame((j + 1).min(len.saturating_sub(1))),
-            );
+            let (a, b) = (audio.frame(j), audio.frame((j + 1).min(len.saturating_sub(1))));
             [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
         });
         Sample::from_frames(frames, rate)
@@ -111,10 +86,7 @@ impl Sample {
 
     fn from_frames(frames: impl Iterator<Item = [f32; 2]>, rate: f64) -> Sample {
         let q = |v: f32| (v.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
-        Sample {
-            frames: frames.map(|[l, r]| [q(l), q(r)]).collect(),
-            rate,
-        }
+        Sample { frames: frames.map(|[l, r]| [q(l), q(r)]).collect(), rate }
     }
 
     pub fn len(&self) -> usize {
@@ -236,8 +208,7 @@ impl Samplers {
             .map(|n| {
                 let g = sampler_group(n);
                 let g = g.as_str();
-                let sample =
-                    (n < SAMPLE_NAMES.len()).then(|| Arc::new(Sample::builtin(n, sample_rate)));
+                let sample = (n < SAMPLE_NAMES.len()).then(|| Arc::new(Sample::builtin(n, sample_rate)));
                 let loaded = reg.indicator(g, "track_loaded", 1.0);
                 let duration = reg.indicator(g, "duration", MAX_SAMPLE_SECONDS * 2.0);
                 loaded.set_bool(sample.is_some());
@@ -279,10 +250,7 @@ impl Samplers {
                 incoming,
                 done,
             },
-            SamplerInput {
-                samples,
-                done: done_rx,
-            },
+            SamplerInput { samples, done: done_rx },
         )
     }
 
@@ -438,8 +406,7 @@ fn sound(n: usize, sr: f32) -> Vec<f32> {
             .map(|i| {
                 let t = t(i);
                 phase += TAU * 190.0 / sr;
-                (phase.sin() * (-t * 25.0).exp() * 0.5 + noise.next() * (-t * 14.0).exp() * 0.45)
-                    * 0.9
+                (phase.sin() * (-t * 25.0).exp() * 0.5 + noise.next() * (-t * 14.0).exp() * 0.45) * 0.9
             })
             .collect(),
         // Clap: three quick noise bursts and a tail, band-limited.
@@ -448,13 +415,7 @@ fn sound(n: usize, sr: f32) -> Vec<f32> {
                 let t = t(i);
                 let burst = [0.0, 0.011, 0.023]
                     .iter()
-                    .map(|&s| {
-                        if t >= s {
-                            (-(t - s) * 180.0).exp()
-                        } else {
-                            0.0
-                        }
-                    })
+                    .map(|&s| if t >= s { (-(t - s) * 180.0).exp() } else { 0.0 })
                     .sum::<f32>()
                     + 0.6 * (-t * 12.0).exp();
                 let x = noise.next();
@@ -532,16 +493,12 @@ mod tests {
     }
 
     fn press(reg: &ControlRegistry, s: &mut Samplers, n: usize, down: bool) {
-        reg.get(&sampler_group(n), "cue_gotoandplay")
-            .unwrap()
-            .set_bool(down);
+        reg.get(&sampler_group(n), "cue_gotoandplay").unwrap().set_bool(down);
         s.update();
     }
 
     fn playing(reg: &ControlRegistry, n: usize) -> bool {
-        reg.get(&sampler_group(n), "play_indicator")
-            .unwrap()
-            .get_bool()
+        reg.get(&sampler_group(n), "play_indicator").unwrap().get_bool()
     }
 
     #[test]
@@ -590,9 +547,7 @@ mod tests {
     #[test]
     fn on_off_stops_on_second_press() {
         let (reg, mut s, _) = samplers();
-        reg.get("[Sampler5]", "play_mode")
-            .unwrap()
-            .set(ON_OFF as f64);
+        reg.get("[Sampler5]", "play_mode").unwrap().set(ON_OFF as f64);
         press(&reg, &mut s, 4, true);
         press(&reg, &mut s, 4, false);
         run(&mut s, 4_800);
@@ -644,9 +599,7 @@ mod tests {
         reg.get("[Sampler1]", "pregain").unwrap().set(0.0);
         s.update();
         let frames: Vec<f32> = (0..2_000).map(|_| s.next()[0]).collect();
-        let step = frames
-            .windows(2)
-            .fold(0f32, |m, w| m.max((w[1] - w[0]).abs()));
+        let step = frames.windows(2).fold(0f32, |m, w| m.max((w[1] - w[0]).abs()));
         assert!(step < 0.01, "no jump: {step}");
         assert!(frames[1_999].abs() < 1e-3, "down to silence");
     }

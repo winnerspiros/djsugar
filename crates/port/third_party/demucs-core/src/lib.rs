@@ -29,36 +29,20 @@ impl Demucs {
     pub fn from_bytes(opts: ModelOptions, bytes: &[u8], device: Device) -> Result<Self> {
         let info = opts.model_info();
         let models = weights::load::load_model(bytes, info, &device)?;
-        Ok(Self {
-            opts,
-            models,
-            device,
-        })
+        Ok(Self { opts, models, device })
     }
 
-    /// Run the full inference pipeline with dummy audio to pre-compile all
-    /// GPU shaders and resolve CubeCL autotune for every matmul shape.
-    ///
-    /// Uses a synthetic sine wave (not zeros) so autotune sees representative
-    /// value distributions and selects the same kernel variants as real audio.
+    /// Run the full inference pipeline with dummy audio to pre-compile all GPU shaders and resolve
+    /// CubeCL autotune for every matmul shape. Uses a synthetic sine wave (not zeros) so autotune
+    /// sees representative value distributions and selects the same kernel variants as real audio.
     pub async fn warmup(&self) {
-        let dummy: Vec<f32> = (0..TRAINING_LENGTH)
-            .map(|i| (i as f32 * 0.1).sin() * 0.5)
-            .collect();
+        let dummy: Vec<f32> = (0..TRAINING_LENGTH).map(|i| (i as f32 * 0.1).sin() * 0.5).collect();
         let info = self.opts.model_info();
-        let _ = self
-            .separate_single_segment(&dummy, &dummy, TRAINING_LENGTH, info, &mut NoOpListener)
-            .await;
+        let _ = self.separate_single_segment(&dummy, &dummy, TRAINING_LENGTH, info, &mut NoOpListener).await;
     }
 
-    pub async fn separate(
-        &self,
-        left_channel: &[f32],
-        right_channel: &[f32],
-        sample_rate: u32,
-    ) -> Result<Vec<Stem>> {
-        self.separate_with_listener(left_channel, right_channel, sample_rate, &mut NoOpListener)
-            .await
+    pub async fn separate(&self, left_channel: &[f32], right_channel: &[f32], sample_rate: u32) -> Result<Vec<Stem>> {
+        self.separate_with_listener(left_channel, right_channel, sample_rate, &mut NoOpListener).await
     }
 
     pub async fn separate_with_listener(
@@ -73,10 +57,8 @@ impl Demucs {
         // ── 0. Resample to 44100 Hz if needed ────────────────────────────────
         let needs_resample = sample_rate != SAMPLE_RATE as u32;
         let (left_in, right_in): (Cow<[f32]>, Cow<[f32]>) = if needs_resample {
-            let l = resample_channel(left_channel, sample_rate, SAMPLE_RATE as u32)
-                .map_err(DemucsError::Dsp)?;
-            let r = resample_channel(right_channel, sample_rate, SAMPLE_RATE as u32)
-                .map_err(DemucsError::Dsp)?;
+            let l = resample_channel(left_channel, sample_rate, SAMPLE_RATE as u32).map_err(DemucsError::Dsp)?;
+            let r = resample_channel(right_channel, sample_rate, SAMPLE_RATE as u32).map_err(DemucsError::Dsp)?;
             (Cow::Owned(l), Cow::Owned(r))
         } else {
             (Cow::Borrowed(left_channel), Cow::Borrowed(right_channel))
@@ -87,8 +69,7 @@ impl Demucs {
 
         // ── 1. Short audio fast path (≤ TRAINING_LENGTH) ────────────────────
         let mut stems = if n_samples <= TRAINING_LENGTH {
-            self.separate_single_segment(left_channel, right_channel, n_samples, info, listener)
-                .await?
+            self.separate_single_segment(left_channel, right_channel, n_samples, info, listener).await?
         } else {
             // ── 2. Chunked inference for long audio ─────────────────────────
             let segment = TRAINING_LENGTH;
@@ -102,10 +83,7 @@ impl Demucs {
             let mut sum_weight = vec![0.0f32; n_samples];
 
             for chunk_idx in 0..num_chunks {
-                listener.on_event(ForwardEvent::ChunkStarted {
-                    index: chunk_idx,
-                    total: num_chunks,
-                });
+                listener.on_event(ForwardEvent::ChunkStarted { index: chunk_idx, total: num_chunks });
 
                 let start = chunk_idx * stride;
                 let end = (start + segment).min(n_samples);
@@ -114,9 +92,8 @@ impl Demucs {
                 let left_chunk = &left_channel[start..end];
                 let right_chunk = &right_channel[start..end];
 
-                let chunk_stems = self
-                    .separate_single_segment(left_chunk, right_chunk, chunk_len, info, listener)
-                    .await?;
+                let chunk_stems =
+                    self.separate_single_segment(left_chunk, right_chunk, chunk_len, info, listener).await?;
 
                 // Apply triangular window and accumulate
                 let window = triangular_window(chunk_len);
@@ -132,10 +109,7 @@ impl Demucs {
                     sum_weight[start + i] += window[i];
                 }
 
-                listener.on_event(ForwardEvent::ChunkDone {
-                    index: chunk_idx,
-                    total: num_chunks,
-                });
+                listener.on_event(ForwardEvent::ChunkDone { index: chunk_idx, total: num_chunks });
 
                 if listener.is_cancelled() {
                     return Err(DemucsError::Cancelled);
@@ -164,10 +138,9 @@ impl Demucs {
         // ── 3. Resample outputs back to original rate if needed ──────────────
         if needs_resample {
             for stem in &mut stems {
-                stem.left = resample_channel(&stem.left, SAMPLE_RATE as u32, sample_rate)
-                    .map_err(DemucsError::Dsp)?;
-                stem.right = resample_channel(&stem.right, SAMPLE_RATE as u32, sample_rate)
-                    .map_err(DemucsError::Dsp)?;
+                stem.left = resample_channel(&stem.left, SAMPLE_RATE as u32, sample_rate).map_err(DemucsError::Dsp)?;
+                stem.right =
+                    resample_channel(&stem.right, SAMPLE_RATE as u32, sample_rate).map_err(DemucsError::Dsp)?;
             }
         }
 
@@ -200,7 +173,7 @@ impl Demucs {
         let bins = N_FFT / 2;
         let n_frames = left_spec.len() / bins;
 
-        // CaC: each [2, F, T], stack to [4, F, T], add batch → [1, 4, F, T]
+        // CaC: each [2, F, T], stack to [4, F, T], add batch -> [1, 4, F, T]
         let left_cac = stft_to_cac(&left_spec, N_FFT, device);
         let right_cac = stft_to_cac(&right_spec, N_FFT, device);
         let freq = Tensor::cat(vec![left_cac, right_cac], 0).unsqueeze_dim::<4>(0);
@@ -211,17 +184,11 @@ impl Demucs {
         let total_stems = info.stems.len();
         let stems = match &self.opts {
             ModelOptions::FourStem | ModelOptions::SixStem => {
-                let (freq_out, time_out) =
-                    self.models[0].forward_with_listener(freq, time, listener)?;
-                let stems = extract_all_stems(
-                    &freq_out, &time_out, info, n_frames, padded_len, n_samples, &mut stft,
-                )
-                .await?;
+                let (freq_out, time_out) = self.models[0].forward_with_listener(freq, time, listener)?;
+                let stems =
+                    extract_all_stems(&freq_out, &time_out, info, n_frames, padded_len, n_samples, &mut stft).await?;
                 for i in 0..stems.len() {
-                    listener.on_event(ForwardEvent::StemDone {
-                        index: i,
-                        total: total_stems,
-                    });
+                    listener.on_event(ForwardEvent::StemDone { index: i, total: total_stems });
                 }
                 stems
             }
@@ -231,21 +198,14 @@ impl Demucs {
                     if !selected.contains(&stem_id) {
                         continue;
                     }
-                    let (freq_out, time_out) = self.models[i].forward_with_listener(
-                        freq.clone(),
-                        time.clone(),
-                        listener,
-                    )?;
+                    let (freq_out, time_out) =
+                        self.models[i].forward_with_listener(freq.clone(), time.clone(), listener)?;
                     let stem = extract_single_stem(
-                        &freq_out, &time_out, i, stem_id, n_frames, padded_len, n_samples,
-                        &mut stft,
+                        &freq_out, &time_out, i, stem_id, n_frames, padded_len, n_samples, &mut stft,
                     )
                     .await?;
                     stems.push(stem);
-                    listener.on_event(ForwardEvent::StemDone {
-                        index: i,
-                        total: total_stems,
-                    });
+                    listener.on_event(ForwardEvent::StemDone { index: i, total: total_stems });
                 }
                 stems
             }
@@ -286,9 +246,7 @@ fn triangular_window(length: usize) -> Vec<f32> {
         return vec![1.0; length];
     }
     let denom = (length - 1) as f32;
-    (0..length)
-        .map(|i| 1.0 - (2.0 * i as f32 / denom - 1.0).abs())
-        .collect()
+    (0..length).map(|i| 1.0 - (2.0 * i as f32 / denom - 1.0).abs()).collect()
 }
 
 /// Build the time-domain input tensor [1, 2, padded_time_t] from stereo audio.
@@ -300,9 +258,8 @@ fn build_time_tensor(left: &[f32], right: &[f32], padded_len: usize, device: &De
 }
 
 /// Extract all stems from a single model's output using bulk GPU readback.
-///
-/// Reads the entire freq_out and time_out tensors in 2 GPU→CPU transfers (instead
-/// of 3 per stem = 12 total), then does all CaC→complex→iSTFT work on CPU.
+/// (instead of 3 per stem = 12 total), then does all CaC->complex->iSTFT work on CPU.
+/// (instead of 3 per stem = 12 total), then does all CaC->complex->iSTFT work
 async fn extract_all_stems(
     freq_out: &Tensor<4>, // [1, n_sources * 4, F, padded_T]
     time_out: &Tensor<3>, // [1, n_sources * 2, padded_T]
@@ -326,7 +283,7 @@ async fn extract_all_stems(
         .squeeze_dim::<2>(0) // [n_sources*2, padded_T]
         .narrow(1, 0, n_samples); // [n_sources*2, n_samples]
 
-    // Bulk GPU→CPU readback (2 sync points for ALL stems)
+    // Bulk GPU->CPU readback (2 sync points for ALL stems)
     let freq_data: Vec<f32> = freq_trimmed
         .reshape([n_sources * 4 * freq_bins * n_frames])
         .to_data_async()
@@ -351,16 +308,9 @@ async fn extract_all_stems(
     let mut stems = Vec::with_capacity(n_sources);
     for (i, &stem_id) in info.stems.iter().enumerate() {
         let freq_offset = i * cac_stride;
-        let left_spec = cac_data_to_complex(
-            &freq_data[freq_offset..freq_offset + ch_stride],
-            freq_bins,
-            n_frames,
-        );
-        let right_spec = cac_data_to_complex(
-            &freq_data[freq_offset + ch_stride..freq_offset + cac_stride],
-            freq_bins,
-            n_frames,
-        );
+        let left_spec = cac_data_to_complex(&freq_data[freq_offset..freq_offset + ch_stride], freq_bins, n_frames);
+        let right_spec =
+            cac_data_to_complex(&freq_data[freq_offset + ch_stride..freq_offset + cac_stride], freq_bins, n_frames);
 
         let left_freq_wav = stft.inverse(&left_spec, padded_len)?;
         let right_freq_wav = stft.inverse(&right_spec, padded_len)?;
@@ -369,31 +319,18 @@ async fn extract_all_stems(
         let left_time = &time_data[time_offset..time_offset + n_samples];
         let right_time = &time_data[time_offset + n_samples..time_offset + time_stride];
 
-        let left: Vec<f32> = left_freq_wav[..n_samples]
-            .iter()
-            .zip(left_time)
-            .map(|(f, t)| f + t)
-            .collect();
-        let right: Vec<f32> = right_freq_wav[..n_samples]
-            .iter()
-            .zip(right_time)
-            .map(|(f, t)| f + t)
-            .collect();
+        let left: Vec<f32> = left_freq_wav[..n_samples].iter().zip(left_time).map(|(f, t)| f + t).collect();
+        let right: Vec<f32> = right_freq_wav[..n_samples].iter().zip(right_time).map(|(f, t)| f + t).collect();
 
-        stems.push(Stem {
-            id: stem_id,
-            left,
-            right,
-        });
+        stems.push(Stem { id: stem_id, left, right });
     }
 
     Ok(stems)
 }
 
 /// Extract one stem from model output using bulk GPU readback.
-///
-/// Reads the stem's freq and time data in 2 GPU→CPU transfers (instead of 3),
-/// then does CaC→complex→iSTFT on CPU.
+/// Reads the stem's freq and time data in 2 GPU->CPU transfers
+/// (instead of 3), then does CaC->complex->iSTFT on CPU.
 #[allow(clippy::too_many_arguments)]
 async fn extract_single_stem(
     freq_out: &Tensor<4>, // [1, n_sources * 4, F, padded_T]
@@ -420,7 +357,7 @@ async fn extract_single_stem(
         .narrow(2, 0, n_samples) // [1, 2, n_samples]
         .squeeze_dim::<2>(0); // [2, n_samples]
 
-    // Bulk GPU→CPU readback (2 syncs instead of 3)
+    // Bulk GPU->CPU readback (2 syncs instead of 3)
     let freq_data: Vec<f32> = freq_stem
         .reshape([4 * freq_bins * n_frames])
         .to_data_async()
@@ -437,7 +374,7 @@ async fn extract_single_stem(
         .try_to_vec()
         .map_err(|e| DemucsError::Tensor(format!("time extraction failed: {e}")))?;
 
-    // CPU: CaC → complex → iSTFT → combine
+    // CPU: CaC -> complex -> iSTFT -> combine
     let ch_stride = 2 * freq_bins * n_frames;
     let left_spec = cac_data_to_complex(&freq_data[..ch_stride], freq_bins, n_frames);
     let right_spec = cac_data_to_complex(&freq_data[ch_stride..], freq_bins, n_frames);
@@ -447,22 +384,10 @@ async fn extract_single_stem(
 
     let (left_time, right_time) = time_data.split_at(n_samples);
 
-    let left: Vec<f32> = left_freq_wav[..n_samples]
-        .iter()
-        .zip(left_time)
-        .map(|(f, t)| f + t)
-        .collect();
-    let right: Vec<f32> = right_freq_wav[..n_samples]
-        .iter()
-        .zip(right_time)
-        .map(|(f, t)| f + t)
-        .collect();
+    let left: Vec<f32> = left_freq_wav[..n_samples].iter().zip(left_time).map(|(f, t)| f + t).collect();
+    let right: Vec<f32> = right_freq_wav[..n_samples].iter().zip(right_time).map(|(f, t)| f + t).collect();
 
-    Ok(Stem {
-        id: stem_id,
-        left,
-        right,
-    })
+    Ok(Stem { id: stem_id, left, right })
 }
 
 /// Compute the number of chunks needed for a given sample count.
@@ -493,6 +418,6 @@ pub(crate) const DCONV_DEPTH: usize = 2;
 pub(crate) const SAMPLE_RATE: usize = 44100;
 
 /// Training segment length in samples. All HTDemucs variants were trained with
-/// segment = 39/5 seconds → int(39/5 * 44100) = 343980. The model always pads
+/// segment = 39/5 seconds -> int(39/5 * 44100) = 343980. The model always pads
 /// its input to this length during inference (via `use_train_segment`).
 pub const TRAINING_LENGTH: usize = 343980;

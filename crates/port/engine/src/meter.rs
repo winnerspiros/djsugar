@@ -1,17 +1,6 @@
-//! The master's loudness meter, for recording and broadcasting.
-//!
-//! The audio thread copies the master into a ring buffer all the time (a
-//! tap like the recorder's); a thread here empties it into a
-//! [`LiveLoudness`] and publishes the readings as controls:
-//!
-//! - `[Master],loudness_momentary`, `loudness_short_term` and
-//!   `loudness_integrated` in LUFS, `loudness_range` in LU and `true_peak`
-//!   (the highest since the reset) in dBTP. [`NO_READING`] while there is
-//!   nothing to read (silence, or too soon after a reset).
-//! - `[Master],loudness_reset` starts integrated loudness, the range and the
-//!   true peak again. So does starting a recording or going on air.
-//! - `[Master],loudness_target` holds the chosen target in LUFS, for the
-//!   meter's colours.
+//! The master's loudness meter, for recording and broadcasting. The audio thread copies the master into a ring buffer all the time (a tap like the recorder's); a thread here empties it into a [`LiveLoudness`] and publishes the readings as
+//! soon after a reset). - `[Master],loudness_reset` starts integrated loudness, the range and the true peak again. So does starting a recording or going on air. - `[Master],loudness_target` holds the chosen target in LUFS, for the meter's colours.
+//! soon after a reset). - `[Master],loudness_reset` starts integrated loudness, the range and the true peak again. So does starting a recording or going on air. - `[Master],loudness_target` holds the chosen target in LUFS, for the meter's
 
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
@@ -45,14 +34,7 @@ struct Readings {
 }
 
 fn reading(reg: &ControlRegistry, item: &str) -> ControlHandle {
-    reg.create(
-        "[Master]",
-        item,
-        NO_READING,
-        NO_READING,
-        30.0,
-        Behavior::Indicator,
-    )
+    reg.create("[Master]", item, NO_READING, NO_READING, 30.0, Behavior::Indicator)
 }
 
 /// Creates the meter's controls and starts the thread that feeds them. The
@@ -62,25 +44,11 @@ pub(crate) fn start(registry: &Arc<ControlRegistry>, rate: f64, feed: Feed) {
         momentary: reading(registry, "loudness_momentary"),
         short_term: reading(registry, "loudness_short_term"),
         integrated: reading(registry, "loudness_integrated"),
-        range: registry.create(
-            "[Master]",
-            "loudness_range",
-            NO_READING,
-            NO_READING,
-            60.0,
-            Behavior::Indicator,
-        ),
+        range: registry.create("[Master]", "loudness_range", NO_READING, NO_READING, 60.0, Behavior::Indicator),
         true_peak: reading(registry, "true_peak"),
         reset: registry.push("[Master]", "loudness_reset"),
     };
-    registry.create(
-        "[Master]",
-        "loudness_target",
-        DEFAULT_LOUDNESS_TARGET,
-        -40.0,
-        0.0,
-        Behavior::Free,
-    );
+    registry.create("[Master]", "loudness_target", DEFAULT_LOUDNESS_TARGET, -40.0, 0.0, Behavior::Free);
     let weak = Arc::downgrade(registry);
     std::thread::Builder::new()
         .name("loudness-meter".into())
@@ -179,11 +147,7 @@ mod tests {
             get("loudness_short_term")
         );
         assert!(wait_for(|| (get("loudness_integrated") + 20.0).abs() < 0.2));
-        assert!(
-            (get("true_peak") + 20.0).abs() < 0.2,
-            "{}",
-            get("true_peak")
-        );
+        assert!((get("true_peak") + 20.0).abs() < 0.2, "{}", get("true_peak"));
         // Reset clears what counts from the reset on.
         let reset = reg.get("[Master]", "loudness_reset").unwrap();
         reset.set(1.0);

@@ -1,12 +1,8 @@
 use std::f64::consts::PI;
 
-/// Resample a single channel from `from_rate` to `to_rate`.
-///
-/// Implements the same polyphase sinc interpolation algorithm as
-/// `torchaudio.functional.resample` with default parameters:
-///   lowpass_filter_width=6, rolloff=0.99, sinc_interp_hann
-///
-/// Returns the input unchanged if rates already match.
+/// Resample a single channel from `from_rate` to `to_rate`. Implements the same polyphase sinc
+/// lowpass_filter_width=6, rolloff=0.99, sinc_interp_hann Returns the input unchanged if rates already match.
+/// lowpass_filter_width=6, rolloff=0.99, sinc_interp_hann Returns the input unchanged if rates
 pub fn resample_channel(samples: &[f32], from_rate: u32, to_rate: u32) -> Result<Vec<f32>, String> {
     if from_rate == to_rate || samples.is_empty() {
         return Ok(samples.to_vec());
@@ -28,13 +24,12 @@ pub fn resample_channel(samples: &[f32], from_rate: u32, to_rate: u32) -> Result
     let kernel_len = 2 * width + orig_freq;
     let scale = base_freq / orig_freq as f64;
 
-    // Build kernel matching torchaudio's exact dtype flow:
-    //   phase: int64 → /new_freq → float32 (truncated!) → promoted to f64 by adding idx
-    //   idx:   arange in float64 → /orig_freq → float64
-    // Then cast final kernel to f32.
+    // Build kernel matching torchaudio's exact dtype flow: phase: int64 ->
+    // /new_freq -> float32 (truncated!) -> promoted to f64 by adding idx idx:
+    // arange in float64 -> /orig_freq -> float64 Then cast final kernel to f32.
     let mut kernels = vec![0.0f32; new_freq * kernel_len];
     for j in 0..new_freq {
-        // torchaudio: arange(0,-new_freq,-1, dtype=None) → int64, then /new_freq → float32
+        // torchaudio: arange(0,-new_freq,-1, dtype=None) -> int64, then /new_freq -> float32
         // We must replicate this float32 truncation to match exactly.
         let phase = (-(j as f32) / new_freq as f32) as f64;
         for k in 0..kernel_len {

@@ -1,15 +1,6 @@
-//! MIDI clock in: a drum machine, groovebox or another app leads the decks.
-//!
-//! The input picked in Settings › Controllers › MIDI Clock is opened by the
-//! clock thread (see [`crate::midi_clock`]); its messages are read on the
-//! MIDI input's own thread by a [`ClockReader`], which smooths the tempo
-//! with a straight line fitted through the pulses of the last four bars, so
-//! a jittery hardware clock still gives a steady tempo; when the last two
-//! beats say the tempo changed, the fit starts over from them, so a tempo
-//! change is followed within two beats. What it finds goes to
-//! the audio thread through a [`ClockIn`] snapshot, with no locks: with
-//! `[Master],sync_leader_source` on Clock, decks with SYNC on follow its
-//! tempo and, while it runs, its beat, with bar 1 on its Start.
+//! MIDI clock in: a drum machine, groovebox or another app leads the decks. The input picked in Settings › Controllers › MIDI Clock is opened by the clock thread (see [`crate::midi_clock`]); its messages are read on the MIDI input's own thread by a
+//! change is followed within two beats. What it finds goes to the audio thread through a [`ClockIn`] snapshot, with no locks: with `[Master],sync_leader_source` on Clock, decks with SYNC on follow its tempo and, while it runs, its beat, with bar 1 on its Start.
+//! change is followed within two beats. What it finds goes to the audio thread through a [`ClockIn`] snapshot, with no locks: with `[Master],sync_leader_source` on Clock, decks with SYNC on follow its tempo and, while it runs, its beat, with bar 1 on its
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -60,17 +51,13 @@ pub struct Reading {
 impl ClockIn {
     pub(crate) fn publish(&self, r: Reading) {
         self.running.store(r.running, Ordering::Relaxed);
-        self.clock
-            .publish(r.at.heard_at as i64, r.at.beat, r.at.tempo);
+        self.clock.publish(r.at.heard_at as i64, r.at.beat, r.at.tempo);
     }
 
     /// The last reading; None with no clock yet.
     pub fn read(&self) -> Option<Reading> {
         let at = self.clock.read().filter(|s| s.tempo > 0.0)?;
-        Some(Reading {
-            at,
-            running: self.running.load(Ordering::Relaxed),
-        })
+        Some(Reading { at, running: self.running.load(Ordering::Relaxed) })
     }
 
     /// Clears the reading, when the input closes.
@@ -173,9 +160,7 @@ fn fit<'a>(pulses: impl Iterator<Item = &'a (i64, f64)> + Clone) -> Option<(f64,
     if n < 2.0 {
         return None;
     }
-    let (mean_i, mean_t) = pulses
-        .clone()
-        .fold((0.0, 0.0), |(a, b), &(i, t)| (a + i as f64 / n, b + t / n));
+    let (mean_i, mean_t) = pulses.clone().fold((0.0, 0.0), |(a, b), &(i, t)| (a + i as f64 / n, b + t / n));
     let (mut cov, mut var) = (0.0, 0.0);
     for &(i, t) in pulses {
         let di = i as f64 - mean_i;
@@ -201,10 +186,7 @@ pub(crate) fn open(
     let mut input = midir::MidiInput::new("DJ Sugar clock in").ok()?;
     // Clock and the other real-time messages are what this is for.
     input.ignore(midir::Ignore::SysexAndActiveSense);
-    let p = input
-        .ports()
-        .into_iter()
-        .find(|p| input.port_name(p).as_deref() == Ok(port))?;
+    let p = input.ports().into_iter().find(|p| input.port_name(p).as_deref() == Ok(port))?;
     let mut reader = ClockReader::default();
     let connected = input.connect(
         &p,
@@ -237,12 +219,7 @@ pub fn input_ports() -> Vec<String> {
     let Ok(input) = midir::MidiInput::new("DJ Sugar clock ports") else {
         return Vec::new();
     };
-    input
-        .ports()
-        .iter()
-        .filter_map(|p| input.port_name(p).ok())
-        .filter(|n| !n.contains("DJ Sugar"))
-        .collect()
+    input.ports().iter().filter_map(|p| input.port_name(p).ok()).filter(|n| !n.contains("DJ Sugar")).collect()
 }
 
 #[cfg(test)]
@@ -322,14 +299,7 @@ mod tests {
     fn the_snapshot_reads_back() {
         let feed = ClockIn::default();
         assert_eq!(feed.read(), None);
-        let r = Reading {
-            at: Snapshot {
-                heard_at: 5e6,
-                beat: 3.0,
-                tempo: 128.0,
-            },
-            running: true,
-        };
+        let r = Reading { at: Snapshot { heard_at: 5e6, beat: 3.0, tempo: 128.0 }, running: true };
         feed.publish(r);
         assert_eq!(feed.read(), Some(r));
         feed.clear();

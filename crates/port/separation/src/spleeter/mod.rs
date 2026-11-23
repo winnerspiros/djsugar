@@ -1,12 +1,6 @@
-//! Deezer's Spleeter 4-stem model (MIT): one U-Net per stem predicts a
-//! magnitude spectrogram, and the four predictions become ratio masks on the
-//! mix's spectrogram, so the stems add up to the mix exactly.
-//!
-//! Weights come from `scripts/models/convert_spleeter.py`. The network follows
-//! `spleeter/model/functions/unet.py` with the 4-stem settings (ELU in both
-//! halves, TensorFlow "same" padding). It runs on burn ([`gpu::Net`]) or on
-//! plain CPU matrix products ([`cpu::Net`]), which are much faster than
-//! burn's CPU backend for these convolutions.
+//! Deezer's Spleeter 4-stem model (MIT): one U-Net per stem predicts a magnitude spectrogram, and the four predictions become ratio masks on the mix's spectrogram, so the stems add
+//! up to the mix exactly. Weights come from `scripts/models/convert_spleeter.py`. The network follows `spleeter/model/functions/unet.py` with the 4-stem settings (ELU in both halves,
+//! TensorFlow "same" padding). It runs on burn ([`gpu::Net`]) or on plain CPU matrix products ([`cpu::Net`]), which are much faster than burn's CPU backend for these convolutions.
 
 pub mod cpu;
 pub mod gpu;
@@ -47,17 +41,10 @@ pub trait OneStem {
 /// Frames of the vocal level per second (one per STFT hop at 44.1 kHz).
 pub const VOCAL_RATE: f64 = crate::SAMPLE_RATE as f64 / HOP as f64;
 
-/// How much of a stereo track at 44.1 kHz is vocals, frame by frame
-/// ([`VOCAL_RATE`] a second): the vocal network's share of the mix's
-/// energy from 150 Hz to 8 kHz, 0 to 1. Only the vocal U-Net runs and no
-/// audio is rebuilt, so this costs about a quarter of a separation.
-/// `keep_going` is asked between windows; false stops early with what is
-/// done so far (the rest 0).
-pub fn vocal_levels(
-    net: &impl OneStem,
-    channels: [&[f32]; 2],
-    mut keep_going: impl FnMut() -> bool,
-) -> Vec<f32> {
+/// How much of a stereo track at 44.1 kHz is vocals, frame by frame ([`VOCAL_RATE`] a second): the vocal network's share of
+/// the mix's energy from 150 Hz to 8 kHz, 0 to 1. Only the vocal U-Net runs and no audio is rebuilt, so this costs about a
+/// quarter of a separation. `keep_going` is asked between windows; false stops early with what is done so far (the rest 0).
+pub fn vocal_levels(net: &impl OneStem, channels: [&[f32]; 2], mut keep_going: impl FnMut() -> bool) -> Vec<f32> {
     let len = channels[0].len();
     if len == 0 {
         return Vec::new();
@@ -105,11 +92,7 @@ pub fn vocal_levels(
                     mix += m * m;
                 }
             }
-            out[f0 + f] = if mix > 1e-6 {
-                (vocal / mix).sqrt()
-            } else {
-                0.0
-            };
+            out[f0 + f] = if mix > 1e-6 { (vocal / mix).sqrt() } else { 0.0 };
         }
     }
     // Frame k is centred on padded sample k·HOP + FRAME/2, which is the
@@ -121,13 +104,7 @@ pub fn vocal_levels(
 /// A tensor from the weights file as f32, with its shape.
 pub(crate) fn tensor(st: &SafeTensors, name: &str) -> Result<(Vec<f32>, Vec<usize>), String> {
     let t = st.tensor(name).map_err(|e| format!("{name}: {e}"))?;
-    let data = t
-        .data()
-        .as_chunks::<2>()
-        .0
-        .iter()
-        .map(|b| half::f16::from_le_bytes(*b).to_f32())
-        .collect();
+    let data = t.data().as_chunks::<2>().0.iter().map(|b| half::f16::from_le_bytes(*b).to_f32()).collect();
     Ok((data, t.shape().to_vec()))
 }
 
@@ -136,10 +113,7 @@ pub(crate) fn tensor(st: &SafeTensors, name: &str) -> Result<(Vec<f32>, Vec<usiz
 fn to_masks(estimates: &mut [f32]) {
     let n = estimates.len() / STEMS.len();
     for i in 0..n {
-        let total: f32 = (0..STEMS.len())
-            .map(|s| estimates[s * n + i].powi(2))
-            .sum::<f32>()
-            + EPSILON;
+        let total: f32 = (0..STEMS.len()).map(|s| estimates[s * n + i].powi(2)).sum::<f32>() + EPSILON;
         for s in 0..STEMS.len() {
             let e = &mut estimates[s * n + i];
             *e = (e.powi(2) + EPSILON / STEMS.len() as f32) / total;
@@ -150,12 +124,7 @@ fn to_masks(estimates: &mut [f32]) {
 /// Separates a stereo track at 44.1 kHz with `net`. Windows are separated
 /// starting with the one holding sample `from`, then onwards to the end, then
 /// back to the start; `done(window, windows)` is called after each.
-pub fn separate(
-    net: &impl Net,
-    channels: [&[f32]; 2],
-    from: usize,
-    done: impl FnMut(usize, usize),
-) -> Stems {
+pub fn separate(net: &impl Net, channels: [&[f32]; 2], from: usize, done: impl FnMut(usize, usize)) -> Stems {
     let len = channels[0].len();
     let mut out: Stems = Vec::new();
     run(
@@ -165,10 +134,7 @@ pub fn separate(
         len.max(1),
         0,
         |_, parts| {
-            out = parts
-                .iter()
-                .map(|[l, r]| [l.to_vec(), r.to_vec()])
-                .collect();
+            out = parts.iter().map(|[l, r]| [l.to_vec(), r.to_vec()]).collect();
             true
         },
         done,
@@ -179,14 +145,9 @@ pub fn separate(
     out
 }
 
-/// Separates like [`separate`], handing over each stretch of `chunk`
-/// samples as soon as it is final (every window that overlaps it is done),
-/// so the stems can play while the rest is separated, and keeping only the
-/// windows still needed in memory. `ready(k, stems)` gets chunk `k`,
-/// samples `k * chunk..`, as `[stem][channel][sample]`, preceded by up to
-/// `lead` samples before it (for filters to settle on; those may lack a
-/// window that isn't done yet); chunks come in no particular order. Stops
-/// early, returning false, when `ready` returns false.
+/// Separates like [`separate`], handing over each stretch of `chunk` samples as soon as it is final (every window that overlaps it is done), so the stems can play while the rest is
+/// samples before it (for filters to settle on; those may lack a window that isn't done yet); chunks come in no particular order. Stops early, returning false, when `ready` returns false.
+/// samples before it (for filters to settle on; those may lack a window that isn't done yet); chunks come in no particular order. Stops early, returning false, when `ready` returns
 pub fn separate_in_chunks(
     net: &impl Net,
     channels: [&[f32]; 2],
@@ -234,10 +195,7 @@ fn run(
     let span = |w: usize| {
         let f0 = w * T;
         let count = (frames - f0).min(T);
-        (
-            (f0 * HOP).saturating_sub(FRAME),
-            ((f0 + count - 1) * HOP).min(len),
-        )
+        ((f0 * HOP).saturating_sub(FRAME), ((f0 + count - 1) * HOP).min(len))
     };
     let overlaps = |w: usize, (a, b): (usize, usize)| {
         let (s, e) = span(w);
@@ -270,9 +228,7 @@ fn run(
         let mut masks = net.estimate(mags);
         to_masks(&mut masks);
         let size = (count - 1) * HOP + FRAME;
-        let mut stems: Local = (0..STEMS.len())
-            .map(|_| [vec![0.0; size], vec![0.0; size]])
-            .collect();
+        let mut stems: Local = (0..STEMS.len()).map(|_| [vec![0.0; size], vec![0.0; size]]).collect();
         for (s, stem) in stems.iter_mut().enumerate() {
             for (c, spec) in specs.iter().enumerate() {
                 for f in 0..count {
@@ -293,18 +249,13 @@ fn run(
 
         for (k, sent) in sent.iter_mut().enumerate() {
             let (a, b) = range(k);
-            if *sent
-                || !(0..windows)
-                    .filter(|&v| overlaps(v, (a, b)))
-                    .all(|v| finished[v])
-            {
+            if *sent || !(0..windows).filter(|&v| overlaps(v, (a, b))).all(|v| finished[v]) {
                 continue;
             }
             *sent = true;
             let a = a.saturating_sub(lead);
-            let mut parts: Vec<[Vec<f32>; 2]> = (0..STEMS.len())
-                .map(|_| [vec![0.0; b - a], vec![0.0; b - a]])
-                .collect();
+            let mut parts: Vec<[Vec<f32>; 2]> =
+                (0..STEMS.len()).map(|_| [vec![0.0; b - a], vec![0.0; b - a]]).collect();
             for (v, l) in local.iter().enumerate() {
                 let Some(l) = l else { continue };
                 // Local sample j is unpadded sample j + v·T·HOP − FRAME.
@@ -345,11 +296,7 @@ mod tests {
     impl OneStem for Fake {
         fn estimate_stem(&self, _stem: usize, magnitudes: &[f32]) -> Vec<f32> {
             // Vocals in the second half of the frames of each window only.
-            magnitudes
-                .iter()
-                .enumerate()
-                .map(|(i, m)| if (i % (T * F)) / F >= T / 2 { *m } else { 0.0 })
-                .collect()
+            magnitudes.iter().enumerate().map(|(i, m)| if (i % (T * F)) / F >= T / 2 { *m } else { 0.0 }).collect()
         }
     }
 
@@ -363,22 +310,13 @@ mod tests {
         // frames in to stay clear of the padding).
         let w1 = T - FRAME / 2 / HOP;
         assert!(levels[w1 + 10] < 0.01, "{}", levels[w1 + 10]);
-        assert!(
-            levels[w1 + T / 2 + 10] > 0.99,
-            "{}",
-            levels[w1 + T / 2 + 10]
-        );
+        assert!(levels[w1 + T / 2 + 10] > 0.99, "{}", levels[w1 + T / 2 + 10]);
     }
 
     impl Net for Fake {
         fn estimate(&self, magnitudes: Vec<f32>) -> Vec<f32> {
             (0..STEMS.len())
-                .flat_map(|s| {
-                    magnitudes
-                        .iter()
-                        .enumerate()
-                        .map(move |(i, m)| m * (1 + (s + i) % 3) as f32)
-                })
+                .flat_map(|s| magnitudes.iter().enumerate().map(move |(i, m)| m * (1 + (s + i) % 3) as f32))
                 .collect()
         }
     }
@@ -386,11 +324,8 @@ mod tests {
     #[test]
     fn chunks_match_the_whole_separation() {
         let len = 3 * T * HOP + 12_345;
-        let channels: [Vec<f32>; 2] = [0.013f32, 0.021].map(|w| {
-            (0..len)
-                .map(|i| (i as f32 * w).sin() * 0.4 + ((i * 7919) % 97) as f32 / 400.0)
-                .collect()
-        });
+        let channels: [Vec<f32>; 2] = [0.013f32, 0.021]
+            .map(|w| (0..len).map(|i| (i as f32 * w).sin() * 0.4 + ((i * 7919) % 97) as f32 / 400.0).collect());
         let input = [&channels[0][..], &channels[1][..]];
         let whole = separate(&Fake, input, 0, |_, _| {});
         let chunk = 100_000;
@@ -406,11 +341,7 @@ mod tests {
                 let r = &r[k * chunk - a..];
                 let a = k * chunk;
                 for (i, (x, y)) in l.iter().zip(r.iter()).enumerate() {
-                    assert!(
-                        (x - whole[s][0][a + i]).abs() < 1e-5,
-                        "stem {s} at {}",
-                        a + i
-                    );
+                    assert!((x - whole[s][0][a + i]).abs() < 1e-5, "stem {s} at {}", a + i);
                     assert!((y - whole[s][1][a + i]).abs() < 1e-5);
                 }
             }

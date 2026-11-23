@@ -1,9 +1,6 @@
-//! The sound of decks playing a live source (an input, an instrument or the
-//! Groove Box), as waveform slices for the app to draw while it plays.
-//!
-//! The audio thread splits each such deck's sound into the waveform's bands
-//! and sends a slice every millisecond through a lock-free queue; the app
-//! keeps the last seconds and draws them up to the play line.
+//! The sound of decks playing a live source (an input, an instrument or the Groove Box), as waveform slices for the app
+//! to draw while it plays. The audio thread splits each such deck's sound into the waveform's bands and sends a slice
+//! every millisecond through a lock-free queue; the app keeps the last seconds and draws them up to the play line.
 
 use crate::dsp::Isolator;
 use crate::track::WAVEFORM_RATE;
@@ -71,10 +68,7 @@ impl LiveWave {
         if self.filled >= self.slice_len {
             self.filled -= self.slice_len;
             let n = self.frames.max(1) as f32;
-            let slice = LiveSlice {
-                peak: self.peak,
-                rms: self.power.map(|p| (p / n).sqrt()),
-            };
+            let slice = LiveSlice { peak: self.peak, rms: self.power.map(|p| (p / n).sqrt()) };
             // A full queue means the app isn't reading: the slice is dropped.
             let _ = self.tx.push(slice);
             self.peak = [0.0; 4];

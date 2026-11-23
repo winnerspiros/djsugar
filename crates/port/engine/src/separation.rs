@@ -1,12 +1,6 @@
-//! Stem separation inside DJ Sugar (`crates/separation`), without Python:
-//! Spleeter whenever a track loads, so its stems are there within a second
-//! or two, starting where the DJ will play from; HTDemucs when the DJ asks
-//! for high-quality stems, kept in the cache.
-//!
-//! The model files are downloaded to [`models_dir`] the first time they
-//! are needed, through the app's [`set_fetch`]; without them a track
-//! simply has no stems on load, and high-quality stems fall back to the
-//! Demucs command if it is installed.
+//! Stem separation inside DJ Sugar (`crates/separation`), without Python: Spleeter whenever a track loads, so its stems are there within a second or two, starting where
+//! the DJ will play from; HTDemucs when the DJ asks for high-quality stems, kept in the cache. The model files are downloaded to [`models_dir`] the first time they are
+//! needed, through the app's [`set_fetch`]; without them a track simply has no stems on load, and high-quality stems fall back to the Demucs command if it is installed.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -15,8 +9,7 @@ use djsugar_separation::spleeter;
 
 use crate::dsp::Lr4;
 use crate::stems::{
-    default_info, split, split_drums, to_i16, Quality, StemFrame, StemSource, Stems, CHUNK,
-    KICK_SPLIT_HZ, MAX_STEMS,
+    default_info, split, split_drums, to_i16, Quality, StemFrame, StemSource, Stems, CHUNK, KICK_SPLIT_HZ, MAX_STEMS,
 };
 use crate::track::Audio;
 
@@ -28,14 +21,8 @@ pub const HTDEMUCS: &str = "htdemucs.safetensors";
 /// Each model file and its SHA-256, as the `stem-models` release of DJ Sugar
 /// has them (`.github/workflows/stem-models.yml`).
 pub const MODELS: [(&str, &str); 2] = [
-    (
-        SPLEETER,
-        "4f3c1011feda8f2cccaef9735fad04f272c87bd5ad0a93dd53a3d622c4ed31c5",
-    ),
-    (
-        HTDEMUCS,
-        "8193504cdfb3943adaf039b8acb524a46e87ebf232c383ac7a32c80a6578423e",
-    ),
+    (SPLEETER, "4f3c1011feda8f2cccaef9735fad04f272c87bd5ad0a93dd53a3d622c4ed31c5"),
+    (HTDEMUCS, "8193504cdfb3943adaf039b8acb524a46e87ebf232c383ac7a32c80a6578423e"),
 ];
 
 /// Downloads a model file: `(name, sha256, to)`. The app sets it, so the
@@ -58,22 +45,16 @@ pub(crate) fn model_or_fetch(name: &str, models: &[(&str, &str)]) -> Result<Path
         return Ok(p);
     }
     let fetch = FETCH.get().ok_or("the models aren't downloaded")?;
-    let (_, sha) = models
-        .iter()
-        .find(|(n, _)| *n == name)
-        .ok_or("unknown model")?;
+    let (_, sha) = models.iter().find(|(n, _)| *n == name).ok_or("unknown model")?;
     let dir = models_dir().ok_or("no folder for the models")?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let path = dir.join(name);
     let part = path.with_extension("part");
-    let result = fetch(name, sha, &part)
-        .and_then(|()| std::fs::rename(&part, &path).map_err(|e| e.to_string()));
+    let result = fetch(name, sha, &part).and_then(|()| std::fs::rename(&part, &path).map_err(|e| e.to_string()));
     if result.is_err() {
         let _ = std::fs::remove_file(&part);
     }
-    result
-        .map(|()| path)
-        .map_err(|e| format!("couldn't download {name}: {e}"))
+    result.map(|()| path).map_err(|e| format!("couldn't download {name}: {e}"))
 }
 
 /// Where the separation models are kept: `DJSUGAR_MODELS`, else `models`
@@ -96,8 +77,7 @@ pub fn model(name: &str) -> Option<PathBuf> {
 static ON_LOAD: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
 /// The most bytes of high-quality stems kept in the cache; 0 keeps all.
-static CACHE_LIMIT: std::sync::atomic::AtomicU64 =
-    std::sync::atomic::AtomicU64::new(DEFAULT_CACHE_LIMIT);
+static CACHE_LIMIT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(DEFAULT_CACHE_LIMIT);
 
 /// 10 GB: about 150 tracks of five minutes.
 pub const DEFAULT_CACHE_LIMIT: u64 = 10 << 30;
@@ -167,16 +147,10 @@ pub(crate) fn channels(audio: &Audio) -> [Vec<f32>; 2] {
     [l, r]
 }
 
-/// Separates the decoded `audio` with Spleeter and gives it the stems,
-/// which play at once: the stretch around frame `from` is separated first,
-/// in about a second, and the original plays wherever the stems aren't
-/// there yet. Does nothing if the audio has stems already. Stops when
-/// `keep_going` turns false.
-pub fn separate_fast(
-    audio: &Audio,
-    from: usize,
-    keep_going: impl Fn() -> bool,
-) -> Result<(), String> {
+/// Separates the decoded `audio` with Spleeter and gives it the stems, which play at once: the stretch
+/// around frame `from` is separated first, in about a second, and the original plays wherever the stems
+/// aren't there yet. Does nothing if the audio has stems already. Stops when `keep_going` turns false.
+pub fn separate_fast(audio: &Audio, from: usize, keep_going: impl Fn() -> bool) -> Result<(), String> {
     if audio.stems().is_some() || audio.is_empty() {
         return Ok(());
     }
@@ -214,12 +188,11 @@ pub fn separate_fast(
         out.into_boxed_slice()
     };
     if rate == model_rate {
-        let complete =
-            spleeter::separate_in_chunks(&*net, [&l, &r], from, CHUNK, SPLIT_LEAD, |k, parts| {
-                let lead = (k * CHUNK).min(SPLIT_LEAD);
-                stems.fill(k, frames(&parts, lead));
-                keep_going()
-            });
+        let complete = spleeter::separate_in_chunks(&*net, [&l, &r], from, CHUNK, SPLIT_LEAD, |k, parts| {
+            let lead = (k * CHUNK).min(SPLIT_LEAD);
+            stems.fill(k, frames(&parts, lead));
+            keep_going()
+        });
         if complete {
             stems.finish();
         }
@@ -227,12 +200,8 @@ pub fn separate_fast(
     }
     // Another rate: separate at the model's and bring the stems back, all
     // at once.
-    let resample =
-        |x: &[f32], from_rate, to_rate| djsugar_separation::resample(x, from_rate, to_rate);
-    let (l, r) = (
-        resample(&l, rate, model_rate)?,
-        resample(&r, rate, model_rate)?,
-    );
+    let resample = |x: &[f32], from_rate, to_rate| djsugar_separation::resample(x, from_rate, to_rate);
+    let (l, r) = (resample(&l, rate, model_rate)?, resample(&r, rate, model_rate)?);
     let from = (from as f64 * model_rate as f64 / rate as f64) as usize;
     let separated = spleeter::separate(&*net, [&l, &r], from, |_, _| {});
     if !keep_going() {
@@ -252,21 +221,17 @@ pub fn separate_fast(
     for (k, start) in (0..audio.len()).step_by(CHUNK).enumerate() {
         let end = (start + CHUNK).min(audio.len());
         let lead = start.min(SPLIT_LEAD);
-        let parts: Vec<[&[f32]; 2]> = back
-            .iter()
-            .map(|[sl, sr]| [&sl[start - lead..end], &sr[start - lead..end]])
-            .collect();
+        let parts: Vec<[&[f32]; 2]> =
+            back.iter().map(|[sl, sr]| [&sl[start - lead..end], &sr[start - lead..end]]).collect();
         stems.fill(k, frames(&parts, lead));
     }
     stems.finish();
     Ok(())
 }
 
-/// Separates the file at `path` into high-quality stems with HTDemucs,
-/// leaving four FLAC files at the track's own rate where
-/// [`crate::stems::find`] looks. Uses the GPU (Metal on macOS, Vulkan on
-/// Linux). Without the model, or when it fails, the Demucs command does it
-/// if it is installed.
+/// Separates the file at `path` into high-quality stems with HTDemucs, leaving four FLAC files at
+/// the track's own rate where [`crate::stems::find`] looks. Uses the GPU (Metal on macOS, Vulkan on
+/// Linux). Without the model, or when it fails, the Demucs command does it if it is installed.
 pub fn separate_hq(path: &Path) -> Result<StemSource, String> {
     let weights = match model_or_fetch(HTDEMUCS, &MODELS) {
         Ok(w) => w,
@@ -329,10 +294,8 @@ mod tests {
     #[ignore]
     fn spleeter_on_load_fills_the_stems_from_the_cue() {
         let audio = crate::synth::render_with(124.0, 0.25, 60.0, 5);
-        let audio = Audio::from_frames(
-            djsugar_separation::SAMPLE_RATE,
-            audio.decoded_chunks().flatten().copied().collect(),
-        );
+        let audio =
+            Audio::from_frames(djsugar_separation::SAMPLE_RATE, audio.decoded_chunks().flatten().copied().collect());
         let t = std::time::Instant::now();
         separate_fast(&audio, 30 * 44_100, || true).unwrap();
         println!("60 s separated in {:.2} s", t.elapsed().as_secs_f64());
@@ -346,9 +309,7 @@ mod tests {
         assert!((orig[0] + all[0]).abs() < 2e-3, "{orig:?} {all:?}");
         // The synth's drums are mostly kick and hats: muting both takes out most of it.
         let rms = |g: [f32; MAX_STEMS]| {
-            let e: f32 = (0..44_100 * 10)
-                .map(|k| stems.mix(i + k, &g, || audio.frame(i + k))[0].powi(2))
-                .sum();
+            let e: f32 = (0..44_100 * 10).map(|k| stems.mix(i + k, &g, || audio.frame(i + k))[0].powi(2)).sum();
             e.sqrt()
         };
         let full = rms([1.0; MAX_STEMS]);
@@ -361,10 +322,7 @@ mod tests {
     fn checksums_match_the_published_models() {
         let sums = include_str!("../../models/SHA256SUMS");
         for (name, sha) in MODELS {
-            assert!(
-                sums.lines().any(|l| l == format!("{sha}  {name}")),
-                "{name}"
-            );
+            assert!(sums.lines().any(|l| l == format!("{sha}  {name}")), "{name}");
         }
     }
 

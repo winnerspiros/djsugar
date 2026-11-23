@@ -4,51 +4,31 @@ use burn::nn::{GroupNorm, LayerNorm, Linear};
 use burn::tensor::Device;
 use burn::tensor::Tensor;
 
-use crate::model::conv::{
-    DConv, DConvLayer, HDecLayer, HEncLayer, LayerScale, TDecLayer, TEncLayer,
-};
+use crate::model::conv::{DConv, DConvLayer, HDecLayer, HEncLayer, LayerScale, TDecLayer, TEncLayer};
 use crate::model::htdemucs::{HTDemucs, HyperParameters};
 use crate::model::metadata::ModelInfo;
-use crate::model::transformer::{
-    CrossAttentionLayer, CrossDomainTransformer, SelfAttentionLayer, TransformerLayer,
-};
+use crate::model::transformer::{CrossAttentionLayer, CrossDomainTransformer, SelfAttentionLayer, TransformerLayer};
 use crate::weights::tensor_store::TensorStore;
 use crate::weights::tensor_store::{split_1d, split_dim0, to_tensor_data, transpose_2d};
 use crate::weights::WeightError;
 
 // ─── Primitive loaders ───────────────────────────────────────────────────────
 
-fn load_conv1d(
-    conv: &mut Conv1d,
-    store: &mut TensorStore,
-    prefix: &str,
-    device: &Device,
-) -> Result<(), WeightError> {
+fn load_conv1d(conv: &mut Conv1d, store: &mut TensorStore, prefix: &str, device: &Device) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        conv.bias = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        conv.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
 
-fn load_conv2d(
-    conv: &mut Conv2d,
-    store: &mut TensorStore,
-    prefix: &str,
-    device: &Device,
-) -> Result<(), WeightError> {
+fn load_conv2d(conv: &mut Conv2d, store: &mut TensorStore, prefix: &str, device: &Device) -> Result<(), WeightError> {
     let w = store.take(&format!("{}.weight", prefix))?;
     // 4D weight [out, in, kH, kW] — no transformation needed
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        conv.bias = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        conv.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
@@ -62,10 +42,7 @@ fn load_conv_tr1d(
     let w = store.take(&format!("{}.weight", prefix))?;
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        conv.bias = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        conv.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
@@ -80,30 +57,19 @@ fn load_conv_tr2d(
     // 4D weight [in, out, kH, kW] — no transformation needed
     conv.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        conv.bias = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        conv.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
 
-fn load_linear(
-    linear: &mut Linear,
-    store: &mut TensorStore,
-    prefix: &str,
-    device: &Device,
-) -> Result<(), WeightError> {
+fn load_linear(linear: &mut Linear, store: &mut TensorStore, prefix: &str, device: &Device) -> Result<(), WeightError> {
     // PyTorch Linear: [out_features, in_features]
     // Burn Linear:    [in_features, out_features]
     let w = store.take(&format!("{}.weight", prefix))?;
     let w = transpose_2d(w)?;
     linear.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        linear.bias = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        linear.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
@@ -114,14 +80,11 @@ fn load_layernorm(
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    // PyTorch: .weight, .bias → Burn: .gamma, .beta
+    // PyTorch: .weight, .bias -> Burn: .gamma, .beta
     let w = store.take(&format!("{}.weight", prefix))?;
     ln.gamma = Param::from_tensor(Tensor::from_data(to_tensor_data(w), device));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        ln.beta = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        ln.beta = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
@@ -132,17 +95,11 @@ fn load_groupnorm(
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    // PyTorch: .weight, .bias → Burn: .gamma, .beta (both Option)
+    // PyTorch: .weight, .bias -> Burn: .gamma, .beta (both Option)
     let w = store.take(&format!("{}.weight", prefix))?;
-    gn.gamma = Some(Param::from_tensor(Tensor::from_data(
-        to_tensor_data(w),
-        device,
-    )));
+    gn.gamma = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(w), device)));
     if let Ok(b) = store.take(&format!("{}.bias", prefix)) {
-        gn.beta = Some(Param::from_tensor(Tensor::from_data(
-            to_tensor_data(b),
-            device,
-        )));
+        gn.beta = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(b), device)));
     }
     Ok(())
 }
@@ -161,7 +118,7 @@ fn load_layer_scale(
 }
 
 /// Load a DConvLayer from PyTorch sequential indices.
-/// PyTorch layout: `{prefix}.0` → conv1, `.1` → norm1, `.3` → conv2, `.4` → norm2, `.6` → scale
+/// PyTorch layout: `{prefix}.0` -> conv1, `.1` -> norm1, `.3` -> conv2, `.4` -> norm2, `.6` -> scale
 /// (Indices 2, 5 are GELU activations with no params.)
 fn load_dconv_layer(
     layer: &mut DConvLayer,
@@ -177,12 +134,7 @@ fn load_dconv_layer(
     Ok(())
 }
 
-fn load_dconv(
-    dconv: &mut DConv,
-    store: &mut TensorStore,
-    prefix: &str,
-    device: &Device,
-) -> Result<(), WeightError> {
+fn load_dconv(dconv: &mut DConv, store: &mut TensorStore, prefix: &str, device: &Device) -> Result<(), WeightError> {
     for (j, layer) in dconv.layers.iter_mut().enumerate() {
         load_dconv_layer(layer, store, &format!("{}.{}", prefix, j), device)?;
     }
@@ -196,18 +148,8 @@ fn load_henc_layer(
     device: &Device,
 ) -> Result<(), WeightError> {
     load_conv2d(&mut enc.conv, store, &format!("{}.conv", prefix), device)?;
-    load_dconv(
-        &mut enc.dconv,
-        store,
-        &format!("{}.dconv.layers", prefix),
-        device,
-    )?;
-    load_conv2d(
-        &mut enc.rewrite,
-        store,
-        &format!("{}.rewrite", prefix),
-        device,
-    )?;
+    load_dconv(&mut enc.dconv, store, &format!("{}.dconv.layers", prefix), device)?;
+    load_conv2d(&mut enc.rewrite, store, &format!("{}.rewrite", prefix), device)?;
     Ok(())
 }
 
@@ -218,18 +160,8 @@ fn load_tenc_layer(
     device: &Device,
 ) -> Result<(), WeightError> {
     load_conv1d(&mut enc.conv, store, &format!("{}.conv", prefix), device)?;
-    load_dconv(
-        &mut enc.dconv,
-        store,
-        &format!("{}.dconv.layers", prefix),
-        device,
-    )?;
-    load_conv1d(
-        &mut enc.rewrite,
-        store,
-        &format!("{}.rewrite", prefix),
-        device,
-    )?;
+    load_dconv(&mut enc.dconv, store, &format!("{}.dconv.layers", prefix), device)?;
+    load_conv1d(&mut enc.rewrite, store, &format!("{}.rewrite", prefix), device)?;
     Ok(())
 }
 
@@ -239,24 +171,9 @@ fn load_hdec_layer(
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    load_conv2d(
-        &mut dec.rewrite,
-        store,
-        &format!("{}.rewrite", prefix),
-        device,
-    )?;
-    load_dconv(
-        &mut dec.dconv,
-        store,
-        &format!("{}.dconv.layers", prefix),
-        device,
-    )?;
-    load_conv_tr2d(
-        &mut dec.conv_tr,
-        store,
-        &format!("{}.conv_tr", prefix),
-        device,
-    )?;
+    load_conv2d(&mut dec.rewrite, store, &format!("{}.rewrite", prefix), device)?;
+    load_dconv(&mut dec.dconv, store, &format!("{}.dconv.layers", prefix), device)?;
+    load_conv_tr2d(&mut dec.conv_tr, store, &format!("{}.conv_tr", prefix), device)?;
     Ok(())
 }
 
@@ -266,96 +183,55 @@ fn load_tdec_layer(
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    load_conv1d(
-        &mut dec.rewrite,
-        store,
-        &format!("{}.rewrite", prefix),
-        device,
-    )?;
-    load_dconv(
-        &mut dec.dconv,
-        store,
-        &format!("{}.dconv.layers", prefix),
-        device,
-    )?;
-    load_conv_tr1d(
-        &mut dec.conv_tr,
-        store,
-        &format!("{}.conv_tr", prefix),
-        device,
-    )?;
+    load_conv1d(&mut dec.rewrite, store, &format!("{}.rewrite", prefix), device)?;
+    load_dconv(&mut dec.dconv, store, &format!("{}.dconv.layers", prefix), device)?;
+    load_conv_tr1d(&mut dec.conv_tr, store, &format!("{}.conv_tr", prefix), device)?;
     Ok(())
 }
 
 // ─── Attention loaders ──────────────────────────────────────────────────────
 
-/// Load Burn's MultiHeadAttention from PyTorch's packed in_proj_weight/bias.
-///
-/// PyTorch MHA stores:
-///   `{prefix}.in_proj_weight`  [3*d_model, d_model]  — packed Q, K, V
-///   `{prefix}.in_proj_bias`    [3*d_model]
-///   `{prefix}.out_proj.weight` [d_model, d_model]
-///   `{prefix}.out_proj.bias`   [d_model]
-///
-/// Burn MHA has separate `.query`, `.key`, `.value`, `.output` Linear modules.
+/// Load Burn's MultiHeadAttention from PyTorch's packed in_proj_weight/bias. PyTorch MHA stores:
+/// `{prefix}.out_proj.weight` [d_model, d_model] `{prefix}.out_proj.bias` [d_model] Burn MHA has separate `.query`, `.key`, `.value`, `.output` Linear modules.
+/// `{prefix}.out_proj.weight` [d_model, d_model] `{prefix}.out_proj.bias` [d_model] Burn MHA has separate `.query`,
 fn load_mha(
     attn: &mut burn::nn::attention::MultiHeadAttention,
     store: &mut TensorStore,
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    // 1. Split packed in_proj_weight [3*d, d] → Q, K, V each [d, d]
+    // 1. Split packed in_proj_weight [3*d, d] -> Q, K, V each [d, d]
     let in_proj_w = store.take(&format!("{}.in_proj_weight", prefix))?;
     let mut w_chunks = split_dim0(&in_proj_w, 3)?;
     // w_chunks: [Q, K, V] each [d, d] in PyTorch layout
     // Burn Linear stores [in, out], so transpose each
-    let v_w = transpose_2d(w_chunks.pop().ok_or_else(|| {
-        WeightError::ShapeMismatch("in_proj_weight split: missing V chunk".into())
-    })?)?;
-    let k_w = transpose_2d(w_chunks.pop().ok_or_else(|| {
-        WeightError::ShapeMismatch("in_proj_weight split: missing K chunk".into())
-    })?)?;
-    let q_w = transpose_2d(w_chunks.pop().ok_or_else(|| {
-        WeightError::ShapeMismatch("in_proj_weight split: missing Q chunk".into())
-    })?)?;
+    let v_w = transpose_2d(
+        w_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_weight split: missing V chunk".into()))?,
+    )?;
+    let k_w = transpose_2d(
+        w_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_weight split: missing K chunk".into()))?,
+    )?;
+    let q_w = transpose_2d(
+        w_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_weight split: missing Q chunk".into()))?,
+    )?;
 
     attn.query.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(q_w), device));
     attn.key.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(k_w), device));
     attn.value.weight = Param::from_tensor(Tensor::from_data(to_tensor_data(v_w), device));
 
-    // 2. Split in_proj_bias [3*d] → Q, K, V each [d]
+    // 2. Split in_proj_bias [3*d] -> Q, K, V each [d]
     let in_proj_b = store.take(&format!("{}.in_proj_bias", prefix))?;
     let mut b_chunks = split_1d(&in_proj_b, 3)?;
-    let v_b = b_chunks
-        .pop()
-        .ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing V chunk".into()))?;
-    let k_b = b_chunks
-        .pop()
-        .ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing K chunk".into()))?;
-    let q_b = b_chunks
-        .pop()
-        .ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing Q chunk".into()))?;
+    let v_b = b_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing V chunk".into()))?;
+    let k_b = b_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing K chunk".into()))?;
+    let q_b = b_chunks.pop().ok_or_else(|| WeightError::ShapeMismatch("in_proj_bias split: missing Q chunk".into()))?;
 
-    attn.query.bias = Some(Param::from_tensor(Tensor::from_data(
-        to_tensor_data(q_b),
-        device,
-    )));
-    attn.key.bias = Some(Param::from_tensor(Tensor::from_data(
-        to_tensor_data(k_b),
-        device,
-    )));
-    attn.value.bias = Some(Param::from_tensor(Tensor::from_data(
-        to_tensor_data(v_b),
-        device,
-    )));
+    attn.query.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(q_b), device)));
+    attn.key.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(k_b), device)));
+    attn.value.bias = Some(Param::from_tensor(Tensor::from_data(to_tensor_data(v_b), device)));
 
     // 3. Output projection
-    load_linear(
-        &mut attn.output,
-        store,
-        &format!("{}.out_proj", prefix),
-        device,
-    )?;
+    load_linear(&mut attn.output, store, &format!("{}.out_proj", prefix), device)?;
 
     Ok(())
 }
@@ -368,48 +244,13 @@ fn load_self_attn_layer(
     prefix: &str,
     device: &Device,
 ) -> Result<(), WeightError> {
-    load_layernorm(
-        &mut layer.norm1,
-        store,
-        &format!("{}.norm1", prefix),
-        device,
-    )?;
-    load_mha(
-        &mut layer.attn,
-        store,
-        &format!("{}.self_attn", prefix),
-        device,
-    )?;
-    load_layer_scale(
-        &mut layer.gamma_1,
-        store,
-        &format!("{}.gamma_1", prefix),
-        device,
-    )?;
-    load_layernorm(
-        &mut layer.norm2,
-        store,
-        &format!("{}.norm2", prefix),
-        device,
-    )?;
-    load_linear(
-        &mut layer.linear1,
-        store,
-        &format!("{}.linear1", prefix),
-        device,
-    )?;
-    load_linear(
-        &mut layer.linear2,
-        store,
-        &format!("{}.linear2", prefix),
-        device,
-    )?;
-    load_layer_scale(
-        &mut layer.gamma_2,
-        store,
-        &format!("{}.gamma_2", prefix),
-        device,
-    )?;
+    load_layernorm(&mut layer.norm1, store, &format!("{}.norm1", prefix), device)?;
+    load_mha(&mut layer.attn, store, &format!("{}.self_attn", prefix), device)?;
+    load_layer_scale(&mut layer.gamma_1, store, &format!("{}.gamma_1", prefix), device)?;
+    load_layernorm(&mut layer.norm2, store, &format!("{}.norm2", prefix), device)?;
+    load_linear(&mut layer.linear1, store, &format!("{}.linear1", prefix), device)?;
+    load_linear(&mut layer.linear2, store, &format!("{}.linear2", prefix), device)?;
+    load_layer_scale(&mut layer.gamma_2, store, &format!("{}.gamma_2", prefix), device)?;
     if let Some(ref mut norm_out) = layer.norm_out {
         load_groupnorm(norm_out, store, &format!("{}.norm_out", prefix), device)?;
     } else {
@@ -426,54 +267,14 @@ fn load_cross_attn_layer(
     device: &Device,
 ) -> Result<(), WeightError> {
     // Cross-attention uses .cross_attn in PyTorch (not .self_attn)
-    load_layernorm(
-        &mut layer.norm1,
-        store,
-        &format!("{}.norm1", prefix),
-        device,
-    )?;
-    load_layernorm(
-        &mut layer.norm2,
-        store,
-        &format!("{}.norm2", prefix),
-        device,
-    )?;
-    load_mha(
-        &mut layer.attn,
-        store,
-        &format!("{}.cross_attn", prefix),
-        device,
-    )?;
-    load_layer_scale(
-        &mut layer.gamma_1,
-        store,
-        &format!("{}.gamma_1", prefix),
-        device,
-    )?;
-    load_layernorm(
-        &mut layer.norm3,
-        store,
-        &format!("{}.norm3", prefix),
-        device,
-    )?;
-    load_linear(
-        &mut layer.linear1,
-        store,
-        &format!("{}.linear1", prefix),
-        device,
-    )?;
-    load_linear(
-        &mut layer.linear2,
-        store,
-        &format!("{}.linear2", prefix),
-        device,
-    )?;
-    load_layer_scale(
-        &mut layer.gamma_2,
-        store,
-        &format!("{}.gamma_2", prefix),
-        device,
-    )?;
+    load_layernorm(&mut layer.norm1, store, &format!("{}.norm1", prefix), device)?;
+    load_layernorm(&mut layer.norm2, store, &format!("{}.norm2", prefix), device)?;
+    load_mha(&mut layer.attn, store, &format!("{}.cross_attn", prefix), device)?;
+    load_layer_scale(&mut layer.gamma_1, store, &format!("{}.gamma_1", prefix), device)?;
+    load_layernorm(&mut layer.norm3, store, &format!("{}.norm3", prefix), device)?;
+    load_linear(&mut layer.linear1, store, &format!("{}.linear1", prefix), device)?;
+    load_linear(&mut layer.linear2, store, &format!("{}.linear2", prefix), device)?;
+    load_layer_scale(&mut layer.gamma_2, store, &format!("{}.gamma_2", prefix), device)?;
     if let Some(ref mut norm_out) = layer.norm_out {
         load_groupnorm(norm_out, store, &format!("{}.norm_out", prefix), device)?;
     } else {
@@ -520,29 +321,14 @@ fn load_cross_domain_transformer(
 
     // Input norms
     load_layernorm(&mut ct.norm_in, store, "crosstransformer.norm_in", device)?;
-    load_layernorm(
-        &mut ct.norm_in_t,
-        store,
-        "crosstransformer.norm_in_t",
-        device,
-    )?;
+    load_layernorm(&mut ct.norm_in_t, store, "crosstransformer.norm_in_t", device)?;
 
     // Transformer layers
     for (i, layer) in ct.layers.iter_mut().enumerate() {
-        load_transformer_layer(
-            layer,
-            store,
-            &format!("crosstransformer.layers.{}", i),
-            device,
-        )?;
+        load_transformer_layer(layer, store, &format!("crosstransformer.layers.{}", i), device)?;
     }
     for (i, layer) in ct.layers_t.iter_mut().enumerate() {
-        load_transformer_layer(
-            layer,
-            store,
-            &format!("crosstransformer.layers_t.{}", i),
-            device,
-        )?;
+        load_transformer_layer(layer, store, &format!("crosstransformer.layers_t.{}", i), device)?;
     }
 
     Ok(())
@@ -558,7 +344,7 @@ fn load_htdemucs_from_store(
 ) -> Result<HTDemucs, WeightError> {
     let mut model = HTDemucs::init(hp, device);
 
-    // Encoders: PyTorch "encoder.{i}" → our encoders[i]
+    // Encoders: PyTorch "encoder.{i}" -> our encoders[i]
     for (i, enc) in model.encoders.iter_mut().enumerate() {
         load_henc_layer(enc, store, &format!("encoder.{}", i), device)?;
     }
@@ -566,7 +352,7 @@ fn load_htdemucs_from_store(
         load_tenc_layer(enc, store, &format!("tencoder.{}", i), device)?;
     }
 
-    // Decoders: PyTorch "decoder.{i}" → our decoders[i]
+    // Decoders: PyTorch "decoder.{i}" -> our decoders[i]
     for (i, dec) in model.decoders.iter_mut().enumerate() {
         load_hdec_layer(dec, store, &format!("decoder.{}", i), device)?;
     }
@@ -591,11 +377,7 @@ fn load_htdemucs_from_store(
 
 /// Load one or more HTDemucs models from safetensors bytes.
 /// Returns Vec because htdemucs_ft has 4 models in one file (one per stem).
-pub fn load_model(
-    bytes: &[u8],
-    info: &ModelInfo,
-    device: &Device,
-) -> Result<Vec<HTDemucs>, WeightError> {
+pub fn load_model(bytes: &[u8], info: &ModelInfo, device: &Device) -> Result<Vec<HTDemucs>, WeightError> {
     let hp = HyperParameters::from_model_info(info);
     let mut models = Vec::new();
 
@@ -646,14 +428,7 @@ mod tests {
         assert_eq!(w_data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
 
         // Verify bias
-        let b_data: Vec<f32> = linear
-            .bias
-            .as_ref()
-            .unwrap()
-            .val()
-            .to_data()
-            .try_to_vec()
-            .unwrap();
+        let b_data: Vec<f32> = linear.bias.as_ref().unwrap().val().to_data().try_to_vec().unwrap();
         assert_eq!(b_data, vec![0.1, 0.2]);
 
         // Verify forward pass: input [1,0,0] should give [1*1+0*2+0*3, 1*4+0*5+0*6] + bias
@@ -753,15 +528,7 @@ mod tests {
         assert!(v_w.iter().all(|&v| (v - 3.0).abs() < 1e-5));
 
         // Verify Q bias is 0.1
-        let q_b: Vec<f32> = mha
-            .query
-            .bias
-            .as_ref()
-            .unwrap()
-            .val()
-            .to_data()
-            .try_to_vec()
-            .unwrap();
+        let q_b: Vec<f32> = mha.query.bias.as_ref().unwrap().val().to_data().try_to_vec().unwrap();
         assert!(q_b.iter().all(|&v| (v - 0.1).abs() < 1e-5));
 
         assert_eq!(store.len(), 0);
@@ -777,12 +544,7 @@ mod tests {
                 let bytes: &[u8] = bytemuck::cast_slice(data);
                 (
                     name.to_string(),
-                    safetensors::tensor::TensorView::new(
-                        safetensors::Dtype::F32,
-                        shape.to_vec(),
-                        bytes,
-                    )
-                    .unwrap(),
+                    safetensors::tensor::TensorView::new(safetensors::Dtype::F32, shape.to_vec(), bytes).unwrap(),
                 )
             })
             .collect();

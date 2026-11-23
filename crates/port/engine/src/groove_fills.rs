@@ -1,20 +1,6 @@
-//! Drum fills and Remix for the Groove Box.
-//!
-//! **Auto fill**, as drum machines such as Sugar Bytes' DrumComputer do it:
-//! Auto 1 plays a fill in the last beat of every 4th bar, the last two
-//! beats of every 8th and the whole of every 16th; Auto 2 does the same
-//! every 2nd, 4th and 8th bar. The bars count with the groove's beat, which
-//! follows the leading deck, so the fills land on its phrases. After a fill
-//! of two beats or more the cymbal track crashes on the next downbeat.
-//!
-//! **Remix** is a strip: where it is held picks one of 16 figures, and the
-//! groove plays it until the strip is let go, then goes straight back. Low
-//! figures roll the hats, the middle ones roll two or three sounds and then
-//! swap the tracks' patterns between sounds, the top two fire 16th rolls
-//! over everything.
-//!
-//! Fills and figures are worked out a step at a time from the step, the bar
-//! and a seed, so nothing is stored or allocated on the audio thread.
+//! Drum fills and Remix for the Groove Box. **Auto fill**, as drum machines such as Sugar Bytes' DrumComputer do it: Auto 1 plays a fill in the last beat of every 4th bar, the last two beats of every 8th and the whole of every 16th; Auto 2 does the same every 2nd, 4th and 8th bar. The bars count with the
+//! groove's beat, which follows the leading deck, so the fills land on its phrases. After a fill of two beats or more the cymbal track crashes on the next downbeat. **Remix** is a strip: where it is held picks one of 16 figures, and the groove plays it until the strip is let go, then goes straight back.
+//! Low figures roll the hats, the middle ones roll two or three sounds and then swap the tracks' patterns between sounds, the top two fire 16th rolls over everything. Fills and figures are worked out a step at a time from the step, the bar and a seed, so nothing is stored or allocated on the audio thread.
 
 use crate::groove::{ROWS, STEPS};
 
@@ -110,18 +96,12 @@ pub fn auto_fill(auto: u8, bar: i64, seed: u32) -> Option<Fill> {
     } else {
         return None;
     };
-    Some(Fill {
-        from,
-        kind: figure(bar, seed),
-    })
+    Some(Fill { from, kind: figure(bar, seed) })
 }
 
 /// A fill that plays the whole bar, for FILL held.
 pub fn held_fill(bar: i64, seed: u32) -> Fill {
-    Fill {
-        from: 0,
-        kind: figure(bar, seed),
-    }
+    Fill { from: 0, kind: figure(bar, seed) }
 }
 
 fn figure(bar: i64, seed: u32) -> u32 {
@@ -168,11 +148,7 @@ pub fn remix(level: u8, step: usize, normal: [f32; ROWS], patterns: [u32; ROWS])
             let shift = (level - 8) as usize;
             for (r, out) in v.iter_mut().enumerate().skip(1) {
                 let from = 1 + (r - 1 + shift) % (ROWS - 1);
-                *out = if patterns[from] & (1 << step) != 0 {
-                    0.9
-                } else {
-                    0.0
-                };
+                *out = if patterns[from] & (1 << step) != 0 { 0.9 } else { 0.0 };
             }
             if level >= 12 {
                 // Busier: the hats roll under it.
@@ -226,15 +202,9 @@ mod tests {
                 let f = Fill { from, kind };
                 let loudest = |step| f.hits(step).iter().cloned().fold(0.0, f32::max);
                 for step in 12..STEPS {
-                    assert!(
-                        loudest(step) > 0.0,
-                        "kind {kind} from {from}: step {step} is silent"
-                    );
+                    assert!(loudest(step) > 0.0, "kind {kind} from {from}: step {step} is silent");
                 }
-                assert!(
-                    loudest(STEPS - 1) > loudest(from),
-                    "kind {kind} from {from} builds"
-                );
+                assert!(loudest(STEPS - 1) > loudest(from), "kind {kind} from {from} builds");
             }
         }
     }

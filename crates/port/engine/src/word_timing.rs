@@ -1,12 +1,6 @@
-//! Times each word of a track's lyrics by listening to it: Whisper
-//! (whisper.cpp, through whisper-rs) hears the vocals, word by word with
-//! times, and the lyrics the DJ has are lined up with what it heard. Words
-//! it heard well take its times; the words between are spread over the gap
-//! by their length. A track with no lyrics can be transcribed instead:
-//! the words heard, grouped into lines.
-//!
-//! The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded
-//! the first time it is needed, like the stem separation models.
+//! Times each word of a track's lyrics by listening to it: Whisper (whisper.cpp, through whisper-rs) hears the vocals, word by word with times, and the lyrics the DJ has are
+//! instead: the words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation models.
+//! instead: the words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation
 
 use std::path::Path;
 
@@ -48,10 +42,9 @@ pub enum Stage {
 /// Where [`time_words`] reports its [`Stage`].
 pub type Report = std::sync::Arc<dyn Fn(Stage) + Send + Sync>;
 
-/// Times each word of `lines` by listening to the track at `path`: its
-/// vocal stem when it has one (separated with HTDemucs first when it
-/// doesn't, if that works), else the whole mix. Lines keep their text;
-/// each sung line gets its words' times.
+/// Times each word of `lines` by listening to the track at `path`: its vocal stem
+/// when it has one (separated with HTDemucs first when it doesn't, if that works),
+/// else the whole mix. Lines keep their text; each sung line gets its words' times.
 pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Line>, String> {
     let heard = hear(path, report)?;
     align(lines, &heard)
@@ -83,29 +76,18 @@ fn vocals(path: &Path, report: &Report) -> Result<Vec<f32>, String> {
         _ => path.to_owned(),
     };
     let audio = crate::decode::decode(&source)?;
-    let mono: Vec<f32> = audio
-        .decoded_chunks()
-        .flatten()
-        .map(|f| (f[0] + f[1]) * 0.5)
-        .collect();
+    let mono: Vec<f32> = audio.decoded_chunks().flatten().map(|f| (f[0] + f[1]) * 0.5).collect();
     djsugar_separation::resample(&mono, audio.sample_rate, RATE)
 }
 
-fn listen(
-    model: &Path,
-    samples: &[f32],
-    mut progress: impl FnMut(i32) + 'static,
-) -> Result<Vec<Heard>, String> {
+fn listen(model: &Path, samples: &[f32], mut progress: impl FnMut(i32) + 'static) -> Result<Vec<Heard>, String> {
     // Speech recognition needs a pure-Rust model runtime; until then nothing is heard.
     let _ = (model, samples, &mut progress);
     Err("word timing is not available yet".into())
 }
 
 fn plain(word: &str) -> String {
-    word.chars()
-        .filter(|c| c.is_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
+    word.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
 }
 
 /// How well two plain words match: 2 the same, 1 close (a letter or two
@@ -133,9 +115,7 @@ fn edit_distance(a: &str, b: &str) -> usize {
         let mut diagonal = row[0];
         row[0] = i + 1;
         for (j, cb) in b.iter().enumerate() {
-            let next = (diagonal + usize::from(ca != *cb))
-                .min(row[j] + 1)
-                .min(row[j + 1] + 1);
+            let next = (diagonal + usize::from(ca != *cb)).min(row[j] + 1).min(row[j + 1] + 1);
             diagonal = row[j + 1];
             row[j + 1] = next;
         }
@@ -226,10 +206,8 @@ pub fn align(lines: &[Line], heard: &[Heard]) -> Result<Vec<Line>, String> {
     }
     // Each written word's (start, end), from its match or spread between
     // the matched words around it by length.
-    let mut times: Vec<Option<(f64, f64)>> = found
-        .iter()
-        .map(|f| f.map(|j| (heard[j].start, heard[j].end.max(heard[j].start))))
-        .collect();
+    let mut times: Vec<Option<(f64, f64)>> =
+        found.iter().map(|f| f.map(|j| (heard[j].start, heard[j].end.max(heard[j].start)))).collect();
     let length = |k: usize| written[k].1.chars().count().max(1) as f64;
     let mut k = 0;
     while k < times.len() {
@@ -242,11 +220,7 @@ pub fn align(lines: &[Line], heard: &[Heard]) -> Result<Vec<Line>, String> {
             k += 1;
         }
         // Words first..k have no time: fit them between their neighbors.
-        let from = first
-            .checked_sub(1)
-            .and_then(|p| times[p])
-            .map(|t| t.1)
-            .or_else(|| lines[written[first].0].start);
+        let from = first.checked_sub(1).and_then(|p| times[p]).map(|t| t.1).or_else(|| lines[written[first].0].start);
         let to = times.get(k).copied().flatten().map(|t| t.0);
         let total: f64 = (first..k).map(length).sum();
         let (from, to) = match (from, to) {
@@ -277,10 +251,7 @@ pub fn align(lines: &[Line], heard: &[Heard]) -> Result<Vec<Line>, String> {
         let mut end = None;
         while w < written.len() && written[w].0 == i {
             let (start, stop) = times[w].unwrap_or((previous_end, previous_end));
-            words.push(Word {
-                start,
-                text: written[w].1.clone(),
-            });
+            words.push(Word { start, text: written[w].1.clone() });
             end = Some(stop);
             w += 1;
         }
@@ -292,12 +263,7 @@ pub fn align(lines: &[Line], heard: &[Heard]) -> Result<Vec<Line>, String> {
         if let Some(e) = end {
             previous_end = e;
         }
-        out.push(Line {
-            start,
-            text: line.text.trim().to_owned(),
-            words,
-            end,
-        });
+        out.push(Line { start, text: line.text.trim().to_owned(), words, end });
     }
     Ok(out)
 }
@@ -346,27 +312,19 @@ pub fn lines_from(heard: &[Heard]) -> Vec<Line> {
         }
         if !words.is_empty() {
             let gap = h.start - end;
-            let sentence = words
-                .last()
-                .is_some_and(|w| w.text.trim_end().ends_with(['.', '?', '!']));
+            let sentence = words.last().is_some_and(|w| w.text.trim_end().ends_with(['.', '?', '!']));
             if gap >= LINE_GAP || sentence || chars >= LINE_CHARS {
                 close(&mut lines, &mut words, end);
                 chars = 0;
                 if gap >= VERSE_GAP {
-                    lines.push(Line {
-                        start: Some(end),
-                        ..Line::default()
-                    });
+                    lines.push(Line { start: Some(end), ..Line::default() });
                 }
             }
         }
         if let Some(last) = words.last_mut() {
             last.text.push(' ');
         }
-        words.push(Word {
-            start: h.start.max(end),
-            text: text.to_owned(),
-        });
+        words.push(Word { start: h.start.max(end), text: text.to_owned() });
         chars += text.chars().count() + 1;
         end = h.end.max(h.start).max(end);
     }
@@ -379,21 +337,11 @@ mod tests {
     use super::*;
 
     fn line(text: &str) -> Line {
-        Line {
-            text: text.into(),
-            ..Line::default()
-        }
+        Line { text: text.into(), ..Line::default() }
     }
 
     fn heard(words: &[(&str, f64)]) -> Vec<Heard> {
-        words
-            .iter()
-            .map(|(w, t)| Heard {
-                start: *t,
-                end: t + 0.4,
-                text: (*w).into(),
-            })
-            .collect()
+        words.iter().map(|(w, t)| Heard { start: *t, end: t + 0.4, text: (*w).into() }).collect()
     }
 
     #[test]
@@ -413,11 +361,7 @@ mod tests {
 
     #[test]
     fn times_the_words_whisper_heard() {
-        let lines = vec![
-            line("Hold the line"),
-            line(""),
-            line("Love isn't always on time"),
-        ];
+        let lines = vec![line("Hold the line"), line(""), line("Love isn't always on time")];
         let heard = heard(&[
             ("Hold", 10.0),
             ("the", 10.5),
@@ -446,13 +390,7 @@ mod tests {
     fn spreads_words_whisper_missed_between_those_it_heard() {
         let lines = vec![line("Hold the line, love isn't always on time")];
         // Whisper missed "love isn't always".
-        let heard = heard(&[
-            ("hold", 10.0),
-            ("the", 10.5),
-            ("line", 11.0),
-            ("on", 14.0),
-            ("time", 14.5),
-        ]);
+        let heard = heard(&[("hold", 10.0), ("the", 10.5), ("line", 11.0), ("on", 14.0), ("time", 14.5)]);
         let out = align(&lines, &heard).unwrap();
         let starts: Vec<f64> = out[0].words.iter().map(|w| w.start).collect();
         assert_eq!(starts[2], 11.0);
@@ -465,13 +403,7 @@ mod tests {
     #[test]
     fn skips_words_whisper_heard_that_are_not_in_the_lyrics() {
         let lines = vec![line("Hold the line")];
-        let heard = heard(&[
-            ("yeah", 9.0),
-            ("hold", 10.0),
-            ("uh", 10.2),
-            ("the", 10.5),
-            ("line", 11.0),
-        ]);
+        let heard = heard(&[("yeah", 9.0), ("hold", 10.0), ("uh", 10.2), ("the", 10.5), ("line", 11.0)]);
         let out = align(&lines, &heard).unwrap();
         let starts: Vec<f64> = out[0].words.iter().map(|w| w.start).collect();
         assert_eq!(starts, vec![10.0, 10.5, 11.0]);
@@ -502,10 +434,7 @@ mod tests {
         ]);
         let lines = lines_from(&heard);
         let texts: Vec<&str> = lines.iter().map(|l| l.text.as_str()).collect();
-        assert_eq!(
-            texts,
-            vec!["Hold the line.", "Love isn't always on time", "", "Oh no"]
-        );
+        assert_eq!(texts, vec!["Hold the line.", "Love isn't always on time", "", "Oh no"]);
         assert_eq!(lines[1].start, Some(11.6));
         assert_eq!(lines[1].end, Some(13.9));
         assert_eq!(lines[2].start, Some(13.9));
@@ -526,11 +455,7 @@ mod tests {
     #[test]
     fn writes_lyrics_that_read_back_word_timed() {
         let lines = vec![line("Hold the line")];
-        let out = align(
-            &lines,
-            &heard(&[("hold", 1.0), ("the", 1.5), ("line", 2.0)]),
-        )
-        .unwrap();
+        let out = align(&lines, &heard(&[("hold", 1.0), ("the", 1.5), ("line", 2.0)])).unwrap();
         let back = crate::lyrics::parse(&crate::lyrics::to_lrc(&out)).unwrap();
         assert_eq!(back[0].words.len(), 3);
         assert_eq!(back[0].words[1].start, 1.5);

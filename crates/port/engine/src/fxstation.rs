@@ -1,18 +1,6 @@
-//! The FX Station: a remix effector on the main mix, in the style of the
-//! remix stations of DJ booths. Four sections, all locked to the beat grid
-//! of the deck that leads (or to a tapped tempo):
-//!
-//! - Scene: build ups (BPF Echo, Echo, Noise, Spiral Up, Reverb Up) and
-//!   break downs (HPF Echo, LPF Echo, Crush Echo, Spiral Down, Reverb Down)
-//!   on a big dial, with two sub parameters.
-//! - Isolate: three bands (low, mid, high) with Isolator, Cut/Add,
-//!   Trans/Roll and Gate/Drive modes.
-//! - X-Pad: kick, snare, clap and hi-hat rolls from 1/1 to 1/16 of a beat,
-//!   with pitch, an overdub loop of a bar, mutes and four banks.
-//! - Release: Vinyl Brake, Echo or Back Spin, turning everything else off.
-//!
-//! Controls are in the [FxStation] group. Processed on the engine thread,
-//! without allocations or locks; it costs almost nothing while idle.
+//! The FX Station: a remix effector on the main mix, in the style of the remix stations of DJ booths. Four sections, all locked to the beat grid of the deck that leads (or to a tapped tempo): - Scene: build ups (BPF Echo, Echo, Noise, Spiral Up, Reverb Up) and break downs
+//! (HPF Echo, LPF Echo, Crush Echo, Spiral Down, Reverb Down) on a big dial, with two sub parameters. - Isolate: three bands (low, mid, high) with Isolator, Cut/Add, Trans/Roll and Gate/Drive modes. - X-Pad: kick, snare, clap and hi-hat rolls from 1/1 to 1/16 of a beat,
+//! with pitch, an overdub loop of a bar, mutes and four banks. - Release: Vinyl Brake, Echo or Back Spin, turning everything else off. Controls are in the [FxStation] group. Processed on the engine thread, without allocations or locks; it costs almost nothing while idle.
 
 pub mod dsp;
 pub mod fdnreverb;
@@ -25,12 +13,10 @@ use std::sync::Arc;
 
 use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
 
-use crate::fxstation::dsp::{Crossover, DelayLine, PitchShifter, Smoother, Svf, soft_clip};
+use crate::fxstation::dsp::{soft_clip, Crossover, DelayLine, PitchShifter, Smoother, Svf};
 use crate::fxstation::fdnreverb::FdnReverb;
 use crate::fxstation::instruments::{Instrument, Instruments};
-use crate::fxstation::scenes::{
-    Drive, Flanger, Phaser, Roll, SweepFilter, WsolaPitch, gate_gain,
-};
+use crate::fxstation::scenes::{gate_gain, Drive, Flanger, Phaser, Roll, SweepFilter, WsolaPitch};
 use crate::fxstation::vinylmotion::{BackSpinMotion, NeedleShaper};
 
 const TWO_PI: f32 = TAU;
@@ -574,8 +560,15 @@ impl FxStation {
                 }
                 let p_leader = deck.sync_leader.as_ref();
                 let p_volume = deck.volume.as_ref();
-                let loudness = if let Some(l) = p_leader { if l.get() > 0.0 { 10.0 } else { 0.0 } } else { 0.0 }
-                    + p_volume.map_or(1.0, |v| v.get() as f64);
+                let loudness = if let Some(l) = p_leader {
+                    if l.get() > 0.0 {
+                        10.0
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                } + p_volume.map_or(1.0, |v| v.get() as f64);
                 if loudness > loudest {
                     loudest = loudness;
                     source = Some(i);
@@ -590,7 +583,13 @@ impl FxStation {
             }
             if let Some(p_dist) = deck.beat_distance.as_ref() {
                 let diff = Self::fraction(p_dist.get() + self.nudge) - Self::fraction(self.beat);
-                let diff = if diff > 0.5 { diff - 1.0 } else if diff < -0.5 { diff + 1.0 } else { diff };
+                let diff = if diff > 0.5 {
+                    diff - 1.0
+                } else if diff < -0.5 {
+                    diff + 1.0
+                } else {
+                    diff
+                };
                 self.beat += diff;
             }
         }
@@ -652,7 +651,8 @@ impl FxStation {
             if hit && !self.previous_hits[i] {
                 self.trigger_instrument(i, (self.xpad_volume.get() * velocity.min(1.0)) as f32);
                 if self.xpad_overdub.get() > 0.0 {
-                    let step = ((self.beat * 16.0).round() as i64 % K_LOOP_STEPS as i64 + K_LOOP_STEPS as i64) as usize % K_LOOP_STEPS;
+                    let step = ((self.beat * 16.0).round() as i64 % K_LOOP_STEPS as i64 + K_LOOP_STEPS as i64) as usize
+                        % K_LOOP_STEPS;
                     self.loop_pattern[i][step] = true;
                     self.loop_has_steps = true;
                 }
@@ -716,8 +716,13 @@ impl FxStation {
         let mut wet_right = 0.0;
 
         match scene {
-            Scene::BpfEcho | Scene::Echo | Scene::HpfEcho | Scene::LpfEcho
-            | Scene::CrushEcho | Scene::SpiralUp | Scene::SpiralDown => {
+            Scene::BpfEcho
+            | Scene::Echo
+            | Scene::HpfEcho
+            | Scene::LpfEcho
+            | Scene::CrushEcho
+            | Scene::SpiralUp
+            | Scene::SpiralDown => {
                 let delay = self.echo_delay.value;
                 wet_left = self.echo.read(0, delay);
                 wet_right = self.echo.read(1, delay);
@@ -738,10 +743,16 @@ impl FxStation {
                         let ratio = 2.0_f32.powf(if scene == Scene::SpiralUp { semitones } else { -semitones } / 12.0);
                         self.spiral.process(&mut feedback_left, &mut feedback_right, ratio);
                         let feedback = 0.55 + 0.35 * wet_level;
-                        self.echo.write(soft_clip(in_left + feedback_left * feedback), soft_clip(in_right + feedback_right * feedback));
+                        self.echo.write(
+                            soft_clip(in_left + feedback_left * feedback),
+                            soft_clip(in_right + feedback_right * feedback),
+                        );
                     }
                     _ => {
-                        self.echo.write(soft_clip(in_left + feedback_left * feedback), soft_clip(in_right + feedback_right * feedback));
+                        self.echo.write(
+                            soft_clip(in_left + feedback_left * feedback),
+                            soft_clip(in_right + feedback_right * feedback),
+                        );
                     }
                 }
 
@@ -823,10 +834,22 @@ impl FxStation {
 
         match scene {
             Scene::Flanger => {
-                self.flanger.process(left, right, (self.beat / Self::pick(&K_SWEEP_BEATS, param1)) as f32, 0.95 * param2, self.sample_rate);
+                self.flanger.process(
+                    left,
+                    right,
+                    (self.beat / Self::pick(&K_SWEEP_BEATS, param1)) as f32,
+                    0.95 * param2,
+                    self.sample_rate,
+                );
             }
             Scene::Phaser => {
-                self.phaser.process(left, right, (self.beat / Self::pick(&K_SWEEP_BEATS, param1)) as f32, 0.9 * param2, self.sample_rate);
+                self.phaser.process(
+                    left,
+                    right,
+                    (self.beat / Self::pick(&K_SWEEP_BEATS, param1)) as f32,
+                    0.9 * param2,
+                    self.sample_rate,
+                );
             }
             Scene::Filter => {
                 self.sweep_filter.process(left, right, 2.0 * dial - 1.0, param2, self.sample_rate);
@@ -951,7 +974,8 @@ impl FxStation {
                     band_roll.recorded += 1;
                 } else {
                     let mix = value.clamp(0.0, 1.0);
-                    let position = buffer.write_index() as f64 - band_roll.length as f64 + band_roll.play_position as f64;
+                    let position =
+                        buffer.write_index() as f64 - band_roll.length as f64 + band_roll.play_position as f64;
                     for channel in 0..2 {
                         let repeated = buffer.at(channel, position);
                         output[channel] += (repeated - bands[band][channel]) * mix * gain;
@@ -975,8 +999,22 @@ impl FxStation {
 
         let p_instrument = bank
             .as_ref()
-            .and_then(|b| if !b.instruments[instrument].is_empty() { Some(Arc::new(b.instruments[instrument].clone())) } else { None })
-            .or_else(|| factory.as_ref().and_then(|b| if !b.instruments[instrument].is_empty() { Some(Arc::new(b.instruments[instrument].clone())) } else { None }));
+            .and_then(|b| {
+                if !b.instruments[instrument].is_empty() {
+                    Some(Arc::new(b.instruments[instrument].clone()))
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
+                factory.as_ref().and_then(|b| {
+                    if !b.instruments[instrument].is_empty() {
+                        Some(Arc::new(b.instruments[instrument].clone()))
+                    } else {
+                        None
+                    }
+                })
+            });
 
         let Some(p_instrument) = p_instrument else { return };
 
@@ -1056,7 +1094,8 @@ impl FxStation {
             if hit {
                 self.trigger_instrument(instrument, volume);
                 if self.xpad_overdub.get() > 0.0 {
-                    let step = ((beat * 16.0).round() as i64 % K_LOOP_STEPS as i64 + K_LOOP_STEPS as i64) as usize % K_LOOP_STEPS;
+                    let step = ((beat * 16.0).round() as i64 % K_LOOP_STEPS as i64 + K_LOOP_STEPS as i64) as usize
+                        % K_LOOP_STEPS;
                     self.loop_pattern[instrument][step] = true;
                     if !self.loop_has_steps {
                         self.loop_has_steps = true;
@@ -1088,8 +1127,12 @@ impl FxStation {
             let idx = voice.position as usize;
             let frac = voice.position - idx as f64;
             let next = (idx + 1).min(instrument.frames() - 1);
-            xpad_left += (instrument.samples[2 * idx] + (instrument.samples[2 * next] - instrument.samples[2 * idx]) * frac as f32) * voice.gain;
-            xpad_right += (instrument.samples[2 * idx + 1] + (instrument.samples[2 * next + 1] - instrument.samples[2 * idx + 1]) * frac as f32) * voice.gain;
+            xpad_left += (instrument.samples[2 * idx]
+                + (instrument.samples[2 * next] - instrument.samples[2 * idx]) * frac as f32)
+                * voice.gain;
+            xpad_right += (instrument.samples[2 * idx + 1]
+                + (instrument.samples[2 * next + 1] - instrument.samples[2 * idx + 1]) * frac as f32)
+                * voice.gain;
             voice.position += voice.rate;
         }
         *left += xpad_left;
@@ -1239,7 +1282,8 @@ impl FxStation {
 
         // The echo time of the first sub parameter, in beats.
         let echo_index = (param1 * K_ECHO_BEAT_COUNT as f32).clamp(0.0, (K_ECHO_BEAT_COUNT - 1) as f32) as usize;
-        let echo_target = (K_ECHO_BEATS[echo_index] * self.beat_frames()).min(self.echo.max_frames() as f64 - 4.0) as f32;
+        let echo_target =
+            (K_ECHO_BEATS[echo_index] * self.beat_frames()).min(self.echo.max_frames() as f64 - 4.0) as f32;
         if self.echo_delay.value <= 0.0 {
             self.echo_delay.reset(echo_target);
         }
@@ -1260,9 +1304,7 @@ impl FxStation {
             }
         }
 
-        let xpad_active = self.xpad_division() > 0
-            || self.loop_has_steps
-            || self.voices.iter().any(|v| v.active);
+        let xpad_active = self.xpad_division() > 0 || self.loop_has_steps || self.voices.iter().any(|v| v.active);
 
         let beat_increment = self.bpm / 60.0 / self.sample_rate as f64;
         let sample_coefficient = 1.0 - (-1.0 / (0.005 * self.sample_rate as f64)).exp() as f32;
@@ -1286,9 +1328,12 @@ impl FxStation {
             }
 
             let mut left = (if source_input { input_left } else { 0.0 }) + (if source_xpad { xpad_left } else { 0.0 });
-            let mut right = (if source_input { input_right } else { 0.0 }) + (if source_xpad { xpad_right } else { 0.0 });
-            let bypass_left = (if source_input { 0.0 } else { input_left }) + (if source_xpad { 0.0 } else { xpad_left });
-            let bypass_right = (if source_input { 0.0 } else { input_right }) + (if source_xpad { 0.0 } else { xpad_right });
+            let mut right =
+                (if source_input { input_right } else { 0.0 }) + (if source_xpad { xpad_right } else { 0.0 });
+            let bypass_left =
+                (if source_input { 0.0 } else { input_left }) + (if source_xpad { 0.0 } else { xpad_left });
+            let bypass_right =
+                (if source_input { 0.0 } else { input_right }) + (if source_xpad { 0.0 } else { xpad_right });
 
             if self.isolate_active {
                 let dry_left = left;

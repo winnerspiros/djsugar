@@ -1,9 +1,6 @@
-//! A track's lyrics: plain text, timed by line, or timed by word.
-//!
-//! Lyrics are read from what the DJ already has: an `.lrc` file beside the
-//! track (plain LRC, or enhanced LRC with a time before each word), or the
-//! file's own tags (ID3 `SYLT` timed lyrics, ID3 `USLT`, Vorbis `LYRICS`,
-//! MP4 `©lyr`, which often hold LRC text too). Nothing is fetched here.
+//! A track's lyrics: plain text, timed by line, or timed by word. Lyrics are read from what the DJ already has: an
+//! `SYLT` timed lyrics, ID3 `USLT`, Vorbis `LYRICS`, MP4 `©lyr`, which often hold LRC text too). Nothing is fetched here.
+//! `SYLT` timed lyrics, ID3 `USLT`, Vorbis `LYRICS`, MP4 `©lyr`, which often hold LRC text too). Nothing is fetched
 
 use std::borrow::Cow;
 use std::fs;
@@ -100,20 +97,13 @@ impl Line {
         let done = join(&self.words[..sung]);
         let rest = join(&self.words[sung..]);
         // Text before the first word goes with it.
-        let lead = self
-            .text
-            .len()
-            .saturating_sub((done.clone() + &rest).trim().len());
+        let lead = self.text.len().saturating_sub((done.clone() + &rest).trim().len());
         let lead = self.text.get(..lead).unwrap_or_default();
         if sung == 0 {
             (String::new(), format!("{lead}{}", rest.trim()))
         } else {
             let done = format!("{lead}{}", done.trim_start());
-            let done = if rest.trim().is_empty() {
-                done.trim_end().to_string()
-            } else {
-                done
-            };
+            let done = if rest.trim().is_empty() { done.trim_end().to_string() } else { done };
             (done, rest.trim_end().to_string())
         }
     }
@@ -136,10 +126,9 @@ pub fn word_length(chars: usize) -> f64 {
 }
 
 impl Line {
-    /// Each word with when it starts and ends. Lyrics timed only by line
-    /// have their words spread over the line by length, from its start to
-    /// `until` (the next line's start), or as long as they'd take to sing
-    /// when that is far off.
+    /// Each word with when it starts and ends. Lyrics timed only by line have
+    /// their words spread over the line by length, from its start to `until` (the
+    /// next line's start), or as long as they'd take to sing when that is far off.
     pub fn word_times(&self, until: Option<f64>) -> Vec<(f64, f64, String)> {
         let Some(start) = self.start else {
             return Vec::new();
@@ -154,25 +143,18 @@ impl Line {
                         Some(next) => next.start,
                         None => {
                             let sung = w.start + word_length(w.text.trim().chars().count());
-                            self.end
-                                .unwrap_or_else(|| until.map_or(sung, |u| u.min(sung)))
+                            self.end.unwrap_or_else(|| until.map_or(sung, |u| u.min(sung)))
                         }
                     };
                     (w.start, end.max(w.start), w.text.clone())
                 })
                 .collect();
         }
-        let words: Vec<&str> = self
-            .text
-            .split_inclusive(char::is_whitespace)
-            .filter(|w| !w.trim().is_empty())
-            .collect();
+        let words: Vec<&str> =
+            self.text.split_inclusive(char::is_whitespace).filter(|w| !w.trim().is_empty()).collect();
         let weight = |w: &str| w.trim().chars().count() as f64 + 1.0;
         let total: f64 = words.iter().map(|w| weight(w)).sum();
-        let sung: f64 = words
-            .iter()
-            .map(|w| word_length(w.trim().chars().count()))
-            .sum();
+        let sung: f64 = words.iter().map(|w| word_length(w.trim().chars().count())).sum();
         let end = until.map_or(start + sung, |u| u.min(start + sung).max(start));
         let mut at = start;
         words
@@ -191,29 +173,19 @@ impl Line {
     pub fn fill_at(&self, seconds: f64, until: Option<f64>) -> Fill {
         let words = self.word_times(until);
         let Some(k) = words.iter().rposition(|w| w.0 <= seconds) else {
-            return Fill {
-                rest: self.text.trim().to_string(),
-                ..Default::default()
-            };
+            return Fill { rest: self.text.trim().to_string(), ..Default::default() };
         };
         let join = |ws: &[(f64, f64, String)]| ws.iter().map(|w| w.2.as_str()).collect::<String>();
         let (start, end, text) = &words[k];
         if k == words.len() - 1 && seconds >= *end {
-            return Fill {
-                sung: join(&words).trim().to_string(),
-                ..Default::default()
-            };
+            return Fill { sung: join(&words).trim().to_string(), ..Default::default() };
         }
         let word = text.trim_end();
         let rest = format!("{}{}", &text[word.len()..], join(&words[k + 1..]));
         Fill {
             sung: join(&words[..k]).trim_start().to_string(),
             word: word.trim_start().to_string(),
-            part: if end > start {
-                ((seconds - start) / (end - start)).clamp(0.0, 1.0)
-            } else {
-                1.0
-            },
+            part: if end > start { ((seconds - start) / (end - start)).clamp(0.0, 1.0) } else { 1.0 },
             rest: rest.trim_end().to_string(),
         }
     }
@@ -286,9 +258,7 @@ fn parse_time(s: &str) -> Option<f64> {
     }
     let parts: Vec<&str> = s.split(':').collect();
     let number = |p: &str| -> Option<f64> {
-        (!p.is_empty() && p.chars().all(|c| c.is_ascii_digit() || c == '.'))
-            .then(|| p.parse().ok())
-            .flatten()
+        (!p.is_empty() && p.chars().all(|c| c.is_ascii_digit() || c == '.')).then(|| p.parse().ok()).flatten()
     };
     let t = match parts.as_slice() {
         [m, s] => number(m)? * 60.0 + number(s)?,
@@ -319,11 +289,7 @@ fn leading_stamps(line: &str) -> (Vec<f64>, Option<(String, String)>, &str) {
                 if let Some((k, v)) = inside.split_once(':') {
                     let k = k.trim();
                     if !k.is_empty() && k.chars().all(|c| c.is_ascii_alphabetic() || c == '#') {
-                        return (
-                            times,
-                            Some((k.to_ascii_lowercase(), v.trim().to_string())),
-                            "",
-                        );
+                        return (times, Some((k.to_ascii_lowercase(), v.trim().to_string())), "");
                     }
                 }
                 break;
@@ -365,10 +331,7 @@ fn word_stamps(text: &str) -> Option<(String, Vec<Word>, Option<f64>)> {
             Some(w) => w.text.push_str(before),
             None => lead.push_str(before),
         }
-        words.push(Word {
-            start: t,
-            text: String::new(),
-        });
+        words.push(Word { start: t, text: String::new() });
         rest = &rest[close + 1..];
     }
     if !any {
@@ -404,16 +367,8 @@ pub fn decode_text(bytes: &[u8]) -> Cow<'_, str> {
     }
     let utf16 = |rest: &[u8], le: bool| -> String {
         let (pairs, _) = rest.as_chunks::<2>();
-        let units: Vec<u16> = pairs
-            .iter()
-            .map(|&c| {
-                if le {
-                    u16::from_le_bytes(c)
-                } else {
-                    u16::from_be_bytes(c)
-                }
-            })
-            .collect();
+        let units: Vec<u16> =
+            pairs.iter().map(|&c| if le { u16::from_le_bytes(c) } else { u16::from_be_bytes(c) }).collect();
         String::from_utf16_lossy(&units)
     };
     if let Some(rest) = bytes.strip_prefix(&[0xFF, 0xFE]) {
@@ -452,9 +407,8 @@ pub fn parse(text: &str) -> Option<Vec<Line>> {
         }
         let (text, words, end) = match word_stamps(rest) {
             Some((lead, words, end)) => {
-                let joined: String = std::iter::once(lead.as_str())
-                    .chain(words.iter().map(|w| w.text.as_str()))
-                    .collect();
+                let joined: String =
+                    std::iter::once(lead.as_str()).chain(words.iter().map(|w| w.text.as_str())).collect();
                 (joined.trim().to_string(), words, end)
             }
             None => (rest.trim().to_string(), Vec::new(), None),
@@ -467,13 +421,7 @@ pub fn parse(text: &str) -> Option<Vec<Line>> {
             timed.push(Line {
                 start: Some(t),
                 text: text.clone(),
-                words: words
-                    .iter()
-                    .map(|w| Word {
-                        start: w.start + shift,
-                        text: w.text.clone(),
-                    })
-                    .collect(),
+                words: words.iter().map(|w| Word { start: w.start + shift, text: w.text.clone() }).collect(),
                 end: end.map(|e| e + shift),
             });
         }
@@ -503,10 +451,7 @@ pub fn parse(text: &str) -> Option<Vec<Line>> {
         if t.is_empty() && lines.last().is_none_or(|l| l.text.is_empty()) {
             continue;
         }
-        lines.push(Line {
-            text: t,
-            ..Line::default()
-        });
+        lines.push(Line { text: t, ..Line::default() });
     }
     while lines.last().is_some_and(|l| l.text.is_empty()) {
         lines.pop();
@@ -518,38 +463,22 @@ pub fn parse(text: &str) -> Option<Vec<Line>> {
 /// a line break begin a new line, and the others are its words; with no
 /// line breaks at all each entry is a line.
 pub fn from_synced(entries: &[(u32, String)]) -> Option<Vec<Line>> {
-    let entries: Vec<(f64, &str)> = entries
-        .iter()
-        .map(|(ms, t)| (*ms as f64 / 1000.0, t.as_str()))
-        .collect();
-    let by_word = entries
-        .iter()
-        .skip(1)
-        .any(|(_, t)| t.starts_with('\n') || t.starts_with('\r'));
+    let entries: Vec<(f64, &str)> = entries.iter().map(|(ms, t)| (*ms as f64 / 1000.0, t.as_str())).collect();
+    let by_word = entries.iter().skip(1).any(|(_, t)| t.starts_with('\n') || t.starts_with('\r'));
     let mut lines: Vec<Line> = Vec::new();
     for (start, text) in entries {
         if !by_word {
             let text = text.trim();
-            lines.push(Line {
-                start: Some(start),
-                text: text.to_string(),
-                ..Line::default()
-            });
+            lines.push(Line { start: Some(start), text: text.to_string(), ..Line::default() });
             continue;
         }
         let new_line = text.starts_with('\n') || text.starts_with('\r') || lines.is_empty();
         let word = text.trim_start_matches(['\r', '\n']);
         if new_line {
-            lines.push(Line {
-                start: Some(start),
-                ..Line::default()
-            });
+            lines.push(Line { start: Some(start), ..Line::default() });
         }
         let line = lines.last_mut().expect("a line");
-        line.words.push(Word {
-            start,
-            text: word.to_string(),
-        });
+        line.words.push(Word { start, text: word.to_string() });
         line.text.push_str(word);
     }
     for l in &mut lines {
@@ -584,11 +513,7 @@ fn from_sidecar(track: &Path) -> Option<Lyrics> {
             if let Ok(bytes) = fs::read(&p) {
                 let text = decode_text(&bytes);
                 if let Some(lines) = parse(&text) {
-                    return Some(Lyrics {
-                        lines,
-                        origin: Origin::Lrc(p),
-                        auto: is_auto(&text),
-                    });
+                    return Some(Lyrics { lines, origin: Origin::Lrc(p), auto: is_auto(&text) });
                 }
             }
         }
@@ -620,27 +545,18 @@ fn from_tags(track: &Path) -> Option<Lyrics> {
     // The finest timing wins; among equals, the first found.
     let best = found.iter().map(|l| timing_of(l)).max()?;
     let lines = found.into_iter().find(|l| timing_of(l) == best)?;
-    Some(Lyrics {
-        lines,
-        origin: Origin::Tag,
-        auto: false,
-    })
+    Some(Lyrics { lines, origin: Origin::Tag, auto: false })
 }
 
 fn is_mpeg(track: &Path) -> bool {
-    track
-        .extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| e.eq_ignore_ascii_case("mp3"))
+    track.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("mp3"))
 }
 
 /// The `SYLT` lyrics of an MP3, timed in milliseconds.
 fn synced_from_id3(track: &Path) -> Option<Vec<Line>> {
     use lofty::config::ParseOptions;
     use lofty::file::AudioFile;
-    use lofty::id3::v2::{
-        Frame, FrameId, SyncTextContentType, SynchronizedTextFrame, TimestampFormat,
-    };
+    use lofty::id3::v2::{Frame, FrameId, SyncTextContentType, SynchronizedTextFrame, TimestampFormat};
     let mut f = fs::File::open(track).ok()?;
     let file = lofty::mpeg::MpegFile::read_from(&mut f, ParseOptions::new()).ok()?;
     let tag = file.id3v2()?;
@@ -655,9 +571,7 @@ fn synced_from_id3(track: &Path) -> Option<Vec<Line>> {
         let Ok(s) = SynchronizedTextFrame::parse(&b.data, frame.flags()) else {
             continue;
         };
-        if s.timestamp_format != TimestampFormat::MS
-            || s.content_type != SyncTextContentType::Lyrics
-        {
+        if s.timestamp_format != TimestampFormat::MS || s.content_type != SyncTextContentType::Lyrics {
             continue;
         }
         if let Some(lines) = from_synced(&s.content) {
@@ -680,11 +594,7 @@ pub fn find_with(path: &Path, store: Option<&Path>) -> Option<Lyrics> {
         let bytes = fs::read(&saved).ok()?;
         let text = decode_text(&bytes);
         let lines = parse(&text)?;
-        Some(Lyrics {
-            lines,
-            auto: is_auto(&text),
-            origin: Origin::Saved(saved),
-        })
+        Some(Lyrics { lines, auto: is_auto(&text), origin: Origin::Saved(saved) })
     })
 }
 
@@ -755,10 +665,7 @@ mod tests {
     fn plain_lrc() {
         let lrc = "[ar:Someone]\n[ti:Song]\n\n[00:12.00]First line\n[00:15.30]Second line\n[00:20.00]\n[00:21.00]Third";
         let lines = parse(lrc).unwrap();
-        assert_eq!(
-            starts(&lines),
-            vec![Some(12.0), Some(15.3), Some(20.0), Some(21.0)]
-        );
+        assert_eq!(starts(&lines), vec![Some(12.0), Some(15.3), Some(20.0), Some(21.0)]);
         assert_eq!(lines[0].text, "First line");
         assert_eq!(lines[2].text, "");
         assert_eq!(timing_of(&lines), Timing::Lines);
@@ -791,10 +698,7 @@ mod tests {
         assert_eq!(l.text, "almost home");
         assert_eq!(l.words[0].text, "al");
         assert_eq!(l.words[1].text, "most home");
-        assert_eq!(
-            to_lrc(&lines[..1]),
-            "[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>\n"
-        );
+        assert_eq!(to_lrc(&lines[..1]), "[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>\n");
     }
 
     #[test]
@@ -853,29 +757,18 @@ mod tests {
 
     #[test]
     fn splits_a_line_at_a_time() {
-        let lines =
-            parse("[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>").unwrap();
+        let lines = parse("[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>").unwrap();
         let l = &lines[0];
         assert_eq!(l.sung_at(9.0), (String::new(), "Hold the line".to_string()));
-        assert_eq!(
-            l.sung_at(10.5),
-            ("Hold the ".to_string(), "line".to_string())
-        );
-        assert_eq!(
-            l.sung_at(12.0),
-            ("Hold the line".to_string(), String::new())
-        );
+        assert_eq!(l.sung_at(10.5), ("Hold the ".to_string(), "line".to_string()));
+        assert_eq!(l.sung_at(12.0), ("Hold the line".to_string(), String::new()));
         let plain = parse("[00:01.00]No words").unwrap();
-        assert_eq!(
-            plain[0].sung_at(5.0),
-            (String::new(), "No words".to_string())
-        );
+        assert_eq!(plain[0].sung_at(5.0), (String::new(), "No words".to_string()));
     }
 
     #[test]
     fn fills_a_word_as_it_is_sung() {
-        let lines =
-            parse("[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>").unwrap();
+        let lines = parse("[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>").unwrap();
         let l = &lines[0];
         assert_eq!(l.fill_at(9.0, None).rest, "Hold the line");
         let f = l.fill_at(10.5, None);
@@ -883,10 +776,7 @@ mod tests {
         assert_eq!(f.rest, " line");
         assert!((f.part - 1.0 / 3.0).abs() < 1e-9, "{}", f.part);
         let f = l.fill_at(11.1, None);
-        assert_eq!(
-            (f.sung.as_str(), f.word.as_str(), f.rest.as_str()),
-            ("Hold the ", "line", "")
-        );
+        assert_eq!((f.sung.as_str(), f.word.as_str(), f.rest.as_str()), ("Hold the ", "line", ""));
         assert!((f.part - 0.5).abs() < 1e-9);
         assert_eq!(l.fill_at(12.0, None).sung, "Hold the line");
     }
@@ -905,10 +795,7 @@ mod tests {
         let words = lines[0].word_times(Some(10.5));
         assert!((words[1].1 - 10.5).abs() < 1e-9);
         let f = lines[0].fill_at(10.1, Some(12.0));
-        assert_eq!(
-            (f.sung.as_str(), f.word.as_str(), f.rest.as_str()),
-            ("", "Hi", " there")
-        );
+        assert_eq!((f.sung.as_str(), f.word.as_str(), f.rest.as_str()), ("", "Hi", " there"));
         assert!(lines[0].fill_at(13.0, Some(12.0)).rest.is_empty());
         assert!(parse("Plain").unwrap()[0].word_times(None).is_empty());
     }
@@ -919,10 +806,7 @@ mod tests {
         let store = dir.join("store");
         fs::create_dir_all(&dir).unwrap();
         let track = dir.join("Tune.mp3");
-        assert_eq!(
-            save(&track, Some(&store), "[00:01.00]Hi\n").unwrap(),
-            Origin::Lrc(dir.join("Tune.lrc"))
-        );
+        assert_eq!(save(&track, Some(&store), "[00:01.00]Hi\n").unwrap(), Origin::Lrc(dir.join("Tune.lrc")));
         assert_eq!(find_with(&track, Some(&store)).unwrap().lines[0].text, "Hi");
         // A folder that isn't there can't be written: the store takes it.
         let gone = dir.join("missing").join("Other.mp3");
