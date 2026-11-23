@@ -164,7 +164,7 @@ fn side_column(p: &mut Painter, s: &mut State, r: Rect, d: usize, narrow: bool) 
     let deck = &s.decks[d];
     let (kl, q, slip, rev, grid) = (deck.key_lock, deck.quantize, deck.slip, deck.reverse, deck.grid_locked);
     let mut items: Vec<(&str, bool, u32, Target)> = vec![
-        ("BEATGRID", grid, ACCENT, Target::Grid(d)),
+        ("GRID", grid, ACCENT, Target::Grid(d)),
         ("SYNC", false, rgb(0x2e7d32), Target::Sync(d)),
         ("Q", q, ACCENT, Target::Quantize(d)),
         ("KEY", kl, ACCENT, Target::KeyLock(d)),

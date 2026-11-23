@@ -27,7 +27,7 @@
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboard|keyboardHidden|navigation|uiMode"
             android:launchMode="singleTask"
-            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
+            android:theme="@style/Stage">
             <layout android:minWidth="320dp" android:minHeight="320dp" android:defaultWidth="1280dp" android:defaultHeight="800dp" />
             <meta-data android:name="android.app.lib_name" android:value="djsugar" />
             <intent-filter>
