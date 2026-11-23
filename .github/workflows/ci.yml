@@ -54,7 +54,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
-      - run: cargo test --workspace --locked
+      # One optimized build for the tests and the app: the engine is too big to build twice.
       - run: cargo test --workspace --release --locked
       - run: cargo doc --workspace --no-deps --locked
       - run: cargo build --release -p djsugar --locked
@@ -114,7 +114,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
-      - run: cargo test --workspace --locked
+      - run: cargo test --workspace --release --locked
       - run: cargo build --release -p djsugar --locked
       - uses: actions/upload-artifact@v7
         with:
