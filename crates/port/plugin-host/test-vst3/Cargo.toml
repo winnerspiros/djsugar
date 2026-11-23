@@ -1,0 +1,15 @@
+[package]
+name = "djsugar-test-vst3"
+description = "A tiny VST3 effect for DJ Sugar's plugin-host tests: stereo gain"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+vst3 = "0.3"
+
+[lints]

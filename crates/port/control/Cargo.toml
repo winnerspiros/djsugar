@@ -1,0 +1,11 @@
+[package]
+name = "djsugar-control"
+description = "Named controls ([Group],key) shared by the engine, UI, skins and controller mappings"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+
+[dependencies]
+
+[lints]

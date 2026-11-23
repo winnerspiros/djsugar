@@ -1,0 +1,30 @@
+[package]
+name = "djsugar-separation"
+description = "Stem separation in-process: Spleeter for instant stems, HTDemucs for high quality, on the GPU or CPU"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+
+[dependencies]
+demucs-core = { path = "../third_party/demucs-core", features = ["flex", "wgpu", "fusion", "autotune"] }
+burn = { version = "0.22.1", default-features = false, features = ["std", "flex", "wgpu", "fusion", "autotune"] }
+# Threads and SIMD for the CPU backend (burn turns its defaults off).
+burn-flex = { version = "0.22.1", features = ["simd", "rayon"] }
+realfft = "3.5"
+matrixmultiply = { version = "0.3", features = ["std"] }
+safetensors = "0.7"
+half = "2"
+pollster = "0.4"
+
+[package.metadata.cargo-machete]
+# Listed only to turn on its SIMD and threads; burn uses it.
+ignored = ["burn-flex"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+burn = { version = "0.22.1", default-features = false, features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+burn = { version = "0.22.1", default-features = false, features = ["vulkan"] }
+
+[lints]

@@ -1,0 +1,60 @@
+[package]
+name = "djsugar-engine"
+description = "Audio engine: decks, mixer and output, driven through named controls"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+
+[dependencies]
+djsugar-control = { path = "../control" }
+djsugar-timecode = { path = "../timecode" }
+djsugar-separation = { path = "../separation" }
+# Plugins run in a helper process; the engine only needs the client side.
+djsugar-plugin-host = { path = "../plugin-host", default-features = false }
+cpal = "0.18"
+symphonia = { version = "0.6", features = ["all"] }
+lofty = "0.25"
+rtrb = "0.4"
+flate2 = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+rustfft = "6"
+matrixmultiply = { version = "0.3", features = ["std"] }
+djsugar-stretch = { path = "../stretch" }
+serde_json = "1"
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+djsugar-link = { path = "../link" }
+# MIDI clock out to drum machines and other apps.
+midir = "0.11"
+flacenc = { version = "0.5", default-features = false }
+# Beat and downbeat tracking (Beat This!, MIT) on the pure-Rust rten runtime.
+beat-this = { version = "1.1", default-features = false }
+# Beat This!'s thread pool, to put its threads at low priority.
+rten = { version = "0.24", default-features = false }
+rayon = "1"
+# The Groove Box's Analog and Synthetic kits: Mutable Instruments Plaits'
+# drum models (MIT). Not on crates.io, so pinned to a commit.
+mi-plaits-dsp = { git = "https://github.com/sourcebox/mi-plaits-dsp-rs", rev = "effe9864bb67d23aaf5724722ac1ce165d4e7c9f" }
+# Word timing for lyrics: whisper.cpp (MIT) through whisper-rs, built with
+# cmake. The model (OpenAI Whisper large-v3-turbo, MIT) is downloaded the
+# first time it is needed.
+
+# Real-time priority for the audio thread, which cpal only asks for with
+# this feature (Core Audio's callbacks on macOS already run real-time).
+# Background analysis runs at low priority (see `background.rs`).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cpal = { version = "0.18", features = ["realtime"] }
+
+# Whisper on the Mac's GPU.
+[target.'cfg(target_os = "macos")'.dependencies]
+
+[target.'cfg(windows)'.dependencies]
+# ASIO drivers next to Windows Audio. The build downloads Steinberg's ASIO
+# SDK (GPLv3), so Windows builds are distributed under GPLv3.
+cpal = { version = "0.18", features = ["asio", "realtime"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Threading"] }
+
+[lints]

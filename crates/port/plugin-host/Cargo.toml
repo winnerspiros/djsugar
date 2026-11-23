@@ -1,0 +1,40 @@
+[package]
+name = "djsugar-plugin-host"
+description = "Runs audio plugins in a helper process, so a plugin that crashes, hangs or runs slow can't stop the decks"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+
+[dependencies]
+memmap2 = "0.9"
+serde_json = "1"
+clack-host = { version = "0.2", optional = true }
+clack-extensions = { version = "0.2", optional = true, features = ["clack-host", "params", "state", "latency", "audio-ports", "gui", "timer", "posix-fd", "remote-controls", "preset-discovery"] }
+# VST3: Steinberg's interfaces as Rust bindings (the SDK is MIT since 3.8).
+vst3 = { version = "0.3", optional = true }
+libloading = { version = "0.8", optional = true }
+# The window a plugin's editor opens in (helper only).
+winit = { version = "0.30", optional = true, default-features = false, features = ["rwh_06", "x11"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSProcessInfo", "NSGeometry"] }
+block2 = "0.6"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+libc = "0.2"
+
+[features]
+# The plugin formats, for the helper binary. DJ Sugar itself only needs the
+# client side (shared memory and process control), without them.
+default = ["formats"]
+formats = ["dep:clack-host", "dep:clack-extensions", "dep:vst3", "dep:libloading", "dep:winit"]
+
+[[bin]]
+name = "djsugar-plugin-host"
+path = "src/bin/djsugar-plugin-host.rs"
+required-features = ["formats"]
+
+[lints]

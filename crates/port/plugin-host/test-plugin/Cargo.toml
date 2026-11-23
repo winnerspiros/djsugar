@@ -1,0 +1,16 @@
+[package]
+name = "djsugar-test-clap"
+description = "A tiny CLAP effect for DJ Sugar's plugin-host tests: stereo gain"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clack-plugin = "0.2"
+clack-extensions = { version = "0.2", features = ["clack-plugin", "params", "audio-ports", "latency", "state", "remote-controls", "preset-discovery"] }
+
+[lints]

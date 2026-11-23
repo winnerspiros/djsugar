@@ -1,0 +1,9 @@
+[package]
+name = "djsugar-timecode"
+description = "Timecode vinyl and CD decoding (DVS) for DJ Sugar"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+
+[lints]
