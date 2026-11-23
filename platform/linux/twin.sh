@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Desktop twin: the reference AppImage in its phone skin and our binary, each
+# Desktop twin: the reference AppImage in its QML skin and our binary, each
 # full screen on the same virtual display, shot once settled, then compared.
 # Usage: twin.sh REF.AppImage OURS_BINARY OUT_DIR
 set -u
@@ -37,7 +37,7 @@ for o in land:2400x1080 dex:1600x900; do
   xv=$!
   sleep 2
   export DISPLAY=:9
-  HOME=$APPHOME QT_FILE_SELECTORS=android QT_QPA_PLATFORM=xcb "$REFBIN" --qml --full-screen \
+  HOME=$APPHOME QT_QPA_PLATFORM=xcb "$REFBIN" --qml --full-screen \
     > "$OUT/ref-$name.log" 2>&1 &
   pid=$!
   settle "$OUT/launch-$name.ref.png" 60
