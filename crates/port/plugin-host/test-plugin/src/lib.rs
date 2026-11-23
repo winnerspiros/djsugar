@@ -6,19 +6,17 @@ use std::ffi::{CStr, CString};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use clack_extensions::audio_ports::{
-    AudioPortFlags, AudioPortInfo, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
-    PluginAudioPortsImpl,
+    AudioPortFlags, AudioPortInfo, AudioPortInfoWriter, AudioPortType, PluginAudioPorts, PluginAudioPortsImpl,
 };
 use clack_extensions::latency::{PluginLatency, PluginLatencyImpl};
 use clack_extensions::params::{
-    ParamDisplayWriter, ParamInfo, ParamInfoFlags, ParamInfoWriter, PluginAudioProcessorParams,
-    PluginMainThreadParams, PluginParams,
+    ParamDisplayWriter, ParamInfo, ParamInfoFlags, ParamInfoWriter, PluginAudioProcessorParams, PluginMainThreadParams,
+    PluginParams,
 };
 use clack_extensions::preset_discovery::prelude::{
-    FileType, Flags, Indexer, IndexerInfo, Location, LocationInfo, MetadataReceiver,
-    PluginPresetLoad, PluginPresetLoadImpl, PresetDiscoveryFactoryImpl,
-    PresetDiscoveryFactoryWrapper, ProviderDescriptor, ProviderImpl, ProviderInstance,
-    UniversalPluginId,
+    FileType, Flags, Indexer, IndexerInfo, Location, LocationInfo, MetadataReceiver, PluginPresetLoad,
+    PluginPresetLoadImpl, PresetDiscoveryFactoryImpl, PresetDiscoveryFactoryWrapper, ProviderDescriptor, ProviderImpl,
+    ProviderInstance, UniversalPluginId,
 };
 use clack_extensions::remote_controls::{
     PluginRemoteControls, PluginRemoteControlsImpl, RemoteControlsPage, RemoteControlsPageWriter,
@@ -94,25 +92,16 @@ impl Plugin for TestGain {
 impl DefaultPluginFactory for TestGain {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::{AUDIO_EFFECT, STEREO};
-        PluginDescriptor::new(
-            "io.github.winnerspiros.djsugar.test-gain",
-            "DJ Sugar Test Gain",
-        )
-        .with_vendor("DJ Sugar")
-        .with_features([AUDIO_EFFECT, STEREO])
+        PluginDescriptor::new("io.github.winnerspiros.djsugar.test-gain", "DJ Sugar Test Gain")
+            .with_vendor("DJ Sugar")
+            .with_features([AUDIO_EFFECT, STEREO])
     }
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Shared, PluginError> {
-        Ok(Shared {
-            gain: AtomicU64::new(1.0f64.to_bits()),
-            tempo_out: AtomicU64::new(0.0f64.to_bits()),
-        })
+        Ok(Shared { gain: AtomicU64::new(1.0f64.to_bits()), tempo_out: AtomicU64::new(0.0f64.to_bits()) })
     }
 
-    fn new_main_thread<'a>(
-        _host: HostMainThreadHandle<'a>,
-        shared: &'a Shared,
-    ) -> Result<MainThread<'a>, PluginError> {
+    fn new_main_thread<'a>(_host: HostMainThreadHandle<'a>, shared: &'a Shared) -> Result<MainThread<'a>, PluginError> {
         Ok(MainThread { shared })
     }
 }
@@ -131,20 +120,12 @@ impl<'a> PluginAudioProcessor<'a, Shared, MainThread<'a>> for Processor<'a> {
         Ok(Self { shared })
     }
 
-    fn process(
-        &mut self,
-        process: Process,
-        mut audio: Audio,
-        events: Events,
-    ) -> Result<ProcessStatus, PluginError> {
+    fn process(&mut self, process: Process, mut audio: Audio, events: Events) -> Result<ProcessStatus, PluginError> {
         self.shared.apply(events.input);
         let gain = self.shared.get(GAIN).unwrap_or(1.0) as f32;
         let tempo = process.transport.map(|t: &TransportEvent| t.tempo);
         let tempo_out = self.shared.get(TEMPO_OUT).unwrap_or(0.0) > 0.5;
-        let note = events
-            .input
-            .iter()
-            .find_map(|e| e.as_event::<NoteOnEvent>().map(|n| n.key()));
+        let note = events.input.iter().find_map(|e| e.as_event::<NoteOnEvent>().map(|n| n.key()));
         for mut port in &mut audio {
             let Some(pairs) = port.channels()?.into_f32() else {
                 continue;
@@ -235,12 +216,7 @@ impl PluginMainThreadParams for MainThread<'_> {
         self.shared.get(id.get())
     }
 
-    fn value_to_text(
-        &self,
-        _id: ClapId,
-        value: f64,
-        writer: &mut ParamDisplayWriter,
-    ) -> std::fmt::Result {
+    fn value_to_text(&self, _id: ClapId, value: f64, writer: &mut ParamDisplayWriter) -> std::fmt::Result {
         use std::fmt::Write;
         write!(writer, "{value:.2}")
     }
@@ -278,9 +254,7 @@ impl Entry for TestEntry {
     }
 
     fn declare_factories<'a>(&'a self, builder: &mut EntryFactories<'a>) {
-        builder
-            .register_factory(&self.plugins)
-            .register_factory(&self.presets);
+        builder.register_factory(&self.plugins).register_factory(&self.presets);
     }
 }
 
@@ -295,18 +269,9 @@ impl PluginFactoryImpl for Plugins {
         (index == 0).then_some(&self.0)
     }
 
-    fn create_plugin<'a>(
-        &'a self,
-        host_info: HostInfo<'a>,
-        plugin_id: &CStr,
-    ) -> Option<PluginInstance<'a>> {
+    fn create_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
         (plugin_id == self.0.id().unwrap_or_default()).then(|| {
-            PluginInstance::new::<TestGain>(
-                host_info,
-                &self.0,
-                TestGain::new_shared,
-                TestGain::new_main_thread,
-            )
+            PluginInstance::new::<TestGain>(host_info, &self.0, TestGain::new_shared, TestGain::new_main_thread)
         })
     }
 }
@@ -322,11 +287,7 @@ impl PresetDiscoveryFactoryImpl for Presets {
         (index == 0).then_some(&self.0)
     }
 
-    fn create_provider<'a>(
-        &'a self,
-        host_info: IndexerInfo<'a>,
-        provider_id: &CStr,
-    ) -> Option<ProviderInstance<'a>> {
+    fn create_provider<'a>(&'a self, host_info: IndexerInfo<'a>, provider_id: &CStr) -> Option<ProviderInstance<'a>> {
         (Some(provider_id) == self.0.id()).then(|| {
             ProviderInstance::new(host_info, &self.0, |mut indexer: Indexer<'a>| {
                 let _ = indexer.declare_location(LocationInfo {
@@ -356,33 +317,21 @@ impl PresetDiscoveryFactoryImpl for Presets {
 pub struct Provider;
 
 impl ProviderImpl<'_> for Provider {
-    fn get_metadata(
-        &mut self,
-        location: Location,
-        receiver: &mut MetadataReceiver,
-    ) -> Result<(), PluginError> {
+    fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) -> Result<(), PluginError> {
         let me = UniversalPluginId::clap(c"io.github.winnerspiros.djsugar.test-gain");
         let fail = |_| PluginError::Message("the host refused a preset");
         match location {
             Location::Plugin => {
                 for (name, key) in [(c"Loud", c"loud"), (c"Quiet", c"quiet")] {
-                    receiver
-                        .begin_preset(Some(name), Some(key))
-                        .map_err(fail)?
-                        .add_plugin_id(me);
+                    receiver.begin_preset(Some(name), Some(key)).map_err(fail)?.add_plugin_id(me);
                 }
                 receiver
                     .begin_preset(Some(c"Not mine"), Some(c"other"))
                     .map_err(fail)?
-                    .add_plugin_id(UniversalPluginId::clap(
-                        c"io.github.winnerspiros.djsugar.else",
-                    ));
+                    .add_plugin_id(UniversalPluginId::clap(c"io.github.winnerspiros.djsugar.else"));
             }
             Location::File { .. } => {
-                receiver
-                    .begin_preset(None, None)
-                    .map_err(fail)?
-                    .add_plugin_id(me);
+                receiver.begin_preset(None, None).map_err(fail)?.add_plugin_id(me);
             }
         }
         Ok(())
@@ -392,11 +341,7 @@ impl ProviderImpl<'_> for Provider {
 clack_export_entry!(TestEntry);
 
 impl PluginPresetLoadImpl for MainThread<'_> {
-    fn load_from_location(
-        &self,
-        location: Location,
-        load_key: Option<&CStr>,
-    ) -> Result<(), PluginError> {
+    fn load_from_location(&self, location: Location, load_key: Option<&CStr>) -> Result<(), PluginError> {
         let gain: f64 = match location {
             Location::Plugin => match load_key.map(CStr::to_bytes) {
                 Some(b"loud") => 1.5,
@@ -417,20 +362,14 @@ impl PluginStateImpl for MainThread<'_> {
     fn save(&self, output: &mut OutputStream) -> Result<(), PluginError> {
         use std::io::Write;
         let gain = self.shared.gain.load(Ordering::Relaxed);
-        output
-            .write_all(&gain.to_le_bytes())
-            .map_err(|_| PluginError::Message("can't write the state"))
+        output.write_all(&gain.to_le_bytes()).map_err(|_| PluginError::Message("can't write the state"))
     }
 
     fn load(&self, input: &mut InputStream) -> Result<(), PluginError> {
         use std::io::Read;
         let mut bytes = [0; 8];
-        input
-            .read_exact(&mut bytes)
-            .map_err(|_| PluginError::Message("the state is too short"))?;
-        self.shared
-            .gain
-            .store(u64::from_le_bytes(bytes), Ordering::Relaxed);
+        input.read_exact(&mut bytes).map_err(|_| PluginError::Message("the state is too short"))?;
+        self.shared.gain.store(u64::from_le_bytes(bytes), Ordering::Relaxed);
         Ok(())
     }
 }
@@ -446,8 +385,7 @@ impl PluginRemoteControlsImpl for MainThread<'_> {
                 section_name: b"",
                 page_id: ClapId::new(1),
                 page_name: b"Main",
-                param_ids: [GAIN, TEMPO_OUT, TONE, 0, 0, 0, 0, 0]
-                    .map(|id| (id > 0).then(|| ClapId::new(id))),
+                param_ids: [GAIN, TEMPO_OUT, TONE, 0, 0, 0, 0, 0].map(|id| (id > 0).then(|| ClapId::new(id))),
                 is_for_preset: false,
             });
         }

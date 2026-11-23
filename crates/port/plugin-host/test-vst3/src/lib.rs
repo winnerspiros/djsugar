@@ -70,10 +70,7 @@ impl GainProcessor {
     const CID: TUID = uid(0x6E332252, 0x54224A00, 0xAA69301A, 0xF318797D);
 
     fn new() -> GainProcessor {
-        GainProcessor {
-            gain: AtomicU64::new(1.0f64.to_bits()),
-            tempo_out: AtomicU64::new(0.0f64.to_bits()),
-        }
+        GainProcessor { gain: AtomicU64::new(1.0f64.to_bits()), tempo_out: AtomicU64::new(0.0f64.to_bits()) }
     }
 }
 
@@ -113,13 +110,7 @@ impl IComponentTrait for GainProcessor {
         }
     }
 
-    unsafe fn getBusInfo(
-        &self,
-        mediaType: MediaType,
-        dir: BusDirection,
-        index: i32,
-        bus: *mut BusInfo,
-    ) -> tresult {
+    unsafe fn getBusInfo(&self, mediaType: MediaType, dir: BusDirection, index: i32, bus: *mut BusInfo) -> tresult {
         match mediaType as MediaTypes {
             MediaTypes_::kAudio => match dir as BusDirections {
                 BusDirections_::kInput => match index {
@@ -168,21 +159,11 @@ impl IComponentTrait for GainProcessor {
         }
     }
 
-    unsafe fn getRoutingInfo(
-        &self,
-        _in_info: *mut RoutingInfo,
-        _out_info: *mut RoutingInfo,
-    ) -> tresult {
+    unsafe fn getRoutingInfo(&self, _in_info: *mut RoutingInfo, _out_info: *mut RoutingInfo) -> tresult {
         kNotImplemented
     }
 
-    unsafe fn activateBus(
-        &self,
-        _media_type: MediaType,
-        _dir: BusDirection,
-        _index: i32,
-        _state: TBool,
-    ) -> tresult {
+    unsafe fn activateBus(&self, _media_type: MediaType, _dir: BusDirection, _index: i32, _state: TBool) -> tresult {
         kResultOk
     }
 
@@ -218,12 +199,7 @@ impl IAudioProcessorTrait for GainProcessor {
         kResultTrue
     }
 
-    unsafe fn getBusArrangement(
-        &self,
-        dir: BusDirection,
-        index: i32,
-        arr: *mut SpeakerArrangement,
-    ) -> tresult {
+    unsafe fn getBusArrangement(&self, dir: BusDirection, index: i32, arr: *mut SpeakerArrangement) -> tresult {
         match dir as BusDirections {
             BusDirections_::kInput => {
                 if index == 0 {
@@ -271,16 +247,13 @@ impl IAudioProcessorTrait for GainProcessor {
         if let Some(param_changes) = ComRef::from_raw(process_data.inputParameterChanges) {
             let param_count = param_changes.getParameterCount();
             for param_index in 0..param_count {
-                if let Some(param_queue) =
-                    ComRef::from_raw(param_changes.getParameterData(param_index))
-                {
+                if let Some(param_queue) = ComRef::from_raw(param_changes.getParameterData(param_index)) {
                     let param_id = param_queue.getParameterId();
                     let point_count = param_queue.getPointCount();
 
                     let mut sample_offset = 0;
                     let mut value = 0.0;
-                    let result =
-                        param_queue.getPoint(point_count - 1, &mut sample_offset, &mut value);
+                    let result = param_queue.getPoint(point_count - 1, &mut sample_offset, &mut value);
                     if result == kResultOk {
                         match param_id {
                             0 => self.gain.store(value.to_bits(), Ordering::Relaxed),
@@ -300,23 +273,17 @@ impl IAudioProcessorTrait for GainProcessor {
             return kResultOk;
         }
 
-        let input_buses =
-            slice::from_raw_parts(process_data.inputs, process_data.numInputs as usize);
-        let output_buses =
-            slice::from_raw_parts(process_data.outputs, process_data.numOutputs as usize);
+        let input_buses = slice::from_raw_parts(process_data.inputs, process_data.numInputs as usize);
+        let output_buses = slice::from_raw_parts(process_data.outputs, process_data.numOutputs as usize);
 
         if input_buses[0].numChannels != 2 || output_buses[0].numChannels != 2 {
             return kResultOk;
         }
 
-        let input_channels = slice::from_raw_parts(
-            input_buses[0].__field0.channelBuffers32,
-            input_buses[0].numChannels as usize,
-        );
-        let output_channels = slice::from_raw_parts(
-            output_buses[0].__field0.channelBuffers32,
-            output_buses[0].numChannels as usize,
-        );
+        let input_channels =
+            slice::from_raw_parts(input_buses[0].__field0.channelBuffers32, input_buses[0].numChannels as usize);
+        let output_channels =
+            slice::from_raw_parts(output_buses[0].__field0.channelBuffers32, output_buses[0].numChannels as usize);
 
         let input_l = slice::from_raw_parts(input_channels[0], num_samples);
         let input_r = slice::from_raw_parts(input_channels[1], num_samples);
@@ -330,8 +297,7 @@ impl IAudioProcessorTrait for GainProcessor {
 
         if f64::from_bits(self.tempo_out.load(Ordering::Relaxed)) > 0.5 && num_samples > 0 {
             let ctx = process_data.processContext;
-            output_l[0] = if !ctx.is_null()
-                && (*ctx).state & ProcessContext_::StatesAndFlags_::kTempoValid as u32 != 0
+            output_l[0] = if !ctx.is_null() && (*ctx).state & ProcessContext_::StatesAndFlags_::kTempoValid as u32 != 0
             {
                 (*ctx).tempo as f32
             } else {
@@ -380,9 +346,7 @@ impl GainController {
     const CID: TUID = uid(0x1BA8A477, 0xEE0A4A2D, 0x80F50D14, 0x13D2EAA0);
 
     fn new() -> GainController {
-        GainController {
-            gain: Cell::new(1.0),
-        }
+        GainController { gain: Cell::new(1.0) }
     }
 }
 
@@ -447,12 +411,7 @@ impl IEditControllerTrait for GainController {
         }
     }
 
-    unsafe fn getParamStringByValue(
-        &self,
-        id: u32,
-        value_normalized: f64,
-        string: *mut String128,
-    ) -> tresult {
+    unsafe fn getParamStringByValue(&self, id: u32, value_normalized: f64, string: *mut String128) -> tresult {
         let slice = unsafe { &mut *string };
 
         match id {
@@ -465,18 +424,11 @@ impl IEditControllerTrait for GainController {
         }
     }
 
-    unsafe fn getParamValueByString(
-        &self,
-        id: u32,
-        string: *mut TChar,
-        value_normalized: *mut f64,
-    ) -> tresult {
+    unsafe fn getParamValueByString(&self, id: u32, string: *mut TChar, value_normalized: *mut f64) -> tresult {
         match id {
             0 => {
                 let len = len_wstring(string as *const TChar);
-                if let Ok(string) =
-                    String::from_utf16(slice::from_raw_parts(string as *const u16, len))
-                {
+                if let Ok(string) = String::from_utf16(slice::from_raw_parts(string as *const u16, len)) {
                     if let Ok(value) = f64::from_str(&string) {
                         *value_normalized = value;
                         return kResultOk;
@@ -595,23 +547,10 @@ impl IPluginFactoryTrait for Factory {
         }
     }
 
-    unsafe fn createInstance(
-        &self,
-        cid: FIDString,
-        iid: FIDString,
-        obj: *mut *mut c_void,
-    ) -> tresult {
+    unsafe fn createInstance(&self, cid: FIDString, iid: FIDString, obj: *mut *mut c_void) -> tresult {
         let instance = match *(cid as *const TUID) {
-            GainProcessor::CID => Some(
-                ComWrapper::new(GainProcessor::new())
-                    .to_com_ptr::<FUnknown>()
-                    .unwrap(),
-            ),
-            GainController::CID => Some(
-                ComWrapper::new(GainController::new())
-                    .to_com_ptr::<FUnknown>()
-                    .unwrap(),
-            ),
+            GainProcessor::CID => Some(ComWrapper::new(GainProcessor::new()).to_com_ptr::<FUnknown>().unwrap()),
+            GainController::CID => Some(ComWrapper::new(GainController::new()).to_com_ptr::<FUnknown>().unwrap()),
             _ => None,
         };
 
@@ -662,8 +601,5 @@ extern "system" fn ModuleExit() -> bool {
 
 #[no_mangle]
 extern "system" fn GetPluginFactory() -> *mut IPluginFactory {
-    ComWrapper::new(Factory {})
-        .to_com_ptr::<IPluginFactory>()
-        .unwrap()
-        .into_raw()
+    ComWrapper::new(Factory {}).to_com_ptr::<IPluginFactory>().unwrap().into_raw()
 }
