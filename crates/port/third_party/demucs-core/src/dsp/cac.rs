@@ -70,7 +70,7 @@ mod tests {
         let num_frames = 3;
         let spec = vec![Complex::new(0.0, 0.0); num_frames * freq_bins];
 
-        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
+        let tensor = stft_to_cac(&spec, n_fft, &burn::tensor::Device::flex());
 
         assert_eq!(tensor.dims(), [2, 4, 3]); // [2, n_fft/2, num_frames]
     }
@@ -82,7 +82,7 @@ mod tests {
         // One frame, 2 bins (no Nyquist in input)
         let spec = vec![Complex::new(1.0, 2.0), Complex::new(3.0, 4.0)];
 
-        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
+        let tensor = stft_to_cac(&spec, n_fft, &burn::tensor::Device::flex());
         let data: Vec<f32> = tensor.to_data().try_to_vec().unwrap();
 
         // [2, 2, 1] row-major: [real_bin0, real_bin1, imag_bin0, imag_bin1]
@@ -103,7 +103,7 @@ mod tests {
             Complex::new(4.0, 40.0),
         ];
 
-        let tensor = stft_to_cac(&spec, n_fft, &Default::default());
+        let tensor = stft_to_cac(&spec, n_fft, &burn::tensor::Device::flex());
         let data: Vec<f32> = tensor.to_data().try_to_vec().unwrap();
 
         assert_eq!(
@@ -131,7 +131,7 @@ mod tests {
             }
         }
 
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let tensor = stft_to_cac(&spec, n_fft, &device);
         let roundtrip = pollster::block_on(cac_to_stft(&tensor)).unwrap();
 

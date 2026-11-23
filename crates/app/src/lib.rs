@@ -242,6 +242,8 @@ pub mod native {
                         if !self.drawn {
                             self.drawn = true;
                             crate::stage("first frame");
+                            #[cfg(target_os = "android")]
+                            crate::android::test_mint();
                         }
                         if self.ui.animating() {
                             gpu.window.request_redraw();
@@ -382,6 +384,15 @@ pub(crate) mod android {
         })
     }
 
+    /// CI sets this property to a video ID to prove the token mint works on a
+    /// real device; it starts after the first frame so its web view can't hold
+    /// up the window.
+    pub(crate) fn test_mint() {
+        if let Some(video) = property(c"debug.djsugar.mint") {
+            std::thread::spawn(move || crate::potoken::mint(&video, ""));
+        }
+    }
+
     fn property(name: &std::ffi::CStr) -> Option<String> {
         #[allow(unsafe_code, reason = "a libc call present on every Android version")]
         unsafe extern "C" {
@@ -409,10 +420,6 @@ pub(crate) mod android {
         }
         let _ = request_audio(&app);
         sugar_net::youtube::set_po_token_source(crate::potoken::mint);
-        // CI sets this to a video ID to prove the token mint works on a real device.
-        if let Some(video) = property(c"debug.djsugar.mint") {
-            std::thread::spawn(move || crate::potoken::mint(&video, ""));
-        }
         crate::stage("permissions");
         let event_loop =
             winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));

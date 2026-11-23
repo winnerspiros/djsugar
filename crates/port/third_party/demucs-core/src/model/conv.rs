@@ -265,7 +265,7 @@ mod tests {
     use burn::tensor::Distribution;
 
     fn make_henc_layer(chin: usize, chout: usize) -> HEncLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let conv = Conv2dConfig::new([chin, chout], [8, 1])
             .with_stride([4, 1])
             .with_padding(PaddingConfig2d::Explicit(2, 0, 2, 0))
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn layer_scale_preserves_shape() {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let scale = Param::from_tensor(Tensor::<1>::ones([48], &device));
         let layer = LayerScale { scale };
         let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &device);
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn layer_scale_multiplies_channels() {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         // Scale channel 0 by 2.0, channel 1 by 0.5
         let scale_data = Tensor::<1>::from_floats([2.0, 0.5], &device);
         let scale = Param::from_tensor(scale_data);
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn layer_scale_broadcasts_across_batch() {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let scale = Param::from_tensor(Tensor::<1>::from_floats([3.0], &device));
         let layer = LayerScale { scale };
 
@@ -317,7 +317,7 @@ mod tests {
     }
 
     fn make_dconv_layer(ch: usize, dilation: usize) -> DConvLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let compress = ch / 4;
         let conv1 = Conv1dConfig::new(ch, compress, 3)
             .with_dilation(dilation)
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn dconv_layer_preserves_shape() {
         let layer = make_dconv_layer(48, 1);
-        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 100]);
     }
@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn dconv_layer_preserves_shape_dilation2() {
         let layer = make_dconv_layer(48, 2);
-        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 100]);
     }
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn dconv_preserves_shape() {
         let dconv = make_dconv(48, 2);
-        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 48, 100], Distribution::Default, &burn::tensor::Device::flex());
         let out = dconv.forward(x);
         assert_eq!(out.dims(), [1, 48, 100]);
     }
@@ -364,7 +364,7 @@ mod tests {
     fn dconv_deeper_channels() {
         // Test with 192 channels (encoder layer 2)
         let dconv = make_dconv(192, 2);
-        let x = Tensor::<3>::random([1, 192, 50], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 192, 50], Distribution::Default, &burn::tensor::Device::flex());
         let out = dconv.forward(x);
         assert_eq!(out.dims(), [1, 192, 50]);
     }
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn dconv_is_residual() {
         // With scale=0, output should equal input (residual passthrough)
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let mut layer = make_dconv_layer(48, 1);
         layer.scale = LayerScale { scale: Param::from_tensor(Tensor::<1>::zeros([48], &device)) };
         let x = Tensor::<3>::random([1, 48, 20], Distribution::Default, &device);
@@ -385,7 +385,7 @@ mod tests {
     fn henc_layer_output_shape() {
         // 4D: [1, 4, 2048, 8] -> [1, 48, 512, 8]
         let layer = make_henc_layer(4, 48);
-        let x = Tensor::<4>::random([1, 4, 2048, 8], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 4, 2048, 8], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 512, 8]);
     }
@@ -394,7 +394,7 @@ mod tests {
     fn henc_layer_freq_downsampling() {
         // Freq dim gets downsampled by stride 4
         let layer = make_henc_layer(4, 48);
-        let x = Tensor::<4>::random([1, 4, 64, 8], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 4, 64, 8], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 16, 8]); // freq: 64/4=16, time preserved
     }
@@ -403,7 +403,7 @@ mod tests {
     fn henc_layer_second_level() {
         // Encoder layer 1: 48 -> 96 channels
         let layer = make_henc_layer(48, 96);
-        let x = Tensor::<4>::random([1, 48, 512, 8], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 48, 512, 8], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 96, 128, 8]); // freq: 512/4=128
     }
@@ -418,7 +418,7 @@ mod tests {
         for (expected_chin, chout) in configs {
             assert_eq!(chin, expected_chin);
             let layer = make_henc_layer(chin, chout);
-            let x = Tensor::<4>::random([1, chin, freq, time], Distribution::Default, &Default::default());
+            let x = Tensor::<4>::random([1, chin, freq, time], Distribution::Default, &burn::tensor::Device::flex());
             let out = layer.forward(x);
             freq /= 4; // freq downsampled by stride 4
             chin = chout;
@@ -429,7 +429,7 @@ mod tests {
     }
 
     fn make_tenc_layer(chin: usize, chout: usize) -> TEncLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let conv = Conv1dConfig::new(chin, chout, 8)
             .with_stride(4)
             .with_padding(PaddingConfig1d::Explicit(2, 2))
@@ -444,7 +444,7 @@ mod tests {
     fn tenc_layer_output_shape() {
         // Layer 0: stereo input -> 48 channels
         let layer = make_tenc_layer(2, 48);
-        let x = Tensor::<3>::random([1, 2, 8], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 2, 8], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 2]);
     }
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn tenc_layer_time_downsampling() {
         let layer = make_tenc_layer(2, 48);
-        let x = Tensor::<3>::random([1, 2, 16], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 2, 16], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 48, 4]);
     }
@@ -460,13 +460,13 @@ mod tests {
     #[test]
     fn tenc_layer_second_level() {
         let layer = make_tenc_layer(48, 96);
-        let x = Tensor::<3>::random([1, 48, 16], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 48, 16], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 96, 4]);
     }
 
     fn make_hdec_layer(chin: usize, chout: usize, last: bool) -> HDecLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let rewrite = Conv2dConfig::new([chin, 2 * chin], [3, 3])
             .with_padding(PaddingConfig2d::Explicit(1, 1, 1, 1))
             .init(&device);
@@ -478,7 +478,7 @@ mod tests {
     }
 
     fn make_tdec_layer(chin: usize, chout: usize, last: bool) -> TDecLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let rewrite = Conv1dConfig::new(chin, 2 * chin, 3).with_padding(PaddingConfig1d::Explicit(1, 1)).init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
@@ -490,8 +490,8 @@ mod tests {
     fn hdec_layer_output_shape() {
         // Decoder layer 0: 384 -> 192 (4D)
         let layer = make_hdec_layer(384, 192, false);
-        let x = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &Default::default());
-        let skip = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &burn::tensor::Device::flex());
+        let skip = Tensor::<4>::random([1, 384, 8, 4], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x, skip, 32);
         assert_eq!(out.dims(), [1, 192, 32, 4]);
     }
@@ -500,8 +500,8 @@ mod tests {
     fn hdec_layer_last() {
         // Decoder layer 3: 48 -> 16 (last layer, no GELU)
         let layer = make_hdec_layer(48, 16, true);
-        let x = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &Default::default());
-        let skip = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &burn::tensor::Device::flex());
+        let skip = Tensor::<4>::random([1, 48, 128, 4], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x, skip, 512);
         assert_eq!(out.dims(), [1, 16, 512, 4]);
     }
@@ -510,8 +510,8 @@ mod tests {
     fn tdec_layer_output_shape() {
         // Decoder layer 0: 384 -> 192
         let layer = make_tdec_layer(384, 192, false);
-        let x = Tensor::<3>::random([1, 384, 4], Distribution::Default, &Default::default());
-        let skip = Tensor::<3>::random([1, 384, 4], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 384, 4], Distribution::Default, &burn::tensor::Device::flex());
+        let skip = Tensor::<3>::random([1, 384, 4], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x, skip, 16);
         assert_eq!(out.dims(), [1, 192, 16]);
     }
@@ -520,8 +520,8 @@ mod tests {
     fn tdec_layer_last() {
         // Decoder layer 3: 48 -> 8 (last, no GELU)
         let layer = make_tdec_layer(48, 8, true);
-        let x = Tensor::<3>::random([1, 48, 16], Distribution::Default, &Default::default());
-        let skip = Tensor::<3>::random([1, 48, 16], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 48, 16], Distribution::Default, &burn::tensor::Device::flex());
+        let skip = Tensor::<3>::random([1, 48, 16], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x, skip, 64);
         assert_eq!(out.dims(), [1, 8, 64]);
     }
@@ -531,7 +531,7 @@ mod tests {
         // Encoder then decoder should recover original freq dimension
         let enc = make_henc_layer(4, 48);
         let dec = make_hdec_layer(48, 4, true);
-        let x = Tensor::<4>::random([1, 4, 64, 8], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 4, 64, 8], Distribution::Default, &burn::tensor::Device::flex());
         let encoded = enc.forward(x);
         assert_eq!(encoded.dims(), [1, 48, 16, 8]);
         let skip = encoded.clone();

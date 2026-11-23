@@ -305,12 +305,12 @@ mod tests {
     // --- Helpers (mirror conv.rs test helpers) ---
 
     fn make_layer_scale(ch: usize) -> LayerScale {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         LayerScale { scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)) }
     }
 
     fn make_dconv_layer(ch: usize, dilation: usize) -> crate::model::conv::DConvLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let compress = ch / 4;
         let conv1 = Conv1dConfig::new(ch, compress, 3)
             .with_dilation(dilation)
@@ -330,7 +330,7 @@ mod tests {
     }
 
     fn make_henc_layer(chin: usize, chout: usize) -> HEncLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let conv = Conv2dConfig::new([chin, chout], [8, 1])
             .with_stride([4, 1])
             .with_padding(PaddingConfig2d::Explicit(2, 0, 2, 0))
@@ -342,7 +342,7 @@ mod tests {
     }
 
     fn make_tenc_layer(chin: usize, chout: usize) -> TEncLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let conv = Conv1dConfig::new(chin, chout, 8)
             .with_stride(4)
             .with_padding(PaddingConfig1d::Explicit(2, 2))
@@ -354,7 +354,7 @@ mod tests {
     }
 
     fn make_hdec_layer(chin: usize, chout: usize, last: bool) -> HDecLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let rewrite = Conv2dConfig::new([chin, 2 * chin], [3, 3])
             .with_padding(PaddingConfig2d::Explicit(1, 1, 1, 1))
             .init(&device);
@@ -366,7 +366,7 @@ mod tests {
     }
 
     fn make_tdec_layer(chin: usize, chout: usize, last: bool) -> TDecLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let rewrite = Conv1dConfig::new(chin, 2 * chin, 3).with_padding(PaddingConfig1d::Explicit(1, 1)).init(&device);
         let glu = GLU::new(1);
         let dconv = make_dconv(chin, 2);
@@ -375,7 +375,7 @@ mod tests {
     }
 
     fn make_self_attn_layer() -> crate::model::transformer::SelfAttentionLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let d = 512;
         let ffn = 2048;
         crate::model::transformer::SelfAttentionLayer {
@@ -391,7 +391,7 @@ mod tests {
     }
 
     fn make_cross_attn_layer() -> crate::model::transformer::CrossAttentionLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let d = 512;
         let ffn = 2048;
         crate::model::transformer::CrossAttentionLayer {
@@ -416,7 +416,7 @@ mod tests {
     }
 
     fn make_cross_domain_transformer() -> CrossDomainTransformer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let ch = 384;
         let d = 512;
 
@@ -450,7 +450,7 @@ mod tests {
     /// Build a full HTDemucs with small dimensions for testing.
     /// n_sources: 4 or 6
     fn make_htdemucs(n_sources: usize) -> HTDemucs {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let audio_channels = 2;
         let cac_channels = audio_channels * 2; // 4
 
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn normalize_freq_zero_mean_unit_var() {
-        let x = Tensor::<4>::random([1, 4, 16, 32], Distribution::Normal(5.0, 3.0), &Default::default());
+        let x = Tensor::<4>::random([1, 4, 16, 32], Distribution::Normal(5.0, 3.0), &burn::tensor::Device::flex());
         let (normed, _mean, _std) = HTDemucs::normalize_freq(x);
         let [b, c, f, t] = normed.dims();
         let flat = normed.reshape([b * c * f * t]);
@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn normalize_time_zero_mean_unit_var() {
-        let x = Tensor::<3>::random([1, 2, 1000], Distribution::Normal(-2.0, 4.0), &Default::default());
+        let x = Tensor::<3>::random([1, 2, 1000], Distribution::Normal(-2.0, 4.0), &burn::tensor::Device::flex());
         let (normed, _mean, _std) = HTDemucs::normalize_time(x);
         let data: Vec<f32> = normed.reshape([2000]).to_data().try_to_vec().unwrap();
 
@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn normalize_freq_preserves_shape() {
-        let x = Tensor::<4>::random([1, 4, 8, 16], Distribution::Default, &Default::default());
+        let x = Tensor::<4>::random([1, 4, 8, 16], Distribution::Default, &burn::tensor::Device::flex());
         let (normed, mean, std) = HTDemucs::normalize_freq(x);
         assert_eq!(normed.dims(), [1, 4, 8, 16]);
         assert_eq!(mean.dims(), [1, 1, 1, 1]);
@@ -533,7 +533,7 @@ mod tests {
 
     #[test]
     fn normalize_time_preserves_shape() {
-        let x = Tensor::<3>::random([1, 2, 500], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 2, 500], Distribution::Default, &burn::tensor::Device::flex());
         let (normed, mean, std) = HTDemucs::normalize_time(x);
         assert_eq!(normed.dims(), [1, 2, 500]);
         assert_eq!(mean.dims(), [1, 1, 1]);
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn normalize_denormalize_roundtrip_freq() {
-        let x = Tensor::<4>::random([1, 4, 8, 16], Distribution::Normal(3.0, 2.0), &Default::default());
+        let x = Tensor::<4>::random([1, 4, 8, 16], Distribution::Normal(3.0, 2.0), &burn::tensor::Device::flex());
         let (normed, mean, std) = HTDemucs::normalize_freq(x.clone());
         // Invert: x_recovered = normed * (std + eps) + mean
         let recovered = normed * (std + 1e-5) + mean;
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn normalize_denormalize_roundtrip_time() {
-        let x = Tensor::<3>::random([1, 2, 500], Distribution::Normal(-1.0, 5.0), &Default::default());
+        let x = Tensor::<3>::random([1, 2, 500], Distribution::Normal(-1.0, 5.0), &burn::tensor::Device::flex());
         let (normed, mean, std) = HTDemucs::normalize_time(x.clone());
         let recovered = normed * (std + 1e-5) + mean;
         let diff: Vec<f32> = (recovered - x).abs().to_data().try_to_vec().unwrap();
@@ -586,9 +586,13 @@ mod tests {
         let freq = Tensor::<4>::random(
             [1, audio_channels * 2, freq_bins, freq_time],
             Distribution::Default,
-            &Default::default(),
+            &burn::tensor::Device::flex(),
         );
-        let time = Tensor::<3>::random([1, audio_channels, time_samples], Distribution::Default, &Default::default());
+        let time = Tensor::<3>::random(
+            [1, audio_channels, time_samples],
+            Distribution::Default,
+            &burn::tensor::Device::flex(),
+        );
 
         let (freq_out, time_out) = model.forward(freq, time).unwrap();
 

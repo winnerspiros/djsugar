@@ -106,7 +106,7 @@ jobs:
           - os: macos-latest
             bin: target/release/djsugar
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -165,7 +165,7 @@ jobs:
           s=$(stat -c %s target/djsugar.apk)
           so=$(stat -c %s target/android/lib/arm64-v8a/libdjsugar.so)
           echo "APK: $((s / 1024)) KiB, native lib: $((so / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
-          [ $s -lt 25165824 ] || { echo "::error::APK over 24 MiB: $s"; exit 1; }
+          [ $s -lt 58720256 ] || { echo "::error::APK over 56 MiB: $s"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-android

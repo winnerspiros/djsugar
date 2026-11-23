@@ -357,12 +357,12 @@ mod tests {
     const FFN_DIM: usize = 2048;
 
     fn make_layer_scale(ch: usize) -> LayerScale {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         LayerScale { scale: Param::from_tensor(Tensor::<1>::ones([ch], &device)) }
     }
 
     fn make_self_attn_layer(with_norm_out: bool) -> SelfAttentionLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         SelfAttentionLayer {
             norm1: LayerNormConfig::new(D_MODEL).init(&device),
             attn: MultiHeadAttentionConfig::new(D_MODEL, N_HEADS).init(&device),
@@ -376,7 +376,7 @@ mod tests {
     }
 
     fn make_cross_attn_layer(with_norm_out: bool) -> CrossAttentionLayer {
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         CrossAttentionLayer {
             norm1: LayerNormConfig::new(D_MODEL).init(&device),
             norm2: LayerNormConfig::new(D_MODEL).init(&device),
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn self_attn_preserves_shape() {
         let layer = make_self_attn_layer(false);
-        let x = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 100, D_MODEL]);
     }
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn self_attn_with_norm_out() {
         let layer = make_self_attn_layer(true);
-        let x = Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &Default::default());
+        let x = Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(x);
         assert_eq!(out.dims(), [1, 50, D_MODEL]);
     }
@@ -409,8 +409,8 @@ mod tests {
     #[test]
     fn cross_attn_preserves_query_shape() {
         let layer = make_cross_attn_layer(false);
-        let query = Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &Default::default());
-        let cross = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &Default::default());
+        let query = Tensor::<3>::random([1, 50, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
+        let cross = Tensor::<3>::random([1, 100, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(query, cross);
         assert_eq!(out.dims(), [1, 50, D_MODEL]);
     }
@@ -418,8 +418,8 @@ mod tests {
     #[test]
     fn cross_attn_with_norm_out() {
         let layer = make_cross_attn_layer(true);
-        let query = Tensor::<3>::random([1, 30, D_MODEL], Distribution::Default, &Default::default());
-        let cross = Tensor::<3>::random([1, 80, D_MODEL], Distribution::Default, &Default::default());
+        let query = Tensor::<3>::random([1, 30, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
+        let cross = Tensor::<3>::random([1, 80, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(query, cross);
         assert_eq!(out.dims(), [1, 30, D_MODEL]);
     }
@@ -427,21 +427,21 @@ mod tests {
     #[test]
     fn cross_attn_different_seq_lengths() {
         let layer = make_cross_attn_layer(false);
-        let freq = Tensor::<3>::random([1, 200, D_MODEL], Distribution::Default, &Default::default());
-        let time = Tensor::<3>::random([1, 20, D_MODEL], Distribution::Default, &Default::default());
+        let freq = Tensor::<3>::random([1, 200, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
+        let time = Tensor::<3>::random([1, 20, D_MODEL], Distribution::Default, &burn::tensor::Device::flex());
         let out = layer.forward(freq, time);
         assert_eq!(out.dims(), [1, 200, D_MODEL]);
     }
 
     #[test]
     fn sin_embed_shape() {
-        let emb = create_sin_embed(100, 512, &Default::default());
+        let emb = create_sin_embed(100, 512, &burn::tensor::Device::flex());
         assert_eq!(emb.dims(), [1, 100, 512]);
     }
 
     #[test]
     fn sin_embed_bounded() {
-        let emb = create_sin_embed(50, 128, &Default::default());
+        let emb = create_sin_embed(50, 128, &burn::tensor::Device::flex());
         let data: Vec<f32> = emb.to_data().try_to_vec().unwrap();
         // All values should be in [-1, 1] since they're sin/cos
         assert!(data.iter().all(|v| (-1.0 - 1e-6..=1.0 + 1e-6).contains(v)));
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn sin_embed_cos_first() {
         // Verify cos-first layout: first half = cos, second half = sin
-        let emb = create_sin_embed(1, 4, &Default::default());
+        let emb = create_sin_embed(1, 4, &burn::tensor::Device::flex());
         let data: Vec<f32> = emb.to_data().try_to_vec().unwrap();
         // pos=0: all angles are 0, cos(0)=1, sin(0)=0
         assert!((data[0] - 1.0).abs() < 1e-6, "data[0] should be cos(0)=1");
@@ -461,14 +461,14 @@ mod tests {
 
     #[test]
     fn sin_2d_embed_shape() {
-        let emb = create_2d_sin_embed(512, 8, 4, &Default::default());
+        let emb = create_2d_sin_embed(512, 8, 4, &burn::tensor::Device::flex());
         // height=8, width=4, seq_len = 4*8 = 32
         assert_eq!(emb.dims(), [1, 32, 512]);
     }
 
     #[test]
     fn sin_2d_embed_bounded() {
-        let emb = create_2d_sin_embed(128, 4, 4, &Default::default());
+        let emb = create_2d_sin_embed(128, 4, 4, &burn::tensor::Device::flex());
         let data: Vec<f32> = emb.to_data().try_to_vec().unwrap();
         assert!(data.iter().all(|v| (-1.0 - 1e-6..=1.0 + 1e-6).contains(v)));
     }
@@ -484,7 +484,7 @@ mod tests {
     fn make_cross_domain_transformer() -> CrossDomainTransformer {
         use burn::nn::conv::Conv1dConfig;
 
-        let device = Default::default();
+        let device = burn::tensor::Device::flex();
         let ch = 384;
         let d = D_MODEL;
 
@@ -524,8 +524,9 @@ mod tests {
         let time_t = 8;
 
         // 4D freq: [1, ch, Fr, T]
-        let freq = Tensor::<4>::random([1, 384, freq_bins, time_f], Distribution::Default, &Default::default());
-        let time = Tensor::<3>::random([1, 384, time_t], Distribution::Default, &Default::default());
+        let freq =
+            Tensor::<4>::random([1, 384, freq_bins, time_f], Distribution::Default, &burn::tensor::Device::flex());
+        let time = Tensor::<3>::random([1, 384, time_t], Distribution::Default, &burn::tensor::Device::flex());
 
         let (freq_out, time_out) = transformer.forward(freq, time).unwrap();
         assert_eq!(freq_out.dims(), [1, 384, freq_bins, time_f]);

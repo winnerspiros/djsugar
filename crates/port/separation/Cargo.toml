@@ -22,10 +22,10 @@ pollster = "0.4"
 # Listed only to turn on its SIMD and threads; burn uses it.
 ignored = ["burn-flex"]
 
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(target_vendor = "apple")'.dependencies]
 burn = { version = "0.22.1", default-features = false, features = ["metal"] }
 
-[target.'cfg(not(target_os = "macos"))'.dependencies]
+[target.'cfg(not(target_vendor = "apple"))'.dependencies]
 burn = { version = "0.22.1", default-features = false, features = ["vulkan"] }
 
 [lints]
