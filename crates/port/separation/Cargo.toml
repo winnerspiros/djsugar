@@ -3,6 +3,7 @@ name = "djsugar-separation"
 description = "Stem separation in-process: Spleeter for instant stems, HTDemucs for high quality, on the GPU or CPU"
 version.workspace = true
 edition = "2021"
+publish = false
 license.workspace = true
 
 
@@ -17,7 +18,7 @@ safetensors = "0.7"
 half = "2"
 pollster = "0.4"
 
-[package.metadata.cargo-machete]
+[package.metadata.cargo-shear]
 # Listed only to turn on its SIMD and threads; burn uses it.
 ignored = ["burn-flex"]
 

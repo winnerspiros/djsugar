@@ -3,6 +3,7 @@ name = "djsugar-plugin-host"
 description = "Runs audio plugins in a helper process, so a plugin that crashes, hangs or runs slow can't stop the decks"
 version.workspace = true
 edition = "2021"
+publish = false
 license.workspace = true
 
 

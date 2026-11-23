@@ -332,7 +332,7 @@ impl Recorder {
         }
         let settings = state.settings.clone();
         std::fs::create_dir_all(&settings.dir).map_err(|e| format!("{}: {e}", settings.dir.display()))?;
-        let base = unique_base(&settings.dir, &chrono::Local::now(), settings.format);
+        let base = unique_base(&settings.dir, &jiff::ZonedDateTime::now(), settings.format);
         let first_file = audio_path(&base, 1, settings.format);
         let sink =
             open_sink(&first_file, &settings, self.0.rate).map_err(|e| format!("{}: {e}", first_file.display()))?;
@@ -417,8 +417,8 @@ impl Recorder {
 }
 
 /// `<dir>/DJSugar 2026-10-19 21.05`, with " 2", " 3"... if that is taken.
-fn unique_base(dir: &Path, now: &chrono::DateTime<chrono::Local>, format: RecordFormat) -> PathBuf {
-    let stem = format!("DJ Sugar {}", now.format("%Y-%m-%d %H.%M"));
+fn unique_base(dir: &Path, now: &jiff::ZonedDateTime, format: RecordFormat) -> PathBuf {
+    let stem = format!("DJ Sugar {}", now.strftime("%Y-%m-%d %H.%M"));
     let mut n = 1;
     loop {
         let name = if n == 1 { stem.clone() } else { format!("{stem} {n}") };
@@ -820,12 +820,12 @@ fn log_controls(
         let _ = serde_json::to_writer(&mut *out, &v);
         let _ = out.write_all(b"\n");
     };
-    let started = chrono::Local::now();
+    let started = jiff::ZonedDateTime::now();
     line(
         &mut out,
         json!({
             "djsugar_recording": 1,
-            "started": started.to_rfc3339(),
+            "started": started.strftime("%Y-%m-%dT%H:%M:%S%:z").to_string(),
             "sample_rate": rate,
             "audio": audio_name(&parts.lock().unwrap()[0].path),
         }),
@@ -952,13 +952,13 @@ fn cue_time(seconds: f64) -> String {
 
 fn write_cue(
     base: &Path,
-    started: &chrono::DateTime<chrono::Local>,
+    started: &jiff::ZonedDateTime,
     parts: &[Part],
     cues: &[CueEntry],
     rate: f64,
 ) -> io::Result<()> {
     let mut s = String::new();
-    s.push_str(&format!("REM DATE {}\n", started.format("%Y-%m-%d %H:%M")));
+    s.push_str(&format!("REM DATE {}\n", started.strftime("%Y-%m-%d %H:%M")));
     s.push_str("REM COMMENT \"Recorded with DJ Sugar\"\n");
     s.push_str("PERFORMER \"DJ Sugar\"\n");
     s.push_str(&format!("TITLE \"{}\"\n", cue_text(&audio_name(base))));

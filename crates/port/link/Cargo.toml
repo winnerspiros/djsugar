@@ -3,6 +3,7 @@ name = "djsugar-link"
 description = "Tempo and beat sharing over the network, compatible with Link sessions"
 version.workspace = true
 edition = "2021"
+publish = false
 license.workspace = true
 
 

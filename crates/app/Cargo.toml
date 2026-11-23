@@ -16,7 +16,6 @@ sugar-engine = { path = "../engine" }
 djsugar-engine = { path = "../port/engine" }
 djsugar-control = { path = "../port/control" }
 sugar-decode = { path = "../decode" }
-sugar-io = { path = "../io" }
 sugar-analysis = { path = "../analysis" }
 sugar-net = { path = "../net" }
 

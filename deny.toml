@@ -15,3 +15,5 @@ allow-wildcard-paths = true
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+# The Groove Box's drum synthesis, pinned to a commit; not on crates.io.
+allow-git = ["https://github.com/sourcebox/mi-plaits-dsp-rs"]

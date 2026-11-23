@@ -3,6 +3,7 @@ name = "djsugar-stretch"
 description = "Real-time time-stretching and pitch-shifting"
 version.workspace = true
 edition = "2021"
+publish = false
 license.workspace = true
 
 
