@@ -140,11 +140,33 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     track_menu(p, s, w, h);
 }
 
+/// The brand mark: a glazed donut with sprinkles, then DJ in grey and SUGAR in pink.
+/// Returns the right edge.
+fn logo(p: &mut Painter, x: f32, cy: f32) -> f32 {
+    let rad = 11.0;
+    let cx = x + rad;
+    p.disc(cx, cy, rad, rgb(0xd5944a), rgb(0xb3722d));
+    p.disc(cx, cy, rad * 0.8, rgb(0xff99ca), rgb(0xe63380));
+    for (i, colour) in [0xffffff, 0x7ad7ff, 0xfff27a, 0x9cff8a, 0xffffff, 0xc49bff].into_iter().enumerate() {
+        let a = i as f32 * 1.047 + 0.4;
+        let (sn, cs) = a.sin_cos();
+        let (px, py) = (cx + sn * rad * 0.58, cy - cs * rad * 0.58);
+        p.line((px - cs * 1.5, py - sn * 1.5), (px + cs * 1.5, py + sn * 1.5), 1.5, rgb(colour));
+    }
+    p.disc(cx, cy, rad * 0.3, rgb(0x2c2e34), rgb(0x1b1c20));
+    p.disc(cx, cy, rad * 0.1, rgb(0xcfd4dc), rgb(0x0e1117));
+    let st = Style { colour: rgb(0xb0b0b0), ..LOGO };
+    let tx = cx + rad + 8.0;
+    let w = p.text(tx, cy + st.px * 0.36, st, "DJ ");
+    let w2 = p.text(tx + w, cy + st.px * 0.36, Style { colour: ACCENT, ..LOGO }, "SUGAR");
+    tx + w + w2
+}
+
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, EDGE);
     let two = r.h > TOOLBAR;
-    let mut x = r.x + 10.0 + p.text(r.x + 10.0, r.y + 23.0, LOGO, "DJ Sugar") + 12.0;
+    let mut x = logo(p, r.x + 8.0, r.y + TOOLBAR * 0.5) + 12.0;
     let views = [
         ("DJ", View::Dj),
         ("WAVE", View::Wave),
@@ -187,7 +209,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     let items: [(&str, bool, Target); 6] = [
         ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
         ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
-        ("DECK FX", s.show_fx, Target::ToggleFx),
+        ("FX", s.show_fx, Target::ToggleFx),
         ("SMPL", s.show_samplers, Target::ToggleSamplers),
         ("AUTO", s.auto.is_some(), Target::AutoDj),
         (rec_label, s.recorder.is_some(), Target::Record),
