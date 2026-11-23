@@ -7,7 +7,7 @@ bad() { echo "::error::$1"; fail=1; }
 html=$(git ls-files '*.html' '*.htm')
 [ -z "$html" ] || bad "HTML files are not allowed: $html"
 
-names=$(git grep -n -i -I -E 'mixxx|serato|rekordbox|traktor|virtual ?dj|\bdjay\b|engine dj|opendj|openfader' -- crates platform ':!*.md')
+names=$(git grep -n -i -I -E 'mixxx|serato|rekordbox|traktor|virtual ?dj|\bdjay\b|engine dj|opendj|openfader|ableton' -- crates platform ':!*.md')
 [ -z "$names" ] || bad "Other apps named in code:
 $names"
 

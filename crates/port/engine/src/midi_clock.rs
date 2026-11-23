@@ -1,4 +1,4 @@
-//! MIDI clock out: drum machines, grooveboxes, synths and other apps follow the master deck (the deck Ableton Link follows) at 24 pulses per beat. The audio thread only publishes a [`BeatClock`] snapshot each buffer: the host time the buffer is heard, the master deck's beat then and its tempo. A thread of its own ([`start`]) reads it, works out when each pulse is due with a [`Generator`], and sends it at that moment:
+//! MIDI clock out: drum machines, grooveboxes, synths and other apps follow the master deck (the deck Link follows) at 24 pulses per beat. The audio thread only publishes a [`BeatClock`] snapshot each buffer: the host time the buffer is heard, the master deck's beat then and its tempo. A thread of its own ([`start`]) reads it, works out when each pulse is due with a [`Generator`], and sends it at that moment:
 //! it sleeps until just before, then spins on the clock, so pulses go out within a fraction of a millisecond of when the audio is heard. The pulses follow the master deck's tempo and stay on its beat: drift (a nudge, another deck taking over) is caught up by bending the pulse rate a little, never by jumping, since gear reads the tempo from the spacing of the pulses. Start goes out on the deck's next downbeat, after
 //! Song Position 0, so pattern-based gear lands on the bar; RESTART ON BAR does the same while running. When the master deck stops, Stop goes out, or with `[MidiClock],keep_running` the clock carries on at the last tempo. Controls: `[MidiClock],enabled` (CLOCK OUT), `[MidiClock],restart`, `[MidiClock],keep_running`, and the indicators `[MidiClock],running`, `[MidiClock],bpm` and `[MidiClock],outputs` (outputs open).
 
@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use djsugar_control::{ControlHandle, ControlRegistry};
-use djsugar_link::AblLink;
+use djsugar_link::LinkSession;
 
 pub const GROUP: &str = "[MidiClock]";
 
@@ -439,7 +439,7 @@ pub const LEADER_GROUP: &str = "[Master]";
 pub enum LeaderSource {
     /// The master deck, as decks always have.
     Deck,
-    /// The Ableton Link session.
+    /// The Link session.
     Link,
     /// The MIDI clock input.
     Clock,
@@ -581,7 +581,7 @@ impl Sender {
 pub(crate) fn start(
     beat_clock: Arc<BeatClock>,
     clock_in: Arc<crate::clock_in::ClockIn>,
-    link: Arc<AblLink>,
+    link: Arc<LinkSession>,
     reg: &Arc<ControlRegistry>,
 ) -> MidiClock {
     let clock = MidiClock::default();
@@ -610,7 +610,7 @@ pub(crate) fn start(
 fn run(
     beat_clock: Arc<BeatClock>,
     clock_in: Arc<crate::clock_in::ClockIn>,
-    link: Arc<AblLink>,
+    link: Arc<LinkSession>,
     reg: Weak<ControlRegistry>,
     shared: Arc<Shared>,
     [enabled, restart, keep_running, running, bpm, open_count, in_bpm, in_running]: [ControlHandle; 8],

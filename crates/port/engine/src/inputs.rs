@@ -629,7 +629,7 @@ fn hold_peak((db, held): (f32, f32), peak: f32, dt: f32) -> (f32, f32) {
 }
 
 /// The left and right gains of a pan from -1 (left) to 1 (right): a
-/// balance, as Ableton's and a DJ mixer's are: the far side fades out and
+/// balance, as studio and DJ mixers do: the far side fades out and
 /// the near side stays at full level, so centre is unchanged.
 fn pan_gains(pan: f32) -> [f32; 2] {
     let pan = pan.clamp(-1.0, 1.0);

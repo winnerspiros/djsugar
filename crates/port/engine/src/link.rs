@@ -1,4 +1,4 @@
-//! Ableton Link: shares tempo and beat phase with other apps and devices on the network (other DJ software, phones, drum machines). With `[Link],enabled` on, Link follows the master deck: the session takes
+//! Link: shares tempo and beat phase with other apps and devices on the network (other DJ software, phones, drum machines). With `[Link],enabled` on, Link follows the master deck: the session takes
 //! the tempo and beat of the deck that is playing (`[Link],master_deck`), so other apps play along with the mix. The decks themselves sync to each other as usual. Enabling Link opens network sockets, which
 //! can't happen on the audio thread; [`watch`] does it on its own thread and keeps the peer count up to date. The audio thread only captures and commits session states, which Link makes real-time safe.
 
@@ -6,11 +6,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use djsugar_control::{Behavior, ControlHandle, ControlRegistry};
-use djsugar_link::{AblLink, HostTimeFilter, SessionState};
+use djsugar_link::{HostTimeFilter, LinkSession, SessionState};
 
 pub const GROUP: &str = "[Link]";
 
-/// Beats per bar Link aligns to, as Ableton Live's default.
+/// Beats per bar Link aligns to, as the usual default.
 pub const QUANTUM: f64 = 4.0;
 
 /// `[Link],enabled` turns Link on and `[Link],num_peers` counts the other
@@ -49,7 +49,7 @@ pub(crate) struct Moment {
 
 /// The audio thread's side of Link.
 pub(crate) struct Link {
-    link: Arc<AblLink>,
+    link: Arc<LinkSession>,
     state: SessionState,
     filter: HostTimeFilter,
     /// Frames rendered so far: the clock the host time filter smooths.
@@ -63,7 +63,7 @@ pub(crate) struct Link {
 impl Link {
     pub(crate) fn new(reg: &ControlRegistry) -> Self {
         Self {
-            link: Arc::new(AblLink::new(120.0)),
+            link: Arc::new(LinkSession::new(120.0)),
             state: SessionState::new(),
             filter: HostTimeFilter::new(),
             frames: 0,
@@ -74,7 +74,7 @@ impl Link {
     }
 
     /// The Link instance, for [`watch`].
-    pub(crate) fn handle(&self) -> Arc<AblLink> {
+    pub(crate) fn handle(&self) -> Arc<LinkSession> {
         self.link.clone()
     }
 
@@ -122,8 +122,8 @@ impl Link {
 
 /// Turns Link on and off as `[Link],enabled` says and keeps
 /// `[Link],num_peers` current. Runs until the registry is dropped.
-pub(crate) fn watch(link: Arc<AblLink>, reg: std::sync::Weak<ControlRegistry>) {
-    let spawned = std::thread::Builder::new().name("ableton-link".into()).spawn(move || loop {
+pub(crate) fn watch(link: Arc<LinkSession>, reg: std::sync::Weak<ControlRegistry>) {
+    let spawned = std::thread::Builder::new().name("link".into()).spawn(move || loop {
         let Some(reg) = reg.upgrade() else { return };
         let (Some(enabled), Some(peers)) = (reg.get(GROUP, "enabled"), reg.get(GROUP, "num_peers")) else {
             return;
@@ -137,7 +137,7 @@ pub(crate) fn watch(link: Arc<AblLink>, reg: std::sync::Weak<ControlRegistry>) {
         std::thread::sleep(Duration::from_millis(100));
     });
     if let Err(e) = spawned {
-        eprintln!("could not start Ableton Link: {e}");
+        eprintln!("could not start Link: {e}");
     }
 }
 

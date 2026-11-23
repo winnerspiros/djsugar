@@ -1,6 +1,6 @@
-//! Shares tempo and beat phase with other apps and devices on the local network, joining Ableton Link sessions (other music software, phones, drum machines). Each app keeps a timeline (tempo and
+//! Shares tempo and beat phase with other apps and devices on the local network, joining Link sessions (other music software, phones, drum machines). Each app keeps a timeline (tempo and
 //! where beats fall in time). Peers find each other by multicast, measure each other's clocks, and settle on one session whose timeline they all follow; a change any of them commits reaches the
-//! rest. [`AblLink`] is shared between threads. The audio thread captures and commits a [`SessionState`] without blocking or allocating; enabling opens the sockets and starts a network thread.
+//! rest. [`LinkSession`] is shared between threads. The audio thread captures and commits a [`SessionState`] without blocking or allocating; enabling opens the sockets and starts a network thread.
 
 mod net;
 pub mod timeline;
@@ -89,13 +89,13 @@ pub(crate) struct Shared {
 }
 
 /// A Link instance: one per app.
-pub struct AblLink {
+pub struct LinkSession {
     shared: Arc<Shared>,
     net: Mutex<Option<net::Running>>,
     enabled: AtomicBool,
 }
 
-impl AblLink {
+impl LinkSession {
     /// A Link instance, off, with its timeline at `bpm`.
     pub fn new(bpm: f64) -> Self {
         let t = Timeline { bpm: bpm.clamp(MIN_BPM, MAX_BPM), beat_origin: 0.0, time_origin: now_micros() as f64 };
@@ -166,7 +166,7 @@ impl AblLink {
     }
 }
 
-impl Drop for AblLink {
+impl Drop for LinkSession {
     fn drop(&mut self) {
         let net = self.net.get_mut().unwrap_or_else(|e| e.into_inner());
         if let Some(r) = net.take() {
@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn commit_reaches_capture() {
-        let link = AblLink::new(120.0);
+        let link = LinkSession::new(120.0);
         let mut s = SessionState::new();
         link.capture_app_session_state(&mut s);
         s.set_tempo(128.0, link.clock_micros());

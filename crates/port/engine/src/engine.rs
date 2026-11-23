@@ -2357,7 +2357,7 @@ impl Engine {
 
     /// The Link instance, to turn on and off off the audio thread (see
     /// [`crate::link::watch`]).
-    pub(crate) fn link_handle(&self) -> Arc<djsugar_link::AblLink> {
+    pub(crate) fn link_handle(&self) -> Arc<djsugar_link::LinkSession> {
         self.link.handle()
     }
 
@@ -4099,7 +4099,7 @@ mod tests {
     }
 
     #[test]
-    fn ableton_link_follows_the_master_deck() {
+    fn link_follows_the_master_deck() {
         let (reg, mut engine, mut input) = setup();
         let link = engine.link_handle();
         link.enable(true);

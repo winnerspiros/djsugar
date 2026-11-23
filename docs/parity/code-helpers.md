@@ -221,7 +221,7 @@
 | Feature | DJ Sugar Mixxx | OpenFadeR | OpenDJ | `djsugar-next` | Best Basis |
 |---------|----------------|-----------|--------|----------------|------------|
 | OSC (Open Sound Control) | `OscManager` | — | `crates/osc/src/lib.rs` — every control by address, feedback, subscribe | MISSING | **OpenDJ** — complete: `/channel1/play`, feedback rate 30 Hz |
-| Ableton Link | `LinkManager` (abletonlink) | — | `crates/link/src/lib.rs` — `AblLink` + `Timeline` + multicast | MISSING | **OpenDJ** — lock-free timeline, audio-thread capture/commit |
+| Ableton Link | `LinkManager` (abletonlink) | — | `crates/link/src/lib.rs` — `LinkSession` + `Timeline` + multicast | MISSING | **OpenDJ** — lock-free timeline, audio-thread capture/commit |
 | Phone remote (web UI) | `Remote` (web server + WebSocket) | — | `crates/remote/src/lib.rs` — QR pairing, WebSocket JSON API | MISSING | **OpenDJ** — `Server` + `pairing` + `page.html` |
 | MIDI Clock output | `MidiClockSender` | — | `crates/engine/src/midi_clock.rs` — `MidiClock` from engine tempo | MISSING | **OpenDJ** |
 | MIDI Clock input (sync to external) | `MidiClockReceiver` | — | MISSING | MISSING | **DJ Sugar** |

@@ -1,6 +1,6 @@
 [package]
 name = "djsugar-link"
-description = "Tempo and beat sharing over the network, compatible with Ableton Link sessions"
+description = "Tempo and beat sharing over the network, compatible with Link sessions"
 version.workspace = true
 edition = "2021"
 license.workspace = true

@@ -423,7 +423,7 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AblLink, SessionState};
+    use crate::{LinkSession, SessionState};
 
     fn wait_for(mut what: impl FnMut() -> bool) -> bool {
         let end = Instant::now() + Duration::from_secs(5);
@@ -458,8 +458,8 @@ mod tests {
     #[test]
     #[ignore = "needs multicast networking"]
     fn two_instances_share_a_session() {
-        let a = AblLink::new(120.0);
-        let b = AblLink::new(100.0);
+        let a = LinkSession::new(120.0);
+        let b = LinkSession::new(100.0);
         a.enable(true);
         b.enable(true);
         assert!(wait_for(|| a.num_peers() == 1 && b.num_peers() == 1));

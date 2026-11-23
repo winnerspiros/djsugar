@@ -5,6 +5,18 @@ togglable = "togglable"
 ACN = "ACN"
 Pn = "Pn"
 Maschine = "Maschine"
+# Format, tensor and math names in the engine and the stem models.
+trak = "trak"
+caf = "caf"
+henc = "henc"
+arange = "arange"
+numer = "numer"
+ths = "ths"
+iy = "iy"
+fo = "fo"
+skool = "skool"
+# A field name fixed by the plugin standard.
+continous = "continous"
 
 [files]
 extend-exclude = ["res/samples", "*.lock"]

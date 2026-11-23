@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use djsugar_control::ControlHandle;
-use djsugar_link::AblLink;
+use djsugar_link::LinkSession;
 
 use crate::midi_clock::{BeatClock, Snapshot, PPQN};
 
@@ -179,7 +179,7 @@ fn per_pulse<'a>(pulses: impl Iterator<Item = &'a (i64, f64)> + Clone) -> Option
 pub(crate) fn open(
     port: &str,
     feed: Arc<ClockIn>,
-    link: Arc<AblLink>,
+    link: Arc<LinkSession>,
     bpm: ControlHandle,
     running: ControlHandle,
 ) -> Option<midir::MidiInputConnection<()>> {
