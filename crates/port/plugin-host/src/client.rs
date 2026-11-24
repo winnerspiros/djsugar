@@ -230,13 +230,20 @@ fn scan_with(helper: &Path, args: &[std::ffi::OsString], timeout: Duration) -> R
 /// Runs a throwaway helper with `args` and gives the lines it wrote before
 /// `done`, killing it after `timeout`.
 fn lines(helper: &Path, args: &[std::ffi::OsString], timeout: Duration) -> Result<Vec<String>, ScanError> {
-    let mut child = Command::new(helper)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| ScanError::Failed(e.to_string()))?;
+    let start =
+        || Command::new(helper).args(args).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn();
+    // A helper just written can't start while another thread's fork still holds it
+    // open for writing ("text file busy"); that clears within milliseconds.
+    let mut tries = 0;
+    let mut child = loop {
+        match start() {
+            Err(e) if e.raw_os_error() == Some(26) && tries < 20 => {
+                tries += 1;
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            r => break r.map_err(|e| ScanError::Failed(e.to_string()))?,
+        }
+    };
     let stdout = child.stdout.take().expect("piped stdout");
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
