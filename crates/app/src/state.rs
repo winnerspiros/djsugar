@@ -117,6 +117,8 @@ pub enum Target {
     WaveZoom(i8),
     /// Makes the large waveforms taller (1) or shorter (-1); 0 resets.
     WaveHeight(i8),
+    /// A streaming service in the library's rail: its page in the hub.
+    StreamFrom(crate::hub::Service),
     Gain(usize),
 }
 
@@ -168,6 +170,8 @@ pub enum Shelf {
     Tracks,
     History,
     Playlist(usize),
+    /// The tracks in one folder, by its place in `State::folders`.
+    Folder(usize),
 }
 
 pub fn entry_key(e: &Entry) -> String {
@@ -1089,11 +1093,27 @@ impl State {
                     .map(|i| i as u32)
                     .collect()
             }
+            Shelf::Folder(f) => {
+                let name = self.folders().get(f).map(|n| n.to_string()).unwrap_or_default();
+                (s..n).filter(|&i| *self.entries[i as usize].folder == *name).collect()
+            }
         };
         self.shown = order.into_iter().filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
         if !matches!(self.shelf, Shelf::History | Shelf::Playlist(_)) || self.sort.0 != library::Column::Index {
             self.resort();
         }
+    }
+
+    /// The library's folders, sorted, each once.
+    pub fn folders(&self) -> Vec<&str> {
+        let mut v: Vec<&str> = self.entries[SAMPLES.len().min(self.entries.len())..]
+            .iter()
+            .map(|e| &*e.folder)
+            .filter(|f| !f.is_empty())
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        v
     }
 
     pub fn typing(&self) -> bool {
@@ -1879,6 +1899,10 @@ impl State {
             Target::SearchFocus => {}
             Target::HubFocus => {}
             Target::HubService(sv) => self.hub.switch(sv),
+            Target::StreamFrom(sv) => {
+                self.hub.switch(sv);
+                self.view = View::Stream;
+            }
             Target::HubSearch => {
                 self.hub.focus = false;
                 self.hub.search();
@@ -1886,6 +1910,9 @@ impl State {
             Target::HubList => {}
             Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
             Target::Shelf(sh) => {
+                if self.view == View::Stream {
+                    self.view = View::Lib;
+                }
                 self.shelf = sh;
                 self.selected = None;
                 let q = std::mem::take(&mut self.query);

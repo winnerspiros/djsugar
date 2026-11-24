@@ -42,6 +42,14 @@ impl Service {
         }
     }
 
+    /// The name on its own, as a list shows it.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Archive => "Internet Archive",
+            _ => self.title(),
+        }
+    }
+
     /// The tab's underline.
     pub const fn colour(self) -> u32 {
         match self {

@@ -475,50 +475,76 @@ fn mmss(secs: f32) -> String {
     format!("{}:{:02}", t / 60, t % 60)
 }
 
-/// Library sources: tracks, samples, history and the playlists.
+/// The library's rail: the collection, playlists, streaming services and folders, each under its heading.
 fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::state::Shelf;
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     p.rect(r.x + r.w - 1.0, r.y, 1.0, r.h, 0.0, EDGE);
-    let mut items: Vec<(String, Shelf)> =
-        vec![("Tracks".into(), Shelf::Tracks), (format!("History  {}", s.history.len()), Shelf::History)];
-    for (n, (name, keys)) in s.playlists.iter().enumerate() {
-        items.push((format!("{name}  {}", keys.len()), Shelf::Playlist(n)));
-    }
-    let rh = 28.0;
-    let mut y = r.y + 6.0;
-    p.text(r.x + 12.0, y + 12.0, SMALL, "LIBRARY");
-    y += 18.0;
-    for (n, (label, sh)) in items.iter().enumerate() {
-        if n == 2 {
-            p.text(r.x + 12.0, y + 14.0, SMALL, "PLAYLISTS");
-            y += 20.0;
+    let rh = 26.0;
+    let bottom = r.y + r.h;
+    let mut y = r.y + 4.0;
+    let row = |p: &mut Painter, s: &mut State, y: &mut f32, label: &str, t: Target, on: bool, tint: Option<u32>| {
+        if *y + rh > bottom {
+            return;
         }
-        if y + rh > r.y + r.h - rh {
-            break;
+        let b = Rect::new(r.x + 6.0, *y, r.w - 12.0, rh - 2.0);
+        if on || s.pressed(t) {
+            p.rect(b.x, b.y, b.w, b.h, 5.0, fade(ACCENT, if on { 0x30 } else { 0x18 }));
         }
-        let on = s.shelf == *sh;
-        let b = Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0);
         if on {
-            p.rect(b.x, b.y, b.w, b.h, 5.0, fade(ACCENT, 0x30));
             p.rect(b.x, b.y + 4.0, 3.0, b.h - 8.0, 1.5, ACCENT);
         }
+        let mut tx = b.x + 10.0;
+        if let Some(c) = tint {
+            p.rect(tx, b.y + b.h * 0.5 - 4.0, 8.0, 8.0, 4.0, c);
+            tx += 14.0;
+        }
         p.text_in(
-            b.x + 10.0,
+            tx,
             b.y + b.h * 0.5 + 4.0,
-            b.w - 14.0,
+            b.x + b.w - tx - 4.0,
             Style { colour: if on { TEXT } else { GREY }, ..ARTIST },
             label,
         );
-        hit(s, b, Target::Shelf(*sh));
-        y += rh;
+        hit(s, b, t);
+        *y += rh;
+    };
+    let head = |p: &mut Painter, y: &mut f32, name: &str| {
+        if *y + 18.0 + rh <= bottom {
+            p.text(r.x + 12.0, *y + 14.0, SMALL, name);
+            *y += 20.0;
+        }
+    };
+    let lib = s.view != View::Stream;
+    head(p, &mut y, "COLLECTION");
+    let all = format!("All Tracks  {}", s.entries.len().saturating_sub(crate::state::SAMPLES.len()));
+    row(p, s, &mut y, &all, Target::Shelf(Shelf::Tracks), lib && s.shelf == Shelf::Tracks, None);
+    let hist = format!("History  {}", s.history.len());
+    row(p, s, &mut y, &hist, Target::Shelf(Shelf::History), lib && s.shelf == Shelf::History, None);
+    head(p, &mut y, "PLAYLISTS");
+    let lists: Vec<String> = s.playlists.iter().map(|(n, k)| format!("{n}  {}", k.len())).collect();
+    for (n, label) in lists.iter().enumerate() {
+        let sh = Shelf::Playlist(n);
+        row(p, s, &mut y, label, Target::Shelf(sh), lib && s.shelf == sh, None);
     }
-    if items.len() == 2 {
-        p.text(r.x + 12.0, y + 14.0, SMALL, "PLAYLISTS");
-        y += 20.0;
+    if y + rh <= bottom {
+        let b = Rect::new(r.x + 6.0, y + 2.0, r.w - 12.0, rh - 4.0);
+        button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
+        y += rh + 2.0;
     }
-    let b = Rect::new(r.x + 6.0, (y + 4.0).min(r.y + r.h - rh), r.w - 12.0, rh - 4.0);
-    button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
+    head(p, &mut y, "STREAMING");
+    for sv in crate::hub::Service::ALL {
+        let on = !lib && s.hub.service == sv;
+        row(p, s, &mut y, sv.label(), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
+    }
+    let folders: Vec<String> = s.folders().into_iter().map(str::to_string).collect();
+    if !folders.is_empty() {
+        head(p, &mut y, "FOLDERS");
+    }
+    for (n, f) in folders.iter().enumerate() {
+        let sh = Shelf::Folder(n);
+        row(p, s, &mut y, f, Target::Shelf(sh), lib && s.shelf == sh, None);
+    }
 }
 
 /// The latest message, over every page near the bottom, fading out.
