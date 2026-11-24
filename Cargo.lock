@@ -2976,10 +2976,13 @@ dependencies = [
 name = "djsugar"
 version = "0.1.0"
 dependencies = [
+ "android-activity",
  "djsugar-control",
  "djsugar-engine",
  "jni 0.22.4",
+ "ndk",
  "png",
+ "raw-window-handle",
  "sugar-analysis",
  "sugar-decode",
  "sugar-engine",

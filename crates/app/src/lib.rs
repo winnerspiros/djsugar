@@ -14,7 +14,7 @@ mod theme;
 use sugar_ui::{Fonts, Painter};
 
 use state::State;
-pub use state::{Key, Reader};
+pub use state::{Key, Mods, Reader};
 
 static FONT: &[u8] = include_bytes!("../../../res/fonts/Inter.ttf");
 
@@ -74,8 +74,27 @@ impl Ui {
         }
     }
 
-    pub fn key(&mut self, key: Key) {
-        self.state.key(key);
+    pub fn key(&mut self, key: Key, mods: Mods) {
+        self.state.key(key, mods);
+    }
+
+    pub fn key_up(&mut self, key: Key) {
+        self.state.key_up(key);
+    }
+
+    /// A right click at a point, in pixels.
+    pub fn context(&mut self, x: f32, y: f32) {
+        self.state.context(x / self.scale, y / self.scale);
+    }
+
+    /// Closes the topmost menu or sheet, as Back does; false when none was open.
+    pub fn back(&mut self) -> bool {
+        self.state.dismiss()
+    }
+
+    /// Ctrl+Q was pressed.
+    pub fn quit(&self) -> bool {
+        self.state.quit
     }
 
     pub fn typing(&self) -> bool {
@@ -146,18 +165,18 @@ pub fn fail(e: &dyn std::fmt::Display) -> ! {
     std::process::exit(1);
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
 pub mod native {
     use std::sync::Arc;
 
     use sugar_ui::Renderer;
     use winit::application::ApplicationHandler;
-    use winit::event::{ElementState, Ime, MouseScrollDelta, TouchPhase, WindowEvent};
+    use winit::event::{ElementState, Ime, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent};
     use winit::event_loop::{ActiveEventLoop, EventLoop};
     use winit::keyboard::{Key as WKey, NamedKey};
     use winit::window::{Window, WindowId};
 
-    use crate::{Key, Reader, Ui, fail};
+    use crate::{Key, Mods, Reader, Ui, fail};
 
     const MOUSE: u64 = u64::MAX;
 
@@ -170,7 +189,7 @@ pub mod native {
         ui: Ui,
         gpu: Option<Gpu>,
         cursor: (f32, f32),
-        shift: bool,
+        mods: Mods,
         started: bool,
         ime: bool,
         drawn: bool,
@@ -258,11 +277,16 @@ pub mod native {
                     self.ui.pointer_move(MOUSE, self.cursor.0, self.cursor.1);
                     self.redraw();
                 }
-                WindowEvent::MouseInput { state, .. } => {
+                WindowEvent::MouseInput { state, button, .. } => {
                     let (x, y) = self.cursor;
-                    match state {
-                        ElementState::Pressed => self.ui.pointer_down(MOUSE, x, y),
-                        ElementState::Released => self.ui.pointer_up(MOUSE, y),
+                    match (button, state) {
+                        (MouseButton::Left, ElementState::Pressed) => self.ui.pointer_down(MOUSE, x, y),
+                        (MouseButton::Left, ElementState::Released) => self.ui.pointer_up(MOUSE, y),
+                        (MouseButton::Right, ElementState::Pressed) => self.ui.context(x, y),
+                        (MouseButton::Back, ElementState::Pressed) => {
+                            self.ui.back();
+                        }
+                        _ => {}
                     }
                     self.redraw();
                 }
@@ -274,31 +298,36 @@ pub mod native {
                     self.ui.text(&t);
                     self.redraw();
                 }
-                WindowEvent::ModifiersChanged(m) => self.shift = m.state().shift_key(),
+                WindowEvent::ModifiersChanged(m) => {
+                    let m = m.state();
+                    self.mods = Mods { shift: m.shift_key(), ctrl: m.control_key() || m.super_key(), alt: m.alt_key() };
+                }
                 WindowEvent::MouseWheel { delta, .. } => {
                     let dy = match delta {
-                        MouseScrollDelta::LineDelta(_, y) => y * 44.0,
-                        MouseScrollDelta::PixelDelta(p) => p.y as f32,
+                        MouseScrollDelta::LineDelta(x, y) => (if y == 0.0 { x } else { y }) * 44.0,
+                        MouseScrollDelta::PixelDelta(p) => (if p.y == 0.0 { p.x } else { p.y }) as f32,
                     };
                     self.ui.wheel(self.cursor.0, self.cursor.1, dy);
                     self.redraw();
                 }
-                WindowEvent::KeyboardInput { event, .. } if event.state == ElementState::Pressed => {
-                    match &event.logical_key {
-                        WKey::Named(NamedKey::Backspace) => self.ui.key(Key::Backspace),
-                        WKey::Named(NamedKey::Escape) => self.ui.key(Key::Escape),
-                        WKey::Named(NamedKey::Enter) => self.ui.key(Key::Enter),
-                        WKey::Named(NamedKey::F1) => self.ui.key(Key::Play(0)),
-                        WKey::Named(NamedKey::F2) => self.ui.key(Key::Play(1)),
-                        _ => {
+                WindowEvent::KeyboardInput { event, .. } => {
+                    let Some(key) = key_of(&event.logical_key) else { return };
+                    if event.state == ElementState::Released {
+                        self.ui.key_up(key);
+                        return;
+                    }
+                    match key {
+                        Key::Char(_) if self.ui.typing() && !self.mods.ctrl => {
                             if let Some(t) = &event.text {
-                                if self.ui.typing() {
-                                    self.ui.text(t);
-                                } else if let Some(c) = t.chars().next() {
-                                    self.ui.key(Key::Char(c, self.shift));
-                                }
+                                self.ui.text(t);
                             }
                         }
+                        // Held keys repeat only where repeating means something.
+                        Key::F(_) | Key::Char(_) if event.repeat => {}
+                        key => self.ui.key(key, self.mods),
+                    }
+                    if self.ui.quit() {
+                        event_loop.exit();
                     }
                     self.redraw();
                 }
@@ -316,12 +345,49 @@ pub mod native {
         }
     }
 
+    /// A key as the app names it; None for modifiers and keys it has no use for.
+    fn key_of(k: &WKey) -> Option<Key> {
+        Some(match k {
+            WKey::Named(n) => match n {
+                NamedKey::Backspace => Key::Backspace,
+                NamedKey::Delete => Key::Delete,
+                NamedKey::Escape | NamedKey::BrowserBack | NamedKey::GoBack => Key::Escape,
+                NamedKey::Enter => Key::Enter,
+                NamedKey::Tab => Key::Tab,
+                NamedKey::Space => Key::Space,
+                NamedKey::ArrowUp => Key::Up,
+                NamedKey::ArrowDown => Key::Down,
+                NamedKey::ArrowLeft => Key::Left,
+                NamedKey::ArrowRight => Key::Right,
+                NamedKey::PageUp => Key::PageUp,
+                NamedKey::PageDown => Key::PageDown,
+                NamedKey::Home => Key::Home,
+                NamedKey::End => Key::End,
+                NamedKey::F1 => Key::F(1),
+                NamedKey::F2 => Key::F(2),
+                NamedKey::F3 => Key::F(3),
+                NamedKey::F4 => Key::F(4),
+                NamedKey::F5 => Key::F(5),
+                NamedKey::F6 => Key::F(6),
+                NamedKey::F7 => Key::F(7),
+                NamedKey::F8 => Key::F(8),
+                NamedKey::F9 => Key::F(9),
+                NamedKey::F10 => Key::F(10),
+                NamedKey::F11 => Key::F(11),
+                NamedKey::F12 => Key::F(12),
+                _ => return None,
+            },
+            WKey::Character(s) => Key::Char(s.chars().next()?),
+            _ => return None,
+        })
+    }
+
     pub fn run(event_loop: EventLoop<()>, read: Reader) {
         let mut app = Native {
             ui: Ui::new(read),
             gpu: None,
             cursor: (0.0, 0.0),
-            shift: false,
+            mods: Mods::default(),
             started: false,
             ime: false,
             drawn: false,
@@ -334,12 +400,14 @@ pub mod native {
 mod potoken;
 
 #[cfg(target_os = "android")]
+mod droid;
+
+#[cfg(target_os = "android")]
 pub(crate) mod android {
     use std::io::Read;
     use std::sync::OnceLock;
 
-    use winit::platform::android::EventLoopBuilderExtAndroid;
-    use winit::platform::android::activity::AndroidApp;
+    use android_activity::AndroidApp;
 
     static APP: OnceLock<AndroidApp> = OnceLock::new();
 
@@ -387,6 +455,19 @@ pub(crate) mod android {
         })
     }
 
+    /// Closes the activity, as Ctrl+Q asks.
+    #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
+    pub(crate) fn finish(app: &AndroidApp) {
+        use jni::objects::JObject;
+        use jni::{jni_sig, jni_str};
+        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
+        let _ = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+            let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
+            env.call_method(&activity, jni_str!("finish"), jni_sig!("()V"), &[])?;
+            Ok(())
+        });
+    }
+
     /// CI sets this property to a video ID to prove the token mint works on a
     /// real device; it starts after the first frame so its web view can't hold
     /// up the window.
@@ -424,9 +505,7 @@ pub(crate) mod android {
         let _ = request_audio(&app);
         sugar_net::youtube::set_po_token_source(crate::potoken::mint);
         crate::stage("permissions");
-        let event_loop =
-            winit::event_loop::EventLoop::builder().with_android_app(app).build().unwrap_or_else(|e| crate::fail(&e));
-        crate::native::run(event_loop, read);
+        crate::droid::run(app, read);
     }
 }
 

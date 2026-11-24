@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use djsugar::{Key, Ui, read_dir_sample};
+use djsugar::{Key, Mods, Ui, read_dir_sample};
 use sugar_ui::Renderer;
 
 /// Physical pixels and the scale the app draws at there: phones use 0.45 of
@@ -138,7 +138,7 @@ fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String
     ui.render(r);
     ui.tap("HubFocus");
     ui.text("punkx");
-    ui.key(Key::Backspace);
+    ui.key(Key::Backspace, Mods::default());
     ui.render(r);
     if !ui.typing() {
         faults.push(format!("{name}: focus lost after a release"));
@@ -187,7 +187,7 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
 
 /// The app menu with its View submenu, then the Decks settings page with a menu open.
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
-    ui.key(Key::Escape);
+    ui.key(Key::Escape, Mods::default());
     ui.render(r);
     let steps: [(&str, &str); 4] =
         [("AppMenu", ""), ("Submenu(1)", "appmenu"), ("Prefs(0)", ""), ("Pref(RateRange)", "settings")];

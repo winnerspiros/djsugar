@@ -258,6 +258,8 @@ pub struct DeckUi {
     pub rate: f32,
     pub volume: f32,
     pub knobs: [f32; 4],
+    /// High, mid and low kills.
+    pub kills: [bool; 3],
     pub key_lock: bool,
     pub cue: f64,
     pub mode: Mode,
@@ -306,14 +308,63 @@ impl DeckUi {
     }
 }
 
+/// A key, by what it does rather than where it sits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
     Backspace,
+    Delete,
     Escape,
     Enter,
-    Play(usize),
-    Char(char, bool),
+    Tab,
+    Space,
+    Up,
+    Down,
+    Left,
+    Right,
+    PageUp,
+    PageDown,
+    Home,
+    End,
+    /// F1 to F12.
+    F(u8),
+    /// A typed character, after the layout and Shift.
+    Char(char),
 }
+
+/// The modifier keys held with a key.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Mods {
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+}
+
+/// A shifted symbol back to its key on a US layout, as the keyboard map names keys.
+pub fn unshift(c: char) -> char {
+    match c {
+        '!' => '1',
+        '@' => '2',
+        '#' => '3',
+        '$' => '4',
+        '%' => '5',
+        '^' => '6',
+        '&' => '7',
+        '*' => '8',
+        '(' => '9',
+        ')' => '0',
+        ':' => ';',
+        '<' => ',',
+        '>' => '.',
+        '?' => '/',
+        '~' => '`',
+        c => c.to_ascii_lowercase(),
+    }
+}
+
+/// Permanent tempo steps, normal and small, as fractions of the speed.
+const RATE_STEP: [f64; 2] = [0.005, 0.0005];
+/// Held tempo changes, normal and small.
+const NUDGE: [f64; 2] = [0.04, 0.02];
 
 /// Default keyboard map, same keys as the DJ Sugar desktop mapping (en_US).
 pub fn keymap(c: char) -> Option<Target> {
@@ -412,6 +463,8 @@ pub struct State {
     /// The setting whose choices are open, and where.
     pub pref_menu: Option<(crate::settings::Opt, f32, f32)>,
     pub app_menu: bool,
+    /// Ctrl+Q asked the app to close.
+    pub quit: bool,
     /// The held playlist whose menu is open.
     pub list_menu: Option<usize>,
     /// The deck to start once its track has loaded.
@@ -524,6 +577,7 @@ impl State {
             prefs: None,
             pref_menu: None,
             app_menu: false,
+            quit: false,
             list_menu: None,
             play_on_load: None,
             menu_at: (0.0, 0.0),
@@ -595,52 +649,7 @@ impl State {
             self.station.bpm = bpm;
             self.send(Command::Station(Set::Bpm(bpm)));
         }
-        if self.cue_menu.is_none()
-            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && let Some(Target::Pad(d, p)) = g.target
-            && self.decks[d].mode == Mode::Cues
-            && self.decks[d].cues[p].is_some()
-        {
-            self.cue_menu = Some((d, p, g.start.0, g.start.1));
-            self.submenu = None;
-        }
-        if let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && let Some(Target::Sync(d)) = g.target
-        {
-            g.moved = true;
-            let t = self.telemetry.decks[d];
-            let c = if t.sync_lock { Command::SyncLeader(d, t.sync_leader < 2) } else { Command::SyncLock(d, true) };
-            self.send(c);
-        }
-        if self.track_menu.is_none()
-            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && g.target == Some(Target::Library)
-        {
-            g.moved = true;
-            let row = ((g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
-            if row >= 0.0 && g.start.1 > self.library.y + 30.0 {
-                self.track_menu = self.shown.get(row as usize).copied();
-                self.menu_at = g.start;
-                self.submenu = None;
-            }
-        }
-        if self.list_menu.is_none()
-            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && let Some(Target::Shelf(Shelf::Playlist(n))) = g.target
-        {
-            g.moved = true;
-            self.list_menu = Some(n);
-            self.menu_at = g.start;
-        }
-        if self.picker.is_none()
-            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && let Some(Target::Pad(d, p)) = g.target
-            && self.decks[d].mode == Mode::Samples
-        {
-            self.picker = Some((d, p));
-            let at = self.pads[d][self.bank[d] * 8 + p];
-            self.picker_scroll = (at / self.picker_grid.cols.max(1)) as f32 * self.picker_grid.cell.1;
-        }
+        self.holds();
         while let Ok((job, loaded)) = self.jobs.1.try_recv() {
             match (job, loaded) {
                 (Job::Deck(d), Some(l)) => {
@@ -1033,29 +1042,60 @@ impl State {
         self.search(q);
     }
 
-    pub fn key(&mut self, key: Key) {
-        self.key_press(key);
+    pub fn key(&mut self, key: Key, mods: Mods) {
+        self.key_press(key, mods);
         self.remember();
     }
 
-    fn key_press(&mut self, key: Key) {
-        if key == Key::Escape && (self.prefs.is_some() || self.app_menu) {
+    /// A key let go: ends a held temporary tempo change.
+    pub fn key_up(&mut self, key: Key) {
+        if let Key::F(n @ (3 | 4 | 7 | 8)) = key {
+            self.send(Command::Nudge(usize::from(n > 4), 0.0));
+        }
+    }
+
+    /// Closes the topmost menu or sheet; false when nothing was open.
+    pub fn dismiss(&mut self) -> bool {
+        if self.pref_menu.take().is_some() {
+            return true;
+        }
+        if self.prefs.is_some() || self.app_menu {
+            self.prefs = None;
             self.app_menu = false;
-            if self.pref_menu.take().is_none() {
-                self.prefs = None;
-            }
-            return;
+            self.submenu = None;
+            return true;
         }
         let open = self.track_menu.is_some()
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
-            || self.grid_menu.is_some();
-        if key == Key::Escape && open {
-            self.track_menu = None;
-            self.list_menu = None;
-            self.cue_menu = None;
-            self.grid_menu = None;
-            self.submenu = None;
+            || self.grid_menu.is_some()
+            || self.picker.is_some();
+        self.track_menu = None;
+        self.list_menu = None;
+        self.cue_menu = None;
+        self.grid_menu = None;
+        self.picker = None;
+        self.submenu = None;
+        open
+    }
+
+    /// A right click: what holding there would open.
+    pub fn context(&mut self, x: f32, y: f32) {
+        const CONTEXT: u64 = u64::MAX - 1;
+        let target = self.hit(x, y);
+        let now = std::time::Instant::now();
+        let at = now.checked_sub(std::time::Duration::from_millis(LONG_PRESS_MS as u64)).unwrap_or(now);
+        self.drags.push(Drag { id: CONTEXT, target, start: (x, y), last: (x, y), moved: false, resume: false, at });
+        self.holds();
+        self.drags.retain(|d| d.id != CONTEXT);
+    }
+
+    fn key_press(&mut self, key: Key, m: Mods) {
+        if key == Key::Escape && self.dismiss() {
+            return;
+        }
+        if m.ctrl {
+            self.shortcut(key, m);
             return;
         }
         if self.hub_typing() {
@@ -1084,34 +1124,162 @@ impl State {
                 self.search(String::new());
             }
             Key::Enter => {
-                if let Some(&first) = self.shown.first() {
-                    let deck = self.browser.take().unwrap_or(self.focus);
-                    self.load_deck(deck, first as usize);
+                let deck = self.browser.take().unwrap_or(self.focus);
+                self.load_pick(deck);
+            }
+            Key::Up => self.select_by(-1),
+            Key::Down => self.select_by(1),
+            Key::PageUp => self.select_by(-10),
+            Key::PageDown => self.select_by(10),
+            Key::Home => self.select_by(isize::MIN / 2),
+            Key::End => self.select_by(isize::MAX / 2),
+            Key::Left | Key::Right if m.shift => {
+                let d = usize::from(key == Key::Right);
+                if m.alt {
+                    self.press(Target::Eject(d), 0.0, 0.0);
+                } else {
+                    self.load_pick(d);
                 }
             }
-            Key::Play(d) if self.decks[d].loaded.is_some() => {
-                let on = !self.telemetry.decks[d].playing;
-                self.send(Command::Play(d, on));
-                self.telemetry.decks[d].playing = on;
+            Key::Tab => self.next_view(if m.shift { -1 } else { 1 }),
+            Key::Space => {
+                let v = if self.view == View::Lib { View::Dj } else { View::Lib };
+                self.press(Target::View(v), 0.0, 0.0);
             }
-            Key::Play(_) => {}
-            Key::Char(c, shift) => {
-                if let Some(t) = keymap(c) {
-                    let t = match (t, shift) {
-                        (Target::Jump(d, dir), true) => {
-                            self.beat_jump(d, f64::from(dir));
-                            return;
-                        }
-                        (Target::Pad(d, p), true) => {
-                            self.decks[d].cues[p] = None;
-                            return;
-                        }
-                        (t, _) => t,
-                    };
-                    self.pointer_target(t);
-                }
-            }
+            Key::F(n) => self.function_key(n, m),
+            Key::Char(c) => self.deck_key(c, m),
+            Key::Delete | Key::Left | Key::Right => {}
         }
+    }
+
+    /// Ctrl shortcuts, as the desktop menus name them.
+    fn shortcut(&mut self, key: Key, m: Mods) {
+        let Key::Char(c) = key else {
+            if key == Key::Tab {
+                self.next_view(if m.shift { -1 } else { 1 });
+            }
+            return;
+        };
+        match unshift(c) {
+            'f' => {
+                self.press(Target::View(View::Lib), 0.0, 0.0);
+                self.search_focus = true;
+            }
+            'n' => self.press(Target::NewPlaylist, 0.0, 0.0),
+            'r' => self.press(Target::Record, 0.0, 0.0),
+            'o' => self.load_pick(usize::from(m.shift)),
+            ',' => self.press(Target::Prefs(0), 0.0, 0.0),
+            '5' => self.press(Target::ToggleFx, 0.0, 0.0),
+            'q' => self.quit = true,
+            n @ '1'..='6' if m.alt => {
+                const VIEWS: [View; 6] = [View::Dj, View::Wave, View::Lib, View::Fx, View::Stream, View::Ctl];
+                self.press(Target::View(VIEWS[n as usize - '1' as usize]), 0.0, 0.0);
+            }
+            _ => {}
+        }
+    }
+
+    /// The deck keys, each with its Shift action.
+    fn deck_key(&mut self, c: char, m: Mods) {
+        let k = unshift(c);
+        let shift = m.shift || k != c;
+        if let 'b' | 'n' = k {
+            let d = usize::from(k == 'n');
+            self.decks[d].kills[2] = !self.decks[d].kills[2];
+            self.send(Command::Kill(d, self.decks[d].kills));
+            return;
+        }
+        let Some(t) = keymap(k) else { return };
+        if !shift {
+            self.pointer_target(t);
+            return;
+        }
+        match t {
+            Target::Play(d) => {
+                let at = self.telemetry.decks[d].position;
+                self.decks[d].cue = self.decks[d].snap(at);
+            }
+            Target::Cue(d) => {
+                self.send(Command::Play(d, false));
+                self.send(Command::Seek(d, self.decks[d].cue));
+            }
+            Target::Jump(d, dir) => self.beat_jump(d, f64::from(dir)),
+            Target::Pad(d, p) => self.decks[d].cues[p] = None,
+            Target::LoopIn(d) | Target::LoopOut(d) => {
+                if let Some((a, b)) = self.decks[d].loop_range {
+                    self.send(Command::Seek(d, if matches!(t, Target::LoopIn(_)) { a } else { b }));
+                }
+            }
+            Target::LoopToggle(d) if matches!(k, '4' | '9') => {
+                self.pointer_target(t);
+                self.send(Command::Play(d, false));
+            }
+            Target::XfadeStep(by) => {
+                self.crossfader = (self.crossfader + f32::from(by) * 0.02).clamp(-1.0, 1.0);
+                let x = self.crossfader_out();
+                self.send(Command::Crossfader(x));
+            }
+            t => self.pointer_target(t),
+        }
+    }
+
+    /// F1 to F4 change deck 1's tempo, F5 to F8 deck 2's: down and up for good,
+    /// then down and up while held; Shift makes the steps small. Shift+F12
+    /// starts or stops the auto mix.
+    fn function_key(&mut self, n: u8, m: Mods) {
+        if n == 12 && m.shift {
+            self.press(Target::AutoDj, 0.0, 0.0);
+            return;
+        }
+        if !(1..=8).contains(&n) {
+            return;
+        }
+        let (d, i) = (usize::from(n > 4), (n - 1) % 4);
+        let small = usize::from(m.shift);
+        let dir = if i % 2 == 0 { -1.0 } else { 1.0 };
+        if i < 2 {
+            let range = self.settings.rate_range();
+            let r = (f64::from(self.decks[d].rate) + dir * RATE_STEP[small] / range).clamp(-1.0, 1.0);
+            self.decks[d].rate = r as f32;
+            self.send(Command::Rate(d, r * range));
+        } else {
+            self.send(Command::Nudge(d, dir * NUDGE[small]));
+        }
+    }
+
+    /// Moves the library's selection, keeping it in view.
+    fn select_by(&mut self, by: isize) {
+        if self.shown.is_empty() {
+            return;
+        }
+        let now = self.selected.and_then(|i| self.shown.iter().position(|&s| s == i));
+        let at = match now {
+            Some(n) => n.saturating_add_signed(by).min(self.shown.len() - 1),
+            None if by < 0 => self.shown.len() - 1,
+            None => 0,
+        };
+        self.selected = Some(self.shown[at]);
+        let top = at as f32 * self.row_h;
+        let room = (self.library.h - 30.0).max(self.row_h);
+        if top < self.scroll {
+            self.scroll = top;
+        } else if top + self.row_h > self.scroll + room {
+            self.scroll = top + self.row_h - room;
+        }
+    }
+
+    /// Loads the selected track, or the first one shown.
+    fn load_pick(&mut self, deck: usize) {
+        if let Some(i) = self.selected.or_else(|| self.shown.first().copied()) {
+            self.load_deck(deck, i as usize);
+        }
+    }
+
+    fn next_view(&mut self, by: isize) {
+        const ORDER: [View; 6] = [View::Dj, View::Wave, View::Lib, View::Fx, View::Stream, View::Ctl];
+        let at = ORDER.iter().position(|v| *v == self.view).unwrap_or(0);
+        let next = ORDER[(at as isize + by).rem_euclid(ORDER.len() as isize) as usize];
+        self.press(Target::View(next), 0.0, 0.0);
     }
 
     pub fn load_deck(&mut self, deck: usize, index: usize) {
@@ -1124,6 +1292,56 @@ impl State {
         self.history.insert(0, index as u32);
         self.decks[deck].loading = true;
         self.load(Job::Deck(deck), index);
+    }
+
+    /// What a finger held still, or a right click, opens.
+    fn holds(&mut self) {
+        if self.cue_menu.is_none()
+            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Pad(d, p)) = g.target
+            && self.decks[d].mode == Mode::Cues
+            && self.decks[d].cues[p].is_some()
+        {
+            self.cue_menu = Some((d, p, g.start.0, g.start.1));
+            self.submenu = None;
+        }
+        if let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Sync(d)) = g.target
+        {
+            g.moved = true;
+            let t = self.telemetry.decks[d];
+            let c = if t.sync_lock { Command::SyncLeader(d, t.sync_leader < 2) } else { Command::SyncLock(d, true) };
+            self.send(c);
+        }
+        if self.track_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && g.target == Some(Target::Library)
+        {
+            g.moved = true;
+            let row = ((g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
+            if row >= 0.0 && g.start.1 > self.library.y + 30.0 {
+                self.track_menu = self.shown.get(row as usize).copied();
+                self.menu_at = g.start;
+                self.submenu = None;
+            }
+        }
+        if self.list_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Shelf(Shelf::Playlist(n))) = g.target
+        {
+            g.moved = true;
+            self.list_menu = Some(n);
+            self.menu_at = g.start;
+        }
+        if self.picker.is_none()
+            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Pad(d, p)) = g.target
+            && self.decks[d].mode == Mode::Samples
+        {
+            self.picker = Some((d, p));
+            let at = self.pads[d][self.bank[d] * 8 + p];
+            self.picker_scroll = (at / self.picker_grid.cols.max(1)) as f32 * self.picker_grid.cell.1;
+        }
     }
 
     /// What the settings ask of a deck that has just loaded a track.

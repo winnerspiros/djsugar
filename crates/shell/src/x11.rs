@@ -92,10 +92,12 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
                 XEvent::ButtonPress(e) => Some(Event::Button { button: e.detail, pressed: true }),
                 XEvent::ButtonRelease(e) => Some(Event::Button { button: e.detail, pressed: false }),
                 XEvent::KeyPress(e) => {
-                    let shift = u16::from(e.state) & 1 != 0;
-                    Some(Event::Key { sym: keysym(e.detail, shift), pressed: true })
+                    let state = u16::from(e.state);
+                    Some(Event::Key { sym: keysym(e.detail, state & 1 != 0), pressed: true, mods: state })
                 }
-                XEvent::KeyRelease(e) => Some(Event::Key { sym: keysym(e.detail, false), pressed: false }),
+                XEvent::KeyRelease(e) => {
+                    Some(Event::Key { sym: keysym(e.detail, false), pressed: false, mods: u16::from(e.state) })
+                }
                 XEvent::ClientMessage(e) if e.data.as_data32()[0] == delete => Some(Event::Close),
                 _ => None,
             };

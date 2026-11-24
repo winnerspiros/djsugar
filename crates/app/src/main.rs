@@ -1,6 +1,6 @@
 #[cfg(target_os = "linux")]
 mod linux {
-    use djsugar::{Key, Ui, fail, read_dir_sample};
+    use djsugar::{Key, Mods, Ui, fail, read_dir_sample};
     use sugar_shell::{App, Event, Frame, keysym};
     use sugar_ui::Renderer;
 
@@ -35,18 +35,39 @@ mod linux {
                         self.ui.pointer_up(MOUSE, y);
                     }
                 }
-                Event::Key { sym, pressed: true } => match sym {
-                    keysym::BACKSPACE => self.ui.key(Key::Backspace),
-                    keysym::ESCAPE => self.ui.key(Key::Escape),
-                    keysym::RETURN => self.ui.key(Key::Enter),
-                    keysym::F1 => self.ui.key(Key::Play(0)),
-                    keysym::F2 => self.ui.key(Key::Play(1)),
-                    _ => match keysym::char(sym) {
-                        Some(c) if self.ui.typing() => self.ui.text(c.encode_utf8(&mut [0; 4])),
-                        Some(c) => self.ui.key(Key::Char(c, c.is_uppercase())),
-                        None => return false,
-                    },
-                },
+                Event::Key { sym, pressed, mods } => {
+                    let key = match sym {
+                        keysym::BACKSPACE => Key::Backspace,
+                        keysym::TAB => Key::Tab,
+                        keysym::RETURN => Key::Enter,
+                        keysym::ESCAPE => Key::Escape,
+                        keysym::HOME => Key::Home,
+                        keysym::LEFT => Key::Left,
+                        keysym::UP => Key::Up,
+                        keysym::RIGHT => Key::Right,
+                        keysym::DOWN => Key::Down,
+                        keysym::PAGE_UP => Key::PageUp,
+                        keysym::PAGE_DOWN => Key::PageDown,
+                        keysym::END => Key::End,
+                        keysym::DELETE => Key::Delete,
+                        f if (keysym::F1..keysym::F1 + 12).contains(&f) => Key::F((f - keysym::F1) as u8 + 1),
+                        _ => match keysym::char(sym) {
+                            Some(' ') => Key::Space,
+                            Some(c) => Key::Char(c),
+                            None => return false,
+                        },
+                    };
+                    let mods = Mods { shift: mods & 1 != 0, ctrl: mods & 4 != 0, alt: mods & 8 != 0 };
+                    match key {
+                        _ if !pressed => self.ui.key_up(key),
+                        Key::Char(c) if self.ui.typing() && !mods.ctrl => self.ui.text(c.encode_utf8(&mut [0; 4])),
+                        key => self.ui.key(key, mods),
+                    }
+                }
+                Event::Button { button: 3, pressed: true } => self.ui.context(self.cursor.0, self.cursor.1),
+                Event::Button { button: 8, pressed: true } => {
+                    self.ui.back();
+                }
                 _ => return false,
             }
             true

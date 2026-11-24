@@ -3,11 +3,26 @@ mod x11;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Event {
-    Resize { width: u32, height: u32, scale: f32 },
+    Resize {
+        width: u32,
+        height: u32,
+        scale: f32,
+    },
     Redraw,
-    Pointer { x: f32, y: f32 },
-    Button { button: u8, pressed: bool },
-    Key { sym: u32, pressed: bool },
+    Pointer {
+        x: f32,
+        y: f32,
+    },
+    Button {
+        button: u8,
+        pressed: bool,
+    },
+    /// A key; `mods` is the X modifier mask: 1 Shift, 4 Control, 8 Alt.
+    Key {
+        sym: u32,
+        pressed: bool,
+        mods: u16,
+    },
     Close,
 }
 
@@ -50,10 +65,20 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
 
 pub mod keysym {
     pub const BACKSPACE: u32 = 0xff08;
+    pub const TAB: u32 = 0xff09;
     pub const RETURN: u32 = 0xff0d;
     pub const ESCAPE: u32 = 0xff1b;
+    pub const HOME: u32 = 0xff50;
+    pub const LEFT: u32 = 0xff51;
+    pub const UP: u32 = 0xff52;
+    pub const RIGHT: u32 = 0xff53;
+    pub const DOWN: u32 = 0xff54;
+    pub const PAGE_UP: u32 = 0xff55;
+    pub const PAGE_DOWN: u32 = 0xff56;
+    pub const END: u32 = 0xff57;
+    pub const DELETE: u32 = 0xffff;
+    /// F1; F2 to F12 follow it.
     pub const F1: u32 = 0xffbe;
-    pub const F2: u32 = 0xffbf;
 
     pub fn char(sym: u32) -> Option<char> {
         match sym {
