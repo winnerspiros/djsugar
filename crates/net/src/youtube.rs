@@ -50,7 +50,20 @@ const PLAYSTATION: Client = client(
 );
 
 /// Who to ask for audio, in order.
-pub const PLAYER_CLIENTS: [Client; 6] = [
+pub const PLAYER_CLIENTS: [Client; 7] = [
+    // Needs no player script: its links carry no signature to solve.
+    Client {
+        make: "Apple",
+        model: "RealityDevice17,1",
+        os: "visionOS",
+        os_version: "26.5.23O471",
+        ..client(
+            "VISIONOS",
+            "1.02",
+            "101",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+        )
+    },
     client(
         "TVHTML5",
         "7.20260707.07.00",
@@ -293,6 +306,7 @@ impl YouTube {
             return Err(Error::Refused("Not a YouTube video".into()));
         }
         let mut last = Error::Refused("All InnerTube clients failed".into());
+        let mut refused = 0;
         if !self.resting() {
             for c in &PLAYER_CLIENTS {
                 let mut body = json!({
@@ -311,15 +325,20 @@ impl YouTube {
                         continue;
                     }
                 };
+                // A bot check gates that client only; the next may still answer.
                 if let Some(why) = bot_check(status, &v, &raw) {
-                    self.flag();
+                    refused += 1;
                     last = Error::Refused(why);
-                    break;
+                    continue;
                 }
                 match player_formats(&v).and_then(|f| take(f, c.agent)) {
                     Ok(t) => return Ok(t),
                     Err(e) => last = e,
                 }
+            }
+            // Every client refused: back off before asking again.
+            if refused == PLAYER_CLIENTS.len() {
+                self.flag();
             }
         }
         for host in PIPED {
@@ -626,7 +645,8 @@ mod tests {
         assert_eq!(yt.lock().rest, REST_FIRST * 2);
         assert_eq!(yt.context(&VR)["client"]["gl"], "GR");
         assert_eq!(yt.context(&VR)["client"]["visitorData"], "vd");
-        assert_eq!(yt.context(&PLAYER_CLIENTS[0])["client"].get("deviceMake"), None);
+        assert_eq!(yt.context(&PLAYER_CLIENTS[1])["client"].get("deviceMake"), None);
+        assert_eq!(yt.context(&PLAYER_CLIENTS[0])["client"]["osName"], "visionOS");
         assert!(!valid_id("abc") && valid_id("dQw4w9WgXcQ"));
     }
 }
