@@ -113,6 +113,10 @@ pub enum Target {
     LoadSelected(usize),
     GridOp(GridOp),
     GridClose,
+    /// Zooms the large waveforms in (1) or out (-1); 0 resets.
+    WaveZoom(i8),
+    /// Makes the large waveforms taller (1) or shorter (-1); 0 resets.
+    WaveHeight(i8),
     Gain(usize),
 }
 
@@ -482,6 +486,10 @@ pub struct State {
     pub view_at: Option<std::time::Instant>,
     pub show_fx: bool,
     pub show_samplers: bool,
+    /// The large waveforms' zoom, each step twice as close; 0 is the default.
+    pub wave_zoom: i8,
+    /// The large waveforms' height, each step a fifth taller; 0 is the default.
+    pub wave_height: i8,
     pub search_focus: bool,
     pub hub: crate::hub::Hub,
     pub hub_area: Rect,
@@ -603,6 +611,8 @@ impl State {
             view_at: None,
             show_fx: false,
             show_samplers: false,
+            wave_zoom: 0,
+            wave_height: 0,
             search_focus: false,
             hub_area: Rect::default(),
             hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
@@ -1245,6 +1255,9 @@ impl State {
             'r' => self.press(Target::Record, 0.0, 0.0),
             'o' => self.load_pick(usize::from(m.shift)),
             ',' => self.press(Target::Prefs(0), 0.0, 0.0),
+            '=' | '+' => self.press(Target::WaveZoom(1), 0.0, 0.0),
+            '-' => self.press(Target::WaveZoom(-1), 0.0, 0.0),
+            '0' => self.press(Target::WaveZoom(0), 0.0, 0.0),
             '5' => self.press(Target::ToggleFx, 0.0, 0.0),
             'q' => self.quit = true,
             n @ '1'..='6' if m.alt => {
@@ -2018,6 +2031,8 @@ impl State {
             }
             Target::ToggleFx => self.show_fx = !self.show_fx,
             Target::ToggleSamplers => self.show_samplers = !self.show_samplers,
+            Target::WaveZoom(z) => self.wave_zoom = if z == 0 { 0 } else { (self.wave_zoom + z).clamp(-3, 3) },
+            Target::WaveHeight(z) => self.wave_height = if z == 0 { 0 } else { (self.wave_height + z).clamp(-3, 3) },
             Target::Sampler(i) => self.sample(i),
             Target::Reverse(d) => {
                 let on = !self.decks[d].reverse;

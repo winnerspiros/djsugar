@@ -75,7 +75,8 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     match s.view {
         View::Dj => {
             // The Classic phone layout: waveforms, decks around the mixer, the library below.
-            let wh = (rest * 0.22).round().clamp(56.0, 96.0);
+            let tall_by = 1.0 + 0.2 * f32::from(s.wave_height);
+            let wh = (rest * 0.22 * tall_by).round().clamp(40.0, (96.0 * tall_by).max(56.0)).min(rest * 0.5);
             waveforms(p, s, Rect::new(0.0, y, w, wh));
             let y = y + wh + 4.0;
             let lower = h - y;
@@ -321,7 +322,8 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let pos = s.telemetry.decks[d].position;
     let mid = r.y + r.h * 0.5;
     let speed = 1.0 + deck.rate * s.settings.rate_range() as f32;
-    let per_px = DETAIL_FRAMES as f64 * 0.5 * f64::from(speed);
+    let step = speed * 2f32.powi(-i32::from(s.wave_zoom));
+    let per_px = DETAIL_FRAMES as f64 * 0.5 * f64::from(step);
     let left = pos - per_px * f64::from(r.w) * 0.5;
     if let Some(l) = &deck.loaded {
         if let Some((a, b)) = deck.loop_range {
@@ -350,7 +352,7 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let centre = pos / DETAIL_FRAMES as f64;
         let half = r.h * 0.47;
         for c in 0..cols {
-            let i = centre + f64::from((c as f32 - cols as f32 * 0.5) * speed);
+            let i = centre + f64::from((c as f32 - cols as f32 * 0.5) * step);
             let Some(&[v, lo, md, hi]) = (i >= 0.0).then(|| l.detail.get(i as usize)).flatten() else { continue };
             let past = (c as f32) < cols as f32 * 0.5;
             let a = if past { 0x70 } else { 0xff };
@@ -582,15 +584,18 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::Picks { label: "Rating", picks: stars },
         Line::Picks { label: "Color", picks: colours },
         Line::Rule,
-        Line::item("Play on deck 1", Target::MenuPlay(0)).enabled(free(0)),
-        Line::item("Play on deck 2", Target::MenuPlay(1)).enabled(free(1)),
-        Line::item("Load on deck 1", Target::MenuDeck(0)).enabled(free(0)),
-        Line::item("Load on deck 2", Target::MenuDeck(1)).enabled(free(1)),
-        Line::Rule,
+        Line::Picks {
+            label: "Load on Deck",
+            picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuDeck(d))).collect(),
+        },
+        Line::Picks {
+            label: "Play on Deck",
+            picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
+        },
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
     ];
     if matches!(s.shelf, crate::state::Shelf::Playlist(_)) {
-        lines.push(Line::item("Remove from this playlist", Target::MenuRemove));
+        lines.push(Line::item("Remove from this list", Target::MenuRemove));
     }
     lines.push(Line::Rule);
     if !e.artist.is_empty() {
@@ -606,8 +611,8 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::sub("Show Info", 3),
         Line::sub("Sort by", 1),
         Line::Rule,
-        Line::item("Analyze again", Target::MenuAnalyze),
-        Line::item("Look for new tracks", Target::Rescan),
+        Line::item("Analyze Track", Target::MenuAnalyze),
+        Line::item("Look for New Tracks", Target::Rescan),
     ]);
     let (open, r) = theme::menu(p, s, s.menu_at, screen, &lines);
     let Some(top) = open else { return };

@@ -102,6 +102,8 @@ pub enum Pick {
     Swatch(u32, bool),
     /// No colour, chosen or not.
     Clear(bool),
+    /// A deck's number, usable or not.
+    Deck(u8, bool),
 }
 
 /// What sits before a line's text.
@@ -241,9 +243,11 @@ pub fn menu(p: &mut Painter, s: &mut State, (x, y): (f32, f32), bounds: Rect, li
 /// A label, then buttons as wide as the row allows.
 fn picks_row(p: &mut Painter, s: &mut State, row: Rect, label: &str, picks: &[(Pick, Target)]) {
     let cy = row.y + row.h * 0.5;
-    p.text(row.x + 10.0, cy + 4.3, Style::new(12.0, Weight::Regular, DIM), label);
-    let x0 = row.x + 58.0;
-    let step = ((row.x + row.w - x0) / picks.len().max(1) as f32).min(22.0);
+    let st = Style::new(12.0, Weight::Regular, DIM);
+    p.text(row.x + 10.0, cy + 4.3, st, label);
+    let x0 = row.x + (p.text_width(st, label) + 20.0).max(58.0);
+    let wide = picks.iter().any(|(k, _)| matches!(k, Pick::Deck(..)));
+    let step = ((row.x + row.w - x0) / picks.len().max(1) as f32).min(if wide { 30.0 } else { 22.0 });
     for (n, &(pick, target)) in picks.iter().enumerate() {
         let b = Rect::new(x0 + n as f32 * step, row.y, step, row.h);
         let (bx, r) = (b.x + step * 0.5, 6.0);
@@ -262,6 +266,15 @@ fn picks_row(p: &mut Painter, s: &mut State, row: Rect, label: &str, picks: &[(P
                 p.outlined(bx - r, cy - r, 2.0 * r, 2.0 * r, r, MENU, 1.0, if on { TEXT } else { DIM });
                 p.line((bx - 3.0, cy - 3.0), (bx + 3.0, cy + 3.0), 1.3, DIM);
                 p.line((bx + 3.0, cy - 3.0), (bx - 3.0, cy + 3.0), 1.3, DIM);
+            }
+            Pick::Deck(n, on) => {
+                p.outlined(b.x + 2.0, cy - 10.0, b.w - 4.0, 20.0, 5.0, MENU, 1.0, if on { DIM } else { MENU_HOVER });
+                let st = Style::new(12.0, Weight::Semibold, if on { TEXT } else { DIM });
+                let d = n.to_string();
+                p.text(bx - p.text_width(st, &d) * 0.5, cy + 4.3, st, &d);
+                if !on {
+                    continue;
+                }
             }
         }
         hit(s, b, target);

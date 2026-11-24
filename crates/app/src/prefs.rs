@@ -13,7 +13,7 @@ const LILAC: u32 = rgb(0xb69cff);
 const SIDE: u32 = rgb(0x141416);
 const HOVER: u32 = rgb(0x3a3a3d);
 
-/// The app menu, under its button: File, View and Help, each a submenu.
+/// The app menu, under its button: File, Edit, View and Help, each a submenu.
 pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     if !s.app_menu {
         return;
@@ -25,7 +25,6 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let lines = [
         Line::sub("File", 0),
         Line::sub("Edit", 3),
-        Line::sub("Mix", 4),
         Line::sub("View", 1),
         Line::sub("Help", 2),
         Line::Rule,
@@ -36,49 +35,48 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some(top) = open else { return };
     let sub: Vec<Line> = match s.submenu {
         Some(0) => vec![
-            Line::item("Record mix", Target::Record).mark(Mark::Check(s.recorder.is_some())).hint("Ctrl+R"),
+            Line::item("Record Mix", Target::Record).mark(Mark::Check(s.recorder.is_some())).hint("Ctrl+R"),
+            Line::item("Auto Mix", Target::AutoDj).mark(Mark::Check(s.auto.is_some())).hint("Shift+F12"),
             Line::Rule,
-            Line::item("Load selected on deck 1", Target::LoadPick(0)).hint("Ctrl+O"),
-            Line::item("Load selected on deck 2", Target::LoadPick(1)).hint("Ctrl+Shift+O"),
+            Line::item("Load Selected on Deck 1", Target::LoadPick(0)).hint("Ctrl+O"),
+            Line::item("Load Selected on Deck 2", Target::LoadPick(1)).hint("Ctrl+Shift+O"),
             Line::Rule,
-            Line::item("Look for new tracks", Target::Rescan),
-            Line::item("Music folders", Target::Prefs(4)),
+            Line::item("Look for New Tracks", Target::Rescan),
+            Line::item("Music Folders", Target::Prefs(4)),
         ],
         Some(3) => vec![
             Line::item("Find", Target::Find).hint("Ctrl+F"),
-            Line::item("New playlist", Target::NewPlaylist).hint("Ctrl+N"),
-        ],
-        Some(4) => vec![
-            Line::item("Auto mix", Target::AutoDj).mark(Mark::Check(s.auto.is_some())).hint("Shift+F12"),
-            Line::Rule,
-            Line::item("Crossfader and loudness", Target::Prefs(2)),
-            Line::item("Tempo and loading", Target::Prefs(1)),
+            Line::item("New Playlist", Target::NewPlaylist).hint("Ctrl+N"),
         ],
         Some(1) => {
+            let mut v = vec![
+                Line::item("Zoom Waveforms In", Target::WaveZoom(1)).hint("Ctrl+="),
+                Line::item("Zoom Waveforms Out", Target::WaveZoom(-1)).hint("Ctrl+-"),
+                Line::item("Reset Waveform Zoom", Target::WaveZoom(0)).hint("Ctrl+0"),
+                Line::Rule,
+                Line::item("Taller Waveforms", Target::WaveHeight(1)),
+                Line::item("Shorter Waveforms", Target::WaveHeight(-1)),
+                Line::item("Reset Waveform Height", Target::WaveHeight(0)),
+                Line::Rule,
+            ];
             let views = [
                 ("Decks", View::Dj),
                 ("Waveforms", View::Wave),
                 ("Library", View::Lib),
-                ("Effects station", View::Fx),
+                ("Effects Station", View::Fx),
                 ("Streaming", View::Stream),
                 ("Controller", View::Ctl),
             ];
-            let mut v: Vec<Line> = views
-                .into_iter()
-                .enumerate()
-                .map(|(i, (n, view))| {
-                    Line::item(n, Target::View(view))
-                        .mark(Mark::Check(s.view == view))
-                        .hint(format!("Ctrl+Alt+{}", i + 1))
-                })
-                .collect();
+            v.extend(views.into_iter().enumerate().map(|(i, (n, view))| {
+                Line::item(n, Target::View(view)).mark(Mark::Check(s.view == view)).hint(format!("Ctrl+Alt+{}", i + 1))
+            }));
             v.push(Line::Rule);
-            v.push(Line::item("Effects bar", Target::ToggleFx).mark(Mark::Check(s.show_fx)).hint("Ctrl+5"));
-            v.push(Line::item("Samplers bar", Target::ToggleSamplers).mark(Mark::Check(s.show_samplers)));
+            v.push(Line::item("Effects Bar", Target::ToggleFx).mark(Mark::Check(s.show_fx)).hint("Ctrl+5"));
+            v.push(Line::item("Samplers Bar", Target::ToggleSamplers).mark(Mark::Check(s.show_samplers)));
             v
         }
         _ => vec![
-            Line::item("Keyboard shortcuts", Target::Prefs(3)),
+            Line::item("Keyboard Shortcuts", Target::Prefs(3)),
             Line::Rule,
             Line::item("About DJ Sugar", Target::Prefs(7)),
         ],
