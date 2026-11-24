@@ -87,6 +87,7 @@ fn main() {
         }
         menu(&mut ui, &mut r, (name, scale), &mut faults);
         save(&r, &out.join(format!("{name}-menu.png")));
+        settings(&mut ui, &mut r, &out, name, &mut faults);
         let before = pixels(&r);
         r = Renderer::offscreen(w, h).expect("second renderer");
         ui.render(&mut r);
@@ -173,5 +174,25 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
         return;
     }
     ui.render(r);
+    ui.render(r);
+}
+
+/// The app menu with its View submenu, then the Decks settings page with a menu open.
+fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
+    let steps: [(&str, &str); 4] =
+        [("AppMenu", ""), ("Submenu(1)", "appmenu"), ("Prefs(0)", ""), ("Pref(RateRange)", "settings")];
+    for (tap, shot) in steps {
+        if !ui.tap(tap) {
+            faults.push(format!("{name}: no {tap}"));
+            return;
+        }
+        ui.render(r);
+        ui.render(r);
+        if !shot.is_empty() {
+            save(r, &out.join(format!("{name}-{shot}.png")));
+        }
+    }
+    ui.tap("PrefsClose");
+    ui.tap("PrefsClose");
     ui.render(r);
 }

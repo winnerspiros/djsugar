@@ -136,6 +136,8 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
     track_menu(p, s, w, h);
+    crate::prefs::app_menu(p, s, w, h);
+    crate::prefs::overlay(p, s, w, h);
 }
 
 /// The brand mark: a glazed donut with sprinkles, then DJ in grey and SUGAR in pink.
@@ -164,7 +166,16 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
     let two = r.h > TOOLBAR;
-    let mut x = logo(p, r.x + 8.0, r.y + TOOLBAR * 0.5) + 12.0;
+    // The app menu button: three lines.
+    let mb = Rect::new(r.x + 6.0, r.y + 6.0, TOOLBAR - 12.0, TOOLBAR - 12.0);
+    if s.app_menu || s.pressed(Target::AppMenu) {
+        p.rect(mb.x, mb.y, mb.w, mb.h, 6.0, theme::PRESSED);
+    }
+    for i in 0..3 {
+        p.rect(mb.x + mb.w * 0.25, mb.y + mb.h * 0.5 - 6.0 + i as f32 * 5.5, mb.w * 0.5, 1.6, 0.8, TEXT);
+    }
+    hit(s, mb, Target::AppMenu);
+    let mut x = logo(p, mb.x + mb.w + 6.0, r.y + TOOLBAR * 0.5) + 12.0;
     let views = [
         ("DJ", View::Dj),
         ("WAVE", View::Wave),
@@ -307,7 +318,7 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let deck = &s.decks[d];
     let pos = s.telemetry.decks[d].position;
     let mid = r.y + r.h * 0.5;
-    let speed = 1.0 + deck.rate * 0.08;
+    let speed = 1.0 + deck.rate * s.settings.rate_range() as f32;
     let per_px = DETAIL_FRAMES as f64 * 0.5 * f64::from(speed);
     let left = pos - per_px * f64::from(r.w) * 0.5;
     if let Some(l) = &deck.loaded {
@@ -644,7 +655,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
                     cx,
                     base,
                     Style { colour: GREEN, ..cell },
-                    &m.and_then(|m| m.key).map_or(String::new(), |k| k.camelot()),
+                    &m.and_then(|m| m.key).map_or(String::new(), |k| s.settings.key(k)),
                 ),
                 C::Time => p.text(cx, base, Style { colour: GREY, ..cell }, &m.map_or(String::new(), |m| mmss(m.secs))),
             };
@@ -1092,10 +1103,10 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             p.text(r.x + r.w - 4.0 - p.text_width(TIME, &time), r.y + r.h * 0.42, TIME, &time);
             let mut parts = Vec::with_capacity(3);
             if let Some(g) = l.grid {
-                parts.push(format!("{:.2} BPM", g.bpm * (1.0 + f64::from(deck.rate) * 0.08)));
+                parts.push(format!("{:.2} BPM", g.bpm * (1.0 + f64::from(deck.rate) * s.settings.rate_range())));
             }
             if let Some(k) = l.key {
-                parts.push(k.camelot());
+                parts.push(s.settings.key(k));
             }
             parts.push(format!("{:+.1}%", deck.rate * 8.0));
             let line = parts.join("  ");

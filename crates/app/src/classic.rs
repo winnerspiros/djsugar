@@ -127,7 +127,7 @@ fn header(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
     let tp = (line * 0.42).clamp(10.0, 17.0);
     let (title, sub) = match &deck.loaded {
         Some(l) => {
-            let bpm = l.grid.map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+            let bpm = l.grid.map(|g| g.bpm * (1.0 + f64::from(deck.rate) * s.settings.rate_range()));
             let bpm = bpm.map_or_else(String::new, |b| format!("  |  {b:.2}"));
             (l.entry.title.to_string(), format!("{}{bpm}", l.entry.artist))
         }
@@ -174,7 +174,7 @@ fn key_box(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(r.x - 6.0, r.y, 1.0, r.h, 0.0, SEPARATOR);
     let deck = &s.decks[d];
     let st = deck.semitones;
-    let key = deck.loaded.as_ref().and_then(|l| l.key).map_or_else(|| "--".to_string(), |k| k.name());
+    let key = deck.loaded.as_ref().and_then(|l| l.key).map_or_else(|| "--".to_string(), |k| s.settings.key(k));
     let kp = (r.h * 0.34).clamp(11.0, 17.0);
     let line = Rect::new(r.x, r.y, r.w, kp + 6.0);
     centred(p, line, bold(kp, KEY), &key);
@@ -209,10 +209,11 @@ fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let kl = 20.0;
     let f = Rect::new(r.x + r.w * 0.5 - 11.0, r.y + sh + 8.0, 22.0, r.h - sh - foot - kl - 16.0);
     let rate = s.decks[d].rate;
-    fader(p, s, f, ((1.0 - rate) * 0.5, false, true), DECK[d], Target::Rate(d));
+    let up = s.rate_from(rate);
+    fader(p, s, f, ((up + 1.0) * 0.5, false, true), DECK[d], Target::Rate(d));
     let lock = Rect::new(r.x, f.y + f.h + 4.0, r.w, kl);
     button(p, s, lock, "KEY", (s.decks[d].key_lock, DECK[d]), Target::KeyLock(d));
-    let pct = format!("{:+.1}%", f64::from(rate) * 8.0);
+    let pct = format!("{:+.1}%", f64::from(rate) * s.settings.rate_range() * 100.0);
     centred(p, Rect::new(r.x - 4.0, r.y + r.h - foot, r.w + 8.0, foot), Style::new(10.0, Weight::Semibold, DIM), &pct);
 }
 
@@ -564,7 +565,11 @@ fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.disc(cx, cy, label, rgb(0x26262b), rgb(0x18181c));
     p.outlined(cx - label, cy - label, label * 2.0, label * 2.0, label, 0, 1.0, BORDER);
     // The tempo readout in the middle: BPM, then the rate offset in the deck colour.
-    let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+    let bpm = deck
+        .loaded
+        .as_ref()
+        .and_then(|l| l.grid)
+        .map(|g| g.bpm * (1.0 + f64::from(deck.rate) * s.settings.rate_range()));
     let known = bpm.is_some();
     let bpm = bpm.map_or_else(|| "--.--".to_string(), |b| format!("{b:.2}"));
     let pct = format!("{:+.2}%", f64::from(deck.rate) * 8.0);

@@ -14,7 +14,6 @@ pub type Reader = fn(&str) -> Option<Vec<u8>>;
 
 const OVERVIEW: usize = 1024;
 pub const DETAIL_FRAMES: usize = 256;
-const RATE_RANGE: f64 = 0.08;
 /// The view switch fade, as long as the reference's reflow transition.
 pub const VIEW_FADE: std::time::Duration = std::time::Duration::from_millis(150);
 const TAP: f32 = 8.0;
@@ -68,6 +67,16 @@ pub enum Target {
     Submenu(u8),
     /// A menu's own area, so a press there neither closes it nor reaches what is under it.
     MenuBody,
+    /// The app menu button.
+    AppMenu,
+    /// Opens settings at a page.
+    Prefs(u8),
+    PrefsClose,
+    /// A settings switch, or a choice's menu.
+    Pref(crate::settings::Opt),
+    /// A choice picked for a setting.
+    PrefPick(crate::settings::Opt, u8),
+    Rescan,
     PickerClose,
     Scene(usize),
     Xy,
@@ -379,6 +388,12 @@ pub struct State {
     pub playlists: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
     pub track_menu: Option<u32>,
+    pub settings: crate::settings::Settings,
+    /// The open settings page.
+    pub prefs: Option<usize>,
+    /// The setting whose choices are open, and where.
+    pub pref_menu: Option<(crate::settings::Opt, f32, f32)>,
+    pub app_menu: bool,
     /// Where the track menu was opened.
     pub menu_at: (f32, f32),
     /// The open menu's open submenu.
@@ -483,6 +498,10 @@ impl State {
             playlists: crate::store::load_playlists(),
             history: Vec::new(),
             track_menu: None,
+            settings: crate::settings::Settings::load(),
+            prefs: None,
+            pref_menu: None,
+            app_menu: false,
             menu_at: (0.0, 0.0),
             submenu: None,
             station: Station::default(),
@@ -608,6 +627,7 @@ impl State {
                     self.restore(d);
                     self.decks[d].looping = None;
                     self.decks[d].loop_range = None;
+                    self.on_load(d);
                 }
                 (Job::Deck(d), None) => self.decks[d].loading = false,
                 (Job::Sample(i, play), Some(l)) => {
@@ -919,6 +939,13 @@ impl State {
     }
 
     fn key_press(&mut self, key: Key) {
+        if key == Key::Escape && (self.prefs.is_some() || self.app_menu) {
+            self.app_menu = false;
+            if self.pref_menu.take().is_none() {
+                self.prefs = None;
+            }
+            return;
+        }
         if self.hub_typing() {
             match key {
                 Key::Backspace => {
@@ -976,10 +1003,75 @@ impl State {
     }
 
     pub fn load_deck(&mut self, deck: usize, index: usize) {
+        use crate::settings::Opt;
+        if self.settings.on(Opt::Protect) && self.telemetry.decks[deck].playing {
+            self.status = Some(format!("Deck {} is playing; stop it to load another track", deck + 1));
+            return;
+        }
         self.history.retain(|&i| i as usize != index);
         self.history.insert(0, index as u32);
         self.decks[deck].loading = true;
         self.load(Job::Deck(deck), index);
+    }
+
+    /// What the settings ask of a deck that has just loaded a track.
+    fn on_load(&mut self, d: usize) {
+        use crate::settings::Opt;
+        let s = self.settings.clone();
+        let lock = s.on(Opt::KeyLock);
+        self.decks[d].key_lock = lock;
+        self.send(Command::KeyLock(d, lock));
+        let q = s.on(Opt::Quantize);
+        self.decks[d].quantize = q;
+        self.send(Command::Quantize(d, q));
+        if s.on(Opt::ResetTempo) {
+            self.decks[d].rate = 0.0;
+            self.send(Command::Rate(d, 0.0));
+        }
+        if s.on(Opt::ResetEq) {
+            self.decks[d].knobs[..3].fill(0.5);
+            self.send(Command::Eq(d, [knob_gain(0.5); 3]));
+        }
+        if s.on(Opt::ResetGain) {
+            self.decks[d].gain = 0.5;
+            self.send(Command::Gain(d, knob_gain(0.5)));
+        }
+        if s.on(Opt::PflOnLoad) {
+            for o in 0..self.decks.len() {
+                let on = o == d;
+                self.decks[o].pfl = on;
+                self.send(Command::Pfl(o, on));
+            }
+        }
+    }
+
+    /// Sets a setting and applies what changes at once.
+    fn set_pref(&mut self, o: crate::settings::Opt, v: u8) {
+        use crate::settings::Opt;
+        self.settings.set(o, v);
+        match o {
+            Opt::RateRange => {
+                for d in 0..self.decks.len() {
+                    let r = f64::from(self.decks[d].rate) * self.settings.rate_range();
+                    self.send(Command::Rate(d, r));
+                }
+            }
+            Opt::ReverseFader => {
+                let x = self.crossfader_out();
+                self.send(Command::Crossfader(x));
+            }
+            _ => {}
+        }
+    }
+
+    /// The crossfader as the mixer takes it: flipped when the DJ reversed it.
+    fn crossfader_out(&self) -> f32 {
+        if self.settings.on(crate::settings::Opt::ReverseFader) { -self.crossfader } else { self.crossfader }
+    }
+
+    /// The tempo fader position to its value, -1 to 1, as the DJ set its direction.
+    pub fn rate_from(&self, up: f32) -> f32 {
+        if self.settings.on(crate::settings::Opt::TempoUp) { up } else { -up }
     }
 
     fn pad(&mut self, deck: usize, pad: usize) {
@@ -1015,7 +1107,7 @@ impl State {
     fn fx(&mut self, d: usize, p: usize) {
         let Some(l) = &self.decks[d].loaded else { return };
         let rate = l.track.rate;
-        let speed = 1.0 + f64::from(self.decks[d].rate) * RATE_RANGE;
+        let speed = 1.0 + f64::from(self.decks[d].rate) * self.settings.rate_range();
         let beat = l.grid.map_or(0.5 * f64::from(rate), |g| g.beat_frames(rate)) / speed;
         let out_beat = beat * f64::from(self.out_rate) / f64::from(rate);
         match p {
@@ -1043,7 +1135,7 @@ impl State {
         let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
         let (Some(g), Some(og)) = (me.grid, other.grid) else { return };
         let (rate, orate) = (me.track.rate, other.track.rate);
-        let other_speed = 1.0 + f64::from(self.decks[o].rate) * RATE_RANGE;
+        let other_speed = 1.0 + f64::from(self.decks[o].rate) * self.settings.rate_range();
         let mut target = og.bpm * other_speed;
         while target / g.bpm > 1.5 {
             target /= 2.0;
@@ -1051,9 +1143,9 @@ impl State {
         while target / g.bpm < 0.67 {
             target *= 2.0;
         }
-        let r = ((target / g.bpm - 1.0) / RATE_RANGE).clamp(-1.0, 1.0);
+        let r = ((target / g.bpm - 1.0) / self.settings.rate_range()).clamp(-1.0, 1.0);
         self.decks[d].rate = r as f32;
-        self.send(Command::Rate(d, r * RATE_RANGE));
+        self.send(Command::Rate(d, r * self.settings.rate_range()));
         if self.telemetry.decks[o].playing {
             let op = self.telemetry.decks[o].position;
             let phase = ((op - og.first_beat) / og.beat_frames(orate)).rem_euclid(1.0);
@@ -1243,6 +1335,40 @@ impl State {
                 self.submenu = None;
             }
             Target::Submenu(n) => self.submenu = Some(n),
+            Target::AppMenu => {
+                self.app_menu = !self.app_menu;
+                self.submenu = None;
+            }
+            Target::Prefs(n) => {
+                self.prefs = Some(usize::from(n));
+                self.app_menu = false;
+                self.pref_menu = None;
+                self.submenu = None;
+            }
+            Target::PrefsClose => {
+                if self.pref_menu.take().is_none() {
+                    self.prefs = None;
+                }
+            }
+            Target::Pref(o) => match crate::settings::spec(o).kind {
+                crate::settings::Kind::Switch => {
+                    let v = u8::from(!self.settings.on(o));
+                    self.set_pref(o, v);
+                }
+                _ => {
+                    let at = self.rect_of(Target::Pref(o)).map_or((0.0, 0.0), |r| (r.x, r.y + r.h + 2.0));
+                    self.pref_menu = Some((o, at.0, at.1));
+                }
+            },
+            Target::PrefPick(o, v) => {
+                self.pref_menu = None;
+                self.set_pref(o, v);
+            }
+            Target::Rescan => {
+                self.app_menu = false;
+                self.scan();
+                self.status = Some("Looking for new tracks".into());
+            }
             Target::MenuBody => {}
             Target::Grid(d) if self.decks[d].loaded.is_some() => {
                 self.grid_menu = Some(d);
@@ -1542,14 +1668,16 @@ impl State {
             Target::Rate(d) => {
                 let v = vertical(r) * 2.0 - 1.0;
                 let v = if v.abs() < 0.04 { 0.0 } else { v };
+                let v = self.rate_from(v);
                 self.decks[d].rate = v;
-                self.send(Command::Rate(d, f64::from(v) * RATE_RANGE));
+                self.send(Command::Rate(d, f64::from(v) * self.settings.rate_range()));
             }
             Target::Crossfader => {
                 let v = ((x - r.x) / r.w * 2.0 - 1.0).clamp(-1.0, 1.0);
                 let v = if v.abs() < 0.04 { 0.0 } else { v };
                 self.crossfader = v;
-                self.send(Command::Crossfader(v));
+                let x = self.crossfader_out();
+                self.send(Command::Crossfader(x));
             }
             Target::Knob(d, k) => {
                 let v = (self.decks[d].knobs[k] - delta.1 / 160.0).clamp(0.0, 1.0);
@@ -1620,7 +1748,10 @@ impl State {
     fn master_bpm(&self) -> f64 {
         let pick = (0..2).find(|&d| self.telemetry.decks[d].playing).unwrap_or(self.focus.min(1));
         let deck = &self.decks[pick];
-        deck.loaded.as_ref().and_then(|l| l.grid).map_or(120.0, |g| g.bpm * (1.0 + f64::from(deck.rate) * RATE_RANGE))
+        deck.loaded
+            .as_ref()
+            .and_then(|l| l.grid)
+            .map_or(120.0, |g| g.bpm * (1.0 + f64::from(deck.rate) * self.settings.rate_range()))
     }
 }
 
