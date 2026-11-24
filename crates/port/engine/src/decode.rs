@@ -13,6 +13,18 @@ use symphonia::core::io::{MediaSource, MediaSourceStream, MediaSourceStreamOptio
 use symphonia::core::meta::MetadataOptions;
 
 use crate::track::{Audio, AudioWriter};
+use symphonia::core::codecs::registry::CodecRegistry;
+
+/// The decoders: the defaults, with Opus for WebM and Ogg Opus files.
+pub fn codecs() -> &'static CodecRegistry {
+    static CODECS: std::sync::LazyLock<CodecRegistry> = std::sync::LazyLock::new(|| {
+        let mut r = CodecRegistry::new();
+        symphonia::default::register_enabled_codecs(&mut r);
+        r.register_audio_decoder::<symphonia_opus::OpusDecoder>();
+        r
+    });
+    &CODECS
+}
 
 /// File extensions the scanner offers and the decoder can read.
 pub const EXTENSIONS: &[&str] =
@@ -75,9 +87,7 @@ impl Decoder {
         let Some(CodecParameters::Audio(params)) = track.codec_params.clone() else {
             return Err(format!("{}: unknown codec", path.display()));
         };
-        let decoder = symphonia::default::get_codecs()
-            .make_audio_decoder(&params, &AudioDecoderOptions::default())
-            .map_err(err)?;
+        let decoder = codecs().make_audio_decoder(&params, &AudioDecoderOptions::default()).map_err(err)?;
         let sample_rate = params.sample_rate.unwrap_or(0);
         let length_known = n_frames.is_some() && sample_rate > 0;
         // Without a length, guess ten minutes; the audio grows past it as needed.

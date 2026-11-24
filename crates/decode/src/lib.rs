@@ -3,6 +3,7 @@ use std::path::Path;
 
 use sugar_engine::Track;
 use symphonia::core::codecs::audio::AudioDecoderOptions;
+use symphonia::core::codecs::registry::CodecRegistry;
 use symphonia::core::errors::Error as SymError;
 use symphonia::core::formats::probe::Hint;
 use symphonia::core::formats::{FormatOptions, TrackType};
@@ -27,6 +28,17 @@ impl std::fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+/// The decoders: the defaults, with Opus for WebM and Ogg Opus files.
+pub fn codecs() -> &'static CodecRegistry {
+    static CODECS: std::sync::LazyLock<CodecRegistry> = std::sync::LazyLock::new(|| {
+        let mut r = CodecRegistry::new();
+        symphonia::default::register_enabled_codecs(&mut r);
+        r.register_audio_decoder::<symphonia_opus::OpusDecoder>();
+        r
+    });
+    &CODECS
+}
 
 pub fn file(path: &Path) -> Result<Track, Error> {
     let mut hint = Hint::new();
@@ -56,8 +68,7 @@ fn decode(mss: MediaSourceStream<'static>, hint: &Hint, len: u64) -> Result<Trac
     let rate = params.sample_rate.ok_or(Error::NoAudio)?;
     let channels = params.channels.as_ref().map_or(2, |c| c.count()).max(1);
     let expect = track.num_frames.map_or(len as usize / 2, |n| n as usize);
-    let mut decoder =
-        symphonia::default::get_codecs().make_audio_decoder(params, &AudioDecoderOptions::default()).map_err(fail)?;
+    let mut decoder = codecs().make_audio_decoder(params, &AudioDecoderOptions::default()).map_err(fail)?;
     let mut frames: Vec<[f32; 2]> = Vec::with_capacity(expect.min(1 << 28));
     let mut buf: Vec<f32> = Vec::new();
     loop {

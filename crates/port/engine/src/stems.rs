@@ -396,9 +396,8 @@ impl Input {
         let Some(CodecParameters::Audio(params)) = track.codec_params.clone() else {
             unreachable!("filtered above");
         };
-        let decoder = symphonia::default::get_codecs()
-            .make_audio_decoder(&params, &AudioDecoderOptions::default())
-            .map_err(err)?;
+        let decoder =
+            crate::decode::codecs().make_audio_decoder(&params, &AudioDecoderOptions::default()).map_err(err)?;
         Ok(Input {
             track_id: track.id,
             rate: params.sample_rate.unwrap_or(0),

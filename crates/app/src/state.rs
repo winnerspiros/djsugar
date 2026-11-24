@@ -326,6 +326,8 @@ enum Job {
     Sample(usize, bool),
     Scan(Vec<Entry>),
     Meta(u32, u32, library::Meta),
+    /// A track that would not load, and why.
+    Failed(String),
 }
 
 struct Drag {
@@ -615,6 +617,7 @@ impl State {
                     self.samples[i] = Some(l.track);
                 }
                 (Job::Sample(..), None) => {}
+                (Job::Failed(why), _) => self.status = Some(why),
                 (Job::Scan(found), _) => {
                     self.entries.truncate(SAMPLES.len());
                     self.entries.extend(found);
@@ -747,7 +750,15 @@ impl State {
                 Source::Sample(name) => read(name),
                 Source::File(path) => std::fs::read(path).ok(),
             };
-            let loaded = bytes.and_then(|b| sugar_decode::bytes(b, entry.extension()).ok()).map(|t| {
+            let name = entry.title.to_string();
+            let decoded = match bytes {
+                Some(b) => sugar_decode::bytes(b, entry.extension()).map_err(|e| e.to_string()),
+                None => Err("the file could not be read".to_string()),
+            };
+            if let Err(why) = &decoded {
+                let _ = tx.send((Job::Failed(format!("Could not load \"{name}\": {why}")), None));
+            }
+            let loaded = decoded.ok().map(|t| {
                 let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
                 let detail = if detail { bands(&t, DETAIL_FRAMES) } else { Box::default() };
                 let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
