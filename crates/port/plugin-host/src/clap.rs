@@ -1,5 +1,5 @@
 //! CLAP effects inside the helper, through `clack-host`. The plugin instance lives on the helper's main thread; its audio processor is
-//! sent to the helper's audio thread, where [`ClapEffect`] runs one block per wake. Parameters arrive through the shared block as plain
+//! sent to the helper's audio thread, where `ClapEffect` runs one block per wake. Parameters arrive through the shared block as plain
 //! values and are sent to the plugin as events when they change; the routed deck's tempo and beat position go in as a transport event.
 
 use std::cell::{Cell, RefCell};

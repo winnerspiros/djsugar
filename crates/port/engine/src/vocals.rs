@@ -54,7 +54,7 @@ fn detect(audio: &Audio, mut keep_going: impl FnMut() -> bool) -> Result<Vec<u8>
 }
 
 /// The levels drawn from vocal shares (0..1, as amplitudes: the square root of the vocals' part of the power), `rate` a second. Averaged over
-/// [`SMOOTH_SECONDS`] first; then under 0.4 (a sixth of the power) is what leaks from other instruments and reads as none, rising to full at
+/// `SMOOTH_SECONDS` first; then under 0.4 (a sixth of the power) is what leaks from other instruments and reads as none, rising to full at
 /// 0.75 (over half the power). A voice over a mix sits well above that; a lead synth or pad that leaks into the vocal network rarely holds it.
 pub fn to_levels(shares: &[f32], rate: f64) -> Levels {
     let half = (SMOOTH_SECONDS * rate * 0.5).round() as usize;

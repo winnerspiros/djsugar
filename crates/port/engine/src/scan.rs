@@ -160,7 +160,7 @@ pub fn read_key(path: &Path) -> String {
 }
 
 /// The comment tag, where stores leave notes such as Bandcamp's
-/// "Visit https://artist.bandcamp.com". Lofty reads a Vorbis COMMENT field
+/// "Visit `https://artist.bandcamp.com`". Lofty reads a Vorbis COMMENT field
 /// (FLAC, Ogg) as a description, so that counts too.
 pub fn read_comment(path: &Path) -> String {
     lofty::read_from_path(path)
@@ -209,9 +209,9 @@ mod tests {
         crate::decode::tests::write_wav(&path, 44_100, 2, &vec![0; 4_410]);
         assert_eq!(read_comment(&path), "");
         let mut tag = Tag::new(TagType::Id3v2);
-        tag.insert_text(ItemKey::Comment, "Visit https://artist.bandcamp.com".into());
+        tag.insert_text(ItemKey::Comment, "Visit `https://artist.bandcamp.com`".into());
         tag.save_to_path(&path, WriteOptions::default()).unwrap();
-        assert_eq!(read_comment(&path), "Visit https://artist.bandcamp.com");
+        assert_eq!(read_comment(&path), "Visit `https://artist.bandcamp.com`");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

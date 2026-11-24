@@ -1,6 +1,6 @@
 //! Link: shares tempo and beat phase with other apps and devices on the network (music software, phones, drum machines). With `[Link],enabled` on, Link follows the master deck: the session takes
 //! the tempo and beat of the deck that is playing (`[Link],master_deck`), so other apps play along with the mix. The decks themselves sync to each other as usual. Enabling Link opens network sockets, which
-//! can't happen on the audio thread; [`watch`] does it on its own thread and keeps the peer count up to date. The audio thread only captures and commits session states, which Link makes real-time safe.
+//! can't happen on the audio thread; `watch` does it on its own thread and keeps the peer count up to date. The audio thread only captures and commits session states, which Link makes real-time safe.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,7 +14,7 @@ pub const GROUP: &str = "[Link]";
 pub const QUANTUM: f64 = 4.0;
 
 /// `[Link],enabled` turns Link on and `[Link],num_peers` counts the other
-/// apps in the session; [`watch`] looks after both. `[Link],master_deck` is
+/// apps in the session; `watch` looks after both. `[Link],master_deck` is
 /// the deck the session follows (1 or 2), 0 for none.
 pub(crate) struct LinkControls {
     /// The session's tempo.
@@ -73,7 +73,7 @@ impl Link {
         }
     }
 
-    /// The Link instance, for [`watch`].
+    /// The Link instance, for `watch`.
     pub(crate) fn handle(&self) -> Arc<LinkSession> {
         self.link.clone()
     }

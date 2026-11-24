@@ -36,7 +36,7 @@ pub struct StemInfo {
 }
 
 /// The names and colours of separated stems (drums become
-/// Kick and HiHat, see [`split_drums`]); NI STEM files without their own
+/// Kick and HiHat, see `split_drums`); NI STEM files without their own
 /// take them too. In NI's order: drums, bass, other ("synth") and vocals.
 pub fn default_info() -> Vec<StemInfo> {
     [("Drums", KICK_COLOR), ("Bass", 0xA21418), ("Instru", 0xA26018), ("Vocal", 0x09AD18)]
@@ -484,7 +484,7 @@ pub struct Decode {
     stems: Arc<Stems>,
     inputs: Vec<Input>,
     /// Splits the first stem, drums, into kick and hi-hats (see
-    /// [`split_drums`]).
+    /// `split_drums`).
     split: Option<crate::dsp::Lr4>,
 }
 

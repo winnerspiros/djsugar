@@ -1,4 +1,4 @@
-//! The microphone and auxiliary inputs, `[Microphone]` and `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`. The microphone and auxiliaries take audio from an input device (see [`crate::output`]), the instrument from an instrument plugin playing the notes it is sent (see [`crate::plugins`]). Each goes through
+//! The microphone and auxiliary inputs, `[Microphone]` and `[Auxiliary1]` to `[Auxiliary8]`, and the instrument, `[Instrument1]`. The microphone and auxiliaries take audio from an input device (see `crate::output`), the instrument from an instrument plugin playing the notes it is sent (see [`crate::plugins`]). Each goes through
 //! its gain, a 3-band EQ and the effect units routed to it, then its fader. The microphone is heard while `talkover` is on. It joins the main mix after the main mix's effects, so they don't touch the voice, and can duck the music while the DJ talks (`[Master],talkover_ducking`). The auxiliary input joins the music while `main_mix`
 //! is on. Both can be cued in the headphones, and both are in recordings, which take the main mix. An input device runs on its own clock, so its audio comes through a queue that the engine keeps short: it waits for a callback's worth before playing, drops audio when the queue grows, and pads with silence when it runs dry.
 
@@ -32,7 +32,7 @@ pub const AUXILIARIES: [usize; NUM_AUXILIARIES] =
     [AUXILIARY, AUXILIARY_2, AUXILIARY_3, AUXILIARY_4, AUXILIARY_5, AUXILIARY_6, AUXILIARY_7, AUXILIARY_8];
 
 /// `[ChannelN],live_input` for the Mixer: the deck plays the auxiliary
-/// channels, the Mixer's strips, summed (see [`Routing::Mixer`]). After the
+/// channels, the Mixer's strips, summed (see `Routing::Mixer`). After the
 /// inputs' own values, 1 + each input.
 pub const MIXER: usize = NUM_INPUTS + 1;
 

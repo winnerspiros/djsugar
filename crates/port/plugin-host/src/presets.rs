@@ -1,4 +1,4 @@
-//! A plugin's own presets as files: VST3 `.vstpreset` and AU `.aupreset`, in the folders each format names for them, made into the sound [`crate::Connection::load_state`] takes. - VST3 keeps its
+//! A plugin's own presets as files: VST3 `.vstpreset` and AU `.aupreset`, in the folders each format names for them, made into the sound `crate::Connection::load_state` takes. - VST3 keeps its
 //! presets in `<root>/<maker>/<plugin>/`, the roots being `~/Library/Audio/Presets` on macOS, `Documents/VST3 Presets` on Windows and `~/.vst3/presets` on Linux, plus the machine-wide ones. - AU
 //! keeps `.aupreset` files in `~/Library/Audio/Presets/<maker>/<name>/` (and `/Library/...`). One is the unit's class info, as the AU helper saves its sound, so the file is the sound itself.
 

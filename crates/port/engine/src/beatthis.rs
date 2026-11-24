@@ -1,5 +1,5 @@
 //! Neural beat and downbeat detection with Beat This! (Foscarin, Schlüter and Widmer, ISMIR 2024; MIT licence), run through the `beat-this` crate on its pure-Rust runtime. The
-//! DSP analysis gives a track its tempo and a first grid within a second or so; this runs after it, finds each beat and downbeat, and fits the grid again through them (see [`crate::gridfit`]),
+//! DSP analysis gives a track its tempo and a first grid within a second or so; this runs after it, finds each beat and downbeat, and fits the grid again through them (see `crate::gridfit`),
 //! so bar 1 lands on a downbeat. Its two model files are downloaded the first time they are needed, as the stem models are; without them the DSP grid stays.
 
 use std::sync::atomic::{AtomicBool, Ordering};

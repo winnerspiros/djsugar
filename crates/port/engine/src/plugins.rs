@@ -1499,7 +1499,12 @@ mod tests {
         assert!(rig.instrument_buffer().abs() < 1e-3, "silent until a note");
         let view = rig.rack.instrument_view();
         assert!(rig.notes.send([0x90, 127, 100]));
-        assert!((rig.instrument_buffer() - 1.0).abs() < 1e-3);
+        // A buffer whose deadline the helper misses plays dry, so give the note a few.
+        let end = Instant::now() + Duration::from_secs(5);
+        while (rig.instrument_buffer() - 1.0).abs() >= 1e-3 {
+            assert!(Instant::now() < end, "the note sounds");
+            std::thread::sleep(Duration::from_millis(1));
+        }
         assert!((rig.instrument_buffer() - 1.0).abs() < 1e-3, "held");
         // Its deck sees the note held and the sound in the scope.
         assert_eq!(view.held(), 1 << 127);

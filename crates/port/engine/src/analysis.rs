@@ -1,6 +1,6 @@
 //! Track analysis: the 3-band waveform summary, tempo, beat phase and key (see [`crate::key`] and [`crate::keynet`]). The tempo detector works on an onset envelope (rises in bass energy and overall level, 200 per second). It picks the strongest autocorrelation lag in the tempo range (60 to 180 BPM unless set otherwise, or the
 //! octave around the track's genre's tempo; see [`genre_range`]), then refines it to 0.01 BPM by folding the envelope at each candidate period and keeping the one whose beats line up best. When the beats then fit no steady grid, the spectral flux (rises across the whole spectrum) gets a second say in the tempo. Live and older
-//! recordings drift, so a steady grid misses their beats. A dynamic-programming beat tracker (Ellis, "Beat Tracking by Dynamic Programming", 2007) then follows the beats one by one, and a grid is fitted through them: steady unless the beats move away from one tempo for a while, then in tempo sections (see [`crate::gridfit`]).
+//! recordings drift, so a steady grid misses their beats. A dynamic-programming beat tracker (Ellis, "Beat Tracking by Dynamic Programming", 2007) then follows the beats one by one, and a grid is fitted through them: steady unless the beats move away from one tempo for a while, then in tempo sections (see `crate::gridfit`).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

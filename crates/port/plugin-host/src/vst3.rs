@@ -1,6 +1,6 @@
 //! VST3 effects inside the helper, through the `vst3` crate's bindings. The component and its edit controller stay on the helper's main thread; the audio processor runs
 //! on the helper's audio thread. Parameters are VST3's normalized values (0 to 1); changes go to the processor as parameter queues, and the deck's tempo and beat go in
-//! the process context. [`scan_moduleinfo`] reads a bundle's `moduleinfo.json` without loading any plugin code; [`scan`] loads the module (in a throwaway helper).
+//! the process context. `scan_moduleinfo` reads a bundle's `moduleinfo.json` without loading any plugin code; [`scan`] loads the module (in a throwaway helper).
 
 #![allow(non_upper_case_globals)]
 // The bindings' constant types differ between platforms (u32 here, i32 on
