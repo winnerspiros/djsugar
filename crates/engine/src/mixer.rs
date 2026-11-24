@@ -226,6 +226,11 @@ impl Mixer {
             Command::Main(v) => self.main = v.max(0.0),
             Command::Record(_) => {}
             Command::Station(s) => self.station.set(s),
+            Command::Pfl(..)
+            | Command::Quantize(..)
+            | Command::BeatSync(_)
+            | Command::SyncLock(..)
+            | Command::SyncLeader(..) => {}
         }
         None
     }
@@ -319,7 +324,13 @@ impl Mixer {
         Telemetry {
             decks: std::array::from_fn(|i| {
                 let c = &self.channels[i];
-                DeckState { position: c.deck.position, playing: c.deck.playing, peak: c.peak }
+                DeckState {
+                    position: c.deck.position,
+                    playing: c.deck.playing,
+                    peak: c.peak,
+                    sync_lock: false,
+                    sync_leader: 0,
+                }
             }),
             main_peak: self.main_peak,
         }

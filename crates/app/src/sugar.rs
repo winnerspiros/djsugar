@@ -4,6 +4,8 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 use crate::state::{DETAIL_FRAMES, FX_PADS, GridOp, Hit, Mode, State, Target, View};
 use sugar_engine::station::Scene;
 
+use crate::theme::{self, Line, Mark};
+
 const INK: u32 = rgb(0x000000);
 const SURFACE: u32 = rgb(0x0d0e13);
 const DEEP: u32 = rgb(0x0c0c0c);
@@ -26,6 +28,7 @@ pub const CUES: [u32; 8] = [
     rgb(0x2f7bff),
     rgb(0xaf52de),
 ];
+const CUE_NAMES: [&str; 8] = ["Pink", "Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"];
 pub const DECK: [u32; 2] = [rgb(0x00b0ff), rgb(0xff6d00)];
 
 const LOGO: Style = Style::new(16.0, Weight::Bold, rgb(0xe63380));
@@ -49,21 +52,7 @@ pub fn hit(s: &mut State, r: Rect, target: Target) {
 
 fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
     let down = s.pressed(target);
-    skin_button(p, r, down);
-    if on {
-        p.rect(r.x + 2.0, r.y + 2.0, r.w - 4.0, r.h - 4.0, 1.0, fade(colour, 0x30));
-        p.rect(r.x + 4.0, r.y + r.h - 4.0, r.w - 8.0, 2.0, 1.0, colour);
-    }
-    let ink = if on {
-        colour
-    } else if down {
-        TEXT
-    } else {
-        GREY
-    };
-    let style = Style::new(if r.h < 26.0 { 9.0 } else { 10.5 }, Weight::Semibold, ink);
-    let tw = p.text_width(style, label).min(r.w - 4.0);
-    p.text_in(r.x + (r.w - tw) * 0.5, r.y + r.h * 0.5 + style.px * 0.36, r.w - 4.0, style, label);
+    theme::labelled(p, r, label, if r.h < 26.0 { 9.0 } else { 10.5 }, on, down, colour);
     hit(s, r, target);
 }
 
@@ -172,8 +161,8 @@ fn logo(p: &mut Painter, x: f32, cy: f32) -> f32 {
 }
 
 fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
-    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, EDGE);
+    p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
+    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
     let two = r.h > TOOLBAR;
     let mut x = logo(p, r.x + 8.0, r.y + TOOLBAR * 0.5) + 12.0;
     let views = [
@@ -191,20 +180,25 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     } else {
         58.0
     };
-    p.outlined(x, r.y + 4.0, tw * views.len() as f32, TOOLBAR - 8.0, 6.0, DEEP, 1.0, EDGE);
+    // The views as a segmented control: the open one raised, with an accent underline.
+    p.outlined(x, r.y + 4.0, tw * views.len() as f32, TOOLBAR - 8.0, 9.0, theme::WELL, 1.0, theme::BORDER);
     for (n, (label, v)) in views.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * tw, r.y + 4.0, tw, TOOLBAR - 8.0);
         if s.view == v {
-            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 2.0, ACCENT);
+            p.glow(b.x + 2.0, b.y + 3.0, b.w - 4.0, b.h - 4.0, 7.0, 4.0, fade(rgb(0x000000), 0x90));
+            p.outlined(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 7.0, theme::RAISED, 1.0, theme::BORDER);
+            p.rect(b.x + b.w * 0.5 - 8.0, b.y + b.h - 5.0, 16.0, 2.0, 1.0, ACCENT);
+        } else if s.pressed(Target::View(v)) {
+            p.rect(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 7.0, theme::PRESSED);
         }
-        let ink = Style { colour: if s.view == v { TEXT } else { GREY }, ..TAB };
+        let ink = Style { colour: if s.view == v { TEXT } else { theme::DIM }, ..TAB };
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
         hit(s, b, Target::View(v));
     }
     x += tw * views.len() as f32 + 8.0;
     let r = if two {
         x = r.x + 6.0;
-        p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, EDGE);
+        p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
         Rect::new(r.x, r.y + TOOLBAR, r.w, TOOLBAR)
     } else {
         r
@@ -247,23 +241,21 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     };
     let sx = if two { r.x + 6.0 } else { (r.w - 300.0).max(x + 2.0) };
     let sw = r.w - sx - 8.0;
-    p.outlined(
-        sx,
-        r.y + 5.0,
-        sw,
-        h - 2.0,
-        6.0,
-        DEEP,
-        1.0,
-        if s.search_focus || !s.query.is_empty() { ACCENT } else { EDGE },
-    );
+    let focus = s.search_focus || !s.query.is_empty();
+    let fh = h - 2.0;
+    p.outlined(sx, r.y + 5.0, sw, fh, fh * 0.5, theme::WELL, 1.0, if focus { ACCENT } else { theme::BORDER });
+    // A magnifier ahead of the text.
+    let (mx, my) = (sx + 15.0, r.y + 5.0 + fh * 0.5 - 1.0);
+    p.outlined(mx - 4.5, my - 4.5, 9.0, 9.0, 4.5, 0, 1.5, if focus { ACCENT } else { theme::DIM });
+    p.line((mx + 3.5, my + 3.5), (mx + 6.5, my + 6.5), 1.5, if focus { ACCENT } else { theme::DIM });
     hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
+    let tx = sx + 28.0;
     if s.query.is_empty() {
-        let hint = s.status.as_deref().unwrap_or("Search");
-        p.text_in(sx + 10.0, r.y + 22.0, sw - 16.0, Style { colour: DARK, ..ARTIST }, hint);
+        let hint = s.status.as_deref().unwrap_or("Search tracks");
+        p.text_in(tx, r.y + 22.0, sw - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
     } else {
-        let qw = p.text_in(sx + 10.0, r.y + 22.0, sw - 50.0, Style { px: 12.0, ..TITLE }, &s.query);
-        p.rect(sx + 11.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
+        let qw = p.text_in(tx, r.y + 22.0, sw - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
+        p.rect(tx + 1.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
         let n = s.shown.len().to_string();
         p.text(sx + sw - 8.0 - p.text_width(SMALL, &n), r.y + 21.0, SMALL, &n);
     }
@@ -384,73 +376,65 @@ pub fn cue_colour(s: &State, d: usize, i: usize) -> u32 {
     CUES[usize::from(s.decks[d].cue_colours[i]) % 8]
 }
 
+/// A hot cue's menu where it was held: its colour in a submenu, and delete.
 fn cue_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some((d, i, x, y)) = s.cue_menu else { return };
     p.layer();
-    hit(s, Rect::new(0.0, 0.0, w, h), Target::CueMenuClose);
-    let (cell, gap) = (30.0, 4.0);
-    let pw = 4.0 * cell + 3.0 * gap + 16.0;
-    let ph = 2.0 * cell + gap + 70.0;
-    let r = Rect::new(x.clamp(4.0, w - pw - 4.0), y.clamp(4.0, h - ph - 4.0), pw, ph);
-    p.outlined(r.x, r.y, r.w, r.h, 8.0, SURFACE, 1.5, cue_colour(s, d, i));
-    let head = format!("HOT CUE {}", i + 1);
-    p.text(r.x + 8.0, r.y + 18.0, TAB, &head);
-    for (n, &c) in CUES.iter().enumerate() {
-        let b = Rect::new(
-            r.x + 8.0 + (n % 4) as f32 * (cell + gap),
-            r.y + 26.0 + (n / 4) as f32 * (cell + gap),
-            cell,
-            cell,
-        );
-        let on = usize::from(s.decks[d].cue_colours[i]) == n;
-        p.outlined(b.x, b.y, b.w, b.h, 5.0, c, if on { 2.0 } else { 0.0 }, TEXT);
-        hit(s, b, Target::CueColour(n as u8));
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::CueMenuClose);
+    let now = usize::from(s.decks[d].cue_colours[i]) % CUES.len();
+    let lines = [
+        Line::item(format!("Hot cue {}", i + 1), Target::MenuBody).enabled(false).hint(format!("Deck {}", d + 1)),
+        Line::Rule,
+        Line::sub("Colour", 0).hint(CUE_NAMES[now]),
+        Line::Rule,
+        Line::item("Delete cue", Target::CueClear),
+    ];
+    let (open, r) = theme::menu(p, s, (x, y), screen, &lines);
+    if let Some(top) = open {
+        let colours: Vec<Line> = CUES
+            .iter()
+            .zip(CUE_NAMES)
+            .enumerate()
+            .map(|(n, (&c, name))| {
+                Line::item(name, Target::CueColour(n as u8)).mark(Mark::Swatch(c)).hint(if n == now {
+                    "Current"
+                } else {
+                    ""
+                })
+            })
+            .collect();
+        theme::submenu(p, s, r, top, screen, &colours);
     }
-    let by = r.y + r.h - 34.0;
-    button(p, s, Rect::new(r.x + 8.0, by, r.w - 54.0, 26.0), "CLEAR", false, RED, Target::CueClear);
-    button(p, s, Rect::new(r.x + r.w - 40.0, by, 32.0, 26.0), "X", false, ACCENT, Target::CueMenuClose);
 }
 
+/// The beat grid's menu beside the deck's GRID button.
 fn grid_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some(d) = s.grid_menu else { return };
     p.layer();
-    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0x90));
-    hit(s, Rect::new(0.0, 0.0, w, h), Target::GridClose);
-    let pw = 340.0f32.min(w - 16.0);
-    let row = 34.0;
-    let ph = 54.0 + 5.0 * (row + 6.0) + 6.0;
-    let r = Rect::new((w - pw) * 0.5, ((h - ph) * 0.5).max(4.0), pw, ph);
-    p.outlined(r.x, r.y, r.w, r.h, 10.0, SURFACE, 1.5, DECK[d]);
-    hit(s, r, Target::Grid(d));
-    p.text(r.x + 12.0, r.y + 22.0, Style { colour: DECK[d], ..TAB }, &format!("BEATGRID  DECK {}", d + 1));
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::GridClose);
+    let at = s.rect_of(Target::Grid(d)).map_or(((w - theme::MENU_W) * 0.5, h * 0.2), |b| (b.x, b.y + b.h + 4.0));
     let locked = s.decks[d].grid_locked;
-    if let Some((g, _)) = s.decks[d].beat() {
-        let bpm = format!("{:.2} BPM", g.bpm);
-        p.text(r.x + r.w - 44.0 - p.text_width(TAB, &bpm), r.y + 22.0, Style { colour: AMBER, ..TAB }, &bpm);
-    }
-    button(p, s, Rect::new(r.x + r.w - 38.0, r.y + 6.0, 30.0, 24.0), "X", false, ACCENT, Target::GridClose);
-    let hint = if locked { "Grid locked: unlock to edit" } else { "Move the grid until beat lines sit on the kicks" };
-    p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, hint);
     let edits = !locked;
-    let undo = edits && !s.decks[d].grid_undo.is_empty();
-    let ops = [
-        ("1/2 BEAT", Target::GridOp(GridOp::Half), edits),
-        ("DOWNBEAT HERE", Target::GridOp(GridOp::Here), edits),
-        ("EARLIER", Target::GridOp(GridOp::Earlier), edits),
-        ("LATER", Target::GridOp(GridOp::Later), edits),
-        ("BPM / 2", Target::GridOp(GridOp::Halve), edits),
-        ("BPM x 2", Target::GridOp(GridOp::Double), edits),
-        ("MATCH OTHER DECK", Target::GridOp(GridOp::Match), edits),
-        ("UNDO", Target::GridOp(GridOp::Undo), undo),
-        (if locked { "UNLOCK GRID" } else { "LOCK GRID" }, Target::GridOp(GridOp::Lock), true),
-        ("CLOSE", Target::GridClose, true),
+    let bpm = s.decks[d].beat().map_or_else(String::new, |(g, _)| format!("{:.2} BPM", g.bpm));
+    let op = |text: &str, o: GridOp, on: bool| Line::item(text, Target::GridOp(o)).enabled(on);
+    let lines = [
+        Line::item(format!("Beat grid, deck {}", d + 1), Target::MenuBody).enabled(false).hint(bpm),
+        Line::Rule,
+        op("Downbeat here", GridOp::Here, edits),
+        op("Move earlier", GridOp::Earlier, edits).hint("-10 ms"),
+        op("Move later", GridOp::Later, edits).hint("+10 ms"),
+        op("Shift half a beat", GridOp::Half, edits),
+        Line::Rule,
+        op("Halve BPM", GridOp::Halve, edits).hint("/2"),
+        op("Double BPM", GridOp::Double, edits).hint("x2"),
+        op("Match other deck", GridOp::Match, edits),
+        Line::Rule,
+        op("Undo", GridOp::Undo, edits && !s.decks[d].grid_undo.is_empty()),
+        op("Lock grid", GridOp::Lock, true).mark(Mark::Check(locked)),
     ];
-    let bw = (r.w - 30.0) * 0.5;
-    for (n, (label, t, enabled)) in ops.into_iter().enumerate() {
-        let b = Rect::new(r.x + 12.0 + (n % 2) as f32 * (bw + 6.0), r.y + 54.0 + (n / 2) as f32 * (row + 6.0), bw, row);
-        let on = n == 8 && locked;
-        button(p, s, b, label, on, if enabled { if n == 8 { AMBER } else { ACCENT } } else { DARK }, t);
-    }
+    theme::menu(p, s, at, screen, &lines);
 }
 
 fn clock(secs: f64) -> String {
@@ -522,64 +506,40 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
 }
 
-/// Card for a held track: load it to a deck, add it to playlists.
+/// A held track's menu where it was held: load it to a deck, or add it to playlists.
 fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some(i) = s.track_menu else { return };
     p.layer();
-    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0x99));
-    hit(s, Rect::new(0.0, 0.0, w, h), Target::MenuClose);
-    let lists = s.playlists.len();
-    let cw = 360.0f32.min(w - 24.0);
-    let ch = (16.0 + 22.0 + 52.0 + 26.0 + lists.max(1) as f32 * 34.0 + 16.0).min(h - 24.0);
-    let r = Rect::new((w - cw) * 0.5, (h - ch) * 0.5, cw, ch);
-    p.glow(r.x, r.y + 6.0, r.w, r.h, 16.0, 18.0, fade(rgb(0x000000), 0xc0));
-    p.outlined(r.x, r.y, r.w, r.h, 16.0, SURFACE, 1.0, EDGE);
-    hit(s, r, Target::Picker);
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
     let e = &s.entries[i as usize];
     let key = crate::state::entry_key(e);
     let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
-    p.text_in(r.x + 16.0, r.y + 30.0, r.w - 32.0, Style::new(15.0, Weight::Bold, TEXT), &title);
-    let bw = (r.w - 40.0) * 0.5;
-    for d in 0..2 {
-        let b = Rect::new(r.x + 16.0 + d as f32 * (bw + 8.0), r.y + 44.0, bw, 44.0);
-        button(p, s, b, ["DECK 1", "DECK 2"][d], true, DECK[d], Target::MenuDeck(d));
-    }
-    let mut y = r.y + 104.0;
-    p.rect(r.x + 16.0, y - 8.0, r.w - 32.0, 1.0, 0.0, EDGE);
     let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
-    p.text(r.x + 16.0, y + 8.0, SMALL, "PLAYLISTS");
-    let pill = format!("in {held}");
-    p.text(
-        r.x + r.w - 16.0 - p.text_width(SMALL, &pill),
-        y + 8.0,
-        Style { colour: if held > 0 { ACCENT } else { GREY }, ..SMALL },
-        &pill,
-    );
-    y += 18.0;
-    if lists == 0 {
-        p.text(r.x + 16.0, y + 20.0, ARTIST, "No playlists yet: make one in the sidebar");
-    }
-    for n in 0..lists {
-        if y + 32.0 > r.y + r.h - 8.0 {
-            break;
+    let lines = [
+        Line::item(title, Target::MenuBody).enabled(false),
+        Line::Rule,
+        Line::item("Load on deck 1", Target::MenuDeck(0)).enabled(!s.telemetry.decks[0].playing),
+        Line::item("Load on deck 2", Target::MenuDeck(1)).enabled(!s.telemetry.decks[1].playing),
+        Line::Rule,
+        Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
+    ];
+    let (open, r) = theme::menu(p, s, s.menu_at, screen, &lines);
+    if let Some(top) = open {
+        let mut lists: Vec<Line> = s
+            .playlists
+            .iter()
+            .enumerate()
+            .map(|(n, (name, keys))| {
+                Line::item(name.clone(), Target::MenuToggle(n)).mark(Mark::Check(keys.contains(&key)))
+            })
+            .collect();
+        if lists.is_empty() {
+            lists.push(Line::item("No playlists yet", Target::MenuBody).enabled(false));
         }
-        let on = s.playlists[n].1.contains(&key);
-        let b = Rect::new(r.x + 16.0, y, r.w - 32.0, 30.0);
-        p.rect(b.x, b.y, b.w, b.h, 6.0, if on { fade(ACCENT, 0x28) } else { rgb(0x16181e) });
-        p.outlined(
-            b.x + 8.0,
-            b.y + 8.0,
-            14.0,
-            14.0,
-            3.0,
-            if on { ACCENT } else { 0 },
-            1.5,
-            if on { ACCENT } else { GREY },
-        );
-        let name = s.playlists[n].0.clone();
-        p.text_in(b.x + 32.0, b.y + 20.0, b.w - 40.0, Style { colour: TEXT, ..ARTIST }, &name);
-        hit(s, b, Target::MenuToggle(n));
-        y += 34.0;
+        lists.push(Line::Rule);
+        lists.push(Line::item("New playlist", Target::NewPlaylist));
+        theme::submenu(p, s, r, top, screen, &lists);
     }
 }
 
@@ -850,7 +810,7 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0xb0));
     hit(s, Rect::new(0.0, 0.0, w, h), Target::PickerClose);
     let r = Rect::new(20.0, 20.0, w - 40.0, h - 40.0);
-    p.outlined(r.x, r.y, r.w, r.h, 10.0, SURFACE, 1.5, DECK[d]);
+    theme::card(p, r, DECK[d]);
     hit(s, r, Target::Picker);
     let bank = ["A", "B", "C", "D"][s.bank[d] % 4];
     let head = format!("DECK {} SAMPLE PAD {bank}{}", d + 1, pad + 1);
@@ -886,10 +846,10 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             b.w,
             b.h,
             6.0,
-            if on { fade(DECK[d], 0x60) } else { rgb(0x1a1c23) },
-            if on { fade(DECK[d], 0x30) } else { rgb(0x111318) },
+            if on { fade(DECK[d], 0x50) } else { theme::RAISED },
+            if on { fade(DECK[d], 0x28) } else { theme::CONTROL },
             1.0,
-            if on { DECK[d] } else { rgb(0x2a2c33) },
+            if on { DECK[d] } else { theme::BORDER },
         );
         let label = crate::state::sample_name(s, i);
         p.text_in(
@@ -994,16 +954,6 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             }
         }
     }
-}
-
-/// DJ Sugar's `button.svg`: a half black rim, a #282828 to #202020 face, a faint
-/// lit top edge and a shaded bottom one; `button_pressed.svg` darkens the face.
-fn skin_button(p: &mut Painter, r: Rect, down: bool) {
-    p.rect(r.x, r.y, r.w, r.h, 3.0, fade(rgb(0x000000), 0x80));
-    let (top, bottom) = if down { (rgb(0x181818), rgb(0x202020)) } else { (rgb(0x282828), rgb(0x202020)) };
-    p.gradient(r.x + 2.0, r.y + 2.0, r.w - 4.0, r.h - 4.0, 1.0, top, bottom, 0.0, 0);
-    p.rect(r.x + 3.0, r.y + 2.0, r.w - 6.0, 1.0, 0.0, fade(rgb(0xffffff), if down { 0x08 } else { 0x10 }));
-    p.rect(r.x + 3.0, r.y + r.h - 3.0, r.w - 6.0, 1.0, 0.0, fade(rgb(0x000000), 0x40));
 }
 
 /// DJ Sugar's `section.svg`: a black frame lit along the top, shaded along the bottom.

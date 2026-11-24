@@ -85,6 +85,8 @@ fn main() {
             }
             save(&r, &out.join(format!("{name}-{}.png", view.to_lowercase())));
         }
+        menu(&mut ui, &mut r, (name, scale), &mut faults);
+        save(&r, &out.join(format!("{name}-menu.png")));
         let before = pixels(&r);
         r = Renderer::offscreen(w, h).expect("second renderer");
         ui.render(&mut r);
@@ -150,4 +152,26 @@ fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String
     if ui.query() != "daft punk" {
         faults.push(format!("{name}: typed \"{}\", wanted \"daft punk\"", ui.query()));
     }
+}
+
+/// Holds a library track for its menu and opens the playlist submenu.
+fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &mut Vec<String>) {
+    ui.tap("View(Lib)");
+    ui.render(r);
+    let Some((_, [x, y, w, _])) = ui.targets().into_iter().find(|(t, _)| t == "Library") else {
+        faults.push(format!("{name}: no library to hold"));
+        return;
+    };
+    let (px, py) = ((x + w * 0.3) * scale, (y + 50.0) * scale);
+    ui.pointer_down(7, px, py);
+    std::thread::sleep(std::time::Duration::from_millis(700));
+    ui.render(r);
+    ui.pointer_up(7, py);
+    ui.render(r);
+    // Without tracks there is nothing to hold; the shot then shows the empty library.
+    if !ui.tap("Submenu(0)") {
+        return;
+    }
+    ui.render(r);
+    ui.render(r);
 }

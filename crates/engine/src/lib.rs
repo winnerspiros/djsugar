@@ -19,6 +19,12 @@ pub enum Command {
     Rate(usize, f64),
     Nudge(usize, f64),
     KeyLock(usize, bool),
+    Pfl(usize, bool),
+    Quantize(usize, bool),
+    /// Matches tempo and phase to the leader once.
+    BeatSync(usize),
+    SyncLock(usize, bool),
+    SyncLeader(usize, bool),
     Loop(usize, Option<(f64, f64)>),
     Echo(usize, f32, f64),
     Brake(usize, f32),
@@ -44,6 +50,9 @@ pub struct DeckState {
     pub position: f64,
     pub playing: bool,
     pub peak: f32,
+    pub sync_lock: bool,
+    /// 0 not leading, 1 leading, 2 leading because the DJ picked it.
+    pub sync_leader: u8,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

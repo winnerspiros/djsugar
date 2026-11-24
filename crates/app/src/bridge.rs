@@ -133,6 +133,11 @@ impl Bridge {
                 self.deck(d, "rate_temp_down", f64::from(u8::from(n < 0.0)));
             }
             Command::KeyLock(d, on) => self.deck(d, "keylock", f64::from(u8::from(on))),
+            Command::Pfl(d, on) => self.deck(d, "pfl", f64::from(u8::from(on))),
+            Command::Quantize(d, on) => self.deck(d, "quantize", f64::from(u8::from(on))),
+            Command::BeatSync(d) => self.deck(d, "beatsync", 1.0),
+            Command::SyncLock(d, on) => self.deck(d, "sync_enabled", f64::from(u8::from(on))),
+            Command::SyncLeader(d, on) => self.deck(d, "sync_leader", if on { 2.0 } else { 0.0 }),
             Command::Loop(d, l) => {
                 let g = deck_group(d);
                 match l {
@@ -197,6 +202,8 @@ impl Bridge {
                 position: self.get(&g, "playposition").max(0.0) * self.get(&g, "duration") * self.rate[d],
                 playing: self.get(&g, "play") != 0.0,
                 peak: self.get(&g, "VuMeter") as f32,
+                sync_lock: self.get(&g, "sync_enabled") != 0.0,
+                sync_leader: self.get(&g, "sync_leader").round() as u8,
             };
         }
         t.main_peak = [self.get("[Master]", "VuMeterL") as f32, self.get("[Master]", "VuMeterR") as f32];

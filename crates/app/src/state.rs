@@ -64,6 +64,10 @@ pub enum Target {
     MenuToggle(usize),
     MenuClose,
     Picker,
+    /// Opens a submenu of the open menu, by its number in that menu.
+    Submenu(u8),
+    /// A menu's own area, so a press there neither closes it nor reaches what is under it.
+    MenuBody,
     PickerClose,
     Scene(usize),
     Xy,
@@ -373,6 +377,10 @@ pub struct State {
     pub playlists: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
     pub track_menu: Option<u32>,
+    /// Where the track menu was opened.
+    pub menu_at: (f32, f32),
+    /// The open menu's open submenu.
+    pub submenu: Option<u8>,
     pub station: Station,
     pub cue_menu: Option<(usize, usize, f32, f32)>,
     pub grid_menu: Option<usize>,
@@ -473,6 +481,8 @@ impl State {
             playlists: crate::store::load_playlists(),
             history: Vec::new(),
             track_menu: None,
+            menu_at: (0.0, 0.0),
+            submenu: None,
             station: Station::default(),
             cue_menu: None,
             grid_menu: None,
@@ -547,6 +557,15 @@ impl State {
             && self.decks[d].cues[p].is_some()
         {
             self.cue_menu = Some((d, p, g.start.0, g.start.1));
+            self.submenu = None;
+        }
+        if let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Sync(d)) = g.target
+        {
+            g.moved = true;
+            let t = self.telemetry.decks[d];
+            let c = if t.sync_lock { Command::SyncLeader(d, t.sync_leader < 2) } else { Command::SyncLock(d, true) };
+            self.send(c);
         }
         if self.track_menu.is_none()
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -556,6 +575,8 @@ impl State {
             let row = ((g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
             if row >= 0.0 && g.start.1 > self.library.y + 30.0 {
                 self.track_menu = self.shown.get(row as usize).copied();
+                self.menu_at = g.start;
+                self.submenu = None;
             }
         }
         if self.picker.is_none()
@@ -1195,7 +1216,6 @@ impl State {
                 self.decks[d].mode = m;
             }
             Target::PickerClose => self.picker = None,
-            Target::Sync(d) => self.sync(d),
             Target::AutoDj => self.toggle_auto(),
             Target::Jog(d) => {
                 self.focus = d;
@@ -1207,9 +1227,20 @@ impl State {
                 self.browser = if self.browser == Some(d) { None } else { Some(d) };
             }
             Target::CloseBrowser => self.browser = None,
-            Target::CueMenuClose => self.cue_menu = None,
-            Target::Grid(d) if self.decks[d].loaded.is_some() => self.grid_menu = Some(d),
-            Target::GridClose => self.grid_menu = None,
+            Target::CueMenuClose => {
+                self.cue_menu = None;
+                self.submenu = None;
+            }
+            Target::Submenu(n) => self.submenu = Some(n),
+            Target::MenuBody => {}
+            Target::Grid(d) if self.decks[d].loaded.is_some() => {
+                self.grid_menu = Some(d);
+                self.submenu = None;
+            }
+            Target::GridClose => {
+                self.grid_menu = None;
+                self.submenu = None;
+            }
             Target::SearchFocus => {}
             Target::HubFocus => {}
             Target::HubSearch => {
@@ -1250,7 +1281,10 @@ impl State {
                     }
                 }
             }
-            Target::MenuClose => self.track_menu = None,
+            Target::MenuClose => {
+                self.track_menu = None;
+                self.submenu = None;
+            }
             Target::Scene(i) => {
                 self.station.scene = Scene::ALL[i.min(Scene::ALL.len() - 1)];
                 self.send(Command::Station(Set::Scene(self.station.scene)));
@@ -1327,8 +1361,16 @@ impl State {
                 self.decks[d] = DeckUi { volume: self.decks[d].volume, knobs: self.decks[d].knobs, ..DeckUi::new() };
                 self.send(Command::Unload(d));
             }
-            Target::Pfl(d) => self.decks[d].pfl = !self.decks[d].pfl,
-            Target::Quantize(d) => self.decks[d].quantize = !self.decks[d].quantize,
+            Target::Pfl(d) => {
+                let on = !self.decks[d].pfl;
+                self.decks[d].pfl = on;
+                self.send(Command::Pfl(d, on));
+            }
+            Target::Quantize(d) => {
+                let on = !self.decks[d].quantize;
+                self.decks[d].quantize = on;
+                self.send(Command::Quantize(d, on));
+            }
             Target::Pitch(d, by) => {
                 let st = if by == 0 { 0 } else { (self.decks[d].semitones + by).clamp(-12, 12) };
                 self.decks[d].semitones = st;
@@ -1430,6 +1472,16 @@ impl State {
                 self.station.on = false;
                 self.send(Command::Station(Set::On(false)));
             }
+            // A tap matches tempo and phase once, so a stray touch never locks the
+            // deck, or unlocks a locked one; holding locks it (see `tick`).
+            Some(Target::Sync(deck)) if !d.moved => {
+                let c = if self.telemetry.decks[deck].sync_lock {
+                    Command::SyncLock(deck, false)
+                } else {
+                    Command::BeatSync(deck)
+                };
+                self.send(c);
+            }
             Some(Target::Jog(deck)) if d.resume => {
                 self.send(Command::Play(deck, true));
                 self.telemetry.decks[deck].playing = true;
@@ -1463,7 +1515,7 @@ impl State {
         self.scroll = (self.scroll + dy).clamp(0.0, max);
     }
 
-    fn rect_of(&self, t: Target) -> Option<Rect> {
+    pub(crate) fn rect_of(&self, t: Target) -> Option<Rect> {
         self.hits.iter().find(|h| h.target == t).map(|h| h.rect)
     }
 

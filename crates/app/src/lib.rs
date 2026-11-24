@@ -7,6 +7,7 @@ mod record;
 mod state;
 mod store;
 mod sugar;
+mod theme;
 
 use sugar_ui::{Fonts, Painter};
 
