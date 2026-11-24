@@ -48,7 +48,7 @@ pub enum ForwardEvent {
     /// Input z-normalization complete.
     Normalized,
 
-    /// Normalized CaC tensor (input to freq encoder[0]).
+    /// Normalized CaC tensor (input to `freq_encoder[0]`).
     NormalizedCac { stats: Option<TensorStats> },
 
     /// An encoder layer finished.

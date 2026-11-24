@@ -156,7 +156,7 @@ pub fn split_dim0(t: &StoredTensor, n_chunks: usize) -> Result<Vec<StoredTensor>
 }
 
 /// Split a 1D StoredTensor into `n_chunks` equal pieces.
-/// E.g., [1536] with n_chunks=3 -> three [512] tensors.
+/// E.g., `[1536]` with `n_chunks=3` -> three `[512]` tensors.
 pub fn split_1d(t: &StoredTensor, n_chunks: usize) -> Result<Vec<StoredTensor>, WeightError> {
     if t.shape.len() != 1 {
         return Err(WeightError::ShapeMismatch(format!("split_1d expects 1D tensor, got shape {:?}", t.shape)));
