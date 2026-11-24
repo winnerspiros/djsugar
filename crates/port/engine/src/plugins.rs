@@ -1215,11 +1215,17 @@ mod tests {
         instrument: Input,
         notes: crate::effects::NoteInput,
         now: f64,
+        // One rig at a time: parallel helper processes on a small runner miss
+        // the buffer deadlines these tests count on.
+        _serial: std::sync::MutexGuard<'static, ()>,
     }
+
+    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     impl Rig {
         /// Deck 1's own unit, its first slot loaded with `effect`, fully wet.
         fn new(effect: &str) -> Self {
+            let serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
             let reg = ControlRegistry::new();
             let mut rack = EffectRack::new(&reg, SR as f64);
             let instrument = Input::new(&reg, INSTRUMENT, SR as f64);
@@ -1233,7 +1239,7 @@ mod tests {
                 name: format!("Test {effect}"),
                 plugin: Plugin::Test(effect.into()),
             }]);
-            let rig = Self { reg, rack, host, instrument, notes, now: 0.0 };
+            let rig = Self { reg, rack, host, instrument, notes, now: 0.0, _serial: serial };
             rig.unit("mix").set(1.0);
             rig.slot("loaded_effect").set(PLUGIN_BASE as f64);
             rig.slot("enabled").set_bool(true);
