@@ -80,6 +80,7 @@ pub enum Target {
     /// Opens settings at a page.
     Prefs(u8),
     PrefsClose,
+    HubService(crate::hub::Service),
     Quit,
     Find,
     LoadPick(usize),
@@ -1864,6 +1865,7 @@ impl State {
             }
             Target::SearchFocus => {}
             Target::HubFocus => {}
+            Target::HubService(sv) => self.hub.switch(sv),
             Target::HubSearch => {
                 self.hub.focus = false;
                 self.hub.search();

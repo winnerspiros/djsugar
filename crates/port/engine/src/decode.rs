@@ -30,6 +30,13 @@ pub fn codecs() -> &'static CodecRegistry {
 pub const EXTENSIONS: &[&str] =
     &["mp3", "flac", "wav", "wave", "ogg", "oga", "m4a", "mp4", "aac", "aif", "aiff", "caf", "mka"];
 
+/// Frames the file at `path` could hold at the lowest bitrate in use, 16 kbps,
+/// so a missing or wrong length in its headers never cuts the audio short.
+fn room(path: &Path, sample_rate: u32) -> usize {
+    let bytes = std::fs::metadata(path).map_or(0, |m| m.len());
+    (bytes / 2000).saturating_mul(u64::from(sample_rate.max(48_000))) as usize
+}
+
 /// Decodes `path` to stereo frames. Mono is duplicated to both sides; channels
 /// beyond the first two are dropped.
 pub fn decode(path: &Path) -> Result<Audio, String> {
@@ -89,10 +96,11 @@ impl Decoder {
         };
         let decoder = codecs().make_audio_decoder(&params, &AudioDecoderOptions::default()).map_err(err)?;
         let sample_rate = params.sample_rate.unwrap_or(0);
+        // Streamed files often give no length, or 0, or only their first part's.
+        let n_frames = n_frames.filter(|&n| n > 0);
         let length_known = n_frames.is_some() && sample_rate > 0;
-        // Without a length, guess ten minutes; the audio grows past it as needed.
         let expected = n_frames.map_or(600 * sample_rate.max(44_100) as usize, |n| n as usize);
-        let (_, writer) = Audio::writer(sample_rate, expected);
+        let (_, writer) = Audio::writer_for(sample_rate, expected, room(path, sample_rate));
         Ok(Decoder { path: path.to_owned(), format, decoder, track_id, writer, length_known })
     }
 
@@ -188,7 +196,7 @@ impl Decoder {
                 }
                 // The headers didn't give the rate; start over with the real one.
                 let expected = self.writer.audio().len();
-                self.writer = Audio::writer(spec.rate(), expected).1;
+                self.writer = Audio::writer_for(spec.rate(), expected, room(&path, spec.rate())).1;
                 self.length_known = false;
             }
             let channels = spec.channels().count().max(1);
@@ -233,6 +241,15 @@ pub(crate) mod tests {
         for s in samples {
             f.write_all(&s.to_le_bytes()).unwrap();
         }
+    }
+
+    /// A streamed file's headers carry no length; it must still decode whole.
+    #[test]
+    fn decodes_a_fragmented_file_to_its_end() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/fragmented.m4a");
+        let audio = decode(&path).unwrap();
+        let secs = audio.len() as f64 / f64::from(audio.sample_rate);
+        assert!((secs - 40.0).abs() < 0.5, "{secs} s");
     }
 
     #[test]

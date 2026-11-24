@@ -105,7 +105,8 @@ pub fn download(
                     return Err(Error::Parse("the server ignored the range"));
                 }
                 let mut body = resp.body_mut().with_config().limit(u64::MAX).reader();
-                let mut out = file.try_clone().map_err(net)?;
+                // A clone would share one position with the other threads.
+                let mut out = std::fs::OpenOptions::new().write(true).open(&part).map_err(net)?;
                 out.seek(SeekFrom::Start(*at)).map_err(net)?;
                 let mut buf = vec![0u8; 1 << 16];
                 while *at <= end {

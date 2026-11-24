@@ -5,21 +5,92 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use sugar_net::Hit;
-use sugar_net::youtube::{Page, YouTube};
+use sugar_net::archive::Archive;
+use sugar_net::audius::Audius;
+use sugar_net::soundcloud::SoundCloud;
+use sugar_net::youtube::YouTube;
+use sugar_net::{Hit, Result};
 
 /// A service tab, in DJ Sugar's order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Service {
     YouTube,
+    SoundCloud,
+    Audius,
+    Archive,
 }
 
 impl Service {
-    pub const ALL: [Self; 1] = [Self::YouTube];
+    pub const ALL: [Self; 4] = [Self::YouTube, Self::SoundCloud, Self::Audius, Self::Archive];
 
     pub const fn name(self) -> &'static str {
         match self {
             Self::YouTube => "YOUTUBE",
+            Self::SoundCloud => "SOUNDCLOUD",
+            Self::Audius => "AUDIUS",
+            Self::Archive => "ARCHIVE",
+        }
+    }
+
+    /// The name in running text.
+    pub const fn title(self) -> &'static str {
+        match self {
+            Self::YouTube => "YouTube",
+            Self::SoundCloud => "SoundCloud",
+            Self::Audius => "Audius",
+            Self::Archive => "the Internet Archive",
+        }
+    }
+
+    /// The tab's underline.
+    pub const fn colour(self) -> u32 {
+        match self {
+            Self::YouTube => 0xff0033,
+            Self::SoundCloud => 0xff5500,
+            Self::Audius => 0xcc0fe0,
+            Self::Archive => 0x9a9a9e,
+        }
+    }
+}
+
+/// One page of hits and where the next starts.
+#[derive(Debug, Default)]
+pub struct Page {
+    pub hits: Vec<Hit>,
+    pub more: Option<String>,
+}
+
+/// Every service's client, shared by the worker threads.
+#[derive(Debug)]
+struct Clients {
+    youtube: YouTube,
+    soundcloud: SoundCloud,
+    audius: Audius,
+    archive: Archive,
+}
+
+impl Clients {
+    fn search(&self, sv: Service, q: &str, more: Option<&str>) -> Result<Page> {
+        match sv {
+            Service::YouTube => self.youtube.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::SoundCloud => self.soundcloud.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Audius => self.audius.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Archive => self.archive.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+        }
+    }
+
+    fn fetch(
+        &self,
+        sv: Service,
+        id: &str,
+        dir: &std::path::Path,
+        progress: &(dyn Fn(u64, u64) + Sync),
+    ) -> Result<PathBuf> {
+        match sv {
+            Service::YouTube => self.youtube.fetch(id, dir, progress),
+            Service::SoundCloud => self.soundcloud.fetch(id, dir, progress),
+            Service::Audius => self.audius.fetch(id, dir, progress),
+            Service::Archive => self.archive.fetch(id, dir, progress),
         }
     }
 }
@@ -44,7 +115,7 @@ pub struct Hub {
     /// Downloads under way: video, deck, done 0..1.
     pub fetching: Vec<(String, usize, f32)>,
     pub scroll: f32,
-    youtube: Arc<YouTube>,
+    clients: Arc<Clients>,
     cache: PathBuf,
     tx: Sender<Reply>,
     rx: Receiver<Reply>,
@@ -63,7 +134,12 @@ impl Hub {
             status: String::new(),
             fetching: Vec::new(),
             scroll: 0.0,
-            youtube: Arc::new(YouTube::new("US", "")),
+            clients: Arc::new(Clients {
+                youtube: YouTube::new("US", ""),
+                soundcloud: SoundCloud::new(),
+                audius: Audius::new(),
+                archive: Archive,
+            }),
             cache,
             tx,
             rx,
@@ -76,11 +152,11 @@ impl Hub {
             return;
         }
         self.searching = true;
-        self.status = format!("Searching \"{q}\"");
+        self.status = format!("Searching {} for \"{q}\"", self.service.title());
         self.scroll = 0.0;
-        let (yt, tx) = (self.youtube.clone(), self.tx.clone());
+        let (c, tx, sv) = (self.clients.clone(), self.tx.clone(), self.service);
         std::thread::spawn(move || {
-            let _ = tx.send(match yt.search(&q, None) {
+            let _ = tx.send(match c.search(sv, &q, None) {
                 Ok(p) => Reply::Page(p, false),
                 Err(e) => Reply::Failed(None, e.to_string()),
             });
@@ -95,9 +171,9 @@ impl Hub {
             return;
         }
         self.searching = true;
-        let (yt, tx, q) = (self.youtube.clone(), self.tx.clone(), self.query.clone());
+        let (c, tx, q, sv) = (self.clients.clone(), self.tx.clone(), self.query.clone(), self.service);
         std::thread::spawn(move || {
-            let _ = tx.send(match yt.search(&q, Some(&token)) {
+            let _ = tx.send(match c.search(sv, &q, Some(&token)) {
                 Ok(p) => Reply::Page(p, true),
                 Err(e) => Reply::Failed(None, e.to_string()),
             });
@@ -112,7 +188,7 @@ impl Hub {
         let id = h.id.clone();
         self.fetching.push((id.clone(), deck, 0.0));
         self.status = format!("Getting \"{}\" for deck {}", h.title, deck + 1);
-        let (yt, tx, dir) = (self.youtube.clone(), self.tx.clone(), self.cache.clone());
+        let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
         std::thread::spawn(move || {
             let last = std::sync::Mutex::new(0u8);
             let progress = |done: u64, total: u64| {
@@ -125,12 +201,24 @@ impl Hub {
                     }
                 }
             };
-            let r = yt.fetch(&id, &dir, &progress);
+            let r = c.fetch(sv, &id, &dir, &progress);
             let _ = tx.send(match r {
                 Ok(path) => Reply::Ready(id, path, deck),
                 Err(e) => Reply::Failed(Some(id), e.to_string()),
             });
         });
+    }
+
+    /// Switches service; the query stays and is searched there.
+    pub fn switch(&mut self, sv: Service) {
+        if sv == self.service {
+            return;
+        }
+        self.service = sv;
+        self.hits.clear();
+        self.more = None;
+        self.searching = false;
+        self.search();
     }
 
     /// Replies since the last frame; finished downloads come back as (file, title, artist, deck).

@@ -1027,8 +1027,9 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         let tw = p.text_width(TAB, sv.name()) + 24.0;
         p.text(x + 12.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
         if on {
-            p.rect(x + 8.0, r.y + bar - 3.0, tw - 16.0, 2.0, 1.0, rgb(0xff0033));
+            p.rect(x + 8.0, r.y + bar - 3.0, tw - 16.0, 2.0, 1.0, rgb(sv.colour()));
         }
+        hit(s, Rect::new(x, r.y, tw, bar), Target::HubService(sv));
         x += tw;
     }
     let fx = x + 12.0;
@@ -1036,7 +1037,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     let field = Rect::new(fx, r.y + 6.0, fw, bar - 12.0);
     p.outlined(field.x, field.y, field.w, field.h, 4.0, DEEP, 1.0, if s.hub.focus { ACCENT } else { EDGE });
     let (shown, ink) = if s.hub.query.is_empty() && !s.hub.focus {
-        ("Search YouTube".to_string(), DARK)
+        (format!("Search {}", s.hub.service.title()), DARK)
     } else {
         (format!("{}{}", s.hub.query, if s.hub.focus { "|" } else { "" }), TEXT)
     };
@@ -1061,10 +1062,14 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     s.hub_area = list;
     if s.hub.hits.is_empty() {
         let msg = if busy {
-            "Searching"
+            "Searching".to_string()
         } else {
-            "Search YouTube, then send a result to deck 1 or 2. Audio is cached for next time."
+            format!(
+                "Search {}, then send a result to deck 1 or 2. Audio is cached for next time.",
+                s.hub.service.title()
+            )
         };
+        let msg = msg.as_str();
         p.text(
             list.x + (list.w - p.text_width(ARTIST, msg)) * 0.5,
             list.y + 40.0,

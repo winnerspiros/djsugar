@@ -155,7 +155,12 @@ impl Audio {
     /// Empty audio of about `expected_frames` frames, and the writer that fills
     /// it. Frames beyond one chunk past the estimate are dropped.
     pub fn writer(sample_rate: u32, expected_frames: usize) -> (Arc<Audio>, AudioWriter) {
-        let chunks = (0..expected_frames / CHUNK + 2).map(|_| OnceLock::new()).collect();
+        Self::writer_for(sample_rate, expected_frames, expected_frames)
+    }
+
+    /// As [`Audio::writer`], with room for up to `room` frames.
+    pub fn writer_for(sample_rate: u32, expected_frames: usize, room: usize) -> (Arc<Audio>, AudioWriter) {
+        let chunks = (0..room.max(expected_frames) / CHUNK + 2).map(|_| OnceLock::new()).collect();
         let audio = Arc::new(Audio {
             sample_rate,
             chunks,

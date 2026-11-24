@@ -1,8 +1,11 @@
 //! Streaming services: search them and fetch their audio for the decks.
 //! Calls block, so the app runs them on worker threads. Pure Rust down to TLS.
 
+pub mod archive;
+pub mod audius;
 pub mod botguard;
 pub mod http;
+pub mod soundcloud;
 pub mod youtube;
 
 /// One search result.
