@@ -54,10 +54,22 @@ fn xpad_kit(read: crate::state::Reader) -> [Option<PathBuf>; 4] {
 impl Bridge {
     pub fn start(read: crate::state::Reader) -> Self {
         let reg = ControlRegistry::new();
-        let engine = AudioEngine::start(reg.clone(), &AudioSetup::default());
+        let s = crate::settings::Settings::load();
+        let pick = |o, v: &[Option<u32>]| v[usize::from(s.get(o)).min(v.len() - 1)];
+        use crate::settings::{BUFFERS, Opt, RATES};
+        let setup = AudioSetup {
+            sample_rate: pick(Opt::SampleRate, &RATES),
+            buffer_frames: pick(Opt::Buffer, &BUFFERS),
+            ..AudioSetup::default()
+        };
+        let engine = AudioEngine::start(reg.clone(), &setup);
         engine.xpad_factory(xpad_kit(read));
         let slots = (0..SLOTS).map(|_| Slot { name: String::new(), ready: Arc::default() }).collect();
         Self { engine, reg, rate: [44_100.0; DECKS], slots, next: 0, last: Telemetry::default() }
+    }
+
+    pub fn status(&self) -> String {
+        self.engine.status()
     }
 
     pub fn rate(&self) -> u32 {

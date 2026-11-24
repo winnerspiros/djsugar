@@ -24,6 +24,8 @@ pub enum Opt {
     AutoGain,
     GainTarget,
     BpmRange,
+    SampleRate,
+    Buffer,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -58,7 +60,11 @@ pub const BPM_RANGES: [(f64, f64); 6] =
     [(60.0, 120.0), (70.0, 140.0), (80.0, 160.0), (90.0, 180.0), (100.0, 200.0), (120.0, 240.0)];
 const BPM_NAMES: [&str; 6] = ["60 - 120", "70 - 140", "80 - 160", "90 - 180", "100 - 200", "120 - 240"];
 
-pub const OPTIONS: [Spec; 19] = [
+/// Sample rates and buffer sizes offered; the first of each is the device's own.
+pub const RATES: [Option<u32>; 5] = [None, Some(44_100), Some(48_000), Some(88_200), Some(96_000)];
+pub const BUFFERS: [Option<u32>; 7] = [None, Some(64), Some(128), Some(256), Some(512), Some(1024), Some(2048)];
+
+pub const OPTIONS: [Spec; 21] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -211,6 +217,22 @@ pub const OPTIONS: [Spec; 19] = [
         kind: Kind::Menu(&BPM_NAMES),
         default: 3,
     },
+    Spec {
+        opt: Opt::SampleRate,
+        key: "sample_rate",
+        title: "Sample rate",
+        detail: "Takes effect the next time DJ Sugar starts.",
+        kind: Kind::Menu(&["Device default", "44.1 kHz", "48 kHz", "88.2 kHz", "96 kHz"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::Buffer,
+        key: "buffer_frames",
+        title: "Buffer size",
+        detail: "Smaller answers faster; larger is safer from dropouts.",
+        kind: Kind::Menu(&["Device default", "64", "128", "256", "512", "1024", "2048"]),
+        default: 0,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -226,11 +248,18 @@ pub enum Row {
     Rescan,
 }
 
-pub const PAGES: [&str; 7] = ["Decks", "Mixer", "Keyboard", "Collection", "Analysis", "Appearance", "About"];
+pub const PAGES: [&str; 8] = ["Audio", "Decks", "Mixer", "Keyboard", "Collection", "Analysis", "Appearance", "About"];
 
-pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
+pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> Vec<Row> {
     match n {
         0 => vec![
+            Row::Heading("OUTPUT"),
+            Row::Info("Device", if device.is_empty() { "System default".into() } else { device.into() }),
+            Row::Info("Running at", if rate > 0 { format!("{rate} Hz") } else { "No sound".into() }),
+            Row::Opt(Opt::SampleRate),
+            Row::Opt(Opt::Buffer),
+        ],
+        1 => vec![
             Row::Heading("TEMPO"),
             Row::Opt(Opt::RateRange),
             Row::Opt(Opt::TempoUp),
@@ -247,7 +276,7 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
             Row::Opt(Opt::ResetEq),
             Row::Opt(Opt::ResetGain),
         ],
-        1 => vec![
+        2 => vec![
             Row::Heading("CROSSFADER"),
             Row::Opt(Opt::FaderOn),
             Row::Opt(Opt::FaderCurve),
@@ -257,7 +286,7 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
             Row::Opt(Opt::AutoGain),
             Row::Opt(Opt::GainTarget),
         ],
-        2 => {
+        3 => {
             let mut v = Vec::with_capacity(SHORTCUTS.len() + 3);
             for (heading, keys) in SHORTCUTS {
                 v.push(Row::Heading(heading));
@@ -265,9 +294,9 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
             }
             v
         }
-        4 => vec![Row::Heading("TEMPO"), Row::Opt(Opt::BpmRange)],
-        5 => vec![Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
-        3 => {
+        5 => vec![Row::Heading("TEMPO"), Row::Opt(Opt::BpmRange)],
+        6 => vec![Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
+        4 => {
             let mut v = vec![Row::Heading("MUSIC FOLDERS")];
             if roots.is_empty() {
                 v.push(Row::Info("No music folder", "Put tracks in Music or Download".into()));

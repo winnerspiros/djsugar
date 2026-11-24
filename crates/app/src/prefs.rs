@@ -24,19 +24,35 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let at = s.rect_of(Target::AppMenu).map_or((8.0, 44.0), |b| (b.x, b.y + b.h + 4.0));
     let lines = [
         Line::sub("File", 0),
+        Line::sub("Edit", 3),
+        Line::sub("Mix", 4),
         Line::sub("View", 1),
         Line::sub("Help", 2),
         Line::Rule,
-        Line::item("Settings", Target::Prefs(0)),
+        Line::item("Settings", Target::Prefs(0)).hint("Ctrl+,"),
+        Line::item("Quit", Target::Quit).hint("Ctrl+Q"),
     ];
     let (open, r) = theme::menu(p, s, at, screen, &lines);
     let Some(top) = open else { return };
     let sub: Vec<Line> = match s.submenu {
         Some(0) => vec![
-            Line::item("Record mix", Target::Record).mark(Mark::Check(s.recorder.is_some())),
+            Line::item("Record mix", Target::Record).mark(Mark::Check(s.recorder.is_some())).hint("Ctrl+R"),
+            Line::Rule,
+            Line::item("Load selected on deck 1", Target::LoadPick(0)).hint("Ctrl+O"),
+            Line::item("Load selected on deck 2", Target::LoadPick(1)).hint("Ctrl+Shift+O"),
             Line::Rule,
             Line::item("Look for new tracks", Target::Rescan),
-            Line::item("Music folders", Target::Prefs(3)),
+            Line::item("Music folders", Target::Prefs(4)),
+        ],
+        Some(3) => vec![
+            Line::item("Find", Target::Find).hint("Ctrl+F"),
+            Line::item("New playlist", Target::NewPlaylist).hint("Ctrl+N"),
+        ],
+        Some(4) => vec![
+            Line::item("Auto mix", Target::AutoDj).mark(Mark::Check(s.auto.is_some())).hint("Shift+F12"),
+            Line::Rule,
+            Line::item("Crossfader and loudness", Target::Prefs(2)),
+            Line::item("Tempo and loading", Target::Prefs(1)),
         ],
         Some(1) => {
             let views = [
@@ -49,14 +65,23 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             ];
             let mut v: Vec<Line> = views
                 .into_iter()
-                .map(|(n, view)| Line::item(n, Target::View(view)).mark(Mark::Check(s.view == view)))
+                .enumerate()
+                .map(|(i, (n, view))| {
+                    Line::item(n, Target::View(view))
+                        .mark(Mark::Check(s.view == view))
+                        .hint(format!("Ctrl+Alt+{}", i + 1))
+                })
                 .collect();
             v.push(Line::Rule);
-            v.push(Line::item("Effects bar", Target::ToggleFx).mark(Mark::Check(s.show_fx)));
+            v.push(Line::item("Effects bar", Target::ToggleFx).mark(Mark::Check(s.show_fx)).hint("Ctrl+5"));
             v.push(Line::item("Samplers bar", Target::ToggleSamplers).mark(Mark::Check(s.show_samplers)));
             v
         }
-        _ => vec![Line::item("About DJ Sugar", Target::Prefs(4))],
+        _ => vec![
+            Line::item("Keyboard shortcuts", Target::Prefs(3)),
+            Line::Rule,
+            Line::item("About DJ Sugar", Target::Prefs(7)),
+        ],
     };
     theme::submenu(p, s, r, top, screen, &sub);
 }
@@ -105,7 +130,7 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Style::new(20.0, Weight::Bold, theme::TEXT),
         settings::PAGES[page.min(settings::PAGES.len() - 1)],
     );
-    let rows = settings::page(page, &crate::library::roots(), s.out_rate);
+    let rows = settings::page(page, &crate::library::roots(), s.out_rate, &s.audio_device());
     let top = body.y + 50.0;
     let bottom = body.y + body.h;
     let total: f32 = rows.iter().map(row_h).sum();

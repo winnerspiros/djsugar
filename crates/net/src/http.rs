@@ -59,77 +59,95 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
     Ok(total.or_else(|| resp.headers().get("content-length").and_then(|v| v.to_str().ok()?.parse().ok())))
 }
 
-/// Downloads `url` to `to` via a `.part` file. Files of `chunk_from` bytes or more
-/// come as `chunks` parallel ranges, each resumed up to four times.
+/// The most one request asks for; streaming hosts cut longer replies short.
+pub const PIECE: u64 = 1 << 20;
+
+/// Downloads `url` to `to` via a `.part` file, in ranges of at most [`PIECE`]
+/// bytes fetched by `workers` threads; each range is resumed up to four times.
+/// `size` is the length when the caller already knows it. A file that comes
+/// out shorter than its length is an error, never a finished download.
 pub fn download(
     url: &str,
     headers: &[(&str, &str)],
     to: &Path,
-    chunk_from: u64,
-    chunks: u64,
+    size: Option<u64>,
+    workers: u64,
     progress: &(dyn Fn(u64, u64) + Sync),
 ) -> Result<u64> {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
     let part = to.with_extension(format!("{}.part", to.extension().and_then(|e| e.to_str()).unwrap_or("")));
-    let total = length(url, headers)?;
+    let total = match size {
+        Some(n) => n,
+        None => length(url, headers)?.ok_or(Error::Parse("the server gave no length"))?,
+    };
+    if total == 0 {
+        return Err(Error::Parse("empty stream"));
+    }
     let file = std::fs::File::create(&part).map_err(net)?;
-    let done = std::sync::atomic::AtomicU64::new(0);
-    let total_n = total.unwrap_or(0);
-    let fetch = |from: u64, to_byte: Option<u64>| -> Result<()> {
+    file.set_len(total).map_err(net)?;
+    let done = AtomicU64::new(0);
+    let next = AtomicU64::new(0);
+    let pieces = total.div_ceil(PIECE);
+    let fetch = |from: u64, end: u64| -> Result<()> {
         let mut at = from;
         let mut tries = 0;
         loop {
-            let range = match to_byte {
-                Some(end) => format!("bytes={at}-{end}"),
-                None => format!("bytes={at}-"),
-            };
-            let mut req = agent().get(url).header("Range", &range);
+            let mut req = agent().get(url).header("Range", &format!("bytes={at}-{end}"));
             for (k, v) in headers {
                 req = req.header(*k, *v);
             }
-            let run = || -> Result<()> {
+            let run = |at: &mut u64| -> Result<()> {
                 let mut resp = req.call().map_err(net)?;
                 let status = resp.status().as_u16();
                 if status >= 400 {
                     return Err(Error::Status(status));
                 }
+                // A server ignoring the range sends the whole file from byte 0.
+                if status == 200 && *at > 0 {
+                    return Err(Error::Parse("the server ignored the range"));
+                }
                 let mut body = resp.body_mut().with_config().limit(u64::MAX).reader();
                 let mut out = file.try_clone().map_err(net)?;
-                out.seek(SeekFrom::Start(at)).map_err(net)?;
+                out.seek(SeekFrom::Start(*at)).map_err(net)?;
                 let mut buf = vec![0u8; 1 << 16];
-                loop {
-                    let n = body.read(&mut buf).map_err(net)?;
+                while *at <= end {
+                    let want = buf.len().min((end + 1 - *at) as usize);
+                    let n = body.read(&mut buf[..want]).map_err(net)?;
                     if n == 0 {
-                        return Ok(());
+                        break;
                     }
                     out.write_all(&buf[..n]).map_err(net)?;
-                    at += n as u64;
-                    let d = done.fetch_add(n as u64, std::sync::atomic::Ordering::Relaxed) + n as u64;
-                    progress(d, total_n);
+                    *at += n as u64;
+                    progress(done.fetch_add(n as u64, Relaxed) + n as u64, total);
                 }
+                Ok(())
             };
-            match run() {
-                Ok(()) if to_byte.is_none_or(|end| at > end) => return Ok(()),
+            match run(&mut at) {
+                _ if at > end => return Ok(()),
                 Err(Error::Status(s)) if s < 500 => return Err(Error::Status(s)),
                 r if tries >= 4 => return r.and(Err(Error::Parse("download ended early"))),
                 _ => tries += 1,
             }
         }
     };
-    let result = match total {
-        Some(n) if n >= chunk_from && chunks > 1 => {
-            file.set_len(n).map_err(net)?;
-            let size = n.div_ceil(chunks);
-            std::thread::scope(|s| {
-                let jobs: Vec<_> = (0..chunks)
-                    .map(|i| (i * size, ((i + 1) * size).min(n) - 1))
-                    .filter(|(a, b)| a <= b)
-                    .map(|(a, b)| s.spawn(move || fetch(a, Some(b))))
-                    .collect();
-                jobs.into_iter().try_for_each(|j| j.join().unwrap_or(Err(Error::Parse("download thread"))))
+    let result = std::thread::scope(|s| {
+        let jobs: Vec<_> = (0..workers.clamp(1, pieces))
+            .map(|_| {
+                s.spawn(|| {
+                    loop {
+                        let i = next.fetch_add(1, Relaxed);
+                        if i >= pieces {
+                            return Ok(());
+                        }
+                        fetch(i * PIECE, ((i + 1) * PIECE).min(total) - 1)?;
+                    }
+                })
             })
-        }
-        _ => fetch(0, None),
-    };
+            .collect();
+        jobs.into_iter().try_for_each(|j| j.join().unwrap_or(Err(Error::Parse("download thread"))))
+    });
+    let result = result
+        .and_then(|()| if done.load(Relaxed) < total { Err(Error::Parse("download ended early")) } else { Ok(()) });
     drop(file);
     match result {
         Ok(()) => {
@@ -140,5 +158,61 @@ pub fn download(
             let _ = std::fs::remove_file(&part);
             Err(e)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{BufRead, BufReader};
+
+    /// Serves `data` by range, but never more than `cut` bytes per reply.
+    fn serve(data: Vec<u8>, cut: usize) -> String {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = l.local_addr().unwrap();
+        std::thread::spawn(move || {
+            for c in l.incoming().flatten() {
+                let data = data.clone();
+                std::thread::spawn(move || {
+                    let mut r = BufReader::new(c.try_clone().unwrap());
+                    let mut range = (0, data.len() - 1);
+                    let mut line = String::new();
+                    while r.read_line(&mut line).is_ok_and(|n| n > 2) {
+                        if let Some(v) = line.to_lowercase().strip_prefix("range: bytes=") {
+                            let (a, b) = v.trim().split_once('-').unwrap();
+                            range.0 = a.parse().unwrap();
+                            range.1 = b.parse().unwrap_or(data.len() - 1).min(data.len() - 1);
+                        }
+                        line.clear();
+                    }
+                    let (a, b) = range;
+                    let head = format!(
+                        "HTTP/1.1 206 Partial\r\nContent-Range: bytes {a}-{b}/{}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        data.len(),
+                        b + 1 - a
+                    );
+                    let mut c = c;
+                    let _ = c.write_all(head.as_bytes());
+                    let _ = c.write_all(&data[a..=b.min(a + cut - 1)]);
+                });
+            }
+        });
+        format!("http://{addr}/a")
+    }
+
+    #[test]
+    fn cut_replies_still_give_the_whole_file() {
+        let data: Vec<u8> = (0..3_500_000u32).map(|i| (i * 7 % 251) as u8).collect();
+        let url = serve(data.clone(), 300_000);
+        let dir = std::env::temp_dir().join(format!("dl-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let to = dir.join("a.bin");
+        for size in [Some(data.len() as u64), None] {
+            let _ = std::fs::remove_file(&to);
+            let n = download(&url, &[], &to, size, 4, &|_, _| {});
+            assert!(n.is_ok(), "{n:?}");
+            assert_eq!(std::fs::read(&to).unwrap(), data);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

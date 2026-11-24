@@ -156,6 +156,9 @@ impl Shell {
                 return InputStatus::Unhandled;
             }
         }
+        if self.ui.quit() {
+            crate::android::finish(&self.app);
+        }
         InputStatus::Handled
     }
 

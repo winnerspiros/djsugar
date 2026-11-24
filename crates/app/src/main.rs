@@ -77,6 +77,10 @@ mod linux {
             self.ui.animating()
         }
 
+        fn closing(&self) -> bool {
+            self.ui.quit()
+        }
+
         fn draw(&mut self, present: &mut dyn FnMut(Frame<'_>)) {
             self.ui.render(&mut self.renderer);
             self.renderer

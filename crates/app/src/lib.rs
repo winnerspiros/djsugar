@@ -293,6 +293,9 @@ pub mod native {
                         }
                         _ => {}
                     }
+                    if self.ui.quit() {
+                        event_loop.exit();
+                    }
                     self.redraw();
                 }
                 WindowEvent::Focused(false) => {

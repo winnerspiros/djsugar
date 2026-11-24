@@ -37,6 +37,10 @@ pub struct Frame<'a> {
 pub trait App {
     fn event(&mut self, event: Event) -> bool;
     fn animating(&self) -> bool;
+    /// The app asked to close.
+    fn closing(&self) -> bool {
+        false
+    }
     fn draw(&mut self, present: &mut dyn FnMut(Frame<'_>));
 }
 

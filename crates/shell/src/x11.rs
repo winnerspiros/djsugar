@@ -110,6 +110,9 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
                 Some(ev) => dirty |= app.event(ev),
                 None => {}
             }
+            if app.closing() {
+                return Ok(());
+            }
             event = conn.poll_for_event().map_err(Error::from)?;
         }
         let animating = app.animating();

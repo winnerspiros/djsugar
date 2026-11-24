@@ -80,6 +80,9 @@ pub enum Target {
     /// Opens settings at a page.
     Prefs(u8),
     PrefsClose,
+    Quit,
+    Find,
+    LoadPick(usize),
     /// The track menu's stars, 1 to 5; the lit one again clears them.
     MenuRate(u8),
     /// The track menu's colours, 0 for none.
@@ -1456,6 +1459,11 @@ impl State {
         }
     }
 
+    /// The device playing, or why nothing is.
+    pub fn audio_device(&self) -> String {
+        self.control.as_ref().map(Control::status).unwrap_or_default()
+    }
+
     fn send_gain(&mut self, d: usize) {
         let g = knob_gain(self.decks[d].gain) * self.decks[d].auto_gain;
         self.send(Command::Gain(d, g));
@@ -1797,6 +1805,16 @@ impl State {
             }
             Target::PickerClose => self.picker = None,
             Target::AutoDj => self.toggle_auto(),
+            Target::Quit => self.quit = true,
+            Target::Find => {
+                self.app_menu = false;
+                self.view = View::Lib;
+                self.search_focus = true;
+            }
+            Target::LoadPick(d) => {
+                self.app_menu = false;
+                self.load_pick(d);
+            }
             Target::Jog(d) => {
                 self.focus = d;
                 self.send(Command::Play(d, false));

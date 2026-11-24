@@ -111,7 +111,6 @@ const BURST: usize = 8;
 const REST_FIRST: Duration = Duration::from_secs(30);
 const REST_MAX: Duration = Duration::from_secs(600);
 /// Files this big or bigger are downloaded as parallel ranges.
-pub const CHUNK_FROM: u64 = 1 << 20;
 pub const CHUNKS: u64 = 16;
 const RESULTS: usize = 60;
 
@@ -128,6 +127,8 @@ pub struct Format {
     pub url: String,
     pub m4a: bool,
     pub bitrate: u64,
+    /// Bytes, when the listing says.
+    pub size: Option<u64>,
 }
 
 impl Format {
@@ -394,7 +395,7 @@ impl YouTube {
                     }
                     _ => f.url.clone(),
                 };
-                match download(&url, headers, &to, CHUNK_FROM, CHUNKS, progress) {
+                match download(&url, headers, &to, f.size, CHUNKS, progress) {
                     Ok(_) => return Ok(to),
                     Err(Error::Status(403)) => return Err(Error::Status(403)),
                     Err(e) => last = e,
@@ -549,6 +550,7 @@ pub fn player_formats(v: &Value) -> Result<Vec<Format>> {
                 url: f["url"].as_str()?.to_string(),
                 m4a: mime.contains("mp4"),
                 bitrate: f["bitrate"].as_u64().unwrap_or(0),
+                size: f["contentLength"].as_str().and_then(|n| n.parse().ok()),
             })
         })
         .collect();
@@ -571,6 +573,7 @@ pub fn piped_formats(v: &Value) -> Vec<Format> {
                         url: s["url"].as_str().filter(|u| !u.is_empty())?.to_string(),
                         m4a: mime.contains("mp4") || codec.starts_with("mp4a"),
                         bitrate: s["bitrate"].as_u64().unwrap_or(0),
+                        size: s["contentLength"].as_u64().filter(|&n| n > 0),
                     })
                 })
                 .collect()

@@ -192,14 +192,15 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
     ui.key(Key::Escape, Mods::default());
     ui.render(r);
-    let steps: [(&str, &str); 7] = [
+    let steps: [(&str, &str); 8] = [
         ("AppMenu", ""),
         ("Submenu(1)", "appmenu"),
-        ("Prefs(0)", ""),
+        ("Prefs(0)", "settings-audio"),
+        ("Prefs(1)", ""),
         ("Pref(RateRange)", "settings"),
         ("PrefsClose", ""),
-        ("Prefs(1)", "settings-mixer"),
-        ("Prefs(2)", "settings-keyboard"),
+        ("Prefs(2)", "settings-mixer"),
+        ("Prefs(3)", "settings-keyboard"),
     ];
     for (tap, shot) in steps {
         if !ui.tap(tap) {
