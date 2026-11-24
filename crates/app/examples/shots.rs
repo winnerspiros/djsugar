@@ -43,9 +43,43 @@ fn pixels(r: &Renderer<'_>) -> Vec<u8> {
     v
 }
 
+/// Ten seconds of 440 Hz, so the library always has a track to hold.
+fn tone(path: &std::path::Path) {
+    let rate = 44_100u32;
+    let data: Vec<u8> = (0..rate * 10)
+        .flat_map(|i| {
+            ((((i as f32) * 440.0 * std::f32::consts::TAU / rate as f32).sin() * 8000.0) as i16).to_le_bytes()
+        })
+        .collect();
+    let mut f = Vec::with_capacity(44 + data.len());
+    f.extend_from_slice(b"RIFF");
+    f.extend_from_slice(&(36 + data.len() as u32).to_le_bytes());
+    f.extend_from_slice(b"WAVEfmt ");
+    for v in [16u32, 0x0001_0001, rate, rate * 2, 0x0010_0002] {
+        f.extend_from_slice(&v.to_le_bytes());
+    }
+    f.extend_from_slice(b"data");
+    f.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    f.extend_from_slice(&data);
+    std::fs::write(path, f).expect("tone");
+}
+
 fn main() {
     let out = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "target/shots".into()));
     std::fs::create_dir_all(&out).expect("output dir");
+    if std::env::var_os("DJSUGAR_MUSIC").is_none() {
+        let music = out.join("music");
+        std::fs::create_dir_all(&music).expect("music dir");
+        tone(&music.join("Shots - Tone.wav"));
+        // Run again with the folder in the library's roots.
+        let me = std::env::current_exe().expect("own path");
+        let status = std::process::Command::new(me)
+            .args(std::env::args_os().skip(1))
+            .env("DJSUGAR_MUSIC", &music)
+            .status()
+            .expect("run again");
+        std::process::exit(status.code().unwrap_or(1));
+    }
     let mut faults = Vec::new();
     let mut perf = Vec::new();
     for (name, w, h, scale) in SIZES {
