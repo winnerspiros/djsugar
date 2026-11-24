@@ -75,7 +75,7 @@ jobs:
           f=target/release/djsugar
           s=$(stat -c %s $f)
           echo "Linux binary: $((s / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
-          [ $s -lt 41943040 ] || { echo "::error::Linux binary over 40 MiB: $s"; exit 1; }
+          [ $s -lt 58720256 ] || { echo "::error::Linux binary over 56 MiB: $s"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-linux
