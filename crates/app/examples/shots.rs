@@ -158,27 +158,37 @@ fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String
 /// Holds a library track for its menu and opens the playlist submenu.
 fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &mut Vec<String>) {
     ui.tap("View(Lib)");
-    ui.render(r);
+    // The scan finds tracks off the main thread; give it time.
+    for _ in 0..30 {
+        ui.render(r);
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
     let Some((_, [x, y, w, _])) = ui.targets().into_iter().find(|(t, _)| t == "Library") else {
         faults.push(format!("{name}: no library to hold"));
         return;
     };
-    let (px, py) = ((x + w * 0.3) * scale, (y + 50.0) * scale);
+    // The first track's row.
+    let (px, py) = ((x + w * 0.3) * scale, (y + 11.0) * scale);
     ui.pointer_down(7, px, py);
     std::thread::sleep(std::time::Duration::from_millis(700));
     ui.render(r);
     ui.pointer_up(7, py);
     ui.render(r);
     // Without tracks there is nothing to hold; the shot then shows the empty library.
-    if !ui.tap("Submenu(0)") {
+    if !ui.tap("Submenu(1)") {
         return;
     }
     ui.render(r);
     ui.render(r);
+    if !ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)") {
+        faults.push(format!("{name}: no Sort by submenu"));
+    }
 }
 
 /// The app menu with its View submenu, then the Decks settings page with a menu open.
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
+    ui.key(Key::Escape);
+    ui.render(r);
     let steps: [(&str, &str); 4] =
         [("AppMenu", ""), ("Submenu(1)", "appmenu"), ("Prefs(0)", ""), ("Pref(RateRange)", "settings")];
     for (tap, shot) in steps {

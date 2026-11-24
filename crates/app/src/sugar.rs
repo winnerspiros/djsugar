@@ -136,6 +136,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
     track_menu(p, s, w, h);
+    list_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -517,6 +518,30 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
 }
 
+/// A held playlist's menu: load its first track, move it, empty it, delete it.
+fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    use crate::state::ListOp as L;
+    let Some(n) = s.list_menu else { return };
+    let Some((name, count)) = s.playlists.get(n).map(|(n, k)| (n.clone(), k.len())) else { return };
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let last = s.playlists.len() - 1;
+    let lines = [
+        Line::item(name, Target::MenuBody).enabled(false).hint(format!("{count} tracks")),
+        Line::Rule,
+        Line::item("Load first on deck 1", Target::ListOp(n, L::Load(0))).enabled(count > 0),
+        Line::item("Load first on deck 2", Target::ListOp(n, L::Load(1))).enabled(count > 0),
+        Line::Rule,
+        Line::item("Move up", Target::ListOp(n, L::Up)).enabled(n > 0),
+        Line::item("Move down", Target::ListOp(n, L::Down)).enabled(n < last),
+        Line::Rule,
+        Line::item("Clear", Target::ListOp(n, L::Clear)).enabled(count > 0),
+        Line::item("Delete playlist", Target::ListOp(n, L::Delete)),
+    ];
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
 /// A held track's menu where it was held: load it to a deck, or add it to playlists.
 fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some(i) = s.track_menu else { return };
@@ -527,16 +552,49 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let key = crate::state::entry_key(e);
     let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
     let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
-    let lines = [
+    let free = |d: usize| !(s.settings.on(crate::settings::Opt::Protect) && s.telemetry.decks[d].playing);
+    let mut lines = vec![
         Line::item(title, Target::MenuBody).enabled(false),
         Line::Rule,
-        Line::item("Load on deck 1", Target::MenuDeck(0)).enabled(!s.telemetry.decks[0].playing),
-        Line::item("Load on deck 2", Target::MenuDeck(1)).enabled(!s.telemetry.decks[1].playing),
+        Line::item("Play on deck 1", Target::MenuPlay(0)).enabled(free(0)),
+        Line::item("Play on deck 2", Target::MenuPlay(1)).enabled(free(1)),
+        Line::item("Load on deck 1", Target::MenuDeck(0)).enabled(free(0)),
+        Line::item("Load on deck 2", Target::MenuDeck(1)).enabled(free(1)),
         Line::Rule,
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
     ];
+    if matches!(s.shelf, crate::state::Shelf::Playlist(_)) {
+        lines.push(Line::item("Remove from this playlist", Target::MenuRemove));
+    }
+    lines.extend([
+        Line::sub("Sort by", 1),
+        Line::Rule,
+        Line::item("Analyze again", Target::MenuAnalyze),
+        Line::item("Look for new tracks", Target::Rescan),
+    ]);
     let (open, r) = theme::menu(p, s, s.menu_at, screen, &lines);
-    if let Some(top) = open {
+    if let Some(top) = open
+        && s.submenu == Some(1)
+    {
+        use crate::library::Column as C;
+        let cols = [
+            (C::Index, "Order added"),
+            (C::Title, "Title"),
+            (C::Artist, "Artist"),
+            (C::Bpm, "BPM"),
+            (C::Key, "Key"),
+            (C::Time, "Length"),
+        ];
+        let (now, up) = s.sort;
+        let sub: Vec<Line> = cols
+            .into_iter()
+            .map(|(c, n)| {
+                let hint = if c == now { if up { "Up" } else { "Down" } } else { "" };
+                Line::item(n, Target::Sort(c)).mark(Mark::Check(c == now)).hint(hint.to_string())
+            })
+            .collect();
+        theme::submenu(p, s, r, top, screen, &sub);
+    } else if let Some(top) = open {
         let mut lists: Vec<Line> = s
             .playlists
             .iter()

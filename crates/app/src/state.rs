@@ -61,6 +61,14 @@ pub enum Target {
     NewPlaylist,
     MenuDeck(usize),
     MenuToggle(usize),
+    /// Loads the menu's track on a deck and plays it.
+    MenuPlay(usize),
+    /// Measures the menu's track again.
+    MenuAnalyze,
+    /// Takes the menu's track out of the open playlist.
+    MenuRemove,
+    /// A playlist's menu action.
+    ListOp(usize, ListOp),
     MenuClose,
     Picker,
     /// Opens a submenu of the open menu, by its number in that menu.
@@ -127,6 +135,16 @@ pub struct Picker {
 }
 
 /// What the library lists, picked in its sidebar.
+/// What a playlist's menu does to it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ListOp {
+    Load(usize),
+    Up,
+    Down,
+    Clear,
+    Delete,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Shelf {
     #[default]
@@ -394,6 +412,10 @@ pub struct State {
     /// The setting whose choices are open, and where.
     pub pref_menu: Option<(crate::settings::Opt, f32, f32)>,
     pub app_menu: bool,
+    /// The held playlist whose menu is open.
+    pub list_menu: Option<usize>,
+    /// The deck to start once its track has loaded.
+    play_on_load: Option<usize>,
     /// Where the track menu was opened.
     pub menu_at: (f32, f32),
     /// The open menu's open submenu.
@@ -502,6 +524,8 @@ impl State {
             prefs: None,
             pref_menu: None,
             app_menu: false,
+            list_menu: None,
+            play_on_load: None,
             menu_at: (0.0, 0.0),
             submenu: None,
             station: Station::default(),
@@ -600,6 +624,14 @@ impl State {
                 self.submenu = None;
             }
         }
+        if self.list_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Shelf(Shelf::Playlist(n))) = g.target
+        {
+            g.moved = true;
+            self.list_menu = Some(n);
+            self.menu_at = g.start;
+        }
         if self.picker.is_none()
             && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
             && let Some(Target::Pad(d, p)) = g.target
@@ -628,8 +660,15 @@ impl State {
                     self.decks[d].looping = None;
                     self.decks[d].loop_range = None;
                     self.on_load(d);
+                    if self.play_on_load == Some(d) {
+                        self.play_on_load = None;
+                        self.send(Command::Play(d, true));
+                    }
                 }
-                (Job::Deck(d), None) => self.decks[d].loading = false,
+                (Job::Deck(d), None) => {
+                    self.decks[d].loading = false;
+                    self.play_on_load = None;
+                }
                 (Job::Sample(i, play), Some(l)) => {
                     if play {
                         self.play_sample(i);
@@ -866,6 +905,67 @@ impl State {
         });
     }
 
+    /// Measures one track again, as the library's pass does.
+    fn analyze_one(&mut self, i: u32) {
+        use std::sync::atomic::Ordering::Relaxed;
+        let Some(entry) = self.entries.get(i as usize).cloned() else { return };
+        let (generation, tx, read) = (self.analysis.load(Relaxed), self.jobs.0.clone(), self.read);
+        self.status = Some(format!("Analyzing \"{}\"", entry.title));
+        std::thread::spawn(move || {
+            let bytes = match &entry.source {
+                Source::Sample(name) => read(name),
+                Source::File(path) => std::fs::read(path).ok(),
+            };
+            if let Some(t) = bytes.and_then(|b| sugar_decode::bytes(b, entry.extension()).ok()) {
+                let _ = tx.send((Job::Meta(generation, i, library::Meta::of(&t)), None));
+            }
+        });
+    }
+
+    fn list_op(&mut self, n: usize, op: ListOp) {
+        if n >= self.playlists.len() {
+            return;
+        }
+        match op {
+            ListOp::Load(d) => {
+                let first =
+                    self.playlists[n].1.first().and_then(|k| self.entries.iter().position(|e| entry_key(e) == *k));
+                match first {
+                    Some(i) => self.load_deck(d, i),
+                    None => self.status = Some("That playlist is empty".into()),
+                }
+                return;
+            }
+            ListOp::Up if n > 0 => self.playlists.swap(n, n - 1),
+            ListOp::Down if n + 1 < self.playlists.len() => self.playlists.swap(n, n + 1),
+            ListOp::Clear => self.playlists[n].1.clear(),
+            ListOp::Delete => {
+                self.playlists.remove(n);
+                if let Shelf::Playlist(p) = self.shelf {
+                    self.shelf = match p.cmp(&n) {
+                        std::cmp::Ordering::Equal => Shelf::Tracks,
+                        std::cmp::Ordering::Greater => Shelf::Playlist(p - 1),
+                        std::cmp::Ordering::Less => self.shelf,
+                    };
+                }
+            }
+            _ => return,
+        }
+        if let (ListOp::Up | ListOp::Down, Shelf::Playlist(p)) = (op, self.shelf) {
+            let to = if op == ListOp::Up { n - 1 } else { n + 1 };
+            self.shelf = if p == n {
+                Shelf::Playlist(to)
+            } else if p == to {
+                Shelf::Playlist(n)
+            } else {
+                self.shelf
+            };
+        }
+        crate::store::save_playlists(&self.playlists);
+        let q = std::mem::take(&mut self.query);
+        self.search(q);
+    }
+
     pub fn resort(&mut self) {
         use library::Column as C;
         let (col, asc) = self.sort;
@@ -944,6 +1044,18 @@ impl State {
             if self.pref_menu.take().is_none() {
                 self.prefs = None;
             }
+            return;
+        }
+        let open = self.track_menu.is_some()
+            || self.list_menu.is_some()
+            || self.cue_menu.is_some()
+            || self.grid_menu.is_some();
+        if key == Key::Escape && open {
+            self.track_menu = None;
+            self.list_menu = None;
+            self.cue_menu = None;
+            self.grid_menu = None;
+            self.submenu = None;
             return;
         }
         if self.hub_typing() {
@@ -1418,7 +1530,34 @@ impl State {
                     }
                 }
             }
+            Target::MenuPlay(d) => {
+                if let Some(i) = self.track_menu.take() {
+                    self.load_deck(d, i as usize);
+                    self.play_on_load = Some(d);
+                }
+            }
+            Target::MenuAnalyze => {
+                if let Some(i) = self.track_menu.take() {
+                    self.analyze_one(i);
+                }
+            }
+            Target::MenuRemove => {
+                if let (Some(i), Shelf::Playlist(p)) = (self.track_menu.take(), self.shelf) {
+                    let k = entry_key(&self.entries[i as usize]);
+                    if let Some((_, keys)) = self.playlists.get_mut(p) {
+                        keys.retain(|x| *x != k);
+                    }
+                    crate::store::save_playlists(&self.playlists);
+                    let q = std::mem::take(&mut self.query);
+                    self.search(q);
+                }
+            }
+            Target::ListOp(n, op) => {
+                self.list_menu = None;
+                self.list_op(n, op);
+            }
             Target::MenuClose => {
+                self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;
             }
@@ -1448,7 +1587,8 @@ impl State {
             }
             Target::XfadeStep(by) => {
                 self.crossfader = (self.crossfader + f32::from(by) * 0.1).clamp(-1.0, 1.0);
-                self.send(Command::Crossfader(self.crossfader));
+                let x = self.crossfader_out();
+                self.send(Command::Crossfader(x));
             }
             Target::Sort(c) => {
                 self.sort = if self.sort.0 == c { (c, !self.sort.1) } else { (c, true) };
