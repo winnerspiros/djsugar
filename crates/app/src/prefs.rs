@@ -106,17 +106,40 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         settings::PAGES[page.min(settings::PAGES.len() - 1)],
     );
     let rows = settings::page(page, &crate::library::roots(), s.out_rate);
-    let mut y = body.y + 50.0;
+    let top = body.y + 50.0;
+    let bottom = body.y + body.h;
+    let total: f32 = rows.iter().map(row_h).sum();
+    s.prefs_max = (total - (bottom - top)).max(0.0);
+    s.prefs_scroll = s.prefs_scroll.min(s.prefs_max);
+    hit(s, Rect::new(body.x, top, body.w, bottom - top), Target::PrefsScroll);
+    // Only rows wholly inside the card are drawn, so none spills over its edge.
+    let mut y = top - s.prefs_scroll;
     for row in &rows {
-        y += row_at(p, s, Rect::new(body.x, y, body.w, 0.0), row);
-        if y > r.y + r.h {
-            break;
+        let rh = row_h(row);
+        if y >= top - 0.5 && y + rh <= bottom + 0.5 {
+            row_at(p, s, Rect::new(body.x, y, body.w, 0.0), row);
         }
+        y += rh;
+    }
+    if s.prefs_max > 0.0 {
+        // Where the page is scrolled to.
+        let track = bottom - top;
+        let th = (track * track / total).max(24.0);
+        let ty = top + (track - th) * s.prefs_scroll / s.prefs_max;
+        p.rect(r.x + r.w - 6.0, ty, 3.0, th, 1.5, fade(theme::DIM, 0x80));
     }
     choices(p, s, w, h);
 }
 
 /// One row of a page at the top of `r`; returns its height.
+fn row_h(row: &Row) -> f32 {
+    match row {
+        Row::Heading(_) => 34.0,
+        Row::Info(..) => 44.0,
+        Row::Rescan | Row::Opt(_) => 52.0,
+    }
+}
+
 fn row_at(p: &mut Painter, s: &mut State, r: Rect, row: &Row) -> f32 {
     let title = Style::new(13.0, Weight::Regular, theme::TEXT);
     let small = Style::new(11.5, Weight::Regular, theme::DIM);

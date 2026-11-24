@@ -61,7 +61,7 @@ pub struct Meta {
 impl Meta {
     pub fn of(t: &sugar_engine::Track) -> Self {
         Self {
-            bpm: sugar_analysis::grid(t.rate, &t.frames).map_or(0.0, |g| g.bpm as f32),
+            bpm: sugar_analysis::grid(t.rate, &t.frames).map_or(0.0, |g| crate::settings::fold(g).bpm as f32),
             key: sugar_analysis::key(t.rate, &t.frames),
             secs: t.frames.len() as f32 / t.rate as f32,
         }

@@ -73,9 +73,35 @@ pub const MENU_W: f32 = 220.0;
 
 /// A menu line: an action, a rule between groups, or a submenu opening beside it.
 pub enum Line {
-    Item { text: String, hint: String, target: Target, enabled: bool, mark: Mark },
-    Sub { text: String, hint: String, id: u8 },
+    Item {
+        text: String,
+        hint: String,
+        target: Target,
+        enabled: bool,
+        mark: Mark,
+    },
+    Sub {
+        text: String,
+        hint: String,
+        id: u8,
+    },
+    /// A label and a row of small buttons, as stars or colours.
+    Picks {
+        label: &'static str,
+        picks: Vec<(Pick, Target)>,
+    },
     Rule,
+}
+
+/// One of a [`Line::Picks`] row's buttons.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Pick {
+    /// A star, lit or not.
+    Star(bool),
+    /// A colour, chosen or not.
+    Swatch(u32, bool),
+    /// No colour, chosen or not.
+    Clear(bool),
 }
 
 /// What sits before a line's text.
@@ -95,7 +121,7 @@ impl Line {
     pub fn hint(mut self, h: impl Into<String>) -> Self {
         match &mut self {
             Line::Item { hint, .. } | Line::Sub { hint, .. } => *hint = h.into(),
-            Line::Rule => {}
+            Line::Picks { .. } | Line::Rule => {}
         }
         self
     }
@@ -156,6 +182,10 @@ pub fn menu(p: &mut Painter, s: &mut State, (x, y): (f32, f32), bounds: Rect, li
                 p.rect(row.x - MENU_PAD, row.y + 4.0, r.w, 1.0, 0.0, MENU_BORDER);
                 continue;
             }
+            Line::Picks { label, picks } => {
+                picks_row(p, s, row, label, picks);
+                continue;
+            }
             Line::Item { text, hint, target, enabled, mark } => {
                 let down = *enabled && s.pressed(*target);
                 if *enabled {
@@ -206,6 +236,53 @@ pub fn menu(p: &mut Painter, s: &mut State, (x, y): (f32, f32), bounds: Rect, li
         }
     }
     (open_at, r)
+}
+
+/// A label, then buttons as wide as the row allows.
+fn picks_row(p: &mut Painter, s: &mut State, row: Rect, label: &str, picks: &[(Pick, Target)]) {
+    let cy = row.y + row.h * 0.5;
+    p.text(row.x + 10.0, cy + 4.3, Style::new(12.0, Weight::Regular, DIM), label);
+    let x0 = row.x + 58.0;
+    let step = ((row.x + row.w - x0) / picks.len().max(1) as f32).min(22.0);
+    for (n, &(pick, target)) in picks.iter().enumerate() {
+        let b = Rect::new(x0 + n as f32 * step, row.y, step, row.h);
+        let (bx, r) = (b.x + step * 0.5, 6.0);
+        if s.pressed(target) {
+            p.rect(b.x, b.y + 2.0, b.w, b.h - 4.0, 4.0, MENU_HOVER);
+        }
+        match pick {
+            Pick::Star(lit) => star(p, (bx, cy), 6.5, if lit { rgb(0xffd60a) } else { rgb(0x5a5a5e) }),
+            Pick::Swatch(c, on) => {
+                if on {
+                    p.rect(bx - r - 2.0, cy - r - 2.0, 2.0 * r + 4.0, 2.0 * r + 4.0, r + 2.0, TEXT);
+                }
+                p.rect(bx - r, cy - r, 2.0 * r, 2.0 * r, r, c);
+            }
+            Pick::Clear(on) => {
+                p.outlined(bx - r, cy - r, 2.0 * r, 2.0 * r, r, MENU, 1.0, if on { TEXT } else { DIM });
+                p.line((bx - 3.0, cy - 3.0), (bx + 3.0, cy + 3.0), 1.3, DIM);
+                p.line((bx + 3.0, cy - 3.0), (bx - 3.0, cy + 3.0), 1.3, DIM);
+            }
+        }
+        hit(s, b, target);
+    }
+}
+
+/// A five pointed star's outline as lines.
+fn star(p: &mut Painter, (cx, cy): (f32, f32), r: f32, c: u32) {
+    let at = |k: usize| {
+        let a = -std::f32::consts::FRAC_PI_2 + k as f32 * std::f32::consts::PI / 5.0;
+        let rr = if k.is_multiple_of(2) { r } else { r * 0.45 };
+        (cx + rr * a.cos(), cy + rr * a.sin())
+    };
+    for k in 0..10 {
+        p.line(at(k), at(k + 1), 1.4, c);
+    }
+    if c != rgb(0x5a5a5e) {
+        for k in 0..10 {
+            p.line((cx, cy), at(k), 2.6, c);
+        }
+    }
 }
 
 /// A submenu beside the line at `top` of the menu `parent`, on whichever side has room.

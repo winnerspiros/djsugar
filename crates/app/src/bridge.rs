@@ -181,6 +181,19 @@ impl Bridge {
                 }
             }
             Command::Crossfader(x) => self.set("[Master]", "crossfader", f64::from(x)),
+            Command::Curve(c) => {
+                use sugar_engine::Curve;
+                self.set("[Mixer]", "crossfader_enabled", f64::from(u8::from(c != Curve::Off)));
+                let (shape, cut) = match c {
+                    Curve::Off | Curve::Smooth => (0.0, None),
+                    Curve::Linear => (1.0, None),
+                    Curve::Cut(c) => (2.0, Some(c)),
+                };
+                self.set("[Mixer Profile]", "xFaderShape", shape);
+                if let Some(c) = cut {
+                    self.set("[Mixer Profile]", "xFaderCutIn", f64::from(c));
+                }
+            }
             Command::Main(v) => self.set("[Master]", "gain", f64::from(v)),
             Command::Record(on) => {
                 let r = self.engine.recorder();

@@ -31,6 +31,10 @@ pub struct Saved {
     pub locked: bool,
     pub cues: [Option<f64>; 8],
     pub colours: [u8; 8],
+    /// Stars, 0 to 5.
+    pub rating: u8,
+    /// The track's colour, 1 to 8; 0 for none.
+    pub colour: u8,
 }
 
 impl Saved {
@@ -38,7 +42,14 @@ impl Saved {
         let grid = self.grid.map_or_else(|| "-\t-".to_string(), |(b, f)| format!("{b}\t{f}"));
         let cues: Vec<String> = self.cues.iter().map(|c| c.map_or_else(|| "-".into(), |v| format!("{v:.0}"))).collect();
         let colours: Vec<String> = self.colours.iter().map(u8::to_string).collect();
-        format!("{key}\t{grid}\t{}\t{}\t{}\n", u8::from(self.locked), cues.join(","), colours.join(","))
+        format!(
+            "{key}\t{grid}\t{}\t{}\t{}\t{}\t{}\n",
+            u8::from(self.locked),
+            cues.join(","),
+            colours.join(","),
+            self.rating,
+            self.colour
+        )
     }
 
     fn parse(line: &str) -> Option<(String, Self)> {
@@ -54,6 +65,9 @@ impl Saved {
         for (slot, v) in s.colours.iter_mut().zip(f.next()?.split(',')) {
             *slot = v.parse().unwrap_or(0);
         }
+        // Rating and colour came later; older lines have neither.
+        s.rating = f.next().and_then(|v| v.parse().ok()).unwrap_or(0).min(5);
+        s.colour = f.next().and_then(|v| v.parse().ok()).unwrap_or(0).min(8);
         Some((key, s))
     }
 }
@@ -153,10 +167,20 @@ mod tests {
         let mut cues = [None; 8];
         cues[0] = Some(44100.0);
         cues[5] = Some(9.0);
-        let s = Saved { grid: Some((124.5, 812.25)), locked: true, cues, colours: [1, 2, 3, 4, 5, 6, 7, 0] };
+        let s = Saved {
+            grid: Some((124.5, 812.25)),
+            locked: true,
+            cues,
+            colours: [1, 2, 3, 4, 5, 6, 7, 0],
+            rating: 4,
+            colour: 6,
+        };
         let mut st = Store::default();
         st.tracks.insert("a/b c.flac".into(), s);
         let back = Store::parse(&st.text());
         assert_eq!(back.get("a/b c.flac"), Some(s));
+        // A line saved before ratings reads with none.
+        let old = "x\t-\t-\t0\t-,-,-,-,-,-,-,-\t0,0,0,0,0,0,0,0\n";
+        assert_eq!(Store::parse(old).get("x"), Some(Saved::default()));
     }
 }

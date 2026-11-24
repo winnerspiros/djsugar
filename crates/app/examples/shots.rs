@@ -158,6 +158,9 @@ fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String
 /// Holds a library track for its menu and opens the playlist submenu.
 fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &mut Vec<String>) {
     ui.tap("View(Lib)");
+    // The typed shot left a search; clear it so every track shows.
+    ui.key(Key::Escape, Mods::default());
+    ui.key(Key::Escape, Mods::default());
     // The scan finds tracks off the main thread; give it time.
     for _ in 0..30 {
         ui.render(r);
@@ -174,8 +177,8 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
     ui.render(r);
     ui.pointer_up(7, py);
     ui.render(r);
-    // Without tracks there is nothing to hold; the shot then shows the empty library.
     if !ui.tap("Submenu(1)") {
+        faults.push(format!("{name}: no track menu"));
         return;
     }
     ui.render(r);
@@ -189,8 +192,15 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
     ui.key(Key::Escape, Mods::default());
     ui.render(r);
-    let steps: [(&str, &str); 4] =
-        [("AppMenu", ""), ("Submenu(1)", "appmenu"), ("Prefs(0)", ""), ("Pref(RateRange)", "settings")];
+    let steps: [(&str, &str); 7] = [
+        ("AppMenu", ""),
+        ("Submenu(1)", "appmenu"),
+        ("Prefs(0)", ""),
+        ("Pref(RateRange)", "settings"),
+        ("PrefsClose", ""),
+        ("Prefs(1)", "settings-mixer"),
+        ("Prefs(2)", "settings-keyboard"),
+    ];
     for (tap, shot) in steps {
         if !ui.tap(tap) {
             faults.push(format!("{name}: no {tap}"));

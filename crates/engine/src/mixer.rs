@@ -91,6 +91,7 @@ pub struct Mixer {
     rate: f32,
     pub channels: [Channel; DECKS],
     crossfader: f32,
+    curve: crate::Curve,
     main: f32,
     scratch: Vec<[f32; 2]>,
     main_peak: [f32; 2],
@@ -112,6 +113,7 @@ impl Mixer {
             rate,
             channels: std::array::from_fn(|_| Channel::new(rate as u32)),
             crossfader: 0.0,
+            curve: crate::Curve::Smooth,
             main: 1.0,
             scratch: vec![[0.0; 2]; max_block],
             main_peak: [0.0; 2],
@@ -223,6 +225,7 @@ impl Mixer {
                 }
             }
             Command::Crossfader(x) => self.crossfader = x.clamp(-1.0, 1.0),
+            Command::Curve(c) => self.curve = c,
             Command::Main(v) => self.main = v.max(0.0),
             Command::Record(_) => {}
             Command::Station(s) => self.station.set(s),
@@ -236,10 +239,14 @@ impl Mixer {
     }
 
     fn side_gain(&self, i: usize) -> f32 {
-        let x = self.crossfader;
-        match i % 2 {
-            0 => (1.0 - x).min(1.0),
-            _ => (1.0 + x).min(1.0),
+        use crate::Curve;
+        // How far the fader sits toward this deck's own side, 0 to 1.
+        let near = if i.is_multiple_of(2) { 1.0 - self.crossfader } else { 1.0 + self.crossfader } * 0.5;
+        match self.curve {
+            Curve::Off => 1.0,
+            Curve::Smooth => ((near * std::f32::consts::FRAC_PI_2).sin() * std::f32::consts::SQRT_2).min(1.0),
+            Curve::Linear => near,
+            Curve::Cut(c) => (near / c.clamp(0.001, 0.5)).min(1.0),
         }
     }
 

@@ -562,17 +562,25 @@ fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 
 /// A held track's menu where it was held: load it to a deck, or add it to playlists.
 fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    use crate::theme::Pick;
     let Some(i) = s.track_menu else { return };
     p.layer();
     let screen = Rect::new(0.0, 0.0, w, h);
     hit(s, screen, Target::MenuClose);
     let e = &s.entries[i as usize];
     let key = crate::state::entry_key(e);
+    let saved = s.store.get(&key).unwrap_or_default();
     let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
     let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
     let free = |d: usize| !(s.settings.on(crate::settings::Opt::Protect) && s.telemetry.decks[d].playing);
+    let stars = (1..=5u8).map(|n| (Pick::Star(n <= saved.rating), Target::MenuRate(n))).collect();
+    let mut colours = vec![(Pick::Clear(saved.colour == 0), Target::MenuColour(0))];
+    colours
+        .extend((1..=8u8).map(|n| (Pick::Swatch(CUES[usize::from(n) - 1], saved.colour == n), Target::MenuColour(n))));
     let mut lines = vec![
         Line::item(title, Target::MenuBody).enabled(false),
+        Line::Picks { label: "Rating", picks: stars },
+        Line::Picks { label: "Color", picks: colours },
         Line::Rule,
         Line::item("Play on deck 1", Target::MenuPlay(0)).enabled(free(0)),
         Line::item("Play on deck 2", Target::MenuPlay(1)).enabled(free(1)),
@@ -584,50 +592,102 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     if matches!(s.shelf, crate::state::Shelf::Playlist(_)) {
         lines.push(Line::item("Remove from this playlist", Target::MenuRemove));
     }
+    lines.push(Line::Rule);
+    if !e.artist.is_empty() {
+        lines.push(Line::item("Go to Artist", Target::MenuArtist));
+    }
+    if !e.folder.is_empty() {
+        lines.push(Line::item("Go to Folder", Target::MenuFolder));
+    }
+    if held > 0 {
+        lines.push(Line::sub("Show in playlist", 2));
+    }
     lines.extend([
+        Line::sub("Show Info", 3),
         Line::sub("Sort by", 1),
         Line::Rule,
         Line::item("Analyze again", Target::MenuAnalyze),
         Line::item("Look for new tracks", Target::Rescan),
     ]);
     let (open, r) = theme::menu(p, s, s.menu_at, screen, &lines);
-    if let Some(top) = open
-        && s.submenu == Some(1)
-    {
-        use crate::library::Column as C;
-        let cols = [
-            (C::Index, "Order added"),
-            (C::Title, "Title"),
-            (C::Artist, "Artist"),
-            (C::Bpm, "BPM"),
-            (C::Key, "Key"),
-            (C::Time, "Length"),
-        ];
-        let (now, up) = s.sort;
-        let sub: Vec<Line> = cols
-            .into_iter()
-            .map(|(c, n)| {
-                let hint = if c == now { if up { "Up" } else { "Down" } } else { "" };
-                Line::item(n, Target::Sort(c)).mark(Mark::Check(c == now)).hint(hint.to_string())
-            })
-            .collect();
-        theme::submenu(p, s, r, top, screen, &sub);
-    } else if let Some(top) = open {
-        let mut lists: Vec<Line> = s
+    let Some(top) = open else { return };
+    let sub: Vec<Line> = match s.submenu {
+        Some(1) => {
+            use crate::library::Column as C;
+            let cols = [
+                (C::Index, "Order added"),
+                (C::Title, "Title"),
+                (C::Artist, "Artist"),
+                (C::Bpm, "BPM"),
+                (C::Key, "Key"),
+                (C::Time, "Length"),
+            ];
+            let (now, up) = s.sort;
+            cols.into_iter()
+                .map(|(c, n)| {
+                    let hint = if c == now { if up { "Up" } else { "Down" } } else { "" };
+                    Line::item(n, Target::Sort(c)).mark(Mark::Check(c == now)).hint(hint.to_string())
+                })
+                .collect()
+        }
+        Some(2) => s
             .playlists
             .iter()
             .enumerate()
-            .map(|(n, (name, keys))| {
-                Line::item(name.clone(), Target::MenuToggle(n)).mark(Mark::Check(keys.contains(&key)))
-            })
-            .collect();
-        if lists.is_empty() {
-            lists.push(Line::item("No playlists yet", Target::MenuBody).enabled(false));
+            .filter(|(_, (_, keys))| keys.contains(&key))
+            .map(|(n, (name, _))| Line::item(name.clone(), Target::Shelf(crate::state::Shelf::Playlist(n))))
+            .collect(),
+        Some(3) => info_lines(s, i as usize),
+        _ => {
+            let mut lists: Vec<Line> = s
+                .playlists
+                .iter()
+                .enumerate()
+                .map(|(n, (name, keys))| {
+                    Line::item(name.clone(), Target::MenuToggle(n)).mark(Mark::Check(keys.contains(&key)))
+                })
+                .collect();
+            if lists.is_empty() {
+                lists.push(Line::item("No playlists yet", Target::MenuBody).enabled(false));
+            }
+            lists.push(Line::Rule);
+            lists.push(Line::item("New playlist", Target::NewPlaylist));
+            lists
         }
-        lists.push(Line::Rule);
-        lists.push(Line::item("New playlist", Target::NewPlaylist));
-        theme::submenu(p, s, r, top, screen, &lists);
+    };
+    theme::submenu(p, s, r, top, screen, &sub);
+}
+
+/// What is known of a track, as lines to read.
+fn info_lines(s: &State, i: usize) -> Vec<Line> {
+    let e = &s.entries[i];
+    let m = s.meta.get(i).copied().flatten();
+    let mut rows: Vec<(&str, String)> = vec![("Title", e.title.to_string())];
+    if !e.artist.is_empty() {
+        rows.push(("Artist", e.artist.to_string()));
     }
+    if !e.folder.is_empty() {
+        rows.push(("Folder", e.folder.to_string()));
+    }
+    if let Some(m) = m {
+        if m.bpm > 0.0 {
+            rows.push(("BPM", format!("{:.1}", m.bpm)));
+        }
+        if let Some(k) = m.key {
+            rows.push(("Key", s.settings.key(k)));
+        }
+        let secs = m.secs as u32;
+        rows.push(("Length", format!("{}:{:02}", secs / 60, secs % 60)));
+    }
+    if let crate::library::Source::File(p) = &e.source {
+        if let Some(ext) = p.extension() {
+            rows.push(("Format", ext.to_string_lossy().to_uppercase()));
+        }
+        if let Ok(md) = std::fs::metadata(p) {
+            rows.push(("Size", format!("{:.1} MB", md.len() as f64 / 1e6)));
+        }
+    }
+    rows.into_iter().map(|(k, v)| Line::item(v, Target::MenuBody).hint(k).enabled(false)).collect()
 }
 
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
@@ -700,6 +760,10 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         }
         let e = &s.entries[i as usize];
         let deck = s.decks.iter().position(|d| d.loaded.as_ref().is_some_and(|l| l.entry.source == e.source));
+        let colour = s.store.get(&crate::state::entry_key(e)).map_or(0, |v| v.colour);
+        if colour > 0 {
+            p.rect(r.x + 1.0, y + 2.0, 3.0, row - 4.0, 1.5, CUES[usize::from(colour) - 1]);
+        }
         if s.selected == Some(i) {
             p.outlined(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(ACCENT, 0x30), 1.0, ACCENT);
         } else if let Some(d) = deck {

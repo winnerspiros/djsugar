@@ -72,6 +72,28 @@ fn crossfader_cuts_the_far_side() {
 }
 
 #[test]
+fn curves_shape_the_far_side() {
+    use crate::Curve;
+    for (curve, x, heard) in [
+        (Curve::Off, -1.0, true),
+        (Curve::Smooth, 0.0, true),
+        (Curve::Smooth, -1.0, false),
+        (Curve::Linear, -1.0, false),
+        (Curve::Cut(0.02), -0.95, true),
+        (Curve::Cut(0.02), -1.0, false),
+    ] {
+        let (mut c, mut e) = new(48000, 256);
+        c.send(Command::Load(1, sine(48000, 440.0, 1.0)));
+        c.send(Command::Play(1, true));
+        c.send(Command::Curve(curve));
+        c.send(Command::Crossfader(x));
+        let mut out = vec![0.0; 512];
+        e.process(&mut out);
+        assert_eq!(rms(&out) > 0.01, heard, "{curve:?} at {x}");
+    }
+}
+
+#[test]
 fn replaced_tracks_are_freed_off_the_audio_thread() {
     let (mut c, mut e) = new(48000, 256);
     let t = sine(48000, 440.0, 0.1);

@@ -10,6 +10,19 @@ pub use mixer::{Channel, Mixer, VOICES};
 
 pub const DECKS: usize = 4;
 
+/// The crossfader's curve.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Curve {
+    /// Both sides always full.
+    Off,
+    /// Constant power, both sides full at the middle.
+    Smooth,
+    /// Straight lines, dipping at the middle.
+    Linear,
+    /// Both sides full until the last of the travel, this share of it, for scratching.
+    Cut(f32),
+}
+
 #[derive(Debug)]
 pub enum Command {
     Load(usize, Arc<Track>),
@@ -40,6 +53,8 @@ pub enum Command {
     Sample(Arc<Track>, f32),
     StopSamples,
     Crossfader(f32),
+    /// How the crossfader blends the two sides.
+    Curve(Curve),
     Main(f32),
     Record(bool),
     Station(station::Set),

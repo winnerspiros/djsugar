@@ -16,6 +16,14 @@ pub enum Opt {
     ResetGain,
     ReverseFader,
     KeyNotation,
+    FaderOn,
+    FaderCurve,
+    CutIn,
+    CueMode,
+    KeyMatch,
+    AutoGain,
+    GainTarget,
+    BpmRange,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -40,7 +48,17 @@ pub const RATE_RANGES: [f64; 8] = [0.04, 0.06, 0.08, 0.10, 0.16, 0.25, 0.50, 0.9
 const RATE_NAMES: [&str; 8] = ["4%", "6%", "8%", "10%", "16%", "25%", "50%", "90%"];
 const NOTATIONS: [&str; 4] = ["Camelot  8A", "Open Key  1m", "Sharps  A#m", "Flats  Bbm"];
 
-pub const OPTIONS: [Spec; 11] = [
+/// Cut-in distances for the cut curve, as fractions of the travel.
+pub const CUT_INS: [f32; 4] = [0.005, 0.01, 0.02, 0.05];
+/// Loudness each track is brought to by auto gain, in dB.
+pub const GAIN_TARGETS: [f32; 7] = [-8.0, -10.0, -12.0, -14.0, -16.0, -18.0, -23.0];
+const GAIN_NAMES: [&str; 7] = ["-8 dB", "-10 dB", "-12 dB", "-14 dB", "-16 dB", "-18 dB", "-23 dB"];
+/// Ranges detected tempos are folded into, by doubling or halving.
+pub const BPM_RANGES: [(f64, f64); 6] =
+    [(60.0, 120.0), (70.0, 140.0), (80.0, 160.0), (90.0, 180.0), (100.0, 200.0), (120.0, 240.0)];
+const BPM_NAMES: [&str; 6] = ["60 - 120", "70 - 140", "80 - 160", "90 - 180", "100 - 200", "120 - 240"];
+
+pub const OPTIONS: [Spec; 19] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -129,6 +147,70 @@ pub const OPTIONS: [Spec; 11] = [
         kind: Kind::Menu(&NOTATIONS),
         default: 0,
     },
+    Spec {
+        opt: Opt::FaderOn,
+        key: "xfader_enabled",
+        title: "Crossfader",
+        detail: "Off leaves both sides full, for mixing on the channel faders alone.",
+        kind: Kind::Switch,
+        default: 1,
+    },
+    Spec {
+        opt: Opt::FaderCurve,
+        key: "xfader_shape",
+        title: "Crossfader curve",
+        detail: "Smooth keeps both full in the middle; linear dips there; scratch cuts in at the very end.",
+        kind: Kind::Segmented(&["Smooth", "Linear", "Scratch"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::CutIn,
+        key: "xfader_cut_in",
+        title: "Cut-in",
+        detail: "How far from its end the scratch curve brings a side fully in.",
+        kind: Kind::Segmented(&["0.5%", "1%", "2%", "5%"]),
+        default: 1,
+    },
+    Spec {
+        opt: Opt::CueMode,
+        key: "cue_mode",
+        title: "CUE button",
+        detail: "Press plays from the cue; Hold plays only while held and goes back on release.",
+        kind: Kind::Segmented(&["Press", "Hold"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::KeyMatch,
+        key: "key_match_on_load",
+        title: "Match key on load",
+        detail: "Shifts a loaded track to the playing deck's key by the fewest semitones.",
+        kind: Kind::Segmented(&["Off", "Match"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::AutoGain,
+        key: "auto_gain",
+        title: "Auto gain",
+        detail: "Brings each loaded track to the same loudness; the gain knob adds on top.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::GainTarget,
+        key: "auto_gain_target",
+        title: "Auto gain level",
+        detail: "The loudness auto gain aims for.",
+        kind: Kind::Menu(&GAIN_NAMES),
+        default: 3,
+    },
+    Spec {
+        opt: Opt::BpmRange,
+        key: "bpm_range",
+        title: "BPM range",
+        detail: "Detected tempos are doubled or halved into this range.",
+        kind: Kind::Menu(&BPM_NAMES),
+        default: 3,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -144,7 +226,7 @@ pub enum Row {
     Rescan,
 }
 
-pub const PAGES: [&str; 5] = ["Decks", "Mixer", "Appearance", "Collection", "About"];
+pub const PAGES: [&str; 7] = ["Decks", "Mixer", "Keyboard", "Collection", "Analysis", "Appearance", "About"];
 
 pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
     match n {
@@ -152,6 +234,9 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
             Row::Heading("TEMPO"),
             Row::Opt(Opt::RateRange),
             Row::Opt(Opt::TempoUp),
+            Row::Heading("PLAYING"),
+            Row::Opt(Opt::CueMode),
+            Row::Opt(Opt::KeyMatch),
             Row::Heading("LOADING"),
             Row::Opt(Opt::KeyLock),
             Row::Opt(Opt::Quantize),
@@ -162,8 +247,26 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
             Row::Opt(Opt::ResetEq),
             Row::Opt(Opt::ResetGain),
         ],
-        1 => vec![Row::Heading("CROSSFADER"), Row::Opt(Opt::ReverseFader)],
-        2 => vec![Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
+        1 => vec![
+            Row::Heading("CROSSFADER"),
+            Row::Opt(Opt::FaderOn),
+            Row::Opt(Opt::FaderCurve),
+            Row::Opt(Opt::CutIn),
+            Row::Opt(Opt::ReverseFader),
+            Row::Heading("LOUDNESS"),
+            Row::Opt(Opt::AutoGain),
+            Row::Opt(Opt::GainTarget),
+        ],
+        2 => {
+            let mut v = Vec::with_capacity(SHORTCUTS.len() + 3);
+            for (heading, keys) in SHORTCUTS {
+                v.push(Row::Heading(heading));
+                v.extend(keys.iter().map(|(k, what)| Row::Info(k, (*what).into())));
+            }
+            v
+        }
+        4 => vec![Row::Heading("TEMPO"), Row::Opt(Opt::BpmRange)],
+        5 => vec![Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
         3 => {
             let mut v = vec![Row::Heading("MUSIC FOLDERS")];
             if roots.is_empty() {
@@ -181,6 +284,58 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32) -> Vec<Row> {
     }
 }
 
+type Keys = &'static [(&'static str, &'static str)];
+
+/// Every keyboard shortcut, as the keyboard page lists them.
+const SHORTCUTS: [(&str, Keys); 5] = [
+    (
+        "DECK 1 / DECK 2",
+        &[
+            ("D / L", "Play or pause; Shift sets the cue"),
+            ("F / ;", "Cue; Shift stops at the cue"),
+            ("A S / J K", "Beat jump back and forward; Shift by one beat"),
+            ("1 / 6", "Sync"),
+            ("T / Y", "Headphones"),
+            ("Z X C V / M , . /", "Hot cues 1 to 4; Shift clears"),
+            ("2 3 / 7 8", "Loop in and out; Shift jumps to them"),
+            ("4 Q / 9 U", "Loop on or off; Shift with 4 or 9 also stops"),
+            ("W E / I O", "Loop half or double"),
+            ("B / N", "Low kill"),
+        ],
+    ),
+    (
+        "TEMPO",
+        &[
+            ("F1 F2 / F5 F6", "Tempo down and up; Shift in small steps"),
+            ("F3 F4 / F7 F8", "Slow down or speed up while held"),
+        ],
+    ),
+    ("MIXER", &[("G / H", "Crossfader a step left or right; Shift a small step"), ("Shift+F12", "Auto mix")]),
+    (
+        "LIBRARY",
+        &[
+            ("Up / Down", "Select; Page Up, Page Down, Home and End jump"),
+            ("Enter", "Load the selected track"),
+            ("Shift+Left / Right", "Load onto deck 1 or 2"),
+            ("Ctrl+F", "Search"),
+            ("Ctrl+N", "New playlist"),
+        ],
+    ),
+    (
+        "APP",
+        &[
+            ("Tab / Shift+Tab", "Next or previous page"),
+            ("Space", "Decks or library"),
+            ("Ctrl+Alt+1 to 6", "Go to a page"),
+            ("Ctrl+R", "Record"),
+            ("Ctrl+,", "Settings"),
+            ("Escape or Back", "Close the open menu"),
+            ("Right click", "The menu a long press opens"),
+            ("Ctrl+Q", "Quit"),
+        ],
+    ),
+];
+
 /// Saved values, one per option.
 #[derive(Clone, Debug)]
 pub struct Settings {
@@ -193,6 +348,15 @@ impl Default for Settings {
     }
 }
 
+/// The chosen BPM range, for analysis running away from the settings.
+static BPM_RANGE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3);
+
+/// A detected grid folded into the chosen BPM range.
+pub fn fold(g: sugar_analysis::Grid) -> sugar_analysis::Grid {
+    let i = usize::from(BPM_RANGE.load(std::sync::atomic::Ordering::Relaxed));
+    g.fold(BPM_RANGES[i.min(BPM_RANGES.len() - 1)])
+}
+
 impl Settings {
     pub fn load() -> Self {
         let mut s = Self::default();
@@ -203,6 +367,7 @@ impl Settings {
                 s.values[i] = v;
             }
         }
+        BPM_RANGE.store(s.get(Opt::BpmRange), std::sync::atomic::Ordering::Relaxed);
         s
     }
 
@@ -223,7 +388,26 @@ impl Settings {
 
     pub fn set(&mut self, o: Opt, v: u8) {
         self.values[o as usize] = v;
+        if o == Opt::BpmRange {
+            BPM_RANGE.store(v, std::sync::atomic::Ordering::Relaxed);
+        }
         self.save();
+    }
+
+    pub fn curve(&self) -> sugar_engine::Curve {
+        use sugar_engine::Curve;
+        if !self.on(Opt::FaderOn) {
+            return Curve::Off;
+        }
+        match self.get(Opt::FaderCurve) {
+            1 => Curve::Linear,
+            2 => Curve::Cut(CUT_INS[usize::from(self.get(Opt::CutIn)).min(CUT_INS.len() - 1)]),
+            _ => Curve::Smooth,
+        }
+    }
+
+    pub fn gain_target(&self) -> f32 {
+        GAIN_TARGETS[usize::from(self.get(Opt::GainTarget)).min(GAIN_TARGETS.len() - 1)]
     }
 
     pub fn rate_range(&self) -> f64 {
@@ -257,6 +441,26 @@ mod tests {
         for (i, o) in OPTIONS.iter().enumerate() {
             assert_eq!(o.opt as usize, i);
         }
+    }
+
+    #[test]
+    fn curves_follow_the_switches() {
+        use sugar_engine::Curve;
+        let mut s = Settings::default();
+        assert_eq!(s.curve(), Curve::Smooth);
+        s.values[Opt::FaderCurve as usize] = 2;
+        s.values[Opt::CutIn as usize] = 2;
+        assert_eq!(s.curve(), Curve::Cut(0.02));
+        s.values[Opt::FaderOn as usize] = 0;
+        assert_eq!(s.curve(), Curve::Off);
+    }
+
+    #[test]
+    fn tempos_fold_into_the_range() {
+        let g = |bpm| sugar_analysis::Grid { bpm, first_beat: 0.0 };
+        assert_eq!(g(65.0).fold(BPM_RANGES[3]).bpm, 130.0);
+        assert_eq!(g(200.0).fold(BPM_RANGES[3]).bpm, 100.0);
+        assert_eq!(g(174.0).fold(BPM_RANGES[1]).bpm, 87.0);
     }
 
     #[test]

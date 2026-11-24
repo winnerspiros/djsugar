@@ -80,6 +80,15 @@ pub enum Target {
     /// Opens settings at a page.
     Prefs(u8),
     PrefsClose,
+    /// The track menu's stars, 1 to 5; the lit one again clears them.
+    MenuRate(u8),
+    /// The track menu's colours, 0 for none.
+    MenuColour(u8),
+    /// Shows the menu's track's artist's tracks, or its folder's.
+    MenuArtist,
+    MenuFolder,
+    /// The settings page's body, dragged to scroll.
+    PrefsScroll,
     /// A settings switch, or a choice's menu.
     Pref(crate::settings::Opt),
     /// A choice picked for a setting.
@@ -280,12 +289,25 @@ pub struct DeckUi {
     pub reverse: bool,
     pub slip: bool,
     pub pfl: bool,
+    /// The CUE button is held from the cue, in Hold mode.
+    pub previewing: bool,
+    /// Auto gain's level change for the loaded track, as a factor.
+    pub auto_gain: f32,
     pub semitones: i8,
 }
 
 impl DeckUi {
     fn new() -> Self {
-        Self { volume: 0.85, knobs: [0.5; 4], gain: 0.5, jump: 4, loop_size: 4, quantize: true, ..Self::default() }
+        Self {
+            volume: 0.85,
+            knobs: [0.5; 4],
+            gain: 0.5,
+            auto_gain: 1.0,
+            jump: 4,
+            loop_size: 4,
+            quantize: true,
+            ..Self::default()
+        }
     }
 
     pub fn seconds(&self, frames: f64) -> f64 {
@@ -469,6 +491,9 @@ pub struct State {
     /// The setting whose choices are open, and where.
     pub pref_menu: Option<(crate::settings::Opt, f32, f32)>,
     pub app_menu: bool,
+    /// How far the settings page is scrolled, and how far it can go.
+    pub prefs_scroll: f32,
+    pub prefs_max: f32,
     /// Ctrl+Q asked the app to close.
     pub quit: bool,
     /// The held playlist whose menu is open.
@@ -486,7 +511,7 @@ pub struct State {
     pub sort: (library::Column, bool),
     pub selected: Option<u32>,
     analysis: Arc<std::sync::atomic::AtomicU32>,
-    store: crate::store::Store,
+    pub store: crate::store::Store,
     pub recorder: Option<crate::record::Recorder>,
 }
 
@@ -542,7 +567,7 @@ impl State {
         for (i, p) in pads.iter_mut().flatten().enumerate() {
             *p = i.min(SAMPLES.len().saturating_sub(1));
         }
-        Self {
+        let mut s = Self {
             control,
             telemetry: Telemetry::default(),
             decks: std::array::from_fn(|_| DeckUi::new()),
@@ -585,6 +610,8 @@ impl State {
             prefs: None,
             pref_menu: None,
             app_menu: false,
+            prefs_scroll: 0.0,
+            prefs_max: 0.0,
             quit: false,
             list_menu: None,
             play_on_load: None,
@@ -599,7 +626,9 @@ impl State {
             analysis: Arc::default(),
             store: crate::store::Store::open(),
             recorder: None,
-        }
+        };
+        s.send_curve();
+        s
     }
 
     /// A file the engine can open: library files as they are, built-in
@@ -848,7 +877,11 @@ impl State {
             let loaded = decoded.ok().map(|t| {
                 let overview = if detail { peaks(&t, OVERVIEW, 0) } else { Box::default() };
                 let detail = if detail { bands(&t, DETAIL_FRAMES) } else { Box::default() };
-                let grid = if detail.is_empty() { None } else { sugar_analysis::grid(t.rate, &t.frames) };
+                let grid = if detail.is_empty() {
+                    None
+                } else {
+                    sugar_analysis::grid(t.rate, &t.frames).map(crate::settings::fold)
+                };
                 let key = if detail.is_empty() { None } else { sugar_analysis::key(t.rate, &t.frames) };
                 let lyrics = match &entry.source {
                     Source::File(p) => std::fs::read_to_string(p.with_extension("lrc"))
@@ -897,8 +930,14 @@ impl State {
             let deck = &self.decks[d];
             let Some(key) = Self::track_key(deck) else { continue };
             let grid = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| (g.bpm, g.first_beat));
-            let saved =
-                crate::store::Saved { grid, locked: deck.grid_locked, cues: deck.cues, colours: deck.cue_colours };
+            let old = self.store.get(&key).unwrap_or_default();
+            let saved = crate::store::Saved {
+                grid,
+                locked: deck.grid_locked,
+                cues: deck.cues,
+                colours: deck.cue_colours,
+                ..old
+            };
             self.store.put(&key, saved);
         }
     }
@@ -1068,8 +1107,22 @@ impl State {
 
     /// A key let go: ends a held temporary tempo change.
     pub fn key_up(&mut self, key: Key) {
-        if let Key::F(n @ (3 | 4 | 7 | 8)) = key {
-            self.send(Command::Nudge(usize::from(n > 4), 0.0));
+        match key {
+            Key::F(n @ (3 | 4 | 7 | 8)) => self.send(Command::Nudge(usize::from(n > 4), 0.0)),
+            Key::Char(c) => {
+                if let Some(Target::Cue(d)) = keymap(unshift(c)) {
+                    self.end_preview(d);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Lets go of a CUE held in Hold mode: back to the cue, stopped.
+    fn end_preview(&mut self, d: usize) {
+        if std::mem::take(&mut self.decks[d].previewing) {
+            self.send(Command::Play(d, false));
+            self.send(Command::Seek(d, self.decks[d].cue));
         }
     }
 
@@ -1384,7 +1437,15 @@ impl State {
         }
         if s.on(Opt::ResetGain) {
             self.decks[d].gain = 0.5;
-            self.send(Command::Gain(d, knob_gain(0.5)));
+        }
+        self.decks[d].auto_gain = if s.on(Opt::AutoGain) {
+            self.decks[d].loaded.as_ref().map_or(1.0, |l| auto_gain(&l.track.frames, s.gain_target()))
+        } else {
+            1.0
+        };
+        self.send_gain(d);
+        if s.on(Opt::KeyMatch) {
+            self.match_key(d);
         }
         if s.on(Opt::PflOnLoad) {
             for o in 0..self.decks.len() {
@@ -1393,6 +1454,59 @@ impl State {
                 self.send(Command::Pfl(o, on));
             }
         }
+    }
+
+    fn send_gain(&mut self, d: usize) {
+        let g = knob_gain(self.decks[d].gain) * self.decks[d].auto_gain;
+        self.send(Command::Gain(d, g));
+    }
+
+    /// Shifts deck `d` by the fewest semitones to the key of the deck playing.
+    fn match_key(&mut self, d: usize) {
+        let key = |i: usize| self.decks[i].loaded.as_ref().and_then(|l| l.key);
+        let Some(mine) = key(d) else { return };
+        let Some(theirs) = (0..self.decks.len())
+            .filter(|&o| o != d && self.telemetry.decks[o].playing)
+            .find_map(|o| key(o).map(|k| (k, self.decks[o].semitones)))
+        else {
+            return;
+        };
+        // A relative minor or major counts as the same key.
+        let tonic = |k: sugar_analysis::Key| i16::from(k.tonic) + if k.minor { 3 } else { 0 };
+        let diff = (tonic(theirs.0) + i16::from(theirs.1) - tonic(mine)).rem_euclid(12);
+        let st = if diff > 6 { diff - 12 } else { diff } as i8;
+        self.decks[d].semitones = st;
+        self.send(Command::Key(d, f32::from(st)));
+    }
+
+    /// Sends the crossfader's curve as the settings have it.
+    fn send_curve(&mut self) {
+        let c = self.settings.curve();
+        self.send(Command::Curve(c));
+    }
+
+    fn pref_tap(&mut self, t: Target) {
+        match t {
+            Target::Pref(o) => match crate::settings::spec(o).kind {
+                crate::settings::Kind::Switch => {
+                    let v = u8::from(!self.settings.on(o));
+                    self.set_pref(o, v);
+                }
+                _ => {
+                    let at = self.rect_of(Target::Pref(o)).map_or((0.0, 0.0), |r| (r.x, r.y + r.h + 2.0));
+                    self.pref_menu = Some((o, at.0, at.1));
+                }
+            },
+            Target::PrefPick(o, v) => {
+                self.pref_menu = None;
+                self.set_pref(o, v);
+            }
+            _ => {}
+        }
+    }
+
+    fn prefs_scroll_by(&mut self, dy: f32) {
+        self.prefs_scroll = (self.prefs_scroll + dy).clamp(0.0, self.prefs_max);
     }
 
     /// Sets a setting and applies what changes at once.
@@ -1409,6 +1523,18 @@ impl State {
             Opt::ReverseFader => {
                 let x = self.crossfader_out();
                 self.send(Command::Crossfader(x));
+            }
+            Opt::FaderOn | Opt::FaderCurve | Opt::CutIn => self.send_curve(),
+            Opt::AutoGain | Opt::GainTarget => {
+                for d in 0..self.decks.len() {
+                    let target = self.settings.gain_target();
+                    let on = self.settings.on(Opt::AutoGain);
+                    self.decks[d].auto_gain = match &self.decks[d].loaded {
+                        Some(l) if on => auto_gain(&l.track.frames, target),
+                        _ => 1.0,
+                    };
+                    self.send_gain(d);
+                }
             }
             _ => {}
         }
@@ -1644,6 +1770,7 @@ impl State {
                     self.send(Command::Seek(d, cue));
                 } else if (self.telemetry.decks[d].position - cue).abs() < 1.0 {
                     self.send(Command::Play(d, true));
+                    self.decks[d].previewing = self.settings.get(crate::settings::Opt::CueMode) == 1;
                 } else {
                     self.decks[d].cue = self.telemetry.decks[d].position;
                 }
@@ -1691,6 +1818,7 @@ impl State {
             }
             Target::Prefs(n) => {
                 self.prefs = Some(usize::from(n));
+                self.prefs_scroll = 0.0;
                 self.app_menu = false;
                 self.pref_menu = None;
                 self.submenu = None;
@@ -1700,20 +1828,8 @@ impl State {
                     self.prefs = None;
                 }
             }
-            Target::Pref(o) => match crate::settings::spec(o).kind {
-                crate::settings::Kind::Switch => {
-                    let v = u8::from(!self.settings.on(o));
-                    self.set_pref(o, v);
-                }
-                _ => {
-                    let at = self.rect_of(Target::Pref(o)).map_or((0.0, 0.0), |r| (r.x, r.y + r.h + 2.0));
-                    self.pref_menu = Some((o, at.0, at.1));
-                }
-            },
-            Target::PrefPick(o, v) => {
-                self.pref_menu = None;
-                self.set_pref(o, v);
-            }
+            // Settings rows act on release, so a drag over them scrolls instead.
+            Target::Pref(_) | Target::PrefPick(..) | Target::PrefsScroll => {}
             Target::Rescan => {
                 self.app_menu = false;
                 self.scan();
@@ -1772,6 +1888,27 @@ impl State {
                 if let Some(i) = self.track_menu.take() {
                     self.load_deck(d, i as usize);
                     self.play_on_load = Some(d);
+                }
+            }
+            Target::MenuRate(n) | Target::MenuColour(n) => {
+                if let Some(i) = self.track_menu {
+                    let key = entry_key(&self.entries[i as usize]);
+                    let mut saved = self.store.get(&key).unwrap_or_default();
+                    if let Target::MenuRate(_) = t {
+                        saved.rating = if saved.rating == n { 0 } else { n };
+                    } else {
+                        saved.colour = n;
+                    }
+                    self.store.put(&key, saved);
+                }
+            }
+            Target::MenuArtist | Target::MenuFolder => {
+                if let Some(i) = self.track_menu.take() {
+                    let e = &self.entries[i as usize];
+                    let q = if t == Target::MenuArtist { e.artist.to_string() } else { e.folder.to_string() };
+                    self.shelf = Shelf::Tracks;
+                    self.view = View::Lib;
+                    self.search(q);
                 }
             }
             Target::MenuAnalyze => {
@@ -1949,6 +2086,14 @@ impl State {
     fn release(&mut self, id: u64, y: f32) {
         let Some(i) = self.drags.iter().position(|d| d.id == id) else { return };
         let d = self.drags.swap_remove(i);
+        if let Some(Target::Cue(deck)) = d.target {
+            self.end_preview(deck);
+        }
+        if let Some(t @ (Target::Pref(_) | Target::PrefPick(..))) = d.target
+            && !d.moved
+        {
+            self.pref_tap(t);
+        }
         match d.target {
             Some(Target::Library) if !d.moved => {
                 let row = ((y - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
@@ -2010,7 +2155,9 @@ impl State {
             self.drag(Target::Picker, x, y, (0.0, dy));
             return;
         }
-        if self.view == View::Stream {
+        if self.prefs.is_some() {
+            self.prefs_scroll_by(-dy);
+        } else if self.view == View::Stream {
             self.hub_scroll(-dy);
         } else if self.library.hit(x, y) {
             self.scroll_by(-dy);
@@ -2089,9 +2236,11 @@ impl State {
                 let v = (self.decks[d].gain - delta.1 / 160.0).clamp(0.0, 1.0);
                 let v = if (v - 0.5).abs() < 0.02 { 0.5 } else { v };
                 self.decks[d].gain = v;
-                self.send(Command::Gain(d, knob_gain(v)));
+                self.send_gain(d);
             }
             Target::Library => self.scroll_by(-delta.1),
+            Target::Pref(_) | Target::PrefsScroll => self.prefs_scroll_by(-delta.1),
+            Target::PrefPick(..) if self.pref_menu.is_none() => self.prefs_scroll_by(-delta.1),
             Target::HubList => self.hub_scroll(-delta.1),
             Target::Picker => {
                 let g = self.picker_grid;
@@ -2131,6 +2280,20 @@ impl State {
             .and_then(|l| l.grid)
             .map_or(120.0, |g| g.bpm * (1.0 + f64::from(deck.rate) * self.settings.rate_range()))
     }
+}
+
+/// The level change that brings a track's loudness to `target` dB, within 12 dB either way.
+fn auto_gain(frames: &[[f32; 2]], target: f32) -> f32 {
+    // Every 16th frame is plenty to measure a whole track.
+    let (sum, n) = frames.iter().step_by(16).fold((0.0f64, 0u32), |(s, n), f| {
+        let m = f64::from(f[0] + f[1]) * 0.5;
+        (s + m * m, n + 1)
+    });
+    if n == 0 || sum == 0.0 {
+        return 1.0;
+    }
+    let db = 10.0 * (sum / f64::from(n)).log10() as f32;
+    10f32.powf((target - db) / 20.0).clamp(0.25, 4.0)
 }
 
 pub fn knob_gain(v: f32) -> f32 {

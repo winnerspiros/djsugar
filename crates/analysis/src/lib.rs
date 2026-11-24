@@ -13,6 +13,17 @@ impl Grid {
         60.0 * f64::from(rate) / self.bpm
     }
 
+    /// Doubles or halves the tempo into `lo..hi`, keeping the first beat.
+    pub fn fold(mut self, (lo, hi): (f64, f64)) -> Self {
+        while self.bpm < lo && self.bpm > 0.0 {
+            self.bpm *= 2.0;
+        }
+        while self.bpm >= hi {
+            self.bpm /= 2.0;
+        }
+        self
+    }
+
     pub fn snap(&self, rate: u32, frame: f64) -> f64 {
         let beat = self.beat_frames(rate);
         self.first_beat + ((frame - self.first_beat) / beat).round() * beat
