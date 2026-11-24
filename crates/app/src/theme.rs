@@ -282,7 +282,7 @@ fn picks_row(p: &mut Painter, s: &mut State, row: Rect, label: &str, picks: &[(P
 }
 
 /// A five pointed star's outline as lines.
-fn star(p: &mut Painter, (cx, cy): (f32, f32), r: f32, c: u32) {
+pub fn star(p: &mut Painter, (cx, cy): (f32, f32), r: f32, c: u32) {
     let at = |k: usize| {
         let a = -std::f32::consts::FRAC_PI_2 + k as f32 * std::f32::consts::PI / 5.0;
         let rr = if k.is_multiple_of(2) { r } else { r * 0.45 };

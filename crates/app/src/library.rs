@@ -77,6 +77,7 @@ pub enum Column {
     Bpm,
     Key,
     Time,
+    Rating,
 }
 
 pub fn fold(s: &str) -> String {

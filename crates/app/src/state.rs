@@ -1060,12 +1060,14 @@ impl State {
             }
             return;
         }
-        let (entries, meta) = (&self.entries, &self.meta);
+        let (entries, meta, store) = (&self.entries, &self.meta, &self.store);
         let m = |i: u32| meta.get(i as usize).copied().flatten();
         let num = |i: u32| match col {
             C::Bpm => m(i).map_or(f32::MAX, |m| if m.bpm > 0.0 { m.bpm } else { f32::MAX }),
             C::Time => m(i).map_or(f32::MAX, |m| m.secs),
             C::Key => m(i).and_then(|m| m.key).map_or(f32::MAX, |k| k.camelot_order() as f32),
+            // Best first when going down, as the arrow reads.
+            C::Rating => -f32::from(store.get(&entry_key(&entries[i as usize])).map_or(0, |v| v.rating)),
             _ => 0.0,
         };
         self.shown.sort_by(|&a, &b| {

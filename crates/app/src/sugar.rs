@@ -652,6 +652,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
                 (C::Bpm, "BPM"),
                 (C::Key, "Key"),
                 (C::Time, "Length"),
+                (C::Rating, "Rating"),
             ];
             let (now, up) = s.sort;
             cols.into_iter()
@@ -745,10 +746,11 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         &[
             (C::Index, "#", 0.05),
             (C::Title, "TITLE", 0.37),
-            (C::Artist, "ARTIST", 0.27),
-            (C::Bpm, "BPM", 0.1),
-            (C::Key, "KEY", 0.08),
-            (C::Time, "TIME", 0.13),
+            (C::Artist, "ARTIST", 0.22),
+            (C::Rating, "RATING", 0.1),
+            (C::Bpm, "BPM", 0.08),
+            (C::Key, "KEY", 0.07),
+            (C::Time, "TIME", 0.11),
         ]
     } else {
         &[
@@ -829,6 +831,14 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
                     &m.and_then(|m| m.key).map_or(String::new(), |k| s.settings.key(k)),
                 ),
                 C::Time => p.text(cx, base, Style { colour: GREY, ..cell }, &m.map_or(String::new(), |m| mmss(m.secs))),
+                C::Rating => {
+                    let stars = s.store.get(&crate::state::entry_key(e)).map_or(0, |v| v.rating);
+                    for k in 0..5u8 {
+                        let c = if k < stars { rgb(0xffd60a) } else { rgb(0x5a5a5e) };
+                        theme::star(p, (cx + 5.0 + f32::from(k) * 12.0, y + row * 0.5), 4.5, c);
+                    }
+                    0.0
+                }
             };
         }
     }
