@@ -722,6 +722,34 @@ fn info_lines(s: &State, i: usize) -> Vec<Line> {
     rows.into_iter().map(|(k, v)| Line::item(v, Target::MenuBody).hint(k).enabled(false)).collect()
 }
 
+/// The filter chips over the track list; returns the room left under them.
+fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
+    let h = 30.0;
+    let st = Style::new(11.0, Weight::Semibold, GREY);
+    let mut x = r.x + 12.0;
+    for (n, name) in crate::state::FILTERS.iter().enumerate() {
+        let w = p.text_width(st, name) + 20.0;
+        if x + w > r.x + r.w - 8.0 {
+            break;
+        }
+        let on = s.filters & (1 << n) != 0;
+        let t = Target::Filter(n as u8);
+        let b = Rect::new(x, r.y + 5.0, w, h - 10.0);
+        let fill = if on {
+            fade(ACCENT, 0x30)
+        } else if s.pressed(t) {
+            rgb(0x1c1c1f)
+        } else {
+            INK
+        };
+        p.outlined(b.x, b.y, b.w, b.h, b.h * 0.5, fill, 1.0, if on { ACCENT } else { EDGE });
+        p.text(b.x + 10.0, b.y + b.h * 0.5 + 4.0, Style { colour: if on { TEXT } else { GREY }, ..st }, name);
+        hit(s, b, t);
+        x += w + 6.0;
+    }
+    Rect::new(r.x, r.y + h, r.w, r.h - h)
+}
+
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
     let r = if r.h > 220.0 { library_head(p, s, r) } else { r };
     let r = if r.w >= 640.0 {
@@ -737,6 +765,7 @@ pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
 fn table(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::library::Column as C;
     p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
+    let r = if r.h > 200.0 { chips(p, s, r) } else { r };
     let bar = 40.0;
     let list = Rect::new(r.x, r.y, r.w, r.h - bar);
     s.library = list;

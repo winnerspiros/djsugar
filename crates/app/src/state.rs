@@ -119,6 +119,8 @@ pub enum Target {
     WaveHeight(i8),
     /// A streaming service in the library's rail: its page in the hub.
     StreamFrom(crate::hub::Service),
+    /// Turns a library filter chip on or off, by its place in `FILTERS`.
+    Filter(u8),
     Gain(usize),
 }
 
@@ -173,6 +175,11 @@ pub enum Shelf {
     /// The tracks in one folder, by its place in `State::folders`.
     Folder(usize),
 }
+
+/// The library's filter chips, in order, each a bit of `State::filters`.
+pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
+/// How far a tempo may be from the lead deck's for the Near BPM chip.
+const NEAR_BPM: f32 = 0.06;
 
 pub fn entry_key(e: &Entry) -> String {
     match &e.source {
@@ -494,6 +501,8 @@ pub struct State {
     pub wave_zoom: i8,
     /// The large waveforms' height, each step a fifth taller; 0 is the default.
     pub wave_height: i8,
+    /// The library's filter chips that are on, one bit per `FILTERS` entry.
+    pub filters: u8,
     pub search_focus: bool,
     pub hub: crate::hub::Hub,
     pub hub_area: Rect,
@@ -617,6 +626,7 @@ impl State {
             show_samplers: false,
             wave_zoom: 0,
             wave_height: 0,
+            filters: 0,
             search_focus: false,
             hub_area: Rect::default(),
             hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
@@ -1100,10 +1110,31 @@ impl State {
                 (s..n).filter(|&i| *self.entries[i as usize].folder == *name).collect()
             }
         };
-        self.shown = order.into_iter().filter(|&i| library::matches(&self.entries[i as usize], q)).collect();
+        let lead = self.lead();
+        let f = self.filters;
+        let (meta, store, entries) = (&self.meta, &self.store, &self.entries);
+        let keep = |i: u32| {
+            let m = meta.get(i as usize).copied().flatten();
+            let saved = || store.get(&entry_key(&entries[i as usize])).unwrap_or_default();
+            (f & 1 == 0
+                || lead.0.zip(m.map(|m| m.bpm)).is_some_and(|(b, t)| t > 0.0 && (t / b - 1.0).abs() <= NEAR_BPM))
+                && (f & 2 == 0 || lead.1.zip(m.and_then(|m| m.key)).is_some_and(|(a, b)| a.mixes(b)))
+                && (f & 4 == 0 || saved().rating > 0)
+                && (f & 8 == 0 || saved().colour > 0)
+        };
+        self.shown = order.into_iter().filter(|&i| keep(i) && library::matches(&self.entries[i as usize], q)).collect();
         if !matches!(self.shelf, Shelf::History | Shelf::Playlist(_)) || self.sort.0 != library::Column::Index {
             self.resort();
         }
+    }
+
+    /// The tempo and key the library's chips match against: the playing deck's, else the first loaded one's.
+    fn lead(&self) -> (Option<f32>, Option<sugar_analysis::Key>) {
+        let playing =
+            (0..self.decks.len()).find(|&d| self.telemetry.decks[d].playing && self.decks[d].loaded.is_some());
+        let d = playing.or_else(|| self.decks.iter().position(|d| d.loaded.is_some()));
+        let Some(l) = d.and_then(|d| self.decks[d].loaded.as_ref()) else { return (None, None) };
+        (l.grid.map(|g| g.bpm as f32).filter(|&b| b > 0.0), l.key)
     }
 
     /// The library's folders, sorted, each once.
@@ -1901,6 +1932,11 @@ impl State {
             Target::SearchFocus => {}
             Target::HubFocus => {}
             Target::HubService(sv) => self.hub.switch(sv),
+            Target::Filter(n) => {
+                self.filters ^= 1 << n;
+                let q = std::mem::take(&mut self.query);
+                self.search(q);
+            }
             Target::StreamFrom(sv) => {
                 self.hub.switch(sv);
                 self.view = View::Stream;

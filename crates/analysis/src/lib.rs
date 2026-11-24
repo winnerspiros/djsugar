@@ -128,6 +128,12 @@ impl Key {
     pub fn camelot(self) -> String {
         format!("{}{}", self.camelot_number(), if self.minor { 'A' } else { 'B' })
     }
+
+    /// Mixes in harmonically: the same Camelot number, or one step round the wheel in the same mode.
+    pub fn mixes(self, other: Self) -> bool {
+        let (a, b) = (self.camelot_number(), other.camelot_number());
+        a == b || (self.minor == other.minor && matches!((a + 12 - b) % 12, 1 | 11))
+    }
 }
 
 fn goertzel(x: &[f32], w: f32) -> f32 {
@@ -194,6 +200,18 @@ pub fn key(rate: u32, frames: &[[f32; 2]]) -> Option<Key> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keys_mix_round_the_camelot_wheel() {
+        let k = |tonic, minor| Key { tonic, minor };
+        let am = k(9, true);
+        assert_eq!(am.camelot(), "8A");
+        assert!(am.mixes(k(0, false)));
+        assert!(am.mixes(k(4, true)));
+        assert!(am.mixes(k(2, true)));
+        assert!(!am.mixes(k(7, false)));
+        assert!(!am.mixes(k(11, true)));
+    }
 
     fn clicks(rate: u32, bpm: f64, offset: f64, secs: f64) -> Vec<[f32; 2]> {
         let n = (f64::from(rate) * secs) as usize;
