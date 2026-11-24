@@ -62,10 +62,8 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
 /// The most one request asks for; streaming hosts cut longer replies short.
 pub const PIECE: u64 = 1 << 20;
 
-/// Downloads `url` to `to` via a `.part` file, in ranges of at most [`PIECE`]
-/// bytes fetched by `workers` threads; each range is resumed up to four times.
-/// `size` is the length when the caller already knows it. A file that comes
-/// out shorter than its length is an error, never a finished download.
+/// Downloads `url` to `to` in [`PIECE`] ranges on `workers` threads, each resumed
+/// up to four times; `size` skips asking the length. A short file is an error.
 pub fn download(
     url: &str,
     headers: &[(&str, &str)],
