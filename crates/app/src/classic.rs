@@ -6,12 +6,14 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 
 use crate::state::{FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
 use crate::sugar::{DECK, cue_colour, fade, hit};
-use crate::theme::{BACKDROP, BORDER, CONTROL, DIM, FAINT, PANEL, PRESSED, RAISED, TEXT as WHITE, WELL, centred};
+use crate::theme::{
+    BACKDROP, BORDER, CONTROL, DIM, FAINT, PANEL, PRESSED, RAISED, SEPARATOR, TEXT as WHITE, WELL, centred,
+};
 
-const ACCENT: u32 = rgb(0x5b8cff);
-const PLAY: u32 = rgb(0x00e676);
-const CUE: u32 = rgb(0xff9100);
-const LOOP_ON: u32 = rgb(0x00e5ff);
+const ACCENT: u32 = rgb(0xb69cff);
+const KEY: u32 = rgb(0x8e7cff);
+const CUE: u32 = rgb(0xff9f0a);
+const LOOP_ON: u32 = rgb(0xb69cff);
 const LINE: u32 = rgb(0x3a3a40);
 const LABEL: u32 = rgb(0x8b8b93);
 
@@ -31,186 +33,340 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, (on, colour): (b
 
 pub fn dj(p: &mut Painter, s: &mut State, r: Rect, stacked: bool) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, BACKDROP);
-    let gap = 4.0;
     if stacked || r.w < MIXER.0 * 3.2 {
         // Portrait: decks stacked full width, the mixer between them.
         let mh = MIXER.1.min(r.h * 0.34).round();
-        let dh = ((r.h - mh - 2.0 * gap) * 0.5).floor();
-        deck(p, s, Rect::new(r.x, r.y, r.w, dh), 0);
-        mixer(p, s, Rect::new(r.x, r.y + dh + gap, r.w, mh));
-        deck(p, s, Rect::new(r.x, r.y + r.h - dh, r.w, dh), 1);
+        let dh = ((r.h - mh - 2.0) * 0.5).floor();
+        deck(p, s, Rect::new(r.x, r.y, r.w, dh), 0, false);
+        mixer(p, s, Rect::new(r.x, r.y + dh + 1.0, r.w, mh));
+        deck(p, s, Rect::new(r.x, r.y + r.h - dh, r.w, dh), 1, false);
     } else {
         let mw = MIXER.0;
-        let dw = ((r.w - mw - 2.0 * gap) * 0.5).floor();
-        deck(p, s, Rect::new(r.x, r.y, dw, r.h), 0);
-        mixer(p, s, Rect::new(r.x + dw + gap, r.y, mw, r.h));
-        deck(p, s, Rect::new(r.x + r.w - dw, r.y, dw, r.h), 1);
+        let dw = ((r.w - mw - 2.0) * 0.5).floor();
+        deck(p, s, Rect::new(r.x, r.y, dw, r.h), 0, false);
+        mixer(p, s, Rect::new(r.x + dw + 1.0, r.y, mw, r.h));
+        deck(p, s, Rect::new(r.x + r.w - dw, r.y, dw, r.h), 1, true);
     }
 }
 
-/// The Classic deck height in a band of the given height: the mixer's, or less.
+/// The deck height in a band of the given height: the mixer's, or less.
 pub fn height(avail: f32) -> f32 {
     MIXER.1.min(avail)
 }
 
-fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.outlined(r.x, r.y, r.w, r.h, 10.0, PANEL, 1.0, BORDER);
-    p.rect(r.x + 10.0, r.y, r.w - 20.0, 2.0, 1.0, fade(DECK[d], 0x90));
-    let r = Rect::new(r.x + 5.0, r.y + 5.0, r.w - 10.0, r.h - 10.0);
-    let info_h = (r.h * 0.2).clamp(28.0, 50.0).round();
-    info(p, s, Rect::new(r.x, r.y, r.w, info_h), d);
-    let mut top = r.y + info_h + 6.0;
-    // The overview strip appears with a track, as in the reference.
-    if s.decks[d].loaded.is_some() {
-        let ov = (r.h * 0.14).clamp(14.0, 40.0).round();
-        overview(p, s, Rect::new(r.x, top, r.w, ov), d);
-        top += ov + 4.0;
+/// Lays out boxes along a row from the deck's outer edge: left to right for
+/// deck 1, right to left for deck 2, so the decks mirror around the mixer.
+struct Row {
+    r: Rect,
+    from: f32,
+    mirrored: bool,
+}
+
+impl Row {
+    fn new(r: Rect, mirrored: bool) -> Self {
+        Row { r, from: 0.0, mirrored }
     }
-    let body = Rect::new(r.x, top, r.w, r.y + r.h - top);
-    if body.h < 40.0 {
+
+    fn take(&mut self, w: f32, gap: f32) -> Rect {
+        let x = if self.mirrored { self.r.x + self.r.w - self.from - w } else { self.r.x + self.from };
+        self.from += w + gap;
+        Rect::new(x, self.r.y, w, self.r.h)
+    }
+
+    fn left(&self) -> f32 {
+        self.r.w - self.from
+    }
+}
+
+fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
+    p.rect(r.x, r.y, r.w, r.h, 0.0, PANEL);
+    let hh = (r.h * 0.36).clamp(52.0, 96.0).round();
+    header(p, s, Rect::new(r.x, r.y, r.w, hh), d, mirrored);
+    p.rect(r.x, r.y + hh, r.w, 1.0, 0.0, SEPARATOR);
+    let body = Rect::new(r.x + 8.0, r.y + hh + 8.0, r.w - 16.0, r.h - hh - 16.0);
+    if body.h < 60.0 {
         return;
     }
-    // Left to right as in the reference: transport, pads with their mode tabs,
-    // beat jump, loop, the tempo platter, the sync column, the tempo fader.
-    let u = body.w / 1080.0;
-    let col = |w: f32| (w * u).round();
-    let mut x = body.x;
-    let mut take = |w: f32| {
-        let at = x;
-        x += w + 6.0;
-        Rect::new(at, body.y, w, body.h)
-    };
-    let tr = take(col(75.0).max(40.0));
-    transport(p, s, tr, d);
-    let pr = take(col(350.0).max(150.0));
+    let mut row = Row::new(body, mirrored);
+    let sc = row.take(56.0_f32.min(body.w * 0.12).max(44.0), 8.0);
+    tempo(p, s, sc, d);
+    // The jog takes the room its height allows, after the pads and the loop box.
+    let jog = (body.h - 36.0).min(body.w * 0.3).max(60.0);
+    let loop_w = if row.left() - jog > 330.0 { 108.0 } else { 0.0 };
+    let pads_w = (row.left() - jog - loop_w - 16.0).max(120.0);
+    let pr = row.take(pads_w, 8.0);
     pads(p, s, pr, d);
-    let wide = body.w > 620.0;
-    if wide {
-        let bj = take(col(140.0));
-        beatjump(p, s, bj, d);
-        let lp = take(col(215.0));
-        loops(p, s, lp, d);
+    if loop_w > 0.0 {
+        let lr = row.take(loop_w, 8.0);
+        loop_box(p, s, lr, d);
     }
-    let sp = body.h.min(col(165.0)).max(60.0);
-    let sr = take(sp);
-    spinny(p, s, Rect::new(sr.x, sr.y + (sr.h - sp) * 0.5, sp, sp), d);
-    let rw = 22.0;
-    let side = Rect::new(x, body.y, (body.x + body.w - rw - 6.0 - x).max(30.0), body.h);
-    side_column(p, s, side, d, !wide);
-    let rate = s.decks[d].rate;
-    let rr = Rect::new(body.x + body.w - rw, body.y, rw, body.h);
-    fader(p, s, rr, ((rate + 1.0) * 0.5, false, true), DECK[d], Target::Rate(d));
+    let jr = row.take(row.left().max(jog), 0.0);
+    jog_and_transport(p, s, jr, d);
 }
 
-/// A titled dark panel, the frame of the beat jump and loop blocks.
-fn panel(p: &mut Painter, r: Rect, title: &str) -> Rect {
-    p.outlined(r.x, r.y, r.w, r.h, 8.0, WELL, 1.0, BORDER);
-    let th = (r.h * 0.26).clamp(14.0, 30.0);
-    centred(
-        p,
-        Rect::new(r.x, r.y, r.w, th),
-        Style::new((th * 0.46).round().max(8.0), Weight::Semibold, FAINT),
-        &title.to_uppercase(),
-    );
-    Rect::new(r.x + 4.0, r.y + th + 2.0, r.w - 8.0, r.h - th - 6.0)
-}
-
-fn beatjump(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let inner = panel(p, r, "Beatjump");
-    let h = ((inner.h - 4.0) * 0.5).floor();
-    let w = ((inner.w - 4.0) * 0.5).floor();
-    button(p, s, Rect::new(inner.x, inner.y, w, h), "<<", (false, ACCENT), Target::Jump(d, -1));
-    button(p, s, Rect::new(inner.x + w + 4.0, inner.y, w, h), ">>", (false, ACCENT), Target::Jump(d, 1));
-    let n = beats_label(s.decks[d].jump as f64);
-    centred(p, Rect::new(inner.x, inner.y + h + 4.0, inner.w, h), bold((h * 0.4).min(18.0), WHITE), &n);
-}
-
-fn loops(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let inner = panel(p, r, "Loop");
-    let h = ((inner.h - 4.0) * 0.5).floor();
-    let w = ((inner.w - 8.0) / 3.0).floor();
-    let cell = |i: f32, y: f32| Rect::new(inner.x + i * (w + 4.0), y, w, h);
-    let on = s.decks[d].loop_range.is_some();
-    let armed = s.decks[d].loop_in.is_some();
-    button(p, s, cell(0.0, inner.y), "IN", (armed, ACCENT), Target::LoopIn(d));
-    button(p, s, cell(1.0, inner.y), "OUT", (false, ACCENT), Target::LoopOut(d));
-    button(p, s, cell(2.0, inner.y), "RECALL", (on, LOOP_ON), Target::LoopToggle(d));
-    let y = inner.y + h + 4.0;
-    button(p, s, cell(0.0, y), "/2", (false, ACCENT), Target::LoopSize(d, -1));
-    let n = beats_label(s.decks[d].loop_size as f64);
-    centred(p, cell(1.0, y), bold((h * 0.4).min(18.0), WHITE), &n);
-    button(p, s, cell(2.0, y), "x2", (false, ACCENT), Target::LoopSize(d, 1));
-}
-
-/// Beat grid, sync and the deck switches stacked beside the platter.
-fn side_column(p: &mut Painter, s: &mut State, r: Rect, d: usize, narrow: bool) {
+/// The header: a cover tile, title and artist over the overview, the time
+/// left and the key.
+fn header(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
+    let mut row = Row::new(Rect::new(r.x + 6.0, r.y + 6.0, r.w - 12.0, r.h - 12.0), mirrored);
+    let art = row.take(r.h - 12.0, 10.0);
+    let loaded = s.decks[d].loaded.is_some();
+    cover(p, art, d, loaded);
+    if loaded {
+        // Tapping the cover ejects the track.
+        hit(s, art, Target::Eject(d));
+    }
+    let key_w = 64.0_f32.min(r.w * 0.14);
+    let time_w = 82.0_f32.min(r.w * 0.18);
+    let text_w = (row.left() - key_w - time_w - 20.0).max(40.0);
+    let text = row.take(text_w, 10.0);
+    let time = row.take(time_w, 10.0);
+    let key = row.take(key_w, 0.0);
     let deck = &s.decks[d];
-    let (kl, q, slip, rev, grid) = (deck.key_lock, deck.quantize, deck.slip, deck.reverse, deck.grid_locked);
-    let t = s.telemetry.decks[d];
-    let sync = match (t.sync_leader, t.sync_lock) {
-        (1.., _) => ("MSTR", true, rgb(0xff9100)),
-        (0, true) => ("LOCK", true, rgb(0x00e676)),
-        (0, false) => ("SYNC", false, rgb(0x00e676)),
+    let ov_h = (text.h * 0.42).round();
+    let line = text.h - ov_h - 6.0;
+    let tp = (line * 0.42).clamp(10.0, 17.0);
+    let (title, sub) = match &deck.loaded {
+        Some(l) => {
+            let bpm = l.grid.map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
+            let bpm = bpm.map_or_else(String::new, |b| format!("  |  {b:.2}"));
+            (l.entry.title.to_string(), format!("{}{bpm}", l.entry.artist))
+        }
+        None if deck.loading => ("Loading".to_string(), String::new()),
+        None => ("No track".to_string(), "Hold a track in the library to load it".to_string()),
     };
-    let mut items: Vec<(&str, bool, u32, Target)> = vec![
-        ("GRID", grid, ACCENT, Target::Grid(d)),
-        (sync.0, sync.1, sync.2, Target::Sync(d)),
-        ("Q", q, ACCENT, Target::Quantize(d)),
-        ("KEY", kl, ACCENT, Target::KeyLock(d)),
-        ("SLIP", slip, ACCENT, Target::Slip(d)),
-        ("REV", rev, rgb(0xbf360c), Target::Reverse(d)),
-    ];
-    if narrow {
-        items.extend([
-            ("PITCH -", false, ACCENT, Target::Pitch(d, -1)),
-            ("PITCH +", false, ACCENT, Target::Pitch(d, 1)),
-        ]);
+    let ink = if deck.loaded.is_some() { WHITE } else { DIM };
+    p.text_in(text.x, text.y + tp, text.w, Style::new(tp, Weight::Semibold, ink), &title);
+    let sp = (tp * 0.78).round().max(9.0);
+    p.text_in(text.x, text.y + tp + sp + 4.0, text.w, Style::new(sp, Weight::Regular, DIM), &sub);
+    // The overview runs under the title and on under the time.
+    let ov = Rect::new(text.x.min(time.x), text.y + text.h - ov_h, text.w + time.w + 10.0, ov_h);
+    let loaded = deck.loaded.is_some();
+    if loaded {
+        overview(p, s, ov, d);
+    } else {
+        p.rect(ov.x, ov.y, ov.w, ov.h, 4.0, WELL);
     }
-    let cols = if r.w > 150.0 { 2 } else { 1 };
-    let rows = items.len().div_ceil(cols);
-    let h = ((r.h - (rows - 1) as f32 * 3.0) / rows as f32).floor();
-    let w = ((r.w - (cols - 1) as f32 * 3.0) / cols as f32).floor();
-    for (i, (label, on, colour, t)) in items.into_iter().enumerate() {
-        let b = Rect::new(r.x + (i % cols) as f32 * (w + 3.0), r.y + (i / cols) as f32 * (h + 3.0), w, h);
-        button(p, s, b, label, (on, colour), t);
+    let deck = &s.decks[d];
+    // Time left, large, and the length under it.
+    if loaded {
+        let left = deck.seconds((deck.length() - s.telemetry.decks[d].position).max(0.0));
+        let big = bold((line * 0.5).clamp(12.0, 24.0), if left < 30.0 { CUE } else { WHITE });
+        let t = format!("-{}", mmss(left));
+        let w = p.text_width(big, &t);
+        p.text(time.x + time.w - w, time.y + big.px, big, &t);
+        let small = Style::new((big.px * 0.45).max(8.0).round(), Weight::Regular, DIM);
+        let total = mmss(deck.seconds(deck.length()));
+        let w = p.text_width(small, &total);
+        p.text(time.x + time.w - w, time.y + big.px + small.px + 4.0, small, &total);
+    }
+    key_box(p, s, Rect::new(key.x, key.y, key.w, line), d);
+}
+
+/// A square standing in for the cover: the deck's colour fading to black, its number.
+fn cover(p: &mut Painter, r: Rect, d: usize, loaded: bool) {
+    let top = if loaded { fade(DECK[d], 0xb0) } else { RAISED };
+    p.gradient(r.x, r.y, r.w, r.h, 4.0, top, rgb(0x101012), 1.0, BORDER);
+    centred(p, r, bold(r.h * 0.42, fade(WHITE, if loaded { 0xe0 } else { 0x40 })), if d == 0 { "1" } else { "2" });
+}
+
+/// The key in its own column, with the semitone shift and the sync leader's badge.
+fn key_box(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    p.rect(r.x - 6.0, r.y, 1.0, r.h, 0.0, SEPARATOR);
+    let deck = &s.decks[d];
+    let st = deck.semitones;
+    let key = deck.loaded.as_ref().and_then(|l| l.key).map_or_else(|| "--".to_string(), |k| k.name());
+    let kp = (r.h * 0.34).clamp(11.0, 17.0);
+    let line = Rect::new(r.x, r.y, r.w, kp + 6.0);
+    centred(p, line, bold(kp, KEY), &key);
+    let t = s.telemetry.decks[d];
+    let by = line.y + line.h + 2.0;
+    let bh = (r.h - line.h - 2.0).clamp(12.0, 20.0);
+    if t.sync_leader > 0 {
+        let b = Rect::new(r.x + 4.0, by, r.w - 8.0, bh.min(16.0));
+        p.rect(b.x, b.y, b.w, b.h, b.h * 0.5, fade(KEY, 0x40));
+        centred(p, b, bold(8.0, KEY), "MASTER");
+    } else {
+        // The key shift: down, the semitones, up.
+        let w = ((r.w - 4.0) / 3.0).floor();
+        button(p, s, Rect::new(r.x, by, w, bh), "-", (false, KEY), Target::Pitch(d, -1));
+        let n = if st == 0 { "0".to_string() } else { format!("{st:+}") };
+        centred(p, Rect::new(r.x + w + 2.0, by, w, bh), bold(9.0, if st == 0 { FAINT } else { KEY }), &n);
+        button(p, s, Rect::new(r.x + 2.0 * (w + 2.0), by, w, bh), "+", (false, KEY), Target::Pitch(d, 1));
     }
 }
 
-fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.outlined(r.x, r.y, r.w, r.h, 8.0, RAISED, 1.0, BORDER);
-    let badge = Rect::new(r.x + 5.0, r.y + 5.0, r.h - 10.0, r.h - 10.0);
-    p.outlined(badge.x, badge.y, badge.w, badge.h, 6.0, fade(DECK[d], 0x26), 1.0, fade(DECK[d], 0xb0));
-    centred(p, badge, bold(badge.h * 0.52, DECK[d]), if d == 0 { "1" } else { "2" });
+/// SYNC over the tempo fader, key lock beside it, the rate under it.
+fn tempo(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let t = s.telemetry.decks[d];
+    let (label, on, colour) = match (t.sync_leader, t.sync_lock) {
+        (1.., _) => ("MASTER", true, KEY),
+        (0, true) => ("SYNC", true, DECK[d]),
+        (0, false) => ("SYNC", false, DECK[d]),
+    };
+    let sh = 28.0_f32.min(r.h * 0.2);
+    button(p, s, Rect::new(r.x, r.y, r.w, sh), label, (on, colour), Target::Sync(d));
+    let foot = 16.0;
+    let kl = 20.0;
+    let f = Rect::new(r.x + r.w * 0.5 - 11.0, r.y + sh + 8.0, 22.0, r.h - sh - foot - kl - 16.0);
+    let rate = s.decks[d].rate;
+    fader(p, s, f, ((1.0 - rate) * 0.5, false, true), DECK[d], Target::Rate(d));
+    let lock = Rect::new(r.x, f.y + f.h + 4.0, r.w, kl);
+    button(p, s, lock, "KEY", (s.decks[d].key_lock, DECK[d]), Target::KeyLock(d));
+    let pct = format!("{:+.1}%", f64::from(rate) * 8.0);
+    centred(p, Rect::new(r.x - 4.0, r.y + r.h - foot, r.w + 8.0, foot), Style::new(10.0, Weight::Semibold, DIM), &pct);
+}
+
+/// LOOP: its size between halve and double, IN and OUT, then beat jump and the deck switches.
+fn loop_box(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let gap = 4.0;
+    let lh = 14.0;
+    let rh = ((r.h - lh - 4.0 * gap) / 4.0).floor().min(28.0);
+    let mut y = r.y;
+    let caption = |p: &mut Painter, y: f32, t: &str| centred(p, Rect::new(r.x, y, r.w, lh), bold(9.0, FAINT), t);
+    caption(p, y, "LOOP");
+    y += lh + 2.0;
+    let third = ((r.w - 2.0 * gap) / 3.0).floor();
+    let looping = s.decks[d].loop_range.is_some();
+    button(p, s, Rect::new(r.x, y, third, rh), "<", (false, LOOP_ON), Target::LoopSize(d, -1));
+    let size = Rect::new(r.x + third + gap, y, third, rh);
+    button(p, s, size, "", (looping, LOOP_ON), Target::LoopToggle(d));
+    centred(p, size, bold(12.0, if looping { LOOP_ON } else { WHITE }), &beats_label(s.decks[d].loop_size as f64));
+    button(p, s, Rect::new(r.x + 2.0 * (third + gap), y, third, rh), ">", (false, LOOP_ON), Target::LoopSize(d, 1));
+    y += rh + gap;
+    let half = ((r.w - gap) * 0.5).floor();
+    button(p, s, Rect::new(r.x, y, half, rh), "IN", (s.decks[d].loop_in.is_some(), LOOP_ON), Target::LoopIn(d));
+    button(p, s, Rect::new(r.x + half + gap, y, half, rh), "OUT", (false, LOOP_ON), Target::LoopOut(d));
+    y += rh + gap;
+    button(p, s, Rect::new(r.x, y, third, rh), "<<", (false, ACCENT), Target::Jump(d, -1));
+    centred(p, Rect::new(r.x + third + gap, y, third, rh), bold(10.0, DIM), &beats_label(s.decks[d].jump as f64));
+    button(p, s, Rect::new(r.x + 2.0 * (third + gap), y, third, rh), ">>", (false, ACCENT), Target::Jump(d, 1));
+    y += rh + gap;
     let deck = &s.decks[d];
-    let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + f64::from(deck.rate) * 0.08));
-    // LOAD's place on the right ejects a loaded track.
-    let ej_w = (r.h * 1.7).min(r.w * 0.16).round();
-    let ej = Rect::new(r.x + r.w - ej_w - 4.0, r.y + 4.0, ej_w, r.h - 8.0);
-    button(p, s, ej, "EJECT", (false, DECK[d]), Target::Eject(d));
-    let deck = &s.decks[d];
-    let pill_w = (r.h * 1.6).min(r.w * 0.2).round();
-    let pill = Rect::new(ej.x - pill_w - 6.0, r.y + 4.0, pill_w, r.h - 8.0);
-    p.outlined(pill.x, pill.y, pill.w, pill.h, pill.h * 0.5, WELL, 1.0, BORDER);
-    let known = bpm.is_some();
-    let bpm = bpm.map_or_else(|| "--.-".to_string(), |b| format!("{b:.1}"));
-    centred(p, pill, bold((pill.h * 0.44).min(14.0), if known { WHITE } else { FAINT }), &bpm);
-    let tx = badge.x + badge.w + 6.0;
-    let tw = pill.x - tx - 6.0;
-    let (title, artist) = deck.loaded.as_ref().map_or(("No track".to_string(), "Press LOAD".to_string()), |l| {
-        (l.entry.title.to_string(), l.entry.artist.to_string())
-    });
-    let tp = (r.h * 0.3).clamp(9.0, 14.0);
-    let ink = if deck.loaded.is_some() { WHITE } else { DIM };
-    p.text_in(tx, r.y + r.h * 0.45, tw, bold(tp, ink), &title);
-    if !artist.is_empty() {
-        p.text_in(tx, r.y + r.h * 0.45 + tp + 2.0, tw, Style::new(tp * 0.85, Weight::Regular, DIM), &artist);
+    let quarter = ((r.w - 3.0) / 4.0).floor();
+    let chips = [
+        ("Q", deck.quantize, Target::Quantize(d)),
+        ("SLIP", deck.slip, Target::Slip(d)),
+        ("REV", deck.reverse, Target::Reverse(d)),
+        ("GRID", deck.grid_locked, Target::Grid(d)),
+    ];
+    for (i, (label, on, t)) in chips.into_iter().enumerate() {
+        let b = Rect::new(r.x + i as f32 * (quarter + 1.0), y, quarter, rh);
+        let down = s.pressed(t);
+        crate::theme::labelled(p, b, label, 7.0, on, down, ACCENT);
+        hit(s, b, t);
     }
-    let left = deck.length() - s.telemetry.decks[d].position;
-    if deck.loaded.is_some() && r.w > 260.0 {
-        let t = format!("-{}", mmss(deck.seconds(left.max(0.0))));
-        let st = bold(tp * 0.9, if deck.seconds(left) < 30.0 { CUE } else { WHITE });
-        let w = p.text_width(st, &t);
-        p.text(pill.x - w - 8.0, r.y + r.h * 0.5 + st.px * 0.36, st, &t);
+}
+
+/// The jog: a ring that fills as the track plays round the tempo, with PLAY and CUE under it.
+fn jog_and_transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let bh = 28.0_f32.min(r.h * 0.18);
+    let side = (r.h - bh - 8.0).min(r.w).max(40.0);
+    let jr = Rect::new(r.x + (r.w - side) * 0.5, r.y, side, side);
+    spinny(p, s, jr, d);
+    let bw = ((side.max(120.0).min(r.w) - 8.0) * 0.5).floor();
+    let bx = r.x + (r.w - 2.0 * bw - 8.0) * 0.5;
+    let by = r.y + r.h - bh;
+    let playing = s.telemetry.decks[d].playing;
+    let play = Rect::new(bx, by, bw, bh);
+    let down = s.pressed(Target::Play(d));
+    p.outlined(
+        play.x,
+        play.y,
+        play.w,
+        play.h,
+        6.0,
+        if down { PRESSED } else { CONTROL },
+        if playing { 2.0 } else { 1.0 },
+        if playing { DECK[d] } else { BORDER },
+    );
+    let k = (bh * 0.42).round();
+    let (cx, cy) = (play.x + play.w * 0.5, play.y + play.h * 0.5);
+    let ink = if playing { DECK[d] } else { WHITE };
+    for i in 0..(k as usize) {
+        let f = i as f32;
+        let half = k * 0.5 * (1.0 - f / k);
+        p.rect(cx - k * 0.4 + f, cy - half, 1.0, half * 2.0, 0.0, ink);
+    }
+    hit(s, play, Target::Play(d));
+    let cue = Rect::new(bx + bw + 8.0, by, bw, bh);
+    let down = s.pressed(Target::Cue(d));
+    p.outlined(
+        cue.x,
+        cue.y,
+        cue.w,
+        cue.h,
+        6.0,
+        if down { fade(CUE, 0x60) } else { CONTROL },
+        1.0,
+        if down { CUE } else { BORDER },
+    );
+    centred(p, cue, bold(11.0, if down { WHITE } else { CUE }), "CUE");
+    hit(s, cue, Target::Cue(d));
+}
+
+const MODES: [(Mode, &str); 4] =
+    [(Mode::Cues, "HOT CUES"), (Mode::Loops, "LOOPS"), (Mode::Samples, "SAMPLER"), (Mode::Fx, "PAD FX")];
+
+/// Pads under their mode tabs: a dark grid whose labels light in the pad's colour.
+fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    p.outlined(r.x, r.y, r.w, r.h, 6.0, WELL, 1.0, BORDER);
+    let th = 22.0_f32.min(r.h * 0.18).round();
+    let mode = s.decks[d].mode;
+    let tw = r.w / MODES.len() as f32;
+    for (i, (m, label)) in MODES.into_iter().enumerate() {
+        let b = Rect::new(r.x + i as f32 * tw, r.y, tw, th);
+        let t = Target::Mode(d, m);
+        let on = mode == m;
+        if on || s.pressed(t) {
+            p.rect(b.x + 1.0, b.y + 1.0, b.w - 2.0, b.h - 1.0, 5.0, RAISED);
+        }
+        centred(p, b, bold((th * 0.36).clamp(7.0, 9.0), if on { WHITE } else { FAINT }), label);
+        hit(s, b, t);
+    }
+    p.rect(r.x, r.y + th, r.w, 1.0, 0.0, SEPARATOR);
+    let g = Rect::new(r.x + 1.0, r.y + th + 1.0, r.w - 2.0, r.h - th - 2.0);
+    let (pw, ph) = ((g.w - 3.0) / 4.0, (g.h - 1.0) * 0.5);
+    for i in 0..8 {
+        let b = Rect::new(g.x + (i % 4) as f32 * (pw + 1.0), g.y + (i / 4) as f32 * (ph + 1.0), pw, ph);
+        let t = Target::Pad(d, i);
+        let down = s.pressed(t);
+        let (label, lit) = match mode {
+            Mode::Cues => match s.decks[d].cues[i] {
+                Some(at) => (mmss(s.decks[d].seconds(at)), Some(cue_colour(s, d, i))),
+                None => ("+".to_string(), None),
+            },
+            Mode::Loops => (beats_label(LOOP_BEATS[i]), (s.decks[d].looping == Some(i)).then_some(LOOP_ON)),
+            Mode::Samples => (pad_name(s, d, i), None),
+            Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(rgb(0xfca001))),
+        };
+        let fill = match (down, lit) {
+            (true, Some(c)) => fade(c, 0x50),
+            (true, None) => PRESSED,
+            (false, Some(c)) => fade(c, 0x14),
+            (false, None) => CONTROL,
+        };
+        p.rect(b.x, b.y, b.w, b.h, 4.0, fill);
+        let ink = lit.unwrap_or(if mode == Mode::Cues { FAINT } else { DIM });
+        let st = bold((b.h * 0.24).clamp(8.0, 12.0), ink);
+        if mode == Mode::Cues && lit.is_some() {
+            // A play mark ahead of the cue's time, as the pads show it.
+            let tw = p.text_width(st, &label);
+            let k = st.px * 0.7;
+            let x0 = b.x + (b.w - tw - k - 4.0) * 0.5;
+            let cy = b.y + b.h * 0.5;
+            for j in 0..(k as usize) {
+                let f = j as f32;
+                let half = k * 0.5 * (1.0 - f / k);
+                p.rect(x0 + f, cy - half, 1.0, half * 2.0, 0.0, ink);
+            }
+            p.text(x0 + k + 4.0, cy + st.px * 0.36, st, &label);
+        } else {
+            centred(p, b, st, &label);
+        }
+        if let Some(c) = lit {
+            p.rect(b.x + b.w * 0.3, b.y + b.h - 4.0, b.w * 0.4, 2.0, 1.0, c);
+        }
+        hit(s, b, t);
     }
 }
 
@@ -240,83 +396,6 @@ fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         p.rect(r.x + r.w * played - 1.0, r.y, 2.0, r.h, 1.0, WHITE);
     }
     hit(s, r, Target::Overview(d));
-}
-
-fn transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let h = ((r.h - 4.0) * 0.5).floor();
-    let playing = s.telemetry.decks[d].playing;
-    let play = Rect::new(r.x, r.y, r.w, h);
-    let down = s.pressed(Target::Play(d));
-    let radius = (play.w * 0.18).clamp(6.0, 12.0);
-    p.outlined(play.x, play.y, play.w, play.h, radius, if down { PRESSED } else { CONTROL }, 1.0, BORDER);
-    if playing {
-        p.glow(play.x, play.y, play.w, play.h, radius, 8.0, fade(PLAY, 0x30));
-        p.outlined(play.x, play.y, play.w, play.h, radius, fade(PLAY, 0x18), 2.0, PLAY);
-    }
-    // The play triangle.
-    let k = (play.w.min(play.h) * 0.32).round();
-    let (cx, cy) = (play.x + play.w * 0.5, play.y + play.h * 0.5);
-    let ink = if playing { PLAY } else { WHITE };
-    for i in 0..(k as usize) {
-        let f = i as f32;
-        let half = k * 0.5 * (1.0 - f / k);
-        p.rect(cx - k * 0.4 + f, cy - half, 1.0, half * 2.0, 0.0, ink);
-    }
-    hit(s, play, Target::Play(d));
-    let cue = Rect::new(r.x, r.y + h + 4.0, r.w, h);
-    let down = s.pressed(Target::Cue(d));
-    let fill = if down { fade(CUE, 0x70) } else { fade(CUE, 0x14) };
-    p.outlined(cue.x, cue.y, cue.w, cue.h, radius, fill, 1.5, fade(CUE, if down { 0xff } else { 0x90 }));
-    centred(p, cue, bold((cue.w * 0.22).min(15.0), if down { WHITE } else { CUE }), "CUE");
-    hit(s, cue, Target::Cue(d));
-}
-
-const MODES: [(Mode, &str); 4] =
-    [(Mode::Cues, "CUE"), (Mode::Loops, "LOOP"), (Mode::Samples, "SMPL"), (Mode::Fx, "FX")];
-
-fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let tab_w = (r.w * 0.13).clamp(38.0, 46.0).round();
-    let th = ((r.h - 3.0 * 3.0) / 4.0).floor();
-    let mode = s.decks[d].mode;
-    for (i, (m, label)) in MODES.into_iter().enumerate() {
-        let b = Rect::new(r.x + r.w - tab_w, r.y + i as f32 * (th + 3.0), tab_w, th);
-        button(p, s, b, label, (mode == m, ACCENT), Target::Mode(d, m));
-    }
-    let g = Rect::new(r.x, r.y, r.w - tab_w - 4.0, r.h);
-    let (pw, ph) = (((g.w - 9.0) / 4.0).floor(), ((g.h - 3.0) * 0.5).floor());
-    for i in 0..8 {
-        let b = Rect::new(g.x + (i % 4) as f32 * (pw + 3.0), g.y + (i / 4) as f32 * (ph + 3.0), pw, ph);
-        let t = Target::Pad(d, i);
-        let down = s.pressed(t);
-        // What the pad shows, and its colour when it is set or running.
-        let (label, sub, lit) = match mode {
-            Mode::Cues => ((i + 1).to_string(), "", s.decks[d].cues[i].is_some().then(|| cue_colour(s, d, i))),
-            Mode::Loops => (beats_label(LOOP_BEATS[i]), "BEATS", (s.decks[d].looping == Some(i)).then_some(LOOP_ON)),
-            Mode::Samples => (pad_name(s, d, i), "", None),
-            Mode::Fx => (FX_PADS[i].to_string(), "", (s.decks[d].echo == Some(i)).then_some(rgb(0xfca001))),
-        };
-        let radius = 8.0_f32.min(b.h * 0.25);
-        match lit {
-            Some(c) => {
-                p.outlined(b.x, b.y, b.w, b.h, radius, fade(c, if down { 0x90 } else { 0x38 }), 1.5, c);
-                p.rect(b.x + 6.0, b.y + 4.0, b.w - 12.0, 3.0, 1.5, c);
-            }
-            None => crate::theme::control(p, b, radius, false, down, ACCENT),
-        }
-        let ink = match lit {
-            Some(_) => WHITE,
-            None if mode == Mode::Cues => FAINT,
-            None => DIM,
-        };
-        let big = (b.h * 0.3).clamp(9.0, 15.0);
-        if sub.is_empty() || b.h < 34.0 {
-            centred(p, b, bold(big, ink), &label);
-        } else {
-            centred(p, Rect::new(b.x, b.y, b.w, b.h * 0.7), bold(big, ink), &label);
-            centred(p, Rect::new(b.x, b.y + b.h * 0.55, b.w, b.h * 0.4), bold(8.0, ink), sub);
-        }
-        hit(s, b, t);
-    }
 }
 
 fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
