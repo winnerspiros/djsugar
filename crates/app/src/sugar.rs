@@ -135,6 +135,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
+    toast(p, s, w, h);
     track_menu(p, s, w, h);
     list_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
@@ -516,6 +517,23 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     }
     let b = Rect::new(r.x + 6.0, (y + 4.0).min(r.y + r.h - rh), r.w - 12.0, rh - 4.0);
     button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
+}
+
+/// The latest message, over every page near the bottom, fading out.
+fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some((msg, at)) = &s.toast else { return };
+    let age = at.elapsed();
+    if age >= crate::state::TOAST {
+        return;
+    }
+    let left = (crate::state::TOAST - age).as_secs_f32();
+    let alpha = (left.min(0.5) * 2.0 * 255.0) as u32;
+    let st = Style::new(13.0, Weight::Semibold, fade(TEXT, alpha));
+    let tw = p.text_width(st, msg).min(w - 48.0);
+    let r = Rect::new((w - tw) * 0.5 - 16.0, h - 64.0, tw + 32.0, 36.0);
+    p.layer();
+    p.outlined(r.x, r.y, r.w, r.h, 18.0, fade(theme::MENU, alpha), 1.0, fade(theme::MENU_BORDER, alpha));
+    p.text_in(r.x + 16.0, r.y + 23.0, tw, st, msg);
 }
 
 /// A held playlist's menu: load its first track, move it, empty it, delete it.

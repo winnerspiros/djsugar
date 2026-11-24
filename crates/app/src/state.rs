@@ -195,6 +195,8 @@ fn recordings_dir() -> Option<std::path::PathBuf> {
 }
 
 pub const LONG_PRESS_MS: u128 = 450;
+/// How long a message stays on screen.
+pub const TOAST: std::time::Duration = std::time::Duration::from_secs(6);
 
 pub const JUMP_BEATS: [f64; 10] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0];
 
@@ -443,6 +445,10 @@ pub struct State {
     read: Reader,
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
+    /// The message on screen, and when it came.
+    pub toast: Option<(String, std::time::Instant)>,
+    /// The app's and the streaming page's last messages, to show each new one once.
+    last_msgs: [String; 2],
     pub out_rate: u32,
     pub auto: Option<Auto>,
     pub view: View,
@@ -560,6 +566,8 @@ impl State {
             read,
             jobs: channel(),
             status,
+            toast: None,
+            last_msgs: Default::default(),
             out_rate,
             auto: None,
             view: View::Dj,
@@ -631,9 +639,20 @@ impl State {
             || self.decks.iter().any(|d| d.loading)
             || self.auto.is_some()
             || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE)
+            || self.toast.as_ref().is_some_and(|t| t.1.elapsed() < TOAST)
     }
 
     pub fn tick(&mut self) {
+        let now = [self.status.clone().unwrap_or_default(), self.hub.status.clone()];
+        for (msg, last) in now.into_iter().zip(&mut self.last_msgs) {
+            if msg != *last {
+                if !msg.is_empty() {
+                    crate::diag(&msg);
+                    self.toast = Some((msg.clone(), std::time::Instant::now()));
+                }
+                *last = msg;
+            }
+        }
         for (path, title, artist, deck) in self.hub.poll() {
             let at =
                 self.entries.iter().position(|e| matches!(&e.source, Source::File(p) if **p == *path)).unwrap_or_else(
@@ -1290,6 +1309,7 @@ impl State {
         }
         self.history.retain(|&i| i as usize != index);
         self.history.insert(0, index as u32);
+        self.status = None;
         self.decks[deck].loading = true;
         self.load(Job::Deck(deck), index);
     }

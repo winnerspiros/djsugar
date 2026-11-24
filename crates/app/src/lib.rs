@@ -116,6 +116,11 @@ impl Ui {
     }
 
     /// The streaming search text.
+    /// The message on screen, if one is.
+    pub fn toast(&self) -> Option<String> {
+        self.state.toast.as_ref().filter(|t| t.1.elapsed() < state::TOAST).map(|t| t.0.clone())
+    }
+
     pub fn query(&self) -> &str {
         &self.state.hub.query
     }
