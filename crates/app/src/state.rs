@@ -1514,6 +1514,9 @@ impl State {
             1.0
         };
         self.send_gain(d);
+        if s.on(Opt::TempoMatch) && self.telemetry.decks[1 - d.min(1)].playing {
+            self.match_tempo(d);
+        }
         if s.on(Opt::KeyMatch) {
             self.match_key(d);
         }
@@ -1681,11 +1684,12 @@ impl State {
         }
     }
 
-    fn sync(&mut self, d: usize) {
+    /// Sets deck `d`'s tempo fader so it plays at the other deck's tempo, folded to the nearest octave.
+    /// Returns false when either deck has no beat grid.
+    fn match_tempo(&mut self, d: usize) -> bool {
         let o = 1 - d.min(1);
-        let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
-        let (Some(g), Some(og)) = (me.grid, other.grid) else { return };
-        let (rate, orate) = (me.track.rate, other.track.rate);
+        let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return false };
+        let (Some(g), Some(og)) = (me.grid, other.grid) else { return false };
         let other_speed = 1.0 + f64::from(self.decks[o].rate) * self.settings.rate_range();
         let mut target = og.bpm * other_speed;
         while target / g.bpm > 1.5 {
@@ -1697,6 +1701,17 @@ impl State {
         let r = ((target / g.bpm - 1.0) / self.settings.rate_range()).clamp(-1.0, 1.0);
         self.decks[d].rate = r as f32;
         self.send(Command::Rate(d, r * self.settings.rate_range()));
+        true
+    }
+
+    fn sync(&mut self, d: usize) {
+        if !self.match_tempo(d) {
+            return;
+        }
+        let o = 1 - d.min(1);
+        let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
+        let (Some(g), Some(og)) = (me.grid, other.grid) else { return };
+        let (rate, orate) = (me.track.rate, other.track.rate);
         if self.telemetry.decks[o].playing {
             let op = self.telemetry.decks[o].position;
             let phase = ((op - og.first_beat) / og.beat_frames(orate)).rem_euclid(1.0);
@@ -1834,6 +1849,12 @@ impl State {
             Target::Play(d) if self.decks[d].loaded.is_some() => {
                 let on = !self.telemetry.decks[d].playing;
                 self.focus = d;
+                if on
+                    && self.settings.on(crate::settings::Opt::SyncOnPlay)
+                    && self.telemetry.decks[1 - d.min(1)].playing
+                {
+                    self.sync(d);
+                }
                 self.send(Command::Play(d, on));
                 self.telemetry.decks[d].playing = on;
             }

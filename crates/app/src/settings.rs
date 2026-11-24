@@ -26,6 +26,9 @@ pub enum Opt {
     BpmRange,
     SampleRate,
     Buffer,
+    TempoMatch,
+    SyncOnPlay,
+    EndWarning,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -64,7 +67,10 @@ const BPM_NAMES: [&str; 6] = ["60 - 120", "70 - 140", "80 - 160", "90 - 180", "1
 pub const RATES: [Option<u32>; 5] = [None, Some(44_100), Some(48_000), Some(88_200), Some(96_000)];
 pub const BUFFERS: [Option<u32>; 7] = [None, Some(64), Some(128), Some(256), Some(512), Some(1024), Some(2048)];
 
-pub const OPTIONS: [Spec; 21] = [
+/// Seconds before the end that the track end warning starts; 0 is off.
+pub const END_WARNINGS: [u32; 4] = [0, 15, 30, 60];
+
+pub const OPTIONS: [Spec; 24] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -233,6 +239,30 @@ pub const OPTIONS: [Spec; 21] = [
         kind: Kind::Menu(&["Device default", "64", "128", "256", "512", "1024", "2048"]),
         default: 0,
     },
+    Spec {
+        opt: Opt::TempoMatch,
+        key: "tempo_match_on_load",
+        title: "Match tempo on load",
+        detail: "A loaded track takes the playing deck's tempo.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::SyncOnPlay,
+        key: "sync_on_play",
+        title: "Sync on play",
+        detail: "Starting a deck while the other plays matches its tempo and lines up its beats.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::EndWarning,
+        key: "end_warning",
+        title: "Track end warning",
+        detail: "The deck's waveform flashes red this long before its track ends.",
+        kind: Kind::Segmented(&["Off", "15 s", "30 s", "60 s"]),
+        default: 2,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -265,6 +295,10 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             Row::Opt(Opt::TempoUp),
             Row::Heading("PLAYING"),
             Row::Opt(Opt::CueMode),
+            Row::Opt(Opt::SyncOnPlay),
+            Row::Opt(Opt::EndWarning),
+            Row::Heading("TEMPO AND KEY ON LOAD"),
+            Row::Opt(Opt::TempoMatch),
             Row::Opt(Opt::KeyMatch),
             Row::Heading("LOADING"),
             Row::Opt(Opt::KeyLock),
@@ -442,6 +476,11 @@ impl Settings {
         GAIN_TARGETS[usize::from(self.get(Opt::GainTarget)).min(GAIN_TARGETS.len() - 1)]
     }
 
+    /// Seconds before a track's end that its deck warns; 0 is off.
+    pub fn end_warning(&self) -> u32 {
+        END_WARNINGS[usize::from(self.get(Opt::EndWarning)).min(END_WARNINGS.len() - 1)]
+    }
+
     pub fn rate_range(&self) -> f64 {
         RATE_RANGES[usize::from(self.get(Opt::RateRange)).min(RATE_RANGES.len() - 1)]
     }
@@ -467,6 +506,13 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn options_sit_at_their_own_place() {
+        for (i, o) in OPTIONS.iter().enumerate() {
+            assert_eq!(o.opt as usize, i, "{}", o.key);
+        }
+    }
 
     #[test]
     fn options_are_in_enum_order() {

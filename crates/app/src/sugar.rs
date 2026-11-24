@@ -348,6 +348,13 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 n += 1.0;
             }
         }
+        let warn = f64::from(s.settings.end_warning());
+        let left_s = (l.track.frames.len() as f64 - pos) / f64::from(l.track.rate) / f64::from(speed.max(0.01));
+        if warn > 0.0 && s.telemetry.decks[d].playing && left_s < warn && ((left_s * 2.0) as u64).is_multiple_of(2) {
+            p.rect(r.x, r.y, r.w, r.h, 0.0, fade(rgb(0xff2d2d), 0x30));
+            p.rect(r.x, r.y, r.w, 2.0, 0.0, rgb(0xff2d2d));
+            p.rect(r.x, r.y + r.h - 2.0, r.w, 2.0, 0.0, rgb(0xff2d2d));
+        }
         let cols = r.w as usize;
         let centre = pos / DETAIL_FRAMES as f64;
         let half = r.h * 0.47;
