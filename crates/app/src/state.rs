@@ -504,6 +504,8 @@ pub struct State {
     /// The library's filter chips that are on, one bit per `FILTERS` entry.
     pub filters: u8,
     pub search_focus: bool,
+    /// The top bar drew the search box this frame, so the library leaves out its own.
+    pub search_in_bar: bool,
     pub hub: crate::hub::Hub,
     pub hub_area: Rect,
     pub shelf: Shelf,
@@ -628,6 +630,7 @@ impl State {
             wave_height: 0,
             filters: 0,
             search_focus: false,
+            search_in_bar: false,
             hub_area: Rect::default(),
             hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
             shelf: Shelf::Tracks,

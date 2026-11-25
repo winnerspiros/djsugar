@@ -76,7 +76,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         View::Dj => {
             // The Classic phone layout: waveforms, decks around the mixer, the library below.
             let tall_by = 1.0 + 0.2 * f32::from(s.wave_height);
-            let wh = (rest * 0.22 * tall_by).round().clamp(40.0, (96.0 * tall_by).max(56.0)).min(rest * 0.5);
+            let wh = (rest * 0.22 * tall_by).round().clamp(40.0, (160.0 * tall_by).max(56.0)).min(rest * 0.5);
             waveforms(p, s, Rect::new(0.0, y, w, wh));
             let y = y + wh + 4.0;
             let lower = h - y;
@@ -211,6 +211,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, b, Target::View(v));
     }
     x += tw * views.len() as f32 + 8.0;
+    s.search_in_bar = false;
     if wide {
         return toolbar_wide(p, s, r, x);
     }
@@ -349,6 +350,7 @@ fn toolbar_wide(p: &mut Painter, s: &mut State, r: Rect, views_end: f32) {
     if sw < 120.0 {
         return;
     }
+    s.search_in_bar = true;
     let focus = s.search_focus || !s.query.is_empty();
     let fh = r.h - 10.0;
     p.outlined(sx, r.y + 5.0, sw, fh, fh * 0.5, theme::WELL, 1.0, if focus { ACCENT } else { theme::BORDER });
@@ -851,7 +853,7 @@ fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
 }
 
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
-    let r = if r.h > 220.0 { library_head(p, s, r) } else { r };
+    let r = if r.h > 220.0 && !s.search_in_bar { library_head(p, s, r) } else { r };
     let r = if r.w >= 640.0 {
         let sw = (r.w * 0.2).clamp(150.0, 220.0);
         sidebar(p, s, Rect::new(r.x, r.y, sw, r.h));
