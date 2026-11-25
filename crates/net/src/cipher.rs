@@ -1,7 +1,6 @@
-//! Unlocks YouTube stream links that carry a scrambled signature or a throttling
-//! `n` value. The player script is run as it is, in a JavaScript engine written in
-//! Rust; its own URL builder, the function that marks a link `alr=yes`, rewrites
-//! both. Nothing in the script is pattern-matched beyond finding that function.
+//! Unlocks YouTube links with a scrambled signature or throttling `n` value: the player
+//! script runs as it is in a Rust JavaScript engine, and its own URL builder (the function
+//! that marks a link `alr=yes`) rewrites both.
 
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Mutex, OnceLock, PoisonError};
