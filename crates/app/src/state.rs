@@ -279,6 +279,40 @@ pub struct Loaded {
     pub grid: Option<sugar_analysis::Grid>,
     pub key: Option<sugar_analysis::Key>,
     pub lyrics: crate::lyrics::Lyrics,
+    /// The album art, `ART` by `ART` colours row by row, if the file or its folder has any.
+    pub art: Option<Box<[u32]>>,
+}
+
+/// Cells on a side of the deck's album art.
+pub const ART: usize = 32;
+
+/// The album art for `path`, averaged down to `ART` by `ART` colours.
+fn art(path: &std::path::Path) -> Option<Box<[u32]>> {
+    let c = djsugar_engine::cover::find_sized(path, "", ART as u32 * 4)?;
+    let (w, h) = (c.width as usize, c.height as usize);
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let side = w.min(h);
+    let (ox, oy) = ((w - side) / 2, (h - side) / 2);
+    let mut out = vec![0u32; ART * ART];
+    for (i, cell) in out.iter_mut().enumerate() {
+        let (x0, y0) = (ox + i % ART * side / ART, oy + i / ART * side / ART);
+        let (x1, y1) = (ox + (i % ART + 1) * side / ART, oy + (i / ART + 1) * side / ART);
+        let mut sum = [0u32; 3];
+        let mut n = 0;
+        for y in y0..y1.max(y0 + 1) {
+            for x in x0..x1.max(x0 + 1) {
+                let p = &c.rgba[(y * w + x) * 4..][..3];
+                for k in 0..3 {
+                    sum[k] += u32::from(p[k]);
+                }
+                n += 1;
+            }
+        }
+        *cell = ((sum[0] / n) << 16) | ((sum[1] / n) << 8) | (sum[2] / n);
+    }
+    Some(out.into())
 }
 
 #[derive(Debug, Default)]
@@ -915,13 +949,17 @@ impl State {
                     sugar_analysis::grid(t.rate, &t.frames).map(crate::settings::fold)
                 };
                 let key = if detail.is_empty() { None } else { sugar_analysis::key(t.rate, &t.frames) };
+                let art = match &entry.source {
+                    Source::File(p) if !detail.is_empty() => art(p),
+                    _ => None,
+                };
                 let lyrics = match &entry.source {
                     Source::File(p) => std::fs::read_to_string(p.with_extension("lrc"))
                         .map(|t| crate::lyrics::Lyrics::parse(&t))
                         .unwrap_or_default(),
                     Source::Sample(_) => crate::lyrics::Lyrics::default(),
                 };
-                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics }
+                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art }
             });
             let _ = tx.send((job, loaded));
         });

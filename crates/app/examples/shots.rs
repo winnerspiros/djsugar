@@ -64,6 +64,28 @@ fn tone(path: &std::path::Path) {
     std::fs::write(path, f).expect("tone");
 }
 
+/// A 64 by 64 cover beside the tone: a pink to blue sweep with a light disc in the middle.
+fn cover(path: &std::path::Path) {
+    let n = 64u32;
+    let mut px = Vec::with_capacity((n * n * 4) as usize);
+    for y in 0..n {
+        for x in 0..n {
+            let (dx, dy) = (x as i32 - 32, y as i32 - 32);
+            let disc = dx * dx + dy * dy < 14 * 14;
+            let t = (x + y) * 255 / (2 * n);
+            px.extend_from_slice(&if disc {
+                [240, 240, 245, 255]
+            } else {
+                [255 - t as u8, 40, 120 + t as u8 / 2, 255]
+            });
+        }
+    }
+    let file = std::io::BufWriter::new(std::fs::File::create(path).expect("cover"));
+    let mut enc = png::Encoder::new(file, n, n);
+    enc.set_color(png::ColorType::Rgba);
+    enc.write_header().and_then(|mut w| w.write_image_data(&px)).expect("cover");
+}
+
 fn main() {
     let out = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "target/shots".into()));
     std::fs::create_dir_all(&out).expect("output dir");
@@ -71,6 +93,7 @@ fn main() {
         let music = out.join("music");
         std::fs::create_dir_all(&music).expect("music dir");
         tone(&music.join("Shots - Tone.wav"));
+        cover(&music.join("cover.png"));
         // Run again with the folder in the library's roots.
         let me = std::env::current_exe().expect("own path");
         let status = std::process::Command::new(me)
@@ -121,6 +144,24 @@ fn main() {
         }
         menu(&mut ui, &mut r, (name, scale), &mut faults);
         save(&r, &out.join(format!("{name}-menu.png")));
+        ui.key(Key::Escape, Mods::default());
+        ui.render(&mut r);
+        if let Some((_, [x, y, w, _])) = ui.targets().into_iter().find(|(t, _)| t == "Library") {
+            let (px, py) = ((x + w * 0.3) * scale, (y + 11.0) * scale);
+            ui.pointer_down(8, px, py);
+            ui.pointer_up(8, py);
+            ui.render(&mut r);
+        }
+        if ui.tap("LoadSelected(0)") {
+            for _ in 0..30 {
+                ui.render(&mut r);
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            ui.tap("View(Dj)");
+            ui.render(&mut r);
+            ui.render(&mut r);
+            save(&r, &out.join(format!("{name}-loaded.png")));
+        }
         settings(&mut ui, &mut r, &out, name, &mut faults);
         let before = pixels(&r);
         r = Renderer::offscreen(w, h).expect("second renderer");

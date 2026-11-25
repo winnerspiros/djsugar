@@ -110,7 +110,10 @@ fn header(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
     let mut row = Row::new(Rect::new(r.x + 6.0, r.y + 6.0, r.w - 12.0, r.h - 12.0), mirrored);
     let art = row.take(r.h - 12.0, 10.0);
     let loaded = s.decks[d].loaded.is_some();
-    cover(p, art, d, loaded);
+    match s.decks[d].loaded.as_ref().and_then(|l| l.art.as_deref()) {
+        Some(cells) => artwork(p, art, cells),
+        None => cover(p, art, d, loaded),
+    }
     if loaded {
         // Tapping the cover ejects the track.
         hit(s, art, Target::Eject(d));
@@ -160,6 +163,18 @@ fn header(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
         p.text(time.x + time.w - w, time.y + big.px + small.px + 4.0, small, &total);
     }
     key_box(p, s, Rect::new(key.x, key.y, key.w, line), d);
+}
+
+/// The album art, drawn cell by cell, with rounded corners left to the frame around it.
+fn artwork(p: &mut Painter, r: Rect, cells: &[u32]) {
+    use crate::state::ART;
+    let c = r.w.min(r.h) / ART as f32;
+    let (x0, y0) = (r.x + (r.w - c * ART as f32) * 0.5, r.y + (r.h - c * ART as f32) * 0.5);
+    for (i, &v) in cells.iter().enumerate() {
+        let (x, y) = (x0 + (i % ART) as f32 * c, y0 + (i / ART) as f32 * c);
+        p.rect(x.floor(), y.floor(), (x + c).ceil() - x.floor(), (y + c).ceil() - y.floor(), 0.0, rgb(v));
+    }
+    p.outlined(x0, y0, c * ART as f32, c * ART as f32, 4.0, 0, 1.0, BORDER);
 }
 
 /// A square standing in for the cover: the deck's colour fading to black, its number.
