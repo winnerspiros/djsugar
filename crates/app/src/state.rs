@@ -134,6 +134,13 @@ pub enum Target {
     MenuStage(u8),
     /// The field a playlist's new name is typed in.
     NameField,
+    /// Puts the menu's track's tag on or takes it off.
+    MenuTag(usize),
+    /// A new tag on the menu's track, named next.
+    NewTag,
+    /// Deletes a tag from every track.
+    DeleteTag(usize),
+    RenameTag(usize),
     ToggleColumn(crate::library::Column),
     ResetColumns,
     /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
@@ -194,6 +201,8 @@ pub enum Shelf {
     Folder(usize),
     /// The tracks at one preparation stage, 1 to 3.
     Stage(u8),
+    /// The tracks wearing one tag.
+    Tag(usize),
 }
 
 /// The preparation stages, in order, with their colours.
@@ -574,7 +583,9 @@ pub struct State {
     /// The chip whose editor is open.
     pub chip_menu: Option<u8>,
     /// The playlist being renamed, and the name so far.
-    pub naming: Option<usize>,
+    pub naming: Option<Shelf>,
+    /// The held tag whose menu is open.
+    pub tag_menu: Option<usize>,
     pub name_buf: String,
     /// The large waveforms' zoom, each step twice as close; 0 is the default.
     pub wave_zoom: i8,
@@ -589,6 +600,8 @@ pub struct State {
     pub hub_area: Rect,
     pub shelf: Shelf,
     pub playlists: Vec<(String, Vec<String>)>,
+    /// Tags: each a name and the tracks wearing it.
+    pub tags: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
     pub track_menu: Option<u32>,
     pub settings: crate::settings::Settings,
@@ -720,6 +733,7 @@ impl State {
             hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
             shelf: Shelf::Tracks,
             playlists: crate::store::load_playlists(),
+            tags: crate::store::load_tags(),
             history: Vec::new(),
             track_menu: None,
             settings: crate::settings::Settings::load(),
@@ -731,6 +745,7 @@ impl State {
             min_stars: 1,
             chip_menu: None,
             naming: None,
+            tag_menu: None,
             name_buf: String::new(),
             prefs: None,
             pref_menu: None,
@@ -1163,7 +1178,7 @@ impl State {
             ListOp::Clear => self.playlists[n].1.clear(),
             ListOp::Rename => {
                 self.name_buf.clone_from(&self.playlists[n].0);
-                self.naming = Some(n);
+                self.naming = Some(Shelf::Playlist(n));
                 self.folded &= !(1 << 1);
             }
             ListOp::Delete => {
@@ -1243,6 +1258,10 @@ impl State {
         let order: Vec<u32> = match self.shelf {
             Shelf::Tracks => (s..n).collect(),
             Shelf::History => self.history.clone(),
+            Shelf::Tag(t) => {
+                let keys = self.tags.get(t).map(|(_, k)| k.as_slice()).unwrap_or_default();
+                (s..n).filter(|&i| keys.contains(&entry_key(&self.entries[i as usize]))).collect()
+            }
             Shelf::Stage(st) => (s..n)
                 .filter(|&i| self.store.get(&entry_key(&self.entries[i as usize])).is_some_and(|v| v.stage == st))
                 .collect(),
@@ -1361,6 +1380,7 @@ impl State {
         let open = self.track_menu.is_some()
             || self.column_menu
             || self.chip_menu.is_some()
+            || self.tag_menu.is_some()
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
             || self.grid_menu.is_some()
@@ -1368,6 +1388,7 @@ impl State {
         self.track_menu = None;
         self.column_menu = false;
         self.chip_menu = None;
+        self.tag_menu = None;
         self.list_menu = None;
         self.cue_menu = None;
         self.grid_menu = None;
@@ -1395,15 +1416,22 @@ impl State {
 
     /// Ends typing a playlist's name, keeping it unless cancelled or left empty.
     fn end_naming(&mut self, keep: bool) {
-        let Some(n) = self.naming.take() else { return };
+        let Some(what) = self.naming.take() else { return };
         let name = std::mem::take(&mut self.name_buf);
         let name = name.trim();
-        if keep
-            && !name.is_empty()
-            && let Some(l) = self.playlists.get_mut(n)
-        {
-            l.0 = name.to_string();
-            crate::store::save_playlists(&self.playlists);
+        if !keep || name.is_empty() {
+            return;
+        }
+        match what {
+            Shelf::Playlist(n) if n < self.playlists.len() => {
+                self.playlists[n].0 = name.to_string();
+                crate::store::save_playlists(&self.playlists);
+            }
+            Shelf::Tag(n) if n < self.tags.len() => {
+                self.tags[n].0 = name.to_string();
+                crate::store::save_tags(&self.tags);
+            }
+            _ => {}
         }
     }
 
@@ -1656,6 +1684,14 @@ impl State {
                 self.menu_at = g.start;
                 self.submenu = None;
             }
+        }
+        if self.tag_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Shelf(Shelf::Tag(n))) = g.target
+        {
+            g.moved = true;
+            self.tag_menu = Some(n);
+            self.menu_at = g.start;
         }
         if self.chip_menu.is_none()
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -2204,6 +2240,51 @@ impl State {
                     self.load_deck(d, i as usize);
                 }
             }
+            Target::MenuTag(t) => {
+                if let (Some(i), Some((_, keys))) = (self.track_menu, self.tags.get_mut(t)) {
+                    let k = entry_key(&self.entries[i as usize]);
+                    match keys.iter().position(|x| *x == k) {
+                        Some(at) => {
+                            keys.remove(at);
+                        }
+                        None => keys.push(k),
+                    }
+                    crate::store::save_tags(&self.tags);
+                    if self.shelf == Shelf::Tag(t) {
+                        let q = std::mem::take(&mut self.query);
+                        self.search(q);
+                    }
+                }
+            }
+            Target::NewTag => {
+                let keys = self.track_menu.map(|i| vec![entry_key(&self.entries[i as usize])]).unwrap_or_default();
+                self.tags.push((format!("Tag {}", self.tags.len() + 1), keys));
+                crate::store::save_tags(&self.tags);
+                self.track_menu = None;
+                self.submenu = None;
+                self.name_buf.clone_from(&self.tags[self.tags.len() - 1].0);
+                self.naming = Some(Shelf::Tag(self.tags.len() - 1));
+                self.folded &= !(1 << 5);
+            }
+            Target::RenameTag(t) if t < self.tags.len() => {
+                self.tag_menu = None;
+                self.name_buf.clone_from(&self.tags[t].0);
+                self.naming = Some(Shelf::Tag(t));
+            }
+            Target::DeleteTag(t) if t < self.tags.len() => {
+                self.tags.remove(t);
+                crate::store::save_tags(&self.tags);
+                self.tag_menu = None;
+                if let Shelf::Tag(x) = self.shelf {
+                    self.shelf = match x.cmp(&t) {
+                        std::cmp::Ordering::Equal => Shelf::Tracks,
+                        std::cmp::Ordering::Greater => Shelf::Tag(x - 1),
+                        std::cmp::Ordering::Less => self.shelf,
+                    };
+                    let q = std::mem::take(&mut self.query);
+                    self.search(q);
+                }
+            }
             Target::MenuToggle(p) => {
                 if let (Some(i), Some((_, keys))) = (self.track_menu, self.playlists.get_mut(p)) {
                     let k = entry_key(&self.entries[i as usize]);
@@ -2270,6 +2351,7 @@ impl State {
             Target::MenuClose => {
                 self.column_menu = false;
                 self.chip_menu = None;
+                self.tag_menu = None;
                 self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;

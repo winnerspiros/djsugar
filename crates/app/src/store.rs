@@ -141,6 +141,23 @@ pub fn load_pads<const N: usize>() -> Option<[[usize; N]; 2]> {
 
 /// Playlists, one per line: the name, then the tracks, tab separated.
 pub fn save_playlists(lists: &[(String, Vec<String>)]) {
+    save_lists("playlists.tsv", lists);
+}
+
+pub fn load_playlists() -> Vec<(String, Vec<String>)> {
+    load_lists("playlists.tsv")
+}
+
+/// Tags, kept as playlists are: each a name and the tracks it is on.
+pub fn save_tags(tags: &[(String, Vec<String>)]) {
+    save_lists("tags.tsv", tags);
+}
+
+pub fn load_tags() -> Vec<(String, Vec<String>)> {
+    load_lists("tags.tsv")
+}
+
+fn save_lists(file: &str, lists: &[(String, Vec<String>)]) {
     let Some(d) = dir() else { return };
     let text: String = lists
         .iter()
@@ -149,11 +166,11 @@ pub fn save_playlists(lists: &[(String, Vec<String>)]) {
         })
         .collect();
     let _ = std::fs::create_dir_all(&d);
-    let _ = std::fs::write(d.join("playlists.tsv"), text);
+    let _ = std::fs::write(d.join(file), text);
 }
 
-pub fn load_playlists() -> Vec<(String, Vec<String>)> {
-    let text = dir().and_then(|d| std::fs::read_to_string(d.join("playlists.tsv")).ok()).unwrap_or_default();
+fn load_lists(file: &str) -> Vec<(String, Vec<String>)> {
+    let text = dir().and_then(|d| std::fs::read_to_string(d.join(file)).ok()).unwrap_or_default();
     text.lines()
         .filter_map(|l| {
             let mut f = l.split('\t');

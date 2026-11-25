@@ -95,6 +95,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
     chip_menu(p, s, w, h);
+    tag_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -859,16 +860,8 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     if head(p, s, &mut y, "PLAYLISTS", 1) {
         let lists: Vec<(String, usize)> = s.playlists.iter().map(|(n, k)| (n.clone(), k.len())).collect();
         for (n, (name, len)) in lists.iter().enumerate() {
-            if s.naming == Some(n) && y + rh <= bottom {
-                // The name being typed, in a field with a caret.
-                let b = Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0);
-                p.outlined(b.x, b.y, b.w, b.h, 5.0, rgb(0x141417), 1.0, ACCENT);
-                let ink = Style { colour: TEXT, ..ARTIST };
-                let shown = s.name_buf.clone();
-                let tw = p.text_width(ink, &shown).min(b.w - 30.0);
-                p.text_in(b.x + 22.0, b.y + b.h * 0.5 + 4.0, b.w - 30.0, ink, &shown);
-                p.rect(b.x + 23.0 + tw, b.y + 5.0, 1.5, b.h - 10.0, 0.0, ACCENT);
-                hit(s, b, Target::NameField);
+            if s.naming == Some(Shelf::Playlist(n)) && y + rh <= bottom {
+                name_field(p, s, Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0));
                 y += rh;
                 continue;
             }
@@ -885,6 +878,18 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
         for sv in crate::hub::Service::ALL {
             let on = !lib && s.hub.service == sv;
             row(p, s, &mut y, (sv.label(), None), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
+        }
+    }
+    if !s.tags.is_empty() && head(p, s, &mut y, "TAGS", 5) {
+        let tags: Vec<(String, usize)> = s.tags.iter().map(|(n, k)| (n.clone(), k.len())).collect();
+        for (n, (name, len)) in tags.iter().enumerate() {
+            if s.naming == Some(Shelf::Tag(n)) && y + rh <= bottom {
+                name_field(p, s, Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0));
+                y += rh;
+                continue;
+            }
+            let sh = Shelf::Tag(n);
+            row(p, s, &mut y, (name, Some(*len)), Target::Shelf(sh), lib && s.shelf == sh, None);
         }
     }
     let folders: Vec<String> = s.folders().into_iter().map(str::to_string).collect();
@@ -914,6 +919,32 @@ fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 /// A held playlist's menu: load its first track, move it, empty it, delete it.
+/// The field a list's or tag's new name is typed in, with its caret.
+fn name_field(p: &mut Painter, s: &mut State, b: Rect) {
+    p.outlined(b.x, b.y, b.w, b.h, 5.0, rgb(0x141417), 1.0, ACCENT);
+    let ink = Style { colour: TEXT, ..ARTIST };
+    let tw = p.text_width(ink, &s.name_buf).min(b.w - 30.0);
+    p.text_in(b.x + 22.0, b.y + b.h * 0.5 + 4.0, b.w - 30.0, ink, &s.name_buf);
+    p.rect(b.x + 23.0 + tw, b.y + 5.0, 1.5, b.h - 10.0, 0.0, ACCENT);
+    hit(s, b, Target::NameField);
+}
+
+/// A held tag's menu: rename or delete it.
+fn tag_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(n) = s.tag_menu else { return };
+    let Some((name, count)) = s.tags.get(n).map(|(n, k)| (n.clone(), k.len())) else { return };
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let lines = [
+        Line::item(name, Target::MenuBody).enabled(false).hint(format!("{count} tracks")),
+        Line::Rule,
+        Line::item("Rename", Target::RenameTag(n)),
+        Line::item("Delete tag", Target::DeleteTag(n)),
+    ];
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
 /// A chip's editor: how near in tempo for Near BPM, how many stars for Rated.
 fn chip_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some(chip) = s.chip_menu else { return };
@@ -998,6 +1029,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let saved = s.store.get(&key).unwrap_or_default();
     let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
     let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
+    let worn = s.tags.iter().filter(|(_, k)| k.contains(&key)).count();
     let free = |d: usize| !(s.settings.on(crate::settings::Opt::Protect) && s.telemetry.decks[d].playing);
     let stars = (1..=5u8).map(|n| (Pick::Star(n <= saved.rating), Target::MenuRate(n))).collect();
     let mut colours = vec![(Pick::Clear(saved.colour == 0), Target::MenuColour(0))];
@@ -1025,6 +1057,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
         },
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
+        Line::sub("Tags", 4).hint(if worn > 0 { worn.to_string() } else { String::new() }),
     ];
     if matches!(s.shelf, crate::state::Shelf::Playlist(_)) {
         lines.push(Line::item("Remove from this list", Target::MenuRemove));
@@ -1076,6 +1109,21 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             .map(|(n, (name, _))| Line::item(name.clone(), Target::Shelf(crate::state::Shelf::Playlist(n))))
             .collect(),
         Some(3) => info_lines(s, i as usize),
+        Some(4) => {
+            let mut tags: Vec<Line> = s
+                .tags
+                .iter()
+                .enumerate()
+                .map(|(n, (name, keys))| {
+                    Line::item(name.clone(), Target::MenuTag(n)).mark(Mark::Check(keys.contains(&key)))
+                })
+                .collect();
+            if !tags.is_empty() {
+                tags.push(Line::Rule);
+            }
+            tags.push(Line::item("New tag", Target::NewTag));
+            tags
+        }
         _ => {
             let mut lists: Vec<Line> = s
                 .playlists
@@ -1254,7 +1302,9 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         if colour > 0 {
             p.rect(r.x + 1.0, y + 2.0, 3.0, row - 4.0, 1.5, CUES[usize::from(colour) - 1]);
         }
-        if s.selected == Some(i) {
+        // The picked row reads in plain white over its highlight.
+        let picked = s.selected == Some(i);
+        if picked {
             p.rect(r.x + 4.0, y, r.w - 8.0, row, 3.0, fade(ACCENT, 0x58));
         } else if let Some(d) = deck {
             p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(1)], 0x50));
@@ -1278,13 +1328,13 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
                 C::Bpm => p.text(
                     cx,
                     base,
-                    Style { colour: AMBER, ..cell },
+                    Style { colour: if picked { TEXT } else { AMBER }, ..cell },
                     &m.filter(|m| m.bpm > 0.0).map_or(String::new(), |m| format!("{:.1}", m.bpm)),
                 ),
                 C::Key => p.text(
                     cx,
                     base,
-                    Style { colour: GREEN, ..cell },
+                    Style { colour: if picked { TEXT } else { GREEN }, ..cell },
                     &m.and_then(|m| m.key).map_or(String::new(), |k| s.settings.key(k)),
                 ),
                 C::Time => p.text(cx, base, Style { colour: GREY, ..cell }, &m.map_or(String::new(), |m| mmss(m.secs))),

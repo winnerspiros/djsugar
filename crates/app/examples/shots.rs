@@ -348,6 +348,27 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
     if !ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)") {
         faults.push(format!("{name}: no Sort by submenu"));
     }
+    // Tags: a new one from the track menu is named by typing, then listed in the sidebar.
+    if ui.tap("Submenu(4)") {
+        ui.render(r);
+        if ui.tap("NewTag") {
+            ui.render(r);
+            for _ in 0..8 {
+                ui.key(Key::Backspace, Mods::default());
+            }
+            ui.text("Peak");
+            ui.render(r);
+            ui.key(Key::Enter, Mods::default());
+            ui.render(r);
+            if ui.typing() {
+                faults.push(format!("{name}: Enter did not end tag naming"));
+            }
+        } else {
+            faults.push(format!("{name}: no New tag"));
+        }
+    } else {
+        faults.push(format!("{name}: no Tags submenu"));
+    }
 }
 
 /// The app menu with its View submenu, then the Decks settings page with a menu open.
