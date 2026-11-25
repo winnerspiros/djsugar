@@ -24,6 +24,9 @@ pub struct Ui {
     state: State,
     size: (f32, f32),
     scale: f32,
+    /// The window in pixels and the device's own scale, before the DJ's interface scale.
+    pixels: (u32, u32),
+    device: f32,
 }
 
 impl Ui {
@@ -37,12 +40,26 @@ impl Ui {
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
         stage("state ready");
-        Self { painter: Painter::new(Fonts::new(FONT)), state, size: (1.0, 1.0), scale: 1.0 }
+        Self {
+            painter: Painter::new(Fonts::new(FONT)),
+            state,
+            size: (1.0, 1.0),
+            scale: 1.0,
+            pixels: (1, 1),
+            device: 1.0,
+        }
     }
 
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
-        self.scale = scale.max(0.25);
-        self.size = (width as f32 / self.scale, height as f32 / self.scale);
+        self.pixels = (width, height);
+        self.device = scale;
+        self.fit();
+    }
+
+    /// The scale drawn at: the device's times the DJ's interface scale.
+    fn fit(&mut self) {
+        self.scale = (self.device * self.state.settings.ui_scale()).max(0.25);
+        self.size = (self.pixels.0 as f32 / self.scale, self.pixels.1 as f32 / self.scale);
     }
 
     pub fn animating(&self) -> bool {
@@ -51,6 +68,7 @@ impl Ui {
 
     pub fn render(&mut self, renderer: &mut sugar_ui::Renderer<'_>) {
         self.state.tick();
+        self.fit();
         self.painter.begin(self.scale);
         sugar::paint(&mut self.painter, &mut self.state, self.size.0, self.size.1);
         renderer.render(&mut self.painter, 0);

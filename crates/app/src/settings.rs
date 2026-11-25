@@ -33,6 +33,7 @@ pub enum Opt {
     SplitCue,
     Ducking,
     DuckDepth,
+    UiScale,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -79,7 +80,10 @@ pub const CUE_MIXES: [f32; 5] = [-1.0, -0.5, 0.0, 0.5, 1.0];
 /// How far the music goes down under the mic, for each Ducking depth choice.
 pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 
-pub const OPTIONS: [Spec; 28] = [
+/// Interface scales offered, on top of the device's own.
+pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
+
+pub const OPTIONS: [Spec; 29] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -304,6 +308,14 @@ pub const OPTIONS: [Spec; 28] = [
         kind: Kind::Menu(&["25%", "50%", "75%", "90%"]),
         default: 2,
     },
+    Spec {
+        opt: Opt::UiScale,
+        key: "ui_scale",
+        title: "Interface scale",
+        detail: "Makes everything on screen larger or smaller.",
+        kind: Kind::Menu(&["90%", "100%", "110%", "125%", "135%", "150%"]),
+        default: 1,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -376,7 +388,7 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             v
         }
         5 => vec![Row::Heading("TEMPO"), Row::Opt(Opt::BpmRange)],
-        6 => vec![Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
+        6 => vec![Row::Heading("SIZE"), Row::Opt(Opt::UiScale), Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
         4 => {
             let mut v = vec![Row::Heading("MUSIC FOLDERS")];
             if roots.is_empty() {
@@ -521,6 +533,10 @@ impl Settings {
 
     pub fn gain_target(&self) -> f32 {
         GAIN_TARGETS[usize::from(self.get(Opt::GainTarget)).min(GAIN_TARGETS.len() - 1)]
+    }
+
+    pub fn ui_scale(&self) -> f32 {
+        UI_SCALES[usize::from(self.get(Opt::UiScale)).min(UI_SCALES.len() - 1)]
     }
 
     /// The headphones' blend and split, as the mixer takes them.
