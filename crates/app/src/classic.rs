@@ -183,7 +183,7 @@ fn artwork(p: &mut Painter, r: Rect, cells: &[u32]) {
 fn cover(p: &mut Painter, r: Rect, d: usize, loaded: bool) {
     let top = if loaded { fade(DECK[d], 0xb0) } else { RAISED };
     p.gradient(r.x, r.y, r.w, r.h, 4.0, top, rgb(0x101012), 1.0, BORDER);
-    centred(p, r, bold(r.h * 0.42, fade(WHITE, if loaded { 0xe0 } else { 0x40 })), if d == 0 { "1" } else { "2" });
+    centred(p, r, bold(r.h * 0.42, fade(WHITE, if loaded { 0xe0 } else { 0x40 })), ["A", "B"][d]);
 }
 
 /// The key in its own column, with the semitone shift and the sync leader's badge.

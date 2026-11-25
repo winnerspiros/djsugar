@@ -163,7 +163,7 @@ pub const OPTIONS: [Spec; 32] = [
         opt: Opt::ReverseFader,
         key: "reverse_crossfader",
         title: "Reverse crossfader",
-        detail: "Deck 2 sits on the left of the crossfader, deck 1 on the right.",
+        detail: "Deck B sits on the left of the crossfader, deck A on the right.",
         kind: Kind::Switch,
         default: 0,
     },
@@ -472,7 +472,7 @@ const SHORTCUTS: [(&str, Keys); 5] = [
         &[
             ("Up / Down", "Select; Page Up, Page Down, Home and End jump"),
             ("Enter", "Load the selected track"),
-            ("Shift+Left / Right", "Load onto deck 1 or 2"),
+            ("Shift+Left / Right", "Load onto deck A or B"),
             ("Ctrl+F", "Search"),
             ("Ctrl+N", "New playlist"),
         ],

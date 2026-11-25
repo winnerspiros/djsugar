@@ -777,7 +777,9 @@ fn cue_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     hit(s, screen, Target::CueMenuClose);
     let now = usize::from(s.decks[d].cue_colours[i]) % CUES.len();
     let lines = [
-        Line::item(format!("Hot cue {}", i + 1), Target::MenuBody).enabled(false).hint(format!("Deck {}", d + 1)),
+        Line::item(format!("Hot cue {}", i + 1), Target::MenuBody)
+            .enabled(false)
+            .hint(format!("Deck {}", ["A", "B"][d])),
         Line::Rule,
         Line::sub("Colour", 0).hint(CUE_NAMES[now]),
         Line::Rule,
@@ -813,7 +815,7 @@ fn grid_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let bpm = s.decks[d].beat().map_or_else(String::new, |(g, _)| format!("{:.2} BPM", g.bpm));
     let op = |text: &str, o: GridOp, on: bool| Line::item(text, Target::GridOp(o)).enabled(on);
     let lines = [
-        Line::item(format!("Beat grid, deck {}", d + 1), Target::MenuBody).enabled(false).hint(bpm),
+        Line::item(format!("Beat grid, deck {}", ["A", "B"][d]), Target::MenuBody).enabled(false).hint(bpm),
         Line::Rule,
         op("Downbeat here", GridOp::Here, edits),
         op("Move earlier", GridOp::Earlier, edits).hint("-10 ms"),
@@ -853,10 +855,69 @@ fn mmss(secs: f32) -> String {
     format!("{}:{:02}", t / 60, t % 60)
 }
 
-/// The library's rail: the collection, playlists, streaming services and folders, each under its heading.
-/// The sidebar tree: collection, playlists, streaming services and folders, each a
-/// section that folds away under its heading.
-fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
+/// The sources down the browser's edge: the collection, the history, then the streaming
+/// services. Labelled where the window is wide, icons alone where it is not.
+fn rail(p: &mut Painter, s: &mut State, r: Rect) {
+    use crate::state::Shelf;
+    p.rect(r.x, r.y, r.w, r.h, 0.0, BROWSER);
+    p.rect(r.x + r.w - 1.0, r.y, 1.0, r.h, 0.0, EDGE);
+    let labelled = r.w > 100.0;
+    let services = crate::hub::Service::ALL;
+    let heading = if labelled { 26.0 } else { 0.0 };
+    let rh = ((r.h - 10.0 - heading) / (services.len() + 2) as f32).clamp(26.0, 48.0).floor();
+    let icon = (rh - 10.0).min(30.0);
+    let lib = s.view != View::Stream;
+    let name = Style::new(13.0, Weight::Regular, GREY);
+    let mut y = r.y + 5.0;
+    let row = |p: &mut Painter, s: &mut State, y: &mut f32, label: &str, on: bool, t: Target| -> Rect {
+        let b = Rect::new(r.x + 5.0, *y + 1.0, r.w - 11.0, rh - 2.0);
+        if on {
+            p.outlined(b.x, b.y, b.w, b.h, 9.0, fade(ACCENT, 0x24), 1.0, fade(ACCENT, 0x90));
+        } else if s.pressed(t) {
+            p.rect(b.x, b.y, b.w, b.h, 9.0, theme::PRESSED);
+        }
+        let i = Rect::new(b.x + if labelled { 6.0 } else { (b.w - icon) * 0.5 }, b.y + (b.h - icon) * 0.5, icon, icon);
+        if labelled {
+            let ink = Style { colour: if on { TEXT } else { GREY }, ..name };
+            p.text_in(i.x + icon + 8.0, b.y + b.h * 0.5 + 4.5, b.w - icon - 20.0, ink, label);
+        }
+        hit(s, b, t);
+        *y += rh;
+        i
+    };
+    let on = lib && s.shelf != Shelf::History;
+    let i = row(p, s, &mut y, "Collection", on, Target::Shelf(Shelf::Tracks));
+    let (cx, cy, rad) = (i.x + i.w * 0.5, i.y + i.h * 0.5, i.w * 0.5);
+    p.disc(cx, cy, rad, rgb(0x1c1c1f), rgb(0x0c0c0d));
+    p.arc(cx, cy, rad * 0.94, rad * 0.12, 0.0, 1.0, ACCENT);
+    p.arc(cx, cy, rad * 0.6, 1.0, 0.0, 1.0, fade(ACCENT, 0x70));
+    p.disc(cx, cy, rad * 0.3, ACCENT, ACCENT);
+    let i = row(p, s, &mut y, "History", lib && s.shelf == Shelf::History, Target::Shelf(Shelf::History));
+    let (cx, cy, rad) = (i.x + i.w * 0.5, i.y + i.h * 0.5, i.w * 0.5);
+    p.rect(i.x, i.y, i.w, i.h, 7.0, rgb(0x26262a));
+    p.arc(cx, cy, rad * 0.58, 1.6, 0.0, 1.0, TEXT);
+    p.line((cx, cy), (cx, cy - rad * 0.36), 1.6, TEXT);
+    p.line((cx, cy), (cx + rad * 0.28, cy + rad * 0.14), 1.6, TEXT);
+    if labelled {
+        p.text(r.x + 12.0, y + heading - 8.0, SMALL, "STREAMING");
+        y += heading;
+    }
+    for sv in services {
+        if y + rh > r.y + r.h {
+            break;
+        }
+        let i = row(p, s, &mut y, sv.label(), !lib && s.hub.service == sv, Target::StreamFrom(sv));
+        p.rect(i.x, i.y, i.w, i.h, 7.0, rgb(sv.colour()));
+        let letter = Style::new((i.h * 0.55).round(), Weight::Bold, rgb(0xffffff));
+        let initial = &sv.label()[..1];
+        p.text(i.x + (i.w - p.text_width(letter, initial)) * 0.5, i.y + i.h * 0.5 + letter.px * 0.36, letter, initial);
+    }
+}
+
+/// The lists beside the table: the collection, preparation stages, playlists, tags and
+/// folders, each a section that folds away under its heading. Beside the rail it leaves
+/// the history and the streaming services to it.
+fn sidebar(p: &mut Painter, s: &mut State, r: Rect, railed: bool) {
     use crate::state::Shelf;
     p.rect(r.x, r.y, r.w, r.h, 0.0, BROWSER);
     p.rect(r.x + r.w - 1.0, r.y, 1.0, r.h, 0.0, EDGE);
@@ -931,15 +992,17 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
             None,
         );
         let hist = s.history.len();
-        row(
-            p,
-            s,
-            &mut y,
-            ("History", Some(hist)),
-            Target::Shelf(Shelf::History),
-            lib && s.shelf == Shelf::History,
-            None,
-        );
+        if !railed {
+            row(
+                p,
+                s,
+                &mut y,
+                ("History", Some(hist)),
+                Target::Shelf(Shelf::History),
+                lib && s.shelf == Shelf::History,
+                None,
+            );
+        }
     }
     if head(p, s, &mut y, "PREPARATION", 4) {
         let counts = s.stage_counts();
@@ -966,7 +1029,7 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
             y += rh + 2.0;
         }
     }
-    if head(p, s, &mut y, "STREAMING", 2) {
+    if !railed && head(p, s, &mut y, "STREAMING", 2) {
         for sv in crate::hub::Service::ALL {
             let on = !lib && s.hub.service == sv;
             row(p, s, &mut y, (sv.label(), None), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
@@ -1096,8 +1159,8 @@ fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let lines = [
         Line::item(name, Target::MenuBody).enabled(false).hint(tracks(count)),
         Line::Rule,
-        Line::item("Load first on deck 1", Target::ListOp(n, L::Load(0))).enabled(count > 0),
-        Line::item("Load first on deck 2", Target::ListOp(n, L::Load(1))).enabled(count > 0),
+        Line::item("Load first on deck A", Target::ListOp(n, L::Load(0))).enabled(count > 0),
+        Line::item("Load first on deck B", Target::ListOp(n, L::Load(1))).enabled(count > 0),
         Line::Rule,
         Line::item("Move up", Target::ListOp(n, L::Up)).enabled(n > 0),
         Line::item("Move down", Target::ListOp(n, L::Down)).enabled(n < last),
@@ -1314,9 +1377,20 @@ fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
     let r = if r.h > 220.0 && !s.search_in_bar { library_head(p, s, r) } else { r };
     let r = if r.w >= 640.0 {
-        let sw = (r.w * 0.2).clamp(150.0, 220.0);
-        sidebar(p, s, Rect::new(r.x, r.y, sw, r.h));
-        Rect::new(r.x + sw, r.y, r.w - sw, r.h)
+        // A source rail joins the lists once there is room for both.
+        let rw = if r.w >= 1360.0 {
+            168.0
+        } else if r.w >= 900.0 {
+            50.0
+        } else {
+            0.0
+        };
+        if rw > 0.0 {
+            rail(p, s, Rect::new(r.x, r.y, rw, r.h));
+        }
+        let sw = ((r.w - rw) * 0.2).clamp(150.0, 220.0);
+        sidebar(p, s, Rect::new(r.x + rw, r.y, sw, r.h), rw > 0.0);
+        Rect::new(r.x + rw + sw, r.y, r.w - rw - sw, r.h)
     } else {
         r
     };
@@ -1725,7 +1799,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             "Searching".to_string()
         } else {
             format!(
-                "Search {}, then send a result to deck 1 or 2. Audio is cached for next time.",
+                "Search {}, then send a result to deck A or B. Audio is cached for next time.",
                 s.hub.service.title()
             )
         };
@@ -1863,7 +1937,7 @@ fn browser(p: &mut Painter, s: &mut State, w: f32, h: f32, top: f32) {
     section(p, r, INK);
     p.outlined(r.x, r.y, r.w, r.h, 0.0, 0, 1.5, DECK[d]);
     let head = Style::new(14.0, Weight::Bold, DECK[d]);
-    let x = r.x + 24.0 + p.text(r.x + 12.0, r.y + 25.0, head, ["Load to deck 1", "Load to deck 2"][d]);
+    let x = r.x + 24.0 + p.text(r.x + 12.0, r.y + 25.0, head, ["Load to deck A", "Load to deck B"][d]);
     let (q, st) = if s.query.is_empty() {
         ("Type to search", Style { colour: DARK, ..TITLE })
     } else {
@@ -1916,9 +1990,9 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let t = s.telemetry.decks[d];
     let art = r.h;
     p.rect(r.x, r.y, art, art, 4.0, fade(DECK[d], 0x40));
-    let num = (d + 1).to_string();
+    let num = ["A", "B"][d];
     let big = Style::new(art * 0.42, Weight::Bold, DECK[d]);
-    p.text(r.x + (art - p.text_width(big, &num)) * 0.5, r.y + art * 0.66, big, &num);
+    p.text(r.x + (art - p.text_width(big, num)) * 0.5, r.y + art * 0.66, big, num);
     let right = 150.0f32.min(r.w * 0.4);
     let tx = r.x + art + 8.0;
     let tw = r.w - art - right - 16.0;
