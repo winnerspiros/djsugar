@@ -178,7 +178,8 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         p.rect(mb.x + mb.w * 0.25, mb.y + mb.h * 0.5 - 6.0 + i as f32 * 5.5, mb.w * 0.5, 1.6, 0.8, TEXT);
     }
     hit(s, mb, Target::AppMenu);
-    let mut x = logo(p, mb.x + mb.w + 6.0, r.y + TOOLBAR * 0.5) + 12.0;
+    let wide = !two && r.w >= 1100.0;
+    let mut x = if wide { mb.x + mb.w + 8.0 } else { logo(p, mb.x + mb.w + 6.0, r.y + TOOLBAR * 0.5) + 12.0 };
     let views = [
         ("DJ", View::Dj),
         ("WAVE", View::Wave),
@@ -210,6 +211,9 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, b, Target::View(v));
     }
     x += tw * views.len() as f32 + 8.0;
+    if wide {
+        return toolbar_wide(p, s, r, x);
+    }
     let r = if two {
         x = r.x + 6.0;
         p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
@@ -262,6 +266,95 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     let (mx, my) = (sx + 15.0, r.y + 5.0 + fh * 0.5 - 1.0);
     p.outlined(mx - 4.5, my - 4.5, 9.0, 9.0, 4.5, 0, 1.5, if focus { ACCENT } else { theme::DIM });
     p.line((mx + 3.5, my + 3.5), (mx + 6.5, my + 6.5), 1.5, if focus { ACCENT } else { theme::DIM });
+    hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
+    let tx = sx + 28.0;
+    if s.query.is_empty() {
+        let hint = s.status.as_deref().unwrap_or("Search tracks");
+        p.text_in(tx, r.y + 22.0, sw - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
+    } else {
+        let qw = p.text_in(tx, r.y + 22.0, sw - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
+        p.rect(tx + 1.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
+        let n = s.shown.len().to_string();
+        p.text(sx + sw - 8.0 - p.text_width(SMALL, &n), r.y + 21.0, SMALL, &n);
+    }
+}
+
+/// The top bar on a wide window: views on the left, the logo in the middle, then the master
+/// meter, the mix buttons and settings on the right, and search in the room left of the logo.
+fn toolbar_wide(p: &mut Painter, s: &mut State, r: Rect, views_end: f32) {
+    let cy = r.y + r.h * 0.5;
+    let lw = 30.0 + p.text_width(LOGO, "DJ ") + p.text_width(LOGO, "SUGAR");
+    let lx = r.x + (r.w - lw) * 0.5;
+    logo(p, lx, cy);
+    // Settings, at the far right: a cog.
+    let g = Rect::new(r.x + r.w - 34.0, r.y + 4.0, 28.0, r.h - 8.0);
+    if s.pressed(Target::Prefs(0)) {
+        p.rect(g.x, g.y, g.w, g.h, 6.0, theme::PRESSED);
+    }
+    let (gx, gy) = (g.x + g.w * 0.5, cy);
+    for k in 0..6 {
+        let (sn, cs) = (k as f32 * std::f32::consts::FRAC_PI_3).sin_cos();
+        p.line((gx + cs * 5.0, gy + sn * 5.0), (gx + cs * 8.0, gy + sn * 8.0), 2.4, theme::DIM);
+    }
+    p.outlined(gx - 5.5, gy - 5.5, 11.0, 11.0, 5.5, theme::PANEL, 1.8, theme::DIM);
+    hit(s, g, Target::Prefs(0));
+    // The master level, left and right.
+    let mw = 64.0;
+    let mx = g.x - 10.0 - mw;
+    for (c, &v) in s.telemetry.main_peak.iter().enumerate() {
+        let y = cy - 5.0 + c as f32 * 6.0;
+        p.rect(mx, y, mw, 4.0, 2.0, theme::WELL);
+        let v = v.clamp(0.0, 1.0);
+        let colour = if v > 0.95 {
+            RED
+        } else if v > 0.8 {
+            AMBER
+        } else {
+            GREEN
+        };
+        p.rect(mx, y, mw * v, 4.0, 2.0, colour);
+    }
+    let rec = s.recorder.as_ref().map(|r| {
+        let t = r.frames / u64::from(s.out_rate.max(1));
+        format!("REC {}:{:02}", t / 60, t % 60)
+    });
+    let items: [(&str, bool, Target); 6] = [
+        (rec.as_deref().unwrap_or("REC"), s.recorder.is_some(), Target::Record),
+        ("AUTO", s.auto.is_some(), Target::AutoDj),
+        ("SMPL", s.show_samplers, Target::ToggleSamplers),
+        ("FX", s.show_fx, Target::ToggleFx),
+        ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
+        ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
+    ];
+    let mut right = mx - 12.0;
+    let floor = lx + lw + 16.0;
+    for (label, on, t) in items {
+        let bw = if label.len() > 6 {
+            78.0
+        } else if label.len() > 4 {
+            58.0
+        } else {
+            46.0
+        };
+        if right - bw < floor {
+            break;
+        }
+        right -= bw;
+        let colour = if matches!(t, Target::Record) { RED } else { ACCENT };
+        button(p, s, Rect::new(right, r.y + 4.0, bw, r.h - 8.0), label, on, colour, t);
+        right -= 4.0;
+    }
+    let sx = views_end + 4.0;
+    let sw = (lx - 16.0 - sx).min(320.0);
+    if sw < 120.0 {
+        return;
+    }
+    let focus = s.search_focus || !s.query.is_empty();
+    let fh = r.h - 10.0;
+    p.outlined(sx, r.y + 5.0, sw, fh, fh * 0.5, theme::WELL, 1.0, if focus { ACCENT } else { theme::BORDER });
+    let (gx, gy) = (sx + 15.0, r.y + 5.0 + fh * 0.5 - 1.0);
+    p.outlined(gx - 4.5, gy - 4.5, 9.0, 9.0, 4.5, 0, 1.5, if focus { ACCENT } else { theme::DIM });
+    p.line((gx + 3.5, gy + 3.5), (gx + 6.5, gy + 6.5), 1.5, if focus { ACCENT } else { theme::DIM });
     hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
     let tx = sx + 28.0;
     if s.query.is_empty() {
