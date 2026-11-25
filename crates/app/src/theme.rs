@@ -18,6 +18,7 @@ pub const WELL: u32 = rgb(0x08080a);
 pub const TEXT: u32 = rgb(0xf0f0f4);
 pub const DIM: u32 = rgb(0x8b8b93);
 pub const FAINT: u32 = rgb(0x55555c);
+pub const LILAC: u32 = rgb(0xb69cff);
 
 pub fn style(px: f32, weight: Weight, colour: u32) -> Style {
     Style::new(px.round().max(7.0), weight, colour)

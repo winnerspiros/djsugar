@@ -60,9 +60,47 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     s.hits.clear();
     p.rect(0.0, 0.0, w, h, 0.0, rgb(0x1e1e20));
     let tall = h > w * 1.1;
-    let bar = if w < 720.0 || (tall && w < 1100.0) { TOOLBAR * 3.0 } else { TOOLBAR };
-    toolbar(p, s, Rect::new(0.0, 0.0, w, bar));
-    let mut y = bar;
+    let wide = w >= 1100.0;
+    let bar = if wide {
+        TOP_BAR
+    } else if w < 720.0 || (tall && w < 1100.0) {
+        TOOLBAR * 3.0
+    } else {
+        TOOLBAR
+    };
+    if wide {
+        top_bar(p, s, Rect::new(0.0, 0.0, w, bar));
+        footer(p, s, Rect::new(0.0, h - FOOTER, w, FOOTER));
+        let r = Rect::new(0.0, bar, w, h - bar - FOOTER);
+        if s.view == View::Dj { perform(p, s, r) } else { views(p, s, r, tall) }
+    } else {
+        toolbar(p, s, Rect::new(0.0, 0.0, w, bar));
+        views(p, s, Rect::new(0.0, bar, w, h - bar), tall);
+    }
+    if let Some(t) = s.view_at {
+        let k = t.elapsed().as_secs_f32() / crate::state::VIEW_FADE.as_secs_f32();
+        if k < 1.0 {
+            let a = ((1.0 - k) * (1.0 - k) * 255.0) as u32;
+            p.rect(0.0, bar, w, h - bar, 0.0, fade(rgb(0x000000), a));
+        } else {
+            s.view_at = None;
+        }
+    }
+    browser(p, s, w, h, bar);
+    cue_menu(p, s, w, h);
+    grid_menu(p, s, w, h);
+    picker(p, s, w, h);
+    toast(p, s, w, h);
+    track_menu(p, s, w, h);
+    list_menu(p, s, w, h);
+    crate::prefs::app_menu(p, s, w, h);
+    crate::prefs::overlay(p, s, w, h);
+}
+
+/// The views as the narrow toolbar picks them, in the area under the top bar.
+fn views(p: &mut Painter, s: &mut State, area: Rect, tall: bool) {
+    let (w, h) = (area.w, area.y + area.h);
+    let mut y = area.y;
     if s.show_fx {
         effects(p, s, Rect::new(0.0, y, w, ROW));
         y += ROW;
@@ -123,24 +161,47 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             }
         }
     }
-    if let Some(t) = s.view_at {
-        let k = t.elapsed().as_secs_f32() / crate::state::VIEW_FADE.as_secs_f32();
-        if k < 1.0 {
-            let a = ((1.0 - k) * (1.0 - k) * 255.0) as u32;
-            p.rect(0.0, bar, w, h - bar, 0.0, fade(rgb(0x000000), a));
-        } else {
-            s.view_at = None;
+}
+
+/// The wide Perform mode: the waveforms, the decks around the mixer, the effects and
+/// samplers bars, then the library with the side panel on its right.
+fn perform(p: &mut Painter, s: &mut State, r: Rect) {
+    const STEPS: [f32; 10] = [99.0, 123.0, 144.0, 167.0, 189.0, 209.0, 229.0, 249.0, 271.0, 291.0];
+    let mut y = r.y;
+    let bottom = r.y + r.h;
+    if !s.lib_expanded {
+        if s.show_waves {
+            let wh = STEPS[(s.wave_height + 4).clamp(0, 9) as usize].min(r.h * 0.3).round();
+            waveforms(p, s, Rect::new(r.x, y, r.w, wh));
+            y += wh;
+            p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
+            y += 1.0;
+        }
+        let dh = crate::classic::height((bottom - y) * 0.6).max(150.0).min(bottom - y);
+        crate::classic::dj(p, s, Rect::new(r.x, y, r.w, dh), false);
+        y += dh;
+        if s.show_fx && bottom - y > ROW + 60.0 {
+            p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
+            effects(p, s, Rect::new(r.x, y + 1.0, r.w, ROW));
+            y += ROW + 1.0;
+        }
+        if s.show_samplers && bottom - y > ROW + 60.0 {
+            p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
+            samplers(p, s, Rect::new(r.x, y + 1.0, r.w, ROW));
+            y += ROW + 1.0;
         }
     }
-    browser(p, s, w, h, bar);
-    cue_menu(p, s, w, h);
-    grid_menu(p, s, w, h);
-    picker(p, s, w, h);
-    toast(p, s, w, h);
-    track_menu(p, s, w, h);
-    list_menu(p, s, w, h);
-    crate::prefs::app_menu(p, s, w, h);
-    crate::prefs::overlay(p, s, w, h);
+    if bottom - y < 60.0 {
+        return;
+    }
+    p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
+    let lh = bottom - y - 1.0;
+    let side = if s.side_panel { (r.w * 0.24).clamp(260.0, 360.0) } else { 0.0 };
+    library(p, s, Rect::new(r.x, y + 1.0, r.w - side, lh));
+    if side > 0.0 {
+        p.rect(r.x + r.w - side, y + 1.0, 1.0, lh, 0.0, theme::SEPARATOR);
+        lyrics(p, s, Rect::new(r.x + r.w - side + 1.0, y + 1.0, side - 1.0, lh));
+    }
 }
 
 /// The brand mark: a glazed donut with sprinkles, then DJ in grey and SUGAR in pink.
@@ -178,8 +239,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         p.rect(mb.x + mb.w * 0.25, mb.y + mb.h * 0.5 - 6.0 + i as f32 * 5.5, mb.w * 0.5, 1.6, 0.8, TEXT);
     }
     hit(s, mb, Target::AppMenu);
-    let wide = !two && r.w >= 1100.0;
-    let mut x = if wide { mb.x + mb.w + 8.0 } else { logo(p, mb.x + mb.w + 6.0, r.y + TOOLBAR * 0.5) + 12.0 };
+    let mut x = logo(p, mb.x + mb.w + 6.0, r.y + TOOLBAR * 0.5) + 12.0;
     let views = [
         ("DJ", View::Dj),
         ("WAVE", View::Wave),
@@ -212,9 +272,6 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
     }
     x += tw * views.len() as f32 + 8.0;
     s.search_in_bar = false;
-    if wide {
-        return toolbar_wide(p, s, r, x);
-    }
     let r = if two {
         x = r.x + 6.0;
         p.rect(r.x, r.y + TOOLBAR - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
@@ -259,115 +316,152 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         r
     };
     let sx = if two { r.x + 6.0 } else { (r.w - 300.0).max(x + 2.0) };
-    let sw = r.w - sx - 8.0;
+    search_box(p, s, Rect::new(sx, r.y + 5.0, r.w - sx - 8.0, h - 2.0));
+}
+
+/// The search field, with its magnifier, the query and its count of matches.
+fn search_box(p: &mut Painter, s: &mut State, r: Rect) {
     let focus = s.search_focus || !s.query.is_empty();
-    let fh = h - 2.0;
-    p.outlined(sx, r.y + 5.0, sw, fh, fh * 0.5, theme::WELL, 1.0, if focus { ACCENT } else { theme::BORDER });
-    // A magnifier ahead of the text.
-    let (mx, my) = (sx + 15.0, r.y + 5.0 + fh * 0.5 - 1.0);
-    p.outlined(mx - 4.5, my - 4.5, 9.0, 9.0, 4.5, 0, 1.5, if focus { ACCENT } else { theme::DIM });
-    p.line((mx + 3.5, my + 3.5), (mx + 6.5, my + 6.5), 1.5, if focus { ACCENT } else { theme::DIM });
-    hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
-    let tx = sx + 28.0;
+    let edge = if focus { ACCENT } else { theme::BORDER };
+    p.outlined(r.x, r.y, r.w, r.h, r.h * 0.5, theme::WELL, 1.0, edge);
+    let (gx, gy) = (r.x + 15.0, r.y + r.h * 0.5 - 1.0);
+    let ink = if focus { ACCENT } else { theme::DIM };
+    p.outlined(gx - 4.5, gy - 4.5, 9.0, 9.0, 4.5, 0, 1.5, ink);
+    p.line((gx + 3.5, gy + 3.5), (gx + 6.5, gy + 6.5), 1.5, ink);
+    hit(s, r, Target::SearchFocus);
+    let (tx, base) = (r.x + 28.0, r.y + r.h * 0.5 + 4.0);
     if s.query.is_empty() {
         let hint = s.status.as_deref().unwrap_or("Search tracks");
-        p.text_in(tx, r.y + 22.0, sw - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
+        p.text_in(tx, base, r.w - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
     } else {
-        let qw = p.text_in(tx, r.y + 22.0, sw - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
-        p.rect(tx + 1.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
+        let qw = p.text_in(tx, base, r.w - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
+        p.rect(tx + 1.0 + qw, base - 11.0, 1.5, 15.0, 0.0, ACCENT);
         let n = s.shown.len().to_string();
-        p.text(sx + sw - 8.0 - p.text_width(SMALL, &n), r.y + 21.0, SMALL, &n);
+        p.text(r.x + r.w - 10.0 - p.text_width(SMALL, &n), base, SMALL, &n);
     }
 }
 
-/// The top bar on a wide window: views on the left, the logo in the middle, then the master
-/// meter, the mix buttons and settings on the right, and search in the room left of the logo.
-fn toolbar_wide(p: &mut Painter, s: &mut State, r: Rect, views_end: f32) {
+/// A rounded top bar button, outlined in its colour while on.
+fn pill(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
+    let fill = if s.pressed(target) { theme::PRESSED } else { theme::RAISED };
+    p.outlined(r.x, r.y, r.w, r.h, 10.0, fill, 1.0, if on { colour } else { theme::BORDER });
+    let ink = Style { colour: if on { colour } else { TEXT }, ..TAB };
+    p.text(r.x + (r.w - p.text_width(ink, label)) * 0.5, r.y + r.h * 0.5 + 4.0, ink, label);
+    hit(s, r, target);
+}
+
+/// Height of the top bar on a wide window.
+pub const TOP_BAR: f32 = 52.0;
+/// Height of the footer on a wide window.
+pub const FOOTER: f32 = 36.0;
+
+/// The top bar on a wide window: logo, menu and the three modes on the left, the
+/// search in the middle, and the panel switches, recorder and master level on the right.
+fn top_bar(p: &mut Painter, s: &mut State, r: Rect) {
+    p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
+    p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
     let cy = r.y + r.h * 0.5;
-    let lw = 30.0 + p.text_width(LOGO, "DJ ") + p.text_width(LOGO, "SUGAR");
-    let lx = r.x + (r.w - lw) * 0.5;
-    logo(p, lx, cy);
-    // Settings, at the far right: a cog.
-    let g = Rect::new(r.x + r.w - 34.0, r.y + 4.0, 28.0, r.h - 8.0);
-    if s.pressed(Target::Prefs(0)) {
-        p.rect(g.x, g.y, g.w, g.h, 6.0, theme::PRESSED);
+    let mut x = logo(p, r.x + 14.0, cy) + 14.0;
+    let mb = Rect::new(x, r.y + 8.0, 36.0, 36.0);
+    let fill = if s.app_menu || s.pressed(Target::AppMenu) { theme::PRESSED } else { theme::RAISED };
+    p.outlined(mb.x, mb.y, mb.w, mb.h, 10.0, fill, 1.0, theme::BORDER);
+    for i in 0..3 {
+        p.rect(mb.x + 11.0, cy - 6.0 + i as f32 * 5.5, 14.0, 1.6, 0.8, TEXT);
     }
+    hit(s, mb, Target::AppMenu);
+    x += mb.w + 10.0;
+    // The modes: performing on the decks, preparing tracks, or just listening through the library.
+    let modes = [("Perform", View::Dj), ("Prepare", View::Ctl), ("Listen", View::Lib)];
+    let tw = 78.0;
+    p.outlined(x, r.y + 8.0, tw * 3.0, 36.0, 10.0, theme::WELL, 1.0, theme::BORDER);
+    for (n, (label, v)) in modes.into_iter().enumerate() {
+        let b = Rect::new(x + n as f32 * tw, r.y + 8.0, tw, 36.0);
+        if s.view == v {
+            p.outlined(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 8.0, theme::RAISED, 1.0, theme::BORDER);
+        } else if s.pressed(Target::View(v)) {
+            p.rect(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 8.0, theme::PRESSED);
+        }
+        let ink = Style { colour: if s.view == v { TEXT } else { theme::DIM }, ..TAB };
+        p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, cy + 4.0, ink, label);
+        hit(s, b, Target::View(v));
+    }
+    let left = x + tw * 3.0 + 16.0;
+    // From the right: settings, the master level, then the switches while they fit.
+    let g = Rect::new(r.x + r.w - 44.0, r.y + 8.0, 36.0, 36.0);
+    let fill = if s.pressed(Target::Prefs(0)) { theme::PRESSED } else { theme::RAISED };
+    p.outlined(g.x, g.y, g.w, g.h, 10.0, fill, 1.0, theme::BORDER);
     let (gx, gy) = (g.x + g.w * 0.5, cy);
     for k in 0..6 {
         let (sn, cs) = (k as f32 * std::f32::consts::FRAC_PI_3).sin_cos();
         p.line((gx + cs * 5.0, gy + sn * 5.0), (gx + cs * 8.0, gy + sn * 8.0), 2.4, theme::DIM);
     }
-    p.outlined(gx - 5.5, gy - 5.5, 11.0, 11.0, 5.5, theme::PANEL, 1.8, theme::DIM);
+    p.outlined(gx - 5.5, gy - 5.5, 11.0, 11.0, 5.5, theme::RAISED, 1.8, theme::DIM);
     hit(s, g, Target::Prefs(0));
-    // The master level, left and right.
-    let mw = 64.0;
-    let mx = g.x - 10.0 - mw;
-    for (c, &v) in s.telemetry.main_peak.iter().enumerate() {
-        let y = cy - 5.0 + c as f32 * 6.0;
-        p.rect(mx, y, mw, 4.0, 2.0, theme::WELL);
-        let v = v.clamp(0.0, 1.0);
-        let colour = if v > 0.95 {
-            RED
-        } else if v > 0.8 {
-            AMBER
-        } else {
-            GREEN
-        };
-        p.rect(mx, y, mw * v, 4.0, 2.0, colour);
+    let search_min = 220.0;
+    let mut right = g.x - 8.0;
+    let mw = 190.0;
+    if right - mw > left + search_min {
+        right -= mw;
+        let m = Rect::new(right, r.y + 8.0, mw, 36.0);
+        let fill = if s.pressed(Target::Prefs(2)) { theme::PRESSED } else { theme::RAISED };
+        p.outlined(m.x, m.y, m.w, m.h, 10.0, fill, 1.0, theme::BORDER);
+        p.text(m.x + 12.0, cy + 4.0, Style { colour: theme::DIM, ..SMALL }, "MASTER");
+        let vx = m.x + 60.0;
+        let vw = m.w - 72.0;
+        for (c, &v) in s.telemetry.main_peak.iter().enumerate() {
+            let y = cy - 5.0 + c as f32 * 6.0;
+            p.rect(vx, y, vw, 4.0, 2.0, theme::WELL);
+            let v = v.clamp(0.0, 1.0);
+            let colour = if v > 0.95 {
+                RED
+            } else if v > 0.8 {
+                AMBER
+            } else {
+                GREEN
+            };
+            p.rect(vx, y, vw * v, 4.0, 2.0, colour);
+        }
+        hit(s, m, Target::Prefs(2));
+        right -= 8.0;
     }
     let rec = s.recorder.as_ref().map(|r| {
         let t = r.frames / u64::from(s.out_rate.max(1));
         format!("REC {}:{:02}", t / 60, t % 60)
     });
-    let items: [(&str, bool, Target); 6] = [
-        (rec.as_deref().unwrap_or("REC"), s.recorder.is_some(), Target::Record),
-        ("AUTO", s.auto.is_some(), Target::AutoDj),
-        ("SMPL", s.show_samplers, Target::ToggleSamplers),
-        ("FX", s.show_fx, Target::ToggleFx),
-        ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
-        ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
+    let items: [(&str, bool, u32, Target); 5] = [
+        (rec.as_deref().unwrap_or("REC"), s.recorder.is_some(), RED, Target::Record),
+        ("Automix", s.auto.is_some(), ACCENT, Target::AutoDj),
+        ("Samplers", s.show_samplers, ACCENT, Target::ToggleSamplers),
+        ("FX", s.show_fx, theme::LILAC, Target::ToggleFx),
+        ("Waveforms", s.show_waves, ACCENT, Target::ToggleWaves),
     ];
-    let mut right = mx - 12.0;
-    let floor = lx + lw + 16.0;
-    for (label, on, t) in items {
-        let bw = if label.len() > 6 {
-            78.0
-        } else if label.len() > 4 {
-            58.0
-        } else {
-            46.0
-        };
-        if right - bw < floor {
+    for (label, on, colour, t) in items {
+        let bw = p.text_width(TAB, label) + 28.0;
+        if right - bw < left + search_min {
             break;
         }
         right -= bw;
-        let colour = if matches!(t, Target::Record) { RED } else { ACCENT };
-        button(p, s, Rect::new(right, r.y + 4.0, bw, r.h - 8.0), label, on, colour, t);
-        right -= 4.0;
+        pill(p, s, Rect::new(right, r.y + 8.0, bw, 36.0), label, on, colour, t);
+        right -= 8.0;
     }
-    let sx = views_end + 4.0;
-    let sw = (lx - 16.0 - sx).min(320.0);
-    if sw < 120.0 {
-        return;
-    }
+    // The search, centred on the window while there is room, else in the gap.
+    let sw = (right - left - 8.0).min(560.0);
+    let sx = ((r.w - sw) * 0.5).clamp(left, right - sw);
     s.search_in_bar = true;
-    let focus = s.search_focus || !s.query.is_empty();
-    let fh = r.h - 10.0;
-    p.outlined(sx, r.y + 5.0, sw, fh, fh * 0.5, theme::WELL, 1.0, if focus { ACCENT } else { theme::BORDER });
-    let (gx, gy) = (sx + 15.0, r.y + 5.0 + fh * 0.5 - 1.0);
-    p.outlined(gx - 4.5, gy - 4.5, 9.0, 9.0, 4.5, 0, 1.5, if focus { ACCENT } else { theme::DIM });
-    p.line((gx + 3.5, gy + 3.5), (gx + 6.5, gy + 6.5), 1.5, if focus { ACCENT } else { theme::DIM });
-    hit(s, Rect::new(sx, r.y, sw, r.h), Target::SearchFocus);
-    let tx = sx + 28.0;
-    if s.query.is_empty() {
-        let hint = s.status.as_deref().unwrap_or("Search tracks");
-        p.text_in(tx, r.y + 22.0, sw - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
-    } else {
-        let qw = p.text_in(tx, r.y + 22.0, sw - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
-        p.rect(tx + 1.0 + qw, r.y + 11.0, 1.5, 15.0, 0.0, ACCENT);
-        let n = s.shown.len().to_string();
-        p.text(sx + sw - 8.0 - p.text_width(SMALL, &n), r.y + 21.0, SMALL, &n);
-    }
+    search_box(p, s, Rect::new(sx, r.y + 9.0, sw, 34.0));
+}
+
+/// The footer on a wide window: expand the library, what the app is busy with, and the side panel.
+fn footer(p: &mut Painter, s: &mut State, r: Rect) {
+    p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
+    p.rect(r.x, r.y, r.w, 1.0, 0.0, theme::SEPARATOR);
+    let b = Rect::new(r.x + 8.0, r.y + 5.0, 150.0, r.h - 10.0);
+    let label = if s.lib_expanded { "Collapse Browser" } else { "Expand Browser" };
+    pill(p, s, b, label, s.lib_expanded, ACCENT, Target::ToggleExpand);
+    let busy = s.status.clone().unwrap_or_else(|| format!("{} tracks", s.shown.len()));
+    p.text_in(b.x + b.w + 16.0, r.y + r.h * 0.5 + 4.0, r.w - 360.0, Style { colour: theme::DIM, ..ARTIST }, &busy);
+    let b = Rect::new(r.x + r.w - 158.0, r.y + 5.0, 150.0, r.h - 10.0);
+    pill(p, s, b, "Side Panel", s.side_panel, ACCENT, Target::ToggleSide);
 }
 
 fn effects(p: &mut Painter, s: &mut State, r: Rect) {

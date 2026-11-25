@@ -118,7 +118,13 @@ fn main() {
         perf.push(format!("| {name} | {w}x{h} | {ms:.2} |"));
         for view in VIEWS {
             let tab = format!("View({})", view_name(view));
-            if !ui.tap(&tab) {
+            // Wide windows show three modes; the rest of the views are on Ctrl+Alt+1 to 6, as in the View menu.
+            let wide = w as f32 / scale >= 1100.0;
+            if wide {
+                let n = VIEWS.iter().position(|v| *v == view).unwrap_or(0);
+                let digit = char::from(b'1' + n as u8);
+                ui.key(Key::Char(digit), Mods { ctrl: true, alt: true, shift: false });
+            } else if !ui.tap(&tab) {
                 faults.push(format!("{name}: no {view} tab"));
                 continue;
             }
@@ -126,7 +132,7 @@ fn main() {
             ui.render(&mut r);
             ui.render(&mut r);
             let shown = ui.targets();
-            for want in TOOLBAR {
+            for want in TOOLBAR.iter().filter(|t| !wide || !t.starts_with("Browse")) {
                 if !shown.iter().any(|(t, _)| t == want) {
                     faults.push(format!("{name} {view}: toolbar lost {want}"));
                 }
@@ -205,7 +211,9 @@ fn view_name(v: &str) -> &str {
 
 /// Tap the hub field, type, lose focus, come back and type more: the text must survive.
 fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String>) {
-    ui.tap("View(Stream)");
+    if !ui.tap("View(Stream)") {
+        ui.key(Key::Char('5'), Mods { ctrl: true, alt: true, shift: false });
+    }
     ui.render(r);
     if !ui.tap("HubFocus") {
         faults.push(format!("{name}: no hub search field"));

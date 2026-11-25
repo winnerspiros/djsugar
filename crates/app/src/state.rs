@@ -122,6 +122,9 @@ pub enum Target {
     /// Turns a library filter chip on or off, by its place in `FILTERS`.
     Filter(u8),
     Gain(usize),
+    ToggleWaves,
+    ToggleExpand,
+    ToggleSide,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -533,6 +536,12 @@ pub struct State {
     pub view_at: Option<std::time::Instant>,
     pub show_fx: bool,
     pub show_samplers: bool,
+    /// The large waveforms in the wide Perform mode.
+    pub show_waves: bool,
+    /// The library over the whole wide Perform mode.
+    pub lib_expanded: bool,
+    /// The side panel right of the library.
+    pub side_panel: bool,
     /// The large waveforms' zoom, each step twice as close; 0 is the default.
     pub wave_zoom: i8,
     /// The large waveforms' height, each step a fifth taller; 0 is the default.
@@ -662,6 +671,9 @@ impl State {
             view_at: None,
             show_fx: false,
             show_samplers: false,
+            show_waves: true,
+            lib_expanded: false,
+            side_panel: false,
             wave_zoom: 0,
             wave_height: 0,
             filters: 0,
@@ -1375,12 +1387,12 @@ impl State {
             '=' | '+' => self.press(Target::WaveZoom(1), 0.0, 0.0),
             '-' => self.press(Target::WaveZoom(-1), 0.0, 0.0),
             '0' => self.press(Target::WaveZoom(0), 0.0, 0.0),
-            '5' => self.press(Target::ToggleFx, 0.0, 0.0),
-            'q' => self.quit = true,
             n @ '1'..='6' if m.alt => {
                 const VIEWS: [View; 6] = [View::Dj, View::Wave, View::Lib, View::Fx, View::Stream, View::Ctl];
                 self.press(Target::View(VIEWS[n as usize - '1' as usize]), 0.0, 0.0);
             }
+            '5' => self.press(Target::ToggleFx, 0.0, 0.0),
+            'q' => self.quit = true,
             _ => {}
         }
     }
@@ -2189,6 +2201,9 @@ impl State {
             }
             Target::ToggleFx => self.show_fx = !self.show_fx,
             Target::ToggleSamplers => self.show_samplers = !self.show_samplers,
+            Target::ToggleWaves => self.show_waves = !self.show_waves,
+            Target::ToggleExpand => self.lib_expanded = !self.lib_expanded,
+            Target::ToggleSide => self.side_panel = !self.side_panel,
             Target::WaveZoom(z) => self.wave_zoom = if z == 0 { 0 } else { (self.wave_zoom + z).clamp(-3, 3) },
             Target::WaveHeight(z) => self.wave_height = if z == 0 { 0 } else { (self.wave_height + z).clamp(-3, 3) },
             Target::Sampler(i) => self.sample(i),
