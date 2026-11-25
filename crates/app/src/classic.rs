@@ -14,6 +14,8 @@ const ACCENT: u32 = rgb(0xb69cff);
 const KEY: u32 = rgb(0x8e7cff);
 const CUE: u32 = rgb(0xff9f0a);
 const LOOP_ON: u32 = rgb(0xb69cff);
+const SAMPLE_ON: u32 = rgb(0x4aa8ff);
+const FX_ON: u32 = rgb(0xfca001);
 const LINE: u32 = rgb(0x3a3a40);
 const LABEL: u32 = rgb(0x8b8b93);
 
@@ -353,7 +355,7 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             },
             Mode::Loops => (beats_label(LOOP_BEATS[i]), (s.decks[d].looping == Some(i)).then_some(LOOP_ON)),
             Mode::Samples => (pad_name(s, d, i), None),
-            Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(rgb(0xfca001))),
+            Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(FX_ON)),
         };
         let fill = match (down, lit) {
             (true, Some(c)) => c,
@@ -362,9 +364,15 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             (false, None) => CONTROL,
         };
         p.rect(b.x, b.y, b.w, b.h, 4.0, fill);
-        if mode == Mode::Cues && lit.is_none() {
-            // The colour the pad takes once set, as a strip along its top.
-            p.rect(b.x + 4.0, b.y + 3.0, b.w - 8.0, 2.0, 1.0, fade(cue_colour(s, d, i), 0x60));
+        if lit.is_none() {
+            // The colour the pad takes once lit, as a strip along its top.
+            let c = match mode {
+                Mode::Cues => cue_colour(s, d, i),
+                Mode::Loops => LOOP_ON,
+                Mode::Samples => SAMPLE_ON,
+                Mode::Fx => FX_ON,
+            };
+            p.rect(b.x + 4.0, b.y + 3.0, b.w - 8.0, 2.0, 1.0, fade(c, 0x60));
         }
         let ink = if lit.is_some() {
             rgb(0x0a0a0c)
@@ -585,6 +593,21 @@ fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     }
     let label = rad * 0.6;
     p.disc(cx, cy, label, rgb(0x26262b), rgb(0x18181c));
+    if let Some(cells) = deck.loaded.as_ref().and_then(|l| l.art.as_deref()) {
+        // The album art on the label, cell by cell inside its circle, dimmed under the readout.
+        use crate::state::ART;
+        let c = label * 2.0 / ART as f32;
+        for (i, &v) in cells.iter().enumerate() {
+            let (gx, gy) = ((i % ART) as f32 + 0.5, (i / ART) as f32 + 0.5);
+            let (dx, dy) = ((gx - ART as f32 * 0.5) * c, (gy - ART as f32 * 0.5) * c);
+            if dx * dx + dy * dy > (label - c * 0.5) * (label - c * 0.5) {
+                continue;
+            }
+            let (x, y) = (cx + dx - c * 0.5, cy + dy - c * 0.5);
+            p.rect(x.floor(), y.floor(), (x + c).ceil() - x.floor(), (y + c).ceil() - y.floor(), 0.0, rgb(v));
+        }
+        p.disc(cx, cy, label, fade(rgb(0x000000), 0x90), fade(rgb(0x000000), 0x60));
+    }
     p.outlined(cx - label, cy - label, label * 2.0, label * 2.0, label, 0, 1.0, BORDER);
     // The tempo readout in the middle: BPM, then the rate offset in the deck colour.
     let bpm = deck
@@ -594,7 +617,7 @@ fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         .map(|g| g.bpm * (1.0 + f64::from(deck.rate) * s.settings.rate_range()));
     let known = bpm.is_some();
     let bpm = bpm.map_or_else(|| "--.--".to_string(), |b| format!("{b:.2}"));
-    let pct = format!("{:+.2}%", f64::from(deck.rate) * 8.0);
+    let pct = format!("{:+.2}%", f64::from(deck.rate) * s.settings.rate_range() * 100.0);
     let big = bold((rad * 0.24).clamp(9.0, 22.0), if known { WHITE } else { FAINT });
     centred(p, Rect::new(cx - label, cy - big.px * 1.05, label * 2.0, big.px * 1.2), big, &bpm);
     let sm = Style::new((rad * 0.11).clamp(7.0, 11.0).round(), Weight::Semibold, DECK[d]);

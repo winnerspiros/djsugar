@@ -652,4 +652,17 @@ mod tests {
         assert_eq!(yt.context(&PLAYER_CLIENTS[0])["client"]["osName"], "visionOS");
         assert!(!valid_id("abc") && valid_id("dQw4w9WgXcQ"));
     }
+
+    #[test]
+    #[ignore = "network: talks to YouTube"]
+    fn live_search_and_fetch() {
+        let yt = YouTube::new("US", "");
+        let hits = yt.search("daft punk one more time", None).unwrap().hits;
+        assert!(!hits.is_empty());
+        let dir = std::env::temp_dir().join(format!("djsugar-yt-{}", std::process::id()));
+        let got = yt.fetch(&hits[0].id, &dir, &|_, _| {});
+        let _ = std::fs::remove_dir_all(&dir);
+        let file = got.unwrap();
+        assert!(file.extension().is_some(), "{file:?}");
+    }
 }
