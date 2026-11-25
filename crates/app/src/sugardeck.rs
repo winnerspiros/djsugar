@@ -433,8 +433,9 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     for d in 0..2 {
         let x = if d == 0 { inner.x } else { inner.x + inner.w - cw };
         let v = s.decks[d].gain;
-        knob(p, s, Rect::new(x, inner.y, cw, size), (v, true, DECK[d]), "", Target::Gain(d));
-        let f = Rect::new(x + 2.0, inner.y + size + 4.0, cw - 4.0, inner.h - size - 4.0);
+        let top = (size * 0.72).round() + 11.0;
+        knob(p, s, Rect::new(x, inner.y, cw, top), (v, true, DECK[d]), "GAIN", Target::Gain(d));
+        let f = Rect::new(x + 2.0, inner.y + top + 4.0, cw - 4.0, inner.h - top - 4.0);
         for i in 0..7 {
             let y = f.y + 7.0 + (f.h - 14.0) * i as f32 / 6.0;
             p.rect(f.x, y, f.w, 1.0, 0.0, rgb(0x3e3e42));

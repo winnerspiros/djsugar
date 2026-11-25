@@ -445,7 +445,7 @@ type Keys = &'static [(&'static str, &'static str)];
 /// Every keyboard shortcut, as the keyboard page lists them.
 const SHORTCUTS: [(&str, Keys); 5] = [
     (
-        "DECK 1 / DECK 2",
+        "DECK A / DECK B",
         &[
             ("D / L", "Play or pause; Shift sets the cue"),
             ("F / ;", "Cue; Shift stops at the cue"),

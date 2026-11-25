@@ -269,7 +269,7 @@ fn side_cues(p: &mut Painter, s: &mut State, r: Rect) {
         r.y + 14.0,
         r.w - 24.0,
         Style { colour: DECK[d], ..SMALL },
-        &format!("DECK {}  {}", d + 1, l.entry.title),
+        &format!("DECK {}  {}", ["A", "B"][d], l.entry.title),
     );
     let mut y = r.y + 26.0;
     for n in 0..8 {
@@ -888,6 +888,7 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
         let mut right = b.x + b.w - 6.0;
         if let Some(n) = n {
             let n = n.to_string();
+            let count = Style { colour: if on { TEXT } else { count.colour }, ..count };
             right -= p.text_width(count, &n);
             p.text(right, b.y + b.h * 0.5 + 4.0, count, &n);
             right -= 6.0;
@@ -1358,6 +1359,19 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         .map(|&(c, n, f)| (c, n, if c == C::Title { f + gone } else { f }))
         .collect();
     let inner = r.w - 24.0;
+    // Figures keep to their own width on a wide list; the names take what that frees.
+    let cap = |c: C| match c {
+        C::Index => 48.0,
+        C::Rating => 96.0,
+        C::Bpm | C::Key | C::Time => 76.0,
+        _ => f32::INFINITY,
+    };
+    let freed: f32 = cols.iter().map(|&(c, _, f)| (f - cap(c) / inner).max(0.0)).sum();
+    let names: f32 = cols.iter().filter(|c| cap(c.0).is_infinite()).map(|c| c.2).sum();
+    let cols: Vec<(C, &str, f32)> = cols
+        .into_iter()
+        .map(|(c, n, f)| (c, n, if cap(c).is_infinite() { f + freed * f / names } else { f.min(cap(c) / inner) }))
+        .collect();
     let mut x = r.x + 12.0;
     let xs: Vec<f32> = cols
         .iter()
@@ -1462,7 +1476,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
     for d in 0..2 {
         let b = Rect::new(r.x + r.w - (2 - d) as f32 * (bw + 6.0), y + 6.0, bw, bar - 12.0);
         p.rect(b.x, b.y, b.w, b.h, 5.0, DECK[d]);
-        let label = ["DECK 1", "DECK 2"][d];
+        let label = ["DECK A", "DECK B"][d];
         p.text(b.x + (b.w - p.text_width(TAB, label)) * 0.5, b.y + b.h * 0.5 + 4.0, TAB, label);
         hit(s, b, Target::LoadSelected(d));
     }
@@ -1610,7 +1624,7 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     theme::card(p, r, DECK[d]);
     hit(s, r, Target::Picker);
     let bank = ["A", "B", "C", "D"][s.bank[d] % 4];
-    let head = format!("DECK {} SAMPLE PAD {bank}{}", d + 1, pad + 1);
+    let head = format!("DECK {} SAMPLE PAD {bank}{}", ["A", "B"][d], pad + 1);
     p.text(r.x + 12.0, r.y + 22.0, TAB, &head);
     let current = s.pads[d][s.bank[d] * 8 + pad];
     let name = crate::state::sample_name(s, current);
@@ -1748,7 +1762,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             let getting = s.hub.fetching.iter().find(|f| f.0 == s.hub.hits[i].id && f.1 == d).map(|f| f.2);
             let label = match getting {
                 Some(f) => format!("{:.0}%", f * 100.0),
-                None => format!("DECK {}", d + 1),
+                None => format!("DECK {}", ["A", "B"][d]),
             };
             button(p, s, b, &label, getting.is_some(), colour, Target::HubLoad(i, d));
             if let Some(f) = getting {
