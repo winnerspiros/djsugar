@@ -126,6 +126,8 @@ pub enum Target {
     ToggleExpand,
     ToggleSide,
     SideTab(u8),
+    ToggleColumn(crate::library::Column),
+    ResetColumns,
     /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
     SideCue(usize, usize),
 }
@@ -578,6 +580,10 @@ pub struct State {
     play_on_load: Option<usize>,
     /// Where the track menu was opened.
     pub menu_at: (f32, f32),
+    /// The column chooser, from a held or right-clicked column heading.
+    pub column_menu: bool,
+    /// Columns the DJ hid, one bit per column.
+    pub hidden_cols: u8,
     /// The open menu's open submenu.
     pub submenu: Option<u8>,
     pub station: Station,
@@ -698,6 +704,8 @@ impl State {
             prefs_max: 0.0,
             quit: false,
             list_menu: None,
+            column_menu: false,
+            hidden_cols: 0,
             play_on_load: None,
             menu_at: (0.0, 0.0),
             submenu: None,
@@ -1286,11 +1294,13 @@ impl State {
             return true;
         }
         let open = self.track_menu.is_some()
+            || self.column_menu
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
             || self.grid_menu.is_some()
             || self.picker.is_some();
         self.track_menu = None;
+        self.column_menu = false;
         self.list_menu = None;
         self.cue_menu = None;
         self.grid_menu = None;
@@ -1548,6 +1558,14 @@ impl State {
                 self.menu_at = g.start;
                 self.submenu = None;
             }
+        }
+        if !self.column_menu
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Sort(_)) = g.target
+        {
+            g.moved = true;
+            self.column_menu = true;
+            self.menu_at = g.start;
         }
         if self.list_menu.is_none()
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -2140,6 +2158,7 @@ impl State {
                 self.list_op(n, op);
             }
             Target::MenuClose => {
+                self.column_menu = false;
                 self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;
@@ -2210,6 +2229,8 @@ impl State {
             Target::ToggleExpand => self.lib_expanded = !self.lib_expanded,
             Target::ToggleSide => self.side_panel = !self.side_panel,
             Target::SideTab(n) => self.side_tab = n,
+            Target::ToggleColumn(c) => self.hidden_cols ^= 1 << c as u8,
+            Target::ResetColumns => self.hidden_cols = 0,
             Target::SideCue(d, n) => {
                 self.focus = d;
                 self.hotcue(d, n);

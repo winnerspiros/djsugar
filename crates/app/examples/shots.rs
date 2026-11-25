@@ -195,6 +195,27 @@ fn main() {
                 ui.tap("ToggleSide");
                 ui.render(&mut r);
             }
+            // Right-click a heading, hide BPM: its heading must go, and Reset must bring it back.
+            if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
+                ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-columns.png")));
+                if !ui.tap("ToggleColumn(Bpm)") {
+                    faults.push(format!("{name}: no column chooser"));
+                }
+                ui.render(&mut r);
+                if ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)") {
+                    faults.push(format!("{name}: hidden BPM column still shown"));
+                }
+                ui.key(Key::Escape, Mods::default());
+                if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
+                    ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
+                    ui.render(&mut r);
+                    ui.tap("ResetColumns");
+                    ui.key(Key::Escape, Mods::default());
+                    ui.render(&mut r);
+                }
+            }
         }
     }
     let table = format!("| size | pixels | ms per frame, software GPU |\n|---|---|---|\n{}\n", perf.join("\n"));

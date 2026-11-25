@@ -93,6 +93,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     toast(p, s, w, h);
     track_menu(p, s, w, h);
     list_menu(p, s, w, h);
+    column_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -845,6 +846,31 @@ fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 /// A held playlist's menu: load its first track, move it, empty it, delete it.
+/// Which columns the track list shows; the title always stays.
+fn column_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    use crate::library::Column as C;
+    if !s.column_menu {
+        return;
+    }
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let mut lines: Vec<Line> = [
+        (C::Index, "Number"),
+        (C::Artist, "Artist"),
+        (C::Rating, "Rating"),
+        (C::Bpm, "BPM"),
+        (C::Key, "Key"),
+        (C::Time, "Length"),
+    ]
+    .into_iter()
+    .map(|(c, n)| Line::item(n, Target::ToggleColumn(c)).mark(Mark::Check(s.hidden_cols & (1 << c as u8) == 0)))
+    .collect();
+    lines.push(Line::Rule);
+    lines.push(Line::item("Reset Columns", Target::ResetColumns).enabled(s.hidden_cols != 0));
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
 fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     use crate::state::ListOp as L;
     let Some(n) = s.list_menu else { return };
@@ -1070,6 +1096,13 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
             (C::Time, "TIME", 0.16),
         ]
     };
+    // Hidden columns give their share to the title.
+    let gone: f32 = cols.iter().filter(|c| s.hidden_cols & (1 << c.0 as u8) != 0).map(|c| c.2).sum();
+    let cols: Vec<(C, &str, f32)> = cols
+        .iter()
+        .filter(|c| s.hidden_cols & (1 << c.0 as u8) == 0)
+        .map(|&(c, n, f)| (c, n, if c == C::Title { f + gone } else { f }))
+        .collect();
     let inner = r.w - 24.0;
     let mut x = r.x + 12.0;
     let xs: Vec<f32> = cols
