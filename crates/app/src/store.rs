@@ -35,6 +35,8 @@ pub struct Saved {
     pub rating: u8,
     /// The track's colour, 1 to 8; 0 for none.
     pub colour: u8,
+    /// Where the track is in preparation: 0 none, then Inbox, In Prep, Play Ready.
+    pub stage: u8,
 }
 
 impl Saved {
@@ -43,12 +45,13 @@ impl Saved {
         let cues: Vec<String> = self.cues.iter().map(|c| c.map_or_else(|| "-".into(), |v| format!("{v:.0}"))).collect();
         let colours: Vec<String> = self.colours.iter().map(u8::to_string).collect();
         format!(
-            "{key}\t{grid}\t{}\t{}\t{}\t{}\t{}\n",
+            "{key}\t{grid}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             u8::from(self.locked),
             cues.join(","),
             colours.join(","),
             self.rating,
-            self.colour
+            self.colour,
+            self.stage
         )
     }
 
@@ -68,6 +71,7 @@ impl Saved {
         // Rating and colour came later; older lines have neither.
         s.rating = f.next().and_then(|v| v.parse().ok()).unwrap_or(0).min(5);
         s.colour = f.next().and_then(|v| v.parse().ok()).unwrap_or(0).min(8);
+        s.stage = f.next().and_then(|v| v.parse().ok()).unwrap_or(0).min(3);
         Some((key, s))
     }
 }
@@ -174,6 +178,7 @@ mod tests {
             colours: [1, 2, 3, 4, 5, 6, 7, 0],
             rating: 4,
             colour: 6,
+            stage: 2,
         };
         let mut st = Store::default();
         st.tracks.insert("a/b c.flac".into(), s);

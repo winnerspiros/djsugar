@@ -848,6 +848,14 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
             None,
         );
     }
+    if head(p, s, &mut y, "PREPARATION", 4) {
+        let counts = s.stage_counts();
+        for (&(name, c), n) in crate::state::STAGES.iter().zip(1u8..) {
+            let sh = Shelf::Stage(n);
+            let count = counts[usize::from(n) - 1];
+            row(p, s, &mut y, (name, Some(count)), Target::Shelf(sh), lib && s.shelf == sh, Some(rgb(c)));
+        }
+    }
     if head(p, s, &mut y, "PLAYLISTS", 1) {
         let lists: Vec<(String, usize)> = s.playlists.iter().map(|(n, k)| (n.clone(), k.len())).collect();
         for (n, (name, len)) in lists.iter().enumerate() {
@@ -985,6 +993,14 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::item(title, Target::MenuBody).enabled(false),
         Line::Picks { label: "Rating", picks: stars },
         Line::Picks { label: "Color", picks: colours },
+        Line::Picks {
+            label: "Stage",
+            picks: crate::state::STAGES
+                .iter()
+                .zip(1u8..)
+                .map(|(&(_, c), n)| (Pick::Swatch(rgb(c), saved.stage == n), Target::MenuStage(n)))
+                .collect(),
+        },
         Line::Rule,
         Line::Picks {
             label: "Load on Deck",

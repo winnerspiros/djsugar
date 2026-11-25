@@ -130,6 +130,8 @@ pub enum Target {
     Fold(u8),
     /// A choice in a chip's editor: chip, then the value.
     ChipSet(u8, u8),
+    /// Sets the menu's track to a preparation stage; the lit stage clears it.
+    MenuStage(u8),
     ToggleColumn(crate::library::Column),
     ResetColumns,
     /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
@@ -186,7 +188,12 @@ pub enum Shelf {
     Playlist(usize),
     /// The tracks in one folder, by its place in `State::folders`.
     Folder(usize),
+    /// The tracks at one preparation stage, 1 to 3.
+    Stage(u8),
 }
+
+/// The preparation stages, in order, with their colours.
+pub const STAGES: [(&str, u32); 3] = [("Inbox", 0x8a8a96), ("In Prep", 0xf5a02a), ("Play Ready", 0x3ccf6e)];
 
 /// The library's filter chips, in order, each a bit of `State::filters`.
 pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
@@ -1199,6 +1206,19 @@ impl State {
         });
     }
 
+    /// How many tracks sit at each preparation stage.
+    pub fn stage_counts(&self) -> [usize; 3] {
+        let mut c = [0; 3];
+        for e in &self.entries[SAMPLES.len().min(self.entries.len())..] {
+            if let Some(v) = self.store.get(&entry_key(e))
+                && (1..=3).contains(&v.stage)
+            {
+                c[usize::from(v.stage) - 1] += 1;
+            }
+        }
+        c
+    }
+
     pub fn search(&mut self, query: String) {
         self.query = query;
         self.scroll = 0.0;
@@ -1207,6 +1227,9 @@ impl State {
         let order: Vec<u32> = match self.shelf {
             Shelf::Tracks => (s..n).collect(),
             Shelf::History => self.history.clone(),
+            Shelf::Stage(st) => (s..n)
+                .filter(|&i| self.store.get(&entry_key(&self.entries[i as usize])).is_some_and(|v| v.stage == st))
+                .collect(),
             Shelf::Playlist(p) => {
                 let keys = self.playlists.get(p).map(|(_, k)| k.as_slice()).unwrap_or_default();
                 keys.iter()
@@ -2274,6 +2297,18 @@ impl State {
                 self.save_panels();
             }
             Target::Fold(b) => self.folded ^= 1 << b,
+            Target::MenuStage(n) => {
+                if let Some(i) = self.track_menu {
+                    let key = entry_key(&self.entries[i as usize]);
+                    let mut saved = self.store.get(&key).unwrap_or_default();
+                    saved.stage = if saved.stage == n { 0 } else { n };
+                    self.store.put(&key, saved);
+                    if matches!(self.shelf, Shelf::Stage(_)) {
+                        let q = std::mem::take(&mut self.query);
+                        self.search(q);
+                    }
+                }
+            }
             Target::ChipSet(chip, v) => {
                 if chip == 0 {
                     self.near_bpm = v;
