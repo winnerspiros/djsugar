@@ -356,13 +356,23 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(rgb(0xfca001))),
         };
         let fill = match (down, lit) {
-            (true, Some(c)) => fade(c, 0x50),
+            (true, Some(c)) => c,
             (true, None) => PRESSED,
-            (false, Some(c)) => fade(c, 0x14),
+            (false, Some(c)) => fade(c, 0xc8),
             (false, None) => CONTROL,
         };
         p.rect(b.x, b.y, b.w, b.h, 4.0, fill);
-        let ink = lit.unwrap_or(if mode == Mode::Cues { FAINT } else { DIM });
+        if mode == Mode::Cues && lit.is_none() {
+            // The colour the pad takes once set, as a strip along its top.
+            p.rect(b.x + 4.0, b.y + 3.0, b.w - 8.0, 2.0, 1.0, fade(cue_colour(s, d, i), 0x60));
+        }
+        let ink = if lit.is_some() {
+            rgb(0x0a0a0c)
+        } else if mode == Mode::Cues {
+            FAINT
+        } else {
+            DIM
+        };
         let st = bold((b.h * 0.24).clamp(8.0, 12.0), ink);
         if mode == Mode::Cues && lit.is_some() {
             // A play mark ahead of the cue's time, as the pads show it.
@@ -378,9 +388,6 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             p.text(x0 + k + 4.0, cy + st.px * 0.36, st, &label);
         } else {
             centred(p, b, st, &label);
-        }
-        if let Some(c) = lit {
-            p.rect(b.x + b.w * 0.3, b.y + b.h - 4.0, b.w * 0.4, 2.0, 1.0, c);
         }
         hit(s, b, t);
     }

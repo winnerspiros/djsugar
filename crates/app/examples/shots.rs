@@ -144,6 +144,17 @@ fn main() {
         }
         menu(&mut ui, &mut r, (name, scale), &mut faults);
         save(&r, &out.join(format!("{name}-menu.png")));
+        settings(&mut ui, &mut r, &out, name, &mut faults);
+        let before = pixels(&r);
+        r = Renderer::offscreen(w, h).expect("second renderer");
+        ui.render(&mut r);
+        if pixels(&r) != before {
+            faults.push(format!("{name}: frame changes when the GPU is recreated, as after leaving the app"));
+        }
+        typing(&mut ui, &mut r, name, &mut faults);
+        save(&r, &out.join(format!("{name}-typed.png")));
+        ui.tap("View(Lib)");
+        ui.key(Key::Escape, Mods::default());
         ui.key(Key::Escape, Mods::default());
         ui.render(&mut r);
         if let Some((_, [x, y, w, _])) = ui.targets().into_iter().find(|(t, _)| t == "Library") {
@@ -159,18 +170,13 @@ fn main() {
             }
             ui.tap("View(Dj)");
             ui.render(&mut r);
+            for pad in ["Pad(0, 0)", "Pad(0, 1)"] {
+                ui.tap(pad);
+                ui.render(&mut r);
+            }
             ui.render(&mut r);
             save(&r, &out.join(format!("{name}-loaded.png")));
         }
-        settings(&mut ui, &mut r, &out, name, &mut faults);
-        let before = pixels(&r);
-        r = Renderer::offscreen(w, h).expect("second renderer");
-        ui.render(&mut r);
-        if pixels(&r) != before {
-            faults.push(format!("{name}: frame changes when the GPU is recreated, as after leaving the app"));
-        }
-        typing(&mut ui, &mut r, name, &mut faults);
-        save(&r, &out.join(format!("{name}-typed.png")));
     }
     let table = format!("| size | pixels | ms per frame, software GPU |\n|---|---|---|\n{}\n", perf.join("\n"));
     print!("{table}");
