@@ -23,10 +23,12 @@ pub struct Client {
     pub sdk: u32,
     pub os: &'static str,
     pub os_version: &'static str,
+    /// Its links come scrambled and need the player script to unlock.
+    pub js: bool,
 }
 
 const fn client(name: &'static str, version: &'static str, id: &'static str, agent: &'static str) -> Client {
-    Client { name, version, id, agent, make: "", model: "", sdk: 0, os: "", os_version: "" }
+    Client { name, version, id, agent, make: "", model: "", sdk: 0, os: "", os_version: "", js: false }
 }
 
 const VR: Client = Client {
@@ -50,7 +52,21 @@ const PLAYSTATION: Client = client(
 );
 
 /// Who to ask for audio, in order.
-pub const PLAYER_CLIENTS: [Client; 7] = [
+pub const PLAYER_CLIENTS: [Client; 8] = [
+    // A Samsung TV: the first choice while signed out; its links need the player script.
+    Client {
+        make: "Samsung",
+        model: "UKS9800",
+        os: "Tizen",
+        os_version: "2.4.0",
+        js: true,
+        ..client(
+            "TVHTML5",
+            "5.20260707",
+            "7",
+            "Mozilla/5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/2.4.0 TV Safari/538.1",
+        )
+    },
     // Needs no player script: its links carry no signature to solve.
     Client {
         make: "Apple",
@@ -125,6 +141,8 @@ pub struct Page {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Format {
     pub url: String,
+    /// A scrambled signature and the parameter it goes in, still to unlock.
+    pub sig: Option<(String, String)>,
     pub m4a: bool,
     pub bitrate: u64,
     /// Bytes, when the listing says.
@@ -309,13 +327,28 @@ impl YouTube {
         let mut last = Error::Refused("All InnerTube clients failed".into());
         let mut refused = 0;
         if !self.resting() {
+            let mut player: Option<Result<crate::cipher::Player>> = None;
             for c in &PLAYER_CLIENTS {
+                let sts = if c.js {
+                    match player.get_or_insert_with(crate::cipher::load) {
+                        Ok(p) => Some(p.sts),
+                        Err(e) => {
+                            last = Error::Refused(format!("player script: {e}"));
+                            continue;
+                        }
+                    }
+                } else {
+                    None
+                };
                 let mut body = json!({
                     "videoId": video,
                     "contentCheckOk": true,
                     "racyCheckOk": true,
                     "playbackContext": { "contentPlaybackContext": { "html5Preference": "HTML5_PREF_WANTS" } },
                 });
+                if let Some(sts) = sts {
+                    body["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"] = sts.into();
+                }
                 if let Some(t) = tokens.filter(|t| !t.player.is_empty()) {
                     body["playbackContext"]["serviceIntegrityDimensions"] = json!({ "poToken": t.player });
                 }
@@ -332,7 +365,14 @@ impl YouTube {
                     last = Error::Refused(why);
                     continue;
                 }
-                match player_formats(&v).and_then(|f| take(f, c.agent)) {
+                let formats = player_formats(&v).and_then(|f| {
+                    if c.js {
+                        f.into_iter().map(unlocked).collect()
+                    } else {
+                        Ok(f.into_iter().filter(|f| f.sig.is_none()).collect())
+                    }
+                });
+                match formats.and_then(|f| take(f, c.agent)) {
                     Ok(t) => return Ok(t),
                     Err(e) => last = e,
                 }
@@ -528,12 +568,61 @@ pub fn continuation(v: &Value) -> Option<String> {
     }
 }
 
+/// A form-encoded query split into decoded pairs.
+pub fn form(q: &str) -> Vec<(String, String)> {
+    q.split('&').filter_map(|kv| kv.split_once('=')).map(|(k, v)| (unescape(k), unescape(v))).collect()
+}
+
+fn unescape(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'+' => out.push(b' '),
+            b'%' if i + 2 < b.len() => {
+                match u8::from_str_radix(std::str::from_utf8(&b[i + 1..i + 3]).unwrap_or("zz"), 16) {
+                    Ok(v) => {
+                        out.push(v);
+                        i += 2;
+                    }
+                    Err(_) => out.push(b'%'),
+                }
+            }
+            c => out.push(c),
+        }
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// A link with its signature and `n` value unlocked by the player script.
+fn unlocked(f: Format) -> Result<Format> {
+    let n = f.url.split(['?', '&']).find_map(|kv| kv.strip_prefix("n=")).map(unescape);
+    if f.sig.is_none() && n.is_none() {
+        return Ok(f);
+    }
+    let (sig, n_new) = crate::cipher::solve(f.sig.as_ref().map(|(s, _)| s.as_str()), n.as_deref().unwrap_or(""))?;
+    let mut url = f.url.clone();
+    if let (Some(old), false) = (&n, n_new.is_empty()) {
+        url = url.replacen(&format!("n={}", crate::soundcloud::encode(old)), &format!("n={n_new}"), 1);
+        url = url.replacen(&format!("n={old}"), &format!("n={n_new}"), 1);
+    }
+    if let Some((_, sp)) = &f.sig {
+        if sig.is_empty() {
+            return Err(Error::Refused("The player script gave no signature".into()));
+        }
+        url.push_str(&format!("&{sp}={}", crate::soundcloud::encode(&sig)));
+    }
+    Ok(Format { url, sig: None, ..f })
+}
+
 fn rank(mut f: Vec<Format>) -> Vec<Format> {
     f.sort_by(|a, b| b.m4a.cmp(&a.m4a).then(b.bitrate.cmp(&a.bitrate)));
     f
 }
 
-/// Plain audio URLs of a player reply, best first. Ciphered ones are skipped.
+/// Audio URLs of a player reply, best first; scrambled ones carry what unlocks them.
 pub fn player_formats(v: &Value) -> Result<Vec<Format>> {
     let state = v["playabilityStatus"]["status"].as_str().unwrap_or("");
     if state != "OK" {
@@ -546,8 +635,17 @@ pub fn player_formats(v: &Value) -> Result<Vec<Format>> {
         .filter_map(|f| {
             let mime = f["mimeType"].as_str()?;
             mime.starts_with("audio/").then_some(())?;
+            let (url, sig) = match f["url"].as_str() {
+                Some(u) => (u.to_string(), None),
+                None => {
+                    let q = form(f["signatureCipher"].as_str()?);
+                    let get = |k: &str| q.iter().find(|(a, _)| a == k).map(|(_, b)| b.clone());
+                    (get("url")?, Some((get("s")?, get("sp").unwrap_or_else(|| "signature".into()))))
+                }
+            };
             Some(Format {
-                url: f["url"].as_str()?.to_string(),
+                url,
+                sig,
                 m4a: mime.contains("mp4"),
                 bitrate: f["bitrate"].as_u64().unwrap_or(0),
                 size: f["contentLength"].as_str().and_then(|n| n.parse().ok()),
@@ -570,6 +668,7 @@ pub fn piped_formats(v: &Value) -> Vec<Format> {
                     let mime = s["mimeType"].as_str().unwrap_or("").to_lowercase();
                     let codec = s["codec"].as_str().unwrap_or("").to_lowercase();
                     Some(Format {
+                        sig: None,
                         url: s["url"].as_str().filter(|u| !u.is_empty())?.to_string(),
                         m4a: mime.contains("mp4") || codec.starts_with("mp4a"),
                         bitrate: s["bitrate"].as_u64().unwrap_or(0),
@@ -648,8 +747,9 @@ mod tests {
         assert_eq!(yt.lock().rest, REST_FIRST * 2);
         assert_eq!(yt.context(&VR)["client"]["gl"], "GR");
         assert_eq!(yt.context(&VR)["client"]["visitorData"], "vd");
-        assert_eq!(yt.context(&PLAYER_CLIENTS[1])["client"].get("deviceMake"), None);
-        assert_eq!(yt.context(&PLAYER_CLIENTS[0])["client"]["osName"], "visionOS");
+        assert_eq!(yt.context(&PLAYER_CLIENTS[2])["client"].get("deviceMake"), None);
+        assert_eq!(yt.context(&PLAYER_CLIENTS[1])["client"]["osName"], "visionOS");
+        assert_eq!(yt.context(&PLAYER_CLIENTS[0])["client"]["osName"], "Tizen");
         assert!(!valid_id("abc") && valid_id("dQw4w9WgXcQ"));
     }
 
@@ -664,5 +764,18 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let file = got.unwrap();
         assert!(file.extension().is_some(), "{file:?}");
+    }
+
+    #[test]
+    fn reads_scrambled_links() {
+        let v = json!({"playabilityStatus": {"status": "OK"}, "streamingData": {"adaptiveFormats": [
+            {"mimeType": "audio/mp4", "bitrate": 128, "signatureCipher": "s=AB%3DC&sp=sig&url=https%3A%2F%2Fr.example%2Fvideoplayback%3Fn%3Dxyz%26id%3D1"},
+            {"mimeType": "audio/webm", "bitrate": 160, "url": "https://r.example/v?n=q"}
+        ]}});
+        let f = player_formats(&v).unwrap();
+        assert_eq!(f[0].url, "https://r.example/videoplayback?n=xyz&id=1");
+        assert_eq!(f[0].sig, Some(("AB=C".to_string(), "sig".to_string())));
+        assert_eq!(f[1].sig, None);
+        assert_eq!(form("a=1+2&b=%2F%zz"), [("a".into(), "1 2".into()), ("b".into(), "/%zz".into())]);
     }
 }
