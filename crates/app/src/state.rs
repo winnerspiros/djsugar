@@ -132,6 +132,8 @@ pub enum Target {
     ChipSet(u8, u8),
     /// Sets the menu's track to a preparation stage; the lit stage clears it.
     MenuStage(u8),
+    /// The field a playlist's new name is typed in.
+    NameField,
     ToggleColumn(crate::library::Column),
     ResetColumns,
     /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
@@ -178,6 +180,8 @@ pub enum ListOp {
     Down,
     Clear,
     Delete,
+    /// Starts typing a new name in the sidebar.
+    Rename,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -198,6 +202,8 @@ pub const STAGES: [(&str, u32); 3] = [("Inbox", 0x8a8a96), ("In Prep", 0xf5a02a)
 /// The library's filter chips, in order, each a bit of `State::filters`.
 pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
 /// How far a tempo may be from the lead deck's for the Near BPM chip.
+/// The longest name a playlist may have, in characters.
+const NAME_MAX: usize = 48;
 pub const NEAR_BPM: [u8; 5] = [2, 4, 6, 8, 10];
 
 pub fn entry_key(e: &Entry) -> String {
@@ -567,6 +573,9 @@ pub struct State {
     pub min_stars: u8,
     /// The chip whose editor is open.
     pub chip_menu: Option<u8>,
+    /// The playlist being renamed, and the name so far.
+    pub naming: Option<usize>,
+    pub name_buf: String,
     /// The large waveforms' zoom, each step twice as close; 0 is the default.
     pub wave_zoom: i8,
     /// The large waveforms' height, each step a fifth taller; 0 is the default.
@@ -721,6 +730,8 @@ impl State {
             near_bpm: 2,
             min_stars: 1,
             chip_menu: None,
+            naming: None,
+            name_buf: String::new(),
             prefs: None,
             pref_menu: None,
             app_menu: false,
@@ -1150,6 +1161,11 @@ impl State {
             ListOp::Up if n > 0 => self.playlists.swap(n, n - 1),
             ListOp::Down if n + 1 < self.playlists.len() => self.playlists.swap(n, n + 1),
             ListOp::Clear => self.playlists[n].1.clear(),
+            ListOp::Rename => {
+                self.name_buf.clone_from(&self.playlists[n].0);
+                self.naming = Some(n);
+                self.folded &= !(1 << 1);
+            }
             ListOp::Delete => {
                 self.playlists.remove(n);
                 if let Shelf::Playlist(p) = self.shelf {
@@ -1283,7 +1299,7 @@ impl State {
     }
 
     pub fn typing(&self) -> bool {
-        self.search_focus || self.browser.is_some() || self.hub_typing()
+        self.naming.is_some() || self.search_focus || self.browser.is_some() || self.hub_typing()
     }
 
     fn hub_typing(&self) -> bool {
@@ -1291,6 +1307,11 @@ impl State {
     }
 
     pub fn type_text(&mut self, text: &str) {
+        if self.naming.is_some() {
+            let room = NAME_MAX.saturating_sub(self.name_buf.chars().count());
+            self.name_buf.extend(text.chars().filter(|c| !c.is_control()).take(room));
+            return;
+        }
         if self.hub_typing() {
             self.hub.query.push_str(text);
             return;
@@ -1355,13 +1376,13 @@ impl State {
         open
     }
 
-    /// A right click: what holding there would open.
     /// Keeps the side panel and its tab for the next start: 0 is closed, else the tab plus one.
     fn save_panels(&mut self) {
         let v = if self.side_panel { self.side_tab + 1 } else { 0 };
         self.settings.set(crate::settings::Opt::SidePanel, v);
     }
 
+    /// A right click: what holding there would open.
     pub fn context(&mut self, x: f32, y: f32) {
         const CONTEXT: u64 = u64::MAX - 1;
         let target = self.hit(x, y);
@@ -1372,7 +1393,32 @@ impl State {
         self.drags.retain(|d| d.id != CONTEXT);
     }
 
+    /// Ends typing a playlist's name, keeping it unless cancelled or left empty.
+    fn end_naming(&mut self, keep: bool) {
+        let Some(n) = self.naming.take() else { return };
+        let name = std::mem::take(&mut self.name_buf);
+        let name = name.trim();
+        if keep
+            && !name.is_empty()
+            && let Some(l) = self.playlists.get_mut(n)
+        {
+            l.0 = name.to_string();
+            crate::store::save_playlists(&self.playlists);
+        }
+    }
+
     fn key_press(&mut self, key: Key, m: Mods) {
+        if self.naming.is_some() {
+            match key {
+                Key::Enter => self.end_naming(true),
+                Key::Escape => self.end_naming(false),
+                Key::Backspace => {
+                    self.name_buf.pop();
+                }
+                _ => {}
+            }
+            return;
+        }
         if key == Key::Escape && self.dismiss() {
             return;
         }
@@ -1988,6 +2034,9 @@ impl State {
             resume,
             at: std::time::Instant::now(),
         });
+        if self.naming.is_some() && !matches!(target, Some(Target::NameField)) {
+            self.end_naming(true);
+        }
         self.search_focus = target == Some(Target::SearchFocus);
         self.hub.focus = target == Some(Target::HubFocus);
         if let Some(t) = target {
@@ -2148,6 +2197,7 @@ impl State {
                 let name = format!("Playlist {}", self.playlists.len() + 1);
                 self.playlists.push((name, Vec::new()));
                 crate::store::save_playlists(&self.playlists);
+                self.list_op(self.playlists.len() - 1, ListOp::Rename);
             }
             Target::MenuDeck(d) => {
                 if let Some(i) = self.track_menu.take() {

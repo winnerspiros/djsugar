@@ -89,6 +89,10 @@ fn cover(path: &std::path::Path) {
 fn main() {
     let out = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "target/shots".into()));
     std::fs::create_dir_all(&out).expect("output dir");
+    // Saved state goes to a fresh folder, so runs neither read nor change the DJ's own.
+    let data = out.join("data");
+    let _ = std::fs::remove_dir_all(&data);
+    djsugar::set_data_dir(data);
     if std::env::var_os("DJSUGAR_MUSIC").is_none() {
         let music = out.join("music");
         std::fs::create_dir_all(&music).expect("music dir");
@@ -194,6 +198,25 @@ fn main() {
                 }
                 ui.tap("ToggleSide");
                 ui.render(&mut r);
+            }
+            // A new playlist starts named by typing: the name must stick.
+            if ui.tap("NewPlaylist") {
+                ui.render(&mut r);
+                if ui.targets().iter().any(|(t, _)| t == "NameField") {
+                    for _ in 0..12 {
+                        ui.key(Key::Backspace, Mods::default());
+                    }
+                    ui.text("Warm Up");
+                    ui.render(&mut r);
+                    save(&r, &out.join(format!("{name}-naming.png")));
+                    ui.key(Key::Enter, Mods::default());
+                    ui.render(&mut r);
+                    if ui.typing() || ui.targets().iter().any(|(t, _)| t == "NameField") {
+                        faults.push(format!("{name}: Enter did not end naming"));
+                    }
+                } else {
+                    faults.push(format!("{name}: new playlist has no name field"));
+                }
             }
             // Right-click the Near BPM chip: its editor must open and a choice must close it.
             if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Filter(0)") {

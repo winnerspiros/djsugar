@@ -859,6 +859,19 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     if head(p, s, &mut y, "PLAYLISTS", 1) {
         let lists: Vec<(String, usize)> = s.playlists.iter().map(|(n, k)| (n.clone(), k.len())).collect();
         for (n, (name, len)) in lists.iter().enumerate() {
+            if s.naming == Some(n) && y + rh <= bottom {
+                // The name being typed, in a field with a caret.
+                let b = Rect::new(r.x + 6.0, y, r.w - 12.0, rh - 2.0);
+                p.outlined(b.x, b.y, b.w, b.h, 5.0, rgb(0x141417), 1.0, ACCENT);
+                let ink = Style { colour: TEXT, ..ARTIST };
+                let shown = s.name_buf.clone();
+                let tw = p.text_width(ink, &shown).min(b.w - 30.0);
+                p.text_in(b.x + 22.0, b.y + b.h * 0.5 + 4.0, b.w - 30.0, ink, &shown);
+                p.rect(b.x + 23.0 + tw, b.y + 5.0, 1.5, b.h - 10.0, 0.0, ACCENT);
+                hit(s, b, Target::NameField);
+                y += rh;
+                continue;
+            }
             let sh = Shelf::Playlist(n);
             row(p, s, &mut y, (name, Some(*len)), Target::Shelf(sh), lib && s.shelf == sh, None);
         }
@@ -966,6 +979,7 @@ fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::item("Move up", Target::ListOp(n, L::Up)).enabled(n > 0),
         Line::item("Move down", Target::ListOp(n, L::Down)).enabled(n < last),
         Line::Rule,
+        Line::item("Rename", Target::ListOp(n, L::Rename)),
         Line::item("Clear", Target::ListOp(n, L::Clear)).enabled(count > 0),
         Line::item("Delete playlist", Target::ListOp(n, L::Delete)),
     ];
