@@ -18,6 +18,8 @@ pub struct Hit {
     pub title: String,
     pub artist: String,
     pub seconds: u32,
+    /// The artwork's address, when the service has one.
+    pub art: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

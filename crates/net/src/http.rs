@@ -215,3 +215,23 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// Saves the artwork at `url` beside the audio file `track`, named after it, so it is found as its cover.
+pub fn save_art(url: &str, track: &std::path::Path) -> Result<()> {
+    let to = track.with_extension("jpg");
+    if url.is_empty() || to.is_file() {
+        return Ok(());
+    }
+    let mut resp = agent()
+        .get(url)
+        .config()
+        .timeout_global(Some(std::time::Duration::from_secs(15)))
+        .build()
+        .call()
+        .map_err(net)?;
+    if resp.status().as_u16() != 200 {
+        return Err(Error::Status(resp.status().as_u16()));
+    }
+    let bytes = resp.body_mut().with_config().limit(8 << 20).read_to_vec().map_err(net)?;
+    std::fs::write(&to, bytes).map_err(net)
+}

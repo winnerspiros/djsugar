@@ -193,7 +193,7 @@ impl Hub {
         if self.fetching.iter().any(|(id, ..)| *id == h.id) {
             return;
         }
-        let id = h.id.clone();
+        let (id, art) = (h.id.clone(), h.art.clone());
         self.fetching.push((id.clone(), deck, 0.0));
         self.status = format!("Getting \"{}\" for deck {}", h.title, deck + 1);
         let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
@@ -210,6 +210,9 @@ impl Hub {
                 }
             };
             let r = c.fetch(sv, &id, &dir, &progress);
+            if let Ok(path) = &r {
+                let _ = sugar_net::http::save_art(&art, path);
+            }
             let _ = tx.send(match r {
                 Ok(path) => Reply::Ready(id, path, deck),
                 Err(e) => Reply::Failed(Some(id), e.to_string()),

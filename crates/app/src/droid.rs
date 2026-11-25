@@ -256,6 +256,7 @@ pub fn run(app: AndroidApp, read: Reader) {
             match event {
                 MainEvent::InitWindow { .. } => {
                     crate::stage("resumed");
+                    crate::android::immersive(&app);
                     shell.open();
                 }
                 MainEvent::TerminateWindow { .. } => {
@@ -270,6 +271,7 @@ pub fn run(app: AndroidApp, read: Reader) {
                     shell.fit();
                 }
                 MainEvent::RedrawNeeded { .. } => shell.dirty = true,
+                MainEvent::GainedFocus => crate::android::immersive(&app),
                 MainEvent::LostFocus => {
                     shell.ui.release_all();
                     shell.dirty = true;
@@ -279,6 +281,10 @@ pub fn run(app: AndroidApp, read: Reader) {
             }
         });
         if quit {
+            if crate::android::QUITTING.load(std::sync::atomic::Ordering::Relaxed) {
+                // Nothing keeps playing after Quit: the audio and the download threads end with the process.
+                std::process::exit(0);
+            }
             return;
         }
         if let Ok(mut events) = app.input_events_iter() {

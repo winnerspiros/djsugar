@@ -113,6 +113,11 @@ fn hit(t: &Value) -> Option<Hit> {
         title: t["title"].as_str()?.to_string(),
         artist: t["user"]["name"].as_str().unwrap_or("").to_string(),
         seconds: t["duration"].as_u64().unwrap_or(0) as u32,
+        art: ["480x480", "1000x1000", "150x150"]
+            .iter()
+            .find_map(|k| t["artwork"][k].as_str())
+            .unwrap_or_default()
+            .to_string(),
     })
 }
 
@@ -126,7 +131,10 @@ mod tests {
         let v = json!({"data": ["https://a.example/", "http://insecure", 3, "https://b.example"]});
         assert_eq!(servers(&v), ["https://a.example", "https://b.example"]);
         let t = json!({"id": "x1", "title": "T", "user": {"name": "U"}, "duration": 90, "is_streamable": true});
-        assert_eq!(hit(&t), Some(Hit { id: "x1".into(), title: "T".into(), artist: "U".into(), seconds: 90 }));
+        assert_eq!(
+            hit(&t).map(|h| (h.id, h.title, h.artist, h.seconds)),
+            Some(("x1".into(), "T".into(), "U".into(), 90))
+        );
         assert_eq!(hit(&json!({"id": "x", "title": "T", "is_streamable": false})), None);
     }
 

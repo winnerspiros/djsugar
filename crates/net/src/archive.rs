@@ -96,7 +96,14 @@ fn text(v: &Value) -> String {
 fn hit(d: &Value) -> Option<Hit> {
     let id = d["identifier"].as_str()?.to_string();
     let title = text(&d["title"]);
-    Some(Hit { title: if title.is_empty() { id.clone() } else { title }, artist: text(&d["creator"]), seconds: 0, id })
+    let art = format!("https://archive.org/services/img/{id}");
+    Some(Hit {
+        title: if title.is_empty() { id.clone() } else { title },
+        artist: text(&d["creator"]),
+        seconds: 0,
+        id,
+        art,
+    })
 }
 
 #[cfg(test)]
@@ -115,7 +122,10 @@ mod tests {
         assert_eq!(pick(files.as_array().unwrap()), Some(("d/a.mp3".into(), "mp3", Some(200))));
         assert_eq!(pick(&[json!({"name": "x.txt", "format": "Text"})]), None);
         let d = json!({"identifier": "id1", "title": "T", "creator": ["A", "B"]});
-        assert_eq!(hit(&d), Some(Hit { id: "id1".into(), title: "T".into(), artist: "A, B".into(), seconds: 0 }));
+        assert_eq!(
+            hit(&d).map(|h| (h.id, h.title, h.artist, h.art)),
+            Some(("id1".into(), "T".into(), "A, B".into(), "https://archive.org/services/img/id1".into()))
+        );
     }
 
     #[test]

@@ -536,7 +536,13 @@ pub fn parse_search(v: &Value, cap: usize) -> Vec<Hit> {
                         && !title.is_empty()
                         && seen.insert(id.to_string())
                     {
-                        out.push(Hit { id: id.to_string(), title, artist, seconds });
+                        out.push(Hit {
+                            id: id.to_string(),
+                            title,
+                            artist,
+                            seconds,
+                            art: format!("https://i.ytimg.com/vi/{id}/hqdefault.jpg"),
+                        });
                     }
                     return;
                 }

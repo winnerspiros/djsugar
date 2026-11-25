@@ -217,7 +217,12 @@ fn hit(t: &Value) -> Option<Hit> {
         .unwrap_or("")
         .to_string();
     let ms = t["full_duration"].as_u64().or_else(|| t["duration"].as_u64()).unwrap_or(0);
-    Some(Hit { id: id.to_string(), title, artist, seconds: (ms / 1000) as u32 })
+    let art = t["artwork_url"]
+        .as_str()
+        .or_else(|| t["user"]["avatar_url"].as_str())
+        .map(|u| u.replace("-large.", "-t500x500."))
+        .unwrap_or_default();
+    Some(Hit { id: id.to_string(), title, artist, seconds: (ms / 1000) as u32, art })
 }
 
 pub(crate) fn encode(s: &str) -> String {
@@ -257,7 +262,10 @@ mod tests {
     fn hits_name_the_artist_first() {
         let t = json!({"id": 7, "title": "T", "duration": 61_500,
             "user": {"username": "up"}, "publisher_metadata": {"artist": "Art"}});
-        assert_eq!(hit(&t), Some(Hit { id: "7".into(), title: "T".into(), artist: "Art".into(), seconds: 61 }));
+        assert_eq!(
+            hit(&t).map(|h| (h.id, h.title, h.artist, h.seconds)),
+            Some(("7".into(), "T".into(), "Art".into(), 61))
+        );
         assert_eq!(encode("a b&c"), "a%20b%26c");
     }
 

@@ -39,6 +39,8 @@ impl Ui {
         stage("audio open");
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
+        // The YouTube player script takes seconds to load; have it ready before the first download.
+        std::thread::spawn(|| sugar_net::cipher::load().ok());
         stage("state ready");
         Self {
             painter: Painter::new(Fonts::new(FONT)),
@@ -481,15 +483,76 @@ pub(crate) mod android {
         })
     }
 
-    /// Closes the activity, as Ctrl+Q asks.
+    /// Hides the status and navigation bars; a swipe from the edge shows them for a moment.
+    #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
+    pub(crate) fn immersive(app: &AndroidApp) {
+        use jni::objects::{JObject, JValue};
+        use jni::{jni_sig, jni_str};
+        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
+        let _ = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+            let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
+            let sdk =
+                env.get_static_field(jni_str!("android/os/Build$VERSION"), jni_str!("SDK_INT"), jni_sig!("I"))?.i()?;
+            let window =
+                env.call_method(&activity, jni_str!("getWindow"), jni_sig!("()Landroid/view/Window;"), &[])?.l()?;
+            let out = if sdk >= 30 {
+                (|| {
+                    let c = env
+                        .call_method(
+                            &window,
+                            jni_str!("getInsetsController"),
+                            jni_sig!("()Landroid/view/WindowInsetsController;"),
+                            &[],
+                        )?
+                        .l()?;
+                    let bars = env
+                        .call_static_method(
+                            jni_str!("android/view/WindowInsets$Type"),
+                            jni_str!("systemBars"),
+                            jni_sig!("()I"),
+                            &[],
+                        )?
+                        .i()?;
+                    // Bars shown by a swipe hide again by themselves.
+                    env.call_method(&c, jni_str!("setSystemBarsBehavior"), jni_sig!("(I)V"), &[JValue::Int(2)])?;
+                    env.call_method(&c, jni_str!("hide"), jni_sig!("(I)V"), &[JValue::Int(bars)])?;
+                    Ok(())
+                })()
+            } else {
+                (|| {
+                    let decor = env
+                        .call_method(&window, jni_str!("getDecorView"), jni_sig!("()Landroid/view/View;"), &[])?
+                        .l()?;
+                    // Immersive sticky, hide navigation and status, laid out under both.
+                    env.call_method(
+                        &decor,
+                        jni_str!("setSystemUiVisibility"),
+                        jni_sig!("(I)V"),
+                        &[JValue::Int(0x1706)],
+                    )?;
+                    Ok(())
+                })()
+            };
+            if out.is_err() {
+                let _ = env.exception_clear();
+            }
+            out
+        });
+    }
+
+    /// The DJ asked to quit, so the window's end is the app's end.
+    pub(crate) static QUITTING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+    /// Closes the activity and its task, as Quit and Ctrl+Q ask; the process ends once it is gone.
     #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
     pub(crate) fn finish(app: &AndroidApp) {
+        QUITTING.store(true, std::sync::atomic::Ordering::Relaxed);
         use jni::objects::JObject;
         use jni::{jni_sig, jni_str};
         let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
         let _ = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
             let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
-            env.call_method(&activity, jni_str!("finish"), jni_sig!("()V"), &[])?;
+            env.call_method(&activity, jni_str!("finishAndRemoveTask"), jni_sig!("()V"), &[])?;
             Ok(())
         });
     }
