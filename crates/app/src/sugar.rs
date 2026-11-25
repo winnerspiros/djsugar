@@ -7,9 +7,11 @@ use sugar_engine::station::Scene;
 use crate::theme::{self, Line, Mark};
 
 const INK: u32 = rgb(0x000000);
-const SURFACE: u32 = rgb(0x0d0e13);
+/// Behind the library and its side lists.
+const BROWSER: u32 = rgb(0x101112);
+const SURFACE: u32 = rgb(0x161618);
 const DEEP: u32 = rgb(0x0c0c0c);
-const EDGE: u32 = rgb(0x2e2e2e);
+const EDGE: u32 = rgb(0x28282b);
 const RAISED: u32 = rgb(0x2b2b2b);
 const ACCENT: u32 = rgb(0xff4fa8);
 const TEXT: u32 = rgb(0xe8e8e8);
@@ -42,7 +44,7 @@ const PAD_TEXT: Style = Style::new(10.0, Weight::Bold, TEXT);
 const TOOLBAR: f32 = 36.0;
 const ROW: f32 = 44.0;
 /// The effects bar, tall enough for its knobs.
-const FX_ROW: f32 = 56.0;
+const FX_ROW: f32 = 68.0;
 
 pub const fn fade(c: u32, a: u32) -> u32 {
     c & 0x00ff_ffff | a << 24
@@ -183,8 +185,8 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
             p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
             y += 1.0;
         }
-        let dh = crate::classic::height((bottom - y) * 0.6).max(150.0).min(bottom - y);
-        crate::classic::dj(p, s, Rect::new(r.x, y, r.w, dh), false);
+        let dh = crate::sugardeck::HEIGHT.min((bottom - y) * 0.6).max(190.0).min(bottom - y);
+        crate::sugardeck::row(p, s, Rect::new(r.x, y, r.w, dh));
         y += dh;
         if s.show_fx && bottom - y > FX_ROW + 60.0 {
             p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
@@ -413,7 +415,7 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
 fn search_box(p: &mut Painter, s: &mut State, r: Rect) {
     let focus = s.search_focus || !s.query.is_empty();
     let edge = if focus { ACCENT } else { theme::BORDER };
-    p.outlined(r.x, r.y, r.w, r.h, r.h * 0.5, theme::WELL, 1.0, edge);
+    p.outlined(r.x, r.y, r.w, r.h, 6.0, theme::WELL, 1.0, edge);
     let (gx, gy) = (r.x + 15.0, r.y + r.h * 0.5 - 1.0);
     let ink = if focus { ACCENT } else { theme::DIM };
     p.outlined(gx - 4.5, gy - 4.5, 9.0, 9.0, 4.5, 0, 1.5, ink);
@@ -433,9 +435,15 @@ fn search_box(p: &mut Painter, s: &mut State, r: Rect) {
 
 /// A rounded top bar button, outlined in its colour while on.
 fn pill(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
-    let fill = if s.pressed(target) { theme::PRESSED } else { theme::RAISED };
-    p.outlined(r.x, r.y, r.w, r.h, 10.0, fill, 1.0, if on { colour } else { theme::BORDER });
-    let ink = Style { colour: if on { colour } else { TEXT }, ..TAB };
+    let fill = if s.pressed(target) {
+        theme::PRESSED
+    } else if on {
+        fade(colour, 0x24)
+    } else {
+        theme::RAISED
+    };
+    p.outlined(r.x, r.y, r.w, r.h, 6.0, fill, 1.0, if on { colour } else { theme::RAISED });
+    let ink = Style { colour: if on { colour } else { theme::DIM }, ..TAB };
     p.text(r.x + (r.w - p.text_width(ink, label)) * 0.5, r.y + r.h * 0.5 + 4.0, ink, label);
     hit(s, r, target);
 }
@@ -448,53 +456,53 @@ pub const FOOTER: f32 = 36.0;
 /// The top bar on a wide window: logo, menu and the three modes on the left, the
 /// search in the middle, and the panel switches, recorder and master level on the right.
 fn top_bar(p: &mut Painter, s: &mut State, r: Rect) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
+    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     p.rect(r.x, r.y + r.h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
     let cy = r.y + r.h * 0.5;
     let mut x = logo(p, r.x + 14.0, cy) + 14.0;
-    let mb = Rect::new(x, r.y + 8.0, 36.0, 36.0);
+    let mb = Rect::new(x, r.y + 9.0, 34.0, 34.0);
     let fill = if s.app_menu || s.pressed(Target::AppMenu) { theme::PRESSED } else { theme::RAISED };
-    p.outlined(mb.x, mb.y, mb.w, mb.h, 10.0, fill, 1.0, theme::BORDER);
+    p.rect(mb.x, mb.y, mb.w, mb.h, 6.0, fill);
     for i in 0..3 {
-        p.rect(mb.x + 11.0, cy - 6.0 + i as f32 * 5.5, 14.0, 1.6, 0.8, TEXT);
+        p.rect(mb.x + 10.0, cy - 6.0 + i as f32 * 5.5, 14.0, 1.6, 0.8, TEXT);
     }
     hit(s, mb, Target::AppMenu);
     x += mb.w + 10.0;
     // The modes: performing on the decks, preparing tracks, or just listening through the library.
     let modes = [("Perform", View::Dj), ("Prepare", View::Ctl), ("Listen", View::Lib)];
     let tw = 78.0;
-    p.outlined(x, r.y + 8.0, tw * 3.0, 36.0, 10.0, theme::WELL, 1.0, theme::BORDER);
+    p.outlined(x, r.y + 10.0, tw * 3.0, 32.0, 16.0, theme::CONTROL, 1.0, theme::BORDER);
     for (n, (label, v)) in modes.into_iter().enumerate() {
-        let b = Rect::new(x + n as f32 * tw, r.y + 8.0, tw, 36.0);
+        let b = Rect::new(x + n as f32 * tw, r.y + 10.0, tw, 32.0);
         if s.view == v {
-            p.outlined(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 8.0, theme::RAISED, 1.0, theme::BORDER);
+            p.rect(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 13.0, ACCENT);
         } else if s.pressed(Target::View(v)) {
-            p.rect(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 8.0, theme::PRESSED);
+            p.rect(b.x + 3.0, b.y + 3.0, b.w - 6.0, b.h - 6.0, 13.0, theme::PRESSED);
         }
-        let ink = Style { colour: if s.view == v { TEXT } else { theme::DIM }, ..TAB };
+        let ink = Style { colour: if s.view == v { rgb(0x151329) } else { theme::DIM }, ..TAB };
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, cy + 4.0, ink, label);
         hit(s, b, Target::View(v));
     }
     let left = x + tw * 3.0 + 16.0;
     // From the right: settings, the master level, then the switches while they fit.
-    let g = Rect::new(r.x + r.w - 44.0, r.y + 8.0, 36.0, 36.0);
+    let g = Rect::new(r.x + r.w - 42.0, r.y + 9.0, 34.0, 34.0);
     let fill = if s.pressed(Target::Prefs(0)) { theme::PRESSED } else { theme::RAISED };
-    p.outlined(g.x, g.y, g.w, g.h, 10.0, fill, 1.0, theme::BORDER);
+    p.rect(g.x, g.y, g.w, g.h, 6.0, fill);
     let (gx, gy) = (g.x + g.w * 0.5, cy);
     for k in 0..6 {
         let (sn, cs) = (k as f32 * std::f32::consts::FRAC_PI_3).sin_cos();
         p.line((gx + cs * 5.0, gy + sn * 5.0), (gx + cs * 8.0, gy + sn * 8.0), 2.4, theme::DIM);
     }
-    p.outlined(gx - 5.5, gy - 5.5, 11.0, 11.0, 5.5, theme::RAISED, 1.8, theme::DIM);
+    p.outlined(gx - 5.5, gy - 5.5, 11.0, 11.0, 5.5, fill, 1.8, theme::DIM);
     hit(s, g, Target::Prefs(0));
     let search_min = 220.0;
     let mut right = g.x - 8.0;
     let mw = 190.0;
     if right - mw > left + search_min {
         right -= mw;
-        let m = Rect::new(right, r.y + 8.0, mw, 36.0);
+        let m = Rect::new(right, r.y + 9.0, mw, 34.0);
         let fill = if s.pressed(Target::Prefs(2)) { theme::PRESSED } else { theme::RAISED };
-        p.outlined(m.x, m.y, m.w, m.h, 10.0, fill, 1.0, theme::BORDER);
+        p.rect(m.x, m.y, m.w, m.h, 6.0, fill);
         p.text(m.x + 12.0, cy + 4.0, Style { colour: theme::DIM, ..SMALL }, "MASTER");
         let vx = m.x + 60.0;
         let vw = m.w - 72.0;
@@ -522,7 +530,7 @@ fn top_bar(p: &mut Painter, s: &mut State, r: Rect) {
         (rec.as_deref().unwrap_or("REC"), s.recorder.is_some(), RED, Target::Record),
         ("Automix", s.auto.is_some(), ACCENT, Target::AutoDj),
         ("Samplers", s.show_samplers, ACCENT, Target::ToggleSamplers),
-        ("FX", s.show_fx, theme::LILAC, Target::ToggleFx),
+        ("FX", s.show_fx, theme::ACCENT, Target::ToggleFx),
         ("Waveforms", s.show_waves, ACCENT, Target::ToggleWaves),
     ];
     for (label, on, colour, t) in items {
@@ -531,7 +539,7 @@ fn top_bar(p: &mut Painter, s: &mut State, r: Rect) {
             break;
         }
         right -= bw;
-        pill(p, s, Rect::new(right, r.y + 8.0, bw, 36.0), label, on, colour, t);
+        pill(p, s, Rect::new(right, r.y + 9.0, bw, 34.0), label, on, colour, t);
         right -= 8.0;
     }
     // The search, centred on the window while there is room, else in the gap.
@@ -548,7 +556,7 @@ fn footer(p: &mut Painter, s: &mut State, r: Rect) {
     let b = Rect::new(r.x + 8.0, r.y + 5.0, 150.0, r.h - 10.0);
     let label = if s.lib_expanded { "Collapse Browser" } else { "Expand Browser" };
     pill(p, s, b, label, s.lib_expanded, ACCENT, Target::ToggleExpand);
-    let busy = s.status.clone().unwrap_or_else(|| format!("{} tracks", s.shown.len()));
+    let busy = s.status.clone().unwrap_or_else(|| tracks(s.shown.len()));
     p.text_in(b.x + b.w + 16.0, r.y + r.h * 0.5 + 4.0, r.w - 360.0, Style { colour: theme::DIM, ..ARTIST }, &busy);
     let b = Rect::new(r.x + r.w - 158.0, r.y + 5.0, 150.0, r.h - 10.0);
     pill(p, s, b, "Side Panel", s.side_panel, ACCENT, Target::ToggleSide);
@@ -557,42 +565,84 @@ fn footer(p: &mut Painter, s: &mut State, r: Rect) {
 /// Each deck's effect unit: three slots in series, each its effect's name (tap for the list),
 /// an on button and its knob, then the unit's dry/wet mix.
 fn effects(p: &mut Painter, s: &mut State, r: Rect) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    p.rect(r.x, r.y, r.w, r.h, 0.0, theme::PANEL);
     let half = r.w * 0.5;
-    let kw = (r.h - 4.0).min(40.0);
+    let top = (r.h * 0.46).round();
+    let kinds = djsugar_engine::AVAILABLE_EFFECTS.len() as u8 + 1;
+    let name_ink = Style::new(12.0, Weight::Regular, theme::DIM);
     for d in 0..2 {
-        let x0 = r.x + d as f32 * half + 8.0;
-        p.text(x0, r.y + r.h * 0.5 + 4.0, Style { colour: DECK[d], ..TAB }, ["FX 1", "FX 2"][d]);
-        let left = x0 + 40.0;
-        let right = r.x + (d + 1) as f32 * half - 8.0 - kw;
-        let sw = ((right - left) / 3.0 - 6.0).max(40.0);
+        let x0 = r.x + d as f32 * half;
+        let mix_w = 84.0_f32.min(half * 0.2);
+        let cell = ((half - mix_w) / 3.0).floor();
         let (slots, mix) = s.fx[d];
         for (i, &(kind, on, meta)) in slots.iter().enumerate() {
-            let x = left + i as f32 * (sw + 6.0);
+            let c = Rect::new(x0 + i as f32 * cell, r.y, cell, r.h);
+            p.rect(c.x + c.w - 1.0, c.y, 1.0, c.h, 0.0, theme::SEPARATOR);
+            // The effect before and the one after, either side of the name and its list.
+            let step = 26.0;
+            for (side, by) in [(0.0, kinds - 1), (1.0, 1)] {
+                let b = Rect::new(c.x + 4.0 + side * (c.w - step - 9.0), c.y + 2.0, step, top - 2.0);
+                let t = Target::FxPick(d, i, (kind + by) % kinds);
+                if s.pressed(t) {
+                    p.rect(b.x, b.y + 2.0, b.w, b.h - 4.0, 5.0, theme::PRESSED);
+                }
+                let (ax, ay, k) = (b.x + b.w * 0.5, b.y + b.h * 0.5, if side == 0.0 { 1.0 } else { -1.0 });
+                p.line((ax + 2.0 * k, ay - 4.0), (ax - 2.0 * k, ay), 1.4, theme::DIM);
+                p.line((ax - 2.0 * k, ay), (ax + 2.0 * k, ay + 4.0), 1.4, theme::DIM);
+                hit(s, b, t);
+            }
             let name = djsugar_engine::effect_name(f64::from(kind));
-            let name = if name.is_empty() { "Empty" } else { name };
-            let bw = (sw - kw - 4.0).max(24.0);
-            let top = Rect::new(x, r.y + 5.0, bw, r.h * 0.5 - 6.0);
-            let fill = if s.pressed(Target::FxName(d, i)) { theme::PRESSED } else { theme::CONTROL };
-            p.rect(top.x, top.y, top.w, top.h, 4.0, fill);
-            p.text_in(
-                top.x + 6.0,
-                top.y + top.h * 0.5 + 4.0,
-                top.w - 18.0,
-                Style { colour: if kind > 0 { TEXT } else { GREY }, ..SMALL },
-                name,
-            );
-            let (ax, ay) = (top.x + top.w - 8.0, top.y + top.h * 0.5);
-            p.line((ax - 3.0, ay - 1.5), (ax, ay + 1.5), 1.3, GREY);
-            p.line((ax, ay + 1.5), (ax + 3.0, ay - 1.5), 1.3, GREY);
-            hit(s, top, Target::FxName(d, i));
-            let low = Rect::new(x, r.y + r.h * 0.5 + 1.0, bw, r.h * 0.5 - 6.0);
-            button(p, s, low, if on { "ON" } else { "OFF" }, on && kind > 0, DECK[d], Target::FxOn(d, i));
-            knob(p, s, Rect::new(x + bw + 4.0, r.y + 2.0, kw, r.h - 4.0), meta, DECK[d], "", Target::FxMeta(d, i));
+            let name = if name.is_empty() { "No effect" } else { name };
+            let nb = Rect::new(c.x + 4.0 + step, c.y + 2.0, c.w - 2.0 * step - 9.0, top - 2.0);
+            if s.pressed(Target::FxName(d, i)) || s.fx_menu == Some((d, i)) {
+                p.rect(nb.x, nb.y + 2.0, nb.w, nb.h - 4.0, 5.0, theme::PRESSED);
+            }
+            let ink = Style { colour: if kind > 0 { TEXT } else { theme::DIM }, ..name_ink };
+            let tw = p.text_width(ink, name).min(nb.w - 18.0);
+            let tx = nb.x + (nb.w - tw - 12.0) * 0.5;
+            p.text_in(tx, nb.y + nb.h * 0.5 + 4.0, nb.w - 18.0, ink, name);
+            let (ax, ay) = (tx + tw + 8.0, nb.y + nb.h * 0.5);
+            p.line((ax - 3.0, ay - 1.5), (ax, ay + 1.5), 1.3, theme::DIM);
+            p.line((ax, ay + 1.5), (ax + 3.0, ay - 1.5), 1.3, theme::DIM);
+            hit(s, nb, Target::FxName(d, i));
+            let low = Rect::new(c.x, c.y + top, c.w - 1.0, c.h - top);
+            let ob = Rect::new(low.x + 8.0, low.y + (low.h - 22.0) * 0.5 - 1.0, 36.0, 22.0);
+            let lit = on && kind > 0;
+            let fill = if lit {
+                DECK[d]
+            } else if s.pressed(Target::FxOn(d, i)) {
+                theme::PRESSED
+            } else {
+                theme::PANEL
+            };
+            p.outlined(ob.x, ob.y, ob.w, ob.h, 5.0, fill, 1.0, if lit { DECK[d] } else { theme::BORDER });
+            let ink = Style { colour: if lit { rgb(0x151329) } else { theme::DIM }, ..TAB };
+            p.text(ob.x + (ob.w - p.text_width(ink, "ON")) * 0.5, ob.y + 15.0, ink, "ON");
+            hit(s, ob, Target::FxOn(d, i));
+            let kw = (low.h - 8.0).min(30.0);
+            let kb = Rect::new(low.x + low.w - kw - 26.0, low.y + (low.h - kw) * 0.5 + 1.0, kw, kw + 10.0);
+            let letter = Style { colour: theme::DIM, ..SMALL };
+            p.text(kb.x - 12.0, kb.y + kw * 0.5 + 3.0, letter, "D");
+            p.text(kb.x + kw + 5.0, kb.y + kw * 0.5 + 3.0, letter, "W");
+            knob(p, s, kb, meta, DECK[d], "", Target::FxMeta(d, i));
         }
-        knob(p, s, Rect::new(right, r.y + 2.0, kw, r.h - 4.0), mix, ACCENT, "MIX", Target::FxMix(d));
+        let m = Rect::new(x0 + 3.0 * cell, r.y, half - 3.0 * cell, r.h);
+        let label = Style { colour: DECK[d], ..SMALL };
+        let text = ["FX 1 MIX", "FX 2 MIX"][d];
+        p.text(m.x + (m.w - p.text_width(label, text)) * 0.5, m.y + top * 0.5 + 4.0, label, text);
+        let kw = (m.h - top - 8.0).min(30.0);
+        knob(
+            p,
+            s,
+            Rect::new(m.x + (m.w - kw) * 0.5, m.y + top + (m.h - top - kw) * 0.5 + 1.0, kw, kw + 10.0),
+            mix,
+            DECK[d],
+            "",
+            Target::FxMix(d),
+        );
     }
-    p.rect(r.x + half, r.y + 6.0, 1.0, r.h - 12.0, 0.0, EDGE);
+    p.rect(r.x, r.y + top, r.w, 1.0, 0.0, theme::SEPARATOR);
+    p.rect(r.x + half - 1.0, r.y, 1.0, r.h, 0.0, theme::BORDER);
 }
 
 /// The effects a slot can load, the loaded one ticked.
@@ -808,7 +858,7 @@ fn mmss(secs: f32) -> String {
 /// section that folds away under its heading.
 fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::state::Shelf;
-    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    p.rect(r.x, r.y, r.w, r.h, 0.0, BROWSER);
     p.rect(r.x + r.w - 1.0, r.y, 1.0, r.h, 0.0, EDGE);
     let rh = 26.0;
     let bottom = r.y + r.h;
@@ -825,11 +875,10 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
             return;
         }
         let b = Rect::new(r.x + 6.0, *y, r.w - 12.0, rh - 2.0);
-        if on || s.pressed(t) {
-            p.rect(b.x, b.y, b.w, b.h, 5.0, fade(ACCENT, if on { 0x30 } else { 0x18 }));
-        }
         if on {
-            p.rect(b.x, b.y + 4.0, 3.0, b.h - 8.0, 1.5, ACCENT);
+            p.outlined(b.x, b.y, b.w, b.h, b.h * 0.5, fade(ACCENT, 0x30), 1.0, fade(ACCENT, 0xb0));
+        } else if s.pressed(t) {
+            p.rect(b.x, b.y, b.w, b.h, b.h * 0.5, fade(ACCENT, 0x18));
         }
         let mut tx = b.x + 22.0;
         if let Some(c) = tint {
@@ -979,7 +1028,7 @@ fn tag_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let screen = Rect::new(0.0, 0.0, w, h);
     hit(s, screen, Target::MenuClose);
     let lines = [
-        Line::item(name, Target::MenuBody).enabled(false).hint(format!("{count} tracks")),
+        Line::item(name, Target::MenuBody).enabled(false).hint(tracks(count)),
         Line::Rule,
         Line::item("Rename", Target::RenameTag(n)),
         Line::item("Delete tag", Target::DeleteTag(n)),
@@ -1044,7 +1093,7 @@ fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     hit(s, screen, Target::MenuClose);
     let last = s.playlists.len() - 1;
     let lines = [
-        Line::item(name, Target::MenuBody).enabled(false).hint(format!("{count} tracks")),
+        Line::item(name, Target::MenuBody).enabled(false).hint(tracks(count)),
         Line::Rule,
         Line::item("Load first on deck 1", Target::ListOp(n, L::Load(0))).enabled(count > 0),
         Line::item("Load first on deck 2", Target::ListOp(n, L::Load(1))).enabled(count > 0),
@@ -1275,7 +1324,7 @@ pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
 
 fn table(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::library::Column as C;
-    p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
+    p.rect(r.x, r.y, r.w, r.h, 0.0, BROWSER);
     let r = if r.h > 200.0 { chips(p, s, r) } else { r };
     let bar = 40.0;
     let list = Rect::new(r.x, r.y, r.w, r.h - bar);
@@ -1351,7 +1400,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         } else if let Some(d) = deck {
             p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(1)], 0x50));
         } else if n % 2 == 1 {
-            p.rect(r.x + 4.0, y, r.w - 8.0, row, 0.0, rgb(0x121215));
+            p.rect(r.x + 4.0, y, r.w - 8.0, row, 0.0, rgb(0x161819));
         }
         let m = s.meta.get(i as usize).copied().flatten();
         let base = y + row - 6.0;
@@ -1383,7 +1432,13 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
                 C::Rating => {
                     let stars = s.store.get(&crate::state::entry_key(e)).map_or(0, |v| v.rating);
                     for k in 0..5u8 {
-                        let c = if k < stars { rgb(0xffd60a) } else { rgb(0x5a5a5e) };
+                        let c = if k < stars {
+                            rgb(0xffd60a)
+                        } else if picked {
+                            fade(TEXT, 0x70)
+                        } else {
+                            rgb(0x5a5a5e)
+                        };
                         theme::star(p, (cx + 5.0 + f32::from(k) * 12.0, y + row * 0.5), 4.5, c);
                     }
                     0.0
@@ -1395,7 +1450,8 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         p.text(r.x + 12.0, r.y + 52.0, ARTIST, "No matches");
     }
     let y = r.y + r.h - bar;
-    p.rect(r.x, y, r.w, bar, 0.0, rgb(0x0c0c0c));
+    p.rect(r.x, y, r.w, bar, 0.0, theme::PANEL);
+    p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
     let Some(i) = s.selected else {
         p.text(r.x + 12.0, y + 25.0, Style { colour: GREY, ..TITLE }, "Select a track to load");
         return;
@@ -1928,4 +1984,9 @@ fn knob(p: &mut Painter, s: &mut State, r: Rect, v: f32, colour: u32, label: &st
     let lw = p.text_width(SMALL, label);
     p.text(r.x + (r.w - lw) * 0.5, r.y + k + 9.0, SMALL, label);
     hit(s, r, target);
+}
+
+/// A count of tracks in words.
+fn tracks(n: usize) -> String {
+    if n == 1 { "1 track".to_string() } else { format!("{n} tracks") }
 }

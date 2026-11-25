@@ -7,18 +7,18 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 use crate::state::{State, Target};
 use crate::sugar::{fade, hit};
 
-pub const BACKDROP: u32 = rgb(0x0b0b0d);
-pub const PANEL: u32 = rgb(0x17171a);
-pub const RAISED: u32 = rgb(0x212125);
-pub const CONTROL: u32 = rgb(0x1d1d21);
-pub const PRESSED: u32 = rgb(0x2e2e33);
-pub const BORDER: u32 = rgb(0x2f2f35);
-pub const SEPARATOR: u32 = rgb(0x26262b);
-pub const WELL: u32 = rgb(0x08080a);
-pub const TEXT: u32 = rgb(0xf0f0f4);
-pub const DIM: u32 = rgb(0x8b8b93);
+pub const BACKDROP: u32 = rgb(0x0e0e10);
+pub const PANEL: u32 = rgb(0x1a1a1c);
+pub const RAISED: u32 = rgb(0x232326);
+pub const CONTROL: u32 = rgb(0x161618);
+pub const PRESSED: u32 = rgb(0x2c2c2f);
+pub const BORDER: u32 = rgb(0x353538);
+pub const SEPARATOR: u32 = rgb(0x28282b);
+pub const WELL: u32 = rgb(0x0d0d0e);
+pub const TEXT: u32 = rgb(0xf2f2f7);
+pub const DIM: u32 = rgb(0x8e8e93);
 pub const FAINT: u32 = rgb(0x55555c);
-pub const LILAC: u32 = rgb(0xb69cff);
+pub const ACCENT: u32 = rgb(0xff4fa8);
 
 pub fn style(px: f32, weight: Weight, colour: u32) -> Style {
     Style::new(px.round().max(7.0), weight, colour)

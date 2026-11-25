@@ -111,7 +111,7 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         let st = Style::new(
             14.0,
             if on { Weight::Semibold } else { Weight::Regular },
-            if on { theme::LILAC } else { theme::TEXT },
+            if on { theme::ACCENT } else { theme::TEXT },
         );
         p.text_in(b.x + 10.0, b.y + 23.0, b.w - 16.0, st, name);
         hit(s, b, t);
@@ -212,7 +212,7 @@ fn opt_row(p: &mut Painter, s: &mut State, r: Rect, o: Opt, title: Style, small:
         Kind::Switch => {
             let sw = Rect::new(c.x, c.y + 2.0, 38.0, 22.0);
             let on = v != 0;
-            p.rect(sw.x, sw.y, sw.w, sw.h, 11.0, if on { theme::LILAC } else { rgb(0x3a3a3e) });
+            p.rect(sw.x, sw.y, sw.w, sw.h, 11.0, if on { theme::ACCENT } else { rgb(0x3a3a3e) });
             let kx = if on { sw.x + sw.w - 20.0 } else { sw.x + 2.0 };
             p.rect(kx, sw.y + 2.0, 18.0, 18.0, 9.0, rgb(0xf2f2f7));
             // The whole row flips it, as a phone's settings do.
@@ -240,7 +240,7 @@ fn opt_row(p: &mut Painter, s: &mut State, r: Rect, o: Opt, title: Style, small:
         }
         Kind::Menu(names) => {
             let open = s.pref_menu.is_some_and(|m| m.0 == o);
-            p.outlined(c.x, c.y, c.w, c.h, 6.0, theme::WELL, 1.0, if open { theme::LILAC } else { theme::BORDER });
+            p.outlined(c.x, c.y, c.w, c.h, 6.0, theme::WELL, 1.0, if open { theme::ACCENT } else { theme::BORDER });
             let now = names.get(usize::from(v)).copied().unwrap_or("");
             p.text_in(c.x + 10.0, c.y + 17.0, c.w - 30.0, Style::new(12.5, Weight::Regular, theme::TEXT), now);
             // A down chevron.

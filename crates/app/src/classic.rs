@@ -10,10 +10,10 @@ use crate::theme::{
     BACKDROP, BORDER, CONTROL, DIM, FAINT, PANEL, PRESSED, RAISED, SEPARATOR, TEXT as WHITE, WELL, centred,
 };
 
-const ACCENT: u32 = rgb(0xb69cff);
+const ACCENT: u32 = crate::theme::ACCENT;
 const KEY: u32 = rgb(0x8e7cff);
 const CUE: u32 = rgb(0xff9f0a);
-const LOOP_ON: u32 = rgb(0xb69cff);
+const LOOP_ON: u32 = crate::theme::ACCENT;
 const SAMPLE_ON: u32 = rgb(0x4aa8ff);
 const FX_ON: u32 = rgb(0xfca001);
 const LINE: u32 = rgb(0x3a3a40);
@@ -22,7 +22,7 @@ const LABEL: u32 = rgb(0x8b8b93);
 /// The mixer keeps this size; the decks share what is left.
 const MIXER: (f32, f32) = (190.0, 260.0);
 
-fn bold(px: f32, colour: u32) -> Style {
+pub(crate) fn bold(px: f32, colour: u32) -> Style {
     Style::new(px.round().max(7.0), Weight::Bold, colour)
 }
 
@@ -405,12 +405,12 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     }
 }
 
-fn mmss(secs: f64) -> String {
+pub(crate) fn mmss(secs: f64) -> String {
     let t = secs.max(0.0) as u32;
     format!("{}:{:02}", t / 60, t % 60)
 }
 
-fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+pub(crate) fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.outlined(r.x, r.y, r.w, r.h, 6.0, WELL, 1.0, BORDER);
     let deck = &s.decks[d];
     if let Some(l) = &deck.loaded {
@@ -488,7 +488,7 @@ fn channel(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 }
 
 /// The Classic meter: a black capsule filled from the bottom, green, amber, then red at the top.
-fn vu_meter(p: &mut Painter, r: Rect, peak: f32) {
+pub(crate) fn vu_meter(p: &mut Painter, r: Rect, peak: f32) {
     p.outlined(r.x - 0.5, r.y, r.w + 1.0, r.h, r.w * 0.5, WELL, 1.0, BORDER);
     let fill = peak.clamp(0.0, 1.0) * (r.h - 2.0);
     for (lo, hi, colour) in [(0.0, 0.7, rgb(0x85c85b)), (0.7, 0.85, rgb(0xfca001)), (0.85, 1.0, rgb(0xea2a4e))] {
@@ -500,7 +500,14 @@ fn vu_meter(p: &mut Painter, r: Rect, peak: f32) {
 }
 
 /// The Booth knob: a 270 degree ring, filled from the centre or the start, and a pointer.
-fn knob(p: &mut Painter, s: &mut State, r: Rect, (v, bipolar, colour): (f32, bool, u32), label: &str, t: Target) {
+pub(crate) fn knob(
+    p: &mut Painter,
+    s: &mut State,
+    r: Rect,
+    (v, bipolar, colour): (f32, bool, u32),
+    label: &str,
+    t: Target,
+) {
     let lp = (r.w * 0.22).min(r.h * 0.28).round().clamp(7.0, 13.0);
     let lh = if label.is_empty() { 0.0 } else { lp + 3.0 };
     let size = r.w.min(r.h - lh).clamp(12.0, 64.0);
@@ -532,7 +539,7 @@ fn knob(p: &mut Painter, s: &mut State, r: Rect, (v, bipolar, colour): (f32, boo
 }
 
 /// The Booth fader: a thin track, an optional centre mark, a grey cap with a coloured line.
-fn fader(
+pub(crate) fn fader(
     p: &mut Painter,
     s: &mut State,
     r: Rect,
