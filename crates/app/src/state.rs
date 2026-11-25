@@ -683,8 +683,6 @@ impl State {
             show_samplers: false,
             show_waves: true,
             lib_expanded: false,
-            side_panel: false,
-            side_tab: 0,
             wave_zoom: 0,
             wave_height: 0,
             filters: 0,
@@ -697,6 +695,9 @@ impl State {
             history: Vec::new(),
             track_menu: None,
             settings: crate::settings::Settings::load(),
+            hidden_cols: 0,
+            side_panel: false,
+            side_tab: 0,
             prefs: None,
             pref_menu: None,
             app_menu: false,
@@ -705,7 +706,6 @@ impl State {
             quit: false,
             list_menu: None,
             column_menu: false,
-            hidden_cols: 0,
             play_on_load: None,
             menu_at: (0.0, 0.0),
             submenu: None,
@@ -719,6 +719,10 @@ impl State {
             store: crate::store::Store::open(),
             recorder: None,
         };
+        s.hidden_cols = s.settings.get(crate::settings::Opt::HiddenColumns);
+        let panel = s.settings.get(crate::settings::Opt::SidePanel);
+        s.side_panel = panel > 0;
+        s.side_tab = panel.saturating_sub(1).min(crate::sugar::SIDE_TABS.len() as u8 - 1);
         s.send_curve();
         s.send_phones();
         s
@@ -1310,6 +1314,12 @@ impl State {
     }
 
     /// A right click: what holding there would open.
+    /// Keeps the side panel and its tab for the next start: 0 is closed, else the tab plus one.
+    fn save_panels(&mut self) {
+        let v = if self.side_panel { self.side_tab + 1 } else { 0 };
+        self.settings.set(crate::settings::Opt::SidePanel, v);
+    }
+
     pub fn context(&mut self, x: f32, y: f32) {
         const CONTEXT: u64 = u64::MAX - 1;
         let target = self.hit(x, y);
@@ -2227,10 +2237,22 @@ impl State {
             Target::ToggleSamplers => self.show_samplers = !self.show_samplers,
             Target::ToggleWaves => self.show_waves = !self.show_waves,
             Target::ToggleExpand => self.lib_expanded = !self.lib_expanded,
-            Target::ToggleSide => self.side_panel = !self.side_panel,
-            Target::SideTab(n) => self.side_tab = n,
-            Target::ToggleColumn(c) => self.hidden_cols ^= 1 << c as u8,
-            Target::ResetColumns => self.hidden_cols = 0,
+            Target::ToggleSide => {
+                self.side_panel = !self.side_panel;
+                self.save_panels();
+            }
+            Target::SideTab(n) => {
+                self.side_tab = n;
+                self.save_panels();
+            }
+            Target::ToggleColumn(c) => {
+                self.hidden_cols ^= 1 << c as u8;
+                self.settings.set(crate::settings::Opt::HiddenColumns, self.hidden_cols);
+            }
+            Target::ResetColumns => {
+                self.hidden_cols = 0;
+                self.settings.set(crate::settings::Opt::HiddenColumns, 0);
+            }
             Target::SideCue(d, n) => {
                 self.focus = d;
                 self.hotcue(d, n);

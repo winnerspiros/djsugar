@@ -35,6 +35,8 @@ pub enum Opt {
     DuckDepth,
     UiScale,
     LyricsOnline,
+    HiddenColumns,
+    SidePanel,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -84,7 +86,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 30] = [
+pub const OPTIONS: [Spec; 32] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -324,6 +326,22 @@ pub const OPTIONS: [Spec; 30] = [
         detail: "Tracks without an .lrc file get synced lyrics from LRCLIB, saved beside the track.",
         kind: Kind::Switch,
         default: 1,
+    },
+    Spec {
+        opt: Opt::HiddenColumns,
+        key: "hidden_columns",
+        title: "Hidden columns",
+        detail: "Track list columns hidden from their heading's menu.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::SidePanel,
+        key: "side_panel",
+        title: "Side panel",
+        detail: "The panel right of the library, and its open tab plus one.",
+        kind: Kind::Switch,
+        default: 0,
     },
 ];
 

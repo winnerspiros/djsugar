@@ -357,13 +357,17 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             Mode::Samples => (pad_name(s, d, i), None),
             Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(FX_ON)),
         };
+        // Dark cells: a lit pad takes a deep tint of its colour, a line of it along the bottom and text in it.
         let fill = match (down, lit) {
-            (true, Some(c)) => c,
+            (true, Some(c)) => fade(c, 0x70),
             (true, None) => PRESSED,
-            (false, Some(c)) => fade(c, 0xc8),
+            (false, Some(c)) => fade(c, 0x30),
             (false, None) => CONTROL,
         };
-        p.rect(b.x, b.y, b.w, b.h, 4.0, fill);
+        p.rect(b.x, b.y, b.w, b.h, 3.0, fill);
+        if let Some(c) = lit {
+            p.rect(b.x + b.w * 0.3, b.y + b.h - 5.0, b.w * 0.4, 2.0, 1.0, c);
+        }
         if lit.is_none() {
             // The colour the pad takes once lit, as a strip along its top.
             let c = match mode {
@@ -374,8 +378,8 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             };
             p.rect(b.x + 4.0, b.y + 3.0, b.w - 8.0, 2.0, 1.0, fade(c, 0x60));
         }
-        let ink = if lit.is_some() {
-            rgb(0x0a0a0c)
+        let ink = if let Some(c) = lit {
+            if mode == Mode::Cues { c } else { WHITE }
         } else if mode == Mode::Cues {
             FAINT
         } else {
@@ -564,65 +568,40 @@ fn fader(
     hit(s, r, t);
 }
 
-/// The platter: a record whose rim shows how much of the track has played, a
-/// marker turning with the music and the tempo on its label.
+/// The platter: a dark disc whose thick rim fills with the part of the track played, the
+/// rate offset, tempo and both times on its face.
 fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let rad = r.w * 0.5;
     let (cx, cy) = (r.x + rad, r.y + rad);
-    p.glow(r.x, r.y + 4.0, r.w, r.h, rad, 12.0, fade(rgb(0x000000), 0xb0));
-    p.disc(cx, cy, rad, rgb(0x141416), rgb(0x060607));
-    p.outlined(cx - rad, cy - rad, rad * 2.0, rad * 2.0, rad, 0, 1.0, BORDER);
-    for f in [0.86, 0.79, 0.72] {
-        let g = rad * f;
-        p.outlined(cx - g, cy - g, g * 2.0, g * 2.0, g, 0, 1.0, fade(rgb(0xffffff), 0x08));
-    }
-    let ring = (rad * 0.06).clamp(2.0, 4.0);
-    p.arc(cx, cy, rad - ring * 0.5 - 2.0, ring, 0.0, 1.0, RAISED);
+    p.glow(r.x, r.y + 3.0, r.w, r.h, rad, 10.0, fade(rgb(0x000000), 0xa0));
+    p.disc(cx, cy, rad, rgb(0x1c1c20), rgb(0x0e0e10));
+    let ring = (rad * 0.1).clamp(3.0, 7.0);
+    let mid = rad - ring * 0.5 - 1.0;
+    p.arc(cx, cy, mid, ring, 0.0, 1.0, rgb(0x2a2a30));
     let deck = &s.decks[d];
+    let at = s.telemetry.decks[d].position;
     if deck.loaded.is_some() {
-        let played = (s.telemetry.decks[d].position / deck.length().max(1.0)).clamp(0.0, 1.0) as f32;
-        p.arc(cx, cy, rad - ring * 0.5 - 2.0, ring, 0.0, played, DECK[d]);
-        let turn = (deck.seconds(s.telemetry.decks[d].position) / 1.8).fract() as f32 * std::f32::consts::TAU;
-        let (sn, cs) = turn.sin_cos();
-        p.line(
-            (cx + sn * rad * 0.66, cy - cs * rad * 0.66),
-            (cx + sn * (rad - ring - 5.0), cy - cs * (rad - ring - 5.0)),
-            (rad * 0.05).clamp(2.0, 4.0),
-            WHITE,
-        );
+        let played = (at / deck.length().max(1.0)).clamp(0.0, 1.0) as f32;
+        p.arc(cx, cy, mid, ring, 0.0, played, DECK[d]);
     }
-    let label = rad * 0.6;
-    p.disc(cx, cy, label, rgb(0x26262b), rgb(0x18181c));
-    if let Some(cells) = deck.loaded.as_ref().and_then(|l| l.art.as_deref()) {
-        // The album art on the label, cell by cell inside its circle, dimmed under the readout.
-        use crate::state::ART;
-        let c = label * 2.0 / ART as f32;
-        for (i, &v) in cells.iter().enumerate() {
-            let (gx, gy) = ((i % ART) as f32 + 0.5, (i / ART) as f32 + 0.5);
-            let (dx, dy) = ((gx - ART as f32 * 0.5) * c, (gy - ART as f32 * 0.5) * c);
-            if dx * dx + dy * dy > (label - c * 0.5) * (label - c * 0.5) {
-                continue;
-            }
-            let (x, y) = (cx + dx - c * 0.5, cy + dy - c * 0.5);
-            p.rect(x.floor(), y.floor(), (x + c).ceil() - x.floor(), (y + c).ceil() - y.floor(), 0.0, rgb(v));
-        }
-        p.disc(cx, cy, label, fade(rgb(0x000000), 0x90), fade(rgb(0x000000), 0x60));
-    }
-    p.outlined(cx - label, cy - label, label * 2.0, label * 2.0, label, 0, 1.0, BORDER);
-    // The tempo readout in the middle: BPM, then the rate offset in the deck colour.
-    let bpm = deck
-        .loaded
-        .as_ref()
-        .and_then(|l| l.grid)
-        .map(|g| g.bpm * (1.0 + f64::from(deck.rate) * s.settings.rate_range()));
+    let face = rad - ring - 4.0;
+    p.disc(cx, cy, face, rgb(0x141417), rgb(0x0b0b0d));
+    p.outlined(cx - face, cy - face, face * 2.0, face * 2.0, face, 0, 1.0, rgb(0x2a2a30));
+    let rate = f64::from(deck.rate) * s.settings.rate_range();
+    let bpm = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| g.bpm * (1.0 + rate));
     let known = bpm.is_some();
     let bpm = bpm.map_or_else(|| "--.--".to_string(), |b| format!("{b:.2}"));
-    let pct = format!("{:+.2}%", f64::from(deck.rate) * s.settings.rate_range() * 100.0);
-    let big = bold((rad * 0.24).clamp(9.0, 22.0), if known { WHITE } else { FAINT });
-    centred(p, Rect::new(cx - label, cy - big.px * 1.05, label * 2.0, big.px * 1.2), big, &bpm);
-    let sm = Style::new((rad * 0.11).clamp(7.0, 11.0).round(), Weight::Semibold, DECK[d]);
-    centred(p, Rect::new(cx - label, cy + 1.0, label * 2.0, sm.px * 1.3), sm, &pct);
-    let unit = Style::new((rad * 0.09).clamp(7.0, 10.0).round(), Weight::Semibold, FAINT);
-    centred(p, Rect::new(cx - label, cy + sm.px * 1.4, label * 2.0, unit.px * 1.3), unit, "BPM");
+    let big = bold((rad * 0.3).clamp(10.0, 26.0), if known { WHITE } else { FAINT });
+    let sm = Style::new((rad * 0.11).clamp(7.0, 11.0).round(), Weight::Semibold, DIM);
+    let line = |dy: f32, h: f32| Rect::new(cx - face, cy + dy, face * 2.0, h);
+    centred(p, line(-big.px * 0.6 - sm.px * 1.5, sm.px * 1.3), sm, &format!("{:+.1}%", rate * 100.0));
+    centred(p, line(-big.px * 0.6, big.px * 1.2), big, &bpm);
+    if let Some(l) = &deck.loaded {
+        let gone = deck.seconds(at);
+        let left = (l.track.frames.len() as f64 / f64::from(l.track.rate) - gone).max(0.0);
+        let clock = |t: f64| format!("{:02}:{:04.1}", (t / 60.0) as u32, t % 60.0);
+        centred(p, line(big.px * 0.62, sm.px * 1.3), Style { colour: WHITE, ..sm }, &clock(gone));
+        centred(p, line(big.px * 0.62 + sm.px * 1.3, sm.px * 1.3), sm, &format!("-{}", clock(left)));
+    }
     hit(s, r, Target::Jog(d));
 }

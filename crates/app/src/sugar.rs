@@ -29,7 +29,7 @@ pub const CUES: [u32; 8] = [
     rgb(0xaf52de),
 ];
 const CUE_NAMES: [&str; 8] = ["Pink", "Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"];
-pub const DECK: [u32; 2] = [rgb(0x00b0ff), rgb(0xff6d00)];
+pub const DECK: [u32; 2] = [rgb(0x3a8dff), rgb(0xf0443a)];
 
 const LOGO: Style = Style::new(16.0, Weight::Bold, rgb(0xe63380));
 const TAB: Style = Style::new(11.0, Weight::Bold, TEXT);
@@ -172,7 +172,7 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
     let bottom = r.y + r.h;
     if !s.lib_expanded {
         if s.show_waves {
-            let wh = STEPS[(s.wave_height + 4).clamp(0, 9) as usize].min(r.h * 0.3).round();
+            let wh = STEPS[(s.wave_height + 1).clamp(0, 9) as usize].min(r.h * 0.25).round();
             waveforms(p, s, Rect::new(r.x, y, r.w, wh));
             y += wh;
             p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
@@ -591,7 +591,7 @@ fn waveforms(p: &mut Painter, s: &mut State, r: Rect) {
 }
 
 fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x000000));
+    p.rect(r.x, r.y, r.w, r.h, 0.0, rgb(0x101012));
     let deck = &s.decks[d];
     let pos = s.telemetry.decks[d].position;
     let mid = r.y + r.h * 0.5;
@@ -617,7 +617,11 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 }
                 if f >= 0.0 {
                     let bar = n.rem_euclid(4.0) == 0.0;
-                    p.rect(r.x + x, r.y, 1.0, r.h, 0.0, if bar { rgb(0x3a3a3a) } else { rgb(0x222222) });
+                    p.rect(r.x + x, r.y, 1.0, r.h, 0.0, if bar { rgb(0x34343a) } else { rgb(0x1e1e22) });
+                    if bar && x > 0.0 {
+                        let label = ((n / 4.0) as i64 + 1).to_string();
+                        p.text(r.x + x + 4.0, r.y + 11.0, Style { colour: rgb(0xb4b4bc), ..SMALL }, &label);
+                    }
                 }
                 n += 1.0;
             }
@@ -636,17 +640,18 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             let i = centre + f64::from((c as f32 - cols as f32 * 0.5) * step);
             let Some(&[v, lo, md, hi]) = (i >= 0.0).then(|| l.detail.get(i as usize)).flatten() else { continue };
             let past = (c as f32) < cols as f32 * 0.5;
-            let a = if past { 0x70 } else { 0xff };
+            let a = if past { 0x90 } else { 0xff };
             let x = r.x + c as f32;
             let amp = f32::from(v) / 255.0 * half;
             let total = (f32::from(lo) + f32::from(md) + f32::from(hi)).max(1.0);
             let lo_h = amp * (f32::from(lo) / total).sqrt().min(1.0);
             let md_h = amp * (f32::from(md) / total).sqrt().min(1.0) * 0.8;
             let hi_h = amp * (f32::from(hi) / total).sqrt().min(1.0) * 0.6;
-            p.rect(x, mid - amp, 1.0, amp * 2.0, 0.0, fade(rgb(0x1e3c78), a));
-            p.rect(x, mid - lo_h, 1.0, lo_h * 2.0, 0.0, fade(rgb(0xd8304a), a));
-            p.rect(x, mid - md_h, 1.0, md_h * 2.0, 0.0, fade(rgb(0x3ccf6e), a));
-            p.rect(x, mid - hi_h, 1.0, hi_h * 2.0, 0.0, fade(rgb(0x7fd8ff), a));
+            // Warm layers: the whole level in deep orange, the bass in orange, the mids in amber, the highs pale gold.
+            p.rect(x, mid - amp, 1.0, amp * 2.0, 0.0, fade(rgb(0xa8380e), a));
+            p.rect(x, mid - lo_h, 1.0, lo_h * 2.0, 0.0, fade(rgb(0xe8621a), a));
+            p.rect(x, mid - md_h, 1.0, md_h * 2.0, 0.0, fade(rgb(0xf5a02a), a));
+            p.rect(x, mid - hi_h, 1.0, hi_h * 2.0, 0.0, fade(rgb(0xffd98a), a));
         }
         for (n, cue) in deck.cues.iter().enumerate() {
             let Some(c) = cue else { continue };
@@ -662,10 +667,8 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let msg = if deck.loading { "Loading" } else { "No track loaded" };
         p.text(r.x + 12.0, mid + 4.0, Style { colour: DARK, ..ARTIST }, msg);
     }
-    p.rect(r.x, r.y + r.h, r.w, 1.0, 0.0, rgb(0x0a0b10));
-    p.glow(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 1.0, 4.0, fade(DECK[d], 0xc0));
+    p.rect(r.x, r.y + r.h, r.w, 1.0, 0.0, rgb(0x2a2a30));
     p.rect(r.x + r.w * 0.5 - 1.0, r.y, 2.0, r.h, 1.0, TEXT);
-    p.rect(r.x + 4.0, r.y + 4.0, 3.0, r.h - 8.0, 1.5, DECK[d]);
 }
 
 pub fn cue_colour(s: &State, d: usize, i: usize) -> u32 {
@@ -1075,7 +1078,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
     let bar = 40.0;
     let list = Rect::new(r.x, r.y, r.w, r.h - bar);
     s.library = list;
-    s.row_h = 22.0;
+    s.row_h = 26.0;
     let wide = r.w >= 600.0;
     let cols: &[(C, &str, f32)] = if wide {
         &[
@@ -1140,11 +1143,11 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
             p.rect(r.x + 1.0, y + 2.0, 3.0, row - 4.0, 1.5, CUES[usize::from(colour) - 1]);
         }
         if s.selected == Some(i) {
-            p.outlined(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(ACCENT, 0x30), 1.0, ACCENT);
+            p.rect(r.x + 4.0, y, r.w - 8.0, row, 3.0, fade(ACCENT, 0x58));
         } else if let Some(d) = deck {
             p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(1)], 0x50));
         } else if n % 2 == 1 {
-            p.rect(r.x + 6.0, y, r.w - 12.0, row, 0.0, rgb(0x08090c));
+            p.rect(r.x + 4.0, y, r.w - 8.0, row, 0.0, rgb(0x121215));
         }
         let m = s.meta.get(i as usize).copied().flatten();
         let base = y + row - 6.0;

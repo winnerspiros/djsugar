@@ -197,6 +197,8 @@ fn main() {
             }
             // Right-click a heading, hide BPM: its heading must go, and Reset must bring it back.
             if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
+                // Columns persist, so compare with what was shown before rather than assume.
+                let before = ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)");
                 ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
                 ui.render(&mut r);
                 save(&r, &out.join(format!("{name}-columns.png")));
@@ -204,8 +206,8 @@ fn main() {
                     faults.push(format!("{name}: no column chooser"));
                 }
                 ui.render(&mut r);
-                if ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)") {
-                    faults.push(format!("{name}: hidden BPM column still shown"));
+                if ui.targets().iter().any(|(t, _)| t == "Sort(Bpm)") == before {
+                    faults.push(format!("{name}: toggling the BPM column changed nothing"));
                 }
                 ui.key(Key::Escape, Mods::default());
                 if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
