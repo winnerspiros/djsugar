@@ -1,45 +1,44 @@
+use djsugar_engine::lyrics::{self as lrc, Line};
+
+/// A track's lyrics: LRC, enhanced LRC timed by word, or plain text.
 #[derive(Debug, Default)]
 pub struct Lyrics {
-    pub lines: Vec<(f64, Box<str>)>,
+    pub lines: Vec<Line>,
 }
 
 impl Lyrics {
     pub fn parse(text: &str) -> Self {
-        let mut offset = 0.0;
-        let mut lines = Vec::new();
-        for raw in text.lines() {
-            let mut rest = raw.trim();
-            let mut stamps = Vec::new();
-            while let Some(tag) = rest.strip_prefix('[').and_then(|r| r.split_once(']')) {
-                let (inner, after) = tag;
-                rest = after;
-                if let Some(v) = inner.strip_prefix("offset:") {
-                    offset = v.trim().parse::<f64>().unwrap_or(0.0) / 1000.0;
-                } else if let Some(t) = stamp(inner) {
-                    stamps.push(t);
-                }
-            }
-            for t in stamps {
-                lines.push((t, rest.trim().into()));
-            }
-        }
-        for l in &mut lines {
-            l.0 = (l.0 - offset).max(0.0);
-        }
-        lines.sort_by(|a, b| a.0.total_cmp(&b.0));
-        Self { lines }
+        Self { lines: lrc::parse(text).unwrap_or_default() }
     }
 
+    /// The line sung at `seconds`.
     pub fn current(&self, seconds: f64) -> Option<usize> {
-        self.lines.partition_point(|l| l.0 <= seconds).checked_sub(1)
+        lrc::line_at(&self.lines, seconds)
+    }
+
+    /// Line `n` split for karaoke at `seconds`.
+    pub fn fill(&self, n: usize, seconds: f64) -> lrc::Fill {
+        let until = self.lines.get(n + 1).and_then(|l| l.start);
+        self.lines[n].fill_at(seconds, until)
     }
 }
 
-fn stamp(s: &str) -> Option<f64> {
-    let (m, sec) = s.split_once(':')?;
-    let m: f64 = m.trim().parse().ok()?;
-    let sec: f64 = sec.trim().replace(':', ".").parse().ok()?;
-    Some(m * 60.0 + sec)
+/// Lyrics for a file: its `.lrc` beside it, else LRCLIB's, saved beside it for next time.
+pub fn find(path: &std::path::Path, artist: &str, title: &str, seconds: f64, online: bool) -> Lyrics {
+    let lrc = path.with_extension("lrc");
+    if let Ok(t) = std::fs::read_to_string(&lrc) {
+        return Lyrics::parse(&t);
+    }
+    if !online {
+        return Lyrics::default();
+    }
+    match sugar_net::lrclib::find(artist, title, seconds) {
+        Ok(Some(t)) => {
+            let _ = std::fs::write(&lrc, &t);
+            Lyrics::parse(&t)
+        }
+        _ => Lyrics::default(),
+    }
 }
 
 #[cfg(test)]
@@ -48,12 +47,19 @@ mod tests {
 
     #[test]
     fn parses_repeats_offset_and_finds_line() {
-        let l = Lyrics::parse("[ar:Someone]\n[offset:500]\n[00:01.50][00:10.00]Chorus\n[00:05.25]Verse\nnot a line");
+        let l = Lyrics::parse("[ar:Someone]\n[offset:500]\n[00:01.50][00:10.00]Chorus\n[00:05.25]Verse");
         assert_eq!(l.lines.len(), 3);
-        assert_eq!(&*l.lines[0].1, "Chorus");
-        assert!((l.lines[0].0 - 1.0).abs() < 1e-9);
+        assert_eq!(l.lines[0].text, "Chorus");
+        assert!((l.lines[0].start.unwrap() - 1.0).abs() < 1e-9);
         assert_eq!(l.current(0.5), None);
         assert_eq!(l.current(5.0), Some(1));
         assert_eq!(l.current(60.0), Some(2));
+    }
+
+    #[test]
+    fn word_fill() {
+        let l = Lyrics::parse("[00:10.00]<00:10.00>Hold <00:10.40>the <00:10.70>line<00:11.50>");
+        let f = l.fill(0, 10.5);
+        assert_eq!((f.sung.as_str(), f.word.as_str()), ("Hold ", "the"));
     }
 }

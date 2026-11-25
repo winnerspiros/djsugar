@@ -34,6 +34,7 @@ pub enum Opt {
     Ducking,
     DuckDepth,
     UiScale,
+    LyricsOnline,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -83,7 +84,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 29] = [
+pub const OPTIONS: [Spec; 30] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -316,6 +317,14 @@ pub const OPTIONS: [Spec; 29] = [
         kind: Kind::Menu(&["90%", "100%", "110%", "125%", "135%", "150%"]),
         default: 1,
     },
+    Spec {
+        opt: Opt::LyricsOnline,
+        key: "lyrics_online",
+        title: "Find lyrics online",
+        detail: "Tracks without an .lrc file get synced lyrics from LRCLIB, saved beside the track.",
+        kind: Kind::Switch,
+        default: 1,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -388,7 +397,14 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             v
         }
         5 => vec![Row::Heading("TEMPO"), Row::Opt(Opt::BpmRange)],
-        6 => vec![Row::Heading("SIZE"), Row::Opt(Opt::UiScale), Row::Heading("KEYS"), Row::Opt(Opt::KeyNotation)],
+        6 => vec![
+            Row::Heading("SIZE"),
+            Row::Opt(Opt::UiScale),
+            Row::Heading("KEYS"),
+            Row::Opt(Opt::KeyNotation),
+            Row::Heading("LYRICS"),
+            Row::Opt(Opt::LyricsOnline),
+        ],
         4 => {
             let mut v = vec![Row::Heading("MUSIC FOLDERS")];
             if roots.is_empty() {

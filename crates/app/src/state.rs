@@ -483,6 +483,8 @@ enum Job {
     Meta(u32, u32, library::Meta),
     /// A track that would not load, and why.
     Failed(String),
+    /// Lyrics found online for the track now on a deck, by its file.
+    Lyrics(usize, std::sync::Arc<std::path::Path>, crate::lyrics::Lyrics),
 }
 
 struct Drag {
@@ -800,6 +802,13 @@ impl State {
                 }
                 (Job::Sample(..), None) => {}
                 (Job::Failed(why), _) => self.status = Some(why),
+                (Job::Lyrics(d, path, ly), _) => {
+                    if let Some(l) = &mut self.decks[d].loaded
+                        && matches!(&l.entry.source, Source::File(p) if *p == path)
+                    {
+                        l.lyrics = ly;
+                    }
+                }
                 (Job::Scan(found), _) => {
                     self.entries.truncate(SAMPLES.len());
                     self.entries.extend(found);
@@ -927,6 +936,7 @@ impl State {
         let Some(entry) = self.entries.get(index).cloned() else { return };
         let (tx, read) = (self.jobs.0.clone(), self.read);
         let detail = matches!(job, Job::Deck(_));
+        let online = self.settings.on(crate::settings::Opt::LyricsOnline);
         std::thread::spawn(move || {
             let bytes = match &entry.source {
                 Source::Sample(name) => read(name),
@@ -953,11 +963,23 @@ impl State {
                     Source::File(p) if !detail.is_empty() => art(p),
                     _ => None,
                 };
+                let secs = t.frames.len() as f64 / f64::from(t.rate.max(1));
                 let lyrics = match &entry.source {
-                    Source::File(p) => std::fs::read_to_string(p.with_extension("lrc"))
-                        .map(|t| crate::lyrics::Lyrics::parse(&t))
-                        .unwrap_or_default(),
-                    Source::Sample(_) => crate::lyrics::Lyrics::default(),
+                    Source::File(p) if !detail.is_empty() => {
+                        let found = crate::lyrics::find(p, &entry.artist, &entry.title, secs, false);
+                        if found.lines.is_empty() && online {
+                            let (tx, p, e) = (tx.clone(), p.clone(), entry.clone());
+                            let d = if let Job::Deck(d) = job { d } else { 0 };
+                            std::thread::spawn(move || {
+                                let ly = crate::lyrics::find(&p, &e.artist, &e.title, secs, true);
+                                if !ly.lines.is_empty() {
+                                    let _ = tx.send((Job::Lyrics(d, p, ly), None));
+                                }
+                            });
+                        }
+                        found
+                    }
+                    _ => crate::lyrics::Lyrics::default(),
                 };
                 Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art }
             });

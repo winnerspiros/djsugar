@@ -1327,18 +1327,42 @@ fn lyrics(p: &mut Painter, s: &State, r: Rect) {
     p.text(r.x + 12.0, r.y + 20.0, SMALL, "LYRICS");
     let has = |d: usize| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty());
     let Some(d) = (0..2).find(|&d| s.telemetry.decks[d].playing && has(d)).or_else(|| (0..2).find(|&d| has(d))) else {
-        p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No synced lyrics for the loaded tracks");
+        p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No lyrics for the loaded tracks");
         return;
     };
     let Some(l) = &s.decks[d].loaded else { return };
-    let cur = l.lyrics.current(s.decks[d].seconds(s.telemetry.decks[d].position));
+    let at = s.decks[d].seconds(s.telemetry.decks[d].position);
+    let cur = l.lyrics.current(at);
     let line_h = 22.0;
     let rows = ((r.h - 36.0) / line_h).max(1.0) as usize;
     let first = cur.unwrap_or(0).saturating_sub(rows / 3);
-    for (n, (_, text)) in l.lyrics.lines.iter().enumerate().skip(first).take(rows) {
-        let y = r.y + 44.0 + (n - first) as f32 * line_h;
-        let style = if Some(n) == cur { Style::new(14.0, Weight::Bold, DECK[d]) } else { Style { px: 12.5, ..ARTIST } };
-        p.text_in(r.x + 12.0, y, r.w - 24.0, style, text);
+    for (n, line) in l.lyrics.lines.iter().enumerate().skip(first).take(rows) {
+        let (x, y, w) = (r.x + 12.0, r.y + 44.0 + (n - first) as f32 * line_h, r.w - 24.0);
+        if Some(n) != cur {
+            let past = cur.is_some_and(|c| n < c);
+            p.text_in(x, y, w, Style { px: 12.5, colour: if past { DARK } else { GREY }, ..ARTIST }, &line.text);
+            continue;
+        }
+        // The current line as karaoke: sung words in the deck colour, the word being sung filling in.
+        let f = l.lyrics.fill(n, at);
+        let lit = Style::new(14.0, Weight::Bold, DECK[d]);
+        let dim = Style { colour: TEXT, ..lit };
+        let mut cx = x;
+        if !f.sung.is_empty() {
+            cx += p.text_in(cx, y, w, lit, &f.sung);
+            if !f.sung.ends_with(' ') {
+                cx += p.text_width(lit, " ");
+            }
+        }
+        if !f.word.is_empty() {
+            let ww = p.text_width(dim, &f.word);
+            let mix = fade(DECK[d], 0x60 + (159.0 * f.part.clamp(0.0, 1.0)) as u32);
+            p.text_in(cx, y, (x + w - cx).max(0.0), Style { colour: mix, ..lit }, &f.word);
+            cx += ww + p.text_width(dim, " ");
+        }
+        if !f.rest.is_empty() && cx < x + w {
+            p.text_in(cx, y, x + w - cx, dim, &f.rest);
+        }
     }
 }
 

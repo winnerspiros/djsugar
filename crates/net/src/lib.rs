@@ -5,6 +5,7 @@ pub mod archive;
 pub mod audius;
 pub mod botguard;
 pub mod http;
+pub mod lrclib;
 pub mod soundcloud;
 pub mod youtube;
 
