@@ -200,7 +200,91 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
     library(p, s, Rect::new(r.x, y + 1.0, r.w - side, lh));
     if side > 0.0 {
         p.rect(r.x + r.w - side, y + 1.0, 1.0, lh, 0.0, theme::SEPARATOR);
-        lyrics(p, s, Rect::new(r.x + r.w - side + 1.0, y + 1.0, side - 1.0, lh));
+        side_panel(p, s, Rect::new(r.x + r.w - side + 1.0, y + 1.0, side - 1.0, lh));
+    }
+}
+
+/// The side panel's tabs, in order.
+pub const SIDE_TABS: [&str; 3] = ["Info", "Cues", "Lyrics"];
+
+/// The side panel right of the library: the selected track's details, the hot cues
+/// of the deck playing, or the lyrics.
+fn side_panel(p: &mut Painter, s: &mut State, r: Rect) {
+    p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
+    let th = 36.0;
+    let tw = (r.w - 16.0) / SIDE_TABS.len() as f32;
+    p.outlined(r.x + 8.0, r.y + 6.0, r.w - 16.0, th - 8.0, 8.0, theme::WELL, 1.0, theme::BORDER);
+    for (n, label) in SIDE_TABS.iter().enumerate() {
+        let b = Rect::new(r.x + 8.0 + n as f32 * tw, r.y + 6.0, tw, th - 8.0);
+        let on = usize::from(s.side_tab) == n;
+        if on {
+            p.outlined(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 6.0, theme::RAISED, 1.0, theme::BORDER);
+        }
+        let ink = Style { colour: if on { TEXT } else { theme::DIM }, ..TAB };
+        p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
+        hit(s, b, Target::SideTab(n as u8));
+    }
+    let body = Rect::new(r.x, r.y + th + 4.0, r.w, r.h - th - 4.0);
+    match s.side_tab {
+        0 => side_info(p, s, body),
+        1 => side_cues(p, s, body),
+        _ => lyrics(p, s, body),
+    }
+}
+
+fn side_info(p: &mut Painter, s: &mut State, r: Rect) {
+    let Some(i) = s.selected.map(|i| i as usize).filter(|&i| i < s.entries.len()) else {
+        p.text_in(r.x + 12.0, r.y + 20.0, r.w - 24.0, ARTIST, "Select a track to see its details");
+        return;
+    };
+    let mut y = r.y + 8.0;
+    for line in info_lines(s, i) {
+        if let Line::Item { text, hint, .. } = line {
+            if y + 34.0 > r.y + r.h {
+                break;
+            }
+            p.text(r.x + 12.0, y + 11.0, Style { colour: theme::FAINT, ..SMALL }, &hint);
+            p.text_in(r.x + 12.0, y + 27.0, r.w - 24.0, Style { px: 13.0, ..TITLE }, &text);
+            y += 36.0;
+        }
+    }
+}
+
+fn side_cues(p: &mut Painter, s: &mut State, r: Rect) {
+    let d = (0..2).find(|&d| s.telemetry.decks[d].playing).unwrap_or(0);
+    let Some(l) = s.decks[d].loaded.as_ref() else {
+        p.text_in(r.x + 12.0, r.y + 20.0, r.w - 24.0, ARTIST, "Load a track to see its cues");
+        return;
+    };
+    p.text_in(
+        r.x + 12.0,
+        r.y + 14.0,
+        r.w - 24.0,
+        Style { colour: DECK[d], ..SMALL },
+        &format!("DECK {}  {}", d + 1, l.entry.title),
+    );
+    let mut y = r.y + 26.0;
+    for n in 0..8 {
+        let b = Rect::new(r.x + 8.0, y, r.w - 16.0, 34.0);
+        let at = s.decks[d].cues[n];
+        let colour = cue_colour(s, d, n);
+        p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, EDGE);
+        p.rect(b.x + 4.0, b.y + 5.0, 4.0, b.h - 10.0, 2.0, if at.is_some() { colour } else { theme::FAINT });
+        p.text(b.x + 16.0, b.y + 21.0, TAB, &(n + 1).to_string());
+        let when = at.map_or_else(
+            || "Empty".to_string(),
+            |f| {
+                let t = s.decks[d].seconds(f);
+                format!("{}:{:05.2}", (t / 60.0) as u32, t % 60.0)
+            },
+        );
+        let ink = if at.is_some() { TEXT } else { theme::FAINT };
+        p.text(b.x + 40.0, b.y + 21.0, Style { colour: ink, ..ARTIST }, &when);
+        hit(s, b, Target::SideCue(d, n));
+        y += 38.0;
+        if y + 34.0 > r.y + r.h {
+            break;
+        }
     }
 }
 

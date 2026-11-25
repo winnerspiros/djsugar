@@ -125,6 +125,9 @@ pub enum Target {
     ToggleWaves,
     ToggleExpand,
     ToggleSide,
+    SideTab(u8),
+    /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
+    SideCue(usize, usize),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -542,6 +545,7 @@ pub struct State {
     pub lib_expanded: bool,
     /// The side panel right of the library.
     pub side_panel: bool,
+    pub side_tab: u8,
     /// The large waveforms' zoom, each step twice as close; 0 is the default.
     pub wave_zoom: i8,
     /// The large waveforms' height, each step a fifth taller; 0 is the default.
@@ -674,6 +678,7 @@ impl State {
             show_waves: true,
             lib_expanded: false,
             side_panel: false,
+            side_tab: 0,
             wave_zoom: 0,
             wave_height: 0,
             filters: 0,
@@ -2204,6 +2209,11 @@ impl State {
             Target::ToggleWaves => self.show_waves = !self.show_waves,
             Target::ToggleExpand => self.lib_expanded = !self.lib_expanded,
             Target::ToggleSide => self.side_panel = !self.side_panel,
+            Target::SideTab(n) => self.side_tab = n,
+            Target::SideCue(d, n) => {
+                self.focus = d;
+                self.hotcue(d, n);
+            }
             Target::WaveZoom(z) => self.wave_zoom = if z == 0 { 0 } else { (self.wave_zoom + z).clamp(-3, 3) },
             Target::WaveHeight(z) => self.wave_height = if z == 0 { 0 } else { (self.wave_height + z).clamp(-3, 3) },
             Target::Sampler(i) => self.sample(i),

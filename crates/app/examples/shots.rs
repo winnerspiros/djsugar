@@ -182,6 +182,19 @@ fn main() {
             }
             ui.render(&mut r);
             save(&r, &out.join(format!("{name}-loaded.png")));
+            // Wide windows: the side panel's tabs, each must open.
+            if ui.tap("ToggleSide") {
+                ui.render(&mut r);
+                for (n, tab) in ["info", "cues", "lyrics"].iter().enumerate() {
+                    if !ui.tap(&format!("SideTab({n})")) {
+                        faults.push(format!("{name}: no side panel {tab} tab"));
+                    }
+                    ui.render(&mut r);
+                    save(&r, &out.join(format!("{name}-side-{tab}.png")));
+                }
+                ui.tap("ToggleSide");
+                ui.render(&mut r);
+            }
         }
     }
     let table = format!("| size | pixels | ms per frame, software GPU |\n|---|---|---|\n{}\n", perf.join("\n"));
