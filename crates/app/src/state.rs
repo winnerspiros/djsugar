@@ -656,6 +656,7 @@ impl State {
             recorder: None,
         };
         s.send_curve();
+        s.send_phones();
         s
     }
 
@@ -1558,6 +1559,13 @@ impl State {
     }
 
     /// Sends the crossfader's curve as the settings have it.
+    fn send_phones(&mut self) {
+        let (mix, split) = self.settings.phones();
+        let (mode, depth) = self.settings.ducking();
+        self.send(Command::Phones(mix, split));
+        self.send(Command::Ducking(mode, depth));
+    }
+
     fn send_curve(&mut self) {
         let c = self.settings.curve();
         self.send(Command::Curve(c));
@@ -1603,6 +1611,7 @@ impl State {
                 self.send(Command::Crossfader(x));
             }
             Opt::FaderOn | Opt::FaderCurve | Opt::CutIn => self.send_curve(),
+            Opt::CueMix | Opt::SplitCue | Opt::Ducking | Opt::DuckDepth => self.send_phones(),
             Opt::AutoGain | Opt::GainTarget => {
                 for d in 0..self.decks.len() {
                     let target = self.settings.gain_target();

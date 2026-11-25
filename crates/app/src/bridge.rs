@@ -207,6 +207,14 @@ impl Bridge {
                 }
             }
             Command::Main(v) => self.set("[Master]", "gain", f64::from(v)),
+            Command::Phones(mix, split) => {
+                self.set("[Master]", "headMix", f64::from(mix.clamp(-1.0, 1.0)));
+                self.set("[Master]", "headSplit", f64::from(u8::from(split)));
+            }
+            Command::Ducking(mode, depth) => {
+                self.set("[Master]", "talkover_ducking", f64::from(mode.min(2)));
+                self.set("[Master]", "duckStrength", f64::from(depth.clamp(0.0, 1.0)));
+            }
             Command::Record(on) => {
                 let r = self.engine.recorder();
                 if on {

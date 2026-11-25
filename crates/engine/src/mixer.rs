@@ -230,6 +230,8 @@ impl Mixer {
             Command::Record(_) => {}
             Command::Station(s) => self.station.set(s),
             Command::Pfl(..)
+            | Command::Phones(..)
+            | Command::Ducking(..)
             | Command::Quantize(..)
             | Command::BeatSync(_)
             | Command::SyncLock(..)

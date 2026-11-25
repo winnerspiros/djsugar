@@ -29,6 +29,10 @@ pub enum Opt {
     TempoMatch,
     SyncOnPlay,
     EndWarning,
+    CueMix,
+    SplitCue,
+    Ducking,
+    DuckDepth,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -70,7 +74,12 @@ pub const BUFFERS: [Option<u32>; 7] = [None, Some(64), Some(128), Some(256), Som
 /// Seconds before the end that the track end warning starts; 0 is off.
 pub const END_WARNINGS: [u32; 4] = [0, 15, 30, 60];
 
-pub const OPTIONS: [Spec; 24] = [
+/// The headphones' cue to master blend for each Cue mix choice.
+pub const CUE_MIXES: [f32; 5] = [-1.0, -0.5, 0.0, 0.5, 1.0];
+/// How far the music goes down under the mic, for each Ducking depth choice.
+pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
+
+pub const OPTIONS: [Spec; 28] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -263,6 +272,38 @@ pub const OPTIONS: [Spec; 24] = [
         kind: Kind::Segmented(&["Off", "15 s", "30 s", "60 s"]),
         default: 2,
     },
+    Spec {
+        opt: Opt::CueMix,
+        key: "cue_mix",
+        title: "Cue mix",
+        detail: "What the headphones play: the cued decks, the master, or a blend.",
+        kind: Kind::Menu(&["Cue only", "Mostly cue", "Half and half", "Mostly master", "Master only"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::SplitCue,
+        key: "split_cue",
+        title: "Split cue",
+        detail: "The cued decks in the left ear and the master in the right.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::Ducking,
+        key: "talkover_ducking",
+        title: "Talkover ducking",
+        detail: "Turns the music down under the mic: when your voice is heard, or the whole time the mic is on.",
+        kind: Kind::Segmented(&["Off", "Auto", "Manual"]),
+        default: 1,
+    },
+    Spec {
+        opt: Opt::DuckDepth,
+        key: "duck_depth",
+        title: "Ducking depth",
+        detail: "How far the music goes down under the mic.",
+        kind: Kind::Menu(&["25%", "50%", "75%", "90%"]),
+        default: 2,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -319,6 +360,12 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             Row::Heading("LOUDNESS"),
             Row::Opt(Opt::AutoGain),
             Row::Opt(Opt::GainTarget),
+            Row::Heading("HEADPHONES"),
+            Row::Opt(Opt::CueMix),
+            Row::Opt(Opt::SplitCue),
+            Row::Heading("MIC"),
+            Row::Opt(Opt::Ducking),
+            Row::Opt(Opt::DuckDepth),
         ],
         3 => {
             let mut v = Vec::with_capacity(SHORTCUTS.len() + 3);
@@ -474,6 +521,16 @@ impl Settings {
 
     pub fn gain_target(&self) -> f32 {
         GAIN_TARGETS[usize::from(self.get(Opt::GainTarget)).min(GAIN_TARGETS.len() - 1)]
+    }
+
+    /// The headphones' blend and split, as the mixer takes them.
+    pub fn phones(&self) -> (f32, bool) {
+        (CUE_MIXES[usize::from(self.get(Opt::CueMix)).min(CUE_MIXES.len() - 1)], self.on(Opt::SplitCue))
+    }
+
+    /// The mic's ducking mode and depth, as the mixer takes them.
+    pub fn ducking(&self) -> (u8, f32) {
+        (self.get(Opt::Ducking).min(2), DUCK_DEPTHS[usize::from(self.get(Opt::DuckDepth)).min(DUCK_DEPTHS.len() - 1)])
     }
 
     /// Seconds before a track's end that its deck warns; 0 is off.

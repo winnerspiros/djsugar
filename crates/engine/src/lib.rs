@@ -56,6 +56,10 @@ pub enum Command {
     /// How the crossfader blends the two sides.
     Curve(Curve),
     Main(f32),
+    /// The headphones: cue to master blend from -1 to 1, and split cue (cue left, master right).
+    Phones(f32, bool),
+    /// Music ducking under the mic: 0 off, 1 when the voice is heard, 2 while the mic is on; and how deep, 0 to 1.
+    Ducking(u8, f32),
     Record(bool),
     Station(station::Set),
 }
