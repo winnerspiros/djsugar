@@ -62,6 +62,19 @@ pub enum Command {
     Ducking(u8, f32),
     Record(bool),
     Station(station::Set),
+    /// A change to a deck's effect unit; only the full engine has them.
+    Fx(usize, FxSet),
+}
+
+/// One change to an effect unit: three slots in series, then the unit's dry/wet mix.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FxSet {
+    /// Loads an effect in a slot: 0 empties it, then the effects in the engine's order.
+    Kind(usize, u8),
+    On(usize, bool),
+    /// The slot's one main knob, 0 to 1.
+    Meta(usize, f32),
+    Mix(f32),
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

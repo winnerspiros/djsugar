@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 use crate::bridge::Bridge as Control;
-use sugar_engine::{Command, DECKS, Telemetry, Track};
+use sugar_engine::{Command, DECKS, FxSet, Telemetry, Track};
 use sugar_layout::Rect;
 
 use crate::library::{self, Entry, Source};
@@ -138,6 +138,14 @@ pub enum Target {
     MenuTag(usize),
     /// A new tag on the menu's track, named next.
     NewTag,
+    /// Turns an effect slot on or off; holding it lists the effects.
+    FxOn(usize, usize),
+    /// Opens a slot's list of effects.
+    FxName(usize, usize),
+    /// Loads an effect in a slot from its list.
+    FxPick(usize, usize, u8),
+    FxMeta(usize, usize),
+    FxMix(usize),
     /// Deletes a tag from every track.
     DeleteTag(usize),
     RenameTag(usize),
@@ -213,6 +221,9 @@ pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
 /// How far a tempo may be from the lead deck's for the Near BPM chip.
 /// The longest name a playlist may have, in characters.
 const NAME_MAX: usize = 48;
+/// An effect unit as the screen shows it: three slots (effect, on, knob), then the dry/wet mix.
+pub type FxUnit = ([(u8, bool, f32); 3], f32);
+
 pub const NEAR_BPM: [u8; 5] = [2, 4, 6, 8, 10];
 
 pub fn entry_key(e: &Entry) -> String {
@@ -584,6 +595,10 @@ pub struct State {
     pub chip_menu: Option<u8>,
     /// The playlist being renamed, and the name so far.
     pub naming: Option<Shelf>,
+    /// Each deck's effect unit: three slots (effect, on, knob), then the dry/wet mix.
+    pub fx: [FxUnit; 2],
+    /// The slot whose effect list is open.
+    pub fx_menu: Option<(usize, usize)>,
     /// The held tag whose menu is open.
     pub tag_menu: Option<usize>,
     pub name_buf: String,
@@ -686,6 +701,7 @@ fn peaks(t: &Track, bins: usize, per: usize) -> Box<[u8]> {
 
 impl State {
     pub fn new(control: Option<Control>, read: Reader, status: Option<String>, out_rate: u32) -> Self {
+        let fx = std::array::from_fn(|d| control.as_ref().map_or(([(0, false, 0.5); 3], 1.0), |c| c.fx(d)));
         let mut pads = [[0; 8 * BANKS]; 2];
         for (i, p) in pads.iter_mut().flatten().enumerate() {
             *p = i.min(SAMPLES.len().saturating_sub(1));
@@ -737,6 +753,8 @@ impl State {
             history: Vec::new(),
             track_menu: None,
             settings: crate::settings::Settings::load(),
+            fx,
+            fx_menu: None,
             hidden_cols: 0,
             side_panel: false,
             side_tab: 0,
@@ -1381,6 +1399,7 @@ impl State {
             || self.column_menu
             || self.chip_menu.is_some()
             || self.tag_menu.is_some()
+            || self.fx_menu.is_some()
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
             || self.grid_menu.is_some()
@@ -1389,6 +1408,7 @@ impl State {
         self.column_menu = false;
         self.chip_menu = None;
         self.tag_menu = None;
+        self.fx_menu = None;
         self.list_menu = None;
         self.cue_menu = None;
         self.grid_menu = None;
@@ -1684,6 +1704,14 @@ impl State {
                 self.menu_at = g.start;
                 self.submenu = None;
             }
+        }
+        if self.fx_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::FxOn(d, slot)) = g.target
+        {
+            g.moved = true;
+            self.fx_menu = Some((d, slot));
+            self.menu_at = g.start;
         }
         if self.tag_menu.is_none()
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -2240,6 +2268,24 @@ impl State {
                     self.load_deck(d, i as usize);
                 }
             }
+            Target::FxOn(d, slot) => {
+                let on = !self.fx[d].0[slot].1;
+                self.fx[d].0[slot].1 = on;
+                self.send(Command::Fx(d, FxSet::On(slot, on)));
+            }
+            Target::FxName(d, slot) => {
+                self.fx_menu = Some((d, slot));
+                self.menu_at = (x, y);
+            }
+            Target::FxPick(d, slot, k) => {
+                self.fx_menu = None;
+                self.fx[d].0[slot].0 = k;
+                self.send(Command::Fx(d, FxSet::Kind(slot, k)));
+                if !self.fx[d].0[slot].1 && k > 0 {
+                    self.fx[d].0[slot].1 = true;
+                    self.send(Command::Fx(d, FxSet::On(slot, true)));
+                }
+            }
             Target::MenuTag(t) => {
                 if let (Some(i), Some((_, keys))) = (self.track_menu, self.tags.get_mut(t)) {
                     let k = entry_key(&self.entries[i as usize]);
@@ -2352,6 +2398,7 @@ impl State {
                 self.column_menu = false;
                 self.chip_menu = None;
                 self.tag_menu = None;
+                self.fx_menu = None;
                 self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;
@@ -2671,6 +2718,16 @@ impl State {
                 self.crossfader = v;
                 let x = self.crossfader_out();
                 self.send(Command::Crossfader(x));
+            }
+            Target::FxMeta(d, slot) => {
+                let v = (self.fx[d].0[slot].2 - delta.1 / 160.0).clamp(0.0, 1.0);
+                self.fx[d].0[slot].2 = v;
+                self.send(Command::Fx(d, FxSet::Meta(slot, v)));
+            }
+            Target::FxMix(d) => {
+                let v = (self.fx[d].1 - delta.1 / 160.0).clamp(0.0, 1.0);
+                self.fx[d].1 = v;
+                self.send(Command::Fx(d, FxSet::Mix(v)));
             }
             Target::Knob(d, k) => {
                 let v = (self.decks[d].knobs[k] - delta.1 / 160.0).clamp(0.0, 1.0);

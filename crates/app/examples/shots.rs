@@ -218,6 +218,22 @@ fn main() {
                     faults.push(format!("{name}: new playlist has no name field"));
                 }
             }
+            // The effects bar: a slot's list opens, a pick loads it and turns it on.
+            if !ui.targets().iter().any(|(t, _)| t == "FxName(0, 0)") {
+                ui.key(Key::Char('5'), Mods { ctrl: true, ..Mods::default() });
+                ui.render(&mut r);
+            }
+            if ui.tap("FxName(0, 0)") {
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-fx.png")));
+                if !ui.tap("FxPick(0, 0, 4)") {
+                    faults.push(format!("{name}: no effect list"));
+                }
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-fx-on.png")));
+            } else {
+                faults.push(format!("{name}: no effects bar"));
+            }
             // Right-click the Near BPM chip: its editor must open and a choice must close it.
             if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Filter(0)") {
                 ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);

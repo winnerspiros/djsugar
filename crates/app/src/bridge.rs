@@ -7,7 +7,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use djsugar_control::ControlRegistry;
 use djsugar_engine::{AudioEngine, AudioSetup, SampleSource, deck_group, eq_group, quick_effect_group, scan};
-use sugar_engine::{Command, DECKS, DeckState, Telemetry};
+use djsugar_engine::{effect_group, effect_unit_group};
+use sugar_engine::{Command, DECKS, DeckState, FxSet, Telemetry};
 
 /// Sampler slots the pads cycle through.
 const SLOTS: usize = 16;
@@ -66,6 +67,15 @@ impl Bridge {
         engine.xpad_factory(xpad_kit(read));
         let slots = (0..SLOTS).map(|_| Slot { name: String::new(), ready: Arc::default() }).collect();
         Self { engine, reg, rate: [44_100.0; DECKS], slots, next: 0, last: Telemetry::default() }
+    }
+
+    /// Deck `d`'s effect unit as the engine holds it: each slot's effect, on, knob; then the mix.
+    pub fn fx(&self, d: usize) -> crate::state::FxUnit {
+        let slots = std::array::from_fn(|s| {
+            let g = effect_group(d, s);
+            (self.get(&g, "loaded_effect") as u8, self.get(&g, "enabled") != 0.0, self.get(&g, "meta") as f32)
+        });
+        (slots, self.get(&effect_unit_group(d), "mix") as f32)
     }
 
     pub fn status(&self) -> String {
@@ -192,6 +202,12 @@ impl Bridge {
                     self.set(&djsugar_engine::sampler::sampler_group(i), "cue_gotoandstop", 1.0);
                 }
             }
+            Command::Fx(d, set) => match set {
+                FxSet::Kind(slot, k) => self.set(&effect_group(d, slot), "loaded_effect", f64::from(k)),
+                FxSet::On(slot, on) => self.set(&effect_group(d, slot), "enabled", f64::from(u8::from(on))),
+                FxSet::Meta(slot, v) => self.set(&effect_group(d, slot), "meta", f64::from(v)),
+                FxSet::Mix(v) => self.set(&effect_unit_group(d), "mix", f64::from(v)),
+            },
             Command::Crossfader(x) => self.set("[Master]", "crossfader", f64::from(x)),
             Command::Curve(c) => {
                 use sugar_engine::Curve;

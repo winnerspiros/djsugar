@@ -229,6 +229,7 @@ impl Mixer {
             Command::Main(v) => self.main = v.max(0.0),
             Command::Record(_) => {}
             Command::Station(s) => self.station.set(s),
+            Command::Fx(..) => {}
             Command::Pfl(..)
             | Command::Phones(..)
             | Command::Ducking(..)

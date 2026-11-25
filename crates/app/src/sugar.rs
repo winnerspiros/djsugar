@@ -1,7 +1,7 @@
 use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, FX_PADS, GridOp, Hit, Mode, State, Target, View};
+use crate::state::{DETAIL_FRAMES, GridOp, Hit, State, Target, View};
 use sugar_engine::station::Scene;
 
 use crate::theme::{self, Line, Mark};
@@ -41,6 +41,8 @@ const PAD_TEXT: Style = Style::new(10.0, Weight::Bold, TEXT);
 
 const TOOLBAR: f32 = 36.0;
 const ROW: f32 = 44.0;
+/// The effects bar, tall enough for its knobs.
+const FX_ROW: f32 = 56.0;
 
 pub const fn fade(c: u32, a: u32) -> u32 {
     c & 0x00ff_ffff | a << 24
@@ -96,6 +98,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     column_menu(p, s, w, h);
     chip_menu(p, s, w, h);
     tag_menu(p, s, w, h);
+    fx_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -105,8 +108,8 @@ fn views(p: &mut Painter, s: &mut State, area: Rect, tall: bool) {
     let (w, h) = (area.w, area.y + area.h);
     let mut y = area.y;
     if s.show_fx {
-        effects(p, s, Rect::new(0.0, y, w, ROW));
-        y += ROW;
+        effects(p, s, Rect::new(0.0, y, w, FX_ROW));
+        y += FX_ROW;
     }
     if s.show_samplers {
         samplers(p, s, Rect::new(0.0, y, w, ROW));
@@ -183,10 +186,10 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
         let dh = crate::classic::height((bottom - y) * 0.6).max(150.0).min(bottom - y);
         crate::classic::dj(p, s, Rect::new(r.x, y, r.w, dh), false);
         y += dh;
-        if s.show_fx && bottom - y > ROW + 60.0 {
+        if s.show_fx && bottom - y > FX_ROW + 60.0 {
             p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
-            effects(p, s, Rect::new(r.x, y + 1.0, r.w, ROW));
-            y += ROW + 1.0;
+            effects(p, s, Rect::new(r.x, y + 1.0, r.w, FX_ROW));
+            y += FX_ROW + 1.0;
         }
         if s.show_samplers && bottom - y > ROW + 60.0 {
             p.rect(r.x, y, r.w, 1.0, 0.0, theme::SEPARATOR);
@@ -551,23 +554,62 @@ fn footer(p: &mut Painter, s: &mut State, r: Rect) {
     pill(p, s, b, "Side Panel", s.side_panel, ACCENT, Target::ToggleSide);
 }
 
+/// Each deck's effect unit: three slots in series, each its effect's name (tap for the list),
+/// an on button and its knob, then the unit's dry/wet mix.
 fn effects(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     let half = r.w * 0.5;
+    let kw = (r.h - 4.0).min(40.0);
     for d in 0..2 {
         let x0 = r.x + d as f32 * half + 8.0;
-        p.text(x0, r.y + 26.0, Style { colour: DECK[d], ..TAB }, ["FX 1", "FX 2"][d]);
-        let bw = ((half - 60.0) / FX_PADS.len() as f32 - 4.0).max(24.0);
-        for (i, label) in FX_PADS.iter().enumerate() {
-            let on = s.decks[d].echo == Some(i);
-            let b = Rect::new(x0 + 40.0 + i as f32 * (bw + 4.0), r.y + 6.0, bw, r.h - 12.0);
-            let prev = s.decks[d].mode;
-            s.decks[d].mode = Mode::Fx;
-            button(p, s, b, label, on, ACCENT, Target::Pad(d, i));
-            s.decks[d].mode = prev;
+        p.text(x0, r.y + r.h * 0.5 + 4.0, Style { colour: DECK[d], ..TAB }, ["FX 1", "FX 2"][d]);
+        let left = x0 + 40.0;
+        let right = r.x + (d + 1) as f32 * half - 8.0 - kw;
+        let sw = ((right - left) / 3.0 - 6.0).max(40.0);
+        let (slots, mix) = s.fx[d];
+        for (i, &(kind, on, meta)) in slots.iter().enumerate() {
+            let x = left + i as f32 * (sw + 6.0);
+            let name = djsugar_engine::effect_name(f64::from(kind));
+            let name = if name.is_empty() { "Empty" } else { name };
+            let bw = (sw - kw - 4.0).max(24.0);
+            let top = Rect::new(x, r.y + 5.0, bw, r.h * 0.5 - 6.0);
+            let fill = if s.pressed(Target::FxName(d, i)) { theme::PRESSED } else { theme::CONTROL };
+            p.rect(top.x, top.y, top.w, top.h, 4.0, fill);
+            p.text_in(
+                top.x + 6.0,
+                top.y + top.h * 0.5 + 4.0,
+                top.w - 18.0,
+                Style { colour: if kind > 0 { TEXT } else { GREY }, ..SMALL },
+                name,
+            );
+            let (ax, ay) = (top.x + top.w - 8.0, top.y + top.h * 0.5);
+            p.line((ax - 3.0, ay - 1.5), (ax, ay + 1.5), 1.3, GREY);
+            p.line((ax, ay + 1.5), (ax + 3.0, ay - 1.5), 1.3, GREY);
+            hit(s, top, Target::FxName(d, i));
+            let low = Rect::new(x, r.y + r.h * 0.5 + 1.0, bw, r.h * 0.5 - 6.0);
+            button(p, s, low, if on { "ON" } else { "OFF" }, on && kind > 0, DECK[d], Target::FxOn(d, i));
+            knob(p, s, Rect::new(x + bw + 4.0, r.y + 2.0, kw, r.h - 4.0), meta, DECK[d], "", Target::FxMeta(d, i));
         }
+        knob(p, s, Rect::new(right, r.y + 2.0, kw, r.h - 4.0), mix, ACCENT, "MIX", Target::FxMix(d));
     }
-    p.rect(half, r.y + 6.0, 1.0, r.h - 12.0, 0.0, EDGE);
+    p.rect(r.x + half, r.y + 6.0, 1.0, r.h - 12.0, 0.0, EDGE);
+}
+
+/// The effects a slot can load, the loaded one ticked.
+fn fx_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some((d, slot)) = s.fx_menu else { return };
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let now = s.fx[d].0[slot].0;
+    let mut lines = vec![Line::item("Empty", Target::FxPick(d, slot, 0)).mark(Mark::Check(now == 0)), Line::Rule];
+    lines.extend(
+        djsugar_engine::AVAILABLE_EFFECTS
+            .iter()
+            .zip(1u8..)
+            .map(|(name, k)| Line::item(*name, Target::FxPick(d, slot, k)).mark(Mark::Check(now == k))),
+    );
+    theme::menu(p, s, s.menu_at, screen, &lines);
 }
 
 fn samplers(p: &mut Painter, s: &mut State, r: Rect) {
