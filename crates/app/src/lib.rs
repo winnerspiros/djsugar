@@ -534,7 +534,7 @@ pub(crate) mod android {
                 })()
             };
             if out.is_err() {
-                let _ = env.exception_clear();
+                env.exception_clear();
             }
             out
         });
